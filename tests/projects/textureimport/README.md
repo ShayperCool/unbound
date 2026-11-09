@@ -10,7 +10,9 @@ scaling (odd sizes, one odd side) and scaled to nearest/larger/smaller, the max 
 Mitchell and Bilinear resize algorithms (also soft 512x512 and 600x360 images and a float EXR
 downscaled to 128 and 256 rows), and normal maps: plain, with Kaiser mips, flipped green
 and fading, and made from grayscale with the standard and Sobel filters at eleven height scales,
-three sizes, gray and coloured sources and impulses (filter kernels). Every case is readable and
+three sizes, gray and coloured sources and impulses (filter kernels). Photoshop files (16-bit raw RGB, 16-bit PackBits RGBA, 16-bit gray, 8-bit PackBits RGBA) and a
+16-bit PNG show how deep channels become bytes (the byte nearest v / 257, gray as (g, g, g, a)).
+Every case is readable and
 stored as RGBA32, the float case as RGBAFloat (platform overrides; uncompressed default platform),
 so compression hides nothing.
 

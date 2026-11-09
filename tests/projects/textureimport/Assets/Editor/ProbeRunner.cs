@@ -21,9 +21,7 @@ public static class ProbeRunner
         {
             var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) continue;
-            var path = File.Exists("Assets/Textures/" + parts[0] + ".exr")
-                ? "Assets/Textures/" + parts[0] + ".exr"
-                : "Assets/Textures/" + parts[0] + ".png";
+            var path = new[] { ".exr", ".psd", ".png" }.Select(e => "Assets/Textures/" + parts[0] + e).First(File.Exists);
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             Apply(importer, parts.Skip(1));
             importer.SaveAndReimport();

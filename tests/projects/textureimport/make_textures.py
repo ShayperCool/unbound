@@ -235,6 +235,67 @@ def dots():
     return 16, 16, rows
 
 
+
+def deep(w, h, seed, channels):
+    """16-bit texels: low bytes around every 8-bit rounding boundary (0x7f, 0x80, 0x81, ...)."""
+    rng = Lcg(seed)
+    rows = []
+    for y in range(h):
+        row = []
+        for x in range(w):
+            texel = []
+            for c in range(channels):
+                high = (x * 8 + y * 3 + c * 85) & 0xff if c == 0 else rng.byte()
+                low = (0x7e, 0x7f, 0x80, 0x81, 0x00, 0xff, rng.byte())[(x + y + c) % 7]
+                texel.append(high << 8 | low)
+            row.append(tuple(texel))
+        rows.append(row)
+    return w, h, rows
+
+
+def packbits(data):
+    """PackBits: literal runs of at most 128 bytes (enough for a valid RLE stream)."""
+    out = bytearray()
+    for at in range(0, len(data), 128):
+        chunk = data[at:at + 128]
+        out.append(len(chunk) - 1)
+        out += chunk
+    return bytes(out)
+
+
+def psd(path, width, height, pixels, depth, rle):
+    """A flattened Photoshop file (no layers): pixels rows top-down of channel tuples (1 gray,
+    3 RGB, 4 RGBA), 8- or 16-bit, raw or PackBits-compressed planar channels."""
+    channels = len(pixels[0][0])
+    mode = 1 if channels == 1 else 3
+    header = (b'8BPS' + struct.pack('>H', 1) + b'\0' * 6
+              + struct.pack('>HIIHH', channels, height, width, depth, mode))
+    planes = []
+    for c in range(channels):
+        for row in pixels:
+            if depth == 16:
+                planes.append(b''.join(struct.pack('>H', p[c]) for p in row))
+            else:
+                planes.append(bytes(p[c] for p in row))
+    if rle:
+        packed = [packbits(line) for line in planes]
+        data = struct.pack('>H', 1) + b''.join(struct.pack('>H', len(p)) for p in packed) + b''.join(packed)
+    else:
+        data = struct.pack('>H', 0) + b''.join(planes)
+    path.write_bytes(header + struct.pack('>III', 0, 0, 0) + data)
+
+
+def png16(path, width, height, pixels):
+    """A 16-bit RGBA PNG; pixels rows top-down of (r, g, b, a) 16-bit values."""
+    raw = b''.join(b'\0' + b''.join(struct.pack('>4H', *p) for p in row) for row in pixels)
+
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+    path.write_bytes(b'\x89PNG\r\n\x1a\n'
+                     + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 16, 6, 0, 0, 0))
+                     + chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b''))
+
+
 SOURCES = {
     'Noise': lambda: noise(64, 64, 1),
     'Smooth': smooth,
@@ -258,6 +319,21 @@ SOURCES = {
 }
 # Sources written as float EXR rather than PNG.
 FLOAT_SOURCES = {'SoftHdr'}
+# Sources written as other files: (writer, arguments after the image).
+FILE_SOURCES = {
+    'Deep': ('psd', 16, False),
+    'DeepAlphaRle': ('psd', 16, True),
+    'DeepGray': ('psd', 16, False),
+    'PsdRle': ('psd', 8, True),
+    'Deep16Png': ('png16',),
+}
+SOURCES.update({
+    'Deep': lambda: deep(32, 32, 21, 3),
+    'DeepAlphaRle': lambda: deep(32, 32, 22, 4),
+    'DeepGray': lambda: deep(32, 32, 23, 1),
+    'PsdRle': lambda: noise(32, 32, 24),
+    'Deep16Png': lambda: deep(32, 32, 22, 4),
+})
 
 # name: (source, settings). Settings default to a Default-type, sRGB, box-filtered texture with
 # mipmaps, input alpha and NPOT ToNearest (Unity's defaults); every case is readable and stored as
@@ -341,6 +417,14 @@ CASES = {
     'MaxSizeSoft': ('Soft', 'maxsize=128'),
     'MaxSizeSoftWide': ('SoftWide', 'maxsize=256 npot=none srgb=0'),
     'MaxSizeSoftHdr': ('SoftHdr', 'maxsize=128 mips=0 format=float'),
+    # Photoshop files (16-bit raw RGB, 16-bit PackBits RGBA, 16-bit gray, 8-bit PackBits RGBA)
+    # and a 16-bit PNG: how deep channels become bytes, before and after mipmapping.
+    'Psd16Rgb': ('Deep', ''),
+    'Psd16RgbLinear': ('Deep', 'srgb=0'),
+    'Psd16RgbaRle': ('DeepAlphaRle', ''),
+    'Psd16Gray': ('DeepGray', 'srgb=0'),
+    'Psd8RgbaRle': ('PsdRle', ''),
+    'Png16Rgba': ('Deep16Png', ''),
 }
 
 
@@ -349,7 +433,13 @@ def main():
     textures.mkdir(parents=True, exist_ok=True)
     images = {name: make() for name, make in SOURCES.items()}
     for name, (source, _) in CASES.items():
-        if source in FLOAT_SOURCES:
+        if source in FILE_SOURCES:
+            kind, *args = FILE_SOURCES[source]
+            if kind == 'psd':
+                psd(textures/f'{name}.psd', *images[source], *args)
+            else:
+                png16(textures/f'{name}.png', *images[source])
+        elif source in FLOAT_SOURCES:
             exr(textures/f'{name}.exr', *images[source])
         else:
             png(textures/f'{name}.png', *images[source])
