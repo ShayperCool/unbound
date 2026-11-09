@@ -149,7 +149,7 @@ registrations and notifications; its safety tests do not certify reset delivery 
 mixer assets, scenes, `.meta` GUIDs, the Editor's ProjectSettings and `packages-lock.json`.
 `authored.json` records the authoring command and the hash of every fixture file it started
 from. Each set was recorded with `tests/authored_project.py record` from a Native run whose
-capture matched the canonical reference exactly. Sets: `default` (both rates), `submission`, `lifecycle`, `generators`, `state`, `reset-data`; the unstable reset diagnostics have none.
+capture matched the canonical reference exactly. Sets: `default` (both rates), `submission`, `lifecycle`, `generators`, `state`, `reset-data`, `delivery`; the unstable reset diagnostics have none.
 
 ```bash
 python3 tests/authored_project.py assemble mixersuspend default --release 6000.0.71f1 --out "$work/native"
@@ -174,16 +174,19 @@ python3 tests/projects/mixersuspend/gate.py --release 6000.0.71f1
 
 The gate uses `$UNBOUND` and its matching managed directory, or `--runtime`. It runs
 all original profiles and the new state controls without an Editor, preserves each
-complete strict report, and rejects anything outside the precisely documented
-reset records and the two isolated one-step Reverb PCM samples. The suite still
-reports the original 2049 raw device-reset failures per rate.
+complete strict report, and rejects anything outside the two isolated one-step
+Reverb PCM samples. The original suspension matrix now passes strictly, including
+the 2049 reset-listener records per rate that failed before the closing-buffer fix.
+The retained before reports preserve those original failures.
 
 
 [RESET_DATA_MEASUREMENT.md](RESET_DATA_MEASUREMENT.md) defines the clip-data reset
 controls, cloned storage, duration boundaries and resampling endpoints. Both Native
 repeats match all 197097 values per rate; the engine compares them strictly.
-Generated-data loss resolves the six original replay impulse failures. The 2049
-remaining original records concern only the extra listener callback around reset.
+Generated-data loss resolves the six original replay impulse failures. Closing
+output delivery resolves the original extra listener callback around reset. Real
+device queue timing can produce additional closing buffers; that broader delivery
+mechanism remains a follow-up, as the independent thread control records.
 
 
 [RESET_DELIVERY_MEASUREMENT.md](RESET_DELIVERY_MEASUREMENT.md) defines the independent

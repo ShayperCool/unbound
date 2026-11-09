@@ -38,3 +38,7 @@ python3 tests/projects/mixersuspend/compare.py --release 6000.0.71f1 --rate 4800
 parity. The final comparator retains the full unresolved callback/PCM count
 difference and returns failure. The certified delivery gate still compares its
 original single-buffer reference strictly.
+
+The engine thread invariant passes for both source and listener. Its complete
+comparison against Native retains 10243 differences out of 18438 records, caused
+by the unresolved three-buffer versus one-buffer delivery and associated metadata.

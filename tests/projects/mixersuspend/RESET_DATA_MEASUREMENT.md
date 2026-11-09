@@ -114,3 +114,8 @@ listener callback containing approximately +/-1e-20. Other reset captures have
 inconsistent independent callback counts; no universal extra-block rule is inferred.
 The full raw reports retain this functional delivery gap. `acceptance.py` admits
 only that precise shape and rejects any replay impulse or other new error.
+
+The counts above describe the retained pre-Q158 reports. Closing-buffer delivery
+now resolves those original reset-listener failures; the full original matrix is
+compared strictly. See [RESET_DELIVERY_MEASUREMENT.md](RESET_DELIVERY_MEASUREMENT.md)
+for the independent source/listener control and the wider queued-period follow-up.
