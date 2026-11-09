@@ -9,15 +9,17 @@ using Unbound.UIElements;
 // Documented (Unity 6000.0 Scripting API and Manual "TreeView"): SetRootItems forces the default
 // controller; the items source "Contains items that are expanded in the tree"; GetIndexForId is -1
 // for a hidden item; itemExpandedChanged's id is -1 for ExpandAll/CollapseAll; selecting by id
-// expands the selected items; autoExpand expands added items; the USS class table.
+// "will also expand the selected item(s)" (measured otherwise, see below); autoExpand expands added
+// items; the USS class table; the --unity-tree-view-indent custom property.
 // Matches the Unity 6000.0.71f1 Editor, tests/projects/uitkcollections (tree section): ExpandItem with
 // and without its children (which marks every descendant expanded, leaves too), toggle presses and
 // Alt presses (a row pressed with Alt expands or collapses its whole subtree), ExpandAll/CollapseAll,
 // a collapse of a collapsed item (refreshed and reported all the same), selection by id (each
 // collapsed ancestor expanded and reported), right/left navigation (into the first child, expand,
 // collapse, back to the parent), new root items (itemsSourceChanged first), row structure and names,
-// and every callback in order. View-data persistence of the expanded items and tree reordering by
-// dragging are not implemented.
+// and every callback in order. AddItem, TryRemoveItem, Move, GetAllItemIds, the custom indent and
+// dynamic height rows follow the same model without a capture. View-data persistence of the expanded
+// items and tree reordering by dragging are not implemented.
 namespace UnityEngine.UIElements
 {
     public abstract partial class BaseTreeView : BaseVerticalCollectionView
@@ -32,7 +34,13 @@ namespace UnityEngine.UIElements
 
         internal static readonly int invalidId = -1;
 
+        // A theme or game sheet can set the indent per depth level.
+        internal static readonly CustomStyleProperty<float> s_TreeViewIndentProperty = new CustomStyleProperty<float>("--unity-tree-view-indent");
+
         bool m_AutoExpand;
+
+        /// <summary>The indent per level from --unity-tree-view-indent, when set.</summary>
+        internal float? customIdent { get; private set; }
 
         public new IList itemsSource
         {
@@ -64,6 +72,20 @@ namespace UnityEngine.UIElements
         public BaseTreeView(int itemHeight) : base(null, itemHeight)
         {
             AddToClassList(ussClassName);
+            RegisterCallback<CustomStyleResolvedEvent>(OnCustomStyleResolved);
+        }
+
+        void OnCustomStyleResolved(CustomStyleResolvedEvent evt)
+        {
+            if (evt.customStyle.TryGetValue(s_TreeViewIndentProperty, out float indent))
+            {
+                customIdent = indent;
+                virtualizationController?.Refresh(false);
+            }
+            else
+            {
+                customIdent = null;
+            }
         }
 
         public void SetRootItems<T>(IList<TreeViewItemData<T>> rootItems) => SetRootItemsInternal(rootItems);
@@ -513,6 +535,7 @@ namespace UnityEngine.UIElements
                     treeItem.owner?.UnregisterRow(treeItem);
                     PostInitRegistration(treeItem);
                 }
+                treeItem.customIndentWidth = baseTreeView.customIdent;
                 treeItem.Indent(GetIndentationDepthByIndex(index));
                 treeItem.SetExpandedWithoutNotify(IsExpandedByIndex(index));
                 treeItem.SetToggleVisibility(HasChildrenByIndex(index));
@@ -741,7 +764,6 @@ namespace UnityEngine.UIElements
     public partial class DefaultTreeViewController<T> : TreeViewController
     {
         readonly Dictionary<int, TreeViewItemData<T>> m_ItemData = new Dictionary<int, TreeViewItemData<T>>();
-        IList<TreeViewItemData<T>> m_RootItems;
 
         /// <summary>Assigning root items (a list of TreeViewItemData&lt;T&gt;) sets them; another type
         /// is an error.</summary>
@@ -760,8 +782,7 @@ namespace UnityEngine.UIElements
         /// itemsSourceChanged; the rows follow at the next refresh.</summary>
         public void SetRootItems(IList<TreeViewItemData<T>> items)
         {
-            if (items != null && ReferenceEquals(items, m_RootItems)) return;
-            m_RootItems = items;
+            // The same list given again (after the game changed it) is read again.
             m_UaHierarchy.Clear();
             m_ItemData.Clear();
             if (items != null)
@@ -781,16 +802,19 @@ namespace UnityEngine.UIElements
             foreach (var child in item.children) AddRecursive(child, node);
         }
 
+        /// <summary>Adds an item (with its children) under a parent, -1 for the root, at a child index
+        /// (-1: last). An unknown parent or an id already in the tree is an error and adds nothing.</summary>
         public virtual void AddItem(in TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree = true)
         {
             UaTreeNode parent = m_UaHierarchy.root;
-            if (parentId != BaseTreeView.invalidId)
+            if (parentId != BaseTreeView.invalidId && !m_UaHierarchy.TryGet(parentId, out parent))
             {
-                if (!m_UaHierarchy.TryGet(parentId, out parent)) return;
-                if (m_ItemData.TryGetValue(parentId, out var parentData)) parentData.InsertChild(item, childIndex);
+                Debug.LogError($"Unbound: tree view item {item.id} was not added: its parent id {parentId} is not in the tree");
+                return;
             }
             var node = m_UaHierarchy.Add(item.id, parent);
             if (node == null) return;
+            if (parentId != BaseTreeView.invalidId && m_ItemData.TryGetValue(parentId, out var parentData)) parentData.InsertChild(item, childIndex);
             m_ItemData[item.id] = item;
             foreach (var child in item.children) AddRecursive(child, node);
             if (baseTreeView.autoExpand) ExpandAncestorNodes(node);

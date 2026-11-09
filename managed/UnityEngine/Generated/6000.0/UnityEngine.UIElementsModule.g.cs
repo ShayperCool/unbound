@@ -328,11 +328,9 @@ namespace UnityEngine.UIElements
     unsafe partial class BaseTreeView
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId autoExpandProperty;
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.CustomStyleProperty<float> s_TreeViewIndentProperty;
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.OnViewDataReady"); }
         [global::Unbound.Stub] internal void CopyExpandedStates(int sourceId, int targetId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.CopyExpandedStates"); }
         internal global::System.Collections.Generic.List<int> expandedItemIds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.expandedItemIds"); return new global::System.Collections.Generic.List<int>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.expandedItemIds"); } }
-        internal global::System.Nullable<float> customIdent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.customIdent"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseVerticalCollectionView.UxmlSerializedData

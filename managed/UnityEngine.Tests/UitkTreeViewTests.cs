@@ -800,14 +800,16 @@ namespace UnityEngine.Tests
             Assert.Equal("zero", dataDuring);
         }
 
-        // [measured] The expanded ancestors send their ids, root first; a selected item with children
-        // stays collapsed and sends nothing.
+        // [measured] The expanded ancestors send their ids; a selected item with children stays
+        // collapsed and sends nothing.
         [Fact]
         public void SelectionByIdExpansionSendsTheExpandedItemIds()
         {
             var view = NewTree();
             var payloads = RecordExpansions(view);
             view.SetSelectionById(121);
+            // Ancestors are expanded from the nearest outwards (one ancestor is measured; the order
+            // for several follows the same walk and is not measured).
             Assert.Equal(new[] { (12, true, false), (1, true, false) }, payloads);
             payloads.Clear();
             view.SetSelectionByIdWithoutNotify(new[] { 3 });
@@ -816,6 +818,61 @@ namespace UnityEngine.Tests
             payloads.Clear();
             view.AddToSelectionById(3);
             Assert.Empty(payloads);
+        }
+
+        // ------------------------------------------------------------------ structure changes
+
+        // [rule] SetRootItems reads the given list again when it is the same list, changed.
+        [Fact]
+        public void TheSameRootListIsReadAgain()
+        {
+            var view = NewTree();
+            var roots = Sample();
+            view.SetRootItems(roots);
+            roots.Add(new TreeViewItemData<string>(4, "D"));
+            view.SetRootItems(roots);
+            Assert.Equal(new[] { 1, 2, 3, 4 }, VisibleIds(view));
+            Assert.Equal("D", view.GetItemDataForId<string>(4));
+        }
+
+        // [rule] AddItem at the root, under a parent at a child index, with autoExpand; an unknown
+        // parent or a repeated id adds nothing (logged); TryRemoveItem removes the descendants too.
+        [Fact]
+        public void AddAndRemoveItems()
+        {
+            var view = NewTree();
+            view.AddItem(new TreeViewItemData<string>(4, "D"));
+            Assert.Equal(new[] { 1, 2, 3, 4 }, VisibleIds(view));
+            view.AddItem(new TreeViewItemData<string>(13, "A0"), 1, 0);
+            Assert.Equal(new[] { 13, 11, 12 }, view.viewController.GetChildrenIds(1).ToArray());
+            Assert.Equal(3, view.GetItemDataForId<string>(1) == "A" ? 3 : 0);
+            view.autoExpand = true;
+            view.AddItem(new TreeViewItemData<string>(311, "C1a"), 31);
+            Assert.True(view.IsExpanded(3) && view.IsExpanded(31));
+            int before = view.GetTreeCount();
+            view.AddItem(new TreeViewItemData<string>(999, "orphan"), 12345);
+            view.AddItem(new TreeViewItemData<string>(2, "B again"), 1);
+            Assert.Equal(before, view.GetTreeCount());
+            Assert.Equal(3, view.viewController.GetChildrenIds(1).Count());
+            Assert.True(view.TryRemoveItem(3));
+            Assert.False(view.viewController.Exists(31));
+            Assert.False(view.viewController.Exists(311));
+            Assert.False(view.TryRemoveItem(3));
+        }
+
+        // [rule] Move within a parent and to another parent.
+        [Fact]
+        public void MoveItems()
+        {
+            var view = NewTree();
+            var controller = view.viewController;
+            controller.Move(11, 1, 2);
+            Assert.Equal(new[] { 12, 11 }, controller.GetChildrenIds(1).ToArray());
+            controller.Move(2, 3, 0);
+            Assert.Equal(new[] { 2, 31 }, controller.GetChildrenIds(3).ToArray());
+            Assert.Equal(3, controller.GetParentId(2));
+            controller.Move(1, 12);
+            Assert.Equal(-1, controller.GetParentId(1));
         }
 
         // ------------------------------------------------------------------ UXML
