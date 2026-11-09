@@ -1,6 +1,7 @@
 //! The solver against the Unity 6000.0.71f1 Editor's converged realtime lightmaps of
 //! tests/projects/realtimegi (Room scene).
 use crate::data::{Precomputed, System, read_precomputed};
+use crate::probes::ProbeSetSolver;
 use crate::solver::{PointLight, SystemSolver, gamma_to_linear};
 use std::path::Path;
 use std::sync::Arc;
@@ -41,6 +42,28 @@ fn reference(case: &str) -> (usize, Vec<[f32; 4]>) {
         .map(|c| std::array::from_fn(|k| half(u16::from_le_bytes([c[2 * k], c[2 * k + 1]]))))
         .collect();
     (width, texels)
+}
+
+/// The Editor's LightProbes.GetInterpolatedProbe at the probe positions in case `case` (27
+/// coefficients each, red, green, blue), from the probe's values.jsonl.
+fn reference_probes(case: &str) -> Vec<Vec<f32>> {
+    let text =
+        std::fs::read_to_string(probe().join("Reference/unity-6000.0.71f1/values.jsonl")).unwrap();
+    let line = text
+        .lines()
+        .find(|l| l.contains(&format!("\"case\":\"{case}\"")))
+        .unwrap();
+    let start = line.find("\"probes\":[").unwrap() + "\"probes\":[".len();
+    let end = start + line[start..].find("]]").unwrap() + 1;
+    line[start..end]
+        .split("],")
+        .map(|p| {
+            p.trim_matches(|c| c == '[' || c == ']')
+                .split(',')
+                .map(|v| v.parse().unwrap())
+                .collect()
+        })
+        .collect()
 }
 
 /// What the Standard shader's meta pass writes as albedo for an opaque, non-metallic,
@@ -126,6 +149,7 @@ const ISOLATED: usize = 4;
 struct Replay {
     data: Precomputed,
     solver: SystemSolver,
+    probes: ProbeSetSolver,
     room: Option<Room>,
 }
 
@@ -133,9 +157,15 @@ impl Replay {
     fn new() -> Self {
         let data = room_data();
         let solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
+        let probes = ProbeSetSolver::new(
+            Arc::new(data.probe_sets[0].clone()),
+            std::slice::from_ref(&solver),
+        )
+        .unwrap();
         Self {
             data,
             solver,
+            probes,
             room: None,
         }
     }
@@ -231,6 +261,31 @@ impl Replay {
         (fails, total, relative[relative.len() / 2])
     }
 
+    /// The light probes' coefficients compared with the Editor's in `case`: (coefficients off,
+    /// the largest difference). A coefficient is off beyond the probe comparator's tolerance plus
+    /// 1% of its channel's band-0 coefficient: the direct light's residual (about 2% per
+    /// cluster) moves the small higher-band coefficients of bright probes by that much.
+    fn probes(&self, case: &str) -> (usize, f32) {
+        let room = self.room.unwrap();
+        let environment = vec![room.ambient.map(gamma_to_linear); crate::data::ENVIRONMENT_VALUES];
+        let mut sh = vec![[0.0; 27]; self.probes.probe_set().probes.len()];
+        self.probes.solve(
+            std::slice::from_ref(&self.solver),
+            &environment,
+            room.indirect_scale,
+            &mut sh,
+        );
+        let (mut fails, mut worst) = (0, 0f32);
+        for (ours, theirs) in sh.iter().zip(reference_probes(case)) {
+            for (k, (a, b)) in ours.iter().zip(&theirs).enumerate() {
+                let d = (a - b).abs();
+                worst = worst.max(d);
+                fails += (d > 0.02 + 0.05 * b.abs() + 0.01 * theirs[k / 9 * 9].abs()) as usize;
+            }
+        }
+        (fails, worst)
+    }
+
     /// `allowed`: values allowed outside the comparator tolerance; `median_limit`: the largest
     /// median relative error.
     fn check(&mut self, room: Room, case: &str, allowed: usize, median_limit: f32) {
@@ -247,6 +302,9 @@ impl Replay {
             median < median_limit,
             "{case}: median relative error {median}"
         );
+        let (fails, worst) = self.probes(case);
+        eprintln!("{case} probes: {fails} coefficients off, worst {worst}");
+        assert_eq!(fails, 0, "{case}: light probe coefficients");
     }
 }
 
@@ -468,6 +526,31 @@ fn the_update_threshold_keeps_parts_that_changed_less() {
 }
 
 #[test]
+fn reads_the_rooms_light_probe_transport() {
+    let data = room_data();
+    assert_eq!(data.probe_sets.len(), 1);
+    let set = &data.probe_sets[0];
+    assert_eq!(
+        set.dependencies,
+        vec![
+            data.systems[0].hash,
+            crate::data::ENVIRONMENT_ID,
+            crate::data::ABSENT_ID
+        ]
+    );
+    assert_eq!(set.probes.len(), 9);
+    for p in &set.probes {
+        assert_eq!(p.references.len(), p.weights.len());
+        assert!(p.references.len() > 10);
+    }
+    // A probe set lit by a system the scene does not have fails.
+    let mut other = set.clone();
+    other.dependencies[0] = [7; 16];
+    let solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
+    assert!(ProbeSetSolver::new(Arc::new(other), std::slice::from_ref(&solver)).is_err());
+}
+
+#[test]
 fn rgb9e5_round_trip() {
     use crate::solver::{decode_rgb9e5, encode_rgb9e5};
     for rgb in [
@@ -510,6 +593,14 @@ fn malformed_data_fails_without_panicking() {
             let _ = crate::data::read_input_samples(part);
             let _ = crate::data::read_transport(part);
             let _ = crate::data::read_cluster_materials(part, 52, 52);
+            let _ = crate::data::read_probe_set([0; 16], part);
+        }
+        if f.path.ends_with(".rpc.ref") {
+            assert!(crate::data::read_probe_set([0; 16], full).is_ok());
+            // A coefficient order outside the scale table fails.
+            let mut other = full.clone();
+            other[0x44] = 9;
+            assert!(crate::data::read_probe_set([0; 16], &other).is_err());
         }
         if f.path.ends_with(".rsc.ref") {
             // The transport's width cut to 10 leaves texels outside it.

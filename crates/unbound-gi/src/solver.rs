@@ -209,6 +209,11 @@ impl SystemSolver {
         })
     }
 
+    /// The cluster, tree and constant values of the last update (what transports reference).
+    pub fn values(&self) -> &[[f32; 3]] {
+        &self.values
+    }
+
     pub fn system(&self) -> &System {
         &self.system
     }

@@ -12,16 +12,37 @@ const FILE_MAGIC: u32 = 0xAD10_5174;
 const INPUT_VERSION: i32 = 17;
 const TRANSPORT_VERSION: i32 = 37;
 const MATERIAL_VERSION: i32 = 12;
+const PROBE_VERSION: i32 = 40;
+/// The probe set file's header after the version: its own fields (probe count, coefficient
+/// order, bounds) before the blocks.
+const PROBE_HEADER: usize = 0xC0;
 /// Block types inside the files.
 const INPUT_MAIN_BLOCK: u16 = 4;
 const TRANSPORT_BLOCK: u16 = 1;
 const BOUNCE_BLOCK: u16 = 27;
 const MATERIAL_BLOCK: u16 = 6;
+const PROBE_BLOCK: u16 = 5;
 /// Magics of the sections inside the blocks.
 const INPUT_MAGIC: u32 = 0x5749_4547;
 const TREE_MAGIC: u32 = 0x4744_4547;
 const TRANSPORT_MAGIC: u32 = 0x4753_4547;
 const BOUNCE_MAGIC: u32 = 0x4452_4547;
+const PROBE_MAGIC: u32 = 0x4853_4547;
+/// Where the probe set header lists, per output coefficient, which of [`PROBE_BAND_SCALES`]
+/// scales it (from the file's start).
+const PROBE_ORDER_AT: usize = 8 + 0x3C;
+/// The factors a probe's summed coefficients are scaled by, selected per coefficient by the
+/// header's order: the result is Unity's SphericalHarmonicsL2 coefficient (matches the Unity
+/// 6000.0.71f1 Editor's LightProbes.GetInterpolatedProbe at the probes, tests/projects/realtimegi).
+const PROBE_BAND_SCALES: [f32; 9] = [1.0, 2.0, 2.0, 2.0, 0.3125, 3.75, 3.75, 3.75, 0.9375];
+/// A probe's coefficient bytes are signed around this, each coefficient's 16-bit scale times this
+/// factor (2^-23 / (1 - 2^-16)).
+const PROBE_BYTE_ZERO: f32 = 127.0;
+const PROBE_SCALE: f32 = 1.192_111_1e-7;
+/// The probe's header value marking a probe without references.
+const PROBE_EMPTY: u16 = 0xFFFF;
+/// Spherical harmonics coefficients per channel (L2).
+pub const SH_COEFFICIENTS: usize = 9;
 /// The environment's dependency id in a transport.
 pub const ENVIRONMENT_ID: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0xFE, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0];
 /// The dependency id of an input that is never present (its references add nothing).
@@ -463,10 +484,99 @@ pub struct System {
     pub chart_mask: Vec<u32>,
 }
 
+/// A light probe set's transport: per probe, the input values it references (dependency and
+/// index, as in a system's transport) and, per reference, its weight for each of the 9
+/// coefficients of Unity's SphericalHarmonicsL2 (a probe's coefficients are the weighted sums
+/// of its references' RGB values).
+#[derive(Debug, Clone)]
+pub struct ProbeSet {
+    pub hash: [u8; 16],
+    pub dependencies: Vec<[u8; 16]>,
+    pub probes: Vec<Probe>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Probe {
+    pub references: Vec<(u8, u32)>,
+    pub weights: Vec<[f32; SH_COEFFICIENTS]>,
+}
+
+pub fn read_probe_set(hash: [u8; 16], bytes: &[u8]) -> Result<ProbeSet> {
+    let blocks = file_blocks(bytes, PROBE_VERSION, PROBE_HEADER)?;
+    let order = Reader { bytes }.slice(PROBE_ORDER_AT, SH_COEFFICIENTS)?;
+    let mut band = [0f32; SH_COEFFICIENTS];
+    for (b, &o) in band.iter_mut().zip(order) {
+        *b = *PROBE_BAND_SCALES
+            .get(o as usize)
+            .context("a malformed probe coefficient order")?;
+    }
+    let main = block(&blocks, PROBE_BLOCK)?;
+    let r = Reader { bytes: main };
+    ensure!(r.u32(0)? == PROBE_MAGIC, "malformed light probe transport");
+    let count = r.usize(8)?;
+    let dependency_count = r.usize(12)?;
+    // Counts are checked against the data before anything is sized by them.
+    let dependencies = (0..dependency_count)
+        .map(|d| Ok(r.slice(0x10 + 16 * count + 16 * d, 16)?.try_into().unwrap()))
+        .collect::<Result<Vec<[u8; 16]>>>()?;
+    ensure!(
+        dependency_count <= u8::MAX as usize,
+        "{dependency_count} light probe dependencies"
+    );
+    let probes = (0..count)
+        .map(|i| {
+            let header = 0x10 + 16 * i;
+            let references = r.u16(header)? as usize;
+            let coefficients = r.u16(header + 2)? as usize;
+            if r.u16(header + 6)? == PROBE_EMPTY {
+                return Ok(Probe::default());
+            }
+            ensure!(
+                coefficients == SH_COEFFICIENTS,
+                "light probes of {coefficients} coefficients (only L2 probes are supported)"
+            );
+            let at = header + r.usize(header + 12)?;
+            let bytes = r.slice(at, references * SH_COEFFICIENTS)?;
+            let scales_at = at + align(references * SH_COEFFICIENTS, 16);
+            let mut scale = [0f32; SH_COEFFICIENTS];
+            for (k, s) in scale.iter_mut().enumerate() {
+                *s = r.u16(scales_at + 2 * k)? as f32 * PROBE_SCALE * band[k];
+            }
+            let indices_at = scales_at + 2 * align(SH_COEFFICIENTS, 2);
+            let counts_at = indices_at + 4 * references;
+            let mut refs = Vec::with_capacity(references);
+            for d in 0..dependency_count {
+                for _ in 0..r.u16(counts_at + 2 * d)? {
+                    refs.push((d as u8, r.u32(indices_at + 4 * refs.len())?));
+                }
+            }
+            ensure!(
+                refs.len() == references,
+                "light probe reference counts do not add up"
+            );
+            let weights = bytes
+                .chunks_exact(SH_COEFFICIENTS)
+                .map(|b| std::array::from_fn(|k| (b[k] as f32 - PROBE_BYTE_ZERO) * scale[k]))
+                .collect();
+            Ok(Probe {
+                references: refs,
+                weights,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(ProbeSet {
+        hash,
+        dependencies,
+        probes,
+    })
+}
+
 /// A scene's precomputed realtime GI.
 #[derive(Debug, Clone)]
 pub struct Precomputed {
     pub systems: Vec<System>,
+    /// The light probe sets lit by the systems.
+    pub probe_sets: Vec<ProbeSet>,
     /// Realtime lightmap atlas sizes.
     pub atlas_sizes: Vec<u32>,
     /// The scene mapping's renderers (scene object id, prefab id) in mapping order.
@@ -611,8 +721,17 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
             chart_mask,
         });
     }
+    let probe_sets = seq(mapping, "m_Probesets")
+        .iter()
+        .map(|h| {
+            let hash = hash128(h)?;
+            read_probe_set(hash, file(&hash, "rpc.ref")?)
+                .with_context(|| format!("light probe set {}", hex(&hash)))
+        })
+        .collect::<Result<Vec<_>>>()?;
     Ok(Some(Precomputed {
         systems,
+        probe_sets,
         atlas_sizes,
         renderers,
         renderer_st,
