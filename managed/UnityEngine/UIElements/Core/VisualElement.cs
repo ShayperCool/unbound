@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -92,6 +93,7 @@ namespace UnityEngine.UIElements
 
         // ---- identity ----
 
+        [CreateProperty]
         public string name
         {
             get => m_Name;
@@ -124,18 +126,24 @@ namespace UnityEngine.UIElements
 
         internal string fullTypeName => GetType().FullName;
 
+        [CreateProperty]
         public string viewDataKey { get => m_ViewDataKey; set => m_ViewDataKey = value; }
 
+        [CreateProperty]
         public object userData { get => m_UserData; set => m_UserData = value; }
 
+        [CreateProperty]
         public string tooltip { get => m_Tooltip ?? string.Empty; set => m_Tooltip = value; }
 
+        [CreateProperty]
         public UsageHints usageHints { get => m_UsageHints; set => m_UsageHints = value; }
 
+        [CreateProperty]
         public bool disablePlayModeTint { get; set; }
 
         public LanguageDirection languageDirection { get => m_LanguageDirection; set => m_LanguageDirection = value; }
 
+        [CreateProperty(ReadOnly = true)]
         public VisualTreeAsset visualTreeAssetSource { get => m_VisualTreeAssetSource; internal set => m_VisualTreeAssetSource = value; }
 
         public Action<MeshGenerationContext> generateVisualContent { get; set; }
@@ -219,8 +227,10 @@ namespace UnityEngine.UIElements
             set => m_PseudoStates = value;
         }
 
+        [CreateProperty(ReadOnly = true)]
         public bool enabledInHierarchy => (pseudoStates & PseudoStates.Disabled) != PseudoStates.Disabled;
 
+        [CreateProperty]
         public bool enabledSelf
         {
             get => m_EnabledSelf;
@@ -287,12 +297,14 @@ namespace UnityEngine.UIElements
             return before != enabledInHierarchy;
         }
 
+        [CreateProperty]
         public PickingMode pickingMode
         {
             get => m_PickingMode;
             set => m_PickingMode = value;
         }
 
+        [CreateProperty]
         public bool visible
         {
             get => resolvedStyle.visibility == Visibility.Visible;
@@ -346,6 +358,7 @@ namespace UnityEngine.UIElements
 
         // ---- panel and events ----
 
+        [CreateProperty(ReadOnly = true)]
         public IPanel panel => elementPanel;
 
         public sealed override void SendEvent(EventBase e) => elementPanel?.SendEvent(e, DispatchMode.Default);
@@ -390,6 +403,7 @@ namespace UnityEngine.UIElements
         {
             if (elementPanel == null) return;
             UaUnregisterRunningAnimations();
+            UaUnregisterBindings();
             uaTransitions?.CancelAll();
             elementPanel.OnElementLeavingPanel(this);
             if (!m_NeedsAttach)
@@ -408,6 +422,7 @@ namespace UnityEngine.UIElements
             {
                 yogaNode.Config = elementPanel.uaLayoutConfig;
                 UaRegisterRunningAnimations();
+                UaRegisterBindings();
                 pseudoStatesNoNotify &= ~(PseudoStates.Active | PseudoStates.Hover | PseudoStates.Focus);
                 if (m_NeedsAttach)
                 {
@@ -497,6 +512,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty(ReadOnly = true)]
         public int childCount
         {
             get
@@ -793,12 +809,15 @@ namespace UnityEngine.UIElements
 
         // ---- style sheets and styles ----
 
+        [CreateProperty(ReadOnly = true)]
         public VisualElementStyleSheetSet styleSheets => new VisualElementStyleSheetSet(this);
 
+        [CreateProperty]
         public IStyle style => m_InlineStyle ??= new InlineStyle(this);
 
         internal bool hasInlineStyle => m_InlineStyle != null;
 
+        [CreateProperty]
         public IResolvedStyle resolvedStyle => m_ResolvedStyle ??= new ResolvedStyle(this);
 
         public ICustomStyle customStyle => m_CustomStyle ??= new UaCustomStyle(this);

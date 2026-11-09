@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 
 namespace UnityEngine.UIElements
@@ -29,6 +30,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Background iconImage
         {
             get => m_IconImage;
@@ -227,6 +229,7 @@ namespace UnityEngine.UIElements
         bool m_ScaleModeIsInline;
         bool m_TintColorIsInline;
 
+        [CreateProperty]
         public Texture image
         {
             get => m_Image;
@@ -238,6 +241,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Sprite sprite
         {
             get => m_Sprite;
@@ -249,6 +253,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public VectorImage vectorImage
         {
             get => m_VectorImage;
@@ -260,6 +265,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Rect sourceRect
         {
             get => GetSourceRect();
@@ -275,12 +281,14 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Rect uv
         {
             get => m_UV;
             set => m_UV = value;
         }
 
+        [CreateProperty]
         public ScaleMode scaleMode
         {
             get => m_ScaleMode;
@@ -292,6 +300,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Color tintColor
         {
             get => m_TintColor;

@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections.Generic;
 
@@ -16,8 +17,11 @@ namespace UnityEngine.UIElements
 
         public abstract FocusController focusController { get; }
 
+        [CreateProperty]
         public virtual bool focusable { get => m_Focusable; set => m_Focusable = value; }
+        [CreateProperty]
         public int tabIndex { get => m_TabIndex; set => m_TabIndex = value; }
+        [CreateProperty]
         public bool delegatesFocus { get => m_DelegatesFocus; set => m_DelegatesFocus = value; }
 
         internal bool excludeFromFocusRing
@@ -32,6 +36,7 @@ namespace UnityEngine.UIElements
 
         internal bool isEligibleToReceiveFocusFromDisabledChild { get; set; } = true;
 
+        [CreateProperty(ReadOnly = true)]
         public virtual bool canGrabFocus => focusable;
 
         protected Focusable()

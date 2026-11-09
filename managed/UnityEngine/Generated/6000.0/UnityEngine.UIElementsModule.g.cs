@@ -195,9 +195,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class BaseField<TValueType> : global::UnityEngine.UIElements.IMixedValueSupport, global::UnityEngine.UIElements.IPrefixLabel, global::UnityEngine.UIElements.IEditableElement
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId valueProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId labelProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showMixedValueProperty;
         [global::Unbound.Stub] protected internal static readonly global::UnityEngine.PropertyName serializedPropertyCopyName;
         [global::Unbound.Stub] internal global::System.Action<global::UnityEngine.ExpressionEvaluator.Expression> expressionEvaluated;
         global::System.Action global::UnityEngine.UIElements.IEditableElement.editingStarted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingStarted"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingStarted"); } }
@@ -230,7 +227,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId makeHeaderProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId makeFooterProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showAddRemoveFooterProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId bindingSourceSelectionModeProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId reorderModeProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId makeNoneElementProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId allowAddProperty;
@@ -239,8 +235,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId allowRemoveProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId onRemoveProperty;
         [global::Unbound.Stub] internal void SetOverMaxMultiEditLimit(bool isOverLimit, int maxMultiEditCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.SetOverMaxMultiEditLimit"); }
-        public global::UnityEngine.UIElements.BindingSourceSelectionMode bindingSourceSelectionMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.bindingSourceSelectionMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.bindingSourceSelectionMode"); } }
-        internal bool autoAssignSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.autoAssignSource"); return default; } }
         internal global::UnityEngine.UIElements.TextField arraySizeField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.arraySizeField"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
@@ -488,28 +482,9 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.UxmlSerializedData.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct BindablePropertyChangedEventArgs
-    {
-        [global::Unbound.Stub] public BindablePropertyChangedEventArgs(in global::UnityEngine.UIElements.BindingId propertyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindablePropertyChangedEventArgs.ctor"); }
-        public global::UnityEngine.UIElements.BindingId propertyName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindablePropertyChangedEventArgs.propertyName"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class Binding
+    unsafe partial class Binding
     {
         internal const string k_UpdateTriggerTooltip = "This informs the binding system of whether the binding object should be updated on every frame, when a change occurs in the source or on every frame if change detection is impossible, and when explicitly marked as dirty.";
-        [global::Unbound.Stub] public static void SetGlobalLogLevel(global::UnityEngine.UIElements.BindingLogLevel logLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.SetGlobalLogLevel"); }
-        [global::Unbound.Stub] public static void SetPanelLogLevel(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.UIElements.BindingLogLevel logLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.SetPanelLogLevel"); }
-        [global::Unbound.Stub] public static void ResetPanelLogLevel(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.ResetPanelLogLevel"); }
-        [global::Unbound.Stub] internal Binding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.ctor"); }
-        [global::Unbound.Stub] public void MarkDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.MarkDirty"); }
-        [global::Unbound.Stub] internal void ClearDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.ClearDirty"); }
-        [global::Unbound.Stub] protected internal virtual void OnActivated(in global::UnityEngine.UIElements.BindingActivationContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.OnActivated"); }
-        [global::Unbound.Stub] protected internal virtual void OnDeactivated(in global::UnityEngine.UIElements.BindingActivationContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.OnDeactivated"); }
-        [global::Unbound.Stub] protected internal virtual void OnDataSourceChanged(in global::UnityEngine.UIElements.DataSourceContextChanged context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.OnDataSourceChanged"); }
-        internal string property { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.property"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.property"); } }
-        public bool isDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.isDirty"); return default; } }
-        public global::UnityEngine.UIElements.BindingUpdateTrigger updateTrigger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.updateTrigger"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.updateTrigger"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData
@@ -520,54 +495,10 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.UxmlSerializedData.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct BindingActivationContext
-    {
-        [global::Unbound.Stub] internal BindingActivationContext(global::UnityEngine.UIElements.VisualElement element, in global::UnityEngine.UIElements.BindingId property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingActivationContext.ctor"); }
-        public global::UnityEngine.UIElements.VisualElement targetElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingActivationContext.targetElement"); return default; } }
-        public global::UnityEngine.UIElements.BindingId bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingActivationContext.bindingId"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct BindingContext
-    {
-        [global::Unbound.Stub] internal BindingContext(global::UnityEngine.UIElements.VisualElement targetElement, in global::UnityEngine.UIElements.BindingId bindingId, in global::Unity.Properties.PropertyPath resolvedDataSourcePath, object resolvedDataSource) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingContext.ctor"); }
-        public global::UnityEngine.UIElements.VisualElement targetElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingContext.targetElement"); return default; } }
-        public global::UnityEngine.UIElements.BindingId bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingContext.bindingId"); return default; } }
-        public global::Unity.Properties.PropertyPath dataSourcePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingContext.dataSourcePath"); return default; } }
-        public object dataSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingContext.dataSource"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct BindingId : global::System.IEquatable<global::UnityEngine.UIElements.BindingId>
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEngine.UIElements.BindingId Invalid;
-        [global::Unbound.Stub] public BindingId(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.ctor"); }
-        [global::Unbound.Stub] public BindingId(in global::Unity.Properties.PropertyPath path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::Unity.Properties.PropertyPath(in global::UnityEngine.UIElements.BindingId vep) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator string(in global::UnityEngine.UIElements.BindingId vep) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.BindingId(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.BindingId(in global::Unity.Properties.PropertyPath path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.op_Implicit"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.ToString"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.BindingId other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(in global::UnityEngine.UIElements.BindingId lhs, in global::UnityEngine.UIElements.BindingId rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(in global::UnityEngine.UIElements.BindingId lhs, in global::UnityEngine.UIElements.BindingId rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingId.op_Inequality"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct BindingInfo
+    unsafe readonly partial struct BindingInfo
     {
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.BindingInfo FromRequest(global::UnityEngine.UIElements.VisualElement target, in global::Unity.Properties.PropertyPath targetPath, global::UnityEngine.UIElements.Binding binding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.FromRequest"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.BindingInfo FromBindingData(in global::UnityEngine.UIElements.DataBindingManager.BindingData bindingData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.FromBindingData"); return default; }
-        public global::UnityEngine.UIElements.VisualElement targetElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.targetElement"); return default; } }
-        public global::UnityEngine.UIElements.BindingId bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.bindingId"); return default; } }
-        public global::UnityEngine.UIElements.Binding binding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.binding"); return default; } }
-    }
-    public enum BindingMode
-    {
-        TwoWay = 0,
-        ToSource = 1,
-        ToTarget = 2,
-        ToTargetOnce = 3,
     }
     [global::Unbound.Stub]
     internal unsafe partial class BindingModeDrawerAttribute : global::UnityEngine.PropertyAttribute
@@ -578,24 +509,6 @@ namespace UnityEngine.UIElements
     internal unsafe partial class BindingPathDrawerAttribute : global::UnityEngine.PropertyAttribute
     {
         [global::Unbound.Stub] public BindingPathDrawerAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingPathDrawerAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct BindingResult
-    {
-        [global::Unbound.Stub] public BindingResult(global::UnityEngine.UIElements.BindingStatus status, string message = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingResult.ctor"); }
-        public global::UnityEngine.UIElements.BindingStatus status { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingResult.status"); return default; } }
-        public string message { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingResult.message"); return default; } }
-    }
-    public enum BindingSourceSelectionMode
-    {
-        Manual = 0,
-        AutoAssign = 1,
-    }
-    public enum BindingStatus
-    {
-        Success = 0,
-        Failure = 1,
-        Pending = 2,
     }
     [global::Unbound.Stub]
     internal unsafe readonly partial struct BindingTarget
@@ -613,17 +526,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public readonly global::Unity.Properties.PropertyPath resolvedPath;
         [global::Unbound.Stub] internal BindingTypeResult(global::System.Type type, in global::Unity.Properties.PropertyPath resolvedPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingTypeResult.ctor"); }
         [global::Unbound.Stub] internal BindingTypeResult(global::Unity.Properties.VisitReturnCode returnCode, int errorIndex, in global::Unity.Properties.PropertyPath resolvedPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingTypeResult.ctor"); }
-    }
-    internal enum BindingUpdateStage
-    {
-        UpdateUI = 0,
-        UpdateSource = 1,
-    }
-    public enum BindingUpdateTrigger
-    {
-        WhenDirty = 0,
-        OnSourceChanged = 1,
-        EveryUpdate = 2,
     }
     [global::Unbound.Stub]
     internal unsafe partial class BindingUpdater
@@ -787,7 +689,6 @@ namespace UnityEngine.UIElements
         internal const string ExecuteDefaultActionName = "ExecuteDefaultAction";
         internal const string ExecuteDefaultActionAtTargetName = "ExecuteDefaultActionAtTarget";
         [global::Unbound.Stub] internal void RegisterCallback<TEventType>(global::UnityEngine.UIElements.EventCallback<TEventType> callback, global::UnityEngine.UIElements.InvokePolicy invokePolicy, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.RegisterCallback"); }
-        [global::Unbound.Stub] protected void NotifyPropertyChanged(in global::UnityEngine.UIElements.BindingId property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.NotifyPropertyChanged"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ChunkAllocatingArray<T>
@@ -1087,30 +988,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public bool isConverterToSource;
         [global::Unbound.Stub] public ConverterDrawerAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterDrawerAttribute.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ConverterGroup
+    unsafe static partial class ConverterGroups
     {
-        [global::Unbound.Stub] public ConverterGroup(string id, string displayName = null, string description = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroup.ctor"); }
-        [global::Unbound.Stub] public void AddConverter<TSource, TDestination>(global::Unity.Properties.TypeConverter<TSource, TDestination> converter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroup.AddConverter"); }
-        [global::Unbound.Stub] public bool TryConvert<TSource, TDestination>(ref TSource source, out TDestination destination) { destination = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroup.TryConvert"); return default; }
-        [global::Unbound.Stub] public bool TrySetValue<TContainer, TValue>(ref TContainer container, in global::Unity.Properties.PropertyPath path, TValue value, out global::Unity.Properties.VisitReturnCode returnCode) { returnCode = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroup.TrySetValue"); return default; }
-        public string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroup.id"); return default; } }
-        public string displayName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroup.displayName"); return default; } }
-        public string description { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroup.description"); return default; } }
-        internal global::UnityEngine.UIElements.TypeConverterRegistry registry { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroup.registry"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class ConverterGroups
-    {
-        [global::Unbound.Stub] public static void RegisterGlobalConverter<TSource, TDestination>(global::Unity.Properties.TypeConverter<TSource, TDestination> converter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.RegisterGlobalConverter"); }
-        [global::Unbound.Stub] internal static void RegisterGlobal<TSource, TDestination>(global::Unity.Properties.TypeConverter<TSource, TDestination> converter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.RegisterGlobal"); }
-        [global::Unbound.Stub] internal static void AddConverterToGroup<TSource, TDestination>(string groupId, global::Unity.Properties.TypeConverter<TSource, TDestination> converter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.AddConverterToGroup"); }
-        [global::Unbound.Stub] public static void RegisterConverterGroup(global::UnityEngine.UIElements.ConverterGroup converterGroup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.RegisterConverterGroup"); }
-        [global::Unbound.Stub] public static bool TryGetConverterGroup(string groupId, out global::UnityEngine.UIElements.ConverterGroup converterGroup) { converterGroup = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.TryGetConverterGroup"); return default; }
-        [global::Unbound.Stub] internal static void GetAllConverterGroups(global::System.Collections.Generic.List<global::UnityEngine.UIElements.ConverterGroup> result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.GetAllConverterGroups"); }
-        [global::Unbound.Stub] public static bool TryConvert<TSource, TDestination>(ref TSource source, out TDestination destination) { destination = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.TryConvert"); return default; }
-        [global::Unbound.Stub] public static bool TrySetValueGlobal<TContainer, TValue>(ref TContainer container, in global::Unity.Properties.PropertyPath path, TValue value, out global::Unity.Properties.VisitReturnCode returnCode) { returnCode = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.TrySetValueGlobal"); return default; }
-        internal static global::UnityEngine.UIElements.ConverterGroup globalConverters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.globalConverters"); return default; } }
         internal static global::UnityEngine.UIElements.ConverterGroup primitivesConverters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.primitivesConverters"); return default; } }
     }
     [global::Unbound.Stub]
@@ -1164,11 +1043,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public CursorManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CursorManager.ctor"); }
         public bool isCursorOverriden { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CursorManager.isCursorOverriden"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class CustomBinding : global::UnityEngine.UIElements.Binding
+    unsafe partial class CustomBinding
     {
-        [global::Unbound.Stub] protected CustomBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomBinding.ctor"); }
-        [global::Unbound.Stub] protected internal virtual global::UnityEngine.UIElements.BindingResult Update(in global::UnityEngine.UIElements.BindingContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomBinding.Update"); return default; }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.Binding.UxmlSerializedData
@@ -1176,29 +1052,17 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomBinding.UxmlSerializedData.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class DataBinding : global::UnityEngine.UIElements.Binding, global::UnityEngine.UIElements.IDataSourceProvider
+    unsafe partial class DataBinding
     {
         internal const string k_DataSourceTooltip = "A data source is a collection of information. By default, a binding will inherit the existing data source from the hierarchy. You can instead define another object here as the data source, or define the type of property it may be if the source is not yet available.";
         internal const string k_DataSourcePathTooltip = "The path to the value in the data source used by this binding. To see resolved bindings in the UI Builder, define a path that is compatible with the target source property.";
         internal const string k_BindingModeTooltip = "Controls how a binding is updated, which can include the direction in which data is written.";
         internal const string k_SourceToUiConvertersTooltip = "Define one or more converter groups for this binding that will be used between the data source to the target UI.";
         internal const string k_UiToSourceConvertersTooltip = "Define one or more converter groups for this binding that will be used between the target UI to the data source.";
-        [global::Unbound.Stub] public DataBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.ctor"); }
-        [global::Unbound.Stub] public void ApplyConverterGroupToSource(global::UnityEngine.UIElements.ConverterGroup group) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.ApplyConverterGroupToSource"); }
-        [global::Unbound.Stub] public void ApplyConverterGroupToUI(global::UnityEngine.UIElements.ConverterGroup group) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.ApplyConverterGroupToUI"); }
-        [global::Unbound.Stub] protected internal virtual global::UnityEngine.UIElements.BindingResult UpdateUI<TValue>(in global::UnityEngine.UIElements.BindingContext context, ref TValue value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.UpdateUI"); return default; }
-        [global::Unbound.Stub] protected internal virtual global::UnityEngine.UIElements.BindingResult UpdateSource<TValue>(in global::UnityEngine.UIElements.BindingContext context, ref TValue value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.UpdateSource"); return default; }
         [global::Unbound.Stub] internal static string GetSetValueErrorString<TValue>(global::Unity.Properties.VisitReturnCode returnCode, object source, in global::Unity.Properties.PropertyPath sourcePath, object target, in global::UnityEngine.UIElements.BindingId targetPath, TValue extractedValueFromSource) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.GetSetValueErrorString"); return default; }
         internal static global::System.Reflection.MethodInfo updateUIMethod { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.updateUIMethod"); return default; } }
-        public object dataSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSource"); } }
-        public global::System.Type dataSourceType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourceType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourceType"); } }
         internal string dataSourceTypeString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourceTypeString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourceTypeString"); } }
-        public global::Unity.Properties.PropertyPath dataSourcePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourcePath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourcePath"); } }
         internal string dataSourcePathString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourcePathString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourcePathString"); } }
-        public global::UnityEngine.UIElements.BindingMode bindingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.bindingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.bindingMode"); } }
-        public global::UnityEngine.UIElements.ConverterGroup sourceToUiConverters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.sourceToUiConverters"); return default; } }
-        public global::UnityEngine.UIElements.ConverterGroup uiToSourceConverters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.uiToSourceConverters"); return default; } }
         internal string sourceToUiConvertersString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.sourceToUiConvertersString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.sourceToUiConvertersString"); } }
         internal string uiToSourceConvertersString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.uiToSourceConvertersString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.uiToSourceConvertersString"); } }
         [global::System.Serializable]
@@ -1306,22 +1170,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.BindingTypeResult IsPathValid(global::System.Type type, string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBindingUtility.IsPathValid"); return default; }
         [global::Unbound.Stub] public static void GetPropertyPaths(object dataSource, int depth, global::System.Collections.Generic.List<global::UnityEngine.UIElements.PropertyPathInfo> listResult) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBindingUtility.GetPropertyPaths"); }
         [global::Unbound.Stub] public static void GetPropertyPaths(global::System.Type type, int depth, global::System.Collections.Generic.List<global::UnityEngine.UIElements.PropertyPathInfo> listResult) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBindingUtility.GetPropertyPaths"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct DataSourceContext
-    {
-        [global::Unbound.Stub] public DataSourceContext(object dataSource, in global::Unity.Properties.PropertyPath dataSourcePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceContext.ctor"); }
-        public object dataSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceContext.dataSource"); return default; } }
-        public global::Unity.Properties.PropertyPath dataSourcePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceContext.dataSourcePath"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct DataSourceContextChanged
-    {
-        [global::Unbound.Stub] internal DataSourceContextChanged(global::UnityEngine.UIElements.VisualElement element, in global::UnityEngine.UIElements.BindingId bindingId, in global::UnityEngine.UIElements.DataSourceContext previousContext, in global::UnityEngine.UIElements.DataSourceContext newContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceContextChanged.ctor"); }
-        public global::UnityEngine.UIElements.VisualElement targetElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceContextChanged.targetElement"); return default; } }
-        public global::UnityEngine.UIElements.BindingId bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceContextChanged.bindingId"); return default; } }
-        public global::UnityEngine.UIElements.DataSourceContext previousContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceContextChanged.previousContext"); return default; } }
-        public global::UnityEngine.UIElements.DataSourceContext newContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceContextChanged.newContext"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class DataSourceDrawerAttribute : global::UnityEngine.PropertyAttribute
@@ -2189,22 +2037,9 @@ namespace UnityEngine.UIElements
         void SetCursor(global::UnityEngine.UIElements.Cursor cursor);
         void ResetCursor();
     }
-    public unsafe partial interface IDataSourceProvider
-    {
-        object dataSource { get; }
-        global::Unity.Properties.PropertyPath dataSourcePath { get; }
-    }
-    public unsafe partial interface IDataSourceViewHashProvider
-    {
-        long GetViewHashCode();
-    }
     public unsafe partial interface IDebugPanelChangeReceiver
     {
         void OnVisualElementChange(global::UnityEngine.UIElements.VisualElement element, global::UnityEngine.UIElements.VersionChangeType changeType);
-    }
-    internal unsafe partial interface IDelayedField
-    {
-        bool isDelayed { get; }
     }
     public unsafe partial interface IDragAndDropEvent
     {
@@ -2337,10 +2172,6 @@ namespace UnityEngine.UIElements
     public unsafe partial interface IMixedValueSupport
     {
         bool showMixedValue { get; set; }
-    }
-    public unsafe partial interface INotifyBindablePropertyChanged
-    {
-        event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged;
     }
     internal unsafe partial interface IPanelDebug
     {
@@ -4576,8 +4407,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId enableRichTextProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId isElidedProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId parseEscapeSequencesProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId valueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId autoCorrectionProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId hideMobileInputProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId keyboardTypeProperty;
@@ -4665,7 +4494,7 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.UxmlTraits.ctor"); }
         }
     }
-    unsafe partial class TextInputBaseField<TValueType> : global::UnityEngine.UIElements.IDelayedField
+    unsafe partial class TextInputBaseField<TValueType>
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId autoCorrectionProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId hideMobileInputProperty;
@@ -5189,22 +5018,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] protected void OnPointerUp(global::UnityEngine.UIElements.PointerUpEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.OnPointerUp"); }
         [global::Unbound.Stub] protected void InterruptPointerMove(global::UnityEngine.UIElements.PointerMoveEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.InterruptPointerMove"); }
         public float delta { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.delta"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe readonly partial struct TypeConverterRegistry : global::System.Collections.Generic.IEqualityComparer<global::UnityEngine.UIElements.TypeConverterRegistry>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.TypeConverterRegistry Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.Create"); return default; }
-        [global::Unbound.Stub] public void Register(global::System.Type source, global::System.Type destination, global::System.Delegate converter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.Register"); }
-        [global::Unbound.Stub] public void Unregister(global::System.Type source, global::System.Type destination) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.Unregister"); }
-        [global::Unbound.Stub] internal void Apply(global::UnityEngine.UIElements.TypeConverterRegistry registry) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.Apply"); }
-        [global::Unbound.Stub] public global::System.Delegate GetConverter(global::System.Type source, global::System.Type destination) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.GetConverter"); return default; }
-        [global::Unbound.Stub] public bool TryGetConverter(global::System.Type source, global::System.Type destination, out global::System.Delegate converter) { converter = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.TryGetConverter"); return default; }
-        [global::Unbound.Stub] public void GetAllTypesConvertingToType(global::System.Type type, global::System.Collections.Generic.List<global::System.Type> result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.GetAllTypesConvertingToType"); }
-        [global::Unbound.Stub] public void GetAllTypesConvertingFromType(global::System.Type type, global::System.Collections.Generic.List<global::System.Type> result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.GetAllTypesConvertingFromType"); }
-        [global::Unbound.Stub] public void GetAllConversions(global::System.Collections.Generic.List<global::System.ValueTuple<global::System.Type, global::System.Type>> result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.GetAllConversions"); }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.TypeConverterRegistry x, global::UnityEngine.UIElements.TypeConverterRegistry y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.Equals"); return default; }
-        [global::Unbound.Stub] public int GetHashCode(global::UnityEngine.UIElements.TypeConverterRegistry obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.GetHashCode"); return default; }
-        public int ConverterCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypeConverterRegistry.ConverterCount"); return default; } }
     }
     unsafe partial class UIDocument
     {
@@ -6180,8 +5993,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal int imguiContainerDescendantCount;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId childCountProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId contentRectProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId dataSourcePathProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId dataSourceProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId disablePlayModeTintProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId enabledInHierarchyProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId enabledSelfProperty;
@@ -6262,18 +6073,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void ApplyPlayerRenderingToEditorElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ApplyPlayerRenderingToEditorElement"); }
         [global::Unbound.Stub] internal void RegisterAnimation(global::UnityEngine.UIElements.Experimental.IValueAnimationUpdate anim) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.RegisterAnimation"); }
         [global::Unbound.Stub] internal void UnregisterAnimation(global::UnityEngine.UIElements.Experimental.IValueAnimationUpdate anim) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UnregisterAnimation"); }
-        [global::Unbound.Stub] public void SetBinding(global::UnityEngine.UIElements.BindingId bindingId, global::UnityEngine.UIElements.Binding binding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetBinding"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.Binding GetBinding(global::UnityEngine.UIElements.BindingId bindingId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetBinding"); return default; }
-        [global::Unbound.Stub] public bool TryGetBinding(global::UnityEngine.UIElements.BindingId bindingId, out global::UnityEngine.UIElements.Binding binding) { binding = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.TryGetBinding"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.BindingInfo> GetBindingInfos() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetBindingInfos"); return global::System.Array.Empty<global::UnityEngine.UIElements.BindingInfo>(); }
-        [global::Unbound.Stub] public bool HasBinding(global::UnityEngine.UIElements.BindingId bindingId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.HasBinding"); return default; }
-        [global::Unbound.Stub] public void ClearBinding(global::UnityEngine.UIElements.BindingId bindingId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ClearBinding"); }
-        [global::Unbound.Stub] public void ClearBindings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ClearBindings"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.DataSourceContext GetHierarchicalDataSourceContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetHierarchicalDataSourceContext"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.DataSourceContext GetDataSourceContext(global::UnityEngine.UIElements.BindingId bindingId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetDataSourceContext"); return default; }
-        [global::Unbound.Stub] public bool TryGetDataSourceContext(global::UnityEngine.UIElements.BindingId bindingId, out global::UnityEngine.UIElements.DataSourceContext context) { context = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.TryGetDataSourceContext"); return default; }
-        [global::Unbound.Stub] public bool TryGetLastBindingToUIResult(in global::UnityEngine.UIElements.BindingId bindingId, out global::UnityEngine.UIElements.BindingResult result) { result = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.TryGetLastBindingToUIResult"); return default; }
-        [global::Unbound.Stub] public bool TryGetLastBindingToSourceResult(in global::UnityEngine.UIElements.BindingId bindingId, out global::UnityEngine.UIElements.BindingResult result) { result = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.TryGetLastBindingToSourceResult"); return default; }
         [global::Unbound.Stub] internal void AddBindingRequest(global::UnityEngine.UIElements.BindingId bindingId, global::UnityEngine.UIElements.Binding binding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.AddBindingRequest"); }
         [global::Unbound.Stub] internal void SetAsNextParentWithEventInterests() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetAsNextParentWithEventInterests"); }
         [global::Unbound.Stub] internal bool GetCachedNextParentWithEventInterests(out global::UnityEngine.UIElements.VisualElement nextParent) { nextParent = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetCachedNextParentWithEventInterests"); return default; }
@@ -6343,11 +6142,8 @@ namespace UnityEngine.UIElements
         internal global::UnityEngine.UIElements.LanguageDirection localLanguageDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.localLanguageDirection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.localLanguageDirection"); } }
         internal global::UnityEngine.UIElements.VisualElement.RenderTargetMode subRenderTargetMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.subRenderTargetMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.subRenderTargetMode"); } }
         internal global::UnityEngine.Material defaultMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.defaultMaterial"); return default; } }
-        public object dataSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSource"); } }
         internal global::UnityEngine.Object dataSourceUnityObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceUnityObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceUnityObject"); } }
-        public global::Unity.Properties.PropertyPath dataSourcePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourcePath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourcePath"); } }
         internal string dataSourcePathString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourcePathString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourcePathString"); } }
-        public global::System.Type dataSourceType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceType"); } }
         internal string dataSourceTypeString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceTypeString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceTypeString"); } }
         internal global::UnityEngine.UIElements.VisualElement nextParentWithEventInterests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.nextParentWithEventInterests"); return default; } }
         internal int eventInterestSelfCategories { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.eventInterestSelfCategories"); return default; } }

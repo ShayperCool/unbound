@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -42,6 +43,7 @@ namespace UnityEngine.UIElements
         /// <summary>The indent per level from --unity-tree-view-indent, when set.</summary>
         internal float? customIdent { get; private set; }
 
+        [CreateProperty(ReadOnly = true)]
         public new IList itemsSource
         {
             get => viewController?.itemsSource;
@@ -51,6 +53,7 @@ namespace UnityEngine.UIElements
         public new BaseTreeViewController viewController => base.viewController as BaseTreeViewController;
 
         /// <summary>Items added while set are expanded; setting it refreshes the rows.</summary>
+        [CreateProperty]
         public bool autoExpand
         {
             get => m_AutoExpand;
@@ -260,6 +263,7 @@ namespace UnityEngine.UIElements
         Action<VisualElement> m_DestroyItem;
 
         // A new makeItem rebuilds the rows, a new bindItem refreshes them.
+        [CreateProperty]
         public new Func<VisualElement> makeItem
         {
             get => m_MakeItem;
@@ -271,6 +275,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public VisualTreeAsset itemTemplate
         {
             get => m_ItemTemplate;
@@ -283,6 +288,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public new Action<VisualElement, int> bindItem
         {
             get => m_BindItem;
@@ -294,12 +300,14 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public new Action<VisualElement, int> unbindItem
         {
             get => m_UnbindItem;
             set => m_UnbindItem = value;
         }
 
+        [CreateProperty]
         public new Action<VisualElement> destroyItem
         {
             get => m_DestroyItem;
@@ -324,14 +332,7 @@ namespace UnityEngine.UIElements
 
         VisualElement TemplateMakeItem() => m_ItemTemplate != null ? m_ItemTemplate.Instantiate() : new Label(k_InvalidTemplateError);
 
-        /// <summary>Rows come from <see cref="itemTemplate"/> with no <see cref="bindItem"/>: the
-        /// template is set, makeItem is still its factory and no bind callback is set. Unbound has no
-        /// runtime data binding yet, so the rows are shown unbound (with a notice).</summary>
-        internal bool bindsTemplateWithoutBindItem =>
-            m_ItemTemplate != null && m_BindItem == null && ReferenceEquals(m_MakeItem, m_TemplateMakeItem);
-
-        internal override bool HasValidDataAndBindings() =>
-            base.HasValidDataAndBindings() && ((makeItem != null) == (bindItem != null) || bindsTemplateWithoutBindItem);
+        internal override bool HasValidDataAndBindings() => base.HasValidDataAndBindings() && (makeItem != null) == (bindItem != null);
 
         protected override CollectionViewController CreateViewController() => new DefaultTreeViewController<object>();
 
@@ -781,13 +782,6 @@ namespace UnityEngine.UIElements
         {
             if (treeView.bindItem == null)
             {
-                if (treeView.bindsTemplateWithoutBindItem)
-                {
-                    // Unbound interim: the template row is shown as instantiated, without data.
-                    Unbound.Runtime.Stubs.Ignored("TreeView.itemTemplate",
-                        "rows are shown unbound: runtime data binding (bindItem omitted with an item template) not implemented");
-                    return;
-                }
                 if (treeView.makeItem != null) throw new NotImplementedException("You must specify bindItem if makeItem is specified.");
                 ((Label)element).text = GetItemForIndex(index)?.ToString() ?? "null";
                 return;

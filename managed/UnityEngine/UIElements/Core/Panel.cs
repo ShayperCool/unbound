@@ -41,6 +41,9 @@ namespace UnityEngine.UIElements
     internal abstract partial class BaseVisualElementPanel : IPanel, IDisposable
     {
         internal readonly UaValueAnimationSystem uaValueAnimations = new UaValueAnimationSystem();
+        private protected UaDataBindingSystem m_UaDataBinding;
+
+        internal UaDataBindingSystem uaDataBinding => m_UaDataBinding ??= new UaDataBindingSystem(this);
 
         float m_Scale = 1f;
         float m_PixelsPerPoint = 1f;
@@ -159,6 +162,7 @@ namespace UnityEngine.UIElements
         internal void UaOnVersionChanged(VisualElement ve, VersionChangeType change)
         {
             uaVersion++;
+            if ((change & VersionChangeType.Hierarchy) != 0) m_UaDataBinding?.OnHierarchyChanged();
             if ((change & k_PickingChanges) != 0)
             {
                 m_UaHierarchyFlagsVersion++;
@@ -603,9 +607,15 @@ namespace UnityEngine.UIElements
 
         internal void Repaint(Event e)
         {
+            UaUpdateDataBindingForRepaint();
             uaRepaintVersion = uaVersion;
             ValidateLayout();
         }
+
+        /// <summary>Data bindings update when the panel repaints, before its styles and layout (a
+        /// panel update without a repaint leaves them as they were, as in Unity's Editor:
+        /// tests/projects/uitkcollections binding section).</summary>
+        internal void UaUpdateDataBindingForRepaint() => m_UaDataBinding?.Update();
 
         public override void Render() => PanelRendering.Render(this);
     }

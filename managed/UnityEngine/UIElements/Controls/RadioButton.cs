@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections.Generic;
 
@@ -201,6 +202,7 @@ namespace UnityEngine.UIElements
         bool m_Rebuilding;
         bool m_Syncing;
 
+        [CreateProperty]
         public IEnumerable<string> choices
         {
             get => m_Choices;

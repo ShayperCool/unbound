@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -100,8 +101,10 @@ namespace UnityEngine.UIElements
             m_TemplateSource = templateSource;
         }
 
+        [CreateProperty(ReadOnly = true)]
         public string templateId { get; private set; }
 
+        [CreateProperty(ReadOnly = true)]
         public VisualTreeAsset templateSource { get => m_TemplateSource; internal set => m_TemplateSource = value; }
 
         public override VisualElement contentContainer => m_ContentContainer;

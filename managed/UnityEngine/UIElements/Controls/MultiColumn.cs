@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -93,10 +94,13 @@ namespace UnityEngine.UIElements
         Action<VisualElement, int> m_BindCell;
         Action<VisualElement, int> m_UnbindCell;
 
+        [CreateProperty]
         public string name { get => m_Name; set { if (m_Name == value) return; m_Name = value; NotifyChange(ColumnDataType.Name); } }
 
+        [CreateProperty]
         public string title { get => m_Title; set { if (m_Title == value) return; m_Title = value; NotifyChange(ColumnDataType.Title); } }
 
+        [CreateProperty]
         public Background icon { get => m_Icon; set { if (m_Icon == value) return; m_Icon = value; NotifyChange(ColumnDataType.Icon); } }
 
         public Comparison<int> comparison { get; set; }
@@ -107,10 +111,12 @@ namespace UnityEngine.UIElements
 
         internal int visibleIndex => collection != null ? collection.visibleColumns.IndexOf(this) : -1;
 
+        [CreateProperty]
         public bool visible { get => m_Visible; set { if (m_Visible == value) return; m_Visible = value; NotifyChange(ColumnDataType.Visibility); } }
 
         /// <summary>The width (points or a percentage of the header width); setting it forgets the
         /// laid-out width.</summary>
+        [CreateProperty]
         public Length width
         {
             get => m_Width;
@@ -123,8 +129,10 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Length minWidth { get => m_MinWidth; set { if (m_MinWidth == value) return; m_MinWidth = value; NotifyChange(ColumnDataType.MinWidth); } }
 
+        [CreateProperty]
         public Length maxWidth { get => m_MaxWidth; set { if (m_MaxWidth == value) return; m_MaxWidth = value; NotifyChange(ColumnDataType.MaxWidth); } }
 
         /// <summary>The laid-out width (NaN until laid out).</summary>
@@ -139,18 +147,24 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool sortable { get => m_Sortable; set { if (m_Sortable == value) return; m_Sortable = value; NotifyChange(ColumnDataType.Sortable); } }
 
+        [CreateProperty]
         public bool stretchable { get => m_Stretchable; set { if (m_Stretchable == value) return; m_Stretchable = value; NotifyChange(ColumnDataType.Stretchable); } }
 
+        [CreateProperty]
         public bool optional { get => m_Optional; set { if (m_Optional == value) return; m_Optional = value; NotifyChange(ColumnDataType.Optional); } }
 
+        [CreateProperty]
         public bool resizable { get => m_Resizable; set { if (m_Resizable == value) return; m_Resizable = value; NotifyChange(ColumnDataType.Resizable); } }
 
         public string bindingPath { get; set; }
 
+        [CreateProperty]
         public VisualTreeAsset headerTemplate { get => m_HeaderTemplate; set { if (m_HeaderTemplate == value) return; m_HeaderTemplate = value; NotifyChange(ColumnDataType.HeaderTemplate); } }
 
+        [CreateProperty]
         public VisualTreeAsset cellTemplate { get => m_CellTemplate; set { if (m_CellTemplate == value) return; m_CellTemplate = value; NotifyChange(ColumnDataType.CellTemplate); } }
 
         public Func<VisualElement> makeHeader { get => m_MakeHeader; set { if (m_MakeHeader == value) return; m_MakeHeader = value; NotifyChange(ColumnDataType.HeaderTemplate); } }
@@ -206,12 +220,16 @@ namespace UnityEngine.UIElements
 
         internal IList<Column> columns => m_Columns;
 
+        [CreateProperty]
         public string primaryColumnName { get => m_PrimaryColumnName; set { if (m_PrimaryColumnName == value) return; m_PrimaryColumnName = value; NotifyChange(ColumnsDataType.PrimaryColumn); } }
 
+        [CreateProperty]
         public bool reorderable { get => m_Reorderable; set { if (m_Reorderable == value) return; m_Reorderable = value; NotifyChange(ColumnsDataType.Reorderable); } }
 
+        [CreateProperty]
         public bool resizable { get => m_Resizable; set { if (m_Resizable == value) return; m_Resizable = value; NotifyChange(ColumnsDataType.Resizable); } }
 
+        [CreateProperty]
         public bool resizePreview { get => m_ResizePreview; set { if (m_ResizePreview == value) return; m_ResizePreview = value; NotifyChange(ColumnsDataType.ResizePreview); } }
 
         internal IEnumerable<Column> displayList => displayColumns;
@@ -242,6 +260,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public StretchMode stretchMode { get => m_StretchMode; set { if (m_StretchMode == value) return; m_StretchMode = value; NotifyChange(ColumnsDataType.StretchMode); } }
 
         public int Count => m_Columns.Count;
@@ -351,12 +370,15 @@ namespace UnityEngine.UIElements
         string m_ColumnName;
         SortDirection m_SortDirection;
 
+        [CreateProperty]
         public string columnName { get => m_ColumnName; set { if (m_ColumnName == value) return; m_ColumnName = value; changed?.Invoke(this); } }
 
+        [CreateProperty]
         public int columnIndex { get => m_ColumnIndex; set { if (m_ColumnIndex == value) return; m_ColumnIndex = value; changed?.Invoke(this); } }
 
         public Column column { get; internal set; }
 
+        [CreateProperty]
         public SortDirection direction { get => m_SortDirection; set { if (m_SortDirection == value) return; m_SortDirection = value; changed?.Invoke(this); } }
 
         internal event Action<SortColumnDescription> changed;
@@ -1357,6 +1379,7 @@ namespace UnityEngine.UIElements
 
         public IEnumerable<SortColumnDescription> sortedColumns => m_State.sortedColumns;
 
+        [CreateProperty]
         public Columns columns
         {
             get => m_State.columns;
@@ -1372,6 +1395,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public SortColumnDescriptions sortColumnDescriptions
         {
             get => m_State.sortDescriptions;
@@ -1384,6 +1408,7 @@ namespace UnityEngine.UIElements
             set => sortingMode = value ? ColumnSortingMode.Custom : ColumnSortingMode.None;
         }
 
+        [CreateProperty]
         public ColumnSortingMode sortingMode
         {
             get => m_State.sortingMode;
@@ -1527,6 +1552,7 @@ namespace UnityEngine.UIElements
 
         public IEnumerable<SortColumnDescription> sortedColumns => m_State.sortedColumns;
 
+        [CreateProperty]
         public Columns columns
         {
             get => m_State.columns;
@@ -1542,6 +1568,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public SortColumnDescriptions sortColumnDescriptions
         {
             get => m_State.sortDescriptions;
@@ -1554,6 +1581,7 @@ namespace UnityEngine.UIElements
             set => sortingMode = value ? ColumnSortingMode.Custom : ColumnSortingMode.None;
         }
 
+        [CreateProperty]
         public ColumnSortingMode sortingMode
         {
             get => m_State.sortingMode;

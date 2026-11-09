@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using Unbound.UIElements;
 using Unbound.UIElements.Layout;
@@ -21,6 +22,7 @@ namespace UnityEngine.UIElements
 
         internal float scaledPixelsPerPointNoWarning => elementPanel?.scaledPixelsPerPoint ?? GUIUtility.pixelsPerPoint;
 
+        [CreateProperty(ReadOnly = true)]
         public Rect layout
         {
             get
@@ -88,6 +90,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty(ReadOnly = true)]
         public Rect contentRect
         {
             get
@@ -212,6 +215,7 @@ namespace UnityEngine.UIElements
         /// <summary>The element's transform to panel space, computed when first asked after a transform
         /// change of the element or an ancestor (as Unity caches it: elements hidden by display none
         /// keep the world transform they last had).</summary>
+        [CreateProperty(ReadOnly = true)]
         public Matrix4x4 worldTransform
         {
             get
@@ -285,6 +289,7 @@ namespace UnityEngine.UIElements
             return new Rect(minX, minY, maxX - minX, maxY - minY);
         }
 
+        [CreateProperty(ReadOnly = true)]
         public Rect worldBound
         {
             get
@@ -295,6 +300,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty(ReadOnly = true)]
         public Rect localBound
         {
             get

@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections.Generic;
 
@@ -20,12 +21,14 @@ namespace UnityEngine.UIElements
         float m_HighValue = 100f;
         float m_Value;
 
+        [CreateProperty]
         public string title
         {
             get => m_Title.text;
             set => m_Title.text = value;
         }
 
+        [CreateProperty]
         public float lowValue
         {
             get => m_LowValue;
@@ -36,6 +39,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public float highValue
         {
             get => m_HighValue;
@@ -46,6 +50,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public virtual float value
         {
             get => m_Value;
@@ -150,12 +155,14 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool toggleOnLabelClick
         {
             get => m_Toggle.toggleOnTextClick;
             set => m_Toggle.toggleOnTextClick = value;
         }
 
+        [CreateProperty]
         public string text
         {
             get => m_Toggle.text;
@@ -166,6 +173,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool value
         {
             get => m_Value;
@@ -273,6 +281,7 @@ namespace UnityEngine.UIElements
 
         protected TextElement textElement => m_TextElement;
 
+        [CreateProperty]
         public virtual List<TValueChoice> choices
         {
             get => m_Choices;
@@ -283,6 +292,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty(ReadOnly = true)]
         public string text => m_TextElement.text;
 
         internal abstract string GetValueToDisplay();
@@ -395,6 +405,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public int index
         {
             get => m_Index;

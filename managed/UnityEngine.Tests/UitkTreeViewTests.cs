@@ -447,53 +447,19 @@ namespace UnityEngine.Tests
             return capture;
         }
 
-        // [doc] TreeView.itemTemplate: "A UXML template that constructs each recycled and rebound
-        // element within the tree. This template is designed to replace the makeItem definition."
-        // The pages do not say what such rows show when no bindItem is set.
-        // [interim] (Root grant Tree_mirror, an explicitly labelled Unbound interim, not Unity
-        // behaviour) A tree whose rows come from an item template set in C# with no bindItem shows one
-        // unbound template row per visible item and reports the missing runtime data binding through
-        // Stubs.Ignored: every bind is counted, the warning is logged once per process (so here only
-        // if nothing reported the member before), and no exception is thrown or logged. The rows'
-        // label keeps the template's empty text: no data is bound.
-        // Red on 411b77c2 (this file overlaid; every member it uses exists there): the tree is not
-        // valid (makeItem set, bindItem not), so engine refreshes make no row;
-        // Assert.True(view.HasValidDataAndBindings()) fails.
+        // [doc] A tree with an item template and no bindItem is not valid (makeItem without
+        // bindItem): it shows no rows.
         [Fact]
-        public void TemplateRowsWithoutBindItemAreShownUnboundWithOneNotice()
+        public void TemplateRowsWithoutBindItemAreNotShown()
         {
             var template = ScriptableObject.CreateInstance<VisualTreeAsset>();
             template.name = "UitkTreeViewRow";
             UxmlImporter.Import("Assets/UI/UitkTreeViewRow.uxml", "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label name=\"row-label\" /></ui:UXML>", template);
             var view = new TreeView { fixedItemHeight = 20f };
             view.itemTemplate = template;
-            view.SetRootItems(new List<TreeViewItemData<string>>
-            {
-                new TreeViewItemData<string>(1, "a"),
-                new TreeViewItemData<string>(2, "b"),
-                new TreeViewItemData<string>(3, "c"),
-            });
-            Assert.Same(template, view.itemTemplate);
+            view.SetRootItems(new List<TreeViewItemData<string>> { new TreeViewItemData<string>(1, "a") });
             Assert.Null(view.bindItem);
-            Assert.True(view.HasValidDataAndBindings());
-
-            int before = Hits(UnboundTemplateMember);
-            var capture = Captured(() => view.virtualizationController.Resize(new Vector2(100f, 100f)));
-            var rows = view.activeItems.OrderBy(r => r.index).ToList();
-            Assert.Equal(new[] { 0, 1, 2 }, rows.Select(r => r.index));
-            foreach (var row in rows)
-            {
-                var container = Assert.IsType<TemplateContainer>(row.bindableElement);
-                Assert.Same(template, container.templateSource);
-                var label = container.Q<Label>("row-label");
-                Assert.NotNull(label);
-                Assert.True(string.IsNullOrEmpty(label.text));
-            }
-            Assert.Equal(3, rows.Select(r => r.bindableElement).Distinct().Count());
-            Assert.Equal(0, capture.Exceptions);
-            Assert.Equal(before + 3, Hits(UnboundTemplateMember));
-            Assert.Equal(before == 0 ? 1 : 0, capture.Notices.Count);
-            if (before == 0) Assert.StartsWith(UnboundTemplateNotice, capture.Notices[0]);
+            Assert.False(view.HasValidDataAndBindings());
         }
 
         /// <summary>A tree whose rows come from a one-Label item template set in C#, with 20-pixel rows,
@@ -535,24 +501,6 @@ namespace UnityEngine.Tests
             Assert.Equal(before, Hits(UnboundTemplateMember));
         }
 
-        // [interim] Control: clearing the template ends the exemption. makeItem stays the template's
-        // factory (the itemTemplate setter keeps it), so the tree is again an unpaired makeItem and
-        // is not valid.
-        // Red at 411b77c2: the first Assert.True(view.HasValidDataAndBindings()) fails (no
-        // exemption). Red at head under a mutation dropping the "there is a template" term: the
-        // cleared tree stays valid.
-        [Fact]
-        public void ClearingTheTemplateEndsTheTreeExemption()
-        {
-            var view = TemplatedTree(out _);
-            Assert.True(view.HasValidDataAndBindings());
-
-            view.itemTemplate = null;
-            Assert.Null(view.itemTemplate);
-            Assert.NotNull(view.makeItem);
-            Assert.Null(view.bindItem);
-            Assert.False(view.HasValidDataAndBindings());
-        }
 
         // ------------------------------------------------------------------ USS classes and rows
 

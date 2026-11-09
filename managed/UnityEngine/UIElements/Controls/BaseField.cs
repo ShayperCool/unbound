@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections.Generic;
 
@@ -47,6 +48,11 @@ namespace UnityEngine.UIElements
 
         internal DispatchMode dispatchMode { get; set; } = DispatchMode.Default;
 
+        internal static readonly BindingId valueProperty = nameof(value);
+        internal static readonly BindingId labelProperty = nameof(label);
+        internal static readonly BindingId showMixedValueProperty = nameof(showMixedValue);
+
+        [CreateProperty]
         public virtual TValueType value
         {
             get => m_Value;
@@ -62,11 +68,13 @@ namespace UnityEngine.UIElements
                     evt.elementTarget = this;
                     SendEvent(evt, dispatchMode);
                 }
+                NotifyPropertyChanged(valueProperty);
             }
         }
 
         public Label labelElement { get; private set; }
 
+        [CreateProperty]
         public string label
         {
             get => labelElement.text;
@@ -84,9 +92,11 @@ namespace UnityEngine.UIElements
                     hierarchy.Insert(0, labelElement);
                     RemoveFromClassList(noLabelVariantUssClassName);
                 }
+                NotifyPropertyChanged(labelProperty);
             }
         }
 
+        [CreateProperty]
         public bool showMixedValue
         {
             get => m_ShowMixedValue;
@@ -95,6 +105,7 @@ namespace UnityEngine.UIElements
                 if (value == m_ShowMixedValue || (value && !canSwitchToMixedValue)) return;
                 m_ShowMixedValue = value;
                 UpdateMixedValueContent();
+                NotifyPropertyChanged(showMixedValueProperty);
             }
         }
 
@@ -212,10 +223,12 @@ namespace UnityEngine.UIElements
             set => m_Clickable.acceptClicksIfDisabled = value;
         }
 
+        [CreateProperty]
         public bool toggleOnLabelClick { get; set; } = true;
 
         internal bool toggleOnTextClick { get; set; } = true;
 
+        [CreateProperty]
         public string text
         {
             get => m_Label?.text;

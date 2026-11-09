@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 
 // MinMaxSlider, from the Unity 6000.0 Manual page "MinMaxSlider" (UI Toolkit control reference) and
@@ -66,12 +67,14 @@ namespace UnityEngine.UIElements
 
         internal DragPart navigationPart => m_NavigationPart;
 
+        [CreateProperty]
         public float minValue
         {
             get => value.x;
             set => this.value = new Vector2(ClampToLimits(value), Mathf.Max(this.value.y, ClampToLimits(value)));
         }
 
+        [CreateProperty]
         public float maxValue
         {
             get => value.y;
@@ -84,8 +87,10 @@ namespace UnityEngine.UIElements
             set => base.value = ClampValue(value);
         }
 
+        [CreateProperty(ReadOnly = true)]
         public float range => Math.Abs(m_HighLimit - m_LowLimit);
 
+        [CreateProperty]
         public float lowLimit
         {
             get => m_LowLimit;
@@ -98,6 +103,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public float highLimit
         {
             get => m_HighLimit;

@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections.Generic;
 
@@ -85,6 +86,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool reorderable
         {
             get => m_Reorderable;
@@ -222,6 +224,7 @@ namespace UnityEngine.UIElements
 
         public override VisualElement contentContainer => m_ContentContainer;
 
+        [CreateProperty]
         public string label
         {
             get => m_Label;
@@ -235,6 +238,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Background iconImage
         {
             get => m_IconImage;
@@ -260,6 +264,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool closeable
         {
             get => m_Closeable;

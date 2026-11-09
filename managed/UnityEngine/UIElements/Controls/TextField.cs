@@ -1,10 +1,11 @@
+using Unity.Properties;
 using System;
 
 namespace UnityEngine.UIElements
 {
     /// <summary>A field edited as text: its input (named unity-text-input) holds an editable,
     /// selectable TextElement that takes the focus for the field.</summary>
-    public abstract partial class TextInputBaseField<TValueType> : BaseField<TValueType>
+    public abstract partial class TextInputBaseField<TValueType> : BaseField<TValueType>, IDelayedField
     {
         static readonly CustomStyleProperty<Color> s_SelectionColorProperty = new CustomStyleProperty<Color>("--unity-selection-color");
         static readonly CustomStyleProperty<Color> s_CursorColorProperty = new CustomStyleProperty<Color>("--unity-cursor-color");
@@ -46,8 +47,10 @@ namespace UnityEngine.UIElements
 
             internal TextElement textElement { get; private set; }
 
+            [CreateProperty(ReadOnly = true)]
             public ITextSelection textSelection => textElement.selection;
 
+            [CreateProperty(ReadOnly = true)]
             public ITextEdition textEdition => textElement.edition;
 
             internal bool isDragging { get; set; }
@@ -63,24 +66,28 @@ namespace UnityEngine.UIElements
 
             internal string originalText => textElement.originalText;
 
+            [CreateProperty]
             public bool isReadOnly
             {
                 get => textEdition.isReadOnly;
                 set => textEdition.isReadOnly = value;
             }
 
+            [CreateProperty]
             public int maxLength
             {
                 get => textEdition.maxLength;
                 set => textEdition.maxLength = value;
             }
 
+            [CreateProperty]
             public char maskChar
             {
                 get => textEdition.maskChar;
                 set => textEdition.maskChar = value;
             }
 
+            [CreateProperty]
             public virtual bool isPasswordField
             {
                 get => textEdition.isPassword;
@@ -99,16 +106,20 @@ namespace UnityEngine.UIElements
                 set => textElement.cursorColor = value;
             }
 
+            [CreateProperty]
             public int cursorIndex => textSelection.cursorIndex;
 
+            [CreateProperty]
             public int selectIndex => textSelection.selectIndex;
 
+            [CreateProperty]
             public bool doubleClickSelectsWord
             {
                 get => textSelection.doubleClickSelectsWord;
                 set => textSelection.doubleClickSelectsWord = value;
             }
 
+            [CreateProperty]
             public bool tripleClickSelectsLine
             {
                 get => textSelection.tripleClickSelectsLine;
@@ -375,12 +386,14 @@ namespace UnityEngine.UIElements
             set => isReadOnly = value;
         }
 
+        [CreateProperty]
         internal string placeholderText
         {
             get => textEdition.placeholder;
             set => textEdition.placeholder = value;
         }
 
+        [CreateProperty]
         internal bool hidePlaceholderOnFocus
         {
             get => textEdition.hidePlaceholderOnFocus;
@@ -416,18 +429,21 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool autoCorrection
         {
             get => textEdition.autoCorrection;
             set => textEdition.autoCorrection = value;
         }
 
+        [CreateProperty]
         public bool hideMobileInput
         {
             get => textEdition.hideMobileInput;
             set => textEdition.hideMobileInput = value;
         }
 
+        [CreateProperty]
         public TouchScreenKeyboardType keyboardType
         {
             get => textEdition.keyboardType;
@@ -442,6 +458,7 @@ namespace UnityEngine.UIElements
             set => textEdition.maxLength = value;
         }
 
+        [CreateProperty]
         public bool isDelayed
         {
             get => textEdition.isDelayed;
@@ -466,6 +483,7 @@ namespace UnityEngine.UIElements
             set => textSelection.cursorIndex = value;
         }
 
+        [CreateProperty(ReadOnly = true)]
         public Vector2 cursorPosition => textSelection.cursorPosition;
 
         public int selectIndex
@@ -474,12 +492,14 @@ namespace UnityEngine.UIElements
             set => textSelection.selectIndex = value;
         }
 
+        [CreateProperty]
         public bool selectAllOnFocus
         {
             get => textSelection.selectAllOnFocus;
             set => textSelection.selectAllOnFocus = value;
         }
 
+        [CreateProperty]
         public bool selectAllOnMouseUp
         {
             get => textSelection.selectAllOnMouseUp;
@@ -504,6 +524,7 @@ namespace UnityEngine.UIElements
             protected internal set => m_TextInputBase.text = value;
         }
 
+        [CreateProperty]
         public bool emojiFallbackSupport
         {
             get => m_TextInputBase.textElement.emojiFallbackSupport;
@@ -514,6 +535,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public ScrollerVisibility verticalScrollerVisibility
         {
             get => textInputBase.verticalScrollerVisibility;
@@ -639,6 +661,7 @@ namespace UnityEngine.UIElements
         {
             TextField parentTextField => (TextField)parent;
 
+            [CreateProperty]
             public bool multiline
             {
                 get => textEdition.multiline;

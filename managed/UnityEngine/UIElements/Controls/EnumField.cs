@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -77,6 +78,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty(ReadOnly = true)]
         public string text => m_TextElement.text;
 
         public EnumField() : this(null, null) { }

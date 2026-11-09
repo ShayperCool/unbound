@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -138,6 +139,7 @@ namespace UnityEngine.UIElements
         long m_LastPointerDownTimeStamp;
         int m_PointerDownCount;
 
+        [CreateProperty]
         public IList itemsSource
         {
             get => viewController?.itemsSource;
@@ -175,6 +177,7 @@ namespace UnityEngine.UIElements
         [Unbound.EditorFaithful("Unity's too: a collection view's children come from its items, not from Add")]
         public override VisualElement contentContainer => null;
 
+        [CreateProperty]
         public SelectionType selectionType
         {
             get => m_SelectionType;
@@ -186,8 +189,10 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty(ReadOnly = true)]
         public object selectedItem => m_Selection.FirstObject();
 
+        [CreateProperty(ReadOnly = true)]
         public IEnumerable<object> selectedItems
         {
             get
@@ -197,12 +202,14 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public int selectedIndex
         {
             get => m_Selection.indexCount == 0 ? -1 : m_Selection.FirstIndex();
             set => SetSelection(value);
         }
 
+        [CreateProperty(ReadOnly = true)]
         public IEnumerable<int> selectedIndices => m_Selection.indices;
 
         public IEnumerable<int> selectedIds => m_Selection.selectedIds;
@@ -218,6 +225,7 @@ namespace UnityEngine.UIElements
         [Obsolete("resolvedItemHeight is deprecated and will be removed from the API.")]
         public float resolvedItemHeight => ResolveItemHeight();
 
+        [CreateProperty]
         public bool showBorder
         {
             get => m_ScrollView.ClassListContains(borderUssClassName);
@@ -226,6 +234,7 @@ namespace UnityEngine.UIElements
 
         /// <summary>Whether rows can be reordered by dragging (the drag controller's switch); a change
         /// rebuilds the view.</summary>
+        [CreateProperty]
         public bool reorderable
         {
             get => m_Dragger?.dragAndDropController?.enableReordering == true;
@@ -288,6 +297,7 @@ namespace UnityEngine.UIElements
             m_Dragger.dragAndDropController = dragAndDropController;
         }
 
+        [CreateProperty]
         public bool horizontalScrollingEnabled
         {
             get => m_HorizontalScrollingEnabled;
@@ -300,6 +310,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public AlternatingRowBackground showAlternatingRowBackgrounds
         {
             get => m_ShowAlternatingRowBackgrounds;
@@ -311,6 +322,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public CollectionVirtualizationMethod virtualizationMethod
         {
             get => m_VirtualizationMethod;
@@ -330,6 +342,7 @@ namespace UnityEngine.UIElements
             set => fixedItemHeight = value;
         }
 
+        [CreateProperty]
         public float fixedItemHeight
         {
             get => m_FixedItemHeight;
@@ -986,6 +999,7 @@ namespace UnityEngine.UIElements
         Action<IEnumerable<int>> m_ItemRemovedCallback;
         Action m_ItemsSourceSizeChangedCallback;
 
+        [CreateProperty]
         public bool showBoundCollectionSize
         {
             get => m_ShowBoundCollectionSize;
@@ -999,6 +1013,7 @@ namespace UnityEngine.UIElements
 
         /// <summary>A foldout titled <see cref="headerTitle"/> around the scroll view (and the footer),
         /// with the size field beside its toggle.</summary>
+        [CreateProperty]
         public bool showFoldoutHeader
         {
             get => m_ShowFoldoutHeader;
@@ -1035,6 +1050,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public string headerTitle
         {
             get => m_HeaderTitle;
@@ -1046,6 +1062,7 @@ namespace UnityEngine.UIElements
         }
 
         /// <summary>A game header replaces the foldout header.</summary>
+        [CreateProperty]
         public Func<VisualElement> makeHeader
         {
             get => m_MakeHeader;
@@ -1094,6 +1111,7 @@ namespace UnityEngine.UIElements
         }
 
         /// <summary>A game footer replaces the add/remove footer.</summary>
+        [CreateProperty]
         public Func<VisualElement> makeFooter
         {
             get => m_MakeFooter;
@@ -1126,6 +1144,7 @@ namespace UnityEngine.UIElements
 
         /// <summary>A footer with "+" and "-" buttons that add an item and remove the selection (or the
         /// last item).</summary>
+        [CreateProperty]
         public bool showAddRemoveFooter
         {
             get => m_Footer != null;
@@ -1144,6 +1163,27 @@ namespace UnityEngine.UIElements
         public new BaseListViewController viewController => base.viewController as BaseListViewController;
 
         /// <summary>A new mode replaces the dragger (keeping whether reordering is on) and rebuilds.</summary>
+        [CreateProperty]
+        internal static readonly BindingId bindingSourceSelectionModeProperty = nameof(bindingSourceSelectionMode);
+        BindingSourceSelectionMode m_BindingSourceSelectionMode;
+
+        /// <summary>AutoAssign: each row's data source is the items source and its data source path
+        /// the row's index, so bindings in the row read its item.</summary>
+        [CreateProperty]
+        public BindingSourceSelectionMode bindingSourceSelectionMode
+        {
+            get => m_BindingSourceSelectionMode;
+            set
+            {
+                if (m_BindingSourceSelectionMode == value) return;
+                m_BindingSourceSelectionMode = value;
+                Rebuild();
+                NotifyPropertyChanged(bindingSourceSelectionModeProperty);
+            }
+        }
+
+        internal bool autoAssignSource => m_BindingSourceSelectionMode == BindingSourceSelectionMode.AutoAssign;
+
         public ListViewReorderMode reorderMode
         {
             get => m_ReorderMode;
@@ -1157,6 +1197,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Func<VisualElement> makeNoneElement
         {
             get => m_MakeNoneElement;
@@ -1169,6 +1210,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool allowAdd
         {
             get => m_AllowAdd;
@@ -1181,6 +1223,7 @@ namespace UnityEngine.UIElements
         }
 
         /// <summary>Replaces what "+" does; setting it (as onAdd and onRemove) refreshes the rows.</summary>
+        [CreateProperty]
         public Action<BaseListView, Button> overridingAddButtonBehavior
         {
             get => m_OverridingAddButtonBehavior;
@@ -1192,6 +1235,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Action<BaseListView> onAdd
         {
             get => m_OnAdd;
@@ -1203,6 +1247,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool allowRemove
         {
             get => m_AllowRemove;
@@ -1214,6 +1259,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public Action<BaseListView> onRemove
         {
             get => m_OnRemove;
@@ -1473,6 +1519,7 @@ namespace UnityEngine.UIElements
         Action<VisualElement, int> m_UnbindItem;
         Action<VisualElement> m_DestroyItem;
 
+        [CreateProperty]
         public new Func<VisualElement> makeItem
         {
             get => m_MakeItem;
@@ -1484,6 +1531,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public VisualTreeAsset itemTemplate
         {
             get => m_ItemTemplate;
@@ -1496,6 +1544,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public new Action<VisualElement, int> bindItem
         {
             get => m_BindItem;
@@ -1507,12 +1556,14 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public new Action<VisualElement, int> unbindItem
         {
             get => m_UnbindItem;
             set => m_UnbindItem = value;
         }
 
+        [CreateProperty]
         public new Action<VisualElement> destroyItem
         {
             get => m_DestroyItem;
@@ -1525,17 +1576,10 @@ namespace UnityEngine.UIElements
 
         internal void SetBindItemWithoutNotify(Action<VisualElement, int> callback) => m_BindItem = callback;
 
-        /// <summary>Rows come from <see cref="itemTemplate"/> with no <see cref="bindItem"/>: there is a
-        /// template, makeItem is still the template factory the itemTemplate setter assigned (not a
-        /// game callback), and no bind callback is set. Unity documents this as the codeless workflow,
-        /// filled by bindings (bindingSourceSelectionMode AutoAssign). Unbound has no runtime data
-        /// binding yet, so its interim is to show the template rows unbound, with a warning, instead
-        /// of an empty list. Replacing makeItem or clearing the template ends the exemption.</summary>
-        internal bool bindsTemplateWithoutBindItem =>
-            m_ItemTemplate != null && m_BindItem == null && ReferenceEquals(m_MakeItem, m_TemplateMakeItem);
-
+        /// <summary>A list is shown with matching makeItem and bindItem, or with makeItem (an item
+        /// template) and no bindItem when its rows get their data sources automatically.</summary>
         internal override bool HasValidDataAndBindings() =>
-            base.HasValidDataAndBindings() && ((makeItem != null) == (bindItem != null) || bindsTemplateWithoutBindItem);
+            base.HasValidDataAndBindings() && ((autoAssignSource && makeItem != null) || (makeItem != null) == (bindItem != null));
 
         protected override CollectionViewController CreateViewController() => new ListViewController();
 
@@ -1684,7 +1728,13 @@ namespace UnityEngine.UIElements
             s.flexShrink = 0f;
         }
 
-        internal override void SetBindingContext(ReusableCollectionItem reusableItem, int index) => base.SetBindingContext(reusableItem, index);
+        internal override void SetBindingContext(ReusableCollectionItem reusableItem, int index)
+        {
+            base.SetBindingContext(reusableItem, index);
+            if (!baseListView.autoAssignSource) return;
+            reusableItem.rootElement.dataSource = itemsSource;
+            reusableItem.rootElement.dataSourcePath = PropertyPath.FromIndex(GetIdForIndex(index));
+        }
 
         /// <summary>Animated reordering shows the drag handle on rows that need one.</summary>
         internal override void InvokeBindItem(ReusableCollectionItem reusableItem, int index)
@@ -1828,14 +1878,8 @@ namespace UnityEngine.UIElements
         {
             if (listView.bindItem == null)
             {
-                if (listView.bindsTemplateWithoutBindItem)
-                {
-                    // Unbound interim: the template row is shown as instantiated. No data is bound and
-                    // no data source is assigned to it.
-                    Unbound.Runtime.Stubs.Ignored("ListView.itemTemplate",
-                        "rows are shown unbound: runtime data binding (bindItem omitted with an item template) not implemented");
-                    return;
-                }
+                // Rows with automatic data sources are filled by their bindings.
+                if (listView.autoAssignSource && listView.makeItem != null) return;
                 if (listView.makeItem != null) throw new NotImplementedException("You must specify bindItem if makeItem is specified.");
                 if (element is Label label)
                 {

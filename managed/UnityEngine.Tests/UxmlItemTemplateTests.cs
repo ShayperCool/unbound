@@ -244,38 +244,27 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ rows without bindItem
 
-        // [interim] A template list with no bindItem shows one unbound template row per item and
-        // reports the missing runtime data binding through Stubs.Ignored: every bind is counted, the
-        // warning is logged once per process (so here only if nothing reported the member before),
-        // and no exception is thrown or logged. The rows' label keeps the template's empty text: no
-        // data is bound.
-        // Red at 437bd059: the list is not valid (makeItem set, bindItem not), so engine refreshes
-        // make no row; Assert.True(list.HasValidDataAndBindings()) fails.
+        // [doc] A template list with no bindItem is shown only when its rows get their data sources
+        // automatically (bindingSourceSelectionMode AutoAssign): each row's data source is the items
+        // source and its data source path the row's index, so bindings in the template read the item.
         [Fact]
-        public void TemplateRowsWithoutBindItemAreShownUnboundWithOneNotice()
+        public void TemplateRowsWithoutBindItemNeedAutoAssignedSources()
         {
             using var row = new RowFile();
             var list = TemplatedList(row);
             Assert.Null(list.bindItem);
+            Assert.False(list.HasValidDataAndBindings());
+            list.bindingSourceSelectionMode = BindingSourceSelectionMode.AutoAssign;
             Assert.True(list.HasValidDataAndBindings());
-
-            int before = Hits(UnboundTemplateMember);
-            List<VisualElement> rows = null;
-            var capture = Captured(() => rows = Rows(list));
+            var rows = Rows(list);
             Assert.Equal(3, rows.Count);
-            foreach (var element in rows)
+            for (int i = 0; i < rows.Count; i++)
             {
-                var container = Assert.IsType<TemplateContainer>(element);
+                var container = Assert.IsType<TemplateContainer>(rows[i]);
                 Assert.Same(row.Template, container.templateSource);
-                var label = container.Q<Label>("row-label");
-                Assert.NotNull(label);
-                Assert.True(string.IsNullOrEmpty(label.text));
+                Assert.Same(list.itemsSource, container.dataSource);
+                Assert.Equal("[" + i + "]", container.dataSourcePath.ToString());
             }
-            Assert.Equal(3, rows.Distinct().Count());
-            Assert.Equal(0, capture.Exceptions);
-            Assert.Equal(before + 3, Hits(UnboundTemplateMember));
-            Assert.Equal(before == 0 ? 1 : 0, capture.Notices.Count);
-            if (before == 0) Assert.StartsWith(UnboundTemplateNotice, capture.Notices[0]);
         }
 
         // [interim] Control: a game makeItem without bindItem is still rejected, also on a list that
@@ -344,23 +333,19 @@ namespace UnityEngine.Tests
             Assert.Equal(before, Hits(UnboundTemplateMember));
         }
 
-        // [interim] Control: clearing the template ends the exemption. makeItem stays the template's
-        // factory (the itemTemplate setter keeps it), so the list is again an unpaired makeItem and
-        // is not valid.
-        // Red at 437bd059: the first Assert.True(list.HasValidDataAndBindings()) fails (no
-        // exemption). Red at head under a mutation dropping the "there is a template" term: the
-        // cleared list stays valid.
+        // [doc] Control: the automatic sources depend on makeItem, not on the template: a cleared
+        // template keeps its factory as makeItem, so the list stays valid with AutoAssign and not
+        // with Manual.
         [Fact]
-        public void ClearingTheTemplateEndsTheExemption()
+        public void AutoAssignedSourcesDependOnMakeItem()
         {
             using var row = new RowFile();
             var list = TemplatedList(row);
-            Assert.True(list.HasValidDataAndBindings());
-
+            list.bindingSourceSelectionMode = BindingSourceSelectionMode.AutoAssign;
             list.itemTemplate = null;
-            Assert.Null(list.itemTemplate);
             Assert.NotNull(list.makeItem);
-            Assert.Null(list.bindItem);
+            Assert.True(list.HasValidDataAndBindings());
+            list.bindingSourceSelectionMode = BindingSourceSelectionMode.Manual;
             Assert.False(list.HasValidDataAndBindings());
         }
 

@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using Unbound.UIElements;
 
@@ -67,12 +68,17 @@ namespace UnityEngine.UIElements
             edition.GetDefaultValueType = () => string.Empty;
         }
 
+        internal static readonly BindingId textProperty = nameof(text);
+        internal static readonly BindingId valueProperty = "value";
+
+        [CreateProperty]
         public virtual string text
         {
             get => ((INotifyValueChanged<string>)this).value;
             set => ((INotifyValueChanged<string>)this).value = value;
         }
 
+        [CreateProperty]
         public bool enableRichText
         {
             get => m_EnableRichText;
@@ -84,6 +90,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool emojiFallbackSupport
         {
             get => m_EmojiFallbackSupport;
@@ -95,6 +102,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool parseEscapeSequences
         {
             get => m_ParseEscapeSequences;
@@ -106,12 +114,14 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool displayTooltipWhenElided
         {
             get => m_DisplayTooltipWhenElided;
             set => m_DisplayTooltipWhenElided = value;
         }
 
+        [CreateProperty(ReadOnly = true)]
         public bool isElided { get; private set; }
 
         internal UITKTextHandle uitkTextHandle { get; set; }
@@ -131,6 +141,8 @@ namespace UnityEngine.UIElements
                         e.elementTarget = this;
                         ((INotifyValueChanged<string>)this).SetValueWithoutNotify(value);
                         SendEvent(e);
+                        NotifyPropertyChanged(valueProperty);
+                        NotifyPropertyChanged(textProperty);
                     }
                     return;
                 }
@@ -395,6 +407,7 @@ namespace UnityEngine.UIElements
 
         // ---- ITextSelection ----
 
+        [CreateProperty(ReadOnly = true)]
         public ITextSelection selection => this;
 
         internal UaTextSelectingManipulator uaSelecting => m_Selecting ??= new UaTextSelectingManipulator(this);
@@ -412,6 +425,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         internal bool isSelectable
         {
             get => selection.isSelectable;
@@ -442,6 +456,7 @@ namespace UnityEngine.UIElements
             set => m_DoubleClickSelectsWord = value;
         }
 
+        [CreateProperty]
         internal bool doubleClickSelectsWord
         {
             get => selection.doubleClickSelectsWord;
@@ -454,6 +469,7 @@ namespace UnityEngine.UIElements
             set => m_TripleClickSelectsLine = value;
         }
 
+        [CreateProperty]
         internal bool tripleClickSelectsLine
         {
             get => selection.tripleClickSelectsLine;

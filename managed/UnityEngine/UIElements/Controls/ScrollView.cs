@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 
 namespace UnityEngine.UIElements
@@ -25,24 +26,28 @@ namespace UnityEngine.UIElements
         public RepeatButton lowButton { get; }
         public RepeatButton highButton { get; }
 
+        [CreateProperty]
         public float value
         {
             get => slider.value;
             set => slider.value = value;
         }
 
+        [CreateProperty]
         public float lowValue
         {
             get => slider.lowValue;
             set => slider.lowValue = value;
         }
 
+        [CreateProperty]
         public float highValue
         {
             get => slider.highValue;
             set => slider.highValue = value;
         }
 
+        [CreateProperty]
         public SliderDirection direction
         {
             get => resolvedStyle.flexDirection != FlexDirection.Row ? SliderDirection.Vertical : SliderDirection.Horizontal;
@@ -201,6 +206,7 @@ namespace UnityEngine.UIElements
         public static readonly string verticalHorizontalVariantUssClassName = ussClassName + "--vertical-horizontal";
         public static readonly string scrollVariantUssClassName = ussClassName + "--scroll";
 
+        [CreateProperty]
         public ScrollerVisibility horizontalScrollerVisibility
         {
             get => m_HorizontalScrollerVisibility;
@@ -211,6 +217,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public ScrollerVisibility verticalScrollerVisibility
         {
             get => m_VerticalScrollerVisibility;
@@ -221,6 +228,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public long elasticAnimationIntervalMs
         {
             get => m_ElasticAnimationIntervalMs;
@@ -258,6 +266,7 @@ namespace UnityEngine.UIElements
 
         internal bool isHorizontalScrollDisplayed => horizontalScroller.resolvedStyle.display == DisplayStyle.Flex;
 
+        [CreateProperty]
         public Vector2 scrollOffset
         {
             get => m_ScrollOffset;
@@ -273,6 +282,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public float horizontalPageSize
         {
             get => m_HorizontalPageSize;
@@ -283,6 +293,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public float verticalPageSize
         {
             get => m_VerticalPageSize;
@@ -293,6 +304,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public float mouseWheelScrollSize
         {
             get => m_MouseWheelScrollSize;
@@ -310,18 +322,21 @@ namespace UnityEngine.UIElements
 
         bool hasInertia => scrollDecelerationRate > 0f;
 
+        [CreateProperty]
         public float scrollDecelerationRate
         {
             get => m_ScrollDecelerationRate;
             set => m_ScrollDecelerationRate = Mathf.Max(0f, value);
         }
 
+        [CreateProperty]
         public float elasticity
         {
             get => m_Elasticity;
             set => m_Elasticity = Mathf.Max(0f, value);
         }
 
+        [CreateProperty]
         public TouchScrollBehavior touchScrollBehavior
         {
             get => m_TouchScrollBehavior;
@@ -334,6 +349,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public NestedInteractionKind nestedInteractionKind
         {
             get => m_NestedInteractionKind;
@@ -348,6 +364,7 @@ namespace UnityEngine.UIElements
 
         public override VisualElement contentContainer => m_ContentContainer;
 
+        [CreateProperty]
         public ScrollViewMode mode
         {
             get => m_Mode;

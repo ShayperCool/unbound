@@ -1,3 +1,4 @@
+using Unity.Properties;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -56,6 +57,7 @@ namespace UnityEngine.UIElements
 
         private protected override bool canSwitchToMixedValue => inputTextField == null || !inputTextField.textInputBase.textElement.hasFocus;
 
+        [CreateProperty]
         public TValueType lowValue
         {
             get => m_LowValue;
@@ -68,6 +70,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public TValueType highValue
         {
             get => m_HighValue;
@@ -80,14 +83,17 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty(ReadOnly = true)]
         public TValueType range => SliderRange();
 
+        [CreateProperty]
         public virtual float pageSize
         {
             get => m_PageSize;
             set => m_PageSize = value;
         }
 
+        [CreateProperty]
         public virtual bool showInputField
         {
             get => m_ShowInputField;
@@ -99,6 +105,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool fill
         {
             get => m_Fill;
@@ -128,6 +135,7 @@ namespace UnityEngine.UIElements
             set => base.value = clamped ? GetClampedValue(value) : value;
         }
 
+        [CreateProperty]
         public SliderDirection direction
         {
             get => m_Direction;
@@ -147,6 +155,7 @@ namespace UnityEngine.UIElements
             }
         }
 
+        [CreateProperty]
         public bool inverted
         {
             get => m_Inverted;
