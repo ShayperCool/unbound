@@ -6,7 +6,7 @@ namespace Unbound.Runtime
     /// <summary>
     /// The dictionaries that hold a draw's merged properties (its own, its lighting, probes and
     /// per-object lights) while draws are emitted: a renderer list or a single draw opens a scope,
-    /// and the dictionaries handed out in it are reused once the outermost scope ends. The command
+    /// and the dictionaries handed out in it are reused once it ends. The command
     /// stream copies a draw's properties when the draw is written, so nothing keeps them past
     /// their scope.
     /// </summary>
@@ -17,18 +17,24 @@ namespace Unbound.Runtime
 
         internal readonly struct Scope : IDisposable
         {
+            readonly int m_Start;
+
+            internal Scope(int start) => m_Start = start;
+
+            /// <summary>The copies handed out in the scope go back (those of the scopes around it
+            /// stay theirs).</summary>
             public void Dispose()
             {
-                if (--s_Depth > 0) return;
-                for (int i = 0; i < s_Used; i++) s_Pool[i].Clear();
-                s_Used = 0;
+                s_Depth--;
+                for (int i = m_Start; i < s_Used; i++) s_Pool[i].Clear();
+                s_Used = m_Start;
             }
         }
 
         internal static Scope Begin()
         {
             s_Depth++;
-            return default;
+            return new Scope(s_Used);
         }
 
         /// <summary>A copy of <paramref name="properties"/> (empty for none), in their order, for

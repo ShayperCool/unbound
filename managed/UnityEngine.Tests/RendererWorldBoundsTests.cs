@@ -46,6 +46,15 @@ namespace UnityEngine.Tests
                 Near(new Vector3(2f, 2f, 0f), renderer.bounds.center);
                 renderer.ResetLocalBounds();
                 Near(new Vector3(6f, 4f, 0f), renderer.bounds.center);
+
+                // Another object with a transform at the same version: its own box.
+                var twin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                try
+                {
+                    twin.transform.position = new Vector3(0f, 0f, 9f);
+                    Near(new Vector3(0f, 0f, 9f), twin.GetComponent<MeshRenderer>().bounds.center);
+                }
+                finally { Object.DestroyImmediate(twin); }
             }
             finally
             {

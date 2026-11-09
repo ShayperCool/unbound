@@ -6,7 +6,7 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>The dictionaries draws merge their properties into: copies in the same order,
-    /// kept until the outermost scope ends (a nested draw does not end a list's), reused after;
+    /// kept until their scope ends (a nested draw's end leaves the list's copies), reused after;
     /// outside any scope each copy is a new dictionary. Boxed vectors are given again only while
     /// the value is the same.</summary>
     public sealed class DrawPropertyPoolTests
@@ -28,9 +28,10 @@ namespace UnityEngine.Tests
                     Assert.Empty(inner);
                     Assert.NotSame(outer, inner);
                 }
-                // The nested scope's end leaves the outer copies alone.
+                // The nested scope's end leaves the outer copies alone and takes back its own.
                 Assert.Equal(4, outer.Count);
-                Assert.NotSame(outer, DrawPropertyPool.Copy(outer));
+                Assert.Same(inner, DrawPropertyPool.Copy(outer));
+                Assert.Equal(4, inner.Count);
             }
             Assert.Empty(outer);
             using (DrawPropertyPool.Begin())

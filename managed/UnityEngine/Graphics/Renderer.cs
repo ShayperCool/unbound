@@ -337,12 +337,14 @@ namespace UnityEngine
             if (m_StaticBatched) return TransformBounds(local, BoundsMatrix);
             // Cameras ask every frame: the box is made again only when the local bounds or the
             // transform (or a parent) changed.
-            int version = m_GameObject.m_Transform.SyncedVersion;
-            if (m_WorldBoundsVersion != version || !(FloatBits.Same(m_WorldBoundsLocal.center, local.center) && FloatBits.Same(m_WorldBoundsLocal.extents, local.extents)))
+            var transform = m_GameObject.m_Transform;
+            int version = transform.SyncedVersion;
+            if (m_WorldBoundsVersion != version || !ReferenceEquals(m_WorldBoundsTransform, transform) || !(FloatBits.Same(m_WorldBoundsLocal.center, local.center) && FloatBits.Same(m_WorldBoundsLocal.extents, local.extents)))
             {
                 m_WorldBounds = TransformBounds(local, BoundsMatrix);
                 m_WorldBoundsLocal = local;
                 m_WorldBoundsVersion = version;
+                m_WorldBoundsTransform = transform;
             }
             return m_WorldBounds;
         }
@@ -350,6 +352,8 @@ namespace UnityEngine
         Bounds m_WorldBounds, m_WorldBoundsLocal;
         /// <summary>The transform's version <see cref="m_WorldBounds"/> were made at; none yet.</summary>
         int? m_WorldBoundsVersion;
+        /// <summary>The transform those were made with (a RectTransform can replace it).</summary>
+        Transform m_WorldBoundsTransform;
 
         internal static Bounds TransformBounds(Bounds local, Matrix4x4 matrix)
         {
