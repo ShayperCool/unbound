@@ -308,9 +308,13 @@ namespace UnityEngine.UIElements
         /// <summary>Content of elements with this flag is not clipped even with overflow hidden (scroll view content).</summary>
         internal bool disableClipping { get; set; }
 
-        /// <summary>Whether geometry changes of descendants are reported to this element (unused: every
-        /// element's GeometryChangedEvent is sent to it).</summary>
+        /// <summary>Whether this element gets a GeometryChangedEvent when something under it changed
+        /// while its own geometry did not (see the panel's layout update).</summary>
         internal bool receivesHierarchyGeometryChangedEvents { get; set; }
+
+        /// <summary>Set when this element or a descendant changed in a way that can move bounding
+        /// boxes (hierarchy, size, transform, ...) since the last layout pass visited it.</summary>
+        internal bool boundingBoxDirtiedSinceLastLayoutPass { get; set; }
 
         internal bool ShouldClip() => computedValues.overflow != OverflowInternal.Visible && !disableClipping;
 

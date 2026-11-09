@@ -157,7 +157,12 @@ namespace UnityEngine.UIElements
         internal void UaOnVersionChanged(VisualElement ve, VersionChangeType change)
         {
             uaVersion++;
-            if ((change & k_PickingChanges) != 0) m_UaHierarchyFlagsVersion++;
+            if ((change & k_PickingChanges) != 0)
+            {
+                m_UaHierarchyFlagsVersion++;
+                for (var e = ve; e != null && !e.boundingBoxDirtiedSinceLastLayoutPass; e = e.hierarchy.parent)
+                    e.boundingBoxDirtiedSinceLastLayoutPass = true;
+            }
             if ((change & (VersionChangeType.Transform | VersionChangeType.Hierarchy)) != 0) ve.UaDirtyWorldTransform();
             // UIR regenerates an element's geometry on repaints and color changes (without dynamic
             // color hints); transforms move it, opacity and clipping are drawn from shader data.
@@ -280,11 +285,17 @@ namespace UnityEngine.UIElements
         }
 
         readonly List<(Rect OldRect, Rect NewRect, VisualElement Element)> m_ChangeEvents = new List<(Rect, Rect, VisualElement)>();
+        // Elements that ask for hierarchy geometry events (a scroll view's content) whose own geometry
+        // did not change while something under them did: they get one GeometryChangedEvent (from an
+        // empty rect) after the layout settles, as in the Unity 6000.0.71f1 Editor
+        // (tests/projects/uitkcollections: a rebuilt list's scroll view updates its scrollers).
+        readonly List<VisualElement> m_MissedHierarchyChangeEvents = new List<VisualElement>();
 
         void UpdateLayout()
         {
             var root = visualTree;
             int pass = 0;
+            if (root.yogaNode.IsDirty) m_MissedHierarchyChangeEvents.Clear();
             while (root.yogaNode.IsDirty)
             {
                 m_ChangeEvents.Clear();
@@ -307,6 +318,19 @@ namespace UnityEngine.UIElements
                         e.elementTarget = element;
                         Dispatching.HandleEventAtTargetAndDefaultPhase(e, this, element);
                     }
+                }
+                if (!root.yogaNode.IsDirty)
+                {
+                    foreach (var element in m_MissedHierarchyChangeEvents)
+                    {
+                        using (var e = GeometryChangedEvent.GetPooled(Rect.zero, element.layout))
+                        {
+                            e.layoutPass = pass;
+                            e.elementTarget = element;
+                            Dispatching.HandleEventAtTargetAndDefaultPhase(e, this, element);
+                        }
+                    }
+                    m_MissedHierarchyChangeEvents.Clear();
                 }
                 if (pass++ >= 10)
                 {
@@ -355,8 +379,6 @@ namespace UnityEngine.UIElements
             if (change != 0) ve.IncrementVersion(change);
             ve.lastLayout = rect;
             bool hasNewLayout = n.HasNewLayout;
-            if (sizeChanged || positionChanged || displayChanged)
-                m_ChangeEvents.Add((displayChanged ? Rect.zero : last, rect, ve));
             if (hasNewLayout)
             {
                 int count = ve.hierarchy.childCount;
@@ -365,8 +387,22 @@ namespace UnityEngine.UIElements
                     var child = ve.hierarchy[i];
                     if (child.yogaNode.HasNewLayout) UpdateSubTree(child, true);
                 }
-                n.MarkLayoutSeen();
             }
+            // An element's geometry change is sent after its children's (a scroll view's viewport and
+            // content before the scroll view), as in the Unity 6000.0.71f1 Editor
+            // (tests/projects/uitkcollections: the scroller range a list view sets on resize wins
+            // over the one its scroll view sets for the new content size).
+            if (sizeChanged || positionChanged || displayChanged)
+            {
+                m_ChangeEvents.Add((displayChanged ? Rect.zero : last, rect, ve));
+                if (ve.receivesHierarchyGeometryChangedEvents) m_MissedHierarchyChangeEvents.Remove(ve);
+            }
+            else if (ve.receivesHierarchyGeometryChangedEvents && ve.boundingBoxDirtiedSinceLastLayoutPass)
+            {
+                m_MissedHierarchyChangeEvents.Add(ve);
+            }
+            ve.boundingBoxDirtiedSinceLastLayoutPass = false;
+            if (hasNewLayout) n.MarkLayoutSeen();
         }
 
         // ---- picking ----
