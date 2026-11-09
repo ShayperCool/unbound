@@ -433,6 +433,8 @@ struct State {
 }
 
 pub struct UnityRenderer {
+    /// The adapter the device was opened on (its formats as the backend stores them).
+    adapter: wgpu::Adapter,
     /// Native plugins' shared textures and callbacks (`plugins`).
     plugins: plugins::PluginState,
     /// The graphics device's projection, depth and target orientation (resolved at startup).
@@ -546,6 +548,7 @@ pub struct UnityRenderer {
 
 impl UnityRenderer {
     pub fn new(
+        adapter: wgpu::Adapter,
         device: wgpu::Device,
         queue: wgpu::Queue,
         resolver: Resolver,
@@ -566,6 +569,7 @@ impl UnityRenderer {
             frames_completed: Default::default(),
             plugin_pass_open: false,
             conventions,
+            adapter,
             device,
             queue,
             resolver,
@@ -3091,7 +3095,8 @@ impl UnityRenderer {
         // A depth-only target still being drawn: read back before the next submission.
         self.copy_depth(&mut passes, depth_mark);
         self.encode(passes);
-        if end_frame {
+        #[cfg(target_os = "linux")]
+        if end_frame && self.vulkan_plugins.is_some() {
             // The frame's work is submitted: when the GPU finishes it, plugins may free what
             // they used in it.
             let completed = self.frames_completed.clone();
@@ -3099,6 +3104,8 @@ impl UnityRenderer {
             self.queue.on_submitted_work_done(move || {
                 completed.fetch_max(frame, std::sync::atomic::Ordering::AcqRel);
             });
+        }
+        if end_frame {
             let slot = self.screen_slot;
             let space = self.color_space;
             let screen = self.ensure_screen(slot).view(space).0.clone();

@@ -158,7 +158,7 @@ impl UnityRenderer {
     /// compression, so they are refused rather than risk wrong texels.
     fn interop_device(&mut self) -> Result<Option<[u8; 16]>, String> {
         let device = self.plugins.device.get_or_insert_with(|| {
-            let (uuid, vendor, d24s8) = vulkan::device_info(&self.device);
+            let (uuid, vendor, d24s8) = vulkan::device_info(&self.device, &self.adapter);
             let refused = (vendor != Some(MEASURED_VENDOR)).then(|| {
                 "native plugins share textures with the renderer on NVIDIA GPUs only (measured \
                  there; other drivers may need image layouts handed over)"
@@ -272,6 +272,7 @@ impl UnityRenderer {
         // The same storage again, in exported memory.
         let packet = descriptor(gpu);
         let device = self.device.clone();
+        let adapter = self.adapter.clone();
         let mut exported = Vec::new();
         let mut failure = None;
         let replacement = resources::upload_texture_with(
@@ -280,7 +281,7 @@ impl UnityRenderer {
             None,
             &packet,
             self.generation + 1,
-            &mut |desc| match vulkan::exported_texture(&device, desc) {
+            &mut |desc| match vulkan::exported_texture(&device, &adapter, desc) {
                 Ok((texture, memory)) => {
                     exported.push(memory);
                     texture
@@ -436,6 +437,10 @@ impl UnityRenderer {
 
     /// A texture was released: its OpenGL textures go (a plugin's own texture stays its own).
     pub(super) fn release_plugin_texture(&mut self, handle: u64) {
+        #[cfg(target_os = "linux")]
+        if let Some(plugins) = self.vulkan_plugins.as_mut() {
+            plugins.release(handle);
+        }
         let uuid = self.plugins.device.as_ref().and_then(|d| d.uuid);
         self.plugins.refused.remove(&handle);
         self.plugins.aliases.remove(&handle);
@@ -480,6 +485,7 @@ impl UnityRenderer {
             self.plugins.aliases.insert(handle);
         }
         let device = self.device.clone();
+        let adapter = self.adapter.clone();
         // Another texture's name: the same storage.
         let source = self
             .plugins
@@ -539,7 +545,7 @@ impl UnityRenderer {
             None,
             &packet,
             self.generation,
-            &mut |desc| match vulkan::exported_texture(&device, desc) {
+            &mut |desc| match vulkan::exported_texture(&device, &adapter, desc) {
                 Ok((texture, memory)) => {
                     exported = Some(memory);
                     texture
@@ -964,7 +970,7 @@ fn gl_format(
 }
 
 #[cfg(target_os = "linux")]
-mod vulkan {
+pub(super) mod vulkan {
     //! Textures in memory OpenGL can import: Vulkan images with exportable dedicated memory
     //! (`VK_KHR_external_memory_fd`), made as wgpu-hal makes them and given to wgpu.
     use ash::vk;
@@ -978,7 +984,10 @@ mod vulkan {
     }
 
     /// The GPU's UUID and PCI vendor, and whether it stores Depth24PlusStencil8 as D24S8.
-    pub fn device_info(device: &wgpu::Device) -> (Option<[u8; 16]>, Option<u32>, bool) {
+    pub fn device_info(
+        device: &wgpu::Device,
+        adapter: &wgpu::Adapter,
+    ) -> (Option<[u8; 16]>, Option<u32>, bool) {
         let Some(hal) = (unsafe { device.as_hal::<Vulkan>() }) else {
             return (None, None, true);
         };
@@ -989,52 +998,23 @@ mod vulkan {
         unsafe { instance.get_physical_device_properties2(physical, &mut properties) };
         let vendor = properties.properties.vendor_id;
         let uuid = id.device_uuid;
-        (Some(uuid), Some(vendor), d24s8(instance, physical))
+        let d24s8 = vk_format(adapter, wgpu::TextureFormat::Depth24PlusStencil8)
+            != Some(vk::Format::D32_SFLOAT_S8_UINT);
+        (Some(uuid), Some(vendor), d24s8)
     }
 
-    /// wgpu-hal's choice for Depth24PlusStencil8: D24S8 where it can be sampled and drawn into.
-    fn d24s8(instance: &ash::Instance, physical: vk::PhysicalDevice) -> bool {
-        let properties = unsafe {
-            instance.get_physical_device_format_properties(physical, vk::Format::D24_UNORM_S8_UINT)
-        };
-        properties.optimal_tiling_features.contains(
-            vk::FormatFeatureFlags::SAMPLED_IMAGE
-                | vk::FormatFeatureFlags::DEPTH_STENCIL_ATTACHMENT,
-        )
-    }
-
-    fn vk_format(
-        format: wgpu::TextureFormat,
-        instance: &ash::Instance,
-        physical: vk::PhysicalDevice,
-    ) -> Option<vk::Format> {
-        use wgpu::TextureFormat as F;
-        Some(match format {
-            F::Rgba8Unorm => vk::Format::R8G8B8A8_UNORM,
-            F::Rgba8UnormSrgb => vk::Format::R8G8B8A8_SRGB,
-            F::Rgba16Float => vk::Format::R16G16B16A16_SFLOAT,
-            F::Rgba32Float => vk::Format::R32G32B32A32_SFLOAT,
-            F::R8Unorm => vk::Format::R8_UNORM,
-            F::Rg8Unorm => vk::Format::R8G8_UNORM,
-            F::R16Float => vk::Format::R16_SFLOAT,
-            F::Rg16Float => vk::Format::R16G16_SFLOAT,
-            F::R32Float => vk::Format::R32_SFLOAT,
-            F::Rg32Float => vk::Format::R32G32_SFLOAT,
-            F::R16Unorm => vk::Format::R16_UNORM,
-            F::Rg16Unorm => vk::Format::R16G16_UNORM,
-            F::Rgba16Unorm => vk::Format::R16G16B16A16_UNORM,
-            F::Rgb10a2Unorm => vk::Format::A2B10G10R10_UNORM_PACK32,
-            F::Rg11b10Ufloat => vk::Format::B10G11R11_UFLOAT_PACK32,
-            F::Depth32Float => vk::Format::D32_SFLOAT,
-            F::Depth24PlusStencil8 if d24s8(instance, physical) => vk::Format::D24_UNORM_S8_UINT,
-            F::Depth24PlusStencil8 => vk::Format::D32_SFLOAT_S8_UINT,
-            _ => return None,
-        })
+    /// The Vulkan format wgpu-hal stores a wgpu format in on this device (None: not Vulkan, or a
+    /// format it has none for).
+    pub fn vk_format(adapter: &wgpu::Adapter, format: wgpu::TextureFormat) -> Option<vk::Format> {
+        // SAFETY: the hal adapter is only read, while the wgpu adapter lives.
+        let hal = unsafe { adapter.as_hal::<Vulkan>() }?;
+        Some(hal.texture_format_as_raw(format)).filter(|f| *f != vk::Format::UNDEFINED)
     }
 
     /// A 2D texture as `desc` describes it, in exported dedicated memory.
     pub fn exported_texture(
         device: &wgpu::Device,
+        adapter: &wgpu::Adapter,
         desc: &wgpu::TextureDescriptor,
     ) -> Result<(wgpu::Texture, Exported), String> {
         if desc.dimension != wgpu::TextureDimension::D2
@@ -1056,7 +1036,7 @@ mod vulkan {
         let raw = hal_device.raw_device();
         let instance = hal_device.shared_instance().raw_instance();
         let physical = hal_device.raw_physical_device();
-        let format = vk_format(desc.format, instance, physical)
+        let format = vk_format(adapter, desc.format)
             .ok_or_else(|| format!("the format {:?} is not exported", desc.format))?;
         let depth = desc.format.is_depth_stencil_format();
         let mut usage = vk::ImageUsageFlags::TRANSFER_SRC
@@ -1083,7 +1063,7 @@ mod vulkan {
         let mut view_formats = desc
             .view_formats
             .iter()
-            .filter_map(|f| vk_format(*f, instance, physical))
+            .filter_map(|f| vk_format(adapter, *f))
             .collect::<Vec<_>>();
         view_formats.push(format);
         let mut format_list = vk::ImageFormatListCreateInfo::default().view_formats(&view_formats);
@@ -1201,12 +1181,16 @@ mod vulkan {
         pub size: u64,
     }
 
-    pub fn device_info(_: &wgpu::Device) -> (Option<[u8; 16]>, Option<u32>, bool) {
+    pub fn device_info(
+        _: &wgpu::Device,
+        _: &wgpu::Adapter,
+    ) -> (Option<[u8; 16]>, Option<u32>, bool) {
         (None, None, true)
     }
 
     pub fn exported_texture(
         _: &wgpu::Device,
+        _: &wgpu::Adapter,
         _: &wgpu::TextureDescriptor,
     ) -> Result<(wgpu::Texture, Exported), String> {
         Err("textures are shared with native plugins on Linux only".into())

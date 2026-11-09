@@ -97,6 +97,7 @@ impl Plugin for UnityRenderPlugin {
         ));
         let wgpu_queue: wgpu::Queue = std::ops::Deref::deref(&queue).clone();
         self.backend.install(UnityRenderer::new(
+            (**render_app.world().resource::<RenderAdapter>()).clone(),
             device.wgpu_device().clone(),
             wgpu_queue,
             resolver,

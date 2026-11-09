@@ -174,16 +174,23 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   and `V2` (`render/executor/plugins_vulkan.rs`, tests/projects/nativegfx `vulkan.jsonl`): the
   renderer's instance, physical device, device, queue and its family, a pipeline cache; native
   texture pointers point at the texture's `VkImage`. A rendering callback runs where it is in the
-  stream: the work before it is submitted, the plugin records into a secondary command buffer
+  stream: the work before it is submitted, the plugin records into secondary command buffers
   that a command buffer of the renderer's executes, submitted before the work after it, with full
-  memory barriers around it. The textures a plugin can reach are first put in a resting layout by
-  wgpu; `AccessTexture` (and its render buffer and texture ID forms) records the barrier into the
-  layout asked for and the renderer records the one back after the callback, so wgpu's tracking
-  stays right. `kUnityVulkanRenderPass_EnsureInside` (and a DontCare event while the current
-  target draws, as a camera's events) runs inside a render pass over the current target, loaded,
-  stored and resolved where it is multisampled. `safeFrameNumber` is the last frame the GPU
-  finished. Not supported (logged): intercepting Vulkan, queue access (such events are skipped),
-  swapchain configuration, resolve textures of render buffers, `Recreate` access.
+  memory barriers around them. The textures a plugin can reach are first put in a resting layout
+  by wgpu; `AccessTexture` (and its render buffer, resolve texture and texture ID forms) records
+  the barrier from the layout each subresource is in to the one asked for, and the renderer
+  records the ones back after the callback, so wgpu's tracking stays right.
+  `kUnityVulkanRenderPass_EnsureInside` (and a DontCare event while the current target draws, as
+  a camera's events) runs inside a render pass over the current render texture target, loaded,
+  stored and resolved where it is multisampled. `EnsureOutsideRenderPass`/`EnsureInsideRenderPass`
+  end and begin it again, and a barrier for an access inside it is recorded between two passes
+  (the callback stays inside, as the Editor answers); each change starts a new command buffer, as
+  the interface's recording state is invalidated then. `safeFrameNumber` is the last frame the
+  GPU finished; command buffers, passes and the buffers accessed are kept until then. Not
+  supported (logged): intercepting Vulkan functions, queue access (such events are skipped),
+  swapchain configuration, `Recreate` access, a render pass over the screen or several colors
+  (EnsureInside events are skipped there); initialization is intercepted too late for every
+  plugin, preloaded ones too (the device is made before any plugin loads).
 * **Native rendering plugins**: on the OpenGL Core device (`SystemInfo.graphicsDeviceType`,
   `IUnityGraphics::GetRenderer`), the Linux Editor's default, the renderer still draws with
   Vulkan (Metal on macOS; see above). Plugins written for that device call OpenGL on the main
