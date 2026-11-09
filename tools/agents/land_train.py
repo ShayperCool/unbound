@@ -419,13 +419,23 @@ class LandTrain:
         # A stacked branch can carry another queued branch's commits even if that
         # earlier request is rejected. Keep the checks attached to those commits.
         for entry in entries:
+            if 'automatic' in entry:
+                continue
+            # Older callers have no captured selection. Read their metadata only
+            # while their original checkout still matches the captured clean head.
+            if not self.valid(entry):
+                entry['automatic'] = []
+                continue
             changed = self.git('diff', '--name-only', '--no-renames',
                                'main...'+entry['head'], cwd=Path(entry['worktree'])).splitlines()
             try:
-                entry['automatic'] = self.api.automatic_checks(Path(entry['worktree']), changed, entry['probes'],
-                                                                         entry.get('probe_environment', {}), full=entry['full'])
+                entry['automatic'] = self.api.automatic_checks(
+                    Path(entry['worktree']), changed, entry['probes'],
+                    entry.get('probe_environment', {}), full=entry['full'])
+                if not self.valid(entry):
+                    entry['automatic'] = []
             except (SystemExit, ValueError):
-                entry['automatic'] = []  # Assembly reports invalid metadata against its rebased tree.
+                entry['automatic'] = []  # Assembly reports invalid rebased metadata.
         for entry in entries:
             ancestors = set(self.git('rev-list', 'main..'+entry['head']).splitlines())
             sources = [entry, *(item for item in entries
@@ -435,7 +445,8 @@ class LandTrain:
             entry['automatic'] = self.api.automatic_union([item.get('automatic', []) for item in sources])
             entry.update(probes=[item[0] for item in specs], releases=[item[1] for item in specs],
                          full=any(item['full'] for item in sources))
-            self.queue.update(entry['id'], probes=entry['probes'], releases=entry['releases'], full=entry['full'])
+            self.queue.update(entry['id'], probes=entry['probes'], releases=entry['releases'],
+                              full=entry['full'], automatic=entry['automatic'])
 
     def lead(self):
         self.id = uuid.uuid4().hex
@@ -550,10 +561,16 @@ class LandTrain:
             releases = [self.api.probe_release(probe, worktree) for probe in probes]
         except ValueError as error:
             self.api.die(2, str(error))
+        probe_environment = {self.api.RELEASE_VARIABLE: os.environ.get(self.api.RELEASE_VARIABLE, '')}
+        changed = self.git('diff', '--name-only', '--no-renames', 'main...'+head).splitlines()
+        automatic = self.api.automatic_checks(self.worktree, changed, probes, probe_environment, full=full)
+        self.api.require_clean(self.worktree, 'this worktree')
+        if self.git('rev-parse', 'HEAD') != head:
+            self.api.die(2, 'branch changed during probe selection; retry the landing')
         request = {'id': uuid.uuid4().hex, 'branch': branch, 'worktree': str(worktree),
                    'repo': self.git('rev-parse', '--path-format=absolute', '--git-common-dir'),
                    'head': head, 'probes': probes, 'releases': releases, 'full': full,
-                   'probe_environment': {self.api.RELEASE_VARIABLE: os.environ.get(self.api.RELEASE_VARIABLE, '')},
+                   'probe_environment': probe_environment, 'automatic': automatic,
                    'build_environment': {key: os.environ.get(key) for key in BUILD_ENVIRONMENT}}
         self.request_id = request['id']
         with self.queue.register(request):

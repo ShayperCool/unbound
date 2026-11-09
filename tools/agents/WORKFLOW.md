@@ -124,6 +124,7 @@ tools/validation/README.md for why that is unsafe).
      every code landing, without an Editor capture or long engine replay. Selected full recipes
      run through the suite against the current sheriff baseline when present, preserving its
      existing failures and regression rules. Without a baseline every check must pass.
+     Recipe lookup uses the candidate checkout in a guarded process with a printed 10 s budget.
      Automatic checks share a printed 600 s wall-clock budget, at most 300 s each. A timeout or
      exhausted budget fails the gate. Supply a complete declared recipe as explicit `--probe`
      commands, or a suite `--only` command, for longer checks. Exact explicit commands are not

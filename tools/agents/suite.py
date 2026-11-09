@@ -1193,7 +1193,7 @@ def compare_runs(current, previous):
     return lines, regressed
 
 
-def main():
+def argument_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--cli', type=Path, help='the unbound executable (default: $UNBOUND, else this '
                         "checkout's release build)")
@@ -1207,6 +1207,11 @@ def main():
     parser.add_argument('--update-baseline', action='store_true', help='copy this summary to agents/baseline/')
     parser.add_argument('--promote', metavar='LABEL', help="make run LABEL's summary the baseline; run nothing")
     parser.add_argument('--list', action='store_true', help='print each probe and its recipe, run nothing')
+    return parser
+
+
+def main():
+    parser = argument_parser()
     args = parser.parse_args()
     if args.promote:
         summary = AGENTS/'suite'/args.promote/'summary.json'

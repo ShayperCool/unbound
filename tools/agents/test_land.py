@@ -208,6 +208,16 @@ def gate(root, base, probes, full, branch, **options):
     if (automatic_left and values.get('break-left.txt') == 'yes') or values.get('bad.txt') == 'fail' or ('probe-b' in probes and values.get('bad-probe.txt') == 'fail') or ('probe-a' in probes and (values.get('a.txt') != 'ok' or values.get('break-a.txt') == 'yes')):
         raise SystemExit(5)
     return None
+if os.environ.get('TRAIN_LEGACY_REQUEST'):
+    original_register = land_train.Queue.register
+    @contextlib.contextmanager
+    def legacy_register(self, entry):
+        entry = dict(entry)
+        entry.pop('automatic', None)
+        entry.pop('probe_environment', None)
+        with original_register(self, entry) as value:
+            yield value
+    land_train.Queue.register = legacy_register
 land.run_gate = gate
 land.pin_main = lambda *args, **kwargs: None
 land.push_main = lambda *args: event({'push': True})
@@ -303,13 +313,13 @@ class TrainIntegrationTests(unittest.TestCase):
         return path
 
     def start(self, path, probes=(), *, crash=False, pause_lock=False, pause_leader=False,
-              crash_final=False, crash_prefix=False, crash_after_final_record=False, probe_release=None):
+              crash_final=False, crash_prefix=False, crash_after_final_record=False, probe_release=None, legacy=False):
         log = self.root/(path.name+'.log')
         stream = log.open('w')
         env = dict(os.environ, UNBOUND_LAND_NO_PUSH='1')
         if probe_release is not None:
             env[land.RELEASE_VARIABLE] = probe_release
-        settings = {'TRAIN_CRASH_AFTER_ADVANCE': crash, 'TRAIN_PAUSE_LOCK': pause_lock,
+        settings = {'TRAIN_LEGACY_REQUEST': legacy, 'TRAIN_CRASH_AFTER_ADVANCE': crash, 'TRAIN_PAUSE_LOCK': pause_lock,
                     'TRAIN_PAUSE_LEADER': pause_leader, 'TRAIN_CRASH_FINAL': crash_final,
                     'TRAIN_CRASH_PREFIX': crash_prefix,
                     'TRAIN_CRASH_AFTER_FINAL_RECORD': crash_after_final_record}
@@ -416,13 +426,13 @@ class TrainIntegrationTests(unittest.TestCase):
         first = self.branch('first', {'tests/projects/control/gate.json':
                                      '{"commands":["true"],"fast_commands":false}\n'})
         second = self.branch('second', {'good.txt': 'ok\n'})
+        rejected = self.start(first)
+        self.assertEqual(rejected[0].wait(timeout=5), 2)
         with self.hold():
-            workers = [self.start(first)]
+            peer = self.start(second)
             self.registered(1)
-            workers.append(self.start(second))
-            self.registered(2)
-        results = self.finish(workers)
-        self.assertEqual([code for code, _ in results], [2, 0], results)
+        results = self.finish([peer])
+        self.assertEqual(results[0][0], 0, results)
         self.assertEqual([row['branch'] for row in self.rows()], ['second'])
 
     def test_train_preserves_each_callers_automatic_release_override(self):
@@ -463,6 +473,64 @@ class TrainIntegrationTests(unittest.TestCase):
         (self.state/'pause-gate').unlink()
         self.assertEqual(self.finish([peer])[0][0], 0)
         self.assertEqual([row['branch'] for row in self.rows()], ['second'])
+
+    def test_rejected_ancestor_automatic_checks_survive_a_leader_handoff(self):
+        project = self.repo/'tests/projects/left'
+        (project/'Reference').mkdir(parents=True)
+        (project/'Reference/control.json').write_text('{}\n')
+        (project/'gate.json').write_text(json.dumps({
+            'commands': ['left-check'], 'engine_paths': ['crates/alpha/']}))
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): inherited automatic control')
+        first = self.branch('first', {'a.txt': 'wrong\n', 'crates/alpha/src/lib.rs': '// edited\n'})
+        second = self.branch('second', {'a.txt': 'ok\n', 'crates/alpha/src/lib.rs': '// base\n',
+                                       'break-left.txt': 'yes\n'}, base='first')
+        (self.state/'pause-leader').write_text('pause')
+        owner = self.start(first, ['probe-a'], pause_leader=True)
+        self.wait_for(lambda: (self.state/'leader-running').exists(), 'leader did not start')
+        peer = self.start(second)
+        self.registered(2)
+        (self.state/'pause-leader').unlink()
+        results = self.finish([owner, peer])
+        self.assertEqual([code for code, _ in results], [5, 5], results)
+        self.assertEqual(self.rows(), [])
+
+    def test_queued_metadata_edits_do_not_enter_a_stacked_peers_checks(self):
+        metadata = self.repo/'tests/projects/control/gate.json'
+        metadata.write_text(json.dumps({'commands': ['true'], 'fast_commands': ['good-check']}))
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): queued metadata control')
+        first = self.branch('first', {'a.txt': 'ok\n'})
+        second = self.branch('second', {'b.txt': 'ok\n'}, base='first')
+        (self.state/'pause-leader').write_text('pause')
+        owner = self.start(first, pause_leader=True)
+        self.wait_for(lambda: (self.state/'leader-running').exists(), 'leader did not start')
+        peer = self.start(second)
+        self.registered(2)
+        edited = first/'tests/projects/control/gate.json'
+        edited.write_text(json.dumps({'commands': ['true'], 'fast_commands': ['uncommitted-check']}))
+        (self.state/'pause-leader').unlink()
+        results = self.finish([owner, peer])
+        self.assertEqual([code for code, _ in results], [2, 0], results)
+        checks = self.gates()[-1]['automatic']
+        self.assertEqual([row[1] for row in checks], ['good-check'])
+        self.assertIn('uncommitted-check', edited.read_text())
+
+    def test_legacy_queue_requests_select_checks_with_current_callers(self):
+        metadata = self.repo/'tests/projects/control/gate.json'
+        metadata.write_text(json.dumps({'commands': ['true'], 'fast_commands': ['legacy-fast']}))
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): legacy queue control')
+        first = self.branch('first', {'a.txt': 'ok\n'})
+        second = self.branch('second', {'b.txt': 'ok\n'})
+        with self.hold():
+            owner = self.start(first, legacy=True)
+            self.registered(1)
+            peer = self.start(second, probe_release='6000.0.71f1')
+            self.registered(2)
+        results = self.finish([owner, peer])
+        self.assertEqual([code for code, _ in results], [0, 0], results)
+        self.assertEqual([row[1] for row in self.gates()[0]['automatic']], ['legacy-fast'])
 
     def test_all_branches_share_one_gate_and_one_push(self):
         first = self.branch('first', {'a.txt': 'ok', 'crates/alpha/src/lib.rs': '// changed\n'})
@@ -717,6 +785,62 @@ class AutomaticProbeTests(unittest.TestCase):
         self.assertEqual([row[0] for row in self.select(paths, echoed)], ['humanfirstpose'])
         commented = ['python3 -c \"print(1)\" tools/agents/suite.py --only humanfirstpose']
         self.assertEqual([row[0] for row in self.select(paths, commented)], ['humanfirstpose'])
+
+    def test_suite_coverage_requires_execution_final_selection_and_matching_release(self):
+        self.probe('humanfirstpose', {'engine_paths': ['managed/Animation/']})
+        paths = ['managed/Animation/Animator.cs']
+        prefix = 'python3 tools/agents/suite.py --only humanfirstpose'
+        for suffix in ('--list', '--help', '--promote existing', '--release 2022.3.10f1',
+                       '--only other', '--only=other'):
+            with self.subTest(suffix=suffix):
+                self.assertEqual([row[0] for row in self.select(paths, [prefix+' '+suffix])], ['humanfirstpose'])
+        self.assertEqual(self.select(paths, [prefix+' --release 6000.0.71f1']), [])
+        check = ('humanfirstpose', prefix, 'engine paths', '6000.0.71f1')
+        for command in (prefix+' --list', prefix+' --release 2022.3.10f1'):
+            self.assertEqual(land.automatic_union([[check]], [(command, '6000.0.71f1')]), [check])
+        self.assertEqual(land.automatic_union([[check]], [(prefix+' --release 6000.0.71f1', '2022.3.10f1')]), [])
+
+    def test_recipe_validation_reads_the_candidate_suite_and_bounds_imports(self):
+        self.probe('candidate')
+        path = self.root/'tools/agents/suite.py'
+        path.parent.mkdir(parents=True)
+        (path.parent/'candidate_helper.py').write_text('marker = "candidate"\n')
+        body = ('from dataclasses import dataclass\nimport candidate_helper\n'
+                'print("candidate import diagnostic")\n@dataclass\nclass Step:\n    value: int = 1\n'
+                'class NoRecipe:\n    def __init__(self, reason): self.reason = reason\n'
+                'def recipes(release): return {candidate_helper.marker: [Step()]}\n'
+                'def recipe_for(name, table, release, projects=None):\n'
+                '    return table.get(name, NoRecipe("candidate missing recipe"))\n')
+        path.write_text(body)
+        paths = ['tests/projects/candidate/run.py']
+        with mock.patch.dict(sys.modules, {'candidate_helper': mock.Mock(marker='leader-wrong')}):
+            self.assertEqual([row[0] for row in self.select(paths)], ['candidate'])
+        path.write_text(body.replace('{candidate_helper.marker: [Step()]}', '{}'))
+        with self.assertRaises(SystemExit):
+            self.select(paths)
+        path.write_text('import time; time.sleep(30)\n')
+        started = time.monotonic()
+        with mock.patch.object(land, 'AUTO_SELECTION_TIMEOUT_SECONDS', .1), self.assertRaises(SystemExit):
+            self.select(paths)
+        self.assertLess(time.monotonic()-started, 5)
+
+    def test_candidate_catalog_imports_each_release_without_claiming_priority(self):
+        path = self.root/'tools/agents/suite.py'
+        path.parent.mkdir(parents=True)
+        path.write_text('import os\n'
+                        'assert os.environ.get("UNBOUND_SUITE_NO_EDITOR") == "1"\n'
+                        'assert "UNBOUND_LAND_GATE" not in os.environ\n'
+                        'captured = os.environ["UNBOUND_PROBE_UNITY_VERSION"]\n'
+                        'class NoRecipe: pass\n'
+                        'def recipes(release):\n'
+                        '    assert release == captured\n'
+                        '    return {"probe-"+captured: ["step"]}\n'
+                        'def recipe_for(name, table, release, projects=None): return table[name]\n')
+        requested = [('probe-6000.0.71f1', '6000.0.71f1'), ('probe-2022.3.10f1', '2022.3.10f1')]
+        with mock.patch.dict(os.environ, {'UNBOUND_LAND_GATE': '1'}):
+            catalog = land.candidate_recipes(self.root, requested)
+        self.assertEqual(set(catalog), {name for name, _ in requested})
+        self.assertTrue(all(row['builtin'] and row['error'] is None for row in catalog.values()))
 
     def test_invalid_metadata_fails_instead_of_omitting_checks(self):
         for spec in [{'commands': ['true'], 'engine_paths': 'crates/'},

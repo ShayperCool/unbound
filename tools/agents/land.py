@@ -49,6 +49,7 @@ import datetime
 import fcntl
 import fnmatch
 import hashlib
+import io
 import json
 import mmap
 import os
@@ -64,6 +65,7 @@ import xml.etree.ElementTree as ET
 GATE_VERSION = '6'
 AUTO_PROBE_BUDGET_SECONDS = 600
 AUTO_PROBE_TIMEOUT_SECONDS = 300
+AUTO_SELECTION_TIMEOUT_SECONDS = 10
 STATE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/agents'
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 DOCS_ONLY = re.compile(r'(\.md$)|(^docs/)')
@@ -142,22 +144,90 @@ def suite_arguments(command):
     return None
 
 
-def suite_projects(command):
-    argv = suite_arguments(command) or []
-    names = set()
-    for index, token in enumerate(argv):
-        value = (argv[index+1] if token == '--only' and index+1 < len(argv) else
-                 token.split('=', 1)[1] if token.startswith('--only=') else '')
-        names.update(name for name in value.split(',') if name)
-    return names
+def suite_coverage(command, fallback_release):
+    """Credit only an executing suite's effective final selection and release."""
+    from suite import argument_parser
+    argv = suite_arguments(command)
+    if argv is None:
+        return set()
+    try:
+        with contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+            args, unknown = argument_parser().parse_known_args(argv)
+    except SystemExit:
+        return set()
+    if unknown or args.list or args.promote or not args.only:
+        return set()
+    return {(name, args.release or fallback_release) for name in args.only.split(',')}
+
+
+def candidate_recipes(worktree, requested):
+    """Resolve recipes in guarded candidate interpreters with one shared planning budget."""
+    if not requested:
+        return {}
+    source = worktree/'tools/agents/suite.py'
+    if not source.is_file():  # Partial repositories used by the metadata unit controls.
+        source = HERE/'suite.py'
+    helper = worktree/'tools/agents/probe_catalog.py'
+    if not helper.is_file():
+        helper = HERE/'probe_catalog.py'
+    require_process_watch()
+    print(f'land: recipe selection: {len(requested)} probes, '
+          f'budget {AUTO_SELECTION_TIMEOUT_SECONDS}s', flush=True)
+    groups, catalog = {}, {}
+    for name, release in requested:
+        groups.setdefault(release, []).append((name, release))
+    deadline = time.monotonic()+AUTO_SELECTION_TIMEOUT_SECONDS
+    for release, group in groups.items():
+        remaining = deadline-time.monotonic()
+        if remaining <= 0:
+            die(2, 'candidate recipe selection exhausted its planning budget')
+        environment = dict(os.environ, **{NO_EDITOR: '1', RELEASE_VARIABLE: release})
+        environment.pop('UNBOUND_LAND_GATE', None)  # Planning never claims a heavy-job gate lease.
+        process = subprocess.Popen([sys.executable, str(helper), str(source),
+                                    str(worktree/'tests/projects')], stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   env=environment, start_new_session=True)
+        EDITOR_WATCH.add(process.pid)
+        timed_out = False
+        try:
+            try:
+                output, errors = process.communicate(json.dumps(group).encode(), timeout=remaining)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                stop_tree(process)
+                output, errors = process.communicate()
+        except BaseException:
+            stop_tree(process)
+            raise
+        finally:
+            editor = EDITOR_WATCH.remove(process.pid)
+        if timed_out or editor or process.returncode:
+            logs = STATE/'selection-logs'
+            logs.mkdir(parents=True, exist_ok=True)
+            log = logs/f'{os.getpid()}-{time.time_ns()}.log'
+            log.write_bytes(output+b'\n'+errors)
+            reason = ('timed out' if timed_out else f'{EDITOR_MARK}: {editor}' if editor else f'exit {process.returncode}')
+            die(2, f'candidate recipe selection {reason}; full log: {log}')
+        try:
+            records = json.loads(output)
+            if (not isinstance(records, dict) or set(records) != {name for name, _ in group}
+                    or any(not isinstance(row, dict) or type(row.get('builtin')) is not bool
+                           or row.get('error') is not None and not isinstance(row['error'], str)
+                           for row in records.values())):
+                raise ValueError('invalid catalog entries')
+        except ValueError:
+            die(2, 'candidate recipe selection did not return its complete JSON catalog')
+        catalog.update(records)
+    return catalog
 
 
 def automatic_probes(worktree, changed, explicit, environment=None):
-    """Select touched probe recipes and declared short checks without running any commands."""
-    from suite import gate_spec, NoRecipe, recipes, recipe_for
+    """Select touched recipes and short checks, validating recipes in the candidate interpreter."""
+    from suite import gate_spec, NoRecipe
     projects = worktree/'tests/projects'
-    selected, seen, tables = [], set(explicit), {}
-    explicit_suites = {name for command in explicit for name in suite_projects(command)}
+    selected, seen, records = [], set(explicit), []
+    explicit_suites = {pair for command in explicit
+                       for pair in suite_coverage(command, probe_release(command, worktree, environment))}
     for project in sorted(projects.iterdir()) if projects.is_dir() else []:
         # Match suite discovery. Support projects and shared fixtures have no Reference/ and
         # can still be checked by the worker's explicit --probe commands.
@@ -176,26 +246,25 @@ def automatic_probes(worktree, changed, explicit, environment=None):
             path == pattern.rstrip('/') or path.startswith(pattern.rstrip('/')+'/')
             or fnmatch.fnmatchcase(path, pattern)
             for path in changed for pattern in dependencies)
-        commands = []
-        if affected:
-            # Use suite.py so built-in recipes, summary verdicts and declared commands have
-            # exactly the same meaning in the worker gate and sheriff suite.
-            commands.append((None, 'changed files' if touched else 'engine paths'))
+        records.append((name, prefix, touched, affected, spec))
+    requested = [(name, probe_release(prefix, worktree, environment))
+                 for name, prefix, _, affected, _ in records if affected]
+    catalog = candidate_recipes(worktree, requested)
+    for name, prefix, touched, affected, spec in records:
+        commands = [(None, 'changed files' if touched else 'engine paths')] if affected else []
         commands.extend((command, 'fast check') for command in spec.get('fast_commands', []))
         for command, reason in commands:
             if command is None:
                 # A full declared recipe already supplied verbatim needs no duplicate run.
                 declared = spec.get('commands', [])
                 release = probe_release(prefix, worktree, environment)
-                if release not in tables:
-                    tables[release] = recipes(release)
-                recipe = recipe_for(name, tables[release], release, projects=projects)
-                if isinstance(recipe, NoRecipe):
-                    die(2, f'{name}: {recipe.reason}')
-                if name in explicit_suites or (name not in tables[release] and declared and all(c in seen for c in declared)):
+                recipe = catalog[name]
+                if recipe.get('error'):
+                    die(2, f'{name}: {recipe["error"]}')
+                if (name, release) in explicit_suites or (not recipe['builtin'] and declared and all(c in seen for c in declared)):
                     continue
-                if name not in tables[release]:
-                    seen.update(declared)  # these commands are covered by the selected full recipe
+                if not recipe['builtin']:
+                    seen.update(declared)
                 command = shlex.join([sys.executable, 'tools/agents/suite.py', '--only', name,
                                       '--jobs', '1', '--label',
                                       f'land-{os.getpid()}-{time.time_ns()}-{name}'])
@@ -234,7 +303,7 @@ def automatic_checks(worktree, changed, explicit, environment=None, *, full=Fals
 
 def automatic_union(groups, explicit=()):
     seen = {automatic_key(command, release) for command, release in explicit}
-    suites = {(name, release) for command, release in explicit for name in suite_projects(command)}
+    suites = {pair for command, release in explicit for pair in suite_coverage(command, release)}
     selected = []
     for group in groups:
         for row in group:
