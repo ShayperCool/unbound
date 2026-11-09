@@ -52,6 +52,14 @@ namespace DotRecast.Detour
         private readonly List<DtSurface> m_surfaces = new List<DtSurface>();
         private int m_plainTiles;
 
+        /// Unbound: the tiles holding off-mesh connections, by the cells of the mesh's grid that their
+        /// connections' ends reach (a wide end: every cell its segment's bounds cover), so a tile
+        /// finds the connections landing on it wherever their starts are.
+        private readonly Dictionary<long, List<DtMeshTile>> m_endHolders = new Dictionary<long, List<DtMeshTile>>();
+        private readonly List<DtMeshTile> m_landTiles = new List<DtMeshTile>();
+        private readonly List<DtMeshTile> m_holders = new List<DtMeshTile>();
+        private int m_visit;
+
         /// Unbound: the surfaces, in order of their ids (the order queries visit them in).
         public IReadOnlyList<DtSurface> Surfaces => m_surfaces;
 
@@ -517,9 +525,8 @@ namespace DotRecast.Detour
 
             ConnectIntLinks(tile);
 
-            // Base off-mesh connections to their starting polygons and connect connections inside the tile.
+            // Base off-mesh connections to their starting polygons.
             BaseOffMeshLinks(tile);
-            ConnectExtOffMeshLinks(tile, tile, -1);
 
             // Create connections with neighbour tiles.
             const int MAX_NEIS = 32;
@@ -553,9 +560,6 @@ namespace DotRecast.Detour
                     ConnectExtLinks(tile, neis[j], -1);
                     ConnectExtLinks(neis[j], tile, -1);
                 }
-
-                ConnectExtOffMeshLinks(tile, neis[j], -1);
-                ConnectExtOffMeshLinks(neis[j], tile, -1);
             }
 
             // Connect with neighbour tiles.
@@ -579,11 +583,12 @@ namespace DotRecast.Detour
                         ConnectExtLinks(tile, neis[j], i);
                         ConnectExtLinks(neis[j], tile, DtUtils.OppositeTile(i));
                     }
-
-                    ConnectExtOffMeshLinks(tile, neis[j], i);
-                    ConnectExtOffMeshLinks(neis[j], tile, DtUtils.OppositeTile(i));
                 }
             }
+
+            // Unbound: off-mesh connections land in the tiles their ends lie over, whichever.
+            RegisterEnds(tile, true);
+            ConnectOffMeshEnds(tile);
 
             result = GetTileRef(tile);
             return DtStatus.DT_SUCCESS;
@@ -659,6 +664,10 @@ namespace DotRecast.Detour
                     UnconnectLinks(neis[j], tile);
                 }
             }
+
+            // Unbound: and from the tiles its connections land in and those whose connections land in it.
+            UnconnectOffMeshEnds(tile);
+            RegisterEnds(tile, false);
 
             // Unbound: and from the tiles of its surface around it (in the surface's grid).
             DtSurface surface = tile.data.surface;
@@ -875,107 +884,305 @@ namespace DotRecast.Detour
             }
         }
 
-        /// Builds external polygon links for a tile.
-        void ConnectExtOffMeshLinks(DtMeshTile tile, DtMeshTile target, int side)
+        /// Unbound: connects the off-mesh connections of a newly added tile to the tiles their ends
+        /// lie over, and the connections of other tiles whose ends lie over it.
+        void ConnectOffMeshEnds(DtMeshTile tile)
         {
-            if (tile == null)
+            for (int c = 0; c < tile.data.header.offMeshConCount; ++c)
+            {
+                var con = tile.data.offMeshCons[c];
+                for (int end = 1; end >= 0; --end)
+                {
+                    if (end == 0 && !con.IsWide)
+                        break;
+                    LandTiles(con, end, m_landTiles);
+                    foreach (var land in m_landTiles)
+                    {
+                        // A wide start is attached in its own tile by BaseOffMeshLinks.
+                        if (end == 0 && land == tile)
+                            continue;
+                        ConnectOffMeshEnd(land, tile, con, end);
+                    }
+                }
+            }
+
+            HoldersOver(tile, m_holders);
+            foreach (var holder in m_holders)
+            {
+                for (int c = 0; c < holder.data.header.offMeshConCount; ++c)
+                {
+                    var con = holder.data.offMeshCons[c];
+                    for (int end = 1; end >= 0; --end)
+                    {
+                        if (end == 0 && !con.IsWide)
+                            break;
+                        if (EndOverTile(con, end, tile))
+                            ConnectOffMeshEnd(tile, holder, con, end);
+                    }
+                }
+            }
+        }
+
+        /// Unbound: removes the links between a tile being removed and the tiles its connections land
+        /// in or whose connections land in it.
+        void UnconnectOffMeshEnds(DtMeshTile tile)
+        {
+            for (int c = 0; c < tile.data.header.offMeshConCount; ++c)
+            {
+                var con = tile.data.offMeshCons[c];
+                for (int end = 1; end >= 0; --end)
+                {
+                    if (end == 0 && !con.IsWide)
+                        break;
+                    LandTiles(con, end, m_landTiles);
+                    foreach (var land in m_landTiles)
+                    {
+                        if (land != tile)
+                            UnconnectLinks(land, tile);
+                    }
+                }
+            }
+
+            HoldersOver(tile, m_holders);
+            foreach (var holder in m_holders)
+                UnconnectLinks(holder, tile);
+        }
+
+        /// Unbound: enters (or removes) a tile in the cells its connections' ends reach.
+        void RegisterEnds(DtMeshTile tile, bool add)
+        {
+            for (int c = 0; c < tile.data.header.offMeshConCount; ++c)
+            {
+                var con = tile.data.offMeshCons[c];
+                for (int end = 1; end >= 0; --end)
+                {
+                    if (end == 0 && !con.IsWide)
+                        break;
+                    EndBounds(con, end, out var min, out var max);
+                    CalcTileLoc(min, out int x0, out int y0);
+                    CalcTileLoc(max, out int x1, out int y1);
+                    for (int x = x0; x <= x1; ++x)
+                    {
+                        for (int y = y0; y <= y1; ++y)
+                        {
+                            long cell = CellKey(x, y);
+                            if (add)
+                            {
+                                if (!m_endHolders.TryGetValue(cell, out var holders))
+                                    m_endHolders[cell] = holders = new List<DtMeshTile>();
+                                if (holders.Count == 0 || holders[holders.Count - 1] != tile)
+                                    holders.Add(tile);
+                            }
+                            else if (m_endHolders.TryGetValue(cell, out var holders))
+                            {
+                                holders.Remove(tile);
+                                if (holders.Count == 0)
+                                    m_endHolders.Remove(cell);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        static long CellKey(int x, int y) => ((long)x << 32) | (uint)y;
+
+        /// Unbound: the other tiles holding connections whose ends reach the cells of the mesh's
+        /// grid that the tile's bounds cover, each once.
+        void HoldersOver(DtMeshTile tile, List<DtMeshTile> result)
+        {
+            result.Clear();
+            int visit = ++m_visit;
+            CalcTileLoc(tile.data.header.bmin, out int x0, out int y0);
+            CalcTileLoc(tile.data.header.bmax, out int x1, out int y1);
+            for (int x = x0; x <= x1; ++x)
+            {
+                for (int y = y0; y <= y1; ++y)
+                {
+                    if (!m_endHolders.TryGetValue(CellKey(x, y), out var holders))
+                        continue;
+                    foreach (var holder in holders)
+                    {
+                        if (holder == tile || holder.visit == visit)
+                            continue;
+                        holder.visit = visit;
+                        result.Add(holder);
+                    }
+                }
+            }
+        }
+
+        /// Unbound: the bounds of an end of a connection: its point, or a wide end's segment.
+        static void EndBounds(DtOffMeshConnection con, int end, out RcVec3f min, out RcVec3f max)
+        {
+            if (con.IsWide)
+            {
+                con.Edge(end, out var a, out var b);
+                min = RcVec3f.Min(a, b);
+                max = RcVec3f.Max(a, b);
+                return;
+            }
+            min = max = con.pos[end];
+        }
+
+        /// Unbound: the range of a surface's grid an end of a connection lies over (in the surface's
+        /// frame); false when it misses the surface's tiles.
+        static bool EndCells(DtSurface surface, DtOffMeshConnection con, int end, out int x0, out int y0, out int x1, out int y1)
+        {
+            x0 = y0 = x1 = y1 = 0;
+            EndBounds(con, end, out var min, out var max);
+            if (!surface.QueryBox(min, max, out var lmin, out var lmax))
+                return false;
+            x0 = surface.CellX(lmin.X);
+            x1 = surface.CellX(lmax.X);
+            y0 = surface.CellY(lmin.Z);
+            y1 = surface.CellY(lmax.Z);
+            return true;
+        }
+
+        /// Unbound: the tiles an end of a connection lies over, of every surface (in its frame: the
+        /// tile at the place of its grid holding the end, every place a wide end's segment covers)
+        /// and of none (by the mesh's grid). Unity's: a link lands on the NavMesh under its end,
+        /// moved or turned, however far its start is (tests/projects/navpath `place.links`).
+        void LandTiles(DtOffMeshConnection con, int end, List<DtMeshTile> result)
+        {
+            result.Clear();
+            foreach (var surface in m_surfaces)
+            {
+                if (!EndCells(surface, con, end, out int x0, out int y0, out int x1, out int y1))
+                    continue;
+                for (int x = x0; x <= x1; ++x)
+                    for (int y = y0; y <= y1; ++y)
+                        for (var tile = surface.TileAt(x, y); tile != null; tile = tile.surfaceNext)
+                            result.Add(tile);
+            }
+
+            if (m_plainTiles == 0)
+                return;
+            EndBounds(con, end, out var min, out var max);
+            CalcTileLoc(min, out int px0, out int py0);
+            CalcTileLoc(max, out int px1, out int py1);
+            for (int x = px0; x <= px1; ++x)
+            {
+                for (int y = py0; y <= py1; ++y)
+                {
+                    for (var tile = m_posLookup[ComputeTileHash(x, y, m_tileLutMask)]; tile != null; tile = tile.next)
+                    {
+                        if (tile.data != null && tile.data.surface == null && tile.data.header.x == x && tile.data.header.y == y)
+                            result.Add(tile);
+                    }
+                }
+            }
+        }
+
+        /// Unbound: whether an end of a connection lies over the tile (one of its LandTiles).
+        bool EndOverTile(DtOffMeshConnection con, int end, DtMeshTile tile)
+        {
+            var data = tile.data;
+            if (data.surface != null)
+            {
+                return EndCells(data.surface, con, end, out int x0, out int y0, out int x1, out int y1)
+                       && data.surfaceX >= x0 && data.surfaceX <= x1 && data.surfaceY >= y0 && data.surfaceY <= y1;
+            }
+            EndBounds(con, end, out var min, out var max);
+            CalcTileLoc(min, out int px0, out int py0);
+            CalcTileLoc(max, out int px1, out int py1);
+            return data.header.x >= px0 && data.header.x <= px1 && data.header.y >= py0 && data.header.y <= py1;
+        }
+
+        /// Unbound: the side of <paramref name="target"/> a tile lies on (as Detour's neighbour
+        /// sides, 0xff for the same place), for the links between them.
+        static int SideTowards(DtMeshTile target, DtMeshTile land)
+        {
+            if (land == target)
+                return 0xff;
+            var h = land.data.header;
+            var centre = new RcVec3f((h.bmin.X + h.bmax.X) * 0.5f, (h.bmin.Y + h.bmax.Y) * 0.5f, (h.bmin.Z + h.bmax.Z) * 0.5f);
+            return DtNavMeshBuilder.ClassifyOffMeshPoint(centre, target.data.header.bmin, target.data.header.bmax);
+        }
+
+        /// Builds the links of an off-mesh connection of <paramref name="target"/> whose end
+        /// <paramref name="end"/> lies over <paramref name="land"/> (Unbound: one connection, found by
+        /// where its end lies rather than by the neighbour side it was classified to).
+        void ConnectOffMeshEnd(DtMeshTile land, DtMeshTile target, DtOffMeshConnection targetCon, int end)
+        {
+            int oppositeSide = SideTowards(target, land);
+
+            // Unbound: a wide connection's ends attach to the polygons they cross in every tile
+            // they reach (its start in its own tile is attached by BaseOffMeshLinks).
+            if (targetCon.IsWide)
+            {
+                ConnectWideEnd(target, targetCon, end, land, oppositeSide, end == 0 || (targetCon.flags & DT_OFFMESH_CON_BIDIR) != 0);
+                return;
+            }
+
+            DtPoly targetPoly = target.data.polys[targetCon.poly];
+            // Skip off-mesh connections which start location could not be
+            // connected at all.
+            if (targetPoly.firstLink == DT_NULL_LINK)
             {
                 return;
             }
 
-            // Connect off-mesh links.
-            // We are interested on links which land from target tile to this tile.
-            int oppositeSide = (side == -1) ? 0xff : DtUtils.OppositeTile(side);
-
-            for (int i = 0; i < target.data.header.offMeshConCount; ++i)
+            var ext = new RcVec3f()
             {
-                DtOffMeshConnection targetCon = target.data.offMeshCons[i];
+                X = targetCon.rad,
+                Y = target.data.header.walkableClimb,
+                Z = targetCon.rad
+            };
 
-                // Unbound: a wide connection's ends attach to the polygons they cross in every tile
-                // they reach, whichever tile their middles lie over (its start in its own tile is
-                // attached by BaseOffMeshLinks).
-                if (targetCon.IsWide)
-                {
-                    if (EdgeOverTile(targetCon, 1, tile))
-                        ConnectWideEnd(target, targetCon, 1, tile, oppositeSide, (targetCon.flags & DT_OFFMESH_CON_BIDIR) != 0);
-                    if (tile != target && EdgeOverTile(targetCon, 0, tile))
-                        ConnectWideEnd(target, targetCon, 0, tile, oppositeSide, true);
-                    continue;
-                }
+            // Find polygon to connect to.
+            RcVec3f p = targetCon.pos[1];
+            var refs = FindNearestPolyInTile(land, p, ext, out var nearestPt);
+            if (refs == 0)
+            {
+                return;
+            }
 
-                if (targetCon.side != oppositeSide)
-                {
-                    continue;
-                }
+            // findNearestPoly may return too optimistic results, further check
+            // to make sure.
 
-                DtPoly targetPoly = target.data.polys[targetCon.poly];
-                // Skip off-mesh connections which start location could not be
-                // connected at all.
-                if (targetPoly.firstLink == DT_NULL_LINK)
-                {
-                    continue;
-                }
+            if (RcMath.Sqr(nearestPt.X - p.X) + RcMath.Sqr(nearestPt.Z - p.Z) > RcMath.Sqr(targetCon.rad))
+            {
+                return;
+            }
 
-                var ext = new RcVec3f()
-                {
-                    X = targetCon.rad,
-                    Y = target.data.header.walkableClimb,
-                    Z = targetCon.rad
-                };
+            // Unbound: and within the climb in height (Unity's; measured, tests/projects/navpath link.snap).
+            if (MathF.Abs(nearestPt.Y - p.Y) > target.data.header.walkableClimb)
+            {
+                return;
+            }
 
-                // Find polygon to connect to.
-                RcVec3f p = targetCon.pos[1];
-                var refs = FindNearestPolyInTile(tile, p, ext, out var nearestPt);
-                if (refs == 0)
-                {
-                    continue;
-                }
+            // Make sure the location is on current mesh.
+            target.data.verts[targetPoly.verts[1] * 3] = nearestPt.X;
+            target.data.verts[targetPoly.verts[1] * 3 + 1] = nearestPt.Y;
+            target.data.verts[targetPoly.verts[1] * 3 + 2] = nearestPt.Z;
 
-                // findNearestPoly may return too optimistic results, further check
-                // to make sure.
+            // Link off-mesh connection to target poly.
+            int idx = AllocLink(target);
+            DtLink link = target.links[idx];
+            link.refs = refs;
+            link.edge = 1;
+            link.side = (byte)oppositeSide;
+            link.bmin = link.bmax = 0;
+            // Add to linked list.
+            link.next = targetPoly.firstLink;
+            targetPoly.firstLink = idx;
 
-                if (RcMath.Sqr(nearestPt.X - p.X) + RcMath.Sqr(nearestPt.Z - p.Z) > RcMath.Sqr(targetCon.rad))
-                {
-                    continue;
-                }
-
-                // Unbound: and within the climb in height (Unity's; measured, tests/projects/navpath link.snap).
-                if (MathF.Abs(nearestPt.Y - p.Y) > target.data.header.walkableClimb)
-                {
-                    continue;
-                }
-
-                // Make sure the location is on current mesh.
-                target.data.verts[targetPoly.verts[1] * 3] = nearestPt.X;
-                target.data.verts[targetPoly.verts[1] * 3 + 1] = nearestPt.Y;
-                target.data.verts[targetPoly.verts[1] * 3 + 2] = nearestPt.Z;
-
-                // Link off-mesh connection to target poly.
-                int idx = AllocLink(target);
-                DtLink link = target.links[idx];
-                link.refs = refs;
-                link.edge = 1;
-                link.side = (byte)oppositeSide;
+            // Link target poly to off-mesh connection.
+            if ((targetCon.flags & DT_OFFMESH_CON_BIDIR) != 0)
+            {
+                int tidx = AllocLink(land);
+                int landPolyIdx = DecodePolyIdPoly(refs);
+                DtPoly landPoly = land.data.polys[landPolyIdx];
+                link = land.links[tidx];
+                link.refs = GetPolyRefBase(target) | (long)targetCon.poly;
+                link.edge = 0xff;
+                link.side = (byte)(oppositeSide == 0xff ? 0xff : DtUtils.OppositeTile(oppositeSide));
                 link.bmin = link.bmax = 0;
                 // Add to linked list.
-                link.next = targetPoly.firstLink;
-                targetPoly.firstLink = idx;
-
-                // Link target poly to off-mesh connection.
-                if ((targetCon.flags & DT_OFFMESH_CON_BIDIR) != 0)
-                {
-                    int tidx = AllocLink(tile);
-                    int landPolyIdx = DecodePolyIdPoly(refs);
-                    DtPoly landPoly = tile.data.polys[landPolyIdx];
-                    link = tile.links[tidx];
-                    link.refs = GetPolyRefBase(target) | (long)targetCon.poly;
-                    link.edge = 0xff;
-                    link.side = (byte)(side == -1 ? 0xff : side);
-                    link.bmin = link.bmax = 0;
-                    // Add to linked list.
-                    link.next = landPoly.firstLink;
-                    landPoly.firstLink = tidx;
-                }
+                link.next = landPoly.firstLink;
+                landPoly.firstLink = tidx;
             }
         }
 
@@ -1080,15 +1287,6 @@ namespace DotRecast.Detour
             }
 
             return false;
-        }
-
-        /// Unbound: whether end <paramref name="end"/> of a wide connection reaches over the tile (x, z).
-        static bool EdgeOverTile(DtOffMeshConnection con, int end, DtMeshTile tile)
-        {
-            con.Edge(end, out var a, out var b);
-            var h = tile.data.header;
-            return MathF.Max(a.X, b.X) >= h.bmin.X && MathF.Min(a.X, b.X) <= h.bmax.X
-                && MathF.Max(a.Z, b.Z) >= h.bmin.Z && MathF.Min(a.Z, b.Z) <= h.bmax.Z;
         }
 
         /// Unbound: the most polygons one end of a wide connection attaches to in a tile (as many as

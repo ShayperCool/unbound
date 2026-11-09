@@ -449,10 +449,9 @@ namespace Unbound.Runtime
 
         /// <summary>The active links of the surface's agent type whose start lies over this tile
         /// become its off-mesh connections (Detour connects their ends when tiles are added).
-        /// A start on the edge between two tiles lies over both and is added to each; each copy's
-        /// end side is classified against its own tile, so every copy lands where its tile's
-        /// neighbours are. The links whose end lies over this tile (or within the snap radius of it)
-        /// land in it, and a bidirectional landing takes one of this tile's link slots for the way
+        /// A start on the edge between two tiles lies over both and is added to each; every copy's
+        /// end lands in the tiles it lies over (DtNavMesh.LandTiles). The links whose end lies over
+        /// this tile (or within the snap radius of it) land in it, and a bidirectional landing takes one of this tile's link slots for the way
         /// back, so this tile reserves slots for them too, whether or not it holds any start.</summary>
         static void AddLinks(Surface surface, DtMeshData tile)
         {
@@ -463,8 +462,8 @@ namespace Unbound.Runtime
             {
                 if (!link.Active || link.Link.agentTypeID != surface.AgentTypeID) continue;
                 var end = link.End;
-                // Over the tile or within the snap radius of it: Detour lands an end on a polygon of
-                // the tile up to the snap radius away (DtNavMesh.ConnectExtOffMeshLinks).
+                // Over the tile or within the snap radius of it: an end lands on a polygon of the
+                // tile it lies over up to the snap radius away (DtNavMesh.ConnectOffMeshEnd).
                 float snap = SnapRadius(surface);
                 if (!(end.x < h.bmin.X - snap || end.x > h.bmax.X + snap || end.z < h.bmin.Z - snap || end.z > h.bmax.Z + snap)) ends++;
                 var start = link.Start;
@@ -508,11 +507,7 @@ namespace Unbound.Runtime
                     rad = SnapRadius(surface),
                     poly = basePoly + i,
                     flags = link.Link.bidirectional ? DtDetour.DT_OFFMESH_CON_BIDIR : 0,
-                    // Where the end lies from this tile: 0xff over it, else the neighbour (0..7)
-                    // Detour looks for the landing in. Classified as DotRecast's own tile builder
-                    // does (DtNavMeshBuilder.CreateNavMeshData: the end against the tile's bounds),
-                    // so an end in the next tile lands there instead of never connecting.
-                    side = DtNavMeshBuilder.ClassifyOffMeshPoint(endPos, h.bmin, h.bmax),
+                    // Its end lands in the tiles it lies over, whichever (DtNavMesh.LandTiles).
                     userId = link.Id,
                     costModifier = link.Link.costModifier >= 0f ? link.Link.costModifier : -1f,
                     halfWidth = HalfWidth(link, start, end),

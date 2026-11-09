@@ -29,7 +29,10 @@ Altered (marked `Unbound:` in the sources):
   polygon bounds in that frame (`DtMeshData.localVerts`); ground polygons connect only to tiles of
   their own surface, by their sides in its frame (`DtNavMesh.AddTile`); `Raycast` is cast in the
   frame of the start polygon's surface (Unity 6000.0.71f1: tests/projects/navpath `place.moved`,
-  `place.adjacent`); off-mesh connections still attach by the mesh's world tile grid;
+  `place.adjacent`); an off-mesh connection's end lands in the tiles it lies over, of any surface
+  and however far from its start (`DtNavMesh.LandTiles`, `ConnectOffMeshEnd`: in each surface's
+  frame; a grid of the cells the ends reach finds the connections landing on a tile added later;
+  navpath `place.links`);
 - A* as Unity's (`tests/projects/navcost`): a polygon's node is placed once, when the search first
   reaches the polygon, at the point of the portal from the polygon it is reached from nearest that
   polygon's node (in 3D, kept 5% of the portal's length from its ends; a portal shorter than 1 cm
@@ -97,10 +100,10 @@ Altered (marked `Unbound:` in the sources):
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   ground polygon nearest to the target, never on an off-mesh connection: navlinks `snapnear`);
 - off-mesh connection ends attach within the agent type's radius across (the engine sets `rad`)
-  and its climb in height (`BaseOffMeshLinks`, `ConnectExtOffMeshLinks`; navpath `link.snap`);
+  and its climb in height (`BaseOffMeshLinks`, `ConnectOffMeshEnd`; navpath `link.snap`);
 - wide connections (`DtOffMeshConnection.halfWidth`, NavMeshLinkData.width): each end is a segment
   attached to every polygon it crosses in every tile it reaches (`ConnectWideEnd`,
-  `ConnectExtOffMeshLinks`; navpath `link.widetile`), the overlap kept as the link's bmin/bmax;
+  `ConnectOffMeshEnd`; navpath `link.widetile`), the overlap kept as the link's bmin/bmax;
   its portal is that part of the segment (`WidePortal`), and it is crossed straight across from
   where the agent is along the end it enters by, held to the parts over the polygons before
   and after (`GetOffMeshConnectionPolyEndPoints`; navpath `link.wide`, navlinks `wide`); a tile's

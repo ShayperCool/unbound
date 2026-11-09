@@ -36,6 +36,8 @@ namespace DotRecast.Detour
         public DtMeshTile next; //< The next free tile, or the next tile in the spatial grid.
         /// Unbound: the next tile at the same place of the tile's surface grid (DtSurface).
         public DtMeshTile surfaceNext;
+        /// Unbound: the last visit of a search over tiles (each tile is taken once).
+        public int visit;
 
         public DtMeshTile(int index)
         {

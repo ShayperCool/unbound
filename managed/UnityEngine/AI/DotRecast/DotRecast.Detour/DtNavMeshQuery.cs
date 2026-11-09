@@ -608,7 +608,6 @@ namespace DotRecast.Detour
         }
 
         /// Queries polygons within a tile.
-        /// Queries polygons within a tile.
         /// Unbound: the box (<paramref name="qmin"/>, <paramref name="qmax"/>) is in the frame of
         /// the tile's surface (DtSurface; the world for a tile of none).
         protected void QueryPolygonsInTile<TQuery>(DtMeshTile tile, RcVec3f qmin, RcVec3f qmax, IDtQueryFilter filter, ref TQuery query)

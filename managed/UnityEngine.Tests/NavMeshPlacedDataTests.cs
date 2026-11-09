@@ -55,6 +55,9 @@ namespace UnityEngine.Tests
             new object[] { -40.2f, 0f, 3.7f, 30f },
             new object[] { 5.1f, -0.3f, 47.6f, 90f },
             new object[] { 2.6667f, 0f, 2.6667f, 45f },
+            // Moved by float noise only: still placed and looked up in its own frame.
+            new object[] { 0f, 5e-6f, 0f, 0f },
+            new object[] { 3e-6f, 0f, 2e-6f, 0f },
         };
 
         /// <summary>Every point over the floor (every tile, both sides of each tile edge) samples
@@ -149,6 +152,62 @@ namespace UnityEngine.Tests
             float length = 0f;
             for (int i = 1; i < corners.Length; i++) length += Vector3.Distance(corners[i - 1], corners[i]);
             return length;
+        }
+
+        /// <summary>A link from a NavMesh where it was built to a copy moved and turned 30 degrees
+        /// (5 m apart; its end lies on a turned tile whose bounds' centre lies in another cell of the
+        /// world, and its start and end are further apart than a tile) connects both ways, as does a
+        /// 2 m wide one; without the links the copies are not connected.</summary>
+        [Fact]
+        public void LinksLandOnATurnedNavMeshWhereverTheirStartIs()
+        {
+            var data = NavMeshBuilder.BuildNavMeshData(SmallTiles(), new List<NavMeshBuildSource>
+            {
+                Box(new Vector3(0.037f, -0.05f, 0.053f), new Vector3(16f, 0.1f, 16f), 0),
+            }, new Bounds(Vector3.zero, new Vector3(20f, 10f, 20f)), Vector3.zero, Quaternion.identity);
+            var pos = new Vector3(24f, 0f, 6f);
+            var rot = Quaternion.Euler(0f, 30f, 0f);
+            Vector3 B(float x, float z) => pos + rot * new Vector3(x, 0f, z);
+            m_Data.Add(NavMesh.AddNavMeshData(data));
+            m_Data.Add(NavMesh.AddNavMeshData(data, pos, rot));
+            var path = new NavMeshPath();
+            NavMesh.CalculatePath(new Vector3(-6f, 0f, 2f), B(5f, 1f), NavMesh.AllAreas, path);
+            Assert.Equal(NavMeshPathStatus.PathPartial, path.status);
+
+            var links = new List<NavMeshLinkInstance>();
+            try
+            {
+                foreach (var (start, end, width) in new[]
+                {
+                    (new Vector3(7.3f, 0f, 2f), B(-7.3f, -1.5f), 0f),
+                    (new Vector3(7.3f, 0f, -5f), B(-7.3f, -6f), 2f),
+                })
+                {
+                    links.Add(NavMesh.AddLink(new NavMeshLinkData
+                    {
+                        startPosition = start, endPosition = end, width = width, bidirectional = true, costModifier = -1f,
+                    }));
+                }
+                foreach (var (from, to, over) in new[]
+                {
+                    (new Vector3(-6f, 0f, 2f), B(5f, 1f), B(-7.3f, -1.5f)),
+                    (B(5f, 1f), new Vector3(-6f, 0f, 2f), B(-7.3f, -1.5f)),
+                    (new Vector3(-6f, 0f, -6f), B(5f, -6.5f), B(-7.3f, -6f)),
+                })
+                {
+                    Assert.True(NavMesh.CalculatePath(from, to, NavMesh.AllAreas, path));
+                    Assert.Equal(NavMeshPathStatus.PathComplete, path.status);
+                    // Across the link: one corner on the turned NavMesh's end of it.
+                    bool crosses = false;
+                    foreach (var corner in path.corners)
+                        crosses |= Mathf.Abs(corner.x - over.x) < 1.1f && Mathf.Abs(corner.z - over.z) < 1.1f;
+                    Assert.True(crosses, $"{from} -> {to}");
+                }
+            }
+            finally
+            {
+                foreach (var link in links) NavMesh.RemoveLink(link);
+            }
         }
 
         /// <summary>Two NavMeshes built from one floor with bounds meeting at a tile edge (x = 0) are
