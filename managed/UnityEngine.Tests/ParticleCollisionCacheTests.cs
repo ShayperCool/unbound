@@ -54,7 +54,7 @@ namespace UnityEngine.Tests
         /// <summary>A box whose top is at y 0 and a system <paramref name="height"/> above it
         /// dropping one particle (radius 0.1) at <paramref name="speed"/> (by default 0.5 above at
         /// 5 units/s, reaching the box in its fourth frame).</summary>
-        ParticleSystem Dropping(ParticleSystemCollisionQuality quality, float height = 0.5f, float speed = 5f)
+        ParticleSystem Dropping(ParticleSystemCollisionQuality quality, float height = 0.5f, float speed = 5f, short count = 1)
         {
             var box = new GameObject("box").AddComponent<BoxCollider>();
             box.size = new Vector3(4f, 2f, 4f);
@@ -70,7 +70,7 @@ namespace UnityEngine.Tests
             var main = ps.main; main.playOnAwake = false; main.loop = false; main.startLifetime = 5f; main.startSpeed = speed; main.startSize = 0.2f;
             main.simulationSpace = ParticleSystemSimulationSpace.World; main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             var shape = ps.shape; shape.enabled = false;
-            var emission = ps.emission; emission.rateOverTime = 0f; emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            var emission = ps.emission; emission.rateOverTime = 0f; emission.SetBursts(new[] { new ParticleSystem.Burst(0f, count) });
             var c = ps.collision; c.enabled = true; c.type = ParticleSystemCollisionType.World; c.mode = ParticleSystemCollisionMode.Collision3D;
             c.quality = quality; c.bounce = 1f; c.dampen = 0f; c.lifetimeLoss = 0f;
             go.SetActive(true);
@@ -111,24 +111,46 @@ namespace UnityEngine.Tests
         [InlineData(ParticleSystemCollisionQuality.Low, true)]
         public void OnlyALowSystemMeetsThePlaneOfAColliderThatLeft(ParticleSystemCollisionQuality quality, bool bounces)
         {
-            // The cache is meant for static colliders (6000.0 Manual). The particle starts 1.5
-            // above the box at 3.2 units/s; Low's first query (its fifth frame) finds the box, which
-            // then goes far away. Low meets the cached plane in its 22nd frame (between queries);
-            // Medium queries every frame and goes through (tests/projects/particlerender
-            // collide/cache/gone_*).
-            var ps = Dropping(quality, height: 1.5f, speed: 3.2f);
+            // The cache is meant for static colliders (6000.0 Manual). Two particles in one voxel
+            // start 1.5 above the box at 3.2 units/s; Low's first query (its fifth frame) finds the
+            // box, which then goes far away. Low meets the cached plane in its 22nd frame (between
+            // queries); Medium queries every frame and goes through (tests/projects/particlerender
+            // collide/cache/gone_*, whose Low particles sharing a voxel bounce; one alone in its
+            // voxel there does not, an open difference).
+            var ps = Dropping(quality, height: 1.5f, speed: 3.2f, count: 2);
             var box = m_Objects[0] as GameObject;
             ps.Play();
             for (int frame = 0; frame < 5; frame++) Frame();
             box.transform.position = new Vector3(0f, -50f, 0f);
             Physics.SyncTransforms();
+            var particles = new ParticleSystem.Particle[2];
             bool bounced = false;
             for (int frame = 5; frame < 40 && !bounced; frame++)
             {
                 Frame();
-                bounced = Only(ps).velocity.y > 0f;
+                Assert.Equal(2, ps.GetParticles(particles));
+                bounced = particles[0].velocity.y > 0f && particles[1].velocity.y > 0f;
             }
             Assert.Equal(bounces, bounced);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(100)]
+        public void APrewarmMakesNoQueriesWhateverRaysEarlierFramesLeft(int leftover)
+        {
+            // A looping Low system prewarms over a box with nothing cached: like a system advanced
+            // by Simulate, it makes no queries, so no prewarmed particle has bounced, whatever
+            // queries the system had left from earlier frames.
+            var ps = Dropping(ParticleSystemCollisionQuality.Low);
+            var main = ps.main; main.loop = true; main.prewarm = true; main.duration = 1f;
+            var emission = ps.emission; emission.rateOverTime = 10f;
+            typeof(ParticleSystem).GetField("m_Rays", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .SetValue(ps, leftover);
+            ps.Play();
+            var particles = new ParticleSystem.Particle[ps.particleCount];
+            Assert.True(ps.GetParticles(particles) > 10);
+            Assert.All(particles, p => Assert.True(p.velocity.y <= 0f, $"bounced at y {p.position.y}"));
         }
 
         [Fact]

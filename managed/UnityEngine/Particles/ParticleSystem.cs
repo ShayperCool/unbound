@@ -1159,6 +1159,10 @@ namespace UnityEngine
         /// then the playback restarts at time 0 keeping the emission's phase.</para></summary>
         void Prewarm()
         {
+            // At Medium and Low quality a prewarm makes no collision queries, as a system advanced
+            // by Simulate makes none (tests/projects/particlerender collide/cache/simulate_medium);
+            // its particles meet only planes already cached (Unbound's choice for prewarm, unmeasured).
+            m_Rays = 0;
             float lifetime = Mathf.Max(LongestLifetime(m_Main.startLifetime), 0.0001f);
             if (!Compat.ParticlePrewarmMeasured)
             {

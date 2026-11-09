@@ -241,8 +241,9 @@ namespace UnityEngine
             m_CollisionHits = 0;
             int pending = m_PendingCollisionCount;
             m_PendingCollisionCount = 0;
-            // Lookups the pass's window could serve come now (Unbound's choice: their random
-            // draws follow the hits in slot order, unmeasured with random curves).
+            // Lookups the pass's window could serve come now (Unbound's choice, unmeasured: their
+            // random draws follow the hits in slot order, and the Trigger module and Birth
+            // sub-emitters of those particles run after the pass, after later slots').
             for (int k = 0; k < pending; k++)
             {
                 ref var entry = ref m_PendingCollisions[k];

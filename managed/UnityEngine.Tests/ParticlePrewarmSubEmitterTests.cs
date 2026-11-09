@@ -212,7 +212,7 @@ namespace UnityEngine.Tests
                 var m = p.main; m.startLifetime = 1.5f; m.startSpeed = 2f; m.gravityModifier = 0.5f;
                 var e = p.emission; e.rateOverTime = 4f; e.SetBursts(new ParticleSystem.Burst[0]);
             }
-            // Set here: physics tests running in parallel earlier may leave another gravity behind.
+            // Set here: an earlier test may leave another gravity behind.
             var gravity = Physics.gravity;
             Physics.gravity = new Vector3(0f, -9.81f, 0f);
             try

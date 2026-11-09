@@ -32,8 +32,13 @@ namespace UnityEngine
             internal Collider collider;
         }
 
-        /// <summary>The planes found so far, by voxel and direction (kept for the system's life).</summary>
+        /// <summary>The planes found so far, by voxel and direction (kept for the system's life),
+        /// and the voxel size and simulation space they were stored for: a change of either
+        /// empties the cache (Unbound's choice, unmeasured), as its keys and planes would mean
+        /// other places.</summary>
         readonly Dictionary<VoxelKey, CachedPlane> m_PlaneCache = new Dictionary<VoxelKey, CachedPlane>();
+        float m_PlaneCacheVoxel;
+        ParticleSystemSimulationSpace m_PlaneCacheSpace;
 
         /// <summary>The queries this frame gives the system; those left in the current update; where
         /// the next pass's window starts; the window of the current pass.</summary>
@@ -104,6 +109,12 @@ namespace UnityEngine
         void BeginRayPass(int start, int end)
         {
             if (!UsesCollisionCache) return;
+            if (m_PlaneCacheVoxel != CacheVoxel || m_PlaneCacheSpace != m_Main.simulationSpace)
+            {
+                m_PlaneCache.Clear();
+                m_PlaneCacheVoxel = CacheVoxel;
+                m_PlaneCacheSpace = m_Main.simulationSpace;
+            }
             int offset = m_RayOffset >= start && m_RayOffset < end ? m_RayOffset : start;
             int windowEnd = (int)System.Math.Min((long)offset + m_Rays, end);
             m_RayOffset = offset + m_Rays;
