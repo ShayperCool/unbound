@@ -1,0 +1,5 @@
+{
+ "commands": ["python3 tests/projects/screenread/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label \"gate-$(date +%s%N)\""],
+ "summary": "\\d+/\\d+ records match",
+ "engine_paths": ["crates/unbound-app/src/render/executor.rs", "managed/UnityEngine/Core/Input.cs"]
+}
