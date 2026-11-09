@@ -19,7 +19,8 @@ using UnityEngine;
 /// screen size and its distinct RGBA32 colors with their pixel counts. The rendering resolution is
 /// set at the end of the frames in <see cref="Resizes"/> with
 /// <c>UnityEditor.PlayModeWindow.SetCustomRenderingResolution</c>, recording <c>Screen</c>'s size
-/// right after the call (<c>resize.r{k}</c>).
+/// right after the call (<c>resize.r{k}</c>), and in the Update of frame 7, recording <c>Screen</c>'s
+/// size right after the call and in LateUpdate (<c>resize.update.r7</c>, <c>late.r7</c>).
 /// </summary>
 public class ScreenReadProbe : MonoBehaviour
 {
@@ -33,14 +34,18 @@ public class ScreenReadProbe : MonoBehaviour
         { 2, new Vector2Int(80, 40) },
         { 5, new Vector2Int(64, 32) },
     };
+    /// <summary>The frame whose Update changes the rendering resolution, and the size.</summary>
+    const int UpdateResize = 7;
+    static readonly Vector2Int UpdateResizeSize = new Vector2Int(72, 36);
     /// <summary>Rendered frames whose camera keeps the screen's color (clears only depth).</summary>
-    static readonly HashSet<int> Keeps = new HashSet<int> { 0, 2, 3, 6, 8 };
+    static readonly HashSet<int> Keeps = new HashSet<int> { 0, 2, 3, 6, 7, 8 };
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
     string directory;
     Camera cam;
     int renders, readBefore = -1;
+    bool resizedInUpdate;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -65,6 +70,21 @@ public class ScreenReadProbe : MonoBehaviour
         cam.orthographic = true;
         Camera.onPreRender += PreRender;
         Application.logMessageReceived += OnLog;
+    }
+
+    void Update()
+    {
+        if (renders != UpdateResize || resizedInUpdate) return;
+        resizedInUpdate = true;
+#if UNITY_EDITOR
+        UnityEditor.PlayModeWindow.SetCustomRenderingResolution((uint)UpdateResizeSize.x, (uint)UpdateResizeSize.y, "ScreenReadProbe");
+#endif
+        Value("resize.update.r" + renders, "{\"size\":[" + UpdateResizeSize.x + "," + UpdateResizeSize.y + "],\"screen\":[" + Screen.width + "," + Screen.height + "]}");
+    }
+
+    void LateUpdate()
+    {
+        if (renders == UpdateResize) Value("late.r" + renders, "{\"screen\":[" + Screen.width + "," + Screen.height + "]}");
     }
 
     void PreRender(Camera c)
