@@ -257,7 +257,10 @@ namespace Unbound.UIElements
                 // names no UXML object type is reported by the importer, and only that binding is
                 // dropped.
                 if (UxmlBuilder.IsBindings(node) && !UxmlBuilder.IsUxmlObjectTag(childNode))
-                    Debug.LogError($" ({childNode.Line},{childNode.Column}): Semantic - Uxml object has an invalid child element: {element.Name}");
+                {
+                    Debug.LogError($" ({childNode.Line},{childNode.Column}): Semantic - Uxml object has an invalid child element: {UxmlBuilder.TypeName(childNode)}");
+                    asset.importedWithErrors = true;
+                }
                 if (local == "Instance") childNode.TemplateName = element.GetAttribute("template");
                 ReadChildren(asset, assetPath, element, childNode, errors, positions, ref next);
                 node.Children.Add(childNode);
@@ -304,13 +307,15 @@ namespace Unbound.UIElements
             string full = FullName(node);
             if (s_ObjectTypes.TryGetValue(full, out var cached)) return cached;
             var type = FindType(full);
-            bool isObject = type != null && !typeof(VisualElement).IsAssignableFrom(type)
-                && (type.GetNestedType("UxmlSerializedData", BindingFlags.Public | BindingFlags.NonPublic) != null
-                    || HasAttributeNamed(type, "UxmlObjectAttribute"));
-            var result = isObject ? type : null;
+            var result = IsUxmlObject(type) ? type : null;
             s_ObjectTypes[full] = result;
             return result;
         }
+
+        static bool IsUxmlObject(Type type) =>
+            type != null && !typeof(VisualElement).IsAssignableFrom(type)
+            && (type.GetNestedType("UxmlSerializedData", BindingFlags.Public | BindingFlags.NonPublic) != null
+                || HasAttributeNamed(type, "UxmlObjectAttribute"));
 
         static bool HasAttributeNamed(Type type, string name)
         {
@@ -324,14 +329,18 @@ namespace Unbound.UIElements
         internal static bool IsBindings(UxmlNode node) => node.Type == "Bindings" && string.IsNullOrEmpty(node.Namespace) && node.TemplateName == null;
 
         /// <summary>Whether a tag names a UXML object type (a binding, a column, ...).</summary>
-        internal static bool IsUxmlObjectTag(UxmlNode node) => BindingType(node) != null || UxmlObjectType(node) != null;
+        internal static bool IsUxmlObjectTag(UxmlNode node) => UxmlObjectType(node) != null;
 
-        /// <summary>The Binding type a tag names, else null.</summary>
+        /// <summary>The UXML object Binding type a tag names (DataBinding, a game's [UxmlObject]
+        /// binding), else null.</summary>
         internal static Type BindingType(UxmlNode node)
         {
-            var type = FindType(FullName(node));
+            var type = UxmlObjectType(node);
             return type != null && typeof(Binding).IsAssignableFrom(type) ? type : null;
         }
+
+        /// <summary>A tag's namespace-qualified type name, as the importer reports it.</summary>
+        internal static string TypeName(UxmlNode node) => FullName(node);
 
         // A type by its full name, in the engine or any loaded assembly.
         static Type FindType(string full)
@@ -425,8 +434,8 @@ namespace Unbound.UIElements
                 source = Resolve(node, out type, out var factories, out var hint);
                 if (source == ElementSource.Unknown && UxmlObjectType(node) is Type objectType)
                 {
-                    // UXML objects (a multi-column view's <Columns> and <SortColumnDescriptions>,
-                    // <Bindings>) describe their parent's data, not elements: not read yet.
+                    // UXML objects (a multi-column view's <Columns> and <SortColumnDescriptions>)
+                    // describe their parent's data, not elements: not read yet.
                     Unbound.Runtime.Stubs.Ignored($"UXML object <{node.Type}> ({objectType.FullName})", "is not read yet: its parent is created without it");
                     return null;
                 }

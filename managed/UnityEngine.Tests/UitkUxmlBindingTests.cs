@@ -13,6 +13,7 @@ using Xunit;
 namespace UxmlBindingProbes
 {
     /// <summary>A game binding declared in UXML with a [UxmlAttribute] member.</summary>
+    [UxmlObject]
     public class PrefixBinding : CustomBinding
     {
         [UxmlAttribute]
@@ -23,6 +24,11 @@ namespace UxmlBindingProbes
             ((Label)context.targetElement).text = prefix + context.dataSourcePath;
             return new BindingResult(BindingStatus.Success);
         }
+    }
+
+    /// <summary>A game binding without [UxmlObject]: not a UXML object.</summary>
+    public class PlainBinding : CustomBinding
+    {
     }
 }
 
@@ -122,6 +128,26 @@ namespace UnityEngine.Tests
             Assert.Equal(0, label.childCount);
         }
 
+        // [measured] UnknownType: the importer names the tag's type with its namespace and marks the
+        // document as imported with errors; a game binding type without [UxmlObject] is no UXML
+        // object either.
+        [Fact]
+        public void TagsNamingNoUxmlObjectAreImportErrors()
+        {
+            var asset = ScriptableObject.CreateInstance<VisualTreeAsset>();
+            var logs = Logged(() => UxmlImporter.Import("Assets/UI/UxmlBindingTests.uxml",
+                "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\">\n<ui:Label><Bindings><ui:NoSuch property=\"text\" /><UxmlBindingProbes.PlainBinding property=\"tooltip\" /></Bindings></ui:Label>\n</ui:UXML>", asset));
+            Assert.Equal(new[]
+            {
+                "Error  (2,22): Semantic - Uxml object has an invalid child element: UnityEngine.UIElements.NoSuch",
+                "Error  (2,51): Semantic - Uxml object has an invalid child element: UxmlBindingProbes.PlainBinding",
+            }, logs);
+            Assert.True(asset.importedWithErrors);
+            var root = new VisualElement();
+            asset.CloneTree(root);
+            Assert.Empty(root[0].GetBindingInfos());
+        }
+
         // [measured] NoProperty: a binding without `property` is listed under the empty id until
         // the panel's update reports it and drops it.
         [Fact]
@@ -138,9 +164,10 @@ namespace UnityEngine.Tests
             Assert.Empty(Logged(() => Update(panel)));
         }
 
-        // [measured] describe/styled vs initial/styled: bindings not processed yet are listed newest
-        // first, processed ones in the order they were set; a removed element's bindings are requests
-        // again.
+        // [measured] describe/styled vs initial/styled and requests/*: bindings not processed yet are
+        // listed newest first, processed ones in the order they were processed (one set again moves to
+        // the end); a removed element's bindings are requests again, listed in their processed order
+        // and processed in reverse when it is added back.
         [Fact]
         public void BindingRequestsAreListedNewestFirstUntilProcessed()
         {
@@ -160,7 +187,12 @@ namespace UnityEngine.Tests
             Update(panel);
             Assert.Equal("style.height,tooltip,style.width,name", Ids(e));
             e.RemoveFromHierarchy();
-            Assert.Equal("name,style.width,tooltip,style.height", Ids(e));
+            Assert.Equal("style.height,tooltip,style.width,name", Ids(e));
+            e.SetBinding("text", new DataBinding());
+            Assert.Equal("text,style.height,tooltip,style.width,name", Ids(e));
+            panel.visualTree.Add(e);
+            Update(panel);
+            Assert.Equal("name,style.width,tooltip,style.height,text", Ids(e));
         }
 
         // [measured] custom: a game binding's [UxmlAttribute] members and the base attributes.

@@ -80,7 +80,10 @@ namespace UnityEngine.UIElements
         // The binding whose UI update must not be reported back as a UI change.
         BindingData m_Ignored;
         // Elements with bindings set since the last update (their requests).
-        readonly HashSet<VisualElement> m_Requests = new HashSet<VisualElement>();
+        HashSet<VisualElement> m_Requests = new HashSet<VisualElement>();
+        // Swapped with m_Requests while those are processed: requests made meanwhile (a log
+        // handler setting bindings) wait for the next update.
+        HashSet<VisualElement> m_ProcessingRequests = new HashSet<VisualElement>();
 
         internal BindingLogLevel? logLevel;
 
@@ -294,13 +297,20 @@ namespace UnityEngine.UIElements
 
         void ProcessRequests()
         {
+            (m_Requests, m_ProcessingRequests) = (m_ProcessingRequests, m_Requests);
             string panelName = null;
-            foreach (var element in m_Requests)
+            try
             {
-                if (element.elementPanel != m_Panel) continue;
-                element.UaProcessBindingRequests(panelName ??= PanelName);
+                foreach (var element in m_ProcessingRequests)
+                {
+                    if (element.elementPanel != m_Panel) continue;
+                    element.UaProcessBindingRequests(panelName ??= PanelName);
+                }
             }
-            m_Requests.Clear();
+            finally
+            {
+                m_ProcessingRequests.Clear();
+            }
         }
 
         string PanelName => (m_Panel as Panel)?.name ?? m_Panel.visualTree.name;
@@ -942,7 +952,11 @@ namespace UnityEngine.UIElements
         void UaUnregisterBindings()
         {
             if (m_UaBindings == null || m_UaBindings.Count == 0 || elementPanel == null) return;
-            // Out of a panel, the bindings are requests again.
+            // Out of a panel, the bindings are requests again: the processed ones follow the pending
+            // ones, last processed first (so GetBindingInfos, newest request first, lists them in
+            // their processed order, and attaching again processes them in reverse).
+            m_UaBindings.Reverse(m_UaProcessed, m_UaBindings.Count - m_UaProcessed);
+            m_UaBindings.Reverse();
             m_UaProcessed = 0;
             elementPanel.uaDataBinding.UnregisterAll(this, true);
         }
