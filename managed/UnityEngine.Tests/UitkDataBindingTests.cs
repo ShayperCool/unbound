@@ -103,6 +103,26 @@ namespace UnityEngine.Tests
             Assert.Equal("silent", label.text);
         }
 
+        // [measured] binding/switch-*: a binding whose source is replaced updates even when the new
+        // source reports no change (here a notifying one) or the binding updates only when dirty.
+        [Fact]
+        public void ReplacingTheSourceUpdatesTheBinding()
+        {
+            var panel = NewPanel();
+            var label = new Label { dataSource = new Notifying() };
+            var whenDirty = new Label { dataSource = new Source() };
+            label.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("message") });
+            whenDirty.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("message"), updateTrigger = BindingUpdateTrigger.WhenDirty });
+            panel.visualTree.Add(label);
+            panel.visualTree.Add(whenDirty);
+            Update(panel);
+            label.dataSource = new Notifying { message = "second" };
+            whenDirty.dataSource = new Source { message = "other" };
+            Update(panel);
+            Assert.Equal("second", label.text);
+            Assert.Equal("other", whenDirty.text);
+        }
+
         [Fact]
         public void ToTargetOnceUpdatesOnceUntilMarkedDirty()
         {

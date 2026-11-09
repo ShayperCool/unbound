@@ -934,6 +934,11 @@ public static class CollectionsProbe
             Log.Add("infos " + string.Join(",", System.Linq.Enumerable.Select(field.GetBindingInfos(), i => i.bindingId.ToString())));
         });
         Bind("change-hierarchy-source", () => parent.dataSourcePath = new PropertyPath("message"));
+        // A binding whose source is replaced by one that does not report a change (notifying, a view
+        // hash equal to the last one, a binding updated only when dirty).
+        Bind("switch-notify-source", () => c.dataSource = new BindNotifying { message = "second" });
+        Bind("switch-hash-source", () => f.dataSource = new BindHashed { message = "h2", hash = 1 });
+        Bind("switch-dirty-source", () => g.dataSource = new BindSource { message = "plain2" });
         Bind("clear", () => { a.ClearBinding("text"); plain.message = "after clear"; Log.Add("has " + a.HasBinding("text")); });
         Bind("remove-custom", () => k.RemoveFromHierarchy());
         Bind("readd-custom", () => box.Add(k));

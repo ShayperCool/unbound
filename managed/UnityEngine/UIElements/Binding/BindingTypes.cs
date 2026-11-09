@@ -301,7 +301,7 @@ namespace UnityEngine.UIElements
         public void ApplyConverterGroupToUI(ConverterGroup group) => sourceToUiConverters.registry.Apply(group.registry);
 
         /// <summary>Sets the element property to a value from the source (pending while the element
-        /// is a focused delayed or touch-keyboard text field being edited).</summary>
+        /// is a focused delayed text field being edited).</summary>
         protected internal virtual BindingResult UpdateUI<TValue>(in BindingContext context, ref TValue value)
         {
             var container = context.targetElement;

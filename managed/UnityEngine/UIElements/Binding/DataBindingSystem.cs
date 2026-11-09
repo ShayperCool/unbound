@@ -4,8 +4,8 @@ using System.Reflection;
 using Unity.Properties;
 
 // The binding side of elements and panels. An element keeps the bindings set on it; while it is in a
-// panel they are registered with the panel's binding system, which each panel update (before
-// animations and styles):
+// panel they are registered with the panel's binding system, which each repaint of the panel (before
+// its styles and layout):
 // - copies element values changed by the UI to their sources (bindings that write to the source);
 // - updates each bound element in tree order: a binding is updated when it is dirty, on every update
 //   (EveryUpdate), or when its source may have changed (OnSourceChanged: a source reporting changes
@@ -29,6 +29,10 @@ namespace UnityEngine.UIElements
             public bool hasUiResult;
             public BindingResult sourceResult;
             public bool hasSourceResult;
+            // The resolved context, valid while contextVersion matches the system's.
+            public DataSourceContext cachedContext;
+            public PropertyPath cachedBindingPath;
+            public int contextVersion = -1;
         }
 
         sealed class SourceInfo
@@ -68,7 +72,9 @@ namespace UnityEngine.UIElements
         readonly HashSet<object> m_KnownSources = new HashSet<object>(ReferenceEqualityComparer.Instance);
         readonly List<(object source, long version)> m_VersionChanges = new List<(object, long)>();
         readonly HashSet<object> m_TrackedThisUpdate = new HashSet<object>(ReferenceEqualityComparer.Instance);
-        readonly Stack<List<BindingData>> m_ListPool = new Stack<List<BindingData>>();
+        readonly List<BindingData> m_Scratch = new List<BindingData>();
+        // Element data sources and paths, or the tree, changed: resolved contexts are recomputed.
+        int m_ContextVersion;
         readonly EventHandler<BindablePropertyChangedEventArgs> m_SourceHandler;
         // The binding whose UI update must not be reported back as a UI change.
         BindingData m_Ignored;
@@ -87,7 +93,25 @@ namespace UnityEngine.UIElements
 
         public void OnHierarchyChanged()
         {
-            if (m_PerElement.Count > 0) m_OrderDirty = true;
+            if (m_PerElement.Count == 0) return;
+            m_OrderDirty = true;
+            m_ContextVersion++;
+        }
+
+        public void OnDataSourceChanged()
+        {
+            if (m_PerElement.Count > 0) m_ContextVersion++;
+        }
+
+        /// <summary>The panel goes away: sources stop being observed.</summary>
+        public void Dispose()
+        {
+            foreach (var source in m_Sources.Keys)
+                if (source is INotifyBindablePropertyChanged notifying) notifying.propertyChanged -= m_SourceHandler;
+            m_Sources.Clear();
+            m_PerElement.Clear();
+            m_Ordered.Clear();
+            m_ChangesFromUI.Clear();
         }
 
         // ---- registration ----
@@ -98,7 +122,7 @@ namespace UnityEngine.UIElements
             Unregister(element, id);
             if (!m_PerElement.TryGetValue(element, out var list))
             {
-                list = m_ListPool.Count > 0 ? m_ListPool.Pop() : new List<BindingData>();
+                list = new List<BindingData>();
                 m_PerElement[element] = list;
             }
             var data = new BindingData { element = element, id = id, binding = binding };
@@ -153,8 +177,8 @@ namespace UnityEngine.UIElements
         void Forget(VisualElement element, List<BindingData> list)
         {
             m_PerElement.Remove(element);
-            m_ListPool.Push(list);
             m_OrderDirty = true;
+            if (m_PerElement.Count == 0) m_Ordered.Clear();
         }
 
         public bool TryGetData(VisualElement element, in BindingId id, out BindingData data)
@@ -228,11 +252,15 @@ namespace UnityEngine.UIElements
             {
                 var element = m_Ordered[e];
                 if (!m_PerElement.TryGetValue(element, out var list)) continue;
-                for (int i = 0; i < list.Count; i++)
+                // Bindings set or cleared by callbacks during this update take effect next time.
+                m_Scratch.Clear();
+                m_Scratch.AddRange(list);
+                for (int i = 0; i < m_Scratch.Count; i++)
                 {
-                    var data = list[i];
+                    var data = m_Scratch[i];
+                    if (data.binding == null || !list.Contains(data)) continue;
                     var binding = data.binding;
-                    var context = ResolveContext(element, binding);
+                    var context = CachedContext(data);
                     object source = context.dataSource;
                     var (changed, version) = GetDataSourceVersion(source);
                     if (source != null && m_TrackedThisUpdate.Add(source))
@@ -250,7 +278,7 @@ namespace UnityEngine.UIElements
                     binding.ClearDirty();
                     var bindingContext = new BindingContext(element, data.id, context.dataSourcePath, source);
                     long before = data.version;
-                    var result = UpdateUI(bindingContext, binding);
+                    var result = Guarded(bindingContext, binding, true);
                     CacheAndLog(data, result, true);
                     if (data.version != before) continue;
                     if (result.status == BindingStatus.Success) m_RanUpdate.Add(binding);
@@ -271,7 +299,37 @@ namespace UnityEngine.UIElements
             m_TrackedThisUpdate.Clear();
             m_RanUpdate.Clear();
             m_KnownSources.Clear();
+            m_Scratch.Clear();
             PruneSources();
+        }
+
+        /// <summary>A binding's update; an exception from game code (a custom binding, converter or
+        /// property) is logged and fails this binding only.</summary>
+        static BindingResult Guarded(in BindingContext context, Binding binding, bool toUI)
+        {
+            try
+            {
+                return toUI ? UpdateUI(context, binding) : UpdateSource(context, binding);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return new BindingResult(BindingStatus.Failure, e.Message);
+            }
+        }
+
+        /// <summary>The binding's resolved context, recomputed after a data source, path or tree
+        /// change in the panel, or a change of the binding's own source or path.</summary>
+        DataSourceContext CachedContext(BindingData data)
+        {
+            var provider = data.binding as IDataSourceProvider;
+            if (provider?.dataSource != null) return new DataSourceContext(provider.dataSource, provider.dataSourcePath);
+            var bindingPath = provider?.dataSourcePath ?? default;
+            if (data.contextVersion == m_ContextVersion && data.cachedBindingPath == bindingPath) return data.cachedContext;
+            data.cachedContext = ResolveContext(data.element, data.binding);
+            data.cachedBindingPath = bindingPath;
+            data.contextVersion = m_ContextVersion;
+            return data.cachedContext;
         }
 
         // Sources no binding resolved to in this update stop being tracked.
@@ -332,6 +390,8 @@ namespace UnityEngine.UIElements
             data.lastContext = context;
             data.hasContext = true;
             data.binding.OnDataSourceChanged(new DataSourceContextChanged(data.element, data.id, previous, context));
+            // A binding whose source or path changed updates (as when it is new).
+            data.binding.MarkDirty();
         }
 
         /// <summary>The binding's own data source (with its path), else the element's hierarchical
@@ -357,9 +417,9 @@ namespace UnityEngine.UIElements
                 var data = change.data;
                 var binding = data.binding;
                 if (!ShouldProcess(binding, BindingUpdateStage.UpdateSource, true, false) || ranUpdate.Contains(binding)) continue;
-                var context = ResolveContext(data.element, binding);
+                var context = CachedContext(data);
                 var bindingContext = new BindingContext(data.element, data.id, context.dataSourcePath, context.dataSource);
-                var result = UpdateSource(bindingContext, binding);
+                var result = Guarded(bindingContext, binding, false);
                 CacheAndLog(data, result, false);
                 if (result.status != BindingStatus.Success || !change.IsValid) continue;
                 bool wasDirty = binding.isDirty;
@@ -367,7 +427,7 @@ namespace UnityEngine.UIElements
                 m_Ignored = data;
                 try
                 {
-                    result = UpdateUI(bindingContext, binding);
+                    result = Guarded(bindingContext, binding, true);
                     CacheAndLog(data, result, true);
                 }
                 finally

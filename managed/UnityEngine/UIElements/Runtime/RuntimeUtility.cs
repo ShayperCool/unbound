@@ -126,10 +126,17 @@ namespace UnityEngine.UIElements
             }
         }
 
+        // Repainting runs game code (data bindings): the panels are iterated over a copy, in case a
+        // callback creates or disposes panels.
+        static readonly List<Panel> s_RepaintScratch = new List<Panel>();
+
         public static void RepaintPanels(bool onlyOffscreen)
         {
-            foreach (var p in GetSortedPlayerPanels())
-                if (p is BaseRuntimePanel runtime && (!onlyOffscreen || runtime.targetTexture != null)) runtime.Repaint(Event.current);
+            s_RepaintScratch.Clear();
+            s_RepaintScratch.AddRange(GetSortedPlayerPanels());
+            foreach (var p in s_RepaintScratch)
+                if (p is BaseRuntimePanel runtime && !runtime.disposed && (!onlyOffscreen || runtime.targetTexture != null)) runtime.Repaint(Event.current);
+            s_RepaintScratch.Clear();
         }
 
         public static void RenderOffscreenPanels()

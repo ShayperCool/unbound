@@ -1162,8 +1162,6 @@ namespace UnityEngine.UIElements
 
         public new BaseListViewController viewController => base.viewController as BaseListViewController;
 
-        /// <summary>A new mode replaces the dragger (keeping whether reordering is on) and rebuilds.</summary>
-        [CreateProperty]
         internal static readonly BindingId bindingSourceSelectionModeProperty = nameof(bindingSourceSelectionMode);
         BindingSourceSelectionMode m_BindingSourceSelectionMode;
 
@@ -1184,6 +1182,8 @@ namespace UnityEngine.UIElements
 
         internal bool autoAssignSource => m_BindingSourceSelectionMode == BindingSourceSelectionMode.AutoAssign;
 
+        /// <summary>A new mode replaces the dragger (keeping whether reordering is on) and rebuilds.</summary>
+        [CreateProperty]
         public ListViewReorderMode reorderMode
         {
             get => m_ReorderMode;

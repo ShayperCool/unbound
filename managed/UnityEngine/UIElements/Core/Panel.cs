@@ -143,6 +143,7 @@ namespace UnityEngine.UIElements
             {
                 visualTree.uaTransitions?.CancelAll();
                 uaTransitionUpdates.Clear();
+                m_UaDataBinding?.Dispose();
                 PointerDeviceState.RemovePanelData(this);
             }
             disposed = true;
@@ -163,6 +164,7 @@ namespace UnityEngine.UIElements
         {
             uaVersion++;
             if ((change & VersionChangeType.Hierarchy) != 0) m_UaDataBinding?.OnHierarchyChanged();
+            else if ((change & VersionChangeType.DataSource) != 0) m_UaDataBinding?.OnDataSourceChanged();
             if ((change & k_PickingChanges) != 0)
             {
                 m_UaHierarchyFlagsVersion++;
