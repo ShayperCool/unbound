@@ -895,6 +895,9 @@ impl ShaderCompiler {
             pp.define(k, v);
         }
         let mut source = String::from(SAMPLERS);
+        if self.settings.device.compiler_precision_types() {
+            source.push_str(PRECISION_TYPES);
+        }
         // As the Editor's: `UnityObjectToClipPos` works in a CG program (or its CGINCLUDE) that
         // includes nothing, `UnityObjectToWorldNormal` (UnityCG) does not (measured, 6000.0).
         if program.cg {
@@ -1004,6 +1007,28 @@ fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
         tracing::info!("wrote the failed program to {}", path.display());
     }
 }
+
+/// The precision texture and sampler type names on devices where Unity's compiler provides
+/// them (`GraphicsDevice::compiler_precision_types`): plain types, as `HLSLSupport.cginc`
+/// defines them elsewhere (`UNITY_DECLARE_SHADOWMAP` declares a `Texture2D_float`).
+const PRECISION_TYPES: &str = r#"
+#define sampler1D_half sampler1D
+#define sampler1D_float sampler1D
+#define sampler3D_half sampler3D
+#define sampler3D_float sampler3D
+#define Texture2D_half Texture2D
+#define Texture2D_float Texture2D
+#define Texture2DArray_half Texture2DArray
+#define Texture2DArray_float Texture2DArray
+#define Texture2DMS_half Texture2DMS
+#define Texture2DMS_float Texture2DMS
+#define TextureCube_half TextureCube
+#define TextureCube_float TextureCube
+#define TextureCubeArray_half TextureCubeArray
+#define TextureCubeArray_float TextureCubeArray
+#define Texture3D_half Texture3D
+#define Texture3D_float Texture3D
+"#;
 
 /// Framebuffer inputs on devices where the render pipelines read them as subpass inputs
 /// (`GraphicsDevice::subpass_inputs`): Unbound reads each as its input attachment's texture,
@@ -2710,6 +2735,52 @@ fixed4 frag(v2f IN) : SV_Target
             assert!(c.uniforms.iter().any(|u| u.name == name), "{name}");
         }
         assert!(c.main_texture && c.textures.is_empty());
+    }
+
+    /// A shadow receiver (`UNITY_DECLARE_SHADOWMAP`, a `Texture2D_float`) compiles on both
+    /// devices, with each device's clip-space macros (skipped without a Unity release).
+    #[test]
+    fn shadow_receivers_compile_on_every_device() {
+        let Some(cg) = unity_includes() else {
+            eprintln!("no Unity release installed: skipped");
+            return;
+        };
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+#include "UnityCG.cginc"
+UNITY_DECLARE_SHADOWMAP(_ShadowMapTexture);
+float4 _Coord;
+float4 vert(float4 v : POSITION) : SV_POSITION { return UnityObjectToClipPos(v); }
+float4 frag() : SV_Target
+{
+    float near = UNITY_NEAR_CLIP_VALUE;
+    return UNITY_SAMPLE_SHADOW(_ShadowMapTexture, _Coord.xyz) * near;
+}
+"#;
+        for device in [
+            unbound_compat::GraphicsDevice::OpenGLCore,
+            unbound_compat::GraphicsDevice::Vulkan,
+        ] {
+            let mut compiler = ShaderCompiler::new(Settings {
+                includes: Includes {
+                    cg_includes: Some(cg.clone()),
+                    ..Default::default()
+                },
+                unity_version: 6000071,
+                platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
+                cache_dir: None,
+                device,
+            })
+            .unwrap();
+            let c = compiler
+                .compile(&program(source, true), &[], false)
+                .unwrap_or_else(|e| panic!("{device}: {e:#}"));
+            assert!(
+                c.textures.iter().any(|t| t == "_ShadowMapTexture"),
+                "{device}"
+            );
+        }
     }
 
     /// A `.shader` file's surface program as the ShaderLab parser hands it over: the

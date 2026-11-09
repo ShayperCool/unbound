@@ -165,16 +165,16 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   are drawn with the projection's y flipped (`_ProjectionParams.x` -1; their rows stay bottom-up,
   as Unity's texture data is) and the screen with it unflipped (its rows top-down; the window,
   screenshots and `ReadPixels` turn them back), and the render pipelines' framebuffer inputs are
-  read as their input attachments' textures (`_UnityFBInput<i>`). OpenGL Core is drawn by the OS's
-  native wgpu backend for now (Vulkan on Linux, Metal on macOS), Vulkan by wgpu's Vulkan backend:
-  wgpu's OpenGL backend lacks what the renderer uses (texture views in another format, sampler
-  LOD bias; an OpenGL 3.3 context); see the gap table. The
-  suite selects the device of each reference set explicitly (`--force-glcore`,
-  `--force-vulkan`).
+  read as their input attachments' textures (`_UnityFBInput<i>`). OpenGL Core is drawn by the
+  OS's native wgpu backend for now (Vulkan on Linux, Metal on macOS), Vulkan by wgpu's Vulkan
+  backend: wgpu's OpenGL backend lacks what the renderer uses (texture views in another format,
+  sampler LOD bias; an OpenGL 3.3 context); see the gap table. The suite selects the device of
+  each reference set explicitly (`--force-glcore`, `--force-vulkan`).
 * **Native rendering plugins**: on the OpenGL Core device (`SystemInfo.graphicsDeviceType`,
   `IUnityGraphics::GetRenderer`), the Linux Editor's default, the renderer still draws with
-  Vulkan (Metal on macOS; see above). Plugins written for that device call OpenGL on the main thread with a context
-  current and use OpenGL texture names, so they get a real OpenGL 4.5 core context on the
+  Vulkan (Metal on macOS; see above). Plugins written for that device call OpenGL on the main
+  thread with a context current and use OpenGL texture names, so they get a real OpenGL 4.5
+  core context on the
   renderer's GPU (EGL without a surface, `render/gl_interop.rs`), current on the game thread: in
   `UnityPluginLoad` and in every rendering callback, as in the Editor, whose callbacks run on its
   main thread (tests/projects/nativegfx). A texture whose native pointer is asked for moves once

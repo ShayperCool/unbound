@@ -114,6 +114,13 @@ impl GraphicsDevice {
         matches!(self, Self::Vulkan | Self::Metal)
     }
 
+    /// Whether the shader compiler provides the precision texture and sampler type names
+    /// (`Texture2D_float`, `sampler3D_half`, ...) on the device: Unity's `HLSLSupport.cginc`
+    /// defines them itself except on Vulkan, Metal and the mobile APIs.
+    pub fn compiler_precision_types(self) -> bool {
+        matches!(self, Self::Vulkan | Self::Metal)
+    }
+
     /// Whether Unbound can draw with the device.
     pub fn drawable(self) -> bool {
         !matches!(self, Self::Metal)
