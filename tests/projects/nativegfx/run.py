@@ -8,6 +8,13 @@ publish, verify.
     run.py verify --candidate PATH   compare a capture with the reference
     run.py check                     an engine run into a new directory, then verify (the landing gate)
 
+--device selects the graphics device of both sides: opengl (the default: the Linux Editor's own
+device, on a private display through VirtualGL; Unbound with --force-glcore) or vulkan (the Editor
+with -force-vulkan on the GPU-backed display :0, Unbound with --force-vulkan). On Vulkan the
+probe's Vulkan plugin (Plugins/nativegfx_vulkan.c, libNativeGfxVulkan.so, against the system's
+Vulkan headers) and NativeGfxVulkanProbe.cs record the Vulkan plugin interface instead; their
+reference is Reference/unity-<version>/vulkan.jsonl.
+
 Each run builds the probe's plugin (Plugins/nativegfx_probe.c, the C compiler `cc`, else $CC)
 into the project copy's Assets/Plugins/x86_64, three times: libNativeGfxProbe.so, which the
 scripts call, libNativeGfxPreload.so (its importer's "Load on startup", isPreloaded) and
@@ -45,6 +52,8 @@ PLUGIN_LOG = 'plugin.log'
 LIBRARY = 'libNativeGfxProbe.so'
 # The libraries built from the plugin source: the record prefix of the variants no script calls.
 LIBRARIES = ((LIBRARY, None), ('libNativeGfxPreload.so', 'preload'), ('libGfxPluginNativeGfxPrefix.so', 'prefix'))
+VULKAN_LIBRARY = 'libNativeGfxVulkan.so'
+DEVICE = 'opengl'
 
 
 def require_platform():
@@ -67,6 +76,10 @@ def copy_project(target):
         subprocess.run([*compiler, *defines, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/library),
                         str(ROOT/'Plugins/nativegfx_probe.c'), '-ldl', '-lpthread'], check=True)
         shutil.copyfile(ROOT/'Plugins'/(library + '.meta'), plugins/(library + '.meta'))
+    if DEVICE == 'vulkan':
+        subprocess.run([*compiler, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/VULKAN_LIBRARY),
+                        str(ROOT/'Plugins/nativegfx_vulkan.c'), '-lpthread'], check=True)
+        shutil.copyfile(ROOT/'Plugins'/(VULKAN_LIBRARY + '.meta'), plugins/(VULKAN_LIBRARY + '.meta'))
 
 
 def assemble(out):
@@ -92,7 +105,19 @@ def assemble(out):
 
 
 def environment(out):
+    if DEVICE == 'vulkan':
+        return {'NATIVEGFX_VULKAN_OUT': str(out/OUT)}
     return {'NATIVEGFX_PROBE_OUT': str(out/SCRIPTS_OUT), 'NATIVEGFX_PLUGIN_LOG': str(out/PLUGIN_LOG)}
+
+
+def finish(out):
+    """The capture's values.jsonl: assembled from the OpenGL probe's records; written whole by
+    the Vulkan probe."""
+    return (out/OUT).exists() if DEVICE == 'vulkan' else assemble(out)
+
+
+def reference():
+    return reference_file(ROOT, 'jsonl') if DEVICE == 'opengl' else ROOT/'Reference'/f'unity-{unity_version()}'/'vulkan.jsonl'
 
 
 def native(label):
@@ -102,11 +127,13 @@ def native(label):
         out = WORK/repeat
         copy_project(out/'project')
         jobs.append(editor_runner.EditorJob(out/'project', out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'],
-                                            batch=True, graphics=True, env=environment(out),
+                                            batch=True, graphics=True, env=environment(out), vulkan=DEVICE == 'vulkan',
                                             timeout=900, label='nativegfx-' + repeat))
-    for result in editor_runner.run_parallel(jobs):
+    # The Vulkan Editors share the display :0: one after the other.
+    results = [editor_runner.run(job) for job in jobs] if DEVICE == 'vulkan' else editor_runner.run_parallel(jobs)
+    for result in results:
         print(editor_runner.summary(result))
-    return 0 if all(assemble(job.out) for job in jobs) else 1
+    return 0 if all(finish(job.out) for job in jobs) else 1
 
 
 def engine(label):
@@ -118,23 +145,23 @@ def engine(label):
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, **environment(out))
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(out/'project'),
-               '--no-watch', '--frames', '400', '--size', '64x32']
+               '--no-watch', '--frames', '400', '--size', '64x32', '--force-' + ('vulkan' if DEVICE == 'vulkan' else 'glcore')]
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(label, 'exit', code)
-    return 0 if code == 0 and assemble(out) else 1
+    return 0 if code == 0 and finish(out) else 1
 
 
 def publish(labels):
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
-    return editor_runner.publish([WORK/label for label in labels], reference_file(ROOT, 'jsonl'), lambda d: [OUT], write,
+    return editor_runner.publish([WORK/label for label in labels], reference(), lambda d: [OUT], write,
                                  complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
 
 
 def verify(candidate):
-    return subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference_file(ROOT, 'jsonl')), str(candidate)]).returncode
+    return subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference()), str(candidate)]).returncode
 
 
 def main():
@@ -143,7 +170,10 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
+    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
     args = parser.parse_args()
+    global DEVICE
+    DEVICE = args.device
     if args.mode in ('native', 'engine') and (not args.label or Path(args.label).name != args.label):
         parser.error('--label must be a single directory name')
     if args.mode == 'native':

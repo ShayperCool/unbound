@@ -34,6 +34,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import editor_path, reference_root, run_root
+from editor_runner import vulkan_display_env
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -98,25 +99,13 @@ def create(work):
     return code
 
 
-def xwayland_auth():
-    """The authority file of the GPU-backed display :0 (the headless shell's Xwayland)."""
-    for process in Path('/proc').glob('[0-9]*'):
-        try:
-            argv = (process/'cmdline').read_bytes().split(b'\0')
-        except (FileNotFoundError, PermissionError):
-            continue
-        if argv and argv[0].endswith(b'Xwayland') and b':0' in argv and b'-auth' in argv:
-            return argv[argv.index(b'-auth')+1].decode()
-    sys.exit('no Xwayland on :0 for the Vulkan Editor')
-
-
 def editor_vulkan(work):
     """The Editor on Vulkan, windowed on :0, one capture after the other."""
     codes = []
     for repeat in ('native1', 'native2'):
         project = copy_project(work/'projects'/repeat)
         out = fresh_output(work/repeat)
-        env = dict(os.environ, DISPLAY=':0', XAUTHORITY=xwayland_auth(), RTDEPTH_PROBE_OUT=str(out),
+        env = dict(os.environ, **vulkan_display_env(), RTDEPTH_PROBE_OUT=str(out),
                    PWD=str(project), RTDEPTH_PROBE_MODE=MODE)
         job = subprocess.Popen(
             [str(LAUNCHER), '--kind', 'editor-gpu', 'timeout', '-s', 'KILL', '1800', str(editor_path()),

@@ -1,4 +1,7 @@
 {
- "commands": ["python3 tests/projects/nativegfx/run.py check"],
+ "commands": [
+  "python3 tests/projects/nativegfx/run.py check",
+  "python3 tests/projects/nativegfx/run.py check --device vulkan"
+ ],
  "summary": "\\d+/\\d+ records match.*"
 }

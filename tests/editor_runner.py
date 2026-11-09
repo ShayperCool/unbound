@@ -62,7 +62,7 @@ class EditorJob:
     def __init__(self, project, log, out, args=(), *, batch=False, graphics=True, env=None,
                  timeout=1800, shutdown_grace=30, kill_grace=10, follow=30, label=None,
                  screen='1280x720x24', late_sweeps=LATE_SWEEPS, editor=None, cwd=None,
-                 private_display=True,
+                 private_display=True, vulkan=False,
                  progress_files=(), progress_timeout=None, launch_inputs=None):
         self.project = Path(project)
         self.log = Path(log)
@@ -77,7 +77,11 @@ class EditorJob:
         self.follow = follow
         self.label = label or self.out.name
         self.screen = screen
-        self.private_display = private_display
+        # The Vulkan device (`-force-vulkan`) on the GPU-backed display :0, not a private one.
+        self.vulkan = vulkan
+        self.private_display = private_display and not vulkan
+        if vulkan:
+            self.env = {**vulkan_display_env(), **self.env}
         self.late_sweeps = tuple(late_sweeps)
         self.editor = Path(editor) if editor else editor_path()
         self.cwd = Path(cwd) if cwd else self.project
@@ -93,9 +97,33 @@ class EditorJob:
 
     def command(self):
         mode = (['-batchmode'] if self.batch else [])+([] if self.graphics else ['-nographics'])
-        prefix = ['vglrun', '-d', 'egl'] if self.graphics else []
-        return [*prefix, str(self.editor), *mode, '-projectPath', str(self.project), *self.args,
+        prefix = ['vglrun', '-d', 'egl'] if self.graphics and not self.vulkan else []
+        device = ['-force-vulkan'] if self.vulkan else []
+        return [*prefix, str(self.editor), *mode, *device, '-projectPath', str(self.project), *self.args,
                 '-logFile', str(self.log)]
+
+
+def vulkan_display_env():
+    """DISPLAY and XAUTHORITY of the GPU-backed display :0 (the headless shell's Xwayland), where
+    the Vulkan Editor runs."""
+    for process in Path('/proc').glob('[0-9]*'):
+        try:
+            argv = (process/'cmdline').read_bytes().split(b'\0')
+        except (FileNotFoundError, PermissionError, ProcessLookupError):
+            continue
+        if argv and argv[0].endswith(b'Xwayland') and b':0' in argv and b'-auth' in argv:
+            return {'DISPLAY': ':0', 'XAUTHORITY': argv[argv.index(b'-auth')+1].decode()}
+    raise SystemExit('editor_runner: no Xwayland on :0 for the Vulkan Editor')
+
+
+def renderer_of(line):
+    """The GPU an Editor log line names: OpenGL's `Renderer: NAME`, Vulkan's
+    `Vulkan renderer=[NAME] id=[...]`."""
+    if line.startswith('Renderer:'):
+        return line[len('Renderer:'):].strip()
+    if line.startswith('Vulkan renderer=['):
+        return line[len('Vulkan renderer=['):].split(']', 1)[0]
+    return None
 
 
 # ---------------------------------------------------------------- processes
@@ -343,8 +371,8 @@ class LogWatch:
         lines = (self.partial+data).split(b'\n')
         self.partial = lines.pop()
         for line in lines:
-            if self.renderer is None and line.startswith(b'Renderer:'):
-                self.renderer = line[len(b'Renderer:'):].strip().decode(errors='replace')
+            if self.renderer is None:
+                self.renderer = renderer_of(line.decode(errors='replace'))
             if self.shutdown is None and any(m in line for m in SHUTDOWN_MARKERS):
                 self.shutdown = now
             if self.hub is None and HUB_MARKER in line:
@@ -685,7 +713,7 @@ def load_result(directory):
     if not (directory/'exit.txt').exists():
         return None
     log = (directory/'editor.log').read_text(errors='replace') if (directory/'editor.log').exists() else ''
-    renderer = next((line.split(':', 1)[1].strip() for line in log.splitlines() if line.startswith('Renderer:')), None)
+    renderer = next((r for r in map(renderer_of, log.splitlines()) if r), None)
     forced = (directory/'forced-exit.txt').exists()
     return {'exit_code': int((directory/'exit.txt').read_text().strip() or -1),
             'forced_exit': 'shutdown-guard' if forced else None, 'renderer': renderer,
