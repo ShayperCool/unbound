@@ -134,9 +134,11 @@ namespace Unbound.UIElements.Layout
         /// the item sizes to its content, as UI Toolkit's layout measures it.</summary>
         public bool PercentFlexBasisNeedsExactContainer { get; set; }
 
-        /// <summary>Containers with overflow hidden measure their items along the main axis without
-        /// constraint, as overflow scroll does (UI Toolkit's layout).</summary>
-        public bool OverflowHiddenMeasuresContent { get; set; }
+        /// <summary>A node with overflow scroll measured with an at-most main size keeps its content's
+        /// main size, as other nodes do, instead of clamping it to the available size; its cross axis
+        /// still clamps (UI Toolkit's layout: a scroll view's content container measures its whole
+        /// content in its viewport; Unity 6000.0.71f1 Editor, tests/projects/uitkcollections).</summary>
+        public bool ScrollKeepsMainAxisContent { get; set; }
 
         /// <summary>Positions round as the difference of the rounded absolute edges of the node and its
         /// parent (as widths do), not as rounded relative offsets, as UI Toolkit's layout engine does
@@ -1390,10 +1392,8 @@ namespace Unbound.UIElements.Layout
                     childHeightMeasureMode = YogaMeasureMode.Exactly;
                 }
 
-                // Overflow: scroll leaves the main axis unconstrained, as browsers do (in UI Toolkit hidden
-                // too: a scroll view's content container measures its whole content in its hidden viewport).
-                bool scrolls = node.style.Overflow == YogaOverflow.Scroll
-                    || (node.config.OverflowHiddenMeasuresContent && node.style.Overflow == YogaOverflow.Hidden);
+                // Overflow: scroll leaves the main axis unconstrained, as browsers do.
+                bool scrolls = node.style.Overflow == YogaOverflow.Scroll;
                 if ((!isMainAxisRow && scrolls) || !scrolls)
                 {
                     if (IsUndefined(childWidth) && !IsUndefined(width))
@@ -1772,22 +1772,25 @@ namespace Unbound.UIElements.Layout
             YogaNode singleFlexChild = null;
             var children = node.Children;
             var measureModeMainDim = IsRow(mainAxis) ? widthMeasureMode : heightMeasureMode;
-            // A single child that both grows and shrinks gets a flex basis of 0 instead of being
-            // measured and then flexed to fill the remaining space exactly.
+            // The first child that both grows and shrinks gets a flex basis of 0 instead of being
+            // measured and then flexed to fill the remaining space exactly, unless a flexible child
+            // follows it. Flexible children before it that do not both grow and shrink do not count
+            // (a multi-column view's header container, flex-shrink 1, keeps its height above the
+            // growing scroll content: Unity 6000.0.71f1 Editor, tests/projects/uitkcollections).
             if (measureModeMainDim == YogaMeasureMode.Exactly)
             {
                 foreach (var child in children)
                 {
-                    if (child.IsNodeFlexible())
+                    if (singleFlexChild != null)
                     {
-                        if (singleFlexChild != null
-                            || FloatsEqual(child.ResolveFlexGrow(), 0.0f)
-                            || FloatsEqual(child.ResolveFlexShrink(), 0.0f))
+                        if (child.IsNodeFlexible())
                         {
-                            // There is already a flexible child, or this one doesn't both grow and shrink.
                             singleFlexChild = null;
                             break;
                         }
+                    }
+                    else if (child.ResolveFlexGrow() > 0.0f && child.ResolveFlexShrink() > 0.0f)
+                    {
                         singleFlexChild = child;
                     }
                 }
@@ -2754,14 +2757,15 @@ namespace Unbound.UIElements.Layout
                 node, YogaFlexDirection.Column, availableHeight - marginAxisColumn, ownerHeight, ownerWidth);
 
             // Without a given size, the size comes from the children.
+            bool clampsMainAxis = node.style.Overflow == YogaOverflow.Scroll && !node.config.ScrollKeepsMainAxisContent;
             if (measureModeMainDim == YogaMeasureMode.Undefined
-                || (node.style.Overflow != YogaOverflow.Scroll && measureModeMainDim == YogaMeasureMode.AtMost))
+                || (!clampsMainAxis && measureModeMainDim == YogaMeasureMode.AtMost))
             {
                 // Clamp to the min/max size, and to at least the padding and border.
                 node.layout.MeasuredDimensions[Dim[(int)mainAxis]] =
                     BoundAxis(node, mainAxis, maxLineMainDim, mainAxisOwnerSize, ownerWidth);
             }
-            else if (measureModeMainDim == YogaMeasureMode.AtMost && node.style.Overflow == YogaOverflow.Scroll)
+            else if (measureModeMainDim == YogaMeasureMode.AtMost && clampsMainAxis)
             {
                 node.layout.MeasuredDimensions[Dim[(int)mainAxis]] = FloatMax(
                     FloatMin(
@@ -2808,7 +2812,10 @@ namespace Unbound.UIElements.Layout
                 // STEP 10: SIZING AND POSITIONING ABSOLUTE CHILDREN
                 foreach (var child in children)
                 {
-                    if (child.style.PositionType != YogaPositionType.Absolute)
+                    // An absolute child with display: none keeps its zeroed layout (a multi-column
+                    // header's hidden last resize handle: Unity 6000.0.71f1 Editor,
+                    // tests/projects/uitkcollections).
+                    if (child.style.PositionType != YogaPositionType.Absolute || child.style.Display == YogaDisplay.None)
                         continue;
                     AbsoluteLayoutChild(node, child, availableInnerWidth,
                         isMainAxisRow ? measureModeMainDim : measureModeCrossDim, availableInnerHeight, direction, config);

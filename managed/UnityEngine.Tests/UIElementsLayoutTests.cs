@@ -1,3 +1,4 @@
+using System;
 using Unbound.UIElements.Layout;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,10 +32,55 @@ namespace UnityEngine.Tests
             Assert.Equal(24f, input.LayoutWidth);
         }
 
+        // A 25x20 box (column, or row) holding a middle node over a 50x50 leaf; neither shrinks.
+        static YogaNode BoxedMiddle(YogaConfig config, YogaOverflow boxOverflow, YogaOverflow middleOverflow, YogaFlexDirection boxDirection = YogaFlexDirection.Column)
+        {
+            var box = new YogaNode(config) { Width = YogaValue.Point(25), Height = YogaValue.Point(20), Overflow = boxOverflow, FlexDirection = boxDirection };
+            var middle = new YogaNode(config) { Overflow = middleOverflow, FlexShrink = 0 };
+            middle.Insert(0, new YogaNode(config) { Width = YogaValue.Point(50), Height = YogaValue.Point(50), FlexShrink = 0 });
+            box.Insert(0, middle);
+            box.CalculateLayout();
+            return middle;
+        }
+
+        /// <summary>Measured in the Editor (tests/projects/uitkcollections): a scroll node keeps its
+        /// content's main size inside a hidden or visible box; plain Yoga clamps it to the box.</summary>
+        [Fact]
+        public void ScrollNodesKeepTheirMainAxisContent()
+        {
+            var config = new YogaConfig { ScrollKeepsMainAxisContent = true };
+            Assert.Equal(50f, BoxedMiddle(config, YogaOverflow.Hidden, YogaOverflow.Scroll).LayoutHeight);
+            Assert.Equal(50f, BoxedMiddle(config, YogaOverflow.Visible, YogaOverflow.Scroll).LayoutHeight);
+            Assert.Equal(50f, BoxedMiddle(config, YogaOverflow.Hidden, YogaOverflow.Visible).LayoutHeight);
+            Assert.Equal(20f, BoxedMiddle(new YogaConfig(), YogaOverflow.Hidden, YogaOverflow.Scroll).LayoutHeight);
+            // The cross axis still clamps: in a row box the scroll node is as wide as the box.
+            Assert.Equal(25f, BoxedMiddle(config, YogaOverflow.Hidden, YogaOverflow.Scroll, YogaFlexDirection.Row).ComputedFlexBasis);
+        }
+
+        /// <summary>A hidden box measures its items within its size (a label in a 20-high cell is
+        /// measured at most 14 high once its margins and padding are taken).</summary>
+        [Fact]
+        public void HiddenBoxesMeasureItemsWithinTheirSize()
+        {
+            var config = new YogaConfig { ScrollKeepsMainAxisContent = true };
+            var box = new YogaNode(config) { Width = YogaValue.Point(25), Height = YogaValue.Point(20), Overflow = YogaOverflow.Hidden };
+            YogaMeasureMode seen = YogaMeasureMode.Exactly;
+            var text = new YogaNode(config) { FlexShrink = 0 };
+            text.MeasureFunction = (n, w, wm, h, hm) =>
+            {
+                seen = hm;
+                return new YogaSize(10, hm == YogaMeasureMode.Undefined ? 30 : Math.Min(30, h));
+            };
+            box.Insert(0, text);
+            box.CalculateLayout();
+            Assert.Equal(YogaMeasureMode.AtMost, seen);
+            Assert.Equal(20f, text.LayoutHeight);
+        }
+
         static YogaConfig ScaledConfig() => new YogaConfig
         {
             PointScaleFactor = 1.25f, RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true,
-            OverflowHiddenMeasuresContent = true, RoundPositionsFromAbsolute = true, MeasuredNodesRoundAsOthers = true,
+            ScrollKeepsMainAxisContent = true, RoundPositionsFromAbsolute = true, MeasuredNodesRoundAsOthers = true,
         };
 
         /// <summary>At 1.25 pixels per point positions are differences of rounded absolute edges: the

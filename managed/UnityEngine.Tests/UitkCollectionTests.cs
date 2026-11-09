@@ -596,6 +596,48 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void HiddenAbsoluteChildKeepsAZeroLayout()
+        {
+            var (_, hidden) = Padded(n => { n.Width = YogaValue.Point(10); n.SetPosition(YogaEdge.Left, YogaValue.Point(30)); n.Display = YogaDisplay.None; });
+            Assert.Equal(0f, hidden.LayoutX);
+            Assert.Equal(0f, hidden.LayoutY);
+            Assert.Equal(0f, hidden.LayoutWidth);
+            Assert.Equal(0f, hidden.LayoutHeight);
+        }
+
+        // A column of exact height: a shrinkable 41-high header, a growing and shrinking body whose
+        // content is 400 high, then optionally a shrinkable trailing child.
+        static (YogaNode Header, YogaNode Body) HeaderAndBody(bool trailingFlexibleChild)
+        {
+            var config = new YogaConfig();
+            var root = new YogaNode(config) { Width = YogaValue.Point(100), Height = YogaValue.Point(160) };
+            var header = new YogaNode(config) { FlexShrink = 1 };
+            header.Insert(0, new YogaNode(config) { Height = YogaValue.Point(41) });
+            var body = new YogaNode(config) { FlexGrow = 1, FlexShrink = 1 };
+            body.Insert(0, new YogaNode(config) { Height = YogaValue.Point(400) });
+            root.Insert(0, header);
+            root.Insert(1, body);
+            if (trailingFlexibleChild)
+                root.Insert(2, new YogaNode(config) { FlexShrink = 1, Height = YogaValue.Point(10) });
+            root.CalculateLayout();
+            return (header, body);
+        }
+
+        [Fact]
+        public void TheFirstGrowingAndShrinkingChildTakesTheRemainingSpace()
+        {
+            // The header before it does not grow, so the body alone flexes from a zero basis.
+            var (header, body) = HeaderAndBody(false);
+            Assert.Equal(41f, header.LayoutHeight);
+            Assert.Equal(0f, body.ComputedFlexBasis);
+            Assert.Equal(119f, body.LayoutHeight);
+            // A flexible child after it: every child is measured and the overflow shrinks them all.
+            var (shrunkHeader, measuredBody) = HeaderAndBody(true);
+            Assert.True(shrunkHeader.LayoutHeight < 41f);
+            Assert.Equal(400f, measuredBody.ComputedFlexBasis);
+        }
+
+        [Fact]
         public void StaticPositionFollowsTheAxisDirection()
         {
             var (_, rev) = Padded(n => n.Width = YogaValue.Point(10), YogaFlexDirection.ColumnReverse);
