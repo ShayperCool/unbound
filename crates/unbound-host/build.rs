@@ -224,8 +224,8 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
         nvcloth_flags,
     );
     let cloth_compiler = cloth_build.get_compiler();
-    // libtess2 is C; the Editor's build keeps every product rounded (no fused multiply-adds), and
-    // only the shim's ua_tess_ functions are exported.
+    // libtess2 is C, compiled without floating-point contraction (every product rounded) so fills
+    // match tests/projects/uitkpainter; only the shim's ua_tess_ functions are exported.
     let tess = native.join("libtess2");
     let mut tess_sources = Vec::new();
     sources(&tess.join("Source"), "c", &mut tess_sources);

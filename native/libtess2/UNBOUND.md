@@ -12,3 +12,10 @@ way, so the triangles come out in the Editor's order.
 
 To update: copy `Include/` and `Source/` from a newer archive and update the date and hash above;
 the sprite import probe (`tests/projects/spriteimport`) checks the triangles still match.
+
+Two builds use it: `crates/unbound-assets` links it into the engine binary for sprite meshes, and
+`crates/unbound-host/build.rs` links it with `native/unbound_tess.c` into the `unbound_physx` library
+next to the managed engine, where UI Toolkit's Painter2D fills call `ua_tess_triangulate`
+(tests/projects/uitkpainter). The managed engine and its tests load that library, not the engine
+binary, so one build cannot serve both; both compile the same sources without floating-point
+contraction.
