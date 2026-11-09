@@ -124,6 +124,9 @@ def register(snapshot, destination, cache, *, retained=False):
         finally:
             temporary.unlink(missing_ok=True)
     key = hashlib.sha256(os.fsencode(destination)).hexdigest()
+    previous = cache/'references'/key
+    if previous.is_file():
+        retained = retained or json.loads(previous.read_text()).get('retained', False)
     atomic_json(cache/'references'/key, {'path': str(destination), 'snapshot': snapshot.name,
                                        'owner': task_owner(), 'retained': retained})
     return destination
@@ -135,16 +138,29 @@ def active_snapshots(cache):
         raise OSError('cannot inspect live runtime processes; snapshot collection requires /proc')
     found = set()
     snapshots = (cache/'snapshots').resolve()
+    run_directories = {}
+    for path in (cache/'references').glob('*'):
+        if path.name.endswith('.tmp'):
+            continue
+        record = json.loads(path.read_text())
+        reference = Path(record['path'])
+        if reference.name == 'runtime':
+            run_directories.setdefault(reference.parent.resolve(), set()).add(record['snapshot'])
     for process in Path('/proc').glob('[0-9]*'):
         try:
             if process.stat().st_uid != os.getuid():
                 continue
             paths = [os.readlink(process/'exe')]
+            cwd = Path(os.readlink(process/'cwd'))
+            for directory in (cwd, *cwd.parents):
+                found.update(run_directories.get(directory, ()))
             # Admission wrappers can be alive before the engine executable starts.
             for argument in (process/'cmdline').read_bytes().split(b'\0'):
                 value = os.fsdecode(argument).split('=', 1)[-1]
                 if value.startswith('/'):
                     paths.append(value)
+                elif value.startswith(('./', '../', 'runtime/')):
+                    paths.append(str(cwd/value))
             for variable in (process/'environ').read_bytes().split(b'\0'):
                 if variable.startswith((b'UNBOUND_RUNTIME=', b'UNBOUND_CLI=', b'UNBOUND=')):
                     paths.append(os.fsdecode(variable.split(b'=', 1)[1]))

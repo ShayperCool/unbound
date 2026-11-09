@@ -405,6 +405,21 @@ class RuntimeSnapshotTests(unittest.TestCase):
             child.wait(timeout=5)
         self.assertIn(snapshot.name, runtime.cleanup(cache=self.cache, days=0))
 
+    def test_live_wrapper_in_a_run_keeps_its_relative_runtime(self):
+        first = self.snapshot()
+        snapshot = first.resolve()
+        project = first.parent/'project'
+        project.mkdir()
+        child = subprocess.Popen(['python3', '-c', 'import time;time.sleep(60)'], cwd=project)
+        try:
+            runtime.release_reference(first, cache=self.cache)
+            self.assertIn(snapshot.name, runtime.active_snapshots(self.cache))
+            self.assertEqual(runtime.cleanup(cache=self.cache, days=0), [])
+        finally:
+            child.terminate()
+            child.wait(timeout=5)
+        self.assertIn(snapshot.name, runtime.cleanup(cache=self.cache, days=0))
+
     def test_collection_racing_promotion_preserves_the_existing_baseline(self):
         import suite
         first = self.snapshot()
@@ -451,6 +466,15 @@ class RuntimeSnapshotTests(unittest.TestCase):
         with mock.patch.object(runtime.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
             self.assertEqual(runtime.cleanup(cache=self.cache, days=0, repo=self.root), [])
         self.assertTrue(reference.exists())
+
+    def test_recapturing_identical_content_does_not_unprotect_a_promoted_reference(self):
+        first = self.snapshot()
+        promoted = runtime.retain(first, self.root/'promoted/runtime', cache=self.cache)
+        runtime.snapshot_runtime(self.cli, self.managed, promoted, cache=self.cache)
+        runtime.release_reference(promoted, cache=self.cache)
+        first.unlink()
+        self.assertEqual(runtime.cleanup(cache=self.cache, days=0), [])
+        self.assertTrue(promoted.exists())
 
 
 if __name__ == '__main__':
