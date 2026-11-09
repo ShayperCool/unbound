@@ -224,36 +224,39 @@ def _symlink_targets(base, checkouts, index):
     excluded_roots = {resolve(base/name) for name in excluded}
     pending, visited = [base], set()
     while pending:
-        directory = pending.pop()
-        # Descents into a checkout meet its root; links into a subdirectory were
-        # already recorded by resolve(). Avoid rebuilding every ancestor per node.
-        if directory in checkouts or (directory == base and inside(base, checkouts)):
-            found.add(directory)
-        try:
-            info = directory.stat()
-            identity = (info.st_dev, info.st_ino)
-            if identity in visited:
-                continue
-            visited.add(identity)
-            for entry in index.entries(directory, info):
-                if directory == base and entry.name in excluded:
+        batch = pending[-64:]
+        del pending[-64:]
+        for directory, info in zip(batch, index.stat_many(batch)):
+            # Descents into a checkout meet its root; links into a subdirectory were
+            # already recorded by resolve(). Avoid rebuilding every ancestor per node.
+            if directory in checkouts or (directory == base and inside(base, checkouts)):
+                found.add(directory)
+            try:
+                if isinstance(info, OSError):
+                    raise info
+                identity = (info.st_dev, info.st_ino)
+                if identity in visited:
                     continue
-                try:
-                    if entry.is_symlink():
-                        target = resolve(Path(entry.path))
-                        found.add(target)
-                        if inside(target, excluded_roots):
-                            continue
-                        if stat.S_ISDIR(entry.stat().st_mode):
-                            if target.parent == target:
-                                raise SystemExit(f'cannot scan filesystem root through run-cache alias {entry.path}')
-                            pending.append(target)
-                    elif entry.is_dir(follow_symlinks=False):
-                        pending.append(Path(entry.path))
-                except OSError as error:
-                    unreadable(error)
-        except OSError as error:
-            unreadable(error)
+                visited.add(identity)
+                for entry in index.entries(directory, info):
+                    if directory == base and entry.name in excluded:
+                        continue
+                    try:
+                        if entry.is_symlink():
+                            target = resolve(Path(entry.path))
+                            found.add(target)
+                            if inside(target, excluded_roots):
+                                continue
+                            if stat.S_ISDIR(entry.stat().st_mode):
+                                if target.parent == target:
+                                    raise SystemExit(f'cannot scan filesystem root through run-cache alias {entry.path}')
+                                pending.append(target)
+                        elif entry.is_dir(follow_symlinks=False):
+                            pending.append(Path(entry.path))
+                    except OSError as error:
+                        unreadable(error)
+            except OSError as error:
+                unreadable(error)
     return found
 
 

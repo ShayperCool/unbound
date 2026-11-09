@@ -1,5 +1,6 @@
 """Incremental directory listings for the conservative run-cache link walk."""
 import hashlib
+import concurrent.futures
 import json
 import os
 from pathlib import Path
@@ -36,6 +37,15 @@ class DirectoryIndex:
                        self.db.execute('SELECT path, stamp, entries FROM directories')}
         self.reused = self.scanned = 0
         self.seen = set()
+        self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+
+    def stat_many(self, paths):
+        def inspect(path):
+            try:
+                return path.stat()
+            except OSError as error:
+                return error
+        return list(self.pool.map(inspect, paths))
 
     @staticmethod
     def stamp(info):
@@ -66,5 +76,6 @@ class DirectoryIndex:
                             ((path,) for path in self.cached.keys()-self.seen))
 
     def close(self):
+        self.pool.shutdown()
         self.db.commit()
         self.db.close()
