@@ -109,19 +109,27 @@ namespace UnityEngine.Tests
             var target=Box("ClosestAllocationTarget",at);
             var commands=Native(new ClosestPointCommand(at+Vector3.right*3,target,at,Quaternion.identity,Vector3.one));
             var results=Native<Vector3>(1);
-            ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
-            long Measure()
+            // Without workers every batch runs inside Complete on this thread, so the per-thread
+            // count covers the job's allocations deterministically, whatever the machine load.
+            int workers=Unity.Jobs.LowLevel.Unsafe.JobsUtility.JobWorkerCount;
+            Unity.Jobs.LowLevel.Unsafe.JobsUtility.JobWorkerCount=0;
+            try
             {
-                long before=GC.GetAllocatedBytesForCurrentThread();
-                for(int i=0;i<8;i++) ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
-                return GC.GetAllocatedBytesForCurrentThread()-before;
+                ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
+                long Measure()
+                {
+                    long before=GC.GetAllocatedBytesForCurrentThread();
+                    for(int i=0;i<8;i++) ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
+                    return GC.GetAllocatedBytesForCurrentThread()-before;
+                }
+                long small=Measure();
+                for(int i=0;i<1024;i++) Box("Unrelated",at+new Vector3(i*2,20,0));
+                Physics.SyncTransforms();
+                ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
+                long large=Measure();
+                Assert.True(large<=small+4096,$"One collider={small}, unrelated colliders={large}");
             }
-            long small=Measure();
-            for(int i=0;i<1024;i++) Box("Unrelated",at+new Vector3(i*2,20,0));
-            Physics.SyncTransforms();
-            ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
-            long large=Measure();
-            Assert.True(large<=small+4096,$"One collider={small}, unrelated colliders={large}");
+            finally { Unity.Jobs.LowLevel.Unsafe.JobsUtility.JobWorkerCount=workers; }
             Assert.Equal(at+Vector3.right*.5f,results[0]);
         }
 
