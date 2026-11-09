@@ -47,6 +47,15 @@ namespace UnityEngine.Tests
                 c.importance = 3;
                 ReflectionProbe.Closest(bounds, ReflectionProbeUsage.BlendProbes, drawn, drawn: true);
                 Assert.Same(c, drawn[0].probe);
+                // Moved during the frame: rendering keeps the box it began with.
+                var start = b.Drawn.Bounds;
+                b.transform.position += new Vector3(5f, 0f, 0f);
+                Assert.Equal(start, b.Drawn.Bounds);
+                Assert.NotEqual(start, b.bounds);
+                // Disabled and enabled again during the frame: its live placement.
+                b.enabled = false;
+                b.enabled = true;
+                Assert.Equal(b.bounds, b.Drawn.Bounds);
             }
             finally
             {

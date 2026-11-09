@@ -41,8 +41,10 @@ largest value, bytes within 1, realtime half floats within 1%) and images (mean 
 Documentation: [Reflection Probe](https://docs.unity3d.com/6000.0/Documentation/Manual/class-ReflectionProbe.html)
 (importance, blend distance, box projection), [Cubemap import](https://docs.unity3d.com/6000.0/Documentation/Manual/class-Cubemap.html)
 ("Specular (Glossy Reflection)" convolution), [Deferred Shading](https://docs.unity3d.com/6000.0/Documentation/Manual/RenderTech-DeferredShading.html)
-(per-pixel probe blending). None documents the filter, the probe order beyond importance or the
-probe constants of lightmapped renderers: those below are observations of this capture.
+(per-pixel probe blending), [Renderer.GetClosestReflectionProbes](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.GetClosestReflectionProbes.html),
+[ReflectionProbe](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ReflectionProbe.html).
+None documents the filter, the probe order beyond importance, the probe constants of lightmapped
+renderers or when a probe's changes reach rendering: those below are observations of this capture.
 
 * An imported cube's mip i of the first min(mip count, 7) is the GGX lobe of perceptual roughness
   i/(n-1) around each texel's direction (`crates/unbound-assets/src/texture/specular.rs` says how),
@@ -59,8 +61,11 @@ probe constants of lightmapped renderers: those below are observations of this c
 * A lightmapped renderer draws with the ambient probe's constants, whatever its probe usage: the
   built-in pipeline does not zero them as URP does. (A separate capture on tests/projects/baked's
   bake, with light probes, showed the same; it is not part of this reference.)
-* Forward draws take probe changes (importance, size, box projection) from the next frame on
-  (`forward_lag_same` keeps the old importance, `forward_lag_next` the new one), while
+* Forward draws take probe changes (importance, size, box projection, a move) from the next frame
+  on, for Camera.Render during Update (`forward_lag_same` keeps the old importance,
+  `forward_lag_next` the new one) and for a camera the player loop renders into a render texture,
+  read in the next Update (`loop_update_*`: importance changed in Update, `loop_late_*`: in
+  LateUpdate, `loop_move_*`: B moved; `*_same` the frame of the change keeps the old state), while
   `Renderer.GetClosestReflectionProbes` answers with a change at once (`lag.*`); the probe waits a
   frame after each other change. Deferred shading's blending in `deferred_lag_*` does not depend on
   this change.

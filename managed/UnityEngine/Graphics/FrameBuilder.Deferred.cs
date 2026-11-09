@@ -143,19 +143,23 @@ namespace Unbound.Runtime
             foreach (var probe in ReflectionProbe.s_Enabled)
                 if (probe && probe.isActiveAndEnabled && (probe.texture != null || probe.mode == ReflectionProbeMode.Realtime)) probes.Add(probe);
             // Less important and larger probes first: smaller, more important ones blend over them.
+            // The probes' placement as the frame began (ReflectionProbe.Drawn).
             probes.Sort((a, b) =>
             {
-                int c = a.importance.CompareTo(b.importance);
+                var pa = a.Drawn;
+                var pb = b.Drawn;
+                int c = pa.Importance.CompareTo(pb.Importance);
                 if (c != 0) return c;
-                var sa = a.bounds.size;
-                var sb = b.bounds.size;
+                var sa = pa.Size;
+                var sb = pb.Size;
                 return (sb.x * sb.y * sb.z).CompareTo(sa.x * sa.y * sa.z);
             });
             foreach (var probe in probes)
             {
-                var box = probe.bounds;
+                var placement = probe.Drawn;
+                var box = placement.Bounds;
                 DrawReflection(quadMesh, quadModel, reflectionOverMaterial, probe.texture ?? ReflectionProbe.Black, probe.textureHDRDecodeValues,
-                    box.min, box.max, probe.transform.position, probe.boxProjection, Mathf.Max(probe.blendDistance, 1e-4f));
+                    box.min, box.max, placement.Position, placement.BoxProjection, Mathf.Max(placement.BlendDistance, 1e-4f));
             }
             SetupCamera(lightHandle, viewport, CameraClearFlags.Nothing, Color.black, context.View, context.Projection, 0);
             GfxStream.SetTarget(lightHandle, GfxStream.NoTexture);

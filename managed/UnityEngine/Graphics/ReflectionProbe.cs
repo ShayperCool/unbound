@@ -109,12 +109,16 @@ namespace UnityEngine
             BoxProjection = m_BoxProjection,
         };
 
-        /// <summary>The placement forward draws use: the one the frame began with, so a change
-        /// reaches them from the next frame on (measured: tests/projects/reflectionprobes
-        /// forward_lag_same keeps the old importance, forward_lag_next the new one, while
-        /// Renderer.GetClosestReflectionProbes answers with the new one at once); a probe enabled
-        /// during the frame, its live one (unmeasured).</summary>
-        Placement Drawn => m_HasDrawn ? m_Drawn : Live;
+        /// <summary>The placement rendering uses: the one the frame began with, so a change made
+        /// during a frame (in Update, in LateUpdate, by moving the probe) reaches the frame's
+        /// renders only from the next frame on, for cameras the player loop renders and for
+        /// Camera.Render alike (measured: tests/projects/reflectionprobes loop_*_same keep the old
+        /// state, loop_*_next and forward_lag_next take the new one), while
+        /// Renderer.GetClosestReflectionProbes answers with the change at once (lag.*). Deferred
+        /// shading's probe volumes and a render pipeline's culled probes use it as well
+        /// (unmeasured: one rule for every render). A probe enabled during the frame: its live
+        /// placement (unmeasured).</summary>
+        internal Placement Drawn => m_HasDrawn ? m_Drawn : Live;
 
         /// <summary>Takes every enabled probe's placement for the frame's forward draws.</summary>
         internal static void BeginFrame()

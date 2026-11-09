@@ -317,11 +317,78 @@ public class ReflectionProbesProbe : MonoBehaviour
             Capture(camera, prefix + "_lag_next");
             blue.importance = 1;
         }
+        yield return LoopTiming(camera);
         Destroy(red.gameObject);
         Destroy(blue.gameObject);
         foreach (var go in scene) Destroy(go);
         scene.Clear();
         yield return null;
+    }
+
+    /// <summary>The same change seen by an enabled camera rendering in the player loop into a
+    /// render texture, read in the next frame's Update (what the frame drew): importance changed
+    /// in Update (loop_update_*) and in LateUpdate (loop_late_*), and B moved by its transform in
+    /// Update (loop_move_*); <c>*_same</c> is the frame of the change, <c>*_next</c> the one after.</summary>
+    IEnumerator LoopTiming(Camera manual)
+    {
+        manual.renderingPath = RenderingPath.Forward;
+        var camera = MakeCamera(manual.transform.position, new Vector3(1f, -0.5f, 0f));
+        camera.renderingPath = RenderingPath.Forward;
+        var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+        camera.targetTexture = target;
+        camera.enabled = true;
+        var late = camera.gameObject.AddComponent<LateChange>();
+        void Read(string name)
+        {
+            RenderTexture.active = target;
+            var read = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
+            read.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+            read.Apply();
+            File.WriteAllBytes(Path.Combine(output, name + ".png"), read.EncodeToPNG());
+            RenderTexture.active = null;
+            Destroy(read);
+        }
+        yield return null;
+        yield return null;
+        blue.importance = 2;
+        yield return null;
+        Read("loop_update_same");
+        yield return null;
+        Read("loop_update_next");
+        blue.importance = 1;
+        yield return null;
+        yield return null;
+        late.Action = () => blue.importance = 2;
+        yield return null;
+        Read("loop_late_same");
+        yield return null;
+        Read("loop_late_next");
+        blue.importance = 1;
+        yield return null;
+        yield return null;
+        var position = blue.transform.position;
+        blue.transform.position = position + new Vector3(-1.5f, 0f, 0f);
+        yield return null;
+        Read("loop_move_same");
+        yield return null;
+        Read("loop_move_next");
+        blue.transform.position = position;
+        camera.enabled = false;
+        camera.targetTexture = null;
+        Destroy(target);
+        yield return null;
+    }
+
+    /// <summary>Runs an action once, in LateUpdate.</summary>
+    sealed class LateChange : MonoBehaviour
+    {
+        public Action Action;
+
+        void LateUpdate()
+        {
+            Action?.Invoke();
+            Action = null;
+        }
     }
 
     /// <summary>Metal spheres of falling smoothness reflecting a realtime probe of coloured boxes,

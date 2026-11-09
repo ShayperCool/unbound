@@ -650,14 +650,16 @@ namespace UnityEngine.Rendering
         /// <summary>A culled probe's data as the culling gives it.</summary>
         internal VisibleReflectionProbe(ReflectionProbe probe)
         {
-            m_Bounds = probe.bounds;
+            // The placement as the frame began (ReflectionProbe.Drawn).
+            var placement = probe.Drawn;
+            m_Bounds = placement.Bounds;
             var t = probe.transform;
-            m_LocalToWorldMatrix = Matrix4x4.TRS(t.position, t.rotation, Vector3.one);
+            m_LocalToWorldMatrix = Matrix4x4.TRS(placement.Position, t.rotation, Vector3.one);
             m_HdrData = probe.textureHDRDecodeValues;
-            m_Center = probe.center;
-            m_BlendDistance = probe.blendDistance;
-            m_Importance = probe.importance;
-            m_BoxProjection = probe.boxProjection ? 1 : 0;
+            m_Center = placement.Offset;
+            m_BlendDistance = placement.BlendDistance;
+            m_Importance = placement.Importance;
+            m_BoxProjection = placement.BoxProjection ? 1 : 0;
             m_InstanceId = probe.GetInstanceID();
             m_TextureId = probe.texture != null ? probe.texture.GetInstanceID() : 0;
         }

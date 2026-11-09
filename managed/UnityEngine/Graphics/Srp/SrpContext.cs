@@ -948,14 +948,15 @@ namespace Unbound.Runtime
             // sorting (importance first: the more important first; size: the smaller first).
             var probes = new List<ReflectionProbe>();
             foreach (var probe in ReflectionProbe.s_Enabled)
-                if (probe && probe.isActiveAndEnabled && probe.texture != null && InsidePlanes(ref parameters, probe.bounds)) probes.Add(probe);
+                if (probe && probe.isActiveAndEnabled && probe.texture != null && InsidePlanes(ref parameters, probe.Drawn.Bounds)) probes.Add(probe);
             var criteria = parameters.reflectionProbeSortingCriteria;
-            float Volume(ReflectionProbe p) { var s = p.bounds.size; return s.x * s.y * s.z; }
+            // The probes' placement as the frame began (ReflectionProbe.Drawn).
+            float Volume(ReflectionProbe p) { var s = p.Drawn.Size; return s.x * s.y * s.z; }
             probes.Sort((a, b) =>
             {
                 int c = 0;
                 if (criteria is ReflectionProbeSortingCriteria.Importance or ReflectionProbeSortingCriteria.ImportanceThenSize)
-                    c = b.importance.CompareTo(a.importance);
+                    c = b.Drawn.Importance.CompareTo(a.Drawn.Importance);
                 if (c == 0 && criteria is ReflectionProbeSortingCriteria.Size or ReflectionProbeSortingCriteria.ImportanceThenSize)
                     c = Volume(a).CompareTo(Volume(b));
                 return c;
