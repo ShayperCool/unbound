@@ -146,9 +146,33 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   rendering commands. `AsyncGPUReadback` reads the source when requested and completes the
   request at the next frame's `UpdateAsyncReadbackManager`, as the Editor does at the earliest
   (tests/projects/gpubuffers).
-* **Native rendering plugins**: Unbound reports OpenGL Core (`SystemInfo.graphicsDeviceType`,
-  `IUnityGraphics::GetRenderer`), the Linux Editor's device, while the renderer draws with Vulkan
-  (Metal on macOS). Plugins written for that device call OpenGL on the main thread with a context
+* **Graphics devices**: like Unity, Unbound has several graphics devices, and the device a game
+  sees is the one it gets: OpenGL Core and Vulkan (Metal later, on macOS). The run's device is
+  chosen once at startup (`unbound_compat::graphics`), as the Editor of the OS chooses it (Unity
+  6000.0.71f1, measured on Linux): `--force-vulkan` / `--force-glcore` (the Editor's
+  `-force-vulkan`, `-force-glcore[XY]`), else the project's graphics API list for the OS's
+  standalone platform (Player Settings `m_BuildTargetGraphicsAPIs`, unless automatic) followed by
+  the platform's first default, else the defaults (Linux: OpenGL Core, then Vulkan; macOS:
+  Metal); the first device that starts wins, OpenGL Core last. Without settings the Linux Editor
+  runs OpenGL Core, so does Unbound. Everything device-dependent reads that one choice, resolved
+  before the game starts, never per frame: SystemInfo's answers and format tables measured on
+  each device (`Unbound.Runtime.GraphicsDeviceProfile`; tests/projects/urp CapsProbe), the
+  shader compilation target (`SHADER_API_GLCORE`/`SHADER_API_VULKAN`, compiled programs keyed by
+  it), `GL.GetGPUProjectionMatrix`, `IUnityGraphics::GetRenderer`, and the renderer's conventions
+  (`render::device`). OpenGL Core: clip depth from -w to w, every target stored bottom-up.
+  Vulkan (`UNITY_UV_STARTS_AT_TOP`, `UNITY_REVERSED_Z`): the GPU projection maps depth to 1 (near)
+  .. 0 (far), depth tests, clears, biases and comparison samplers are mirrored, render textures
+  are drawn with the projection's y flipped (`_ProjectionParams.x` -1; their rows stay bottom-up,
+  as Unity's texture data is) and the screen with it unflipped (its rows top-down; the window,
+  screenshots and `ReadPixels` turn them back), and the render pipelines' framebuffer inputs are
+  read as their input attachments' textures (`_UnityFBInput<i>`). Both devices are drawn by
+  wgpu's Vulkan backend for now: wgpu's OpenGL backend lacks what the renderer uses (texture
+  views in another format, sampler LOD bias; an OpenGL 3.3 context); see the gap table. The
+  suite selects the device of each reference set explicitly (`--force-glcore`,
+  `--force-vulkan`).
+* **Native rendering plugins**: on the OpenGL Core device (`SystemInfo.graphicsDeviceType`,
+  `IUnityGraphics::GetRenderer`), the Linux Editor's default, the renderer still draws with
+  Vulkan (see above). Plugins written for that device call OpenGL on the main thread with a context
   current and use OpenGL texture names, so they get a real OpenGL 4.5 core context on the
   renderer's GPU (EGL without a surface, `render/gl_interop.rs`), current on the game thread: in
   `UnityPluginLoad` and in every rendering callback, as in the Editor, whose callbacks run on its
@@ -176,10 +200,10 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `ForwardBase`, `Vertex` ones without forward passes), each with its ShaderLab render states under
   the material's properties. Missing shaders and passes that do not compile draw with Unity's error
   shader. Programs compile in `unbound-shaders`: Unity-style preprocessing against the release's
-  `CGIncludes` (an OpenGL-convention platform, `SHADER_API_GLCORE`, matching the renderer's
-  matrices and texture rows), glslang (shaderc) to SPIR-V, naga to its IR, where the program is
+  `CGIncludes` for the run's graphics device (`SHADER_API_GLCORE` or `SHADER_API_VULKAN`),
+  glslang (shaderc) to SPIR-V, naga to its IR, where the program is
   fitted to the renderer (vertex inputs by HLSL semantic, resources by name, the draw's color on
-  the vertex color, clip space turned into the renderer's, array elements padded to their HLSL
+  the vertex color, the device's clip space turned into the renderer's, array elements padded to their HLSL
   stride), and WGSL out. Variants follow the material's and the global keywords; compiled
   programs are cached in the global cache by a hash of their preprocessed sources. Each draw's
   uniform block is filled by name: Unity's built-in variables, then material properties (colors
