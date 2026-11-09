@@ -1,0 +1,116 @@
+# Builds the release archives and drafts a GitHub release for a pushed `v*` tag.
+#
+#   1. Set [workspace.package] version in Cargo.toml to X.Y.Z and land it on main.
+#   2. git tag vX.Y.Z && git push origin vX.Y.Z
+#   3. Review the draft release this workflow creates, then publish it. install.sh fetches the
+#      latest published release.
+#
+# Running the workflow by hand (workflow_dispatch) builds the archives as workflow artifacts
+# without creating a release.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest supported Ubuntu LTS image, so the binary's glibc requirement stays low.
+          - platform: linux-x86_64
+            os: ubuntu-22.04
+          - platform: macos-arm64
+            os: macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 240
+    env:
+      CARGO_TERM_COLOR: always
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      # tests/ holds the probe projects (over a gigabyte); the build only embeds the class-id
+      # references of one of them (managed/UnityEngine/UnityEngine.csproj).
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/tests/
+            /tests/projects/classids/Reference/
+      - name: Check the embedded class-id references are present
+        shell: bash
+        run: ls tests/projects/classids/Reference/unity-*.jsonl
+
+      - name: Free disk space
+        if: runner.os == 'Linux'
+        run: sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+      - name: Install system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config python3 \
+            libwayland-dev libxkbcommon-dev libudev-dev libasound2-dev
+      - name: Install CMake and Ninja
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja || true
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install the Rust toolchain (rust-toolchain.toml)
+        shell: bash
+        run: rustup toolchain install && rustc --version
+
+      - name: Build
+        shell: bash
+        run: cargo build --release --locked -p unbound
+      - name: Pack
+        shell: bash
+        run: |
+          tag=()
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then tag=(--tag "$GITHUB_REF_NAME"); fi
+          python3 tools/release/package.py --platform ${{ matrix.platform }} --out dist "${tag[@]}"
+      - name: Check the unpacked archive runs outside the checkout
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/unpacked"
+          tar -xzf dist/unbound-${{ matrix.platform }}.tar.gz -C "$RUNNER_TEMP/unpacked"
+          cd "$RUNNER_TEMP"
+          ln -s "$RUNNER_TEMP/unpacked/unbound/bin/unbound" linked-unbound
+          ./linked-unbound --version
+          ./linked-unbound --help > /dev/null
+      - uses: actions/upload-artifact@v7
+        with:
+          name: unbound-${{ matrix.platform }}
+          path: dist/unbound-${{ matrix.platform }}.tar.gz*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" --draft --verify-tag --generate-notes \
+            --title "Unbound $GITHUB_REF_NAME"
