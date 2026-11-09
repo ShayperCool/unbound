@@ -555,6 +555,33 @@ public class MeshShapeProbe : MonoBehaviour
             RecordParticles("texture/clip/ring", ps);
             Destroy(ps.gameObject);
         }
+        // Death sub-emitters of births that die at their start: most lanes discarded (the count
+        // reaches zero), a lifetime shorter than the step, and a first-step collision kill.
+        foreach (var (label, threshold, lifetime, collide) in new[] { ("deathcap", 0.95f, 5f, false), ("deathexpire", 0f, 0.001f, false), ("deathcollide", 0f, 5f, true) })
+        {
+            var parent = Textured("tx", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 10);
+            var pm = parent.main; pm.startLifetime = lifetime; pm.startSpeed = collide ? 40f : 0f;
+            var ps0 = parent.shape; ps0.textureClipThreshold = threshold;
+            var child = Textured("child", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 1);
+            child.transform.SetParent(parent.transform, false);
+            var subs = parent.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            GameObject wall = null;
+            if (collide)
+            {
+                wall = new GameObject("wall");
+                wall.transform.SetPositionAndRotation(new Vector3(0f, 0f, 0.2f), Quaternion.Euler(-90f, 0f, 0f));
+                var c = parent.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes; c.SetPlane(0, wall.transform);
+                c.lifetimeLoss = 1f; c.bounce = 0f;
+            }
+            string key = "texture/clip/" + label;
+            s_Flags.Add((key, 0));
+            parent.Simulate(0.02f, true, true, true);
+            RecordParticles(key + "/0", parent);
+            RecordParticles(key + "/0/child", child);
+            Destroy(parent.gameObject);
+            if (wall != null) Destroy(wall);
+        }
         foreach (var (label, parentClip, childClip) in new[] { ("deathsub", 0.5f, 0f), ("subbirths", 0f, 0.5f) })
         {
             var parent = Textured("tx", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 10);

@@ -181,6 +181,7 @@ public partial class ParticleRandomProbe : MonoBehaviour
             ("two", c => { c.dampen = Two(0.1f, 0.6f); c.bounce = Two(0.2f, 1f); c.lifetimeLoss = Two(0f, 0.3f); }),
             ("curves", c => { c.dampen = new ParticleSystem.MinMaxCurve(0.6f, rise, AnimationCurve.Linear(0f, 0.5f, 1f, 1f)); c.bounce = new ParticleSystem.MinMaxCurve(1f, rise, AnimationCurve.Linear(0f, 0.4f, 1f, 1f)); c.lifetimeLoss = 0f; }),
             ("bounceonly", c => { c.dampen = 0f; c.bounce = Two(0.2f, 1f); c.lifetimeLoss = 0f; }),
+            ("curve", c => { c.dampen = new ParticleSystem.MinMaxCurve(0.5f, AnimationCurve.Linear(0f, 1f, 1f, 0f)); c.bounce = new ParticleSystem.MinMaxCurve(1f, rise); c.lifetimeLoss = 0f; }),
         };
         var plane = new GameObject("collision plane").transform;
         plane.SetPositionAndRotation(new Vector3(0f, 0f, 0.3f), Quaternion.Euler(-90f, 0f, 0f));
