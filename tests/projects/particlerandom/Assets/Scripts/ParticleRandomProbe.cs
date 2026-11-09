@@ -191,7 +191,8 @@ public partial class ParticleRandomProbe : MonoBehaviour
             {
                 var m = ps.main; m.maxParticles = 12; m.ringBufferMode = mode;
                 var e = ps.emission; e.rateOverTime = 100f;
-            }, 5, 0);            // Past twice the maximum, with short lives (particles held at their end or looping
+            }, 5, 0);
+            // Past twice the maximum, with short lives (particles held at their end or looping
             // when replaced), with a maximum that is not a multiple of four.
             Simulated("ring/" + name + "/ratelong", ps =>
             {
@@ -218,6 +219,26 @@ public partial class ParticleRandomProbe : MonoBehaviour
                 ps.Emit(5);
                 RecordParticles(Key("ring/" + name + "/emitparams", seed, 1), ps);
                 Record(Key("ring/" + name + "/deathsub", seed, 0), new List<float> { child.particleCount });
+                ps.Simulate(Dt, true, false, true);
+                Record(Key("ring/" + name + "/deathsub", seed, 1), new List<float> { child.particleCount });
+                DestroyImmediate(ps.gameObject);
+            }
+            // Rate births replacing ring slots, with a Death sub-emitter: the children each step.
+            foreach (uint seed in Seeds)
+            {
+                var ps = Make("ringrate", seed, s => { var m = s.main; m.maxParticles = 6; m.ringBufferMode = mode; var e = s.emission; e.rateOverTime = 100f; }, 0);
+                var child = Make("ringratechild", seed, s => { var m = s.main; m.startLifetime = 5f; }, 1);
+                child.transform.SetParent(ps.transform, false);
+                var subs = ps.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+                var counts = new List<float>();
+                for (int i = 0; i < 5; i++)
+                {
+                    ps.Simulate(Dt, true, i == 0, true);
+                    counts.Add(ps.particleCount);
+                    counts.Add(child.particleCount);
+                }
+                Record("ring/" + name + "/ratedeath/" + seed.ToString(CultureInfo.InvariantCulture), counts);
                 DestroyImmediate(ps.gameObject);
             }
         }
