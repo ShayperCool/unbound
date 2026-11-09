@@ -1,40 +1,25 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using Unbound.UIElements;
 
-// TreeView, BaseTreeView and TreeViewItemData<T>, from the Unity 6000.0 Scripting API pages of these
-// types and their members and the Manual page "TreeView" (UXML element reference, with its attribute
-// and USS class tables). The tree is shown through BaseVerticalCollectionView's virtualization: the
-// controller's items source is the list of visible rows (the items whose ancestors are all
-// expanded), in depth-first order, and each pooled row element holds an indent, a foldout toggle and
-// the element made by makeItem.
-//
-// Documented and implemented here:
-//   - SetRootItems "Sets the root items to use with the default tree view controller"; it forces a
-//     DefaultTreeViewController<T>;
-//   - the controller's itemsSource "Contains items that are expanded in the tree"; GetIndexForId
-//     returns -1 "if the item is not visible"; GetParentId returns -1 at the root;
-//   - bindItem receives the visible index, used with GetItemDataForIndex<T> (Manual note);
-//   - ExpandItem/CollapseItem with expandAllChildren/collapseAllChildren and refresh ("Set to false
-//     when doing multiple operations ... only do one RefreshItems once all operations are done");
-//     ExpandRootItems, ExpandAll, CollapseAll, IsExpanded;
-//   - autoExpand: "When true, items are automatically expanded when added to the TreeView";
-//   - itemExpandedChanged is "Raised when an item is expanded or collapsed"; its id "Returns -1 when
-//     expandAll() or collapseAll() is being called";
-//   - selection by id (SetSelectionById, SetSelectionByIdWithoutNotify, AddToSelectionById,
-//     RemoveFromSelectionById) on top of the collection view's selection by index; selecting by id
-//     "will also expand the selected item(s) if not expanded already" (Remarks of the first three);
-//   - the USS classes unity-tree-view, __item, __item-toggle, __item-indent, __item-content.
-//
-// Unbound's choices (unmeasured; the pages do not describe them) are marked "Unbound's choice" where
-// they are made. Not implemented here and still generated stubs (they warn when called): AddItem,
-// TryRemoveItem, view-data persistence of the expanded state, drag and drop reordering, custom view
-// controllers, and the controller-only members of BaseTreeViewController that are not virtual.
+// TreeView, BaseTreeView, their controllers and TreeViewItemData<T>. The tree is a hierarchy of nodes
+// (one per item id) with an expanded flag on every node, leaves included; the visible rows are the
+// nodes whose ancestors are all expanded, depth first, and they are the controller's items source.
+// Documented (Unity 6000.0 Scripting API and Manual "TreeView"): SetRootItems forces the default
+// controller; the items source "Contains items that are expanded in the tree"; GetIndexForId is -1
+// for a hidden item; itemExpandedChanged's id is -1 for ExpandAll/CollapseAll; selecting by id
+// expands the selected items; autoExpand expands added items; the USS class table.
+// Matches the Unity 6000.0.71f1 Editor, tests/projects/uitkcollections (tree section): ExpandItem with
+// and without its children (which marks every descendant expanded, leaves too), toggle presses and
+// Alt presses (a row pressed with Alt expands or collapses its whole subtree), ExpandAll/CollapseAll,
+// a collapse of a collapsed item (refreshed and reported all the same), selection by id (each
+// collapsed ancestor expanded and reported), right/left navigation (into the first child, expand,
+// collapse, back to the parent), new root items (itemsSourceChanged first), row structure and names,
+// and every callback in order. View-data persistence of the expanded items and tree reordering by
+// dragging are not implemented.
 namespace UnityEngine.UIElements
 {
-    /// <summary>Base class of tree views: a collection view whose rows are the visible items of a tree.</summary>
     public abstract partial class BaseTreeView : BaseVerticalCollectionView
     {
         public new static readonly string ussClassName = "unity-tree-view";
@@ -45,36 +30,36 @@ namespace UnityEngine.UIElements
         public static readonly string itemIndentUssClassName = ussClassName + "__item-indent";
         public static readonly string itemContentContainerUssClassName = ussClassName + "__item-content";
 
-        // Unbound's choice (unmeasured): the expanded state is held by the view, by id, so it survives a
-        // new SetRootItems for the ids that still exist there with children. Items start collapsed
-        // unless autoExpand is set when they are added.
-        readonly HashSet<int> m_UaExpanded = new HashSet<int>();
+        internal static readonly int invalidId = -1;
+
         bool m_AutoExpand;
 
         public new IList itemsSource
         {
-            get => base.itemsSource;
-            internal set => base.itemsSource = value;
+            get => viewController?.itemsSource;
+            internal set => GetOrCreateViewController().itemsSource = value;
         }
 
         public new BaseTreeViewController viewController => base.viewController as BaseTreeViewController;
 
-        /// <summary>Unbound's choice (unmeasured): only items added after autoExpand is set are expanded
-        /// by it (SetRootItems); setting it changes no existing item.</summary>
+        /// <summary>Items added while set are expanded; setting it refreshes the rows.</summary>
         public bool autoExpand
         {
             get => m_AutoExpand;
-            set => m_AutoExpand = value;
+            set
+            {
+                if (m_AutoExpand == value) return;
+                m_AutoExpand = value;
+                RefreshItems();
+            }
         }
 
         public event Action<TreeViewExpansionChangedArgs> itemExpandedChanged;
 
-        UaTreeModel uaTree => (base.viewController as IUaTreeController)?.tree;
-
         // Tree reordering by dragging is not implemented: asking for it says so once.
         internal override ICollectionDragAndDropController CreateDragAndDropController() => new UaUnsupportedReorderController(this, "TreeView");
 
-        public BaseTreeView() : this((int)ItemHeightUnset) { }
+        public BaseTreeView() : this(-1) { }
 
         public BaseTreeView(int itemHeight) : base(null, itemHeight)
         {
@@ -83,98 +68,105 @@ namespace UnityEngine.UIElements
 
         public void SetRootItems<T>(IList<TreeViewItemData<T>> rootItems) => SetRootItemsInternal(rootItems);
 
-        // The typed operations TreeView implements (Unity's signatures), declared here so that the
-        // hand-written code builds alone for `unbound gen-stubs`.
         internal abstract void SetRootItemsInternal<T>(IList<TreeViewItemData<T>> rootItems);
-        private protected abstract IEnumerable<TreeViewItemData<T>> GetSelectedItemsInternal<T>();
-        private protected abstract T GetItemDataForIndexInternal<T>(int index);
-        private protected abstract T GetItemDataForIdInternal<T>(int id);
 
-        public IEnumerable<int> GetRootIds()
-        {
-            var tree = uaTree;
-            if (tree == null) return Array.Empty<int>();
-            return tree.roots.Select(n => n.id).ToArray();
-        }
+        public IEnumerable<int> GetRootIds() => viewController.GetRootItemIds();
 
-        public int GetTreeCount() => uaTree?.count ?? 0;
+        public int GetTreeCount() => viewController.GetTreeItemsCount();
 
-        // Dynamic height rows are not supported by this tree's rows yet: they keep the fixed height,
-        // and the first such tree says so.
-        private protected override void CreateVirtualizationController()
-        {
-            if (virtualizationMethod != CollectionVirtualizationMethod.DynamicHeight)
-            {
-                CreateVirtualizationController<UaTreeRow>();
-                return;
-            }
-            Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.virtualizationMethod DynamicHeight (rows keep the fixed item height)");
-            m_VirtualizationController = new FixedHeightVirtualizationController<UaTreeRow>(this);
-        }
+        private protected override void CreateVirtualizationController() => CreateVirtualizationController<ReusableTreeViewItem>();
 
         public override void SetViewController(CollectionViewController controller)
         {
+            if (viewController != null)
+            {
+                viewController.itemIndexChanged -= OnItemIndexChanged;
+                viewController.itemExpandedChanged -= OnItemExpandedChanged;
+            }
             base.SetViewController(controller);
-            if (controller != null && !(controller is IUaTreeController))
-                Debug.LogError($"Unbound: tree views only support the default controller set by SetRootItems yet; {controller.GetType().FullName} is not supported and its items are not shown");
+            if (viewController != null)
+            {
+                viewController.itemIndexChanged += OnItemIndexChanged;
+                viewController.itemExpandedChanged += OnItemExpandedChanged;
+            }
         }
 
-        /// <summary>Unbound's choice (unmeasured): an index outside the visible rows answers -1.</summary>
-        public int GetIdForIndex(int index) => base.viewController?.GetIdForIndex(index) ?? -1;
+        void OnItemIndexChanged(int srcIndex, int dstIndex) => RefreshItems();
 
-        public int GetParentIdForIndex(int index)
-        {
-            var tree = uaTree;
-            return tree != null && tree.TryGetRow(index, out var node) ? node.parentId : -1;
-        }
+        void OnItemExpandedChanged(TreeViewExpansionChangedArgs args) => itemExpandedChanged?.Invoke(args);
 
-        public IEnumerable<int> GetChildrenIdsForIndex(int index)
-        {
-            var tree = uaTree;
-            if (tree == null || !tree.TryGetRow(index, out var node)) return Array.Empty<int>();
-            return node.children.Select(c => c.id).ToArray();
-        }
+        public int GetIdForIndex(int index) => viewController.GetIdForIndex(index);
+
+        public int GetParentIdForIndex(int index) => viewController.GetParentId(GetIdForIndex(index));
+
+        public IEnumerable<int> GetChildrenIdsForIndex(int index) => viewController.GetChildrenIdsByIndex(index);
 
         public IEnumerable<TreeViewItemData<T>> GetSelectedItems<T>() => GetSelectedItemsInternal<T>();
 
+        private protected abstract IEnumerable<TreeViewItemData<T>> GetSelectedItemsInternal<T>();
+
         public T GetItemDataForIndex<T>(int index) => GetItemDataForIndexInternal<T>(index);
+
+        private protected abstract T GetItemDataForIndexInternal<T>(int index);
 
         public T GetItemDataForId<T>(int id) => GetItemDataForIdInternal<T>(id);
 
-        /// <summary>The default controller of data type T, or null without tree data. Unbound's choice
-        /// (unmeasured): asking for another data type than the tree's throws ArgumentException.</summary>
-        internal UaTreeController<T> UaControllerOf<T>()
-        {
-            var controller = base.viewController;
-            if (controller == null || controller is UaTreeController<T>) return controller as UaTreeController<T>;
-            var type = controller is IUaTreeController tree ? tree.dataType : controller.GetType();
-            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from the data type of the tree view ({type}).");
-        }
+        private protected abstract T GetItemDataForIdInternal<T>(int id);
 
-        /// <summary>Sets the root items on the default controller of type T, creating it when the view
-        /// has another controller (the Scripting API: "This will force the use of a
-        /// DefaultTreeViewController").</summary>
-        internal void UaSetRootItems<T>(IList<TreeViewItemData<T>> rootItems)
+        public void AddItem<T>(TreeViewItemData<T> item, int parentId = -1, int childIndex = -1, bool rebuildTree = true) =>
+            AddItemInternal(item, parentId, childIndex, rebuildTree);
+
+        private protected abstract void AddItemInternal<T>(TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree);
+
+        public bool TryRemoveItem(int id, bool rebuildTree = true) => viewController.TryRemoveItem(id, rebuildTree);
+
+        /// <summary>Right/left navigation: on items with children, expands (right) or collapses
+        /// (left) the selected items, all their descendants with Alt. Otherwise left selects the
+        /// parent (or, at the root, the previous item with children), right the next item with
+        /// children.</summary>
+        private protected override bool HandleItemNavigation(bool moveIn, bool altPressed)
         {
-            if (!(base.viewController is UaTreeController<T> controller))
+            int step = 1;
+            bool changed = false;
+            foreach (int id in selectedIds)
             {
-                controller = new UaTreeController<T>();
-                SetViewController(controller);
+                int index = viewController.GetIndexForId(id);
+                if (!viewController.HasChildrenByIndex(index)) break;
+                if (moveIn && !viewController.IsExpandedByIndex(index))
+                {
+                    ExpandItemByIndex(index, altPressed);
+                    changed = true;
+                }
+                else if (!moveIn && viewController.IsExpandedByIndex(index))
+                {
+                    CollapseItemByIndex(index, altPressed);
+                    changed = true;
+                }
             }
-            controller.SetRoots(rootItems);
-            var tree = controller.tree;
-            // Unbound's choice (unmeasured): ids that no longer name an item with children lose their
-            // expanded state; with autoExpand every added item with children is expanded, without
-            // itemExpandedChanged.
-            m_UaExpanded.RemoveWhere(id => !tree.TryGet(id, out var node) || node.children.Count == 0);
-            if (m_AutoExpand)
-                foreach (var node in tree.all)
-                    if (node.children.Count > 0) m_UaExpanded.Add(node.id);
-            controller.RebuildRows();
-            // Unbound's choice (unmeasured): as a ListView's new items source does, the rows are refreshed
-            // and itemsSourceChanged is sent.
-            RefreshItems();
-            controller.RaiseRowsChanged();
+            if (changed) return true;
+            if (!moveIn)
+            {
+                int parentId = viewController.GetParentId(viewController.GetIdForIndex(selectedIndex));
+                if (parentId != invalidId)
+                {
+                    SetSelectionById(parentId);
+                    ScrollToItemById(parentId);
+                    return true;
+                }
+                step = -1;
+            }
+            int next = selectedIndex;
+            bool hasChildren;
+            do
+            {
+                next += step;
+                hasChildren = viewController.HasChildrenByIndex(next);
+            }
+            while (!hasChildren && next >= 0 && next < itemsSource.Count);
+            if (!hasChildren) return false;
+            SetSelection(next);
+            ScrollToItem(next);
+            return true;
         }
 
         public void SetSelectionById(int id) => SetSelectionById(new[] { id });
@@ -186,162 +178,55 @@ namespace UnityEngine.UIElements
         internal void SetSelectionInternalById(IEnumerable<int> ids, bool sendNotification)
         {
             if (ids == null) return;
-            SetSelectionInternal(UaShowAndIndex(ids), sendNotification);
-        }
-
-        public void AddToSelectionById(int id)
-        {
-            var indices = UaShowAndIndex(new[] { id });
-            if (indices.Count > 0) AddToSelection(indices[0]);
-        }
-
-        /// <summary>Unbound's choice (unmeasured): an id whose row is hidden under a collapsed ancestor is
-        /// not removed.</summary>
-        public void RemoveFromSelectionById(int id)
-        {
-            int index = uaTree?.RowOf(id) ?? -1;
-            if (index >= 0) RemoveFromSelection(index);
-        }
-
-        /// <summary>Expands the items selected by id and their collapsed ancestors, then answers their
-        /// visible indices. Documented (6000.0 Scripting API, Remarks of SetSelectionById(int),
-        /// SetSelectionById(IEnumerable&lt;int&gt;), AddToSelectionById and
-        /// SetSelectionByIdWithoutNotify): "This will also expand the selected item(s) if not expanded
-        /// already." The item itself is expanded as ExpandItem(id) expands it (only an item with children
-        /// changes state). Unbound's choices (unmeasured; the pages do not say): its collapsed ancestors
-        /// are expanded too, so it has a visible index to select; every item whose state changed sends
-        /// itemExpandedChanged (that event is "Raised when an item is expanded or collapsed"), also from
-        /// SetSelectionByIdWithoutNotify, whose "without triggering a selection change callback" names
-        /// only the selection callback; the events follow the given ids, each id's ancestors root first,
-        /// then the item, after the rows are refreshed; unknown ids are skipped.</summary>
-        List<int> UaShowAndIndex(IEnumerable<int> ids)
-        {
             var indices = new List<int>();
-            var tree = uaTree;
-            if (tree == null) return indices;
-            var known = ids.Where(id => tree.TryGet(id, out _)).ToList();
-            var opened = new List<int>();
-            var chain = new List<UaTreeNode>();
-            foreach (int id in known)
-            {
-                tree.TryGet(id, out var node);
-                chain.Clear();
-                int parent = node.parentId;
-                while (parent != -1 && tree.TryGet(parent, out var ancestor))
-                {
-                    chain.Add(ancestor);
-                    parent = ancestor.parentId;
-                }
-                chain.Reverse();
-                chain.Add(node);
-                foreach (var item in chain)
-                    if (UaMark(item, true, false)) opened.Add(item.id);
-            }
-            if (opened.Count > 0)
-            {
-                UaRebuildRows();
-                // Re-index the current selection to its rows after the expansion, quietly, so the
-                // refresh does not report a moved selection: SetSelectionByIdWithoutNotify is
-                // documented "without triggering a selection change callback", and the notifying
-                // variants report only the new selection.
-                var kept = new List<int>();
-                foreach (int selected in selectedIds)
-                {
-                    int row = tree.RowOf(selected);
-                    if (row >= 0) kept.Add(row);
-                }
-                SetSelectionInternal(kept, false);
-                RefreshItems();
-                foreach (int id in opened) UaRaiseExpanded(id, true, false);
-            }
-            foreach (int id in known)
-            {
-                int index = tree.RowOf(id);
-                if (index >= 0) indices.Add(index);
-            }
-            return indices;
+            foreach (int id in ids) indices.Add(GetItemIndex(id, true));
+            SetSelectionInternal(indices, sendNotification);
         }
 
-        public bool IsExpanded(int id) => m_UaExpanded.Contains(id);
+        public void AddToSelectionById(int id) => AddToSelection(GetItemIndex(id, true));
 
-        /// <summary>Unbound's choices (unmeasured): an unknown id, or an item without children, changes
-        /// nothing; nothing is sent when no expanded state changed. The visible rows and the id/index
-        /// mapping are updated at once, even with refresh false (only the bound row elements wait for
-        /// RefreshItems); itemExpandedChanged is sent after the refresh.</summary>
-        public void CollapseItem(int id, bool collapseAllChildren = false, bool refresh = true) => UaSetExpanded(id, false, collapseAllChildren, refresh);
+        public void RemoveFromSelectionById(int id) => RemoveFromSelection(GetItemIndex(id));
 
-        public void ExpandItem(int id, bool expandAllChildren = false, bool refresh = true) => UaSetExpanded(id, true, expandAllChildren, refresh);
+        /// <summary>The visible index of an item; with <paramref name="expand"/>, its collapsed
+        /// ancestors are expanded first (each refreshes and reports).</summary>
+        int GetItemIndex(int id, bool expand = false)
+        {
+            if (expand)
+            {
+                for (int parent = viewController.GetParentId(id); parent != invalidId; parent = viewController.GetParentId(parent))
+                    if (!viewController.IsExpanded(parent)) viewController.ExpandItem(parent, false);
+            }
+            return viewController.GetIndexForId(id);
+        }
 
-        /// <summary>Unbound's choice (unmeasured): one itemExpandedChanged per root whose state changed.</summary>
+        public bool IsExpanded(int id) => viewController.IsExpanded(id);
+
+        public void CollapseItem(int id, bool collapseAllChildren = false, bool refresh = true) => viewController.CollapseItem(id, collapseAllChildren, refresh);
+
+        public void ExpandItem(int id, bool expandAllChildren = false, bool refresh = true) => viewController.ExpandItem(id, expandAllChildren, refresh);
+
         public void ExpandRootItems()
         {
-            var tree = uaTree;
-            if (tree == null) return;
-            var opened = new List<int>();
-            foreach (var root in tree.roots)
-                if (UaMark(root, true, false)) opened.Add(root.id);
-            if (opened.Count == 0) return;
-            UaRebuildRows();
+            foreach (int id in viewController.GetRootItemIds()) viewController.ExpandItem(id, false, false);
             RefreshItems();
-            foreach (int id in opened) UaRaiseExpanded(id, true, false);
         }
 
-        /// <summary>Documented: the event's id is -1 for ExpandAll. Unbound's choice (unmeasured): one
-        /// event, sent whenever the view has tree data, with isAppliedToAllChildren true.</summary>
-        public void ExpandAll() => UaSetAll(true);
+        public void ExpandAll() => viewController.ExpandAll();
 
-        public void CollapseAll() => UaSetAll(false);
+        public void CollapseAll() => viewController.CollapseAll();
 
-        void UaSetAll(bool expanded)
+        void CollapseItemByIndex(int index, bool collapseAll)
         {
-            var tree = uaTree;
-            if (tree == null) return;
-            foreach (var root in tree.roots) UaMark(root, expanded, true);
-            UaRebuildRows();
+            if (!viewController.HasChildrenByIndex(index)) return;
+            viewController.CollapseItemByIndex(index, collapseAll);
             RefreshItems();
-            UaRaiseExpanded(-1, expanded, true);
         }
 
-        void UaSetExpanded(int id, bool expanded, bool allChildren, bool refresh)
+        void ExpandItemByIndex(int index, bool expandAll)
         {
-            var tree = uaTree;
-            if (tree == null || !tree.TryGet(id, out var node)) return;
-            if (!UaMark(node, expanded, allChildren)) return;
-            UaRebuildRows();
-            if (refresh) RefreshItems();
-            UaRaiseExpanded(id, expanded, allChildren);
-        }
-
-        /// <summary>Sets the expanded state of an item with children (and of its descendants with
-        /// children when <paramref name="deep"/>); answers whether any state changed.</summary>
-        bool UaMark(UaTreeNode node, bool expanded, bool deep)
-        {
-            bool changed = false;
-            if (node.children.Count > 0)
-                changed = expanded ? m_UaExpanded.Add(node.id) : m_UaExpanded.Remove(node.id);
-            if (deep)
-                foreach (var child in node.children)
-                    changed |= UaMark(child, expanded, true);
-            return changed;
-        }
-
-        void UaRebuildRows() => (base.viewController as IUaTreeController)?.RebuildRows();
-
-        void UaRaiseExpanded(int id, bool expanded, bool allChildren)
-        {
-            if (itemExpandedChanged == null) return;
-            itemExpandedChanged(new TreeViewExpansionChangedArgs { id = id, isExpanded = expanded, isAppliedToAllChildren = allChildren });
-        }
-
-        /// <summary>Unbound's choice (unmeasured): the move-right key expands the first selected item and
-        /// move-left collapses it (with alt: its whole hierarchy); nothing else moves.</summary>
-        private protected override bool HandleItemNavigation(bool moveIn, bool altPressed)
-        {
-            var tree = uaTree;
-            if (tree == null || !tree.TryGetRow(selectedIndex, out var node) || node.children.Count == 0) return false;
-            if (moveIn == IsExpanded(node.id) && !altPressed) return false;
-            UaSetExpanded(node.id, moveIn, altPressed, true);
-            return true;
+            if (!viewController.HasChildrenByIndex(index)) return;
+            viewController.ExpandItemByIndex(index, expandAll);
+            RefreshItems();
         }
     }
 
@@ -355,8 +240,7 @@ namespace UnityEngine.UIElements
         Action<VisualElement, int> m_UnbindItem;
         Action<VisualElement> m_DestroyItem;
 
-        // The callbacks behave as ListView's: a new makeItem rebuilds the rows, a new bindItem refreshes
-        // them (the Manual: call Rebuild after changing makeItem or destroyItem).
+        // A new makeItem rebuilds the rows, a new bindItem refreshes them.
         public new Func<VisualElement> makeItem
         {
             get => m_MakeItem;
@@ -405,58 +289,88 @@ namespace UnityEngine.UIElements
 
         public new TreeViewController viewController => base.viewController as TreeViewController;
 
-        public TreeView() : this((int)ItemHeightUnset, null, null) { }
+        public TreeView() : this(null, null) { }
 
-        public TreeView(Func<VisualElement> makeItem, Action<VisualElement, int> bindItem) : this((int)ItemHeightUnset, makeItem, bindItem) { }
-
-        public TreeView(int itemHeight, Func<VisualElement> makeItem, Action<VisualElement, int> bindItem) : base(itemHeight)
+        public TreeView(Func<VisualElement> makeItem, Action<VisualElement, int> bindItem) : base(-1)
         {
-            m_TemplateMakeItem = UaTemplateMakeItem;
+            m_TemplateMakeItem = TemplateMakeItem;
             m_MakeItem = makeItem;
             m_BindItem = bindItem;
         }
 
-        VisualElement UaTemplateMakeItem() => m_ItemTemplate != null ? m_ItemTemplate.Instantiate() : new Label(k_InvalidTemplateError);
+        public TreeView(int itemHeight, Func<VisualElement> makeItem, Action<VisualElement, int> bindItem) : this(makeItem, bindItem)
+        {
+            fixedItemHeight = itemHeight;
+        }
 
-        /// <summary>Rows come from <see cref="itemTemplate"/> with no <see cref="bindItem"/>: there is a
-        /// template, makeItem is still the template factory the itemTemplate setter assigned (not a
-        /// game callback), and no bind callback is set. The itemTemplate page says the template
-        /// replaces makeItem; it does not say what such rows show without bindItem. Unbound has no
-        /// runtime data binding yet, so its interim is to show the template rows unbound, with a
-        /// warning, instead of an empty tree. Replacing makeItem or clearing the template ends the
-        /// exemption.</summary>
+        VisualElement TemplateMakeItem() => m_ItemTemplate != null ? m_ItemTemplate.Instantiate() : new Label(k_InvalidTemplateError);
+
+        /// <summary>Rows come from <see cref="itemTemplate"/> with no <see cref="bindItem"/>: the
+        /// template is set, makeItem is still its factory and no bind callback is set. Unbound has no
+        /// runtime data binding yet, so the rows are shown unbound (with a notice).</summary>
         internal bool bindsTemplateWithoutBindItem =>
             m_ItemTemplate != null && m_BindItem == null && ReferenceEquals(m_MakeItem, m_TemplateMakeItem);
 
         internal override bool HasValidDataAndBindings() =>
             base.HasValidDataAndBindings() && ((makeItem != null) == (bindItem != null) || bindsTemplateWithoutBindItem);
 
-        /// <summary>The controller made when items are assigned without SetRootItems.</summary>
-        protected override CollectionViewController CreateViewController() => new UaTreeController<object>();
+        protected override CollectionViewController CreateViewController() => new DefaultTreeViewController<object>();
 
-        internal override void SetRootItemsInternal<T>(IList<TreeViewItemData<T>> rootItems) => UaSetRootItems(rootItems);
+        internal override void SetRootItemsInternal<T>(IList<TreeViewItemData<T>> rootItems)
+        {
+            if (!(base.viewController is DefaultTreeViewController<T> controller))
+            {
+                controller = new DefaultTreeViewController<T>();
+                SetViewController(controller);
+            }
+            controller.SetRootItems(rootItems);
+        }
+
+        DefaultTreeViewController<T> ControllerOf<T>()
+        {
+            var controller = base.viewController;
+            if (controller is DefaultTreeViewController<T> typed) return typed;
+            var type = controller?.GetType();
+            if (type != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(DefaultTreeViewController<>))
+                throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({type.GetGenericArguments()[0]}) and is not recognized by the controller.");
+            return null;
+        }
 
         private protected override IEnumerable<TreeViewItemData<T>> GetSelectedItemsInternal<T>()
         {
-            var controller = UaControllerOf<T>();
-            if (controller == null) return Array.Empty<TreeViewItemData<T>>();
-            return selectedIndices.Select(controller.GetTreeViewItemDataForIndex).ToArray();
+            var controller = ControllerOf<T>();
+            if (controller == null) throw new ArgumentException("GetSelectedItems<T>() only works when using the default controller. Use your controller along with the selectedIndices enumerable instead.");
+            var items = new List<TreeViewItemData<T>>();
+            foreach (int index in selectedIndices) items.Add(controller.GetTreeViewItemDataForIndex(index));
+            return items;
         }
 
-        /// <summary>Unbound's choice (unmeasured): without tree data, or for an index outside the
-        /// visible rows, the default value.</summary>
         private protected override T GetItemDataForIndexInternal<T>(int index)
         {
-            var controller = UaControllerOf<T>();
-            return controller != null ? controller.GetDataForIndex(index) : default;
+            var controller = ControllerOf<T>();
+            if (controller != null) return controller.GetDataForIndex(index);
+            object item = base.viewController?.GetItemForIndex(index);
+            if (item is T typed) return typed;
+            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({item?.GetType()}) and is not recognized by the controller.");
         }
 
-        /// <summary>Unbound's choice (unmeasured): without tree data, or for an unknown id, the default
-        /// value.</summary>
         private protected override T GetItemDataForIdInternal<T>(int id)
         {
-            var controller = UaControllerOf<T>();
-            return controller != null ? controller.GetDataForId(id) : default;
+            var controller = ControllerOf<T>();
+            if (controller != null) return controller.GetDataForId(id);
+            object item = base.viewController?.GetItemForIndex(base.viewController.GetIndexForId(id));
+            if (item is T typed) return typed;
+            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({item?.GetType()}) and is not recognized by the controller.");
+        }
+
+        private protected override void AddItemInternal<T>(TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree)
+        {
+            if (!(base.viewController is DefaultTreeViewController<T> controller))
+            {
+                controller = new DefaultTreeViewController<T>();
+                SetViewController(controller);
+            }
+            controller.AddItem(item, parentId, childIndex, rebuildTree);
         }
     }
 
@@ -464,32 +378,40 @@ namespace UnityEngine.UIElements
     /// data and its children.</summary>
     public readonly partial struct TreeViewItemData<T>
     {
-        readonly List<TreeViewItemData<T>> m_UaChildren;
+        readonly List<TreeViewItemData<T>> m_Children;
 
-        /// <summary>Unbound's choice (unmeasured): the children list is kept as given (null for none),
-        /// not copied.</summary>
         public TreeViewItemData(int id, T data, List<TreeViewItemData<T>> children = null)
         {
             this.id = id;
             this.data = data;
-            m_UaChildren = children;
+            m_Children = children ?? new List<TreeViewItemData<T>>();
         }
 
         public int id { get; }
 
         public T data { get; }
 
-        public IEnumerable<TreeViewItemData<T>> children => m_UaChildren ?? (IEnumerable<TreeViewItemData<T>>)Array.Empty<TreeViewItemData<T>>();
+        public IEnumerable<TreeViewItemData<T>> children => m_Children;
 
-        public bool hasChildren => m_UaChildren != null && m_UaChildren.Count > 0;
+        public bool hasChildren => m_Children != null && m_Children.Count > 0;
+
+        internal void InsertChild(TreeViewItemData<T> child, int index)
+        {
+            if (index < 0 || index >= m_Children.Count) m_Children.Add(child);
+            else m_Children.Insert(index, child);
+        }
+
+        internal void RemoveChild(int childId)
+        {
+            for (int i = 0; i < m_Children.Count; i++)
+            {
+                if (m_Children[i].id != childId) continue;
+                m_Children.RemoveAt(i);
+                return;
+            }
+        }
     }
 
-    /// <summary>"A data structure for the tree view item expansion event" (6000.0 Scripting API,
-    /// TreeViewExpansionChangedArgs): id is "The id of the item being expanded or collapsed. Returns -1
-    /// when expandAll() or collapseAll() is being called"; isExpanded "Indicates whether the item is
-    /// expanded (true) or collapsed (false)"; isAppliedToAllChildren "Indicates whether the
-    /// expandAllChildren or collapsedAllChildren is applied when expanding the item". The values are
-    /// those of the expand or collapse call that raised itemExpandedChanged.</summary>
     public partial class TreeViewExpansionChangedArgs
     {
         public TreeViewExpansionChangedArgs() { }
@@ -501,294 +423,291 @@ namespace UnityEngine.UIElements
         public bool isAppliedToAllChildren { get; set; }
     }
 
-    // Checked bootstrap stubs: UaTreeController needs these base declarations when building without
-    // generated sources. gen-stubs verifies every [Unbound.Stub] signature against the selected
-    // release's reference assemblies before writing output, and generates the remaining members.
-    [global::Unbound.Stub]
+    /// <summary>The tree controller: the hierarchy of item ids and its visible rows, expansion,
+    /// structure queries, and the row elements' indent, toggle and Alt presses.</summary>
     public abstract partial class BaseTreeViewController : CollectionViewController
     {
-        const string k_Type = "UnityEngine.UIElements.BaseTreeViewController.";
+        private protected UaTreeHierarchy m_UaHierarchy = new UaTreeHierarchy();
 
-        [global::Unbound.Stub]
-        public virtual IEnumerable<int> GetAllItemIds(IEnumerable<int> rootIds = null) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetAllItemIds)); return Array.Empty<int>(); }
-        [global::Unbound.Stub]
-        public virtual int GetParentId(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetParentId)); return default; }
-        [global::Unbound.Stub]
-        public virtual IEnumerable<int> GetChildrenIds(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetChildrenIds)); return Array.Empty<int>(); }
-        [global::Unbound.Stub]
-        public virtual int GetTreeItemsCount() { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetTreeItemsCount)); return default; }
-        [global::Unbound.Stub]
-        public virtual bool HasChildren(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(HasChildren)); return default; }
-        [global::Unbound.Stub]
-        public virtual bool CanChangeExpandedState(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(CanChangeExpandedState)); return default; }
-    }
+        protected BaseTreeView baseTreeView => view as BaseTreeView;
 
-    [global::Unbound.Stub]
-    public abstract partial class TreeViewController : BaseTreeViewController
-    {
-        const string k_Type = "UnityEngine.UIElements.TreeViewController.";
-
-        [global::Unbound.Stub]
-        protected override VisualElement MakeItem() { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(MakeItem)); return default; }
-        [global::Unbound.Stub]
-        protected override void BindItem(VisualElement element, int index) => global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(BindItem));
-        [global::Unbound.Stub]
-        protected override void UnbindItem(VisualElement element, int index) => global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(UnbindItem));
-        [global::Unbound.Stub]
-        protected override void DestroyItem(VisualElement element) => global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(DestroyItem));
-    }
-
-    [global::Unbound.Stub]
-    public partial class DefaultTreeViewController<T> : TreeViewController
-    {
-        const string k_Type = "UnityEngine.UIElements.DefaultTreeViewController<T>.";
-
-        [global::Unbound.Stub]
-        public virtual TreeViewItemData<T> GetTreeViewItemDataForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetTreeViewItemDataForId)); return default; }
-        [global::Unbound.Stub]
-        public virtual TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetTreeViewItemDataForIndex)); return default; }
-        [global::Unbound.Stub]
-        public virtual T GetDataForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetDataForId)); return default; }
-        [global::Unbound.Stub]
-        public virtual T GetDataForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetDataForIndex)); return default; }
-    }
-}
-
-namespace Unbound.UIElements
-{
-    using UnityEngine;
-    using UnityEngine.UIElements;
-
-    /// <summary>One item of a tree view's tree: its id, place and boxed TreeViewItemData.</summary>
-    internal sealed class UaTreeNode
-    {
-        public int id;
-        public int parentId;
-        public int depth;
-        public object item;
-        public readonly List<UaTreeNode> children = new List<UaTreeNode>();
-    }
-
-    /// <summary>A tree view's items by id, and its visible rows: the items whose ancestors are all
-    /// expanded, depth first, children in their given order.</summary>
-    internal sealed class UaTreeModel
-    {
-        readonly Dictionary<int, UaTreeNode> m_ById = new Dictionary<int, UaTreeNode>();
-        readonly List<UaTreeNode> m_Roots = new List<UaTreeNode>();
-        readonly List<UaTreeNode> m_All = new List<UaTreeNode>();
-        readonly List<UaTreeNode> m_Rows = new List<UaTreeNode>();
-        readonly Dictionary<int, int> m_RowOfId = new Dictionary<int, int>();
-
-        public int count => m_All.Count;
-        public IReadOnlyList<UaTreeNode> roots => m_Roots;
-        public IReadOnlyList<UaTreeNode> all => m_All;
-        public IReadOnlyList<UaTreeNode> rows => m_Rows;
-
-        public bool TryGet(int id, out UaTreeNode node) => m_ById.TryGetValue(id, out node);
-
-        public bool TryGetRow(int index, out UaTreeNode node)
-        {
-            node = index >= 0 && index < m_Rows.Count ? m_Rows[index] : null;
-            return node != null;
-        }
-
-        public int RowOf(int id) => m_RowOfId.TryGetValue(id, out int index) ? index : -1;
-
-        public void Clear()
-        {
-            m_ById.Clear();
-            m_Roots.Clear();
-            m_All.Clear();
-            m_Rows.Clear();
-            m_RowOfId.Clear();
-        }
-
-        /// <summary>Adds an item under a parent (null at the root). Unbound's choice (unmeasured): a
-        /// repeated id logs one error and is skipped with its children, since ids name items.</summary>
-        public UaTreeNode Add(int id, object item, UaTreeNode parent)
-        {
-            if (m_ById.ContainsKey(id))
-            {
-                Debug.LogError($"Unbound: tree view item id {id} is used more than once; the repeated item and its children are not shown");
-                return null;
-            }
-            var node = new UaTreeNode { id = id, item = item, parentId = parent?.id ?? -1, depth = parent != null ? parent.depth + 1 : 0 };
-            m_ById.Add(id, node);
-            m_All.Add(node);
-            (parent != null ? parent.children : m_Roots).Add(node);
-            return node;
-        }
-
-        public void RebuildRows(Func<int, bool> isExpanded)
-        {
-            m_Rows.Clear();
-            m_RowOfId.Clear();
-            var stack = new Stack<UaTreeNode>();
-            for (int i = m_Roots.Count - 1; i >= 0; i--) stack.Push(m_Roots[i]);
-            while (stack.Count > 0)
-            {
-                var node = stack.Pop();
-                m_RowOfId[node.id] = m_Rows.Count;
-                m_Rows.Add(node);
-                if (node.children.Count == 0 || !isExpanded(node.id)) continue;
-                for (int i = node.children.Count - 1; i >= 0; i--) stack.Push(node.children[i]);
-            }
-        }
-    }
-
-    /// <summary>What a tree view needs from its default controller, whatever its data type.</summary>
-    internal interface IUaTreeController
-    {
-        UaTreeModel tree { get; }
-        Type dataType { get; }
-        void RebuildRows();
-    }
-
-    /// <summary>The default tree view controller of data type T: the tree of TreeViewItemData, its
-    /// visible rows as items source, and the row elements made and bound by the TreeView's callbacks.
-    /// Every member the collection view machinery calls is overridden here, since the generated
-    /// controller bases are still stubs.</summary>
-    internal sealed class UaTreeController<T> : DefaultTreeViewController<T>, IUaTreeController
-    {
-        readonly UaTreeModel m_Tree = new UaTreeModel();
-        readonly List<TreeViewItemData<T>> m_Source = new List<TreeViewItemData<T>>();
-
-        public UaTreeModel tree => m_Tree;
-        public Type dataType => typeof(T);
-
-        BaseTreeView uaView => view as BaseTreeView;
-
-        public void SetRoots(IList<TreeViewItemData<T>> rootItems)
-        {
-            m_Tree.Clear();
-            if (rootItems == null) return;
-            foreach (var item in rootItems) AddRecursive(item, null);
-        }
-
-        void AddRecursive(TreeViewItemData<T> item, UaTreeNode parent)
-        {
-            var node = m_Tree.Add(item.id, item, parent);
-            if (node == null) return;
-            foreach (var child in item.children) AddRecursive(child, node);
-        }
-
-        public void RebuildRows()
-        {
-            var v = uaView;
-            m_Tree.RebuildRows(id => v != null && v.IsExpanded(id));
-            m_Source.Clear();
-            foreach (var node in m_Tree.rows) m_Source.Add((TreeViewItemData<T>)node.item);
-        }
-
-        public void RaiseRowsChanged() => RaiseItemsSourceChanged();
-
-        /// <summary>The visible rows' TreeViewItemData (the Scripting API: the source "contains the items
-        /// wrappers"). Unbound's choice (unmeasured): assigning a source is refused with an error.</summary>
+        /// <summary>The visible rows (read-only); tree data is set through the controller.</summary>
         public override IList itemsSource
         {
-            get => m_Source;
-            set => Debug.LogError("Unbound: a tree view's items come from SetRootItems; assigning itemsSource is not supported");
+            get => base.itemsSource;
+            set => throw new InvalidOperationException("Can't set itemsSource directly. Override this controller to manage tree data.");
         }
 
-        public override int GetItemsCount() => m_Tree.rows.Count;
+        internal event Action<TreeViewExpansionChangedArgs> itemExpandedChanged;
 
-        public override int GetIndexForId(int id) => m_Tree.RowOf(id);
+        protected BaseTreeViewController() => UseVisibleRowsAsItemsSource();
 
-        public override int GetIdForIndex(int index) => m_Tree.TryGetRow(index, out var node) ? node.id : -1;
+        [Obsolete("RebuildTree is no longer supported and will be removed.", false)]
+        [Unbound.EditorFaithful("Unity's: the tree updates itself")]
+        public void RebuildTree() { }
 
-        /// <summary>Unbound's choice (unmeasured): an item of the collection view (selectedItem,
-        /// selectedItems, itemsChosen) is its data.</summary>
-        public override object GetItemForIndex(int index) => m_Tree.TryGetRow(index, out var node) ? (object)((TreeViewItemData<T>)node.item).data : null;
-
-        public override object GetItemForId(int id) => m_Tree.TryGet(id, out var node) ? (object)((TreeViewItemData<T>)node.item).data : null;
-
-        public override TreeViewItemData<T> GetTreeViewItemDataForId(int id) => m_Tree.TryGet(id, out var node) ? (TreeViewItemData<T>)node.item : default;
-
-        public override TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) => m_Tree.TryGetRow(index, out var node) ? (TreeViewItemData<T>)node.item : default;
-
-        public override T GetDataForId(int id) => GetTreeViewItemDataForId(id).data;
-
-        public override T GetDataForIndex(int index) => GetTreeViewItemDataForIndex(index).data;
-
-        public override int GetParentId(int id) => m_Tree.TryGet(id, out var node) ? node.parentId : -1;
-
-        public override IEnumerable<int> GetChildrenIds(int id) =>
-            m_Tree.TryGet(id, out var node) ? node.children.Select(c => c.id).ToArray() : Array.Empty<int>();
-
-        public override bool HasChildren(int id) => m_Tree.TryGet(id, out var node) && node.children.Count > 0;
-
-        public override int GetTreeItemsCount() => m_Tree.count;
-
-        public override IEnumerable<int> GetAllItemIds(IEnumerable<int> rootIds = null)
+        public IEnumerable<int> GetRootItemIds()
         {
             var ids = new List<int>();
-            void Walk(UaTreeNode node)
-            {
-                ids.Add(node.id);
-                foreach (var child in node.children) Walk(child);
-            }
+            foreach (var node in m_UaHierarchy.root.children) ids.Add(node.id);
+            return ids;
+        }
+
+        public virtual IEnumerable<int> GetAllItemIds(IEnumerable<int> rootIds = null)
+        {
+            var ids = new List<int>();
             if (rootIds == null)
             {
-                foreach (var root in m_Tree.roots) Walk(root);
+                m_UaHierarchy.AddDescendantIds(m_UaHierarchy.root, ids);
+                return ids;
             }
-            else
+            foreach (int id in rootIds)
             {
-                foreach (int id in rootIds)
-                    if (m_Tree.TryGet(id, out var node)) Walk(node);
+                if (!m_UaHierarchy.TryGet(id, out var node)) continue;
+                m_UaHierarchy.AddDescendantIds(node, ids);
+                ids.Add(id);
             }
             return ids;
         }
 
-        /// <summary>Unbound's choice (unmeasured): only items with children expand or collapse.</summary>
-        public override bool CanChangeExpandedState(int id) => HasChildren(id);
+        public virtual int GetParentId(int id) =>
+            m_UaHierarchy.TryGet(id, out var node) && node.parent != null && node.parent != m_UaHierarchy.root ? node.parent.id : BaseTreeView.invalidId;
 
-        /// <summary>Every refresh shows the rows of the current expanded state.</summary>
-        internal override void PreRefresh() => RebuildRows();
+        public virtual IEnumerable<int> GetChildrenIds(int id)
+        {
+            var ids = new List<int>();
+            if (m_UaHierarchy.TryGet(id, out var node))
+                foreach (var child in node.children) ids.Add(child.id);
+            return ids;
+        }
+
+        /// <summary>Moves an item under a new parent (-1: the root) at a child index (-1: last).</summary>
+        public virtual void Move(int id, int newParentId, int childIndex = -1, bool rebuildTree = true)
+        {
+            if (id == newParentId || IsChildOf(newParentId, id) || !m_UaHierarchy.TryGet(id, out var node)) return;
+            UaTreeNode parent;
+            if (newParentId == BaseTreeView.invalidId) parent = m_UaHierarchy.root;
+            else if (!m_UaHierarchy.TryGet(newParentId, out parent)) return;
+            if (node.parent == parent && GetChildIndexForId(id) < childIndex) childIndex--;
+            m_UaHierarchy.MoveTo(node, parent, childIndex);
+            if (rebuildTree) RaiseItemParentChanged(id, newParentId);
+        }
+
+        public abstract bool TryRemoveItem(int id, bool rebuildTree = true);
 
         internal override void InvokeMakeItem(ReusableCollectionItem reusableItem)
         {
-            reusableItem.Init(MakeItem());
-            if (reusableItem is UaTreeRow row) row.toggled = OnRowToggled;
+            if (!(reusableItem is ReusableTreeViewItem treeItem)) return;
+            treeItem.Init(MakeItem());
+            PostInitRegistration(treeItem);
         }
 
         internal override void InvokeBindItem(ReusableCollectionItem reusableItem, int index)
         {
-            if (reusableItem is UaTreeRow row)
+            if (reusableItem is ReusableTreeViewItem treeItem)
             {
-                // Rows are pooled by the view and outlive a controller: SetRootItems with another data
-                // type replaces the controller and only refreshes, so the bound controller takes the
-                // toggle over.
-                row.toggled = OnRowToggled;
-                if (m_Tree.TryGetRow(index, out var node))
+                // Rows are pooled by the view and can outlive a controller (SetRootItems with another
+                // data type replaces it): the controller that binds a row takes its events over.
+                if (treeItem.owner != this)
                 {
-                    row.Indent(node.depth);
-                    row.SetToggle(node.children.Count > 0, uaView != null && uaView.IsExpanded(node.id));
+                    treeItem.owner?.UnregisterRow(treeItem);
+                    PostInitRegistration(treeItem);
                 }
+                treeItem.Indent(GetIndentationDepthByIndex(index));
+                treeItem.SetExpandedWithoutNotify(IsExpandedByIndex(index));
+                treeItem.SetToggleVisibility(HasChildrenByIndex(index));
             }
-            BindItem(reusableItem.bindableElement, index);
-            reusableItem.SetSelected(view.selectedIndices.Contains(index));
-            reusableItem.rootElement.pseudoStates &= ~PseudoStates.Hover;
-            reusableItem.index = index;
+            base.InvokeBindItem(reusableItem, index);
         }
 
-        internal override void InvokeDestroyItem(ReusableCollectionItem reusableItem) => DestroyItem(reusableItem.bindableElement);
-
-        void OnRowToggled(UaTreeRow row, bool expanded)
+        internal override void InvokeDestroyItem(ReusableCollectionItem reusableItem)
         {
-            var v = uaView;
-            if (v == null || !m_Tree.TryGetRow(row.index, out var node)) return;
-            if (expanded) v.ExpandItem(node.id);
-            else v.CollapseItem(node.id);
+            if (reusableItem is ReusableTreeViewItem treeItem) (treeItem.owner ?? this).UnregisterRow(treeItem);
+            base.InvokeDestroyItem(reusableItem);
         }
 
-        // Without callbacks a row is a Label showing its data, as a ListView without callbacks shows its
-        // items; one callback without the other is an error, as for ListView.
+        internal void PostInitRegistration(ReusableTreeViewItem treeItem)
+        {
+            treeItem.onPointerUp += OnItemPointerUp;
+            treeItem.onToggleValueChanged += OnToggleValueChanged;
+            treeItem.owner = this;
+        }
+
+        internal void UnregisterRow(ReusableTreeViewItem treeItem)
+        {
+            treeItem.onPointerUp -= OnItemPointerUp;
+            treeItem.onToggleValueChanged -= OnToggleValueChanged;
+            if (treeItem.owner == this) treeItem.owner = null;
+        }
+
+        /// <summary>A row pressed with Alt expands or collapses its item and every descendant.</summary>
+        void OnItemPointerUp(PointerUpEvent evt)
+        {
+            if ((evt.modifiers & EventModifiers.Alt) == 0 || baseTreeView == null) return;
+            var row = evt.currentTarget as VisualElement;
+            var toggle = row?.Q<Toggle>(BaseTreeView.itemToggleUssClassName);
+            if (toggle == null) return;
+            int index = ((ReusableTreeViewItem)toggle.userData).index;
+            if (!HasChildrenByIndex(index)) return;
+            bool expanded = IsExpandedByIndex(index);
+            int id = GetIdForIndex(index);
+            m_UaHierarchy.SetExpanded(m_UaHierarchy.VisibleAt(index), !expanded, true);
+            baseTreeView.RefreshItems();
+            RaiseItemExpandedChanged(id, !expanded, true);
+            evt.StopPropagation();
+        }
+
+        void RaiseItemExpandedChanged(int id, bool isExpanded, bool isAppliedToAllChildren) =>
+            itemExpandedChanged?.Invoke(new TreeViewExpansionChangedArgs { id = id, isExpanded = isExpanded, isAppliedToAllChildren = isAppliedToAllChildren });
+
+        void OnToggleValueChanged(ChangeEvent<bool> evt)
+        {
+            // A replaced controller (no view) ignores rows it no longer shows.
+            if (baseTreeView == null) return;
+            var toggle = evt.target as Toggle;
+            int index = ((ReusableTreeViewItem)toggle.userData).index;
+            if (IsExpandedByIndex(index)) CollapseItemByIndex(index, false);
+            else ExpandItemByIndex(index, false);
+            baseTreeView.scrollView.contentContainer.Focus();
+        }
+
+        public virtual int GetTreeItemsCount() => m_UaHierarchy.count;
+
+        public override int GetIndexForId(int id) => m_UaHierarchy.TryGet(id, out var node) ? m_UaHierarchy.VisibleIndexOf(node) : BaseTreeView.invalidId;
+
+        /// <summary>The item at a visible index; one past the end answers the last row's.</summary>
+        public override int GetIdForIndex(int index)
+        {
+            int count = m_UaHierarchy.visibleCount;
+            if (index == count && count > 0) return m_UaHierarchy.VisibleAt(count - 1).id;
+            return IsIndexValid(index) ? m_UaHierarchy.VisibleAt(index).id : BaseTreeView.invalidId;
+        }
+
+        public virtual bool HasChildren(int id) => m_UaHierarchy.TryGet(id, out var node) && node.children.Count > 0;
+
+        public bool Exists(int id) => m_UaHierarchy.TryGet(id, out _);
+
+        public bool HasChildrenByIndex(int index) => IsIndexValid(index) && m_UaHierarchy.VisibleAt(index).children.Count > 0;
+
+        public IEnumerable<int> GetChildrenIdsByIndex(int index)
+        {
+            var ids = new List<int>();
+            if (IsIndexValid(index))
+                foreach (var child in m_UaHierarchy.VisibleAt(index).children) ids.Add(child.id);
+            return ids;
+        }
+
+        public int GetChildIndexForId(int id) =>
+            m_UaHierarchy.TryGet(id, out var node) && node.parent != null ? node.parent.children.IndexOf(node) : BaseTreeView.invalidId;
+
+        public int GetIndentationDepth(int id)
+        {
+            int depth = 0;
+            for (int parent = GetParentId(id); parent != BaseTreeView.invalidId; parent = GetParentId(parent)) depth++;
+            return depth;
+        }
+
+        public int GetIndentationDepthByIndex(int index) => GetIndentationDepth(GetIdForIndex(index));
+
+        [Unbound.EditorFaithful("Unity's base implementation")]
+        public virtual bool CanChangeExpandedState(int id) => true;
+
+        /// <summary>The item's expanded flag (a leaf can carry one: ExpandAll and expanding with all
+        /// children set it on every descendant).</summary>
+        public bool IsExpanded(int id) => m_UaHierarchy.TryGet(id, out var node) && node.expanded;
+
+        public bool IsExpandedByIndex(int index) => IsIndexValid(index) && IsExpanded(GetIdForIndex(index));
+
+        public void ExpandItemByIndex(int index, bool expandAllChildren, bool refresh = true)
+        {
+            if (HasChildrenByIndex(index)) ExpandNode(m_UaHierarchy.VisibleAt(index), expandAllChildren, refresh);
+        }
+
+        public void ExpandItem(int id, bool expandAllChildren, bool refresh = true)
+        {
+            if (HasChildren(id) && CanChangeExpandedState(id) && m_UaHierarchy.TryGet(id, out var node)) ExpandNode(node, expandAllChildren, refresh);
+        }
+
+        public void CollapseItemByIndex(int index, bool collapseAllChildren, bool refresh = true)
+        {
+            if (HasChildrenByIndex(index)) CollapseNode(m_UaHierarchy.VisibleAt(index), collapseAllChildren, refresh);
+        }
+
+        /// <summary>Collapses an item with children, reporting it even when it was collapsed.</summary>
+        public void CollapseItem(int id, bool collapseAllChildren, bool refresh = true)
+        {
+            if (HasChildren(id) && CanChangeExpandedState(id) && m_UaHierarchy.TryGet(id, out var node)) CollapseNode(node, collapseAllChildren, refresh);
+        }
+
+        public void ExpandAll()
+        {
+            m_UaHierarchy.SetAllExpanded(true);
+            baseTreeView.RefreshItems();
+            RaiseItemExpandedChanged(-1, true, true);
+        }
+
+        public void CollapseAll()
+        {
+            m_UaHierarchy.SetAllExpanded(false);
+            baseTreeView.RefreshItems();
+            RaiseItemExpandedChanged(-1, false, true);
+        }
+
+        void ExpandNode(UaTreeNode node, bool expandAllChildren, bool refresh)
+        {
+            if (!CanChangeExpandedState(node.id)) return;
+            m_UaHierarchy.SetExpanded(node, true, expandAllChildren);
+            if (refresh) baseTreeView.RefreshItems();
+            RaiseItemExpandedChanged(node.id, true, expandAllChildren);
+        }
+
+        void CollapseNode(UaTreeNode node, bool collapseAllChildren, bool refresh)
+        {
+            if (!CanChangeExpandedState(node.id)) return;
+            m_UaHierarchy.SetExpanded(node, false, collapseAllChildren);
+            if (refresh) baseTreeView.RefreshItems();
+            RaiseItemExpandedChanged(node.id, false, collapseAllChildren);
+        }
+
+        internal void GetExpandedItemIds(List<int> list)
+        {
+            list.Clear();
+            m_UaHierarchy.AddExpandedIds(list);
+        }
+
+        /// <summary>Expands every collapsed ancestor of a node.</summary>
+        internal void ExpandAncestorNodes(UaTreeNode node)
+        {
+            for (var parent = node.parent; parent != null && parent != m_UaHierarchy.root; parent = parent.parent)
+                if (!parent.expanded && CanChangeExpandedState(parent.id)) m_UaHierarchy.SetExpanded(parent, true, false);
+        }
+
+        bool IsIndexValid(int index) => index >= 0 && index < m_UaHierarchy.visibleCount;
+
+        bool IsChildOf(int childId, int id)
+        {
+            if (childId == BaseTreeView.invalidId || id == BaseTreeView.invalidId) return false;
+            if (!m_UaHierarchy.TryGet(childId, out var child) || !m_UaHierarchy.TryGet(id, out var node)) return false;
+            for (var n = child; n != null && n != m_UaHierarchy.root; n = n.parent)
+                if (n == node) return true;
+            return false;
+        }
+
+        internal void RaiseItemParentChanged(int id, int newParentId) => RaiseItemIndexChanged(id, newParentId);
+
+        /// <summary>Makes the hierarchy's visible rows the controller's items source.</summary>
+        private protected void UseVisibleRowsAsItemsSource() => SetItemsSourceWithoutNotify(m_UaHierarchy.visibleRows);
+    }
+
+    public abstract partial class TreeViewController : BaseTreeViewController
+    {
+        protected TreeView treeView => view as TreeView;
+
         protected override VisualElement MakeItem()
         {
-            var treeView = view as TreeView;
-            if (treeView?.makeItem == null)
+            if (treeView.makeItem == null)
             {
-                if (treeView?.bindItem != null) throw new NotImplementedException("You must specify makeItem if bindItem is specified.");
+                if (treeView.bindItem != null) throw new NotImplementedException("You must specify makeItem if bindItem is specified.");
                 return new Label();
             }
             return treeView.makeItem();
@@ -796,111 +715,412 @@ namespace Unbound.UIElements
 
         protected override void BindItem(VisualElement element, int index)
         {
-            var treeView = view as TreeView;
-            if (treeView?.bindItem == null)
+            if (treeView.bindItem == null)
             {
-                if (treeView != null && treeView.bindsTemplateWithoutBindItem)
+                if (treeView.bindsTemplateWithoutBindItem)
                 {
-                    // Unbound interim: the template row is shown as instantiated. No data is bound and
-                    // no data source is assigned to it.
+                    // Unbound interim: the template row is shown as instantiated, without data.
                     Unbound.Runtime.Stubs.Ignored("TreeView.itemTemplate",
                         "rows are shown unbound: runtime data binding (bindItem omitted with an item template) not implemented");
                     return;
                 }
-                if (treeView?.makeItem != null) throw new NotImplementedException("You must specify bindItem if makeItem is specified.");
-                if (element is Label label)
-                {
-                    object data = GetItemForIndex(index);
-                    label.text = data?.ToString() ?? "null";
-                }
+                if (treeView.makeItem != null) throw new NotImplementedException("You must specify bindItem if makeItem is specified.");
+                ((Label)element).text = GetItemForIndex(index)?.ToString() ?? "null";
                 return;
             }
             treeView.bindItem(element, index);
         }
 
-        protected override void UnbindItem(VisualElement element, int index) => (view as TreeView)?.unbindItem?.Invoke(element, index);
+        protected override void UnbindItem(VisualElement element, int index) => treeView.unbindItem?.Invoke(element, index);
 
-        protected override void DestroyItem(VisualElement element) => (view as TreeView)?.destroyItem?.Invoke(element);
+        protected override void DestroyItem(VisualElement element) => treeView.destroyItem?.Invoke(element);
     }
 
-    /// <summary>A pooled tree view row: the item element, with the classes of the Manual's USS table,
-    /// holding an indent, the expand/collapse toggle and a content container with the element made by
-    /// makeItem.</summary>
-    internal sealed class UaTreeRow : ReusableCollectionItem
+    /// <summary>The default tree controller of data type T: the hierarchy built from
+    /// TreeViewItemData, each node's item data, adding and removing items.</summary>
+    public partial class DefaultTreeViewController<T> : TreeViewController
     {
-        VisualElement m_Root;
-        VisualElement m_Indent;
+        readonly Dictionary<int, TreeViewItemData<T>> m_ItemData = new Dictionary<int, TreeViewItemData<T>>();
+        IList<TreeViewItemData<T>> m_RootItems;
+
+        /// <summary>Assigning root items (a list of TreeViewItemData&lt;T&gt;) sets them; another type
+        /// is an error.</summary>
+        public override IList itemsSource
+        {
+            get => base.itemsSource;
+            set
+            {
+                if (value == null) SetRootItems(null);
+                else if (value is IList<TreeViewItemData<T>> rootItems) SetRootItems(rootItems);
+                else Debug.LogError($"Type does not match this tree view controller's data type ({typeof(T)}).");
+            }
+        }
+
+        /// <summary>Replaces the tree (autoExpand expands every item) and reports
+        /// itemsSourceChanged; the rows follow at the next refresh.</summary>
+        public void SetRootItems(IList<TreeViewItemData<T>> items)
+        {
+            if (items != null && ReferenceEquals(items, m_RootItems)) return;
+            m_RootItems = items;
+            m_UaHierarchy.Clear();
+            m_ItemData.Clear();
+            if (items != null)
+            {
+                foreach (var item in items) AddRecursive(item, m_UaHierarchy.root);
+                if (baseTreeView != null && baseTreeView.autoExpand) m_UaHierarchy.SetAllExpanded(true);
+            }
+            UseVisibleRowsAsItemsSource();
+            RaiseItemsSourceChanged();
+        }
+
+        void AddRecursive(TreeViewItemData<T> item, UaTreeNode parent)
+        {
+            var node = m_UaHierarchy.Add(item.id, parent);
+            if (node == null) return;
+            m_ItemData[item.id] = item;
+            foreach (var child in item.children) AddRecursive(child, node);
+        }
+
+        public virtual void AddItem(in TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree = true)
+        {
+            UaTreeNode parent = m_UaHierarchy.root;
+            if (parentId != BaseTreeView.invalidId)
+            {
+                if (!m_UaHierarchy.TryGet(parentId, out parent)) return;
+                if (m_ItemData.TryGetValue(parentId, out var parentData)) parentData.InsertChild(item, childIndex);
+            }
+            var node = m_UaHierarchy.Add(item.id, parent);
+            if (node == null) return;
+            m_ItemData[item.id] = item;
+            foreach (var child in item.children) AddRecursive(child, node);
+            if (baseTreeView.autoExpand) ExpandAncestorNodes(node);
+            if (childIndex != -1) m_UaHierarchy.MoveTo(node, parent, childIndex);
+            if (rebuildTree) baseTreeView.RefreshItems();
+        }
+
+        public virtual TreeViewItemData<T> GetTreeViewItemDataForId(int id) => m_ItemData.TryGetValue(id, out var item) ? item : default;
+
+        public virtual TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) => GetTreeViewItemDataForId(GetIdForIndex(index));
+
+        public override bool TryRemoveItem(int id, bool rebuildTree = true)
+        {
+            if (!m_UaHierarchy.TryGet(id, out var node)) return false;
+            int parentId = GetParentId(id);
+            if (parentId != BaseTreeView.invalidId && m_ItemData.TryGetValue(parentId, out var parentData)) parentData.RemoveChild(id);
+            var removed = new List<int>();
+            m_UaHierarchy.AddDescendantIds(node, removed);
+            foreach (int descendant in removed) m_ItemData.Remove(descendant);
+            m_ItemData.Remove(id);
+            m_UaHierarchy.Remove(node);
+            if (rebuildTree) baseTreeView.RefreshItems();
+            return true;
+        }
+
+        public override object GetItemForId(int id) => GetTreeViewItemDataForId(id).data;
+
+        public virtual T GetDataForId(int id) => GetTreeViewItemDataForId(id).data;
+
+        public virtual T GetDataForIndex(int index) => GetTreeViewItemDataForIndex(index).data;
+
+        public override object GetItemForIndex(int index) => GetDataForIndex(index);
+    }
+
+    /// <summary>A tree row: a container (row direction) holding the indent, the expand toggle (with
+    /// the Foldout toggle classes) and a content container around the made element. The indent is
+    /// as wide as the toggle's checkmark with its margins, per depth level.</summary>
+    internal partial class ReusableTreeViewItem : ReusableCollectionItem
+    {
         Toggle m_Toggle;
-        VisualElement m_Content;
-        int m_Depth;
+        VisualElement m_Container;
+        internal VisualElement m_IndentElement;
+        VisualElement m_BindableContainer;
+        VisualElement m_Checkmark;
+        internal int m_Depth;
+        float m_IndentWidth;
+        internal float? customIndentWidth;
+        // The controller whose handlers the row's events reach.
+        internal BaseTreeViewController owner;
+        readonly EventCallback<PointerUpEvent> m_PointerUpCallback;
+        readonly EventCallback<ChangeEvent<bool>> m_ToggleValueChangedCallback;
+        readonly EventCallback<GeometryChangedEvent> m_ToggleGeometryChangedCallback;
 
-        internal Action<UaTreeRow, bool> toggled;
+        public override VisualElement rootElement => m_Container ?? bindableElement;
 
-        public override VisualElement rootElement => m_Root;
+        internal float indentWidth => customIndentWidth ?? m_IndentWidth;
 
-        internal int depth => m_Depth;
-        internal VisualElement indentElement => m_Indent;
-        internal Toggle toggle => m_Toggle;
-        internal VisualElement contentElement => m_Content;
+        public event Action<PointerUpEvent> onPointerUp;
 
-        // Unbound's choice (unmeasured): the element structure (indent, toggle, content in a row) and its
-        // inline flex settings; the theme's selectors give the sizes and looks.
+        public event Action<ChangeEvent<bool>> onToggleValueChanged;
+
+        public ReusableTreeViewItem()
+        {
+            m_PointerUpCallback = OnPointerUp;
+            m_ToggleValueChangedCallback = OnToggleValueChanged;
+            m_ToggleGeometryChangedCallback = OnToggleGeometryChanged;
+        }
+
         public override void Init(VisualElement item)
         {
             base.Init(item);
-            m_Root = new VisualElement();
-            m_Root.AddToClassList(BaseTreeView.itemUssClassName);
-            m_Root.style.flexDirection = FlexDirection.Row;
-            m_Indent = new VisualElement();
-            m_Indent.AddToClassList(BaseTreeView.itemIndentUssClassName);
-            m_Toggle = new Toggle();
-            m_Toggle.AddToClassList(BaseTreeView.itemToggleUssClassName);
-            m_Toggle.RegisterValueChangedCallback(OnToggleChanged);
-            m_Toggle.RegisterCallback<GeometryChangedEvent>(_ => ApplyIndent());
-            m_Content = new VisualElement();
-            m_Content.AddToClassList(BaseTreeView.itemContentContainerUssClassName);
-            m_Content.style.flexGrow = 1f;
-            m_Root.Add(m_Indent);
-            m_Root.Add(m_Toggle);
-            m_Root.Add(m_Content);
-            if (item != null) m_Content.Add(item);
+            var root = new VisualElement { name = BaseTreeView.itemUssClassName };
+            root.AddToClassList(BaseTreeView.itemUssClassName);
+            InitExpandHierarchy(root, item);
         }
 
-        void OnToggleChanged(ChangeEvent<bool> evt)
+        protected void InitExpandHierarchy(VisualElement root, VisualElement item)
         {
-            if (evt.target != m_Toggle) return;
-            toggled?.Invoke(this, evt.newValue);
+            m_Container = root;
+            m_Container.style.flexDirection = FlexDirection.Row;
+            m_IndentElement = new VisualElement { name = BaseTreeView.itemIndentUssClassName };
+            m_IndentElement.style.flexDirection = FlexDirection.Row;
+            m_Container.hierarchy.Add(m_IndentElement);
+            m_Toggle = new Toggle { name = BaseTreeView.itemToggleUssClassName, userData = this };
+            m_Toggle.AddToClassList(Foldout.toggleUssClassName);
+            m_Toggle.AddToClassList(BaseTreeView.itemToggleUssClassName);
+            m_Toggle.visualInput.AddToClassList(Foldout.inputUssClassName);
+            m_Checkmark = m_Toggle.visualInput.Q(null, Toggle.checkmarkUssClassName);
+            m_Checkmark.AddToClassList(Foldout.checkmarkUssClassName);
+            m_Container.hierarchy.Add(m_Toggle);
+            m_BindableContainer = new VisualElement { name = BaseTreeView.itemContentContainerUssClassName };
+            m_BindableContainer.style.flexGrow = 1f;
+            m_BindableContainer.AddToClassList(BaseTreeView.itemContentContainerUssClassName);
+            m_Container.Add(m_BindableContainer);
+            m_BindableContainer.Add(item);
+        }
+
+        public override void PreAttachElement()
+        {
+            base.PreAttachElement();
+            rootElement.AddToClassList(BaseTreeView.itemUssClassName);
+            m_Container?.RegisterCallback(m_PointerUpCallback);
+            m_Checkmark?.RegisterCallback(m_ToggleGeometryChangedCallback);
+            m_Toggle?.RegisterValueChangedCallback(m_ToggleValueChangedCallback);
+        }
+
+        public override void DetachElement()
+        {
+            base.DetachElement();
+            rootElement.RemoveFromClassList(BaseTreeView.itemUssClassName);
+            m_Container?.UnregisterCallback(m_PointerUpCallback);
+            m_Checkmark?.UnregisterCallback(m_ToggleGeometryChangedCallback);
+            m_Toggle?.UnregisterValueChangedCallback(m_ToggleValueChangedCallback);
         }
 
         public void Indent(int depth)
         {
+            if (m_IndentElement == null) return;
             m_Depth = depth;
-            ApplyIndent();
+            UpdateIndentLayout();
         }
 
-        /// <summary>Unbound's choice (unmeasured), the indent width source: one level is as wide as the
-        /// row's toggle with its horizontal margins, as laid out from the theme, so a child's toggle
-        /// lines up with its parent's content. Until the toggle has a layout only depth 0 is applied.</summary>
-        void ApplyIndent()
+        public void SetExpandedWithoutNotify(bool expanded) => m_Toggle?.SetValueWithoutNotify(expanded);
+
+        public void SetToggleVisibility(bool visible)
         {
-            if (m_Indent == null) return;
-            if (m_Depth == 0)
+            if (m_Toggle != null) m_Toggle.visible = visible;
+        }
+
+        void OnToggleGeometryChanged(GeometryChangedEvent evt)
+        {
+            var style = m_Checkmark.resolvedStyle;
+            float width = style.width + style.marginLeft + style.marginRight;
+            if (Math.Abs(width - m_IndentWidth) < float.Epsilon) return;
+            m_IndentWidth = width;
+            UpdateIndentLayout();
+        }
+
+        void UpdateIndentLayout()
+        {
+            m_IndentElement.style.width = indentWidth * m_Depth;
+            m_IndentElement.EnableInClassList(BaseTreeView.itemIndentUssClassName, m_Depth > 0);
+        }
+
+        void OnPointerUp(PointerUpEvent evt) => onPointerUp?.Invoke(evt);
+
+        void OnToggleValueChanged(ChangeEvent<bool> evt) => onToggleValueChanged?.Invoke(evt);
+    }
+}
+
+namespace Unbound.UIElements
+{
+    using UnityEngine;
+
+    /// <summary>A node of a tree view's hierarchy: an item id, its parent, its ordered children and
+    /// its expanded flag.</summary>
+    internal sealed class UaTreeNode
+    {
+        public int id;
+        public UaTreeNode parent;
+        public readonly List<UaTreeNode> children = new List<UaTreeNode>();
+        public bool expanded;
+    }
+
+    /// <summary>A tree view's hierarchy by id and its visible rows (nodes whose ancestors are all
+    /// expanded, depth first), recomputed after a change when next read.</summary>
+    internal sealed class UaTreeHierarchy
+    {
+        readonly Dictionary<int, UaTreeNode> m_ById = new Dictionary<int, UaTreeNode>();
+        readonly List<UaTreeNode> m_Visible = new List<UaTreeNode>();
+        readonly Dictionary<UaTreeNode, int> m_VisibleIndex = new Dictionary<UaTreeNode, int>();
+        readonly Stack<UaTreeNode> m_Walk = new Stack<UaTreeNode>();
+        readonly VisibleRows m_VisibleRows;
+        bool m_Dirty = true;
+
+        public readonly UaTreeNode root = new UaTreeNode { id = -1, expanded = true };
+
+        public UaTreeHierarchy() => m_VisibleRows = new VisibleRows(this);
+
+        public int count => m_ById.Count;
+
+        public int visibleCount
+        {
+            get
             {
-                m_Indent.style.width = 0f;
-                return;
+                Update();
+                return m_Visible.Count;
             }
-            var toggleStyle = m_Toggle.resolvedStyle;
-            float level = toggleStyle.width + toggleStyle.marginLeft + toggleStyle.marginRight;
-            if (float.IsNaN(level) || level <= 0f) return;
-            m_Indent.style.width = m_Depth * level;
         }
 
-        /// <summary>Items without children keep the toggle's space but hide it (Unbound's choice,
-        /// unmeasured), so rows of the same depth line up.</summary>
-        public void SetToggle(bool hasChildren, bool expanded)
+        /// <summary>The visible rows as a read-only list of item ids (the controller's items source).</summary>
+        public IList visibleRows => m_VisibleRows;
+
+        public bool TryGet(int id, out UaTreeNode node) => m_ById.TryGetValue(id, out node);
+
+        public UaTreeNode VisibleAt(int index)
         {
-            m_Toggle.style.visibility = hasChildren ? Visibility.Visible : Visibility.Hidden;
-            m_Toggle.SetValueWithoutNotify(expanded);
+            Update();
+            return m_Visible[index];
+        }
+
+        public int VisibleIndexOf(UaTreeNode node)
+        {
+            Update();
+            return m_VisibleIndex.TryGetValue(node, out int index) ? index : -1;
+        }
+
+        public void Clear()
+        {
+            m_ById.Clear();
+            root.children.Clear();
+            m_Dirty = true;
+        }
+
+        /// <summary>Adds an item under a parent. A repeated id is reported once and skipped with its
+        /// children.</summary>
+        public UaTreeNode Add(int id, UaTreeNode parent)
+        {
+            if (m_ById.ContainsKey(id))
+            {
+                Debug.LogError($"Unbound: tree view item id {id} is used more than once; the repeated item and its children are not shown");
+                return null;
+            }
+            var node = new UaTreeNode { id = id, parent = parent };
+            m_ById.Add(id, node);
+            parent.children.Add(node);
+            m_Dirty = true;
+            return node;
+        }
+
+        public void Remove(UaTreeNode node)
+        {
+            node.parent?.children.Remove(node);
+            Forget(node);
+            m_Dirty = true;
+        }
+
+        void Forget(UaTreeNode node)
+        {
+            m_ById.Remove(node.id);
+            foreach (var child in node.children) Forget(child);
+        }
+
+        /// <summary>Moves a node under a parent at a child index (-1 or past the end: last).</summary>
+        public void MoveTo(UaTreeNode node, UaTreeNode parent, int childIndex)
+        {
+            node.parent.children.Remove(node);
+            node.parent = parent;
+            if (childIndex < 0 || childIndex > parent.children.Count) parent.children.Add(node);
+            else parent.children.Insert(childIndex, node);
+            m_Dirty = true;
+        }
+
+        public void SetExpanded(UaTreeNode node, bool expanded, bool recurse)
+        {
+            node.expanded = expanded;
+            if (recurse)
+                foreach (var child in node.children) SetExpanded(child, expanded, true);
+            m_Dirty = true;
+        }
+
+        public void SetAllExpanded(bool expanded)
+        {
+            foreach (var child in root.children) SetExpanded(child, expanded, true);
+            m_Dirty = true;
+        }
+
+        /// <summary>Adds the ids under a node, depth first (not the node's own).</summary>
+        public void AddDescendantIds(UaTreeNode node, List<int> ids)
+        {
+            foreach (var child in node.children)
+            {
+                ids.Add(child.id);
+                AddDescendantIds(child, ids);
+            }
+        }
+
+        public void AddExpandedIds(List<int> ids)
+        {
+            foreach (var node in m_ById.Values)
+                if (node.expanded) ids.Add(node.id);
+        }
+
+        void Update()
+        {
+            if (!m_Dirty) return;
+            m_Dirty = false;
+            m_Visible.Clear();
+            m_VisibleIndex.Clear();
+            for (int i = root.children.Count - 1; i >= 0; i--) m_Walk.Push(root.children[i]);
+            while (m_Walk.Count > 0)
+            {
+                var node = m_Walk.Pop();
+                m_VisibleIndex[node] = m_Visible.Count;
+                m_Visible.Add(node);
+                if (!node.expanded) continue;
+                for (int i = node.children.Count - 1; i >= 0; i--) m_Walk.Push(node.children[i]);
+            }
+        }
+
+        /// <summary>The visible rows' item ids, read-only.</summary>
+        sealed class VisibleRows : IList
+        {
+            readonly UaTreeHierarchy m_Owner;
+
+            public VisibleRows(UaTreeHierarchy owner) => m_Owner = owner;
+
+            public int Count => m_Owner.visibleCount;
+            public object this[int index] { get => m_Owner.VisibleAt(index).id; set => throw new NotSupportedException(); }
+            public bool IsFixedSize => true;
+            public bool IsReadOnly => true;
+            public bool IsSynchronized => false;
+            public object SyncRoot => this;
+            public int Add(object value) => throw new NotSupportedException();
+            public void Clear() => throw new NotSupportedException();
+            public bool Contains(object value) => IndexOf(value) >= 0;
+            public int IndexOf(object value) => value is int id && m_Owner.TryGet(id, out var node) ? m_Owner.VisibleIndexOf(node) : -1;
+            public void Insert(int index, object value) => throw new NotSupportedException();
+            public void Remove(object value) => throw new NotSupportedException();
+            public void RemoveAt(int index) => throw new NotSupportedException();
+
+            public void CopyTo(Array array, int index)
+            {
+                for (int i = 0; i < Count; i++) array.SetValue(this[i], index + i);
+            }
+
+            public IEnumerator GetEnumerator()
+            {
+                for (int i = 0; i < Count; i++) yield return this[i];
+            }
         }
     }
 }

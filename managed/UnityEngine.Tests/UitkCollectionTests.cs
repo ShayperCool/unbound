@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unbound.UIElements.Layout;
+using Unbound.UIElements;
 using UnityEngine.Pool;
 using UnityEngine.UIElements;
 using Xunit;
@@ -425,12 +426,30 @@ namespace UnityEngine.Tests
             Assert.Equal(40f, list.GetRootElementForIndex(3).layout.y);
         }
 
-        // [rule] A TreeView asked for dynamic height rows keeps fixed-height rows for now (it says so).
+        // [rule] A TreeView with dynamic height rows uses the same virtualization: rows stack at their
+        // own heights.
         [Fact]
-        public void TreeViewWithDynamicHeightKeepsFixedRows()
+        public void TreeViewWithDynamicHeightLaysOutItsRows()
         {
+            using var panel = NewPanel(400, 400);
             var tree = new TreeView { virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight };
-            Assert.Equal("FixedHeightVirtualizationController`1", tree.virtualizationController.GetType().Name);
+            tree.style.position = Position.Absolute;
+            tree.style.width = 180;
+            tree.style.height = 150;
+            // The runtime theme keeps rows from shrinking; the test panel has no theme.
+            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+            new UssImporter("tree-rows.uss").Import(sheet, ".unity-tree-view__item { flex-shrink: 0; }");
+            tree.styleSheets.Add(sheet);
+            var roots = Enumerable.Range(0, 20).Select(i => new TreeViewItemData<int>(i, i)).ToList();
+            tree.SetRootItems(roots);
+            tree.makeItem = () => new Label();
+            tree.bindItem = (e, i) => e.style.height = 18 + (i % 3) * 6;
+            panel.visualTree.Add(tree);
+            Settle(panel);
+            float Top(int i) => tree.GetRootElementForIndex(i).worldBound.y;
+            Assert.Equal(18f, Top(1) - Top(0));
+            Assert.Equal(24f, Top(2) - Top(1));
+            Assert.Equal(30f, Top(3) - Top(2));
         }
 
         // ------------------------------------------------------------------ layout events

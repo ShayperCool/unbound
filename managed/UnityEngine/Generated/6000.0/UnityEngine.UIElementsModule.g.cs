@@ -329,10 +329,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId autoExpandProperty;
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.CustomStyleProperty<float> s_TreeViewIndentProperty;
-        [global::Unbound.Stub] internal static readonly int invalidId;
-        [global::Unbound.Stub] public void AddItem<T>(global::UnityEngine.UIElements.TreeViewItemData<T> item, int parentId = -1, int childIndex = -1, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.AddItem"); }
-        [global::Unbound.Stub] private protected virtual void AddItemInternal<T>(global::UnityEngine.UIElements.TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.AddItemInternal"); }
-        [global::Unbound.Stub] public bool TryRemoveItem(int id, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.TryRemoveItem"); return default; }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.OnViewDataReady"); }
         [global::Unbound.Stub] internal void CopyExpandedStates(int sourceId, int targetId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.CopyExpandedStates"); }
         internal global::System.Collections.Generic.List<int> expandedItemIds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.expandedItemIds"); return new global::System.Collections.Generic.List<int>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.expandedItemIds"); } }
@@ -361,35 +357,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] private protected global::Unity.Hierarchy.HierarchyViewModel m_HierarchyViewModel;
         [global::Unbound.Stub] private protected global::System.Collections.Generic.Dictionary<int, global::Unity.Hierarchy.HierarchyNode> m_IdToNodeDictionary;
         [global::Unbound.Stub] internal void DisposeHierarchy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.DisposeHierarchy"); }
-        [global::System.Obsolete("RebuildTree is no longer supported and will be removed.")] [global::Unbound.Stub] public void RebuildTree() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.RebuildTree"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<int> GetRootItemIds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetRootItemIds"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] public virtual void Move(int id, int newParentId, int childIndex = -1, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.Move"); }
-        [global::Unbound.Stub] public virtual bool TryRemoveItem(int id, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.TryRemoveItem"); return default; }
-        [global::Unbound.Stub] internal override void InvokeMakeItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.InvokeMakeItem"); }
-        [global::Unbound.Stub] internal override void InvokeBindItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.InvokeBindItem"); }
-        [global::Unbound.Stub] internal override void InvokeDestroyItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.InvokeDestroyItem"); }
-        [global::Unbound.Stub] internal void PostInitRegistration(global::UnityEngine.UIElements.ReusableTreeViewItem treeItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.PostInitRegistration"); }
-        [global::Unbound.Stub] public override int GetIndexForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetIndexForId"); return default; }
-        [global::Unbound.Stub] public override int GetIdForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetIdForIndex"); return default; }
-        [global::Unbound.Stub] public bool Exists(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.Exists"); return default; }
-        [global::Unbound.Stub] public bool HasChildrenByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.HasChildrenByIndex"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<int> GetChildrenIdsByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetChildrenIdsByIndex"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] public int GetChildIndexForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetChildIndexForId"); return default; }
-        [global::Unbound.Stub] public int GetIndentationDepth(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetIndentationDepth"); return default; }
-        [global::Unbound.Stub] public int GetIndentationDepthByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetIndentationDepthByIndex"); return default; }
-        [global::Unbound.Stub] public bool IsExpanded(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.IsExpanded"); return default; }
-        [global::Unbound.Stub] public bool IsExpandedByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.IsExpandedByIndex"); return default; }
-        [global::Unbound.Stub] public void ExpandItemByIndex(int index, bool expandAllChildren, bool refresh = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.ExpandItemByIndex"); }
-        [global::Unbound.Stub] public void ExpandItem(int id, bool expandAllChildren, bool refresh = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.ExpandItem"); }
-        [global::Unbound.Stub] public void CollapseItemByIndex(int index, bool collapseAllChildren, bool refresh = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.CollapseItemByIndex"); }
-        [global::Unbound.Stub] public void CollapseItem(int id, bool collapseAllChildren, bool refresh = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.CollapseItem"); }
-        [global::Unbound.Stub] public void ExpandAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.ExpandAll"); }
-        [global::Unbound.Stub] public void CollapseAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.CollapseAll"); }
-        [global::Unbound.Stub] internal void GetExpandedItemIds(global::System.Collections.Generic.List<int> list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetExpandedItemIds"); }
         [global::Unbound.Stub] internal bool IsViewDataKeyEnabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.IsViewDataKeyEnabled"); return default; }
         [global::Unbound.Stub] internal void ExpandAncestorNodes(in global::Unity.Hierarchy.HierarchyNode node) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.ExpandAncestorNodes"); }
         [global::Unbound.Stub] internal override void PreRefresh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.PreRefresh"); }
-        [global::Unbound.Stub] internal void RaiseItemParentChanged(int id, int newParentId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.RaiseItemParentChanged"); }
         [global::Unbound.Stub] internal global::Unity.Hierarchy.HierarchyNode CreateNode(in global::Unity.Hierarchy.HierarchyNode parent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.CreateNode"); return default; }
         [global::Unbound.Stub] internal void UpdateIdToNodeDictionary(int id, in global::Unity.Hierarchy.HierarchyNode node, bool isAdd = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.UpdateIdToNodeDictionary"); }
         [global::Unbound.Stub] internal void RemoveAllChildrenItemsFromCollections(in global::Unity.Hierarchy.HierarchyNode node, global::System.Action<global::Unity.Hierarchy.HierarchyNode, int> removeCallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.RemoveAllChildrenItemsFromCollections"); }
@@ -399,10 +369,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void UpdateHierarchy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.UpdateHierarchy"); }
         [global::Unbound.Stub] internal global::Unity.Hierarchy.HierarchyNode GetHierarchyNodeById(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetHierarchyNodeById"); return default; }
         [global::Unbound.Stub] internal global::Unity.Hierarchy.HierarchyNode GetHierarchyNodeByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetHierarchyNodeByIndex"); return default; }
-        protected global::UnityEngine.UIElements.BaseTreeView baseTreeView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.baseTreeView"); return default; } }
         private protected global::Unity.Hierarchy.Hierarchy hierarchy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.hierarchy"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.hierarchy"); } }
-        public override global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.itemsSource"); } }
-        internal event global::System.Action<global::UnityEngine.UIElements.TreeViewExpansionChangedArgs> itemExpandedChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.itemExpandedChanged"); } [global::Unbound.Stub] remove { } }
     }
     unsafe partial class BaseVerticalCollectionView : global::UnityEngine.ISerializationCallbackReceiver
     {
@@ -1568,15 +1535,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public T GetDataForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultMultiColumnTreeViewController<T>.GetDataForIndex"); return default; }
         [global::Unbound.Stub] public override object GetItemForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultMultiColumnTreeViewController<T>.GetItemForIndex"); return default; }
         public override global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultMultiColumnTreeViewController<T>.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultMultiColumnTreeViewController<T>.itemsSource"); } }
-    }
-    unsafe partial class DefaultTreeViewController<T> : global::UnityEngine.UIElements.IDefaultTreeViewController<T>
-    {
-        [global::Unbound.Stub] public void SetRootItems(global::System.Collections.Generic.IList<global::UnityEngine.UIElements.TreeViewItemData<T>> items) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.SetRootItems"); }
-        [global::Unbound.Stub] public virtual void AddItem(in global::UnityEngine.UIElements.TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.AddItem"); }
-        [global::Unbound.Stub] public override bool TryRemoveItem(int id, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.TryRemoveItem"); return default; }
-        [global::Unbound.Stub] public override object GetItemForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.GetItemForId"); return default; }
-        [global::Unbound.Stub] public override object GetItemForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.GetItemForIndex"); return default; }
-        public override global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.itemsSource"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class DisposeHelper
@@ -4196,25 +4154,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public ReusableMultiColumnTreeViewItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableMultiColumnTreeViewItem.ctor"); }
         public override global::UnityEngine.UIElements.VisualElement rootElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableMultiColumnTreeViewItem.rootElement"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ReusableTreeViewItem : global::UnityEngine.UIElements.ReusableCollectionItem
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement m_IndentElement;
-        [global::Unbound.Stub] internal int m_Depth;
-        [global::Unbound.Stub] internal global::System.Nullable<float> customIndentWidth;
-        [global::Unbound.Stub] public ReusableTreeViewItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.ctor"); }
-        [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.Init"); }
-        [global::Unbound.Stub] protected void InitExpandHierarchy(global::UnityEngine.UIElements.VisualElement root, global::UnityEngine.UIElements.VisualElement item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.InitExpandHierarchy"); }
-        [global::Unbound.Stub] public override void PreAttachElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.PreAttachElement"); }
-        [global::Unbound.Stub] public override void DetachElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.DetachElement"); }
-        [global::Unbound.Stub] public void Indent(int depth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.Indent"); }
-        [global::Unbound.Stub] public void SetExpandedWithoutNotify(bool expanded) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.SetExpandedWithoutNotify"); }
-        [global::Unbound.Stub] public void SetToggleVisibility(bool visible) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.SetToggleVisibility"); }
-        public override global::UnityEngine.UIElements.VisualElement rootElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.rootElement"); return default; } }
-        internal float indentWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.indentWidth"); return default; } }
-        public event global::System.Action<global::UnityEngine.UIElements.PointerUpEvent> onPointerUp { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.onPointerUp"); } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.ChangeEvent<bool>> onToggleValueChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.onToggleValueChanged"); } [global::Unbound.Stub] remove { } }
-    }
     unsafe partial struct Rotate
     {
         [global::Unbound.Stub] internal Rotate(global::UnityEngine.Quaternion quaternion) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.ctor"); }
@@ -5446,7 +5385,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId bindItemProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId unbindItemProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId destroyItemProperty;
-        [global::Unbound.Stub] private protected override void AddItemInternal<T>(global::UnityEngine.UIElements.TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.AddItemInternal"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseTreeView.UxmlSerializedData
@@ -5470,10 +5408,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.UxmlTraits.ctor"); }
         }
     }
-    unsafe partial class TreeViewController
-    {
-        protected global::UnityEngine.UIElements.TreeView treeView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewController.treeView"); return default; } }
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class TreeViewHelpers<T, TDefaultController> where TDefaultController : global::UnityEngine.UIElements.BaseTreeViewController, global::UnityEngine.UIElements.IDefaultTreeViewController<T>
     {
@@ -5487,8 +5421,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal void AddChild(global::UnityEngine.UIElements.TreeViewItemData<T> child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.AddChild"); }
         [global::Unbound.Stub] internal void AddChildren(global::System.Collections.Generic.IList<global::UnityEngine.UIElements.TreeViewItemData<T>> children) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.AddChildren"); }
-        [global::Unbound.Stub] internal void InsertChild(global::UnityEngine.UIElements.TreeViewItemData<T> child, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.InsertChild"); }
-        [global::Unbound.Stub] internal void RemoveChild(int childId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.RemoveChild"); }
         [global::Unbound.Stub] internal int GetChildIndex(int itemId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.GetChildIndex"); return default; }
         [global::Unbound.Stub] internal void ReplaceChild(global::UnityEngine.UIElements.TreeViewItemData<T> newChild) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.ReplaceChild"); }
     }

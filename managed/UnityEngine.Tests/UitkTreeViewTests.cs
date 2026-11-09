@@ -62,7 +62,7 @@ namespace UnityEngine.Tests
 
         static int[] VisibleIds(TreeView view) => Enumerable.Range(0, view.itemsSource.Count).Select(view.GetIdForIndex).ToArray();
 
-        static int Depth(object row) => (int)row.GetType().GetProperty("depth", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(row);
+        static int Depth(object row) => ((ReusableTreeViewItem)row).m_Depth;
 
         // ------------------------------------------------------------------ item data
 
@@ -231,61 +231,56 @@ namespace UnityEngine.Tests
             Assert.Equal("C", view.selectedItem);
         }
 
-        // The selected item itself is expanded. [doc] Remarks of SetSelectionById(int),
-        // SetSelectionById(IEnumerable<int>), AddToSelectionById and SetSelectionByIdWithoutNotify
-        // (6000.0): "This will also expand the selected item(s) if not expanded already."
-        // Red base for these four cases: 46596641, which expands only the ancestors of an id.
+        // [measured] tests/projects/uitkcollections tree/select-id-parent-10, select-id-child-14,
+        // add-to-selection-id-17, select-without-notify-id-21: selection by id expands the item's
+        // collapsed ancestors (each reported), not the item itself, though the Remarks of these
+        // methods say it "will also expand the selected item(s) if not expanded already".
 
-        // Red on 46596641: item 1 stays collapsed (Assert.True(view.IsExpanded(1)) fails).
         [Fact]
-        public void SetSelectionByIdExpandsTheSelectedItem()
+        public void SetSelectionByIdKeepsTheSelectedItemCollapsed()
         {
             var view = NewTree();
             view.SetSelectionById(1);
-            Assert.True(view.IsExpanded(1));
-            Assert.Equal(new[] { 1, 11, 12, 2, 3 }, VisibleIds(view));
+            Assert.False(view.IsExpanded(1));
+            Assert.Equal(new[] { 1, 2, 3 }, VisibleIds(view));
             Assert.Equal(0, view.selectedIndex);
             Assert.Equal(new[] { 1 }, view.selectedIds);
         }
 
-        // [choice] A nested selected item's collapsed ancestors are expanded too, so it has a row.
-        // Red on 46596641: item 12 stays collapsed (Assert.True(view.IsExpanded(12)) fails).
         [Fact]
-        public void SetSelectionByIdsExpandsTheSelectedItems()
+        public void SetSelectionByIdsExpandsOnlyTheAncestors()
         {
             var view = NewTree();
             view.selectionType = SelectionType.Multiple;
             view.SetSelectionById(new[] { 12, 3 });
             Assert.True(view.IsExpanded(1));
-            Assert.True(view.IsExpanded(12));
-            Assert.True(view.IsExpanded(3));
-            Assert.Equal(new[] { 1, 11, 12, 121, 2, 3, 31 }, VisibleIds(view));
-            Assert.Equal(new[] { 2, 5 }, view.selectedIndices);
+            Assert.False(view.IsExpanded(12));
+            Assert.False(view.IsExpanded(3));
+            Assert.Equal(new[] { 1, 11, 12, 2, 3 }, VisibleIds(view));
+            Assert.Equal(new[] { 2, 4 }, view.selectedIndices);
         }
 
-        // Red on 46596641: item 1 stays collapsed (Assert.True(view.IsExpanded(1)) fails).
         [Fact]
-        public void AddToSelectionByIdExpandsTheSelectedItem()
+        public void AddToSelectionByIdKeepsTheSelectedItemCollapsed()
         {
             var view = NewTree();
             view.AddToSelectionById(1);
-            Assert.True(view.IsExpanded(1));
-            Assert.Equal(new[] { 1, 11, 12, 2, 3 }, VisibleIds(view));
+            Assert.False(view.IsExpanded(1));
+            Assert.Equal(new[] { 1, 2, 3 }, VisibleIds(view));
             Assert.Equal(0, view.selectedIndex);
         }
 
-        // [doc] SetSelectionByIdWithoutNotify works "without triggering a selection change callback".
-        // Red on 46596641: item 1 stays collapsed (Assert.True(view.IsExpanded(1)) fails).
         [Fact]
-        public void SetSelectionByIdWithoutNotifyExpandsTheSelectedItems()
+        public void SetSelectionByIdWithoutNotifyExpandsAncestorsQuietly()
         {
             var view = NewTree();
             int changes = 0;
             view.selectionChanged += _ => changes++;
-            view.SetSelectionByIdWithoutNotify(new[] { 1 });
+            view.SetSelectionByIdWithoutNotify(new[] { 121 });
             Assert.True(view.IsExpanded(1));
-            Assert.Equal(new[] { 1, 11, 12, 2, 3 }, VisibleIds(view));
-            Assert.Equal(0, view.selectedIndex);
+            Assert.True(view.IsExpanded(12));
+            Assert.Equal(new[] { 1, 11, 12, 121, 2, 3 }, VisibleIds(view));
+            Assert.Equal(3, view.selectedIndex);
             Assert.Equal(0, changes);
         }
 
@@ -335,11 +330,8 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 1, 11, 12, 121, 2, 3 }, VisibleIds(view));
         }
 
-        // [choice] Each item that selection by id expands sends itemExpandedChanged ("Raised when an item
-        // is expanded or collapsed"; the selection pages name no event), after the rows are refreshed.
-        // The arguments are checked by SelectionByIdExpansionSendsTheExpandedItemIds.
-        // Red on 46596641: selecting item 3 expands nothing, so calls stays 2 (Assert.Equal(3, calls)
-        // fails).
+        // [measured] Each ancestor that selection by id expands sends itemExpandedChanged after the rows
+        // are refreshed; a root item has none.
         [Fact]
         public void SelectionByIdExpansionSendsItemExpandedChanged()
         {
@@ -353,11 +345,10 @@ namespace UnityEngine.Tests
             };
             view.SetSelectionById(121);
             Assert.Equal(2, calls);
+            Assert.Equal(6, rowsDuring);
             view.SetSelectionByIdWithoutNotify(new[] { 3 });
-            Assert.Equal(3, calls);
-            Assert.Equal(7, rowsDuring);
             view.SetSelectionById(3);
-            Assert.Equal(3, calls);
+            Assert.Equal(2, calls);
         }
 
         // ------------------------------------------------------------------ virtualization
@@ -381,7 +372,11 @@ namespace UnityEngine.Tests
             Assert.Empty(unbound);
             Assert.Equal(7, view.activeItems.Count());
 
+            // [measured] tree/set-root-items: new root items report itemsSourceChanged; the rows follow
+            // at the next refresh.
             view.SetRootItems(roots.Take(3).ToList());
+            Assert.Empty(unbound);
+            view.RefreshItems();
             Assert.Equal(Enumerable.Range(0, 7), unbound.OrderBy(i => i));
             Assert.Equal(3, view.activeItems.Count());
             Assert.Equal(new[] { 0, 1, 2 }, view.activeItems.Select(r => r.index).OrderBy(i => i));
@@ -581,7 +576,8 @@ namespace UnityEngine.Tests
 
         // [doc] Each item element has the __item class, a toggle (__item-toggle), an indent
         // (__item-indent) and a content container (__item-content) holding the made element.
-        // [choice] Element order indent, toggle, content; leaves hide their toggle; depth by tree level.
+        // [measured] Element order indent, toggle, content, each named after its class (the indent
+        // carries its class only when indented); leaves hide their toggle; depth by tree level.
         // Red on bc93e0fc: view.virtualizationController is null, so Resize throws.
         [Fact]
         public void RowsHaveTheIndentToggleAndContent()
@@ -598,7 +594,8 @@ namespace UnityEngine.Tests
             Assert.True(root.ClassListContains("unity-collection-view__item"));
             var parts = root.hierarchy.Children().ToList();
             Assert.Equal(3, parts.Count);
-            Assert.True(parts[0].ClassListContains("unity-tree-view__item-indent"));
+            Assert.Equal("unity-tree-view__item-indent", parts[0].name);
+            Assert.False(parts[0].ClassListContains("unity-tree-view__item-indent"));
             var toggle = Assert.IsType<Toggle>(parts[1]);
             Assert.True(toggle.ClassListContains("unity-tree-view__item-toggle"));
             Assert.True(parts[2].ClassListContains("unity-tree-view__item-content"));
@@ -609,6 +606,7 @@ namespace UnityEngine.Tests
 
             var leaf = rows[1];
             Assert.Equal(1, Depth(leaf));
+            Assert.True(leaf.rootElement.hierarchy[0].ClassListContains("unity-tree-view__item-indent"));
             var leafToggle = (Toggle)leaf.rootElement.Q(null, "unity-tree-view__item-toggle");
             Assert.Equal(Visibility.Hidden, leafToggle.style.visibility.value);
             Assert.Equal("A1", ((Label)leaf.bindableElement).text);
@@ -637,9 +635,8 @@ namespace UnityEngine.Tests
 
         // [doc] SetRootItems "will force the use of a DefaultTreeViewController<T>", so root items of
         // another data type replace the controller; the toggle still expands its item.
-        // [choice] Without Rebuild the pooled rows are kept and rebound by the new controller.
-        // Red on 46596641: the kept row's toggle still calls the replaced controller, whose view is gone,
-        // so item 100 stays collapsed (Assert.True(view.IsExpanded(100)) fails).
+        // [rule] Pooled rows are kept; the controller that rebinds a row takes its toggle over (a
+        // replaced controller ignores it instead of failing).
         [Fact]
         public void TheRowToggleWorksAfterRootItemsOfAnotherType()
         {
@@ -658,6 +655,9 @@ namespace UnityEngine.Tests
             Assert.Same(first, view.activeItems.Single(r => r.index == 0));
             var toggle = (Toggle)first.rootElement.Q(null, "unity-tree-view__item-toggle");
             toggle.value = true;
+            Assert.False(view.IsExpanded(100));
+            view.RefreshItems();
+            toggle.value = true;
             Assert.True(view.IsExpanded(100));
             Assert.Equal(new[] { 100, 101, 200, 300 }, VisibleIds(view));
         }
@@ -666,7 +666,8 @@ namespace UnityEngine.Tests
 
         // [doc] itemExpandedChanged is "Raised when an item is expanded or collapsed"; ExpandAll and
         // CollapseAll raise it (its id "Returns -1 when expandAll() or collapseAll() is being called").
-        // [choice] Sent after the rows are refreshed; not sent when nothing changed or for a leaf.
+        // [measured] Sent after the rows are refreshed, also when the state did not change (tree/
+        // collapse-10); a leaf or an unknown id sends nothing (tree/expand-leaf-2).
         // The event arguments' values are checked by the payload facts below.
         // Red on bc93e0fc: the stub's event add stores nothing (calls stays 0, not 1).
         [Fact]
@@ -687,16 +688,17 @@ namespace UnityEngine.Tests
             Assert.True(expandedDuring);
             Assert.Equal(5, rowsDuring);
             view.ExpandItem(1);
+            Assert.Equal(2, calls);
             view.ExpandItem(2);
             view.ExpandItem(999);
-            Assert.Equal(1, calls);
-            view.CollapseItem(1);
             Assert.Equal(2, calls);
+            view.CollapseItem(1);
+            Assert.Equal(3, calls);
             Assert.False(expandedDuring);
             view.ExpandAll();
-            Assert.Equal(3, calls);
-            view.CollapseAll();
             Assert.Equal(4, calls);
+            view.CollapseAll();
+            Assert.Equal(5, calls);
         }
 
         // The payloads itemExpandedChanged handlers receive, as (id, isExpanded, isAppliedToAllChildren),
@@ -798,26 +800,22 @@ namespace UnityEngine.Tests
             Assert.Equal("zero", dataDuring);
         }
 
-        // [doc] selection by id "will also expand the selected item(s) if not expanded already", and
-        // id is the id of the item being expanded.
-        // [choice] Which items send the event (the selected item and its collapsed ancestors, each once;
-        // see SelectionByIdExpansionSendsItemExpandedChanged). Their order is not checked.
-        // Red on 54087224: the stub args answer (0, false, false), so the sorted payloads differ.
+        // [measured] The expanded ancestors send their ids, root first; a selected item with children
+        // stays collapsed and sends nothing.
         [Fact]
         public void SelectionByIdExpansionSendsTheExpandedItemIds()
         {
             var view = NewTree();
             var payloads = RecordExpansions(view);
             view.SetSelectionById(121);
-            Assert.Equal(new[] { (1, true, false), (12, true, false) }, payloads.OrderBy(p => p.id));
+            Assert.Equal(new[] { (12, true, false), (1, true, false) }, payloads);
             payloads.Clear();
             view.SetSelectionByIdWithoutNotify(new[] { 3 });
-            Assert.Equal((3, true, false), Assert.Single(payloads));
-            payloads.Clear();
+            Assert.Empty(payloads);
             view.CollapseAll();
             payloads.Clear();
             view.AddToSelectionById(3);
-            Assert.Equal((3, true, false), Assert.Single(payloads));
+            Assert.Empty(payloads);
         }
 
         // ------------------------------------------------------------------ UXML
@@ -841,9 +839,9 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ out of scope stays loud
 
-        // Guard (not a red/green control): MultiColumnTreeView, MultiColumnListView, AddItem and
-        // TryRemoveItem stay generated stubs, which warn when used; the tree's drag and drop controller
-        // refuses drags and says so when reordering is asked for.
+        // Guard (not a red/green control): MultiColumnTreeView and MultiColumnListView stay generated
+        // stubs, which warn when used; the tree's drag and drop controller refuses drags and says so
+        // when reordering is asked for.
         // Expected to pass on bc93e0fc and on this head alike.
         [Fact]
         public void MultiColumnAndReorderingStayStubs()
@@ -857,8 +855,6 @@ namespace UnityEngine.Tests
             var tree = new TreeView();
             Assert.IsType<UaUnsupportedReorderController>(tree.dragger.dragAndDropController);
             Assert.False(tree.dragger.dragAndDropController.CanStartDrag(new[] { 0 }));
-            Assert.True(typeof(BaseTreeView).GetMethod("AddItem", flags).IsDefined(stub, false));
-            Assert.True(typeof(BaseTreeView).GetMethod("TryRemoveItem", flags).IsDefined(stub, false));
         }
     }
 }
