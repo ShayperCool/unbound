@@ -71,8 +71,9 @@ Observations (not documented guarantees):
   `Renderer.UpdateGIMaterials` (the color set with `SetEmissive` stays). Without `SetEmissive`,
   the change shows after `UpdateGIMaterials`.
 - An albedo change is ignored until `Renderer.UpdateGIMaterials`, as documented.
-- `DynamicGI.UpdateEnvironment` changed nothing measurable: an ambient color change and a
-  skybox exposure change are both picked up without it.
+- Realtime GI picks up an ambient color change and a skybox exposure change without
+  `DynamicGI.UpdateEnvironment` (the atlases and frames do not change with the call); the call is
+  what updates `RenderSettings.ambientProbe` after the skybox change.
 
 ## Unbound
 
