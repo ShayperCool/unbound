@@ -668,5 +668,84 @@ class StubGateTests(unittest.TestCase):
         self.assertFalse(marker.exists())
 
 
+class PartialRecipeTests(unittest.TestCase):
+    def test_color_variants_have_independent_settings_outputs_and_comparisons(self):
+        table = suite.recipes('6000.0.71f1')
+        for name, variants in [('uicolors', ('Linear', 'Gamma')),
+                               ('uirectclipping', ('Linear', 'Gamma', 'LinearMSAA'))]:
+            steps = table[name]
+            self.assertEqual(len(steps), len(variants)*3)
+            for index, variant in enumerate(variants):
+                prepare, engine, compare = steps[index*3:index*3+3]
+                self.assertEqual(prepare.argv[-1], 'Gamma' if variant == 'Gamma' else 'Linear')
+                self.assertIn('{work}/'+variant+'/project', engine.argv)
+                self.assertIn('{work}/'+variant+'/out', compare.argv)
+                self.assertIn('{probe}/Reference/'+variant, compare.argv)
+                self.assertEqual(engine.env.get('RECT_CLIP_MSAA'), ('1' if variant == 'LinearMSAA' else '0') if name == 'uirectclipping' else None)
+                self.assertEqual(compare.verdict, 'exit')
+
+    def test_color_space_changes_only_private_project_and_rejects_reuse(self):
+        sys.path.insert(0, str(suite.REPO/'tests'))
+        try:
+            from project_variant import prepare
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                source = root/'source'
+                for part in ('Assets', 'Packages', 'ProjectSettings'):
+                    (source/part).mkdir(parents=True)
+                settings = source/'ProjectSettings/ProjectSettings.asset'
+                settings.write_text('PlayerSettings:\n  m_ActiveColorSpace: 1\n')
+                for space, number in [('Gamma', 0), ('Linear', 1)]:
+                    project = prepare(source, root/space, space)
+                    self.assertIn(f'm_ActiveColorSpace: {number}', (project/'ProjectSettings/ProjectSettings.asset').read_text())
+                    self.assertEqual(settings.read_text(), 'PlayerSettings:\n  m_ActiveColorSpace: 1\n')
+                    with self.assertRaises(SystemExit):
+                        prepare(source, root/space, space)
+        finally:
+            sys.path.pop(0)
+
+    def test_color_variant_rejects_missing_or_ambiguous_color_setting(self):
+        sys.path.insert(0, str(suite.REPO/'tests'))
+        try:
+            from project_variant import prepare
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                source = root/'source'
+                for part in ('Assets', 'Packages', 'ProjectSettings'):
+                    (source/part).mkdir(parents=True)
+                for index, text in enumerate(['PlayerSettings:\n', 'm_ActiveColorSpace: 0\nm_ActiveColorSpace: 1\n']):
+                    (source/'ProjectSettings/ProjectSettings.asset').write_text(text)
+                    with self.assertRaises(ValueError):
+                        prepare(source, root/str(index), 'Gamma')
+        finally:
+            sys.path.pop(0)
+
+    def test_contact_controls_gate_stable_values_and_retain_hash_differences(self):
+        folder = suite.PROJECTS/'contactevents3d'
+        sys.path.insert(0, str(folder))
+        try:
+            spec = importlib.util.spec_from_file_location('contact_controls', folder/'verify_controls.py')
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            reference = {'scene/0/hash': '1', 'scene/4/defaultHash': '1', 'stable': 'True'}
+            candidate = dict(reference, **{'scene/0/hash': '3', 'scene/4/defaultHash': '3'})
+            raw, failures = module.verify(reference, candidate)
+            self.assertEqual(len(raw['differences']), 2)
+            self.assertFalse(failures)
+            for changed in [dict(candidate, **{'scene/4/defaultHash': '4'}), dict(candidate, stable='False'), dict(candidate, extra='x'),
+                            {'scene/0/hash': '3', 'scene/4/defaultHash': '2'},
+                            dict(candidate, **{'scene/0/hash': 'bad'}),
+                            dict(candidate, **{'scene/0/hash': str(2**31)}),
+                            {key: value for key, value in candidate.items() if key != 'scene/4/defaultHash'}]:
+                self.assertTrue(module.verify(reference, changed)[1])
+            steps = suite.recipes('6000.0.71f1')['contactevents3d']
+            raw = next(s for s in steps if s.kind == 'compare' and 'controls-p0.json' in ' '.join(s.argv))
+            strict = next(s for s in steps if 'verify_controls.py' in ' '.join(s.argv))
+            self.assertEqual(raw.verdict, 'none')
+            self.assertEqual(strict.verdict, 'exit')
+        finally:
+            sys.path.pop(0)
+
+
 if __name__ == '__main__':
     unittest.main()

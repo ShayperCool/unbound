@@ -159,6 +159,20 @@ def classic(variable, out, run_args, compare=None, images=None, verdict='summary
     return steps
 
 
+def color_variants(variable, frames, variants):
+    steps = []
+    for variant in variants:
+        work = '{work}/'+variant
+        steps += [Step('driver', ['{python}', '{projects}/../project_variant.py', '{probe}', work,
+                                 'Gamma' if variant == 'Gamma' else 'Linear']),
+                  Step('engine', ['{cli}', 'run', '-p', work+'/project', '--frames', str(frames),
+                                  '--size', '128x128', '--no-watch'],
+                       {variable: work+'/out', **({'RECT_CLIP_MSAA': '1' if variant == 'LinearMSAA' else '0'}
+                                                if variable == 'RECT_CLIP_OUT' else {})}),
+                  py('compare.py', ref(variant), work+'/out', verdict='exit')]
+    return steps
+
+
 def guarded(probe_compare, capture='unbound', *, extra=()):
     """Drivers with `run.py unbound --release R --label L` writing validation/runs/<probe>/<L>/."""
     return [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}', *extra,
@@ -388,9 +402,7 @@ def recipes(release):
                                    verdict='exit')
     R['particlenoise'] = classic('PARTICLE_NOISE_OUT', 'out', ['--frames', '8', '--size', '320x180', '--no-watch'],
                                  verdict='exit')
-    # Linear only: the Gamma reference needs the project switched to Gamma (README).
-    R['uicolors'] = classic('UI_COLORS_OUT', 'out', ['--frames', '8', '--size', '128x128', '--no-watch'],
-                            [ref('Linear'), '{work}/out'], verdict='exit')
+    R['uicolors'] = color_variants('UI_COLORS_OUT', 8, ('Linear', 'Gamma'))
     R['textcore'] = classic('TEXTCORE_PROBE_OUT', 'out.jsonl', ['--headless', '5', '--no-watch'],
                             [single_ref('jsonl.gz'), '{work}/out.jsonl'], verdict='exit')
     R['physicsdefaults'] = [run('--headless', '30000', '--no-watch', env={'PHYSICS_DEFAULTS_OUT': '{work}/out.jsonl'}),
@@ -409,9 +421,7 @@ def recipes(release):
     # run.sh scripts whose engine modes hard-code an old executable: the same command, current build.
     R['canvaslifecycle'] = classic('CANVAS_LIFECYCLE_OUT', 'out', ['--frames', '24', '--size', '640x480', '--no-watch'],
                                    verdict='exit')
-    # Linear only: Gamma and LinearMSAA need Editor-side project setting changes (README).
-    R['uirectclipping'] = classic('RECT_CLIP_OUT', 'out', ['--frames', '24', '--size', '128x128', '--no-watch'],
-                                  [ref('Linear'), '{work}/out'], verdict='exit')
+    R['uirectclipping'] = color_variants('RECT_CLIP_OUT', 24, ('Linear', 'Gamma', 'LinearMSAA'))
     R['cameramsaa'] = []
     for profile, extra in [('Linear', {}), ('Gamma', {'CAMERA_MSAA_COLOR_SPACE': 'Gamma'}),
                            ('FocusedLinear', {'CAMERA_MSAA_FOCUSED': '1'}),
@@ -588,9 +598,6 @@ def recipes(release):
                          py('compare.py', f'{{work}}/engine-{scenario}/result.json')]
 
     # Profiles with a reference that the recipe does not run; listed with the result.
-    NOTES['uicolors'] = 'Gamma reference not run: it needs the project switched to Gamma in the Editor'
-    NOTES['uirectclipping'] = 'Gamma and LinearMSAA references not run: they need Editor-side project settings'
-    NOTES['contactevents3d'] = 'controls measured only: Native repeats differ in two process-dependent hashes'
 
     # Audio probes whose engine run needs the project their Native run authors in the Editor: the
     # committed authored set (tests/authored_project.py) assembled into the work directory.
@@ -645,8 +652,8 @@ def recipes(release):
             py('compare.py', '--release', '{release}', '--candidate', '{work}/engine/capture',
                '--report', '{work}/report.jsonl.gz')]
     # Every suite and contact-pairs profile that has a reference, with the README's original absolute
-    # 1e-5 bound on physical data (--numeric). Controls are measured only: Native repeats themselves
-    # differ in two process-dependent hash rows (README).
+    # 1e-5 bound on physical data (--numeric). Preserve the full raw controls report, then
+    # gate stable controls separately from the two process-dependent hash literals (README).
     R['contactevents3d'] = []
     for suite, profiles in [('contacts', range(4)), ('controls', [0]), ('geometry', [0]), ('capsule', [0]),
                             ('sweeps', [0])]:
@@ -659,6 +666,9 @@ def recipes(release):
                 py('compare.py', reference+'.jsonl', f'{{work}}/{suite}-engine-p{profile}.jsonl',
                    '--output', f'{{work}}/{suite}-p{profile}.json', *(() if suite == 'controls' else ('--numeric',)),
                    verdict='none' if suite == 'controls' else 'differences')]
+            if suite == 'controls':
+                R['contactevents3d'].append(py('verify_controls.py', reference+'.jsonl',
+                    f'{{work}}/{suite}-engine-p{profile}.jsonl', '--output', '{work}/controls-verdict.json'))
     # report.py reads <probe>-<label>.json for each query suite from QUERY_WORK.
     env = {'QUERY_WORK': '{work}', 'SCENE_SETTINGS_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}
     R['query2dparity'] = []

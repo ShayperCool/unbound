@@ -54,7 +54,7 @@ def main():
         if not a.cli: p.error('--cli is required for engine captures')
         cmd = [a.cli, 'run', '-p', str(project), '--headless', '3000', '--no-watch']
     with (work/(name+'.log')).open('w') as log:
-        result = subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '300', *cmd],
+        result = subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'editor-cpu' if a.mode == 'native' else 'engine-cpu', 'timeout', '300', *cmd],
                                 env=dict(os.environ, **{variable:str(out)}), stdout=log, stderr=subprocess.STDOUT)
     print(name, result.returncode, flush=True)
     if result.returncode or not out.exists(): raise SystemExit('capture failed: '+str(out))

@@ -20,3 +20,10 @@ The capsule controls measure both creation paths and cylinder initialization. Th
 The reusable broad capture driver is `tests/projects/query2dskinmerge/validate.py --work <cache-gates> --managed <candidate-managed> --matrix-baseline <previous-matrix> --skip-tests`. Set `UNBOUND_PROBE_CLI` to the matching private ABI5 executable. It wraps each child itself. Run the 497 original managed cases plus `PhysicsContactEventTests` separately, then pass that TRX, the API log and an explicit prior capture root to `query2dskinmerge/check_gates.py`. The full original union and comparator tolerances remain unchanged.
 
 Only Unity 6000.0.71f1 Linux was measured. Other releases, non-unit capsule transforms, local physics scenes and asynchronous report lifetimes need separate measurements. This probe does not establish full engine parity.
+
+The suite retains the full raw controls comparison, including both process-dependent
+PhysicsScene hash measurements, in `controls-p0.json`. `verify_controls.py` additionally
+gates every stable control, requires both hashes to be signed 32-bit integers, and checks
+that the two equal scene values have equal hashes. It writes `controls-verdict.json` with
+both the raw differences and all failed assertions; cross-process hash literals remain
+visible without being treated as stable values.
