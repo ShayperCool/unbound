@@ -178,7 +178,7 @@ namespace Unbound.Runtime
             {
                 if (l == null || (l.cullingMask & mask) == 0) continue;
                 var properties = new Dictionary<int, object> { [s_LightAsQuad] = 1f };
-                string keyword = ForwardLights.AddPassProperties(l, properties);
+                string keyword = ForwardLights.AddPassProperties(l, 1f, properties);
                 properties[s_LightColorId] = properties[s_LightColor0Id];
                 var t = l.transform;
                 var position = t.position;

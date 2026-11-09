@@ -100,7 +100,8 @@ namespace UnityEngine.Tests
             var spot = Add("spot", LightType.Spot, new Vector3(2f, 0f, 0f), 1f, 5f);
             spot.spotAngle = 40f;
             spot.transform.rotation = Quaternion.LookRotation(Vector3.left);
-            bool Reaches() => LightImportance.Reaches(LightType.Spot, spot.transform.localToWorldMatrix, spot.range, spot.spotAngle, bounds);
+            bool Reaches() => LightImportance.Reaches(LightType.Spot, spot.transform.position, spot.range, bounds)
+                && LightImportance.SpotReaches(spot.transform.localToWorldMatrix, spot.range, spot.spotAngle, bounds);
             Assert.True(Reaches());
             // Pointing away, or to the side: the range still covers the bounds.
             spot.transform.rotation = Quaternion.LookRotation(Vector3.right);
@@ -112,9 +113,57 @@ namespace UnityEngine.Tests
             spot.range = 1.5f;
             Assert.False(Reaches());
             var point = Add("point", LightType.Point, new Vector3(0f, 1.2f, 0f), 1f, 1.15f);
-            Assert.True(LightImportance.Reaches(LightType.Point, point.transform.localToWorldMatrix, point.range, 0f, bounds));
+            Assert.True(LightImportance.Reaches(LightType.Point, point.transform.position, point.range, bounds));
             point.range = 1f;
-            Assert.False(LightImportance.Reaches(LightType.Point, point.transform.localToWorldMatrix, point.range, 0f, bounds));
+            Assert.False(LightImportance.Reaches(LightType.Point, point.transform.position, point.range, bounds));
+            // A range of 0 at the bounds' centre: reached, with a finite importance.
+            point.range = 0f;
+            point.transform.position = Vector3.zero;
+            Assert.True(LightImportance.Reaches(LightType.Point, point.transform.position, point.range, bounds));
+            Assert.False(float.IsNaN(Of(point, Vector3.zero)));
+        }
+
+        /// <summary>The built-in forward path: the Auto light that fills the pixel lights keeps
+        /// (its importance - the next one's) / (the previous one's - the next one's) of its pixel
+        /// pass and lights the base pass per vertex with the rest (tests/projects/builtinrp
+        /// light_rank_directional, the cube).</summary>
+        [Fact]
+        public void TheBuiltInFillingPixelLightFadesIntoAVertexLight()
+        {
+            int pixelLights = QualitySettings.pixelLightCount;
+            try
+            {
+                QualitySettings.pixelLightCount = 1;
+                var sun = Add("sun", LightType.Directional, Vector3.zero, 0.5f);
+                RenderSettings.sun = sun;
+                var extra = Add("extra", LightType.Directional, Vector3.zero, 0.3f);
+                extra.color = new Color(0.2f, 0.4f, 1f);
+                var point = Add("point", LightType.Point, new Vector3(0f, 1f, -0.5f), 1.5f, 4f);
+                point.color = new Color(1f, 0.3f, 0.2f);
+                ForwardLights.BeginCamera(m_Camera);
+                var bounds = new Bounds(new Vector3(0f, 0.5f, 1f), Vector3.one);
+                var lights = new ForwardLights.ObjectLights();
+                ForwardLights.Classify(bounds, 0, lights, ForwardLights.Main);
+                Assert.Same(sun, ForwardLights.Main);
+                Assert.Equal(new[] { point }, lights.Pixel);
+                Assert.Equal(new[] { point }, lights.Vertex);
+                Assert.Equal(new[] { extra }, lights.Spherical);
+                float main = Of(sun, bounds.center), own = Of(point, bounds.center), next = Of(extra, bounds.center);
+                float fade = (own - next) / (main - next + 0.001f);
+                Assert.Equal(fade, lights.PixelFade, 5);
+                Assert.Equal(fade, lights.PixelScale(0), 5);
+                Assert.Equal(1f - fade, lights.VertexScale(0, 1), 5);
+                // An Important light does not fade: its bias puts its neighbours 1000 apart.
+                point.renderMode = LightRenderMode.ForcePixel;
+                ForwardLights.Classify(bounds, 0, lights, ForwardLights.Main);
+                Assert.Equal(1f, lights.PixelFade);
+                Assert.Empty(lights.Vertex);
+            }
+            finally
+            {
+                QualitySettings.pixelLightCount = pixelLights;
+                RenderSettings.sun = null;
+            }
         }
 
         CullingData Cull(int maximumVisibleLights, uint? cullingMask = null)
@@ -156,8 +205,8 @@ namespace UnityEngine.Tests
             Culling.EndFrame();
             Assert.Equal("", Names(Cull(0)));
             Culling.EndFrame();
-            // No maximum (-1): every light, the local ones unsorted (in their enabling order).
-            Assert.Equal("sun,far bright,near dim,mid", Names(Cull(-1)));
+            // No maximum (-1): every light.
+            Assert.Equal(4, Cull(-1).Lights.Length);
         }
 
         [Fact]

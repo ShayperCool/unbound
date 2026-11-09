@@ -9,8 +9,8 @@ namespace Unbound.Runtime
     /// Which lights reach an object and how the forward paths (the built-in pipeline's and the
     /// scriptable pipelines' per-object lights, URP's Forward) rank them, the most important first:
     /// <list type="bullet">
-    /// <item>a light's brightness is the luminance of its colour as set (0.3 r + 0.59 g + 0.11 b,
-    /// whatever the colour space) times its intensity;</item>
+    /// <item>a light's brightness is the luminance of its colour as set (0.3 r + 0.59 g + 0.11 b:
+    /// not linearized, colour temperature aside) times its intensity;</item>
     /// <item>a local light's is divided by 1 + 25 d² / range², d from the centre of the object's
     /// bounds; a directional light's counts sixteen times when it casts shadows;</item>
     /// <item>an Important light adds 1000, a Not Important one subtracts 1000;</item>
@@ -18,7 +18,9 @@ namespace Unbound.Runtime
     /// </list>
     /// A point light reaches the bounds its range sphere touches, a spot light the bounds that touch
     /// its square pyramid (the cone's half angle, out to the range).
-    /// Matches the Unity 6000.0.71f1 Editor, tests/projects/urp light-order.jsonl.
+    /// Matches the Unity 6000.0.71f1 Editor, tests/projects/urp light-order.jsonl (color_temperature:
+    /// the colour as set) and tests/projects/builtinrp light_rank_* (a linear project).
+    /// The spot pyramid's corners against a round cone are not measured.
     /// </summary>
     internal static class LightImportance
     {
@@ -35,6 +37,8 @@ namespace Unbound.Runtime
         /// <summary>The spot pyramid's near plane: this fraction of the range, at least
         /// <see cref="MinimumSpotNear"/>.</summary>
         const float SpotNearFraction = 1e-5f, MinimumSpotNear = 1e-4f;
+        /// <summary>The smallest range the falloff divides by.</summary>
+        const float MinimumRange = 1e-4f;
 
         /// <summary>The luminance of the light's colour times its intensity.</summary>
         internal static float Brightness(Light light)
@@ -54,6 +58,8 @@ namespace Unbound.Runtime
             else
             {
                 float d2 = (center - position).sqrMagnitude;
+                // A range of 0 reaches only bounds holding the light: keep the falloff finite.
+                range = Mathf.Max(range, MinimumRange);
                 importance *= 1f / (FalloffScale / (range * range) * d2 + 1f);
             }
             return importance + light.renderMode switch
@@ -64,15 +70,16 @@ namespace Unbound.Runtime
             };
         }
 
-        /// <summary>Whether a local light reaches bounds: a point light's range sphere touches them,
-        /// a spot light's pyramid (from <paramref name="localToWorld"/>, looking along its z) does.
-        /// Directional lights reach everything.</summary>
-        internal static bool Reaches(LightType type, in Matrix4x4 localToWorld, float range, float spotAngle, in Bounds bounds)
+        /// <summary>Whether a light's range reaches bounds (a directional light's always does);
+        /// a spot light also needs <see cref="SpotReaches"/>.</summary>
+        internal static bool Reaches(LightType type, Vector3 position, float range, in Bounds bounds) =>
+            type == LightType.Directional || bounds.SqrDistance(position) <= range * range;
+
+        /// <summary>Whether bounds touch a spot light's pyramid (from <paramref name="localToWorld"/>,
+        /// looking along its z).</summary>
+        internal static bool SpotReaches(in Matrix4x4 localToWorld, float range, float spotAngle, in Bounds bounds)
         {
-            if (type == LightType.Directional) return true;
             var position = (Vector3)localToWorld.GetColumn(3);
-            if (bounds.SqrDistance(position) > range * range) return false;
-            if (type != LightType.Spot) return true;
             var right = ((Vector3)localToWorld.GetColumn(0)).normalized;
             var up = ((Vector3)localToWorld.GetColumn(1)).normalized;
             var forward = ((Vector3)localToWorld.GetColumn(2)).normalized;

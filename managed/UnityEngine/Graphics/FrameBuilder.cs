@@ -1105,8 +1105,10 @@ namespace Unbound.Runtime
                 if (l == null || (l.cullingMask & (1 << layer)) == 0) continue;
                 if (lightmapped && InLightmap(l)) continue;
                 var matrix = light.localToWorldMatrix;
-                if (!LightImportance.Reaches(light.lightType, matrix, light.range, light.spotAngle, bounds)) continue;
-                candidates.Add(new LightImportance.Candidate(i, LightImportance.Of(l, light.lightType, matrix.GetColumn(3), light.range, center), candidates.Count));
+                var position = (Vector3)matrix.GetColumn(3);
+                if (!LightImportance.Reaches(light.lightType, position, light.range, bounds)) continue;
+                if (light.lightType == LightType.Spot && !LightImportance.SpotReaches(matrix, light.range, light.spotAngle, bounds)) continue;
+                candidates.Add(new LightImportance.Candidate(i, LightImportance.Of(l, light.lightType, position, light.range, center), candidates.Count));
             }
             LightImportance.Sort(candidates);
             Span<float> indices = stackalloc float[MaxPerObjectLights];
@@ -2123,10 +2125,11 @@ namespace Unbound.Runtime
                 int addPass = ForwardAddPass(item.Material.shader);
                 if (addPass < 0 || item.Material.PassDisabled("ForwardAdd")) continue;
                 bool receives = ReceivesShadows(item);
-                foreach (var light in s_ObjectLights.Pixel)
+                for (int p = 0; p < s_ObjectLights.Pixel.Count; p++)
                 {
+                    var light = s_ObjectLights.Pixel[p];
                     var properties = new Dictionary<int, object>();
-                    string lightKeyword = ForwardLights.AddPassProperties(light, properties);
+                    string lightKeyword = ForwardLights.AddPassProperties(light, s_ObjectLights.PixelScale(p), properties);
                     AddPassShadow(light, receives, properties, out var shadowDepth, out var shadowSoft);
                     EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft, dispatch);
                 }

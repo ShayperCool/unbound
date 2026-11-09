@@ -6,10 +6,15 @@ using UnityEngine.Rendering;
 namespace Unbound.Runtime
 {
     /// <summary>
-    /// The built-in forward renderer's lights beyond the main directional one, per object: the
-    /// brightest ones (Important always, Auto ones up to the quality level's pixel light count)
-    /// draw the shader's ForwardAdd pass once each; up to four other point and spot lights light
-    /// the base pass per vertex (VERTEXLIGHT_ON); the rest add to the object's spherical harmonics.
+    /// The built-in forward renderer's lights beyond the main directional one, per object, in
+    /// their <see cref="LightImportance"/> order: the first ones (Important always, Auto ones up to
+    /// the quality level's pixel light count) draw the shader's ForwardAdd pass once each; up to
+    /// four other point and spot lights light the base pass per vertex (VERTEXLIGHT_ON); the rest
+    /// add to the object's spherical harmonics. The Auto light that fills the pixel lights fades
+    /// by how close its importance is to its neighbours' (<see cref="Fade"/>): its pixel pass
+    /// takes that share, a first vertex light (a point or spot light) or the spherical harmonics
+    /// (a directional one) the rest; the last vertex light fades the same way. Matches the Unity
+    /// 6000.0.71f1 Editor, tests/projects/builtinrp light_rank_*.
     /// The light textures are Unity's (measured, tests/projects/lighting): the attenuation
     /// 1 / (1 + 25 d²) fading linearly to 0 from d² = 0.64 to 1 (d is the distance over the range),
     /// and the default spot cookie 1 − smoothstep(0.66, 0.99, r) of the normalized radius.
@@ -21,14 +26,46 @@ namespace Unbound.Runtime
             internal readonly List<Light> Pixel = new List<Light>();
             internal readonly List<Light> Vertex = new List<Light>();
             internal readonly List<Light> Spherical = new List<Light>();
+            /// <summary>How much of each <see cref="Spherical"/> light the harmonics take.</summary>
+            internal readonly List<float> SphericalShare = new List<float>();
+            /// <summary>The last pixel light's share of its light.</summary>
+            internal float PixelFade = 1f;
+            /// <summary>The last vertex light's share of its light.</summary>
+            internal float VertexFade = 1f;
 
             internal void Clear()
             {
                 Pixel.Clear();
                 Vertex.Clear();
                 Spherical.Clear();
+                SphericalShare.Clear();
+                PixelFade = 1f;
+                VertexFade = 1f;
+            }
+
+            internal void AddSpherical(Light l, float share)
+            {
+                Spherical.Add(l);
+                SphericalShare.Add(share);
+            }
+
+            /// <summary>The colour scale of a pixel light (the last one fades).</summary>
+            internal float PixelScale(int index) => index == Pixel.Count - 1 ? PixelFade : 1f;
+
+            /// <summary>The colour scale of a vertex light: the first one, when the last pixel light
+            /// fades, takes the rest of it (whichever light it is); the last one fades.</summary>
+            internal float VertexScale(int index, int count)
+            {
+                if (index == 0 && PixelFade != 1f) return 1f - PixelFade;
+                return index == count - 1 ? VertexFade : 1f;
             }
         }
+
+        /// <summary>Above this importance gap between a fading light's neighbours it does not fade
+        /// (the gap of an Important or Not Important light's bias).</summary>
+        const float FadeGapLimit = 1000f;
+        /// <summary>Keeps the fade's division finite for equal neighbours.</summary>
+        const float FadeGapEpsilon = 0.001f;
 
         static readonly List<Light> s_Lights = new List<Light>();
         static Light s_Main;
@@ -37,16 +74,17 @@ namespace Unbound.Runtime
         /// with their importance.</summary>
         static readonly List<LightImportance.Candidate> s_Candidates = new List<LightImportance.Candidate>();
 
-        /// <summary>Adds the light (one of <see cref="s_Lights"/>) to the candidates when its
+        /// <summary>Adds the light (one of <see cref="s_Lights"/>, -1 the main one) to the candidates when its
         /// culling mask has the layer and it reaches the bounds (<see cref="LightImportance"/>).</summary>
         static void AddCandidate(int index, Bounds bounds, int layer)
         {
-            var l = s_Lights[index];
+            var l = index < 0 ? s_Main : s_Lights[index];
             if ((l.cullingMask & (1 << layer)) == 0) return;
             var t = l.transform;
-            var matrix = t.localToWorldMatrix;
-            if (!LightImportance.Reaches(l.type, matrix, l.range, l.spotAngle, bounds)) return;
-            s_Candidates.Add(new LightImportance.Candidate(index, LightImportance.Of(l, l.type, t.position, l.range, bounds.center), s_Candidates.Count));
+            var position = t.position;
+            if (!LightImportance.Reaches(l.type, position, l.range, bounds)) return;
+            if (l.type == LightType.Spot && !LightImportance.SpotReaches(t.localToWorldMatrix, l.range, l.spotAngle, bounds)) return;
+            s_Candidates.Add(new LightImportance.Candidate(index, LightImportance.Of(l, l.type, position, l.range, bounds.center), s_Candidates.Count));
         }
 
         static Light CandidateLight(in LightImportance.Candidate c) => c.Index < 0 ? s_Main : s_Lights[c.Index];
@@ -120,21 +158,20 @@ namespace Unbound.Runtime
         internal static Light Main => s_Main;
 
         /// <summary>The directional light an object's base pass draws: the main one when its
-        /// culling mask has the object's layer, else the brightest other directional light
-        /// without a cookie that has it (measured: tests/projects/builtinrp main_light_mask*),
+        /// culling mask has the object's layer, else the most important other directional light
+        /// (<see cref="LightImportance"/>) without a cookie that has it (measured:
+        /// tests/projects/builtinrp main_light_mask*),
         /// else none.</summary>
         internal static Light BaseLightFor(int layer)
         {
             if (s_Main != null && (s_Main.cullingMask & (1 << layer)) != 0) return s_Main;
-            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             Light best = null;
-            float bestValue = -1f;
+            float bestValue = float.NegativeInfinity;
             foreach (var l in s_Lights)
             {
                 if (l.type != LightType.Directional || l.cookie != null || l.renderMode == LightRenderMode.ForceVertex) continue;
                 if ((l.cullingMask & (1 << layer)) == 0) continue;
-                var c = l.FinalColor(linear);
-                float value = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+                float value = LightImportance.Of(l, LightType.Directional, Vector3.zero, 0f, Vector3.zero);
                 if (value > bestValue)
                 {
                     best = l;
@@ -147,34 +184,65 @@ namespace Unbound.Runtime
         /// <summary>The camera's lights other than the main one.</summary>
         internal static List<Light> Lights => s_Lights;
 
-        /// <summary>Sorts an object's lights into pixel, vertex and SH ones.</summary>
+        /// <summary>Sorts an object's lights into pixel, vertex and SH ones, with their fades.</summary>
         internal static void Classify(Bounds bounds, int layer, ObjectLights into, Light baseLight = null)
         {
             into.Clear();
             if (s_Lights.Count == 0) return;
             s_Candidates.Clear();
-            for (int i = 0; i < s_Lights.Count; i++)
-                if (s_Lights[i] != baseLight) AddCandidate(i, bounds, layer);
+            // The main light ranks with the others (its importance places the fades).
+            if (s_Main != null) AddCandidate(-1, bounds, layer);
+            for (int i = 0; i < s_Lights.Count; i++) AddCandidate(i, bounds, layer);
             LightImportance.Sort(s_Candidates);
-            int pixelBudget = Math.Max(0, QualitySettings.pixelLightCount);
-            foreach (var c in s_Candidates)
+            int limit = Math.Max(0, QualitySettings.pixelLightCount);
+            // The place of the Auto light that fills the pixel lights.
+            int filling = -1;
+            for (int k = 0; k < s_Candidates.Count; k++)
             {
-                var l = CandidateLight(c);
-                if (l.renderMode == LightRenderMode.ForcePixel) into.Pixel.Add(l);
-            }
-            pixelBudget -= into.Pixel.Count;
-            foreach (var c in s_Candidates)
-            {
-                var l = CandidateLight(c);
-                if (l.renderMode == LightRenderMode.ForcePixel) continue;
-                if (l.renderMode == LightRenderMode.Auto && pixelBudget > 0)
+                var l = CandidateLight(s_Candidates[k]);
+                if (l == baseLight) continue;
+                if (l.renderMode == LightRenderMode.ForcePixel || (l.renderMode != LightRenderMode.ForceVertex && into.Pixel.Count < limit))
                 {
                     into.Pixel.Add(l);
-                    pixelBudget--;
+                    if (l.renderMode != LightRenderMode.ForcePixel && into.Pixel.Count == limit) filling = k;
                 }
                 else if (l.type != LightType.Directional && into.Vertex.Count < 4) into.Vertex.Add(l);
-                else into.Spherical.Add(l);
+                else into.AddSpherical(l, 1f);
             }
+            // The place in the order whose importance fades the last vertex light.
+            int lastVertex = into.Vertex.Count + into.Pixel.Count - 1;
+            if (filling > 0 && Fade(filling, out float fade))
+            {
+                into.PixelFade = fade;
+                var l = CandidateLight(s_Candidates[filling]);
+                if (l.type == LightType.Directional) into.AddSpherical(l, 1f - fade);
+                else
+                {
+                    if (into.Vertex.Count >= 4)
+                    {
+                        into.Vertex.RemoveAt(3);
+                        lastVertex--;
+                    }
+                    into.Vertex.Insert(0, l);
+                }
+            }
+            if (lastVertex > 2 && Fade(lastVertex, out float vertexFade)) into.VertexFade = vertexFade;
+        }
+
+        /// <summary>The share a light at place <paramref name="k"/> of the order keeps:
+        /// (its importance − the next one's) / (the previous one's − the next one's), within 0..1;
+        /// false at either end of the order or when the neighbours are 1000 or more apart.</summary>
+        static bool Fade(int k, out float fade)
+        {
+            fade = 1f;
+            if (k <= 0 || k >= s_Candidates.Count - 1) return false;
+            float previous = s_Candidates[k - 1].Importance, next = s_Candidates[k + 1].Importance;
+            float gap = previous - next;
+            if (!(gap < FadeGapLimit)) return false;
+            float f = (s_Candidates[k].Importance - next) / (gap + FadeGapEpsilon);
+            // NaN keeps the whole light, as above 1.
+            fade = f < 0f ? 0f : (f <= 1f ? f : 1f);
+            return true;
         }
 
         static readonly int s_4LightPosX0 = Shader.PropertyToID("unity_4LightPosX0");
@@ -189,7 +257,8 @@ namespace Unbound.Runtime
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             Vector4 x = default, y = default, z = default, atten = default;
             var colors = new Vector4[8];
-            for (int i = 0; i < lights.Vertex.Count && i < 4; i++)
+            int count = Math.Min(lights.Vertex.Count, 4);
+            for (int i = 0; i < count; i++)
             {
                 var l = lights.Vertex[i];
                 var p = l.transform.position;
@@ -197,7 +266,7 @@ namespace Unbound.Runtime
                 y[i] = p.y;
                 z[i] = p.z;
                 atten[i] = 25f / Mathf.Max(l.range * l.range, 1e-8f);
-                colors[i] = (Vector4)l.FinalColor(linear);
+                colors[i] = (Vector4)l.FinalColor(linear) * lights.VertexScale(i, count);
             }
             into[s_4LightPosX0] = x;
             into[s_4LightPosY0] = y;
@@ -212,12 +281,12 @@ namespace Unbound.Runtime
         static readonly int s_LightTexture0 = Shader.PropertyToID("_LightTexture0");
         static readonly int s_LightTextureB0 = Shader.PropertyToID("_LightTextureB0");
 
-        /// <summary>A pixel light's ForwardAdd variables and its keyword.</summary>
-        internal static string AddPassProperties(Light l, Dictionary<int, object> into)
+        /// <summary>A pixel light's ForwardAdd variables (its colour times <paramref name="scale"/>) and its keyword.</summary>
+        internal static string AddPassProperties(Light l, float scale, Dictionary<int, object> into)
         {
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             var t = l.transform;
-            into[s_LightColor0] = (Vector4)l.FinalColor(linear);
+            into[s_LightColor0] = (Vector4)l.FinalColor(linear) * scale;
             var cookie = l.cookie;
             switch (l.type)
             {
@@ -328,9 +397,10 @@ namespace Unbound.Runtime
         internal static SphericalHarmonicsL2 WithSphericalLights(SphericalHarmonicsL2 sh, ObjectLights lights, Vector3 center)
         {
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
-            foreach (var l in lights.Spherical)
+            for (int i = 0; i < lights.Spherical.Count; i++)
             {
-                var c = l.FinalColor(linear);
+                var l = lights.Spherical[i];
+                var c = l.FinalColor(linear) * lights.SphericalShare[i];
                 if (l.type == LightType.Directional)
                 {
                     sh.AddDirectionalLight(-l.transform.forward, c, 0.5f);
