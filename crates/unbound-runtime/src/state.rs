@@ -1245,6 +1245,12 @@ fn single_channel_texels(
             }
             (format, data)
         }
+        Some(GpuChannel::Opaque) => {
+            for p in data.chunks_exact_mut(4) {
+                p[3] = 255;
+            }
+            (format, data)
+        }
         Some(GpuChannel::RedGreen) => {
             for p in data.chunks_exact_mut(4) {
                 p[2] = 0;

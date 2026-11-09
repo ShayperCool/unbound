@@ -140,6 +140,7 @@ namespace UnityEngine
         {
             int size = SourceLevelSize(mip);
             if (data.Length < size) throw new ArgumentException("SetPixelData: not enough data provided.");
+            DecodeRaw();
             var blocks = CurrentBlocks();
             int at = 0;
             for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
@@ -165,6 +166,7 @@ namespace UnityEngine
             int total = 0;
             for (int mip = 0; mip < m_SourceMips; mip++) total += SourceLevelSize(mip);
             if (data.Length < total) throw new UnityException("LoadRawTextureData: not enough data provided (will result in overread).");
+            DecodeRaw();
             var blocks = CurrentBlocks();
             CheckStoreWrite();
             data.Slice(0, total).CopyTo(blocks);
@@ -261,8 +263,6 @@ namespace UnityEngine
         /// and its pixels what they decode to.</summary>
         void InitBlocks(TextureFormat format)
         {
-            if (m_Width % 4 != 0 || m_Height % 4 != 0)
-                throw new UnityException("Failed to create texture because of invalid parameters.");
             m_SourceFormat = format;
             m_SourceMips = m_MipCount;
             m_Format = format == TextureFormat.BC6H ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
@@ -296,7 +296,9 @@ namespace UnityEngine
         /// `highQuality` (dithering) is not applied.</summary>
         void CompressToBlocks(bool highQuality)
         {
-            if (SourceBlocks || !m_IsReadable || m_Width % 4 != 0 || m_Height % 4 != 0) return;
+            // Any compressed texture is left alone (an AssetBundle's ETC or ASTC texture too, whose
+            // pixels Unbound keeps decoded), as the documentation says.
+            if (m_SourceFormat != null || !m_IsReadable || m_Width % 4 != 0 || m_Height % 4 != 0) return;
             TextureFormat target;
             switch (m_Format)
             {
@@ -377,7 +379,7 @@ namespace UnityEngine
             int size = src.SourceBlocks ? BlockFormats.BlockBytes(src.m_SourceFormat.Value) : 0;
             if (size == 0 || !dst.SourceBlocks || BlockFormats.BlockBytes(dst.m_SourceFormat.Value) != size)
             {
-                Debug.LogWarning($"Unbound: Graphics.CopyTexture between {src.format} and {dst.format} copies nothing (their blocks differ).");
+                Stubs.Ignored($"Graphics.CopyTexture {src.format} to {dst.format}", "copies nothing between formats whose blocks differ (as the Editor)");
                 return;
             }
             if (!src.ValidMip(srcMip) || !dst.ValidMip(dstMip)) return;
@@ -387,11 +389,15 @@ namespace UnityEngine
                 bool aligned = srcX % 4 == 0 && srcY % 4 == 0 && srcWidth % 4 == 0 && srcHeight % 4 == 0 && dstX % 4 == 0 && dstY % 4 == 0;
                 if (!aligned) return;
                 if (src.m_SourceFormat == dst.m_SourceFormat) gpuCopy();
-                else Debug.LogWarning($"Unbound: Graphics.CopyTexture of a region from {src.format} to {dst.format} is not copied (different block formats).");
+                else Stubs.Ignored($"Graphics.CopyTexture region {src.format} to {dst.format}", "does not copy a region between different block formats on Unbound's renderer (unmeasured)");
                 return;
             }
             var from = src.CurrentBlocks();
             var to = dst.CurrentBlocks();
+            // Compressed textures keep their blocks on the CPU, readable or not: the copy reaches
+            // them from an unreadable source and into an unreadable destination too (the Unity
+            // 6000.0.71f1 Editor, tests/projects/texturecompression copy.unreadable,
+            // copy.unreadabledst; the documentation's rule is about readable pixel data).
             if (from == null || to == null)
             {
                 if (src.m_SourceFormat == dst.m_SourceFormat) gpuCopy();
@@ -399,6 +405,11 @@ namespace UnityEngine
             }
             // A whole texture: every level both have.
             int levels = allLevels ? Math.Min(src.m_SourceMips, dst.m_SourceMips) : 1;
+            // Pixel cells the destination already has (an import's, a bundle texture's decoded
+            // ones) follow the blocks; cells not made yet are decoded when first read.
+            dst.DecodeRaw();
+            bool cells = dst.m_Pixels != null || dst.m_Hdr != null || dst.m_AssetGuid != null;
+            if (cells) dst.EnsureBlockCells();
             bool copied = false;
             for (int i = 0; i < levels; i++)
             {
@@ -410,7 +421,7 @@ namespace UnityEngine
                 int bytes = src.SourceLevelSize(sm);
                 dst.CheckStoreWrite();
                 Buffer.BlockCopy(from, fromAt, to, toAt, bytes);
-                if (dst.m_Pixels != null || dst.m_Hdr != null)
+                if (cells)
                 {
                     dst.DecodeBlockLevel(new ReadOnlySpan<byte>(to, toAt, bytes), dm);
                     if (dst.m_BlockCellHashes != null) dst.m_BlockCellHashes[dm] = Fnv1a(new ReadOnlySpan<byte>(to, toAt, bytes));
@@ -422,6 +433,11 @@ namespace UnityEngine
             dst.m_PixelsDirty = true;
             dst.Upload();
         }
+
+        /// <summary>Whether a texture of `format` may have these sides: a block format's must be
+        /// multiples of 4 (tests/projects/texturecompression new.DXT1Odd, new.DXT5Npot).</summary>
+        static bool BlockSized(TextureFormat format, int width, int height) =>
+            BlockFormats.BlockBytes(format) == 0 || (width % 4 == 0 && height % 4 == 0);
 
         /// <summary>Bytes of a source level of a block-compressed texture.</summary>
         int SourceLevelSize(int mip) =>

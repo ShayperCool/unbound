@@ -802,7 +802,7 @@ pub fn texture_storage(
 /// A block-compressed packet as RGBA8, decoded as the Editor's CPU reads do (colour codes
 /// sampled through an sRGB view in linear projects, the others linear; BC6H clamped to 0..1).
 fn decode_blocks(t: &owned::Texture) -> owned::Texture {
-    use unbound_assets::texture::{BlockFormat, decode_blocks};
+    use unbound_assets::texture::{BlockFormat, decode_level_as_gpu};
     let format = match t.format {
         texture_format::BC1_COLOR | texture_format::BC1_DATA => BlockFormat::Bc1,
         texture_format::BC3_COLOR | texture_format::BC3_DATA => BlockFormat::Bc3,
@@ -830,7 +830,7 @@ fn decode_blocks(t: &owned::Texture) -> owned::Texture {
             break;
         };
         offset += len;
-        data.extend(decode_blocks(format, blocks, w, h));
+        data.extend(decode_level_as_gpu(format, blocks, w, h));
     }
     owned::Texture {
         format: if texture_format::block_color(t.format) {

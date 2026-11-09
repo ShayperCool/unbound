@@ -661,6 +661,8 @@ pub enum GpuChannel {
     Red,
     /// RG16: samples (r, g, 0, 1).
     RedGreen,
+    /// RGB24: samples (r, g, b, 1).
+    Opaque,
 }
 
 impl ImportedTexture {
@@ -675,8 +677,9 @@ impl ImportedTexture {
     /// texture its channel (Alpha8 or R8), other textures RGB24 without transparent texels and
     /// RGBA32 with them. A Single Channel Alpha texture is Alpha8 compressed too
     /// (texture-samples.jsonl SingleAlphaCompressed). None where Unbound keeps its RGBA32 or float
-    /// answer: explicit uncompressed formats, compressed formats Unbound does not produce, HDR,
-    /// normal maps and lightmaps stored uncompressed (unmeasured).
+    /// answer: explicit uncompressed formats other than Alpha8, RGB24, RGBA32, RG16 and R8,
+    /// compressed formats Unbound does not produce, HDR, normal maps and lightmaps stored
+    /// uncompressed (unmeasured).
     pub fn reported_format(&self) -> Option<i32> {
         if let Some(blocks) = &self.blocks {
             return Some(blocks.format.unity_format());
@@ -710,13 +713,14 @@ impl ImportedTexture {
     /// Unity 6000.0.71f1 Editor samples it (tests/projects/urp texture-samples.jsonl): a Single
     /// Channel texture its alpha (Alpha8, compressed or not) or its red (R8, or BC4 compressed),
     /// a Cookie its alpha where it imports as Alpha8 (uncompressed; compressed cookies are
-    /// unmeasured and keep their alpha in every channel). None for other textures and explicit
-    /// formats.
+    /// unmeasured and keep their alpha in every channel); explicit Alpha8, R8, RG16 and RGB24
+    /// imports their channels (RGB24 opaque). None for other textures and explicit formats.
     pub fn gpu_channel(&self) -> Option<GpuChannel> {
         match self.explicit_byte_format() {
             Some(unity_format::ALPHA8) => return Some(GpuChannel::Alpha),
             Some(unity_format::R8) => return Some(GpuChannel::Red),
             Some(unity_format::RG16) => return Some(GpuChannel::RedGreen),
+            Some(unity_format::RGB24) => return Some(GpuChannel::Opaque),
             _ => {}
         }
         let s = &self.settings;
@@ -2057,7 +2061,7 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 }
 
 mod bcn;
-pub use bcn::{BlockFormat, compress_level, decode_level as decode_blocks};
+pub use bcn::{BlockFormat, compress_level, decode_level as decode_blocks, decode_level_as_gpu};
 mod cubemap;
 mod mipmaps;
 mod psd;

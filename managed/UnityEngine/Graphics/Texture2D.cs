@@ -85,6 +85,9 @@ namespace UnityEngine
             CheckMainThreadCreation("SupportsTextureFormatNative");
             if (width <= 0 || height <= 0)
                 throw new UnityException($"Failed to create texture because of invalid parameters. Width {width}, height {height}.");
+            // Block formats need block-sized sides (checked before anything changes).
+            if (!BlockSized(format, width, height))
+                throw new UnityException("Failed to create texture because of invalid parameters.");
             ReleaseStore();
             m_Width = width;
             m_Height = height;
@@ -326,10 +329,11 @@ namespace UnityEngine
 
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
-            RequireReadable();
+            // A block-compressed texture uploads its blocks: its pixels need not be decoded.
+            RequireReadable(pixels: !SourceBlocks);
             // A block-compressed texture's levels are its blocks: nothing regenerates them.
             if (updateMipmaps && !SourceBlocks) GenerateMipChain();
-            var rawCopy = makeNoLongerReadable ? EncodeMipChain() : null;
+            var rawCopy = makeNoLongerReadable && !SourceBlocks ? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
             if (makeNoLongerReadable)
@@ -349,11 +353,14 @@ namespace UnityEngine
 
         public void Apply() => Apply(true, false);
 
-        public bool Reinitialize(int width, int height) => Reinitialize(width, height, m_Format, m_MipCount > 1);
+        public bool Reinitialize(int width, int height) => Reinitialize(width, height, format, MipmapCount() > 1);
 
         public bool Reinitialize(int width, int height, TextureFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
+            // A block format refuses sides that are not block-sized, leaving the texture as it was
+            // (tests/projects/texturecompression reinit.odd).
+            if (!BlockSized(format, width, height)) return false;
             Init(width, height, format, hasMipMap ? -1 : 1, m_Linear);
             return true;
         }
@@ -361,6 +368,7 @@ namespace UnityEngine
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
+            if (!BlockSized(TextureFormatOf(format), width, height)) return false;
             Init(width, height, TextureFormatOf(format), hasMipMap ? -1 : 1, !GraphicsFormatUtility.IsSRGBFormat(format));
             return true;
         }
@@ -579,7 +587,8 @@ namespace UnityEngine
         void DropIfNotReadable()
         {
             if (m_IsReadable) return;
-            m_UnreadableRaw ??= m_Raw != null ? (byte[])m_Raw.Clone() : EncodeMipChain();
+            // A block-compressed texture keeps its blocks (GetRawTextureData answers them).
+            if (!SourceBlocks) m_UnreadableRaw ??= m_Raw != null ? (byte[])m_Raw.Clone() : EncodeMipChain();
             ReleaseStore();
             m_Pixels = null;
             m_Hdr = null;

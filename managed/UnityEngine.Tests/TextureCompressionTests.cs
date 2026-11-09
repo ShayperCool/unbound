@@ -134,6 +134,44 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(dxt1);
         }
 
+        /// <summary>Compress leaves any compressed texture alone (the documentation), also an
+        /// AssetBundle texture Unbound keeps decoded (ETC2 here).</summary>
+        [Fact]
+        public void CompressLeavesCompressedTexturesAlone()
+        {
+            const string yaml = @"Texture2D:
+  m_Width: 4
+  m_Height: 4
+  m_TextureFormat: 4
+  m_MipCount: 1
+  m_SourceTextureFormat: 47
+  m_SourceMipCount: 1
+  m_SourceTextureData: 00000000000000000000000000000000
+  m_IsReadable: 1
+  m_ColorSpace: 1
+  _typelessdata: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+";
+            var texture = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
+            ((ISerializedAsset)texture).ReadSerialized(TestYaml.DocumentBody(yaml), null);
+            texture.Compress(false);
+            Assert.Equal(TextureFormat.ETC2_RGBA8, texture.format);
+            Assert.Equal(16, texture.GetRawTextureData().Length);
+            Object.DestroyImmediate(texture);
+        }
+
+        /// <summary>Reinitialize to sides a block format cannot have changes nothing
+        /// (tests/projects/texturecompression reinit.*).</summary>
+        [Fact]
+        public void ReinitializeRefusesSidesThatAreNotBlockSized()
+        {
+            var texture = new Texture2D(64, 64, TextureFormat.DXT1, true) { hideFlags = HideFlags.HideAndDontSave };
+            Assert.True(texture.Reinitialize(32, 32));
+            Assert.Equal((32, 32, 6, TextureFormat.DXT1), (texture.width, texture.height, texture.mipmapCount, texture.format));
+            Assert.False(texture.Reinitialize(30, 18, TextureFormat.DXT1, false));
+            Assert.Equal((32, 32, 6, TextureFormat.DXT1), (texture.width, texture.height, texture.mipmapCount, texture.format));
+            Object.DestroyImmediate(texture);
+        }
+
         [Fact]
         public void UnreadableCompressedTexturesAnswerTheirBlocks()
         {

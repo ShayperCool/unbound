@@ -244,6 +244,16 @@ fn f32_to_f16(v: f32) -> u16 {
 /// (r, 0, 0, 1) and BC5 (r, g, 0, 1). BC6H is clamped to 0..1 (Unbound has no float decoding of
 /// its blocks). `blocks` shorter than the level leaves the missing blocks' texels zero.
 pub fn decode_level(format: BlockFormat, blocks: &[u8], width: u32, height: u32) -> Vec<u8> {
+    decode(format, blocks, width, height, false)
+}
+
+/// [`decode_level`] as GPUs sample the blocks: a BC3 block's colour half always has four
+/// colours (for devices without BC formats).
+pub fn decode_level_as_gpu(format: BlockFormat, blocks: &[u8], width: u32, height: u32) -> Vec<u8> {
+    decode(format, blocks, width, height, true)
+}
+
+fn decode(format: BlockFormat, blocks: &[u8], width: u32, height: u32, gpu: bool) -> Vec<u8> {
     let (w, h) = (width.max(1) as usize, height.max(1) as usize);
     let bw = w.div_ceil(4);
     let size = format.block_bytes();
@@ -252,9 +262,9 @@ pub fn decode_level(format: BlockFormat, blocks: &[u8], width: u32, height: u32)
     for (i, block) in blocks.chunks_exact(size).enumerate() {
         let (bx, by) = (i % bw, i / bw);
         match format {
-            BlockFormat::Bc1 => decode_colour(block, &mut texels),
+            BlockFormat::Bc1 => decode_colour(block, &mut texels, false),
             BlockFormat::Bc3 => {
-                decode_colour(&block[8..], &mut texels);
+                decode_colour(&block[8..], &mut texels, gpu);
                 decode_steps(&block[..8], &mut texels, 3);
             }
             BlockFormat::Bc4 => {
@@ -302,10 +312,11 @@ fn expand565(c: u16) -> [u32; 3] {
     ]
 }
 
-/// A colour block. A BC3 block's colour half follows the same rule, three colours and black
-/// when c0 <= c1 (its alpha comes from the alpha half), as the Editor's GetPixels32 reads it
-/// (tests/projects/texturecompression new.DXT5, bytes of 205).
-fn decode_colour(block: &[u8], texels: &mut [[u8; 4]; 16]) {
+/// A colour block. A BC3 block's colour half follows the same rule on the CPU, three colours
+/// and black when c0 <= c1 (its alpha comes from the alpha half), as the Editor's GetPixels32
+/// reads it (tests/projects/texturecompression new.DXT5, bytes of 205); `four` gives it four
+/// colours always, as GPUs sample it.
+fn decode_colour(block: &[u8], texels: &mut [[u8; 4]; 16], four: bool) {
     let c0 = u16::from_le_bytes([block[0], block[1]]);
     let c1 = u16::from_le_bytes([block[2], block[3]]);
     let (a, b) = (expand565(c0), expand565(c1));
@@ -313,7 +324,7 @@ fn decode_colour(block: &[u8], texels: &mut [[u8; 4]; 16]) {
         let m = |k: usize| ((a[k] * wa + b[k] * wb) / d) as u8;
         [m(0), m(1), m(2), 255]
     };
-    let palette = if c0 > c1 {
+    let palette = if four || c0 > c1 {
         [mix(1, 0, 1), mix(0, 1, 1), mix(2, 1, 3), mix(1, 2, 3)]
     } else {
         [mix(1, 0, 1), mix(0, 1, 1), mix(1, 1, 2), [0, 0, 0, 0]]
