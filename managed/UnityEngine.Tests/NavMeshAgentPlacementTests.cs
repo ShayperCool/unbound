@@ -85,7 +85,7 @@ namespace UnityEngine.Tests
         /// within 20 of its own radii across and 15 up and down from the NavMesh, whatever its
         /// type's settings. 7.5 m beside the 12 m ground: placed with radius 0.5 (10 m reach), not
         /// with radius 0.3 (6 m); 9 m above it: placed with radius 0.75 (11.25 m), not with 0.5
-        /// (7.5 m).</summary>
+        /// (7.5 m). Radius 0.3 is outside the measured radii (0.5, 1, 2): it controls the scaling.</summary>
         [Theory]
         [InlineData(0.5f, 13.5f, 0f, true)]
         [InlineData(0.3f, 13.5f, 0f, false)]

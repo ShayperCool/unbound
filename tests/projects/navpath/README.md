@@ -42,4 +42,4 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
 
 Listed, not gated (`run.py` header): the carved tiles' polygon splits (Unity's pieces are fewer and
 shaped differently; its triangles are the same as Recast's ear clipping but not merged by longest
-shared edge) and `two.p1`, a line grazing a vertex within float rounding.
+shared edge) and `two.p1`, a line grazing a vertex: the builders place that vertex about 2e-6 apart, on either side of the line.

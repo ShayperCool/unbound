@@ -1408,7 +1408,7 @@ namespace DotRecast.Detour
         }
 
         /// Unbound: a start nearer than this to the first portal (in the xz plane) is on it, and the
-        /// funnel begins past it (Unity's distance; Detour's is 1 mm).
+        /// funnel begins past it (Unity's distance, not separately measured by a probe; Detour's is 1 mm).
         const float StartOnPortal = 0.002f;
 
         /// Unbound: how near zero a component of a funnel offset counts as zero (Unity's funnel), so
@@ -1673,7 +1673,8 @@ namespace DotRecast.Detour
                     }
 
                     // Unbound: Unity's funnel. The portal's ends as offsets from the apex (see
-                    // FunnelOffset), in funnel order; a corner where the portal lies strictly beyond
+                    // FunnelOffset), in funnel order (a portal seen reversed from the apex is swapped;
+                    // no probe route measures that case); a corner where the portal lies strictly beyond
                     // a side (a path through a side's end exactly has none), tested on both sides
                     // before either narrows; a side narrows to a portal end on it or within it.
                     var l = FunnelOffset(portalApex, left);
