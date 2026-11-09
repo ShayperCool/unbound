@@ -216,6 +216,8 @@ public class PathProbe : MonoBehaviour
             ("carve.shortcut", CarveShortcut),
             ("carve.rules", CarveRules),
             ("nearest.sides", NearestSides),
+            ("place.moved", PlaceMoved),
+            ("place.adjacent", PlaceAdjacent),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -1228,5 +1230,103 @@ public class PathProbe : MonoBehaviour
             ProbeLog.Value(key + ".ray", blocked + " " + P(ray.position));
             ProbeLog.Value(key + ".closestEdge", NavMesh.FindClosestEdge(at, out var closest, NavMesh.AllAreas) ? P(closest.position) : "none");
         }
+    }
+
+    /// <summary>A NavMesh of 5.33 m tiles (4 x 4: a 16 m floor with two walls) added four times:
+    /// where it was built, moved off the tile grid, moved and turned 30 degrees, moved and turned
+    /// 90 degrees. On each,
+    /// in its own frame: SamplePosition over a grid of points (inside every tile, next to tile
+    /// edges, past the floor's edge), rays and paths across tiles and round the walls, and an agent
+    /// walking across tiles.</summary>
+    IEnumerator PlaceMoved()
+    {
+        ClearAgents();
+        yield return null;
+        var settings = NavMesh.GetSettingsByID(0);
+        settings.overrideTileSize = true;
+        settings.tileSize = 32;
+        var sources = new List<NavMeshBuildSource>
+        {
+            Source(new Vector3(Off.x, -0.05f, Off.y), new Vector3(16f, 0.1f, 16f), 0, 0f),
+            Source(new Vector3(-2.5f + Off.x, 0.5f, -2f + Off.y), new Vector3(0.6f, 1f, 9f), Blocked, 0f),
+            Source(new Vector3(2.8f + Off.x, 0.5f, 3f + Off.y), new Vector3(7f, 1f, 0.6f), Blocked, 0f),
+        };
+        var data = NavMeshBuilder.BuildNavMeshData(settings, sources, new Bounds(Vector3.zero, new Vector3(20f, 10f, 20f)), Vector3.zero, Quaternion.identity);
+        var poses = new[]
+        {
+            ("o", Vector3.zero, Quaternion.identity),
+            ("m", new Vector3(31.3f, 0.4f, -7.9f), Quaternion.identity),
+            ("r30", new Vector3(-40.2f, 0f, 3.7f), Quaternion.Euler(0f, 30f, 0f)),
+            ("r90", new Vector3(5.1f, -0.3f, 47.6f), Quaternion.Euler(0f, 90f, 0f)),
+        };
+        foreach (var (_, pos, rot) in poses) NavMesh.AddNavMeshData(data, pos, rot);
+        yield return Frames(2);
+        var grid = new[] { -7.6f, -5.5f, -2.6f, -0.1f, 2.75f, 5.2f, 7.7f, 8.3f };
+        foreach (var (name, pos, rot) in poses)
+        {
+            Vector3 W(float x, float y, float z) => pos + rot * new Vector3(x, y, z);
+            foreach (float x in grid)
+            foreach (float z in grid)
+            {
+                bool found = NavMesh.SamplePosition(W(x, 0.4f, z), out var hit, 1f, NavMesh.AllAreas);
+                ProbeLog.Value(name + ".s" + Name(x) + "_" + Name(z), found ? P(hit.position) : "none");
+            }
+            foreach (var (ray, a, b) in new[]
+            {
+                ("ray0", W(-7f, 0f, -7f), W(7f, 0f, 7f)),
+                ("ray1", W(-7f, 0f, 1f), W(7f, 0f, 1f)),
+                ("ray2", W(4f, 0f, -7f), W(4f, 0f, 7f)),
+                ("ray3", W(-7f, 0f, 6f), W(7f, 0f, 7.5f)),
+            })
+            {
+                bool blocked = NavMesh.Raycast(a, b, out var rh, NavMesh.AllAreas);
+                ProbeLog.Value(name + "." + ray, blocked + " " + P(rh.position) + " " + Name(rh.distance) + " " + P(rh.normal));
+            }
+            Path(name + ".p0", W(-7f, 0f, -6f), W(6.5f, 0f, 6.5f));
+            Path(name + ".p1", W(-6f, 0f, 7f), W(6f, 0f, -7f));
+            Path(name + ".p2", W(7f, 0f, 1f), W(-7f, 0f, 1.5f));
+            var go = new GameObject("walker." + name);
+            go.transform.position = W(-6.5f, 0f, -6.5f);
+            var agent = go.AddComponent<NavMeshAgent>();
+            agent.SetDestination(W(6.5f, 0f, 6.5f));
+            for (int f = 1; f <= 300; f++)
+            {
+                yield return null;
+                if (f % 50 != 0) continue;
+                ProbeLog.Value(name + ".walk.f" + f, agent.nextPosition);
+            }
+            ProbeLog.Value(name + ".walk.status", agent.pathStatus.ToString());
+            Destroy(go);
+            yield return null;
+        }
+    }
+
+    /// <summary>One floor built as two NavMeshes whose bounds meet at x = 0 (a tile edge), so each
+    /// is cut there: whether paths, rays and agents cross from one to the other.</summary>
+    IEnumerator PlaceAdjacent()
+    {
+        ClearAgents();
+        yield return null;
+        var settings = NavMesh.GetSettingsByID(0);
+        settings.overrideTileSize = true;
+        settings.tileSize = 32;
+        var floor = new List<NavMeshBuildSource> { Source(new Vector3(Off.x, -0.05f, Off.y), new Vector3(20f, 0.1f, 12f), 0, 0f) };
+        NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(settings, floor, new Bounds(new Vector3(-5.333f, 0f, 0f), new Vector3(10.667f, 10f, 16f)), Vector3.zero, Quaternion.identity));
+        NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(settings, floor, new Bounds(new Vector3(5.333f, 0f, 0f), new Vector3(10.667f, 10f, 16f)), Vector3.zero, Quaternion.identity));
+        yield return Frames(2);
+        LogMesh();
+        Path("p", new Vector3(-6f, 0f, -1f), new Vector3(6f, 0f, 2f));
+        bool blocked = NavMesh.Raycast(new Vector3(-6f, 0f, 1f), new Vector3(6f, 0f, 1f), out var rh, NavMesh.AllAreas);
+        ProbeLog.Value("ray", blocked + " " + P(rh.position));
+        foreach (float x in new[] { -0.3f, -0.05f, 0.05f, 0.3f })
+            ProbeLog.Value("s" + Name(x), NavMesh.SamplePosition(new Vector3(x, 0.3f, 0.5f), out var hit, 1f, NavMesh.AllAreas) ? P(hit.position) : "none");
+        var go = new GameObject("walker");
+        go.transform.position = new Vector3(-6f, 0f, 0f);
+        var agent = go.AddComponent<NavMeshAgent>();
+        agent.SetDestination(new Vector3(6f, 0f, 0f));
+        yield return Frames(200);
+        ProbeLog.Value("walk.at", agent.nextPosition);
+        ProbeLog.Value("walk.status", agent.pathStatus.ToString());
+        Destroy(go);
     }
 }

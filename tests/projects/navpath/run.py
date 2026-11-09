@@ -31,6 +31,11 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
                           the vertex the cut piece starts at, which follows from where the built
                           NavMesh tile's polygon starts; Unity's starts at another corner in some
                           tiles (docs/COMPATIBILITY_GAPS.md, the carving row).
+  place.moved *.walk.f200 to f300
+                          an agent walking round a wall's end: Unity's takes a shorter way than its
+                          first path between frames 150 and 200 (it re-plans the start of its path while
+                          walking), Unbound's keeps its path; the same for every pose of the
+                          NavMesh (docs/COMPATIBILITY_GAPS.md, the placed NavMesh data row);
   link.wide gb1.2.cur.*   an agent reaching a wide link where the NavMesh under the link's start
                           ends (z 6): Unity's reaches it 6 cm further from that end and crosses from
                           5.98 to 5.82, Unbound's straight across from where it reaches it, 5.80
@@ -52,13 +57,14 @@ PROBE = Path(__file__).resolve().parent
 REPEATS = ('native1', 'native2')
 OUTPUT = 'navpath.json'
 TOLERANCE = 1e-3
-FRAMES = 1500
+FRAMES = 4000
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
     'hole.shapes': ('two.p1.',),
     'link.wide': ('gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
     'carve.shortcut': ('',),
     'carve.rules': ('poly.p47', 'poly.p51'),
+    'place.moved': tuple(f'{pose}.walk.f{frame}' for pose in ('o', 'm', 'r30', 'r90') for frame in (200, 250, 300)),
 }
 
 
