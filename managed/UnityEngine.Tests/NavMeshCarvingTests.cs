@@ -193,6 +193,110 @@ namespace UnityEngine.Tests
             Assert.Equal(m_Area, Area(), 3);
         }
 
+        NavMeshObstacle Capsule(Vector3 position, float radius, float height, Quaternion rotation)
+        {
+            var go = new GameObject("capsule");
+            m_Objects.Add(go);
+            go.transform.SetPositionAndRotation(position, rotation);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.center = Vector3.zero;
+            obstacle.radius = radius;
+            obstacle.height = height;
+            obstacle.carveOnlyStationary = false;
+            obstacle.carving = true;
+            return obstacle;
+        }
+
+        [Fact]
+        public void ACapsuleCutsAnOctagonRoundItsCircleGrownByTheAgentRadius()
+        {
+            Capsule(new Vector3(0f, 1f, 0f), 1f, 2f, Quaternion.identity);
+            Frame();
+            Frame();
+            // Corners towards its x and z axes and between, at (1 + 0.5) / cos 22.5 degrees.
+            float corner = 1.5f * 1.0823922f;
+            Assert.Equal(m_Area - 2f * Mathf.Sqrt(2f) * corner * corner, Area(), 2);
+            Assert.False(OnNavMesh(corner - 0.03f, 0f));
+            Assert.True(OnNavMesh(corner + 0.03f, 0f));
+            // Its sides are 1.5 m from the centre, nearer than its corners.
+            float side = 1.5f + 0.03f;
+            Assert.True(OnNavMesh(side * Mathf.Cos(22.5f * Mathf.Deg2Rad), side * Mathf.Sin(22.5f * Mathf.Deg2Rad)));
+        }
+
+        [Fact]
+        public void ACapsuleLyingOnItsSideCutsItsLengthToo()
+        {
+            Capsule(new Vector3(0f, 1f, 0f), 1f, 4f, Quaternion.Euler(0f, 0f, 90f));
+            Frame();
+            Frame();
+            // Along x: the straight part (1 m each side), then the cap's tip at r / cos 22.5
+            // degrees, grown; across: the octagon's side, grown.
+            float tip = 1f + 1.0823922f + 0.5f * 1.0823922f;
+            Assert.False(OnNavMesh(tip - 0.03f, 0f));
+            Assert.True(OnNavMesh(tip + 0.03f, 0f));
+            Assert.False(OnNavMesh(0f, 1.0823922f + 0.5f - 0.03f));
+        }
+
+        [Theory]
+        [InlineData(2.4f, true)]   // its bottom 1.9 m over the floor: within the agent height (2)
+        [InlineData(2.6f, false)]  // its bottom 2.1 m over it
+        [InlineData(-0.8f, false)] // its top 0.3 m under the floor
+        [InlineData(-0.35f, true)] // its top 15 cm over it (the NavMesh lies about 7 cm over it)
+        public void AnObstacleCarvesWhenItsHeightReachesTheFloorOrTheAgentsAboveIt(float y, bool carves)
+        {
+            Box(new Vector3(0f, y, 0f), Vector3.one, onlyStationary: false);
+            Frame();
+            Frame();
+            Assert.Equal(carves, !OnNavMesh(0f, 0f));
+        }
+
+        [Fact]
+        public void ACornerSharperThanARightAngleIsCutAcross()
+        {
+            // A flat 3 m square tilted 60 degrees about its diagonal along x: a rhombus from
+            // above, its corners at x = +-2.12 turning by 127 degrees.
+            var obstacle = Box(new Vector3(0f, 0.5f, 0f), new Vector3(3f, 0.01f, 3f), onlyStationary: false);
+            obstacle.transform.rotation = Quaternion.AngleAxis(60f, Vector3.right) * Quaternion.Euler(0f, 45f, 0f);
+            Frame();
+            Frame();
+            // Cut across at 2.66 m (the edges moved out by 0.5 and pushed on by 0.7 of it along
+            // the edge coming in), not at the sides' meeting point 3.24 m out.
+            Assert.False(OnNavMesh(2.6f, 0f));
+            Assert.True(OnNavMesh(2.72f, 0f));
+            Assert.True(OnNavMesh(-2.72f, 0f));
+            Assert.False(OnNavMesh(2.6f, 0.2f));
+        }
+
+        [Fact]
+        public void HolesInOnePolygonAreCutInTheSameOrderWhateverOrderTheObstaclesCameIn()
+        {
+            string[] Cut(bool reversed)
+            {
+                // Both in the polygon x -9.33 to 0, z 0 to 4.5: a turned capsule on its edge and
+                // one lying along x above it; the second cut splits a piece the first left.
+                var at = new[] { new Vector3(-5f, 1f, 0f), new Vector3(-5f, 1f, 3f) };
+                var rotations = new[] { Quaternion.Euler(0f, 22.5f, 0f), Quaternion.Euler(0f, 0f, 90f) };
+                var radii = new[] { 1f, 0.5f };
+                var heights = new[] { 2f, 3f };
+                var made = new List<NavMeshObstacle>();
+                for (int i = 0; i < 2; i++)
+                {
+                    int k = reversed ? 1 - i : i;
+                    made.Add(Capsule(at[k], radii[k], heights[k], rotations[k]));
+                }
+                Frame();
+                Frame();
+                var polygons = Polygons();
+                foreach (var o in made) Object.DestroyImmediate(o.gameObject);
+                // A fresh start: the next obstacles come in in the order they are made.
+                ObstacleSystem.ResetCarving();
+                Assert.Equal(m_Area, Area(), 3);
+                return polygons;
+            }
+            Assert.Equal(Cut(false), Cut(true));
+        }
+
         /// <summary>The NavMesh's polygons (a fan of CalculateTriangulation's triangles is one
         /// polygon), each as its vertices (x,z) in order from the smallest, sorted.</summary>
         static string[] Polygons()
@@ -324,7 +428,8 @@ namespace UnityEngine.Tests
             Assert.False(OnNavMesh(0f, 0f));
             Assert.True(OnNavMesh(1.04f, 0f));
             // Moved: the hole is removed, and cut at the new place once it has stood still for more
-            // than 0.5 s (the measured 26th frame after the one that saw the move, then one more).
+            // than 0.5 s: in the 27th frame after the move (tests/projects/navpath carve.rules, the
+            // decision late in one frame and the cut early in the next).
             obstacle.transform.position = new Vector3(4f, 0f, 0f);
             Frame();
             Frame();
@@ -336,7 +441,25 @@ namespace UnityEngine.Tests
                 Frame();
                 frames++;
             }
-            Assert.Equal(28, frames);
+            Assert.Equal(27, frames);
+        }
+
+        [Theory]
+        [InlineData(3f, 1f, false)]    // 0.052 rad x |scale| sqrt 3 x |extents| 0.87: 0.078 < 0.1
+        [InlineData(5.7f, 1f, true)]   // 0.149
+        [InlineData(0f, 1.04f, false)] // 0.04 sqrt 3 x 0.87: 0.06
+        [InlineData(0f, 1.08f, true)]  // 0.12
+        public void TurningOrScalingAStationaryOnlyObstacleCountsAsMovingPastTheThreshold(float yaw, float scale, bool moved)
+        {
+            var obstacle = Box(new Vector3(0f, 0.5f, 0f), Vector3.one);
+            Frame();
+            Frame();
+            Assert.False(OnNavMesh(0f, 0f));
+            obstacle.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            obstacle.transform.localScale = Vector3.one * scale;
+            Frame();
+            Frame();
+            Assert.Equal(moved, OnNavMesh(0f, 0f));
         }
 
         [Fact]
@@ -542,6 +665,16 @@ namespace UnityEngine.Tests
             Assert.False(OnNavMesh(0f, 0.3f));
             Assert.False(OnNavMesh(2.3f, 0f));
             Assert.True(OnNavMesh(0f, 0.55f));
+        }
+
+        [Fact]
+        public void ABoxOfNoWidthOrDepthCarvesNothing()
+        {
+            Box(new Vector3(0f, 0.5f, 0f), new Vector3(0f, 1f, 0f));
+            Frame();
+            Frame();
+            // One point seen from above: no outline to cut.
+            Assert.Equal(m_Area, Area(), 3);
         }
 
         [Fact]

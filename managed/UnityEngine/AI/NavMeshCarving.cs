@@ -18,87 +18,83 @@ namespace Unbound.Runtime
     // hull of what the hole covers of it, and each polygon of the group is cut by that hull's edges
     // into triangles merged in order into convex pieces (HullsOf, CutGroup); polygons the hole
     // misses keep their vertices.
+    // Measured too (navpath carve.rules): a capsule's outline is an octagon round its axis (see
+    // NavMeshObstacle.FootprintOf); outlines are grown with one point at corners turning up to
+    // about 90 degrees and cut across at sharper ones (Grow); holes overlapping in one polygon are
+    // cut one after the other in the order ObstacleSystem sorts them; a polygon is reached when
+    // the obstacle's height span, extended down by the agent height, overlaps its detail
+    // surface's heights.
     // Unbound's choices (unmeasured): a box's outline is the convex hull of its eight corners seen
-    // from above; a capsule's is a 16-sided polygon around its circle; a polygon is carved when the
-    // obstacle's height span overlaps the polygon's from agentClimb under it to agentHeight above
-    // it; a cut piece's new vertices take the height of the polygon's detail mesh; carved
-    // polygons get the source's detail triangles cut to them; holes overlapping in one polygon are
-    // cut one after the other.
+    // from above; a reached polygon is cut over its whole area (a hole is not clipped in height
+    // over sloped ground); a cut piece's new vertices take the height of the polygon's detail
+    // mesh.
     internal static class NavMeshCarving
     {
-        /// <summary>An obstacle's outline on the ground (counterclockwise in x, z) and height span.</summary>
+        /// <summary>An obstacle's points on the ground (x, z), whose convex hull is its outline, and
+        /// its height span.</summary>
         internal sealed class Footprint
         {
             internal Vector2[] Outline;
             internal float Bottom;
             internal float Top;
+            /// <summary>The obstacle's centre and the squared length of its extents in the world
+            /// (the order holes are cut in).</summary>
+            internal Vector3 Center;
+            internal float ExtentSq;
         }
 
         const float Eps = 1e-5f;
         const int MaxVerts = DtDetour.DT_VERTS_PER_POLYGON;
-        internal const int CapsuleSides = 16;
 
         // ------------------------------------------------------------------ outlines
 
-        /// <summary>The convex hull of the points (x, z), counterclockwise.</summary>
-        internal static Vector2[] Hull(List<Vector2> points)
+        /// <summary>The clockwise outline grown by <paramref name="r"/>: at a corner turning by at
+        /// most about 90 degrees one point, where the edges moved out meet; at a sharper corner two,
+        /// each edge moved out and the corner cut across (Unity's rule).</summary>
+        internal static List<Vector2> Grow(List<Vector2> outline, float r)
         {
-            points.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
-            var hull = new List<Vector2>();
-            for (int pass = 0; pass < 2; pass++)
+            int n = outline.Count;
+            var grown = new List<Vector2>(n + 2);
+            for (int i = 0; i < n; i++)
             {
-                int start = hull.Count;
-                for (int k = 0; k < points.Count; k++)
+                var p = outline[i];
+                var into = (p - outline[(i + n - 1) % n]).normalized;
+                var away = (outline[(i + 1) % n] - p).normalized;
+                float turn = into.y * away.y + into.x * away.x;
+                if (turn >= SharpCorner)
                 {
-                    var p = points[pass == 0 ? k : points.Count - 1 - k];
-                    while (hull.Count >= start + 2 && Cross(hull[hull.Count - 2], hull[hull.Count - 1], p) <= 1e-9f)
-                        hull.RemoveAt(hull.Count - 1);
-                    hull.Add(p);
+                    // The edges' outward normals (on the left of a clockwise outline) averaged and
+                    // divided by its squared length reach where the moved edges meet.
+                    var mid = new Vector2((-away.y - into.y) * 0.5f, (away.x + into.x) * 0.5f);
+                    float len2 = mid.y * mid.y + mid.x * mid.x;
+                    if (len2 > 0f) mid *= 1f / len2;
+                    grown.Add(new Vector2(mid.x * r + p.x, mid.y * r + p.y));
                 }
-                hull.RemoveAt(hull.Count - 1);
-            }
-            return hull.ToArray();
-        }
-
-        /// <summary>The convex outline grown by <paramref name="r"/>: each edge moved out, the
-        /// corners where the moved edges meet (sharp, as measured).</summary>
-        internal static Vector2[] Grow(Vector2[] outline, float r)
-        {
-            int n = outline.Length;
-            if (n == 0 || r <= 0f) return outline;
-            if (n == 1) return new[] { outline[0] + new Vector2(-r, -r), outline[0] + new Vector2(r, -r), outline[0] + new Vector2(r, r), outline[0] + new Vector2(-r, r) };
-            if (n == 2)
-            {
-                // No thickness seen from above (a box with a zero side): the rectangle around the
-                // segment, counterclockwise.
-                var d = (outline[1] - outline[0]).normalized * r;
-                var side = new Vector2(-d.y, d.x);
-                return new[] { outline[0] - d - side, outline[1] + d - side, outline[1] + d + side, outline[0] - d + side };
-            }
-            var normals = new Vector2[n];
-            for (int i = 0; i < n; i++)
-            {
-                var e = outline[(i + 1) % n] - outline[i];
-                normals[i] = new Vector2(e.y, -e.x).normalized;
-            }
-            var grown = new Vector2[n];
-            for (int i = 0; i < n; i++)
-            {
-                var a = normals[(i + n - 1) % n];
-                var b = normals[i];
-                var bisector = a + b;
-                float d = Vector2.Dot(bisector, b);
-                grown[i] = outline[i] + (d > 1e-6f ? bisector * (r / d) : b * r);
+                else
+                {
+                    // Each edge's corner moved out, pushed on along the incoming edge by a part of the
+                    // radius growing with how far the corner turns back.
+                    float push = Mathf.Abs(turn) * 0.75f + 0.25f;
+                    float x = into.x * push * r + p.x, z = p.y + push * into.y * r;
+                    grown.Add(new Vector2(x - into.y * r, into.x * r + z));
+                    grown.Add(new Vector2(-away.y * r + x, away.x * r + z));
+                }
             }
             return grown;
         }
+
+        /// <summary>The cosine of the sharpest corner grown to one point (about 90.1 degrees).</summary>
+        const float SharpCorner = -0.0017454200f;
 
         // ------------------------------------------------------------------ tiles
 
         /// <summary>The footprint's hole: its outline grown by the agent radius, with its bounds.</summary>
         static Hole HoleOf(Footprint f, float radius)
         {
-            var outline = Grow(f.Outline, radius);
+            // Points within a tenth of the agent radius of the line past them are dropped first.
+            var simple = ConvexHull(new List<Vector2>(f.Outline)).points;
+            SimplifyHull(simple, radius * OutlineSimplify);
+            var outline = Grow(simple, radius).ToArray();
             var hole = new Hole { Outline = outline, Bottom = f.Bottom, Top = f.Top, MinX = float.MaxValue, MinZ = float.MaxValue, MaxX = float.MinValue, MaxZ = float.MinValue };
             foreach (var p in outline)
             {
@@ -146,6 +142,8 @@ namespace Unbound.Runtime
             foreach (var f in footprints)
             {
                 var hole = HoleOf(f, settings.agentRadius);
+                // An outline of fewer than three points (an obstacle of no size) cuts nothing.
+                if (hole.Outline.Length < 3) continue;
                 if (hole.MaxX <= h.bmin.X || hole.MinX >= h.bmax.X || hole.MaxZ <= h.bmin.Z || hole.MinZ >= h.bmax.Z) continue;
                 holes.Add(hole);
             }
@@ -346,8 +344,22 @@ namespace Unbound.Runtime
                     minY = Mathf.Min(minY, tile.verts[vi + 1]); maxY = Mathf.Max(maxY, tile.verts[vi + 1]);
                     minZ = Mathf.Min(minZ, tile.verts[vi + 2]); maxZ = Mathf.Max(maxZ, tile.verts[vi + 2]);
                 }
+                if (tile.detailMeshes != null && pi < tile.detailMeshes.Length)
+                {
+                    var pd = tile.detailMeshes[pi];
+                    for (int k = 0; k < pd.vertCount; k++)
+                    {
+                        float y = tile.detailVerts[(pd.vertBase + k) * 3 + 1];
+                        minY = Mathf.Min(minY, y);
+                        maxY = Mathf.Max(maxY, y);
+                    }
+                }
                 if (hole.MaxX < minX || hole.MinX > maxX || hole.MaxZ < minZ || hole.MinZ > maxZ) continue;
-                if (hole.Top < minY - settings.agentClimb || hole.Bottom > maxY + settings.agentHeight) continue;
+                // The obstacle reaches the polygon's surface (its detail heights) from the agent
+                // height under its bottom to its top (matches the Unity 6000.0.71f1 Editor,
+                // tests/projects/navpath carve.rules: a top 0.3 m under the floor does not carve,
+                // a bottom 1.9 m over it does, 2.1 m does not, for a 2 m agent).
+                if (hole.Top + eps < minY || hole.Bottom - settings.agentHeight - eps > maxY) continue;
                 reached[pi] = 1;
                 any = true;
             }
@@ -418,12 +430,16 @@ namespace Unbound.Runtime
             return hulls;
         }
 
+        /// <summary>An obstacle's outline drops points within this part of the agent radius of the
+        /// line past them before it is grown (Unity's).</summary>
+        const float OutlineSimplify = 0.1f;
+
         /// <summary>A hull reaching within 1 cm of the tile's side keeps its points nearly in line.</summary>
         const float HullTileSideSq = 1e-4f;
 
         static float Sq(float x) => x * x;
 
-        /// <summary>The convex polygon (x, z) cut to the convex counterclockwise outline, in place
+        /// <summary>The convex polygon (x, z) cut to the convex clockwise outline, in place
         /// (empty when they do not meet).</summary>
         static void ClipToConvex(List<Vector2> poly, Vector2[] outline, List<Vector2> scratch)
         {
@@ -437,8 +453,8 @@ namespace Unbound.Runtime
                     var p = poly[k];
                     var q = poly[(k + 1) % poly.Count];
                     float dp = Cross(a, b, p), dq = Cross(a, b, q);
-                    if (dp >= 0f) scratch.Add(p);
-                    if ((dp >= 0f) != (dq >= 0f)) scratch.Add(p + (q - p) * (dp / (dp - dq)));
+                    if (dp <= 0f) scratch.Add(p);
+                    if ((dp <= 0f) != (dq <= 0f)) scratch.Add(p + (q - p) * (dp / (dp - dq)));
                 }
                 poly.Clear();
                 poly.AddRange(scratch);
@@ -447,7 +463,7 @@ namespace Unbound.Runtime
 
         /// <summary>The convex hull of the points, clockwise seen from above (x right, z up), from
         /// the point of least x (then z); points in line are left out. Also its bounds.</summary>
-        static (List<Vector2> points, Vector2 min, Vector2 max) ConvexHull(List<Vector2> points)
+        internal static (List<Vector2> points, Vector2 min, Vector2 max) ConvexHull(List<Vector2> points)
         {
             points.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
             var hull = new List<Vector2>(points.Count + 1);

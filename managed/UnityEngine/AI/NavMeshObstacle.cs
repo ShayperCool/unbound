@@ -272,10 +272,15 @@ namespace Unbound.Runtime
             if (!s_Registered)
             {
                 s_Registered = true;
-                // Before the agents' transform sync at the same node (whichever registers first),
-                // which places the agents on the cut NavMesh: an agent placed again by a cut stands
-                // there from this frame's Update (Unbound's order; unmeasured).
-                PlayerLoopDriver.RegisterFirst(typeof(UnityEngine.PlayerLoop.PreUpdate.AIUpdate), UpdateCarving);
+                // The holes decided are cut before the agents' transform sync at the same node
+                // (whichever registers first), which places the agents on the cut NavMesh: an agent
+                // placed again by a cut stands there from this frame's Update (Unbound's order;
+                // unmeasured). The obstacles' holes are decided after the scripts' Update
+                // (PreLateUpdate's AIUpdatePostScript), so a change made in Update or a coroutine
+                // is cut at the next frame (measured: tests/projects/navpath carve.rules) and one
+                // made in LateUpdate the frame after (tests/projects/navmesh).
+                PlayerLoopDriver.RegisterFirst(typeof(UnityEngine.PlayerLoop.PreUpdate.AIUpdate), ApplyCarving);
+                PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PreLateUpdate.AIUpdatePostScript), DecideCarving);
             }
             if (!s_Obstacles.Contains(obstacle)) s_Obstacles.Add(obstacle);
         }
@@ -286,17 +291,51 @@ namespace Unbound.Runtime
 
         // ------------------------------------------------------------------ carving
 
-        /// <summary>A carving obstacle's hole: where it was when last counted as moving, when that
-        /// was, the hole in the NavMesh and the one decided for the next update.</summary>
+        /// <summary>A carving obstacle's hole: its transform when last counted as moving, whether
+        /// it is moving (stationary-only carving) and how long it has stood still since, the hole
+        /// in the NavMesh and the one decided for the next update.</summary>
         sealed class Carve
         {
-            internal NavMeshCarving.Footprint Reference;
-            internal float MovedAt;
+            internal Vector3 Position;
+            internal Quaternion Rotation;
+            internal Vector3 Scale;
+            /// <summary>The squared length of the obstacle's extents in the world then.</summary>
+            internal float ExtentSq;
+            internal bool Moving;
+            internal float Still;
             internal NavMeshCarving.Footprint Applied;
             internal bool Pending;
             internal NavMeshCarving.Footprint Next;
             /// <summary>The hole as it will be once the pending change is taken in.</summary>
             internal NavMeshCarving.Footprint Target => Pending ? Next : Applied;
+
+            internal void Snapshot(NavMeshObstacle obstacle)
+            {
+                var t = obstacle.transform;
+                Position = t.position;
+                Rotation = t.rotation;
+                Scale = t.lossyScale;
+                ExtentSq = WorldExtents(obstacle, Scale).sqrMagnitude;
+            }
+
+            /// <summary>Moved since the snapshot by more than <paramref name="threshold"/>: its
+            /// position (in 3D), its turn (the angle in radians times the length of its scale and
+            /// of its extents) or its scale (the change times the length of its extents).
+            /// Matches the Unity 6000.0.71f1 Editor, tests/projects/navpath carve.rules (a 5.7
+            /// degree turn and an 8 % scale of a 1 m box count as moving at threshold 0.1).</summary>
+            internal bool HasMoved(Transform t, float threshold)
+            {
+                float sq = threshold * threshold;
+                if ((t.position - Position).sqrMagnitude > sq) return true;
+                var rotation = t.rotation;
+                if (rotation != Rotation)
+                {
+                    float dot = Mathf.Min(Mathf.Abs(Quaternion.Dot(Rotation, rotation)), 1f);
+                    float angle = Mathf.Acos(dot) * 2f;
+                    if (sq < angle * angle * Scale.sqrMagnitude * ExtentSq) return true;
+                }
+                return sq < (t.lossyScale - Scale).sqrMagnitude * ExtentSq;
+            }
 
             internal void Schedule(NavMeshCarving.Footprint hole)
             {
@@ -308,6 +347,12 @@ namespace Unbound.Runtime
         static readonly Dictionary<NavMeshObstacle, Carve> s_Carves = new Dictionary<NavMeshObstacle, Carve>(ReferenceEqualityComparer.Instance);
         static readonly List<NavMeshCarving.Footprint> s_Holes = new List<NavMeshCarving.Footprint>();
         static readonly List<NavMeshObstacle> s_Gone = new List<NavMeshObstacle>();
+        static readonly Comparison<NavMeshCarving.Footprint> s_HoleOrder = (a, b) =>
+            a.Center.x != b.Center.x ? a.Center.x.CompareTo(b.Center.x)
+            : a.Center.z != b.Center.z ? a.Center.z.CompareTo(b.Center.z)
+            : a.Center.y != b.Center.y ? a.Center.y.CompareTo(b.Center.y)
+            : b.ExtentSq.CompareTo(a.ExtentSq);
+
         /// <summary>The holes added or removed by this carving update (reused).</summary>
         static readonly List<NavMeshCarving.Footprint> s_Changed = new List<NavMeshCarving.Footprint>();
 
@@ -328,8 +373,8 @@ namespace Unbound.Runtime
         /// <summary>The obstacle's hole is in the NavMesh.</summary>
         internal static bool IsCarved(NavMeshObstacle obstacle) => s_Carves.TryGetValue(obstacle, out var c) && c.Applied != null;
 
-        /// <summary>The frame's carving update (PreUpdate's AIUpdate): the holes decided by the last
-        /// update take effect, then each carving obstacle's hole is decided for the next one.</summary>
+        /// <summary>Both halves of the carving update in a row (tests): the holes decided before
+        /// are cut, then each carving obstacle's hole is decided for the next cut.</summary>
         // Documented (AI Navigation 2.0 Manual, NavMesh Obstacle; Scripting API 6000.0
         // NavMeshObstacle): with carveOnlyStationary (the default) the hole is removed when the
         // obstacle moves (more than carvingMoveThreshold) and comes back once it has stood still for
@@ -341,10 +386,17 @@ namespace Unbound.Runtime
         // a move of 0.05 m (threshold 0.1) leaves the hole; after a move of 1.25 m in frame 180 the
         // hole is gone from frame 182 and back at the new place from frame 208 (0.5 s: carved once
         // more than that has passed); turning carving off removes the hole in the same two frames.
-        // Unbound's choices (unmeasured): "moved" compares the obstacle's outline with where it
-        // was last counted as moving (a turn or a change of size counts by how far its corners
-        // move); the time is Time.time.
+        // "Moved" compares the obstacle's transform with where it was last counted as moving
+        // (Carve.HasMoved; measured: tests/projects/navpath carve.rules); the time standing still
+        // adds up the frames' Time.deltaTime.
         internal static void UpdateCarving()
+        {
+            ApplyCarving();
+            DecideCarving();
+        }
+
+        /// <summary>The holes decided by the last carving decision are cut (PreUpdate's AIUpdate).</summary>
+        internal static void ApplyCarving()
         {
             if (s_Carves.Count == 0 && s_Obstacles.Count == 0) return;
             s_Changed.Clear();
@@ -370,47 +422,99 @@ namespace Unbound.Runtime
                 s_Holes.Clear();
                 foreach (var c in s_Carves.Values)
                     if (c.Applied != null) s_Holes.Add(c.Applied);
+                // Cut in order of their centres' x, then z, then y, the larger first at the same
+                // place (Unity's order: holes overlapping in one polygon split it accordingly).
+                s_Holes.Sort(s_HoleOrder);
                 // Cut now, only the tiles the changed holes reach, so the agents replan in this
                 // frame's update (measured).
                 NavWorld.HolesChanged(s_Changed);
             }
+        }
 
-            float now = Time.time;
+        /// <summary>Each carving obstacle's hole is decided for the next cut (PreLateUpdate's
+        /// AIUpdatePostScript).</summary>
+        internal static void DecideCarving()
+        {
+            if (s_Carves.Count == 0 && s_Obstacles.Count == 0) return;
+            float dt = Time.deltaTime;
             foreach (var obstacle in s_Obstacles)
             {
                 if (!Carving(obstacle)) continue;
-                var footprint = FootprintOf(obstacle);
                 if (!s_Carves.TryGetValue(obstacle, out var c))
                 {
-                    c = new Carve { Reference = footprint, MovedAt = float.NegativeInfinity };
+                    c = new Carve();
+                    c.Snapshot(obstacle);
                     s_Carves[obstacle] = c;
-                    c.Schedule(footprint);
+                    c.Schedule(FootprintOf(obstacle));
                     continue;
                 }
-                bool moved = Moved(c.Reference, footprint, obstacle.carvingMoveThreshold);
-                if (moved)
-                {
-                    c.Reference = footprint;
-                    c.MovedAt = now;
-                }
+                var t = obstacle.transform;
+                float threshold = Mathf.Max(obstacle.carvingMoveThreshold, MinMoveThreshold);
                 if (obstacle.carveOnlyStationary)
                 {
-                    if (moved) { if (c.Target != null) c.Schedule(null); }
-                    else if (c.Target == null && now - c.MovedAt > obstacle.carvingTimeToStationary) c.Schedule(footprint);
+                    if (!c.Moving)
+                    {
+                        if (c.HasMoved(t, threshold))
+                        {
+                            c.Moving = true;
+                            c.Still = 0f;
+                            c.Snapshot(obstacle);
+                            if (c.Target != null) c.Schedule(null);
+                        }
+                        else if (c.Target == null) c.Schedule(FootprintOf(obstacle));
+                    }
+                    // Moving: still once it has moved less than a tenth of the threshold per update for
+                    // more than carvingTimeToStationary.
+                    else if (c.HasMoved(t, Mathf.Max(threshold * StillFraction, MinMoveThreshold)))
+                    {
+                        c.Still = 0f;
+                        c.Snapshot(obstacle);
+                    }
+                    else
+                    {
+                        c.Still += dt;
+                        if (c.Still > obstacle.carvingTimeToStationary)
+                        {
+                            c.Moving = false;
+                            c.Schedule(FootprintOf(obstacle));
+                        }
+                    }
                 }
-                else if (moved || c.Target == null) c.Schedule(footprint);
+                else if (c.HasMoved(t, threshold))
+                {
+                    c.Snapshot(obstacle);
+                    c.Schedule(FootprintOf(obstacle));
+                }
+                else if (c.Target == null) c.Schedule(FootprintOf(obstacle));
             }
             foreach (var pair in s_Carves)
                 if (!Carving(pair.Key) && pair.Value.Target != null) pair.Value.Schedule(null);
         }
 
-        static bool Moved(NavMeshCarving.Footprint a, NavMeshCarving.Footprint b, float threshold)
+        /// <summary>A capsule's hole: eight directions, at its radius over cos(pi / 8), and the cap ring
+        /// at cos(pi / 4) of that.</summary>
+        const int CapsuleDirections = 8;
+        const float CapsuleOctagon = 1.0823922f;
+        const float CapsuleCap = 0.70710677f;
+
+        /// <summary>The smallest move threshold (moves below it never count).</summary>
+        const float MinMoveThreshold = 1e-5f;
+
+        /// <summary>While a stationary-only obstacle is moving, it stands still once it moves less
+        /// than this part of its threshold.</summary>
+        const float StillFraction = 0.1f;
+
+        /// <summary>The obstacle's extents in the world for <paramref name="scale"/>: a box's half
+        /// size, a capsule's radius across (the larger of x and z scale) and half its height.</summary>
+        static Vector3 WorldExtents(NavMeshObstacle obstacle, Vector3 scale)
         {
-            if (a.Outline.Length != b.Outline.Length) return true;
-            if (Mathf.Abs(a.Bottom - b.Bottom) > threshold || Mathf.Abs(a.Top - b.Top) > threshold) return true;
-            for (int i = 0; i < a.Outline.Length; i++)
-                if ((a.Outline[i] - b.Outline[i]).sqrMagnitude > threshold * threshold) return true;
-            return false;
+            scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
+            if (obstacle.shape == NavMeshObstacleShape.Capsule)
+            {
+                float r = obstacle.radius * Mathf.Max(scale.x, scale.z);
+                return new Vector3(r, obstacle.height * 0.5f * scale.y, r);
+            }
+            return Vector3.Scale(obstacle.size * 0.5f, scale);
         }
 
         /// <summary>The obstacle's outline on the ground and its height span, where it stands now.</summary>
@@ -421,19 +525,42 @@ namespace Unbound.Runtime
             float bottom, top;
             if (obstacle.shape == NavMeshObstacleShape.Capsule)
             {
+                // Eight directions round its axis at the radius over cos 22.5 degrees (the octagon
+                // round its circle), at both ends of its straight part, a ring at 45 degrees up its
+                // caps and the caps' tips; the hole is their outline seen from above (matches the
+                // Unity 6000.0.71f1 Editor, tests/projects/navpath carve.rules capsules).
                 var center = t.TransformPoint(obstacle.center);
-                var scale = t.lossyScale;
-                float radius = obstacle.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
-                float half = obstacle.height * Mathf.Abs(scale.y) * 0.5f;
-                // Around the circle: its sides touch it.
-                float r = radius / Mathf.Cos(Mathf.PI / NavMeshCarving.CapsuleSides);
-                for (int i = 0; i < NavMeshCarving.CapsuleSides; i++)
+                var extents = WorldExtents(obstacle, t.lossyScale);
+                float radius = Mathf.Max(extents.x, extents.z);
+                float straight = Mathf.Max(extents.y - radius, 0f);
+                // The rotation's matrix columns in float.
+                var axes = Matrix4x4.Rotate(t.rotation);
+                Vector3 right = axes.GetColumn(0), up = axes.GetColumn(1), forward = axes.GetColumn(2);
+                float ring = radius * CapsuleOctagon;
+                float cap = CapsuleCap * radius * CapsuleOctagon;
+                bottom = float.MaxValue;
+                top = float.MinValue;
+                void Add(Vector3 p)
                 {
-                    float a = (i + 0.5f) * 2f * Mathf.PI / NavMeshCarving.CapsuleSides;
-                    points.Add(new Vector2(center.x + Mathf.Cos(a) * r, center.z + Mathf.Sin(a) * r));
+                    points.Add(new Vector2(p.x, p.z));
+                    bottom = Mathf.Min(bottom, p.y);
+                    top = Mathf.Max(top, p.y);
                 }
-                bottom = center.y - half;
-                top = center.y + half;
+                for (int i = 0; i < CapsuleDirections; i++)
+                {
+                    // Summed in this order, the points round as the Editor's (ties such as the turned
+                    // octagon's sides decide how the polygons round it are split; carve.rules).
+                    float a = i * 2f * MathF.PI / CapsuleDirections;
+                    Vector3 across = right * MathF.Cos(a), along = forward * MathF.Sin(a);
+                    var atRing = along * ring + across * ring + center;
+                    var atCap = along * cap + across * cap + center;
+                    Add(atRing - up * straight);
+                    Add(atRing + up * straight);
+                    Add(atCap - up * (cap + straight));
+                    Add(atCap + up * (cap + straight));
+                }
+                Add(center - up * (ring + straight));
+                Add(center + up * (ring + straight));
             }
             else
             {
@@ -449,7 +576,11 @@ namespace Unbound.Runtime
                     top = Mathf.Max(top, corner.y);
                 }
             }
-            return new NavMeshCarving.Footprint { Outline = NavMeshCarving.Hull(points), Bottom = bottom, Top = top };
+            return new NavMeshCarving.Footprint
+            {
+                Outline = points.ToArray(), Bottom = bottom, Top = top,
+                Center = t.TransformPoint(obstacle.center), ExtentSq = WorldExtents(obstacle, t.lossyScale).sqrMagnitude,
+            };
         }
 
         // ------------------------------------------------------------------ avoidance
