@@ -123,6 +123,26 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>Negating a curve (mirrored muscles, realigned quaternion keys) keeps which key a
+        /// stepped segment holds.</summary>
+        [Fact]
+        public void NegatedKeysKeepTheirSteps()
+        {
+            float inf = float.PositiveInfinity;
+            foreach (var keys in new[]
+            {
+                new[] { new Keyframe(0f, 1f, 0f, inf), new Keyframe(1f, 3f, 0f, 0f) },
+                new[] { new Keyframe(0f, 1f, 0f, 0f), new Keyframe(1f, 3f, -inf, 0f) },
+                new[] { new Keyframe(0f, 1f, 2f, 2f), new Keyframe(1f, 3f, 2f, 2f) },
+            })
+            {
+                var curve = new AnimationCurve(keys);
+                var negated = new AnimationCurve(System.Array.ConvertAll(keys, k => AnimationCurve.Negated(k)));
+                foreach (float time in new[] { 0f, 0.3f, 0.7f, 1f })
+                    Assert.Equal(-curve.Evaluate(time), negated.Evaluate(time), 5);
+            }
+        }
+
         [Fact]
         public void CoincidentKeysAndSingleKeysStayFinite()
         {

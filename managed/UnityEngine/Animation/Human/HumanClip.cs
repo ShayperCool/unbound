@@ -243,12 +243,7 @@ namespace UnityEngine
                 float sign = j < 0 ? -1f : 1f;
                 if (j < 0) j = ~j;
                 var keys = c.Curve.keys;
-                for (int n = 0; n < keys.Length; n++)
-                {
-                    keys[n].value *= sign;
-                    keys[n].inTangent *= sign;
-                    keys[n].outTangent *= sign;
-                }
+                for (int n = 0; n < keys.Length; n++) keys[n] = AnimationCurve.Negated(keys[n], sign);
                 var b = c.Binding;
                 m_Curves[k] = new ClipCurve
                 {

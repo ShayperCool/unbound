@@ -437,6 +437,17 @@ namespace UnityEngine
             return float.IsNegativeInfinity(k0.outTangent) || float.IsNegativeInfinity(k1.inTangent);
         }
 
+        /// <summary>The key of the negated curve: its value and finite tangents negated, infinite
+        /// tangents kept, so that a stepped segment still holds the same key
+        /// (<see cref="Stepped"/>).</summary>
+        internal static Keyframe Negated(Keyframe key, float sign = -1f)
+        {
+            key.value *= sign;
+            if (float.IsFinite(key.inTangent)) key.inTangent *= sign;
+            if (float.IsFinite(key.outTangent)) key.outTangent *= sign;
+            return key;
+        }
+
         internal static float EvaluateSegment(Keyframe k0, Keyframe k1, float time)
         {
             float dx = k1.time - k0.time;

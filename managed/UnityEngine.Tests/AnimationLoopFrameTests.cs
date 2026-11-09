@@ -273,6 +273,25 @@ namespace UnityEngine.Tests
             Near.Equal(stepped.Evaluate(6f / rate), StateValue(animation, "steps", state.length));
         }
 
+        /// <summary>A window ending inside a segment stepped by a −∞ tangent keeps that step: the
+        /// window holds the segment's second key as the source curve does.</summary>
+        [Theory]
+        [InlineData(24f)]
+        [InlineData(30f)]
+        public void AWindowCuttingANegativeInfinityStepHoldsTheSecondKey(float rate)
+        {
+            var stepped = new AnimationCurve(
+                new Keyframe(0f, 0f, 0f, 0f),
+                new Keyframe(0.1f, 1f, 0f, float.NegativeInfinity),
+                new Keyframe(0.9f, 3f, 0f, 0f));
+            var animation = NewAnimation(out _);
+            animation.AddClip(Source(stepped, rate), "steps", 6, 12, true);
+            Assert.True(animation.Play("steps"));
+            foreach (float local in new[] { 0f, 2f / rate, 5f / rate })
+                Near.Equal(stepped.Evaluate(6f / rate + local), StateValue(animation, "steps", local));
+            Near.Equal(3f, StateValue(animation, "steps", 0f));
+        }
+
         [Theory]
         [InlineData(24f)]
         [InlineData(30f)]

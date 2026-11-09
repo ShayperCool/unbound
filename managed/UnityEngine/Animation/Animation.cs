@@ -381,8 +381,11 @@ namespace UnityEngine
                 var k0 = keys[below - 1];
                 var k1 = keys[below];
                 stepped = AnimationCurve.Stepped(k0, k1, out float held);
+                // The split keeps the segment's step: held at k0's value by a +∞ tangent, at k1's by
+                // a −∞ one.
                 if (stepped)
-                    split = new Keyframe(end, held, float.PositiveInfinity, 0f);
+                    split = new Keyframe(end, held,
+                        float.IsPositiveInfinity(k0.outTangent) || float.IsPositiveInfinity(k1.inTangent) ? float.PositiveInfinity : float.NegativeInfinity, 0f);
                 else if ((k0.weightedMode & WeightedMode.Out) != 0 || (k1.weightedMode & WeightedMode.In) != 0)
                     return "the window's end cuts a weighted segment, which is not split yet";
                 else

@@ -505,14 +505,7 @@ namespace UnityEngine
                 float dot = 0f;
                 for (int k = 0; k < 4; k++) dot += keys[k][i - 1].value * keys[k][i].value;
                 if (!(dot < 0f)) continue;
-                for (int k = 0; k < 4; k++)
-                {
-                    var key = keys[k][i];
-                    key.value = -key.value;
-                    key.inTangent = -key.inTangent;
-                    key.outTangent = -key.outTangent;
-                    keys[k][i] = key;
-                }
+                for (int k = 0; k < 4; k++) keys[k][i] = AnimationCurve.Negated(keys[k][i]);
                 flipped = true;
             }
             if (!flipped) return null;
