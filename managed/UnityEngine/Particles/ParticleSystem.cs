@@ -1149,6 +1149,13 @@ namespace UnityEngine
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
             float rest = span % duration;
             if (rest > 0f) StartClockAt(duration - rest);
+            if (PrewarmsProcedurally)
+            {
+                ProceduralPrewarm(span, duration);
+                m_Loop = 0;
+                m_TotalTime = 0f;
+                return;
+            }
             bool simulatingBirths = m_SimulatingBirths;
             m_Prewarming = true;
             m_SimulatingBirths = Compat.ParticleBirthStepsMeasured;

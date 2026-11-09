@@ -122,7 +122,7 @@ namespace UnityEngine.Tests
         public void APrewarmWithoutSubEmittersSimulatesOneLifetimeEndingOnALoopEnd()
         {
             // 2.5 s from 0.5 s into the loop: the loop starts pass at 0.5 and 1.5 s (World space:
-            // a procedural system's prewarm is not modelled).
+            // the stepped prewarm; a procedural system's is below).
             var ps = Parent(p => { var m = p.main; m.startLifetime = 2.5f; m.simulationSpace = ParticleSystemSimulationSpace.World; });
             ps.Play();
             Assert.True(AtLoopEnd(ps.time, 1f), $"time {ps.time}");
@@ -130,6 +130,80 @@ namespace UnityEngine.Tests
             Assert.Equal(2, ages.Length);
             Assert.Equal(1f, ages[0], 1);
             Assert.Equal(2f, ages[1], 1);
+        }
+
+        [Fact]
+        public void AProceduralPrewarmDatesBurstsAtTheirStepAndLeavesTheEndBirthToTheNextUpdate()
+        {
+            // Local space without sub-emitters: procedural mode. 2.5 s ending on a loop's end;
+            // bursts at the loop's start, at 0.13 s (dated at its 0.02 s step's start, 0.12 s)
+            // and at 0.5 s (6000.0.71f1, tests/projects/particlerender prewarm/proc_bursts).
+            var ps = Parent(p =>
+            {
+                var m = p.main; m.startLifetime = 2.5f;
+                var e = p.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 1), new ParticleSystem.Burst(0.13f, 2), new ParticleSystem.Burst(0.5f, 1) });
+            });
+            ps.Play();
+            Assert.Equal(1f, ps.time, 3);
+            var expected = new[] { 0.5f, 0.88f, 0.88f, 1f, 1.5f, 1.88f, 1.88f, 2f, 2.5f };
+            var ages = Ages(ps);
+            Assert.Equal(expected.Length, ages.Length);
+            for (int i = 0; i < ages.Length; i++) Assert.Equal(expected[i], ages[i], 3);
+            // Positions follow the whole age at 1 unit/s.
+            foreach (var p in Particles(ps)) Assert.Equal(p.startLifetime - p.remainingLifetime, p.position.z - kFar.z, 3);
+        }
+
+        [Fact]
+        public void AProceduralPrewarmDrawsEachLifetimeBeforeItsSeedAndKeepsSpentParticlesUntilTheNextUpdate()
+        {
+            // Seed 777: the stepped emission's first two seeds would end in 50073 and 15648; the
+            // procedural ones are the next draws, ending in 18040 and 27507 (6000.0.71f1,
+            // prewarm/nosub_life2.5). With lifetimes of 1 to 2 s, a particle older than its own
+            // lifetime stays listed with none left and goes with the next update (proc_random).
+            var ps = Parent(p => { var m = p.main; m.startLifetime = 2.5f; });
+            ps.Play();
+            Assert.Equal(new uint[] { 18040, 27507 }, Particles(ps).Select(p => p.randomSeed & 0xffff).OrderBy(x => x).ToArray());
+
+            var random = Parent(p =>
+            {
+                var m = p.main; m.startLifetime = new ParticleSystem.MinMaxCurve(1f, 2f);
+                var e = p.emission; e.rateOverTime = 6f; e.SetBursts(new ParticleSystem.Burst[0]);
+            });
+            random.Play();
+            var spent = Particles(random).Where(p => p.remainingLifetime <= 0f).ToArray();
+            Assert.NotEmpty(spent);
+            foreach (var p in spent) Assert.True(p.position.z - kFar.z > p.startLifetime + 1e-3f);
+            int before = random.particleCount;
+            Frame();
+            // Spent particles go; at most one rate birth (6/s over 0.05 s) comes.
+            Assert.True(random.particleCount <= before - spent.Length + 1, $"{random.particleCount} of {before}, {spent.Length} spent");
+            Assert.All(Particles(random), p => Assert.True(p.remainingLifetime > 0f));
+        }
+
+        [Fact]
+        public void AProceduralPrewarmMovesUnderGravityOverTheWholeAgeAndASteppedOneDoesNot()
+        {
+            // Rate 4, start speed 2 along z, gravity × 0.5: a particle aged 0.25 s is at
+            // y = -½ × 4.905 × 0.25² = -0.1533 (6000.0.71f1, prewarm/proc_gravity); a World-space
+            // (stepped) prewarm of the same system lands lower.
+            void Configure(ParticleSystem p)
+            {
+                var m = p.main; m.startLifetime = 1.5f; m.startSpeed = 2f; m.gravityModifier = 0.5f;
+                var e = p.emission; e.rateOverTime = 4f; e.SetBursts(new ParticleSystem.Burst[0]);
+            }
+            var local = Parent(Configure);
+            var world = Parent(p => { Configure(p); var m = p.main; m.simulationSpace = ParticleSystemSimulationSpace.World; });
+            local.Play();
+            world.Play();
+            float g = 0.5f * -Physics.gravity.y;
+            foreach (var p in Particles(local))
+            {
+                float age = p.startLifetime - p.remainingLifetime;
+                Assert.Equal(-0.5f * g * age * age, p.position.y, 3);
+            }
+            var stepped = Particles(world).OrderBy(p => p.startLifetime - p.remainingLifetime).First(p => p.startLifetime - p.remainingLifetime > 0.2f);
+            float a = stepped.startLifetime - stepped.remainingLifetime;
+            Assert.True(Mathf.Abs(stepped.position.y + 0.5f * g * a * a) > 1e-2f);
         }
 
         [Theory]

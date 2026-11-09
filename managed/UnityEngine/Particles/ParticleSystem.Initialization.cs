@@ -132,8 +132,18 @@ namespace UnityEngine
                     }
                     else
                     {
-                        s.seed = CursorWord(0, lane);
-                        s.lifetime = CursorValue(0, lane);
+                        // A procedural prewarm draws the lifetime first (6000.0.71f1,
+                        // tests/projects/particlerender prewarm/proc_random).
+                        if (m_ProceduralPrewarm)
+                        {
+                            s.lifetime = CursorValue(0, lane);
+                            s.seed = CursorWord(0, lane);
+                        }
+                        else
+                        {
+                            s.seed = CursorWord(0, lane);
+                            s.lifetime = CursorValue(0, lane);
+                        }
                         SampleCursorSize(ref s, 0, lane);
                         s.rotationZ = CursorValue(0, lane);
                         if (m_Main.startRotation3D)

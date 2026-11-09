@@ -755,6 +755,12 @@ namespace UnityEngine
                     context.BirthSubs = false;
                     context.TemporaryLane = true;
                 }
+                if (m_ProceduralPrewarm)
+                {
+                    // Aged, not moved, until the prewarm ends; a burst dates from its step's start.
+                    m_Particles[index].m_AgePercent = request.rate || j >= count ? age : m_LastStepDt;
+                    continue;
+                }
                 m_IntegrateSlot = m_RingSlot = index;
                 if (!Integrate(ref m_Particles[index], age, ref context)) marks[index] |= SlotMark.Dead;
             }
@@ -1107,7 +1113,8 @@ namespace UnityEngine
                 var trailBirthPosition = m_Particles[index].m_Position;
                 if (simulate) BeginModuleSample(si, m_Particles[index].m_RandomSeed);
                 m_RingSlot = index;
-                bool alive = !simulate || Integrate(ref m_Particles[index], preAge, ref m_Context);
+                if (m_ProceduralPrewarm) m_Particles[index].m_AgePercent = preAge;
+                bool alive = !simulate || m_ProceduralPrewarm || Integrate(ref m_Particles[index], preAge, ref m_Context);
                 m_RingSlot = -1;
                 if (!alive)
                     RemoveNewborn(index, ref firstDiscarded);
@@ -1663,6 +1670,11 @@ namespace UnityEngine
         void UpdateParticles(float dt)
         {
             if (m_Count == 0) return;
+            if (m_ProceduralPrewarm)
+            {
+                AgeProcedurally(dt);
+                return;
+            }
             bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
             int count = m_Count;
             var marks = SlotMarks(count);
@@ -1779,27 +1791,7 @@ namespace UnityEngine
             // sub-emitter inherits the parent's rotation at the end of the step (6000.0.71f1,
             // particlerender inherit/collision/rotation, inherit/trigger/rotation); it depends only
             // on the age and the velocity the particle moved with.
-            uint seed = p.m_RandomSeed;
-            var RO = m_Rotation;
-            var RS = m_RotationBySpeed;
-            if (RO.enabled || RS.enabled)
-            {
-                // The rotation modules set the angular velocity (GetParticles reports it).
-                var w = Vector3.zero;
-                if (RO.enabled)
-                {
-                    float r = ModuleValue(seed, 1793934638u);
-                    w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
-                }
-                if (RS.enabled)
-                {
-                    float s = Mathf.InverseLerp(RS.range.x, RS.range.y, moving.magnitude);
-                    float r = ModuleValue(seed, 3737431713u);
-                    w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
-                }
-                if ((p.m_Flags & Particle.FlagFlipRotation) != 0) w = -w;
-                p.m_AngularVelocity = w;
-            }
+            if (m_Rotation.enabled || m_RotationBySpeed.enabled) p.m_AngularVelocity = AngularVelocity(in p, age, moving);
             p.m_Rotation += p.m_AngularVelocity * dt;
             if (events && !existing) eventSize = CurrentSize3D(ref p);
             bool deferred = false;
@@ -1829,6 +1821,28 @@ namespace UnityEngine
             // tests/projects/particlerender birthstart/deathtie05 and deathin05, subcull/*).
             if (c.BirthSubs && (p.m_AgePercent < 100f || c.BirthsInFinalStep)) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt, before);
             return true;
+        }
+
+        /// <summary>The angular velocity the rotation modules give a particle at normalized age
+        /// <paramref name="age"/> moving with <paramref name="moving"/> (GetParticles reports it).</summary>
+        Vector3 AngularVelocity(in Particle p, float age, Vector3 moving)
+        {
+            uint seed = p.m_RandomSeed;
+            var RO = m_Rotation;
+            var RS = m_RotationBySpeed;
+            var w = Vector3.zero;
+            if (RO.enabled)
+            {
+                float r = ModuleValue(seed, 1793934638u);
+                w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
+            }
+            if (RS.enabled)
+            {
+                float s = Mathf.InverseLerp(RS.range.x, RS.range.y, moving.magnitude);
+                float r = ModuleValue(seed, 3737431713u);
+                w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
+            }
+            return (p.m_Flags & Particle.FlagFlipRotation) != 0 ? -w : w;
         }
 
         /// <summary>The velocity modules and one step's movement: sets the particle's velocity,
