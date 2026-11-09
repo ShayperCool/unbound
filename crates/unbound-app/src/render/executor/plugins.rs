@@ -172,7 +172,7 @@ impl UnityRenderer {
     /// OpenGL can import the first time (its texels copied), and again after its storage changed.
     fn share(&mut self, handle: u64) -> Result<(GlTexture, Option<GlTexture>), String> {
         let uuid = self.interop_device()?;
-        gl_interop::on_render_thread(uuid, |_| ())?;
+        gl_interop::with(uuid, |_| ())?;
         let gpu = self
             .textures
             .get(&handle)
@@ -270,7 +270,7 @@ impl UnityRenderer {
         self.install_texture(handle, replacement, previous, &packet);
         self.refresh_target(handle);
         let mut memories = exported.into_iter();
-        let imported = gl_interop::on_render_thread(uuid, |interop| -> Result<_, String> {
+        let imported = gl_interop::with(uuid, |interop| -> Result<_, String> {
             let wrap = [sampler.wrap_u, sampler.wrap_v];
             let memory = memories.next().ok_or("the color memory was not exported")?;
             let color = interop.import(
@@ -382,6 +382,8 @@ impl UnityRenderer {
 
     /// A texture's storage changed to `texture`: what plugins saw of the old one goes.
     pub(super) fn plugin_texture_replaced(&mut self, handle: u64, texture: &wgpu::Texture) {
+        // A refusal was of the old storage (and must not keep it alive).
+        self.plugins.refused.remove(&handle);
         if self
             .plugins
             .shared
@@ -402,7 +404,7 @@ impl UnityRenderer {
             delete_shared(uuid, shared);
         }
         if let Some(external) = self.plugins.externals.remove(&handle) {
-            let _ = gl_interop::on_render_thread(uuid, |interop| interop.delete(external.mirror));
+            let _ = gl_interop::with(uuid, |interop| interop.delete(external.mirror));
         }
     }
 
@@ -428,7 +430,7 @@ impl UnityRenderer {
         srgb: bool,
     ) -> Result<(), String> {
         let uuid = self.interop_device()?;
-        gl_interop::on_render_thread(uuid, |_| ())?;
+        gl_interop::with(uuid, |_| ())?;
         let name =
             u32::try_from(native).map_err(|_| format!("{native} is not an OpenGL texture name"))?;
         // What plugins saw of the texture goes; while it showed another's storage it stays an
@@ -520,7 +522,7 @@ impl UnityRenderer {
             self.d24s8(),
         )
         .ok_or("the mirror's format has no OpenGL counterpart")?;
-        let mirror = gl_interop::on_render_thread(uuid, |interop| -> Result<GlTexture, String> {
+        let mirror = gl_interop::with(uuid, |interop| -> Result<GlTexture, String> {
             if !interop.is_texture(name) {
                 return Err(format!(
                     "{name} is not an OpenGL texture of the plugins' context"
@@ -578,7 +580,7 @@ impl UnityRenderer {
         }
         let device = self.interop_device();
         let uuid = device.as_ref().ok().copied().flatten();
-        let context = device.and_then(|uuid| gl_interop::on_render_thread(uuid, |_| ()));
+        let context = device.and_then(|uuid| gl_interop::with(uuid, |_| ()));
         if let (Err(reason), false) = (&context, matches!(call, PluginCall::TextureUpdate { .. })) {
             let reason = reason.clone();
             self.warn_once("plugin-context".into(), || {
@@ -593,7 +595,7 @@ impl UnityRenderer {
         }
         if context.is_ok() {
             self.bind_plugin_target(uuid);
-            let _ = gl_interop::on_render_thread(uuid, |interop| interop.clear_errors());
+            let _ = gl_interop::with(uuid, |interop| interop.clear_errors());
         }
         match *call {
             PluginCall::Event { callback, id } => {
@@ -649,7 +651,7 @@ impl UnityRenderer {
             .values()
             .map(|e| (e.source, e.mirror.name, e.width, e.height))
             .collect();
-        let errors = gl_interop::on_render_thread(uuid, |interop| {
+        let errors = gl_interop::with(uuid, |interop| {
             interop.finish();
             let errors = interop.clear_errors();
             for &(source, mirror, width, height) in &externals {
@@ -709,7 +711,7 @@ impl UnityRenderer {
         };
         let v = clamp_viewport(self.state.viewport, width, height);
         let viewport = [v[0] as i32, v[1] as i32, v[2] as i32, v[3] as i32];
-        let _ = gl_interop::on_render_thread(uuid, |interop| match bound {
+        let _ = gl_interop::with(uuid, |interop| match bound {
             Some((color, depth)) => interop.bind_target(
                 Some((color, mip.max(0) as u32)),
                 depth.map(|d| (d, true)),
@@ -863,7 +865,7 @@ fn plugin_texture_id(handle: u64) -> u32 {
 
 /// Deletes a shared texture's OpenGL textures.
 fn delete_shared(uuid: Option<[u8; 16]>, shared: Shared) {
-    let _ = gl_interop::on_render_thread(uuid, |interop| {
+    let _ = gl_interop::with(uuid, |interop| {
         interop.delete(shared.color);
         if let Some(depth) = shared.depth {
             interop.delete(depth);

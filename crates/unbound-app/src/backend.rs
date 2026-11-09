@@ -138,6 +138,8 @@ impl RenderBackend for GpuBackend {
     }
 
     fn submit_commands(&self, commands: Vec<Command>) {
+        // The thread that submits drives the renderer: the plugins' context stays current on it.
+        crate::render::gl_interop::mark_render_thread();
         // Plugin callbacks among the commands may log; scripts see that once the renderer is free.
         unbound_runtime::plugin_api::while_rendering(|| {
             let mut inner = self.inner.lock().unwrap();
@@ -236,7 +238,7 @@ impl RenderBackend for GpuBackend {
             work();
         };
         let _ = match device {
-            Some(Ok(uuid)) => gl_interop::on_render_thread(uuid, &mut run),
+            Some(Ok(uuid)) => gl_interop::with(uuid, &mut run),
             Some(Err(_)) => Ok(()),
             // Before the GPU is up: the first one that can share textures.
             None => gl_interop::with(None, &mut run),

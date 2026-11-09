@@ -67,18 +67,16 @@ pub use linux::Interop;
 static INTEROP: std::sync::Mutex<Option<Result<Interop, String>>> = std::sync::Mutex::new(None);
 
 thread_local! {
-    /// This thread runs the renderer (the game's): the context stays current on it, so that a
-    /// plugin's OpenGL calls from scripts outside callbacks find it too, as in the Editor.
+    /// This thread runs the renderer (the game's, marked by [`mark_render_thread`]): the context
+    /// stays current on it, so that a plugin's OpenGL calls from scripts outside callbacks find
+    /// it too, as in the Editor.
     static RENDER_THREAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-/// [`with`] on the renderer's thread, which keeps the context current afterwards.
-pub fn on_render_thread<R>(
-    device_uuid: Option<[u8; 16]>,
-    work: impl FnOnce(&mut Interop) -> R,
-) -> Result<R, String> {
+/// Marks this thread as the renderer's (the game's: it submits the rendering commands): the
+/// context stays current on it after [`with`].
+pub fn mark_render_thread() {
     RENDER_THREAD.with(|render| render.set(true));
-    with(device_uuid, work)
 }
 
 /// Runs `work` with the plugins' context current on this thread; on another thread than the
@@ -594,6 +592,19 @@ mod linux {
             unsafe {
                 (gl.CreateMemoryObjectsEXT)(1, &mut memory);
                 (gl.MemoryObjectParameterivEXT)(memory, GL_DEDICATED_MEMORY_OBJECT_EXT, &1);
+                let prepared = self.clear_errors();
+                if !prepared.is_empty() {
+                    // The descriptor is still ours: it closes with `fd`.
+                    (gl.DeleteMemoryObjectsEXT)(1, &memory);
+                    return Err(format!(
+                        "OpenGL cannot make a memory object: {}",
+                        prepared
+                            .iter()
+                            .map(|e| super::error_text(*e))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ));
+                }
                 let raw = fd.into_raw_fd();
                 (gl.ImportMemoryFdEXT)(memory, size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, raw);
                 // OpenGL owns the descriptor only once the import succeeded.
@@ -788,5 +799,28 @@ mod linux {
                 (self.egl.DestroyContext)(self.display, self.context);
             }
         }
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    #[test]
+    fn the_context_stays_only_with_the_render_thread() {
+        // Needs a GPU with EGL; without one there is no context to hand around.
+        if super::with(None, |_| ()).is_err() {
+            return;
+        }
+        // Unmarked threads (this one, a worker that loads a plugin) release it after use...
+        let worker = std::thread::spawn(|| super::with(None, |_| ()).is_ok());
+        assert!(worker.join().unwrap());
+        // ...so the render thread can take it, and keeps it.
+        let render = std::thread::spawn(|| {
+            super::mark_render_thread();
+            let current = super::with(None, |interop| interop.make_current()).unwrap();
+            // A worker cannot take it from the render thread now: it fails cleanly.
+            let worker = std::thread::spawn(|| super::with(None, |_| ()).is_err());
+            (current, worker.join().unwrap())
+        });
+        assert_eq!(render.join().unwrap(), (true, true));
     }
 }
