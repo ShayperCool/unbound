@@ -1,0 +1,892 @@
+{"k":"GenericSwing/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"GenericSwing/./localPosition","v":[0,0,0]}
+{"k":"GenericSwing/./localScale","v":[1,1,1]}
+{"k":"GenericSwing/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericSwing/./worldPosition","v":[0,0,0]}
+{"k":"GenericSwing/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericSwing/Column/localPosition","v":[0,0,0]}
+{"k":"GenericSwing/Column/localScale","v":[1,1,1]}
+{"k":"GenericSwing/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericSwing/Column/worldPosition","v":[0,0,0]}
+{"k":"GenericSwing/Column/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericSwing/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"GenericSwing/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"GenericSwing/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"GenericSwing/Column/rootBone","v":"Rig/Hips"}
+{"k":"GenericSwing/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"GenericSwing/Column/bindposes","v":[[0.98480767,0.173648149,0,0,-0.173648149,0.9848076,0,0,0,0,1,0,0.00173648144,-0.009848076,0,1],[0.98480767,-0.173648149,0,0,0.173648149,0.9848076,0,0,0,0,1,0,-0.008576884,-0.0286419243,0,1],[0.9848076,-0.167731225,0.0449434519,0,0.173648149,0.9512512,-0.254886985,0,-3.522455E-09,0.258819044,0.965925753,0,-0.008576884,-0.0469844937,0.0125894584,1]]}
+{"k":"GenericSwing/Column/updateWhenOffscreen","v":false}
+{"k":"GenericSwing/Column/localBounds","v":[[-0.00281644636,0.0107819019,0],[0.0104617737,0.0216718651,0.006]]}
+{"k":"GenericSwing/Column/bakedVertices","v":[[-0.005999999,1.11013654E-09,0.006],[-0.005999999,1.11013654E-09,-0.006],[0.005999999,7.525086E-10,-0.006],[0.005999999,7.525086E-10,0.006],[-0.00499999942,0.02,0.005],[-0.00499999942,0.02,-0.005],[0.00499999942,0.02,-0.005],[0.00499999942,0.02,0.005],[-0.00300000049,0.0399999954,0.003000001],[-0.00300000049,0.0399999954,-0.00299999863],[0.00299999863,0.0399999954,-0.00299999863],[0.00299999863,0.0399999954,0.003000001]]}
+{"k":"GenericSwing/Rig/localPosition","v":[0,0,0]}
+{"k":"GenericSwing/Rig/localScale","v":[1,1,1]}
+{"k":"GenericSwing/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericSwing/Rig/worldPosition","v":[0,0,0]}
+{"k":"GenericSwing/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericSwing/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"GenericSwing/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"GenericSwing/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"GenericSwing/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"GenericSwing/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"GenericSwing/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"GenericSwing/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"GenericSwing/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"GenericSwing/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"GenericSwing/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"GenericSwing/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"GenericSwing/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"GenericSwing/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"GenericSwing/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"GenericSwing/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"GenericZeroRoot/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"GenericZeroRoot/./localPosition","v":[0,0,0]}
+{"k":"GenericZeroRoot/./localScale","v":[1,1,1]}
+{"k":"GenericZeroRoot/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericZeroRoot/./worldPosition","v":[0,0,0]}
+{"k":"GenericZeroRoot/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericZeroRoot/Column/localPosition","v":[0,0,0]}
+{"k":"GenericZeroRoot/Column/localScale","v":[1,1,1]}
+{"k":"GenericZeroRoot/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericZeroRoot/Column/worldPosition","v":[0,0,0]}
+{"k":"GenericZeroRoot/Column/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericZeroRoot/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"GenericZeroRoot/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"GenericZeroRoot/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"GenericZeroRoot/Column/rootBone","v":"Rig/Hips"}
+{"k":"GenericZeroRoot/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"GenericZeroRoot/Column/bindposes","v":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]}
+{"k":"GenericZeroRoot/Column/updateWhenOffscreen","v":false}
+{"k":"GenericZeroRoot/Column/localBounds","v":[[0,0,0],[0,0,0]]}
+{"k":"GenericZeroRoot/Column/bakedVertices","v":[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]}
+{"k":"GenericZeroRoot/Rig/localPosition","v":[0,0,0]}
+{"k":"GenericZeroRoot/Rig/localScale","v":[1,1,1]}
+{"k":"GenericZeroRoot/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericZeroRoot/Rig/worldPosition","v":[0,0,0]}
+{"k":"GenericZeroRoot/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"GenericZeroRoot/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"GenericZeroRoot/Rig/Hips/localScale","v":[0,0,0]}
+{"k":"GenericZeroRoot/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"GenericZeroRoot/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"GenericZeroRoot/Rig/Hips/worldBasis","v":[[0,0,0],[0,0,0],[0,0,0]]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/worldPosition","v":[0,0.01,0]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/worldBasis","v":[[0,0,0],[0,0,0],[0,0,0]]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/Head/worldPosition","v":[0,0.01,0]}
+{"k":"GenericZeroRoot/Rig/Hips/Spine/Head/worldBasis","v":[[0,0,0],[0,0,0],[0,0,0]]}
+{"k":"LegacyRootOnly/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"LegacyRootOnly/./localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/./localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/./worldPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Column/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Column/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Column/worldPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Column/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"LegacyRootOnly/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"LegacyRootOnly/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"LegacyRootOnly/Column/rootBone","v":"Rig/Hips"}
+{"k":"LegacyRootOnly/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"LegacyRootOnly/Column/bindposes","v":[[0.98480767,0.173648149,0,0,-0.173648149,0.9848076,0,0,0,0,1,0,0.00173648144,-0.009848076,0,1],[0.98480767,-0.173648149,0,0,0.173648149,0.9848076,0,0,0,0,1,0,-0.008576884,-0.0286419243,0,1],[0.9848076,-0.167731225,0.0449434519,0,0.173648149,0.9512512,-0.254886985,0,-3.522455E-09,0.258819044,0.965925753,0,-0.008576884,-0.0469844937,0.0125894584,1]]}
+{"k":"LegacyRootOnly/Column/updateWhenOffscreen","v":false}
+{"k":"LegacyRootOnly/Column/localBounds","v":[[-0.00281644543,0.010781901,0],[0.0104617747,0.021671867,0.00600000145]]}
+{"k":"LegacyRootOnly/Column/bakedVertices","v":[[-0.005999999,1.11013654E-09,0.006],[-0.005999999,1.11013654E-09,-0.006],[0.005999999,7.525086E-10,-0.006],[0.005999999,7.525086E-10,0.006],[-0.00499999942,0.02,0.005],[-0.00499999942,0.02,-0.005],[0.00499999942,0.02,-0.005],[0.00499999942,0.02,0.005],[-0.00300000049,0.0399999954,0.003000001],[-0.00300000049,0.0399999954,-0.00299999863],[0.00299999863,0.0399999954,-0.00299999863],[0.00299999863,0.0399999954,0.003000001]]}
+{"k":"LegacyRootOnly/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Rig/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Rig/worldPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"LegacyRootOnly/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"LegacyRootOnly/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"LegacyRootOnly/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"LegacyRootOnly/Take 001@0.25/./localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.25/./localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.25/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.25/Column/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.25/Column/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.25/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/localPosition","v":[-0.00199999986,0.0112499995,0.00075]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/localBasis","v":[[1,-4.07070244E-09,-6.90030078E-09],[5.207084E-09,0.9848077,0.173648164],[6.0886E-09,-0.173648164,0.9848077]]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.25/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"LegacyRootOnly/Take 001@0.5/./localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.5/./localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.5/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.5/Column/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.5/Column/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.5/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/localPosition","v":[-0.004,0.0124999993,0.0015]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/localBasis","v":[[0.9848077,0.173648179,-1.86264515E-09],[-0.163175911,0.9254166,0.342020124],[0.05939117,-0.3368241,0.9396926]]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.5/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"LegacyRootOnly/Take 001@0.55/./localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.55/./localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.55/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.55/Column/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.55/Column/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.55/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/localPosition","v":[-0.0044,0.0127499988,0.00165]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/localBasis","v":[[0.9781476,0.2079117,-7.450581E-09],[-0.192772359,0.906922638,0.3746066],[0.0778851,-0.366420567,0.927183867]]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.55/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"LegacyRootOnly/Take 001@0.95/./localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.95/./localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.95/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.95/Column/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.95/Column/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.95/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/localPosition","v":[-0.00759999966,0.0147499992,0.00285]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/localBasis","v":[[0.882947564,0.469471574,-1.49011612E-08],[-0.369948626,0.695772231,0.615661442],[0.289035559,-0.5435968,0.7880108]]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@0.95/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"LegacyRootOnly/Take 001@1/./localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@1/./localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@1/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@1/Column/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@1/Column/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@1/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/localPosition","v":[-0.008,0.015,0.003]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/localBasis","v":[[0.8660254,0.50000006,0],[-0.383022249,0.663413942,0.6427877],[0.321393847,-0.5566704,0.766044438]]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacyRootOnly/Take 001@1/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"LegacySwing/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"LegacySwing/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing/./localScale","v":[1,1,1]}
+{"k":"LegacySwing/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/./worldPosition","v":[0,0,0]}
+{"k":"LegacySwing/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Column/worldPosition","v":[0,0,0]}
+{"k":"LegacySwing/Column/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"LegacySwing/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"LegacySwing/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"LegacySwing/Column/rootBone","v":"Rig/Hips"}
+{"k":"LegacySwing/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"LegacySwing/Column/bindposes","v":[[0.98480767,0.173648149,0,0,-0.173648149,0.9848076,0,0,0,0,1,0,0.00173648144,-0.009848076,0,1],[0.98480767,-0.173648149,0,0,0.173648149,0.9848076,0,0,0,0,1,0,-0.008576884,-0.0286419243,0,1],[0.9848076,-0.167731225,0.0449434519,0,0.173648149,0.9512512,-0.254886985,0,-3.522455E-09,0.258819044,0.965925753,0,-0.008576884,-0.0469844937,0.0125894584,1]]}
+{"k":"LegacySwing/Column/updateWhenOffscreen","v":false}
+{"k":"LegacySwing/Column/localBounds","v":[[0.00200390816,0.0121245813,-0.0010269708],[0.015282128,0.0230145473,0.007026971]]}
+{"k":"LegacySwing/Column/bakedVertices","v":[[-0.005999999,1.11013654E-09,0.006],[-0.005999999,1.11013654E-09,-0.006],[0.005999999,7.525086E-10,-0.006],[0.005999999,7.525086E-10,0.006],[-0.00499999942,0.02,0.005],[-0.00499999942,0.02,-0.005],[0.00499999942,0.02,-0.005],[0.00499999942,0.02,0.005],[-0.00300000049,0.0399999954,0.003000001],[-0.00300000049,0.0399999954,-0.00299999863],[0.00299999863,0.0399999954,-0.00299999863],[0.00299999863,0.0399999954,0.003000001]]}
+{"k":"LegacySwing/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Rig/worldPosition","v":[0,0,0]}
+{"k":"LegacySwing/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"LegacySwing/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"LegacySwing/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"LegacySwing/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"LegacySwing/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"LegacySwing/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"LegacySwing/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"LegacySwing/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"LegacySwing/Take 001@0.25/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.25/./localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.25/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.25/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.25/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.25/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.25/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.25/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.25/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/localPosition","v":[-0.00199999986,0.01,0.00075]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/Spine/localBasis","v":[[0.999048233,-0.04361938,0],[0.04361938,0.999048233,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.25/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.8064446,0.591309667],[0,-0.591309667,0.8064446]]}
+{"k":"LegacySwing/Take 001@0.5/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.5/./localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.5/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.5/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.5/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.5/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.5/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.5/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.5/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/localPosition","v":[-0.004,0.01,0.0015]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/Spine/localBasis","v":[[0.906307757,-0.42261827,0],[0.42261827,0.906307757,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.5/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.537299633,0.8433914],[0,-0.8433914,0.537299633]]}
+{"k":"LegacySwing/Take 001@0.55/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.55/./localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.55/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.55/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.55/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.55/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.55/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.55/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.55/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/localPosition","v":[-0.0044,0.01,0.00165]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/Spine/localBasis","v":[[0.870355666,-0.492423654,0],[0.492423654,0.870355666,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.55/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.4733197,0.880890667],[0,-0.880890667,0.4733197]]}
+{"k":"LegacySwing/Take 001@0.95/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.95/./localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.95/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.95/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.95/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.95/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.95/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@0.95/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.95/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/localPosition","v":[-0.00759999966,0.01,0.00285]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/Spine/localBasis","v":[[0.4146933,-0.9099612,0],[0.9099612,0.4146933,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@0.95/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,-0.100188017,0.994968534],[0,-0.994968534,-0.100188017]]}
+{"k":"LegacySwing/Take 001@1/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@1/./localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@1/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@1/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@1/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@1/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@1/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing/Take 001@1/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@1/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/localPosition","v":[-0.008,0.01,0.003]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/Spine/localBasis","v":[[0.3420201,-0.9396927,0],[0.9396927,0.3420201,0],[0,0,1]]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing/Take 001@1/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,-0.173648119,0.9848078],[0,-0.9848078,-0.173648119]]}
+{"k":"LegacySwing60/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"LegacySwing60/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/./localScale","v":[1,1,1]}
+{"k":"LegacySwing60/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/./worldPosition","v":[0,0,0]}
+{"k":"LegacySwing60/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Column/worldPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Column/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"LegacySwing60/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"LegacySwing60/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"LegacySwing60/Column/rootBone","v":"Rig/Hips"}
+{"k":"LegacySwing60/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"LegacySwing60/Column/bindposes","v":[[0.98480767,0.173648149,0,0,-0.173648149,0.9848076,0,0,0,0,1,0,0.00173648144,-0.009848076,0,1],[0.98480767,-0.173648149,0,0,0.173648149,0.9848076,0,0,0,0,1,0,-0.008576884,-0.0286419243,0,1],[0.9848076,-0.167731225,0.0449434519,0,0.173648149,0.9512512,-0.254886985,0,-3.522455E-09,0.258819044,0.965925753,0,-0.008576884,-0.0469844937,0.0125894584,1]]}
+{"k":"LegacySwing60/Column/updateWhenOffscreen","v":false}
+{"k":"LegacySwing60/Column/localBounds","v":[[0.00230979174,0.0121245813,-0.00102701271],[0.0155880116,0.0230145473,0.00702701276]]}
+{"k":"LegacySwing60/Column/bakedVertices","v":[[-0.005999999,1.11013654E-09,0.006],[-0.005999999,1.11013654E-09,-0.006],[0.005999999,7.525086E-10,-0.006],[0.005999999,7.525086E-10,0.006],[-0.00499999942,0.02,0.005],[-0.00499999942,0.02,-0.005],[0.00499999942,0.02,-0.005],[0.00499999942,0.02,0.005],[-0.00300000049,0.0399999954,0.003000001],[-0.00300000049,0.0399999954,-0.00299999863],[0.00299999863,0.0399999954,-0.00299999863],[0.00299999863,0.0399999954,0.003000001]]}
+{"k":"LegacySwing60/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Rig/worldPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"LegacySwing60/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing60/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"LegacySwing60/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing60/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"LegacySwing60/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"LegacySwing60/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"LegacySwing60/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"LegacySwing60/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"LegacySwing60/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"LegacySwing60/Take 001@0.25/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.25/./localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.25/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.25/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.25/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.25/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/localPosition","v":[-0.002,0.01,0.00075]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/Spine/localBasis","v":[[0.999048233,-0.04361939,0],[0.04361939,0.999048233,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.25/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.8064446,0.591309667],[0,-0.591309667,0.8064446]]}
+{"k":"LegacySwing60/Take 001@0.5/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.5/./localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.5/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.5/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.5/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.5/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/localPosition","v":[-0.004,0.01,0.0015]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/Spine/localBasis","v":[[0.906307757,-0.42261827,0],[0.42261827,0.906307757,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.5/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.537299633,0.8433914],[0,-0.8433914,0.537299633]]}
+{"k":"LegacySwing60/Take 001@0.55/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.55/./localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.55/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.55/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.55/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.55/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/localPosition","v":[-0.0044,0.01,0.00165]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/Spine/localBasis","v":[[0.8703557,-0.4924236,0],[0.4924236,0.8703557,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.55/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.4733197,0.880890667],[0,-0.880890667,0.4733197]]}
+{"k":"LegacySwing60/Take 001@0.95/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.95/./localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.95/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.95/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.95/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.95/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/localPosition","v":[-0.00759999966,0.01,0.00285]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/Spine/localBasis","v":[[0.4146933,-0.9099612,0],[0.9099612,0.4146933,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@0.95/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,-0.100188017,0.994968653],[0,-0.994968653,-0.100188017]]}
+{"k":"LegacySwing60/Take 001@1/./localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@1/./localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@1/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@1/Column/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@1/Column/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@1/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@1/Rig/localPosition","v":[0,0,0]}
+{"k":"LegacySwing60/Take 001@1/Rig/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@1/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/localPosition","v":[-0.008,0.01,0.003]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/Spine/localBasis","v":[[0.3420201,-0.9396927,0],[0.9396927,0.3420201,0],[0,0,1]]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"LegacySwing60/Take 001@1/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,-0.173648119,0.9848078],[0,-0.9848078,-0.173648119]]}
+{"k":"MeshChild/nodes","v":[".","Column","Column/Leaf","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshChild/./localPosition","v":[0,0,0]}
+{"k":"MeshChild/./localScale","v":[1,1,1]}
+{"k":"MeshChild/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChild/./worldPosition","v":[0,0,0]}
+{"k":"MeshChild/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChild/Column/localPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshChild/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshChild/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshChild/Column/worldPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshChild/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshChild/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"MeshChild/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshChild/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"MeshChild/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshChild/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshChild/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.0217834488,-0.0162967145,-0.01884483,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.032883957,-0.0266573764,-0.01884483,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.032883957,-0.0499449633,-0.00612689,1]]}
+{"k":"MeshChild/Column/updateWhenOffscreen","v":false}
+{"k":"MeshChild/Column/localBounds","v":[[-0.0147549063,0.0134603949,-0.0144421542],[0.0156809986,0.0316198468,0.009129752]]}
+{"k":"MeshChild/Column/bakedVertices","v":[[-0.0122373244,-0.00965046,0.007674626],[-0.0122373244,-0.00965046,-0.00192537438],[-0.000237326138,-0.00965046,-0.00192537438],[-0.000237326138,-0.00965046,0.007674626],[-0.0112373233,0.0203495361,0.0068746265],[-0.0112373233,0.0203495361,-0.00112537388],[-0.001237324,0.0203495361,-0.00112537388],[-0.001237324,0.0203495361,0.0068746265],[-0.009237325,0.0503495373,0.00527462643],[-0.009237325,0.0503495373,0.000474626431],[-0.003237326,0.0503495373,0.000474626431],[-0.003237326,0.0503495373,0.00527462643]]}
+{"k":"MeshChild/Column/Leaf/localPosition","v":[-0.005,0.01,-0.01]}
+{"k":"MeshChild/Column/Leaf/localScale","v":[1,1,1]}
+{"k":"MeshChild/Column/Leaf/localBasis","v":[[0.951251268,-0.254887,0.173648179],[0.243215427,0.9661673,0.08583165],[-0.189650565,-0.03941355,0.981060266]]}
+{"k":"MeshChild/Column/Leaf/worldPosition","v":[-0.0141709717,0.0218967572,-0.02527374]}
+{"k":"MeshChild/Column/Leaf/worldBasis","v":[[0.75685513,-0.701830268,0.07041706],[0.7126123,1.24677169,0.319281936],[-0.244739443,-0.117914945,0.7626585]]}
+{"k":"MeshChild/Column/Leaf/vertices","v":[[0,0,0],[-0.02,0,0],[0,0.03,0],[0,0,0.04]]}
+{"k":"MeshChild/Column/Leaf/worldVertices","v":[[-0.0141709717,0.0218967572,-0.02527374],[-0.0293080732,0.03593336,-0.0266820788],[0.00720739644,0.05929991,-0.0156952813],[-0.02396055,0.01718016,0.00523259863]]}
+{"k":"MeshChild/Column/Leaf/indices","v":[0,1,2,0,3,1,0,2,3,1,3,2]}
+{"k":"MeshChild/Column/Leaf/meshBounds","v":[[-0.01,0.015,0.02],[0.02,0.03,0.04]]}
+{"k":"MeshChild/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshChild/Rig/localScale","v":[1,1,1]}
+{"k":"MeshChild/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChild/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshChild/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChild/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshChild/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshChild/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshChild/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshChild/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshChild/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshChild/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshChild/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshChild/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshChild/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshChild/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshChild/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshChild/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshChild/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshChild/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"MeshChildMaya/nodes","v":[".","Column","Column/Leaf","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshChildMaya/./localPosition","v":[0,0,0]}
+{"k":"MeshChildMaya/./localScale","v":[1,1,1]}
+{"k":"MeshChildMaya/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChildMaya/./worldPosition","v":[0,0,0]}
+{"k":"MeshChildMaya/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChildMaya/Column/localPosition","v":[-0.0186974052,0.005083896,-0.0189533737]}
+{"k":"MeshChildMaya/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshChildMaya/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshChildMaya/Column/worldPosition","v":[-0.0186974052,0.005083896,-0.0189533737]}
+{"k":"MeshChildMaya/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshChildMaya/Column/vertices","v":[[-0.005,0.004,0.008],[-0.005,0.004,-0.004],[0.00699999975,0.004,-0.004],[0.00699999975,0.004,0.008],[-0.004,0.024,0.00699999975],[-0.004,0.024,-0.003],[0.006,0.024,-0.003],[0.006,0.024,0.00699999975],[-0.002,0.044,0.005],[-0.002,0.044,-0.001],[0.004,0.044,-0.001],[0.004,0.044,0.005]]}
+{"k":"MeshChildMaya/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshChildMaya/Column/meshBounds","v":[[0.0009999999,0.024,0.002],[0.012,0.04,0.012]]}
+{"k":"MeshChildMaya/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshChildMaya/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshChildMaya/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.0254392512,-0.0168561414,-0.017798204,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.036510624,-0.0259327032,-0.017798204,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.03651062,-0.0489741,-0.00530348532,1]]}
+{"k":"MeshChildMaya/Column/updateWhenOffscreen","v":false}
+{"k":"MeshChildMaya/Column/localBounds","v":[[-0.016448088,0.0182727836,-0.0107779466],[0.0156809986,0.0316198468,0.009129753]]}
+{"k":"MeshChildMaya/Column/bakedVertices","v":[[-0.0112373251,-0.00365046086,0.009274627],[-0.0112373251,-0.00365046086,-0.000325373141],[0.0007626731,-0.00365046086,-0.000325373141],[0.0007626731,-0.00365046086,0.009274627],[-0.010237325,0.0263495389,0.00847462751],[-0.010237325,0.0263495389,0.00047462713],[-0.000237326138,0.0263495389,0.00047462713],[-0.000237326138,0.0263495389,0.00847462751],[-0.008237324,0.056349542,0.00687462743],[-0.008237324,0.056349542,0.00207462721],[-0.00223732414,0.056349542,0.00207462721],[-0.00223732414,0.056349542,0.00687462743]]}
+{"k":"MeshChildMaya/Column/Leaf/localPosition","v":[-0.009,0.0139999995,0.002]}
+{"k":"MeshChildMaya/Column/Leaf/localScale","v":[1,1,1]}
+{"k":"MeshChildMaya/Column/Leaf/localBasis","v":[[0.951251268,-0.254887,0.173648179],[0.243215427,0.9661673,0.08583165],[-0.189650565,-0.03941355,0.981060266]]}
+{"k":"MeshChildMaya/Column/Leaf/worldPosition","v":[-0.0201763585,0.0273347441,-0.01373107]}
+{"k":"MeshChildMaya/Column/Leaf/worldBasis","v":[[0.75685513,-0.701830268,0.07041706],[0.7126123,1.24677169,0.319281936],[-0.244739443,-0.117914945,0.7626585]]}
+{"k":"MeshChildMaya/Column/Leaf/vertices","v":[[0.005,0,-0.01],[-0.015,0,-0.01],[0.005,0.03,-0.01],[0.005,0,0.03]]}
+{"k":"MeshChildMaya/Column/Leaf/worldVertices","v":[[-0.0139446892,0.02500474,-0.021005569],[-0.02908179,0.0390413478,-0.02241391],[0.007433675,0.06240789,-0.011427111],[-0.0237342659,0.0202881452,0.00950077]]}
+{"k":"MeshChildMaya/Column/Leaf/indices","v":[0,1,2,0,3,1,0,2,3,1,3,2]}
+{"k":"MeshChildMaya/Column/Leaf/meshBounds","v":[[-0.005,0.015,0.01],[0.02,0.03,0.04]]}
+{"k":"MeshChildMaya/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshChildMaya/Rig/localScale","v":[1,1,1]}
+{"k":"MeshChildMaya/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChildMaya/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshChildMaya/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChildMaya/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshChildMaya/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshChildMaya/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshChildMaya/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshChildMaya/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshChildMaya/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"MeshChildPlain/nodes","v":[".","Column","Column/Leaf","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshChildPlain/./localPosition","v":[0,0,0]}
+{"k":"MeshChildPlain/./localScale","v":[1,1,1]}
+{"k":"MeshChildPlain/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChildPlain/./worldPosition","v":[0,0,0]}
+{"k":"MeshChildPlain/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChildPlain/Column/localPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshChildPlain/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshChildPlain/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshChildPlain/Column/worldPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshChildPlain/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshChildPlain/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"MeshChildPlain/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshChildPlain/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"MeshChildPlain/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshChildPlain/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshChildPlain/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.013903874,-0.007528761,-0.02,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.02248076,-0.0211131647,-0.02,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.022480756,-0.04488865,-0.008677643,1]]}
+{"k":"MeshChildPlain/Column/updateWhenOffscreen","v":false}
+{"k":"MeshChildPlain/Column/localBounds","v":[[-0.00687533058,0.022228349,-0.015597323],[0.0156809986,0.0316198468,0.009129753]]}
+{"k":"MeshChildPlain/Column/bakedVertices","v":[[-0.00599999726,1.0207295E-09,0.00479999976],[-0.00599999726,1.0207295E-09,-0.00480000069],[0.006000001,8.419156E-10,-0.00480000069],[0.006000001,8.419156E-10,0.00479999976],[-0.004999996,0.03,0.00399999972],[-0.004999996,0.03,-0.00400000066],[0.00500000268,0.03,-0.00400000066],[0.00500000268,0.03,0.00399999972],[-0.00299999444,0.0600000061,0.00240000058],[-0.00299999444,0.0600000061,-0.00239999918],[0.00300000468,0.0600000061,-0.00239999918],[0.00300000468,0.0600000061,0.00240000058]]}
+{"k":"MeshChildPlain/Column/Leaf/localPosition","v":[-0.005,0.01,-0.01]}
+{"k":"MeshChildPlain/Column/Leaf/localScale","v":[1,1,1]}
+{"k":"MeshChildPlain/Column/Leaf/localBasis","v":[[0.951251268,-0.254887,0.173648179],[0.243215427,0.9661673,0.08583165],[-0.189650565,-0.03941355,0.981060266]]}
+{"k":"MeshChildPlain/Column/Leaf/worldPosition","v":[-0.0141709717,0.0218967572,-0.02527374]}
+{"k":"MeshChildPlain/Column/Leaf/worldBasis","v":[[0.75685513,-0.701830268,0.07041706],[0.7126123,1.24677169,0.319281936],[-0.244739443,-0.117914945,0.7626585]]}
+{"k":"MeshChildPlain/Column/Leaf/vertices","v":[[0,0,0],[-0.02,0,0],[0,0.03,0],[0,0,0.04]]}
+{"k":"MeshChildPlain/Column/Leaf/worldVertices","v":[[-0.0141709717,0.0218967572,-0.02527374],[-0.0293080732,0.03593336,-0.0266820788],[0.00720739644,0.05929991,-0.0156952813],[-0.02396055,0.01718016,0.00523259863]]}
+{"k":"MeshChildPlain/Column/Leaf/indices","v":[0,1,2,0,3,1,0,2,3,1,3,2]}
+{"k":"MeshChildPlain/Column/Leaf/meshBounds","v":[[-0.01,0.015,0.02],[0.02,0.03,0.04]]}
+{"k":"MeshChildPlain/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshChildPlain/Rig/localScale","v":[1,1,1]}
+{"k":"MeshChildPlain/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChildPlain/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshChildPlain/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshChildPlain/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshChildPlain/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshChildPlain/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshChildPlain/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshChildPlain/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshChildPlain/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"MeshMaya/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshMaya/./localPosition","v":[0,0,0]}
+{"k":"MeshMaya/./localScale","v":[1,1,1]}
+{"k":"MeshMaya/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshMaya/./worldPosition","v":[0,0,0]}
+{"k":"MeshMaya/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshMaya/Column/localPosition","v":[-0.0186974052,0.005083896,-0.0189533737]}
+{"k":"MeshMaya/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshMaya/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshMaya/Column/worldPosition","v":[-0.0186974052,0.005083896,-0.0189533737]}
+{"k":"MeshMaya/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshMaya/Column/vertices","v":[[-0.005,0.004,0.008],[-0.005,0.004,-0.004],[0.00699999975,0.004,-0.004],[0.00699999975,0.004,0.008],[-0.004,0.024,0.00699999975],[-0.004,0.024,-0.003],[0.006,0.024,-0.003],[0.006,0.024,0.00699999975],[-0.002,0.044,0.005],[-0.002,0.044,-0.001],[0.004,0.044,-0.001],[0.004,0.044,0.005]]}
+{"k":"MeshMaya/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshMaya/Column/meshBounds","v":[[0.0009999999,0.024,0.002],[0.012,0.04,0.012]]}
+{"k":"MeshMaya/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshMaya/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshMaya/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.0254392512,-0.0168561414,-0.017798204,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.036510624,-0.0259327032,-0.017798204,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.03651062,-0.0489741,-0.00530348532,1]]}
+{"k":"MeshMaya/Column/updateWhenOffscreen","v":false}
+{"k":"MeshMaya/Column/localBounds","v":[[-0.016448088,0.0182727836,-0.0107779466],[0.0156809986,0.0316198468,0.009129753]]}
+{"k":"MeshMaya/Column/bakedVertices","v":[[-0.0112373251,-0.00365046086,0.009274627],[-0.0112373251,-0.00365046086,-0.000325373141],[0.0007626731,-0.00365046086,-0.000325373141],[0.0007626731,-0.00365046086,0.009274627],[-0.010237325,0.0263495389,0.00847462751],[-0.010237325,0.0263495389,0.00047462713],[-0.000237326138,0.0263495389,0.00047462713],[-0.000237326138,0.0263495389,0.00847462751],[-0.008237324,0.056349542,0.00687462743],[-0.008237324,0.056349542,0.00207462721],[-0.00223732414,0.056349542,0.00207462721],[-0.00223732414,0.056349542,0.00687462743]]}
+{"k":"MeshMaya/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshMaya/Rig/localScale","v":[1,1,1]}
+{"k":"MeshMaya/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshMaya/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshMaya/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshMaya/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshMaya/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshMaya/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshMaya/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshMaya/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshMaya/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshMaya/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshMaya/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshMaya/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshMaya/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshMaya/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshMaya/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshMaya/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshMaya/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshMaya/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"MeshRoff/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshRoff/./localPosition","v":[0,0,0]}
+{"k":"MeshRoff/./localScale","v":[1,1,1]}
+{"k":"MeshRoff/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRoff/./worldPosition","v":[0,0,0]}
+{"k":"MeshRoff/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRoff/Column/localPosition","v":[-0.018,0.003,-0.019]}
+{"k":"MeshRoff/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshRoff/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshRoff/Column/worldPosition","v":[-0.018,0.003,-0.019]}
+{"k":"MeshRoff/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshRoff/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"MeshRoff/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshRoff/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"MeshRoff/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshRoff/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshRoff/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.016511,-0.01001932,-0.019,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.025782479,-0.0225618351,-0.019,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.02578248,-0.04602914,-0.007336775,1]]}
+{"k":"MeshRoff/Column/updateWhenOffscreen","v":false}
+{"k":"MeshRoff/Column/localBounds","v":[[-0.009482458,0.0197377875,-0.0145973228],[0.015681,0.0316198431,0.009129753]]}
+{"k":"MeshRoff/Column/bakedVertices","v":[[-0.005999999,1.0207295E-09,0.0047999993],[-0.005999999,1.0207295E-09,-0.004800001],[0.005999999,8.419156E-10,-0.004800001],[0.005999999,8.419156E-10,0.0047999993],[-0.00499999756,0.03,0.00399999926],[-0.00499999756,0.03,-0.004000001],[0.00500000129,0.03,-0.004000001],[0.00500000129,0.03,0.00399999926],[-0.00299999933,0.06,0.00240000035],[-0.00299999933,0.06,-0.00239999942],[0.00299999979,0.06,-0.00239999942],[0.00299999979,0.06,0.00240000035]]}
+{"k":"MeshRoff/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshRoff/Rig/localScale","v":[1,1,1]}
+{"k":"MeshRoff/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRoff/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshRoff/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRoff/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshRoff/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshRoff/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshRoff/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshRoff/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshRoff/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshRoff/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshRoff/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshRoff/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshRoff/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshRoff/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshRoff/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshRoff/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshRoff/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshRoff/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"MeshRp/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshRp/./localPosition","v":[0,0,0]}
+{"k":"MeshRp/./localScale","v":[1,1,1]}
+{"k":"MeshRp/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRp/./worldPosition","v":[0,0,0]}
+{"k":"MeshRp/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRp/Column/localPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshRp/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshRp/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshRp/Column/worldPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshRp/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshRp/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"MeshRp/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshRp/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"MeshRp/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshRp/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshRp/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.0172750764,-0.00868810248,-0.021698501,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.026045166,-0.0210495722,-0.021698501,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.0260451622,-0.04526683,-0.0103347283,1]]}
+{"k":"MeshRp/Column/updateWhenOffscreen","v":false}
+{"k":"MeshRp/Column/localBounds","v":[[-0.0102465264,0.0210690051,-0.0172958244],[0.0156809986,0.0316198468,0.009129753]]}
+{"k":"MeshRp/Column/bakedVertices","v":[[-0.009118667,-0.00199583359,0.003427215],[-0.009118667,-0.00199583359,-0.00617278554],[0.00288133137,-0.00199583359,-0.00617278554],[0.00288133137,-0.00199583359,0.003427215],[-0.008118663,0.0280041657,0.00262721465],[-0.008118663,0.0280041657,-0.005372786],[0.00188133633,0.0280041657,-0.005372786],[0.00188133633,0.0280041657,0.00262721465],[-0.006118657,0.0580041669,0.00102721574],[-0.006118657,0.0580041669,-0.003772784],[-0.000118657714,0.0580041669,-0.003772784],[-0.000118657714,0.0580041669,0.00102721574]]}
+{"k":"MeshRp/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshRp/Rig/localScale","v":[1,1,1]}
+{"k":"MeshRp/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRp/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshRp/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRp/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshRp/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshRp/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshRp/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshRp/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshRp/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshRp/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshRp/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshRp/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshRp/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshRp/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshRp/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshRp/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshRp/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshRp/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"MeshRpSp/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshRpSp/./localPosition","v":[0,0,0]}
+{"k":"MeshRpSp/./localScale","v":[1,1,1]}
+{"k":"MeshRpSp/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRpSp/./worldPosition","v":[0,0,0]}
+{"k":"MeshRpSp/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRpSp/Column/localPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshRpSp/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshRpSp/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshRpSp/Column/worldPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshRpSp/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshRpSp/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"MeshRpSp/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshRpSp/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"MeshRpSp/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshRpSp/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshRpSp/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.0179465152,-0.0124960365,-0.0213648751,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.0279785041,-0.0243982151,-0.0213648751,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.0279785059,-0.04841502,-0.009145778,1]]}
+{"k":"MeshRpSp/Column/updateWhenOffscreen","v":false}
+{"k":"MeshRpSp/Column/localBounds","v":[[-0.0109179672,0.017261073,-0.0169621967],[0.015681,0.0316198431,0.009129754]]}
+{"k":"MeshRpSp/Column/bakedVertices","v":[[-0.009118663,-0.00574583374,0.004427214],[-0.009118663,-0.00574583374,-0.0051727863],[0.002881335,-0.00574583374,-0.0051727863],[0.002881335,-0.00574583374,0.004427214],[-0.008118659,0.0242541656,0.00362721365],[-0.008118659,0.0242541656,-0.00437278673],[0.00188133959,0.0242541656,-0.00437278673],[0.00188133959,0.0242541656,0.00362721365],[-0.006118659,0.0542541631,0.00202721544],[-0.006118659,0.0542541631,-0.00277278433],[-0.000118660042,0.0542541631,-0.00277278433],[-0.000118660042,0.0542541631,0.00202721544]]}
+{"k":"MeshRpSp/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshRpSp/Rig/localScale","v":[1,1,1]}
+{"k":"MeshRpSp/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRpSp/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshRpSp/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshRpSp/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshRpSp/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshRpSp/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshRpSp/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshRpSp/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshRpSp/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshRpSp/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshRpSp/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshRpSp/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshRpSp/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshRpSp/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshRpSp/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshRpSp/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshRpSp/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshRpSp/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"MeshSoff/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshSoff/./localPosition","v":[0,0,0]}
+{"k":"MeshSoff/./localScale","v":[1,1,1]}
+{"k":"MeshSoff/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshSoff/./worldPosition","v":[0,0,0]}
+{"k":"MeshSoff/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshSoff/Column/localPosition","v":[-0.0156974029,0.00308389636,-0.0199533738]}
+{"k":"MeshSoff/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshSoff/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshSoff/Column/worldPosition","v":[-0.0156974029,0.00308389636,-0.0199533738]}
+{"k":"MeshSoff/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshSoff/Column/vertices","v":[[-0.005,0.004,0.008],[-0.005,0.004,-0.004],[0.00699999975,0.004,-0.004],[0.00699999975,0.004,0.008],[-0.004,0.024,0.00699999975],[-0.004,0.024,-0.003],[0.006,0.024,-0.003],[0.006,0.024,0.00699999975],[-0.002,0.044,0.005],[-0.002,0.044,-0.001],[0.004,0.044,-0.001],[0.004,0.044,0.005]]}
+{"k":"MeshSoff/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshSoff/Column/meshBounds","v":[[0.0009999999,0.024,0.002],[0.012,0.04,0.012]]}
+{"k":"MeshSoff/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshSoff/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshSoff/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.0142579554,-0.009536857,-0.0199533738,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.0235002972,-0.0228790566,-0.0199533738,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.0235002935,-0.0465822965,-0.008175561,1]]}
+{"k":"MeshSoff/Column/updateWhenOffscreen","v":false}
+{"k":"MeshSoff/Column/localBounds","v":[[-0.00526678935,0.02559207,-0.0129331155],[0.0156809986,0.0316198468,0.009129754]]}
+{"k":"MeshSoff/Column/bakedVertices","v":[[-0.004999999,0.00600000052,0.0064],[-0.004999999,0.00600000052,-0.00320000062],[0.00699999928,0.00600000052,-0.00320000062],[0.00699999928,0.00600000052,0.0064],[-0.003999998,0.036,0.0056],[-0.003999998,0.036,-0.00240000035],[0.006000001,0.036,-0.00240000035],[0.006000001,0.036,0.0056],[-0.00199999823,0.066,0.00400000066],[-0.00199999823,0.066,-0.00079999934],[0.004000001,0.066,-0.00079999934],[0.004000001,0.066,0.00400000066]]}
+{"k":"MeshSoff/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshSoff/Rig/localScale","v":[1,1,1]}
+{"k":"MeshSoff/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshSoff/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshSoff/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshSoff/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshSoff/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshSoff/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshSoff/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshSoff/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshSoff/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshSoff/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshSoff/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshSoff/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshSoff/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshSoff/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshSoff/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshSoff/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshSoff/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshSoff/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"MeshSp/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshSp/./localPosition","v":[0,0,0]}
+{"k":"MeshSp/./localScale","v":[1,1,1]}
+{"k":"MeshSp/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshSp/./worldPosition","v":[0,0,0]}
+{"k":"MeshSp/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshSp/Column/localPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshSp/Column/localScale","v":[1,1.5,0.8]}
+{"k":"MeshSp/Column/localBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.3368241,0.9254166,0.173648179],[-0.05939117,-0.163175911,0.9848077]]}
+{"k":"MeshSp/Column/worldPosition","v":[-0.015,0.005,-0.02]}
+{"k":"MeshSp/Column/worldBasis","v":[[0.9396926,-0.342020124,1.86264515E-09],[0.505236149,1.38812482,0.260472268],[-0.0475129373,-0.130540729,0.7878462]]}
+{"k":"MeshSp/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"MeshSp/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"MeshSp/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"MeshSp/Column/rootBone","v":"Rig/Hips"}
+{"k":"MeshSp/Column/bones","v":["Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"MeshSp/Column/bindposes","v":[[0.98480767,-0.173648164,0,0,0.2565152,1.45476937,0.260472238,0,-0.0241229534,-0.136808053,0.7878462,0,-0.0145753166,-0.0113366935,-0.0196663719,1],[0.8660254,-0.5,0,0,0.738605857,1.27930272,0.260472238,0,-0.0694592744,-0.120306969,0.7878462,0,-0.0244140979,-0.024461804,-0.0196663719,1],[0.8660253,-0.482962847,0.1294095,0,0.7386058,1.30312669,-0.07951104,0,-0.0694592744,0.08770196,0.792138636,0,-0.024414096,-0.0480368361,-0.007488692,1]]}
+{"k":"MeshSp/Column/updateWhenOffscreen","v":false}
+{"k":"MeshSp/Column/localBounds","v":[[-0.00754677132,0.0184204169,-0.0152636953],[0.0156809986,0.0316198468,0.009129753]]}
+{"k":"MeshSp/Column/bakedVertices","v":[[-0.005999998,-0.00374999829,0.00580000039],[-0.005999998,-0.00374999829,-0.0038],[0.006,-0.00374999829,-0.0038],[0.006,-0.00374999829,0.00580000039],[-0.004999997,0.026250001,0.00500000035],[-0.004999997,0.026250001,-0.003],[0.00500000175,0.026250001,-0.003],[0.00500000175,0.026250001,0.00500000035],[-0.00299999653,0.056250006,0.00340000074],[-0.00299999653,0.056250006,-0.001399999],[0.00300000259,0.056250006,-0.001399999],[0.00300000259,0.056250006,0.00340000074]]}
+{"k":"MeshSp/Rig/localPosition","v":[0,0,0]}
+{"k":"MeshSp/Rig/localScale","v":[1,1,1]}
+{"k":"MeshSp/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshSp/Rig/worldPosition","v":[0,0,0]}
+{"k":"MeshSp/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"MeshSp/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"MeshSp/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"MeshSp/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshSp/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"MeshSp/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"MeshSp/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"MeshSp/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"MeshSp/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"MeshSp/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"MeshSp/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"MeshSp/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"MeshSp/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"MeshSp/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"MeshSp/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"MeshSp/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}
+{"k":"NoneSwing/nodes","v":[".","Column","Rig","Rig/Hips","Rig/Hips/Spine","Rig/Hips/Spine/Head"]}
+{"k":"NoneSwing/./localPosition","v":[0,0,0]}
+{"k":"NoneSwing/./localScale","v":[1,1,1]}
+{"k":"NoneSwing/./localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"NoneSwing/./worldPosition","v":[0,0,0]}
+{"k":"NoneSwing/./worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"NoneSwing/Column/localPosition","v":[0,0,0]}
+{"k":"NoneSwing/Column/localScale","v":[1,1,1]}
+{"k":"NoneSwing/Column/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"NoneSwing/Column/worldPosition","v":[0,0,0]}
+{"k":"NoneSwing/Column/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"NoneSwing/Column/vertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"NoneSwing/Column/worldVertices","v":[[-0.006,0,0.006],[-0.006,0,-0.006],[0.006,0,-0.006],[0.006,0,0.006],[-0.005,0.02,0.005],[-0.005,0.02,-0.005],[0.005,0.02,-0.005],[0.005,0.02,0.005],[-0.003,0.04,0.003],[-0.003,0.04,-0.003],[0.003,0.04,-0.003],[0.003,0.04,0.003]]}
+{"k":"NoneSwing/Column/indices","v":[0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0,4,8,9,4,9,5,5,9,10,5,10,6,6,10,11,6,11,7,7,11,8,7,8,4,0,1,2,0,2,3,8,11,10,8,10,9]}
+{"k":"NoneSwing/Column/meshBounds","v":[[0,0.02,0],[0.012,0.04,0.012]]}
+{"k":"NoneSwing/Rig/localPosition","v":[0,0,0]}
+{"k":"NoneSwing/Rig/localScale","v":[1,1,1]}
+{"k":"NoneSwing/Rig/localBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"NoneSwing/Rig/worldPosition","v":[0,0,0]}
+{"k":"NoneSwing/Rig/worldBasis","v":[[1,0,0],[0,1,0],[0,0,1]]}
+{"k":"NoneSwing/Rig/Hips/localPosition","v":[0,0.01,0]}
+{"k":"NoneSwing/Rig/Hips/localScale","v":[1,1,1]}
+{"k":"NoneSwing/Rig/Hips/localBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"NoneSwing/Rig/Hips/worldPosition","v":[0,0.01,0]}
+{"k":"NoneSwing/Rig/Hips/worldBasis","v":[[0.9848077,-0.173648179,0],[0.173648179,0.9848077,0],[0,0,1]]}
+{"k":"NoneSwing/Rig/Hips/Spine/localPosition","v":[0,0.02,0]}
+{"k":"NoneSwing/Rig/Hips/Spine/localScale","v":[1,1,1]}
+{"k":"NoneSwing/Rig/Hips/Spine/localBasis","v":[[0.9396926,0.342020184,0],[-0.342020184,0.9396926,0],[0,0,1]]}
+{"k":"NoneSwing/Rig/Hips/Spine/worldPosition","v":[0.00347296358,0.0296961535,0]}
+{"k":"NoneSwing/Rig/Hips/Spine/worldBasis","v":[[0.9848078,0.173648223,0],[-0.173648208,0.9848078,0],[0,0,1]]}
+{"k":"NoneSwing/Rig/Hips/Spine/Head/localPosition","v":[0,0.02,0]}
+{"k":"NoneSwing/Rig/Hips/Spine/Head/localScale","v":[1,1,1]}
+{"k":"NoneSwing/Rig/Hips/Spine/Head/localBasis","v":[[1,0,0],[0,0.9659258,0.258819044],[0,-0.258819044,0.9659258]]}
+{"k":"NoneSwing/Rig/Hips/Spine/Head/worldPosition","v":[-9.313226E-10,0.0493923053,0]}
+{"k":"NoneSwing/Rig/Hips/Spine/Head/worldBasis","v":[[0.9848078,0.173648223,0],[-0.1677313,0.951251268,0.258819044],[0.0449434668,-0.254886985,0.9659258]]}

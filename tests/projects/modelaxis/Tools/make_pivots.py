@@ -11,7 +11,9 @@ convention comes from Blender itself (`blender_models.py`, committed binary outp
 
 The Skinned controls bind a three-bone column with mixed weights to measure the imported
 `SkinnedMeshRenderer.localBounds` and `Mesh.bounds`: bind pose equal to or different from the
-file's node pose, a mesh node away from the origin, and a bone with a pivot.
+file's node pose, a mesh node away from the origin, and a bone with a pivot. The Rigged controls
+add clips that bend the column under each animation type, a zero-scale root bone, and pivots,
+offsets and a child on the skinned mesh's node.
 """
 import math
 from pathlib import Path
@@ -164,7 +166,7 @@ def model(mid, name, kind, props):
     return text + ' }\n Shading: T\n Culling: "CullingOff"\n}\n'
 
 
-def document(objects, connections, up=1, unit=1.0, front_sign=1, animated=False):
+def document(objects, connections, up=1, unit=1.0, front_sign=1, animated=False, time_mode=6):
     axes = dict(UpAxis=up, UpAxisSign=1, FrontAxis=2 if up == 1 else 1,
                 FrontAxisSign=front_sign, CoordAxis=0, CoordAxisSign=1)
     header = ('; FBX 7.4.0 project file\nFBXHeaderExtension: {\n FBXHeaderVersion: 1003\n'
@@ -172,8 +174,8 @@ def document(objects, connections, up=1, unit=1.0, front_sign=1, animated=False)
     header += ''.join(f'  P: "{k}", "int", "Integer", "",{v}\n' for k, v in axes.items())
     header += f'  P: "UnitScaleFactor", "double", "Number", "",{unit}\n'
     if animated:
-        # 30 frames per second.
-        header += '  P: "TimeMode", "enum", "", "",6\n'
+        # 6: 30 frames per second, 3: 60.
+        header += f'  P: "TimeMode", "enum", "", "",{time_mode}\n'
     header += ' }\n}\n'
     # (child, parent) object links, (child, parent, property) property links.
     links = ''.join(f' C: "OO",{c[0]},{c[1]}\n' if len(c) == 2 else f' C: "OP",{c[0]},{c[1]}, "{c[2]}"\n'
@@ -350,10 +352,15 @@ def skinned_fbx(options):
                        'Lcl Scaling': (1, 1, 1)}, **options.get('mesh', {}))
     objects.append(model(300, 'Column', 'Mesh', mesh_props))
     objects.append(model(301, 'Rig', 'Null', {'Lcl Translation': (0, 0, 0)}))
+    if 'child' in options:
+        # A plain mesh node under the skinned mesh's node.
+        objects += [tetra_geometry(101, 'Tetra'), model(302, 'Leaf', 'Mesh', dict(LEAF, **options['child']))]
     # Cluster matrices as exporters write them: Transform is the mesh node's bind matrix in
     # the bone's bind space, TransformLink the bone's bind matrix in world space.
     mesh_world = node_matrix(mesh_props)
     links = [(301, 0), (300, 0), (100, 300), (400, 100)]
+    if 'child' in options:
+        links += [(302, 300), (101, 302)]
     objects.append('Deformer: 400, "Deformer::Skin", "Skin" {\n Version: 101\n Link_DeformAcuracy: 50\n}\n')
     worlds, pose, ids = {}, [], {}
     for i, (name, parent, t, r) in enumerate(BONES):
@@ -364,6 +371,8 @@ def skinned_fbx(options):
         worlds[name] = mul4(worlds[parent], bind_local) if parent else bind_local
         if options.get('posed'):
             props['Lcl Rotation'] = POSED[name]
+        if name == 'Hips' and 'root_scale' in options:
+            props['Lcl Scaling'] = options['root_scale']
         objects.append(model(310+i, name, 'LimbNode', props))
         objects.append(f'NodeAttribute: {320+i}, "NodeAttribute::{name}", "LimbNode" {{\n TypeFlags: "Skeleton"\n}}\n')
         links += [(320+i, 310+i), (310+i, ids[parent] if parent else 301)]
@@ -381,7 +390,40 @@ def skinned_fbx(options):
                    f' NbPoseNodes: {len(pose)}\n' +
                    ''.join(f' PoseNode:  {{\n  Node: {node}\n' + array('Matrix', fbx_matrix(m), '  ') + ' }\n'
                            for node, m in pose) + '}\n')
-    return document(objects, links)
+    if 'animated' in options:
+        more, more_links = animation(*options['animated'])
+        objects += more
+        links += more_links
+    return document(objects, links, animated='animated' in options, time_mode=options.get('time_mode', 6))
+
+
+# The Rigged controls: the column rig's imported localBounds under each animation type with
+# clips that bend it (the Editor bounds Legacy models over sampled clip frames), a degenerate
+# root bone, and pivots, offsets and a child on the skinned mesh's node.
+# Hips moves, Spine and Head bend (linear keys at 0 s and 1 s).
+SWING = {'animated': ((310, 311, 312), ('Lcl Translation', 'Lcl Rotation', 'Lcl Rotation'),
+                      (((0, 0.8), (1, 1), (0, 0.3)), ((0, 0), (0, 0), (-20, 70)), ((15, 100), (0, 0), (0, 0))))}
+# Only the root bone moves and turns: the bounds are in its space.
+ROOT_ONLY = {'animated': ((310, 310), ('Lcl Translation', 'Lcl Rotation'),
+                          (((0, 0.8), (1, 1.5), (0, 0.3)), ((0, 40), (0, 0), (10, -30))))}
+MESH_TRS = {'Lcl Translation': (1.5, 0.5, -2), 'Lcl Rotation': (10, 0, 20), 'Lcl Scaling': (1, 1.5, 0.8)}
+RIGGED = {
+    'LegacySwing': (SWING, dict(animationType=1, animationCompression=0)),
+    'LegacySwing60': (dict(SWING, time_mode=3), dict(animationType=1, animationCompression=0)),
+    'LegacyRootOnly': (ROOT_ONLY, dict(animationType=1, animationCompression=0)),
+    'GenericSwing': (SWING, dict(animationType=2, avatarSetup=0, animationCompression=0)),
+    'NoneSwing': (SWING, dict(animationType=0)),
+    'GenericZeroRoot': ({'root_scale': (0, 0, 0)}, dict(animationType=2, avatarSetup=0)),
+    'MeshRp': ({'mesh': dict(MESH_TRS, RotationPivot=(0.5, 1, 0.25))}, {}),
+    'MeshSp': ({'mesh': dict(MESH_TRS, ScalingPivot=(-0.5, 0.75, 0.5))}, {}),
+    'MeshRpSp': ({'mesh': dict(MESH_TRS, RotationPivot=(0.5, 1, 0.25), ScalingPivot=(-0.5, 0.75, 0.5))}, {}),
+    'MeshRoff': ({'mesh': dict(MESH_TRS, RotationOffset=(0.3, -0.2, 0.1))}, {}),
+    'MeshSoff': ({'mesh': dict(MESH_TRS, ScalingOffset=(-0.1, 0.4, 0.2))}, {}),
+    'MeshMaya': ({'mesh': dict(MESH_TRS, **MAYA)}, {}),
+    'MeshChild': ({'mesh': dict(MESH_TRS, RotationPivot=PIVOT, ScalingPivot=PIVOT), 'child': {}}, {}),
+    'MeshChildMaya': ({'mesh': dict(MESH_TRS, **MAYA), 'child': {'RotationPivot': (0.5, 0, 1)}}, {}),
+    'MeshChildPlain': ({'mesh': MESH_TRS, 'child': {}}, {}),
+}
 
 
 def write_meta(path, name, overrides):
@@ -427,6 +469,13 @@ def main():
         meta = re.sub(r'(?m)^(    isReadable: ).*', r'\g<1>1', meta)
         meta = re.sub(r'(?m)^(    meshOptimizationFlags: ).*', r'\g<1>0', meta)
         Path(str(dest/(name + '.fbx')) + '.meta').write_text(meta)
+    dest = ROOT/'Assets/Resources/Rigged'
+    dest.mkdir(parents=True, exist_ok=True)
+    for name, (options, settings) in RIGGED.items():
+        path = dest/(name + '.fbx')
+        path.write_text(skinned_fbx(options))
+        write_meta(path, 'Rigged/' + name, dict(dict(animationType=2, avatarSetup=0, normalImportMode=2,
+                                                     importAnimation=1), **settings))
     axis.write_missing_metas()
 
 

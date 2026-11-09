@@ -53,11 +53,14 @@ public class AxisProbe : MonoBehaviour
                 Add(k + "/bakedVertices", L(baked.vertices, V));
                 DestroyImmediate(baked);
             }
-            // Legacy clips (Pivots set): the local pose at frame-aligned times.
+            // Legacy clips (Pivots and Rigged sets): the local pose at frame-aligned times, and
+            // in the Rigged set also between frames.
             var animation = instance.GetComponent<Animation>();
+            var times = Environment.GetEnvironmentVariable("AXIS_SET") == "Rigged"
+                ? new[] { 0.25f, 0.5f, 0.55f, 0.95f, 1f } : new[] { 0.5f, 1f };
             if (animation != null)
                 foreach (AnimationState state in animation)
-                    foreach (var time in new[] { 0.5f, 1f })
+                    foreach (var time in times)
                     {
                         state.clip.SampleAnimation(instance, time);
                         foreach (var t in instance.GetComponentsInChildren<Transform>(true))

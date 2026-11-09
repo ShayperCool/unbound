@@ -19,12 +19,13 @@ from probe_paths import reference_root, run_root
 EPSILON = 1e-5
 # Per set: models, Reference subdirectory, a key every model records, its minimum count.
 SETS = dict(Axis=(32,'','/worldVertices',32), Signed=(8,'signed','/worldVertices',8),
-            Pivots=(38,'pivots','/vertices',74), Skinned=(10,'skinned','/localBounds',10))
+            Pivots=(38,'pivots','/vertices',74), Skinned=(10,'skinned','/localBounds',10),
+            Rigged=(15,'rigged','/localBounds',14))
 SET = 'Axis'
-# The Pivots and Skinned sets scale the bound by the largest magnitude of each innermost
+# The Pivots, Skinned and Rigged sets scale the bound by the largest magnitude of each innermost
 # reference vector (at least 1): their world bases reach 100 (a centimetre root's scale), where
 # 1e-5 is below one float32 step. Axis and Signed keep the absolute bound.
-SCALED = ('Pivots','Skinned')
+SCALED = ('Pivots','Skinned','Rigged')
 EXACT = ('/indices','/nodes','/rootBone','/bones','/updateWhenOffscreen')
 
 def load(path):

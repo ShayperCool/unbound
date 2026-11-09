@@ -120,8 +120,8 @@ It records bones, root bone, bind poses, `Mesh.bounds`, `SkinnedMeshRenderer.loc
 Update When Offscreen off, and `BakeMesh` vertices. Normals, bones, bind poses, skinned and
 sampled keys exist only in these sets, so the `Axis` and `Signed` references are unchanged.
 
-Two independent GPU Editor captures agree byte for byte for each set (1001 and 397 keys),
-published under `Reference/unity-6000.0.71f1/pivots` and `skinned`. These two sets bound each
+Two independent GPU Editor captures agree byte for byte for each set (1001, 397 and 892 keys),
+published under `Reference/unity-6000.0.71f1/pivots`, `skinned` and `rigged`. These sets bound each
 value by 1e-5 times the largest magnitude of its innermost reference vector (at least 1e-5):
 world bases of
 a centimetre-scaled root reach 100, where 1e-5 is below one float32 step. This was chosen
@@ -134,7 +134,7 @@ after the first captures showed 1-4 float32-step differences in such bases; the 
 | --- | --- | --- |
 | [Importing models from 3D applications](https://docs.unity3d.com/6000.0/Documentation/Manual/HOWTO-ImportObjectsFrom3DApps.html) | Every application section: "All nodes with position, rotation and scale; pivot points and names are also imported". For Maya files it lists Rotate Axis (pre-rotation), Joint Orient and Segment Scale Compensate as unsupported. Geometric transforms are not mentioned. | FBX pre/post rotation is applied to the node rotation (`Pre`, `Post`, `PrePost`; ignored without `RotationActive`). Inherit types other than RSrs are ignored (`Inherit0`/`1`/`2`), consistent with Segment Scale Compensate being unsupported. |
 | [Model tab](https://docs.unity3d.com/6000.0/Documentation/Manual/FBXImporter-Model.html) | Bake Axis Conversion, Preserve Hierarchy, Sort Hierarchy By Name. | Pivots and geometric transforms compose with baked axis conversion (`*Bake` controls) and with an explicit root (`RootPivotH`). |
-| [Renderer.localBounds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-localBounds.html) | A SkinnedMeshRenderer's default local bounds are precomputed from the model's animations; Update When Offscreen recomputes them every frame. | Measured only where every animation pose is the import pose (no clip, or transform curves holding the import transforms, as in `BlenderBlob`). |
+| [Renderer.localBounds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-localBounds.html) | A SkinnedMeshRenderer's default local bounds are precomputed from the model's animations; Update When Offscreen recomputes them every frame. | In 6000.0.71f1 only Legacy rigs include their clips (`Rigged` set): Generic and None rigs keep the import-pose bounds with clips that bend the rig. |
 
 Observed rules (one reference capture each; not documented guarantees):
 
@@ -158,19 +158,31 @@ Observed rules (one reference capture each; not documented guarantees):
   box of the vertices the bone influences (with their blend shape frame positions) in its bind
   space, carried as a box into the root bone's space by the bone's import pose; the union over
   bones.
+- `Rigged` set: Legacy rigs add the vertices skinned by each sampled frame of each clip, from
+  the first key in steps of 1/sampleRate summed in single precision while not past the last key
+  (`LegacySwing` at 30 fps misses the 1 s frame, `LegacySwing60` reaches it), in the root bone's
+  space (`LegacyRootOnly` keeps the import-pose box). Generic (`GenericSwing`) keeps the
+  import-pose box. Rig None imports the mesh without skinning under a MeshRenderer
+  (`NoneSwing`). A zero-scale root bone gives all-zero bind poses and a zero box
+  (`GenericZeroRoot`).
+- A skinned mesh's node with unequal pivots, a rotation or scaling offset, or children
+  (`MeshRp`, `MeshSp`, `MeshRpSp`, `MeshRoff`, `MeshSoff`, `MeshMaya`, `MeshChild*`): its
+  rotation and scaling pivots are dropped as in `MeshPivot`, its rotation offset is ignored, and
+  with `c` = minus its scaling offset it moves by `R·S·c` while its vertices and children move
+  by `-c`, as for other nodes.
 
 ### Implementation scope and limits
 
-`crates/unbound-assets/src/model/pivots.rs` implements these rules; the model cache format is
-v27. Clips of pivoted nodes take positions with the same placement at every key time of their
+`crates/unbound-assets/src/model/pivots.rs` and `skinned_bounds.rs` implement these rules; the
+model cache format is v33. Clips of pivoted nodes take positions with the same placement at every key time of their
 translation, rotation and scale; rotation keys are not reduced, so a turning node is keyed on
 every frame. Not measured, implemented by the same rule or left as before:
 
-- `localBounds` of models whose clips move transforms (no `m_AABB`; the managed fallback and its
-  unsupported-bounds warning remain), and of blend-shape meshes without bones.
-- Children of a pivoted skinned-mesh node, unequal pivots or offsets on such a node (warnings),
-  vertices without bone weights (they add nothing to `localBounds`), and which of several shared
-  instances is "first" beyond the measured parent-before-child order.
+- `localBounds` of blend-shape meshes without bones, Humanoid rigs (same rule as Generic),
+  Legacy clips whose root bone pose has no inverse (Update When Offscreen is set instead),
+  vertices without bone weights (they add nothing to the import-pose box), rig None with
+  blend shapes or pivots, and which of several shared instances is "first" beyond the measured
+  parent-before-child order.
 - Blend shape deltas on meshes with geometric transforms (transformed with `G`'s linear part).
 - A LODGroup's size and reference point come from mesh bounds, which now include blend shape
   frames; LOD levels with blend shapes are unmeasured.
@@ -181,6 +193,7 @@ every frame. Not measured, implemented by the same rule or left as before:
 
 ```sh
 python3 tests/projects/modelaxis/Tools/make_pivots.py
+python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Rigged
 python3 tests/projects/modelaxis/run.py editor --release 6000.0.71f1 --set Pivots --label <fresh>
 python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Pivots
 python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Skinned
