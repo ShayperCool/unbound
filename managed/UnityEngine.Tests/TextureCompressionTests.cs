@@ -160,7 +160,7 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>Reinitialize to sides a block format cannot have changes nothing
-        /// (tests/projects/texturecompression reinit.*; the false it returns is Unbound's, unmeasured).</summary>
+        /// (tests/projects/texturecompression reinit.*): it returns false.</summary>
         [Fact]
         public void ReinitializeRefusesSidesThatAreNotBlockSized()
         {
@@ -179,6 +179,27 @@ namespace UnityEngine.Tests
             Assert.Equal(new byte[] { 0xff, 0xff, 0, 0, 0, 0, 0, 0 }, texture.GetRawTextureData());
             Assert.Throws<UnityException>(() => texture.GetPixelData<byte>(0));
             Object.DestroyImmediate(texture);
+        }
+
+        /// <summary>R8 and RG16 go to the GPU in their channels unless sampled through an sRGB
+        /// view (tests/projects/texturecompression channels.*); Alpha8 alone; others as RGBA8.</summary>
+        [Fact]
+        public void OneAndTwoChannelTexturesUploadTheirChannels()
+        {
+            int Code(TextureFormat format, bool linear)
+            {
+                var t = new Texture2D(4, 4, format, false, linear) { hideFlags = HideFlags.HideAndDontSave };
+                int code = t.GpuByteFormat();
+                Object.DestroyImmediate(t);
+                return code;
+            }
+            Assert.Equal(45, Code(TextureFormat.R8, true));
+            Assert.Equal(46, Code(TextureFormat.RG16, true));
+            Assert.Equal(3, Code(TextureFormat.Alpha8, false));
+            Assert.Equal(1, Code(TextureFormat.RGBA32, true));
+            bool gamma = QualitySettings.activeColorSpace == ColorSpace.Gamma;
+            Assert.Equal(gamma ? 45 : 0, Code(TextureFormat.R8, false));
+            Assert.Equal(gamma ? 46 : 0, Code(TextureFormat.RG16, false));
         }
 
         /// <summary>The engine's own reads of an unreadable compressed texture (particle shapes,

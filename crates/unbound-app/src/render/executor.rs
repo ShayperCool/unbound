@@ -764,7 +764,9 @@ impl UnityRenderer {
             Upload::UploadTexture(handle, texture) => {
                 self.generation += 1;
                 let old = self.textures.remove(&handle);
-                let previous = old.as_ref().map(|gpu| (gpu.texture.clone(), gpu.sampler_key));
+                let previous = old
+                    .as_ref()
+                    .map(|gpu| (gpu.texture.clone(), gpu.sampler_key));
                 let gpu =
                     resources::upload_texture(&device, &self.queue, old, &texture, self.generation);
                 self.install_texture(handle, gpu, previous, &texture);
@@ -4141,6 +4143,19 @@ impl UnityRenderer {
                                     } else {
                                         // Negative (signed) values read as 0.
                                         out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                                    }
+                                }
+                            }
+                        }
+                        // One- and two-channel 8-bit texels read as they sample.
+                        wgpu::TextureFormat::R8Unorm | wgpu::TextureFormat::Rg8Unorm => {
+                            for pixel in line.chunks_exact(texel as usize) {
+                                let g = pixel.get(1).copied().unwrap_or(0);
+                                for b in [pixel[0], g, 0, 255] {
+                                    if float {
+                                        out.extend_from_slice(&(b as f32 / 255.0).to_le_bytes());
+                                    } else {
+                                        out.push(b);
                                     }
                                 }
                             }

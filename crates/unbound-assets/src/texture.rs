@@ -659,7 +659,7 @@ pub enum GpuChannel {
     Alpha,
     /// R8 or BC4: samples (r, 0, 0, 1).
     Red,
-    /// RG16: samples (r, g, 0, 1).
+    /// RG16: samples (r, g, 0, 1); (r, g, 1, 1) through an sRGB view.
     RedGreen,
     /// RGB24: samples (r, g, b, 1).
     Opaque,

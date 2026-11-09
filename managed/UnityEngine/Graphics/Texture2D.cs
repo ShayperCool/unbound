@@ -623,35 +623,21 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Uploads the raw data: Alpha8 and RGBA32 as they are, other formats decoded.</summary>
+        /// <summary>Uploads the raw data: formats the renderer keeps as stored (RGBA32, Alpha8,
+        /// and R8 and RG16 in their channels, <see cref="GpuByteFormat"/>) as they are, other
+        /// formats decoded.</summary>
         unsafe void UploadRaw()
         {
             m_GpuMipCount = m_MipCount;
-            if (m_Format != TextureFormat.Alpha8 && m_Format != TextureFormat.RGBA32)
+            int format = GpuByteFormat();
+            if (m_Format != TextureFormat.RGBA32 && GpuTexelBytes(format) == 4)
             {
                 DecodeRaw();
                 if (m_Hdr != null) UploadHdr();
                 else UploadPixels();
                 return;
             }
-            fixed (byte* data = m_Raw)
-            {
-                var packet = new TexturePacket
-                {
-                    Width = m_Width,
-                    Height = m_Height,
-                    Format = m_Format == TextureFormat.Alpha8 ? 3 : m_Linear ? 1 : 0,
-                    MipCount = m_MipCount,
-                    Data = data,
-                    DataLength = m_Raw.Length,
-                    FilterMode = (int)filterMode,
-                    WrapU = (int)wrapModeU,
-                    WrapV = (int)wrapModeV,
-                    WrapW = (int)wrapModeW,
-                    AnisoLevel = anisoLevel,
-                };
-                UploadTexture(&packet);
-            }
+            fixed (byte* data = m_Raw) UploadByteTexels(format, data, m_Raw.Length);
         }
 
         unsafe void UploadSampler()
@@ -661,8 +647,7 @@ namespace UnityEngine
                 Width = m_Width,
                 Height = m_Height,
                 // The format the texels went up in: a different one would make a new, empty texture.
-                Format = m_Format == TextureFormat.Alpha8 ? 3 : Texture2DTexels.FloatStored(m_Format) ? PixelFormats.GpuFloatFormat(m_Format)
-                    : m_Linear ? 1 : 0,
+                Format = Texture2DTexels.FloatStored(m_Format) ? PixelFormats.GpuFloatFormat(m_Format) : GpuByteFormat(),
                 MipCount = m_GpuMipCount,
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
@@ -673,54 +658,83 @@ namespace UnityEngine
             UploadTexture(&packet);
         }
 
+        /// <summary>The renderer's format code for 8-bit texels: Alpha8 alone (sampled (0, 0, 0,
+        /// a)), R8 and RG16 in one and two channels (sampled (r, 0, 0, 1) and (r, g, 0, 1)) unless
+        /// sampled through an sRGB view (R8_SRGB and R8G8_SRGB: an sRGB texture in a linear
+        /// project; in a gamma project they are R8_UNorm and R8G8_UNorm), which the device has no
+        /// one- or two-channel formats for; other formats as RGBA8 (the Unity 6000.0.71f1 Editor,
+        /// tests/projects/texturecompression channels.*).</summary>
+        internal int GpuByteFormat()
+        {
+            bool srgbSampled = !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            return m_Format switch
+            {
+                TextureFormat.Alpha8 => GpuAlpha8,
+                TextureFormat.R8 when !srgbSampled => GpuR8,
+                TextureFormat.RG16 when !srgbSampled => GpuRG8,
+                _ => m_Linear ? 1 : 0,
+            };
+        }
+
+        // The renderer's 8-bit format codes with fewer than four channels.
+        const int GpuAlpha8 = 3, GpuR8 = 45, GpuRG8 = 46;
+
+        /// <summary>Bytes per texel of a <see cref="GpuByteFormat"/> code's upload data.</summary>
+        static int GpuTexelBytes(int format) => format switch
+        {
+            GpuAlpha8 or GpuR8 => 1,
+            GpuRG8 => 2,
+            _ => 4,
+        };
+
         unsafe void UploadPixels()
         {
             m_GpuMipCount = m_MipCount;
             var pixels = UploadByteChain();
-            if (m_Format == TextureFormat.Alpha8)
+            int format = GpuByteFormat();
+            int bytes = GpuTexelBytes(format);
+            if (bytes < 4)
             {
-                // Alpha-only: the renderer samples it as (0, 0, 0, a), as Unity does (font textures).
-                var alpha = new byte[pixels.Length];
-                for (int i = 0; i < alpha.Length; i++) alpha[i] = pixels[i].a;
-
-                fixed (byte* a = alpha)
-                {
-                    var packet = new TexturePacket
+                // The cells hold what the GPU samples: (0, 0, 0, a), (r, 0, 0, 1), (r, g, 0, 1).
+                var texels = new byte[pixels.Length * bytes];
+                if (format == GpuAlpha8)
+                    for (int i = 0; i < pixels.Length; i++) texels[i] = pixels[i].a;
+                else
+                    for (int i = 0; i < pixels.Length; i++)
                     {
-                        Width = m_Width,
-                        Height = m_Height,
-                        Format = 3,
-                        MipCount = m_MipCount,
-                        Data = a,
-                        DataLength = alpha.Length,
-                        FilterMode = (int)filterMode,
-                        WrapU = (int)wrapModeU,
-                        WrapV = (int)wrapModeV,
-                        WrapW = (int)wrapModeW,
-                        AnisoLevel = anisoLevel,
-                    };
-                    UploadTexture(&packet);
-                }
+                        texels[i * bytes] = pixels[i].r;
+                        if (bytes == 2) texels[i * 2 + 1] = pixels[i].g;
+                    }
+                fixed (byte* t = texels) UploadByteTexels(format, t, texels.Length);
                 return;
             }
-            fixed (Color32* p = pixels)
+            if (m_Format == TextureFormat.RG16)
             {
-                var packet = new TexturePacket
-                {
-                    Width = m_Width,
-                    Height = m_Height,
-                    Format = m_Linear ? 1 : 0,
-                    MipCount = m_MipCount,
-                    Data = (byte*)p,
-                    DataLength = pixels.Length * 4,
-                    FilterMode = (int)filterMode,
-                    WrapU = (int)wrapModeU,
-                    WrapV = (int)wrapModeV,
-                    WrapW = (int)wrapModeW,
-                    AnisoLevel = anisoLevel,
-                };
-                UploadTexture(&packet);
+                // Sampled through an sRGB view (R8G8_SRGB): blue samples one (the Unity
+                // 6000.0.71f1 Editor, tests/projects/texturecompression channels.RG16.srgb).
+                if (ReferenceEquals(pixels, m_Pixels)) pixels = (Color32[])pixels.Clone();
+                for (int i = 0; i < pixels.Length; i++) pixels[i].b = 255;
             }
+            fixed (Color32* p = pixels) UploadByteTexels(format, (byte*)p, pixels.Length * 4);
+        }
+
+        unsafe void UploadByteTexels(int format, byte* data, int length)
+        {
+            var packet = new TexturePacket
+            {
+                Width = m_Width,
+                Height = m_Height,
+                Format = format,
+                MipCount = m_MipCount,
+                Data = data,
+                DataLength = length,
+                FilterMode = (int)filterMode,
+                WrapU = (int)wrapModeU,
+                WrapV = (int)wrapModeV,
+                WrapW = (int)wrapModeW,
+                AnisoLevel = anisoLevel,
+            };
+            UploadTexture(&packet);
         }
 
         /// <summary>An asset texture: the native side imports it into a new handle.</summary>

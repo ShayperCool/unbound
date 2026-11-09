@@ -794,6 +794,8 @@ pub fn texture_storage(
                 }
             }
         }
+        texture_format::R8_UNORM => stored(wgpu::TextureFormat::R8Unorm, 1),
+        texture_format::RG8_UNORM => stored(wgpu::TextureFormat::Rg8Unorm, 2),
         _ if compressed.is_some() => stored(compressed.unwrap(), 0),
         _ => stored(wgpu::TextureFormat::Rgba8Unorm, 4),
     }
@@ -1332,8 +1334,7 @@ pub fn upload_texture_with(
     } else if !t.data.is_empty() {
         let source_bpp = match t.format {
             c if texture_format::float_data(c) => 16,
-            3 => 1,
-            _ => 4,
+            c => texture_format::byte_texel(c),
         };
         let mut offset = 0usize;
         // A 3D texture's data is level by level, each level all its slices.
@@ -1714,9 +1715,23 @@ mod tests {
         assert_eq!(bc4.format, texture_format::LINEAR_RGBA8);
     }
 
+    /// One- and two-channel 8-bit uploads keep their channels.
+    #[test]
+    fn one_and_two_channel_codes_keep_their_channels() {
+        for (code, format, bytes) in [
+            (texture_format::R8_UNORM, wgpu::TextureFormat::R8Unorm, 1),
+            (texture_format::RG8_UNORM, wgpu::TextureFormat::Rg8Unorm, 2),
+        ] {
+            let s = stored(code, false, false, 1, &full_caps());
+            assert_eq!((s.format, s.bytes_per_pixel), (format, bytes));
+            assert!(s.fallback.is_none());
+            assert_eq!(texture_format::byte_texel(code), bytes as usize);
+        }
+    }
+
     #[test]
     fn unknown_codes_are_rejected() {
-        for code in [-1, 45, 99, i32::MAX] {
+        for code in [-1, texture_format::RG8_UNORM + 1, 99, i32::MAX] {
             let s = stored(code, true, false, 1, &full_caps());
             assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm);
             assert!(
