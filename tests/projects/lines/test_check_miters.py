@@ -14,17 +14,12 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(out['.missing']['kind'], 'missing')
         self.assertEqual(out['.extra']['kind'], 'extra')
 
-    def test_insignificant_exception_is_bounded_to_both_documented_components(self):
-        key = 'trail.f6.api2Emitting.mid.asline'
-        detail = {f'.{key}.v[{i}]': dict(reference=1., actual=1.0000442) for i in (6, 9)}
-        self.assertTrue(gate.insignificant_centre_rounding(key, detail))
-        self.assertFalse(gate.insignificant_centre_rounding('trail.f6.api2Emitting.mid.mesh', detail))
-        detail[f'.{key}.v[6]']['actual'] = 1.00006
-        self.assertFalse(gate.insignificant_centre_rounding(key, detail))
-        detail[f'.{key}.v[6]']['actual'] = 1.00004
-        detail[f'.{key}.n[0]'] = dict(reference=0., actual=1.)
-        self.assertFalse(gate.insignificant_centre_rounding(key, detail))
-
+    def test_only_the_named_residuals_are_open(self):
+        for key in ('trail.f1.time', 'trail.f15.time', 'line.color.PerceptualBlend'):
+            self.assertTrue(gate.open_residual(key), key)
+        for key in ('trail.f1.time.log', 'trail.fx.time', 'line.color.PerceptualBlend.log', 'trail.f1.round.end.mesh',
+                    'line.color.Blend', 'space.trail.far.mesh', 'simplify.closed.positions'):
+            self.assertFalse(gate.open_residual(key), key)
 
 if __name__ == '__main__':
     unittest.main()

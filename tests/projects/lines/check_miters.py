@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Run the engine and require reversal parity while retaining the full strict report.
+"""Run the engine and require every line and trail record to match, except the open residuals.
 
-Unrelated existing gaps stay failing in comparison.json and every failing component
-is retained in components.json. No tolerance or existing assertion is changed.
+The open residuals stay failing in comparison.json and every failing component is retained
+in components.json. No tolerance or existing assertion is changed.
 """
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -59,23 +60,14 @@ def components(reference, capture):
     return out
 
 
-def focused(key):
-    if key.startswith('miterchain.') or key.startswith('miterrev.'):
-        # These four discriminating meshes expose the separately owned rotated
-        # TransformZ BakeMesh space/normal gap. Their input readbacks still gate.
-        return not (key.startswith('miterrev.transformZ.') and key.endswith('.mesh'))
-    return key == 'line.miter.179.w0.4' or '.api2.' in key or '.api2Emitting.' in key
+# Open residuals (docs/COMPATIBILITY_GAPS.md, LineRenderer/TrailRenderer geometry): the probe's
+# frame count during trails (player-loop scope) and one byte of a perceptual gradient (the
+# gradient's sRGB conversion). Every other key, missing or extra key fails the gate.
+OPEN = re.compile(r'trail\.f\d+\.time|line\.color\.PerceptualBlend')
 
 
-def insignificant_centre_rounding(key, detail):
-    """Keep the strict failures; admit only the two documented copy-as-line x residuals."""
-    if key not in ('trail.f6.api2Emitting.mid.asline', 'trail.f6.api2Emitting.end.asline'):
-        return False
-    leaves = {p: v for p, v in detail.items() if p.startswith('.'+key+'.')}
-    expected = {f'.{key}.v[{i}]' for i in (6, 9)}
-    return set(leaves) == expected and all(
-        isinstance(v.get('reference'), (int, float)) and isinstance(v.get('actual'), (int, float))
-        and abs(v['reference']-v['actual']) <= 5e-5 for v in leaves.values())
+def open_residual(key):
+    return OPEN.fullmatch(key) is not None
 
 
 def main():
@@ -116,14 +108,11 @@ def main():
         detail['resolved'] = sorted(detail['before'].keys() - detail['after'].keys())
     (args.capture/'components.json').write_text(json.dumps(detail, indent=1)+'\n')
     failures = full['failures']
-    accepted = [k for k in failures if insignificant_centre_rounding(k, detail['after'])]
-    bad = [k for k, v in failures.items() if (focused(k) and k not in accepted) or v in ('missing', 'extra')]
+    bad = [k for k, v in failures.items() if not open_residual(k) or v in ('missing', 'extra')]
     cap = compare.load(args.capture)
     if cap.get('complete') is not True or any(k == 'fatal' or k.endswith('.fatal') for k in cap):
         bad.append('incomplete capture')
-    print(f'reversal gate: {len(bad)} failures; full strict report retains {full["failing"]} failing keys: {report}')
-    if accepted:
-        print('recorded insignificant copy-centre residuals, strict failures retained: '+', '.join(accepted))
+    print(f'lines gate: {len(bad)} failures; full strict report retains {full["failing"]} failing keys: {report}')
     return int(bool(bad))
 
 

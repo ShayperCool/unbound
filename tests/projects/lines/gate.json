@@ -1,4 +1,10 @@
 {
- "commands": ["python3 tests/projects/lines/check_miters.py --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
- "summary": "reversal gate: .*"
+ "commands": [
+  "python3 tests/projects/lines/check_miters.py --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+ ],
+ "summary": "lines gate: .*",
+ "engine_paths": [
+  "managed/UnityEngine/Graphics/LineRenderers.cs",
+  "managed/UnityEngine/Graphics/LineBuilder.cs"
+ ]
 }

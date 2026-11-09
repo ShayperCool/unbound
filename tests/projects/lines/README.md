@@ -94,6 +94,36 @@ first live pair through `editor_runner` (label `lines-blend-20261101b`, cases co
 and all nine images, and reproduced all 1853 existing records and the nine images byte for
 byte. The existing bytes of `values.jsonl` are unchanged; the new records follow them.
 
+## Build-space and Simplify controls
+
+`space.values.jsonl` (40 records, `Assets/Scripts/SpaceControls.cs`, recorded after the
+reversal chains) holds BakeMesh controls of where a strip is built and the Simplify rules:
+
+- TransformZ trails with the head at z 30, unturned and turned half round about y, baked with
+  and without the transform (whether the frame starts at the world origin or at the transform);
+- TransformZ lines on a moved, turned, unevenly scaled transform, local and world space, with
+  and without useTransform (normals and tangents included);
+- a View line on a turned, scaled transform with and without useTransform (Scripting API:
+  "include the rotation and scale of the Transform"; the two meshes are identical);
+- a spatial line from orthographic cameras with near planes 0.3 and 5, and a line passing
+  behind a perspective camera;
+- LineRenderer.Simplify on spans with a point beyond the segment, a zigzag, a closed polyline,
+  a point exactly at the tolerance, two points and one point; LineUtility.Simplify into
+  pre-filled lists (indices and points, Vector3 and Vector2).
+
+It was published with `miter_reference.py --space` from the pair `q22-space-1`: both repeats
+exited with 0 on the NVIDIA GeForce RTX 4060, 2190 records each, byte-identical in
+`values.jsonl` and all images, every existing record and image reproduced byte for byte.
+`compare.py --mode miter` includes it. The land gate (`check_miters.py`) requires every record
+of every file to match except the open residuals named in it (the trail frame count and one
+perceptual gradient byte).
+
+```sh
+python3 tests/projects/lines/run.py editor --release 6000.0.71f1 --label LABEL
+python3 tests/projects/lines/miter_reference.py --release 6000.0.71f1 --label LABEL --space \
+  --receipt ~/.cache/unbound/lines-space-receipt.json
+```
+
 ## Offline geometry attribution
 
 `attribute_geometry.py` reads the saved combined raw union, image arrays and a

@@ -98,5 +98,26 @@ class PublicationTests(unittest.TestCase):
         self.assertEqual(len(ref.load(self.target)), len(self.rows))
 
 
+    def test_space_extension_requires_and_keeps_previous_controls(self):
+        ref.publish('test', 'test', self.receipt)
+        self.receipt.unlink()
+        space = [record(k, 6) for k in ref.SPACE_KEYS]
+        self.rows = self.rows[:-1] + space + self.rows[-1:]
+        self.capture()
+        with self.assertRaisesRegex(SystemExit, 'publish the chain reference first'):
+            ref.publish('test', 'test', self.receipt, extension='space')
+        chain = [record(k, 5) for k in ref.CHAIN_KEYS]
+        self.rows = self.rows[:-1-len(space)] + chain + self.rows[-1:]
+        self.capture()
+        ref.publish('test', 'test', self.receipt, chains=True)
+        self.receipt.unlink()
+        self.rows = self.rows[:-1] + space + self.rows[-1:]
+        self.capture()
+        before = ref.layout.tree(self.target)
+        ref.publish('test', 'test', self.receipt, extension='space')
+        self.assertEqual((self.target/ref.SPACE_FILE).read_bytes(), b''.join(space))
+        self.assertEqual({k: ref.layout.tree(self.target)[k] for k in before}, before)
+        self.assertEqual(len(ref.load(self.target)), len(self.rows))
+
 if __name__ == '__main__':
     unittest.main()
