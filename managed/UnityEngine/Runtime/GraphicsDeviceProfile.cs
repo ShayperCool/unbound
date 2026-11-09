@@ -83,9 +83,19 @@ namespace Unbound.Runtime
             _ => throw new System.ArgumentException($"Unbound has no {name} graphics device"),
         };
 
+        /// <summary>The screen's rows are stored top-down where UV starts at the top (it is drawn
+        /// with the projection unflipped): a raw copy of it holds its image upside down.</summary>
+        internal bool ScreenTopDown => UVStartsAtTop;
+
+        /// <summary>A shadow map's depth of clip-space z, as its projection stores it: z * s + 0.5,
+        /// s 0.5 ([-1, 1] to [0, 1]), -0.5 where depth is reversed (1 near).</summary>
+        internal float ShadowDepthScale => ReversedZ ? -0.5f : 0.5f;
+
         /// <summary>GL.GetGPUProjectionMatrix: depth from [-1, 1] to [0, 1] (reversed: 1 near) on
         /// devices that clip there, y negated into render textures where UV starts at the top
-        /// (measured to the bit on the Vulkan Editor; OpenGL Core keeps the matrix).</summary>
+        /// (measured to the bit on the Vulkan Editor; OpenGL Core keeps the matrix). The renderer
+        /// applies the same mapping (`render::device::DeviceConventions::gpu_projection`); both
+        /// are tested against the same Editor matrices and must stay identical.</summary>
         internal Matrix4x4 GpuProjection(Matrix4x4 proj, bool renderIntoTexture)
         {
             if (!ReversedZ) return proj;

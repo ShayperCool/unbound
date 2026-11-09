@@ -157,12 +157,12 @@ namespace Unbound.Runtime
                 GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(-forward.x, -forward.y, -forward.z, 0f));
                 DrawCasters();
                 RunLightEvent(camera, light, LightEvent.AfterShadowMapPass, shadowMap, cascadePass);
-                // Clip space to the cascade's tile of the atlas (OpenGL depth to [0, 1]).
+                // Clip space to the cascade's tile of the atlas, depth as the shadow map stores it.
                 float ox = cascades == 1 ? 0f : (c % 2) * 0.5f, oy = cascades == 1 ? 0f : (c / 2) * 0.5f;
                 var toTexture = new Matrix4x4(
                     new Vector4(0.5f * scale, 0f, 0f, 0f),
                     new Vector4(0f, 0.5f * scale, 0f, 0f),
-                    new Vector4(0f, 0f, 0.5f, 0f),
+                    new Vector4(0f, 0f, Unbound.Runtime.GraphicsDeviceProfile.Current.ShadowDepthScale, 0f),
                     new Vector4(0.5f * scale + ox, 0.5f * scale + oy, 0.5f, 1f));
                 var m = toTexture * projection * view;
                 for (int k = 0; k < 16; k++) worldToShadow[c * 16 + k] = m[k % 4, k / 4];
@@ -396,7 +396,9 @@ namespace Unbound.Runtime
             GfxStream.DepthBias(0f, 0f);
             RunLightEvent(camera, light, LightEvent.AfterShadowMap, map);
 
-            var toTexture = Matrix4x4.TRS(new Vector3(0.5f, 0.5f, 0.5f), Quaternion.identity, new Vector3(0.5f, 0.5f, 0.5f));
+            // Depth as the shadow map stores it (reversed where the device's depth is).
+            var toTexture = Matrix4x4.TRS(new Vector3(0.5f, 0.5f, 0.5f), Quaternion.identity,
+                new Vector3(0.5f, 0.5f, Unbound.Runtime.GraphicsDeviceProfile.Current.ShadowDepthScale));
             s_LightShadows[light] = new LightShadow
             {
                 Map = map,

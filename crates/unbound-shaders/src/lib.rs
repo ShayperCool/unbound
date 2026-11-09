@@ -724,11 +724,8 @@ impl ShaderCompiler {
             let mut h = blake3::Hasher::new();
             h.update(&FORMAT_VERSION.to_le_bytes());
             h.update(b"native-sampler-lod-bias-v1");
-            // The device's clip space is fitted after compiling; OpenGL Core's keys stay as
-            // they were before devices were told apart.
-            if self.settings.device != unbound_compat::GraphicsDevice::OpenGLCore {
-                h.update(self.settings.device.name().as_bytes());
-            }
+            // The device's clip space is fitted after compiling.
+            h.update(self.settings.device.name().as_bytes());
             for part in [
                 &vertex_source,
                 &fragment_source,

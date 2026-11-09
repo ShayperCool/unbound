@@ -4,14 +4,21 @@ use unbound_compat::GraphicsDevice;
 
 /// The wgpu backend that draws the device.
 ///
-/// OpenGL Core is drawn by wgpu's Vulkan backend for now: wgpu's OpenGL backend lacks what the
-/// renderer needs (texture views in another format, independent blending on its 3.3 context,
-/// sampler LOD bias), see docs/COMPATIBILITY_GAPS.md (graphics devices). Native plugins on that
-/// device get an OpenGL context sharing the renderer's memory (`gl_interop`).
+/// OpenGL Core is drawn by the OS's native backend for now (Vulkan on Linux, Metal on macOS):
+/// wgpu's OpenGL backend lacks what the renderer needs (texture views in another format,
+/// independent blending on its 3.3 context, sampler LOD bias), see docs/COMPATIBILITY_GAPS.md
+/// (graphics devices). Native plugins on that device get an OpenGL context sharing the
+/// renderer's memory on Linux (`gl_interop`).
 pub fn backends(device: GraphicsDevice) -> wgpu::Backends {
-    match device {
-        GraphicsDevice::OpenGLCore | GraphicsDevice::Vulkan => wgpu::Backends::VULKAN,
-        GraphicsDevice::Metal => wgpu::Backends::METAL,
+    backends_on(device, unbound_compat::HostOs::current())
+}
+
+fn backends_on(device: GraphicsDevice, os: unbound_compat::HostOs) -> wgpu::Backends {
+    match (device, os) {
+        (GraphicsDevice::Metal, _) | (_, unbound_compat::HostOs::MacOs) => wgpu::Backends::METAL,
+        (GraphicsDevice::OpenGLCore | GraphicsDevice::Vulkan, unbound_compat::HostOs::Linux) => {
+            wgpu::Backends::VULKAN
+        }
     }
 }
 
@@ -210,6 +217,16 @@ mod tests {
             ])
         );
         assert_eq!(vulkan.depth(1.0), 0.0);
+        // The OS's native backend draws OpenGL Core for now (macOS: Metal, as before devices).
+        use unbound_compat::HostOs;
+        assert_eq!(
+            backends_on(GraphicsDevice::OpenGLCore, HostOs::Linux),
+            wgpu::Backends::VULKAN
+        );
+        assert_eq!(
+            backends_on(GraphicsDevice::OpenGLCore, HostOs::MacOs),
+            wgpu::Backends::METAL
+        );
         assert_eq!(mirror_compare(4), 7);
         assert_eq!(mirror_compare(8), 8);
     }

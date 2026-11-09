@@ -5,13 +5,16 @@
 //! [`GraphicsDevice`]: SystemInfo's answers, the shader compilation target and its conventions,
 //! the renderer's clip space and target orientation, and the native plugin interface.
 //!
-//! The choice follows the Unity 6000.0.71f1 Editor (measured on Linux): a `-force-glcore*` /
-//! `-force-opengl` or `-force-vulkan` option decides; else the Player Settings graphics API list of
-//! the Editor's own standalone platform (StandaloneLinux64 on Linux, StandaloneOSX on macOS, not the
-//! active build target), when it is not automatic, followed by that platform's first default API;
-//! else the platform's defaults (Linux: OpenGL Core, then Vulkan; macOS: Metal). The first device
-//! that starts wins, OpenGL Core last. Without options and settings the Linux Editor runs OpenGL
-//! Core (tests/projects/urp `paths-opengl`); with `-force-vulkan` it runs Vulkan (`paths-vulkan`).
+//! The choice follows the Unity 6000.0.71f1 Editor on Linux: a `-force-glcore*` / `-force-opengl`
+//! or `-force-vulkan` option decides; else the Player Settings graphics API list of the Editor's
+//! own standalone platform (StandaloneLinux64 on Linux, StandaloneOSX on macOS), when it is not
+//! automatic, followed by that platform's first default API; else the platform's defaults (Linux:
+//! OpenGL Core, then Vulkan; macOS: Metal). The first device that starts wins, OpenGL Core last.
+//! The Manual (Configure graphics APIs) documents the list order and falling back to the next
+//! API. Measured on the Linux Editor: no options or settings give OpenGL Core (tests/projects/urp
+//! `paths-opengl`), `-force-vulkan` gives Vulkan (`paths-vulkan`), and a Vulkan-first
+//! LinuxStandaloneSupport list gives Vulkan without options. Not measured: that the active build
+//! target's list is not read, macOS.
 
 use std::fmt;
 

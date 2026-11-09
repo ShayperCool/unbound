@@ -3761,6 +3761,11 @@ impl UnityRenderer {
         if w <= 0 || h <= 0 || x < 0 || y < 0 || dx < 0 || dy < 0 {
             return None;
         }
+        // Regions are bottom-up (Unity's); a screen stored top-down counts its rows from the top.
+        // The texels are copied as stored, as the device copies its screen.
+        let top_down = self.conventions.top_down(true);
+        let y = if top_down && source == 0 { sh - y - h } else { y };
+        let dy = if top_down && destination == 0 { dh - dy - h } else { dy };
         self.mark_resolve_copied(&destination_attachment);
         let channels = channel_kind.map(|kind| ChannelCopy {
             source: src.create_view(&wgpu::TextureViewDescriptor {

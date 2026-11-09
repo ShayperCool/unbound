@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Compare an rtdepth capture with a reference: the full key union and every float channel.
 
-    compare.py REFERENCE ACTUAL [--report REPORT.json]
+    compare.py REFERENCE ACTUAL [--report REPORT.json] [--open KEY,...]
 
 REFERENCE and ACTUAL are capture directories (values.jsonl plus <key>.rgba or <key>.rgba.gz).
 Numbers inside values compare with the camera MSAA probe's float tolerance (absolute and
 relative 2e-4); strings, booleans and log lists compare exactly. Image channels use the same
 tolerance; NaN only matches NaN. Every missing, extra and failing value and image is kept in
-the report and printed; the exit status is nonzero when anything fails.
+the report and printed; the exit status is nonzero when anything fails. --open names keys of a
+known open difference: they are still compared, printed and counted (`open` in the summary), but
+do not fail the run; an open key that passes is printed so the list can shrink.
 """
 import argparse
 import gzip
@@ -76,7 +78,9 @@ def main():
     parser.add_argument('reference', type=Path)
     parser.add_argument('actual', type=Path)
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--open', default='', help='comma-separated keys of known open differences')
     args = parser.parse_args()
+    open_keys = {k for k in args.open.split(',') if k}
     a, b = values(args.reference), values(args.actual)
     rows = []
     for key in sorted(a.keys() | b.keys()):
@@ -100,6 +104,11 @@ def main():
         'channels': [sum(r.get('matched', 0) for r in image_rows), sum(r.get('channels', 0) for r in image_rows)],
         'tolerance': TOLERANCE,
     }
+    for r in rows + image_rows:
+        if r['key'] in open_keys:
+            r['open'] = True
+    if open_keys:
+        summary['open'] = sum(r.get('open', False) and r['status'] != 'pass' for r in rows + image_rows)
     if args.report:
         args.report.write_text(json.dumps({'summary': summary, 'values': rows, 'images': image_rows}, indent=1) + '\n')
     for r in rows:
@@ -108,8 +117,11 @@ def main():
     for r in image_rows:
         if r['status'] != 'pass':
             print(json.dumps(r, sort_keys=True))
+    for r in rows + image_rows:
+        if r.get('open') and r['status'] == 'pass':
+            print(f"open key now passes: {r['key']}")
     print(json.dumps(summary, sort_keys=True))
-    return int(any(r['status'] != 'pass' for r in rows + image_rows))
+    return int(any(r['status'] != 'pass' and not r.get('open') for r in rows + image_rows))
 
 
 if __name__ == '__main__':

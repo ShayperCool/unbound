@@ -1974,8 +1974,11 @@ namespace Unbound.Runtime
             // A copy, not a draw: GL.wireframe leaves it alone.
             bool wireframe = GL.wireframe;
             if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
-            Graphics.Blit(screen, intermediate, new Vector2(pixelRect.width / width, pixelRect.height / height),
-                new Vector2(pixelRect.x / width, pixelRect.y / height));
+            // The screen's own rows top-down (copied as stored) are read upside down.
+            bool topDown = RenderTexture.ScreenStandIn == null && Unbound.Runtime.GraphicsDeviceProfile.Current.ScreenTopDown;
+            float scaleY = pixelRect.height / height, offsetY = pixelRect.y / height;
+            Graphics.Blit(screen, intermediate, new Vector2(pixelRect.width / width, topDown ? -scaleY : scaleY),
+                new Vector2(pixelRect.x / width, topDown ? 1f - offsetY : offsetY));
             if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
             RenderTexture.ReleaseTemporary(screen);
         }
