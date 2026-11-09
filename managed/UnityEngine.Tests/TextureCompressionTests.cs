@@ -39,6 +39,88 @@ namespace UnityEngine.Tests
             Assert.Equal(bytes, BlockFormats.LevelSize(format, width, height));
         }
 
+        /// <summary>A serialized (AssetBundle) DXT1 texture: one white block over decoded pixels.</summary>
+        static Texture2D SerializedDxt1(bool readable)
+        {
+            const string yaml = @"Texture2D:
+  m_Name: Bundled
+  m_Width: 4
+  m_Height: 4
+  m_TextureFormat: 4
+  m_MipCount: 1
+  m_SourceTextureFormat: 10
+  m_SourceMipCount: 1
+  m_SourceTextureData: ffff000000000000
+  m_IsReadable: READABLE
+  m_ColorSpace: 1
+  _typelessdata: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+";
+            var texture = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
+            ((ISerializedAsset)texture).ReadSerialized(TestYaml.DocumentBody(yaml.Replace("READABLE", readable ? "1" : "0")), null);
+            texture.name = "Bundled";
+            return texture;
+        }
+
+        /// <summary>The blocks are a compressed texture's storage (tests/projects/texturecompression
+        /// write.*): views write them and texel reads decode them; SetPixels and SetPixels32 throw,
+        /// SetPixel leaves the texel; copies keep the blocks.</summary>
+        [Fact]
+        public void CompressedTexturesKeepTheirBlocks()
+        {
+            var texture = SerializedDxt1(true);
+            Assert.Equal(TextureFormat.DXT1, texture.format);
+            Assert.Equal(new byte[] { 0xff, 0xff, 0, 0, 0, 0, 0, 0 }, texture.GetRawTextureData());
+            var e = Assert.Throws<ArgumentException>(() => texture.SetPixels(new Color[16]));
+            Assert.Equal("Texture2D.SetPixels: texture uses an unsupported format. (Texture 'Bundled')", e.Message);
+            Assert.Throws<ArgumentException>(() => texture.SetPixels32(new Color32[16]));
+            texture.SetPixel(1, 1, Color.red);
+            Assert.Equal(Color.white, texture.GetPixel(1, 1));
+
+            var copy = Object.Instantiate(texture);
+            Assert.Equal(texture.GetRawTextureData(), copy.GetRawTextureData());
+            Object.DestroyImmediate(copy);
+
+            // Colour 0 black, colour 1 white (c0 <= c1: three colours), texel 5 index 1, texel 6
+            // index 3 (transparent black), the rest index 0.
+            var view = texture.GetPixelData<byte>(0);
+            view[0] = 0; view[1] = 0; view[2] = 0xff; view[3] = 0xff;
+            view[5] = 0b0011_0100;
+            Assert.Equal(new byte[] { 0, 0, 0xff, 0xff, 0, 0b0011_0100, 0, 0 }, texture.GetRawTextureData());
+            Assert.Equal(Color.black, texture.GetPixel(0, 0));
+            Assert.Equal(Color.white, texture.GetPixel(1, 1));
+            Assert.Equal(new Color(0, 0, 0, 0), texture.GetPixel(2, 1));
+            Object.DestroyImmediate(texture);
+        }
+
+        [Fact]
+        public void UnreadableCompressedTexturesAnswerTheirBlocks()
+        {
+            var texture = SerializedDxt1(false);
+            Assert.Equal(new byte[] { 0xff, 0xff, 0, 0, 0, 0, 0, 0 }, texture.GetRawTextureData());
+            Assert.Throws<UnityException>(() => texture.GetPixelData<byte>(0));
+            Object.DestroyImmediate(texture);
+        }
+
+        [Theory]
+        [InlineData(new byte[] { 0x00, 0xf8, 0x1f, 0x00, 0b1110_0100, 0, 0, 0 }, 0, 255, 0, 0)]
+        [InlineData(new byte[] { 0x00, 0xf8, 0x1f, 0x00, 0b1110_0100, 0, 0, 0 }, 1, 0, 0, 255)]
+        [InlineData(new byte[] { 0x00, 0xf8, 0x1f, 0x00, 0b1110_0100, 0, 0, 0 }, 2, 170, 0, 85)]
+        [InlineData(new byte[] { 0x00, 0xf8, 0x1f, 0x00, 0b1110_0100, 0, 0, 0 }, 3, 85, 0, 170)]
+        public void Dxt1TexelsUseTruncatingThirds(byte[] block, int k, byte r, byte g, byte b)
+        {
+            Assert.Equal(new Color32(r, g, b, 255), BlockFormats.DecodeTexel(TextureFormat.DXT1, block, k));
+        }
+
+        [Fact]
+        public void AlphaStepsRoundToNearest()
+        {
+            // a0 = 255 > a1 = 0, texel 0 index 2: (255 * 6 + 3) / 7 = 219.
+            var block = new byte[] { 255, 0, 2, 0, 0, 0, 0, 0 };
+            Assert.Equal(new Color32(219, 0, 0, 255), BlockFormats.DecodeTexel(TextureFormat.BC4, block, 0));
+            // a0 = 0 <= a1 = 255: index 6 is 0, 7 is 255; index 2 is (0 * 4 + 255 + 2) / 5 = 51.
+            Assert.Equal(new Color32(51, 0, 0, 255), BlockFormats.DecodeTexel(TextureFormat.BC4, new byte[] { 0, 255, 2, 0, 0, 0, 0, 0 }, 0));
+        }
+
         /// <summary>GetPixels of an unreadable texture has no data to read, compressed or not.</summary>
         [Fact]
         public void GetPixelsOfAnUnreadableTextureHasNoData()

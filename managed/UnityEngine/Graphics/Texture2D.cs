@@ -180,6 +180,7 @@ namespace UnityEngine
         internal Color32[] EnsurePixels()
         {
             DecodeRaw();
+            RefreshBlockCells();
             LeaveStore();
             return m_Pixels;
         }
@@ -203,7 +204,9 @@ namespace UnityEngine
                 throw new UnityException(message);
             }
             DecodeRaw();
-            RefreshBlockCells();
+            // Whole-level reads see blocks written through views (single texels read them from
+            // the blocks directly, Read).
+            if (pixelArray) RefreshBlockCells();
             if (m_Pixels == null && m_Hdr == null)
             {
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
@@ -247,6 +250,7 @@ namespace UnityEngine
         {
             DecodeRaw();
             SyncFromStore();
+            RefreshBlockCells();
             if (m_Pixels == null && m_Hdr == null && m_UnreadableRaw != null && m_Store == null)
             {
                 // Made non-readable by Apply: decode the kept data for the engine, leaving the

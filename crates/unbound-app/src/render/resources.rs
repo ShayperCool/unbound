@@ -995,12 +995,15 @@ pub fn upload_texture(
             };
             &keep_compressed
         }
-        // A device without BC formats takes what the blocks decode to, as Unity does.
+        // A device without BC formats takes what the blocks decode to, as Unity does; so does
+        // a size the GPU cannot keep in blocks (not a multiple of 4: malformed data).
         _ if block_format(t.format).is_some()
             && !t.render_target
-            && !device
-                .features()
-                .contains(wgpu::Features::TEXTURE_COMPRESSION_BC) =>
+            && (t.width % 4 != 0
+                || t.height % 4 != 0
+                || !device
+                    .features()
+                    .contains(wgpu::Features::TEXTURE_COMPRESSION_BC)) =>
         {
             decoded = decode_blocks(t);
             &decoded

@@ -68,6 +68,38 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>Texel `i` of level `mip` as GetPixel reads it, decoded from its block in the
+        /// pixel data store.</summary>
+        Color BlockTexel(int mip, int i)
+        {
+            var format = m_SourceFormat.Value;
+            int size = BlockFormats.BlockBytes(format);
+            int w = MipWidth(mip), x = i % w, y = i / w;
+            int at = 0;
+            for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
+            at += ((y / 4) * ((w + 3) / 4) + x / 4) * size;
+            var block = new ReadOnlySpan<byte>(m_Store, at, size);
+            int k = (y % 4) * 4 + x % 4;
+            Color32 texel;
+            if (format is TextureFormat.BC6H or TextureFormat.BC7)
+            {
+                // One block decoded as a 4x4 level.
+                var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
+                {
+                    format = (int)format,
+                    width = 4,
+                    height = 4,
+                    data = Convert.ToBase64String(block),
+                }));
+                using var doc = JsonDocument.Parse(json);
+                var rgba = Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
+                texel = new Color32(rgba[k * 4], rgba[k * 4 + 1], rgba[k * 4 + 2], rgba[k * 4 + 3]);
+            }
+            else texel = BlockFormats.DecodeTexel(format, block, k);
+            if (Texture2DTexels.FloatStored(m_Format)) return new Color(texel.r / 255f, texel.g / 255f, texel.b / 255f, 1f);
+            return Texture2DTexels.Pixel(m_Format, texel);
+        }
+
         /// <summary>Decodes one level of blocks into the pixel cells.</summary>
         void DecodeBlockLevel(ReadOnlySpan<byte> blocks, int mip)
         {
@@ -83,6 +115,7 @@ namespace UnityEngine
             var rgba = Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
             if (Texture2DTexels.FloatStored(m_Format))
             {
+                Stubs.Ignored("Texture2D BC6H blocks", "written BC6H blocks read back clamped to 0..1 in 8-bit steps: Unbound has no float decoding of them");
                 m_Hdr ??= new Color[m_Width * m_Height];
                 var cells = FloatLevel(mip);
                 for (int i = 0; i < cells.Length && i * 4 + 3 < rgba.Length; i++)
@@ -224,6 +257,74 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.BC6H => 44,
             _ => throw new ArgumentException($"{format} is not a block format"),
         };
+
+        /// <summary>Texel `k` (row-major in the 4x4 block) of a DXT1, DXT5, BC4 or BC5 block, as
+        /// the importer's decoding (and the Editor's GetPixels32) reads it: colours interpolate with
+        /// truncating thirds (a half in DXT1's three-colour mode, whose fourth entry is
+        /// transparent black), alpha, red and green steps round to nearest.</summary>
+        internal static UnityEngine.Color32 DecodeTexel(UnityEngine.TextureFormat format, ReadOnlySpan<byte> block, int k)
+        {
+            switch (format)
+            {
+                case UnityEngine.TextureFormat.DXT1:
+                    return Colour(block, k, false);
+                case UnityEngine.TextureFormat.DXT5:
+                {
+                    var c = Colour(block.Slice(8), k, true);
+                    c.a = Step(block, k);
+                    return c;
+                }
+                case UnityEngine.TextureFormat.BC4:
+                    return new UnityEngine.Color32(Step(block, k), 0, 0, 255);
+                case UnityEngine.TextureFormat.BC5:
+                    return new UnityEngine.Color32(Step(block, k), Step(block.Slice(8), k), 0, 255);
+                default:
+                    throw new ArgumentException($"{format} texels are not decoded here");
+            }
+        }
+
+        static UnityEngine.Color32 Colour(ReadOnlySpan<byte> block, int k, bool four)
+        {
+            int c0 = block[0] | block[1] << 8, c1 = block[2] | block[3] << 8;
+            int index = (int)((uint)(block[4] | block[5] << 8 | block[6] << 16 | block[7] << 24) >> (2 * k)) & 3;
+            if (index == 3 && !four && c0 <= c1) return new UnityEngine.Color32(0, 0, 0, 0);
+            (int wa, int wb, int d) = index switch
+            {
+                0 => (1, 0, 1),
+                1 => (0, 1, 1),
+                2 when four || c0 > c1 => (2, 1, 3),
+                2 => (1, 1, 2),
+                _ => (1, 2, 3),
+            };
+            return new UnityEngine.Color32(
+                (byte)((Widen(c0, 0) * wa + Widen(c1, 0) * wb) / d),
+                (byte)((Widen(c0, 1) * wa + Widen(c1, 1) * wb) / d),
+                (byte)((Widen(c0, 2) * wa + Widen(c1, 2) * wb) / d),
+                255);
+        }
+
+        /// <summary>Channel `p` (red, green, blue) of an RGB565 colour widened to 8 bits.</summary>
+        static int Widen(int c, int p) => p switch
+        {
+            0 => (c >> 11 << 3) | (c >> 13),
+            1 => (((c >> 5) & 63) << 2) | (((c >> 5) & 63) >> 4),
+            _ => ((c & 31) << 3) | ((c & 31) >> 2),
+        };
+
+        /// <summary>An eight-step value (DXT5 alpha, BC4, a BC5 half).</summary>
+        static byte Step(ReadOnlySpan<byte> block, int k)
+        {
+            int a0 = block[0], a1 = block[1];
+            ulong bits = 0;
+            for (int i = 7; i >= 2; i--) bits = bits << 8 | block[i];
+            int index = (int)(bits >> (3 * k)) & 7;
+            if (index == 0) return (byte)a0;
+            if (index == 1) return (byte)a1;
+            if (a0 > a1) { int i = index - 1; return (byte)((a0 * (7 - i) + a1 * i + 3) / 7); }
+            if (index == 6) return 0;
+            if (index == 7) return 255;
+            { int i = index - 1; return (byte)((a0 * (5 - i) + a1 * i + 2) / 5); }
+        }
 
         /// <summary>Bytes of a `width` x `height` level.</summary>
         internal static int LevelSize(UnityEngine.TextureFormat format, int width, int height) =>
