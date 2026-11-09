@@ -175,6 +175,9 @@ pub enum Command {
     MeshInstance(u32),
     /// Multiplies later direct draws, across submissions. Zero resets it to one.
     InstanceMultiplier(u32),
+    /// The render texture that stands for the screen while a screen camera draws into it (0:
+    /// none): it is stored as the screen is (NativeApi 50).
+    ScreenStandIn(u64),
     DrawSetup {
         instances: u32,
         args: u64,
@@ -378,6 +381,8 @@ mod op {
     pub const RESOLVE_TEXTURE: u8 = 33;
     // NativeApi 41.
     pub const PLUGIN: u8 = 34;
+    // NativeApi 50.
+    pub const SCREEN_STAND_IN: u8 = 35;
     pub const MESH_BUFFERS: u8 = 31;
 }
 
@@ -594,6 +599,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
             }
             op::MESH_INSTANCE => Command::MeshInstance(r.u32()?),
             op::INSTANCE_MULTIPLIER => Command::InstanceMultiplier(r.u32()?),
+            op::SCREEN_STAND_IN => Command::ScreenStandIn(r.u64()?),
             op::DRAW_SETUP => Command::DrawSetup {
                 instances: r.u32()?,
                 args: r.u64()?,
@@ -992,6 +998,10 @@ impl Writer {
             Command::InstanceMultiplier(multiplier) => {
                 self.bytes.push(op::INSTANCE_MULTIPLIER);
                 self.u32(*multiplier);
+            }
+            Command::ScreenStandIn(texture) => {
+                self.bytes.push(op::SCREEN_STAND_IN);
+                self.u64(*texture);
             }
             Command::MeshInstance(first) => {
                 self.bytes.push(op::MESH_INSTANCE);
@@ -1397,6 +1407,8 @@ mod tests {
             Command::MeshInstance(7),
             Command::InstanceMultiplier(0),
             Command::InstanceMultiplier(3),
+            Command::ScreenStandIn(42),
+            Command::ScreenStandIn(0),
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
             Command::DepthBias {
@@ -1747,10 +1759,10 @@ mod tests {
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
-    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes.
+    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 49);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 50);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

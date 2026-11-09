@@ -103,9 +103,8 @@ match as its Gamma ones do (24 images and 18 records resolved, none introduced);
 Editor's system framebuffer remain different.
 
 On Vulkan (`--device vulkan`) the main set passes 1,071 values and 368/368 images, and the controls
-15/17 images: the stand-in pair `ctl.wireframe{,Kept}.buffer.final` keeps one row where a
-wireframe edge lies on a pixel boundary (the stand-in is stored bottom-up, the Editor's screen
-top-down).
+17/17 images: a screen camera's stand-in is stored as the screen is (top-down), so its wireframe
+edges on pixel boundaries rasterize as on the Editor's screen.
 
 ## What the Editor does on Vulkan (6000.0.71f1, Linux, `-force-vulkan`)
 

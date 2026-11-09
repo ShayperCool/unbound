@@ -192,8 +192,21 @@ namespace UnityEngine
         }
 
         /// <summary>The texture that stands for the screen while a screen camera draws
-        /// (FrameBuilder): <see cref="active"/> reads null for it, and null selects it.</summary>
-        internal static RenderTexture ScreenStandIn;
+        /// (FrameBuilder): <see cref="active"/> reads null for it, and null selects it. It is
+        /// stored as the screen is (top-down where the device stores the screen so: a raw copy of
+        /// it or a default Blit from it holds the image as the screen's does, and a wireframe
+        /// rasterizes into it as onto the screen; measured: tests/projects/rtdepth vulkan).</summary>
+        internal static RenderTexture ScreenStandIn
+        {
+            get => s_ScreenStandIn;
+            set
+            {
+                if (value == s_ScreenStandIn) return;
+                s_ScreenStandIn = value;
+                GfxStream.ScreenStandIn(value != null ? value.EnsureCreated() : 0);
+            }
+        }
+        static RenderTexture s_ScreenStandIn;
 
         /// <summary>The target drawing goes into, the screen's stand-in included.</summary>
         internal static RenderTexture ActiveTarget => s_Active;

@@ -30,7 +30,9 @@ namespace Unbound.Runtime
             // NativeApi 39.
             ResolveTextureOp = 33,
             // NativeApi 40.
-            PluginOp = 34;
+            PluginOp = 34,
+            // NativeApi 50.
+            ScreenStandInOp = 35;
 
         /// <summary>The kinds of <see cref="PluginOp"/> (render_commands.rs's PluginCall).</summary>
         const byte PluginEventKind = 0, PluginEventAndDataKind = 1, PluginTextureUpdateV1Kind = 2,
@@ -309,6 +311,14 @@ namespace Unbound.Runtime
             U64(depth);
             I32(mip);
             I32(Math.Max(slice, 0));
+        }
+
+        /// <summary>The render texture standing for the screen (0: none): the renderer stores
+        /// it as the screen is.</summary>
+        internal static void ScreenStandIn(ulong texture)
+        {
+            U8(ScreenStandInOp);
+            U64(texture);
         }
 
         static uint s_InstanceMultiplier = 1;

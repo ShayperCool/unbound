@@ -55,7 +55,8 @@ use std::ffi::c_void;
 /// 47: source filter component activation flags and the component reset command.
 /// 48: `GiFrame.update_threshold` (DynamicGI.updateThreshold).
 /// 49: `gi_read_probes`, light probes lit by precomputed realtime GI.
-pub const NATIVE_API_VERSION: u32 = 49;
+/// 50: the `ScreenStandIn` render command (opcode 35).
+pub const NATIVE_API_VERSION: u32 = 50;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

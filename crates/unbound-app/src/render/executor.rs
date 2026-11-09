@@ -137,6 +137,9 @@ struct Target {
     height: u32,
     /// The screen of this frame (first use clears it).
     screen: bool,
+    /// Stored as the screen is (the screen, or the render texture standing for it): drawn with
+    /// the projection unflipped, its rows top-down where the device stores the screen so.
+    screen_like: bool,
     /// Further colors (multiple render targets), at the outputs after the first.
     extra: Vec<ExtraColor>,
     /// The single-sample texture (and layer) holding what is drawn, which copies read.
@@ -498,6 +501,8 @@ pub struct UnityRenderer {
     depth_reads: Vec<(u64, bool)>,
     /// The current target's color and depth handles (`SetTarget`).
     target_handles: (u64, u64),
+    /// The render texture standing for the screen while a screen camera draws (0: none).
+    screen_stand_in: u64,
     /// Integer-texel slots' defaults (zeros): signed, unsigned.
     integer_defaults: [Option<wgpu::TextureView>; 2],
     /// [`Self::integer_array_default`]'s gray, bits and array view, by (signed, Linear color
@@ -606,6 +611,7 @@ impl UnityRenderer {
             feedback_copies: HashMap::default(),
             depth_reads: Vec::new(),
             target_handles: (0, 0),
+            screen_stand_in: 0,
             integer_defaults: [None, None],
             integer_array_defaults: HashMap::default(),
             samplers: HashMap::default(),
@@ -2283,6 +2289,12 @@ impl UnityRenderer {
         self.screens[slot].as_ref().unwrap()
     }
 
+    /// Whether a texture (0: the screen) is stored as the screen is: the screen and the render
+    /// texture standing for it.
+    fn stored_as_screen(&self, texture: u64) -> bool {
+        texture == 0 || texture == self.screen_stand_in
+    }
+
     /// The screen as a target, its bytes written as `color_space` encodes them.
     fn screen_target(&mut self, color_space: i32) -> Target {
         let s = self.ensure_screen(self.screen_slot);
@@ -2297,6 +2309,7 @@ impl UnityRenderer {
             width: s.width,
             height: s.height,
             screen: true,
+            screen_like: true,
             extra: Vec::new(),
             texture: Some((s.texture.clone(), 0, 0)),
             auto_mips: false,
@@ -2392,6 +2405,7 @@ impl UnityRenderer {
                 width: (t.width >> mip).max(1),
                 height: (t.height >> mip).max(1),
                 screen: false,
+                screen_like: color != 0 && color == self.screen_stand_in,
                 extra: Vec::new(),
                 texture: Some((t.texture.clone(), layer, mip)),
                 auto_mips: generate_mips && !t.defer_mips,
@@ -2664,6 +2678,7 @@ impl UnityRenderer {
                 Command::InstanceMultiplier(multiplier) => {
                     self.state.instance_multiplier = multiplier.max(1)
                 }
+                Command::ScreenStandIn(texture) => self.screen_stand_in = texture,
                 Command::DrawSetup {
                     instances,
                     args,
@@ -3318,10 +3333,10 @@ impl UnityRenderer {
         let (view, projection) = (self.state.view, self.state.projection);
         // The projection as the device draws with it into this target (Unity's GPU projection:
         // flipped into render textures where UV starts at the top, depth in its range).
-        let flipped = self.conventions.flips(target.screen);
+        let flipped = self.conventions.flips(target.screen_like);
         let gpu_projection = self.conventions.gpu_projection(&projection, flipped);
         // Rows stored top-down turn the winding (as a mirrored transform does).
-        let top_down = self.conventions.top_down(target.screen);
+        let top_down = self.conventions.top_down(target.screen_like);
         // The passes drawn: the forward ones (a renderer's), every one, or one by index.
         let forward = resolved.passes.len();
         let passes: Vec<(usize, &crate::materials::ResolvedPass)> = match draw.pass {
@@ -3900,11 +3915,11 @@ impl UnityRenderer {
         if w <= 0 || h <= 0 || x < 0 || y < 0 || dx < 0 || dy < 0 {
             return None;
         }
-        // Regions are bottom-up (Unity's); a screen stored top-down counts its rows from the top.
-        // The texels are copied as stored, as the device copies its screen.
+        // Regions are bottom-up (Unity's); a screen stored top-down (or its stand-in) counts its
+        // rows from the top. The texels are copied as stored, as the device copies its screen.
         let top_down = self.conventions.top_down(true);
-        let y = if top_down && source == 0 { sh - y - h } else { y };
-        let dy = if top_down && destination == 0 { dh - dy - h } else { dy };
+        let y = if top_down && self.stored_as_screen(source) { sh - y - h } else { y };
+        let dy = if top_down && self.stored_as_screen(destination) { dh - dy - h } else { dy };
         self.mark_resolve_copied(&destination_attachment);
         let channels = channel_kind.map(|kind| ChannelCopy {
             source: src.create_view(&wgpu::TextureViewDescriptor {
@@ -4231,7 +4246,7 @@ impl UnityRenderer {
             // Viewports and scissors are bottom-up (Unity's); a target stored top-down counts its
             // rows from the top.
             let target_height = pass.target.height;
-            let top_down = self.conventions.top_down(pass.target.screen);
+            let top_down = self.conventions.top_down(pass.target.screen_like);
             let stored = |[x, y, w, h]: [f32; 4]| {
                 [
                     x,
@@ -4424,9 +4439,9 @@ impl UnityRenderer {
         if w == 0 || h == 0 {
             return Some(Vec::new());
         }
-        // A screen stored top-down is read from its last rows up, so rows still come bottom
-        // first.
-        let top_down = texture == 0 && self.conventions.top_down(true);
+        // A screen stored top-down (or its stand-in) is read from its last rows up, so rows
+        // still come bottom first.
+        let top_down = self.stored_as_screen(texture) && self.conventions.top_down(true);
         let y0 = if top_down { th - y1 } else { y0 };
         let texel = format.block_copy_size(None)?;
         let row = (w * texel).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);

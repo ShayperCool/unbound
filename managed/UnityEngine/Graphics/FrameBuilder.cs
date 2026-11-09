@@ -1670,7 +1670,10 @@ namespace Unbound.Runtime
                     RenderTexture.ScreenStandIn = previousStandIn;
                     bool wireframe = GL.wireframe;
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
-                    Graphics.Blit(screenStandIn, (RenderTexture)null);
+                    // Stored as the screen is, it is presented row for row (sampled from its
+                    // bottom up where both are stored top-down).
+                    bool topDown = Unbound.Runtime.GraphicsDeviceProfile.Current.ScreenTopDown;
+                    Graphics.Blit(screenStandIn, (RenderTexture)null, new Vector2(1f, topDown ? -1f : 1f), new Vector2(0f, topDown ? 1f : 0f));
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
                 }
                 // What the player loop rendered is the next render's previous view (measured:
@@ -2020,8 +2023,9 @@ namespace Unbound.Runtime
             // A copy, not a draw: GL.wireframe leaves it alone.
             bool wireframe = GL.wireframe;
             if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
-            // The screen's own rows top-down (copied as stored) are read upside down.
-            bool topDown = RenderTexture.ScreenStandIn == null && Unbound.Runtime.GraphicsDeviceProfile.Current.ScreenTopDown;
+            // The screen's own rows top-down (copied as stored; its stand-in's too) are read
+            // upside down.
+            bool topDown = Unbound.Runtime.GraphicsDeviceProfile.Current.ScreenTopDown;
             float scaleY = pixelRect.height / height, offsetY = pixelRect.y / height;
             Graphics.Blit(screen, intermediate, new Vector2(pixelRect.width / width, topDown ? -scaleY : scaleY),
                 new Vector2(pixelRect.x / width, topDown ? 1f - offsetY : offsetY));

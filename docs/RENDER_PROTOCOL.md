@@ -16,6 +16,14 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Screen stand-in (NativeApi 50)
+
+`ScreenStandIn` (opcode 35: `u64 texture`, 0 for none) names the render texture that stands for
+the screen while a built-in pipeline screen camera with command buffers draws into it. The
+renderer stores it as the screen is: drawn with the projection unflipped and, where the device
+stores the screen top-down (Vulkan), its rows top-down, so copies, readbacks and blits of it read
+the screen's rows as stored (tests/projects/rtdepth `vulkan`).
+
 ### Render protocol 15: native plugin calls (NativeApi 41)
 
 `Plugin` (opcode 34: `u8 kind`, `u64 callback`, then the kind's fields) runs a native plugin's
