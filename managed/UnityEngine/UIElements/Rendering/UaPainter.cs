@@ -76,11 +76,21 @@ namespace Unbound.UIElements
             public MeshWriteData Data;
             public Texture Texture;
             public UaVectorMesh Vector;
+            public MeshCopy Copy;
+        }
+
+        /// <summary>A copy of a DrawMesh call's vertices and indices (pooled buffers).</summary>
+        sealed class MeshCopy
+        {
+            public Vertex[] Vertices = new Vertex[64];
+            public ushort[] Indices = new ushort[96];
+            public int VertexCount, IndexCount;
         }
 
         readonly List<PendingMesh> m_PendingUserMeshes = new List<PendingMesh>();
         readonly List<UaVectorMesh> m_VectorPool = new List<UaVectorMesh>();
-        int m_VectorPoolUsed;
+        readonly List<MeshCopy> m_CopyPool = new List<MeshCopy>();
+        int m_VectorPoolUsed, m_CopyPoolUsed;
         readonly MeshGenerationContext m_Context = new MeshGenerationContext();
 
         // The element being drawn.
@@ -399,33 +409,58 @@ namespace Unbound.UIElements
             m_PendingUserMeshes.Add(new PendingMesh { Vector = copy });
         }
 
+        /// <summary>Queues a copy of a DrawMesh call's mesh behind the callback's earlier meshes.</summary>
+        internal void QueueUserMesh(NativeSlice<Vertex> vertices, NativeSlice<ushort> indices, Texture texture)
+        {
+            if (m_CopyPoolUsed == m_CopyPool.Count) m_CopyPool.Add(new MeshCopy());
+            var copy = m_CopyPool[m_CopyPoolUsed++];
+            if (copy.Vertices.Length < vertices.Length) copy.Vertices = new Vertex[Math.Max(vertices.Length, copy.Vertices.Length * 2)];
+            if (copy.Indices.Length < indices.Length) copy.Indices = new ushort[Math.Max(indices.Length, copy.Indices.Length * 2)];
+            for (int i = 0; i < vertices.Length; i++) copy.Vertices[i] = vertices[i];
+            for (int i = 0; i < indices.Length; i++) copy.Indices[i] = indices[i];
+            copy.VertexCount = vertices.Length;
+            copy.IndexCount = indices.Length;
+            m_PendingUserMeshes.Add(new PendingMesh { Copy = copy, Texture = texture });
+        }
+
         void FlushUserMeshes()
         {
             for (int i = 0; i < m_PendingUserMeshes.Count; i++)
             {
                 var pending = m_PendingUserMeshes[i];
-                if (pending.Vector != null) AddVectorMesh(pending.Vector);
-                else AddUserMesh(pending.Data.m_Vertices, pending.Data.m_Indices, pending.Texture);
+                if (pending.Vector != null)
+                {
+                    AddVectorMesh(pending.Vector);
+                    continue;
+                }
+                float id = Begin(pending.Texture);
+                byte type = pending.Texture != null ? VertTexture : VertSolid;
+                int first = VertexCount;
+                if (pending.Copy != null)
+                {
+                    var copy = pending.Copy;
+                    for (int k = 0; k < copy.VertexCount; k++) UserVertex(copy.Vertices[k], type, id);
+                    for (int k = 0; k < copy.IndexCount; k++) Index(first + copy.Indices[k]);
+                }
+                else
+                {
+                    var vertices = pending.Data.m_Vertices;
+                    var indices = pending.Data.m_Indices;
+                    for (int k = 0; k < vertices.Length; k++) UserVertex(vertices[k], type, id);
+                    for (int k = 0; k < indices.Length; k++) Index(first + indices[k]);
+                }
             }
             m_PendingUserMeshes.Clear();
             m_VectorPoolUsed = 0;
+            m_CopyPoolUsed = 0;
         }
 
-        internal void AddUserMesh(NativeSlice<Vertex> vertices, NativeSlice<ushort> indices, Texture texture)
+        /// <summary>A vertex of a game-built mesh. UIR evaluates its circles when its flags ask for
+        /// it (flags.b, set by Painter2D geometry; vertices built by game code leave it 0).</summary>
+        void UserVertex(in Vertex v, byte type, float id)
         {
-            float id = Begin(texture);
-            byte type = texture != null ? VertTexture : VertSolid;
-            int first = VertexCount;
-            var unused = new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc);
-            for (int i = 0; i < vertices.Length; i++)
-            {
-                var v = vertices[i];
-                // UIR evaluates a vertex's circles when its flags ask for it (flags.b, set by
-                // Painter2D geometry; vertices built by game code leave it 0).
-                bool arc = v.flags.b != 0;
-                Vertex(new Vector2(v.position.x, v.position.y), v.tint, v.uv, type, id, arc ? v.circle : unused, arc);
-            }
-            for (int i = 0; i < indices.Length; i++) Index(first + indices[i]);
+            bool arc = v.flags.b != 0;
+            Vertex(new Vector2(v.position.x, v.position.y), v.tint, v.uv, type, id, arc ? v.circle : new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc), arc);
         }
 
         /// <summary>Adds Painter2D geometry (solid, with its arc anti-aliasing data), in the

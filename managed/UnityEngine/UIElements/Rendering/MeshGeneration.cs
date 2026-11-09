@@ -126,10 +126,12 @@ namespace UnityEngine.UIElements
             return data;
         }
 
+        /// <summary>Records a draw of the given mesh, in call order with the callback's other meshes
+        /// (the data is copied when called).</summary>
         public void DrawMesh(NativeSlice<Vertex> vertices, NativeSlice<ushort> indices, Texture texture = null)
         {
             if (vertices.Length == 0 || indices.Length == 0) return;
-            uaPainter.AddUserMesh(vertices, indices, texture);
+            uaPainter.QueueUserMesh(vertices, indices, texture);
         }
 
         /// <summary>A textured rectangle as Unity's renderer draws one (MeshGenerator's MakeTextured
