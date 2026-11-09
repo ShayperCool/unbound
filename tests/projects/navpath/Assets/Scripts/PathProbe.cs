@@ -214,6 +214,7 @@ public class PathProbe : MonoBehaviour
             ("link.widetile", LinkWideTile),
             ("link.slope", LinkSlope),
             ("carve.shortcut", CarveShortcut),
+            ("carve.rules", CarveRules),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -1077,5 +1078,76 @@ public class PathProbe : MonoBehaviour
         Path("up", new Vector3(-8f, 0f, -1.8f), new Vector3(8f, 1.5f, 1.9f));
         Path("down", new Vector3(8f, 1.5f, -1.2f), new Vector3(-8f, 0f, 1.9f));
         NavMesh.RemoveLink(link);
+    }
+
+    /// <summary>The NavMesh is at (x, z) on the floor: a sample within 5 cm of it.</summary>
+    static bool OnFloor(float x, float z) => NavMesh.SamplePosition(new Vector3(x, 0.0667f, z), out _, 0.05f, NavMesh.AllAreas);
+
+    /// <summary>Carving rules: capsule holes (upright, turned 22.5 degrees, lying on its side), a
+    /// hole with corners sharper than a right angle, which
+    /// boxes above or below the floor carve (bottom within or beyond the agent height above it, top
+    /// within the climb below it), and when turning or scaling a stationary-only box counts as
+    /// moving (the hole goes, then comes back once it stands still).</summary>
+    IEnumerator CarveRules()
+    {
+        ClearAgents();
+        yield return null;
+        Level(14f);
+        yield return Frames(2);
+        var made = new List<GameObject>();
+        NavMeshObstacle Make(Vector3 at, NavMeshObstacleShape shape, Vector3 size, float yaw, float roll, bool stationary)
+        {
+            var go = new GameObject("rule");
+            go.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, yaw, roll));
+            var o = go.AddComponent<NavMeshObstacle>();
+            o.shape = shape;
+            if (shape == NavMeshObstacleShape.Capsule)
+            {
+                o.radius = size.x;
+                o.height = size.y;
+            }
+            else o.size = size;
+            o.carving = true;
+            o.carveOnlyStationary = stationary;
+            made.Add(go);
+            return o;
+        }
+        // Capsules: radius 1, upright, turned, lying along x.
+        Make(new Vector3(-8f, 1f, -8f), NavMeshObstacleShape.Capsule, new Vector3(1f, 2f, 0f), 0f, 0f, false);
+        Make(new Vector3(-8f, 1f, 0f), NavMeshObstacleShape.Capsule, new Vector3(1f, 2f, 0f), 22.5f, 0f, false);
+        Make(new Vector3(-8f, 1f, 8f), NavMeshObstacleShape.Capsule, new Vector3(1f, 4f, 0f), 0f, 90f, false);
+        // Heights (agent height 2, climb 0.75): top 0.3 below the floor; bottom 1.9 and 2.1 above.
+        Make(new Vector3(0f, -0.8f, -8f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, false);
+        Make(new Vector3(0f, 2.4f, 0f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, false);
+        Make(new Vector3(0f, 2.6f, 8f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, false);
+        // A flat square tilted 60 degrees about its diagonal: a rhombus from above, its corners at
+        // the long diagonal turning by about 127 degrees (sharper than the octagon's 45).
+        var tilted = Make(new Vector3(8f, 0.5f, 0f), NavMeshObstacleShape.Box, new Vector3(3f, 0.01f, 3f), 0f, 0f, false);
+        tilted.transform.rotation = Quaternion.AngleAxis(60f, Vector3.right) * Quaternion.Euler(0f, 45f, 0f);
+        // Stationary-only boxes to turn by 5.7 degrees and to scale by 8 % (threshold 0.1), and
+        // controls turned by 3 degrees and scaled by 4 % (under it).
+        var turned = Make(new Vector3(8f, 0.5f, -6f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
+        var scaled = Make(new Vector3(8f, 0.5f, 6f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
+        var turnedLess = Make(new Vector3(8f, 0.5f, -11f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
+        var scaledLess = Make(new Vector3(8f, 0.5f, 11f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
+        yield return Frames(4);
+        LogPolygons("poly");
+        ProbeLog.Value("below", OnFloor(0f, -8f));
+        ProbeLog.Value("float1.9", OnFloor(0f, 0f));
+        ProbeLog.Value("float2.1", OnFloor(0f, 8f));
+        turned.transform.rotation = Quaternion.Euler(0f, 5.7f, 0f);
+        scaled.transform.localScale = Vector3.one * 1.08f;
+        turnedLess.transform.rotation = Quaternion.Euler(0f, 3f, 0f);
+        scaledLess.transform.localScale = Vector3.one * 1.04f;
+        for (int f = 1; f <= 40; f++)
+        {
+            yield return null;
+            ProbeLog.Value("f" + f + ".turned", OnFloor(8f, -6f));
+            ProbeLog.Value("f" + f + ".scaled", OnFloor(8f, 6f));
+            ProbeLog.Value("f" + f + ".turned3", OnFloor(8f, -11f));
+            ProbeLog.Value("f" + f + ".scaled4", OnFloor(8f, 11f));
+        }
+        foreach (var go in made) Destroy(go);
+        yield return Frames(2);
     }
 }
