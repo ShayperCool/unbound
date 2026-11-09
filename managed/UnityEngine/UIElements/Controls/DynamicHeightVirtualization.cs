@@ -120,6 +120,8 @@ namespace UnityEngine.UIElements
 
         float viewportMaxOffset => m_ScrollView.scrollOffset.y + m_ScrollView.contentViewport.layout.height;
 
+        // Refresh rebinds only the shown rows; Fill binds the rest as they come into view.
+        [Unbound.EditorFaithful("Unity's: dynamic rows are rebound on demand")]
         protected override bool alwaysRebindOnRefresh => false;
 
         public DynamicHeightVirtualizationController(BaseVerticalCollectionView collectionView) : base(collectionView)
