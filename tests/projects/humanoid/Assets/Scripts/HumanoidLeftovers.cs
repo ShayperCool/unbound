@@ -114,6 +114,8 @@ public partial class HumanoidProbe
             }));
         // Two layers: B on an override layer of weight 0.5 above the base layer's A.
         Guarded("match.layers", () => PlayMatch("match.layers", "HumanBlendOverride", MatchAt(2, AvatarTarget.Body, all, 1f, 0.2f, 0.6f)));
+        // The same with B (2/3 s) a loop ahead of the base layer during the match.
+        Guarded("match.layersLoop", () => PlayMatch("match.layersLoop", "HumanBlendOverride", MatchAt(20, AvatarTarget.Body, all, 1f, 0.7f, 0.9f)));
         // A generic Animator (GenericMove, root motion applied): a body part target and the root.
         foreach (var target in new[] { AvatarTarget.Root, AvatarTarget.LeftHand })
         {

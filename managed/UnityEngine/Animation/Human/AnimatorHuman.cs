@@ -106,7 +106,8 @@ namespace Unbound.Runtime.Humanoid
 
         /// <summary>A target body part in the previous evaluation's pose relative to its motion (the
         /// root motion pass runs before this evaluation's pose): nothing for the root, the body, or a
-        /// goal in the API's goal frame.</summary>
+        /// goal in the API's goal frame. The body is the animated one, also when a mass center pose
+        /// placed it (unmeasured).</summary>
         internal Trs PreviousPosePart(int target)
         {
             if (target == 0) return Trs.Identity;

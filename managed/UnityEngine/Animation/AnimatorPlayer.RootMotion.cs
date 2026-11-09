@@ -367,16 +367,15 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Target matching of a humanoid rig: the target body part as the clips would place it
-        /// at the end of the match (each clip at that normalized time) relative to their motion now,
-        /// blended as their root motion is (by weight within a layer; override layers whose mask
-        /// keeps Root lerp towards theirs by their weight), from the root after this step
-        /// (tests/projects/humanoid match.*, match.layers).</summary>
+        /// at the end of the match (each clip at that normalized time, also a loop apart from the
+        /// base layer) relative to their motion now, blended as their root motion is (by weight
+        /// within a layer; layers whose mask keeps Root lerp towards theirs by their weight), from the
+        /// root after this step (tests/projects/humanoid match.*, match.layers, match.layersLoop).</summary>
         void HumanMatchStep(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human, Vector3 scale)
         {
             if (!MatchProgress(animator, out var match, out _, out double to, out float share)) return;
             var t = Vector3.zero;
             var q = Quaternion.identity;
-            bool any = false;
             if (match.Finish)
             {
                 // Finishing early: the part in the previous evaluation's pose, its position without
@@ -391,14 +390,15 @@ namespace Unbound.Runtime
                     out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
                 return;
             }
+            // From no part (the identity), each layer moves the part towards its own by its weight.
             for (int i = 0; i < Layers.Length; i++)
             {
                 var def = Layers[i].Def;
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
-                if (i > 0 && (def.Additive || layerWeight <= 0f || def.Mask != null && def.Mask.MasksHumanoidParts && !def.Mask.m_HumanoidParts[0]))
+                if (def.Additive || layerWeight <= 0f || def.Mask != null && def.Mask.MasksHumanoidParts && !def.Mask.m_HumanoidParts[0])
                     continue;
                 if (!LayerMatchPart(human, match, i, to, out var lt, out var lq)) continue;
-                if (!any || layerWeight >= 1f) { t = lt; q = lq; }
+                if (layerWeight >= 1f) { t = lt; q = lq; }
                 else
                 {
                     t = Vector3.Lerp(t, lt, layerWeight);
@@ -406,7 +406,6 @@ namespace Unbound.Runtime
                     q = new Quaternion(q.x + (lq.x - q.x) * layerWeight, q.y + (lq.y - q.y) * layerWeight, q.z + (lq.z - q.z) * layerWeight,
                         q.w + (lq.w - q.w) * layerWeight).normalized;
                 }
-                any = true;
             }
             var turned = animator.m_MotionRootRotation * animator.m_DeltaRotation;
             var moved = animator.m_MotionRootPosition + animator.m_DeltaPosition;
