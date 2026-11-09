@@ -298,6 +298,10 @@ namespace UnityEngine.Tests
             source.bypassEffects = initiallyBypassed;
             source.Play();
             Assert.True(source.isPlaying);
+            // Before the first audio frame the voice has no route yet: a static bypass.
+            source.bypassEffects = !initiallyBypassed;
+            source.bypassEffects = initiallyBypassed;
+            AudioSystem.Update();
             Assert.Throws<NotSupportedException>(() => source.bypassEffects = !initiallyBypassed);
             Assert.Equal(initiallyBypassed, source.bypassEffects);
             Assert.True(source.isPlaying);
@@ -318,6 +322,7 @@ namespace UnityEngine.Tests
             source.gameObject.AddComponent<AudioLowPassFilter>();
             source.clip = AudioClip.Create("input", 8192, 1, 48000, false);
             source.Play();
+            AudioSystem.Update();
             source.bypassEffects = true;
             Assert.True(source.bypassEffects);
             source.bypassEffects = false;

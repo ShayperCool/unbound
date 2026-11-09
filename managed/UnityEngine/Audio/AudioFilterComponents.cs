@@ -440,11 +440,12 @@ namespace Unbound.Runtime
         // Static bypass of a scripted clip source is measured: the voice stays dry and the
         // scripts receive silence. Reconnecting the voice to its scripts during playback also
         // changes callback input ownership and effect histories, which remains unsupported for
-        // every scripted clip chain, whatever its spatial blend or components.
+        // every scripted clip chain, whatever its spatial blend or components. A change before
+        // the voice reaches an audio frame (Awake/Start, playOnAwake) is a static bypass.
         internal static void ValidateLiveBypass(AudioSource source)
         {
             if (!Compat.AudioSpatialStereoMeasured || source.clip == null || source.m_GameObject == null
-                || (!source.m_Paused && !source.isPlaying)) return;
+                || !source.m_HasAudioFrame || (!source.m_Paused && !source.isPlaying)) return;
             foreach (var component in source.m_GameObject.m_Components)
                 if (AudioFilters.IsFilterScript(component))
                     throw new NotSupportedException("Unbound: changing bypassEffects during playback of an AudioSource clip with OnAudioFilterRead scripts is not supported; stop the source before reconnecting its filters");
