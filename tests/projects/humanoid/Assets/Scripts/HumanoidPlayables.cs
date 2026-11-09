@@ -105,6 +105,16 @@ public partial class HumanoidProbe
             Guarded("mixer.additive" + mask, () => PlayGraph("mixer.additive" + mask, g => LayerMixer(g, true, mask, true, 0.6f), true));
     }
 
+    /// <summary>GenericMove (root curves, no humanoid curves) on HumanA, root motion applied: alone on
+    /// a controller and in a PlayableGraph.</summary>
+    static void GenericOnHuman()
+    {
+        Guarded("genericOnHuman", () => Play("genericOnHuman", "HumanA", "HumanGenericMove", animator => animator.applyRootMotion = true,
+            motion: true, locals: false));
+        Guarded("genericOnHuman.graph", () => PlayGraph("genericOnHuman.graph",
+            g => AnimationClipPlayable.Create(g, Resources.Load<AnimationClip>("GenericMove")), true));
+    }
+
     /// <summary>An extra Animator.Update(0) before step 12 (during the hold).</summary>
     static void UpdateZeroAt12(Animator animator, int step)
     {
@@ -133,5 +143,6 @@ public partial class HumanoidProbe
     {
         NoWriteDefaults();
         Mixers();
+        GenericOnHuman();
     }
 }

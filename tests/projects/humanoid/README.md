@@ -150,6 +150,11 @@ imported without keyframe reduction.
   without it over 0.3 s (`footIKTransition`, HumanFootIKTransition). Measured: see
   docs/COMPATIBILITY_GAPS.md (humanoid row, layer mixers and Foot IK).
 
+- GenericMove (root curves, no humanoid curves) on HumanA with root motion applied, alone on a
+  controller (`genericOnHuman`, HumanGenericMove) and in a PlayableGraph (`genericOnHuman.graph`).
+  Measured: the root moves by the curves times the human scale either way, and the avatar takes the
+  pose with every muscle 0 and the body on the root.
+
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
 

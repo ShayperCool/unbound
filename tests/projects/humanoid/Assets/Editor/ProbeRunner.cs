@@ -872,7 +872,10 @@ public static class ProbeRunner
         Hold("HumanNoWDBack", a, 0f, back: true);
         Hold("GenericNoWD", move, 0f);
         Hold("GenericNoWDBack", move, 0f, back: true);
-        // HumanA's clip on a state with Foot IK.
+        // GenericMove alone on a humanoid; HumanA's clip on a state with Foot IK.
+        if (AssetDatabase.LoadAssetAtPath<AnimatorController>(Dir + "HumanGenericMove.controller") == null)
+            AnimatorController.CreateAnimatorControllerAtPathWithClip(Dir + "HumanGenericMove.controller",
+                AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "GenericMove.anim"));
         var footIK = Make("HumanFootIK");
         if (footIK != null)
         {
