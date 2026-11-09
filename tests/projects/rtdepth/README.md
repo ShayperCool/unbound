@@ -96,10 +96,24 @@ it was a half-float target whose float reads returned linear values and whose by
 re-encoded on the CPU). All 1,071 main values and 368/368 images pass (316 before, the 52
 `target.screen.*.final` images resolved); controls pass 46/46 values and 16/17 images (13 before:
 `ctl.postRead.none`, `ctl.wireframe.none.final` and `ctl.wireframeKept.none.final`, one 8-bit step
-apart at exact halves, resolved), retaining the unsupported `ctl.uintArray` default binding. No
+apart at exact halves, resolved); `ctl.uintArray` passes since integer array slots with nothing
+bound read the default array texture's bits (17/17 images). No
 value or image is introduced or newly missing. The camera MSAA probe's Linear screen reads now
 match as its Gamma ones do (24 images and 18 records resolved, none introduced); its reads of the
 Editor's system framebuffer remain different.
+
+On Vulkan (`--device vulkan`) the main set passes 1,071 values and 368/368 images, and the controls
+15/17 images: the stand-in pair `ctl.wireframe{,Kept}.buffer.final` keeps one row where a
+wireframe edge lies on a pixel boundary (the stand-in is stored bottom-up, the Editor's screen
+top-down).
+
+## What the Editor does on Vulkan (6000.0.71f1, Linux, `-force-vulkan`)
+
+- The default copy of a screen camera's target (`Blit` from `CameraTarget`/`CurrentActive`
+  without a material) holds the screen as stored: upside down in the texture
+  (`target.screen.*.blit{Cam,Active}.out` are the OpenGL Core images flipped).
+- An integer `Texture2DArray` with nothing bound reads the same bits as on OpenGL Core
+  (`ctl.uintArray`: one gray texel, zeros outside it).
 
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core)
 

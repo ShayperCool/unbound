@@ -560,8 +560,10 @@ namespace UnityEngine.Rendering
             if (mat == null && sourceSlice < 0 && Immediate.ArraySlices(texture) > 0) texture = Immediate.HalfGray;
             if (texture != null) properties[s_MainTex] = texture;
             var (scaleY, offsetY) = (scale.y, offset.y);
-            if (mat == null && texture != null && texture == RenderTexture.ScreenStandIn
+            if (mat != null) WarnUprightScreen("a Blit with a material", texture);
+            else if (texture != null && texture == RenderTexture.ScreenStandIn
                 && Unbound.Runtime.GraphicsDeviceProfile.Current.ScreenTopDown)
+                // Rows as stored (also under a scale and offset: unmeasured).
                 (scaleY, offsetY) = (-scaleY, 1f - offsetY);
             if (scale.x != 1f || scaleY != 1f || offset.x != 0f || offsetY != 0f)
                 properties[s_MainTexST] = new Vector4(scale.x, scaleY, offset.x, offsetY);
@@ -599,12 +601,30 @@ namespace UnityEngine.Rendering
             RenderTargetIdentifier dst, int dstElement, int dstMip, int dstX, int dstY) => Add(c =>
         {
             ulong source = HandleOf(src, c), destination = HandleOf(dst, c);
+            WarnUprightScreen("CopyTexture", Resolve(src, c));
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
         });
 
         public void ConvertTexture(RenderTargetIdentifier src, RenderTargetIdentifier dst) => ConvertTexture(src, 0, dst, 0);
         public void ConvertTexture(RenderTargetIdentifier src, int srcElement, RenderTargetIdentifier dst, int dstElement) =>
-            Add(c => Graphics.ConvertTexture(Resolve(src, c), srcElement, Resolve(dst, c), dstElement));
+            Add(c =>
+            {
+                var source = Resolve(src, c);
+                WarnUprightScreen("ConvertTexture", source);
+                Graphics.ConvertTexture(source, srcElement, Resolve(dst, c), dstElement);
+            });
+
+        static readonly HashSet<string> s_UprightWarned = new HashSet<string>();
+
+        /// <summary>Reads of a screen camera's target other than the default copy, which copies it
+        /// as stored: on a device storing the screen top-down they are unmeasured and read the
+        /// stand-in upright (logged once for each).</summary>
+        static void WarnUprightScreen(string how, Texture source)
+        {
+            if (source == null || source != RenderTexture.ScreenStandIn || !Unbound.Runtime.GraphicsDeviceProfile.Current.ScreenTopDown) return;
+            if (s_UprightWarned.Add(how))
+                Debug.LogWarning($"Unbound: {how} of a screen camera's target reads it upright; the Editor's screen on this device is stored top-down (unmeasured)");
+        }
 
         // ------------------------------------------------------------ random write targets
 

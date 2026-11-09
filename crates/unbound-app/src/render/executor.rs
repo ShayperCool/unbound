@@ -500,8 +500,10 @@ pub struct UnityRenderer {
     target_handles: (u64, u64),
     /// Integer-texel slots' defaults (zeros): signed, unsigned.
     integer_defaults: [Option<wgpu::TextureView>; 2],
-    /// [`Self::integer_array_default`]'s, by (signed, Linear color space).
-    integer_array_defaults: HashMap<(bool, bool), wgpu::TextureView>,
+    /// [`Self::integer_array_default`]'s gray, bits and array view, by (signed, Linear color
+    /// space).
+    integer_array_defaults:
+        HashMap<(bool, bool), (wgpu::TextureView, wgpu::TextureView, wgpu::TextureView)>,
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
     buffers: HashMap<u64, compute::GpuBuffer>,
@@ -1798,32 +1800,61 @@ impl UnityRenderer {
     }
 
     /// What an integer-texel array slot with nothing bound reads: the bits of Unity's default
-    /// array texture, one gray texel (128 of 255, its color decoded from sRGB in a Linear color
-    /// space project) as a float texture is read as bits; zeros outside it (measured on OpenGL
-    /// Core and Vulkan: tests/projects/rtdepth controls ctl.uintArray).
+    /// array texture, one gray texel (8-bit 128, sampled through an sRGB view in a Linear color
+    /// space project, as the default textures are), read as a float texture's bits are (by the
+    /// same copy); zeros outside it (measured on OpenGL Core and Vulkan: tests/projects/rtdepth
+    /// controls ctl.uintArray). Made once; the 1x1 copy runs before every draw that reads it,
+    /// as the copies of bound textures do.
     fn integer_array_default(&mut self, signed: bool, space: i32) -> wgpu::TextureView {
-        /// The default array texture's gray (measured: ctl.uintArray's alpha).
-        const GRAY: f32 = 128.0 / 255.0;
+        /// The default array texture's gray (measured: ctl.uintArray's alpha, 128/255).
+        const GRAY: u8 = 128;
         let key = (signed, space == 1);
-        if let Some(view) = self.integer_array_defaults.get(&key) {
-            return view.clone();
-        }
-        let color = if key.1 {
-            ((GRAY + 0.055) / 1.055).powf(2.4)
+        let kind = if signed {
+            CopyKind::SintBits
         } else {
-            GRAY
+            CopyKind::UintBits
         };
-        let texel: Vec<u8> = [color, color, color, GRAY]
-            .iter()
-            .flat_map(|c| c.to_bits().to_le_bytes())
-            .collect();
-        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("unbound integer array default"),
-            size: wgpu::Extent3d {
-                width: 1,
-                height: 1,
-                depth_or_array_layers: 1,
+        if let Some((source, target, view)) = self.integer_array_defaults.get(&key) {
+            let (source, target, view) = (source.clone(), target.clone(), view.clone());
+            self.pre_draw.push(DepthCopy {
+                depth: source,
+                target,
+                kind,
+            });
+            return view;
+        }
+        let one = wgpu::Extent3d {
+            width: 1,
+            height: 1,
+            depth_or_array_layers: 1,
+        };
+        let gray = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("unbound default array gray"),
+            size: one,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[wgpu::TextureFormat::Rgba8UnormSrgb],
+        });
+        self.queue.write_texture(
+            gray.as_image_copy(),
+            &[GRAY; 4],
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4),
+                rows_per_image: Some(1),
             },
+            one,
+        );
+        let source = gray.create_view(&wgpu::TextureViewDescriptor {
+            format: key.1.then_some(wgpu::TextureFormat::Rgba8UnormSrgb),
+            ..Default::default()
+        });
+        let bits = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("unbound integer array default"),
+            size: one,
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -1832,28 +1863,21 @@ impl UnityRenderer {
             } else {
                 wgpu::TextureFormat::Rgba32Uint
             },
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
-        self.queue.write_texture(
-            texture.as_image_copy(),
-            &texel,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(16),
-                rows_per_image: Some(1),
-            },
-            wgpu::Extent3d {
-                width: 1,
-                height: 1,
-                depth_or_array_layers: 1,
-            },
-        );
-        let view = texture.create_view(&wgpu::TextureViewDescriptor {
+        let target = bits.create_view(&wgpu::TextureViewDescriptor::default());
+        self.pre_draw.push(DepthCopy {
+            depth: source.clone(),
+            target: target.clone(),
+            kind,
+        });
+        let view = bits.create_view(&wgpu::TextureViewDescriptor {
             dimension: Some(wgpu::TextureViewDimension::D2Array),
             ..Default::default()
         });
-        self.integer_array_defaults.insert(key, view.clone());
+        self.integer_array_defaults
+            .insert(key, (source, target, view.clone()));
         view
     }
 
