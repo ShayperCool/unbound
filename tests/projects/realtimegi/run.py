@@ -133,7 +133,7 @@ def main():
     parser.add_argument('mode', choices=['setup', 'record', 'publish', 'gate'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default='current')
-    parser.add_argument('--frames', type=int, default=12000)
+    parser.add_argument('--frames', type=int, default=16000)
     args = parser.parse_args()
     if args.mode == 'setup':
         return setup(args.label)
