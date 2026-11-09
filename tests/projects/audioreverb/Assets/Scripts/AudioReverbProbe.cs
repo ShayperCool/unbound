@@ -169,6 +169,7 @@ public partial class AudioReverbProbe : MonoBehaviour
         new[] { "zone_voices_chorus", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=chorus" },
         new[] { "zone_lifecycle_pause_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=pause", "mono" },
         new[] { "zone_lifecycle_pauseactivate_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=pauseactivate", "mono" },
+        new[] { "zone_lifecycle_pauseplay_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=pauseplay", "mono" },
     };
     public static readonly string[] FilterProperties = {
         "reverbPreset", "dryLevel", "room", "roomHF", "roomLF", "decayTime", "decayHFRatio", "reflectionsLevel",
@@ -458,7 +459,7 @@ public partial class AudioReverbProbe : MonoBehaviour
                         if (lifecycle == "enable") zones[0].gameObject.SetActive(true);
                         if (lifecycle == "late") zones.Add(new GameObject(key + ".latezone").AddComponent<AudioReverbZone>());
                         if (lifecycle == "stop") source.Stop();
-                        if (lifecycle == "pause" || lifecycle == "pauseactivate") {
+                        if (lifecycle.StartsWith("pause")) {
                             source.Pause();
                             records.Add("\"" + key + ".pausedPlaying\":" + (source.isPlaying ? "true" : "false"));
                         }
@@ -470,8 +471,8 @@ public partial class AudioReverbProbe : MonoBehaviour
                         zones.Add(added);
                         if (Engine) FlushEngine();
                     }
-                    if (block == 12 && (lifecycle == "pause" || lifecycle == "pauseactivate")) {
-                        source.UnPause();
+                    if (block == 12 && (lifecycle.StartsWith("pause"))) {
+                        if (lifecycle == "pauseplay") source.Play(); else source.UnPause();
                         records.Add("\"" + key + ".resumedPlaying\":" + (source.isPlaying ? "true" : "false"));
                         if (Engine) FlushEngine();
                     }

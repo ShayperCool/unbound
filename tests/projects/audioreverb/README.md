@@ -97,7 +97,7 @@ zones before rendering and stop before long sources finish. The separate
 first-activation and source-completion send differences.
 
 The additional lifecycle, curve-key and overlapping-voice controls bring the
-reference to 140 cases and 13763160 values per rate. They retain every earlier
+reference to 141 cases and 13861469 values per rate. They retain every earlier
 metadata value and sample. Two independent captures agree bit for bit at each
 rate. Reset controls render one silent block before creating their source to
 establish the restarted clock; every subsequent case buffer is retained.
@@ -122,7 +122,7 @@ Record and publish this profile with `native.py --profile motion` and
 --candidate SECOND/capture` checks independent agreement. Each command also
 requires the explicit release, rate and a cache output path as above.
 
-The static gate compares all 135 supported cases. The strict all-case report also
+The static gate compares all 136 supported cases. The strict all-case report also
 retains the five mid-playback zone-activation cases; `rejection.py` requires one
 clear diagnostic per case, Native-equivalent dry Master floats and the exact dry
 device return. Mid-playback activation needs reverb parameter transitions while
@@ -134,8 +134,10 @@ getter values. Motion metadata records the public fixed-step getter bits as well
 as all 40 rendered controls. Existing oracle values and tolerances are unchanged.
 
 The pause controls keep a nonzero source paused across four rendered buffers,
-record isPlaying false and then true on UnPause, and compare the resumed sample
-sequence. Adding a Cave zone while the existing source is paused remains an
+record isPlaying false and then true on UnPause or Play, and compare the resumed
+sample sequence. The Play control has already advanced the source cursor before
+pausing, distinguishing resuming from restarting the clip. Adding a Cave zone while the existing source is paused remains an
 explicit refusal; its dry-return check begins at that activation, preserving the
 ordinary zone return before it. Paused main and one-shot voices are also covered
-by captured-log managed tests.
+by captured-log managed tests, including Play and PlayOneShot calls immediately
+before the rejected activation.
