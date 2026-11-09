@@ -2109,10 +2109,9 @@ namespace UnityEngine
         /// particles it received. Children an InheritLifetime leaves at zero life stay until the
         /// child's next update, as from a script (6000.0.71f1, particlerender inherit/death/lifetime:
         /// counted at the frame's end, gone after the next).</summary>
-        internal void EmitEventNow(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count,
-            bool turnToTravel = true)
+        internal void EmitEventNow(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count)
         {
-            EmitFromParent(parentSystem, ref parent, properties, count, 0f, eventEmission: turnToTravel, keepSpent: true);
+            EmitFromParent(parentSystem, ref parent, properties, count, 0f, eventEmission: true, keepSpent: true);
             if (m_Count > 0 && !m_IsPlaying)
             {
                 m_IsPlaying = true;
@@ -2353,16 +2352,16 @@ namespace UnityEngine
                 {
                     var simRotation = Quaternion.Inverse(parentSystem.WorldToSimulationRotation());
                     var forward = travel.normalized;
-                    var up = simRotation * Vector3.forward;
-                    if (birthCatchup >= 0f)
-                    {
-                        // Measured Birth frame: blend the child's forward and up axes,
-                        // align with travel, then apply its rotation relative to the parent.
-                        var childRotation = m_GameObject.m_Transform.rotation;
-                        var childForward = childRotation * Vector3.forward;
-                        float blend = Mathf.Abs(Vector3.Dot(forward, childForward));
-                        up = Vector3.LerpUnclamped(childForward, childRotation * Vector3.up, blend);
-                    }
+                    // The frame looks along the travel with its up between the child's forward and
+                    // up axes (more of the up the more the travel follows the forward); the child's
+                    // rotation relative to the parent then applies in it. Birth, Death, Manual,
+                    // Collision and Trigger children alike (6000.0.71f1, tests/projects/particlerandom
+                    // Birth frames; tests/projects/subemitters direction/*, event/*: children turned
+                    // about y and x for nine directions of travel).
+                    var childRotation = m_GameObject.m_Transform.rotation;
+                    var childForward = childRotation * Vector3.forward;
+                    float blend = Mathf.Abs(Vector3.Dot(forward, childForward));
+                    var up = Vector3.LerpUnclamped(childForward, childRotation * Vector3.up, blend);
                     float along = Vector3.Dot(forward, up);
                     var align = Mathf.Abs(along) < 1f - 1e-6f ? Quaternion.LookRotation(forward, up)
                         : along > 0f ? simRotation : simRotation * Quaternion.AngleAxis(180f, Vector3.up);

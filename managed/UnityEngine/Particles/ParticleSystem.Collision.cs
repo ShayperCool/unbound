@@ -286,14 +286,6 @@ namespace UnityEngine
         bool RespondToCollision(ref Particle p, in PendingCollision h, in StepContext c, float bounce, float dampen, float lifetimeLoss)
         {
             var C = m_Collision;
-            // Collision sub-emitters ("Spawns new particles when particles from the parent
-            // system collide with something"; collision0/1 spawn "at the locations of the
-            // collision") emit at the contact, the ParticleCollisionEvent intersection, whether
-            // or not collision messages are sent. Unbound's choices (unmeasured): one emission per
-            // detected collision, also when the collision then kills the particle (its Death
-            // sub-emitters fire as well), and what the children inherit is the particle as it
-            // arrives, before the bounce, dampen and lifetime loss.
-            if (m_SubEmitters.enabled) EventSubEmitters(ParticleSystemSubEmitterType.Collision, p, h.contact);
             if (C.sendCollisionMessages && h.other != null)
                 m_CollisionEvents.Add((h.other, new ParticleCollisionEvent
                 {
@@ -310,6 +302,15 @@ namespace UnityEngine
             p.m_Velocity = Mathf.Abs(h.speedModifier) > MinSpeedModifier ? bounced / h.speedModifier - p.m_AnimatedVelocity : Vector3.zero;
             p.m_AgePercent += lifetimeLoss * 100f;
             p.ExportLifetime();
+            // Collision sub-emitters ("Spawns new particles when particles from the parent system
+            // collide with something") emit from the particle as its step ends, bounced and moved
+            // on, along its new direction, whether or not collision messages are sent (6000.0.71f1,
+            // tests/projects/subemitters event/collision/*; the Scripting API's collision0/1 say
+            // "at the locations of the collision", which the Editor's children do not show).
+            // Unbound's choices (unmeasured): one emission per detected collision, also when the
+            // collision then kills the particle (its Death sub-emitters fire as well), and the
+            // lifetime it inherits is the one after the lifetime loss.
+            if (m_SubEmitters.enabled) EventSubEmitters(ParticleSystemSubEmitterType.Collision, p, p.m_Position);
             // The kill by speed takes the speed it arrived with; the killed particle still bounced
             // (6000.0.71f1, tests/projects/particletrails pp/collision/speedkill).
             float speed2 = h.velocity.sqrMagnitude;
@@ -466,9 +467,9 @@ namespace UnityEngine
                     else if (ParticleSystemManager.Updating)
                         ParticleSystemManager.HoldEventEmission(new ParticleSystemManager.EventEmission
                         {
-                            child = child, parentSystem = this, parent = at, properties = e.properties, count = count, ownFrame = true,
+                            child = child, parentSystem = this, parent = at, properties = e.properties, count = count,
                         });
-                    else child.EmitFromParent(this, ref at, e.properties, count, 0f, eventCatchup: EventCatchup);
+                    else child.EmitFromParent(this, ref at, e.properties, count, 0f, eventEmission: true, eventCatchup: EventCatchup);
                 }
             }
             finally { s_EventSubEmitting.RemoveAt(s_EventSubEmitting.Count - 1); }

@@ -18,12 +18,9 @@ import sys
 TOLERANCE = 2e-4
 FIELDS = 18
 POSITION, VELOCITY = {0, 1, 2}, {3, 4, 5}
-KNOWN = [
-    (r'^death/child_rotated/child/\d+$', POSITION | VELOCITY,
-     'a child rotated against its parent: Unity combines that rotation with the emission frame differently'),
-    (r'^direction/\d+/[12]$', VELOCITY,
-     'a child rotated against its parent: Unity combines that rotation with the emission frame differently'),
-]
+# Rules (regex, fields, reason) for records that differ for a cause this probe does not fix; none
+# at present.
+KNOWN = []
 
 
 def read(path):

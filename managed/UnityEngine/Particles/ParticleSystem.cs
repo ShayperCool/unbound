@@ -1848,8 +1848,6 @@ namespace Unbound.Runtime
             public ParticleSystem.Particle parent;
             public ParticleSystemSubEmitterProperties properties;
             public int count;
-            /// <summary>A Collision or Trigger emission: the child keeps its own frame.</summary>
-            public bool ownFrame;
             public bool birth;
             public ParticleSystem.BirthEmission first;
             public int requestStart, requestCount;
@@ -1896,7 +1894,7 @@ namespace Unbound.Runtime
                         var parent = e.parent;
                         if (!e.birth)
                         {
-                            e.child.EmitEventNow(e.parentSystem, ref parent, e.properties, e.count, !e.ownFrame);
+                            e.child.EmitEventNow(e.parentSystem, ref parent, e.properties, e.count);
                             continue;
                         }
                         List<ParticleSystem.BirthEmission> requests = null;

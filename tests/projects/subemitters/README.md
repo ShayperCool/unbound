@@ -27,6 +27,10 @@ order does not matter):
 - `direction/*`: one parent moving along nine directions (zero included) with the child unrotated,
   turned 90° about Y and -90° about X; a rotated parent; a child whose zero-size box shape is moved off
   centre; a Death child where four parents die.
+- `event/*`: Collision (a plane) and Trigger (Enter on a trigger box, Callback) sub-emitters in
+  `Simulate`: four parents falling at 1 unit/s meet the plane or enter the box in the four 0.025 s
+  internal steps of one 0.1 s call, then a 0.05 s call follows; the child unrotated and turned 90°
+  about Y.
 - `played/*` (frames at `Time.captureDeltaTime` 0.02, the state recorded in the next `Update`):
   TriggerSubEmitter from `Update` (`update`), from `OnParticleSystemStopped` with the particles saved
   in the last `Update` (`stopped`, the parent played again at frame 20), from `OnParticleTrigger`
@@ -62,9 +66,16 @@ this release, beyond that:
   particle's current position, also on a Death slot. A disabled Sub Emitters module emits nothing, and
   its child does not emit on its own either. An index past the last slot does nothing, without an
   exception or a logged error.
-- The child's emission frame turns +Z to the parent particle's world direction of travel and +Y
-  towards +Z as far as that allows; a still particle keeps the child's own frame; a rotated parent
-  does not turn the direction further.
+- The child's emission frame looks along the parent particle's world direction of travel, its up
+  between the child's forward and up axes (`Lerp(forward, up, |travel · forward|)`), and the child's
+  rotation against its parent then applies in that frame (children turned about Y and X, nine
+  directions); a still particle keeps the child's own frame; a rotated parent does not turn the
+  direction further. Collision and Trigger children turn alike.
+- Collision children come from the parent as its step ends, bounced and moved on, along its new
+  direction (the Scripting API's collision0 says "at the locations of the collision"; the children
+  do not start at the contact). Trigger children come from the particle as the step it entered in
+  ends.
+- In `Simulate`, Collision and Trigger children are aged as Death children (below).
 - InheritLifetime multiplies the child's start lifetime by the parent's remaining lifetime in seconds
   (2.013 × 3.863 = 7.776); a dying parent leaves none, so its Death children are not emitted.
   InheritColor/Size use the parent's current color and size (with its over-lifetime modules).
@@ -83,12 +94,7 @@ this release, beyond that:
   not move (the child does not play) until the parent plays again. A child triggered from `Update`
   plays from the next frame.
 
-Known differences (the comparator lists each one and keeps it out of the verdict):
-
-- A child rotated against its parent (`direction/*/1`, `/2`, `death/child_rotated`): Unity combines
-  that rotation with the emission frame in a way that is not a rotation of the child's direction
-  (two orthogonal child directions give non-orthogonal velocities); Unbound applies it inside the
-  frame. Unrotated children match.
+Every record matches; the comparator has no known differences.
 
 All 58 `random/*` count records compare exactly. Selection uses a stable roll from the parent
 particle seed; burst probability and count use the parent particle seed plus the parent system
@@ -97,6 +103,6 @@ seed. The comparator has no statistical count allowance.
 Birth origin and Simulate age controls are in [particlerandom](../particlerandom/README.md).
 They extend that probe's fixed-seed Birth histories; this probe retains its Death and Manual scope.
 
-Unmeasured here: other releases; Birth, Collision and Trigger sub-emitters (Collision and Trigger use the
-same count rule, unmeasured); a paused parent; the up axis of the frame for a rotated parent; Inherit
-Duration.
+Unmeasured here: other releases; Birth sub-emitters (measured by particlerandom); Collision and
+Trigger counts beyond one burst, their inheritance and played frames (particlerender inherit/*,
+birthstart/events02); a paused parent; Inherit Duration.

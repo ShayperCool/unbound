@@ -9,7 +9,8 @@ namespace UnityEngine.Tests
     /// Scripting API: ParticleSystemSubEmitterType.Collision "Spawns new particles when particles
     /// from the parent system collide with something", Trigger "... when particles from the
     /// parent system pass conditions in the Trigger Module"; SubEmittersModule.collision0/1 spawn
-    /// "at the locations of the collision"; AddSubEmitter's emitProbability "0 is never and 1 is
+    /// "at the locations of the collision", where the 6000.0.71f1 Editor's children start from the
+    /// bounced parent as its step ends (tests/projects/subemitters event/collision/*); AddSubEmitter's emitProbability "0 is never and 1 is
     /// always"; colliderForce "How much force is applied to a Collider when hit by particles",
     /// with no formula, force mode or direction, so Unbound reports it instead of guessing one).
     /// Nothing here assumes an order of emission: Unity does not document one.</summary>
@@ -82,7 +83,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ACollisionSubEmitterEmitsAtTheCollisionPointWithTheInheritedColorAndSize()
+        public void ACollisionSubEmitterEmitsFromTheBouncedParentWithTheInheritedColorAndSize()
         {
             var (ps, child, plane) = FallOntoPlane((subs, c) => subs.AddSubEmitter(c, ParticleSystemSubEmitterType.Collision,
                 ParticleSystemSubEmitterProperties.InheritColor | ParticleSystemSubEmitterProperties.InheritSize));
@@ -93,9 +94,11 @@ namespace UnityEngine.Tests
                 // The collision happened: the parent bounced off the plane.
                 var parent = Assert.Single(Live(ps));
                 Assert.True(parent.velocity.y > 0f);
+                // Where the parent's step ends, bounced back up from the contact at -0.9 (Unity
+                // 6000.0.71f1, tests/projects/subemitters event/collision/*).
                 var emitted = Assert.Single(Live(child));
                 Assert.Equal(0f, emitted.position.x, 4);
-                Assert.Equal(-.9f, emitted.position.y, 4);
+                Assert.Equal(-.8f, emitted.position.y, 4);
                 Assert.Equal(0f, emitted.position.z, 4);
                 // InheritColor: white × the parent's red; InheritSize: 1 × the parent's .2.
                 Assert.Equal(Red, emitted.startColor);

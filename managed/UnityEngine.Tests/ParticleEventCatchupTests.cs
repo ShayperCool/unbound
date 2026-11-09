@@ -71,6 +71,72 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 0.02f, 0.05f, 0.07f, 0.1f }, ChildAges(0.01f), new FloatNear(1e-4f));
         }
 
+        /// <summary>The direction of a Manual child turned against its parent, the parent moving
+        /// along <paramref name="travel"/>.</summary>
+        static Vector3 ManualChildVelocity(Vector3 travel, Vector3 childEuler)
+        {
+            var parent = Make("parent", null);
+            var child = Make("child", parent.transform);
+            child.transform.localRotation = Quaternion.Euler(childEuler);
+            var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World;
+            child.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            var subs = parent.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Manual, ParticleSystemSubEmitterProperties.InheritNothing);
+            parent.gameObject.SetActive(true);
+            child.gameObject.SetActive(true);
+            try
+            {
+                parent.Emit(new ParticleSystem.EmitParams { velocity = travel, startLifetime = 5f }, 1);
+                parent.TriggerSubEmitter(0);
+                var particles = new ParticleSystem.Particle[1];
+                Assert.Equal(1, child.GetParticles(particles));
+                return particles[0].velocity;
+            }
+            finally { Object.DestroyImmediate(parent.gameObject); }
+        }
+
+        [Theory]
+        // Unity 6000.0.71f1, tests/projects/subemitters direction/*: the frame looks along the
+        // travel with its up between the child's forward and up axes, then the child's rotation
+        // applies in it (two orthogonal child directions need not stay orthogonal).
+        [InlineData(0f, 1f, 0f, 0f, 90f, 0f, 0f, 0f, 1f)]
+        [InlineData(1f, 0f, 0f, 0f, 90f, 0f, 0f, 0f, -1f)]
+        [InlineData(0f, 0f, 1f, 0f, 90f, 0f, 0f, -1f, 0f)]
+        [InlineData(0f, 1f, 0f, -90f, 0f, 0f, 0f, 0f, -1f)]
+        [InlineData(1f, 0f, 0f, -90f, 0f, 0f, 0f, 1f, 0f)]
+        [InlineData(0.6f, 0.8f, 0f, -90f, 0f, 0f, -0.1187f, 0.089f, -0.9889f)]
+        public void ARotatedChildTurnsWithinTheTravelFrame(float tx, float ty, float tz, float ex, float ey, float ez, float vx, float vy, float vz)
+        {
+            var v = ManualChildVelocity(new Vector3(tx, ty, tz) * 2f, new Vector3(ex, ey, ez));
+            Assert.True((v - new Vector3(vx, vy, vz)).magnitude < 1e-3f, v.ToString("F4"));
+        }
+
+        [Fact]
+        public void ACollisionChildStartsFromTheBouncedParentAtItsStepsEnd()
+        {
+            // A parent falling at 1 unit/s 0.0125 above a plane bounces mid-step (0.025 s steps)
+            // and ends the step 0.0135 above it moving up; its Collision child starts there,
+            // facing up (tests/projects/subemitters event/collision/0).
+            var parent = Make("parent", null);
+            m_Parent = parent.gameObject;
+            var plane = new GameObject("plane").transform;
+            plane.SetParent(parent.transform, false);
+            var child = Make("child", parent.transform);
+            var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startSpeed = 0f;
+            child.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            var c = parent.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes; c.AddPlane(plane);
+            c.bounce = 1f; c.dampen = 0f; c.lifetimeLoss = 0f;
+            var subs = parent.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Collision, ParticleSystemSubEmitterProperties.InheritNothing);
+            parent.gameObject.SetActive(true);
+            child.gameObject.SetActive(true);
+            parent.Emit(new ParticleSystem.EmitParams { position = new Vector3(0f, 0.0125f, 0f), velocity = Vector3.down, startLifetime = 5f, startSize = 0.001f }, 1);
+            parent.Simulate(0.025f, true, false, false);
+            var particles = new ParticleSystem.Particle[1];
+            Assert.Equal(1, child.GetParticles(particles));
+            Assert.Equal(0.0135f, particles[0].position.y, 4);
+        }
+
         sealed class FloatNear : System.Collections.Generic.IEqualityComparer<float>
         {
             readonly float m_Tolerance;

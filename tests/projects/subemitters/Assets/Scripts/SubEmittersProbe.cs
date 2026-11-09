@@ -402,6 +402,63 @@ public class SubEmittersProbe : MonoBehaviour
         DestroyImmediate(ps.gameObject);
     }
 
+    /// <summary>Collision and Trigger sub-emitters in Simulate (<c>event/collision/*</c>,
+    /// <c>event/trigger/*</c>): four parents falling at 1 unit/s meet a plane, or enter a trigger
+    /// box, in the four 0.025 s internal steps of one 0.1 s call, then a 0.05 s call follows; the
+    /// child unrotated (<c>/0</c>) and turned 90° about Y (<c>/1</c>). Records the parent count and
+    /// the child after each call.</summary>
+    static void EventScenarios()
+    {
+        for (int r = 0; r < 2; r++)
+        {
+            EventScenario("event/collision/" + I(r), s_ChildRotations[r], ParticleSystemSubEmitterType.Collision);
+            EventScenario("event/trigger/" + I(r), s_ChildRotations[r], ParticleSystemSubEmitterType.Trigger);
+        }
+    }
+
+    static void EventScenario(string scenario, Vector3 childRotation, ParticleSystemSubEmitterType type)
+    {
+        var ps = Make(scenario, null, null);
+        var at = ps.transform.position;
+        var extra = new GameObject(scenario + " target");
+        if (type == ParticleSystemSubEmitterType.Collision)
+        {
+            extra.transform.position = at;
+            var c = ps.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes; c.AddPlane(extra.transform);
+            c.bounce = 1f; c.dampen = 0f; c.lifetimeLoss = 0f;
+        }
+        else
+        {
+            var box = extra.AddComponent<BoxCollider>();
+            box.isTrigger = true;
+            box.size = new Vector3(8f, 1f, 1f);
+            extra.transform.position = at + new Vector3(1.5f, -0.5f, 0f);
+            Physics.SyncTransforms();
+            var t = ps.trigger; t.enabled = true; t.AddCollider(box);
+            t.enter = ParticleSystemOverlapAction.Callback;
+            t.inside = ParticleSystemOverlapAction.Ignore;
+            t.exit = ParticleSystemOverlapAction.Ignore;
+            t.outside = ParticleSystemOverlapAction.Ignore;
+        }
+        var child = Child(ps, B(0f, 1));
+        child.transform.localRotation = Quaternion.Euler(childRotation);
+        var sub = ps.subEmitters; sub.enabled = true;
+        sub.AddSubEmitter(child, type, ParticleSystemSubEmitterProperties.InheritNothing);
+        for (int k = 0; k < 4; k++)
+            ps.Emit(new ParticleSystem.EmitParams
+            {
+                position = new Vector3(k, 0.0125f + 0.025f * k, 0f), velocity = new Vector3(0f, -1f, 0f), startLifetime = 5f, startSize = 0.001f,
+            }, 1);
+        ps.Simulate(0.1f, true, false, false);
+        Record(scenario + "/parent/0", ps.particleCount);
+        RecordParticles(scenario + "/child/0", child);
+        ps.Simulate(0.05f, true, false, false);
+        Record(scenario + "/parent/1", ps.particleCount);
+        RecordParticles(scenario + "/child/1", child);
+        DestroyImmediate(ps.gameObject);
+        DestroyImmediate(extra);
+    }
+
     void Start() => StartCoroutine(Probe());
 
     static void OnLog(string message, string stack, LogType type)
@@ -418,6 +475,7 @@ public class SubEmittersProbe : MonoBehaviour
         Timing(0.05f);
         Timing(0.1f);
         Directions();
+        EventScenarios();
 
         // Played over frames at a fixed delta (each frame's state recorded in the next Update).
         Time.captureDeltaTime = 0.02f;
