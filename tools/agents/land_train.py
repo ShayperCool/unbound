@@ -483,6 +483,12 @@ class LandTrain:
                 entries = self.assemble(pending, base, workspace)
                 if not entries:
                     break
+                owner = next((item for item in self.queue.entries()
+                              if item['id'] == getattr(self, 'request_id', None)), None)
+                if owner and (owner.get('result') or {}).get('code') not in (None, 0):
+                    # Let a live peer take over before starting its gate, so this
+                    # caller can report its rejection promptly.
+                    return
                 outcome = self.gate(entries, base, workspace, context)
                 current = [entry for entry in entries if self.valid(entry)]
                 if len(current) != len(entries):
@@ -549,6 +555,7 @@ class LandTrain:
                    'head': head, 'probes': probes, 'releases': releases, 'full': full,
                    'probe_environment': {self.api.RELEASE_VARIABLE: os.environ.get(self.api.RELEASE_VARIABLE, '')},
                    'build_environment': {key: os.environ.get(key) for key in BUILD_ENVIRONMENT}}
+        self.request_id = request['id']
         with self.queue.register(request):
             while True:
                 records = self.queue.entries()

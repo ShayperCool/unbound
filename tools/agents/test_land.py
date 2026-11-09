@@ -443,6 +443,26 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual({row[3] for row in checks}, {'6000.0.71f1', '2022.3.10f1'})
         self.assertEqual([row[1] for row in checks], ['shared-fast', 'shared-fast'])
 
+    def test_rejected_leader_returns_before_a_peers_gate_completes(self):
+        first = self.branch('first', {'shared.txt': 'branch edit\n'})
+        second = self.branch('second', {'good.txt': 'ok\n'})
+        (self.repo/'shared.txt').write_text('main edit\n')
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): concurrent main control')
+        (self.state/'pause-leader').write_text('pause')
+        rejected = self.start(first, pause_leader=True)
+        self.wait_for(lambda: (self.state/'leader-running').exists(), 'leader did not start')
+        peer = self.start(second)
+        self.registered(2)
+        (self.state/'pause-gate').write_text('pause')
+        (self.state/'pause-leader').unlink()
+        self.assertEqual(rejected[0].wait(timeout=4), 3)
+        self.wait_for(lambda: (self.state/'gate-running').exists(), 'peer did not take over')
+        self.assertIsNone(peer[0].poll())
+        self.assertEqual(self.rows(), [])
+        (self.state/'pause-gate').unlink()
+        self.assertEqual(self.finish([peer])[0][0], 0)
+        self.assertEqual([row['branch'] for row in self.rows()], ['second'])
 
     def test_all_branches_share_one_gate_and_one_push(self):
         first = self.branch('first', {'a.txt': 'ok', 'crates/alpha/src/lib.rs': '// changed\n'})
