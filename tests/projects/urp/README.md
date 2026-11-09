@@ -148,6 +148,33 @@ in both draws (no main or additional light). It runs in its own last frame: queu
 the rest of a frame, and an earlier extra frame would shift the post-processing scenarios' frame counts.
 
 Their constants record `frameCount` (film grain, dithering and TAA jitter follow it).
+
+## Light order
+
+After every scenario (or alone, with `URP_PROBE_LIGHT_ORDER=<path>`) `LightOrderProbe` writes
+`light-order.jsonl` (compared by `compare_constants.py` with `Reference/scenarios/light-order.jsonl`):
+with the scene's lights off, a camera of its own renders one small quad (`Shaders/LightOrderDump.shader`)
+under a set of named lights per case and records the culling's visible lights in order, URP's main
+light, the quad's `unity_LightData` and its per-object lights in order. The cases: `luminance`
+(equal lights of ten colours), `attenuation` (distance against range; one light reaches the quad's
+bounds but not its centre, one does not reach it), `render_mode` (Important, Auto, Not Important),
+`directional` (a sun and other directional lights with and without shadows against point lights),
+`limit_main` (ten point lights and a main light), `main_mask` (a main light whose culling mask leaves
+out the quad's layer), `culling_mask` (a light's culling mask against the quad's and the camera's
+layers; lights of intensity 0, 0.0005 and 0.002), `spot_reach` (spot lights pointing at the quad,
+away from it and beside it), `visible_order` (spot and point lights at different distances from the
+camera) and `visible_limit` (36 point lights). Two Editor recordings were identical.
+
+What they show (Unity 6000.0.71f1, OpenGL Core): an object's lights are ranked by the luminance of the
+colour as set (0.3 r + 0.59 g + 0.11 b) times the intensity, a local light's divided by
+1 + 25 d² / range² (d from the bounds' centre), a directional light's times 16 when it casts shadows,
+plus 1000 for Important and minus 1000 for Not Important; `unity_LightData.y` counts every light that
+reaches the object (10 for ten lights; `unity_LightIndices` holds the first eight) and `.z` is 0 without
+a main light or when its culling mask leaves out the object's layer. A spot light reaches only what its
+cone touches. Visible lights need an intensity of at least 0.001 and a culling mask that shares a layer
+with the camera's; the local ones come spot lights first, then point lights, each the nearest to the
+camera first, and with URP's limit (33 here) the nearest stay. The directional lights' order among
+themselves is not recorded (it is not sorted).
 `texture-samples.jsonl` (compared by `compare_constants.py`) records what the Single Channel
 textures sample as (blitted into a float target): uncompressed and compressed (Alpha stays
 Alpha8, Red becomes BC4; the compressed controls hold only values every block format keeps),

@@ -30,6 +30,16 @@ public partial class UrpProbe : MonoBehaviour
             StartCoroutine(DeferredScenarios(pathDir));
             return;
         }
+        // URP_PROBE_LIGHT_ORDER: only light-order.jsonl (LightOrderProbe), to that path.
+        var lightOrder = Environment.GetEnvironmentVariable("URP_PROBE_LIGHT_ORDER");
+        if (!string.IsNullOrEmpty(lightOrder))
+        {
+            var pipeline = (UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline;
+            LightOrderProbe.Record(lightOrder, ((ScriptableRendererData[])typeof(UniversalRenderPipelineAsset).GetField("m_RendererDataList",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(pipeline))[0]);
+            Quit();
+            return;
+        }
         // URP_PROBE_DIR: every scenario into <dir>/<name>.png (and its constants, .jsonl).
         var dir = Environment.GetEnvironmentVariable("URP_PROBE_DIR");
         if (!string.IsNullOrEmpty(dir))
@@ -425,6 +435,8 @@ public partial class UrpProbe : MonoBehaviour
         // Last: its queued draws stay for the rest of its frame, and the frame it adds would
         // shift the frame counts the post-processing scenarios record.
         yield return LightDataBlockScenario(dir);
+        // Synchronous renders of a camera of its own, after every scenario.
+        LightOrderProbe.Record(Path.Combine(dir, "light-order.jsonl"), rendererData);
         Quit();
     }
 

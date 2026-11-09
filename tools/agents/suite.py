@@ -355,6 +355,8 @@ def recipes(release):
                        '{work}/out/texture-formats.jsonl'))
     R['urp'].append(py('compare_constants.py', ref('scenarios/texture-samples.jsonl'),
                        '{work}/out/texture-samples.jsonl'))
+    R['urp'].append(py('compare_constants.py', ref('scenarios/light-order.jsonl'),
+                       '{work}/out/light-order.jsonl'))
     # The rendering path scenarios (a run of their own) against the Editor's OpenGL Core device,
     # which Unbound's device is; paths-vulkan (URP's Deferred path) has no Unbound counterpart.
     paths = PROJECTS/'urp/Reference'/f'unity-{release}'/'paths-opengl'
