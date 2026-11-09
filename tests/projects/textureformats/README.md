@@ -70,7 +70,7 @@ key. `residuals.json` lists the differences recorded as open: each still has to 
 ## Retained resolves and deferred differences
 
 Q55 closes the eight earlier MSAA readback differences. The 6000.0.71f1 OpenGL Core
-reference has 705 values, with every previous value preserved. The two
+reference has 730 values, with every previous value preserved. The two
 `rt.ARGB64.msaa.history.{targetBound,targetCleared}.asyncfloat` rows retain a one-ULP blue
 component difference, Editor `0x3c808080` versus backend `0x3c808081`, about 1.86e-9.
 These are Deferred; raw values remain in the strict report and `residuals.json`.
@@ -89,3 +89,15 @@ release. Unmeasured releases retain the earlier current-image readback and descr
 metadata until recorded. Retained textures and views are created with their targets and retired
 on replacement/release. Texture and buffer downloads share reusable staging storage, released
 after an idle interval; returned CPU data stays owned by each request.
+
+The `rt.msaaCopies.*` controls distinguish the multisampled attachment from its resolved
+texture: `Graphics.CopyTexture` copies resolved texels without changing the attachment.
+A forced resolve can therefore replace copied green texels with the destination's older red
+samples, even without a new draw. An ordinary target switch publishes pending attachment
+writes. A second source draw distinguishes copying its retained green image from its current
+blue samples. The [Unity 6000.0 CopyTexture API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.CopyTexture.html)
+requires matching sample counts; both copy targets use four samples and matching dimensions
+and formats. These resolved-image details are measured on this OpenGL Core device.
+The `rt.msaaLayers.*` controls retain green resolves while changing each of two array layers
+to red. [ReadPixels](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.ReadPixels.html)
+reads the current render target in both layers; async readback still sees green.

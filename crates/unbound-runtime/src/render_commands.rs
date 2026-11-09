@@ -141,6 +141,7 @@ pub enum Command {
     /// Publish a multisampled target for later readback and compute reads.
     ResolveTexture {
         texture: u64,
+        destination: u64,
     },
     /// Filter the lower mip levels of a render target.
     GenerateMips {
@@ -781,6 +782,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
             }
             op::RESOLVE_TEXTURE => Command::ResolveTexture {
                 texture: r.texture("ResolveTexture")?,
+                destination: r.texture("ResolveTexture destination")?,
             },
             op::GENERATE_MIPS => Command::GenerateMips {
                 texture: r.texture("GenerateMips")?,
@@ -1121,9 +1123,13 @@ impl Writer {
                     self.property(name, value);
                 }
             }
-            Command::ResolveTexture { texture } => {
+            Command::ResolveTexture {
+                texture,
+                destination,
+            } => {
                 self.bytes.push(op::RESOLVE_TEXTURE);
                 self.u64(*texture);
+                self.u64(*destination);
             }
             Command::GenerateMips { texture } => {
                 self.bytes.push(op::GENERATE_MIPS);
@@ -1188,7 +1194,10 @@ mod tests {
     #[test]
     fn round_trip() {
         let commands = vec![
-            Command::ResolveTexture { texture: 42 },
+            Command::ResolveTexture {
+                texture: 42,
+                destination: 42,
+            },
             Command::GenerateMips { texture: 42 },
             Command::BeginFrame {
                 screen_width: 960,
@@ -1398,7 +1407,13 @@ mod tests {
         assert!(encode(set_target(depth, 0)).is_err());
         assert!(encode(set_target(7, depth)).is_err());
         assert!(encode(Command::GenerateMips { texture: depth }).is_err());
-        assert!(encode(Command::ResolveTexture { texture: depth }).is_err());
+        assert!(
+            encode(Command::ResolveTexture {
+                texture: depth,
+                destination: 42
+            })
+            .is_err()
+        );
         let dispatch = |h| {
             Command::Dispatch(Box::new(Dispatch {
                 file: "k.compute".into(),

@@ -471,6 +471,56 @@ public static class TexFormatsProbe
         Try(key + ".async", () => Readback(AsyncGPUReadback.Request(t)));
     }
 
+    static void MsaaCopiesAndLayers()
+    {
+        var d = new RenderTextureDescriptor(2, 1, RenderTextureFormat.ARGB32, 0)
+        { msaaSamples = 4, sRGB = false };
+        var source = Target(d); source.Create();
+        var destination = Target(d); destination.Create();
+        s_Mat.SetVector("_Color", Color.green); Graphics.Blit(null, source, s_Mat, 0); source.ResolveAntiAliasedSurface();
+        ReadBack("rt.msaaCopies.sourceInitial", source);
+        source.ResolveAntiAliasedSurface();
+        ReadBack("rt.msaaCopies.sourceRepeated", source);
+        s_Mat.SetVector("_Color", Color.red); Graphics.Blit(null, destination, s_Mat, 0); destination.ResolveAntiAliasedSurface();
+        ReadBack("rt.msaaCopies.destinationInitial", destination);
+        Graphics.CopyTexture(source, destination);
+        ReadBack("rt.msaaCopies.beforeResolve", destination);
+        ReadPixels("rt.msaaCopies.beforeResolveCurrent", destination);
+        destination.ResolveAntiAliasedSurface();
+        ReadBack("rt.msaaCopies.afterResolve", destination);
+        // Copying a newer attachment distinguishes current pixels from the source's last resolve.
+        s_Mat.SetVector("_Color", Color.blue); Graphics.Blit(null, source, s_Mat, 0);
+        Graphics.CopyTexture(source, destination);
+        ReadBack("rt.msaaCopies.dirtySource", destination);
+        Graphics.SetRenderTarget(destination);
+        destination.ResolveAntiAliasedSurface();
+        ReadBack("rt.msaaCopies.dirtySourceResolved", destination);
+        s_Mat.SetVector("_Color", Color.magenta); Graphics.Blit(null, destination, s_Mat, 0);
+        Graphics.CopyTexture(source, destination);
+        ReadBack("rt.msaaCopies.dirtyDestination", destination);
+        Graphics.SetRenderTarget(source);
+        ReadBack("rt.msaaCopies.dirtyDestinationSwitched", destination);
+        d.dimension = TextureDimension.Tex2DArray; d.volumeDepth = 2;
+        var array = Target(d);
+        Value("rt.msaaLayers.create", B2(array.Create()));
+        Value("rt.msaaLayers.samples", array.antiAliasing.ToString(CultureInfo.InvariantCulture));
+        for (int layer = 0; layer < 2; layer++)
+        {
+            Graphics.SetRenderTarget(array, 0, CubemapFace.Unknown, layer);
+            GL.Clear(false, true, Color.green);
+        }
+        array.ResolveAntiAliasedSurface();
+        for (int layer = 0; layer < 2; layer++)
+        {
+            Graphics.SetRenderTarget(array, 0, CubemapFace.Unknown, layer);
+            GL.Clear(false, true, Color.red);
+            var pixels = Own(new Texture2D(2, 1, TextureFormat.RGBAFloat, false, true));
+            pixels.ReadPixels(new Rect(0, 0, 2, 1), 0, 0, false);
+            Value("rt.msaaLayers." + layer + ".current", Texels(pixels));
+            Try("rt.msaaLayers." + layer + ".retained", () => Readback(AsyncGPUReadback.Request(array, 0, 0, 2, 0, 1, layer, 1, TextureFormat.RGBAFloat)));
+        }
+    }
+
     static void MsaaMips()
     {
         var d = new RenderTextureDescriptor(4, 4, RenderTextureFormat.ARGB32, 0)
@@ -545,6 +595,7 @@ public static class TexFormatsProbe
                 if (Runs("rt." + format)) NormTarget("rt." + format, format);
             foreach (var c in IntTargets) if (Runs("rt." + c.Key)) IntTarget(c);
             if (Runs("rt.msaaMips")) MsaaMips();
+            if (Runs("rt.msaaCopies") || Runs("rt.msaaLayers")) MsaaCopiesAndLayers();
             foreach (var format in new[] { RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBFloat })
                 if (Runs("feedback." + format)) Feedback("feedback." + format, format);
             foreach (var format in new[] { TextureFormat.R16, TextureFormat.RG32, TextureFormat.RGBA64 })

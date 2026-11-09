@@ -156,14 +156,15 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A rectangle of a mip level of a texture's layer (an array slice, a cube face, a
-        /// volume's depth slice) after every command so far, as <see cref="ReadPixels"/> gives it;
+        /// volume's depth slice) after every command so far; currentAttachment selects ReadPixels'
+        /// current image instead of the retained async resolve;
         /// null without a GPU or when the texture has no such level or layer.</summary>
-        internal static byte[] ReadTexture(ulong texture, int mip, int layer, int x, int y, int width, int height, bool asFloat)
+        internal static byte[] ReadTexture(ulong texture, int mip, int layer, int x, int y, int width, int height, bool asFloat, bool currentAttachment = false)
         {
             if (!s_Ready) return null;
             GfxStream.Flush();
             NativeBuffer buffer;
-            if (s_Api.ReadTexture(texture, mip, layer, x, y, width, height, asFloat ? 1 : 0, &buffer) == 0) return null;
+            if (s_Api.ReadTexture(texture, mip, layer, x, y, width, height, (asFloat ? 1 : 0) | (currentAttachment ? 2 : 0), &buffer) == 0) return null;
             try
             {
                 var bytes = new byte[buffer.Length];

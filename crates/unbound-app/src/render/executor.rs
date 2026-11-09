@@ -2313,9 +2313,24 @@ impl UnityRenderer {
                     self.state.state_override = None;
                     open = false;
                 }
-                Command::ResolveTexture { texture } => {
-                    if let Some(copies) = self.resolve_msaa(texture) {
-                        passes.extend(copies.map(Op::Copy));
+                Command::ResolveTexture {
+                    texture,
+                    destination,
+                } => {
+                    if texture == destination {
+                        if let Some(copies) = self.resolve_msaa(texture) {
+                            passes.extend(copies.map(Op::Copy));
+                        }
+                    } else if let Some(copy) = self.plan_copy(
+                        texture,
+                        [0, 0],
+                        [0, 0, -1, -1],
+                        destination,
+                        [0, 0],
+                        [0, 0],
+                        false,
+                    ) {
+                        passes.push(Op::Copy(copy));
                     }
                     open = false;
                 }
@@ -2891,6 +2906,7 @@ impl UnityRenderer {
                         destination,
                         [destination_slice, destination_mip],
                         [destination_x, destination_y],
+                        true,
                     ) {
                         passes.push(Op::Copy(copy));
                     }
@@ -3531,6 +3547,7 @@ impl UnityRenderer {
         destination: u64,
         [destination_slice, destination_mip]: [i32; 2],
         [dx, dy]: [i32; 2],
+        resolved_images: bool,
     ) -> Option<Copy> {
         let texture = |this: &mut Self, handle: u64| -> Option<wgpu::Texture> {
             if handle == 0 {
@@ -3555,6 +3572,19 @@ impl UnityRenderer {
             });
             return None;
         }
+        // Texture copies access the resolved image and leave the multisampled attachment intact.
+        let src = if resolved_images {
+            self.resolve_history
+                .get(&src)
+                .map_or(src.clone(), |history| history.texture.clone())
+        } else {
+            src
+        };
+        let dst = if let Some(history) = self.resolve_history.get(&dst) {
+            history.texture.clone()
+        } else {
+            dst
+        };
         let (smip, dmip) = (source_mip.max(0) as u32, destination_mip.max(0) as u32);
         if smip >= src.mip_level_count() || dmip >= dst.mip_level_count() {
             return None;
@@ -3925,8 +3955,9 @@ impl UnityRenderer {
         layer: u32,
         rect: [i32; 4],
         float: bool,
+        current_attachment: bool,
     ) -> Option<Vec<u8>> {
-        self.read_texture_impl(texture, mip, layer, rect, float, true)
+        self.read_texture_impl(texture, mip, layer, rect, float, !current_attachment)
     }
 
     fn read_texture_impl(

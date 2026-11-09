@@ -918,10 +918,11 @@ namespace Unbound.Runtime
             }
         }
 
-        internal static void ResolveTexture(ulong texture)
+        internal static void ResolveTexture(ulong texture, ulong destination)
         {
             U8(ResolveTextureOp);
             U64(texture);
+            U64(destination);
         }
 
         internal static void GenerateMips(ulong texture)

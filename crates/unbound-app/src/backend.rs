@@ -229,13 +229,16 @@ impl RenderBackend for GpuBackend {
         layer: u32,
         rect: [i32; 4],
         float: bool,
+        current_attachment: bool,
     ) -> Option<Vec<u8>> {
-        self.inner
-            .lock()
-            .unwrap()
-            .renderer
-            .as_mut()?
-            .read_texture(texture, mip, layer, rect, float)
+        self.inner.lock().unwrap().renderer.as_mut()?.read_texture(
+            texture,
+            mip,
+            layer,
+            rect,
+            float,
+            current_attachment,
+        )
     }
 }
 

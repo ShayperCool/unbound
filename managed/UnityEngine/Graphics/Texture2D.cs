@@ -389,7 +389,7 @@ namespace UnityEngine
                 Debug.LogError($"Unbound: ReadPixels cannot read the integer render texture '{active.name}' ({active.graphicsFormat}); the texture is left unchanged.");
                 return;
             }
-            var bytes = level ? Native.ReadTexture(activeHandle, mip, layer, x0, y0, w, h, true)
+            var bytes = level ? Native.ReadTexture(activeHandle, mip, layer, x0, y0, w, h, true, currentAttachment: true)
                 : Native.ReadPixels(activeHandle, x0, y0, w, h, true);
             if (bytes == null)
             {

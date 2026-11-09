@@ -518,6 +518,7 @@ extern "C" fn read_pixels(
 }
 
 #[allow(clippy::too_many_arguments)]
+// Read flags: bit 0 selects float pixels, bit 1 selects the current attachment for ReadPixels.
 extern "C" fn read_texture(
     texture: u64,
     mip: i32,
@@ -541,7 +542,8 @@ extern "C" fn read_texture(
         mip as u32,
         layer as u32,
         [x, y, width, height],
-        float != 0,
+        float & 1 != 0,
+        float & 2 != 0,
     ) {
         Some(pixels) => {
             unsafe { *out = NativeBuffer::from_vec(pixels) };

@@ -250,7 +250,7 @@ namespace UnityEngine
         public void ResolveAntiAliasedSurface()
         {
             if (Compat.RenderingMeasured && antiAliasing > 1 && IsCreated())
-                GfxStream.ResolveTexture(EnsureCreated());
+                GfxStream.ResolveTexture(EnsureCreated(), EnsureCreated());
             GfxStream.Flush();
         }
 
@@ -259,7 +259,12 @@ namespace UnityEngine
             if (target == null || target == this) { ResolveAntiAliasedSurface(); return; }
             // The Editor leaves an uncreated destination alone (resources rtmips.resolve).
             if (!target.IsCreated()) return;
-            Graphics.CopyTexture(this, 0, 0, target, 0, 0);
+            if (Compat.RenderingMeasured)
+            {
+                GfxStream.ResolveTexture(EnsureCreated(), target.EnsureCreated());
+                GfxStream.Flush();
+            }
+            else Graphics.CopyTexture(this, 0, 0, target, 0, 0);
         }
 
         [Unbound.EditorFaithful("the Editor has no dynamic resolution: the scale stays 1 (as ScalableBufferManager)")]

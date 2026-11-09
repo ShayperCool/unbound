@@ -140,7 +140,7 @@ impl UnityRenderer {
                 .flatten()
                 .any(|texture| *texture == source);
             if !remains {
-                if let Some(copies) = self.resolve_msaa_source(&source) {
+                if let Some(copies) = self.resolve_msaa_source(&source, false) {
                     operations.extend(copies.map(Op::Copy));
                 }
             }
@@ -148,9 +148,13 @@ impl UnityRenderer {
     }
 
     /// Resolve copies follow the completed passes that wrote their source.
-    fn resolve_msaa_source(&mut self, source: &wgpu::Texture) -> Option<ResolveCopies> {
+    fn resolve_msaa_source(
+        &mut self,
+        source: &wgpu::Texture,
+        force: bool,
+    ) -> Option<ResolveCopies> {
         let history = self.resolve_history.get_mut(source)?;
-        if !std::mem::take(&mut history.dirty) {
+        if !std::mem::take(&mut history.dirty) && !force {
             return None;
         }
         Some(ResolveCopies {
@@ -166,7 +170,7 @@ impl UnityRenderer {
             return None;
         }
         let source = self.textures.get(&base)?.texture.clone();
-        self.resolve_msaa_source(&source)
+        self.resolve_msaa_source(&source, true)
     }
 
     pub(super) fn compute_texture_view(

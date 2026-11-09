@@ -677,7 +677,7 @@ pub trait RenderBackend: Send + Sync {
         None
     }
     /// A rectangle of a mip level of a texture's layer (an array slice, a cube face, a volume's
-    /// depth slice), as [`Backend::read_pixels`] gives it (NativeApi 15).
+    /// depth slice). `current_attachment` distinguishes ReadPixels from retained async resolves.
     fn read_texture(
         &self,
         _texture: u64,
@@ -685,6 +685,7 @@ pub trait RenderBackend: Send + Sync {
         _layer: u32,
         _rect: [i32; 4],
         _float: bool,
+        _current_attachment: bool,
     ) -> Option<Vec<u8>> {
         None
     }
