@@ -120,6 +120,25 @@ namespace Unbound.Tests
             Assert.Equal(25f, gen.lines[0].topY);
         }
 
+        /// <summary>Generations share their scratch: a text laid out after a longer one with
+        /// rich text, wrapping and best fit is laid out as on its own.</summary>
+        [Fact]
+        public void AGenerationAfterAnotherIsLaidOutAsAlone()
+        {
+            var font = BoxFont();
+            var alone = new TextGenerator();
+            alone.Populate("A B", Settings(font, new Vector2(100, 50)));
+            var shared = new TextGenerator();
+            var rich = Settings(font, new Vector2(30, 100));
+            rich.richText = true;
+            shared.Populate("<b>AAAA</b> <color=red>BBBB</color> CCCC DDDD\nEEEE", rich);
+            Assert.True(shared.lineCount > 2);
+            shared.Populate("A B", Settings(font, new Vector2(100, 50)));
+            Assert.Equal(alone.verts.Select(v => (v.position, v.uv0, v.color)), shared.verts.Select(v => (v.position, v.uv0, v.color)));
+            Assert.Equal(alone.characters.Select(c => (c.cursorPos, c.charWidth)), shared.characters.Select(c => (c.cursorPos, c.charWidth)));
+            Assert.Equal(alone.lines.Select(l => (l.startCharIdx, l.height, l.topY)), shared.lines.Select(l => (l.startCharIdx, l.height, l.topY)));
+        }
+
         [Fact]
         public void WhitespaceAdvancesWithoutVertices()
         {

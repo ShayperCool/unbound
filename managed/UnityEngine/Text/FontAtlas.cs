@@ -341,6 +341,8 @@ namespace Unbound.Runtime
         /// <see cref="Font.textureRebuilt"/> raised).</summary>
         internal bool Request(IReadOnlyList<GlyphKey> keys, IReadOnlyList<GlyphKey> empty = null)
         {
+            // Nothing to place (the usual case once a text's glyphs are in): no work lists.
+            if (empty == null && AllPlaced(keys)) return false;
             var pending = new List<AtlasGlyph>();
             var seen = new HashSet<GlyphKey>();
             foreach (var key in keys)
@@ -382,6 +384,15 @@ namespace Unbound.Runtime
                 m_Placed.Remove(pending[i]);
             }
             Rebuild(pending, seen);
+            return true;
+        }
+
+        /// <summary>Whether every glyph of <paramref name="keys"/> is known and placed or without
+        /// pixels (a glyph not looked up yet is left to the full request, which makes it).</summary>
+        bool AllPlaced(IReadOnlyList<GlyphKey> keys)
+        {
+            for (int i = 0; i < keys.Count; i++)
+                if (!m_Glyphs.TryGetValue(keys[i], out var glyph) || glyph.HasPixels && !glyph.Placed) return false;
             return true;
         }
 

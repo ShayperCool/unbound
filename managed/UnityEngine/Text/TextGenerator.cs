@@ -334,7 +334,7 @@ namespace Unbound.Runtime
             internal int CustomIndex;
         }
 
-        struct Line
+        internal struct Line
         {
             internal int Start;
             /// <summary>One past the last item (a newline belongs to its line).</summary>
@@ -369,12 +369,31 @@ namespace Unbound.Runtime
             var font = r.Font;
             float scale = r.ScaleFactor > 0f ? r.ScaleFactor : 1f;
             var ext = r.Extents * scale;
-            var items = RichText.Parse(r.Text, r.RichText, r.Style, (Color32)r.Color);
+            // Layout scratch from pools that a nested generation (a font texture rebuilt in the
+            // middle of one) takes its own from: a generation allocates nothing once warm.
+            var buffer = Scratch.RentItems(r.Text.Length);
+            var trial = Scratch.RentLines();
+            var layout = Scratch.RentLines();
+            try
+            {
+                GenerateCore(r, buffer.AsSpan(0, r.Text.Length), trial, layout, verts, chars, lines, font, scale, ext, out extents, out bestFitSize);
+            }
+            finally
+            {
+                Scratch.Return(buffer);
+                Scratch.Return(trial);
+                Scratch.Return(layout);
+            }
+        }
+
+        static void GenerateCore(Request r, Span<Item> items, List<Line> trial, List<Line> layout, List<UIVertex> verts, List<UICharInfo> chars,
+            List<UILineInfo> lines, Font font, float scale, Vector2 ext, out Rect extents, out int bestFitSize)
+        {
+            RichText.Parse(r.Text, r.RichText, r.Style, (Color32)r.Color, items);
 
             int baseSize = font.dynamic && r.FontSize > 0 ? r.FontSize : font.fontSize;
             int pixelSize = PixelSizeOf(font, baseSize, scale);
             bestFitSize = 0;
-            List<Line> layout;
             // Best fit: the largest size that fits, words whole; along an axis that overflows
             // everything fits, and text that overflows both ways keeps its size (measured:
             // preferred heights of best-fit text are its maximum size's, preferred widths its own).
@@ -386,7 +405,7 @@ namespace Unbound.Runtime
                 {
                     int mid = (lo + hi) / 2;
                     Measure(items, font, mid, scale);
-                    var trial = BreakLines(items, font, r, ext.x, mid);
+                    BreakLines(items, font, r, ext.x, mid, trial);
                     if (Fits(trial, r, ext))
                     {
                         best = mid;
@@ -403,7 +422,7 @@ namespace Unbound.Runtime
             Measure(items, font, pixelSize, scale);
             // Put the glyphs in the font texture; this may rebuild it (and raise textureRebuilt).
             RequestGlyphs(items, font);
-            layout = BreakLines(items, font, r, ext.x, pixelSize);
+            BreakLines(items, font, r, ext.x, pixelSize, layout);
 
             int kept = layout.Count;
             if (r.VerticalOverflow == VerticalWrapMode.Truncate)
@@ -498,7 +517,18 @@ namespace Unbound.Runtime
         {
             verts.Clear();
             text ??= "";
-            var items = RichText.Parse(text, richText, style, (Color32)color);
+            var buffer = Scratch.RentItems(text.Length);
+            try
+            {
+                GenerateTextMeshCore(text, buffer.AsSpan(0, text.Length), font, color, fontSize, style, lineSpacing, richText, anchor, alignment, tabSize, verts, out rect);
+            }
+            finally { Scratch.Return(buffer); }
+        }
+
+        static void GenerateTextMeshCore(string text, Span<Item> items, Font font, Color color, int fontSize, FontStyle style, float lineSpacing,
+            bool richText, TextAnchor anchor, TextAlignment alignment, float tabSize, List<UIVertex> verts, out Rect rect)
+        {
+            RichText.Parse(text, richText, style, (Color32)color, items);
             int basePixelSize = font.PixelSize(font.dynamic ? fontSize : 0);
             Measure(items, font, basePixelSize, 1f);
             List<GlyphKey> empty = null;
@@ -515,10 +545,14 @@ namespace Unbound.Runtime
             }
             if (font.m_Source != null)
             {
-                var keys = new List<GlyphKey>();
-                foreach (var item in items)
-                    if (item.Visible && item.Glyph != null && item.Glyph.HasPixels) keys.Add(item.Glyph.Key);
-                if (keys.Count > 0 || empty != null) font.Atlas.Request(keys, empty);
+                var keys = Scratch.RentKeys();
+                try
+                {
+                    foreach (var item in items)
+                        if (item.Visible && item.Glyph != null && item.Glyph.HasPixels) keys.Add(item.Glyph.Key);
+                    if (keys.Count > 0 || empty != null) font.Atlas.Request(keys, empty);
+                }
+                finally { Scratch.Return(keys); }
             }
 
             // Lines: their sizes, metrics and widths (tabs resolved).
@@ -666,7 +700,7 @@ namespace Unbound.Runtime
         static bool IsSpace(int c) => c < 0x10000 && char.IsWhiteSpace((char)c);
 
         /// <summary>Advances and glyph boxes of the items at a base pixel size.</summary>
-        static void Measure(Item[] items, Font font, int basePixelSize, float scale)
+        static void Measure(Span<Item> items, Font font, int basePixelSize, float scale)
         {
             float spaceAdvance = -1f;
             for (int i = 0; i < items.Length; i++)
@@ -729,13 +763,17 @@ namespace Unbound.Runtime
             }
         }
 
-        static void RequestGlyphs(Item[] items, Font font)
+        static void RequestGlyphs(Span<Item> items, Font font)
         {
             if (font.m_Source == null) return;
-            var keys = new List<GlyphKey>();
-            foreach (var item in items)
-                if (item.Visible && item.Glyph != null) keys.Add(item.Glyph.Key);
-            if (keys.Count > 0) font.Atlas.Request(keys);
+            var keys = Scratch.RentKeys();
+            try
+            {
+                foreach (var item in items)
+                    if (item.Visible && item.Glyph != null) keys.Add(item.Glyph.Key);
+                if (keys.Count > 0) font.Atlas.Request(keys);
+            }
+            finally { Scratch.Return(keys); }
         }
 
         /// <summary>Breaks the items into lines: at newlines and, when wrapping, after the last space
@@ -743,10 +781,10 @@ namespace Unbound.Runtime
         /// <summary>Whether the last <see cref="BreakLines"/> had to break a word between characters.</summary>
         [ThreadStatic] static bool s_BrokeWord;
 
-        static List<Line> BreakLines(Item[] items, Font font, Request r, float width, int basePixelSize)
+        static void BreakLines(Span<Item> items, Font font, Request r, float width, int basePixelSize, List<Line> lines)
         {
             s_BrokeWord = false;
-            var lines = new List<Line>();
+            lines.Clear();
             bool wrap = r.HorizontalOverflow == HorizontalWrapMode.Wrap;
             int start = 0;
             float pen = 0f;
@@ -790,10 +828,9 @@ namespace Unbound.Runtime
                 i++;
             }
             lines.Add(MakeLine(items, font, start, items.Length, false, basePixelSize));
-            return lines;
         }
 
-        static Line MakeLine(Item[] items, Font font, int start, int end, bool wrapped, int basePixelSize)
+        static Line MakeLine(Span<Item> items, Font font, int start, int end, bool wrapped, int basePixelSize)
         {
             var line = new Line { Start = start, End = end, Size = 0 };
             float pen = 0f, width = 0f;
@@ -836,7 +873,7 @@ namespace Unbound.Runtime
             return line;
         }
 
-        static void EmitQuad(List<UIVertex> verts, Item item, Font font, float x, float baseline)
+        static void EmitQuad(List<UIVertex> verts, in Item item, Font font, float x, float baseline)
         {
             // A dynamic font's glyph quad takes its character padding on every side (measured).
             int pad = item.Kind == Kind.Glyph && item.Glyph != null ? font.Atlas.Padding : 0;
@@ -884,6 +921,42 @@ namespace Unbound.Runtime
         }
     }
 
+    /// <summary>The layout's scratch: rented for one generation and given back after it, so a
+    /// generation nested in another (a font texture rebuilt meanwhile) takes its own.</summary>
+    static class Scratch
+    {
+        [ThreadStatic] static Stack<TextLayout.Item[]> s_Items;
+        [ThreadStatic] static Stack<List<TextLayout.Line>> s_Lines;
+        [ThreadStatic] static Stack<List<GlyphKey>> s_Keys;
+
+        /// <summary>A cleared buffer of at least <paramref name="length"/> items.</summary>
+        internal static TextLayout.Item[] RentItems(int length)
+        {
+            var free = s_Items ??= new Stack<TextLayout.Item[]>();
+            var buffer = free.Count > 0 ? free.Pop() : null;
+            if (buffer == null || buffer.Length < length) buffer = new TextLayout.Item[Math.Max(length, (buffer?.Length ?? 0) * 2)];
+            else Array.Clear(buffer, 0, length);
+            return buffer;
+        }
+
+        internal static void Return(TextLayout.Item[] buffer)
+        {
+            // The glyphs it refers to stay alive until it is used again.
+            s_Items.Push(buffer);
+        }
+
+        internal static List<TextLayout.Line> RentLines() => Rent(ref s_Lines);
+        internal static List<GlyphKey> RentKeys() => Rent(ref s_Keys);
+        internal static void Return(List<TextLayout.Line> list) { list.Clear(); s_Lines.Push(list); }
+        internal static void Return(List<GlyphKey> list) { list.Clear(); s_Keys.Push(list); }
+
+        static List<T> Rent<T>(ref Stack<List<T>> free)
+        {
+            free ??= new Stack<List<T>>();
+            return free.Count > 0 ? free.Pop() : new List<T>();
+        }
+    }
+
     /// <summary>
     /// The legacy rich text tags: &lt;b&gt;, &lt;i&gt;, &lt;size=N&gt;, &lt;color=name|#rrggbb[aa]&gt;,
     /// &lt;material=N&gt; and &lt;quad ...&gt;. A tag only acts when it is well formed and, except quad,
@@ -901,14 +974,25 @@ namespace Unbound.Runtime
             internal bool Valid;
         }
 
-        internal static TextLayout.Item[] Parse(string text, bool rich, FontStyle style, Color32 color)
+        // Parsing calls nothing that could parse again: one set of scratch per thread.
+        [ThreadStatic] static List<Tag> s_Tags;
+        [ThreadStatic] static List<int> s_Open;
+        [ThreadStatic] static Stack<float> s_Sizes;
+        [ThreadStatic] static Stack<Color32> s_ColorStack;
+
+        /// <summary>The items of <paramref name="text"/> into <paramref name="items"/> (one per
+        /// UTF-16 unit, cleared by the caller).</summary>
+        internal static void Parse(string text, bool rich, FontStyle style, Color32 color, Span<TextLayout.Item> items)
         {
-            var items = new TextLayout.Item[text.Length];
-            var tags = rich ? FindTags(text) : new List<Tag>();
+            var tags = s_Tags ??= new List<Tag>();
+            tags.Clear();
+            if (rich) FindTags(text, tags);
             int tagIndex = 0;
             int bold = 0, italic = 0;
-            var sizes = new Stack<float>();
-            var colors = new Stack<Color32>();
+            var sizes = s_Sizes ??= new Stack<float>();
+            var colors = s_ColorStack ??= new Stack<Color32>();
+            sizes.Clear();
+            colors.Clear();
             for (int i = 0; i < text.Length; i++)
             {
                 while (tagIndex < tags.Count && (!tags[tagIndex].Valid || tags[tagIndex].End < i)) tagIndex++;
@@ -983,7 +1067,6 @@ namespace Unbound.Runtime
                     item.Codepoint = c;
                 }
             }
-            return items;
         }
 
         static FontStyle CurrentStyle(FontStyle style, int bold, int italic)
@@ -994,9 +1077,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The tags of a text, with matched pairs (and quads) marked valid.</summary>
-        static List<Tag> FindTags(string text)
+        static void FindTags(string text, List<Tag> tags)
         {
-            var tags = new List<Tag>();
             for (int i = 0; i < text.Length; i++)
             {
                 if (text[i] != '<') continue;
@@ -1024,7 +1106,8 @@ namespace Unbound.Runtime
                 tags.Add(tag);
                 i = end;
             }
-            var open = new List<int>();
+            var open = s_Open ??= new List<int>();
+            open.Clear();
             for (int t = 0; t < tags.Count; t++)
             {
                 var tag = tags[t];
@@ -1045,7 +1128,6 @@ namespace Unbound.Runtime
                     open.RemoveAt(open.Count - 1);
                 }
             }
-            return tags;
         }
 
         static void MarkValid(List<Tag> tags, int index)
