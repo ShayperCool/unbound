@@ -153,7 +153,10 @@ namespace Unbound.Runtime
                 // The normal offset is the bias in texels, 3.65 times wider for the soft filter's
                 // kernel (measured: tests/projects/lighting's shadow_globals_*).
                 float normalBias = light.shadowNormalBias * texel * (soft ? 3.65f : 1f);
-                GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(light.shadowBias * 2f / range, 1f, normalBias, 0f));
+                // The bias in clip-space depth: twice the bias over the depth range on OpenGL
+                // Core, scaled by the device's clip depth (Vulkan: half of it, negated).
+                float clipBias = light.shadowBias * 2f / range * Unbound.Runtime.GraphicsDeviceProfile.Current.ClipDepthSlope;
+                GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(clipBias, 1f, normalBias, 0f));
                 GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(-forward.x, -forward.y, -forward.z, 0f));
                 DrawCasters();
                 RunLightEvent(camera, light, LightEvent.AfterShadowMapPass, shadowMap, cascadePass);
@@ -441,7 +444,10 @@ namespace Unbound.Runtime
             CollectCasters(light, context);
             GfxStream.DepthBias(1f, 1f);
             GfxStream.Keyword("SHADOWS_CUBE", true);
-            GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(2f * light.shadowBias, 0f, 0f, 0f));
+            // Twice the bias, scaled by the size of the device's clip depth range (Vulkan: half;
+            // a spot light's is the same on both: shadow_globals_point_* and _spot_*).
+            float pointBias = 2f * light.shadowBias * Mathf.Abs(Unbound.Runtime.GraphicsDeviceProfile.Current.ClipDepthSlope);
+            GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(pointBias, 0f, 0f, 0f));
             GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(p.x, p.y, p.z, 1f));
             GfxStream.GlobalVector("_LightPositionRange", new Vector4(p.x, p.y, p.z, 1f / range));
             for (int face = 0; face < 6; face++)

@@ -91,6 +91,12 @@ namespace Unbound.Runtime
         /// s 0.5 ([-1, 1] to [0, 1]), -0.5 where depth is reversed (1 near).</summary>
         internal float ShadowDepthScale => ReversedZ ? -0.5f : 0.5f;
 
+        /// <summary>Clip-space depth per unit of OpenGL Core's: 1 there ([-1, 1]), -0.5 on devices
+        /// with reversed depth, which clip it to [0, 1] (Vulkan). Shadow casters' clip-space bias
+        /// is scaled by it (measured: tests/projects/lighting shadow_globals_* on the Vulkan
+        /// Editor).</summary>
+        internal float ClipDepthSlope => ReversedZ ? -0.5f : 1f;
+
         /// <summary>GL.GetGPUProjectionMatrix: depth from [-1, 1] to [0, 1] (reversed: 1 near) on
         /// devices that clip there, y negated into render textures where UV starts at the top
         /// (measured to the bit on the Vulkan Editor; OpenGL Core keeps the matrix). The renderer
