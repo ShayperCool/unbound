@@ -360,16 +360,19 @@ namespace Unbound.Runtime
         static DtMeshData BuildTile(RcContext ctx, NavMeshBuildSettings settings, float[] verts, int[] tris, int[] areas, Geometry g,
             int tx, int tz, float tileWorld, int tileSize, float cs, float ch, int border, int walkableHeight, int walkableClimb, int walkableRadius, Bounds localBounds)
         {
-            var tmin = new RcVec3f(tx * tileWorld, g.Min.y, tz * tileWorld);
-            var tmax = new RcVec3f((tx + 1) * tileWorld, g.Max.y, (tz + 1) * tileWorld);
-            // Only geometry the build bounds hold counts.
-            tmin.X = Math.Max(tmin.X, localBounds.min.x) ; tmin.Z = Math.Max(tmin.Z, localBounds.min.z);
-            tmax.X = Math.Min(tmax.X, localBounds.max.x); tmax.Z = Math.Min(tmax.Z, localBounds.max.z);
-            if (tmin.X >= tmax.X || tmin.Z >= tmax.Z) return null;
-            var hmin = new RcVec3f(tx * tileWorld - border * cs, g.Min.y, tz * tileWorld - border * cs);
-            var hmax = new RcVec3f((tx + 1) * tileWorld + border * cs, g.Max.y + walkableHeight * ch, (tz + 1) * tileWorld + border * cs);
-            int size = tileSize + border * 2;
-            var solid = new RcHeightfield(size, size, hmin, hmax, cs, ch, border);
+            // The tile holds the voxels of the build bounds, rounded out to whole voxels, that lie in
+            // it (a tile the bounds reach by less than a voxel holds that voxel; none: no tile), so
+            // the NavMesh ends within a voxel past the bounds (Unity 6000.0.71f1:
+            // tests/projects/navpath `place.adjacent`).
+            float perVoxel = 1f / cs;
+            int vx0 = Math.Max((int)MathF.Floor(localBounds.min.x * perVoxel), tx * tileSize);
+            int vz0 = Math.Max((int)MathF.Floor(localBounds.min.z * perVoxel), tz * tileSize);
+            int vx1 = Math.Min((int)MathF.Ceiling(localBounds.max.x * perVoxel), (tx + 1) * tileSize);
+            int vz1 = Math.Min((int)MathF.Ceiling(localBounds.max.z * perVoxel), (tz + 1) * tileSize);
+            if (vx0 >= vx1 || vz0 >= vz1) return null;
+            var hmin = new RcVec3f((vx0 - border) * cs, g.Min.y, (vz0 - border) * cs);
+            var hmax = new RcVec3f((vx1 + border) * cs, g.Max.y + walkableHeight * ch, (vz1 + border) * cs);
+            var solid = new RcHeightfield(vx1 - vx0 + border * 2, vz1 - vz0 + border * 2, hmin, hmax, cs, ch, border);
             RcRasterizations.RasterizeTriangles(ctx, verts, tris, areas, areas.Length, solid, walkableClimb);
             RcFilters.FilterLowHangingWalkableObstacles(ctx, walkableClimb, solid);
             // Unity's ledges are drops of more than one voxel over the climb (measured: a ramp's foot).
