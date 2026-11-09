@@ -283,6 +283,12 @@ pub mod callback {
     pub const PCM_SET_POSITION: i32 = 3;
     /// Opt-in observation of a summed group after its effects and before its parent.
     pub const GROUP_OUTPUT: i32 = 4;
+    /// Control-thread allocation of an exact-sized managed callback array for render token `handle`.
+    pub const PREPARE_RENDER_BUFFER: i32 = 5;
+    /// Select (`arg` = 1) or leave (`arg` = 0) the prepared arrays on the rendering thread.
+    pub const RENDER_BUFFER_SCOPE: i32 = 6;
+    /// Retire a render token's managed arrays on the control thread.
+    pub const RELEASE_RENDER_BUFFERS: i32 = 7;
 }
 
 #[cfg(test)]

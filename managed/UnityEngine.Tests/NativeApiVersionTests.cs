@@ -17,6 +17,9 @@ namespace UnityEngine.Tests
         public void TheVersionIncludesCachedDisplayAndImeFrameVersions()
         {
             Assert.Equal(37u, NativeApi.CurrentVersion);
+            Assert.Equal(5, AudioCallbackKind.PrepareRenderBuffer);
+            Assert.Equal(6, AudioCallbackKind.RenderBufferScope);
+            Assert.Equal(7, AudioCallbackKind.ReleaseRenderBuffers);
             Assert.Equal(56, System.Runtime.InteropServices.Marshal.SizeOf<ImportedTextureInfo>());
             Assert.Equal(52, (int)System.Runtime.InteropServices.Marshal.OffsetOf<ImportedTextureInfo>("TextureFormat"));
             Assert.Equal(112, System.Runtime.InteropServices.Marshal.SizeOf<FrameInput>());

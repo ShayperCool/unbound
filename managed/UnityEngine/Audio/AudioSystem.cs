@@ -596,7 +596,9 @@ namespace Unbound.Runtime
         }
 
         static readonly Dictionary<Type, MethodInfo> s_Methods = new Dictionary<Type, MethodInfo>();
+        static readonly ConcurrentDictionary<ulong, Dictionary<int, float[]>> s_RenderBuffers = new();
         [ThreadStatic] static float[] t_Buffer;
+        [ThreadStatic] static Dictionary<int, float[]> t_PreparedBuffers;
 
         static MethodInfo MethodOf(Type type)
         {
@@ -651,6 +653,11 @@ namespace Unbound.Runtime
 
         static float[] Buffer(int length)
         {
+            if (t_PreparedBuffers != null)
+            {
+                if (t_PreparedBuffers.TryGetValue(length, out var prepared)) return prepared;
+                throw new InvalidOperationException("Audio render callback buffer was not prepared");
+            }
             var buffer = t_Buffer;
             if (buffer == null || buffer.Length != length) t_Buffer = buffer = new float[length];
             return buffer;
@@ -681,6 +688,19 @@ namespace Unbound.Runtime
             int count = frames * channels;
             switch (kind)
             {
+                case AudioCallbackKind.PrepareRenderBuffer:
+                {
+                    if (!s_RenderBuffers.TryGetValue(handle, out var buffers))
+                        s_RenderBuffers[handle] = buffers = new Dictionary<int, float[]>();
+                    if (!buffers.ContainsKey(count)) buffers.Add(count, new float[count]);
+                    break;
+                }
+                case AudioCallbackKind.RenderBufferScope:
+                    t_PreparedBuffers = arg != 0 ? s_RenderBuffers[handle] : null;
+                    break;
+                case AudioCallbackKind.ReleaseRenderBuffers:
+                    s_RenderBuffers.TryRemove(handle, out _);
+                    break;
                 case AudioCallbackKind.SourceFilter:
                 case AudioCallbackKind.ListenerFilter:
                 {

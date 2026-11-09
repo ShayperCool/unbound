@@ -31,6 +31,10 @@ The implementation processes the closing offline buffer through the shared
 capture path before clearing voices and generated clip data. It uses the old
 configuration and preserves the buffer-sized listener delivery. A reusable worker
 processes this closing buffer off the main thread and finishes before notification.
+The caller prepares exact-sized managed callback arrays and source scratch before
+rendering; the worker reuses them. Active mixer roots use capacity reserved when
+groups are registered. First and repeated reset tests count native and managed
+render allocations with filters and routed playback.
 The release
 selection is `Compat.AudioResetCaptureTailMeasured`. A reset rejected by resource
 validation processes no buffer and preserves the capture state.

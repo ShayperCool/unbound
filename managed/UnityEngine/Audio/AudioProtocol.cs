@@ -217,5 +217,8 @@ namespace Unbound.Runtime
         internal const int PcmRead = 2;
         internal const int PcmSetPosition = 3;
         internal const int GroupOutput = 4;
+        internal const int PrepareRenderBuffer = 5;
+        internal const int RenderBufferScope = 6;
+        internal const int ReleaseRenderBuffers = 7;
     }
 }

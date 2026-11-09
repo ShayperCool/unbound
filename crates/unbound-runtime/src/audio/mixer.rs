@@ -695,6 +695,7 @@ pub struct Mixer {
     /// Signal sent to each Receive or Duck Volume unit (by unit id) in the current block.
     sidechains: HashMap<String, Vec<f32>>,
     activated_mixers: HashSet<u64>,
+    active_roots: HashSet<u64>,
     capture_sinks: HashMap<u64, capture::Sink>,
     pub listener: Listener,
     pub listener_volume: f32,
@@ -780,6 +781,42 @@ fn frame_of(seconds: f64, rate: u32) -> u64 {
     (seconds.max(0.0) * rate as f64).round() as u64
 }
 
+fn source_spatial(
+    p: &SourceParams,
+    listener: &Listener,
+    config: MixerConfig,
+) -> spatial::Spatialized {
+    let (sampled_listener, doppler_listener_position) = p
+        .listener_snapshot
+        .map_or((*listener, None), |(pose, doppler)| (pose, Some(doppler)));
+    let spatialize = if p.has(source_flags::SPATIAL_STEREO) {
+        spatial::spatialize_measured
+    } else {
+        spatial::spatialize
+    };
+    spatialize(
+        &SourceSpatial {
+            position: p.position,
+            velocity: p.velocity,
+            doppler_listener_position,
+            pan_stereo: p.pan_stereo,
+            spatial_blend: p.spatial_blend,
+            spread: p.spread,
+            doppler_level: p.doppler_level,
+            min_distance: p.min_distance,
+            max_distance: p.max_distance,
+            rolloff_mode: p.rolloff_mode,
+            rolloff_curve: (!p.rolloff_curve.is_empty()).then_some(&p.rolloff_curve[..]),
+            spatial_blend_curve: (!p.spatial_blend_curve.is_empty())
+                .then_some(&p.spatial_blend_curve[..]),
+            spread_curve: (!p.spread_curve.is_empty()).then_some(&p.spread_curve[..]),
+        },
+        &sampled_listener,
+        config.rolloff_scale,
+        config.doppler_factor,
+    )
+}
+
 impl Mixer {
     pub fn new(config: MixerConfig) -> Self {
         Self {
@@ -794,6 +831,7 @@ impl Mixer {
             group_order: Vec::new(),
             sidechains: HashMap::new(),
             activated_mixers: HashSet::new(),
+            active_roots: HashSet::new(),
             capture_sinks: HashMap::new(),
             listener: Listener::default(),
             listener_volume: 1.0,
@@ -1164,6 +1202,16 @@ impl Mixer {
                 .or_insert_with(|| vec![0.0; BLOCK * 2]);
         }
         self.group_order = order;
+        self.active_roots.reserve(
+            self.group_nodes
+                .len()
+                .saturating_sub(self.active_roots.len()),
+        );
+        self.activated_mixers.reserve(
+            self.group_nodes
+                .len()
+                .saturating_sub(self.activated_mixers.len()),
+        );
         Ok(())
     }
 
@@ -1192,12 +1240,12 @@ impl Mixer {
                 voice.submitted = true;
             }
         }
-        let active = self.active_mixer_roots();
+        self.refresh_active_mixer_roots();
         for (handle, node) in &mut self.group_nodes {
             if node.spec.mixer != *handle {
                 continue;
             }
-            if active.contains(handle) || !node.spec.enable_suspend {
+            if self.active_roots.contains(handle) || !node.spec.enable_suspend {
                 node.suspended = false;
                 node.last_active = self.frames;
             } else if self.frames.saturating_sub(node.last_active) > self.config.sample_rate as u64
@@ -1207,8 +1255,8 @@ impl Mixer {
         }
     }
 
-    fn active_mixer_roots(&self) -> std::collections::HashSet<u64> {
-        let mut active = std::collections::HashSet::new();
+    fn refresh_active_mixer_roots(&mut self) {
+        self.active_roots.clear();
         // A playing clipless callback is activity even when it generates silence.
         for source in self.sources.values().filter(|s| s.active()) {
             let mut handle = source.params.group;
@@ -1222,13 +1270,12 @@ impl Mixer {
                 if group.spec.muted {
                     break;
                 }
-                if handle == group.spec.mixer && !active.insert(handle) {
+                if handle == group.spec.mixer && !self.active_roots.insert(handle) {
                     break;
                 }
                 handle = group.spec.parent;
             }
         }
-        active
     }
 
     /// Reports admission before a later render can change the source's voice counts.
@@ -1541,6 +1588,106 @@ impl Mixer {
         })
     }
 
+    /// Prepares callback arrays and source scratch on the control thread before closing output.
+    pub fn prepare_capture_block(&mut self, token: u64) -> anyhow::Result<()> {
+        let frames = self.config.buffer_size.max(1) as usize;
+        let samples = frames * 2;
+        let prepare = |count: usize| {
+            if count > 0
+                && let Some(cb) = self.callback
+            {
+                cb(
+                    callback::PREPARE_RENDER_BUFFER,
+                    token,
+                    std::ptr::null_mut(),
+                    count as i32,
+                    1,
+                    0,
+                );
+            }
+        };
+        prepare(samples);
+        prepare(frames.min(BLOCK) * 2);
+        prepare((frames % BLOCK) * 2);
+        for source in self.sources.values_mut() {
+            if source.params.has(source_flags::FILTER) {
+                source
+                    .filtered
+                    .try_reserve(samples.saturating_sub(source.filtered.len()))?;
+                if source.filter_only() {
+                    source
+                        .generator
+                        .current
+                        .try_reserve(samples.saturating_sub(source.generator.current.len()))?;
+                    source
+                        .generator
+                        .next
+                        .try_reserve(samples.saturating_sub(source.generator.next.len()))?;
+                }
+            }
+            source.completed_shots.try_reserve(source.one_shots.len())?;
+            let pitch = PlaybackPitch {
+                source: source.params.pitch,
+                group: self
+                    .groups
+                    .get(&source.params.group)
+                    .map_or(1.0, |group| group.pitch),
+                doppler: source_spatial(&source.params, &self.listener, self.config).pitch,
+            };
+            for voice in source.main.iter_mut().chain(&mut source.one_shots) {
+                if let (Some(stream), Some(clip)) = (&mut voice.stream, self.clips.get(&voice.clip))
+                {
+                    let channels = clip.channels.max(1);
+                    let step = pitch.step(clip.rate, self.config.sample_rate.max(1), false, false);
+                    // Reserve the furthest read plus one complete read-ahead chunk. Trimming
+                    // can only reduce this bound; preparation performs no PCM reads.
+                    let retained = (voice.position - stream.base as f64).max(0.0);
+                    let needed = ((retained + frames as f64 * step.max(0.0)).ceil()
+                        + STREAM_CHUNK as f64
+                        + 2.0)
+                        * channels as f64;
+                    anyhow::ensure!(
+                        needed.is_finite() && needed <= capture::MAX_SAMPLES as f64,
+                        "closing streamed output exceeds the supported allocation limit"
+                    );
+                    stream
+                        .buffer
+                        .try_reserve((needed as usize).saturating_sub(stream.buffer.len()))?;
+                    prepare(STREAM_CHUNK.min(clip.frames).max(1) * channels);
+                    prepare((clip.frames % STREAM_CHUNK) * channels);
+                    prepare((clip.frames.saturating_sub(stream.cursor) % STREAM_CHUNK) * channels);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn capture_buffer_scope(&self, token: u64, enter: bool) {
+        if let Some(cb) = self.callback {
+            cb(
+                callback::RENDER_BUFFER_SCOPE,
+                token,
+                std::ptr::null_mut(),
+                0,
+                0,
+                i64::from(enter),
+            );
+        }
+    }
+
+    pub fn release_capture_buffers(&self, token: u64) {
+        if let Some(cb) = self.callback {
+            cb(
+                callback::RELEASE_RENDER_BUFFERS,
+                token,
+                std::ptr::null_mut(),
+                0,
+                0,
+                0,
+            );
+        }
+    }
+
     /// Processes one complete offline output block, including the listener's borrowed buffer.
     pub fn render_capture_block(&mut self, block: &mut [f32]) {
         self.capture_listener_batch = true;
@@ -1626,8 +1773,9 @@ impl Mixer {
         }
         // New voices wake immediately, even when no main-thread update intervenes. Waking
         // preserves effect history and the input fade; parameter submissions alone do not wake.
-        for root in self.active_mixer_roots() {
-            if let Some(node) = self.group_nodes.get_mut(&root)
+        self.refresh_active_mixer_roots();
+        for root in &self.active_roots {
+            if let Some(node) = self.group_nodes.get_mut(root)
                 && node.suspended
             {
                 node.suspended = false;
@@ -1652,35 +1800,7 @@ impl Mixer {
         playing.clear();
         for (&handle, source) in &mut self.sources {
             let p = &source.params;
-            let (sampled_listener, doppler_listener_position) = p
-                .listener_snapshot
-                .map_or((listener, None), |(pose, doppler)| (pose, Some(doppler)));
-            let spatialize = if p.has(source_flags::SPATIAL_STEREO) {
-                spatial::spatialize_measured
-            } else {
-                spatial::spatialize
-            };
-            let s = spatialize(
-                &SourceSpatial {
-                    position: p.position,
-                    velocity: p.velocity,
-                    doppler_listener_position,
-                    pan_stereo: p.pan_stereo,
-                    spatial_blend: p.spatial_blend,
-                    spread: p.spread,
-                    doppler_level: p.doppler_level,
-                    min_distance: p.min_distance,
-                    max_distance: p.max_distance,
-                    rolloff_mode: p.rolloff_mode,
-                    rolloff_curve: (!p.rolloff_curve.is_empty()).then_some(&p.rolloff_curve[..]),
-                    spatial_blend_curve: (!p.spatial_blend_curve.is_empty())
-                        .then_some(&p.spatial_blend_curve[..]),
-                    spread_curve: (!p.spread_curve.is_empty()).then_some(&p.spread_curve[..]),
-                },
-                &sampled_listener,
-                config.rolloff_scale,
-                config.doppler_factor,
-            );
+            let s = source_spatial(p, &listener, config);
             if source.active() {
                 playing.push((handle, p.priority, s.audibility * p.volume));
             }

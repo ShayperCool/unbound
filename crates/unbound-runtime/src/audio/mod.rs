@@ -181,9 +181,15 @@ impl Clock {
     }
 }
 
+static NEXT_RENDER_TOKEN: AtomicU64 = AtomicU64::new(1);
+
 /// A reusable execution thread for the captured output that closes during reset.
 /// Buffers are allocated and retired by the caller; the render uses the mixer's scratch storage.
 struct ResetWorker {
+    token: u64,
+    mixer: Arc<Mutex<Mixer>>,
+    #[cfg(test)]
+    allocations: Arc<AtomicU64>,
     sender: Option<std::sync::mpsc::SyncSender<Vec<f32>>>,
     finished: std::sync::mpsc::Receiver<Vec<f32>>,
     thread: Option<std::thread::JoinHandle<()>>,
@@ -193,13 +199,28 @@ impl ResetWorker {
     fn new(mixer: Arc<Mutex<Mixer>>, clock: Arc<Clock>) -> std::io::Result<Self> {
         let (sender, receiver) = std::sync::mpsc::sync_channel::<Vec<f32>>(0);
         let (finished, completion) = std::sync::mpsc::sync_channel(0);
+        let token = NEXT_RENDER_TOKEN.fetch_add(1, Ordering::Relaxed);
+        let worker_mixer = mixer.clone();
+        #[cfg(test)]
+        let allocations = Arc::new(AtomicU64::new(0));
+        #[cfg(test)]
+        let worker_allocations = allocations.clone();
         let thread = std::thread::Builder::new()
             .name("unbound-audio-reset".into())
             .spawn(move || {
                 while let Ok(mut buffer) = receiver.recv() {
                     {
-                        let mut mixer = mixer.lock().unwrap_or_else(|e| e.into_inner());
+                        let mut mixer = worker_mixer.lock().unwrap_or_else(|e| e.into_inner());
+                        mixer.capture_buffer_scope(token, true);
+                        #[cfg(test)]
+                        crate::audio::tests::allocations::start();
                         mixer.render_capture_block(&mut buffer);
+                        #[cfg(test)]
+                        worker_allocations.store(
+                            crate::audio::tests::allocations::finish(),
+                            Ordering::Relaxed,
+                        );
+                        mixer.capture_buffer_scope(token, false);
                         clock.store(&mixer);
                     }
                     if finished.send(buffer).is_err() {
@@ -208,6 +229,10 @@ impl ResetWorker {
                 }
             })?;
         Ok(Self {
+            token,
+            mixer,
+            #[cfg(test)]
+            allocations,
             sender: Some(sender),
             finished: completion,
             thread: Some(thread),
@@ -225,6 +250,10 @@ impl ResetWorker {
             .finished
             .recv()
             .map_err(|_| anyhow::anyhow!("audio reset worker stopped during processing"))?;
+        self.mixer
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .release_capture_buffers(self.token);
         Ok(())
     }
 }
@@ -235,6 +264,10 @@ impl Drop for ResetWorker {
         if let Some(thread) = self.thread.take() {
             let _ = thread.join();
         }
+        self.mixer
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .release_capture_buffers(self.token);
     }
 }
 
@@ -422,6 +455,13 @@ impl Engine {
                     }
                 }
             }
+            if let Err(error) = self
+                .mixer()
+                .prepare_capture_block(worker.as_ref().unwrap().token)
+            {
+                tracing::warn!("audio reset rejected: cannot prepare closing output: {error:#}");
+                return false;
+            }
             if let Err(error) = worker.as_ref().unwrap().render(buffer) {
                 tracing::warn!("audio reset failed: {error:#}");
                 return false;
@@ -539,6 +579,167 @@ impl Engine {
 mod tests {
     use super::*;
     use protocol::{AudioSourceCommand, command, voice_state};
+
+    pub(super) mod allocations {
+        use std::{
+            alloc::{GlobalAlloc, Layout, System},
+            cell::Cell,
+        };
+        thread_local! {
+            static COUNT: Cell<Option<u64>> = const { Cell::new(None) };
+        }
+        struct Allocator;
+        #[global_allocator]
+        static ALLOCATOR: Allocator = Allocator;
+        unsafe impl GlobalAlloc for Allocator {
+            unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+                let _ = COUNT.try_with(|count| {
+                    if let Some(n) = count.get() {
+                        count.set(Some(n + 1));
+                    }
+                });
+                unsafe { System.alloc(layout) }
+            }
+            unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+                unsafe { System.dealloc(ptr, layout) }
+            }
+            unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, size: usize) -> *mut u8 {
+                let _ = COUNT.try_with(|count| {
+                    if let Some(n) = count.get() {
+                        count.set(Some(n + 1));
+                    }
+                });
+                unsafe { System.realloc(ptr, layout, size) }
+            }
+        }
+        pub fn start() {
+            COUNT.with(|count| count.set(Some(0)));
+        }
+        pub fn finish() -> u64 {
+            COUNT.with(|count| count.replace(None).unwrap())
+        }
+    }
+
+    #[test]
+    fn first_and_repeated_reset_renders_allocate_nothing_with_routing_and_filters() {
+        static FILTERS: AtomicU32 = AtomicU32::new(0);
+        static GROUPS: AtomicU32 = AtomicU32::new(0);
+        extern "C" fn callback(kind: i32, _: u64, _: *mut f32, _: i32, _: i32, _: i64) {
+            if kind == protocol::callback::SOURCE_FILTER {
+                FILTERS.fetch_add(1, Ordering::Relaxed);
+            }
+            if kind == protocol::callback::GROUP_OUTPUT {
+                GROUPS.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+        let engine = Engine::new(ProjectAudioSettings::default(), false);
+        for iteration in 0..3 {
+            let before_filters = FILTERS.load(Ordering::Relaxed);
+            let before_groups = GROUPS.load(Ordering::Relaxed);
+            {
+                let mut mixer = engine.mixer();
+                mixer.set_callback(Some(callback));
+                mixer.listener_filter = true;
+                mixer.configure_group(serde_json::from_value(serde_json::json!({
+                    "handle": 4, "mixer": 4, "parent": 0, "muted": false, "bypass": false, "observe": true, "effects": []
+                })).unwrap()).unwrap();
+                mixer.add_clip(1, Clip::new(1, 48000, vec![0.125; 48000]));
+                mixer.update_source(
+                    9,
+                    SourceParams {
+                        clip: 1,
+                        group: 4,
+                        flags: protocol::source_flags::FILTER | protocol::source_flags::LOOP,
+                        ..Default::default()
+                    },
+                );
+                mixer.command(
+                    9,
+                    &AudioSourceCommand {
+                        kind: command::PLAY,
+                        ..Default::default()
+                    },
+                );
+                mixer.add_clip(
+                    2,
+                    Clip {
+                        channels: 1,
+                        rate: 48000,
+                        frames: 5000,
+                        stream: true,
+                        ..Default::default()
+                    },
+                );
+                mixer.update_source(
+                    10,
+                    SourceParams {
+                        clip: 2,
+                        group: 4,
+                        flags: protocol::source_flags::LOOP,
+                        ..Default::default()
+                    },
+                );
+                mixer.command(
+                    10,
+                    &AudioSourceCommand {
+                        kind: command::PLAY,
+                        ..Default::default()
+                    },
+                );
+                mixer.update_source(
+                    11,
+                    SourceParams {
+                        group: 4,
+                        flags: protocol::source_flags::FILTER,
+                        ..Default::default()
+                    },
+                );
+                mixer.command(
+                    11,
+                    &AudioSourceCommand {
+                        kind: command::PLAY,
+                        ..Default::default()
+                    },
+                );
+                mixer.update_suspension();
+                if iteration == 2 {
+                    mixer.add_clip(3, Clip::new(1, 48000, vec![0.25]));
+                    for _ in 0..4 {
+                        mixer.command(
+                            9,
+                            &AudioSourceCommand {
+                                kind: command::PLAY_ONE_SHOT,
+                                clip: 3,
+                                volume_scale: 1.0,
+                                ..Default::default()
+                            },
+                        );
+                    }
+                    mixer.update_suspension();
+                    mixer.render(&mut [0.0; 512], 2);
+                    mixer.command(
+                        9,
+                        &AudioSourceCommand {
+                            kind: command::PLAY_ONE_SHOT,
+                            clip: 3,
+                            volume_scale: 1.0,
+                            ..Default::default()
+                        },
+                    );
+                    mixer.update_suspension();
+                }
+            }
+            assert!(engine.capture_start());
+            assert!(engine.reset_with_capture_tail(engine.configuration(), true));
+            assert!(FILTERS.load(Ordering::Relaxed) > before_filters);
+            assert!(GROUPS.load(Ordering::Relaxed) > before_groups);
+            let worker = engine.reset_worker.lock().unwrap();
+            assert_eq!(
+                worker.as_ref().unwrap().allocations.load(Ordering::Relaxed),
+                0
+            );
+        }
+    }
 
     #[test]
     fn capture_start_waits_for_the_in_flight_mixer_and_clock_update() {
