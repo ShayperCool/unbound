@@ -85,7 +85,9 @@ pub struct KeyEvent {
 }
 
 type StartFn = unsafe extern "system" fn(*const native_api::NativeApi, *const u8, i32) -> i32;
-type FrameFn = unsafe extern "system" fn(*const FrameInput) -> i32;
+/// The managed frame may rewrite the input (it maps the window's pixels to the Game view's
+/// rendering pixels before its readers).
+type FrameFn = unsafe extern "system" fn(*mut FrameInput) -> i32;
 type ShutdownFn = unsafe extern "system" fn();
 
 pub struct Game {
@@ -483,7 +485,7 @@ impl Game {
         scripted.key_event_count = events.len() as i32;
         scripted.text = text.as_ptr();
         scripted.text_length = text.len() as i32;
-        let status = unsafe { (self.frame)(&scripted) };
+        let status = unsafe { (self.frame)(&mut scripted) };
         if status != 0 {
             // Bit 0: quit; the exit code above it.
             self.exit_code = Some(status >> 8);

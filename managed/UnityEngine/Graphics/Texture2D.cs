@@ -424,7 +424,7 @@ namespace UnityEngine
                 : Native.ReadPixels(activeHandle, x0, y0, w, h, true);
             if (bytes == null)
             {
-                Debug.LogWarning("Unbound: Texture2D.ReadPixels has no GPU to read from (headless run); the texture is left unchanged.");
+                Debug.LogWarning("Unbound: Texture2D.ReadPixels has nothing to read (a headless run, or no screen of this size yet); the texture is left unchanged.");
                 return;
             }
             // ReadPixels copies attachment values, including float-to-byte reads, regardless

@@ -62,5 +62,16 @@ namespace UnityEngine.Tests
             Assert.Equal((50f, 5f), (input.MouseX, input.MouseY));
             Assert.Equal(new Vector2(100, 60), Screen.RenderingToWindow(new Vector2(50, 30)));
         }
+
+        /// <summary>A screen read shorter than the rect asked for is refused (the screen has
+        /// another size than the frame began with); an exact or empty one is read.</summary>
+        [Theory]
+        [InlineData(64 * 32 * 16, 64, 32, true, true)]
+        [InlineData(64 * 32 * 4, 64, 32, false, true)]
+        [InlineData(64 * 32 * 4, 64, 32, true, false)]
+        [InlineData(16, 64, 32, true, false)]
+        [InlineData(0, 0, 32, true, true)]
+        public void ShortScreenReadsAreRefused(long length, int width, int height, bool asFloat, bool fits) =>
+            Assert.Equal(fits, Unbound.Runtime.Native.ScreenReadFits(length, width, height, asFloat));
     }
 }

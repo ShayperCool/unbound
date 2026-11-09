@@ -158,7 +158,7 @@ namespace Unbound.Runtime
 
         /// <summary>Whether a screen read has the size asked for: a screen of another size (the
         /// window changed size since the frame began, or no frame has begun) is not read.</summary>
-        static bool ScreenReadFits(long length, int width, int height, bool asFloat) =>
+        internal static bool ScreenReadFits(long length, int width, int height, bool asFloat) =>
             length >= (long)Math.Max(0, width) * Math.Max(0, height) * (asFloat ? 16 : 4);
 
         /// <summary>A rectangle of a mip level of a texture's layer (an array slice, a cube face, a
