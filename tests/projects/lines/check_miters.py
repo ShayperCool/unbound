@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run the engine and require every line and trail record to match, except the open residuals.
 
-The open residuals stay failing in comparison.json and every failing component is retained
-in components.json. No tolerance or existing assertion is changed.
+The open residuals stay failing in comparison.json and every failing component
+is retained in components.json. No tolerance or existing assertion is changed.
 """
 import argparse
 import json
