@@ -284,6 +284,7 @@ pub mod callback {
     /// Opt-in observation of a summed group after its effects and before its parent.
     pub const GROUP_OUTPUT: i32 = 4;
     /// Control-thread allocation of an exact-sized managed callback array for render token `handle`.
+    /// `data` points to one status float: write 1 only on success (0 on entry).
     pub const PREPARE_RENDER_BUFFER: i32 = 5;
     /// Select (`arg` = 1) or leave (`arg` = 0) the prepared arrays on the rendering thread.
     pub const RENDER_BUFFER_SCOPE: i32 = 6;

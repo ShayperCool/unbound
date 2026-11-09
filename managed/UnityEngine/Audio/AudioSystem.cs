@@ -597,6 +597,7 @@ namespace Unbound.Runtime
 
         static readonly Dictionary<Type, MethodInfo> s_Methods = new Dictionary<Type, MethodInfo>();
         static readonly ConcurrentDictionary<ulong, Dictionary<int, float[]>> s_RenderBuffers = new();
+        internal static Func<int, float[]> AllocateRenderBuffer = length => new float[length];
         [ThreadStatic] static float[] t_Buffer;
         [ThreadStatic] static Dictionary<int, float[]> t_PreparedBuffers;
 
@@ -692,7 +693,9 @@ namespace Unbound.Runtime
                 {
                     if (!s_RenderBuffers.TryGetValue(handle, out var buffers))
                         s_RenderBuffers[handle] = buffers = new Dictionary<int, float[]>();
-                    if (!buffers.ContainsKey(count)) buffers.Add(count, new float[count]);
+                    if (!buffers.ContainsKey(count)) buffers.Add(count, AllocateRenderBuffer(count)
+                        ?? throw new InvalidOperationException("Audio callback buffer allocation returned null"));
+                    if (data != null) *data = 1;
                     break;
                 }
                 case AudioCallbackKind.RenderBufferScope:

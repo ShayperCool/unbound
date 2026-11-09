@@ -455,10 +455,12 @@ impl Engine {
                     }
                 }
             }
-            if let Err(error) = self
+            let preparation = self
                 .mixer()
-                .prepare_capture_block(worker.as_ref().unwrap().token)
-            {
+                .prepare_capture_block(worker.as_ref().unwrap().token);
+            if let Err(error) = preparation {
+                self.mixer()
+                    .release_capture_buffers(worker.as_ref().unwrap().token);
                 tracing::warn!("audio reset rejected: cannot prepare closing output: {error:#}");
                 return false;
             }
@@ -624,7 +626,13 @@ mod tests {
     fn first_and_repeated_reset_renders_allocate_nothing_with_routing_and_filters() {
         static FILTERS: AtomicU32 = AtomicU32::new(0);
         static GROUPS: AtomicU32 = AtomicU32::new(0);
-        extern "C" fn callback(kind: i32, _: u64, _: *mut f32, _: i32, _: i32, _: i64) {
+        extern "C" fn callback(kind: i32, _: u64, data: *mut f32, _: i32, _: i32, _: i64) {
+            if kind == protocol::callback::PREPARE_RENDER_BUFFER {
+                // SAFETY: preparation lends one writable success value on the caller.
+                unsafe {
+                    *data = 1.0;
+                }
+            }
             if kind == protocol::callback::SOURCE_FILTER {
                 FILTERS.fetch_add(1, Ordering::Relaxed);
             }
@@ -632,7 +640,13 @@ mod tests {
                 GROUPS.fetch_add(1, Ordering::Relaxed);
             }
         }
-        let engine = Engine::new(ProjectAudioSettings::default(), false);
+        let engine = Engine::new(
+            ProjectAudioSettings {
+                dsp_buffer_size: 2048,
+                ..Default::default()
+            },
+            false,
+        );
         for iteration in 0..3 {
             let before_filters = FILTERS.load(Ordering::Relaxed);
             let before_groups = GROUPS.load(Ordering::Relaxed);
@@ -675,6 +689,7 @@ mod tests {
                     SourceParams {
                         clip: 2,
                         group: 4,
+                        pitch: -3.0,
                         flags: protocol::source_flags::LOOP,
                         ..Default::default()
                     },
@@ -739,6 +754,63 @@ mod tests {
                 0
             );
         }
+    }
+
+    #[test]
+    fn managed_preparation_failure_preserves_capture_clock_and_playback() {
+        static ALLOW: AtomicBool = AtomicBool::new(false);
+        static DELIVERED: AtomicU32 = AtomicU32::new(0);
+        extern "C" fn callback(kind: i32, _: u64, data: *mut f32, _: i32, _: i32, _: i64) {
+            if kind == protocol::callback::PREPARE_RENDER_BUFFER && ALLOW.load(Ordering::Relaxed) {
+                // SAFETY: preparation lends one writable success value on the caller.
+                unsafe {
+                    *data = 1.0;
+                }
+            }
+            if kind == protocol::callback::LISTENER_FILTER {
+                DELIVERED.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+        let engine = Engine::new(ProjectAudioSettings::default(), false);
+        {
+            let mut mixer = engine.mixer();
+            mixer.set_callback(Some(callback));
+            mixer.listener_filter = true;
+            mixer.add_clip(1, Clip::new(1, 48000, vec![0.125; 48000]));
+            mixer.update_source(
+                9,
+                SourceParams {
+                    clip: 1,
+                    ..Default::default()
+                },
+            );
+            mixer.command(
+                9,
+                &AudioSourceCommand {
+                    kind: command::PLAY,
+                    ..Default::default()
+                },
+            );
+            mixer.update_suspension();
+        }
+        let before = engine.configuration();
+        let requested = AudioConfiguration {
+            sample_rate: 44100,
+            ..before
+        };
+        assert!(engine.capture_start());
+        assert!(!engine.reset_with_capture_tail(requested, true));
+        assert_eq!(engine.configuration(), before);
+        assert_eq!(engine.dsp_time(), 0.0);
+        assert!(engine.capturing.load(Ordering::Acquire));
+        assert_eq!(engine.mixer().source_state(9).main, voice_state::PLAYING);
+        assert_eq!(DELIVERED.load(Ordering::Relaxed), 0);
+        ALLOW.store(true, Ordering::Relaxed);
+        assert!(engine.reset_with_capture_tail(requested, true));
+        assert_eq!(engine.configuration(), requested);
+        assert!(!engine.capturing.load(Ordering::Acquire));
+        assert_eq!(engine.mixer().source_state(9).main, voice_state::NONE);
+        assert_eq!(DELIVERED.load(Ordering::Relaxed), 1);
     }
 
     #[test]
@@ -924,6 +996,12 @@ mod tests {
         static FRAMES: AtomicU32 = AtomicU32::new(0);
         static SAMPLE: AtomicU32 = AtomicU32::new(0);
         extern "C" fn callback(kind: i32, _: u64, data: *mut f32, frames: i32, _: i32, _: i64) {
+            if kind == protocol::callback::PREPARE_RENDER_BUFFER {
+                // SAFETY: preparation lends one writable success value on the caller.
+                unsafe {
+                    *data = 1.0;
+                }
+            }
             if kind == protocol::callback::LISTENER_FILTER {
                 SAME_THREAD.store(
                     *CALLER.lock().unwrap() == Some(std::thread::current().id()),

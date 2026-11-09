@@ -37,7 +37,9 @@ groups are registered. First and repeated reset tests count native and managed
 render allocations with filters and routed playback.
 The release
 selection is `Compat.AudioResetCaptureTailMeasured`. A reset rejected by resource
-validation processes no buffer and preserves the capture state.
+validation or managed callback preparation processes no buffer and preserves the
+capture state. The preparation handshake reports success before the worker can
+render; allocation-failure controls verify both rejection and a successful retry.
 
 ```sh
 python3 tests/projects/mixersuspend/delivery.py native --release 6000.0.71f1 --rate 48000 --work "$work/native-a"

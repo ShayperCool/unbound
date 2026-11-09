@@ -1592,23 +1592,29 @@ impl Mixer {
     pub fn prepare_capture_block(&mut self, token: u64) -> anyhow::Result<()> {
         let frames = self.config.buffer_size.max(1) as usize;
         let samples = frames * 2;
-        let prepare = |count: usize| {
+        let prepare = |count: usize| -> anyhow::Result<()> {
             if count > 0
                 && let Some(cb) = self.callback
             {
+                let mut ready = 0.0;
                 cb(
                     callback::PREPARE_RENDER_BUFFER,
                     token,
-                    std::ptr::null_mut(),
+                    &mut ready,
                     count as i32,
                     1,
                     0,
                 );
+                anyhow::ensure!(
+                    ready == 1.0,
+                    "managed audio callback buffer preparation failed"
+                );
             }
+            Ok(())
         };
-        prepare(samples);
-        prepare(frames.min(BLOCK) * 2);
-        prepare((frames % BLOCK) * 2);
+        prepare(samples)?;
+        prepare(frames.min(BLOCK) * 2)?;
+        prepare((frames % BLOCK) * 2)?;
         for source in self.sources.values_mut() {
             if source.params.has(source_flags::FILTER) {
                 source
@@ -1642,7 +1648,7 @@ impl Mixer {
                     // Reserve the furthest read plus one complete read-ahead chunk. Trimming
                     // can only reduce this bound; preparation performs no PCM reads.
                     let retained = (voice.position - stream.base as f64).max(0.0);
-                    let needed = ((retained + frames as f64 * step.max(0.0)).ceil()
+                    let needed = ((retained + frames as f64 * step.abs()).ceil()
                         + STREAM_CHUNK as f64
                         + 2.0)
                         * channels as f64;
@@ -1653,9 +1659,9 @@ impl Mixer {
                     stream
                         .buffer
                         .try_reserve((needed as usize).saturating_sub(stream.buffer.len()))?;
-                    prepare(STREAM_CHUNK.min(clip.frames).max(1) * channels);
-                    prepare((clip.frames % STREAM_CHUNK) * channels);
-                    prepare((clip.frames.saturating_sub(stream.cursor) % STREAM_CHUNK) * channels);
+                    prepare(STREAM_CHUNK.min(clip.frames).max(1) * channels)?;
+                    prepare((clip.frames % STREAM_CHUNK) * channels)?;
+                    prepare((clip.frames.saturating_sub(stream.cursor) % STREAM_CHUNK) * channels)?;
                 }
             }
         }

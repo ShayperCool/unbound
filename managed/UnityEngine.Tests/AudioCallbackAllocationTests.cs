@@ -13,6 +13,41 @@ namespace UnityEngine.Tests
             void OnAudioFilterRead(float[] data, int channels) { Calls++; data[0] += 0.125f; }
         }
 
+        sealed class LogCapture : ILogHandler
+        {
+            internal Exception Exception;
+            public void LogException(Exception exception, Object context) { Exception = exception; }
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) { }
+        }
+
+        [Fact]
+        public void PreparationFailureReportsNoSuccessAndCanBeRetried()
+        {
+            const ulong token = 900002;
+            var previousAllocator = AudioFilters.AllocateRenderBuffer;
+            var previousLog = Debug.unityLogger.logHandler;
+            var capture = new LogCapture();
+            try
+            {
+                Debug.unityLogger.logHandler = capture;
+                AudioFilters.AllocateRenderBuffer = _ => throw new OutOfMemoryException("Injected callback allocation failure");
+                delegate* unmanaged<int, ulong, float*, int, int, long, void> callback = &AudioFilters.Invoke;
+                float ready = 0;
+                callback(AudioCallbackKind.PrepareRenderBuffer, token, &ready, 2048, 1, 0);
+                Assert.Equal(0, ready);
+                Assert.IsType<OutOfMemoryException>(capture.Exception);
+                AudioFilters.AllocateRenderBuffer = previousAllocator;
+                callback(AudioCallbackKind.PrepareRenderBuffer, token, &ready, 2048, 1, 0);
+                Assert.Equal(1, ready);
+            }
+            finally
+            {
+                AudioFilters.AllocateRenderBuffer = previousAllocator;
+                Debug.unityLogger.logHandler = previousLog;
+                AudioFilters.Dispatch(AudioCallbackKind.ReleaseRenderBuffers, token, null, 0, 0, 0);
+            }
+        }
+
         [Fact]
         public void PreparedClosingBuffersAllocateNothingOnFirstAndRepeatedWorkerRenders()
         {
