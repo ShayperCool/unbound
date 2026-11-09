@@ -207,6 +207,8 @@ public class PathProbe : MonoBehaviour
             ("snap.warp", SnapWarp),
             ("snap.destination", SnapDestination),
             ("sync.updatePosition", SyncUpdatePosition),
+            ("link.snap", LinkSnap),
+            ("link.wide", LinkWide),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -808,5 +810,116 @@ public class PathProbe : MonoBehaviour
             yield return null;
             foreach (var (k, x) in all) Log(k + ".after" + n, x);
         }
+    }
+
+    // ------------------------------------------------------------------ links over a gap
+
+    /// <summary>The floor (agent type 0, and the big type) cut by a 2 m strip at x = 0 that only
+    /// links cross, plus any further parts.</summary>
+    static void Gap(int agentType, params Part[] parts)
+    {
+        var all = new List<Part> { new Part(0f, 0f, 2f, 40f, Blocked) };
+        all.AddRange(parts);
+        var sources = new List<NavMeshBuildSource>
+        {
+            Source(new Vector3(0f, -0.05f, 0f), new Vector3(28f, 0.1f, 28f), 0, 0f),
+        };
+        foreach (var p in all)
+            sources.Add(Source(new Vector3(p.Center.x + Off.x, 0.5f, p.Center.z + Off.y), new Vector3(p.Size.x, 1f, p.Size.z), p.Area, p.Yaw));
+        var bounds = new Bounds(Vector3.zero, new Vector3(32f, 10f, 32f));
+        NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(agentType), sources, bounds, Vector3.zero, Quaternion.identity));
+    }
+
+    static NavMeshLinkInstance Link(Vector3 start, Vector3 end, int agentType = 0, float width = 0f)
+    {
+        var data = new NavMeshLinkData
+        {
+            startPosition = start,
+            endPosition = end,
+            width = width,
+            bidirectional = true,
+            costModifier = -1f,
+            area = 0,
+            agentTypeID = agentType,
+        };
+        return NavMesh.AddLink(data);
+    }
+
+    static void TypedPath(string key, Vector3 a, Vector3 b, int agentType)
+    {
+        var filter = new NavMeshQueryFilter { agentTypeID = agentType, areaMask = NavMesh.AllAreas };
+        var path = new NavMeshPath();
+        bool ok = NavMesh.CalculatePath(a, b, filter, path);
+        ProbeLog.Value(key + ".ok", ok);
+        ProbeLog.Value(key + ".status", path.status.ToString());
+        var corners = path.corners;
+        ProbeLog.Value(key + ".n", corners.Length);
+        for (int i = 0; i < corners.Length; i++) ProbeLog.Value(key + ".c" + i, corners[i]);
+    }
+
+    /// <summary>How far from the NavMesh a link's end may lie and still connect: link ends at
+    /// distances either side of the agent radius (0.5 m for type 0, 2 m for the big type) in x,
+    /// and above the floor either side of the climb (0.75 m), each crossed by a path.</summary>
+    IEnumerator LinkSnap()
+    {
+        Gap(0);
+        Gap(BigType);
+        LogMesh();
+        var links = new List<NavMeshLinkInstance>();
+        // The NavMesh ends at x = -1.5 and 1.667 for type 0, at -3.333 and 3.333 for the big type.
+        foreach (var (name, x0, x1, y, z, type) in new[]
+        {
+            ("r05in", -1.1f, 1.267f, 0f, -10f, 0), ("r05out", -0.95f, 1.117f, 0f, -6f, 0),
+            ("climbin", -1.7f, 1.9f, 0.6f, -2f, 0), ("climbout", -1.7f, 1.9f, 0.95f, 2f, 0),
+            ("r2in", -1.633f, 1.633f, 0f, 6f, BigType), ("r2out", -1.233f, 1.233f, 0f, 10f, BigType),
+        })
+        {
+            links.Add(Link(new Vector3(x0, y, z), new Vector3(x1, y, z), type));
+            yield return Frames(1);
+            TypedPath(name, new Vector3(-8f, 0f, z), new Vector3(8f, 0f, z), type);
+        }
+        foreach (var l in links) NavMesh.RemoveLink(l);
+    }
+
+    /// <summary>A 4 m wide link over the gap: paths straight across it at several lateral offsets
+    /// (inside it, beyond its width), and agents crossing it (the link's ends they are given and
+    /// cross between); a second one whose start lies partly off the NavMesh (a hole beside the
+    /// gap covers the start for z above about 6), so a crossing there is held to the part over
+    /// the NavMesh.</summary>
+    IEnumerator LinkWide()
+    {
+        Gap(0, new Part(-2.6f, 11f, 3f, 9f, Blocked));
+        LogMesh();
+        var a = Link(new Vector3(-1.7f, 0f, -6f), new Vector3(1.7f, 0f, -6f), 0, 4f);
+        var b = Link(new Vector3(-1.7f, 0f, 6f), new Vector3(1.7f, 0f, 6f), 0, 4f);
+        yield return Frames(1);
+        foreach (float dz in new[] { 0f, 1.2f, -1.7f, 3f })
+            Path("a" + Name(dz), new Vector3(-8f, 0f, -6f + dz), new Vector3(8f, 0f, -6f + dz));
+        foreach (float dz in new[] { -1.2f, 0f, 1.2f })
+            Path("b" + Name(dz), new Vector3(-8f, 0f, 6f + dz), new Vector3(8f, 0f, 6f + dz));
+        // One agent at a time, so they do not avoid each other.
+        foreach (var (name, z) in new[] { ("ga1.2", -4.8f), ("ga3", -3f), ("gb1.2", 7.2f) })
+        {
+            var go = new GameObject(name);
+            go.transform.position = new Vector3(-6f, 0f, z);
+            var agent = go.AddComponent<NavMeshAgent>();
+            agent.SetDestination(new Vector3(6f, 0f, z));
+            yield return Frames(2);
+            var next = agent.nextOffMeshLinkData;
+            ProbeLog.Value(name + ".next.valid", next.valid);
+            ProbeLog.Value(name + ".next.start", next.startPos);
+            ProbeLog.Value(name + ".next.end", next.endPos);
+            for (int f = 0; f < 200 && !agent.isOnOffMeshLink; f++) yield return null;
+            var cur = agent.currentOffMeshLinkData;
+            ProbeLog.Value(name + ".cur.start", cur.startPos);
+            ProbeLog.Value(name + ".cur.end", cur.endPos);
+            ProbeLog.Value(name + ".cur.at", agent.nextPosition);
+            yield return Frames(120);
+            ProbeLog.Value(name + ".end", agent.nextPosition);
+            Destroy(go);
+            yield return Frames(1);
+        }
+        NavMesh.RemoveLink(a);
+        NavMesh.RemoveLink(b);
     }
 }
