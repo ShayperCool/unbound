@@ -1083,11 +1083,13 @@ public class PathProbe : MonoBehaviour
     /// <summary>The NavMesh is at (x, z) on the floor: a sample within 5 cm of it.</summary>
     static bool OnFloor(float x, float z) => NavMesh.SamplePosition(new Vector3(x, 0.0667f, z), out _, 0.05f, NavMesh.AllAreas);
 
-    /// <summary>Carving rules: capsule holes (upright, turned 22.5 degrees, lying on its side), a
-    /// hole with corners sharper than a right angle, which
-    /// boxes above or below the floor carve (bottom within or beyond the agent height above it, top
-    /// within the climb below it), and when turning or scaling a stationary-only box counts as
-    /// moving (the hole goes, then comes back once it stands still).</summary>
+    /// <summary>Carving rules: capsule holes (upright, turned 22.5 degrees, lying on its side, made
+    /// in the reverse order of their places), two holes round one centre (the smaller made first),
+    /// a hole with corners sharper than a right angle, a box of no width or depth, which boxes
+    /// above or below the floor carve (bottom within or beyond the agent height above it, top
+    /// within the climb below it), when turning or scaling a stationary-only box counts as moving
+    /// (the hole goes, then comes back once it stands still) for boxes of other sizes and scales,
+    /// a stationary-only box resized, and one that keeps creeping after a move.</summary>
     IEnumerator CarveRules()
     {
         ClearAgents();
@@ -1112,10 +1114,15 @@ public class PathProbe : MonoBehaviour
             made.Add(go);
             return o;
         }
-        // Capsules: radius 1, upright, turned, lying along x.
-        Make(new Vector3(-8f, 1f, -8f), NavMeshObstacleShape.Capsule, new Vector3(1f, 2f, 0f), 0f, 0f, false);
-        Make(new Vector3(-8f, 1f, 0f), NavMeshObstacleShape.Capsule, new Vector3(1f, 2f, 0f), 22.5f, 0f, false);
+        // Capsules: radius 1, lying along x, turned, upright (made from the largest z down).
         Make(new Vector3(-8f, 1f, 8f), NavMeshObstacleShape.Capsule, new Vector3(1f, 4f, 0f), 0f, 90f, false);
+        Make(new Vector3(-8f, 1f, 0f), NavMeshObstacleShape.Capsule, new Vector3(1f, 2f, 0f), 22.5f, 0f, false);
+        Make(new Vector3(-8f, 1f, -8f), NavMeshObstacleShape.Capsule, new Vector3(1f, 2f, 0f), 0f, 0f, false);
+        // Round one centre: a 1 m box, then a capsule of radius 1.2 round it.
+        Make(new Vector3(-3f, 0.5f, 11f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, false);
+        Make(new Vector3(-3f, 0.5f, 11f), NavMeshObstacleShape.Capsule, new Vector3(1.2f, 2f, 0f), 0f, 0f, false);
+        // No width or depth: one point from above.
+        Make(new Vector3(-3.5f, 0.5f, 0f), NavMeshObstacleShape.Box, new Vector3(0f, 1f, 0f), 0f, 0f, false);
         // Heights (agent height 2, climb 0.75): top 0.3 below the floor; bottom 1.9 and 2.1 above.
         Make(new Vector3(0f, -0.8f, -8f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, false);
         Make(new Vector3(0f, 2.4f, 0f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, false);
@@ -1130,18 +1137,37 @@ public class PathProbe : MonoBehaviour
         var scaled = Make(new Vector3(8f, 0.5f, 6f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
         var turnedLess = Make(new Vector3(8f, 0.5f, -11f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
         var scaledLess = Make(new Vector3(8f, 0.5f, 11f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
+        // The same 3 degree turn of a 2 m box, and of a 0.5 m box at scale 2.
+        var turnedLarge = Make(new Vector3(-8f, 1f, -12f), NavMeshObstacleShape.Box, Vector3.one * 2f, 0f, 0f, true);
+        var turnedScaled = Make(new Vector3(-8f, 0.5f, 12f), NavMeshObstacleShape.Box, Vector3.one * 0.5f, 0f, 0f, true);
+        turnedScaled.transform.localScale = Vector3.one * 2f;
+        // Stationary-only: one to resize from 1 to 2 m, one to move 0.2 m and then 5 mm a frame.
+        var resized = Make(new Vector3(-3.5f, 0.5f, -4f), NavMeshObstacleShape.Box, Vector3.one, 10f, 0f, true);
+        var creeping = Make(new Vector3(-3.5f, 0.5f, 4f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
         yield return Frames(4);
         LogPolygons("poly");
         ProbeLog.Value("below", OnFloor(0f, -8f));
         ProbeLog.Value("float1.9", OnFloor(0f, 0f));
         ProbeLog.Value("float2.1", OnFloor(0f, 8f));
+        ProbeLog.Value("zero", OnFloor(-3.5f, 0f));
         turned.transform.rotation = Quaternion.Euler(0f, 5.7f, 0f);
         scaled.transform.localScale = Vector3.one * 1.08f;
         turnedLess.transform.rotation = Quaternion.Euler(0f, 3f, 0f);
         scaledLess.transform.localScale = Vector3.one * 1.04f;
+        turnedLarge.transform.rotation = Quaternion.Euler(0f, 3f, 0f);
+        turnedScaled.transform.rotation = Quaternion.Euler(0f, 3f, 0f);
+        resized.size = Vector3.one * 2f;
+        creeping.transform.position += new Vector3(0.2f, 0f, 0f);
         for (int f = 1; f <= 40; f++)
         {
             yield return null;
+            ProbeLog.Value("f" + f + ".turnedLarge", OnFloor(-8f, -12f));
+            ProbeLog.Value("f" + f + ".turnedScaled", OnFloor(-8f, 12f));
+            // Resized: its centre, and 1.2 m off it (on the floor round 1 m, in the hole of 2 m).
+            ProbeLog.Value("f" + f + ".resized", OnFloor(-3.5f, -4f));
+            ProbeLog.Value("f" + f + ".resizedEdge", OnFloor(-2.3f, -4f));
+            ProbeLog.Value("f" + f + ".creeping", OnFloor(creeping.transform.position.x, 4f));
+            creeping.transform.position += new Vector3(0.005f, 0f, 0f);
             ProbeLog.Value("f" + f + ".turned", OnFloor(8f, -6f));
             ProbeLog.Value("f" + f + ".scaled", OnFloor(8f, 6f));
             ProbeLog.Value("f" + f + ".turned3", OnFloor(8f, -11f));

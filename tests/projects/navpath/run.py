@@ -24,6 +24,13 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
                           tiles takes another staircase of tiles (east, then north along the
                           wall) that crosses the gap's tile, so its agent is planned again and
                           takes the gap (docs/COMPATIBILITY_GAPS.md, the path-cost row);
+  carve.rules poly.p47, poly.p51
+                          two pieces where the capsule round the box at (-3, 11) cuts a piece the
+                          lying capsule left: Unity joins the fan triangle under it to the piece
+                          on its right, Unbound to the one on its left. Which is joined depends on
+                          the vertex the cut piece starts at, which follows from where the built
+                          NavMesh tile's polygon starts; Unity's starts at another corner in some
+                          tiles (docs/COMPATIBILITY_GAPS.md, the carving row).
   link.wide gb1.2.cur.*   an agent reaching a wide link where the NavMesh under the link's start
                           ends (z 6): Unity's reaches it 6 cm further from that end and crosses from
                           5.98 to 5.82, Unbound's straight across from where it reaches it, 5.80
@@ -51,6 +58,7 @@ LISTED = {
     'hole.shapes': ('two.p1.',),
     'link.wide': ('gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
     'carve.shortcut': ('',),
+    'carve.rules': ('poly.p47', 'poly.p51'),
 }
 
 
