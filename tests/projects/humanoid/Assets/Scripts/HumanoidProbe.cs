@@ -10,7 +10,7 @@ using UnityEngine.Playables;
 /// <summary>Records what the humanoid avatars of the probe's rigs give a game: the HumanTrait tables,
 /// the imported avatars and their human descriptions, the Animator's humanoid members, poses read
 /// and written through HumanPoseHandler, and avatars built at run time with AvatarBuilder.</summary>
-public class HumanoidProbe : MonoBehaviour
+public partial class HumanoidProbe : MonoBehaviour
 {
     static readonly StringBuilder s_Output = new StringBuilder();
     static readonly List<string> s_Log = new List<string>();
@@ -211,9 +211,10 @@ public class HumanoidProbe : MonoBehaviour
     }
 
     /// <summary>Plays a controller on a fresh instance of a rig: Update(0), then 24 steps of 1/30 s
-    /// and four of 0.1 s.</summary>
+    /// and four of 0.1 s; the transforms' locals (with <paramref name="locals"/>) every
+    /// <paramref name="localsEvery"/> steps.</summary>
     static void Play(string key, string rig, string controller, Action<Animator> setup = null, bool motion = false, bool locals = true,
-        Action<Animator, int> beforeStep = null, bool detail = false)
+        Action<Animator, int> beforeStep = null, bool detail = false, int localsEvery = 1)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
@@ -225,7 +226,7 @@ public class HumanoidProbe : MonoBehaviour
             s_IKKey = key + ".step" + step;
             beforeStep?.Invoke(animator, step);
             animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
-            Step(key + ".step" + step, animator, handler, locals);
+            Step(key + ".step" + step, animator, handler, locals && step % localsEvery == 0);
             if (motion) Motion(key + ".step" + step, animator);
             if (detail) Detail(key + ".step" + step, animator);
         }
@@ -459,6 +460,7 @@ public class HumanoidProbe : MonoBehaviour
             Guarded("ikClipMirror", () => Play("ikClipMirror", "HumanA", "HumanAIKClipMirror", animator => animator.gameObject.AddComponent<HumanoidIK>(),
                 motion: true, locals: false));
             FirstSteps();
+            Leftovers();
         }
         catch (Exception e)
         {

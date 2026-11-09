@@ -58,6 +58,7 @@ public static class ProbeRunner
             MuscleClips();
             MirrorStates();
             FirstSteps();
+            Leftovers();
             AssetDatabase.SaveAssets();
         }
         catch (System.Exception e)
@@ -670,6 +671,179 @@ public static class ProbeRunner
             state.motion = ClipOf("HumanA", "Mirror");
             state.mirror = true;
             EditorUtility.SetDirty(additive);
+        }
+    }
+
+    /// <summary>The controls of target matching, bone rotations in the IK pass, translation DoF,
+    /// loop pose on additive layers, feet without goal curves and layers that do not place the body:
+    /// HumanT.fbx (HumanA's rig with bone translations) as Humanoid with translation DoF, its clip
+    /// (Scene) and the clip mirrored (Mirror), with controllers HumanT and HumanTMirror;
+    /// TDoFMuscles.anim and TDoFMirror.anim (muscles and translation DoF curves, the second mirrored)
+    /// with controllers Human{name}; FeetNoGoals.anim (height from feet, no foot goal curves) and
+    /// FeetLeftGoal.anim (only the left foot's goal curves) with controllers Human{name};
+    /// HumanAdditiveLoopPose (A, LoopMuscles on an additive layer of weight 0.6) and
+    /// HumanAdditiveLoopPoseModel (A, HumanA's LoopPose clip there); HumanNoRootOverEmpty (an empty
+    /// base state), HumanNoRootOverGeneric (GenericMove in the base layer) and HumanNoRootNoWD (A,
+    /// then after an exit time of 0.3 an empty state without write defaults), each with B on an
+    /// override layer of weight 0.5 masked by MaskNoRoot; HumanAIK2 (A on two layers with an IK pass,
+    /// the second an override of weight 1).</summary>
+    static void Leftovers()
+    {
+        var a = ClipOf("HumanA");
+        var b = ClipOf("HumanB");
+        var tPath = Dir + "HumanT.fbx";
+        var t = (ModelImporter)AssetImporter.GetAtPath(tPath);
+        if (t.animationType != ModelImporterAnimationType.Human || !t.humanDescription.hasTranslationDoF)
+        {
+            t.animationType = ModelImporterAnimationType.Human;
+            t.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            t.SaveAndReimport();
+            var description = t.humanDescription;
+            description.hasTranslationDoF = true;
+            t.humanDescription = description;
+            var source = t.defaultClipAnimations[0];
+            source.name = "Scene";
+            source.loopTime = true;
+            var mirror = new ModelImporterClipAnimation
+            {
+                name = "Mirror", takeName = source.takeName, firstFrame = source.firstFrame, lastFrame = source.lastFrame,
+                loopTime = true, keepOriginalPositionY = true, mirror = true,
+            };
+            t.clipAnimations = new[] { source, mirror };
+            t.animationCompression = ModelImporterAnimationCompression.Off;
+            t.SaveAndReimport();
+            var avatar = AssetDatabase.LoadAllAssetsAtPath(tPath).OfType<Avatar>().FirstOrDefault();
+            Debug.Log("PROBE HumanT avatar " + (avatar != null ? "valid " + avatar.isValid + " human " + avatar.isHuman
+                + " tdof " + avatar.humanDescription.hasTranslationDoF : "none"));
+        }
+        foreach (var (name, clip) in new[] { ("HumanT", "Scene"), ("HumanTMirror", "Mirror") })
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(Dir + name + ".controller") == null)
+                AnimatorController.CreateAnimatorControllerAtPathWithClip(Dir + name + ".controller", ClipOf("HumanT", clip));
+
+        AnimationClip NewClip(string name, System.Action<System.Action<string, float[]>> curves, System.Action<AnimationClipSettings> settings)
+        {
+            var path = Dir + name + ".anim";
+            var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+            if (existing != null) return existing;
+            var clip = new AnimationClip();
+            curves((attribute, keys) =>
+            {
+                var curve = new AnimationCurve();
+                for (int i = 0; i < keys.Length; i += 2) curve.AddKey(keys[i], keys[i + 1]);
+                clip.SetCurve("", typeof(Animator), attribute, curve);
+            });
+            var s = AnimationUtility.GetAnimationClipSettings(clip);
+            s.loopTime = true;
+            settings?.Invoke(s);
+            AnimationUtility.SetAnimationClipSettings(clip, s);
+            AssetDatabase.CreateAsset(clip, path);
+            AnimatorController.CreateAnimatorControllerAtPathWithClip(Dir + "Human" + name + ".controller", clip);
+            return clip;
+        }
+        void TDoF(System.Action<string, float[]> set)
+        {
+            set("RootT.x", new[] { 0f, 0f, 1f, 0.2f });
+            set("RootT.y", new[] { 0f, 1f, 1f, 1f });
+            set("RootT.z", new[] { 0f, 0f, 1f, 0.4f });
+            set("RootQ.w", new[] { 0f, 1f, 1f, 1f });
+            set("Spine Front-Back", new[] { 0f, 0.1f, 1f, 0.4f });
+            set("Left Upper Leg Front-Back", new[] { 0f, 0.2f, 1f, -0.3f });
+            set("Right Arm Down-Up", new[] { 0f, -0.2f, 1f, 0.3f });
+            set("SpineTDOF.x", new[] { 0f, 0.02f, 1f, -0.03f });
+            set("SpineTDOF.y", new[] { 0f, 0.05f, 0.5f, -0.02f, 1f, 0.04f });
+            set("SpineTDOF.z", new[] { 0f, -0.01f, 1f, 0.03f });
+            set("NeckTDOF.y", new[] { 0f, 0.03f, 1f, -0.02f });
+            set("LeftUpperLegTDOF.x", new[] { 0f, 0.04f, 1f, -0.02f });
+            set("LeftUpperLegTDOF.z", new[] { 0f, -0.03f, 1f, 0.02f });
+            set("RightUpperArmTDOF.x", new[] { 0f, 0.01f, 1f, 0.05f });
+            set("RightUpperArmTDOF.y", new[] { 0f, -0.04f, 1f, 0.02f });
+            set("LeftShoulderTDOF.z", new[] { 0f, 0.03f, 1f, -0.03f });
+        }
+        NewClip("TDoFMuscles", TDoF, null);
+        NewClip("TDoFMirror", TDoF, s => s.mirror = true);
+        void Feet(System.Action<string, float[]> set, bool left)
+        {
+            set("RootT.x", new[] { 0f, 0.1f, 1f, 0.4f });
+            set("RootT.y", new[] { 0f, 1f, 0.5f, 0.97f, 1f, 1.05f });
+            set("RootT.z", new[] { 0f, 0.2f, 1f, 0.6f });
+            set("RootQ.w", new[] { 0f, 1f, 1f, 1f });
+            set("Spine Front-Back", new[] { 0f, 0f, 1f, 0.4f });
+            set("Left Upper Leg Front-Back", new[] { 0f, 0.3f, 1f, -0.2f });
+            set("Right Lower Leg Stretch", new[] { 0f, 0.2f, 1f, 0.6f });
+            if (!left) return;
+            set("LeftFootT.x", new[] { 0f, -0.1f, 1f, -0.12f });
+            set("LeftFootT.y", new[] { 0f, -0.75f, 1f, -0.8f });
+            set("LeftFootT.z", new[] { 0f, 0.05f, 1f, 0f });
+            set("LeftFootQ.w", new[] { 0f, 1f, 1f, 1f });
+        }
+        System.Action<AnimationClipSettings> fromFeet = s => { s.keepOriginalPositionY = false; s.heightFromFeet = true; };
+        NewClip("FeetNoGoals", set => Feet(set, false), fromFeet);
+        NewClip("FeetLeftGoal", set => Feet(set, true), fromFeet);
+
+        AnimatorController Make(string name)
+        {
+            var path = Dir + name + ".controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) return null;
+            return AnimatorController.CreateAnimatorControllerAtPath(path);
+        }
+        void Layer(AnimatorController controller, AnimationClip clip, AnimatorLayerBlendingMode mode, float weight, AvatarMask mask, bool ik = false)
+        {
+            controller.AddLayer("L" + controller.layers.Length);
+            var layers = controller.layers;
+            int i = layers.Length - 1;
+            layers[i].blendingMode = mode;
+            layers[i].defaultWeight = weight;
+            layers[i].avatarMask = mask;
+            layers[i].iKPass = ik;
+            controller.layers = layers;
+            controller.layers[i].stateMachine.AddState("S").motion = clip;
+            EditorUtility.SetDirty(controller);
+        }
+        foreach (var (name, clip) in new[] { ("HumanAdditiveLoopPose", AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "LoopMuscles.anim")),
+                     ("HumanAdditiveLoopPoseModel", ClipOf("HumanA", "LoopPose")) })
+        {
+            var controller = Make(name);
+            if (controller == null) continue;
+            controller.layers[0].stateMachine.AddState("A").motion = a;
+            Layer(controller, clip, AnimatorLayerBlendingMode.Additive, 0.6f, null);
+        }
+        var noRoot = AssetDatabase.LoadAssetAtPath<AvatarMask>(Dir + "MaskNoRoot.mask");
+        var empty = Make("HumanNoRootOverEmpty");
+        if (empty != null)
+        {
+            empty.layers[0].stateMachine.AddState("Empty");
+            Layer(empty, b, AnimatorLayerBlendingMode.Override, 0.5f, noRoot);
+        }
+        var generic = Make("HumanNoRootOverGeneric");
+        if (generic != null)
+        {
+            generic.layers[0].stateMachine.AddState("Move").motion = AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "GenericMove.anim");
+            Layer(generic, b, AnimatorLayerBlendingMode.Override, 0.5f, noRoot);
+        }
+        var noWD = Make("HumanNoRootNoWD");
+        if (noWD != null)
+        {
+            var machine = noWD.layers[0].stateMachine;
+            var first = machine.AddState("A");
+            first.motion = a;
+            var hold = machine.AddState("Hold");
+            hold.writeDefaultValues = false;
+            machine.defaultState = first;
+            var go = first.AddTransition(hold);
+            go.hasExitTime = true;
+            go.exitTime = 0.3f;
+            go.hasFixedDuration = true;
+            go.duration = 0f;
+            Layer(noWD, b, AnimatorLayerBlendingMode.Override, 0.5f, noRoot);
+        }
+        var ik2 = Make("HumanAIK2");
+        if (ik2 != null)
+        {
+            ik2.layers[0].stateMachine.AddState("A").motion = a;
+            var layers = ik2.layers;
+            layers[0].iKPass = true;
+            ik2.layers = layers;
+            Layer(ik2, a, AnimatorLayerBlendingMode.Override, 1f, null, ik: true);
         }
     }
 

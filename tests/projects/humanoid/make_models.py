@@ -7,11 +7,16 @@ fingers per hand, in an A pose (arms down), with rolled bones so that the bone a
 Unity's muscle axes; it carries a walk-like clip on all of them, hips translation included.
 HumanB: only the required bones under extra non-human nodes (a root, a spine helper between Hips
 and Spine, twist leaves), other proportions and other rolls; it carries a short clip too.
+HumanT: HumanA's rig and clip with translations of the spine, neck, a leg and an arm added (for an
+avatar with translation DoF).
 The character faces Blender's -Y, which is Unity's +Z.
+
+Names after `--` generate only those rigs (HumanA, HumanB, HumanT).
 """
 import math
 import os
 import shutil
+import sys
 
 import bpy
 from mathutils import Euler, Vector
@@ -57,7 +62,7 @@ def side(bones):
     return out
 
 
-def human_a():
+def a_bones():
     body = [
         ('Hips', None, (0, 0, 1.0), (0, 0, 1.1), 0),
         ('Spine', 'Hips', (0, 0.01, 1.1), (0, 0, 1.22), 5),
@@ -87,9 +92,30 @@ def human_a():
         ('LeftFoot', 'LeftLowerLeg', (0.1, 0.01, 0.1), (0.11, -0.11, 0.03), 0),
         ('LeftToes', 'LeftFoot', (0.11, -0.11, 0.03), (0.11, -0.17, 0.03), 0),
     ])
-    rig = armature('HumanA', body + limbs)
+    return body + limbs
+
+
+def human_a():
+    rig = armature('HumanA', a_bones())
     animate(rig, 'Walk', 30, a_keys())
     export(rig, 'HumanA.fbx')
+
+
+def human_t():
+    """HumanA with bone translations (Blender's pose locations, in each bone's rest frame) on the
+    bones that can carry a translation DoF."""
+    rig = armature('HumanT', a_bones())
+    keys = a_keys()
+    for f, s in ((0, 1), (15, -1), (30, 1)):
+        keys += [
+            ('Spine', f, None, (0.01 * s, 0.02, -0.01 * s)),
+            ('Neck', f, None, (0, 0.015 * s, 0.01)),
+            ('LeftUpperLeg', f, None, (0.02 * s, -0.01, 0.015)),
+            ('RightUpperArm', f, None, (-0.01, 0.025 * s, 0.005 * s)),
+            ('LeftShoulder', f, None, (0.01, 0, -0.015 * s)),
+        ]
+    animate(rig, 'Walk', 30, keys)
+    export(rig, 'HumanT.fbx')
 
 
 def a_keys():
@@ -193,7 +219,8 @@ def export(rig, file):
     shutil.copyfile(path, os.path.join(dest, file))
 
 
-reset()
-human_a()
-reset()
-human_b()
+only = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else ['HumanA', 'HumanB', 'HumanT']
+for name, make in (('HumanA', human_a), ('HumanB', human_b), ('HumanT', human_t)):
+    if name in only:
+        reset()
+        make()

@@ -4,7 +4,7 @@ What humanoid avatars give a game on Unity 6000.0.71f1, for two rigs Blender exp
 (`make_models.py`): HumanA maps every body bone Unity knows (upper chest, neck, shoulders, toes,
 eyes, jaw) and three fingers per hand, rests in an A pose and has rolled bones; HumanB maps only
 the required bones, with non-human nodes in between (a root, a spine helper, twist leaves), other
-proportions and rolls. The Editor configured both as Humanoid with an avatar created from the
+proportions and rolls; HumanT is HumanA with bone translations. The Editor configured them as Humanoid with an avatar created from the
 model (`ProbeRunner.Create`): it mapped the bones and wrote the human description (bone mapping,
 T-pose skeleton, parameters) into the `.meta` files, which are committed. Their clips loop and are
 imported without keyframe reduction.
@@ -99,6 +99,24 @@ imported without keyframe reduction.
   rounded up to a single. Unbound matches these. Residuals (docs/COMPATIBILITY_GAPS.md): small-step
   velocities, and the legs and the root's x of `longClipA`/`longClipB`, 2.8e6 units from the
   origin.
+
+- the controls of `HumanoidLeftovers.cs` (assets from `ProbeRunner.Leftovers`): target matching on
+  HumanA's clip with root motion applied (`match.*`: each `AvatarTarget` from 0.2 to 0.6, masks of
+  XZ with half the rotation and of Y alone, a match across a loop, a start and a target already
+  passed, `InterruptMatchTarget(true/false)`, a transition interrupting a completing and a
+  cancelling match, a call in a transition, without root motion, on a clip without loop time, a
+  second call, an invalid target and on HumanB), each step with the GameObject's and the target
+  bones' world transforms, whether it is matching, the state time and the root motion;
+  `SetBoneLocalRotation` in `OnAnimatorIK` (`HumanoidBoneRotation`: spine, hips, head, upper chest,
+  lower arm, upper leg and a finger on HumanA and HumanB, `boneRot`, `boneRotB`; one bone per IK
+  layer of `HumanAIK2`, `boneRotLayers`; called outside the IK pass, `boneRotOutside`), with the
+  transforms' locals every fourth step; `TDoFMuscles.anim` (translation DoF curves) on HumanA with an
+  avatar with translation DoF built at run time and with its own (`tdof.TDoFMuscles`); clips based
+  upon the feet without foot goal curves and with the left foot's only (`feetNoGoals`,
+  `feetLeftGoal`); B under `MaskNoRoot` over an empty base state (`noRootOverEmpty`); and
+  `layersAffectMassCenter` (`massCenter.api`, and on with layers without Root, `massCenter.*`).
+  HumanT (`make_models.py`: HumanA with bone translations, imported with translation DoF) and the
+  other assets `Leftovers` makes are not played yet.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
