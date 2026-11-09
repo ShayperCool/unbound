@@ -633,7 +633,8 @@ namespace Unbound.Runtime.Humanoid
             if (additive ? differences.Length == 0 : samples.Length == 0) return;
             if (layerWeight <= 0f) return;
             // Also over no humanoid clip: an empty base state or generic root motion below
-            // (tests/projects/humanoid noRootOverEmpty, noRootOverGeneric).
+            // (override layers measured, tests/projects/humanoid noRootOverEmpty, noRootOverGeneric;
+            // additive ones follow unmeasured).
             if (parts != null && !parts[0]) return;
             if (additive)
             {

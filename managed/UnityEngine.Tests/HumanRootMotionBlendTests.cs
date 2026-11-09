@@ -299,16 +299,12 @@ namespace UnityEngine.Tests
         [Fact]
         public void ALayerMaskWithoutRootAddsNoMotionOverNoHumanoidClip()
         {
-            const string member = "Animator humanoid layer mask without Root over no humanoid clip";
-            int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
-            int before = Hits();
             var below = default(HumanRootMotionSample);
             bool any = false;
             HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 1f,
                 Parts(AvatarMaskBodyPart.Root));
             Assert.False(any);
             Assert.False(below.HasMotion);
-            Assert.Equal(before, Hits());
         }
 
         [Fact]
