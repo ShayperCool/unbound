@@ -54,9 +54,10 @@ Everything below is measured in this release, not documented.
 | `gradient/particles/*` | A particle's colour is bytes rounded half up (0.3·255 = 76.5 → 77). Gradient and RandomColor evaluate the gradient, TwoColors lerps the colours, then round; TwoGradients rounds both gradients and blends the bytes as (min·(256 − s) + max·s + 128)/256 with s = random·255 truncated. Colour over lifetime and by speed modulate the start colour as c·(f + 1)/256, truncated. |
 | `deprecated/*` | `startSpeed`, `startSize` (X), `startLifetime`, `startRotation`, `startRotation3D`, `startDelay` and `gravityModifier` read and write the stored scalar (the `*Multiplier`) and keep the mode; `emissionRate` sets a constant rate; `startColor` sets Color mode (its getter reads the module colour, defined in the colour modes only). |
 
-Known differences (`known.json`): `gradient-rounding-ties` (6 records: one byte at a half-byte
-float tie of the particle's age) and `perceptual-precision` (4 records: PerceptualBlend values 1/255
-apart about once in thirty, the Oklab round trip differing by hundredths of a byte).
+Known differences (`known.json`): `perceptual-precision` (4 records: PerceptualBlend values 1/255
+apart about once in thirty, the Oklab round trip differing by hundredths of a byte). Gradient key
+times and the time looked up are measured in steps of 1/65535, which also places the Blend values
+that lie within 0.001 of a half byte as the Editor does.
 
 Unmeasured: other releases, `Evaluate` outside time [0, 1], NaN and infinite scalars, trail colours
 and custom data colours of particles, a single-key gradient set through a module's read value.

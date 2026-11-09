@@ -170,8 +170,7 @@ namespace UnityEngine
                 k1 = keys[i];
                 if (m_Mode == GradientMode.Fixed)
                     return k1.color;
-                float span = k1.time - k0.time;
-                t = span > 0f ? (time - k0.time) / span : 1f;
+                t = Fraction(time, k0.time, k1.time);
             }
             // PerceptualBlend goes through Oklab also at and beyond the end keys (6000.0.71f1,
             // tests/projects/particlecurves gradient/struct/perceptual); Blend and Fixed return the
@@ -198,10 +197,24 @@ namespace UnityEngine
             GradientAlphaKey k0 = keys[i - 1], k1 = keys[i];
             if (m_Mode == GradientMode.Fixed)
                 return k1.alpha;
-            float span = k1.time - k0.time;
-            float t = span > 0f ? (time - k0.time) / span : 1f;
-            return k0.alpha + (k1.alpha - k0.alpha) * t;
+            return k0.alpha + (k1.alpha - k0.alpha) * Fraction(time, k0.time, k1.time);
         }
+
+        /// <summary>How far <paramref name="time"/> is from one key to the next. Key times are
+        /// kept in steps of 1/65535 and the time is measured in those steps (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/lines line.color.PerceptualBlend); keys at the same
+        /// step give the later key.</summary>
+        static float Fraction(float time, float from, float to)
+        {
+            float a = KeyStep(from), b = KeyStep(to);
+            return Math.Min((time * KeySteps - a) / Math.Max(b - a, MinKeySpan), 1f);
+        }
+
+        const float KeySteps = 65535f;
+        /// <summary>The smallest step span a fraction divides by.</summary>
+        const float MinKeySpan = 1e-6f;
+
+        static float KeyStep(float time) => (int)(Mathf.Clamp01(time) * KeySteps + 0.5f);
 
         // Interpolation in Oklab (Bjorn Ottosson, 2020) between colors given in sRGB or linear, in
         // single precision as the 6000.0.71f1 Editor computes it: the cube-rooted LMS values are
