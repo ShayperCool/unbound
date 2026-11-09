@@ -331,7 +331,9 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
     })
 }
 
-/// Which renderer (instance) covers each cluster's points, for the clusters' albedo and emission.
+/// Where each cluster takes its albedo and emission from: per cluster, groups of points of one
+/// renderer (instance), each group sampling texels of the system's material textures (system
+/// resolution, row 0 at v = 0) with integer weights that add up to its point count.
 #[derive(Debug, Clone)]
 pub struct ClusterMaterials {
     /// Per instance, the renderer it is within the system's renderers.
@@ -340,21 +342,29 @@ pub struct ClusterMaterials {
     pub cluster_groups: Vec<u32>,
     /// Groups: an instance and how many of the cluster's points it covers.
     pub groups: Vec<(u16, u16)>,
+    /// Per group, its first sample; one more entry ends the last.
+    pub group_samples: Vec<u32>,
+    /// Samples: a texel and its weight.
+    pub samples: Vec<((u16, u16), u16)>,
 }
 
-pub fn read_cluster_materials(bytes: &[u8]) -> Result<ClusterMaterials> {
+/// `width`, `height`: the system's resolution, which the samples' texels must be inside.
+pub fn read_cluster_materials(bytes: &[u8], width: u32, height: u32) -> Result<ClusterMaterials> {
     let blocks = file_blocks(bytes, MATERIAL_VERSION, 16)?;
     let main = block(&blocks, MATERIAL_BLOCK)?;
     let r = Reader { bytes: main };
     let instances = r.usize(4)?;
     let clusters = r.usize(8)?;
+    let sample_count = r.usize(12)?;
     let instances_at = r.usize(16)?;
     ensure!(
-        8 * instances + 2 * clusters <= main.len(),
+        8 * instances + 2 * clusters + 6 * sample_count <= main.len(),
         "malformed cluster materials"
     );
     let counts_at = r.usize(20)?;
     let groups_at = r.usize(24)?;
+    let samples_at = r.usize(28)?;
+    let weights_at = r.usize(32)?;
     let instance_renderers = (0..instances)
         .map(|i| Ok((r.u32(instances_at + 8 * i + 4)? >> 16) as u16))
         .collect::<Result<Vec<_>>>()?;
@@ -376,10 +386,37 @@ pub fn read_cluster_materials(bytes: &[u8]) -> Result<ClusterMaterials> {
             Ok((instance, points))
         })
         .collect::<Result<Vec<_>>>()?;
+    let samples = (0..sample_count)
+        .map(|k| {
+            let texel = (r.u16(samples_at + 4 * k)?, r.u16(samples_at + 4 * k + 2)?);
+            ensure!(
+                (texel.0 as u32) < width && (texel.1 as u32) < height,
+                "a material sample outside {width}x{height}"
+            );
+            Ok((texel, r.u16(weights_at + 2 * k)?))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    // A group takes samples until their weights reach its point count.
+    let mut group_samples = Vec::with_capacity(groups.len() + 1);
+    let mut next = 0usize;
+    for &(_, points) in &groups {
+        group_samples.push(next as u32);
+        let mut sum = 0u32;
+        while sum < points as u32 {
+            let (_, weight) = samples
+                .get(next)
+                .context("material samples end before their groups")?;
+            sum += *weight as u32;
+            next += 1;
+        }
+    }
+    group_samples.push(next as u32);
     Ok(ClusterMaterials {
         instance_renderers,
         cluster_groups,
         groups,
+        group_samples,
+        samples,
     })
 }
 
@@ -405,6 +442,9 @@ pub struct Precomputed {
     pub atlas_sizes: Vec<u32>,
     /// The scene mapping's renderers (scene object id, prefab id) in mapping order.
     pub renderers: Vec<(i64, i64)>,
+    /// Per renderer, its realtime lightmap scale and offset within its system's texture (where
+    /// its meta pass draws).
+    pub renderer_st: Vec<[f32; 4]>,
 }
 
 fn hash128(v: &Value) -> Result<[u8; 16]> {
@@ -470,6 +510,30 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         .iter()
         .map(|r| Ok((int(r, "targetObject")?, int(r, "targetPrefab")?)))
         .collect::<Result<Vec<_>>>()?;
+    let renderer_st = seq(mapping, "m_Renderers")
+        .iter()
+        .map(|r| {
+            let st = r
+                .get("dynamicLightmapSTInSystem")
+                .context("no dynamicLightmapSTInSystem")?;
+            ["x", "y", "z", "w"]
+                .map(|k| {
+                    st.get(k)
+                        .and_then(Value::as_str)
+                        .and_then(|s| s.parse::<f32>().ok())
+                })
+                .into_iter()
+                .collect::<Option<Vec<f32>>>()
+                .map(|v| [v[0], v[1], v[2], v[3]])
+                .context("a malformed dynamicLightmapSTInSystem")
+        })
+        .collect::<Result<Vec<_>>>()?;
+    ensure!(
+        renderer_st.len() == renderers.len(),
+        "{} mapped renderers for {} renderer ids",
+        renderer_st.len(),
+        renderers.len()
+    );
     let atlas_sizes = seq(mapping, "m_SystemAtlases")
         .iter()
         .map(|a| Ok(count(a, "atlasSize")?.min(u32::MAX as usize) as u32))
@@ -491,7 +555,8 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         }
         let input = read_input_samples(file(&input_hash, "iws.ref")?)?;
         let transport = read_transport(file(&hash, "rsc.ref")?)?;
-        let materials = read_cluster_materials(file(&input_hash, "caw")?)?;
+        let materials =
+            read_cluster_materials(file(&input_hash, "caw")?, transport.width, transport.height)?;
         let size = atlas_sizes[atlas] as usize;
         ensure!(
             offset.0 + transport.width as usize <= size
@@ -518,5 +583,6 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         systems,
         atlas_sizes,
         renderers,
+        renderer_st,
     }))
 }

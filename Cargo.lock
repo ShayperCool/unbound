@@ -6516,6 +6516,7 @@ name = "unbound-gi"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "half",
  "unbound-assets",
  "unbound-yaml",
 ]

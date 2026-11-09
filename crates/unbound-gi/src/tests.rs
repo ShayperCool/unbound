@@ -1,7 +1,7 @@
 //! The solver against the Unity 6000.0.71f1 Editor's converged realtime lightmaps of
 //! tests/projects/realtimegi (Room scene).
-use crate::data::{Precomputed, read_precomputed};
-use crate::solver::{PointLight, SystemSolver, gamma_to_linear, light_color};
+use crate::data::{Precomputed, System, read_precomputed};
+use crate::solver::{PointLight, SystemSolver, gamma_to_linear};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -53,6 +53,30 @@ fn standard_meta_albedo(color: [f32; 3]) -> [f32; 3] {
     })
 }
 
+/// Material textures as a meta pass would render them with each renderer's color constant: every
+/// texel a renderer's clusters sample holds its (Standard) meta albedo and its linear emission.
+fn material_textures(system: &System, colors: &[([f32; 3], [f32; 3])]) -> (Vec<u8>, Vec<f32>) {
+    let t = &system.transport;
+    let texels = (t.width * t.height) as usize;
+    let (mut albedo, mut emission) = (vec![0u8; 4 * texels], vec![0f32; 4 * texels]);
+    let m = &system.materials;
+    for (g, &(instance, _)) in m.groups.iter().enumerate() {
+        let (color, emitted) = colors[m.instance_renderers[instance as usize] as usize];
+        let bytes = standard_meta_albedo(color).map(|v| (v * 255.0 + 0.5).floor() as u8);
+        for &((x, y), _) in &m.samples[m.group_samples[g] as usize..m.group_samples[g + 1] as usize]
+        {
+            let at = y as usize * t.width as usize + x as usize;
+            albedo[4 * at..4 * at + 3].copy_from_slice(&bytes);
+            albedo[4 * at + 3] = 255;
+            for k in 0..3 {
+                emission[4 * at + k] = gamma_to_linear(emitted[k]);
+            }
+            emission[4 * at + 3] = 1.0;
+        }
+    }
+    (albedo, emission)
+}
+
 struct Room {
     light: [f32; 3],
     intensity: f32,
@@ -86,17 +110,15 @@ fn converge(room: &Room, case: &str) -> (usize, usize, f32) {
             other => panic!("unknown renderer {other}"),
         })
         .collect();
-    let albedo: Vec<_> = colors
-        .iter()
-        .map(|(c, _)| standard_meta_albedo(*c))
-        .collect();
-    let emission: Vec<_> = colors.iter().map(|(_, e)| e.map(gamma_to_linear)).collect();
+    let (albedo, emission) = material_textures(&system, &colors);
     let mut solver = SystemSolver::new(system).unwrap();
-    solver.set_materials(&albedo, &emission).unwrap();
+    solver.set_albedo(&albedo).unwrap();
+    solver.set_emission(&emission).unwrap();
     solver.set_uniform_environment([0.1, 0.12, 0.2].map(gamma_to_linear));
     solver.set_lights(&[PointLight {
         position: room.light,
-        color: light_color([1.0, 0.95, 0.85], room.intensity, room.bounce, true, false).unwrap(),
+        // The project has no linear light intensity: the gamma color is scaled, then converted.
+        color: [1.0, 0.95, 0.85].map(|c: f32| gamma_to_linear(c * room.intensity * room.bounce)),
         range: 10.0,
     }]);
     solver.set_indirect_scale(room.indirect_scale);
@@ -151,6 +173,11 @@ fn reads_the_rooms_precomputed_data() {
     let data = room_data();
     assert_eq!(data.atlas_sizes, vec![64]);
     assert_eq!(data.renderers.len(), 7);
+    assert_eq!(data.renderer_st.len(), 7);
+    assert_eq!(
+        data.renderer_st[0],
+        [0.15384616, 0.23076925, 0.61538464, 0.4615385]
+    );
     let s = &data.systems[0];
     assert_eq!(
         (s.first_renderer, s.renderer_count, s.atlas, s.atlas_offset),
@@ -268,7 +295,7 @@ fn malformed_data_fails_without_panicking() {
             let part = &full[..cut];
             let _ = crate::data::read_input_samples(part);
             let _ = crate::data::read_transport(part);
-            let _ = crate::data::read_cluster_materials(part);
+            let _ = crate::data::read_cluster_materials(part, 52, 52);
         }
         if f.path.ends_with(".rsc.ref") {
             // The transport's width cut to 10 leaves texels outside it.
@@ -283,4 +310,126 @@ fn malformed_data_fails_without_panicking() {
             assert!(crate::data::read_input_samples(&other).is_err());
         }
     }
+}
+
+/// The Room system's renderer index (within the system) of scene object `object`.
+fn renderer_of(data: &Precomputed, object: i64) -> usize {
+    data.renderers[..data.systems[0].renderer_count]
+        .iter()
+        .position(|&(o, _)| o == object)
+        .unwrap()
+}
+
+/// Clusters whose points all belong to renderer `renderer`.
+fn clusters_of(system: &System, renderer: usize) -> Vec<usize> {
+    let m = &system.materials;
+    (0..system.input.clusters())
+        .filter(|&c| {
+            let groups = &m.groups[m.cluster_groups[c] as usize..m.cluster_groups[c + 1] as usize];
+            !groups.is_empty()
+                && groups
+                    .iter()
+                    .all(|&(i, _)| m.instance_renderers[i as usize] as usize == renderer)
+        })
+        .collect()
+}
+
+#[test]
+fn cluster_albedo_is_the_root_mean_square_of_its_samples() {
+    let data = room_data();
+    let system = Arc::new(data.systems[0].clone());
+    let t = &system.transport;
+    // Texels alternate between black and white: the mean of the squares is 1/2 where a cluster's
+    // samples weigh both equally, never the mean of the bytes.
+    let texels = (t.width * t.height) as usize;
+    let mut albedo = vec![0u8; 4 * texels];
+    for (k, texel) in albedo.chunks_exact_mut(4).enumerate() {
+        let v = if (k + k / t.width as usize) % 2 == 0 {
+            255
+        } else {
+            0
+        };
+        texel.copy_from_slice(&[v, v, v, 255]);
+    }
+    let mut solver = SystemSolver::new(system.clone()).unwrap();
+    solver.set_albedo(&albedo).unwrap();
+    let m = &system.materials;
+    for c in 0..system.input.clusters() {
+        let (mut sum, mut points) = (0.0f64, 0u32);
+        for g in m.cluster_groups[c] as usize..m.cluster_groups[c + 1] as usize {
+            points += m.groups[g].1 as u32;
+            for &((x, y), w) in
+                &m.samples[m.group_samples[g] as usize..m.group_samples[g + 1] as usize]
+            {
+                let v = albedo[4 * (y as usize * t.width as usize + x as usize)] as f64 / 255.0;
+                sum += w as f64 * v * v;
+            }
+        }
+        let byte = ((sum / points.max(1) as f64).sqrt() * 255.0 + 0.5).floor() / 255.0;
+        let got = solver.cluster_materials().0[c][0] as f64;
+        assert!(
+            (got - byte * byte).abs() < 1e-6,
+            "cluster {c}: {got} vs {}",
+            byte * byte
+        );
+    }
+    // Mixed clusters exist: the rule is not a plain copy of one texel.
+    assert!(
+        solver
+            .cluster_materials()
+            .0
+            .iter()
+            .any(|a| a[0] > 0.2 && a[0] < 0.8),
+        "no cluster mixes black and white texels"
+    );
+}
+
+#[test]
+fn set_emissive_overrides_a_renderers_texels_until_cleared() {
+    let data = room_data();
+    let system = Arc::new(data.systems[0].clone());
+    let panel = renderer_of(&data, 1629154324);
+    let block = renderer_of(&data, 152063223);
+    let texels = (system.transport.width * system.transport.height) as usize;
+    let uniform = |rgb: [f32; 3]| {
+        (0..texels)
+            .flat_map(|_| [rgb[0], rgb[1], rgb[2], 1.0])
+            .collect::<Vec<f32>>()
+    };
+    let mut solver = SystemSolver::new(system.clone()).unwrap();
+    solver.set_emission(&uniform([0.5, 0.25, 0.125])).unwrap();
+    let panel_clusters = clusters_of(&system, panel);
+    let block_clusters = clusters_of(&system, block);
+    assert!(!panel_clusters.is_empty() && !block_clusters.is_empty());
+    for &c in &panel_clusters {
+        assert_eq!(solver.cluster_materials().1[c], [0.5, 0.25, 0.125]);
+    }
+    solver
+        .set_renderer_emission(panel, Some([0.0, 3.0, 3.0]))
+        .unwrap();
+    // A material change after it (the texture rendered again) keeps the renderer's own color.
+    solver.set_emission(&uniform([1.0, 0.0, 1.0])).unwrap();
+    for &c in &panel_clusters {
+        assert_eq!(solver.cluster_materials().1[c], [0.0, 3.0, 3.0]);
+    }
+    for &c in &block_clusters {
+        assert_eq!(solver.cluster_materials().1[c], [1.0, 0.0, 1.0]);
+    }
+    solver.set_renderer_emission(panel, None).unwrap();
+    for &c in &panel_clusters {
+        assert_eq!(solver.cluster_materials().1[c], [1.0, 0.0, 1.0]);
+    }
+    // Emission is kept as a half float.
+    solver.set_emission(&uniform([0.1, 1e9, -1.0])).unwrap();
+    let e = solver.cluster_materials().1[block_clusters[0]];
+    assert_eq!(e, [half::f16::from_f32(0.1).to_f32(), 65504.0, 0.0]);
+    assert!(solver.set_renderer_emission(99, None).is_err());
+}
+
+#[test]
+fn material_textures_of_another_size_fail() {
+    let data = room_data();
+    let mut solver = SystemSolver::new(Arc::new(data.systems[0].clone())).unwrap();
+    assert!(solver.set_albedo(&[0u8; 16]).is_err());
+    assert!(solver.set_emission(&[0f32; 16]).is_err());
 }

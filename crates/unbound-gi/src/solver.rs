@@ -16,32 +16,13 @@ const TREE_SCALE: f32 = 1.0 / 255.0;
 const LEGACY_FALLOFF_K: f32 = 25.0;
 const LEGACY_FADE_START: f32 = 0.64;
 
-/// A light's input color in a linear-space project: its color scaled by intensity and bounce
-/// intensity, converted to linear after the scaling unless the project uses linear light
-/// intensity. Gamma-space projects are not measured and fail.
-pub fn light_color(
-    color: [f32; 3],
-    intensity: f32,
-    bounce: f32,
-    linear_space: bool,
-    linear_intensity: bool,
-) -> Result<[f32; 3]> {
-    if !linear_space {
-        bail!("precomputed realtime GI in a gamma-space project is not supported yet");
-    }
-    Ok(if linear_intensity {
-        color.map(|c| gamma_to_linear(c) * intensity * bounce)
-    } else {
-        color.map(|c| gamma_to_linear(c * intensity * bounce))
-    })
-}
-
 /// A realtime point light as precomputed realtime GI sees it in the built-in pipeline: not
 /// shadowed, with the legacy falloff (other pipelines' falloffs are not supported yet).
 #[derive(Debug, Clone, Copy)]
 pub struct PointLight {
     pub position: [f32; 3],
-    /// Linear, see [`light_color`].
+    /// Linear: the light's color times its intensity and bounce intensity (in a project without
+    /// linear light intensity, scaled before the conversion to linear).
     pub color: [f32; 3],
     pub range: f32,
 }
@@ -98,6 +79,9 @@ pub struct SystemSolver {
     direct: Vec<[f32; 3]>,
     albedo2: Vec<[f32; 3]>,
     emission: Vec<[f32; 3]>,
+    /// The emission texture (linear, system resolution) and the renderers' own emissions.
+    emission_texels: Vec<[f32; 3]>,
+    renderer_emission: Vec<Option<[f32; 3]>>,
     bounce: Vec<[f32; 3]>,
     values: Vec<[f32; 3]>,
     environment: Vec<[f32; 3]>,
@@ -136,6 +120,14 @@ impl SystemSolver {
                 })
             })
             .collect::<Result<Vec<_>>>()?;
+        if let Some(r) = system
+            .materials
+            .instance_renderers
+            .iter()
+            .find(|&&r| r as usize >= system.renderer_count)
+        {
+            bail!("a cluster of renderer {r} of {}", system.renderer_count);
+        }
         let values = system.input.values();
         for segment in &system.transport.segments {
             for &(dependency, index) in &segment.references {
@@ -163,6 +155,8 @@ impl SystemSolver {
             direct: vec![[0.0; 3]; clusters],
             albedo2: vec![[0.0; 3]; clusters],
             emission: vec![[0.0; 3]; clusters],
+            emission_texels: vec![[0.0; 3]; texels],
+            renderer_emission: vec![None; system.renderer_count],
             bounce: vec![[0.0; 3]; clusters],
             values: vec![[0.0; 3]; system.input.values()],
             environment: vec![[0.0; 3]; ENVIRONMENT_VALUES],
@@ -209,41 +203,105 @@ impl SystemSolver {
         }
     }
 
-    /// The renderers' albedo (gamma space, 0..1, as their meta pass writes it) and emission
-    /// (linear), one per renderer of the system in scene mapping order. A cluster takes the
-    /// point-weighted mean of the renderers covering it; its albedo is kept as 8 bits and used
-    /// squared.
-    pub fn set_materials(&mut self, albedo: &[[f32; 3]], emission: &[[f32; 3]]) -> Result<()> {
+    /// The system's albedo texture as the meta pass renders it: RGBA8, `width * height` texels
+    /// row-major from v = 0, gamma-space bytes in a linear-space project. Each cluster takes the
+    /// root mean square of its samples' bytes (squared as an approximation of the gamma
+    /// curve), kept as 8 bits, and is lit with its square.
+    pub fn set_albedo(&mut self, rgba8: &[u8]) -> Result<()> {
         let m = &self.system.materials;
-        let renderers = self.system.renderer_count;
-        if albedo.len() != renderers || emission.len() != renderers {
+        let width = self.system.transport.width as usize;
+        let texels = width * self.system.transport.height as usize;
+        if rgba8.len() != 4 * texels {
             bail!(
-                "{renderers} renderers but {} albedos and {} emissions",
-                albedo.len(),
-                emission.len()
+                "an albedo texture of {} bytes for {texels} texels",
+                rgba8.len()
             );
         }
         for c in 0..self.albedo2.len() {
-            let (mut a, mut e, mut total) = ([0.0f32; 3], [0.0f32; 3], 0.0f32);
-            for &(instance, points) in
-                &m.groups[m.cluster_groups[c] as usize..m.cluster_groups[c + 1] as usize]
-            {
-                let r = m.instance_renderers[instance as usize] as usize;
-                if r >= renderers {
-                    bail!("a cluster of renderer {r} of {renderers}");
+            let (mut sum, mut points) = ([0.0f32; 3], 0u32);
+            for g in m.cluster_groups[c] as usize..m.cluster_groups[c + 1] as usize {
+                points += m.groups[g].1 as u32;
+                for &((x, y), w) in
+                    &m.samples[m.group_samples[g] as usize..m.group_samples[g + 1] as usize]
+                {
+                    let at = 4 * (y as usize * width + x as usize);
+                    for k in 0..3 {
+                        let v = rgba8[at + k] as f32 / 255.0;
+                        sum[k] += w as f32 * v * v;
+                    }
                 }
-                mul_add(&mut a, points as f32, albedo[r]);
-                mul_add(&mut e, points as f32, emission[r]);
-                total += points as f32;
             }
-            let total = total.max(1.0);
-            self.albedo2[c] = a.map(|v| {
-                let byte = (v / total * 255.0).round().clamp(0.0, 255.0) / 255.0;
+            let mean = sum.map(|v| if points > 0 { v / points as f32 } else { 0.0 });
+            self.albedo2[c] = mean.map(|v| {
+                let byte = (v.max(0.0).sqrt() * 255.0 + 0.5).floor().min(255.0) / 255.0;
                 byte * byte
             });
-            self.emission[c] = e.map(|v| v / total);
         }
         Ok(())
+    }
+
+    /// The system's emission texture as the meta pass renders it: linear RGBA, `width * height`
+    /// texels row-major from v = 0.
+    pub fn set_emission(&mut self, rgba: &[f32]) -> Result<()> {
+        if rgba.len() != 4 * self.emission_texels.len() {
+            bail!(
+                "an emission texture of {} values for {} texels",
+                rgba.len(),
+                self.emission_texels.len()
+            );
+        }
+        for (texel, v) in self.emission_texels.iter_mut().zip(rgba.chunks_exact(4)) {
+            *texel = [v[0], v[1], v[2]];
+        }
+        self.update_emission();
+        Ok(())
+    }
+
+    /// DynamicGI.SetEmissive: the emission (linear) of renderer `renderer` of the system for
+    /// all its points instead of its texels (None: its texels again).
+    pub fn set_renderer_emission(
+        &mut self,
+        renderer: usize,
+        color: Option<[f32; 3]>,
+    ) -> Result<()> {
+        let Some(slot) = self.renderer_emission.get_mut(renderer) else {
+            bail!("renderer {renderer} of {}", self.renderer_emission.len());
+        };
+        *slot = color;
+        self.update_emission();
+        Ok(())
+    }
+
+    /// Each cluster's emission: the weighted mean of its samples' texels (a renderer with an
+    /// emission of its own counts it for all its points), kept as a half float.
+    fn update_emission(&mut self) {
+        let m = &self.system.materials;
+        let width = self.system.transport.width as usize;
+        for c in 0..self.emission.len() {
+            let (mut sum, mut points) = ([0.0f32; 3], 0u32);
+            for g in m.cluster_groups[c] as usize..m.cluster_groups[c + 1] as usize {
+                let (instance, count) = m.groups[g];
+                points += count as u32;
+                let renderer = m.instance_renderers[instance as usize] as usize;
+                if let Some(color) = self.renderer_emission[renderer] {
+                    mul_add(&mut sum, count as f32, color);
+                    continue;
+                }
+                for &((x, y), w) in
+                    &m.samples[m.group_samples[g] as usize..m.group_samples[g + 1] as usize]
+                {
+                    mul_add(
+                        &mut sum,
+                        w as f32,
+                        self.emission_texels[y as usize * width + x as usize],
+                    );
+                }
+            }
+            self.emission[c] = sum.map(|v| {
+                let mean = if points > 0 { v / points as f32 } else { 0.0 };
+                half::f16::from_f32(mean.clamp(0.0, half::f16::MAX.to_f32())).to_f32()
+            });
+        }
     }
 
     /// A uniform environment of linear radiance `rgb` (a flat ambient color).
@@ -342,6 +400,11 @@ impl SystemSolver {
             self.bounce[c] = sum;
         }
         change
+    }
+
+    /// Per cluster, the albedo it is lit with (the square of its 8-bit albedo) and its emission.
+    pub fn cluster_materials(&self) -> (&[[f32; 3]], &[[f32; 3]]) {
+        (&self.albedo2, &self.emission)
     }
 
     /// The texels to draw (scaled by the indirect scale), RGB9E5, `width * height` row-major at
