@@ -4,6 +4,8 @@ use super::*;
 
 // The render stream accepts at most eight color attachments.
 const MAX_COLOR_ATTACHMENTS: usize = 8;
+// UnityEngine.Rendering.TextureDimension.Tex2DArray in the texture packet.
+const TEX2D_ARRAY: i32 = 5;
 pub(super) type ResolveTargets = [Option<wgpu::Texture>; MAX_COLOR_ATTACHMENTS];
 
 pub(super) struct ResolveHistory {
@@ -56,8 +58,9 @@ impl UnityRenderer {
         &mut self,
         gpu: &GpuTexture,
         enabled: bool,
-        automatic: bool,
+        dimension: i32,
     ) {
+        let automatic = dimension != TEX2D_ARRAY || gpu.layers == 1;
         if !enabled || gpu.samples == 1 || gpu.format == 5 {
             self.release_resolve_history(&gpu.texture);
             return;

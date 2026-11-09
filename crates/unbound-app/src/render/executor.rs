@@ -744,11 +744,7 @@ impl UnityRenderer {
                             .prepare(&device, &gpu.texture, gpu.target_format(1));
                     }
                 }
-                self.prepare_resolve_history(
-                    &gpu,
-                    texture.retain_resolve,
-                    texture.dimension != 5 || gpu.layers == 1,
-                );
+                self.prepare_resolve_history(&gpu, texture.retain_resolve, texture.dimension);
                 self.textures.insert(handle, gpu);
             }
             Upload::ReleaseTexture(handle) => {
