@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use unbound_assets::serialized::SerializedFile;
+use unbound_gi::probes::{ProbeSetSolver, ProbeSh};
 pub use unbound_gi::realtime_uv::Input as UvInput;
 use unbound_gi::solver::{PointLight, SystemSolver, decode_rgb9e5};
 use unbound_project::assetdb::AssetDb;
@@ -68,6 +69,12 @@ struct Scene {
     frame: Option<GiFrame>,
     /// The next system to update when the budget does not allow all.
     cursor: usize,
+    /// The light probe sets lit by the systems, each with its first LightProbes index, and the
+    /// probes' coefficients by LightProbes index after the last update.
+    probe_sets: Vec<(ProbeSetSolver, usize)>,
+    probes: Vec<ProbeSh>,
+    /// The environment's values (a uniform environment: the frame's).
+    environment: Vec<[f32; 3]>,
     /// Systems updated in a row without a change of their drawn texels: the scene is converged
     /// once every system has had such an update (the bounce reads the drawn texels, so nothing
     /// changes after it until the inputs do).
@@ -106,11 +113,66 @@ pub fn load(
     let Some(data) = unbound_gi::data::read_precomputed(&object)? else {
         return Ok(Json::Null);
     };
-    register(data, linear_space)
+    let ranges = light_probe_ranges(&serialized, &object)?;
+    register(data, linear_space, &ranges)
 }
 
-/// Registers a scene's precomputed realtime GI; the reply of [`load`].
-fn register(data: unbound_gi::data::Precomputed, linear_space: bool) -> Result<Json> {
+/// The probe sets of a LightingData's light probes: `(hash, first probe, probe count)` in
+/// LightProbes order (`m_Data.m_ProbeSets`).
+fn light_probe_ranges(
+    serialized: &SerializedFile,
+    lighting_data: &unbound_yaml::Value,
+) -> Result<Vec<([u8; 16], usize, usize)>> {
+    let Some(reference) = lighting_data.get("m_LightProbes") else {
+        return Ok(Vec::new());
+    };
+    let id = |key: &str| {
+        reference
+            .get(key)
+            .and_then(|v| v.as_str())
+            .and_then(|v| v.parse::<i64>().ok())
+            .unwrap_or(0)
+    };
+    if id("m_PathID") == 0 || id("m_FileID") != 0 {
+        return Ok(Vec::new());
+    }
+    let probes = serialized.read(id("m_PathID"))?;
+    let sets = probes
+        .get("m_Data")
+        .and_then(|d| d.get("m_ProbeSets"))
+        .and_then(|s| s.as_seq())
+        .unwrap_or_default();
+    sets.iter()
+        .map(|set| {
+            let number = |key: &str| -> Result<usize> {
+                set.get(key)
+                    .and_then(|v| v.as_str())
+                    .and_then(|v| v.parse().ok())
+                    .with_context(|| format!("a light probe set without {key}"))
+            };
+            let hash = set
+                .get("m_Hash")
+                .context("a light probe set without a hash")?;
+            let mut bytes = [0u8; 16];
+            for (k, b) in bytes.iter_mut().enumerate() {
+                *b = hash
+                    .get(&format!("bytes[{k}]"))
+                    .and_then(|v| v.as_str())
+                    .and_then(|v| v.parse().ok())
+                    .context("a malformed light probe set hash")?;
+            }
+            Ok((bytes, number("m_Offset")?, number("m_Size")?))
+        })
+        .collect()
+}
+
+/// Registers a scene's precomputed realtime GI with its light probes' probe sets (`ranges`, as
+/// [`light_probe_ranges`] gives them); the reply of [`load`].
+fn register(
+    data: unbound_gi::data::Precomputed,
+    linear_space: bool,
+    ranges: &[([u8; 16], usize, usize)],
+) -> Result<Json> {
     let systems_json = data
         .systems
         .iter()
@@ -137,6 +199,33 @@ fn register(data: unbound_gi::data::Precomputed, linear_space: bool) -> Result<J
         .into_iter()
         .map(|s| SystemSolver::new(Arc::new(s), linear_space))
         .collect::<Result<Vec<_>>>()?;
+    // Each probe set lights the LightProbes range of its hash; one without a range, or of
+    // another size, lights nothing (reported).
+    let mut probe_sets = Vec::new();
+    let mut probe_count = 0;
+    let mut probe_error = None;
+    for set in data.probe_sets {
+        let range = ranges.iter().find(|r| r.0 == set.hash);
+        let result = match range {
+            Some(&(_, offset, size)) if size == set.probes.len() => {
+                ProbeSetSolver::new(Arc::new(set), &systems).map(|s| (s, offset))
+            }
+            Some(&(_, _, size)) => Err(anyhow::anyhow!(
+                "a light probe set of {} probes where the scene's light probes have {size}",
+                set.probes.len()
+            )),
+            None => Err(anyhow::anyhow!(
+                "a light probe set the scene's light probes do not list"
+            )),
+        };
+        match result {
+            Ok((solver, offset)) => {
+                probe_count = probe_count.max(offset + solver.probe_set().probes.len());
+                probe_sets.push((solver, offset));
+            }
+            Err(e) => probe_error = Some(format!("{e:#}")),
+        }
+    }
     let atlases = data
         .atlas_sizes
         .iter()
@@ -162,9 +251,17 @@ fn register(data: unbound_gi::data::Precomputed, linear_space: bool) -> Result<J
                 cursor: 0,
                 stable: 0,
                 changed: true,
+                probe_sets,
+                probes: vec![[0.0; 27]; probe_count],
+                environment: vec![[0.0; 3]; unbound_gi::data::ENVIRONMENT_VALUES],
             },
         );
-    Ok(json!({ "handle": handle, "atlases": data.atlas_sizes, "systems": systems_json }))
+    Ok(json!({
+        "handle": handle,
+        "atlases": data.atlas_sizes,
+        "systems": systems_json,
+        "probes": { "count": probe_count, "error": probe_error },
+    }))
 }
 
 pub fn release(handle: u64) {
@@ -255,6 +352,7 @@ impl Scene {
             for system in &mut self.systems {
                 system.set_uniform_environment(frame.environment);
             }
+            self.environment.fill(frame.environment);
         }
         let scale_changed = differs(|f| [f.indirect_scale; 3]);
         if scale_changed {
@@ -301,6 +399,17 @@ impl Scene {
             self.stable = if drawn { 0 } else { self.stable + 1 };
             done += 1;
         }
+        // The probes follow every update: they read the input values, which change with each.
+        for (set, offset) in &self.probe_sets {
+            let end = offset + set.probe_set().probes.len();
+            set.solve(
+                &self.systems,
+                &self.environment,
+                frame.indirect_scale,
+                &mut self.probes[*offset..end],
+            );
+        }
+        self.changed |= !self.probe_sets.is_empty();
         let changed = std::mem::take(&mut self.changed);
         (if changed { UPDATE_CHANGED } else { 0 })
             | if self.stable >= count {
@@ -361,6 +470,26 @@ pub fn read_atlas(handle: u64, atlas: usize, out: &mut [u16]) -> Result<usize> {
             out[3] = one;
         }
         Ok(atlas.texels.len())
+    })
+}
+
+/// The light probes the scene's probe sets light into `out` (27 coefficients each by LightProbes
+/// index; the others are left as they are); the number of probes the sets span.
+pub fn read_probes(handle: u64, out: &mut [f32]) -> Result<usize> {
+    with_scene(handle, |scene| {
+        ensure!(
+            out.len() >= 27 * scene.probes.len(),
+            "{} values for {} light probes",
+            out.len(),
+            scene.probes.len()
+        );
+        for (set, offset) in &scene.probe_sets {
+            let end = offset + set.probe_set().probes.len();
+            for (i, sh) in scene.probes[*offset..end].iter().enumerate() {
+                out[27 * (offset + i)..][..27].copy_from_slice(sh);
+            }
+        }
+        Ok(scene.probes.len())
     })
 }
 
@@ -499,14 +628,22 @@ fn write_cached(path: &Path, output: &unbound_gi::realtime_uv::Output) -> Result
 mod tests {
     use super::*;
 
-    fn room() -> unbound_gi::data::Precomputed {
+    /// The Room scene's precomputed realtime GI and its light probes' probe sets.
+    fn room_with_probes() -> (unbound_gi::data::Precomputed, Vec<([u8; 16], usize, usize)>) {
         let file = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/projects/realtimegi/Assets/Scenes/Room/LightingData.asset");
         let bytes = std::fs::read(file).unwrap();
         let serialized = SerializedFile::parse(&bytes).unwrap();
-        unbound_gi::data::read_precomputed(&serialized.read(112000000).unwrap())
+        let object = serialized.read(112000000).unwrap();
+        let ranges = light_probe_ranges(&serialized, &object).unwrap();
+        let data = unbound_gi::data::read_precomputed(&object)
             .unwrap()
-            .unwrap()
+            .unwrap();
+        (data, ranges)
+    }
+
+    fn room() -> unbound_gi::data::Precomputed {
+        room_with_probes().0
     }
 
     fn point(position: [f32; 3]) -> GiLight {
@@ -521,7 +658,7 @@ mod tests {
 
     #[test]
     fn a_scene_updates_until_converged_and_again_after_a_change() {
-        let reply = register(room(), true).unwrap();
+        let reply = register(room(), true, &[]).unwrap();
         let handle = reply["handle"].as_u64().unwrap();
         assert_eq!(reply["atlases"], json!([64]));
         let system = &reply["systems"][0];
@@ -600,11 +737,66 @@ mod tests {
     }
 
     #[test]
+    fn light_probes_follow_the_update_and_the_indirect_scale() {
+        let (data, ranges) = room_with_probes();
+        // The baked and the realtime probe sets both cover the nine probes.
+        assert_eq!(ranges.len(), 2);
+        assert!(ranges.iter().all(|r| (r.1, r.2) == (0, 9)));
+        let reply = register(data, true, &ranges).unwrap();
+        assert_eq!(reply["probes"], json!({ "count": 9, "error": null }));
+        let handle = reply["handle"].as_u64().unwrap();
+        set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
+        let mut frame = GiFrame {
+            indirect_scale: 1.0,
+            environment: [0.01, 0.01, 0.02],
+            synchronous: 1,
+            budget_ms: 2.0,
+            // Every part solved until the output stops changing: the probes then scale with the
+            // indirect scale (RGB9E5 rounding aside).
+            update_threshold: 0.0,
+        };
+        let lights = [point([0.0, 2.0, 0.0])];
+        let converge = |frame: &GiFrame| {
+            for _ in 0..500 {
+                if update(handle, frame, &lights).unwrap() & UPDATE_CONVERGED != 0 {
+                    let mut sh = vec![0f32; 27 * 9];
+                    assert_eq!(read_probes(handle, &mut sh).unwrap(), 9);
+                    return sh;
+                }
+            }
+            panic!("no convergence");
+        };
+        let one = converge(&frame);
+        // Lit probes: band 0 of every probe is positive in every channel.
+        assert!((0..9).all(|p| (0..3).all(|c| one[27 * p + 9 * c] > 0.01)));
+        frame.indirect_scale = 2.0;
+        let two = converge(&frame);
+        for (a, b) in one.iter().zip(&two) {
+            assert!((2.0 * a - b).abs() <= 0.01 * (0.01 + b.abs()), "{a} {b}");
+        }
+        // Too small a buffer fails.
+        assert!(read_probes(handle, &mut [0f32; 26]).is_err());
+        release(handle);
+        // A probe set the light probes do not list lights nothing, and says so.
+        let reply = register(room(), true, &[]).unwrap();
+        assert_eq!(reply["probes"]["count"], json!(0));
+        assert!(
+            reply["probes"]["error"]
+                .as_str()
+                .unwrap()
+                .contains("do not list")
+        );
+        release(reply["handle"].as_u64().unwrap());
+    }
+
+    #[test]
     fn the_first_frame_sets_every_input() {
         // DynamicGI.indirectScale 0 and updateThreshold 0 from a scene's first frame on (the
         // solvers start at 1 and 1%): the drawn texels are black, and the threshold reaches
         // the solvers.
-        let handle = register(room(), true).unwrap()["handle"].as_u64().unwrap();
+        let handle = register(room(), true, &[]).unwrap()["handle"]
+            .as_u64()
+            .unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
         let frame = GiFrame {
             indirect_scale: 0.0,

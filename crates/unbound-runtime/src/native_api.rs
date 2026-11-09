@@ -54,7 +54,8 @@ use std::ffi::c_void;
 /// 46: driver capabilities and the active speaker mode in the audio settings reply.
 /// 47: source filter component activation flags and the component reset command.
 /// 48: `GiFrame.update_threshold` (DynamicGI.updateThreshold).
-pub const NATIVE_API_VERSION: u32 = 48;
+/// 49: `gi_read_probes`, light probes lit by precomputed realtime GI.
+pub const NATIVE_API_VERSION: u32 = 49;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -213,6 +214,10 @@ pub struct NativeApi {
         extern "C" fn(u64, *const GiFrame, *const GiLight, i32, *mut NativeBuffer) -> i32,
     /// (scene, atlas, out RGBA half floats, capacity in halves): the atlas's texels written, or -1.
     pub gi_read_atlas: extern "C" fn(u64, i32, *mut u16, i32) -> i32,
+    /// (scene, out coefficients, capacity in floats): the light probes its probe sets light, 27
+    /// coefficients each (red, green, blue) by LightProbes index, the others left as they are;
+    /// the number of probes the scene's probe sets span, or -1.
+    pub gi_read_probes: extern "C" fn(u64, *mut f32, i32) -> i32,
     /// (scene, system, kind: 0 albedo RGBA8, 1 emission RGBA float; texels, length in bytes,
     /// out error): a system's material texture as its meta passes render it; 0 on success.
     pub gi_set_material: extern "C" fn(u64, i32, i32, *const u8, i64, *mut NativeBuffer) -> i32,
@@ -285,6 +290,7 @@ pub fn api() -> NativeApi {
         external_texture,
         gi_update,
         gi_read_atlas,
+        gi_read_probes,
         gi_set_material,
         gi_set_emissive,
         gi_realtime_uvs,
@@ -331,6 +337,16 @@ extern "C" fn gi_read_atlas(scene: u64, atlas: i32, out: *mut u16, capacity: i32
     let out = unsafe { std::slice::from_raw_parts_mut(out, capacity as usize) };
     reported(std::ptr::null_mut(), || {
         Ok(crate::realtime_gi::read_atlas(scene, atlas as usize, out)? as i32)
+    })
+}
+
+extern "C" fn gi_read_probes(scene: u64, out: *mut f32, capacity: i32) -> i32 {
+    if out.is_null() || capacity < 0 {
+        return -1;
+    }
+    let out = unsafe { std::slice::from_raw_parts_mut(out, capacity as usize) };
+    reported(std::ptr::null_mut(), || {
+        Ok(crate::realtime_gi::read_probes(scene, out)? as i32)
     })
 }
 

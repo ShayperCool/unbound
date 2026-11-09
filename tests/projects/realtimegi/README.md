@@ -96,9 +96,10 @@ case but the skybox and spot light ones; at most 0.5% of their values outside th
 the isolated texels docs/REALTIME_GI.md explains), and reports the other lighting values
 (`realtimegi: 0 failing state values, 0 failing gated lighting values, N failing lighting
 values`); `compare.py --strict` gates those too. Every failing value, and every allowed isolated
-one, is written to `compare-details.txt` in the run directory. Light probes, the spot light case,
-the skybox cases and directional output are not supported yet (the lighting values of those
-differ).
+one, is written to `compare-details.txt` in the run directory. Light probes are lit by realtime GI
+(their coefficients are reported: a few small higher-band ones differ in the brightest case);
+the spot light case, the skybox cases and directional output are not supported yet (the
+lighting values of those differ).
 
 ## Running
 

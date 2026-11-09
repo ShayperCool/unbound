@@ -32,6 +32,9 @@ namespace UnityEngine
         /// (tests/projects/realtimegi), <see cref="Probes"/> holds zeros and interpolation gives
         /// nothing (<see cref="Evaluate"/>).</summary>
         internal bool Baked = true;
+        /// <summary>Whether <see cref="Probes"/> holds the realtime lighting precomputed realtime
+        /// GI gives probes that have no baked lighting (<see cref="RealtimeGI"/>).</summary>
+        internal bool Realtime;
         /// <summary>Per probe, the occlusion of the mixed lights by shadow mask channel.</summary>
         internal Vector4[] Occlusion = Array.Empty<Vector4>();
         internal Cell[] Cells = Array.Empty<Cell>();
@@ -45,6 +48,7 @@ namespace UnityEngine
             Positions = Positions,
             Probes = (SphericalHarmonicsL2[])Probes.Clone(),
             Baked = Baked,
+            Realtime = Realtime,
             Occlusion = Occlusion,
             Cells = Cells,
             HullRays = HullRays,
@@ -59,14 +63,14 @@ namespace UnityEngine
         /// new hint. Outside the probes' hull, or without probes, there is none: the hint
         /// becomes -1 and false is returned (measured: tests/projects/lightprobes, queries outside
         /// the hull give the ambient probe, occlusion 1 and index -1). Probes without baked
-        /// lighting (precomputed for realtime GI only) give none either: Unbound does not compute
-        /// their realtime lighting yet, so callers keep the ambient probe.
+        /// lighting (precomputed for realtime GI only) give none either until realtime GI has lit
+        /// them (<see cref="Realtime"/>): callers keep the ambient probe.
         /// </summary>
         internal bool Evaluate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh, out Vector4 occlusion)
         {
             sh = default;
             occlusion = Vector4.one;
-            if (Probes.Length == 0 || !Baked)
+            if (Probes.Length == 0 || !(Baked || Realtime))
             {
                 cell = -1;
                 return false;
@@ -99,7 +103,7 @@ namespace UnityEngine
         internal bool Interpolate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh)
         {
             sh = default;
-            if (Probes.Length == 0 || !Baked) return false;
+            if (Probes.Length == 0 || !(Baked || Realtime)) return false;
             if (Cells.Length == 0)
             {
                 sh = Probes[Nearest(p)];

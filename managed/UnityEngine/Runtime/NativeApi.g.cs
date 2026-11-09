@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 48;
+        internal const uint CurrentVersion = 49;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -133,6 +133,12 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, GiFrame*, GiLight*, int, NativeBuffer*, int> GiUpdate;
         /// <summary>(scene, atlas, out RGBA half floats, capacity in halves): the atlas's texels written, or -1.</summary>
         internal delegate* unmanaged<ulong, int, ushort*, int, int> GiReadAtlas;
+        /// <summary>
+        /// (scene, out coefficients, capacity in floats): the light probes its probe sets light, 27
+        /// coefficients each (red, green, blue) by LightProbes index, the others left as they are;
+        /// the number of probes the scene's probe sets span, or -1.
+        /// </summary>
+        internal delegate* unmanaged<ulong, float*, int, int> GiReadProbes;
         /// <summary>
         /// (scene, system, kind: 0 albedo RGBA8, 1 emission RGBA float; texels, length in bytes,
         /// out error): a system's material texture as its meta passes render it; 0 on success.

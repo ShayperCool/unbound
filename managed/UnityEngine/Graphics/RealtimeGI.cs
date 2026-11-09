@@ -79,6 +79,10 @@ namespace UnityEngine
             internal Texture2D[] Atlases;
             internal float AlbedoBoost = 1f;
             internal bool Converged, Failed;
+            /// <summary>The scene's light probes its probe sets light (the scene's own set), and
+            /// the probes' coefficients as read back.</summary>
+            internal ProbeSet Probes;
+            internal float[] ProbeCoefficients = Array.Empty<float>();
         }
 
         static readonly List<GIScene> s_Scenes = new List<GIScene>();
@@ -196,8 +200,7 @@ namespace UnityEngine
             s_Scenes.Add(loaded);
             if (LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
                 Warn("directional:" + file.Path, $"{file.Path}: directional realtime lightmaps are not supported yet: its precomputed realtime GI is drawn without directionality.");
-            if (LightmapSettings.lightProbes is LightProbes probes && probes.count > 0)
-                Warn("probes:" + file.Path, $"{file.Path}: light probes lit by precomputed realtime GI are not supported yet: probe-lit objects keep the ambient light.");
+            BindProbes(loaded, root.GetProperty("probes"), file);
             if (!s_Registered)
             {
                 s_Registered = true;
@@ -384,8 +387,49 @@ namespace UnityEngine
             return Color.black;
         }
 
+        /// <summary>The scene's light probes take the realtime lighting its probe sets give them
+        /// (matches the Unity 6000.0.71f1 Editor's LightProbes.GetInterpolatedProbe,
+        /// tests/projects/realtimegi). Probes that also have baked lighting, and probes merged
+        /// with other scenes' (additive loads), are unmeasured: they keep what they have, with a
+        /// warning.</summary>
+        static void BindProbes(GIScene scene, JsonElement reply, LoadedFile file)
+        {
+            int count = reply.GetProperty("count").GetInt32();
+            if (reply.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.String)
+                Warn("probes:" + file.Path, $"{file.Path}: light probes are not lit by its precomputed realtime GI: {error.GetString()}");
+            if (count == 0 || LightmapSettings.lightProbes is not LightProbes probes) return;
+            var set = probes.m_Self;
+            if (set.Baked && set.Probes.Length > 0)
+            {
+                Warn("probes-baked:" + file.Path, $"{file.Path}: light probes with baked lighting keep it: adding the lighting of precomputed realtime GI to baked probes is not supported yet.");
+                return;
+            }
+            if (count > set.Positions.Length)
+            {
+                Warn("probes-count:" + file.Path, $"{file.Path}: its precomputed realtime GI lights {count} light probes where the scene has {set.Positions.Length}: they are not lit.");
+                return;
+            }
+            scene.Probes = set;
+            scene.ProbeCoefficients = new float[27 * set.Positions.Length];
+        }
+
         static unsafe void Upload(GIScene scene)
         {
+            if (scene.Probes is ProbeSet set)
+            {
+                int read;
+                fixed (float* coefficients = scene.ProbeCoefficients)
+                    read = Native.Api.GiReadProbes(scene.Handle, coefficients, scene.ProbeCoefficients.Length);
+                if (read > 0)
+                {
+                    if (LightmapSettings.lightProbes is LightProbes current && current.m_Set != set)
+                        Warn("probes-merged", "light probes merged from several scenes are not lit by precomputed realtime GI yet: they keep the ambient light.");
+                    var c = scene.ProbeCoefficients;
+                    for (int i = 0; i < read; i++)
+                        for (int k = 0; k < 27; k++) set.Probes[i][k / 9, k % 9] = c[27 * i + k];
+                    set.Realtime = true;
+                }
+            }
             for (int a = 0; a < scene.Atlases.Length; a++)
             {
                 var atlas = scene.Atlases[a];

@@ -14,8 +14,9 @@ the comparator's tolerance but for a few isolated texels (see [Residuals](#resid
 drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
 spot and directional lights (the scene's realtime GI is then not drawn: its renderers take light
 probes again), skybox and gradient environments (no
-environment light), light probes lit by realtime GI, directional realtime lightmaps, systems
-that reference other systems, gamma-space projects and linear light intensity.
+environment light), light probes that also have baked lighting or are merged from several
+scenes, directional realtime lightmaps, systems that reference other systems, gamma-space
+projects and linear light intensity.
 
 ## Documented contract (6000.0)
 
@@ -92,6 +93,22 @@ after the brighter `room-bounce` case the Editor's texels are 2.00 to 2.07 times
 the two). The update is converged (`DynamicGI.isConverged`) once an update of every system
 leaves its drawn texels unchanged: the bounce reads them, so nothing changes until the inputs
 do.
+
+## Light probes
+
+A scene's light probes are lit by its probe sets (the scene mapping's `m_Probesets`; the
+LightProbes asset's `m_Data.m_ProbeSets` places each, by hash, at a range of probe indices).
+A probe set's transport lists, per probe, the input values it references (as a system's
+transport: cluster and tree values of its systems, the environment) and, per reference and
+coefficient, an 8-bit weight around 127 times the coefficient's 16-bit scale times 2^-23 and a
+fixed factor per coefficient ([1, 2, 2, 2, 0.3125, 3.75, 3.75, 3.75, 0.9375], picked per
+coefficient by the file's order bytes). The weighted sums of the references' values from the
+systems' last update, times `DynamicGI.indirectScale`, are the probe's SphericalHarmonicsL2
+coefficients as `LightProbes.GetInterpolatedProbe` returns them at the probe (tests/projects/
+realtimegi: within the comparator's tolerance in every point-light case but the brightest, where
+the direct light's residual moves a few small higher-band coefficients). Probes interpolate as
+baked ones do; `LightProbes.bakedProbes` stays empty. Unbound updates them with every update of
+the systems.
 
 Measured in the probe: the update runs over several frames on worker threads (bounces converge
 frame by frame), so the first frames after a change are not reproducible between runs even with
@@ -174,8 +191,10 @@ to the native update (`crates/unbound-runtime/src/realtime_gi.rs`): one update o
 synchronous mode, else of as many as fit in 2 ms (at least one), without allocating; the scene
 is converged once an update of every system left its drawn texels unchanged. Changed atlases are
 uploaded as RGBA half floats; renderers draw them as `unity_DynamicLightmap` with their realtime
-scale and offset and `DYNAMICLIGHTMAP_ON`, and take no light probes. `DynamicGI.isConverged`,
-`synchronousMode`, `SetEmissive`, `indirectScale` and `updateThreshold` act on it.
+scale and offset and `DYNAMICLIGHTMAP_ON`, and take no light probes. The light probes'
+coefficients are read back after each update (`gi_read_probes`) into the scene's LightProbes.
+`DynamicGI.isConverged`, `synchronousMode`, `SetEmissive`, `indirectScale` and
+`updateThreshold` act on it.
 
 ## Residuals
 
@@ -195,8 +214,8 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
 
 ## Unbound plan
 
-- Phase 2, runtime over Unity's precomputed data (above): next, light probes from the probe
-  transport's SH, spot and directional lights (with the precomputed visibility), skybox and
+- Phase 2, runtime over Unity's precomputed data (above): next, spot and directional lights
+  (with the precomputed visibility), skybox and
   gradient environments, directional output, several systems; unmeasured inputs fail loudly
   until a probe case covers them.
 - Phase 3, Unbound's own precompute from scene geometry (automatic charts for Preserve UVs off,
