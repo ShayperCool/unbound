@@ -1,6 +1,7 @@
 using Unbound.Runtime;
 using Unbound.Tests;
 using UnityEngine;
+using UnityEngine.Playables;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -56,6 +57,46 @@ namespace UnityEngine.Tests
                 Time.s_DeltaTime = oldDelta;
                 ProjectInfo.UnityVersion = version;
                 Object.DestroyImmediate(root);
+            }
+        }
+
+        sealed class Idle : PlayableBehaviour
+        {
+        }
+
+        /// <summary>Play entry's zero interval belongs to the frame, not to animation: a graph of
+        /// script playables in game or unscaled time prepares and processes at it too (playables
+        /// frames.script); the next frame advances.</summary>
+        [Theory]
+        [InlineData(DirectorUpdateMode.GameTime)]
+        [InlineData(DirectorUpdateMode.UnscaledGameTime)]
+        public void AScriptGraphTakesTheZeroEntryInterval(DirectorUpdateMode mode)
+        {
+            string version = ProjectInfo.UnityVersion;
+            float delta = Time.s_DeltaTime, unscaled = Time.s_UnscaledDeltaTime;
+            var graph = PlayableGraph.Create("entry");
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                Time.s_DeltaTime = Time.s_UnscaledDeltaTime = .02f;
+                graph.SetTimeUpdateMode(mode);
+                var playable = ScriptPlayable<Idle>.Create(graph);
+                ScriptPlayableOutput.Create(graph, "out").SetSourcePlayable(playable);
+                graph.Play();
+                AnimationSystem.BeginPlayMode();
+                Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                Assert.Equal(0.0, playable.GetTime());
+                AnimationSystem.EndPlayModeEntry();
+                Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                Assert.Equal(.02, playable.GetTime(), 6);
+            }
+            finally
+            {
+                AnimationSystem.EndPlayModeEntry();
+                graph.Destroy();
+                Time.s_DeltaTime = delta;
+                Time.s_UnscaledDeltaTime = unscaled;
+                ProjectInfo.UnityVersion = version;
             }
         }
 

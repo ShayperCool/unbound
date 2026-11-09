@@ -28,10 +28,12 @@ namespace Unbound.Runtime
         internal static void BeginPlayMode() => s_PlayModeEntry = true;
         internal static void EndPlayModeEntry() => s_PlayModeEntry = false;
 
-        /// <summary>Measured in 6000.0.71f1 Editor Play entry (animstartup): the frame's
-        /// automatic animation evaluation samples and delivers events/movement with zero
-        /// elapsed animation time. Fixed and explicit evaluations keep their supplied deltas.
-        /// Other releases and custom loop startup intervals are not measured.</summary>
+        /// <summary>Measured in 6000.0.71f1 Editor Play entry: the frame's automatic updates of
+        /// Animators and of game-time and unscaled-time playable graphs, whatever their outputs,
+        /// take zero elapsed time (animation samples and delivers events/movement at it:
+        /// animstartup; script playables prepare and process at it: playables frames.script).
+        /// Fixed and explicit evaluations keep their supplied deltas. Other releases, DSP-clock
+        /// graphs and custom loop startup intervals are not measured.</summary>
         internal static double AutomaticFrameDelta(double delta) =>
             s_PlayModeEntry && Compat.AnimatorStartupMeasured ? 0.0 : delta;
 

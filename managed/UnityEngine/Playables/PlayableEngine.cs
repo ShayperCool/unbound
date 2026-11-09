@@ -729,9 +729,8 @@ namespace Unbound.Runtime.Playables
         /// playable that any output advances moves by the frame's delta. Measured in 6000.0.71f1
         /// (animculling clock/, both update modes, shared clips, several outputs and Animators);
         /// other releases hold the whole source tree
-        /// (<see cref="Compat.PlayableCullingHoldsAnimationPlayablesOnly"/>). An animation output's
-        /// automatic Play-entry interval (<see cref="AnimationSystem.AutomaticFrameDelta"/>) applies
-        /// to its whole tree.
+        /// (<see cref="Compat.PlayableCullingHoldsAnimationPlayablesOnly"/>). An automatic update at
+        /// Play entry gets a zero <paramref name="dt"/> (<see cref="AnimationSystem.AutomaticFrameDelta"/>).
         /// </summary>
         internal void PreparePass(double dt, bool evaluate)
         {
@@ -751,7 +750,6 @@ namespace Unbound.Runtime.Playables
                     if (o.Engine is AnimationOutputState animation)
                     {
                         animation.Automatic = !evaluate;
-                        if (!evaluate && UpdateMode == DirectorUpdateMode.GameTime) mark.Step = AnimationSystem.AutomaticFrameDelta(dt);
                         bool culled = CulledCompletely(animation);
                         // The first culled evaluation still samples the held pose.
                         animation.SkipEvaluation = culled && animation.Ticked;
@@ -1108,8 +1106,8 @@ namespace Unbound.Runtime.Playables
         {
             switch (UpdateMode)
             {
-                case DirectorUpdateMode.GameTime: return UnityEngine.Time.deltaTime;
-                case DirectorUpdateMode.UnscaledGameTime: return UnityEngine.Time.unscaledDeltaTime;
+                case DirectorUpdateMode.GameTime: return AnimationSystem.AutomaticFrameDelta(UnityEngine.Time.deltaTime);
+                case DirectorUpdateMode.UnscaledGameTime: return AnimationSystem.AutomaticFrameDelta(UnityEngine.Time.unscaledDeltaTime);
                 case DirectorUpdateMode.DSPClock: return PlayableSystem.DspDelta;
                 default: return 0;
             }
@@ -1199,7 +1197,7 @@ namespace Unbound.Runtime.Playables
                     var outputs = Scratch<PlayableOutputData>.Rent(g.Outputs);
                     foreach (var o in outputs)
                         if (o.OutputType != typeof(ScriptPlayableOutput))
-                            OutputSystems.Process(o, o.Engine is AnimationOutputState && g.UpdateMode == DirectorUpdateMode.GameTime ? AnimationSystem.AutomaticFrameDelta(dt) : dt, false);
+                            OutputSystems.Process(o, dt, false);
                     Scratch<PlayableOutputData>.Return(outputs);
                 }
             }
