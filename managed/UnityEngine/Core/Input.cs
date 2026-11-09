@@ -67,6 +67,23 @@ namespace UnityEngine
         /// <summary>The Game view's rendering resolution: the one last set, else the window's.</summary>
         internal static Vector2Int RenderingResolution => s_RenderingWidth > 0 ? new Vector2Int(s_RenderingWidth, s_RenderingHeight) : new Vector2Int(s_Width, s_Height);
 
+        /// <summary>The frame's window size; every input reader after this works in the Game view's
+        /// rendering pixels (the screen size and mouse position of <paramref name="input"/>).</summary>
+        internal static unsafe void BeginFrame(FrameInput* input)
+        {
+            Update(input->ScreenWidth, input->ScreenHeight);
+            WindowToRendering(ref input->MouseX, ref input->MouseY);
+            input->ScreenWidth = s_Width;
+            input->ScreenHeight = s_Height;
+        }
+
+        /// <summary>A rendering position in window pixels (a cursor warp).</summary>
+        internal static Vector2 RenderingToWindow(Vector2 position)
+        {
+            if (s_RenderingWidth <= 0 || s_WindowWidth <= 0 || s_WindowHeight <= 0) return position;
+            return new Vector2(position.x * s_WindowWidth / s_RenderingWidth, position.y * s_WindowHeight / s_RenderingHeight);
+        }
+
         /// <summary>A window position in rendering pixels (the same point when the view follows
         /// the window).</summary>
         internal static void WindowToRendering(ref float x, ref float y)

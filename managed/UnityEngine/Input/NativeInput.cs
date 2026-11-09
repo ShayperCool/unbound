@@ -252,6 +252,7 @@ namespace Unbound.Runtime
         /// applies it once, keeping the cursor's lock, visibility and image).</summary>
         static bool SendWarp(Vector2 position)
         {
+            position = Screen.RenderingToWindow(position);
             var culture = System.Globalization.CultureInfo.InvariantCulture;
             var json = "{\"warp\":[" + position.x.ToString("R", culture) + "," + position.y.ToString("R", culture) + "]}";
             try

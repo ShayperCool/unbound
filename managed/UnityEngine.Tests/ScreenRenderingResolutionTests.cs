@@ -48,5 +48,19 @@ namespace UnityEngine.Tests
             Screen.WindowToRendering(ref x, ref y);
             Assert.Equal((7f, 9f), (x, y));
         }
+
+        /// <summary>Input readers see the rendering size and the mouse in its pixels; a cursor
+        /// warp goes back to window pixels.</summary>
+        [Fact]
+        public unsafe void InputWorksInRenderingPixels()
+        {
+            Screen.Update(128, 64);
+            UnityEditor.PlayModeWindow.SetCustomRenderingResolution(64, 32, "test");
+            var input = new Unbound.Runtime.FrameInput { ScreenWidth = 128, ScreenHeight = 64, MouseX = 100, MouseY = 10 };
+            Screen.BeginFrame(&input);
+            Assert.Equal((64, 32), (input.ScreenWidth, input.ScreenHeight));
+            Assert.Equal((50f, 5f), (input.MouseX, input.MouseY));
+            Assert.Equal(new Vector2(100, 60), Screen.RenderingToWindow(new Vector2(50, 30)));
+        }
     }
 }
