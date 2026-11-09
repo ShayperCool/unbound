@@ -51,7 +51,8 @@ use std::ffi::c_void;
 /// 44: mixer Pitch Shifter Max channels.
 /// 45: precomputed realtime GI (`gi_update`, `gi_read_atlas`, `gi_set_material`,
 /// `gi_set_emissive`, `gi_realtime_uvs`).
-pub const NATIVE_API_VERSION: u32 = 45;
+/// 46: driver capabilities and the active speaker mode in the audio settings reply.
+pub const NATIVE_API_VERSION: u32 = 46;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
