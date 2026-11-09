@@ -511,12 +511,14 @@ namespace UnityEngine.Rendering
             if (material == null) throw new ArgumentNullException(nameof(material));
             Add(c =>
             {
+                // The draw's properties are copied into the stream at once: pooled copies serve.
+                using var pooled = Unbound.Runtime.DrawPropertyPool.Begin();
                 int pass = shaderPass < 0 ? GfxStream.AllPasses : shaderPass;
                 var mesh = renderer.DrawGeometry(out var model);
                 if (mesh != null)
                 {
                     GfxStream.Draw(mesh.Sync(), submeshIndex, material.Sync(), pass, model, Color.white,
-                        properties: Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer, renderer.BlockFor(submeshIndex)?.m_Values));
+                        properties: Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, renderer.BlockFor(submeshIndex)?.m_Values));
                     return;
                 }
                 // Other renderers (sprites, lines, ...) draw the geometry they draw for a camera,
@@ -532,7 +534,7 @@ namespace UnityEngine.Rendering
                     var item = items[i];
                     if (items.Count > 1 && i != submeshIndex) continue;
                     GfxStream.Draw(item.Mesh, item.Submesh, handle, pass, item.Model, item.Color, item.MainTexture, item.ClipEnabled ? item.Clip : (Rect?)null,
-                        Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer, item.Properties));
+                        Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, item.Properties));
                 }
             });
         }

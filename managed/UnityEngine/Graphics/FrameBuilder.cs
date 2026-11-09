@@ -86,6 +86,9 @@ namespace Unbound.Runtime
             /// <see cref="Bounds"/>.</summary>
             internal Bounds CullBounds;
             internal int Layer;
+            /// <summary>A Graphics.RenderMesh / DrawMesh draw's rendering layer mask (a renderer's
+            /// draws read their renderer's; null for engine-made draws).</summary>
+            internal uint? RenderingLayerMask;
         }
 
         /// <summary>Whether a draw is lit as a mesh: a mesh-like renderer's, or a Graphics.DrawMesh
@@ -904,15 +907,16 @@ namespace Unbound.Runtime
         /// <summary>The boxed unity_RenderingLayer of each mask drawn (a box is never changed).</summary>
         static readonly Dictionary<uint, object> s_RenderingLayerValues = new Dictionary<uint, object>();
 
-        /// <summary>A renderer's draw properties with its rendering layer mask
-        /// (unity_RenderingLayer.x, the mask's bits as a float, as URP's shaders read it with
-        /// asuint): URP's light layers light a renderer by it (Unity 6000.0.71f1,
-        /// tests/projects/urp paths-opengl light_layers). The draw's own block wins; a renderer on
-        /// the default layer keeps the draw's properties as they are.</summary>
-        internal static Dictionary<int, object> WithRenderingLayer(Renderer renderer, Dictionary<int, object> properties)
+        /// <summary>A draw's properties with its rendering layer mask (a renderer's, or a
+        /// Graphics.RenderMesh draw's RenderParams.renderingLayerMask) as unity_RenderingLayer.x,
+        /// the mask's bits as a float, as URP's shaders read it with asuint: URP's light layers
+        /// light a renderer by it (Unity 6000.0.71f1, tests/projects/urp paths-opengl
+        /// light_layers). A mask equal to the native default, or no mask (an engine-made draw),
+        /// keeps the properties as they are. The draw's own value of the constant wins (Unbound's
+        /// choice, as for unity_LightData in a block; unmeasured for this constant).</summary>
+        internal static Dictionary<int, object> WithRenderingLayer(uint? renderingLayerMask, Dictionary<int, object> properties)
         {
-            if (renderer == null) return properties;
-            uint mask = renderer.renderingLayerMask;
+            if (renderingLayerMask is not uint mask) return properties;
             if (mask == DefaultRenderingLayerMask || (properties != null && properties.ContainsKey(s_RenderingLayerId))) return properties;
             if (!s_RenderingLayerValues.TryGetValue(mask, out var value))
                 s_RenderingLayerValues[mask] = value = new Vector4(BitConverter.Int32BitsToSingle((int)mask), 0f, 0f, 0f);
@@ -944,7 +948,7 @@ namespace Unbound.Runtime
                     properties = BakedLighting.ApplyProbes(lighting.Anchor != null ? lighting.Anchor.position : lighting.ProbePosition ?? item.Bounds.center, properties);
                 properties = ReflectionProbe.Apply(item.Bounds, lighting.Reflections, properties, srp);
             }
-            properties = WithRenderingLayer(item.Renderer, properties);
+            properties = WithRenderingLayer(item.Renderer != null ? item.Renderer.renderingLayerMask : item.RenderingLayerMask, properties);
             if (extra != null)
             {
                 var merged = DrawPropertyPool.Copy(properties);
@@ -1789,6 +1793,7 @@ namespace Unbound.Runtime
                 Bounds = bounds,
                 CullBounds = q.WorldBounds ?? bounds,
                 Layer = q.Layer,
+                RenderingLayerMask = q.RenderingLayerMask,
             };
         }
 
