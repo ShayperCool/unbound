@@ -380,8 +380,8 @@ namespace Unbound.Runtime
             bool hasTree = tile.bvTree != null && tile.header.bvNodeCount > 0;
             copy.header.bvNodeCount = hasTree ? tile.header.bvNodeCount : 0;
             if (hasTree) copy.bvTree = tile.bvTree;
-            bool identity = position == Vector3.zero && rotation == Quaternion.identity;
-            if (identity) return copy;
+            // Exactly where it was built (the same test as its surface's: DtSurface.moved).
+            if (DtSurface.IsIdentity(position.x, position.y, position.z, rotation)) return copy;
             copy.localVerts = tile.verts;
             copy.localBmin = tile.header.bmin;
             copy.localBmax = tile.header.bmax;

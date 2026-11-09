@@ -40,7 +40,7 @@ namespace DotRecast.Detour
             this.rotation = rotation;
             this.tileWidth = tileWidth;
             this.tileHeight = tileHeight;
-            moved = position.X != 0f || position.Y != 0f || position.Z != 0f || rotation != UnityEngine.Quaternion.identity;
+            moved = !IsIdentity(position.X, position.Y, position.Z, rotation);
             m_Inverse = UnityEngine.Quaternion.Inverse(rotation);
             var ix = m_Inverse * UnityEngine.Vector3.right;
             var iy = m_Inverse * UnityEngine.Vector3.up;
@@ -49,6 +49,11 @@ namespace DotRecast.Detour
             m_I01 = iy.x; m_I11 = iy.y; m_I21 = iy.z;
             m_I02 = iz.x; m_I12 = iz.y; m_I22 = iz.z;
         }
+
+        /// <summary>Whether a pose leaves the data where it was built: exactly (a position off by
+        /// float noise still moves it, so its tiles are placed and looked up in its frame).</summary>
+        public static bool IsIdentity(float x, float y, float z, UnityEngine.Quaternion rotation) =>
+            x == 0f && y == 0f && z == 0f && rotation.x == 0f && rotation.y == 0f && rotation.z == 0f && rotation.w == 1f;
 
         /// <summary>A point of the world in the surface's frame.</summary>
         public RcVec3f ToLocal(RcVec3f world)
@@ -165,6 +170,11 @@ namespace DotRecast.Detour
             data.localVerts = local;
             data.localBmin = lmin;
             data.localBmax = lmax;
+            // A bounding volume tree is quantized in the bounds of the tile as built, which these
+            // are not: such a tile is searched polygon by polygon instead (tiles placed by NavWorld
+            // keep their tree with their own frame's vertices and bounds; carved tiles have none).
+            data.bvTree = null;
+            data.header.bvNodeCount = 0;
         }
     }
 }
