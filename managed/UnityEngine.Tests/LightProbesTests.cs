@@ -106,6 +106,60 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void RealtimeGILightsEachScenesOwnProbes()
+        {
+            const string json = @"{
+                ""positions"": [0,0,0, 1,0,0, 0,1,0, 0,0,1],
+                ""coefficients"": [],
+                ""hullRays"": [],
+                ""tetrahedra"": []
+            }";
+            LightmapSettings.Reset();
+            try
+            {
+                var first = LightProbes.FromJson(JsonDocument.Parse(json).RootElement);
+                var second = LightProbes.FromJson(JsonDocument.Parse(json).RootElement);
+                LightProbes.SceneLoaded(9001, first);
+                LightProbes.SceneLoaded(9002, second);
+                // An additive scene's realtime GI lights its own probes, not the current ones.
+                Assert.Same(first, LightmapSettings.lightProbes);
+                Assert.Same(second.m_Self, RealtimeGI.ProbeTarget(9002, 4, out var reason));
+                Assert.Null(reason);
+                Assert.Null(RealtimeGI.ProbeTarget(9002, 5, out reason));
+                Assert.Contains("5 light probes", reason);
+                Assert.Null(RealtimeGI.ProbeTarget(9003, 4, out reason));
+                Assert.Null(reason);
+
+                var set = first.m_Self;
+                var coefficients = new float[27 * 4];
+                coefficients[27 * 2 + 9] = 0.25f;
+                Assert.True(RealtimeGI.ApplyProbes(set, coefficients, 4));
+                int cell = -1;
+                Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out var sh));
+                Assert.Equal(0.25f, sh[1, 0]);
+                // Released while another scene still lights the same set, it stays lit; released
+                // alone, it gives nothing (callers take the ambient probe).
+                RealtimeGI.ReleaseProbes(set, new[] { set });
+                Assert.True(set.Realtime);
+                RealtimeGI.ReleaseProbes(set, Array.Empty<ProbeSet>());
+                Assert.False(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out _));
+
+                // Baked coefficients a script gives the probes stay: realtime GI stops.
+                Assert.True(RealtimeGI.ApplyProbes(set, coefficients, 4));
+                var assigned = new SphericalHarmonicsL2[4];
+                assigned[2][1, 0] = 0.75f;
+                first.bakedProbes = assigned;
+                Assert.False(RealtimeGI.ApplyProbes(first.m_Self, coefficients, 4));
+                Assert.Equal(0.75f, first.bakedProbes[2][1, 0]);
+                Assert.False(first.m_Self.Realtime);
+            }
+            finally
+            {
+                LightmapSettings.Reset();
+            }
+        }
+
+        [Fact]
         public void BakesWithUnusedNaNValuesLoad()
         {
             // The Editor's bakes hold NaN where a value is unused (the hull ray of a probe off the

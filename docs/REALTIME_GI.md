@@ -14,8 +14,10 @@ the comparator's tolerance but for a few isolated texels (see [Residuals](#resid
 drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
 spot and directional lights (the scene's realtime GI is then not drawn: its renderers take light
 probes again), skybox and gradient environments (no
-environment light), light probes that also have baked lighting or are merged from several
-scenes, directional realtime lightmaps, systems that reference other systems, gamma-space
+environment light), light probes that also have baked lighting (also given by a script: realtime
+GI then stops lighting them) or whose probe set cannot be read or placed (they light nothing; the
+lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
+directional realtime lightmaps, systems that reference other systems, gamma-space
 projects and linear light intensity.
 
 ## Documented contract (6000.0)

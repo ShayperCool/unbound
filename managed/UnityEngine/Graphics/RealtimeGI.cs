@@ -271,8 +271,9 @@ namespace UnityEngine
             // Its light probes light nothing again (the ambient probe).
             if (scene.Probes != null)
             {
-                scene.Probes.Realtime = false;
+                var set = scene.Probes;
                 scene.Probes = null;
+                ReleaseProbes(set, LitProbeSets());
             }
             foreach (var system in scene.Systems)
             {
@@ -404,49 +405,80 @@ namespace UnityEngine
             int count = reply.GetProperty("count").GetInt32();
             if (reply.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.String)
                 Warn("probes:" + file.Path, $"{file.Path}: light probes are not lit by its precomputed realtime GI: {error.GetString()}");
-            if (count == 0 || LightProbes.OwnOf(scene.Scene) is not LightProbes probes) return;
-            var set = probes.m_Self;
-            if (set.Baked && set.Probes.Length > 0)
+            if (count == 0) return;
+            var set = ProbeTarget(scene.Scene, count, out var reason);
+            if (set == null)
             {
-                Warn("probes-baked:" + file.Path, $"{file.Path}: light probes with baked lighting keep it: adding the lighting of precomputed realtime GI to baked probes is not supported yet.");
-                return;
-            }
-            if (count > set.Positions.Length)
-            {
-                Warn("probes-count:" + file.Path, $"{file.Path}: its precomputed realtime GI lights {count} light probes where the scene has {set.Positions.Length}: they are not lit.");
+                if (reason != null) Warn("probes-target:" + file.Path, $"{file.Path}: {reason}");
                 return;
             }
             scene.Probes = set;
             scene.ProbeCoefficients = new float[27 * set.Positions.Length];
         }
 
+        /// <summary>The probe set realtime GI lights for scene <paramref name="scene"/>: its own
+        /// LightProbes' (not the current ones, which are another scene's on an additive load), or
+        /// null with the reason (null too when the scene has no probes).</summary>
+        internal static ProbeSet ProbeTarget(int scene, int count, out string reason)
+        {
+            reason = null;
+            if (LightProbes.OwnOf(scene) is not LightProbes probes) return null;
+            var set = probes.m_Self;
+            if (set.Baked && set.Probes.Length > 0)
+                reason = "light probes with baked lighting keep it: adding the lighting of precomputed realtime GI to baked probes is not supported yet.";
+            else if (count > set.Positions.Length)
+                reason = $"its precomputed realtime GI lights {count} light probes where the scene has {set.Positions.Length}: they are not lit.";
+            return reason == null ? set : null;
+        }
+
+        /// <summary>Writes <paramref name="read"/> probes' coefficients (27 each) into the set;
+        /// false, leaving the set as it is, when a script has given it baked coefficients since
+        /// (LightProbes.bakedProbes): realtime GI then stops lighting it (unmeasured).</summary>
+        internal static bool ApplyProbes(ProbeSet set, float[] coefficients, int read)
+        {
+            if (set.Baked)
+            {
+                set.Realtime = false;
+                return false;
+            }
+            for (int i = 0; i < read; i++)
+                for (int k = 0; k < 27; k++) set.Probes[i][k / 9, k % 9] = coefficients[27 * i + k];
+            set.Realtime = true;
+            return true;
+        }
+
+        /// <summary>Realtime GI stops lighting the set: it gives the ambient probe again, unless
+        /// another loaded scene's realtime GI lights the same set (one Lighting Data loaded twice).</summary>
+        internal static void ReleaseProbes(ProbeSet set, IEnumerable<ProbeSet> stillLit)
+        {
+            foreach (var other in stillLit)
+                if (other == set) return;
+            set.Realtime = false;
+        }
+
+        static IEnumerable<ProbeSet> LitProbeSets()
+        {
+            foreach (var other in s_Scenes)
+                if (!other.Failed && other.Probes != null) yield return other.Probes;
+        }
+
         /// <summary>The light probes' coefficients after an update. Probes whose coefficients
-        /// game code has set since (LightProbes.bakedProbes) keep them: realtime GI stops
-        /// lighting them, with a warning (unmeasured).</summary>
+        /// game code has set since (LightProbes.bakedProbes) keep them, with a warning.</summary>
         static unsafe void UploadProbes(GIScene scene)
         {
-            if (scene.Probes is ProbeSet set)
+            if (scene.Probes is not ProbeSet set) return;
+            int read;
+            fixed (float* coefficients = scene.ProbeCoefficients)
+                read = Native.Api.GiReadProbes(scene.Handle, coefficients, scene.ProbeCoefficients.Length);
+            if (read <= 0) return;
+            if (!ApplyProbes(set, scene.ProbeCoefficients, read))
             {
-                if (set.Baked)
-                {
-                    Warn("probes-assigned", "light probes given baked coefficients by a script keep them: precomputed realtime GI no longer lights them (unmeasured).");
-                    set.Realtime = false;
-                    scene.Probes = null;
-                    return;
-                }
-                int read;
-                fixed (float* coefficients = scene.ProbeCoefficients)
-                    read = Native.Api.GiReadProbes(scene.Handle, coefficients, scene.ProbeCoefficients.Length);
-                if (read > 0)
-                {
-                    if (LightmapSettings.lightProbes is LightProbes current && current.m_Set != set)
-                        Warn("probes-merged", "light probes merged from several scenes are not lit by precomputed realtime GI yet: they keep the ambient light.");
-                    var c = scene.ProbeCoefficients;
-                    for (int i = 0; i < read; i++)
-                        for (int k = 0; k < 27; k++) set.Probes[i][k / 9, k % 9] = c[27 * i + k];
-                    set.Realtime = true;
-                }
+                Warn("probes-assigned", "light probes given baked coefficients by a script keep them: precomputed realtime GI no longer lights them (unmeasured).");
+                scene.Probes = null;
+                return;
             }
+            if (LightmapSettings.lightProbes is LightProbes current && current.m_Set != set)
+                Warn("probes-not-current", "light probes of a scene loaded beside others are lit by its precomputed realtime GI but are not the current light probes, which keep their own lighting (unmeasured).");
         }
 
         static unsafe void Upload(GIScene scene)

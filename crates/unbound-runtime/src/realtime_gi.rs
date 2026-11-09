@@ -231,7 +231,10 @@ fn register(
                 probe_count = probe_count.max(offset + solver.probe_set().probes.len());
                 probe_sets.push((solver, offset));
             }
-            Err(e) => probe_error = Some(format!("{e:#}")),
+            // The first reason is kept (a failed range read leaves every set unplaced).
+            Err(e) => {
+                probe_error.get_or_insert_with(|| format!("{e:#}"));
+            }
         }
     }
     let atlases = data
@@ -771,8 +774,12 @@ mod tests {
         };
         let lights = [point([0.0, 2.0, 0.0])];
         let converge = |frame: &GiFrame| {
+            // An update solves the probes: the first after a change reports them.
+            assert_ne!(update(handle, frame, &lights).unwrap() & UPDATE_PROBES, 0);
             for _ in 0..500 {
                 if update(handle, frame, &lights).unwrap() & UPDATE_CONVERGED != 0 {
+                    // Converged, nothing is solved again.
+                    assert_eq!(update(handle, frame, &lights).unwrap(), UPDATE_CONVERGED);
                     let mut sh = vec![0f32; 27 * 9];
                     assert_eq!(read_probes(handle, &mut sh).unwrap(), 9);
                     return sh;
