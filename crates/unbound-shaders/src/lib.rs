@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 27;
+pub const FORMAT_VERSION: u32 = 28;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -998,9 +998,69 @@ fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
 fn fxc_compatible(source: &str) -> String {
     writable_globals(&constructor_statements(&flat_bool_varyings(
         &rename_type_semantics(&drop_empty_declarations(&drop_duplicate_overloads(
-            &scopes::flatten_scopes(source),
+            &half_literals(&scopes::flatten_scopes(source)),
         ))),
     )))
+}
+
+/// Float literals with the `h` suffix (`1.0h`) written as plain float literals. FXC reads them as
+/// `half`, which is `float` on desktop, so `uint * 1.0h` multiplies as floats; glslang makes them
+/// 16-bit floats and rejects that product (URP's `PackMaterialFlags`, in Terrain Lit's passes).
+fn half_literals(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let mut out = String::with_capacity(source.len());
+    let mut copied = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        // A number starts with a digit, or a `.` before one, after a non-identifier byte.
+        let starts = (b.is_ascii_digit()
+            || (b == b'.' && bytes.get(i + 1).is_some_and(u8::is_ascii_digit)))
+            && (i == 0 || !is_ident_byte(bytes[i - 1]));
+        if !starts {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        let hex = b == b'0' && matches!(bytes.get(i + 1), Some(b'x' | b'X'));
+        let mut fractional = false;
+        while i < bytes.len() {
+            let c = bytes[i];
+            if c.is_ascii_digit() || (hex && c.is_ascii_hexdigit()) || (hex && i == start + 1) {
+                i += 1;
+            } else if c == b'.' && !hex {
+                fractional = true;
+                i += 1;
+            } else if (c == b'e' || c == b'E') && !hex {
+                fractional = true;
+                i += 1;
+                if matches!(bytes.get(i), Some(b'+' | b'-')) {
+                    i += 1;
+                }
+            } else {
+                break;
+            }
+        }
+        let suffixed = !hex
+            && matches!(bytes.get(i), Some(b'h' | b'H'))
+            && !bytes.get(i + 1).is_some_and(|&c| is_ident_byte(c));
+        if suffixed {
+            out.push_str(&source[copied..i]);
+            // `1h` is a float too.
+            if !fractional {
+                out.push_str(".0");
+            }
+            i += 1;
+            copied = i;
+        } else {
+            // The rest of the token (`1.0f`, `2u`, an identifier glued to it) stays as it is.
+            while i < bytes.len() && is_ident_byte(bytes[i]) {
+                i += 1;
+            }
+        }
+    }
+    out.push_str(&source[copied..]);
+    out
 }
 
 /// The functions of a program: where each one's header starts, and its body as the byte range
@@ -2077,6 +2137,30 @@ float4 frag() : SV_Target
     [unroll] for (uint i = 0; i < 256; i++) m = max(m, _Values[i]);
     return m;
 }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+    }
+
+    #[test]
+    fn half_literals_become_float_literals() {
+        assert_eq!(
+            half_literals(
+                "x * (1.0h / 255.0h) + 2h - .5H + 1e3h + 0x1Fu + f1h + h2 + 1.0hx + 3.0f"
+            ),
+            "x * (1.0 / 255.0) + 2.0 - .5 + 1e3 + 0x1Fu + f1h + h2 + 1.0hx + 3.0f"
+        );
+        // A uint times half literals, as URP's PackMaterialFlags does, compiles.
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+uint _Flags;
+float Pack(uint materialFlags) { return materialFlags * (1.0h / 255.0h); }
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+float4 frag() : SV_Target { return Pack(_Flags); }
 "#;
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         compiler
