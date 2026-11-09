@@ -1089,7 +1089,8 @@ public class PathProbe : MonoBehaviour
     /// above or below the floor carve (bottom within or beyond the agent height above it, top
     /// within the climb below it), when turning or scaling a stationary-only box counts as moving
     /// (the hole goes, then comes back once it stands still) for boxes of other sizes and scales,
-    /// a stationary-only box resized, and one that keeps creeping after a move.</summary>
+    /// a stationary-only box resized, one that keeps creeping after a move, and one moving while
+    /// its size is set every frame.</summary>
     IEnumerator CarveRules()
     {
         ClearAgents();
@@ -1144,6 +1145,10 @@ public class PathProbe : MonoBehaviour
         // Stationary-only: one to resize from 1 to 2 m, one to move 0.2 m and then 5 mm a frame.
         var resized = Make(new Vector3(-3.5f, 0.5f, -4f), NavMeshObstacleShape.Box, Vector3.one, 10f, 0f, true);
         var creeping = Make(new Vector3(-3.5f, 0.5f, 4f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
+        // Stationary-only: one moving 5 cm a frame while its size is set (to the same) every frame,
+        // and a 2 m box to scale by 4 % (a 1 m box's 4 % does not count).
+        var reshaping = Make(new Vector3(3f, 0.5f, 3f), NavMeshObstacleShape.Box, Vector3.one, 0f, 0f, true);
+        var scaledLarge = Make(new Vector3(3f, 1f, -8f), NavMeshObstacleShape.Box, Vector3.one * 2f, 0f, 0f, true);
         yield return Frames(4);
         LogPolygons("poly");
         ProbeLog.Value("below", OnFloor(0f, -8f));
@@ -1158,6 +1163,7 @@ public class PathProbe : MonoBehaviour
         turnedScaled.transform.rotation = Quaternion.Euler(0f, 3f, 0f);
         resized.size = Vector3.one * 2f;
         creeping.transform.position += new Vector3(0.2f, 0f, 0f);
+        scaledLarge.transform.localScale = Vector3.one * 1.04f;
         for (int f = 1; f <= 40; f++)
         {
             yield return null;
@@ -1168,6 +1174,10 @@ public class PathProbe : MonoBehaviour
             ProbeLog.Value("f" + f + ".resizedEdge", OnFloor(-2.3f, -4f));
             ProbeLog.Value("f" + f + ".creeping", OnFloor(creeping.transform.position.x, 4f));
             creeping.transform.position += new Vector3(0.005f, 0f, 0f);
+            ProbeLog.Value("f" + f + ".reshaping", OnFloor(3f, reshaping.transform.position.z));
+            ProbeLog.Value("f" + f + ".scaledLarge", OnFloor(3f, -8f));
+            reshaping.transform.position += new Vector3(0f, 0f, 0.05f);
+            reshaping.size = Vector3.one;
             ProbeLog.Value("f" + f + ".turned", OnFloor(8f, -6f));
             ProbeLog.Value("f" + f + ".scaled", OnFloor(8f, 6f));
             ProbeLog.Value("f" + f + ".turned3", OnFloor(8f, -11f));
