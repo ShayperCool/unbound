@@ -283,7 +283,7 @@ namespace UnityEngine.AI
         /// tests/projects/navlinks offedge, island, targets).</summary>
         public Vector3 destination
         {
-            get => m_HasDestination ? m_ReportedDestination : m_NextPosition;
+            get => Disabled ? Vector3.positiveInfinity : m_HasDestination ? m_ReportedDestination : m_NextPosition;
             set => SetDestination(value);
         }
 
@@ -381,10 +381,9 @@ namespace UnityEngine.AI
         // the NavMesh change replans it) until a new path is applied for a new destination; one
         // without a destination (never given, ResetPath, Warp) is not stale from its next agent
         // update; the agent's own areaMask and area costs make its path stale until its next
-        // destination. Unbound's choices (unmeasured): area cost changes count as link changes;
-        // only a changed value counts; NavMesh data added or removed does not. Open (listed): links
-        // added mark only paths over the tiles round them, partial paths are replanned (and not
-        // stale) about 0.3 s after the change and at once after a link activation.
+        // destination; a stale partial path is searched again near its end (RepathStalePartial).
+        // Unbound's choices (unmeasured): area cost changes count as link changes; only a changed
+        // value counts; NavMesh data added or removed does not.
         bool m_OwnPathStale;
         int m_PathStaleVersion;
 
@@ -419,6 +418,7 @@ namespace UnityEngine.AI
         {
             get
             {
+                if (m_Crowd == null && Disabled) return float.PositiveInfinity;
                 // While a new path is pending, the current one's (measured).
                 if (m_Crowd == null || m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) return 0f;
                 // On a link the path's end is beyond the corners the agent sees (measured:
@@ -633,8 +633,37 @@ namespace UnityEngine.AI
                 data.m_EndPos = forward ? link.End : link.Start;
                 data.m_InstanceID = link.Owner;
                 data.m_LinkType = link.Type;
+                // A wide link: the points the agent would cross between from where its path
+                // reaches the link (measured: tests/projects/navpath link.wide gb1.2, whose path
+                // reaches it where the NavMesh under its start ends).
+                if (link.Link.width > 0f && WideLinkEnds(last.refs, last.pos, out var start, out var end))
+                {
+                    data.m_StartPos = start;
+                    data.m_EndPos = end;
+                }
             }
             return data;
+        }
+
+        /// <summary>Where the agent would cross the wide connection on its corridor: straight
+        /// across from <paramref name="from"/>, within the parts of the ends over the polygons before
+        /// and after it on the corridor (DtNavMesh.GetOffMeshConnectionPolyEndPoints).</summary>
+        bool WideLinkEnds(long conRef, RcVec3f from, out Vector3 start, out Vector3 end)
+        {
+            start = end = default;
+            var path = m_Crowd.corridor.GetPath();
+            int count = m_Crowd.corridor.GetPathCount();
+            for (int i = 1; i < count; i++)
+            {
+                if (path[i] != conRef) continue;
+                RcVec3f s = default, e = default;
+                if (m_Surface.Mesh.GetOffMeshConnectionPolyEndPoints(path[i - 1], conRef, i + 1 < count ? path[i + 1] : 0, from, ref s, ref e, out _).Failed())
+                    return false;
+                start = NavMesh.V(s);
+                end = NavMesh.V(e);
+                return true;
+            }
+            return false;
         }
 
         public void ActivateCurrentOffMeshLink(bool activated)
@@ -685,18 +714,29 @@ namespace UnityEngine.AI
         internal Vector3 WrittenPosition { get => m_WrittenPosition; set => m_WrittenPosition = value; }
         internal int WorldVersion { get => m_WorldVersion; set => m_WorldVersion = value; }
 
+        // Disabling the agent drops its destination and path: while disabled it reports an
+        // invalid path, destination and remainingDistance at infinity; enabled again it is as a
+        // new agent, without a destination (a complete path, destination where it stands).
+        // Measured (Unity 6000.0.71f1, tests/projects/navlinks disableagent: disabled on a link,
+        // enabled 17 frames later; a link change after it leaves the path not stale).
         internal override void OnEngineEnable()
         {
             ResetAreaCosts();
-            CatchUpStaleness();
+            ForgetPath();
             AgentSystem.Add(this);
         }
 
         internal override void OnEngineDisable()
         {
             ResetAreaCosts();
+            ForgetPath();
+            m_PathStatus = NavMeshPathStatus.PathInvalid;
             AgentSystem.Remove(this);
         }
+
+        /// <summary>The agent is disabled (not merely off the NavMesh): its destination and
+        /// remainingDistance read as infinity.</summary>
+        bool Disabled => !isActiveAndEnabled;
 
         internal override void OnEngineDestroy() => AgentSystem.Remove(this);
 
@@ -814,8 +854,31 @@ namespace Unbound.Runtime
         internal static void Step()
         {
             SyncTransforms();
+            RepathStalePartial();
             ProcessRequests();
             UpdateCrowds();
+        }
+
+        /// <summary>A partial path made stale (isPathStale) is searched again, before this update's
+        /// requests are served, once the agent (with autoRepath) still walking it has the path's end
+        /// as its next corner within its radius; an agent that has arrived keeps its stale path.
+        /// Matches the Unity 6000.0.71f1 Editor, tests/projects/navlinks snapnear, snapfar,
+        /// island, inactive, reverseoneway: replanned some frames after a link change, at the next
+        /// update when it is already that near, never once it stands at the end.</summary>
+        static void RepathStalePartial()
+        {
+            foreach (var agent in s_Agents)
+            {
+                var ag = agent.m_Crowd;
+                if (ag == null || !agent.autoRepath || !agent.FollowingPath || agent.pathPending || agent.isOnOffMeshLink) continue;
+                if (agent.pathStatus != NavMeshPathStatus.PathPartial || !agent.isPathStale || ag.ncorners == 0) continue;
+                var next = ag.corners[0];
+                if ((next.flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) continue;
+                float r = ag.option.radius;
+                if (RcVec3f.DistanceSquared(ag.npos, next.pos) >= r * r) continue;
+                agent.SetPathPending(true);
+                RequestPath(agent);
+            }
         }
 
 
@@ -934,14 +997,17 @@ namespace Unbound.Runtime
         // kept), as a failed request does; an agent the new NavMesh cannot place loses its pending
         // request; an agent that had arrived, whose request had failed, or that has no destination
         // is given no path (one within its last centimetre of a path still finishes it); a path given
-        // by SetPath is planned again to its last corner. The rebuild
-        // is taken in when Unbound next refreshes its NavMesh (a NavMesh query or an agent
-        // placement), which can be later than the change. An agent on an off-mesh link, or
-        // completing one, rejoins as before.
+        // by SetPath is planned again to its last corner; a partial path is planned again to its
+        // old end and stays partial (Unity keeps it; see RepathStalePartial). The rebuild is taken
+        // in at the next NavMesh query, agent placement or agent update. An agent on an off-mesh
+        // link, or completing one, rejoins as before.
         /// <summary>The agents follow NavMesh changes: a rebuild places every agent again, tiles
         /// cut again in place only the agents that used them.</summary>
         static void SyncWorld()
         {
+            // A NavMesh change waiting to be built (a link added, removed or toggled) is built now,
+            // so the agents' searches see it.
+            NavWorld.RefreshNow();
             if (s_CrowdVersion != NavWorld.Version) Rebuild();
             else if (s_TileVersion != NavWorld.TileVersion) RejoinTouched();
         }
@@ -1002,6 +1068,7 @@ namespace Unbound.Runtime
                 && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
                 && FlatRemaining(agent.m_Crowd) < 0.01f;
             var moving = agent.m_Crowd;
+            Vector3? partialEnd = following && agent.pathStatus == NavMeshPathStatus.PathPartial ? NavMesh.V(moving.corridor.GetTarget()) : null;
             bool completing = agent.m_LinkCompleting, landing = agent.m_LandAfterReset;
             var linkEnd = moving.animation.endPos;
             agent.m_Crowd = null;
@@ -1058,7 +1125,7 @@ namespace Unbound.Runtime
             // tests/projects/navlinks resetmid through a link toggle).
             KeepMotion(agent.m_Crowd, moving, following || finishing);
             if (agent.pathPending) RestartRequest(agent);
-            else if (following) PlanAgain(agent);
+            else if (following) PlanAgain(agent, partialEnd);
             else if (finishing)
             {
                 PlanAgain(agent);
@@ -1109,15 +1176,25 @@ namespace Unbound.Runtime
         /// <summary>The path of an agent that was following one, planned again on the rebuilt
         /// NavMesh from where the agent now stands to its destination; the agent keeps its velocity
         /// (see the note on <see cref="Rebuild"/>).</summary>
-        static void PlanAgain(NavMeshAgent agent)
+        /// A partial path (<paramref name="partialEnd"/>: where it ended) is planned again to that
+        /// end and stays partial: Unity keeps such a path through a NavMesh change and searches it
+        /// again only as the agent nears its end (RepathStalePartial; measured, tests/projects/
+        /// navlinks inactive: partial and stale in the frame a link opens, complete the next).
+        static void PlanAgain(NavMeshAgent agent, Vector3? partialEnd = null)
         {
-            var search = NavMesh.PathSearch.Begin(agent.m_Surface, agent.m_NextPosition, agent.RequestedDestination, agent.Filter, agent.agentTypeID);
+            var target = partialEnd ?? agent.RequestedDestination;
+            var search = NavMesh.PathSearch.Begin(agent.m_Surface, agent.m_NextPosition, target, agent.Filter, agent.agentTypeID);
             int budget = int.MaxValue;
             if (search != null && search.Step(ref budget) && search.Result != null)
             {
                 // The path goes on: as stale as it was (measured, see isPathStale).
                 var staleness = agent.Staleness;
                 ApplyPath(agent, search.Result);
+                if (partialEnd.HasValue)
+                {
+                    agent.m_Crowd.partial = true;
+                    agent.SetPathStatus(NavMeshPathStatus.PathPartial);
+                }
                 agent.RestoreStaleness(staleness);
                 return;
             }

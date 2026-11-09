@@ -248,16 +248,21 @@ namespace UnityEngine.AI
                 var polys = new long[MaxPath];
                 int count;
                 var end = m_End;
-                // Whether the search reached the target's polygon; if not, the reachable polygon
-                // nearest to the target ends the path (found before finalizing, which reverses the
-                // search's parent links).
+                // Whether the search reached the target's polygon; if not, the reachable ground
+                // polygon nearest to the target ends the path (found before finalizing, which
+                // reverses the search's parent links); never an off-mesh link, which can lead
+                // nowhere when its far end is not connected (measured: tests/projects/navlinks
+                // snapnear).
                 bool complete = false;
                 DtNode best = null;
                 float bestDistance = float.MaxValue;
+                var mesh = m_Query.GetAttachedNavMesh();
                 foreach (var node in m_Query.GetNodePool().AsEnumerable())
                 {
                     if (node == null || node.id == 0 || (node.flags & (DtNodeFlags.DT_NODE_OPEN | DtNodeFlags.DT_NODE_CLOSED)) == 0) continue;
                     if (node.id == m_EndRef) complete = true;
+                    mesh.GetTileAndPolyByRefUnsafe(node.id, out _, out var nodePoly);
+                    if (nodePoly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_GROUND) continue;
                     m_Query.ClosestPointOnPoly(node.id, V(m_End), out var p, out _);
                     float d = RcVec3f.DistanceSquared(p, V(m_End));
                     if (d < bestDistance)

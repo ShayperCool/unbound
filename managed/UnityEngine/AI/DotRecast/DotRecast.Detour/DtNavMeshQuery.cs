@@ -1155,7 +1155,10 @@ namespace DotRecast.Detour
                     }
 
                     // Update nearest node to target so far.
-                    if (heuristic < m_query.lastBestNodeCost)
+                    // Unbound: a partial path ends on a ground polygon, never on an off-mesh
+                    // connection (one whose far end is not connected leads nowhere): Unity's
+                    // (measured, tests/projects/navlinks snapnear).
+                    if (heuristic < m_query.lastBestNodeCost && neighbourPoly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_GROUND)
                     {
                         m_query.lastBestNodeCost = heuristic;
                         m_query.lastBestNode = neighbourNode;
@@ -1674,7 +1677,8 @@ namespace DotRecast.Detour
 
                     // Unbound: Unity's funnel. The portal's ends as offsets from the apex (see
                     // FunnelOffset), in funnel order (a portal seen reversed from the apex is swapped;
-                    // no probe route measures that case); a corner where the portal lies strictly beyond
+                    // Unity's differs where a path leaves a wide link beyond its width, navpath
+                    // link.wide a3, listed); a corner where the portal lies strictly beyond
                     // a side (a path through a side's end exactly has none), tested on both sides
                     // before either narrows; a side narrows to a portal end on it or within it.
                     var l = FunnelOffset(portalApex, left);
@@ -2027,6 +2031,23 @@ namespace DotRecast.Detour
         }
 
         // Returns portal points between two polygons.
+        /// Unbound: the portal between a wide connection and a polygon its end <c>link.edge</c> is
+        /// linked to: the part of that end's segment over the polygon (link.bmin..bmax), from its
+        /// bmin end to its bmax end (the funnel puts them in order). False for a connection
+        /// between two points.
+        bool WidePortal(DtMeshTile conTile, DtPoly conPoly, DtLink link, out RcVec3f left, out RcVec3f right)
+        {
+            left = right = RcVec3f.Zero;
+            int con = conPoly.index - conTile.data.header.offMeshBase;
+            if (con < 0 || con >= conTile.data.offMeshCons.Length || !conTile.data.offMeshCons[con].IsWide)
+                return false;
+            conTile.data.offMeshCons[con].Edge(link.edge, out var a, out var b);
+            const float s = 1f / 255f;
+            left = RcVec3f.Lerp(a, b, link.bmin * s);
+            right = RcVec3f.Lerp(a, b, link.bmax * s);
+            return true;
+        }
+
         protected DtStatus GetPortalPoints(long from, DtPoly fromPoly, DtMeshTile fromTile,
             long to, DtPoly toPoly, DtMeshTile toTile,
             out RcVec3f left, out RcVec3f right)
@@ -2059,6 +2080,8 @@ namespace DotRecast.Detour
                     if (fromTile.links[i].refs == to)
                     {
                         int v = fromTile.links[i].edge;
+                        if (WidePortal(fromTile, fromPoly, fromTile.links[i], out left, out right))
+                            return DtStatus.DT_SUCCESS;
                         left.X = fromTile.data.verts[fromPoly.verts[v] * 3];
                         left.Y = fromTile.data.verts[fromPoly.verts[v] * 3 + 1];
                         left.Z = fromTile.data.verts[fromPoly.verts[v] * 3 + 2];
@@ -2081,6 +2104,8 @@ namespace DotRecast.Detour
                     if (toTile.links[i].refs == from)
                     {
                         int v = toTile.links[i].edge;
+                        if (WidePortal(toTile, toPoly, toTile.links[i], out left, out right))
+                            return DtStatus.DT_SUCCESS;
                         left.X = toTile.data.verts[toPoly.verts[v] * 3];
                         left.Y = toTile.data.verts[toPoly.verts[v] * 3 + 1];
                         left.Z = toTile.data.verts[toPoly.verts[v] * 3 + 2];

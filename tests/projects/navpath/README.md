@@ -12,6 +12,8 @@ agree on the mesh (`meshN.vertices` is logged for every level to show it).
 | `carve.sides`, `carve.mud` | the same round carved `NavMeshObstacle` boxes, with the carved tile's polygons (`polyX.pN`: vertices in order, sorted) |
 | `ray.area` | `NavMesh.Raycast` over water and mud strips, a wall and rays from far off the NavMesh, with area masks excluding the areas |
 | `snap.enable`, `snap.warp`, `snap.destination`, `snap.reach`, `snap.reachtype` | where the agent's transform is right after `AddComponent`, activation, `enabled`, `Instantiate`, `Warp` and `SetDestination`, in the update and LateUpdate of the next frames, and how far from the NavMesh an agent is still placed |
+| `link.snap` | links over a 2 m gap whose ends lie either side of the agent radius (0.5 m, and 2 m for a second agent type) across and either side of the climb above: which connect (paths over them or round by another link) |
+| `link.wide` | 4 m wide links: paths straight across at several lateral offsets (also beyond the width), one whose start lies partly off the NavMesh; agents crossing them one at a time (nextOffMeshLinkData, currentOffMeshLinkData, where they end) |
 | `sync.updatePosition` | `updatePosition` turned off while the transform (in Update or LateUpdate), `nextPosition` or a walking agent moves, then on again (and a move right after); transforms moved by script with it on, in Update and LateUpdate: the transform and `nextPosition` right after, in LateUpdate and in the next frames |
 
     python3 tests/projects/navpath/run.py editor  --label L              # two Editor captures
@@ -46,5 +48,10 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
   the corners between), merged in order into convex pieces of at most six vertices (`polyX.*`), and the
   routes round the hole follow those pieces.
 
+- A link's end attaches within the agent type's radius across and its climb in height. A wide link's
+  ends are segments: paths cross it straight at their offset, held to the part of each end over the
+  NavMesh; an agent's next link is crossed from where its path reaches the link.
+
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
-about 2e-6 apart, on either side of the line.
+about 2e-6 apart, on either side of the line; `link.wide` a3 (a path leaving a wide link beyond its
+width) and the agents' crossing points over a wide link (ga*, gb*).

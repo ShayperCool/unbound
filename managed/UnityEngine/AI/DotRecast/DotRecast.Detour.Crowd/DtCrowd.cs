@@ -1201,7 +1201,7 @@ namespace DotRecast.Detour.Crowd
 
                     // Adjust the path over the off-mesh connection.
                     RcFixedArray2<long> refs = new RcFixedArray2<long>();
-                    if (ag.corridor.MoveOverOffmeshConnection(ag.corners[ag.ncorners - 1].refs, refs.AsSpan(), ref anim.startPos,
+                    if (ag.corridor.MoveOverOffmeshConnection(ag.corners[ag.ncorners - 1].refs, refs.AsSpan(), ag.npos, ref anim.startPos,
                             ref anim.endPos, out var linkEnd, _navQuery))
                     {
                         anim.initPos = ag.npos;

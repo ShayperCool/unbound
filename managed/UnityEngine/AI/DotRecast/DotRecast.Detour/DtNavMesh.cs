@@ -127,12 +127,29 @@ namespace DotRecast.Detour
 
         private int AllocLink(DtMeshTile tile)
         {
+            // Unbound: the links grow when the tile runs out of them (a wide connection links every
+            // polygon along its ends, more than a tile can reserve beforehand).
+            if (tile.linksFreeList == DT_NULL_LINK)
+                GrowLinks(tile);
             if (tile.linksFreeList == DT_NULL_LINK)
                 return DT_NULL_LINK;
 
             int linkIdx = tile.linksFreeList;
             tile.linksFreeList = tile.links[linkIdx].next;
             return linkIdx;
+        }
+
+        /// Unbound: half as many links again (at least 16), added to the free list.
+        private static void GrowLinks(DtMeshTile tile)
+        {
+            int count = tile.links?.Length ?? 0;
+            int grown = count + Math.Max(16, count / 2);
+            var links = new DtLink[grown];
+            if (count > 0) Array.Copy(tile.links, links, count);
+            for (int i = count; i < grown; i++)
+                links[i] = new DtLink { next = i + 1 < grown ? i + 1 : tile.linksFreeList };
+            tile.links = links;
+            tile.linksFreeList = count;
         }
 
         private void FreeLink(DtMeshTile tile, int link)
@@ -797,6 +814,12 @@ namespace DotRecast.Detour
                     continue;
                 }
 
+                if (targetCon.IsWide)
+                {
+                    ConnectWideEnd(target, targetCon, 1, tile, oppositeSide, (targetCon.flags & DT_OFFMESH_CON_BIDIR) != 0);
+                    continue;
+                }
+
                 var ext = new RcVec3f()
                 {
                     X = targetCon.rad,
@@ -816,6 +839,12 @@ namespace DotRecast.Detour
                 // to make sure.
 
                 if (RcMath.Sqr(nearestPt.X - p.X) + RcMath.Sqr(nearestPt.Z - p.Z) > RcMath.Sqr(targetCon.rad))
+                {
+                    continue;
+                }
+
+                // Unbound: and within the climb in height (Unity's; measured, tests/projects/navpath link.snap).
+                if (MathF.Abs(nearestPt.Y - p.Y) > target.data.header.walkableClimb)
                 {
                     continue;
                 }
@@ -957,6 +986,73 @@ namespace DotRecast.Detour
         }
 
         /// Builds internal polygons links for a tile.
+        /// Unbound: the most polygons one end of a wide connection attaches to in a tile.
+        const int MaxWideEndPolys = 32;
+
+        /// Unbound: one end of a wide connection attached to every ground polygon of
+        /// <paramref name="land"/> (lying on side <paramref name="landSide"/> of the connection's
+        /// tile, 0xff for the same tile) its segment crosses (in x, z; within the climb in height), each link
+        /// holding the part of the segment over that polygon (bmin..bmax, of 255). The connection
+        /// links to each polygon; the polygon links back for the start, and for the end of a two-way
+        /// connection. The end points stay where the link put them. Unity's (measured,
+        /// tests/projects/navlinks wide).
+        void ConnectWideEnd(DtMeshTile conTile, DtOffMeshConnection con, int end, DtMeshTile land, int landSide, bool back)
+        {
+            con.Edge(end, out var a, out var b);
+            float climb = conTile.data.header.walkableClimb;
+            var qmin = RcVec3f.Min(a, b);
+            var qmax = RcVec3f.Max(a, b);
+            qmin.Y -= climb;
+            qmax.Y += climb;
+            Span<long> found = stackalloc long[MaxWideEndPolys];
+            int n = QueryPolygonsInTile(land, qmin, qmax, found, MaxWideEndPolys);
+            DtPoly conPoly = conTile.data.polys[con.poly];
+            long landBase = GetPolyRefBase(land);
+            long conRef = GetPolyRefBase(conTile) | (long)con.poly;
+            Span<RcVec3f> verts = stackalloc RcVec3f[m_maxVertPerPoly];
+            for (int k = 0; k < n; k++)
+            {
+                int landIdx = DecodePolyIdPoly(found[k]);
+                DtPoly landPoly = land.data.polys[landIdx];
+                if (landPoly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_GROUND)
+                    continue;
+                for (int j = 0; j < landPoly.vertCount; j++)
+                    verts[j] = land.data.verts.ToVec3(landPoly.verts[j] * 3);
+                if (!DtUtils.IntersectSegmentPoly2D(a, b, verts, landPoly.vertCount, out var tmin, out var tmax, out _, out _))
+                    continue;
+                byte bmin = (byte)(int)(Math.Clamp(tmin, 0f, 1f) * 255f);
+                byte bmax = (byte)(int)(Math.Clamp(tmax, 0f, 1f) * 255f);
+                if (bmin >= bmax)
+                    continue;
+
+                int idx = AllocLink(conTile);
+                if (idx == DT_NULL_LINK)
+                    return;
+                DtLink link = conTile.links[idx];
+                link.refs = landBase | (long)landIdx;
+                link.edge = (byte)end;
+                link.side = (byte)landSide;
+                link.bmin = bmin;
+                link.bmax = bmax;
+                link.next = conPoly.firstLink;
+                conPoly.firstLink = idx;
+
+                if (!back)
+                    continue;
+                int tidx = AllocLink(land);
+                if (tidx == DT_NULL_LINK)
+                    return;
+                link = land.links[tidx];
+                link.refs = conRef;
+                link.edge = 0xff;
+                link.side = (byte)(landSide == 0xff ? 0xff : DtUtils.OppositeTile(landSide));
+                link.bmin = bmin;
+                link.bmax = bmax;
+                link.next = landPoly.firstLink;
+                landPoly.firstLink = tidx;
+            }
+        }
+
         void BaseOffMeshLinks(DtMeshTile tile)
         {
             if (tile == null)
@@ -971,6 +1067,12 @@ namespace DotRecast.Detour
             {
                 DtOffMeshConnection con = tile.data.offMeshCons[i];
                 DtPoly poly = tile.data.polys[con.poly];
+
+                if (con.IsWide)
+                {
+                    ConnectWideEnd(tile, con, 0, tile, 0xff, true);
+                    continue;
+                }
 
                 var ext = new RcVec3f()
                 {
@@ -990,6 +1092,12 @@ namespace DotRecast.Detour
                 // findNearestPoly may return too optimistic results, further check
                 // to make sure.
                 if (RcMath.Sqr(nearestPt.X - p[0].X) + RcMath.Sqr(nearestPt.Z - p[0].Z) > RcMath.Sqr(con.rad))
+                {
+                    continue;
+                }
+
+                // Unbound: and within the climb in height (Unity's; measured, tests/projects/navpath link.snap).
+                if (MathF.Abs(nearestPt.Y - p[0].Y) > tile.data.header.walkableClimb)
                 {
                     continue;
                 }
@@ -1485,11 +1593,12 @@ namespace DotRecast.Detour
         /// normal polygon at one of its endpoints. This is the polygon identified by 
         /// the prevRef parameter.
         public DtStatus GetOffMeshConnectionPolyEndPoints(long prevRef, long polyRef, ref RcVec3f startPos, ref RcVec3f endPos) =>
-            GetOffMeshConnectionPolyEndPoints(prevRef, polyRef, ref startPos, ref endPos, out _);
+            GetOffMeshConnectionPolyEndPoints(prevRef, polyRef, 0, default, ref startPos, ref endPos, out _);
 
         /// Unbound: also gives the connection's own end point as it was placed (<paramref name="linkEnd"/>),
-        /// where the polygon's end vertex is the point the end landed on.
-        public DtStatus GetOffMeshConnectionPolyEndPoints(long prevRef, long polyRef, ref RcVec3f startPos, ref RcVec3f endPos, out RcVec3f linkEnd)
+        /// where the polygon's end vertex is the point the end landed on; a wide connection's points
+        /// for an agent at <paramref name="agentPos"/> going on to <paramref name="nextRef"/>.
+        public DtStatus GetOffMeshConnectionPolyEndPoints(long prevRef, long polyRef, long nextRef, RcVec3f agentPos, ref RcVec3f startPos, ref RcVec3f endPos, out RcVec3f linkEnd)
         {
             linkEnd = default;
             if (polyRef == 0)
@@ -1526,25 +1635,66 @@ namespace DotRecast.Detour
             // Figure out which way to hand out the vertices.
             int idx0 = 0, idx1 = 1;
 
-            // Find link that points to first vertex.
+            // Unbound: the end the connection is entered at is the end of its link to the polygon
+            // before (a wide connection has several links per end).
+            DtLink entry = null, exit = null;
             for (int i = poly.firstLink; i != DT_NULL_LINK; i = tile.links[i].next)
             {
-                if (tile.links[i].edge == 0)
-                {
-                    if (tile.links[i].refs != prevRef)
-                    {
-                        idx0 = 1;
-                        idx1 = 0;
-                    }
+                var l = tile.links[i];
+                if (entry == null && l.refs == prevRef)
+                    entry = l;
+                else if (exit == null && nextRef != 0 && l.refs == nextRef)
+                    exit = l;
+            }
 
-                    break;
+            if (entry != null)
+            {
+                if (entry.edge == 1)
+                {
+                    idx0 = 1;
+                    idx1 = 0;
+                }
+            }
+            else
+            {
+                // Find link that points to first vertex.
+                for (int i = poly.firstLink; i != DT_NULL_LINK; i = tile.links[i].next)
+                {
+                    if (tile.links[i].edge == 0)
+                    {
+                        if (tile.links[i].refs != prevRef)
+                        {
+                            idx0 = 1;
+                            idx1 = 0;
+                        }
+
+                        break;
+                    }
                 }
             }
 
             startPos = tile.data.verts.ToVec3(poly.verts[idx0] * 3);
             endPos = tile.data.verts.ToVec3(poly.verts[idx1] * 3);
             int con = ip - tile.data.header.offMeshBase;
-            linkEnd = con >= 0 && con < tile.data.offMeshCons.Length ? tile.data.offMeshCons[con].pos[idx1] : endPos;
+            var connection = con >= 0 && con < tile.data.offMeshCons.Length ? tile.data.offMeshCons[con] : null;
+            linkEnd = connection != null ? connection.pos[idx1] : endPos;
+            if (connection != null && connection.IsWide && entry != null)
+            {
+                // Unbound: a wide connection is crossed straight across from where the agent is
+                // along the end it enters by, within the parts of both ends over the polygons
+                // before and after (Unity's; measured, tests/projects/navlinks wide).
+                connection.Edge(idx0, out var a0, out var a1);
+                connection.Edge(idx1, out var b0, out var b1);
+                DtUtils.DistancePtSegSqr2D(agentPos, a0, a1, out float t);
+                t = Math.Clamp(t, 0f, 1f);
+                const float s = 1f / 255f;
+                float ta = Math.Min(Math.Max(entry.bmin * s, t), Math.Min(entry.bmax * s, 1f));
+                float u = 1f - t;
+                float tb = exit != null ? Math.Min(Math.Min(exit.bmax * s, 1f), Math.Max(exit.bmin * s, u)) : Math.Clamp(u, 0f, 1f);
+                startPos = RcVec3f.Lerp(a0, a1, ta);
+                endPos = RcVec3f.Lerp(b0, b1, tb);
+                linkEnd = endPos;
+            }
 
             return DtStatus.DT_SUCCESS;
         }

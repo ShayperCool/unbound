@@ -19,6 +19,11 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
                           apart, on either side of the line: Unity keeps the corner there, Unbound
                           does not.
+  link.wide a3.*          a path leaving a wide link beyond its width turns at the far end of the
+                          link's end in Unity, at the near end in Unbound;
+  link.wide ga*, gb*      agents crossing a wide link: Unity's agents steer to a crossing point a
+                          little aside from where they walk (and cross from there), Unbound's
+                          cross where they walk (docs/COMPATIBILITY_GAPS.md, the link rows).
 """
 import argparse
 import json
@@ -36,10 +41,11 @@ PROBE = Path(__file__).resolve().parent
 REPEATS = ('native1', 'native2')
 OUTPUT = 'navpath.json'
 TOLERANCE = 1e-3
-FRAMES = 400
+FRAMES = 1500
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
     'hole.shapes': ('two.p1.',),
+    'link.wide': ('a3.', 'ga1.2.', 'ga3.', 'gb1.2.'),
 }
 
 

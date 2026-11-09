@@ -92,7 +92,7 @@ namespace UnityEngine.Tests
             bool complete = path.status == NavMeshPathStatus.PathComplete;
             Assert.True(complete, $"{path.status}: {route}");
             Assert.True(Dist2D(corners[corners.Length - 1], to) <= 1e-2f, $"ends short: {route}");
-            bool overLink = Array.Exists(corners, c => Dist2D(c, entry) <= NavWorld.LinkSnapRadius + 1e-3f);
+            bool overLink = Array.Exists(corners, c => Dist2D(c, entry) <= NavWorld.SnapRadius(NavWorld.Get(0)) + 1e-3f);
             Assert.True(overLink, $"not over the link: {route}");
         }
 

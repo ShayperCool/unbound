@@ -49,5 +49,23 @@ namespace DotRecast.Detour
         /// Unbound: the cost per metre of crossing the connection in place of its area's cost; negative:
         /// the area's cost (NavMeshLinkData.costModifier, Unity's).
         public float costModifier = -1f;
+
+        /// Unbound: half the width of a wide connection (NavMeshLinkData.width), across it; zero for a
+        /// connection between two points. Each end of a wide connection is a segment: the start from
+        /// pos[0] - halfWidth to pos[0] + halfWidth, the end from pos[1] + halfWidth to pos[1] - halfWidth,
+        /// so the same parameter t on the start and 1 - t on the end lie straight across.
+        public RcVec3f halfWidth;
+
+        /// Unbound: whether the connection's ends are segments.
+        public bool IsWide => halfWidth.X != 0f || halfWidth.Y != 0f || halfWidth.Z != 0f;
+
+        /// Unbound: the segment of end <paramref name="end"/> (0 the start, 1 the end).
+        public void Edge(int end, out RcVec3f a, out RcVec3f b)
+        {
+            var c = pos[end];
+            var h = end == 0 ? halfWidth : RcVec3f.Zero - halfWidth;
+            a = c - h;
+            b = c + h;
+        }
     }
 }

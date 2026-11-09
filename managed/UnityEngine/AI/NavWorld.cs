@@ -34,8 +34,6 @@ namespace Unbound.Runtime
             internal int Owner;
             /// <summary>The data instance whose bake generated the link (0: added by itself).</summary>
             internal int Data;
-            /// <summary>How far its ends may lie from the NavMesh and still connect.</summary>
-            internal float Radius = LinkSnapRadius;
             internal OffMeshLinkType Type;
             internal bool Active = true;
             internal Vector3 Start => Position + Rotation * Link.startPosition;
@@ -110,7 +108,7 @@ namespace Unbound.Runtime
                 s_Links.Add(new LinkInstance
                 {
                     Id = s_NextId++, Link = link, Position = position, Rotation = rotation,
-                    Data = instance.Id, Radius = baked.Radius, Type = baked.Type,
+                    Data = instance.Id, Type = baked.Type,
                 });
             }
             s_Dirty = true;
@@ -437,7 +435,7 @@ namespace Unbound.Runtime
                 var end = link.End;
                 // Over the tile or within the snap radius of it: Detour lands an end on a polygon of
                 // the tile up to the snap radius away (DtNavMesh.ConnectExtOffMeshLinks).
-                float snap = link.Radius;
+                float snap = SnapRadius(surface);
                 if (!(end.x < h.bmin.X - snap || end.x > h.bmax.X + snap || end.z < h.bmin.Z - snap || end.z > h.bmax.Z + snap)) ends++;
                 var start = link.Start;
                 if (start.x < h.bmin.X || start.x > h.bmax.X || start.z < h.bmin.Z || start.z > h.bmax.Z) continue;
@@ -477,7 +475,7 @@ namespace Unbound.Runtime
                 var con = new DtOffMeshConnection
                 {
                     pos = new[] { new RcVec3f(start.x, start.y, start.z), endPos },
-                    rad = link.Radius,
+                    rad = SnapRadius(surface),
                     poly = basePoly + i,
                     flags = link.Link.bidirectional ? DtDetour.DT_OFFMESH_CON_BIDIR : 0,
                     // Where the end lies from this tile: 0xff over it, else the neighbour (0..7)
@@ -487,6 +485,7 @@ namespace Unbound.Runtime
                     side = DtNavMeshBuilder.ClassifyOffMeshPoint(endPos, h.bmin, h.bmax),
                     userId = link.Id,
                     costModifier = link.Link.costModifier >= 0f ? link.Link.costModifier : -1f,
+                    halfWidth = HalfWidth(link, start, end),
                 };
                 cons[tile.offMeshCons.Length + i] = con;
             }
@@ -501,10 +500,30 @@ namespace Unbound.Runtime
             // The detail meshes cover the ground polygons only (Detour skips connection polygons).
         }
 
+        /// <summary>Half a wide link's width across it: along the link's up (its rotation's) crossed
+        /// with the way from start to end; zero for a link without width (or one whose up runs along
+        /// it). Matches the Unity 6000.0.71f1 Editor, tests/projects/navlinks wide.</summary>
+        static RcVec3f HalfWidth(LinkInstance link, Vector3 start, Vector3 end)
+        {
+            float width = link.Link.width;
+            if (!(width > 0f)) return RcVec3f.Zero;
+            var along = end - start;
+            var dir = along.magnitude > Vector3.kEpsilon ? along.normalized : Vector3.forward;
+            var across = Vector3.Cross(link.Rotation * Vector3.up, dir);
+            if (across.sqrMagnitude <= MinAcrossSq) return RcVec3f.Zero;
+            var half = across.normalized * (width * 0.5f);
+            return new RcVec3f(half.x, half.y, half.z);
+        }
+
+        /// <summary>A link whose up runs (almost) along it has no width across it: FLT_EPSILON.</summary>
+        const float MinAcrossSq = 1.1920929e-7f;
+
         static int s_PolyDumps;
 
-        /// <summary>How far a link's end may lie from the NavMesh and still connect.</summary>
-        internal const float LinkSnapRadius = 0.1f;
+        /// <summary>How far (in x, z) a link's end may lie from the NavMesh and still connect: the
+        /// agent type's radius, every link alike (vertically: its climb, the tiles' walkableClimb).
+        /// Matches the Unity 6000.0.71f1 Editor, tests/projects/navlinks snap, snapnear, snapfar.</summary>
+        internal static float SnapRadius(Surface surface) => surface.Settings.agentRadius;
     }
 
     /// <summary>

@@ -76,7 +76,15 @@ Altered (marked `Unbound:` in the sources):
   crosses onto or off a connection (`AppendLinkCrossings`), so they stay corners also in line; a
   start within 2 mm of the first portal begins past it;
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
-  polygon nearest to the target);
+  ground polygon nearest to the target, never on an off-mesh connection: navlinks `snapnear`);
+- off-mesh connection ends attach within the agent type's radius across (the engine sets `rad`)
+  and its climb in height (`BaseOffMeshLinks`, `ConnectExtOffMeshLinks`; navpath `link.snap`);
+- wide connections (`DtOffMeshConnection.halfWidth`, NavMeshLinkData.width): each end is a segment
+  attached to every polygon of the tile it crosses, the overlap kept as the link's bmin/bmax
+  (`ConnectWideEnd`); its portal is that part of the segment (`WidePortal`), and it is crossed
+  straight across from where the agent is along the end it enters by, held to the parts over the
+  polygons before and after (`GetOffMeshConnectionPolyEndPoints`; navpath `link.wide`, navlinks
+  `wide`); a tile's links grow when they run out (`AllocLink`);
 - `DtNavMeshQuery.Raycast` (`DotRecast.Detour/DtNavMeshQuery.cs`) computes the hit wall edge's z
   extent as its end's z minus its start's z (the port subtracted the start's x), so the hit normal
   is perpendicular to the wall that stops the ray (`NavMesh.Raycast`'s and `NavMeshAgent.Raycast`'s
