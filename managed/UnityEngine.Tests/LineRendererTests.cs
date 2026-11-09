@@ -663,5 +663,78 @@ namespace UnityEngine.Tests
             LineUtility.Simplify(points, 0.1f, kept);
             Assert.Equal(new[] { 0, 2, 3 }, kept);
         }
+
+        /// <summary>Simplify measures the distance to the infinite line through a span's ends, ends
+        /// the first span at the last point apart from the first, keeps nothing of one point, and
+        /// LineUtility replaces its output lists (tests/projects/lines simplify.*).</summary>
+        [Fact]
+        public void SimplifyMeasuresFromTheLineThroughTheEnds()
+        {
+            var go = new GameObject("line");
+            try
+            {
+                var line = go.AddComponent<LineRenderer>();
+                void Check(Vector3[] points, float tolerance, Vector3[] expected)
+                {
+                    line.positionCount = points.Length;
+                    line.SetPositions(points);
+                    line.Simplify(tolerance);
+                    var after = new Vector3[line.positionCount];
+                    line.GetPositions(after);
+                    Assert.Equal(expected, after);
+                }
+                // The second point is 0.05 from the line but 1 from the segment's end.
+                Check(new[] { new Vector3(0, 0), new Vector3(2, 0.05f), new Vector3(-1, 0.02f), new Vector3(1, 0) }, 0.1f,
+                    new[] { new Vector3(0, 0), new Vector3(1, 0) });
+                Check(new[] { new Vector3(0, 0), new Vector3(1, 0), new Vector3(1, 1), new Vector3(0, 1), new Vector3(0, 0) }, 0.1f,
+                    new[] { new Vector3(0, 0), new Vector3(1, 0), new Vector3(1, 1), new Vector3(0, 0) });
+                Check(new[] { new Vector3(0, 0), new Vector3(1, 0.5f), new Vector3(2, 0) }, 0.5f, new[] { new Vector3(0, 0), new Vector3(2, 0) });
+                Check(new[] { Vector3.one }, 0.1f, System.Array.Empty<Vector3>());
+            }
+            finally { Object.DestroyImmediate(go); }
+            var indices = new System.Collections.Generic.List<int> { 99 };
+            LineUtility.Simplify(new System.Collections.Generic.List<Vector3> { Vector3.zero, new Vector3(1, 1), new Vector3(2, 0) }, 0.1f, indices);
+            Assert.Equal(new[] { 0, 1, 2 }, indices);
+        }
+
+        /// <summary>A drawn strip's mesh keeps its arrays from frame to frame while they are big
+        /// enough: drawing allocates no geometry.</summary>
+        [Fact]
+        public void DrawnStripReusesItsMeshArrays()
+        {
+            var go = new GameObject("line");
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            try
+            {
+                camera.transform.position = new Vector3(0f, 0f, -10f);
+                var line = go.AddComponent<LineRenderer>();
+                line.numCornerVertices = 3;
+                line.numCapVertices = 3;
+                line.generateLightingData = true;
+                line.positionCount = 4;
+                line.SetPositions(new[] { new Vector3(-1, 0), new Vector3(0, 1), new Vector3(1, 0), new Vector3(2, 1) });
+                var context = new Unbound.Runtime.FrameBuilder.CameraContext
+                {
+                    Camera = camera, Position = camera.transform.position, Forward = Vector3.forward, View = camera.worldToCameraMatrix,
+                };
+                var draws = new System.Collections.Generic.List<Unbound.Runtime.FrameBuilder.DrawItem>();
+                line.CollectDraws(context, draws);
+                var meshes = (System.Collections.Generic.Dictionary<Camera, Mesh>)typeof(LineRenderer)
+                    .GetField("m_Meshes", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(line);
+                var mesh = meshes[camera];
+                var arrays = new object[] { mesh.m_Vertices, mesh.m_Normals, mesh.m_Tangents, mesh.m_Colors, mesh.m_UVs[0], mesh.m_SubMeshes[0].Indices };
+                int vertices = mesh.m_StreamVertexCount;
+                line.SetPosition(3, new Vector3(2, -1));
+                line.CollectDraws(context, draws);
+                Assert.Equal(vertices, mesh.m_StreamVertexCount);
+                var again = new object[] { mesh.m_Vertices, mesh.m_Normals, mesh.m_Tangents, mesh.m_Colors, mesh.m_UVs[0], mesh.m_SubMeshes[0].Indices };
+                for (int i = 0; i < arrays.Length; i++) Assert.Same(arrays[i], again[i]);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(camera.gameObject);
+            }
+        }
     }
 }

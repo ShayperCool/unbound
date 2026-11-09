@@ -863,45 +863,61 @@ namespace UnityEngine
         }
     }
 
-    /// <summary>Ramer-Douglas-Peucker simplification (LineUtility.Simplify, LineRenderer.Simplify).</summary>
+    /// <summary>
+    /// Ramer-Douglas-Peucker simplification (LineUtility.Simplify, LineRenderer.Simplify; matches
+    /// the Unity 6000.0.71f1 Editor, tests/projects/lines simplify.*): the first and last points are
+    /// kept; a span keeps its point farthest from the infinite line through its ends (the first of
+    /// equal ones) when that distance is above the tolerance, and is split there. The first span
+    /// ends at the last point apart from the first, so a closed polyline keeps a point across
+    /// from its start. Fewer than two points keep none. Indices come out in ascending order.
+    /// </summary>
     internal static class LineSimplifier
     {
+        /// <summary>Points within this squared distance of the first count as the first.</summary>
+        const float SameAsFirstSqr = 1e-12f;
+
         internal static void Keep(IReadOnlyList<Vector3> points, float tolerance, List<int> keep)
         {
-            keep.Clear();
-            if (points.Count == 0) return;
-            if (points.Count < 3)
+            int count = points.Count;
+            if (count < 2) return;
+            int start = keep.Count;
+            keep.Add(0);
+            keep.Add(count - 1);
+            if (count == 2) return;
+            int end = count - 1;
+            while (end > 0 && (points[end] - points[0]).sqrMagnitude <= SameAsFirstSqr) end--;
+            float limit = tolerance * tolerance;
+            var spans = new Stack<(int, int)>();
+            spans.Push((0, end));
+            while (spans.Count > 0)
             {
-                for (int i = 0; i < points.Count; i++) keep.Add(i);
-                return;
-            }
-            var flags = new bool[points.Count];
-            flags[0] = flags[points.Count - 1] = true;
-            var stack = new Stack<(int, int)>();
-            stack.Push((0, points.Count - 1));
-            while (stack.Count > 0)
-            {
-                var (first, last) = stack.Pop();
-                float worst = 0f;
-                int index = -1;
-                for (int i = first + 1; i < last; i++)
+                var (first, last) = spans.Pop();
+                float farthest = 0f;
+                int at = first;
+                if (first + 1 < last)
                 {
-                    float d = DistanceToSegment(points[i], points[first], points[last]);
-                    if (d > worst)
+                    var origin = points[first];
+                    var direction = points[last] - origin;
+                    direction *= 1f / direction.magnitude;
+                    for (int i = first + 1; i < last; i++)
                     {
-                        worst = d;
-                        index = i;
+                        float d = Vector3.Cross(origin - points[i], direction).sqrMagnitude;
+                        // A NaN distance (ends at the same point) takes over and keeps nothing.
+                        if (!(d <= farthest))
+                        {
+                            farthest = d;
+                            at = i;
+                        }
                     }
                 }
-                if (index >= 0 && worst > tolerance)
+                if (limit < farthest)
                 {
-                    flags[index] = true;
-                    stack.Push((first, index));
-                    stack.Push((index, last));
+                    keep.Add(at);
+                    spans.Push((first, at));
+                    spans.Push((at, last));
                 }
             }
-            for (int i = 0; i < flags.Length; i++)
-                if (flags[i]) keep.Add(i);
+            keep.Sort(start, keep.Count - start, null);
         }
 
         internal static void Simplify(IReadOnlyList<Vector3> points, float tolerance, List<Vector3> result)
@@ -910,15 +926,6 @@ namespace UnityEngine
             Keep(points, tolerance, keep);
             result.Clear();
             foreach (var i in keep) result.Add(points[i]);
-        }
-
-        static float DistanceToSegment(Vector3 p, Vector3 a, Vector3 b)
-        {
-            var ab = b - a;
-            float len = ab.sqrMagnitude;
-            if (len <= 0f) return Vector3.Distance(p, a);
-            float t = Mathf.Clamp01(Vector3.Dot(p - a, ab) / len);
-            return Vector3.Distance(p, a + ab * t);
         }
     }
 }
@@ -933,6 +940,7 @@ namespace UnityEngine
         {
             if (points == null) throw new ArgumentNullException(nameof(points));
             if (pointsToKeep == null) throw new ArgumentNullException(nameof(pointsToKeep));
+            pointsToKeep.Clear();
             LineSimplifier.Keep(points, tolerance, pointsToKeep);
         }
 
@@ -947,6 +955,7 @@ namespace UnityEngine
         {
             if (points == null) throw new ArgumentNullException(nameof(points));
             if (pointsToKeep == null) throw new ArgumentNullException(nameof(pointsToKeep));
+            pointsToKeep.Clear();
             LineSimplifier.Keep(points.ConvertAll(p => (Vector3)p), tolerance, pointsToKeep);
         }
 
