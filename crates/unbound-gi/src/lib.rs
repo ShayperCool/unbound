@@ -2,6 +2,7 @@
 //! LightingData asset ([`data`]) and updating its realtime lightmaps at runtime ([`solver`]).
 //! See docs/REALTIME_GI.md.
 pub mod data;
+pub mod realtime_uv;
 pub mod solver;
 
 #[cfg(test)]

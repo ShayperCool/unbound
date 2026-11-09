@@ -404,7 +404,7 @@ fn set_emissive_keeps_a_renderers_color_over_later_textures() {
     let data = room_data();
     let system = Arc::new(data.systems[0].clone());
     let panel = renderer_of(&data, PANEL);
-    let block = renderer_of(&data, 152063223);
+    let floor = renderer_of(&data, 152063223);
     let texels = (system.transport.width * system.transport.height) as usize;
     let uniform = |rgb: [f32; 3]| {
         (0..texels)
@@ -414,8 +414,8 @@ fn set_emissive_keeps_a_renderers_color_over_later_textures() {
     let mut solver = SystemSolver::new(system.clone(), true).unwrap();
     solver.set_emission(&uniform([0.5, 0.25, 0.125])).unwrap();
     let panel_clusters = clusters_of(&system, panel);
-    let block_clusters = clusters_of(&system, block);
-    assert!(!panel_clusters.is_empty() && !block_clusters.is_empty());
+    let floor_clusters = clusters_of(&system, floor);
+    assert!(!panel_clusters.is_empty() && !floor_clusters.is_empty());
     for &c in &panel_clusters {
         assert_eq!(solver.cluster_materials().1[c], [0.5, 0.25, 0.125]);
     }
@@ -429,16 +429,16 @@ fn set_emissive_keeps_a_renderers_color_over_later_textures() {
     for &c in &panel_clusters {
         assert_eq!(solver.cluster_materials().1[c], [0.0, 3.0, 3.0]);
     }
-    for &c in &block_clusters {
+    for &c in &floor_clusters {
         assert_eq!(solver.cluster_materials().1[c], [1.0, 0.0, 1.0]);
     }
     // Emission is kept as a half float.
     solver.set_emission(&uniform([0.1, 1e9, -1.0])).unwrap();
-    let e = solver.cluster_materials().1[block_clusters[0]];
+    let e = solver.cluster_materials().1[floor_clusters[0]];
     assert_eq!(e, [half::f16::from_f32(0.1).to_f32(), 65504.0, 0.0]);
     solver.set_emission(&uniform([f32::NAN, 1.0, 1.0])).unwrap();
     assert_eq!(
-        solver.cluster_materials().1[block_clusters[0]],
+        solver.cluster_materials().1[floor_clusters[0]],
         [0.0, 1.0, 1.0]
     );
     assert!(solver.set_renderer_emission(99, [0.0; 3]).is_err());
@@ -498,5 +498,259 @@ fn material_changes_match_the_editor() {
         "room-albedo-call",
         45,
         0.006,
+    );
+}
+
+/// Unity's built-in Cube: positions, lightmap UVs (UV2) and triangles.
+const CUBE_POSITIONS: [[f32; 3]; 24] = [
+    [0.5, -0.5, 0.5],
+    [-0.5, -0.5, 0.5],
+    [0.5, 0.5, 0.5],
+    [-0.5, 0.5, 0.5],
+    [0.5, 0.5, -0.5],
+    [-0.5, 0.5, -0.5],
+    [0.5, -0.5, -0.5],
+    [-0.5, -0.5, -0.5],
+    [0.5, 0.5, 0.5],
+    [-0.5, 0.5, 0.5],
+    [0.5, 0.5, -0.5],
+    [-0.5, 0.5, -0.5],
+    [0.5, -0.5, -0.5],
+    [0.5, -0.5, 0.5],
+    [-0.5, -0.5, 0.5],
+    [-0.5, -0.5, -0.5],
+    [-0.5, -0.5, 0.5],
+    [-0.5, 0.5, 0.5],
+    [-0.5, 0.5, -0.5],
+    [-0.5, -0.5, -0.5],
+    [0.5, -0.5, -0.5],
+    [0.5, 0.5, -0.5],
+    [0.5, 0.5, 0.5],
+    [0.5, -0.5, 0.5],
+];
+const CUBE_UV2: [[f32; 2]; 24] = [
+    [0.6909865, 0.3471644],
+    [0.9966581, 0.3471644],
+    [0.6909865, 0.65283585],
+    [0.9966581, 0.65283585],
+    [0.3097273, 0.34716424],
+    [0.0040557664, 0.34716424],
+    [0.34716424, 0.65283585],
+    [0.65283585, 0.65283585],
+    [0.3097273, 0.65283585],
+    [0.0040557664, 0.65283585],
+    [0.34716424, 0.34716424],
+    [0.65283585, 0.34716424],
+    [0.34716424, 0.0040557664],
+    [0.34716424, 0.3097273],
+    [0.65283585, 0.3097273],
+    [0.65283585, 0.0040557664],
+    [0.6902728, 0.3097273],
+    [0.99594426, 0.3097273],
+    [0.99594426, 0.0040557664],
+    [0.6902728, 0.0040557664],
+    [0.3097273, 0.0040557664],
+    [0.0040557664, 0.0040557664],
+    [0.0040557664, 0.3097273],
+    [0.3097273, 0.3097273],
+];
+const CUBE_TRIANGLES: [[u32; 3]; 12] = [
+    [0, 2, 3],
+    [0, 3, 1],
+    [8, 4, 5],
+    [8, 5, 9],
+    [10, 6, 7],
+    [10, 7, 11],
+    [12, 13, 14],
+    [12, 14, 15],
+    [16, 17, 18],
+    [16, 18, 19],
+    [20, 21, 22],
+    [20, 22, 23],
+];
+
+fn cube_uvs(scale: [f32; 3], pixel_size: f32) -> crate::realtime_uv::Output {
+    let positions: Vec<[f32; 3]> = CUBE_POSITIONS
+        .iter()
+        .map(|p| [p[0] * scale[0], p[1] * scale[1], p[2] * scale[2]])
+        .collect();
+    crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
+        positions: &positions,
+        uvs: &CUBE_UV2,
+        triangles: &CUBE_TRIANGLES,
+        pixel_size,
+        min_chart_texels: 4,
+    })
+    .unwrap()
+}
+
+/// The Room scene's renderers (file IDs) and their scales.
+const ROOM_SCALES: [(i64, [f32; 3]); 7] = [
+    (152063223, [6.0, 0.2, 6.0]),  // Floor
+    (973394265, [1.2, 1.5, 1.2]),  // Block
+    (308039783, [0.2, 4.0, 6.0]),  // Left
+    (1583214537, [0.2, 4.0, 6.0]), // Right
+    (605051979, [6.0, 4.0, 0.2]),  // Back
+    (948094850, [6.0, 0.2, 6.0]),  // Ceiling
+    (PANEL, [1.0, 1.2, 0.1]),      // Panel
+];
+
+#[test]
+fn realtime_uvs_match_the_precomputed_layout() {
+    let data = room_data();
+    let system = &data.systems[0];
+    let mut sizes = Vec::new();
+    for (k, &(object, _)) in data.renderers.iter().enumerate() {
+        let scale = ROOM_SCALES.iter().find(|r| r.0 == object).unwrap().1;
+        // Realtime resolution 2 texels per unit.
+        let out = cube_uvs(scale, 0.5);
+        crate::realtime_uv::check_layout(system, data.renderer_st[k], &out).unwrap();
+        sizes.push((object, out.width, out.height));
+        // Every chart's vertices lie half a texel inside its rectangle (its texel centres
+        // inside the chart).
+        assert_eq!(out.charts.len(), 6);
+        for (c, tri) in CUBE_TRIANGLES.chunks(2).enumerate() {
+            let rect = out.charts[c];
+            for &v in tri.iter().flatten() {
+                let uv = out.uvs[v as usize];
+                let p = [uv[0] * out.width as f32, uv[1] * out.height as f32];
+                for k in 0..2 {
+                    let (lo, hi) = (rect[k] as f32 + 0.5, (rect[k] + rect[k + 2]) as f32 - 0.5);
+                    assert!(
+                        (p[k] - lo).abs() < 1e-3 || (p[k] - hi).abs() < 1e-3,
+                        "chart {c}: {p:?} in {rect:?}"
+                    );
+                }
+            }
+        }
+    }
+    // The floor's 6 m faces take 14x14 texels, its thin faces the minimum 4x4.
+    assert!(sizes.contains(&(152063223, 18, 28)));
+    assert!(sizes.contains(&(973394265, 8, 12)));
+    assert!(sizes.contains(&(308039783, 16, 24)));
+    // A control: at twice the resolution the floor no longer fits its precomputed layout.
+    let k = data
+        .renderers
+        .iter()
+        .position(|r| r.0 == 152063223)
+        .unwrap();
+    let error = crate::realtime_uv::check_layout(
+        system,
+        data.renderer_st[k],
+        &cube_uvs([6.0, 0.2, 6.0], 0.25),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("realtime lightmap UVs of"), "{error}");
+}
+
+#[test]
+fn realtime_uvs_of_irregular_meshes() {
+    use crate::realtime_uv::{Input, realtime_uvs};
+    // A 4 x 1 m quad whose UVs span 2 x 1: one chart, scaled to its area (2.83 m by 1.41 m in
+    // UV proportions), its sides snapped to whole blocks separately.
+    let positions = [
+        [0.0, 0.0, 0.0],
+        [4.0, 0.0, 0.0],
+        [4.0, 0.0, 1.0],
+        [0.0, 0.0, 1.0],
+    ];
+    let uvs = [[0.0, 0.0], [0.5, 0.0], [0.5, 0.25], [0.0, 0.25]];
+    let triangles = [[0, 1, 2], [0, 2, 3]];
+    let out = realtime_uvs(&Input {
+        positions: &positions,
+        uvs: &uvs,
+        triangles: &triangles,
+        pixel_size: 0.5,
+        min_chart_texels: 4,
+    })
+    .unwrap();
+    // At 2 texels per metre (1 block): 2.83 + 0.5 -> 4 blocks, 1.41 + 0.5 -> 2 blocks.
+    assert_eq!((out.width, out.height), (8, 4));
+    // A chart of no world area is a point: one block; an unused vertex stays at 0.
+    let positions = [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [5.0, 5.0, 5.0],
+    ];
+    let uvs = [[0.0, 0.0], [0.5, 0.0], [1.0, 0.0], [0.3, 0.3]];
+    let out = realtime_uvs(&Input {
+        positions: &positions,
+        uvs: &uvs,
+        triangles: &[[0, 1, 2]],
+        pixel_size: 0.5,
+        min_chart_texels: 4,
+    })
+    .unwrap();
+    assert_eq!((out.width, out.height), (2, 2));
+    assert_eq!(out.uvs[3], [0.0, 0.0]);
+    // Vertices with one position and UV join their triangles into one chart.
+    let positions = [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0],
+    ];
+    let uvs = [
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [1.0, 1.0],
+        [0.0, 1.0],
+        [0.0, 0.0],
+    ];
+    let out = realtime_uvs(&Input {
+        positions: &positions,
+        uvs: &uvs,
+        triangles: &[[0, 1, 2], [3, 4, 5]],
+        pixel_size: 0.1,
+        min_chart_texels: 4,
+    })
+    .unwrap();
+    assert_eq!(out.charts.len(), 1);
+    // Malformed input fails without panicking.
+    assert!(
+        realtime_uvs(&Input {
+            positions: &positions,
+            uvs: &uvs,
+            triangles: &[[0, 1, 9]],
+            pixel_size: 0.1,
+            min_chart_texels: 4
+        })
+        .is_err()
+    );
+    assert!(
+        realtime_uvs(&Input {
+            positions: &positions,
+            uvs: &uvs[..2],
+            triangles: &[[0, 1, 2]],
+            pixel_size: 0.1,
+            min_chart_texels: 4
+        })
+        .is_err()
+    );
+    let nan = [[f32::NAN, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]];
+    assert!(
+        realtime_uvs(&Input {
+            positions: &nan,
+            uvs: &uvs[..3],
+            triangles: &[[0, 1, 2]],
+            pixel_size: 0.1,
+            min_chart_texels: 4
+        })
+        .is_err()
+    );
+    assert!(
+        realtime_uvs(&Input {
+            positions: &positions,
+            uvs: &uvs,
+            triangles: &[[0, 1, 2]],
+            pixel_size: 0.0,
+            min_chart_texels: 4
+        })
+        .is_err()
     );
 }

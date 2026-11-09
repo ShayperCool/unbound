@@ -429,6 +429,23 @@ pub fn read_cluster_materials(bytes: &[u8], width: u32, height: u32) -> Result<C
     })
 }
 
+/// The value of a chart mask texel no chart covers.
+pub const NO_CHART: u32 = u32::MAX;
+
+/// A system's chart mask: `width * height` texels (row-major from v = 0), each the chart it
+/// belongs to or [`NO_CHART`].
+pub fn read_chart_mask(bytes: &[u8], width: u32, height: u32) -> Result<Vec<u32>> {
+    let r = Reader { bytes };
+    let (w, h) = (r.i32(0)?, r.i32(4)?);
+    ensure!(
+        w == width as i32 && h == height as i32,
+        "a {w}x{h} chart mask for a {width}x{height} system"
+    );
+    (0..(width * height) as usize)
+        .map(|k| r.u32(8 + 4 * k))
+        .collect()
+}
+
 /// A system of the scene mapping and its data.
 #[derive(Debug, Clone)]
 pub struct System {
@@ -441,6 +458,8 @@ pub struct System {
     pub input: InputSamples,
     pub transport: Transport,
     pub materials: ClusterMaterials,
+    /// The chart each texel belongs to ([`read_chart_mask`]).
+    pub chart_mask: Vec<u32>,
 }
 
 /// A scene's precomputed realtime GI.
@@ -566,6 +585,8 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         let transport = read_transport(file(&hash, "rsc.ref")?)?;
         let materials =
             read_cluster_materials(file(&input_hash, "caw")?, transport.width, transport.height)?;
+        let chart_mask =
+            read_chart_mask(file(&input_hash, "ecm")?, transport.width, transport.height)?;
         let size = atlas_sizes[atlas] as usize;
         ensure!(
             offset.0 + transport.width as usize <= size
@@ -586,6 +607,7 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
             input,
             transport,
             materials,
+            chart_mask,
         });
     }
     Ok(Some(Precomputed {
