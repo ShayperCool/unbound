@@ -1143,6 +1143,7 @@ namespace Unbound.Runtime
             if (!Attached) return;
             WriteMassCenterPose(count);
             if (FootIK() && m_Animator.Human is { } human) human.FootIK = true;
+            m_Animator.Human?.DefaultPoseUnlessWritten();
             m_Animator.ApplyHumanPose();
             m_Animator.CaptureRootMotionPose();
         }

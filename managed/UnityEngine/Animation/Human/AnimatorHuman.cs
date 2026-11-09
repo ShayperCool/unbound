@@ -54,6 +54,17 @@ namespace Unbound.Runtime.Humanoid
 
         internal float Value(int curve) => m_Values[curve];
 
+        /// <summary>An evaluation that wrote no humanoid curve (its clips have none) still poses the
+        /// avatar: every muscle 0, the body on the root (6000.0.71f1, tests/projects/humanoid
+        /// genericOnHuman, genericOnHuman.graph).</summary>
+        internal void DefaultPoseUnlessWritten()
+        {
+            if (m_Dirty) return;
+            for (int i = 0; i < m_Values.Length; i++) m_Values[i] = DefaultValue(i);
+            Array.Clear(m_Present);
+            m_Dirty = true;
+        }
+
         // The mass center pose's curve values (layers whose mask leaves out Root left out), when set.
         readonly float[] m_MassCenterValues = new float[HumanClipImport.CurveCount];
         bool m_HasMassCenter;

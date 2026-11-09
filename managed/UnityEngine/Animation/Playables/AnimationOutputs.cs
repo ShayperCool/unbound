@@ -873,6 +873,7 @@ namespace Unbound.Runtime.Playables
         {
             if (result.BodyMotion.HasMotion) animator.Human?.SetPoseMotion(result.BodyMotion);
             if (result.FootIK && animator.Human is { } footHuman) footHuman.FootIK = true;
+            if (!culled) animator.Human?.DefaultPoseUnlessWritten();
             if (result.HasMassCenter && animator.Human is { } massHuman)
             {
                 var b = result.Bindings;
@@ -913,6 +914,9 @@ namespace Unbound.Runtime.Playables
                     && (o.Engine as AnimationOutputState)?.StreamSource == AnimationStreamSource.DefaultValues)
                 {
                     if (HumanMotionClip(o.Source)) return RootMotionMode.Human;
+                    // Generic root curves alone move a humanoid as a generic Animator's, by its
+                    // human scale (6000.0.71f1, tests/projects/humanoid genericOnHuman.graph).
+                    if (GenericClipTree(o.Source)) return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
                     if (!o.Source.HasConnectedOutput() && MixerKind.HumanMotionTree(o.Source))
                         return RootMotionMode.Human;
                 }
@@ -925,6 +929,22 @@ namespace Unbound.Runtime.Playables
                     + "with complete RootQ curves and input weights that are not infinite, is supported, without a playing controller, shared nodes or loop overrides; "
                     + "controller playables, animation jobs, fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
+        }
+
+        /// <summary>Whether a tree is only clips without humanoid curves, mixers and layer mixers.</summary>
+        static bool GenericClipTree(PlayableNode node, int depth = 0)
+        {
+            if (node == null || node.Destroyed || depth > 64) return false;
+            if (node.Kind is ClipKind clip) return clip.Clip != null && !clip.Clip.HasHumanCurves;
+            if (node.Kind is not (MixerKind or LayerMixerKind)) return false;
+            int connected = 0;
+            foreach (var input in node.Inputs)
+            {
+                if (input.Node == null) continue;
+                connected++;
+                if (!GenericClipTree(input.Node, depth + 1)) return false;
+            }
+            return connected > 0;
         }
 
         internal static bool HumanMotionClip(PlayableNode node) => node != null && !node.Destroyed
@@ -982,7 +1002,16 @@ namespace Unbound.Runtime.Playables
             if (pos >= 0) for (int c = pos; c < pos + 3 && c < result.FloatCount; c++) result.Animated[c] = false;
             if (rot >= 0) for (int c = rot; c < rot + 4 && c < result.FloatCount; c++) result.Animated[c] = false;
             RootMotionStep.RootFrame(animator, out _, out _, out var scale);
-            animator.m_DeltaPosition = animator.m_MotionRootRotation * Vector3.Scale(scale, motion.Delta);
+            // A humanoid Animator moves by its human scale, its pivot the moved root, as with its
+            // controller (6000.0.71f1, tests/projects/humanoid genericOnHuman, genericOnHuman.graph).
+            var human = animator.Human;
+            var delta = human != null ? motion.Delta * animator.humanScale : motion.Delta;
+            animator.m_DeltaPosition = animator.m_MotionRootRotation * Vector3.Scale(scale, delta);
+            if (human != null)
+            {
+                var moved = animator.m_MotionRootPosition + animator.m_DeltaPosition;
+                human.PivotPosition = new Unbound.Runtime.Humanoid.F4(moved.x, moved.y, moved.z, 0f);
+            }
             animator.m_DeltaRotation = motion.Turn;
             RootMotionStep.Velocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, deltaTime,
                 out animator.m_RootVelocity, out animator.m_RootAngularVelocity);

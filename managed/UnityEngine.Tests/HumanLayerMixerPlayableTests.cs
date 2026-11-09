@@ -208,5 +208,46 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(goals);
             }
         }
+
+        /// <summary>Generic root curves alone on a humanoid Animator in a PlayableGraph move it by
+        /// its human scale, as its controller does (6000.0.71f1, tests/projects/humanoid
+        /// genericOnHuman.graph). Control: the same clip on a plain Animator moves by the curve.</summary>
+        [Fact]
+        public void GenericRootCurvesMoveAHumanoidByItsHumanScale()
+        {
+            var created = new List<Object>();
+            var move = new AnimationClip();
+            move.SetCurve("", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            created.Add(move);
+            float Moved(GameObject root, Animator animator)
+            {
+                created.Add(root);
+                var graph = PlayableGraph.Create("generic-on-human");
+                graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+                try
+                {
+                    AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(AnimationClipPlayable.Create(graph, move));
+                    graph.Evaluate(0f);
+                    graph.Evaluate(0.25f);
+                    return animator.deltaPosition.x;
+                }
+                finally { graph.Destroy(); }
+            }
+            try
+            {
+                var human = Rig(out var animator, out var avatar);
+                created.Add(avatar);
+                avatar.Constant.Human.Scale = 2f;
+                Near.Equal(0.5f, Moved(human, animator), 1e-4f);
+                var plain = new GameObject("Plain");
+                var generic = plain.AddComponent<Animator>();
+                generic.applyRootMotion = true;
+                Near.Equal(0.25f, Moved(plain, generic), 1e-4f);
+            }
+            finally
+            {
+                foreach (var o in created) Object.DestroyImmediate(o);
+            }
+        }
     }
 }
