@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.UIElements.Experimental;
@@ -252,6 +253,7 @@ public static class CollectionsProbe
         Section("tabs-steps", () => TabsSteps(tabs));
         Section("absolute", () => AbsoluteChildren(root));
         Section("animations", () => Animations(root));
+        Section("binding", () => Bindings(root));
 
         // The animated list's rows move in real time; hidden for the final image.
         if (animated != null) { animated.style.visibility = Visibility.Hidden; Update(); }
@@ -754,6 +756,216 @@ public static class CollectionsProbe
         return sb.Append(']').ToString();
     }
 
+
+    // ---- runtime data binding ----
+
+    public class BindSource
+    {
+        public string message = "hi";
+        public int count = 3;
+        public float ratio = 0.25f;
+        public BindInner inner = new BindInner();
+    }
+
+    public class BindInner
+    {
+        public string value = "inner";
+    }
+
+    public class BindNotifying : INotifyBindablePropertyChanged
+    {
+        public string message = "start";
+        public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
+        public void Notify(string name) => propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(name));
+    }
+
+    public class BindHashed : IDataSourceViewHashProvider
+    {
+        public string message = "h0";
+        public long hash;
+        public long GetViewHashCode() => hash;
+    }
+
+    public struct BindTag
+    {
+        public int id;
+    }
+
+    public class BindTagged
+    {
+        public BindTag tag = new BindTag { id = 7 };
+    }
+
+    class LoggingBinding : CustomBinding
+    {
+        readonly string m_Name;
+        public LoggingBinding(string name) => m_Name = name;
+        protected override BindingResult Update(in BindingContext context)
+        {
+            Log.Add("custom " + m_Name + " update " + context.bindingId + " path=" + context.dataSourcePath + " source=" + (context.dataSource == null ? "null" : context.dataSource.GetType().Name));
+            return new BindingResult(BindingStatus.Success);
+        }
+        protected override void OnActivated(in BindingActivationContext context) => Log.Add("custom " + m_Name + " activated " + context.targetElement.name + " " + context.bindingId);
+        protected override void OnDeactivated(in BindingActivationContext context) => Log.Add("custom " + m_Name + " deactivated " + context.targetElement.name + " " + context.bindingId);
+        protected override void OnDataSourceChanged(in DataSourceContextChanged context) =>
+            Log.Add("custom " + m_Name + " source " + (context.previousContext.dataSource?.GetType().Name ?? "null") + "/" + context.previousContext.dataSourcePath
+                + " -> " + (context.newContext.dataSource?.GetType().Name ?? "null") + "/" + context.newContext.dataSourcePath);
+    }
+
+    // Bindings on labels and fields in a box: each step records the texts and values, the last
+    // results to the UI and to the source, and the custom bindings' calls (two panel updates per step).
+    static void Bindings(VisualElement root)
+    {
+        // Data bindings update when panels repaint: each step runs two frames (update, repaint).
+        void Frames()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                Update();
+                Runtime.GetMethod("RepaintPanels", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Invoke(null, new object[] { false });
+            }
+        }
+        Func<string> BindState = null;
+        void Bind(string name, Action act) => Step("binding", name, () => { act(); Frames(); }, BindState);
+        var box = new VisualElement { name = "bind-box" };
+        Place(box, 300, 560, 200, 30);
+        root.Add(box);
+        var plain = new BindSource();
+        var notifying = new BindNotifying();
+        var hashed = new BindHashed();
+        var labels = new List<Label>();
+        Label NewLabel(string name) { var l = new Label { name = name }; labels.Add(l); return l; }
+        var field = new TextField { name = "bind-field" };
+        var slider = new Slider(0, 10) { name = "bind-slider" };
+        string Result(VisualElement e, string id)
+        {
+            string ui = e.TryGetLastBindingToUIResult(id, out var r) ? r.status.ToString() : "none";
+            string src = e.TryGetLastBindingToSourceResult(id, out var r2) ? r2.status.ToString() : "none";
+            return ui + "/" + src;
+        }
+        BindState = () =>
+        {
+            var sb = new StringBuilder("{");
+            foreach (var l in labels) sb.Append(Str(l.name)).Append(":[").Append(Str(l.text)).Append(',').Append(Str(Result(l, "text"))).Append("],");
+            sb.Append("\"field\":[").Append(Str(field.value)).Append(',').Append(Str(Result(field, "value"))).Append("],");
+            sb.Append("\"slider\":[").Append(F(slider.value)).Append(',').Append(Str(Result(slider, "value"))).Append("],");
+            sb.Append("\"plain\":[").Append(Str(plain.message)).Append(',').Append(plain.count).Append(',').Append(F(plain.ratio)).Append("]}");
+            return sb.ToString();
+        };
+        Binding.SetPanelLogLevel(root.panel, BindingLogLevel.None);
+        var a = NewLabel("bind-plain");
+        var parent = new VisualElement { name = "bind-parent" };
+        var b = NewLabel("bind-hier");
+        var c = NewLabel("bind-notify");
+        var d = NewLabel("bind-once");
+        var e2 = NewLabel("bind-conv");
+        var f = NewLabel("bind-hash");
+        var g = NewLabel("bind-dirty");
+        var h = NewLabel("bind-nosource");
+        var k = NewLabel("bind-custom");
+        var m = NewLabel("bind-global");
+        DataBinding once = null, dirty = null;
+        Bind("attach", () =>
+        {
+            a.dataSource = plain;
+            a.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("message"), bindingMode = BindingMode.ToTarget });
+            parent.dataSource = plain;
+            parent.dataSourcePath = new PropertyPath("inner");
+            b.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("value") });
+            parent.Add(b);
+            c.dataSource = notifying;
+            c.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("message") });
+            d.dataSource = plain;
+            once = new DataBinding { dataSourcePath = new PropertyPath("message"), bindingMode = BindingMode.ToTargetOnce };
+            d.SetBinding("text", once);
+            e2.dataSource = plain;
+            var conv = new DataBinding { dataSourcePath = new PropertyPath("count"), bindingMode = BindingMode.ToTarget };
+            conv.sourceToUiConverters.AddConverter((ref int v) => "n=" + v);
+            e2.SetBinding("text", conv);
+            f.dataSource = hashed;
+            f.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("message") });
+            g.dataSource = plain;
+            dirty = new DataBinding { dataSourcePath = new PropertyPath("message"), updateTrigger = BindingUpdateTrigger.WhenDirty };
+            g.SetBinding("text", dirty);
+            h.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("message") });
+            k.dataSource = plain;
+            k.SetBinding("text", new LoggingBinding("k"));
+            ConverterGroups.RegisterGlobalConverter((ref BindTag t) => "tag " + t.id);
+            m.dataSource = new BindTagged();
+            m.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("tag"), bindingMode = BindingMode.ToTarget });
+            field.dataSource = plain;
+            field.SetBinding("value", new DataBinding { dataSourcePath = new PropertyPath("message") });
+            slider.dataSource = plain;
+            slider.SetBinding("value", new DataBinding { dataSourcePath = new PropertyPath("count") });
+            box.Add(a); box.Add(parent); box.Add(c); box.Add(d); box.Add(e2); box.Add(f); box.Add(g); box.Add(h); box.Add(k); box.Add(m);
+            box.Add(field); box.Add(slider);
+        });
+        Bind("source-changes", () =>
+        {
+            plain.message = "changed";
+            plain.count = 5;
+            plain.inner.value = "inner2";
+            notifying.message = "silent";
+            hashed.message = "h1";
+        });
+        Bind("notify-other", () => notifying.Notify("other"));
+        Bind("notify-path", () => notifying.Notify("message"));
+        Bind("hash-change", () => hashed.hash = 1);
+        Bind("mark-dirty", () => { once.MarkDirty(); dirty.MarkDirty(); });
+        Bind("ui-to-source", () => { field.value = "typed"; slider.value = 7.6f; });
+        Bind("source-to-ui-again", () => plain.message = "from source");
+        Bind("to-target-field", () =>
+        {
+            field.SetBinding("value", new DataBinding { dataSourcePath = new PropertyPath("message"), bindingMode = BindingMode.ToTarget });
+        });
+        Bind("to-target-field-typed", () => field.value = "ignored");
+        Bind("to-source-field", () =>
+        {
+            field.SetBinding("value", new DataBinding { dataSourcePath = new PropertyPath("message"), bindingMode = BindingMode.ToSource });
+            plain.message = "kept";
+        });
+        Bind("to-source-field-typed", () => field.value = "written");
+        Bind("give-source", () => h.dataSource = plain);
+        Bind("context", () =>
+        {
+            var ctx = b.GetDataSourceContext("text");
+            Log.Add("context " + (ctx.dataSource?.GetType().Name ?? "null") + " " + ctx.dataSourcePath);
+            Log.Add("hierarchical " + b.GetHierarchicalDataSourceContext().dataSourcePath);
+            Log.Add("infos " + string.Join(",", System.Linq.Enumerable.Select(field.GetBindingInfos(), i => i.bindingId.ToString())));
+        });
+        Bind("change-hierarchy-source", () => parent.dataSourcePath = new PropertyPath("message"));
+        Bind("clear", () => { a.ClearBinding("text"); plain.message = "after clear"; Log.Add("has " + a.HasBinding("text")); });
+        Bind("remove-custom", () => k.RemoveFromHierarchy());
+        Bind("readd-custom", () => box.Add(k));
+        // A list whose rows get their data sources automatically: each made row binds its text to its
+        // item; a tree with makeItem and no bindItem shows no rows.
+        var autoItems = new List<string> { "one", "two", "three" };
+        ListView autoList = null;
+        TreeView templateTree = null;
+        Func<string> collectionState = () => "{\"list\":" + Rows(autoList) + ",\"tree\":" + Str(templateTree.GetRootElementForIndex(0) == null ? "no rows" : "rows") + "}";
+        Step("binding", "autoassign-attach", () =>
+        {
+            autoList = new ListView { name = "bind-autolist", fixedItemHeight = 20, bindingSourceSelectionMode = BindingSourceSelectionMode.AutoAssign };
+            autoList.makeItem = () =>
+            {
+                var l = MakeLabel("auto:");
+                l.SetBinding("text", new DataBinding { bindingMode = BindingMode.ToTarget });
+                return l;
+            };
+            autoList.itemsSource = autoItems;
+            Place(autoList, 520, 560, 120, 70);
+            root.Add(autoList);
+            templateTree = new TreeView { name = "bind-templatetree", fixedItemHeight = 20 };
+            templateTree.makeItem = () => new Label();
+            templateTree.SetRootItems(new List<TreeViewItemData<string>> { new TreeViewItemData<string>(1, "a") });
+            Place(templateTree, 650, 560, 100, 40);
+            root.Add(templateTree);
+            Frames();
+        }, collectionState);
+        Step("binding", "autoassign-change", () => { autoItems[1] = "TWO"; Frames(); }, collectionState);
+        Step("binding", "autoassign-cleanup", () => { autoList.RemoveFromHierarchy(); templateTree.RemoveFromHierarchy(); }, () => "null");
+        Step("binding", "cleanup", () => { Binding.ResetPanelLogLevel(root.panel); box.RemoveFromHierarchy(); }, () => "null");
+    }
 
     // ---- transition animations (experimental.animation) ----
 

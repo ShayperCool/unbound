@@ -33,7 +33,13 @@ Stages the `uitk` fixture in a fresh cache directory and replaces its interactio
   panel update, so each completes on its first tick: values, completion callbacks, recycling,
   KeepAlive, StyleValues read from the element, the flexShrink setter, an animation started on an
   element outside a panel; every Easing curve over a grid of progress values and an animation's
-  defaults.
+  defaults;
+- `binding`: runtime data binding over two frames per step (a panel update, then a repaint, which
+  is when bindings update): labels, a text field and a slider bound to plain, notifying and
+  view-hash sources and through the hierarchy, each binding mode and update trigger, local and
+  global converters, UI changes written to the source, a custom binding's calls (activation, data
+  source changes, updates), results, a binding cleared, an element removed and re-added, a list
+  whose rows get their data sources automatically, a tree with makeItem and no bindItem.
 
 Every step records the item callbacks it caused (makeItem/bindItem/unbindItem/destroyItem, with
 the element: elements are numbered per control), the events the controls raised, and the state:
