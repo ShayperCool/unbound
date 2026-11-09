@@ -557,6 +557,8 @@ public static class CollectionsProbe
         Step("tree", "add-to-selection-id-17", () => { tree.selectionType = SelectionType.Multiple; tree.AddToSelectionById(17); }, State);
         Step("tree", "select-without-notify-id-21", () => tree.SetSelectionByIdWithoutNotify(new[] { 21 }), State);
         Step("tree", "expand-leaf-2", () => tree.ExpandItem(2), State);
+        // New root items that keep an expanded id (0): is its expansion kept?
+        Step("tree", "expand-0-before-new-roots", () => tree.ExpandItem(0), State);
         Step("tree", "set-root-items", () => { tree.SetRootItems(TreeItems(2, 2, 0)); tree.Rebuild(); }, State);
     }
 

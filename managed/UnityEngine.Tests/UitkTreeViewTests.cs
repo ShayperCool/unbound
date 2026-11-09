@@ -845,19 +845,76 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 1, 2, 3, 4 }, VisibleIds(view));
             view.AddItem(new TreeViewItemData<string>(13, "A0"), 1, 0);
             Assert.Equal(new[] { 13, 11, 12 }, view.viewController.GetChildrenIds(1).ToArray());
-            Assert.Equal(3, view.GetItemDataForId<string>(1) == "A" ? 3 : 0);
             view.autoExpand = true;
             view.AddItem(new TreeViewItemData<string>(311, "C1a"), 31);
             Assert.True(view.IsExpanded(3) && view.IsExpanded(31));
             int before = view.GetTreeCount();
-            view.AddItem(new TreeViewItemData<string>(999, "orphan"), 12345);
-            view.AddItem(new TreeViewItemData<string>(2, "B again"), 1);
+            var errors = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new ErrorCapture(errors, previous);
+            try
+            {
+                view.AddItem(new TreeViewItemData<string>(999, "orphan"), 12345);
+                view.AddItem(new TreeViewItemData<string>(2, "B again"), 1);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+            Assert.Equal(2, errors.Count);
             Assert.Equal(before, view.GetTreeCount());
-            Assert.Equal(3, view.viewController.GetChildrenIds(1).Count());
+            var controller = (DefaultTreeViewController<string>)view.viewController;
+            Assert.Equal(new[] { 13, 11, 12 }, controller.GetTreeViewItemDataForId(1).children.Select(c => c.id).ToArray());
             Assert.True(view.TryRemoveItem(3));
             Assert.False(view.viewController.Exists(31));
             Assert.False(view.viewController.Exists(311));
             Assert.False(view.TryRemoveItem(3));
+        }
+
+        sealed class ErrorCapture : ILogHandler
+        {
+            readonly List<string> m_Errors;
+            readonly ILogHandler m_Inner;
+            public ErrorCapture(List<string> errors, ILogHandler inner) { m_Errors = errors; m_Inner = inner; }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Error) m_Errors.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+                m_Inner.LogFormat(type, context, format, args);
+            }
+            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
+        }
+
+        // [rule] --unity-tree-view-indent sets the indent per level; a changed value rebinds the rows,
+        // an unchanged one does not.
+        [Fact]
+        public void TheCustomIndentPropertySetsTheIndent()
+        {
+            var panel = NewPanel();
+            panel.visualTree.style.width = 300;
+            panel.visualTree.style.height = 300;
+            var binds = 0;
+            TreeView view = null;
+            view = new TreeView(() => new Label(), (e, i) => { binds++; ((Label)e).text = view.GetItemDataForIndex<string>(i); }) { fixedItemHeight = 20f };
+            view.style.height = 200;
+            view.SetRootItems(Sample());
+            view.ExpandItem(1);
+            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+            new UssImporter("tree-indent.uss").Import(sheet, ".unity-tree-view { --unity-tree-view-indent: 13px; } .wide { --unity-tree-view-indent: 21px; }");
+            view.styleSheets.Add(sheet);
+            panel.visualTree.Add(view);
+            for (int i = 0; i < 3; i++) { panel.ApplyStyles(); panel.ValidateLayout(); }
+            var child = view.activeItems.Single(r => r.index == 1);
+            Assert.Equal(13f, ((ReusableTreeViewItem)child).m_IndentElement.style.width.value.value);
+
+            int before = binds;
+            view.AddToClassList("unrelated");
+            for (int i = 0; i < 3; i++) { panel.ApplyStyles(); panel.ValidateLayout(); }
+            Assert.Equal(before, binds);
+
+            view.AddToClassList("wide");
+            for (int i = 0; i < 3; i++) { panel.ApplyStyles(); panel.ValidateLayout(); }
+            Assert.True(binds > before);
+            Assert.Equal(21f, ((ReusableTreeViewItem)view.activeItems.Single(r => r.index == 1)).m_IndentElement.style.width.value.value);
         }
 
         // [rule] Move within a parent and to another parent.

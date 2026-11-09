@@ -75,17 +75,14 @@ namespace UnityEngine.UIElements
             RegisterCallback<CustomStyleResolvedEvent>(OnCustomStyleResolved);
         }
 
+        /// <summary>A changed --unity-tree-view-indent (set, changed or removed) rebinds the rows with
+        /// it; an unchanged one does nothing.</summary>
         void OnCustomStyleResolved(CustomStyleResolvedEvent evt)
         {
-            if (evt.customStyle.TryGetValue(s_TreeViewIndentProperty, out float indent))
-            {
-                customIdent = indent;
-                virtualizationController?.Refresh(false);
-            }
-            else
-            {
-                customIdent = null;
-            }
+            float? indent = evt.customStyle.TryGetValue(s_TreeViewIndentProperty, out float value) ? value : (float?)null;
+            if (indent == customIdent) return;
+            customIdent = indent;
+            if (viewController != null) virtualizationController?.Refresh(false);
         }
 
         public void SetRootItems<T>(IList<TreeViewItemData<T>> rootItems) => SetRootItemsInternal(rootItems);
