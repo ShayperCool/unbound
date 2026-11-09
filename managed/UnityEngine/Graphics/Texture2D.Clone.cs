@@ -9,6 +9,9 @@ namespace UnityEngine
         {
             DecodeRaw();
             SyncFromStore();
+            RefreshBlockCells();
+            // A block-compressed texture's copy takes its blocks (written ones included).
+            var blocks = SourceBlocks ? CurrentBlocks() : m_SourceRaw;
             if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null)
                 FetchImportedPixels();
 
@@ -23,7 +26,7 @@ namespace UnityEngine
                 m_Linear = m_Linear,
                 m_SourceFormat = m_SourceFormat,
                 m_SourceMips = m_SourceMips,
-                m_SourceRaw = Copy(m_SourceRaw),
+                m_SourceRaw = Copy(blocks),
                 m_Pixels = Copy(m_Pixels),
                 m_Hdr = Copy(m_Hdr),
                 m_MipPixels = CopyLevels(m_MipPixels),

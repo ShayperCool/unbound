@@ -162,6 +162,9 @@ namespace UnityEngine
         public void SetPixel(int x, int y, Color color, int mipLevel)
         {
             RequireReadable();
+            // A block-compressed texture's texels are not set one by one (no error in the Unity
+            // 6000.0.71f1 Editor, tests/projects/texturecompression write.setpixel).
+            if (SourceBlocks) return;
             if (!ValidMip(mipLevel)) { Debug.LogError("Texture mip level is out of range."); return; }
             int w = MipWidth(mipLevel), h = MipHeight(mipLevel);
             // Outside the level, Unity clamps or repeats the coordinate by the texture's wrap
@@ -233,6 +236,7 @@ namespace UnityEngine
         public void SetPixels(Color[] colors, int miplevel)
         {
             RequireReadable();
+            ThrowIfBlocks("Texture2D.SetPixels");
             CheckMip(miplevel);
             SetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), colors, miplevel);
         }
@@ -240,6 +244,7 @@ namespace UnityEngine
         public void SetPixels(int x, int y, int blockWidth, int blockHeight, Color[] colors, int miplevel)
         {
             RequireReadable();
+            ThrowIfBlocks("Texture2D.SetPixels");
             CheckBlock(x, y, blockWidth, blockHeight, miplevel);
             if (colors == null) throw new ArgumentNullException(nameof(colors));
             if (colors.Length < (long)blockWidth * blockHeight) throw new ArgumentException("Not enough pixel data.");
@@ -253,6 +258,7 @@ namespace UnityEngine
         public void SetPixels32(Color32[] colors, int miplevel)
         {
             RequireReadable(true);
+            ThrowIfBlocks("Texture2D.SetPixels32");
             CheckMip(miplevel);
             SetPixels32(0, 0, MipWidth(miplevel), MipHeight(miplevel), colors, miplevel);
         }
@@ -260,6 +266,7 @@ namespace UnityEngine
         public void SetPixels32(int x, int y, int blockWidth, int blockHeight, Color32[] colors, int miplevel)
         {
             RequireReadable(true);
+            ThrowIfBlocks("Texture2D.SetPixels32");
             CheckBlock(x, y, blockWidth, blockHeight, miplevel);
             if (colors == null) throw new ArgumentNullException(nameof(colors));
             if (colors.Length < (long)blockWidth * blockHeight) throw new ArgumentException("Not enough pixel data.");
@@ -350,7 +357,14 @@ namespace UnityEngine
         {
             RequireReadable();
             if (data == null) throw new ArgumentNullException(nameof(data));
-            if (data.Length < RawChainSize()) throw new UnityException("LoadRawTextureData: not enough data provided.");
+            if (SourceBlocks)
+            {
+                LoadBlocks(data);
+                CpuTexelsChanged();
+                return;
+            }
+            // The Unity 6000.0.71f1 Editor's message (tests/projects/texturecompression load.short).
+            if (data.Length < RawChainSize()) throw new UnityException("LoadRawTextureData: not enough data provided (will result in overread).");
             DecodeMipChain(data);
             CpuTexelsChanged();
         }
@@ -367,6 +381,12 @@ namespace UnityEngine
             if (data == null) throw new ArgumentNullException(nameof(data));
             if (sourceDataStartIndex < 0 || sourceDataStartIndex > data.Length) throw new ArgumentOutOfRangeException(nameof(sourceDataStartIndex));
             var bytes = MemoryMarshal.AsBytes(new ReadOnlySpan<T>(data, sourceDataStartIndex, data.Length - sourceDataStartIndex));
+            if (SourceBlocks)
+            {
+                SetBlockLevel(bytes, mipLevel);
+                CpuTexelsChanged();
+                return;
+            }
             int size = RawMipSize(mipLevel);
             if (bytes.Length < size) throw new ArgumentException("SetPixelData: not enough data provided.");
             DecodeLevel(bytes.Slice(0, size), mipLevel);
@@ -377,7 +397,7 @@ namespace UnityEngine
             // The blocks of a compressed texture, readable or not (the Unity 6000.0.71f1 Editor
             // answers an unreadable compressed import's too: tests/projects/texturecompression
             // SmoothUnreadable.raw).
-            if (m_Store == null && SourceBlocks) return (byte[])SourceRawData().Clone();
+            if (SourceBlocks) return (byte[])CurrentBlocks().Clone();
             if (m_SourceRaw != null) return (byte[])m_SourceRaw.Clone();
             if (!m_IsReadable)
             {

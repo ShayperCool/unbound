@@ -101,6 +101,7 @@ namespace UnityEngine
             m_SourceFormat = null;
             m_SourceMips = 0;
             m_SourceRaw = null;
+            m_BlockCellHashes = null;
             m_AssetGuid = null;
             // A new texture is grey (205,205,205,205) until written, as in Unity.
             if (Texture2DTexels.FloatStored(format))
@@ -202,6 +203,7 @@ namespace UnityEngine
                 throw new UnityException(message);
             }
             DecodeRaw();
+            RefreshBlockCells();
             if (m_Pixels == null && m_Hdr == null)
             {
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
@@ -307,7 +309,8 @@ namespace UnityEngine
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
             RequireReadable();
-            if (updateMipmaps) GenerateMipChain();
+            // A block-compressed texture's levels are its blocks: nothing regenerates them.
+            if (updateMipmaps && !SourceBlocks) GenerateMipChain();
             var rawCopy = makeNoLongerReadable ? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
@@ -471,6 +474,16 @@ namespace UnityEngine
 
         unsafe void Upload()
         {
+            if (SourceBlocks && CurrentBlocks() != null)
+            {
+                // A block-compressed texture uploads its blocks (also those written by scripts).
+                if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
+                m_PixelsDirty = false;
+                updateCount++;
+                UploadBlocks();
+                DropIfNotReadable();
+                return;
+            }
             if (m_Pixels == null && m_Raw != null)
             {
                 if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
@@ -722,6 +735,7 @@ namespace UnityEngine
             m_MipHdr = null;
             m_SourceFormat = null;
             m_SourceMips = 0;
+            m_BlockCellHashes = null;
             m_PixelsDirty = false;
             m_AssetGuid = m_ImportedFrom;
             m_NativeHandle = handle;

@@ -28,6 +28,154 @@ namespace UnityEngine
             return m_SourceRaw;
         }
 
+        /// <summary>The blocks the texture holds now: its pixel data store while views of it exist
+        /// (writes through them land there), else its own.</summary>
+        byte[] CurrentBlocks() => m_Store ?? SourceRawData();
+
+        /// <summary>While views of a block-compressed texture's blocks exist: per level, the hash
+        /// of the blocks its pixel cells show.</summary>
+        ulong[] m_BlockCellHashes;
+
+        /// <summary>The pixel cells of a block-compressed texture are what its blocks decode to,
+        /// as the Editor's pixel reads are (tests/projects/texturecompression write.*). The
+        /// import's cells already are; SetPixelData and LoadRawTextureData decode what they write;
+        /// while views of the blocks exist, each read decodes the levels whose blocks changed.</summary>
+        void RefreshBlockCells()
+        {
+            if (!SourceBlocks || m_Store == null) return;
+            int at = 0;
+            for (int mip = 0; mip < m_SourceMips; mip++)
+            {
+                int size = SourceLevelSize(mip);
+                var level = new ReadOnlySpan<byte>(m_Store, at, size);
+                ulong hash = Fnv1a(level);
+                if (m_BlockCellHashes == null || m_BlockCellHashes[mip] != hash) DecodeBlockLevel(level, mip);
+                (m_BlockCellHashes ??= new ulong[m_SourceMips])[mip] = hash;
+                at += size;
+            }
+        }
+
+        /// <summary>The level hashes of blocks whose cells are current (views are being made).</summary>
+        void HashBlockCells(byte[] blocks)
+        {
+            m_BlockCellHashes = new ulong[m_SourceMips];
+            int at = 0;
+            for (int mip = 0; mip < m_SourceMips; mip++)
+            {
+                int size = SourceLevelSize(mip);
+                m_BlockCellHashes[mip] = Fnv1a(new ReadOnlySpan<byte>(blocks, at, size));
+                at += size;
+            }
+        }
+
+        /// <summary>Decodes one level of blocks into the pixel cells.</summary>
+        void DecodeBlockLevel(ReadOnlySpan<byte> blocks, int mip)
+        {
+            int w = MipWidth(mip), h = MipHeight(mip);
+            var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
+            {
+                format = (int)m_SourceFormat.Value,
+                width = w,
+                height = h,
+                data = Convert.ToBase64String(blocks),
+            }));
+            using var doc = JsonDocument.Parse(json);
+            var rgba = Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
+            if (Texture2DTexels.FloatStored(m_Format))
+            {
+                m_Hdr ??= new Color[m_Width * m_Height];
+                var cells = FloatLevel(mip);
+                for (int i = 0; i < cells.Length && i * 4 + 3 < rgba.Length; i++)
+                    cells[i] = new Color(rgba[i * 4] / 255f, rgba[i * 4 + 1] / 255f, rgba[i * 4 + 2] / 255f, 1f);
+            }
+            else
+            {
+                m_Pixels ??= new Color32[m_Width * m_Height];
+                PixelFormats.Decode(TextureFormat.RGBA32, rgba, ByteLevel(mip));
+            }
+        }
+
+        static ulong Fnv1a(ReadOnlySpan<byte> data)
+        {
+            ulong hash = 14695981039346656037UL;
+            foreach (var b in data) hash = (hash ^ b) * 1099511628211UL;
+            return hash;
+        }
+
+        /// <summary>SetPixelData of a block-compressed texture: the level's blocks.</summary>
+        void SetBlockLevel(ReadOnlySpan<byte> data, int mip)
+        {
+            int size = SourceLevelSize(mip);
+            if (data.Length < size) throw new ArgumentException("SetPixelData: not enough data provided.");
+            var blocks = CurrentBlocks();
+            int at = 0;
+            for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
+            CheckStoreWrite();
+            data.Slice(0, size).CopyTo(new Span<byte>(blocks, at, size));
+            EnsureBlockCells();
+            DecodeBlockLevel(new ReadOnlySpan<byte>(blocks, at, size), mip);
+            if (m_BlockCellHashes != null) m_BlockCellHashes[mip] = Fnv1a(new ReadOnlySpan<byte>(blocks, at, size));
+        }
+
+        /// <summary>The pixel cells exist before a level is decoded into them (an import's are
+        /// read from the import).</summary>
+        void EnsureBlockCells()
+        {
+            if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null) FetchImportedPixels();
+        }
+
+        /// <summary>LoadRawTextureData of a block-compressed texture: the whole chain's blocks.</summary>
+        void LoadBlocks(ReadOnlySpan<byte> data)
+        {
+            int total = 0;
+            for (int mip = 0; mip < m_SourceMips; mip++) total += SourceLevelSize(mip);
+            if (data.Length < total) throw new UnityException("LoadRawTextureData: not enough data provided (will result in overread).");
+            var blocks = CurrentBlocks();
+            CheckStoreWrite();
+            data.Slice(0, total).CopyTo(blocks);
+            EnsureBlockCells();
+            int at = 0;
+            for (int mip = 0; mip < m_SourceMips; mip++)
+            {
+                int size = SourceLevelSize(mip);
+                DecodeBlockLevel(new ReadOnlySpan<byte>(blocks, at, size), mip);
+                at += size;
+            }
+            if (m_BlockCellHashes != null) HashBlockCells(blocks);
+        }
+
+        /// <summary>SetPixels and SetPixels32 refuse a block-compressed texture (the Editor's
+        /// error, tests/projects/texturecompression write.setpixels*).</summary>
+        void ThrowIfBlocks(string api)
+        {
+            if (SourceBlocks) throw new ArgumentException($"{api}: texture uses an unsupported format. (Texture '{name}')");
+        }
+
+        /// <summary>Uploads a block-compressed texture's blocks.</summary>
+        unsafe void UploadBlocks()
+        {
+            var blocks = CurrentBlocks();
+            m_GpuMipCount = m_SourceMips;
+            fixed (byte* b = blocks)
+            {
+                var packet = new TexturePacket
+                {
+                    Width = m_Width,
+                    Height = m_Height,
+                    Format = BlockFormats.GpuCode(m_SourceFormat.Value, m_Linear),
+                    MipCount = m_SourceMips,
+                    Data = b,
+                    DataLength = blocks.Length,
+                    FilterMode = (int)filterMode,
+                    WrapU = (int)wrapModeU,
+                    WrapV = (int)wrapModeV,
+                    WrapW = (int)wrapModeW,
+                    AnisoLevel = anisoLevel,
+                };
+                UploadTexture(&packet);
+            }
+        }
+
         /// <summary>A whole level's pixels as GetPixels and GetPixels32 answer them: a compressed
         /// texture's level smaller than a block is the whole decoded block, the level repeated as
         /// tiles (the Unity 6000.0.71f1 Editor, tests/projects/texturecompression pixels5 and
@@ -62,6 +210,19 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.DXT5 or UnityEngine.TextureFormat.BC5 or UnityEngine.TextureFormat.BC6H
                 or UnityEngine.TextureFormat.BC7 => 16,
             _ => 0,
+        };
+
+        /// <summary>The renderer's packet code of a block format: BC1, BC3 and BC7 colour (sampled
+        /// through an sRGB view in linear projects) or linear data; BC4, BC5 and BC6H.</summary>
+        internal static int GpuCode(UnityEngine.TextureFormat format, bool linear) => format switch
+        {
+            UnityEngine.TextureFormat.DXT1 => linear ? 39 : 38,
+            UnityEngine.TextureFormat.DXT5 => linear ? 41 : 40,
+            UnityEngine.TextureFormat.BC7 => linear ? 8 : 7,
+            UnityEngine.TextureFormat.BC4 => 42,
+            UnityEngine.TextureFormat.BC5 => 43,
+            UnityEngine.TextureFormat.BC6H => 44,
+            _ => throw new ArgumentException($"{format} is not a block format"),
         };
 
         /// <summary>Bytes of a `width` x `height` level.</summary>

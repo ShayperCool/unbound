@@ -43,10 +43,15 @@ namespace UnityEngine
             if (m_Store != null) return;
             if (SourceBlocks)
             {
-                // The views of a compressed texture are its blocks.
-                var raw = (byte[])SourceRawData().Clone();
+                // The views of a compressed texture are its blocks: the store is the texture's own
+                // block array, so writes through views stay with the texture.
+                var raw = SourceRawData();
                 var levels = new int[m_SourceMips + 1];
                 for (int mip = 0; mip < m_SourceMips; mip++) levels[mip + 1] = checked(levels[mip] + SourceLevelSize(mip));
+                if (raw == null || raw.Length < levels[^1])
+                    throw new UnityException($"Texture '{name}' has incomplete compressed data.");
+                EnsureBlockCells();
+                HashBlockCells(raw);
                 m_Store = raw;
                 m_StoreOffsets = levels;
                 m_StorePin = GCHandle.Alloc(raw, GCHandleType.Pinned);
