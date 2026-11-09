@@ -29,7 +29,7 @@ namespace Unbound.Tests
 
         internal override bool HasCharacter(int codepoint) => codepoint != 0x2603;
 
-        internal override bool Render(int codepoint, int size, FontStyle style, out RenderedGlyph glyph)
+        internal override bool Render(int codepoint, int size, FontStyle style, int renderingMode, out RenderedGlyph glyph)
         {
             glyph = default;
             if (!HasCharacter(codepoint)) return false;
@@ -90,7 +90,10 @@ namespace Unbound.Tests
             Assert.Same(font.material.mainTexture, font.material.mainTexture);
             Assert.Equal(TextureFormat.Alpha8, ((Texture2D)font.material.mainTexture).format);
             Assert.True(font.HasCharacter('A'));
-            Assert.False(font.HasCharacter('☃'));
+            // A dynamic font answers for any character above U+001F, even one its face lacks.
+            Assert.True(font.HasCharacter('☃'));
+            Assert.True(font.HasCharacter(' '));
+            Assert.False(font.HasCharacter('\u001f'));
         }
 
         [Fact]

@@ -20,8 +20,10 @@ namespace Unbound.Runtime
 
         internal abstract bool HasCharacter(int codepoint);
 
-        /// <summary>The glyph at a pixel size (em), FreeType-style: false when the face lacks it.</summary>
-        internal abstract bool Render(int codepoint, int size, FontStyle style, out RenderedGlyph glyph);
+        /// <summary>The glyph at a pixel size (em), FreeType-style: false when the face lacks it.
+        /// <paramref name="renderingMode"/> is the requesting font's FontRenderingMode, which a
+        /// fallback face renders in too.</summary>
+        internal abstract bool Render(int codepoint, int size, FontStyle style, int renderingMode, out RenderedGlyph glyph);
     }
 
     /// <summary>A rasterized glyph: pixels relative to the pen on the baseline, coverage top row first.</summary>
@@ -54,7 +56,6 @@ namespace Unbound.Runtime
         sealed class OpenJson
         {
             public ulong Handle { get; set; }
-            public ulong? LegacyHandle { get; set; }
             public int UnitsPerEm { get; set; }
             public int Ascender { get; set; }
             public int Descender { get; set; }
@@ -70,8 +71,9 @@ namespace Unbound.Runtime
         static readonly JsonSerializerOptions s_Json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
         readonly ulong m_Handle;
-        ulong m_LegacyHandle;
-        ulong LegacyHandle => m_LegacyHandle != 0 ? m_LegacyHandle : m_Handle;
+        /// <summary>False for a face that provides metrics only: the Editor's built-in
+        /// LegacyRuntime font holds no font data, its glyphs come from OS fonts.</summary>
+        internal bool HasGlyphData = true;
         readonly Dictionary<int, bool> m_Has = new Dictionary<int, bool>();
         /// <summary>The TrueTypeFontImporter settings of a project font.</summary>
         internal FontSettingsJson Settings;
@@ -98,7 +100,6 @@ namespace Unbound.Runtime
             }
             return new NativeGlyphSource(info.Handle)
             {
-                m_LegacyHandle = info.LegacyHandle ?? info.Handle,
                 UnitsPerEm = info.UnitsPerEm,
                 Ascender = info.Ascender,
                 Descender = info.Descender,
@@ -141,13 +142,51 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Ordered system-family fallback for legacy dynamic glyphs, measured by
-        /// glyphraster on 6000.0.71f1. Resource face metrics remain independent.</summary>
-        internal static readonly string[] LegacyFallbackNames = {
+        /// <summary>The OS families a legacy dynamic font falls back to, per character and in this
+        /// order, after its own face, fallback fonts and font names (Unity 6000.0.71f1 Editor on
+        /// Linux, tests/projects/glyphraster): common families, the platform's, then LastResort.</summary>
+        internal static readonly string[] LegacyOsFallbackNames = {
             "Arial", "Arial Unicode MS", "Helvetica Neue", "Microsoft Sans Serif", "Microsoft YaHei",
-            "Malgun Gothic", "Gulim", "MS Gothic", "Nirmala UI", "FreeSans", "Droid Sans", "DejaVu Sans",
-            "Liberation Sans", "WenQuanYi Micro Hei"
+            "Malgun Gothic", "Gulim", "MS Gothic", "Nirmala UI",
+            "FreeSans", "Droid Sans", "DejaVu Sans", "Liberation Sans", "WenQuanYi Micro Hei", "HYSong",
+            "NanumGothic", "TakaoGothic", "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC",
+            "Noto Sans CJK TC", "Droid Sans Fallback", "Noto Color Emoji",
+            "LastResort",
         };
+
+        static readonly Dictionary<string, NativeGlyphSource> s_OsFaces = new Dictionary<string, NativeGlyphSource>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The installed OS face of a family, opened once; null when it is not installed.</summary>
+        internal static NativeGlyphSource OsFace(string family)
+        {
+            if (string.IsNullOrEmpty(family) || !Native.IsReady) return null;
+            if (s_OsFaces.TryGetValue(family, out var face)) return face;
+            face = OpenOsFont(new[] { family });
+            s_OsFaces[family] = face;
+            return face;
+        }
+
+        static GlyphSource s_LegacyOsFallback;
+        static bool s_LegacyOsFallbackOpened;
+
+        /// <summary>The installed faces of <see cref="LegacyOsFallbackNames"/>, first one having a
+        /// character first; null when none is installed.</summary>
+        internal static GlyphSource LegacyOsFallback
+        {
+            get
+            {
+                if (s_LegacyOsFallbackOpened || !Native.IsReady) return s_LegacyOsFallback;
+                s_LegacyOsFallbackOpened = true;
+                var sources = new List<GlyphSource>();
+                foreach (var name in LegacyOsFallbackNames)
+                {
+                    var face = OsFace(name);
+                    if (face != null && !sources.Contains(face)) sources.Add(face);
+                }
+                s_LegacyOsFallback = sources.Count > 0 ? new ChainGlyphSource(sources) : null;
+                return s_LegacyOsFallback;
+            }
+        }
 
         static GlyphSource s_OsFallback;
         static bool s_OsFallbackOpened;
@@ -171,10 +210,11 @@ namespace Unbound.Runtime
 
         internal override bool HasCharacter(int codepoint)
         {
+            if (!HasGlyphData) return false;
             if (m_Has.TryGetValue(codepoint, out var has)) return has;
             try
             {
-                has = Native.Call("font-has-character", JsonSerializer.Serialize(new { handle = LegacyHandle, codepoint })) == "true";
+                has = Native.Call("font-has-character", JsonSerializer.Serialize(new { handle = m_Handle, codepoint })) == "true";
             }
             catch (Exception)
             {
@@ -183,10 +223,11 @@ namespace Unbound.Runtime
             return m_Has[codepoint] = has;
         }
 
-        internal override bool Render(int codepoint, int size, FontStyle style, out RenderedGlyph glyph)
+        internal override bool Render(int codepoint, int size, FontStyle style, int renderingMode, out RenderedGlyph glyph)
         {
             glyph = default;
-            if (!Native.FontGlyph(LegacyHandle, (uint)codepoint, size, (int)style | ((Settings?.RenderingMode ?? 0) << 8), out var info, out var coverage)) return false;
+            if (!HasGlyphData) return false;
+            if (!Native.FontGlyph(m_Handle, (uint)codepoint, size, (int)style | ((renderingMode & 3) << 8), out var info, out var coverage)) return false;
             m_Has[codepoint] = true;
             glyph = new RenderedGlyph
             {
@@ -228,10 +269,10 @@ namespace Unbound.Runtime
             return false;
         }
 
-        internal override bool Render(int codepoint, int size, FontStyle style, out RenderedGlyph glyph)
+        internal override bool Render(int codepoint, int size, FontStyle style, int renderingMode, out RenderedGlyph glyph)
         {
             foreach (var s in m_Sources)
-                if (s.Render(codepoint, size, style, out glyph)) return true;
+                if (s.Render(codepoint, size, style, renderingMode, out glyph)) return true;
             glyph = default;
             return false;
         }
@@ -323,7 +364,7 @@ namespace Unbound.Runtime
             glyph = new AtlasGlyph { Key = key };
             foreach (var source in m_Font.Sources())
             {
-                if (!source.Render(key.Codepoint, key.Size, key.Style, out var rendered)) continue;
+                if (!source.Render(key.Codepoint, key.Size, key.Style, m_Font.m_RenderingMode, out var rendered)) continue;
                 glyph.Found = true;
                 glyph.Advance = m_Font.m_ShouldRoundAdvanceValue
                     ? (float)Math.Round(rendered.Advance, MidpointRounding.AwayFromZero)
@@ -567,8 +608,7 @@ namespace Unbound.Runtime
             get
             {
                 if (s_LegacyRuntime != null) return s_LegacyRuntime;
-                var source = NativeGlyphSource.Open(new { builtin = "LegacyRuntime",
-                    legacyFallbackNames = Compat.LegacyGlyphRasterMeasured ? NativeGlyphSource.LegacyFallbackNames : Array.Empty<string>() });
+                var source = NativeGlyphSource.Open(new { builtin = "LegacyRuntime" });
                 if (source == null && !s_Failed)
                 {
                     s_Failed = true;
@@ -580,6 +620,12 @@ namespace Unbound.Runtime
                     // As Unity 6000.0's resources serialize it: an Arial-compatible face at size 13.
                     font.m_FontNames = new[] { "Arial" };
                     font.InitFromSource(source, 13, "LegacyRuntime");
+                    // The Editor's resource has no font data: its metrics are serialized and its
+                    // glyphs come from the OS faces of its font names and the fallback families.
+                    // Without any of those installed, the player's face draws them.
+                    if (source != null && Compat.LegacyGlyphRasterMeasured
+                        && (NativeGlyphSource.OsFace("Arial") != null || NativeGlyphSource.LegacyOsFallback != null))
+                        source.HasGlyphData = false;
                     s_LegacyRuntime = font;
                 }
                 return s_LegacyRuntime;
@@ -626,6 +672,7 @@ namespace Unbound.Runtime
                 font.m_FallbackGuids = settings.FallbackFonts ?? Array.Empty<string>();
                 font.m_ShouldRoundAdvanceValue = settings.ShouldRoundAdvanceValue;
                 font.m_CharacterPadding = settings.CharacterPadding;
+                font.m_RenderingMode = settings.RenderingMode;
                 font.InitFromSource(source, settings.FontSize, name, settings.AscentCalculationMode);
                 // A font with a fixed character set is not dynamic: its glyphs have the import size.
                 font.m_Dynamic = settings.TextureCase == -2;

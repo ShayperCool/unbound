@@ -22,6 +22,7 @@ namespace UnityEngine
                 m_Dynamic = m_Dynamic,
                 m_ShouldRoundAdvanceValue = m_ShouldRoundAdvanceValue,
                 m_CharacterPadding = m_CharacterPadding,
+                m_RenderingMode = m_RenderingMode,
                 m_AsciiStartOffset = m_AsciiStartOffset,
                 m_Tracking = m_Tracking,
                 m_FallbackGuids = (string[])m_FallbackGuids.Clone(),

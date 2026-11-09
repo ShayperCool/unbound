@@ -125,7 +125,8 @@ impl FontFace {
         self.render_legacy(c, size, bold, italic, 0)
     }
 
-    /// Legacy dynamic-font rendering mode: smooth, hinted smooth, hinted raster, or OS default.
+    /// The glyph of `c` as a legacy dynamic font renders it. `mode` is the requesting font's
+    /// `FontRenderingMode` (smooth, hinted smooth, hinted raster, OS default).
     pub fn render_legacy(
         &self,
         c: char,
@@ -134,17 +135,26 @@ impl FontFace {
         italic: bool,
         mode: i32,
     ) -> Option<GlyphBitmap> {
+        self.with_legacy(|face| face.render(c, size, bold, italic, mode))?
+    }
+
+    /// The face's own style as a Unity `FontStyle` (1 bold, 2 italic), from FreeType's style
+    /// flags: what a request for that style finds without synthesis.
+    pub fn legacy_style(&self) -> i32 {
+        self.with_legacy(|face| face.style()).unwrap_or(0)
+    }
+
+    fn with_legacy<T>(
+        &self,
+        f: impl FnOnce(&mut crate::font_legacy::LegacyFace) -> T,
+    ) -> Option<T> {
         let backend = self.legacy.get_or_init(|| {
             let face = crate::font_legacy::LegacyFace::new(self.data.clone(), self.index)
                 .map_err(|error| tracing::warn!("{error:#}"))
                 .ok();
             Mutex::new(face)
         });
-        backend
-            .lock()
-            .unwrap()
-            .as_mut()?
-            .render(c, size, bold, italic, mode)
+        Some(f(backend.lock().unwrap().as_mut()?))
     }
 
     /// The glyph index of `c`; 0 (the missing glyph) when the font lacks it.
@@ -916,7 +926,7 @@ pub struct BuiltinFontImporter {
 impl Importer for BuiltinFontImporter {
     type Output = BuiltinFont;
     const KIND: &'static str = "builtin-fonts";
-    const VERSION: u32 = 2;
+    const VERSION: u32 = 1;
 
     fn import(&self, _source: &Path, bytes: &[u8], _meta: &Value) -> Result<BuiltinFont> {
         Ok(BuiltinFont {

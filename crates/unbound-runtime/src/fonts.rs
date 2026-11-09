@@ -109,37 +109,65 @@ pub fn kerning(handle: u64, firsts: Option<&[u16]>, seconds: Option<&[u16]>) -> 
     ))
 }
 
-/// A glyph of a face at `size` pixels per em; `style` is Unity's `FontStyle` (1 bold, 2 italic).
+/// A legacy dynamic-font glyph of a face at `size` pixels per em. `style` holds Unity's
+/// `FontStyle` (1 bold, 2 italic) and, from bit 8, the requesting font's `FontRenderingMode`.
+///
+/// A styled request first looks for the installed face of the same family with that style (a
+/// face that has the style itself is not synthesized again); without one, or when that face
+/// lacks the character, the requested face is rendered with synthetic bold/italic.
 pub fn glyph(handle: u64, codepoint: u32, size: f32, style: i32) -> Option<GlyphBitmap> {
     let c = char::from_u32(codepoint)?;
-    let original = face(handle)?;
-    let selected = if style & 3 != 0 {
-        static STYLED: OnceLock<Mutex<HashMap<(u64, i32), u64>>> = OnceLock::new();
-        let mut styled = STYLED.get_or_init(Default::default).lock().unwrap();
-        *styled.entry((handle, style & 3)).or_insert_with(|| {
-            find_styled_os_font(&original.metrics().family, style & 3)
-                .and_then(|(path, index)| load_file(&path, index).ok())
-                .unwrap_or(handle)
-        })
-    } else {
-        handle
-    };
-    face(selected)?.render_legacy(c, size, style & 1 != 0, style & 2 != 0, (style >> 8) & 3)
+    let requested = face(handle)?;
+    let font_style = style & 3;
+    let (bold, italic, mode) = (style & 1 != 0, style & 2 != 0, (style >> 8) & 3);
+    if font_style != 0
+        && let Some(styled) = styled_face(handle, &requested, font_style)
+        && let Some(glyph) =
+            face(styled).and_then(|styled| styled.render_legacy(c, size, bold, italic, mode))
+    {
+        return Some(glyph);
+    }
+    requested.render_legacy(c, size, bold, italic, mode)
 }
 
+/// The face a styled request of `handle` renders from, when it is another face: an installed face
+/// of the family with that style. Looked up once per face and style.
+fn styled_face(handle: u64, requested: &FontFace, style: i32) -> Option<u64> {
+    static STYLED: OnceLock<Mutex<HashMap<(u64, i32), Option<u64>>>> = OnceLock::new();
+    let mut styled = STYLED.get_or_init(Default::default).lock().unwrap();
+    *styled.entry((handle, style)).or_insert_with(|| {
+        if requested.legacy_style() == style {
+            return None;
+        }
+        let (path, index) = find_styled_os_font(&requested.metrics().family, style)?;
+        load_file(&path, index)
+            .map_err(|e| tracing::debug!("styled face {}: {e:#}", path.display()))
+            .ok()
+            .filter(|&found| found != handle)
+    })
+}
+
+/// The installed face of `family` whose style name says `style` (1 bold, 2 italic): bold when a
+/// word of it is "Bold", italic when one is "Italic" or "Oblique", as the faces' style flags
+/// read for ordinary families. Among several (widths such as "Condensed Bold"), the shortest
+/// style name.
 fn find_styled_os_font(family: &str, style: i32) -> Option<(PathBuf, u32)> {
-    os_fonts()
+    pick_styled(os_fonts(), family, style).map(|font| (font.path.clone(), font.index))
+}
+
+fn pick_styled<'a>(fonts: &'a [OsFont], family: &str, style: i32) -> Option<&'a OsFont> {
+    fonts
         .iter()
-        .find(|font| {
-            if !font.family.eq_ignore_ascii_case(family) {
-                return false;
-            }
-            let name = font.style.to_ascii_lowercase();
-            let bold = name.contains("bold");
-            let italic = name.contains("italic") || name.contains("oblique");
-            i32::from(bold) | (i32::from(italic) << 1) == style
-        })
-        .map(|font| (font.path.clone(), font.index))
+        .filter(|font| font.family.eq_ignore_ascii_case(family) && style_of(&font.style) == style)
+        .min_by_key(|font| font.style.split_whitespace().count())
+}
+
+fn style_of(name: &str) -> i32 {
+    let words = || name.split(|c: char| c.is_whitespace() || c == '-');
+    let bold = words().any(|w| w.eq_ignore_ascii_case("bold"));
+    let italic =
+        words().any(|w| w.eq_ignore_ascii_case("italic") || w.eq_ignore_ascii_case("oblique"));
+    i32::from(bold) | (i32::from(italic) << 1)
 }
 
 #[derive(Deserialize, Default)]
@@ -151,10 +179,6 @@ pub struct OpenRequest {
     pub file: Option<String>,
     /// A built-in font: `LegacyRuntime`.
     pub builtin: Option<String>,
-    /// Preferred OS families for system-backed legacy glyphs. Face metrics and TextCore keep
-    /// the extracted resource face.
-    #[serde(default)]
-    pub legacy_fallback_names: Vec<String>,
     /// OS font family names, in order of preference.
     #[serde(default)]
     pub names: Vec<String>,
@@ -209,13 +233,6 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
         found = false;
         builtin_face(unity_data)?
     };
-    let legacy_handle = if request.builtin.is_some() && !request.legacy_fallback_names.is_empty() {
-        find_os_font(&request.legacy_fallback_names)
-            .map(|(path, index)| load_file(&path, index))
-            .transpose()?
-    } else {
-        None
-    };
     let m = face(handle).context("no such face")?.metrics().clone();
     tracing::debug!(
         "font {handle}: {} {} from {}",
@@ -225,7 +242,6 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
     );
     let mut info = json!({
         "handle": handle,
-        "legacyHandle": legacy_handle,
         "unitsPerEm": m.units_per_em,
         "ascender": m.ascender,
         "descender": m.descender,
@@ -437,6 +453,41 @@ fn scan_font_dirs() -> Vec<OsFont> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn style_names_map_to_font_styles() {
+        assert_eq!(style_of("Regular"), 0);
+        assert_eq!(style_of("Book"), 0);
+        assert_eq!(style_of("SemiBold"), 0);
+        assert_eq!(style_of("Bold"), 1);
+        assert_eq!(style_of("Condensed Bold"), 1);
+        assert_eq!(style_of("Italic"), 2);
+        assert_eq!(style_of("Oblique"), 2);
+        assert_eq!(style_of("Bold Oblique"), 3);
+        assert_eq!(style_of("Bold-Italic"), 3);
+    }
+
+    #[test]
+    fn a_styled_request_picks_the_plain_width_of_its_family() {
+        let font = |family: &str, style: &str, path: &str| OsFont {
+            family: family.into(),
+            style: style.into(),
+            path: path.into(),
+            index: 0,
+        };
+        let fonts = [
+            font("DejaVu Sans", "Condensed Bold", "condensed-bold"),
+            font("DejaVu Sans", "Bold", "bold"),
+            font("DejaVu Sans", "Book", "book"),
+            font("DejaVu Sans", "Bold Oblique", "bold-oblique"),
+            font("FreeSans", "Bold", "other-family"),
+        ];
+        let pick = |family, style| pick_styled(&fonts, family, style).map(|f| f.path.clone());
+        assert_eq!(pick("dejavu sans", 1), Some("bold".into()));
+        assert_eq!(pick("DejaVu Sans", 3), Some("bold-oblique".into()));
+        assert_eq!(pick("DejaVu Sans", 2), None);
+        assert_eq!(pick("Liberation Sans", 1), None);
+    }
 
     #[test]
     fn handles_start_at_one() {

@@ -31,6 +31,8 @@ namespace UnityEngine
         internal bool m_Dynamic;
         internal bool m_ShouldRoundAdvanceValue = true;
         internal int m_CharacterPadding = 1;
+        /// <summary>The importer's FontRenderingMode (Smooth 0, HintedSmooth, HintedRaster, OSDefault).</summary>
+        internal int m_RenderingMode;
         internal int m_AsciiStartOffset;
         internal float m_Tracking = 1f;
         /// <summary>A custom font's characters (m_CharacterRects).</summary>
@@ -166,8 +168,12 @@ namespace UnityEngine
 
         public bool HasCharacter(char c) => HasCharacter((int)c);
 
+        /// <summary>A dynamic font answers true for every character above U+001F, whether a face
+        /// has it or not (Unity 6000.0.71f1, tests/projects/glyphraster); a font with a fixed
+        /// character set looks in its characters.</summary>
         internal bool HasCharacter(int c)
         {
+            if (m_Dynamic) return c > 0x1F;
             if (m_Source != null) return m_Source.HasCharacter(c);
             foreach (var info in m_CharacterRects)
                 if (info.index == c) return true;
@@ -264,16 +270,32 @@ namespace UnityEngine
         internal float DescentAt(int size) => m_Dynamic ? m_Descent * size / Math.Max(1f, m_FontSize) : m_Descent;
         internal float LineSpacingAt(int size) => m_Dynamic ? m_LineSpacing * size / Math.Max(1f, m_FontSize) : m_LineSpacing;
 
-        /// <summary>The glyph sources to try for a character: the face, then the fallback fonts.</summary>
+        /// <summary>The glyph sources to try for a character, first one having it: the face, the
+        /// fallback fonts, then OS faces of the font names and the OS fallback families.</summary>
         internal IEnumerable<GlyphSource> Sources()
         {
-            if (m_Source != null) yield return m_Source;
+            var own = m_Source as NativeGlyphSource;
+            bool ownGlyphs = m_Source != null && (own == null || own.HasGlyphData);
+            if (ownGlyphs) yield return m_Source;
             ResolveFallbacks();
             foreach (var fallback in m_FallbackFonts)
                 if (fallback != null && fallback != this && fallback.m_Source != null)
                     yield return fallback.m_Source;
-            var os = NativeGlyphSource.OsFallback;
-            if (os != null) yield return os;
+            if (!Compat.LegacyGlyphRasterMeasured)
+            {
+                var os = NativeGlyphSource.OsFallback;
+                if (os != null) yield return os;
+                yield break;
+            }
+            // The font's own face answers to its family name before an installed face of that name.
+            foreach (var name in m_FontNames)
+            {
+                if (ownGlyphs && string.Equals(name, m_Source.Family, StringComparison.OrdinalIgnoreCase)) continue;
+                var face = NativeGlyphSource.OsFace(name);
+                if (face != null && face != m_Source) yield return face;
+            }
+            var fallbacks = NativeGlyphSource.LegacyOsFallback;
+            if (fallbacks != null) yield return fallbacks;
         }
 
         void ResolveFallbacks()

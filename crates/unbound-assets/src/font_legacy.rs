@@ -1,12 +1,28 @@
-//! Legacy dynamic-font rendering through the bundled FreeType library. TextCore's outline and
-//! distance-field path remains independent. The configuration is measured by glyphraster.
+//! Legacy dynamic-font rendering (Font, UI Text, TextMesh, IMGUI) through the bundled FreeType
+//! library, configured as the Unity 6000.0.71f1 Editor renders dynamic fonts
+//! (tests/projects/glyphraster). TextCore's outline and distance-field path stays independent.
 use super::font::GlyphBitmap;
 use freetype_sys as ft;
 use std::sync::Arc;
 
-// Legacy synthesis settings measured across normal/intrinsic/synthetic styles by glyphraster.
+/// Synthetic italic: a horizontal shear of 0.25 (16.16 fixed point), applied only when the face
+/// is not italic itself.
 const ITALIC_SHEAR: ft::FT_Fixed = 0x4000;
+/// Synthetic bold: the rendered bitmap grows by `max(pixel size / 55, 1)` pixels in both
+/// directions; the advance stays the face's and the glyph's top moves up by the same amount.
 const BOLD_SIZE_DIVISOR: f32 = 55.0;
+const BOLD_MIN_STRENGTH: f32 = 1.0;
+/// Rows of converted bitmaps are aligned to 4 bytes, as FreeType's conversion is asked to.
+const CONVERT_ALIGNMENT: ft::FT_Int = 4;
+
+/// Load flags per `FontRenderingMode` (Smooth, HintedSmooth, HintedRaster, OSDefault); the
+/// render mode is the load target's. Unknown modes render as Smooth.
+const LOAD_FLAGS: [ft::FT_Int32; 4] = [
+    ft::FT_LOAD_NO_HINTING,
+    ft::FT_LOAD_DEFAULT,
+    ft::FT_LOAD_TARGET_MONO,
+    ft::FT_LOAD_NO_HINTING,
+];
 
 unsafe extern "C" {
     fn FT_Bitmap_Embolden(
@@ -15,6 +31,14 @@ unsafe extern "C" {
         x_strength: ft::FT_Pos,
         y_strength: ft::FT_Pos,
     ) -> ft::FT_Error;
+    fn FT_Bitmap_Init(bitmap: *mut ft::FT_Bitmap);
+    fn FT_Bitmap_Convert(
+        library: ft::FT_Library,
+        source: *const ft::FT_Bitmap,
+        target: *mut ft::FT_Bitmap,
+        alignment: ft::FT_Int,
+    ) -> ft::FT_Error;
+    fn FT_Bitmap_Done(library: ft::FT_Library, bitmap: *mut ft::FT_Bitmap) -> ft::FT_Error;
 }
 
 pub(crate) struct LegacyFace {
@@ -64,6 +88,13 @@ impl LegacyFace {
         }
     }
 
+    /// The face's own style as a Unity `FontStyle`: 1 bold, 2 italic.
+    pub(crate) fn style(&self) -> i32 {
+        let flags = unsafe { (*self.face).style_flags };
+        i32::from(flags & ft::FT_STYLE_FLAG_BOLD != 0)
+            | (i32::from(flags & ft::FT_STYLE_FLAG_ITALIC != 0) << 1)
+    }
+
     pub(crate) fn render(
         &mut self,
         character: char,
@@ -96,11 +127,11 @@ impl LegacyFace {
             if index == 0 {
                 return None;
             }
-            let flags = match mode {
-                1 => ft::FT_LOAD_DEFAULT,
-                2 => ft::FT_LOAD_TARGET_MONO,
-                _ => ft::FT_LOAD_NO_HINTING,
-            };
+            let flags = usize::try_from(mode)
+                .ok()
+                .and_then(|mode| LOAD_FLAGS.get(mode))
+                .copied()
+                .unwrap_or(LOAD_FLAGS[0]);
             if ft::FT_Load_Glyph(self.face, index, flags) != 0 {
                 return None;
             }
@@ -112,81 +143,30 @@ impl LegacyFace {
                 yMax: 0,
             };
             ft::FT_Outline_Get_CBox(&slot.outline, &mut control);
-            let render_mode = if mode == 2 {
-                ft::FT_RENDER_MODE_MONO
-            } else {
-                ft::FT_RENDER_MODE_NORMAL
-            };
-            if ft::FT_Render_Glyph(slot, render_mode) != 0 {
-                return None;
-            }
-            // Synthetic bold grows the bitmap, preserving the font's own advance. At small sizes
-            // it adds one pixel; the larger-size slope is measured by glyphraster's 64/96 controls.
-            let strength = if bold && style_flags & ft::FT_STYLE_FLAG_BOLD == 0 {
-                (size / BOLD_SIZE_DIVISOR).max(1.0)
-            } else {
-                0.0
-            };
-            if strength > 0.0
-                && slot.bitmap.width > 0
-                && slot.bitmap.rows > 0
-                && FT_Bitmap_Embolden(
-                    self.library,
-                    &mut slot.bitmap,
-                    (strength * 64.0) as ft::FT_Pos,
-                    (strength * 64.0) as ft::FT_Pos,
-                ) != 0
+            if slot.format != ft::FT_GLYPH_FORMAT_BITMAP
+                && ft::FT_Render_Glyph(slot, ((flags >> 16) & 15) as ft::FT_Render_Mode) != 0
             {
                 return None;
             }
-            let bitmap = &slot.bitmap;
-            let (width, height) = (bitmap.width, bitmap.rows);
-            let length = (width as usize).checked_mul(height as usize)?;
-            let mut coverage = Vec::new();
-            coverage.try_reserve_exact(length).ok()?;
-            coverage.resize(length, 0);
-            if length != 0 {
-                if bitmap.buffer.is_null() {
+            let strength = if bold && style_flags & ft::FT_STYLE_FLAG_BOLD == 0 {
+                (size / BOLD_SIZE_DIVISOR).max(BOLD_MIN_STRENGTH)
+            } else {
+                0.0
+            };
+            if strength > 0.0 && slot.bitmap.width > 0 && slot.bitmap.rows > 0 {
+                let pixels = (strength * 64.0) as ft::FT_Pos;
+                if FT_Bitmap_Embolden(self.library, &mut slot.bitmap, pixels, pixels) != 0 {
                     return None;
                 }
-                let stride = bitmap.pitch.unsigned_abs() as usize;
-                for y in 0..height as usize {
-                    let row = if bitmap.pitch >= 0 {
-                        y
-                    } else {
-                        height as usize - 1 - y
-                    };
-                    let source =
-                        std::slice::from_raw_parts(bitmap.buffer.add(row * stride), stride);
-                    for x in 0..width as usize {
-                        coverage[y * width as usize + x] = match bitmap.pixel_mode as u32 {
-                            ft::FT_PIXEL_MODE_GRAY => *source.get(x)?,
-                            ft::FT_PIXEL_MODE_MONO => {
-                                if source.get(x / 8)? & (0x80 >> (x % 8)) != 0 {
-                                    255
-                                } else {
-                                    0
-                                }
-                            }
-                            _ => {
-                                tracing::warn!(
-                                    "legacy font has unsupported bitmap layout {}",
-                                    bitmap.pixel_mode
-                                );
-                                return None;
-                            }
-                        };
-                    }
-                }
             }
-            let left = slot.bitmap_left;
+            let coverage = coverage(self.library, &slot.bitmap)?;
             Some(GlyphBitmap {
                 advance: slot.metrics.horiAdvance as f32 / 64.0,
-                left,
+                left: slot.bitmap_left,
                 top: slot.bitmap_top,
                 top_offset: strength,
-                width,
-                height,
+                width: slot.bitmap.width,
+                height: slot.bitmap.rows,
                 bounds: (
                     control.xMin as f32 / 64.0,
                     control.yMin as f32 / 64.0,
@@ -197,6 +177,61 @@ impl LegacyFace {
             })
         }
     }
+}
+
+/// A rendered bitmap as 8-bit coverage, top row first. Other pixel layouts (monochrome, 2/4-bit
+/// gray, colour) go through FreeType's conversion; fewer than 256 gray levels are stretched to
+/// 0..255 as `level * (1 / (levels - 1)) * 255`, truncated.
+unsafe fn coverage(library: ft::FT_Library, bitmap: &ft::FT_Bitmap) -> Option<Vec<u8>> {
+    if bitmap.pixel_mode as u32 == ft::FT_PIXEL_MODE_GRAY && bitmap.num_grays == 256 {
+        return unsafe { copy_rows(bitmap, 1.0) };
+    }
+    unsafe {
+        let mut converted = std::mem::zeroed::<ft::FT_Bitmap>();
+        FT_Bitmap_Init(&mut converted);
+        let result = if FT_Bitmap_Convert(library, bitmap, &mut converted, CONVERT_ALIGNMENT) == 0 {
+            let levels = converted.num_grays as f32;
+            let scale = if converted.num_grays == 256 || levels < 2.0 {
+                1.0
+            } else {
+                (1.0 / (levels - 1.0)) * 255.0
+            };
+            copy_rows(&converted, scale)
+        } else {
+            None
+        };
+        FT_Bitmap_Done(library, &mut converted);
+        result
+    }
+}
+
+/// The rows of an 8-bit bitmap, each value multiplied by `scale` (1 keeps it).
+unsafe fn copy_rows(bitmap: &ft::FT_Bitmap, scale: f32) -> Option<Vec<u8>> {
+    let width = usize::try_from(bitmap.width).ok()?;
+    let height = usize::try_from(bitmap.rows).ok()?;
+    let length = width.checked_mul(height)?;
+    let mut coverage = Vec::new();
+    coverage.try_reserve_exact(length).ok()?;
+    if length == 0 {
+        return Some(coverage);
+    }
+    if bitmap.buffer.is_null() {
+        return None;
+    }
+    let stride = bitmap.pitch.unsigned_abs() as usize;
+    if stride < width {
+        return None;
+    }
+    for y in 0..height {
+        let row = if bitmap.pitch >= 0 { y } else { height - 1 - y };
+        let source = unsafe { std::slice::from_raw_parts(bitmap.buffer.add(row * stride), width) };
+        if scale == 1.0 {
+            coverage.extend_from_slice(source);
+        } else {
+            coverage.extend(source.iter().map(|&v| (v as f32 * scale) as i32 as u8));
+        }
+    }
+    Some(coverage)
 }
 
 #[cfg(test)]
@@ -244,6 +279,39 @@ mod tests {
         );
         assert!(bold.coverage != normal.coverage);
         assert!(italic.coverage != normal.coverage);
+    }
+
+    #[test]
+    fn the_face_reports_its_own_style() {
+        assert_eq!(face(SANS).legacy_style(), 0);
+        assert_eq!(face(STYLED).legacy_style(), 3);
+    }
+
+    #[test]
+    fn hinted_raster_glyphs_are_fully_covered_or_empty() {
+        let font = face(SANS);
+        let raster = font.render_legacy('W', 24.0, false, false, 2).unwrap();
+        let smooth = font.render_legacy('W', 24.0, false, false, 0).unwrap();
+        assert!(raster.coverage.iter().all(|&v| v == 0 || v == 255));
+        assert!(raster.coverage.contains(&255));
+        assert!(smooth.coverage.iter().any(|&v| v != 0 && v != 255));
+        assert_eq!(
+            raster.coverage.len(),
+            (raster.width * raster.height) as usize
+        );
+        // Synthetic bold widens monochrome bitmaps too.
+        let bold = font.render_legacy('W', 24.0, true, false, 2).unwrap();
+        assert!(bold.coverage.iter().all(|&v| v == 0 || v == 255));
+        assert_eq!(bold.width, raster.width + 1);
+    }
+
+    #[test]
+    fn unknown_rendering_modes_render_smooth() {
+        let font = face(SANS);
+        let smooth = font.render_legacy('g', 13.0, false, false, 0);
+        assert_eq!(font.render_legacy('g', 13.0, false, false, 7), smooth);
+        assert_eq!(font.render_legacy('g', 13.0, false, false, -1), smooth);
+        assert_eq!(font.render_legacy('g', 13.0, false, false, 3), smooth);
     }
 
     #[test]
