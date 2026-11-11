@@ -117,7 +117,12 @@ impl Surface<'_> {
     ///   (see [`SurfaceCapabilities::format_capabilities`]).
     /// - `config.width` or `config.height` is zero.
     pub fn configure(&self, device: &Device, config: &SurfaceConfiguration) {
+        // Unbound: submissions of other threads wait meanwhile, and this waits for one under way.
+        #[cfg(any(feature = "parking_lot", std))]
+        let submission = crate::api::queue::SUBMISSION.lock();
         self.inner.configure(&device.inner, config);
+        #[cfg(any(feature = "parking_lot", std))]
+        drop(submission);
 
         let mut conf = self.config.lock();
         *conf = Some(config.clone());

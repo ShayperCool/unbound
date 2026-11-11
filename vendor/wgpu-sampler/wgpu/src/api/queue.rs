@@ -11,6 +11,13 @@ use crate::{api::DeferredCommandBufferActions, *};
 /// It can be created along with a [`Device`] by calling [`Adapter::request_device`].
 ///
 /// Corresponds to [WebGPU `GPUQueue`](https://gpuweb.github.io/gpuweb/#gpu-queue).
+/// Unbound: held by a submission and by a surface configuration, so that the two never overlap
+/// on different threads. Configuring waits for the GPU to finish what was submitted and fails
+/// when another thread submits meanwhile; on Vulkan it also waits for the device to idle, which
+/// no submission may overlap. A callback fired by a configuration must not submit.
+#[cfg(any(feature = "parking_lot", std))]
+pub(crate) static SUBMISSION: crate::util::Mutex<()> = crate::util::Mutex::new(());
+
 #[derive(Debug, Clone)]
 pub struct Queue {
     pub(crate) inner: dispatch::DispatchQueue,
@@ -285,7 +292,12 @@ impl Queue {
             actions.append(&mut comb.actions.lock());
             comb.buffer
         });
+        // Unbound: not while another thread configures a surface (`Surface::configure`).
+        #[cfg(any(feature = "parking_lot", std))]
+        let submission = SUBMISSION.lock();
         let index = self.inner.submit(&mut command_buffers);
+        #[cfg(any(feature = "parking_lot", std))]
+        drop(submission);
 
         // Execute all deferred actions after submit.
         actions.execute(&self.inner);
