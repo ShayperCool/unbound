@@ -271,9 +271,12 @@ keys of the human stream controls are listed): each is printed as `known <class>
 in the summary's `known` number instead of its differences, and an entry that matches again is
 printed as `NOW MATCHES`. `feet-pivot-velocity`: Animator.velocity at steps 5 and 17 of HumanA's
 clip, the residual every HumanA play of the probe already has; `foot-ik-legs`: leg muscles up to
-about 8e-4 after the Animator's own Foot IK on a pose a job changed; `stance-drift`: the final pose
-after a job's ResetToStancePose drifting under Foot IK (body up to 3.3e-3, a foot muscle up to
-1.5e-2 by update 28).
+2.4e-3 on single steps after the Animator's own Foot IK on a pose a job changed (consistent with
+amplified rounding of a nearly straight leg); `stance-drift`: the final pose after a job's
+ResetToStancePose on an Animator root motion has moved from the origin, where the Editor's
+stance values step with the distance (body up to 3.3e-3, a straight leg's twist muscle up to
+1.5e-2 by update 28). `stream.stanceInPlace` is the same job with the Animator kept at the
+origin: there every value matches.
 
 After changing the rigs, regenerate them (`blender -b --factory-startup --python
 tests/projects/humanoid/make_models.py`), let the Editor configure them in a copy of the project
