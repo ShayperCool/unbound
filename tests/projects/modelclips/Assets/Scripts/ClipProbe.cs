@@ -79,6 +79,40 @@ public class ClipProbe : MonoBehaviour
         }
     }
 
+    /// <summary>Below this a curve's values are float noise around zero (see <see cref="Keys"/>).</summary>
+    const float Noise = 1e-6f;
+
+    /// <summary>Every Animator curve of a model's clips key by key: times, values and both
+    /// tangents. For the Humanoid models, whose curves the reducing compressions reduce:
+    /// HumanReduced (Keyframe Reduction; rotation and scale errors 5, position error 0.5) and
+    /// HumanOptimal (Optimal; position error 5). Transform curves are left out
+    /// (the Editor's clips have none). A curve that never leaves float noise around zero (every
+    /// key below <see cref="Noise"/>) is recorded as such: which of its keys stay depends on
+    /// the last bits of the conversion, not on the reduction's rule.</summary>
+    static void Keys(string model)
+    {
+#if UNITY_EDITOR
+        foreach (var clip in Clips(model))
+        {
+            var bindings = UnityEditor.AnimationUtility.GetCurveBindings(clip).Where(b => b.type == typeof(Animator))
+                .OrderBy(b => b.path, StringComparer.Ordinal).ThenBy(b => b.propertyName, StringComparer.Ordinal).ToArray();
+            Record("keys." + model + "." + clip.name, "{\"frameRate\":" + F(clip.frameRate) + ",\"length\":" + F(clip.length) + ",\"curves\":" + bindings.Length + "}");
+            foreach (var b in bindings)
+            {
+                var keys = UnityEditor.AnimationUtility.GetEditorCurve(clip, b).keys;
+                if (keys.All(k => Mathf.Abs(k.value) < Noise))
+                {
+                    Record("keys." + model + "." + clip.name + "." + b.path + "|" + b.propertyName, "{\"noise\":1}");
+                    continue;
+                }
+                Record("keys." + model + "." + clip.name + "." + b.path + "|" + b.propertyName, "{\"count\":" + keys.Length
+                    + ",\"time\":[" + string.Join(",", keys.Select(k => F(k.time))) + "],\"value\":[" + string.Join(",", keys.Select(k => F(k.value)))
+                    + "],\"in\":[" + string.Join(",", keys.Select(k => F(k.inTangent))) + "],\"out\":[" + string.Join(",", keys.Select(k => F(k.outTangent))) + "]}");
+            }
+        }
+#endif
+    }
+
     static string Snapshot(Animator animator, ClipReceiver receiver)
     {
         var parts = new List<string>();
@@ -153,6 +187,8 @@ public class ClipProbe : MonoBehaviour
                 Play("override." + name, "Rig", "O_" + name);
             foreach (var name in new[] { "Cycle", "CycleOnce", "Loop", "Full", "Events", "EventsOnce" })
                 Play("stateoffset." + name, "Rig", "S_" + name);
+            Keys("HumanReduced");
+            Keys("HumanOptimal");
         }
         catch (Exception e)
         {
