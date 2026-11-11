@@ -9,7 +9,12 @@ using UnityEngine.UIElements;
 // Property bags of element styles, so bindings and property paths reach them: `style.<name>` (the
 // inline style, read and written as Style* values) and `resolvedStyle.<name>` (read-only resolved
 // values), each property found under its C# name and its USS name (`style.background-color`);
-// `value` and `keyword` of every Style* value and `value` and `unit` of a Length. The global
+// `value` and `keyword` of every Style* value; the members of the values themselves, as Unity's
+// property bags of those types list them (`style.translate.value.x`, `style.rotate.value.angle.value`,
+// `style.textShadow.value.color`, ...: Length, Angle, TimeValue, Translate, Rotate, Scale,
+// TransformOrigin, Background, BackgroundPosition, BackgroundRepeat, BackgroundSize, Cursor,
+// TextShadow, FontDefinition, EasingFunction and the read-only StylePropertyName); and the items of
+// the transition lists by index (`style.transitionDuration.value[0].value`). The global
 // converters of Unity's style properties are registered with the bags: a style value from its plain
 // value or a StyleKeyword and back, a StyleLength from a float or int, a StyleFloat from an int, a
 // StyleColor from a Color32, a StyleBackground from a Texture2D, Sprite, RenderTexture or
@@ -31,7 +36,69 @@ namespace Unbound.UIElements
             PropertyBag.Register(new ResolvedStylePropertyBag());
             foreach (var styleType in styleTypes)
                 s_RegisterStyleType.MakeGenericMethod(styleType, StyleValueType(styleType)).Invoke(null, null);
-            PropertyBag.Register(new LengthPropertyBag());
+            RegisterValueTypes();
+        }
+
+        /// <summary>The bags of the values style properties hold, each member under the name
+        /// Unity's bag of that type gives it, and the lists of transition values.</summary>
+        static void RegisterValueTypes()
+        {
+            PropertyBag.Register(new StyleMemberBag<Length>()
+                .Add("value", (ref Length c) => c.value, (ref Length c, float v) => c.value = v)
+                .Add("unit", (ref Length c) => c.unit, (ref Length c, LengthUnit v) => c.unit = v));
+            PropertyBag.Register(new StyleMemberBag<Angle>()
+                .Add("value", (ref Angle c) => c.value, (ref Angle c, float v) => c.value = v)
+                .Add("unit", (ref Angle c) => c.unit, (ref Angle c, AngleUnit v) => c.unit = v));
+            PropertyBag.Register(new StyleMemberBag<TimeValue>()
+                .Add("value", (ref TimeValue c) => c.value, (ref TimeValue c, float v) => c.value = v)
+                .Add("unit", (ref TimeValue c) => c.unit, (ref TimeValue c, TimeUnit v) => c.unit = v));
+            PropertyBag.Register(new StyleMemberBag<Translate>()
+                .Add("x", (ref Translate c) => c.x, (ref Translate c, Length v) => c.x = v)
+                .Add("y", (ref Translate c) => c.y, (ref Translate c, Length v) => c.y = v)
+                .Add("z", (ref Translate c) => c.z, (ref Translate c, float v) => c.z = v));
+            PropertyBag.Register(new StyleMemberBag<Rotate>()
+                .Add("angle", (ref Rotate c) => c.angle, (ref Rotate c, Angle v) => c.angle = v)
+                .Add("axis", (ref Rotate c) => c.axis, (ref Rotate c, Vector3 v) => c.axis = v));
+            PropertyBag.Register(new StyleMemberBag<Scale>()
+                .Add("value", (ref Scale c) => c.value, (ref Scale c, Vector3 v) => c.value = v));
+            PropertyBag.Register(new StyleMemberBag<TransformOrigin>()
+                .Add("x", (ref TransformOrigin c) => c.x, (ref TransformOrigin c, Length v) => c.x = v)
+                .Add("y", (ref TransformOrigin c) => c.y, (ref TransformOrigin c, Length v) => c.y = v)
+                .Add("z", (ref TransformOrigin c) => c.z, (ref TransformOrigin c, float v) => c.z = v));
+            PropertyBag.Register(new StyleMemberBag<Background>()
+                .Add("texture", (ref Background c) => c.texture, (ref Background c, Texture2D v) => c.texture = v)
+                .Add("sprite", (ref Background c) => c.sprite, (ref Background c, Sprite v) => c.sprite = v)
+                .Add("renderTexture", (ref Background c) => c.renderTexture, (ref Background c, RenderTexture v) => c.renderTexture = v)
+                .Add("vectorImage", (ref Background c) => c.vectorImage, (ref Background c, VectorImage v) => c.vectorImage = v));
+            PropertyBag.Register(new StyleMemberBag<BackgroundPosition>()
+                .Add("keyword", (ref BackgroundPosition c) => c.keyword, (ref BackgroundPosition c, BackgroundPositionKeyword v) => c.keyword = v)
+                .Add("offset", (ref BackgroundPosition c) => c.offset, (ref BackgroundPosition c, Length v) => c.offset = v));
+            PropertyBag.Register(new StyleMemberBag<BackgroundRepeat>()
+                .Add("x", (ref BackgroundRepeat c) => c.x, (ref BackgroundRepeat c, Repeat v) => c.x = v)
+                .Add("y", (ref BackgroundRepeat c) => c.y, (ref BackgroundRepeat c, Repeat v) => c.y = v));
+            PropertyBag.Register(new StyleMemberBag<BackgroundSize>()
+                .Add("sizeType", (ref BackgroundSize c) => c.sizeType, (ref BackgroundSize c, BackgroundSizeType v) => c.sizeType = v)
+                .Add("x", (ref BackgroundSize c) => c.x, (ref BackgroundSize c, Length v) => c.x = v)
+                .Add("y", (ref BackgroundSize c) => c.y, (ref BackgroundSize c, Length v) => c.y = v));
+            PropertyBag.Register(new StyleMemberBag<UnityEngine.UIElements.Cursor>()
+                .Add("texture", (ref UnityEngine.UIElements.Cursor c) => c.texture, (ref UnityEngine.UIElements.Cursor c, Texture2D v) => c.texture = v)
+                .Add("hotspot", (ref UnityEngine.UIElements.Cursor c) => c.hotspot, (ref UnityEngine.UIElements.Cursor c, Vector2 v) => c.hotspot = v)
+                .Add("defaultCursorId", (ref UnityEngine.UIElements.Cursor c) => c.defaultCursorId, (ref UnityEngine.UIElements.Cursor c, int v) => c.defaultCursorId = v));
+            PropertyBag.Register(new StyleMemberBag<TextShadow>()
+                .Add("offset", (ref TextShadow c) => c.offset, (ref TextShadow c, Vector2 v) => c.offset = v)
+                .Add("blurRadius", (ref TextShadow c) => c.blurRadius, (ref TextShadow c, float v) => c.blurRadius = v)
+                .Add("color", (ref TextShadow c) => c.color, (ref TextShadow c, Color v) => c.color = v));
+            PropertyBag.Register(new StyleMemberBag<FontDefinition>()
+                .Add("font", (ref FontDefinition c) => c.font, (ref FontDefinition c, Font v) => c.font = v)
+                .Add("fontAsset", (ref FontDefinition c) => c.fontAsset, (ref FontDefinition c, FontAsset v) => c.fontAsset = v));
+            PropertyBag.Register(new StyleMemberBag<EasingFunction>()
+                .Add("mode", (ref EasingFunction c) => c.mode, (ref EasingFunction c, EasingMode v) => c.mode = v));
+            PropertyBag.Register(new StyleMemberBag<StylePropertyName>()
+                .Add("id", (ref StylePropertyName c) => c.id, null)
+                .Add("name", (ref StylePropertyName c) => c.name, null));
+            PropertyBag.RegisterList<StyleList<EasingFunction>, EasingFunction>();
+            PropertyBag.RegisterList<StyleList<StylePropertyName>, StylePropertyName>();
+            PropertyBag.RegisterList<StyleList<TimeValue>, TimeValue>();
         }
 
         /// <summary>The T of a Style* type's IStyleValue&lt;T&gt;.</summary>
@@ -223,29 +290,42 @@ namespace Unbound.UIElements
         }
     }
 
-    /// <summary>A Length: its `value` and `unit`.</summary>
-    internal sealed class LengthPropertyBag : ContainerPropertyBag<Length>
+    internal delegate TValue StyleMemberGetter<TContainer, TValue>(ref TContainer container);
+
+    internal delegate void StyleMemberSetter<TContainer, TValue>(ref TContainer container, TValue value);
+
+    /// <summary>The bag of a value a style property holds: its members by name, each read and
+    /// written on the value itself (a member without a setter is read-only).</summary>
+    internal sealed class StyleMemberBag<TContainer> : ContainerPropertyBag<TContainer>
     {
-        public LengthPropertyBag()
+        internal StyleMemberBag<TContainer> Add<TValue>(string name, StyleMemberGetter<TContainer, TValue> get, StyleMemberSetter<TContainer, TValue> set)
         {
-            AddProperty(new ValueProperty());
-            AddProperty(new UnitProperty());
+            AddProperty(new Member<TValue>(name, get, set));
+            return this;
         }
 
-        sealed class ValueProperty : Property<Length, float>
+        sealed class Member<TValue> : Property<TContainer, TValue>
         {
-            public override string Name => "value";
-            public override bool IsReadOnly => false;
-            public override float GetValue(ref Length container) => container.value;
-            public override void SetValue(ref Length container, float value) => container.value = value;
-        }
+            readonly string m_Name;
+            readonly StyleMemberGetter<TContainer, TValue> m_Get;
+            readonly StyleMemberSetter<TContainer, TValue> m_Set;
 
-        sealed class UnitProperty : Property<Length, LengthUnit>
-        {
-            public override string Name => "unit";
-            public override bool IsReadOnly => false;
-            public override LengthUnit GetValue(ref Length container) => container.unit;
-            public override void SetValue(ref Length container, LengthUnit value) => container.unit = value;
+            public Member(string name, StyleMemberGetter<TContainer, TValue> get, StyleMemberSetter<TContainer, TValue> set)
+            {
+                m_Name = name;
+                m_Get = get;
+                m_Set = set;
+            }
+
+            public override string Name => m_Name;
+            public override bool IsReadOnly => m_Set == null;
+            public override TValue GetValue(ref TContainer container) => m_Get(ref container);
+
+            public override void SetValue(ref TContainer container, TValue value)
+            {
+                if (m_Set == null) throw new InvalidOperationException("Property is ReadOnly.");
+                m_Set(ref container, value);
+            }
         }
     }
 }
