@@ -335,12 +335,17 @@ lighting the room (the documented parts are in the contract above):
   `legacyownsky`). What makes a scene an earlier release's is its RenderSettings' version alone
   (`legacysettingsonly`, `legacylightmapsonly`, `currentdefault`); the sun's angles are its own,
   not its direction under its parents (`legacychildsun`), and its color and intensity do not
-  count (`legacydimsun`); a gamma-space project upgrades no scene (`--color-space gamma`: all
-  fourteen scenes zero and black). Unbound applies the rule as measured. Other ambient or
-  reflection sources, another resolution, several directional lights (Unbound takes the
-  brightest as the sun) and a render pipeline that declares it bakes neither the ambient probe
-  nor the default reflection are not measured and leave the scene without lighting data, as
-  does `Lightmapping.bakeOnSceneLoad` (not honoured: a warning once). All of this is the
+  count (`legacydimsun`); the sun is the light the scene names, else its brightest directional
+  light (`legacynamedsun`, `legacytwosuns`, `legacytwosunsturned`); rendering features that
+  say neither the ambient probe nor the default reflection is baked
+  (`SupportedRenderingFeatures.active`, a render pipeline's to declare) leave the scene
+  without lighting data, one of the two alone does not (`legacydefault-no*baking`); a
+  gamma-space project upgrades no scene (`--color-space gamma`: all seventeen scenes zero and
+  black). Unbound applies the rule as measured, reading the rendering features at the scene's
+  load. Other ambient or reflection sources and another resolution are not measured and leave
+  the scene without lighting data; a named sun that is disabled or not directional is taken
+  as it is, and one that is not a light of the scene gives way to the brightest light (neither
+  measured). `Lightmapping.bakeOnSceneLoad` is not honoured (a warning once). All of this is the
   measured release's, through the compatibility profile: in another release a scene without
   lighting data gets zero and black too, with a warning once, since releases before Unity 6
   bake the ambient probe and the sky's reflection by default (the Unity 6 upgrade guide) and

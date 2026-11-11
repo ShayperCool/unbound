@@ -107,7 +107,7 @@ color (`end-flat-set-color`), the skybox removed (`end-flat-noskybox`), the skyb
 (`end-skybox-none`), the custom mode (`end-custom-last`), the gradient mode (`end-gradient`),
 another probe given in it (`end-gradient-set`) and the custom mode (`end-gradient-custom`).
 
-Then fourteen scenes without lighting data (`m_LightingDataAsset` none; their files, in
+Then seventeen scenes without lighting data (`m_LightingDataAsset` none; their files, in
 `Assets/NoData`, are written by hand, with nothing in them but their settings and, where said, a
 directional light; each is in the skybox ambient mode). With this release's RenderSettings:
 `NoDataAuto` (LightmapSettings as an earlier release saved them with lighting generated
@@ -121,14 +121,20 @@ Then the default scene with one thing changed: `CurrentDefault` (both settings a
 saves them), `LegacySettingsOnly` (the RenderSettings an earlier release's, the
 LightmapSettings this release's), `LegacyLightmapsOnly` (the other way round),
 `LegacyChildSun` (the light under a parent turned 90 degrees about the vertical, its own
-angles still (50, -30, 0)) and `LegacyDimSun` (the light red at intensity 0.3).
+angles still (50, -30, 0)) and `LegacyDimSun` (the light red at intensity 0.3); and with a
+second directional light at (20, 40, 0): `LegacyTwoSuns` (the second at intensity 0.3),
+`LegacyTwoSunsTurned` (the default one at 0.3, the second at 1) and `LegacyNamedSun` (as
+`LegacyTwoSuns`, with the second light named as the scene's sun, `RenderSettings.sun`).
 Each records, in the frame after its load, `<scene>-reflection` (as `end-reflection`),
 `<scene>-ambient` (`RenderSettings.ambientProbe` as loaded) and `<scene>-custom` (in the custom
 mode). Then two pairs, the first scene loaded and the second added to it:
 `legacydefault-plus-nodatacurrent` and `nodatacurrent-plus-legacydefault`, each recording the
 reflection and the ambient probe two frames after the additive load, right after
 `SceneManager.SetActiveScene` with the added scene (`-active`) and a frame later
-(`-active-next-frame`).
+(`-active-next-frame`). `LegacyDefault` is loaded three more times with
+`SupportedRenderingFeatures.active` replaced, a render pipeline's way of saying what it bakes:
+`ambientProbeBaking` off (`legacydefault-noambientbaking`), `defaultReflectionProbeBaking` off
+(`-noreflectionbaking`) and both off (`-nobaking`).
 
 Last, `RoomBakedEnvironment` (`run.py setup-baked-environment`: the room with baked global
 illumination on as well and its environment lighting baked, Lighting Settings' Realtime
@@ -287,13 +293,17 @@ Observations (not documented guarantees):
   upgraded (`legacysettingsonly`), with this release's RenderSettings it is not, whatever its
   LightmapSettings (`currentdefault`, `legacylightmapsonly`). The light's own angles count, not
   its direction in the scene (`legacychildsun` is upgraded under a turned parent), and neither
-  its color nor its intensity (`legacydimsun`). In a gamma-space project none of the fourteen
-  scenes is upgraded: each reflects the black cube and has a zero ambient probe
-  (`--color-space gamma`). Not captured: other ambient or reflection sources, another
-  reflection resolution, several directional lights, a render pipeline that declares it bakes
-  neither the ambient probe nor the default reflection
-  (`SupportedRenderingFeatures.ambientProbeBaking`, `defaultReflectionProbeBaking`), and a
-  scene with `Lightmapping.bakeOnSceneLoad` on (Unbound does not bake it and says so once).
+  its color nor its intensity (`legacydimsun`). The light is the one the scene names as its
+  sun, else its brightest directional light: with a dimmer second light the scene is upgraded
+  (`legacytwosuns`), with a brighter one it is not (`legacytwosunsturned`), and neither when
+  the dimmer one is named (`legacynamedsun`). With the rendering features saying that neither
+  the ambient probe nor the default reflection is baked the scene is not upgraded
+  (`legacydefault-nobaking`); with one of the two off it still is (`-noambientbaking`,
+  `-noreflectionbaking`). In a gamma-space project none of the seventeen scenes is upgraded:
+  each reflects the black cube and has a zero ambient probe (`--color-space gamma`). Not
+  captured: other ambient or reflection sources, another reflection resolution, a named sun
+  that is disabled, not directional or not a light of the scene, and a scene with
+  `Lightmapping.bakeOnSceneLoad` on (Unbound does not bake it and says so once).
 - The reflection and the ambient probe are the active scene's: a scene added to another changes
   neither (`*-plus-*`), and `SceneManager.SetActiveScene` with the added scene switches both
   within the frame (`-active`), as the documentation says of the active scene ("from what Scene
@@ -326,6 +336,12 @@ Observations (not documented guarantees):
   three captures had one that differed more in the same two cases (up to 0.02 in 1505 and 221
   values). A reference is published from two identical captures; one that lands in another state
   is repeated.
+- Two more variations between captures, each seen once in eleven later runs: `room-moved-next-frame`
+  recorded `DynamicGI.isConverged` true where the reference and the other runs have false (the
+  frame after an input changes, the update may not have started); and a cube given with
+  `DynamicGI.SetEnvironmentData` two frames after a scene's load, before its first solve had
+  converged, gave a lightmap up to 0.0015 apart in 379 values, which is why
+  `room-envdata-alone` waits for the scene to converge before it gives the cube.
 
 ## Unbound
 
