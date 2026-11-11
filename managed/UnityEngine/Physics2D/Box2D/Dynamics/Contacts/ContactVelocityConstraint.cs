@@ -22,6 +22,8 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
         public float InvMassA, InvMassB;
 
+        public Vector2 MotionMaskA, MotionMaskB;
+
         public Matrix2x2 K;
 
         public Vector2 Normal;

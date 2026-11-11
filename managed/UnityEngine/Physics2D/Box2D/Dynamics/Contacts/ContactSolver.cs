@@ -62,6 +62,8 @@ namespace Unbound.Box2D.Dynamics.Contacts
                 vc.IndexB = bodyB.IslandIndex;
                 vc.InvMassA = bodyA.InvMass;
                 vc.InvMassB = bodyB.InvMass;
+                vc.MotionMaskA = bodyA.MotionMask;
+                vc.MotionMaskB = bodyB.MotionMask;
                 vc.InvIa = bodyA.InverseInertia;
                 vc.InvIb = bodyB.InverseInertia;
                 vc.ContactIndex = i;
@@ -74,6 +76,8 @@ namespace Unbound.Box2D.Dynamics.Contacts
                 pc.IndexB = bodyB.IslandIndex;
                 pc.InvMassA = bodyA.InvMass;
                 pc.InvMassB = bodyB.InvMass;
+                pc.InvMassAxesA = bodyA.InvMassAxes;
+                pc.InvMassAxesB = bodyB.InvMassAxes;
                 pc.LocalCenterA = bodyA.Sweep.LocalCenter;
                 pc.LocalCenterB = bodyB.Sweep.LocalCenter;
                 pc.InvIa = bodyA.InverseInertia;
@@ -298,9 +302,9 @@ namespace Unbound.Box2D.Dynamics.Contacts
                     vB += mB * P;
                 }
 
-                velocities[indexA].V = vA;
+                velocities[indexA].V = vA * vc.MotionMaskA;
                 velocities[indexA].W = wA;
-                velocities[indexB].V = vB;
+                velocities[indexB].V = vB * vc.MotionMaskB;
                 velocities[indexB].W = wB;
             }
         }
@@ -684,11 +688,13 @@ namespace Unbound.Box2D.Dynamics.Contacts
                     }
                 }
 
-                velocities[indexA].V.X = vAX;
-                velocities[indexA].V.Y = vAY;
+                // Solve both points together before clearing locked velocity axes.
+                // See the dynamic-ground controls in tests/projects/physics2ddynamics.
+                velocities[indexA].V.X = vAX * vc.MotionMaskA.X;
+                velocities[indexA].V.Y = vAY * vc.MotionMaskA.Y;
                 velocities[indexA].W = wA;
-                velocities[indexB].V.X = vBX;
-                velocities[indexB].V.Y = vBY;
+                velocities[indexB].V.X = vBX * vc.MotionMaskB.X;
+                velocities[indexB].V.Y = vBY * vc.MotionMaskB.Y;
                 velocities[indexB].W = wB;
             }
         }
@@ -782,10 +788,10 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
                     var P = impulse * normal;
 
-                    cA -= mA * P;
+                    cA -= pc.InvMassAxesA * P;
                     aA -= iA * MathUtils.Cross(rA, P);
 
-                    cB += mB * P;
+                    cB += pc.InvMassAxesB * P;
                     aB += iB * MathUtils.Cross(rB, P);
                 }
 
@@ -817,18 +823,22 @@ namespace Unbound.Box2D.Dynamics.Contacts
                 var pointCount = pc.PointCount;
 
                 var mA = 0.0f;
+                var massAxesA = Vector2.Zero;
                 var iA = 0.0f;
                 if (indexA == toiIndexA || indexA == toiIndexB)
                 {
                     mA = pc.InvMassA;
+                    massAxesA = pc.InvMassAxesA;
                     iA = pc.InvIa;
                 }
 
                 var mB = 0.0f;
+                var massAxesB = Vector2.Zero;
                 var iB = 0.0f;
                 if (indexB == toiIndexA || indexB == toiIndexB)
                 {
                     mB = pc.InvMassB;
+                    massAxesB = pc.InvMassAxesB;
                     iB = pc.InvIb;
                 }
 
@@ -877,10 +887,10 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
                     var P = impulse * normal;
 
-                    cA -= mA * P;
+                    cA -= massAxesA * P;
                     aA -= iA * MathUtils.Cross(rA, P);
 
-                    cB += mB * P;
+                    cB += massAxesB * P;
                     aB += iB * MathUtils.Cross(rB, P);
                 }
 

@@ -96,6 +96,83 @@ namespace UnityEngine.Tests
                 Assert.Equal(before[i].normalImpulse,after[i].normalImpulse);
             }
         }
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public void PublicImpulsesIncludeTheImpactSolve(bool continuous, bool dynamicGround)
+        {
+            var ground = Box("ground", 0, -.5f).GetComponent<Rigidbody2D>();
+            ground.GetComponent<BoxCollider2D>().size = new Vector2(20, 1);
+            ground.bodyType = dynamicGround ? RigidbodyType2D.Dynamic : RigidbodyType2D.Static;
+            ground.mass = 3;
+            ground.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation;
+            var o = new GameObject("moving"); objects.Add(o);
+            o.transform.position = new Vector3(1000, .6f, 0);
+            var collider = o.AddComponent<CircleCollider2D>();
+            collider.sharedMaterial = new PhysicsMaterial2D { bounciness = .8f, friction = 0 };
+            var body = o.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0;
+            body.mass = 2;
+            body.collisionDetectionMode = continuous ? CollisionDetectionMode2D.Continuous : CollisionDetectionMode2D.Discrete;
+            var observer = o.AddComponent<ImpulseObserver>();
+            body.linearVelocity = new Vector2(0, -8);
+            for (int i = 0; i < 5 && observer.Collision == null; i++) Step();
+            Assert.NotNull(observer.Collision);
+            var contacts = new List<ContactPoint2D>(); body.GetContacts(contacts);
+            var contact = Assert.Single(contacts);
+            Assert.True(contact.normalImpulse > 0);
+            Assert.InRange(Mathf.Abs(contact.normalImpulse - body.mass * (body.linearVelocity.y + 8)), 0, .001f);
+            Assert.Equal(contact.normalImpulse, observer.Collision.GetContact(0).normalImpulse);
+            Assert.Equal(contact.relativeVelocity, observer.Collision.relativeVelocity);
+            body.linearVelocity = new Vector2(5, 7);
+            contacts.Clear(); body.GetContacts(contacts);
+            Assert.Equal(contact.normalImpulse, Assert.Single(contacts).normalImpulse);
+            Assert.Equal(contact.relativeVelocity, contacts[0].relativeVelocity);
+            Step();
+            contacts.Clear(); body.GetContacts(contacts);
+            Assert.Empty(contacts);
+        }
+        [Theory]
+        [InlineData(false, false, false, -.418789566f)]
+        [InlineData(true, false, false, -.385338962f)]
+        [InlineData(false, true, false, -.418789566f)]
+        [InlineData(true, true, false, -.385338962f)]
+        [InlineData(false, false, true, -.7649468f)]
+        [InlineData(true, false, true, 3.14987016f)]
+        public void ContactSolvesRespectFrozenTranslationAxes(bool continuous, bool sideways, bool box, float tangentImpulse)
+        {
+            Physics2D.gravity = sideways ? new Vector2(-9.81f, 0) : new Vector2(0, -9.81f);
+            var floor = new GameObject("ground"); objects.Add(floor);
+            floor.transform.position = sideways ? new Vector3(-.5f, 0, 0) : new Vector3(0, -.5f, 0);
+            floor.transform.rotation = Quaternion.Euler(0, 0, sideways ? -90 : 0);
+            floor.AddComponent<BoxCollider2D>().size = new Vector2(20, 1);
+            var ground = floor.AddComponent<Rigidbody2D>();
+            ground.mass = 3; ground.gravityScale = 0;
+            ground.constraints = (sideways ? RigidbodyConstraints2D.FreezePositionY : RigidbodyConstraints2D.FreezePositionX)
+                | RigidbodyConstraints2D.FreezeRotation;
+            var moving = new GameObject("moving"); objects.Add(moving);
+            moving.transform.position = sideways ? new Vector3(.6f, 0, 0) : new Vector3(0, .6f, 0);
+            moving.transform.rotation = Quaternion.Euler(0, 0, sideways ? -83 : 7);
+            Collider2D collider = box ? (Collider2D)moving.AddComponent<BoxCollider2D>() : moving.AddComponent<CircleCollider2D>();
+            collider.sharedMaterial = new PhysicsMaterial2D { bounciness = .8f, friction = .4f };
+            var body = moving.AddComponent<Rigidbody2D>();
+            body.collisionDetectionMode = continuous ? CollisionDetectionMode2D.Continuous : CollisionDetectionMode2D.Discrete;
+            body.linearVelocity = sideways ? new Vector2(-8, -1) : new Vector2(1, -8);
+            body.angularVelocity = 17;
+            var observer = moving.AddComponent<ImpulseObserver>();
+            for (int i = 0; i < 5 && observer.Collision == null; i++) Step();
+            Assert.NotNull(observer.Collision);
+            Assert.InRange(Mathf.Abs(observer.Collision.GetContact(0).tangentImpulse - tangentImpulse), 0, .001f);
+            Assert.Equal(0f, sideways ? ground.linearVelocity.y : ground.linearVelocity.x);
+            Assert.Equal(0f, sideways ? ground.position.y : ground.position.x);
+        }
+        public sealed class ImpulseObserver : MonoBehaviour
+        {
+            public Collision2D Collision;
+            void OnCollisionEnter2D(Collision2D collision) => Collision = collision;
+        }
         [Fact]
         public void NewTouchingPairAppendsBeforeAnEndedPairReleasesItsSceneSlot()
         {

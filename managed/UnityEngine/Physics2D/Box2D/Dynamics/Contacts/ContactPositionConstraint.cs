@@ -19,6 +19,8 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
         public float InvMassA, InvMassB;
 
+        public Vector2 InvMassAxesA, InvMassAxesB;
+
         public Vector2 LocalCenterA, LocalCenterB;
 
         public Vector2 LocalNormal;

@@ -218,6 +218,9 @@ namespace Unbound.Box2D.Dynamics
         /// Unbound: RigidbodyConstraints2D.FreezePositionX / FreezePositionY.
         internal bool FreezeX, FreezeY;
 
+        internal Vector2 MotionMask => new Vector2(FreezeX ? 0f : 1f, FreezeY ? 0f : 1f);
+        internal Vector2 InvMassAxes => MotionMask * InvMass;
+
         /// Unbound: contacts this body makes are solved, and swept for continuous collision only when
         /// it is a bullet (CollisionDetectionMode2D.Continuous); Discrete bodies have no TOI events.
         internal bool UnityContinuous => Flags.IsSet(BodyFlags.IsBullet);

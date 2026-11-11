@@ -677,7 +677,11 @@ namespace Unbound.Runtime
             {
                 int velocityIterations = Math.Max(1, Physics2D.s_VelocityIterations);
                 int positionIterations = Math.Max(1, Physics2D.s_PositionIterations);
-                if (!subStepping) s_World.Step(deltaTime, velocityIterations, positionIterations);
+                if (!subStepping)
+                {
+                    s_Listener.BeginStep();
+                    s_World.Step(deltaTime, velocityIterations, positionIterations);
+                }
                 else StepSubSteps(subStepCount, subStepTime, velocityIterations, positionIterations);
             }
             finally
@@ -747,8 +751,11 @@ namespace Unbound.Runtime
             try
             {
                 for (int i = 0; i < count; i++)
+                {
+                    s_Listener.BeginStep();
                     s_World.Step(stepTime, velocityIterations, positionIterations,
                         updateContacts: i == 0 || Physics2D.s_UseSubStepContacts || !s_MeasuredSimulation);
+                }
             }
             finally
             {
@@ -1007,11 +1014,7 @@ namespace Unbound.Runtime
             internal bool EnterPending, ExitPending;
             internal bool RemovalExit;
             internal bool FirstIsB;
-            internal bool VelocityCaptured;
             internal bool PublicListed;
-            /// <summary>B's velocity relative to A's at the first contact point, before the solver
-            /// resolved the impact.</summary>
-            internal Vector2 EnterRelativeVelocity;
         }
 
         static readonly Dictionary<PairKey, Pair> s_Pairs = new Dictionary<PairKey, Pair>();
@@ -1024,6 +1027,8 @@ namespace Unbound.Runtime
             internal readonly Vector2[] Points = new Vector2[2];
             internal readonly Vector2[] Velocities = new Vector2[2];
             internal readonly float[] Separations = new float[2];
+            internal Unbound.Box2D.Common.FixedArray2<float> NormalImpulses, TangentImpulses;
+            internal ulong ImpulseStep;
         }
         static readonly Dictionary<Contact, ContactObservation> s_ContactObservations = new Dictionary<Contact, ContactObservation>();
 
@@ -1061,6 +1066,8 @@ namespace Unbound.Runtime
 
         sealed class Listener : IContactListener
         {
+            ulong step;
+            internal void BeginStep() => step++;
             internal void Clear()
             {
                 s_Pairs.Clear();
@@ -1092,7 +1099,6 @@ namespace Unbound.Runtime
                     else
                     {
                         pair.EnterPending = true;
-                        pair.VelocityCaptured = false;
                     }
                 }
             }
@@ -1133,25 +1139,23 @@ namespace Unbound.Runtime
                     observation.Velocities[i] = ToUnity(contact.FixtureB.Body.GetLinearVelocityFromWorldPoint(point)
                         - contact.FixtureA.Body.GetLinearVelocityFromWorldPoint(point));
                 }
-                if (!contact.EnterPointVelocitiesCaptured)
+                if (observation.ImpulseStep != step)
                 {
-                    contact.GetWorldManifold(out var enteringWorld);
-                    for (int i = 0; i < contact.Manifold.PointCount; i++)
-                    {
-                        var enteringPoint = enteringWorld.Points[i];
-                        contact.EnterPointVelocities[i] = contact.FixtureB.Body.GetLinearVelocityFromWorldPoint(enteringPoint)
-                            - contact.FixtureA.Body.GetLinearVelocityFromWorldPoint(enteringPoint);
-                    }
-                    contact.EnterPointVelocitiesCaptured = true;
+                    observation.NormalImpulses = observation.TangentImpulses = default;
+                    observation.ImpulseStep = step;
                 }
-                if (!s_Pairs.TryGetValue(new PairKey(a, b), out var pair) || pair.VelocityCaptured || !pair.EnterPending) return;
-                var relative = ToUnity(contact.EnterPointVelocities[0]);
-                pair.EnterRelativeVelocity = pair.A == (object)a ? relative : -relative;
-                pair.VelocityCaptured = true;
             }
 
             public void PostSolve(Contact contact, in ContactImpulse impulse)
             {
+                // Accumulate every solve in this step, including time-of-impact solves.
+                // The manifold impulses remain the discrete solver's warm-start cache.
+                if (s_ContactObservations.TryGetValue(contact, out var observation))
+                    for (int i = 0; i < impulse.Count; i++)
+                    {
+                        observation.NormalImpulses[i] += impulse.NormalImpulses[i];
+                        observation.TangentImpulses[i] += impulse.TangentImpulses[i];
+                    }
                 Physics2DEffectors.PostSolve(contact);
             }
 
@@ -1304,13 +1308,11 @@ namespace Unbound.Runtime
             // Unity's exit messages carry no contacts and no relative velocity.
             if (phase == Phase.Exit) return collision;
             var points = new List<ContactPoint2D>(2);
-            bool enabled = CollectContacts(self, other, points, phase == Phase.Enter);
+            bool enabled = CollectContacts(self, other, points);
             collision.m_CollisionContacts = points.ToArray();
             collision.m_CollisionContactCount = points.Count;
             collision.m_CollisionEnabled = enabled;
-            collision.m_CollisionRelativeVelocity = phase == Phase.Enter && pair.VelocityCaptured
-                ? (flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity)
-                : points.Count > 0 ? points[0].relativeVelocity : RelativeVelocity(self, other);
+            collision.m_CollisionRelativeVelocity = points.Count > 0 ? points[0].relativeVelocity : RelativeVelocity(self, other);
             return collision;
         }
 
@@ -1360,7 +1362,7 @@ namespace Unbound.Runtime
         /// <summary>The touching contact points between two colliders, seen from <paramref name="self"/>
         /// (normals point from <paramref name="other"/> towards <paramref name="self"/>). Returns
         /// whether the contact is enabled.</summary>
-        internal static bool CollectContacts(Collider2D self, Collider2D other, List<ContactPoint2D> into, bool entering)
+        internal static bool CollectContacts(Collider2D self, Collider2D other, List<ContactPoint2D> into)
         {
             bool enabled = true;
             foreach (var f in self.m_Fixtures)
@@ -1390,12 +1392,11 @@ namespace Unbound.Runtime
                         var p = world.Points[i];
                         var mp = contact.Manifold.Points[i];
                         var rel = observation != null ? (selfIsA ? observation.Velocities[i] : -observation.Velocities[i])
-                            : entering && contact.EnterPointVelocitiesCaptured
-                            ? ToUnity(selfIsA ? contact.EnterPointVelocities[i] : -contact.EnterPointVelocities[i])
                             : ToUnity(otherBody.GetLinearVelocityFromWorldPoint(p) - selfBody.GetLinearVelocityFromWorldPoint(p));
                         into.Add(new ContactPoint2D(observation != null ? observation.Points[i] : ToUnity(p), normal, rel, contact.Friction, contact.Restitution,
                             observation != null ? observation.Separations[i] : world.Separations[i],
-                            mp.NormalImpulse, mp.TangentImpulse, otherCollider, self, contact.IsEnabled));
+                            observation != null ? observation.NormalImpulses[i] : mp.NormalImpulse,
+                            observation != null ? observation.TangentImpulses[i] : mp.TangentImpulse, otherCollider, self, contact.IsEnabled));
                     }
                 }
             }

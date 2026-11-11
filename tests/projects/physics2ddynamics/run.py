@@ -25,7 +25,7 @@ else:
     if out.exists() or log.exists(): raise SystemExit('Refusing to overwrite '+a.label)
     env = dict(os.environ, PHYSICS_PROBE_OUT=str(out))
     if a.mode == 'native':
-        cmd = [os.environ.get('UNITY_EDITOR', str(editor_path())), '-batchmode','-nographics','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(WORK/(a.label+'-unity.log'))]
+        cmd = [os.environ.get('UNITY_EDITOR', str(editor_path())), '-batchmode','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(WORK/(a.label+'-unity.log'))]
     else:
         project = WORK/os.environ.get('DYNAMICS_PROJECT', 'project-native1')
         env['UNBOUND_MANAGED_DIR'] = os.environ.get('UNBOUND_MANAGED_DIR', str(WORK/os.environ.get('DYNAMICS_MANAGED', 'managed-baseline' if a.label == 'baseline' else 'managed-final')))
