@@ -7,14 +7,14 @@ environment, updated at runtime from data precomputed in the Editor. This page r
 data holds, how the runtime update behaves (documented, then measured against the Unity
 6000.0.71f1 Editor in [tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound
 implements it. Status: the engine draws precomputed realtime GI for scenes whose renderers have
-Preserve UVs, lit by point, spot and directional lights and a flat ambient color, in the built-in
+Preserve UVs, lit by point, spot and directional lights and the environment (an ambient color, a
+gradient, the skybox or a cube a script sets), in the built-in
 pipeline (URP binds the same inputs; unmeasured there). For tests/projects/realtimegi every
 renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
 cases match within the comparator's tolerance but for a few isolated texels (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
-renderers take light probes again; area lights are baked only), skybox and gradient environments (no
-environment light), light probes that also have baked lighting (also given by a script: realtime
+renderers take light probes again; area lights are baked only), light probes that also have baked lighting (also given by a script: realtime
 GI then stops lighting them) or whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
 directional realtime lightmaps, systems that reference another scene's systems, gamma-space
@@ -29,7 +29,12 @@ projects and linear light intensity.
 - `DynamicGI`: `indirectScale` scales the indirect lighting; `updateThreshold` limits updates by
   the percentage change of the lighting; `synchronousMode` shows new output in each frame;
   `isConverged`; `SetEmissive(renderer, color)` sets a renderer's emissive color without
-  rendering the system's emissive input; `UpdateEnvironment()` schedules an environment update;
+  rendering the system's emissive input; `UpdateEnvironment()` schedules an update of the
+  environment cubemap; `SetEnvironmentData(float[])` overrides the environment with a cube of six
+  faces of 8 x 8 texels of four floats (1536), which "changing the Distant Environment Lighting
+  Source or Environment Lighting Intensity will overwrite";
+  `RenderSettings.ambientIntensity` scales the ambient light "only when RenderSettings.ambientMode
+  is AmbientMode.Skybox and the scene has a skybox material";
   `Renderer.UpdateGIMaterials()` schedules an update of the system's albedo and emissive textures.
 - Shader inputs: `unity_DynamicLightmap` (and `unity_DynamicDirectionality` for directional
   mode) with `unity_DynamicLightmapST`, keyword `DYNAMICLIGHTMAP_ON`; light probes carry the
@@ -96,8 +101,9 @@ Room cases of tests/projects/realtimegi in its tests):
    cluster's next bounce input is the drawn value of its first one alone, divided by
    `DynamicGI.indirectScale` (with the weighted sum, clusters on slab edges, whose later samples
    lie on thin faces that only see the environment, get 5 to 30% less bounce than in the Editor).
-6. **Environment**: six 8x8 faces and their coarser levels (510 values); a flat ambient color
-   gives its linear value everywhere.
+6. **Environment**: six 8x8 faces (+X, -X, +Y, -Y, +Z, -Z, each row by row from its top as a
+   cube map stores it) of linear RGB and their coarser levels, each value the mean of the 2x2
+   under it (510 values); see [Environment](#environment) for what fills the faces.
 7. **Update threshold**: the output texels are solved in segments (groups of texels with the
    values they reference). Each value carries how much it changed in this update (the mean of its
    channels' absolute changes; tree values the weighted sum of their children's). A segment adds
@@ -143,8 +149,53 @@ the documented contract: `indirectScale` starts as the scene's Indirect Intensit
 `UpdateGIMaterials`; after `SetEmissive` a material emission change is ignored even after
 `UpdateGIMaterials`; realtime GI picks up ambient color and skybox exposure changes without
 `UpdateEnvironment`, while the call is what updates `RenderSettings.ambientProbe` for the
-skybox. Not measurable as a reference, since the result depends on update timing: a material
+skybox (see [Environment](#environment)). Not measurable as a reference, since the result depends on update timing: a material
 emission change without `UpdateGIMaterials`, and `updateThreshold` above its default of 1.
+
+## Environment
+
+What fills the environment's faces, measured in tests/projects/realtimegi with nothing else
+lighting the room (the documented parts are in the contract above):
+
+- The ambient color (`room-env-*`): its linear value in every texel. A custom ambient mode
+  (`room-ambient-custom`) and a skybox ambient mode without a skybox material (`room-sky-none`)
+  read the ambient color too. The ambient intensity does not scale it (`room-sky-none` and
+  `room-ambient-custom` at intensity 2).
+- A gradient (`room-gradient`): the sky color on +Y, the ground color on -Y and the equator color
+  on the four other faces, linear; the same at ambient intensity 2 (`room-gradient-intensity`).
+- A skybox (`room-sky*`): the sky drawn into the six faces, one texel per pixel of a 90 degree
+  view, as the ambient probe's capture draws it (with the sun's direction and without its color,
+  so without a sun disk; without a main light, a light direction of (0, 0, -1)). The ambient
+  intensity scales each texel as a gamma-encoded value: linear to sRGB, times the intensity, back
+  to linear (`room-sky-only-intensity`: 2).
+- A change of these inputs shows without `DynamicGI.UpdateEnvironment`: the ambient colors, the
+  ambient intensity, a skybox material property (`room-sky-nocall`), a sun added and turned
+  (`room-sky-sun`, `room-sky-sun-turned`; its bounce intensity is 0, so it adds nothing but its
+  place in the sky).
+- `DynamicGI.SetEnvironmentData` (`room-envdata`): the cube's RGB as given, linear, faces and
+  rows in the order above. It stands until one of those inputs changes
+  (`room-envdata-intensity`: the ambient intensity, as documented) or
+  `DynamicGI.UpdateEnvironment` is called (`room-envdata-update`). An array of another length
+  throws ArgumentException ("Array size is wrong. It must have 1536 elements. The resolution of
+  each face is 8x8 texels."), none ArgumentNullException.
+- `RenderSettings.ambientProbe` with a skybox: `DynamicGI.UpdateEnvironment` derives it from the
+  sky; reading it scales it by the ambient intensity of the moment taken as a gamma value
+  (GammaToLinearSpace: 0.214 at 0.5, 4.59 at 2; `room-sky-only-intensity-half` and the cases
+  after it), and a sun added later does not change it without the call.
+
+Observed once and not modelled: data given to `SetEnvironmentData` one frame after the sun was
+destroyed did not show (the lightmap stayed the sky's): the Editor reads the sky back over
+several frames, and an update still on its way replaced the data. Unbound draws and reads the sky
+in the frame its inputs change. Not measured: a scene whose environment lighting is baked
+(`LightingSettings.realtimeEnvironmentLighting` off with baked GI on; Unbound gives realtime GI
+the environment all the same), sky materials other than the procedural one (they are drawn by
+the same capture), and gamma-space projects.
+
+Unbound (`Graphics/RealtimeGIEnvironment.cs`) keeps the cube and what it was made from (the
+ambient mode and colors, or the skybox material and its change count, the ambient intensity and
+the sun's direction in thousandths, so that a slowly turning sun does not draw the sky again in
+every frame); a frame makes it again only when that key differs, and each native scene takes a
+changed cube once (`gi_set_environment`), which restarts its update only when values changed.
 
 ## Material inputs
 
@@ -213,16 +264,16 @@ Preserve UVs off the precompute generates the charts themselves (not supported y
 `Graphics/RealtimeGI.cs` loads a scene's systems (`realtime-gi-load`), makes the renderers'
 realtime lightmap UVs and renders their meta passes into each system's material textures at load
 and after `Renderer.UpdateGIMaterials`. In PostLateUpdate.EnlightenRuntimeUpdate it passes the
-frame's lights (realtime, and mixed ones without baked GI, with bounce intensity) and environment
-to the native update (`crates/unbound-runtime/src/realtime_gi.rs`): one update of every system in
+frame's lights (realtime, and mixed ones without baked GI, with bounce intensity), and the
+environment when it changed, to the native update (`crates/unbound-runtime/src/realtime_gi.rs`): one update of every system in
 synchronous mode, else of as many as fit in 2 ms (at least one), each system in turn reading the
 other systems' values of their last updates, without allocating; the scene
 is converged once an update of every system left its drawn texels unchanged. Changed atlases are
 uploaded as RGBA half floats; renderers draw them as `unity_DynamicLightmap` with their realtime
 scale and offset and `DYNAMICLIGHTMAP_ON`, and take no light probes. The light probes'
 coefficients are read back after each update (`gi_read_probes`) into the scene's LightProbes.
-`DynamicGI.isConverged`, `synchronousMode`, `SetEmissive`, `indirectScale` and
-`updateThreshold` act on it.
+`DynamicGI.isConverged`, `synchronousMode`, `SetEmissive`, `SetEnvironmentData`,
+`UpdateEnvironment`, `indirectScale` and `updateThreshold` act on it.
 
 ## Residuals
 
@@ -234,17 +285,31 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   threshold, input differences well below it decide which update last solved a segment, and so
   move a few texels (2 to 6 values of about 5000 per case in the engine, up to about 10%; 4
   values also in `roomscaled-threshold0`, where no part keeps earlier lighting: cause open). The
-  comparator gates the light cases' lightmaps with at most 0.5% of their values outside the
-  tolerance, each within 0.02 + 10%.
+  comparator gates the lightmaps with at most 0.5% of their values outside the
+  tolerance, each within 0.02 + 10%. In `Room` these values are the texels next to the emissive
+  panel ((1,9), (1,10), (1,12), (2,12), (4,12)): 1 to 4% off in `room-base`, 2 to 5% after
+  `DynamicGI.SetEmissive`, and 6 to 11% in the later cases where little else lights them. With
+  the panel's emission set to black (the environment cases from `room-gradient` on) no value is
+  outside the tolerance, so the emitting panel's nearest texels are the open part, not the
+  update history alone.
+- Environment: with the environment as the only light the lightmaps differ from the Editor's by
+  0.0004 to 0.001 on average for colors and gradients (at most 0.015), 0.001 for the sky (at
+  most 0.008; 0.004 and 0.02 at ambient intensity 2, on values around 0.4) and 0.001 for a
+  script's cube (the comparator's mean and largest difference).
+- `RenderSettings.ambientProbe` in a custom ambient mode: the Editor keeps the probe last derived
+  from the sky, without the ambient intensity; Unbound gives the ambient color's
+  (`room-ambient-custom`, reported).
+- Frames: the cases without a direct light (`room-pointoff`, the environment cases) differ from
+  the Editor's frames by 9 to 17 of 255 on average (the lightmaps match): how the realtime
+  lightmap is drawn is open; the frames are reported, not gated.
 - Light probes: in the RoomScaled cases one coefficient of one probe is about 15% below the
   Editor's (about 0.05), whatever the case; in `room-bounce`, a few small higher-band
   coefficients differ by up to about 0.5% of band 0 (causes open).
 
 ## Unbound plan
 
-- Phase 2, runtime over Unity's precomputed data (above): next, skybox and
-  gradient environments, directional output; unmeasured inputs fail loudly
-  until a probe case covers them.
+- Phase 2, runtime over Unity's precomputed data (above): next, directional output;
+  unmeasured inputs fail loudly until a probe case covers them.
 - Phase 3, Unbound's own precompute from scene geometry (automatic charts for Preserve UVs off,
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
