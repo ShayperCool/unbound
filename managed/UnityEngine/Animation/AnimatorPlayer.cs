@@ -1001,14 +1001,14 @@ namespace Unbound.Runtime
 
         /// <summary>A motion's length in seconds: a clip's; a blend tree's is its clips' lengths
         /// (each over its child's time scale) summed by their weights in the whole tree, and
-        /// divided by the weights' total only while that is below one. Trees whose weights sum to
-        /// one give the same either way; a Direct blend tree whose weights sum above one lasts
-        /// the plain sum (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
-        /// body.directHigh: clips of 1 s at 0.8 and 0.6 make a state of 1.4 s; at 0.3 and 0.4,
-        /// body.directLow, 1 s). A child tree without clips counts for nothing (in an Editor
-        /// capture of the probe's HumanBodyDirectEmptyChild controller, not in the reference); a
-        /// child without a motion counts as one second by its weight,
-        /// as before (unmeasured, as are clips of other lengths below a total of one).</summary>
+        /// divided by the weights' total only while that is below one; one second when no clip
+        /// has a weight. Trees whose weights sum to one give the same either way. Matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/humanoid body.direct*: clips of 1 s at 0.8
+        /// and 0.6 make a state of 1.4 s (body.directHigh), at 0.3 and 0.4 one of 1 s
+        /// (body.directLow), a clip of 2/3 s at 0 one of 1 s (body.directZeroB); at 0.5 it makes
+        /// one of 2/3 s in an Editor capture of the probe's HumanBodyDirectLowB controller, which
+        /// is not in the reference. A child without a motion counts as one second by its weight,
+        /// as before (unmeasured).</summary>
         internal float MotionLength(LayerRun layer, Motion motion)
         {
             switch (motion)
@@ -1024,7 +1024,7 @@ namespace Unbound.Runtime
                     float sum = 0f, total = 0f;
                     AddLeafLengths(layer, tree, 1f, 0, ref sum, ref total);
                     if (total > 0f) return total >= 1f ? sum : sum / total;
-                    return tree.Children.Count > 0 ? MotionLength(layer, tree.Children[0].Motion) : 1f;
+                    return 1f;
                 }
                 default:
                     return 1f;

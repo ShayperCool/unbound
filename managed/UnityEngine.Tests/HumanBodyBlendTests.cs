@@ -324,6 +324,19 @@ namespace UnityEngine.Tests
             Same(sum, HumanRootMotion.InSum(sum, sum));
         }
 
+        /// <summary>A Direct blend tree whose clips are all at weight 0 lasts one second, whatever
+        /// its clips' lengths (6000.0.71f1, tests/projects/humanoid body.directZeroB: a clip of
+        /// 2/3 s at 0). Control: at a weight above 0 the state lasts the clip's length.</summary>
+        [Fact]
+        public void ADirectBlendTreeAtWeightZeroLastsOneSecond()
+        {
+            var half = Fixture.TreeController(true, null, 0f, 0f, Clip(1f, F4.QIdentity), Clip(1f, F4.QIdentity)).Replace("m_StopTime: 1", "m_StopTime: 0.5");
+            Assert.Contains("m_StopTime: 0.5", half);
+            Near.Equal(0.1f, Play(half).GetCurrentAnimatorStateInfo(0).normalizedTime, 1e-5f);
+            var weighted = Fixture.TreeController(true, null, 0.5f, 0f, Clip(1f, F4.QIdentity), Clip(1f, F4.QIdentity)).Replace("m_StopTime: 1", "m_StopTime: 0.5");
+            Near.Equal(0.2f, Play(weighted).GetCurrentAnimatorStateInfo(0).normalizedTime, 1e-5f);
+        }
+
         /// <summary>A Direct blend tree's weights decide its blend, not how many clips carry them:
         /// one clip at 1.4 gives the body of the same clip twice at 0.7, in a transition too.</summary>
         [Fact]
