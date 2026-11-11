@@ -275,8 +275,9 @@ clip, the residual every HumanA play of the probe already has; `foot-ik-legs`: l
 amplified rounding of a nearly straight leg); `stance-drift`: the final pose after a job's
 ResetToStancePose on an Animator root motion has moved from the origin, where the Editor's
 stance values step with the distance (body up to 3.3e-3, a straight leg's twist muscle up to
-1.5e-2 by update 28). `stream.stanceInPlace` is the same job with the Animator kept at the
-origin: there every value matches.
+1.5e-2 by update 28). `stream.stanceInPlace` (recorded last, built in `HumanoidBones.cs`) is
+the same job without root motion applied, so that the Animator stays at the origin: there every
+value matches.
 
 After changing the rigs, regenerate them (`blender -b --factory-startup --python
 tests/projects/humanoid/make_models.py`), let the Editor configure them in a copy of the project
