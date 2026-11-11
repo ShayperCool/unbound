@@ -993,7 +993,7 @@ fn vertex_slot(semantic: &str) -> Option<u32> {
 
 /// A texture or sampler variable's texture property: `_MainTex.t` / `_MainTex.s` (a
 /// `sampler2D`), `_MainTex` / `sampler_MainTex` (separate objects).
-fn texture_property(name: &str, sampler: bool) -> Option<String> {
+pub(crate) fn texture_property(name: &str, sampler: bool) -> Option<String> {
     if let Some(p) = name.strip_suffix(".t").or_else(|| name.strip_suffix(".s")) {
         return Some(p.to_string());
     }
@@ -1006,20 +1006,31 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
     Some(name.to_string())
 }
 
-/// `uav_registers`: the UAV registers the fragment source declares, by buffer name.
+/// `uav_registers`: the UAV registers the fragment source declares, by buffer name;
+/// `texture_state`: the device samples a texture through the texture's own sampler state
+/// (`GraphicsDevice::samples_through_texture_state`).
 pub(crate) fn fit(
     vertex: &[u32],
     fragment: &[u32],
     uav_registers: &HashMap<String, u32>,
     clip: ClipSpace,
+    texture_state: bool,
 ) -> Result<Compiled> {
+    // A texture the program still samples through several samplers has a variable for each,
+    // the same in both stages.
+    let (vertex, fragment) = (
+        crate::samplers::own_samplers(vertex, texture_state)?,
+        crate::samplers::own_samplers(fragment, texture_state)?,
+    );
+    let mut pairs = crate::samplers::sampled_pairs(&vertex)?;
+    pairs.extend(crate::samplers::sampled_pairs(&fragment)?);
+    let primary = crate::samplers::primary_samplers(&pairs);
+    let per_sampler = |stage: &[u32]| crate::samplers::one_sampler_per_texture(stage, &primary);
     let vertex = unify_int_signedness(&pad_array_elements(&align_uniform_members(
-        &strip_relaxed_precision(&crate::samplers::own_samplers(vertex)?),
+        &strip_relaxed_precision(&per_sampler(&vertex)?),
     )?)?)?;
     let fragment = front_facing(&unify_int_signedness(&pad_array_elements(
-        &align_uniform_members(&strip_relaxed_precision(&crate::samplers::own_samplers(
-            fragment,
-        )?))?,
+        &align_uniform_members(&strip_relaxed_precision(&per_sampler(&fragment)?))?,
     )?)?)?;
     let vertex_scan = scan(&vertex, Stage::Vertex)?;
     let fragment_scan = scan(&fragment, Stage::Fragment)?;
@@ -1033,13 +1044,25 @@ pub(crate) fn fit(
     let mut names = BTreeSet::new();
     let mut dims: HashMap<String, TextureDim> = HashMap::new();
     let mut slots: HashMap<String, TextureSlot> = HashMap::new();
+    // The further variables of textures sampled through several samplers, by name.
+    let mut further = BTreeSet::new();
     for module in [&vertex, &fragment] {
         for (_, g) in module.global_variables.iter() {
             if g.space != AddressSpace::Handle {
                 continue;
             }
-            let name = g.name.clone().unwrap_or_default();
+            let variable = g.name.clone().unwrap_or_default();
             let sampler = matches!(module.types[g.ty].inner, TypeInner::Sampler { .. });
+            // A further variable of a texture is its texture's slot again.
+            let name = if sampler {
+                variable
+            } else {
+                let texture = crate::samplers::variable_texture(&variable).to_string();
+                if texture != variable {
+                    further.insert(variable);
+                }
+                texture
+            };
             let property = slot_property(&name, sampler).ok_or_else(|| {
                 anyhow!("sampler `{name}` is neither a texture's nor an inline sampler state")
             })?;
@@ -1084,12 +1107,29 @@ pub(crate) fn fit(
             names.insert(property);
         }
     }
+    let further: Vec<String> = further.into_iter().collect();
+    let further_property = |variable: &String| {
+        slot_property(crate::samplers::variable_texture(variable), false).unwrap_or_default()
+    };
+    // A main texture with further variables is a slot of the program's, like a typed one.
     let main_texture = dims.get(MAIN_TEXTURE).copied().unwrap_or(TextureDim::D2) == TextureDim::D2
         && slots
             .get(MAIN_TEXTURE)
             .is_none_or(|slot| slot.sample == SampleKind::Float && !slot.comparison)
+        && !further.iter().any(|v| further_property(v) == MAIN_TEXTURE)
         && names.remove(MAIN_TEXTURE);
     let textures: Vec<String> = names.into_iter().collect();
+    let texture_aliases = further
+        .iter()
+        .map(|v| {
+            let property = further_property(v);
+            textures
+                .iter()
+                .position(|t| *t == property)
+                .map(|k| k as u32)
+                .ok_or_else(|| anyhow!("texture `{property}`"))
+        })
+        .collect::<Result<Vec<u32>>>()?;
 
     // Structured (and byte address) buffers of both stages, bound alike: read-only unless the
     // fragment program writes one (a vertex program cannot).
@@ -1164,8 +1204,8 @@ pub(crate) fn fit(
     pad_member_gaps(&mut vertex)?;
     pad_member_gaps(&mut fragment)?;
 
-    let vertex_uniforms = rebind(&mut vertex, &textures, &buffers)?;
-    let fragment_uniforms = rebind(&mut fragment, &textures, &buffers)?;
+    let vertex_uniforms = rebind(&mut vertex, &textures, &further, &buffers)?;
+    let fragment_uniforms = rebind(&mut fragment, &textures, &further, &buffers)?;
     fit_vertex(&mut vertex, &vertex_scan.input_semantics, clip)?;
     let extra_vertex_inputs = vertex.entry_points.iter().any(|e| {
         e.function.arguments.iter().any(|a| {
@@ -1227,6 +1267,7 @@ pub(crate) fn fit(
         main_texture,
         keywords: Vec::new(),
         texture_slots,
+        texture_aliases,
         buffers,
         blocks: layout
             .bases
@@ -1615,6 +1656,7 @@ fn uniform_block(module: &Module) -> Option<(Handle<Type>, u32)> {
 fn rebind(
     module: &mut Module,
     textures: &[String],
+    further: &[String],
     buffers: &[BufferSlot],
 ) -> Result<Vec<Uniform>> {
     let mut block = None;
@@ -1649,7 +1691,13 @@ fn rebind(
                     }
                 };
                 let property = slot_property(&name, sampler).unwrap_or_default();
-                let binding = if property == MAIN_TEXTURE && !textures.contains(&property) {
+                let binding = if let Some(j) = further.iter().position(|v| *v == name) {
+                    // A further variable of a texture, after the slots.
+                    ResourceBinding {
+                        group: 1,
+                        binding: (2 * textures.len() + j) as u32,
+                    }
+                } else if property == MAIN_TEXTURE && !textures.contains(&property) {
                     ResourceBinding {
                         group: 2,
                         binding: sampler as u32,

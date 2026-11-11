@@ -114,6 +114,14 @@ impl GraphicsDevice {
         matches!(self, Self::Vulkan | Self::Metal)
     }
 
+    /// Whether a graphics program samples a texture through the texture's own sampler state
+    /// whatever sampler it names, another texture's too: OpenGL Core, where the state is the
+    /// texture's (tests/projects/samplerstates). The other devices keep the sampler a program
+    /// names when it is another texture's (unmeasured on their Editors).
+    pub fn samples_through_texture_state(self) -> bool {
+        matches!(self, Self::OpenGLCore)
+    }
+
     /// Whether the shader compiler provides the precision texture and sampler type names
     /// (`Texture2D_float`, `sampler3D_half`, ...) on the device: Unity's `HLSLSupport.cginc`
     /// defines them itself except on Vulkan, Metal and the mobile APIs.

@@ -1708,6 +1708,13 @@ impl UnityRenderer {
                 resource: wgpu::BindingResource::Sampler(sampler),
             });
         }
+        // A further variable of a texture shows what its slot does.
+        for (j, &slot) in program.texture_aliases.iter().enumerate() {
+            entries.push(wgpu::BindGroupEntry {
+                binding: (2 * views.len() + j) as u32,
+                resource: wgpu::BindingResource::TextureView(&views[slot as usize]),
+            });
+        }
         let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("unbound program textures"),
             layout: self.compiled.texture_layout(id),

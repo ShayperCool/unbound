@@ -322,9 +322,12 @@ fn integer_samplers(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariabl
 /// Binds a kernel's resources in group 0 by order, reads its uniform blocks, sets its RW
 /// textures' formats and access, and writes WGSL.
 fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<CompiledKernel> {
+    // A texture sampled through several samplers: a variable for each (the renderer binds a
+    // resource by its name, the texture's).
+    let primary = crate::samplers::primary_samplers(&crate::samplers::sampled_pairs(spv)?);
     let words = scan(
         &unify_int_signedness(&pad_array_elements(&align_uniform_members(
-            &strip_relaxed_precision(spv),
+            &strip_relaxed_precision(&crate::samplers::one_sampler_per_texture(spv, &primary)?),
         )?)?)?,
         Stage::Compute,
     )?
@@ -345,7 +348,7 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
     let handles: Vec<_> = module.global_variables.iter().map(|(h, _)| h).collect();
     for h in handles {
         let g = module.global_variables[h].clone();
-        let name = g.name.clone().unwrap_or_default();
+        let mut name = g.name.clone().unwrap_or_default();
         let kind = match g.space {
             AddressSpace::Uniform => {
                 let TypeInner::Struct { members, span } = &module.types[g.ty].inner else {
@@ -389,6 +392,7 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
                     arrayed,
                     class,
                 } => {
+                    name = crate::samplers::variable_texture(&name).to_string();
                     let dim = texture_dim(&name, dim, arrayed)?;
                     match class {
                         ImageClass::Sampled { kind, multi } => {
@@ -847,6 +851,18 @@ RWStructuredBuffer<float4> _Out;
             })
             .collect();
         assert_eq!(samplers.len(), 3);
+        // The texture has a variable for each of them, every one bound by the texture's name.
+        let textures: Vec<u32> = compiled
+            .resources
+            .iter()
+            .filter(|r| matches!(r.kind, ResourceKind::Texture { .. }))
+            .map(|r| {
+                assert_eq!(r.name, "_Source");
+                r.binding
+            })
+            .collect();
+        assert_eq!(textures.len(), 3);
+        assert!(textures[0] != textures[1] && textures[1] != textures[2]);
         assert!(
             samplers
                 .iter()

@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 28;
+pub const FORMAT_VERSION: u32 = 31;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -125,6 +125,12 @@ pub struct Compiled {
     /// How each texture slot samples (by `textures` index).
     #[serde(default)]
     pub texture_slots: Vec<TextureSlot>,
+    /// The texture variables a program has beyond its slots, each for a sampler another than
+    /// its texture's own (OpenGL's combined texture-and-sampler units): the `textures` index of
+    /// the slot whose texture the `j`th one shows, bound in the texture group at binding
+    /// `2 * textures.len() + j`.
+    #[serde(default)]
+    pub texture_aliases: Vec<u32>,
     /// The cbuffers in the uniform block: where each one lies (a constant buffer bound by its
     /// name, `SetGlobalConstantBuffer`, fills its range).
     #[serde(default)]
@@ -776,6 +782,7 @@ impl ShaderCompiler {
             &fragment_spv,
             &uav_registers(&fragment_source),
             fit::ClipSpace::of(self.settings.device.conventions()),
+            self.settings.device.samples_through_texture_state(),
         )?;
         compiled.keywords = selected;
         compiled.instanced_properties = instanced_properties;
@@ -1762,6 +1769,132 @@ float4 array() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
         let module = naga::front::wgsl::parse_str(&compiled.fragment).unwrap();
         assert_ne!(compiled.fragment_entry, "array");
         assert_eq!(module.entry_points[0].name, compiled.fragment_entry);
+    }
+
+    /// A texture a graphics program samples through several samplers has a variable for each,
+    /// the same in both stages, bound after the slots: each texture variable of the emitted
+    /// WGSL is sampled through one sampler (OpenGL's combined texture-and-sampler units).
+    #[test]
+    fn a_texture_sampled_through_several_samplers_has_a_binding_for_each() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2D _A;
+Texture2D _B;
+Texture2D _MainTex;
+SamplerState sampler_A;
+SamplerState sampler_B;
+SamplerState sampler_MainTex;
+struct V { float4 position : SV_POSITION; float4 color : COLOR; };
+V vert(float4 position : POSITION) {
+    V o;
+    o.position = position;
+    // This stage samples `_A` through `_B`'s sampler alone.
+    o.color = _A.SampleLevel(sampler_B, position.xy, 0);
+    return o;
+}
+float4 frag(V i) : SV_Target {
+    return i.color + _A.Sample(sampler_A, i.position.xy) + _A.Sample(sampler_B, i.position.xy)
+        + _B.Sample(sampler_B, i.position.xy)
+        + _MainTex.Sample(sampler_MainTex, i.position.xy) + _MainTex.Sample(sampler_A, i.position.xy);
+}
+"#;
+        // A device that keeps the sampler a program names (Vulkan).
+        let mut compiler = ShaderCompiler::new(Settings {
+            device: unbound_compat::GraphicsDevice::Vulkan,
+            ..Settings::default()
+        })
+        .unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        // `_MainTex` has a further variable: it is a slot of the program's.
+        assert!(!compiled.main_texture);
+        assert_eq!(compiled.textures, ["_A", "_B", "_MainTex"]);
+        // `_A` through `sampler_B`, `_MainTex` through `sampler_A`.
+        assert_eq!(compiled.texture_aliases, [0, 2]);
+        let slots = compiled.textures.len() as u32;
+        // The (group, binding) of the texture and of the sampler of every sample of a stage.
+        let samples = |wgsl: &str| {
+            let module = naga::front::wgsl::parse_str(wgsl).unwrap();
+            let mut pairs = std::collections::BTreeSet::new();
+            let functions = module
+                .functions
+                .iter()
+                .map(|(_, f)| f)
+                .chain(module.entry_points.iter().map(|e| &e.function));
+            for f in functions {
+                let binding = |h: naga::Handle<naga::Expression>| match &f.expressions[h] {
+                    naga::Expression::GlobalVariable(g) => {
+                        let b = module.global_variables[*g].binding.as_ref().unwrap();
+                        (b.group, b.binding)
+                    }
+                    other => panic!("not a variable: {other:?}"),
+                };
+                for (_, e) in f.expressions.iter() {
+                    if let naga::Expression::ImageSample { image, sampler, .. } = e {
+                        pairs.insert((binding(*image), binding(*sampler)));
+                    }
+                }
+            }
+            pairs
+        };
+        // `_A` (slot 0) keeps its own sampler; its further variable (after the slots) takes
+        // `_B`'s, in the vertex stage too.
+        let further_a = 2 * slots;
+        let further_main = 2 * slots + 1;
+        let slot = |texture: u32, sampler: u32| ((1, texture), (1, sampler));
+        assert_eq!(
+            samples(&compiled.vertex).into_iter().collect::<Vec<_>>(),
+            [slot(further_a, 3)]
+        );
+        assert_eq!(
+            samples(&compiled.fragment).into_iter().collect::<Vec<_>>(),
+            [
+                slot(0, 1),
+                slot(2, 3),
+                slot(4, 5),
+                slot(further_a, 3),
+                slot(further_main, 1)
+            ]
+        );
+        // OpenGL Core samples every texture through its own state: no further variables, and
+        // each sample through its texture's own sampler.
+        let mut opengl = ShaderCompiler::new(Settings {
+            device: unbound_compat::GraphicsDevice::OpenGLCore,
+            ..Settings::default()
+        })
+        .unwrap();
+        let own = opengl.compile(&program(source, false), &[], false).unwrap();
+        assert!(own.texture_aliases.is_empty());
+        assert_eq!(own.textures, ["_A", "_B"]);
+        assert!(own.main_texture);
+        assert_eq!(
+            samples(&own.vertex).into_iter().collect::<Vec<_>>(),
+            [slot(0, 1)]
+        );
+        // The main texture is the renderer's group again.
+        assert_eq!(
+            samples(&own.fragment).into_iter().collect::<Vec<_>>(),
+            [slot(0, 1), slot(2, 3), ((2, 0), (2, 1))]
+        );
+        // A program sampling each texture through one sampler has none.
+        let plain = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2D _A;
+Texture2D _B;
+SamplerState sampler_A;
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+float4 frag(float4 position : SV_POSITION) : SV_Target {
+    return _A.Sample(sampler_A, position.xy) + _B.Sample(sampler_A, position.xy);
+}
+"#;
+        let compiled = compiler
+            .compile(&program(plain, false), &[], false)
+            .unwrap();
+        assert!(compiled.texture_aliases.is_empty());
+        assert_eq!(compiled.textures, ["_A", "_B"]);
     }
 
     /// The render pipelines' instancing library under the replay: read without instancing, so

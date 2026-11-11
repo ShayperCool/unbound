@@ -299,6 +299,15 @@ impl CompiledPrograms {
                 }),
             ));
         }
+        // A further variable of a texture (for another sampler than its own) shows its slot's
+        // texture.
+        let slots = program.textures.len() as u32;
+        for (j, &slot) in program.texture_aliases.iter().enumerate() {
+            texture_entries.push(wgpu::BindGroupLayoutEntry {
+                binding: 2 * slots + j as u32,
+                ..texture_entries[2 * slot as usize]
+            });
+        }
         let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("unbound program textures"),
             entries: &texture_entries,
@@ -1504,6 +1513,7 @@ mod tests {
             main_texture: true,
             keywords: Vec::new(),
             texture_slots: Vec::new(),
+            texture_aliases: Vec::new(),
             buffers: Vec::new(),
             // A buffer bound over `_MainTex_ST` (offset 96).
             blocks: vec![unbound_shaders::BlockRange {
@@ -1714,6 +1724,7 @@ mod tests {
             main_texture: true,
             keywords: Vec::new(),
             texture_slots: Vec::new(),
+            texture_aliases: Vec::new(),
             buffers: Vec::new(),
             blocks: vec![unbound_shaders::BlockRange {
                 name: "Bound".into(),
