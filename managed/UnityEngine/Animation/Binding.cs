@@ -666,8 +666,7 @@ namespace Unbound.Runtime
 
         /// <summary>Writes a humanoid body (RootT, RootQ) to its seven curves' channels in
         /// <paramref name="values"/> and marks them in <paramref name="animated"/> (when given):
-        /// the body a root motion pass or a mixer blended as a position and a rotation replaces
-        /// what the curves hold.</summary>
+        /// a clip's body read whole, or the body a mixer blended as a position and a rotation.</summary>
         internal void SetHumanBody(float[] values, bool[] animated, in Unbound.Runtime.Humanoid.Trs body)
         {
             const int first = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst;
@@ -855,19 +854,21 @@ namespace Unbound.Runtime
         int[] m_HumanRest;
         int m_HumanRestFor = -1;
 
-        /// <summary>The channels of the humanoid curves bound in <paramref name="bindings"/> that
-        /// the clip has no curve for, IK goals aside (their states or streams complete them): the
-        /// body, muscles and translations a humanoid clip leaves at rest.</summary>
+        /// <summary>The channels of the humanoid muscle and translation curves bound in
+        /// <paramref name="bindings"/> that the clip has no curve for: what a humanoid clip
+        /// leaves at rest (see <see cref="ClipSampling.CompleteHuman"/>; none for a clip without
+        /// <see cref="AnimationClip.humanMotion"/>). The body and the IK goals are completed by
+        /// their states or streams.</summary>
         internal int[] HumanRest(AnimationBindings bindings)
         {
             if (m_HumanRestFor == bindings.FloatCount) return m_HumanRest;
-            const int rootFirst = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst, goalFirst = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst;
             const int muscleFirst = Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst, count = Unbound.Runtime.Humanoid.HumanClipImport.CurveCount;
             var present = Clip.HumanPresent;
             var rest = new List<int>();
-            for (int curve = rootFirst; curve < count; curve++)
+            bool whole = Clip.humanMotion;
+            for (int curve = muscleFirst; curve < count && whole; curve++)
             {
-                if (curve >= goalFirst && curve < muscleFirst || present[curve]) continue;
+                if (present[curve]) continue;
                 int ch = bindings.HumanChannel(curve);
                 if (ch >= 0) rest.Add(ch);
             }
@@ -879,9 +880,15 @@ namespace Unbound.Runtime
         int[] m_GoalSlots;
         bool m_GoalSlotsMade;
 
+        /// <summary>In <see cref="GoalSlots"/>: a curve that is neither a goal's nor the body's.</summary>
+        internal const int NoSlot = -1;
+        /// <summary>In <see cref="GoalSlots"/>: a humanoid body curve (RootT, RootQ).</summary>
+        internal const int BodySlot = -2;
+
         /// <summary>Per curve, the humanoid IK goal curve it writes
-        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals.Slot"/>, −1 for the others);
-        /// null when the clip has no goal curve.</summary>
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals.Slot"/>), <see cref="BodySlot"/>
+        /// for a body curve and <see cref="NoSlot"/> for the others; null when the clip has
+        /// neither goal nor body curves.</summary>
         internal int[] GoalSlots(AnimationBindings bindings)
         {
             if (m_GoalSlotsMade) return m_GoalSlots;
@@ -890,12 +897,13 @@ namespace Unbound.Runtime
             {
                 int ch = Float[i];
                 var owner = ch >= 0 && ch < bindings.FloatOwner.Length ? bindings.FloatOwner[ch] : null;
-                int slot = owner != null ? Unbound.Runtime.Humanoid.HumanStateGoals.Slot(owner.HumanCurve) : -1;
-                if (slot < 0) continue;
+                if (owner == null) continue;
+                int slot = owner.HumanBody ? BodySlot : Unbound.Runtime.Humanoid.HumanStateGoals.Slot(owner.HumanCurve);
+                if (slot == NoSlot) continue;
                 if (m_GoalSlots == null)
                 {
                     m_GoalSlots = new int[Float.Length];
-                    Array.Fill(m_GoalSlots, -1);
+                    Array.Fill(m_GoalSlots, NoSlot);
                 }
                 m_GoalSlots[i] = slot;
             }

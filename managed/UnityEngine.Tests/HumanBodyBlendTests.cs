@@ -171,20 +171,59 @@ namespace UnityEngine.Tests
             Near.Equal(1f, Sample("B").GravityWeight);
         }
 
+        /// <summary>A state that gives no humanoid pose leaves the body to what the pose's other
+        /// values take there (unmeasured in the Editor; as before): in a transition from an empty
+        /// state on an override layer, the body moves from the layer below's to the clip's with
+        /// the transition; in a transition to a state whose clip has no humanoid curve, it moves
+        /// to the identity with it. Neither jumps when the transition starts or ends.</summary>
+        [Fact]
+        public void TheBodyFollowsATransitionWithAStateWithoutAHumanoidPose()
+        {
+            const long empty = 1102000009, transition = 1101000009;
+            F4 leaning = Q(30f, 0f);
+            string layered = Fixture.Header + Fixture.Layer("Base Layer", 1107000001, 0, 1f) + Fixture.Layer("Above", 1107000002, 0, 1f)
+                + Fixture.Machine(1107000001, Fixture.StateA, Fixture.StateA) + Fixture.Machine(1107000002, empty, empty, Fixture.StateB)
+                + Fixture.State(Fixture.StateA, "A", Fixture.ClipA, false) + Fixture.State(empty, "Empty", 0, false, transition)
+                + Fixture.State(Fixture.StateB, "B", Fixture.ClipB, false) + Fixture.Transition(transition, Fixture.StateB, 0.2f, 0.5f)
+                + Fixture.Clip(Fixture.ClipA, "A", Clip(1f, F4.QIdentity)) + Fixture.Clip(Fixture.ClipB, "B", Clip(1.3f, leaning));
+            var above = Fixture.Rig(layered, m_Created);
+            above.Update(0f);
+            above.Update(0.25f);
+            above.Update(0.2f);
+            Assert.True(above.IsInTransition(1));
+            float p = above.GetAnimatorTransitionInfo(1).normalizedTime;
+            Assert.InRange(p, 0.2f, 0.8f);
+            Near.Equal(1f + 0.3f * p, BodyPosition(above).y, 1e-4f);
+            Assert.True(Fixture.Angle(Blend(F4.QIdentity, leaning, p), BodyRotation(above)) < 0.1f);
+
+            var generic = Fixture.Rig(Fixture.TransitionController(new[] { ("NotAHumanCurve", 1f) }, false, false), m_Created);
+            generic.Update(0f);
+            generic.Update(0.25f);
+            generic.Update(0.2f);
+            Assert.True(generic.IsInTransition(0));
+            p = generic.GetAnimatorTransitionInfo(0).normalizedTime;
+            Assert.InRange(p, 0.2f, 0.8f);
+            Near.Equal(1f - p, BodyPosition(generic).y, 1e-4f);
+        }
+
         // ------------------------------------------------------------------ muscles at rest
 
         /// <summary>An override layer's humanoid clip takes the muscles it has no curve for to
         /// rest by the layer's weight, as it blends the ones it has. Controls: an additive layer
-        /// leaves them, and a clip with the curve blends towards its value.</summary>
+        /// leaves them, a clip with the curve blends towards its value, and a clip with body
+        /// curves alone (no AnimationClip.humanMotion) leaves the muscles too (unmeasured, as
+        /// before).</summary>
         [Fact]
         public void AnOverrideLayersClipTakesTheMusclesItLacksToRest()
         {
             var a = Clip(1f, F4.QIdentity, more: ("Spine Front-Back", 0.4f));
             var without = Clip(1f, F4.QIdentity);
             var with = Clip(1f, F4.QIdentity, more: ("Spine Front-Back", 0.8f));
+            var bodyOnly = without.Where(c => c.Item1.StartsWith("Root", StringComparison.Ordinal)).ToArray();
             Near.Equal(0.3f, Play(Fixture.LayerController(0, 0.25f, a: a, b: without)).Human.Value(s_Spine), 1e-5f);
             Near.Equal(0.5f, Play(Fixture.LayerController(0, 0.25f, a: a, b: with)).Human.Value(s_Spine), 1e-5f);
             Near.Equal(0.4f, Play(Fixture.LayerController(1, 0.25f, a: a, b: without)).Human.Value(s_Spine), 1e-5f);
+            Near.Equal(0.4f, Play(Fixture.LayerController(0, 0.25f, a: a, b: bodyOnly)).Human.Value(s_Spine), 1e-5f);
         }
 
         // ------------------------------------------------------------------ Direct blend trees
@@ -210,9 +249,10 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>What a Direct blend tree's clips leave of one is the identity as it is
-        /// (tests/projects/humanoid body.directEmptyChild, a foot goal): a goal's or the body's
+        /// (tests/projects/humanoid body.directEmptyChild, measured for a foot goal): a goal's
         /// rotation with a negative w at 0.5 blends with (0, 0, 0, 1), not with the identity of
-        /// its own hemisphere. Control: the two differ.</summary>
+        /// its own hemisphere; the body's follows the same rule (unmeasured: the probe's bodies
+        /// below a total of one have a positive w). Control: the two differ.</summary>
         [Fact]
         public void ADirectBlendTreeBelowOneCompletesRotationsWithThePlainIdentity()
         {

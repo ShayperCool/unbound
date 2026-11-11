@@ -120,8 +120,8 @@ namespace Unbound.Runtime
         /// v - reference, and for rotations reference⁻¹·q.
         /// <paramref name="loopPose"/>: the Animator's sampling, which applies the clip's loop pose.
         /// With <paramref name="goals"/>, a humanoid clip's IK goal curves go to it instead of the
-        /// pose; the caller adds the goals the clip's state places and blends
-        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>).</summary>
+        /// pose and its body curves are left out; the caller adds the body and the goals the
+        /// clip's state blends (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>).</summary>
         internal static void Sample(BoundClip bound, float time, float weight, AnimationPose pose, bool[] mask = null, bool[] objectMask = null,
             float[] reference = null, bool loopPose = false, Unbound.Runtime.Humanoid.HumanStateGoals goals = null)
         {
@@ -158,9 +158,10 @@ namespace Unbound.Runtime
                 int ch = channels[i];
                 if (ch < 0 || (mask != null && !mask[ch])) continue;
                 float value = bound.Clip.LoopPose(i, curve.Evaluate(time), phase);
-                if (goalSlots != null && goalSlots[i] >= 0)
+                if (goalSlots != null && goalSlots[i] != BoundClip.NoSlot)
                 {
-                    goals.Take(goalSlots[i], value);
+                    // The state takes the clip's body whole from its root motion sample.
+                    if (goalSlots[i] >= 0) goals.Take(goalSlots[i], value);
                     continue;
                 }
                 pose.Value[ch] += weight * (reference != null ? value - reference[ch] : value);
@@ -179,14 +180,16 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>A humanoid clip is a whole human pose: the body, muscle and translation
-        /// curves it lacks join <paramref name="pose"/> at rest (their default values) with the
-        /// clip's weight, as if the clip had them, so the clip blends them towards rest wherever
-        /// it blends (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
+        /// <summary>A humanoid clip is a whole human pose: the muscle and translation curves it
+        /// lacks join <paramref name="pose"/> at rest (their default values) with the clip's
+        /// weight, as if the clip had them, so the clip blends them towards rest wherever it
+        /// blends (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
         /// body.partialOverride and bodyGraph.layerPartial: an override layer of weight 0.5 whose
-        /// clip has four muscle curves halves every other muscle of the layer below). IK goals
-        /// are completed by their states (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>)
-        /// or streams.</summary>
+        /// clip has four muscle curves halves every other muscle of the layer below). Only for
+        /// clips with a goal, muscle or translation curve (AnimationClip.humanMotion); a clip
+        /// with body curves alone leaves the muscles as they are (unmeasured). The body and the
+        /// IK goals are completed by their states
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>) or streams.</summary>
         internal static void CompleteHuman(BoundClip bound, AnimationBindings bindings, float weight, AnimationPose pose, bool[] mask = null)
         {
             if (weight <= 0f) return;
@@ -346,24 +349,21 @@ namespace Unbound.Runtime
         /// states without write defaults keep is the value it holds (where <paramref name="held"/>)
         /// instead of the current one, and it receives what is written. With
         /// <paramref name="humanBodyInRootMotion"/>, additive layers leave a humanoid body's curves to
-        /// the root motion pass and with <paramref name="placedGoals"/> the IK goals' rotations
-        /// combine as rotations (see <see cref="CombineLayers"/>). With
+        /// the root motion pass and with <paramref name="placedGoals"/> the body's and the IK
+        /// goals' rotations combine as rotations (see <see cref="CombineLayers"/>). With
         /// <paramref name="skipTransforms"/>, Transforms and humanoid curves are left as they are
         /// (an Animator culled by CullUpdateTransforms), except <paramref name="rootDuringCull"/>
         /// when an attached controller restores its output-bound root pose. With <paramref name="stream"/>, captures
-        /// the same composed result and bookkeeping without writing the scene. With
-        /// <paramref name="humanBody"/>, the humanoid body curves take that body whole, whatever
-        /// the layers' body curves combine to (<see cref="AnimationBindings.SetHumanBody"/>).</summary>
+        /// the same composed result and bookkeeping without writing the scene.</summary>
         internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null,
             bool humanBodyInRootMotion = false, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null,
-            Transform rootDuringCull = null, bool placedGoals = false, Unbound.Runtime.Humanoid.Trs? humanBody = null)
+            Transform rootDuringCull = null, bool placedGoals = false)
         {
             var s = Rent(b);
             try
             {
                 int n = b.FloatCount;
                 var touched = s.Touched;
-                if (humanBody is { } placed) b.SetHumanBody(s.Result, touched, placed);
                 for (int c = 0; c < n; c++)
                 {
                     for (int l = 0; l < count; l++)
@@ -387,7 +387,6 @@ namespace Unbound.Runtime
                     for (int c = 0; c < n; c++) kept[c] = c < held.Length && held[c] ? written[c] : s.Current[c];
                 }
                 CombineLayers(b, layers, count, s.Result, null, overDefaults: true, kept, humanBodyInRootMotion, placedGoals);
-                if (humanBody is { } body) b.SetHumanBody(s.Result, null, body);
                 if (written != null)
                 {
                     for (int c = 0; c < n && c < written.Length; c++)
@@ -446,11 +445,10 @@ namespace Unbound.Runtime
         /// <paramref name="humanBodyInRootMotion"/>, a humanoid body's curves (RootT, RootQ) take no
         /// additive differences here: the Animator's root motion pass composes them onto the body
         /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.AdditiveBody"/>). With
-        /// <paramref name="placedGoals"/>, the poses hold humanoid IK goals that their states wrote
-        /// whole, every curve of a goal with one weight
-        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>): a goal's rotation combines as a
-        /// rotation. Without, each goal curve combines on its own, as a clip with only some of a
-        /// rotation's curves needs.
+        /// <paramref name="placedGoals"/>, the poses hold humanoid bodies and IK goals that their
+        /// states wrote whole, every curve of a body or goal with one weight
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>): the body's and a goal's
+        /// rotation combine as rotations. Without, each of their curves combines on its own.
         /// </summary>
         internal static void CombineLayers(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, bool overDefaults,
             float[] kept = null, bool humanBodyInRootMotion = false, bool placedGoals = false)
@@ -459,14 +457,15 @@ namespace Unbound.Runtime
             for (int c = 0; c < n; c++)
             {
                 var owner = b.FloatOwner[c];
-                // A placed humanoid IK goal's rotation blends as a rotation too (6000.0.71f1,
-                // tests/projects/humanoid goals.override*: an override layer turns the goals of
-                // the layers below towards its own by its weight).
+                // A humanoid body's and a placed IK goal's rotation blend as rotations too
+                // (6000.0.71f1, tests/projects/humanoid goals.override*, body.negOverride,
+                // body.partialOverride: an override layer turns the body and the goals of the
+                // layers below towards its own by its weight).
                 if (owner != null && c + 3 < n
                     && (owner.IsQuaternion && owner.First == c && owner.Width == 4
-                        || placedGoals && owner.HumanCurve >= 0 && b.HumanRotationStart(c, goalsOnly: true)))
+                        || placedGoals && owner.HumanCurve >= 0 && b.HumanRotationStart(c)))
                 {
-                    CombineRotation(b, layers, count, values, animated, c, overDefaults, kept);
+                    CombineRotation(b, layers, count, values, animated, c, overDefaults, kept, skipAdditive: humanBodyInRootMotion && owner.HumanBody);
                     c += 3;
                     continue;
                 }
@@ -528,7 +527,7 @@ namespace Unbound.Runtime
         }
 
         static void CombineRotation(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, int c, bool overDefaults,
-            float[] kept)
+            float[] kept, bool skipAdditive = false)
         {
             var k0 = kept ?? values;
             var current = new Quaternion(k0[c], k0[c + 1], k0[c + 2], k0[c + 3]);
@@ -547,6 +546,8 @@ namespace Unbound.Runtime
                 if (lw <= 0f) continue;
                 if (layer.Additive)
                 {
+                    // A humanoid body's differences compose in the root motion pass.
+                    if (skipAdditive) continue;
                     written = true;
                     if (!AdditiveRotation(pose, c, lw, out var d)) { r = new Quaternion(0f, 0f, 0f, 0f); continue; }
                     if (r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w < 1e-12f) continue;

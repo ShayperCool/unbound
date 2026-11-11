@@ -114,7 +114,6 @@ namespace Unbound.Runtime
         /// State move callbacks intercept the root pose too, but do not request deltas themselves.</summary>
         void ComputeRootMotion(int count)
         {
-            m_HumanBody = null;
             if (!Attached) return;
             var animator = m_Animator;
             animator.CaptureRootMotionPose();
@@ -665,21 +664,16 @@ namespace Unbound.Runtime
                         m_HumanWeights.Add(weight);
                         continue;
                     }
-                    // Sampled with the clip's pose, which placed its goals by this body; a clip
-                    // sampled without one stands for its whole state.
-                    float share = sampled >= 0 ? m_HumanClipShares[sampled] : 1f;
+                    // Sampled with the clip's pose, which took its body and placed its goals by it.
+                    if (sampled < 0) continue;
+                    float share = m_HumanClipShares[sampled];
                     if (run != state)
                     {
                         AddStateMotion(stateWeight);
                         state = run;
                         stateWeight = weight / share;
                     }
-                    if (sampled >= 0) m_StateSamples.Add(m_HumanClipSamples[sampled]);
-                    else
-                    {
-                        human.SampleMotion(clip, clip.HumanClipMotion, HumanInput(run, clip), out var sample);
-                        m_StateSamples.Add(sample);
-                    }
+                    m_StateSamples.Add(m_HumanClipSamples[sampled]);
                     m_StateShares.Add(share);
                 }
                 AddStateMotion(stateWeight);
@@ -698,7 +692,6 @@ namespace Unbound.Runtime
                 return false;
             }
             human.ApplyMotion(blended, m_RootDeltaTime, out var rm);
-            if (blended.HasMotion) m_HumanBody = blended.Root;
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return true;
             animator.m_DeltaPosition = new Vector3(rm.DeltaPosition.x, rm.DeltaPosition.y, rm.DeltaPosition.z);
             animator.m_DeltaRotation = new Quaternion(rm.DeltaRotation.x, rm.DeltaRotation.y, rm.DeltaRotation.z, rm.DeltaRotation.w);

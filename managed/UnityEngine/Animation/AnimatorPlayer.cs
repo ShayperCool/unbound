@@ -987,8 +987,6 @@ namespace Unbound.Runtime
                     sum = before + (sum - before) / Math.Max(Math.Abs(child.TimeScale), 1e-4f);
                     continue;
                 }
-                // A child without a motion has no clip to count.
-                if (child.Motion == null) continue;
                 sum += w * MotionLength(layer, child.Motion) / Math.Max(Math.Abs(child.TimeScale), 1e-4f);
                 total += w;
             }
@@ -1007,9 +1005,9 @@ namespace Unbound.Runtime
         /// one give the same either way; a Direct blend tree whose weights sum above one lasts
         /// the plain sum (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
         /// body.directHigh: clips of 1 s at 0.8 and 0.6 make a state of 1.4 s; at 0.3 and 0.4,
-        /// body.directLow, 1 s). Child trees without clips and children without a motion count
-        /// for nothing (an empty child tree: body.directEmptyChild; a child without a motion and
-        /// clips of other lengths below a total of one are unmeasured).</summary>
+        /// body.directLow, 1 s). A child tree without clips counts for nothing
+        /// (body.directEmptyChild); a child without a motion counts as one second by its weight,
+        /// as before (unmeasured, as are clips of other lengths below a total of one).</summary>
         internal float MotionLength(LayerRun layer, Motion motion)
         {
             switch (motion)
@@ -1163,8 +1161,7 @@ namespace Unbound.Runtime
                 Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
             }
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached,
-                skipTransforms: skipTransforms, stream: stream, rootDuringCull: RootDuringCull(), placedGoals: m_PlacedHuman != null,
-                humanBody: m_HumanBody);
+                skipTransforms: skipTransforms, stream: stream, rootDuringCull: RootDuringCull(), placedGoals: m_PlacedHuman != null);
             if (skipTransforms || stream != null) return;
             FinishWrite(count);
         }
@@ -1254,8 +1251,6 @@ namespace Unbound.Runtime
             }
             PoseWriter.CombineLayers(Bindings, m_MassCenterLayers, k, m_MassCenterValues, null, overDefaults: true, humanBodyInRootMotion: true,
                 placedGoals: m_PlacedHuman != null);
-            // The root motion pass blended these layers' bodies (it leaves out the same layers).
-            if (m_HumanBody is { } body) Bindings.SetHumanBody(m_MassCenterValues, null, body);
             for (int c = 0; c < n; c++)
             {
                 var owner = Bindings.FloatOwner[c];
@@ -1278,15 +1273,6 @@ namespace Unbound.Runtime
         readonly List<float> m_HumanClipShares = new List<float>();
         /// <summary>The weight of the state being sampled in its layer.</summary>
         float m_SamplingStateWeight;
-        /// <summary>The body (RootT, RootQ) the root motion pass of the last evaluation blended
-        /// from its humanoid clips, each read whole (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.ReadRoot"/>)
-        /// and blended as a position and a rotation; the pose's body curves take it instead of
-        /// what they combine to curve by curve (null: no humanoid clip played). Matches the
-        /// Unity 6000.0.71f1 Editor, tests/projects/humanoid body.*: a clip whose RootQ keys are
-        /// negated blends as the same clip with them positive (body.negTree, body.posTree), a
-        /// clip with only some RootQ curves has the identity's components for the others
-        /// (body.partialTree, body.wTree, body.partialOverride).</summary>
-        Unbound.Runtime.Humanoid.Trs? m_HumanBody;
         Unbound.Runtime.Humanoid.HumanStateGoals m_StateGoals;
         /// <summary>The goals of the state being sampled (null: its clips' goals are not placed).</summary>
         Unbound.Runtime.Humanoid.HumanStateGoals m_SamplingGoals;
@@ -1652,7 +1638,7 @@ namespace Unbound.Runtime
                         humanSample = m_HumanClipSamples.Count;
                         m_HumanClipSamples.Add(sample);
                         m_HumanClipShares.Add(weight / m_SamplingStateWeight);
-                        goals.BeginClip(sample.Body);
+                        goals.BeginClip(sample.Body, sample.Root);
                     }
                     ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, time, clip.isLooping), weight, pose, mask, objectMask,
                         layer.Def.Additive ? Bindings.AdditiveReference(bound) : null, loopPose: true, goals);
@@ -1747,10 +1733,12 @@ namespace Unbound.Runtime
                         foreach (var ch in bound.EulerRotation) if (ch >= 0 && ch + 3 < floats.Length) floats[ch + 3] = true;
                     foreach (var ch in bound.Object) if (ch >= 0 && ch < objects.Length) objects[ch] = true;
                     // A humanoid clip gives the whole human pose, with or without a curve for each
-                    // part: the body, every IK goal (HumanStateGoals), muscle and translation
-                    // (ClipSampling.CompleteHuman).
+                    // part: the body and every IK goal (HumanStateGoals), muscle and translation
+                    // (ClipSampling.CompleteHuman; a clip with body curves alone leaves those).
                     if (clip.HasHumanCurves && m_MasksPlaceGoals)
-                        for (int curve = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst; curve < Unbound.Runtime.Humanoid.HumanClipImport.CurveCount; curve++)
+                        for (int curve = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst,
+                             end = clip.humanMotion ? Unbound.Runtime.Humanoid.HumanClipImport.CurveCount : Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst;
+                             curve < end; curve++)
                         {
                             int ch = Bindings.HumanChannel(curve);
                             if (ch >= 0 && ch < floats.Length) floats[ch] = true;

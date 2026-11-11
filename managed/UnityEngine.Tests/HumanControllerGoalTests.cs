@@ -72,8 +72,8 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ fixture
 
-        const long ClipA = 7400001, ClipB = 7400002, ClipNoGoals = 7400003;
-        const long StateA = 1102000001, StateB = 1102000002;
+        internal const long ClipA = 7400001, ClipB = 7400002, ClipNoGoals = 7400003;
+        internal const long StateA = 1102000001, StateB = 1102000002;
         const int LeftFoot = HumanClipImport.GoalFirst, LeftHand = HumanClipImport.GoalFirst + 2 * HumanStateGoals.Width;
 
         static string F(float value) => value.ToString("R", CultureInfo.InvariantCulture);
@@ -138,7 +138,7 @@ AnimationClip:
 
 """;
 
-        static string State(long id, string name, long motion, bool footIK, long transition = 0) => $$"""
+        internal static string State(long id, string name, long motion, bool footIK, long transition = 0) => $$"""
 --- !u!1102 &{{id}}
 AnimatorState:
   serializedVersion: 6
@@ -154,7 +154,7 @@ AnimatorState:
 
 """;
 
-        static string Transition(long id, long destination, float exitTime, float duration) => $$"""
+        internal static string Transition(long id, long destination, float exitTime, float duration) => $$"""
 --- !u!1101 &{{id}}
 AnimatorStateTransition:
   m_Name:
@@ -174,7 +174,7 @@ AnimatorStateTransition:
 
 """;
 
-        static string Machine(long id, long defaultState, params long[] states) => $$"""
+        internal static string Machine(long id, long defaultState, params long[] states) => $$"""
 --- !u!1107 &{{id}}
 AnimatorStateMachine:
   serializedVersion: 6
@@ -190,7 +190,7 @@ AnimatorStateMachine:
 
 """;
 
-        static string Layer(string name, long machine, int blending, float weight) => $$"""
+        internal static string Layer(string name, long machine, int blending, float weight) => $$"""
   - serializedVersion: 5
     m_Name: {{name}}
     m_StateMachine: {fileID: {{machine}}}
@@ -206,7 +206,7 @@ AnimatorStateMachine:
 
 """;
 
-        const string Header = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!91 &9100000\nAnimatorController:\n  m_Name: Goals\n"
+        internal const string Header = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!91 &9100000\nAnimatorController:\n  m_Name: Goals\n"
             + "  serializedVersion: 5\n  m_AnimatorParameters: []\n  m_AnimatorLayers:\n";
 
         /// <summary>A, then <paramref name="second"/> after an exit time of 0.2 over 0.5 s.</summary>

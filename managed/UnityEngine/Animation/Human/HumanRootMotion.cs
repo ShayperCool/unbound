@@ -486,8 +486,10 @@ namespace Unbound.Runtime.Humanoid
         /// for generic channels (6000.0.71f1, tests/projects/animculling humanMixerShape: sums 0,
         /// 0.5 and 1.5 scale the body and step; rotations are the normalized filled sum). Unit sums
         /// give the same result either way. The identity that takes the rest of a rotation is
-        /// (0, 0, 0, 1) as it is, whatever hemisphere the inputs' sum is in (tests/projects/humanoid
-        /// body.directEmptyChild: a foot goal whose rotation has a negative w, at 0.7); with
+        /// (0, 0, 0, 1) as it is, whatever hemisphere the inputs' sum is in (measured for a goal's
+        /// rotation in a controller's state, tests/projects/humanoid body.directEmptyChild: a
+        /// foot goal whose rotation has a negative w, at 0.7; the body's and the feet's here
+        /// follow it unmeasured, the probe's bodies below a total of one have a positive w); with
         /// <paramref name="alignRest"/> it is taken in the sum's hemisphere, as a layer's blend
         /// from the identity is (<see cref="OverNoClip"/>).</summary>
         public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights, bool sum = false,
@@ -670,7 +672,15 @@ namespace Unbound.Runtime.Humanoid
             any = true;
         }
 
-        static bool Same(F4 a, F4 b) => a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+        /// <summary>How far the body curves may be from the clips' blended RootX and still hold
+        /// just that: the layers' pose and the root motion pass blend the same bodies with their
+        /// operations in another order, a few units in the last place apart (clip units and unit
+        /// rotations, so about 1e-7).</summary>
+        const float RootRounding = 1e-6f;
+
+        static bool Near(F4 a, F4 b) => Near(a.x, b.x) && Near(a.y, b.y) && Near(a.z, b.z) && Near(a.w, b.w);
+
+        static bool Near(float a, float b) => MathF.Abs(a - b) <= RootRounding * MathF.Max(1f, MathF.Abs(b));
 
         static void Add(ref Trs sum, in Trs x, float w)
         {
@@ -718,7 +728,7 @@ namespace Unbound.Runtime.Humanoid
         /// beyond the clips' blended RootX.</summary>
         internal static Trs PoseBody(in Trs rootX, in HumanRootMotionSample sample)
         {
-            if (Same(rootX.t, sample.Root.t) && Same(rootX.q, sample.Root.q)) return sample.Body;
+            if (Near(rootX.t, sample.Root.t) && (Near(rootX.q, sample.Root.q) || Near(rootX.q, -sample.Root.q))) return sample.Body;
             var extra = M.QRotate(M.QConj(sample.Motion.q), rootX.t - sample.Root.t);
             var turn = M.QMul(M.QConj(sample.Root.q), rootX.q);
             return new Trs(sample.Body.t + extra, M.QNormalize(M.QMul(sample.Body.q, turn)), F4.One3);
