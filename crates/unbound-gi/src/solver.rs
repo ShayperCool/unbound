@@ -28,7 +28,7 @@ const SCALE_CHANGE: f32 = 1.0 / 8_388_608.0;
 /// `DynamicGI.updateThreshold`'s default, in percent.
 pub const DEFAULT_UPDATE_THRESHOLD: f32 = 1.0;
 
-/// A realtime light as precomputed realtime GI sees it in the built-in pipeline.
+/// A realtime light as precomputed realtime GI sees it.
 #[derive(Debug, Clone, Copy)]
 pub struct Light {
     /// Linear: the light's color times its intensity and bounce intensity (in a project without
@@ -39,13 +39,17 @@ pub struct Light {
 
 #[derive(Debug, Clone, Copy)]
 pub enum LightKind {
-    /// Not shadowed, with the legacy distance falloff (other pipelines' falloffs are not
-    /// supported yet).
-    Point { position: [f32; 3], range: f32 },
+    /// Not shadowed, with its distance falloff.
+    Point {
+        position: [f32; 3],
+        range: f32,
+        falloff: FalloffTable,
+    },
     /// As a point light, within its cone.
     Spot {
         position: [f32; 3],
         range: f32,
+        falloff: FalloffTable,
         cone: SpotCone,
     },
     /// Shadowed by the system's precomputed visibility: `to_light` is the unit direction toward
@@ -53,12 +57,32 @@ pub enum LightKind {
     Directional { to_light: [f32; 3] },
 }
 
+/// A light's distance falloff: `Experimental.GlobalIllumination.FalloffType`, which a render
+/// pipeline gives its lights (the built-in pipeline: the legacy one).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Falloff {
+    /// 1 / (1 + 25 x^2) over x = distance / range, faded to 0 from x^2 = 0.64 to 1.
+    Legacy,
+    /// 1 / distance^2 times a window (1 - x^4)^2 that ends at the range.
+    InverseSquared,
+    /// 1 / distance^2.
+    InverseSquaredNoRangeAttenuation,
+}
+
 /// Steps of a spot light's angular table between the cosine of half its angle and 1.
 const SPOT_STEPS: usize = 31;
-/// The inner cone a spot light's angular falloff starts at: half its angle's tangent times this
-/// (46/64, the inner cone `LightmapperUtils.ExtractInnerCone` and `Light.innerSpotAngle`'s
-/// default use; the light's own inner angle is not used).
+/// The inner cone of a spot light in the built-in pipeline: half its angle's tangent times this
+/// (46/64, `LightmapperUtils.ExtractInnerCone`'s rule; the light's own inner angle is a render
+/// pipeline's to give).
 const SPOT_INNER_TANGENT: f32 = 0.71875;
+
+/// The inner angle (degrees) `LightmapperUtils.ExtractInnerCone` gives a spot light of angle
+/// `spot_angle` (degrees).
+pub fn default_inner_spot_angle(spot_angle: f32) -> f32 {
+    let pi = std::f32::consts::PI;
+    let inner = ((spot_angle * 0.5 / 360.0) * 2.0 * pi).tan() * SPOT_INNER_TANGENT;
+    inner.atan() * 2.0 * 0.5 / pi * 360.0
+}
 /// Keeps a degenerate cone's divisions finite.
 const SPOT_MIN_STEP: f32 = 1e-6;
 
@@ -67,7 +91,7 @@ const SPOT_MIN_STEP: f32 = 1e-6;
 /// the inner cone, 0 outside the outer one), tabulated at `SPOT_STEPS` steps from the outer
 /// cosine to 1 and read at the step at or below the point's cosine, not interpolated. Matches the
 /// Unity 6000.0.71f1 Editor, tests/projects/realtimegi (`room-spot`: the direct light per cluster
-/// within 0.6%).
+/// within 0.6%, with the built-in pipeline's inner angle; `pipeline-spot*` with a light's own).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SpotCone {
     /// The light's direction times the table steps per unit of cosine.
@@ -79,14 +103,13 @@ pub struct SpotCone {
 }
 
 impl SpotCone {
-    /// `direction`: the light's unit forward vector; `spot_angle`: `Light.spotAngle` in degrees.
-    pub fn new(direction: [f32; 3], spot_angle: f32) -> Self {
+    /// `direction`: the light's unit forward vector; `spot_angle`: `Light.spotAngle` in degrees;
+    /// `inner_angle`: the angle of its inner cone in degrees
+    /// ([`default_inner_spot_angle`] in the built-in pipeline).
+    pub fn new(direction: [f32; 3], spot_angle: f32, inner_angle: f32) -> Self {
         let pi = std::f32::consts::PI;
-        // Half of the default inner angle, in radians: atan(tan(half the angle) * 0.71875).
-        let inner = ((spot_angle * 0.5 / 360.0) * 2.0 * pi).tan() * SPOT_INNER_TANGENT;
-        let inner_degrees = inner.atan() * 2.0 * 0.5 / pi * 360.0;
         let half_angle_cos = |degrees: f32| (0.5 * ((degrees / 360.0) * 2.0 * pi)).cos();
-        let (outer, inner) = (half_angle_cos(spot_angle), half_angle_cos(inner_degrees));
+        let (outer, inner) = (half_angle_cos(spot_angle), half_angle_cos(inner_angle));
         let step = ((1.0 - outer) / SPOT_STEPS as f32).max(SPOT_MIN_STEP);
         let scale = 1.0 / step;
         let inverse_width = 1.0 / (inner - outer).max(SPOT_MIN_STEP);
@@ -132,14 +155,35 @@ fn legacy_falloff(x2: f32) -> f32 {
 /// Number of samples of a light's distance falloff.
 const FALLOFF_SAMPLES: usize = 16;
 
+/// Below this squared distance an inverse-squared falloff stops growing.
+const INVERSE_SQUARED_MIN_DISTANCE2: f32 = 1e-4;
+
 /// A light's distance falloff as precomputed realtime GI evaluates it: sampled at
 /// x = distance / range where the table position t = (N - 1) / (1 + (N - 2) x^2) is a whole
 /// number, and interpolated linearly in t. The last sample (x = 0) is 1, the first two (x >= 1)
-/// are 0. Matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi (the direct light per
-/// cluster within 0.05%).
-struct FalloffTable([f32; FALLOFF_SAMPLES]);
+/// are 0, whatever the falloff: an inverse-squared one therefore falls from its innermost
+/// sample (x = 1/14) to 1 at the light. Matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/realtimegi (the legacy falloff: the direct light per cluster within 0.05%;
+/// the inverse-squared one: the lightmaps of `pipeline-*`, whose surfaces are all farther from
+/// the lights than the innermost sample).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FalloffTable([f32; FALLOFF_SAMPLES]);
 
 impl FalloffTable {
+    /// The table of a light of `range` with the falloff `kind`.
+    pub fn of(kind: Falloff, range: f32) -> Self {
+        let inverse_squared =
+            |x2: f32, window: f32| window / (x2 * range * range).max(INVERSE_SQUARED_MIN_DISTANCE2);
+        match kind {
+            Falloff::Legacy => Self(LEGACY_FALLOFF.0),
+            Falloff::InverseSquared => Self::new(|x2| {
+                let window = (1.0 - x2 * x2).clamp(0.0, 1.0);
+                inverse_squared(x2, window * window)
+            }),
+            Falloff::InverseSquaredNoRangeAttenuation => Self::new(|x2| inverse_squared(x2, 1.0)),
+        }
+    }
+
     fn new(falloff: impl Fn(f32) -> f32) -> Self {
         let n = FALLOFF_SAMPLES as f32;
         let mut values = [0.0; FALLOFF_SAMPLES];
@@ -275,7 +319,6 @@ fn shade_lights(
     stream: &mut Vec<u8>,
     out: &mut [[f32; 3]],
 ) -> Result<()> {
-    let falloff = &*LEGACY_FALLOFF;
     let points = |c: usize| {
         (
             input.cluster_points[c] as usize,
@@ -288,13 +331,18 @@ fn shade_lights(
         for p in first..end {
             let (pos, n) = (input.positions[p], input.normals[p]);
             for light in lights {
-                let (position, range, cone) = match &light.kind {
-                    LightKind::Point { position, range } => (position, *range, None),
+                let (position, range, falloff, cone) = match &light.kind {
+                    LightKind::Point {
+                        position,
+                        range,
+                        falloff,
+                    } => (position, *range, falloff, None),
                     LightKind::Spot {
                         position,
                         range,
+                        falloff,
                         cone,
-                    } => (position, *range, Some(cone)),
+                    } => (position, *range, falloff, Some(cone)),
                     LightKind::Directional { .. } => continue,
                 };
                 let d = [0, 1, 2].map(|k| position[k] - pos[k]);
@@ -835,8 +883,79 @@ mod falloff_tests {
     }
 
     #[test]
+    fn an_inverse_squared_falloff_is_sampled_in_distance_and_ends_at_one() {
+        // A light of range 4: at the sample positions 1 / distance^2 times the window
+        // (1 - x^4)^2; without range attenuation, 1 / distance^2 alone.
+        let windowed = FalloffTable::of(Falloff::InverseSquared, 4.0);
+        let plain = FalloffTable::of(Falloff::InverseSquaredNoRangeAttenuation, 4.0);
+        for i in 2..FALLOFF_SAMPLES - 1 {
+            let x2 = (15.0 / i as f32 - 1.0) / 14.0;
+            let inverse = 1.0 / (x2 * 16.0);
+            let window = (1.0 - x2 * x2) * (1.0 - x2 * x2);
+            assert!(
+                (plain.eval(x2) - inverse).abs() < 1e-5 * inverse,
+                "sample {i}"
+            );
+            assert!(
+                (windowed.eval(x2) - inverse * window).abs() < 1e-5 * inverse,
+                "sample {i}"
+            );
+        }
+        // Half the range: between samples 3 and 4, linear in the table position.
+        let t = 15.0f32 / 4.5;
+        let at = |i: f32| 1.0 / ((15.0 / i - 1.0) / 14.0 * 16.0);
+        let expected = at(3.0) + (at(4.0) - at(3.0)) * (t - 3.0);
+        assert!((plain.eval(0.25) - expected).abs() < 1e-6);
+        // From the range on: nothing, also without range attenuation (the table's first two
+        // samples). At the light the table ends at 1, below its innermost sample
+        // (196 / range^2 at a fourteenth of the range).
+        for table in [&windowed, &plain] {
+            assert_eq!(table.eval(1.0), 0.0);
+            assert_eq!(table.eval(9.0), 0.0);
+            assert_eq!(table.eval(0.0), 1.0);
+            assert!((table.eval(1.0 / 196.0) - 196.0 / 16.0).abs() < 0.01);
+        }
+        // The range scales it: twice the range, a quarter at the same x.
+        let wide = FalloffTable::of(Falloff::InverseSquared, 8.0);
+        assert!((wide.eval(0.25) - windowed.eval(0.25) / 4.0).abs() < 1e-6);
+        // A range of nothing stays finite.
+        let none = FalloffTable::of(Falloff::InverseSquared, 0.0);
+        assert!(none.eval(0.25).is_finite());
+        // The legacy falloff does not depend on the range.
+        assert_eq!(
+            FalloffTable::of(Falloff::Legacy, 4.0),
+            FalloffTable::of(Falloff::Legacy, 40.0)
+        );
+    }
+
+    #[test]
+    fn a_spot_cone_takes_the_inner_angle_it_is_given() {
+        // A render pipeline's inner angle: a narrow one starts the falloff nearer the axis
+        // than the built-in pipeline's (22.5 degrees of half angle for a cone of 60).
+        let narrow = SpotCone::new([0.0, 0.0, 1.0], 60.0, 10.0);
+        let default = SpotCone::new([0.0, 0.0, 1.0], 60.0, default_inner_spot_angle(60.0));
+        let at = |cone: &SpotCone, degrees: f32| {
+            let r = degrees.to_radians();
+            cone.falloff([r.sin(), 0.0, r.cos()])
+        };
+        // On the axis: full. Just inside the narrow inner cone the table's step below the
+        // point's cosine lies outside it already (31 steps for the whole cone).
+        assert_eq!(at(&narrow, 0.0), 1.0);
+        assert!(at(&narrow, 4.0) > 0.99);
+        assert!(at(&narrow, 15.0) < 0.6);
+        assert_eq!(at(&default, 15.0), 1.0);
+        assert!(at(&narrow, 25.0) < at(&default, 25.0));
+        assert_eq!(at(&narrow, 30.5), 0.0);
+        assert!((default_inner_spot_angle(60.0) - 45.08).abs() < 0.01);
+        // An inner angle beyond the outer one: full within the cone.
+        let wide = SpotCone::new([0.0, 0.0, 1.0], 60.0, 90.0);
+        assert_eq!(at(&wide, 29.0), 1.0);
+        assert_eq!(at(&wide, 31.0), 0.0);
+    }
+
+    #[test]
     fn a_spot_cone_steps_between_its_default_inner_and_its_outer_angle() {
-        let cone = SpotCone::new([0.0, 0.0, 1.0], 60.0);
+        let cone = SpotCone::new([0.0, 0.0, 1.0], 60.0, default_inner_spot_angle(60.0));
         let at = |degrees: f32| {
             let r = degrees.to_radians();
             cone.falloff([r.sin(), 0.0, r.cos()])
@@ -868,7 +987,7 @@ mod falloff_tests {
             last = v;
         }
         // A degenerate cone or direction stays finite.
-        let point = SpotCone::new([0.0, 0.0, 1.0], 0.0);
+        let point = SpotCone::new([0.0, 0.0, 1.0], 0.0, 0.0);
         assert!(point.falloff([0.0, 0.0, 1.0]).is_finite());
         assert_eq!(cone.falloff([f32::NAN; 3]), 0.0);
     }
@@ -895,9 +1014,11 @@ mod falloff_tests {
             color: [1.0, 0.5, 0.25],
             kind,
         };
+        let legacy = FalloffTable::of(Falloff::Legacy, 4.0);
         let point = at(LightKind::Point {
             position: [0.0, 2.0, 0.0],
             range: 4.0,
+            falloff: legacy,
         });
         let direct = |input: &crate::data::InputSamples| shade(input, &[point]).unwrap();
         let f = LEGACY_FALLOFF.eval(0.25);
@@ -915,7 +1036,8 @@ mod falloff_tests {
             at(LightKind::Spot {
                 position: [0.0, 2.0, 0.0],
                 range: 4.0,
-                cone: SpotCone::new(direction, 30.0),
+                falloff: legacy,
+                cone: SpotCone::new(direction, 30.0, default_inner_spot_angle(30.0)),
             })
         };
         assert_eq!(

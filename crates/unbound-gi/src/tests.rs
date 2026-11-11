@@ -2,7 +2,10 @@
 //! tests/projects/realtimegi (Room scene).
 use crate::data::{Precomputed, System, read_precomputed};
 use crate::probes::ProbeSetSolver;
-use crate::solver::{Light, LightKind, SpotCone, SystemSolver, gamma_to_linear};
+use crate::solver::{
+    Falloff, FalloffTable, Light, LightKind, SpotCone, SystemSolver, default_inner_spot_angle,
+    gamma_to_linear,
+};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -294,17 +297,20 @@ impl Replay {
                 kind: LightKind::Point {
                     position: room.light,
                     range: 10.0,
+                    falloff: FalloffTable::of(Falloff::Legacy, 10.0),
                 },
             });
         }
-        // The scene's spot light (its inner angle, 21.8, is not what the angular falloff uses).
+        // The scene's spot light (its inner angle, 21.8, is not what the built-in pipeline's
+        // angular falloff uses).
         if let Some((position, direction, angle)) = room.spot {
             lights.push(Light {
                 color: [0.6, 0.8, 1.0].map(|c: f32| gamma_to_linear(c * 3.0)),
                 kind: LightKind::Spot {
                     position,
                     range: 9.0,
-                    cone: SpotCone::new(direction, angle),
+                    falloff: FalloffTable::of(Falloff::Legacy, 9.0),
+                    cone: SpotCone::new(direction, angle, default_inner_spot_angle(angle)),
                 },
             });
         }
@@ -1406,6 +1412,7 @@ fn a_scene_of_two_systems_converges_as_the_editors() {
                 kind: LightKind::Point {
                     position: BASE.light,
                     range: 10.0,
+                    falloff: FalloffTable::of(Falloff::Legacy, 10.0),
                 },
             }])
             .unwrap();

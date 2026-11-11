@@ -13,7 +13,9 @@ use unbound_assets::serialized::SerializedFile;
 use unbound_gi::environment::{FACE_VALUES, environment_values};
 use unbound_gi::probes::{ProbeSetSolver, ProbeSh};
 pub use unbound_gi::realtime_uv::Input as UvInput;
-use unbound_gi::solver::{Light, LightKind, SpotCone, SystemSolver, decode_rgb9e5};
+use unbound_gi::solver::{
+    Falloff, FalloffTable, Light, LightKind, SpotCone, SystemSolver, decode_rgb9e5,
+};
 use unbound_project::assetdb::AssetDb;
 
 /// A light as the managed side passes it (`RealtimeGI.Light` in managed code).
@@ -28,8 +30,18 @@ pub struct GiLight {
     pub color: [f32; 3],
     pub range: f32,
     pub spot_angle: f32,
+    /// The angle of a spot light's inner cone, in degrees (the built-in pipeline's:
+    /// `LightmapperUtils.ExtractInnerCone`; a render pipeline gives its own).
     pub inner_spot_angle: f32,
+    /// Experimental.GlobalIllumination.FalloffType of a point or spot light.
+    pub falloff: i32,
 }
+
+/// Experimental.GlobalIllumination.FalloffType's values ([`GiLight::falloff`]); Linear (2) and
+/// Undefined (4) are not measured.
+pub const FALLOFF_INVERSE_SQUARED: i32 = 0;
+pub const FALLOFF_INVERSE_SQUARED_NO_RANGE: i32 = 1;
+pub const FALLOFF_LEGACY: i32 = 3;
 
 /// One frame's inputs (`RealtimeGI.Frame` in managed code).
 #[repr(C)]
@@ -400,17 +412,38 @@ impl Scene {
         if lights_changed {
             self.solver_lights.clear();
             for light in lights {
+                let falloff = || {
+                    Ok(FalloffTable::of(
+                        match light.falloff {
+                            FALLOFF_INVERSE_SQUARED => Falloff::InverseSquared,
+                            FALLOFF_INVERSE_SQUARED_NO_RANGE => {
+                                Falloff::InverseSquaredNoRangeAttenuation
+                            }
+                            FALLOFF_LEGACY => Falloff::Legacy,
+                            other => bail!(
+                                "light falloff type {other} in precomputed realtime GI is not supported"
+                            ),
+                        },
+                        light.range,
+                    ))
+                };
                 let kind = match light.kind {
                     // LightType.Point
                     2 => LightKind::Point {
                         position: light.position,
                         range: light.range,
+                        falloff: falloff()?,
                     },
                     // LightType.Spot
                     0 => LightKind::Spot {
                         position: light.position,
                         range: light.range,
-                        cone: SpotCone::new(light.direction, light.spot_angle),
+                        falloff: falloff()?,
+                        cone: SpotCone::new(
+                            light.direction,
+                            light.spot_angle,
+                            light.inner_spot_angle,
+                        ),
                     },
                     // LightType.Directional
                     1 => LightKind::Directional {
@@ -803,6 +836,7 @@ mod tests {
             position,
             color: [1.0, 0.9, 0.7],
             range: 10.0,
+            falloff: FALLOFF_LEGACY,
             ..GiLight::default()
         }
     }
@@ -907,6 +941,38 @@ mod tests {
             update(handle, &frame, &[directional]).unwrap() & UPDATE_CONVERGED,
             0
         );
+        // A render pipeline's falloff types: the inverse-squared ones light the scene, and
+        // differently from the legacy one; the others fail loudly.
+        let lights = [point([0.0, 2.0, 0.0])];
+        assert!((0..500).any(|_| update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED != 0));
+        let mut legacy = vec![0u16; 4 * 64 * 64];
+        read_atlas(handle, 0, &mut legacy).unwrap();
+        for falloff in [FALLOFF_INVERSE_SQUARED, FALLOFF_INVERSE_SQUARED_NO_RANGE] {
+            let lights = [GiLight {
+                falloff,
+                ..lights[0]
+            }];
+            assert!(
+                (0..500).any(|_| update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED != 0)
+            );
+            let mut lit = vec![0u16; 4 * 64 * 64];
+            read_atlas(handle, 0, &mut lit).unwrap();
+            assert!(lit.chunks_exact(4).any(|t| t[0] != 0));
+            assert!(lit != legacy);
+        }
+        for falloff in [2, 4, 9] {
+            let error = update(
+                handle,
+                &frame,
+                &[GiLight {
+                    falloff,
+                    ..lights[0]
+                }],
+            )
+            .unwrap_err()
+            .to_string();
+            assert!(error.contains("falloff type"), "{error}");
+        }
         // Unsupported lights fail loudly; the scene goes away with its handle.
         let area = GiLight { kind: 3, ..spot };
         assert!(

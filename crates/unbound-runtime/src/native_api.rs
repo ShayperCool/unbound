@@ -58,7 +58,7 @@ use std::ffi::c_void;
 /// 50: the `ScreenStandIn` render command (opcode 35).
 /// 51: `gi_set_environment`; `GiFrame` without its flat environment color.
 /// 52: `GiFrame.directional` and `gi_read_directionality` (directional realtime lightmaps).
-pub const NATIVE_API_VERSION: u32 = 52;
+pub const NATIVE_API_VERSION: u32 = 53;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -253,6 +253,8 @@ pub struct NativeApi {
     /// written (0 while the scene's lightmaps are not directional, and until every system of
     /// the atlas has solved its directionality since they became so), or -1.
     pub gi_read_directionality: extern "C" fn(u64, i32, *mut u8, i32) -> i32,
+    // Version 53: a realtime GI light carries its falloff type (`realtime_gi::GiLight`); no new
+    // entry.
 }
 
 pub fn api() -> NativeApi {

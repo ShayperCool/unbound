@@ -1,3 +1,4 @@
+using GI = UnityEngine.Experimental.GlobalIllumination;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -19,7 +20,10 @@ namespace Unbound.Runtime
         internal float R, G, B;
         internal float Range;
         internal float SpotAngle;
+        /// <summary>The angle of a spot light's inner cone, in degrees.</summary>
         internal float InnerSpotAngle;
+        /// <summary>Experimental.GlobalIllumination.FalloffType of a point or spot light.</summary>
+        internal int Falloff;
     }
 
     /// <summary>One frame's precomputed realtime GI inputs (`realtime_gi::GiFrame`).</summary>
@@ -331,34 +335,15 @@ namespace UnityEngine
         static unsafe void Update()
         {
             if (s_Scenes.Count == 0 || !Native.IsReady) return;
-            int count = 0;
-            bool linearIntensity = GraphicsSettings.lightsUseLinearIntensity;
+            s_FrameLights.Clear();
             foreach (var light in Light.s_Enabled)
-            {
-                if (!Contributes(light)) continue;
-                if (linearIntensity)
-                {
-                    // Render pipelines scale the linear color by the intensity; how precomputed
-                    // realtime GI takes such a light is not measured.
-                    Warn("linear-intensity", "precomputed realtime GI with linear light intensity (GraphicsSettings.lightsUseLinearIntensity, render pipelines) is not supported yet: lights add no realtime indirect light.");
-                    continue;
-                }
-                if (count == s_Lights.Length) Array.Resize(ref s_Lights, count * 2);
-                var t = light.transform;
-                var position = t.position;
-                var direction = t.forward;
-                var color = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
-                s_Lights[count++] = new GiLight
-                {
-                    Kind = (int)light.type,
-                    PositionX = position.x, PositionY = position.y, PositionZ = position.z,
-                    DirectionX = direction.x, DirectionY = direction.y, DirectionZ = direction.z,
-                    R = color.r, G = color.g, B = color.b,
-                    Range = light.range,
-                    SpotAngle = light.spotAngle,
-                    InnerSpotAngle = light.innerSpotAngle,
-                };
-            }
+                if (Contributes(light)) s_FrameLights.Add(light);
+            // A render pipeline's lights are what its delegate makes of them
+            // (Experimental.GlobalIllumination.Lightmapping.SetDelegate): the Universal Render
+            // Pipeline's have an inverse-squared falloff, a linear intensity and their own inner
+            // spot angle (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
+            // `--pipeline urp`). Without one: the built-in pipeline's.
+            int count = GI.Lightmapping.HasCustomDelegate ? PipelineLights() : BuiltinLights();
             var frame = new GiFrame
             {
                 IndirectScale = DynamicGI.indirectScale,
@@ -415,6 +400,86 @@ namespace UnityEngine
                 if ((result & UpdateChanged) != 0) Upload(scene, frame.Directional != 0);
                 if ((result & UpdateProbes) != 0) UploadProbes(scene);
             }
+        }
+
+        /// <summary>The frame's lights as the built-in pipeline gives them to realtime GI: the
+        /// legacy falloff, the color scaled by the intensity and bounce intensity before its
+        /// conversion to linear, LightmapperUtils' inner spot angle.</summary>
+        static int BuiltinLights()
+        {
+            int count = 0;
+            foreach (var light in s_FrameLights)
+            {
+                if (GraphicsSettings.lightsUseLinearIntensity)
+                {
+                    // How the built-in pipeline's realtime GI takes lights of linear intensity
+                    // is not measured (a render pipeline's are its delegate's).
+                    Warn("linear-intensity", "precomputed realtime GI with linear light intensity (GraphicsSettings.lightsUseLinearIntensity) in the built-in render pipeline is not supported yet: lights add no realtime indirect light.");
+                    continue;
+                }
+                var t = light.transform;
+                var color = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
+                Add(ref count, (int)light.type, t.position, t.forward, color.r, color.g, color.b, light.range, light.spotAngle,
+                    GI.LightmapperUtils.ExtractInnerCone(light) * Mathf.Rad2Deg, GI.FalloffType.Legacy);
+            }
+            return count;
+        }
+
+        static Light[] s_Requests = Array.Empty<Light>();
+        static Unity.Collections.NativeArray<GI.LightDataGI> s_Converted;
+
+        /// <summary>The frame's lights as the registered delegate converts them: its indirect
+        /// color (the color times intensity and bounce intensity), cone angles and falloff. A
+        /// light it gives no indirect light, or none at all (InitNoBake), adds nothing.</summary>
+        static int PipelineLights()
+        {
+            int requested = s_FrameLights.Count;
+            if (s_Requests.Length != requested)
+            {
+                s_Requests = new Light[requested];
+                if (s_Converted.IsCreated) s_Converted.Dispose();
+                s_Converted = new Unity.Collections.NativeArray<GI.LightDataGI>(Math.Max(requested, 1), Unity.Collections.Allocator.Persistent);
+            }
+            for (int i = 0; i < requested; i++) s_Requests[i] = s_FrameLights[i];
+            GI.Lightmapping.GetDelegate()(s_Requests, s_Converted);
+            int count = 0;
+            for (int i = 0; i < requested; i++)
+            {
+                var data = s_Converted[i];
+                float intensity = data.indirectColor.intensity;
+                if (data.mode == GI.LightMode.Unknown || intensity == 0f) continue;
+                int kind;
+                switch (data.type)
+                {
+                    case GI.LightType.Directional: kind = (int)LightType.Directional; break;
+                    case GI.LightType.Point: kind = (int)LightType.Point; break;
+                    case GI.LightType.Spot: kind = (int)LightType.Spot; break;
+                    default:
+                        Warn("pipeline-light:" + data.type, $"precomputed realtime GI: lights the render pipeline gives as {data.type} are not supported: they add no realtime indirect light.");
+                        continue;
+                }
+                Add(ref count, kind, data.position, data.orientation * Vector3.forward,
+                    data.indirectColor.red * intensity, data.indirectColor.green * intensity, data.indirectColor.blue * intensity,
+                    data.range, data.coneAngle * Mathf.Rad2Deg, data.innerConeAngle * Mathf.Rad2Deg, data.falloff);
+            }
+            return count;
+        }
+
+        static void Add(ref int count, int kind, Vector3 position, Vector3 direction, float r, float g, float b, float range, float spotAngle, float innerSpotAngle,
+            GI.FalloffType falloff)
+        {
+            if (count == s_Lights.Length) Array.Resize(ref s_Lights, count * 2);
+            s_Lights[count++] = new GiLight
+            {
+                Kind = kind,
+                PositionX = position.x, PositionY = position.y, PositionZ = position.z,
+                DirectionX = direction.x, DirectionY = direction.y, DirectionZ = direction.z,
+                R = r, G = g, B = b,
+                Range = range,
+                SpotAngle = spotAngle,
+                InnerSpotAngle = innerSpotAngle,
+                Falloff = (int)falloff,
+            };
         }
 
         /// <summary>Whether a light adds to realtime GI: an enabled realtime light with bounce
