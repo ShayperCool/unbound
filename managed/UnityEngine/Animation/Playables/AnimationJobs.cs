@@ -287,8 +287,10 @@ namespace Unbound.Runtime.Playables
             if (s.HasValue && (s.Value - ls).sqrMagnitude > 1e-10f * ls.sqrMagnitude)
                 Stubs.Ignored("TransformStreamHandle scale of a humanoid's hips", "is not taken: the hips' scale in the stream comes from the pose's body (unmeasured)");
             if (!p.HasValue && !r.HasValue) return;
+            // The rotation is taken at unit length in the frame it is written in.
+            if (r.HasValue && !Unbound.Runtime.Playables.HumanStreamPose.UnitRotation(r.Value, out lr)) return;
             HipsParentGlobal(d.Transform, pose, out var pp, out var pr, out var ps);
-            pose.SetHipsPlaced(pp + pr * Vector3.Scale(ps, p ?? lp), pr * (r ?? lr));
+            pose.SetHipsPlaced(pp + pr * Vector3.Scale(ps, p ?? lp), pr * lr);
         }
 
         /// <summary>A write through a humanoid bone's handle, in the world (null: unchanged).</summary>
@@ -306,7 +308,8 @@ namespace Unbound.Runtime.Playables
                 var local = Quaternion.Inverse(pr) * (p.Value - pp);
                 pose.SetBoneLocalPosition(d.Human, new Vector3(Div(local.x, ps.x), Div(local.y, ps.y), Div(local.z, ps.z)));
             }
-            if (r.HasValue) pose.SetBoneLocalRotation(d.Human, Quaternion.Inverse(pr) * r.Value);
+            if (r.HasValue && Unbound.Runtime.Playables.HumanStreamPose.UnitRotation(r.Value, out Quaternion unit))
+                pose.SetBoneLocalRotation(d.Human, Quaternion.Inverse(pr) * unit);
         }
 
         internal static float Div(float a, float b) => Math.Abs(b) > 1e-12f ? a / b : a;

@@ -35,7 +35,7 @@ namespace Unbound.Runtime.Playables
         /// <summary>The skeleton as the bones' stream handles see it, kept apart once the pose was
         /// made again from it: <see cref="m_Local"/> is then re-based for the goal reads.</summary>
         readonly SkeletonPose m_Bones;
-        bool m_BonesKept, m_Rebased;
+        bool m_BonesKept;
         readonly float[] m_Values = new float[HumanClipImport.CurveCount];
         readonly Trs[] m_Saved = new Trs[GoalCount];
         readonly bool[] m_GoalSet = new bool[GoalCount], m_HintSet = new bool[GoalCount];
@@ -120,7 +120,6 @@ namespace Unbound.Runtime.Playables
             m_Changed = false;
             m_BonesMoved = false;
             m_BonesKept = false;
-            m_Rebased = false;
             Array.Clear(m_GoalSet);
             Array.Clear(m_HintSet);
         }
@@ -218,7 +217,6 @@ namespace Unbound.Runtime.Playables
             if (m_SkeletonValid) return;
             m_SkeletonValid = true;
             m_BonesKept = false;
-            m_Rebased = false;
             m_BonesMoved = false;
             HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_Local, m_Global, true);
         }
@@ -356,13 +354,13 @@ namespace Unbound.Runtime.Playables
         /// <see cref="BoneWorld"/> reads).</summary>
         internal void SetHipsWorld(Vector3 position, Quaternion rotation)
         {
-            if (Finite(position) && UnitRotation(rotation, out var q)) SetHipsWorld(V(position), q, m_BonesKept && m_Rebased);
+            if (Finite(position) && UnitRotation(rotation, out F4 q)) SetHipsWorld(V(position), q, m_BonesKept);
         }
 
         /// <summary>The hips written where the pose places them (<see cref="HipsPlaced"/>).</summary>
         internal void SetHipsPlaced(Vector3 position, Quaternion rotation)
         {
-            if (Finite(position) && UnitRotation(rotation, out var q)) SetHipsWorld(V(position), q, false);
+            if (Finite(position) && UnitRotation(rotation, out F4 q)) SetHipsWorld(V(position), q, false);
         }
 
         /// <summary>A job changed the skeleton through a bone's handle: the pose is made again from
@@ -378,7 +376,7 @@ namespace Unbound.Runtime.Playables
         /// the final pose through the muscles the retargeting gives it (bone.rotateLocal).</summary>
         internal void SetBoneLocalRotation(int node, Quaternion rotation)
         {
-            if (!UnitRotation(rotation, out var q)) return;
+            if (!UnitRotation(rotation, out F4 q)) return;
             BoneSkeleton().X[node].q = q;
             BoneChanged();
         }
@@ -392,14 +390,31 @@ namespace Unbound.Runtime.Playables
             float sum = rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w;
             if (!float.IsFinite(sum))
             {
-                Stubs.Ignored("TransformStreamHandle rotation of a humanoid bone that is not a number", "is not taken (unmeasured)");
+                NotANumber();
                 return false;
             }
             if (sum > 1e-30f) q = M.QNormalize(Q(rotation));
             return true;
         }
 
-        static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+        /// <summary>A rotation as a bone's handle takes it, in the frame it was written in (see
+        /// <see cref="UnitRotation(Quaternion, out F4)"/>); false when it is not taken.</summary>
+        internal static bool UnitRotation(Quaternion rotation, out Quaternion unit)
+        {
+            bool taken = UnitRotation(rotation, out F4 q);
+            unit = Q(q);
+            return taken;
+        }
+
+        static bool Finite(Vector3 v)
+        {
+            if (float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z)) return true;
+            NotANumber();
+            return false;
+        }
+
+        static void NotANumber() =>
+            Stubs.Ignored("TransformStreamHandle value of a humanoid bone that is not a number", "is not taken (unmeasured)");
 
         /// <summary>The skeleton the bones' handles read and write: the one the pose gave, with what
         /// the job changed in it since.</summary>
@@ -461,7 +476,6 @@ namespace Unbound.Runtime.Playables
             m_Local.CopyFrom(m_Bones);
             m_Local.X[0] = Trs.Identity;
             m_Local.X[hips] = M.Mul(new Trs(Root.t, Root.q, F4.One3), M.InvMul(Root, hipsX));
-            m_Rebased = true;
         }
 
         /// <summary>The goals the job set go into the pose, back in the pose's goal frame (a foot's
@@ -594,7 +608,6 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = true;
             m_HumanValid = false;
             m_BonesKept = false;
-            m_Rebased = false;
         }
 
         internal Vector3 GetGoalPosition(int g) => ToWorldPoint(GoalLocalPosition(g));
@@ -699,7 +712,6 @@ namespace Unbound.Runtime.Playables
             m_Changed = true;
             m_HumanValid = false;
             m_BonesKept = false;
-            m_Rebased = false;
         }
 
         static F4 V(Vector3 v) => new F4(v.x, v.y, v.z, 0f);

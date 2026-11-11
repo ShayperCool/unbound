@@ -207,6 +207,46 @@ namespace UnityEngine.Tests
             Near(controlHips, hips.position, 1e-3f);
             Near(controlHead, head.position, 1e-3f);
             Near(controlForearm, forearm.localRotation, 0.5f);
+
+            // The hips written back as read after the read-back, in the world and locally, stay too.
+            foreach (int way in new[] { 0, 1, 2 })
+            {
+                Evaluate(animator, (stream, _) =>
+                {
+                    Turn(stream);
+                    var body = stream.AsHuman().bodyPosition;
+                    if (way == 0) hipsHandle.SetPosition(stream, hipsHandle.GetPosition(stream));
+                    else if (way == 1)
+                    {
+                        hipsHandle.GetGlobalTR(stream, out var p, out var r);
+                        hipsHandle.SetGlobalTR(stream, p, r, false);
+                    }
+                    else hipsHandle.SetLocalPosition(stream, hipsHandle.GetLocalPosition(stream));
+                });
+                Near(controlHips, hips.position, 1e-3f);
+                Near(controlHead, head.position, 1e-3f);
+            }
+        }
+
+        /// <summary>A zero rotation written on the hips is the identity in the frame it is written
+        /// in: locally, the hips' local rotation, whatever the root's own turn.</summary>
+        [Fact]
+        public void AZeroRotationOnTheHipsIsTheIdentityWhereItIsWritten()
+        {
+            var animator = Human();
+            animator.transform.rotation = Quaternion.Euler(0f, 30f, 0f);
+            var handle = animator.BindStreamTransform(animator.transform.Find("Hips"));
+            Quaternion local = default, world = default;
+            Evaluate(animator, (stream, _) =>
+            {
+                Touch(stream);
+                handle.SetLocalRotation(stream, default);
+                local = handle.GetLocalRotation(stream);
+                handle.SetRotation(stream, default);
+                world = handle.GetRotation(stream);
+            });
+            Near(Quaternion.identity, local);
+            Near(Quaternion.identity, world);
         }
 
         /// <summary>A rotation that is not of unit length is taken at unit length, a zero one as
