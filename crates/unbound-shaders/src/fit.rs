@@ -1365,9 +1365,9 @@ fn referenced(module: &Module) -> HashSet<Handle<naga::GlobalVariable>> {
 
 /// Where a program samples through the samplers it names, each sampler it uses is one of a
 /// texture the program (either stage) uses, or an inline state: the Vulkan Editor refuses a
-/// program with any other, in these words (tests/projects/samplerstates `Shapes`, where the
-/// program declares the sampler's texture and does not use it). Which stage must use the
-/// texture is unmeasured.
+/// program with any other, or with a wrongly spelt inline state, in these words
+/// (tests/projects/samplerstates `Shapes`, where the program declares the sampler's texture
+/// and does not use it, and `Used*`, where it uses it).
 fn named_samplers_resolve(stages: &[&Module]) -> Result<()> {
     let used: Vec<(&Module, HashSet<Handle<naga::GlobalVariable>>)> =
         stages.iter().map(|m| (*m, referenced(m))).collect();
@@ -1388,11 +1388,16 @@ fn named_samplers_resolve(stages: &[&Module]) -> Result<()> {
         .filter_map(|name| texture_property(crate::samplers::variable_texture(name), false))
         .collect();
     for name in variables(true) {
-        let own = texture_property(name, true).is_some_and(|p| textures.contains(&p));
-        if !own && InlineSampler::from_name(name).is_none() {
-            bail!(
-                "Unrecognized sampler '{name}' - does not match any texture and is not a recognized inline name (should contain filter and wrap modes)"
-            );
+        if texture_property(name, true).is_some_and(|p| textures.contains(&p)) {
+            continue;
+        }
+        match InlineSampler::parse(name) {
+            Ok(Some(_)) => {}
+            Ok(None) => bail!(
+                "Unrecognized sampler '{}' - does not match any texture and is not a recognized inline name (should contain filter and wrap modes)",
+                name.to_ascii_lowercase()
+            ),
+            Err(wrong) => bail!("{wrong}"),
         }
     }
     Ok(())

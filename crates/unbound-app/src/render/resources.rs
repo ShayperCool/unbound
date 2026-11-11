@@ -252,12 +252,16 @@ impl SamplerKey {
         lod_bias_bits: 0,
     };
 
-    /// The state an inline sampler's name spells.
+    /// The state an inline sampler's name spells: its filter, its wrap mode along each axis
+    /// and its anisotropic level.
     pub fn inline(state: unbound_shaders::InlineSampler) -> SamplerKey {
+        let [wrap_u, wrap_v, wrap_w] = state.wrap;
         SamplerKey {
             filter: state.filter,
-            wrap_u: state.wrap,
-            wrap_v: state.wrap,
+            wrap_u,
+            wrap_v,
+            wrap_w,
+            aniso: state.aniso,
             ..SamplerKey::LINEAR_CLAMP
         }
     }

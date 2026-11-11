@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 35;
+pub const FORMAT_VERSION: u32 = 36;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -214,40 +214,117 @@ impl TextureSlot {
     }
 }
 
-/// A sampler state spelt by a sampler's name: filter 0 point, 1 linear, 2 trilinear; wrap 0
-/// repeat, 1 clamp, 2 mirror, 3 mirror once.
+/// A sampler state spelt by a sampler's name: filter 0 point, 1 linear, 2 trilinear; the wrap
+/// mode along U, V and W, 0 repeat, 1 clamp, 2 mirror, 3 mirror once; the anisotropic level.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InlineSampler {
     pub filter: i32,
-    pub wrap: i32,
+    pub wrap: [i32; 3],
+    pub aniso: i32,
 }
 
+/// The wrap modes an inline sampler's name can spell, in [`InlineSampler::wrap`]'s numbers.
+const WRAP_WORDS: [(&str, i32); 4] = [
+    ("clamp", 1),
+    ("repeat", 0),
+    ("mirroronce", 3),
+    ("mirror", 2),
+];
+
 impl InlineSampler {
-    /// The state a sampler's name spells, as Unity reads it: a filter (`Point`, `Linear`,
-    /// `Trilinear`) and a wrap mode (`Clamp`, `Repeat`, `Mirror`, `MirrorOnce`), any case.
-    pub fn from_name(name: &str) -> Option<InlineSampler> {
+    /// The state a sampler's name spells (the Unity 6000.0 Manual, Using sampler states: a
+    /// filter and a wrap mode are required, wrap modes can be given per axis as in
+    /// `ClampU_RepeatV`, `AnisoX` is 2, 4, 8 or 16), read as the Editor reads it
+    /// (tests/projects/samplerstates `Inline*`, `--device vulkan`), in any case:
+    ///
+    /// - one filter word, `point`, `linear` or `trilinear`;
+    /// - wrap words `clamp`, `repeat`, `mirror`, `mirroronce`: a word followed by `u`, `v` or
+    ///   `w` anywhere in the name is that axis's (`ClampUV` is U's alone), a word without any
+    ///   is every axis's, of which `clamp` wins, then `repeat`, `mirroronce`, `mirror` (which
+    ///   `mirroronce` also spells: the axes a `MirrorOnceU` name leaves out mirror); axes
+    ///   nothing names repeat;
+    /// - `aniso` and its level.
+    ///
+    /// None for a name without a filter or without a wrap word (no inline state); an error, in
+    /// the Editor's words, for a name that spells one wrongly.
+    pub fn parse(name: &str) -> std::result::Result<Option<InlineSampler>, String> {
         let n = name.to_ascii_lowercase();
-        let filter = if n.contains("trilinear") {
-            2
-        } else if n.contains("linear") {
-            1
-        } else if n.contains("point") {
-            0
-        } else {
-            return None;
+        // `trilinear` holds `linear`: that one occurrence is not a second filter.
+        let trilinear = n.find("trilinear");
+        let linear = match (n.find("linear"), trilinear) {
+            (Some(l), Some(t)) => l != t + 3,
+            (l, _) => l.is_some(),
         };
-        let wrap = if n.contains("mirroronce") {
-            3
-        } else if n.contains("mirror") {
-            2
-        } else if n.contains("repeat") {
-            0
-        } else if n.contains("clamp") {
-            1
-        } else {
-            return None;
+        let filters = n.contains("point") as u32 + trilinear.is_some() as u32 + linear as u32;
+        // For each wrap word: whether the name has it, and with which axis letters.
+        let named = |word: &str| -> Option<[bool; 3]> {
+            n.contains(word)
+                .then(|| ["u", "v", "w"].map(|axis| n.contains(&format!("{word}{axis}"))))
         };
-        Some(InlineSampler { filter, wrap })
+        let words = WRAP_WORDS.map(|(word, mode)| (named(word), mode));
+        if filters == 0 || words.iter().all(|(axes, _)| axes.is_none()) {
+            return Ok(None);
+        }
+        if filters > 1 {
+            return Err(format!(
+                "Unrecognized inline sampler name '{n}' - only 1 filter mode can be selected at once ('point', 'linear' or `trilinear`"
+            ));
+        }
+        // A word that names no axis is the whole sampler's.
+        let whole = |k: usize| words[k].0 == Some([false; 3]);
+        for (other, k) in [("repeat", 1), ("mirror", 3)] {
+            if whole(0) && whole(k) {
+                return Err(format!(
+                    "Unrecognized inline sampler name '{n}' - can't have both 'clamp' and '{other}'"
+                ));
+            }
+        }
+        let mut wrap = [(0..4).find(|&k| whole(k)).map_or(0, |k| words[k].1); 3];
+        // Each axis a word names takes it: clamp, then repeat, mirror once, mirror (a wholly
+        // clamped name's own axis letters name what is clamped already).
+        for (axes, mode) in words {
+            for axis in 0..3 {
+                if axes.is_some_and(|axes| axes[axis]) {
+                    wrap[axis] = mode;
+                }
+            }
+        }
+        let aniso = match n.find("aniso") {
+            None => 1,
+            Some(at) => {
+                let digits: String = n[at + 5..]
+                    .chars()
+                    .take(3)
+                    .take_while(char::is_ascii_digit)
+                    .collect();
+                match digits.as_str() {
+                    "2" => 2,
+                    "4" => 4,
+                    "8" => 8,
+                    "16" => 16,
+                    _ => {
+                        return Err(format!(
+                            "Unrecognized inline sampler name '{n}' - invalid anisotropic filter value. Only 2/4/8/16 are valid sample counts."
+                        ));
+                    }
+                }
+            }
+        };
+        let filter = match (trilinear.is_some(), linear) {
+            (true, _) => 2,
+            (_, true) => 1,
+            _ => 0,
+        };
+        Ok(Some(InlineSampler {
+            filter,
+            wrap,
+            aniso,
+        }))
+    }
+
+    /// The state a sampler's name spells; None for no inline state or a wrongly spelt one.
+    pub fn from_name(name: &str) -> Option<InlineSampler> {
+        InlineSampler::parse(name).ok().flatten()
     }
 }
 
@@ -2259,18 +2336,105 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         };
         assert_eq!(
             slot(&named, "_LinearRepeat").inline,
-            Some(InlineSampler { filter: 1, wrap: 0 })
+            Some(InlineSampler {
+                filter: 1,
+                wrap: [0; 3],
+                aniso: 1
+            })
         );
         assert!(slot(&named, "_PointClampCompare").comparison);
         assert_eq!(
             slot(&named, "_PointClampCompare").inline,
-            Some(InlineSampler { filter: 0, wrap: 1 })
+            Some(InlineSampler {
+                filter: 0,
+                wrap: [1; 3],
+                aniso: 1
+            })
         );
         let own = compile(unbound_compat::GraphicsDevice::OpenGLCore);
         assert_eq!(
             sampled(&own),
             pairs(&[("_A", "_A"), ("_Shadow", "_Shadow")])
         );
+    }
+
+    /// The state an inline sampler's name spells, word by word.
+    #[test]
+    fn inline_sampler_names_spell_filter_wraps_and_anisotropy() {
+        let state = |name: &str| InlineSampler::parse(name).unwrap().unwrap();
+        let spelt = |filter, wrap, aniso| InlineSampler {
+            filter,
+            wrap,
+            aniso,
+        };
+        assert_eq!(state("sampler_PointClamp"), spelt(0, [1; 3], 1));
+        assert_eq!(state("sampler_LinearRepeat"), spelt(1, [0; 3], 1));
+        assert_eq!(state("my_trilinear_mirror_sampler"), spelt(2, [2; 3], 1));
+        assert_eq!(state("sampler_LinearMirrorOnce"), spelt(1, [3; 3], 1));
+        // A word with an axis letter is that axis's; the axes nothing names repeat.
+        assert_eq!(
+            state("sampler_LinearClampU_RepeatV"),
+            spelt(1, [1, 0, 0], 1)
+        );
+        assert_eq!(
+            state("sampler_PointClampU_ClampV_MirrorW"),
+            spelt(0, [1, 1, 2], 1)
+        );
+        // `ClampUV` names U alone.
+        assert_eq!(state("sampler_PointClampUV"), spelt(0, [1, 0, 0], 1));
+        // A whole-sampler word with another word's axes over it.
+        assert_eq!(state("sampler_LinearRepeat_ClampW"), spelt(1, [0, 0, 1], 1));
+        assert_eq!(state("sampler_LinearClamp_MirrorU"), spelt(1, [2, 1, 1], 1));
+        // `mirroronce` spells `mirror` too: the axes it leaves out mirror.
+        assert_eq!(state("sampler_LinearMirrorOnceU"), spelt(1, [3, 2, 2], 1));
+        assert_eq!(state("sampler_Linear_Clamp_Aniso8"), spelt(1, [1; 3], 8));
+        assert_eq!(
+            state("sampler_TrilinearRepeatAniso16"),
+            spelt(2, [0; 3], 16)
+        );
+        assert_eq!(state("sampler_LinearClampCompare"), spelt(1, [1; 3], 1));
+        // No filter or no wrap word: not an inline state.
+        for name in [
+            "sampler_MainTex",
+            "sampler_Linear",
+            "sampler_Clamp",
+            "samplerunity_Lightmap",
+        ] {
+            assert_eq!(InlineSampler::parse(name), Ok(None), "{name}");
+        }
+        // Wrongly spelt states are the Editor's errors.
+        for (name, error) in [
+            ("sampler_PointLinearClamp", "only 1 filter mode"),
+            (
+                "sampler_LinearClampRepeat",
+                "can't have both 'clamp' and 'repeat'",
+            ),
+            (
+                "sampler_LinearClampMirror",
+                "can't have both 'clamp' and 'mirror'",
+            ),
+            (
+                "sampler_LinearClamp_MirrorOnceU",
+                "can't have both 'clamp' and 'mirror'",
+            ),
+            (
+                "sampler_LinearClampAniso3",
+                "invalid anisotropic filter value",
+            ),
+            (
+                "sampler_LinearClampAniso",
+                "invalid anisotropic filter value",
+            ),
+            (
+                "sampler_LinearClampAniso160",
+                "invalid anisotropic filter value",
+            ),
+        ] {
+            let wrong = InlineSampler::parse(name).unwrap_err();
+            assert!(wrong.contains(error), "{name}: {wrong}");
+            assert!(wrong.contains(&name.to_ascii_lowercase()), "{wrong}");
+            assert_eq!(InlineSampler::from_name(name), None);
+        }
     }
 
     /// Where a program samples through the sampler it names, a sampler that is neither a
@@ -2302,11 +2466,12 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             "_Cube.Sample(sampler_Cube, position.xyz) + _Cube.Sample(sampler_B, position.xyz)";
         let refused = compile(vulkan, unused).unwrap_err();
         assert!(
-            format!("{refused:#}").contains("Unrecognized sampler 'sampler_B'"),
+            format!("{refused:#}").contains("Unrecognized sampler 'sampler_b'"),
             "{refused:#}"
         );
         compile(unbound_compat::GraphicsDevice::OpenGLCore, unused).unwrap();
-        // Used, by a sample or a load, its sampler samples the cube.
+        // Used, by a sample or a load, its sampler samples the cube (samplerstates
+        // `UsedLoad`).
         for used in [
             "_Cube.Sample(sampler_B, position.xyz) + _B.Sample(sampler_B, position.xy)",
             "_Cube.Sample(sampler_B, position.xyz) + _B.Load(int3(0, 0, 0))",

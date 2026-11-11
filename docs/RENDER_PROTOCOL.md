@@ -146,8 +146,8 @@ declarations so only their scalar overrides fall back after instance zero.
 
 NativeApi 14 appends `wrap_w` to `TexturePacket` and `ImportedTextureInfo`, and the
 `texture-sampling-properties` call carries `wrapW`: a texture's own sampler takes its W wrap mode
-(a Texture3D's depth; arrays and cubemaps ignore it). Samplers that are not a texture's own (inline
-sampler states, defaults) keep repeating along W. The managed side refuses a native side of another
+(a Texture3D's depth; arrays and cubemaps ignore it). An inline sampler state has the W wrap mode its
+name spells (the whole sampler's, or `...W`'s); the default samplers repeat along W. The managed side refuses a native side of another
 version at startup, so a 13 side and a 14 side refuse each other in either pairing.
 
 Allocated handles never set bits 62 and 63 (`render_protocol::handle::RESERVED`, `3 << 62`);
