@@ -35,6 +35,9 @@ namespace Unbound.Runtime
         {
             internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>(StringComparer.Ordinal);
             internal readonly List<Dictionary<string, string>> Passes = new List<Dictionary<string, string>>();
+            /// <summary>Each pass's name as Unity stores it (upper case; empty: unnamed); null
+            /// for a pass the host sends no name for (an older host).</summary>
+            internal readonly List<string> PassNames = new List<string>();
             /// <summary>Each pass's variant choices, null when the host cannot read them.</summary>
             internal readonly List<string[][]> KeywordSets = new List<string[][]>();
             /// <summary>Each pass's reason for unknown choices, empty when known.</summary>
@@ -180,6 +183,7 @@ namespace Unbound.Runtime
                         var tags = new Dictionary<string, string>(StringComparer.Ordinal);
                         Tags(pass.GetProperty("tags"), tags);
                         s.Passes.Add(tags);
+                        s.PassNames.Add(pass.TryGetProperty("name", out var passName) && passName.ValueKind == JsonValueKind.String ? passName.GetString() : null);
                         string[][] sets = null;
                         if (pass.TryGetProperty("keyword_sets", out var choices) && choices.ValueKind == JsonValueKind.Array)
                         {

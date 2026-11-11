@@ -164,6 +164,27 @@ namespace UnityEngine
             ActiveSubShader("Shader.passCount", "follows the renderer's pass list")?.Passes.Count;
 
         /// <summary>
+        /// The names of the passes <see cref="passCount"/> counts, in order: those of the
+        /// SubShader the shader's queries answer from (<see cref="ActiveSubShader"/>), a surface
+        /// program's generated passes included (canonical tests/projects/shaderpasscount
+        /// case.*.mat.findPass: the generated DEFERRED and META passes are found at their
+        /// indices, and every pass of the first SubShader while none is in reach). Null
+        /// (unknown) when that SubShader is unknown or the host does not name its passes; the
+        /// caller then keeps the renderer's pass list. Under a render pipeline that is the
+        /// answer as before, without a warning: the pipeline's own code asks every frame, and
+        /// which declared SubShader it selects is not measured.
+        /// </summary>
+        internal List<string> ActivePassNames(string api)
+        {
+            if (globalRenderPipeline.Length != 0) return null;
+            var sub = ActiveSubShader(api, "follows the renderer's pass list");
+            if (sub == null) return null;
+            foreach (var name in sub.PassNames)
+                if (name == null) return null;
+            return sub.PassNames;
+        }
+
+        /// <summary>
         /// The SubShader Shader.passCount and Material.GetTag without fallbacks answer from: the one the built-in pipeline picks from the declarations, the
         /// first of its own then its Fallback chain's SubShaders without a <c>RenderPipeline</c>
         /// tag whose LOD is at most this shader's limit (<see cref="maximumLOD"/>, else
