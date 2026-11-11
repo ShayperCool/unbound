@@ -13,7 +13,7 @@
 
 use super::obj_smoothing::statement;
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// The first word of a line and the rest (without the line end).
 fn split(line: &[u8]) -> (&[u8], &[u8]) {
@@ -50,7 +50,7 @@ fn group_key(name: &[u8]) -> Vec<u8> {
 /// group's faces, the faces are gathered per group. The warning says what could not be gathered.
 pub fn regroup(bytes: &[u8]) -> (Vec<u8>, Option<String>) {
     // Whether a group has faces after another group's faces followed its own.
-    let mut seen: HashMap<Vec<u8>, ()> = HashMap::new();
+    let mut seen: HashSet<Vec<u8>> = HashSet::new();
     let mut key = group_key(b"default");
     let mut last: Option<Vec<u8>> = None;
     let mut returns = false;
@@ -59,7 +59,7 @@ pub fn regroup(bytes: &[u8]) -> (Vec<u8>, Option<String>) {
         if keyword == b"g" {
             key = group_key(&group_name(rest));
         } else if is_element(keyword) && last.as_ref() != Some(&key) {
-            if seen.insert(key.clone(), ()).is_some() {
+            if !seen.insert(key.clone()) {
                 returns = true;
                 break;
             }
@@ -330,10 +330,9 @@ mod tests {
     fn many_groups_are_read_in_one_pass() {
         // One group per face, each returning once: the work stays proportional to the file.
         let mut text = String::from("v 0 0 0\n");
-        for round in 0..2 {
+        for _ in 0..2 {
             for g in 0..100_000 {
                 text += &format!("g part{g}\nf 1 1 1\n");
-                let _ = round;
             }
         }
         let start = std::time::Instant::now();
