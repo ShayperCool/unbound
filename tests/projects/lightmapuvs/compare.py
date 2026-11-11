@@ -2,7 +2,7 @@
 """Compares two lightmap UV captures mesh by mesh, exactly (float32 values at tolerance 0):
 
     compare.py <reference.jsonl> <candidate.jsonl> [--report out.json] [--uv2] [--expect A,B]
-                                                   [--expect-variants V,W]
+                                                   [--expect-variants V,W] [--recorded V/M,...]
 
 Every (variant, mesh) of either side is listed with each field that is missing or differs: the
 vertex count, sub-mesh triangles, vertices, normals, UV and UV2 by index (the count of differing
@@ -13,7 +13,7 @@ differs. Exits 1 when anything differs; with --uv2, when the vertex count or `uv
 differs. With --expect, only the named meshes (in every variant) decide the exit status, with
 --expect-variants also every mesh of the named variants on either side (so a mesh that is missing
 or extra there fails), judged on its triangles, vertices, UV and UV2 by index as well (everything
-but the normals); every mesh is still listed.
+but the normals); a record named by --recorded never decides it. Every mesh is still listed.
 """
 import argparse
 import json
@@ -95,6 +95,8 @@ def main():
     parser.add_argument('--uv2', action='store_true', help='fail only on the vertex count and uv2Corners')
     parser.add_argument('--expect', help='comma-separated mesh names that decide the exit status')
     parser.add_argument('--expect-variants', help='comma-separated variants whose every mesh decides the exit status')
+    parser.add_argument('--recorded', help='comma-separated variant/mesh records with a recorded difference: '
+                        'listed, never deciding the exit status')
     args = parser.parse_args()
     expected, actual = load(args.reference), load(args.candidate)
     unknown = [n for n in (args.expect or '').split(',') if n and n not in {k[1] for k in expected}]
@@ -120,7 +122,8 @@ def main():
             # A variant named by --expect-variants is judged on everything but its normals.
             judged = ('vertexCount', 'uv2Corners') + (('subMeshes', 'vertices', 'uv', 'uv2') if strict_variant(key) else ())
             verdict = {f: d for f, d in verdict.items() if f in judged} or 'match'
-        expected_mesh = not args.expect or key[1] in args.expect.split(',') or strict_variant(key)
+        expected_mesh = ((not args.expect or key[1] in args.expect.split(',') or strict_variant(key))
+                         and name not in (args.recorded or '').split(','))
         if verdict != 'match':
             failing += 1
             if expected_mesh:

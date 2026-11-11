@@ -87,8 +87,13 @@ order alone reorders each sub-mesh's triangles and keeps the vertices, including
 triangle uses; vertex order alone keeps the triangles, renumbers the vertices in the order the
 triangles first use them and drops the unused point; everything does both. Unbound reproduces the
 order: every record of every variant matches the Editor in triangles, vertices, UV and UV2 by
-index, except Hard30/Organic (the packing tie above). The gate (`tools/agents/suite.py`) judges
-all of that for every variant but Hard30; normals are compared by `compare_normals.py`.
+index, except Hard30/Organic (the packing tie above, passed to the gate as `--recorded`). The gate
+(`tools/agents/suite.py`) judges all of that for every variant; normals are compared by
+`compare_normals.py`.
+
+OldOptOff and OldOptOn hold Cylinder, Multi and FlatPoly with metas as Unity 2018 wrote them
+(`optimizeMeshForGPU` instead of the flags). The reference shows: with it off the meshes equal
+OptPolygons (the polygon order stays, the unused point too), with it on they equal Off.
 
 ## Mesh and object names
 

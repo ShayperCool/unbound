@@ -21,6 +21,9 @@ OptPolygons and OptVertices hold a few of the models and FlatPoly (a point no tr
 generateSecondaryUV off and one mesh optimization flag each: `meshOptimizationFlags` 1 (polygon
 order) and 2 (vertex order).
 
+OldOptOff and OldOptOn hold Cylinder, Multi and FlatPoly with metas as Unity 2018 wrote them
+(ModelImporter serializedVersion 23), where mesh optimization is `optimizeMeshForGPU` 0 or 1.
+
 The Names variant holds Sources/Names (hand-written OBJ files of one quad per part with `o` and
 `g` statements in different arrangements) with mesh optimization and generateSecondaryUV off.
 
@@ -201,6 +204,72 @@ DefaultImporter:
 '''
 
 
+# A meta as Unity 2018 wrote it (ModelImporter serializedVersion 23): mesh optimization is the
+# single setting optimizeMeshForGPU, from before meshOptimizationFlags.
+META_OLD = '''fileFormatVersion: 2
+guid: {guid}
+ModelImporter:
+  serializedVersion: 23
+  fileIDToRecycleName: {{}}
+  externalObjects: {{}}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: {optimizeMeshForGPU}
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  animationType: 0
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+'''
+
+
 def guid(path):
     return hashlib.md5(('lightmapuvs/' + path).encode()).hexdigest()
 
@@ -225,6 +294,16 @@ def main():
     variants.append(('OptVertices', dict(meshOptimizationFlags=2, generateSecondaryUV=0), ordered))
     names = sorted(p for p in (PROBE/'Sources/Names').iterdir() if p.suffix in ('.fbx', '.obj'))
     variants.append(('Names', RAW, names))
+    old_models = [p for p in ordered if p.stem in ('Cylinder', 'Multi', 'FlatPoly')]
+    for variant, value in (('OldOptOff', 0), ('OldOptOn', 1)):
+        folder = resources/variant
+        folder.mkdir()
+        rel = f'Assets/Resources/{variant}'
+        (resources/(variant + '.meta')).write_text(FOLDER.format(guid=guid(rel)))
+        for source in old_models:
+            shutil.copyfile(source, folder/source.name)
+            (folder/(source.name + '.meta')).write_text(
+                META_OLD.format(guid=guid(f'{rel}/{source.name}'), optimizeMeshForGPU=value))
     for variant, overrides, sources in variants:
         folder = resources/variant
         folder.mkdir()
