@@ -468,7 +468,6 @@ pub struct UnityRenderer {
     zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
     texture_mip_biases: HashMap<u64, f32>,
-    center_anisotropic_lod: bool,
     defaults: HashMap<&'static str, GpuTexture>,
     /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
     dim_defaults: HashMap<(unbound_shaders::TextureDim, String), wgpu::TextureView>,
@@ -563,7 +562,6 @@ impl UnityRenderer {
         resolver: Resolver,
         compiled: compiled::CompiledPrograms,
         presented: Arc<Mutex<Option<Presented>>>,
-        center_anisotropic_lod: bool,
         conventions: DeviceConventions,
     ) -> Self {
         let pipelines = Pipelines::new(&device);
@@ -596,7 +594,6 @@ impl UnityRenderer {
             zero_extra: None,
             textures: HashMap::default(),
             texture_mip_biases: HashMap::default(),
-            center_anisotropic_lod,
             defaults: defaults.into_iter().collect(),
             dim_defaults: HashMap::default(),
             error_program: None,
@@ -926,24 +923,12 @@ impl UnityRenderer {
         effective_aniso(self.anisotropy, level)
     }
 
-    /// Bias uses the sampler's native LOD operation, preserving implicit and explicit gradients.
-    fn sampler_lod_bias(&self, handle: u64, key: SamplerKey, center: bool) -> u32 {
-        let mut bias = self.texture_mip_biases.get(&handle).copied().unwrap_or(0.0);
-        if self.center_anisotropic_lod
-            && center
-            && key.filter >= 1
-            && self.textures.get(&handle).is_some_and(|t| t.mip_count > 1)
-        {
-            // Native and Vulkan have the same measured anisotropic transition slopes.
-            // Native centers that transition on a half mip; Vulkan starts it at an integer.
-            let slope = match key.aniso {
-                ..=1 => 1.0,
-                2..=3 => 1.5,
-                4..=7 => 1.75,
-                _ => 2.0,
-            };
-            bias -= 0.5 - 0.5 / slope;
-        }
+    /// A texture's mip bias (`Texture.mipMapBias`) as the bits of its sampler key: the
+    /// sampler's own LOD bias, which keeps implicit and explicit gradients. Each device's
+    /// backend has its Editor's anisotropic transition as it is (tests/projects/samplerbias,
+    /// both devices).
+    fn sampler_lod_bias(&self, handle: u64) -> u32 {
+        let bias = self.texture_mip_biases.get(&handle).copied().unwrap_or(0.0);
         if bias == 0.0 { 0 } else { bias.to_bits() }
     }
 
@@ -1081,7 +1066,7 @@ impl UnityRenderer {
             if !t.render_target {
                 key.aniso = self.effective_aniso(key.aniso);
             }
-            key.lod_bias_bits = self.sampler_lod_bias(base, key, true);
+            key.lod_bias_bits = self.sampler_lod_bias(base);
             let sampler = self.sampler(key);
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("unbound main texture depth element"),
@@ -1117,7 +1102,7 @@ impl UnityRenderer {
             };
             let t = &self.textures[&handle];
             let (mut key, alpha_only) = (t.sampler_key, t.alpha_only);
-            key.lod_bias_bits = self.sampler_lod_bias(handle, key, true);
+            key.lod_bias_bits = self.sampler_lod_bias(handle);
             let sampler = self.sampler(key);
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("unbound main texture feedback copy"),
@@ -1147,7 +1132,7 @@ impl UnityRenderer {
         if !self.texture_or_default(handle, default).render_target {
             key.aniso = self.effective_aniso(key.aniso);
         }
-        key.lod_bias_bits = self.sampler_lod_bias(handle, key, true);
+        key.lod_bias_bits = self.sampler_lod_bias(handle);
         let sampler = self.sampler(key);
         let layout = self.pipelines.texture_layout.clone();
         let device = self.device.clone();
@@ -1608,7 +1593,7 @@ impl UnityRenderer {
                 key.compare = 4;
             }
             if slot.inline.is_none() {
-                key.lod_bias_bits = self.sampler_lod_bias(*h, key, is_2d(*dim) && !slot.comparison);
+                key.lod_bias_bits = self.sampler_lod_bias(*h);
             }
 
             if slot.integer() {
@@ -3943,8 +3928,16 @@ impl UnityRenderer {
         // Regions are bottom-up (Unity's); a screen stored top-down (or its stand-in) counts its
         // rows from the top. The texels are copied as stored, as the device copies its screen.
         let top_down = self.conventions.top_down(true);
-        let y = if top_down && self.stored_as_screen(source) { sh - y - h } else { y };
-        let dy = if top_down && self.stored_as_screen(destination) { dh - dy - h } else { dy };
+        let y = if top_down && self.stored_as_screen(source) {
+            sh - y - h
+        } else {
+            y
+        };
+        let dy = if top_down && self.stored_as_screen(destination) {
+            dh - dy - h
+        } else {
+            dy
+        };
         self.mark_resolve_copied(&destination_attachment);
         let channels = channel_kind.map(|kind| ChannelCopy {
             source: src.create_view(&wgpu::TextureViewDescriptor {
@@ -4612,7 +4605,6 @@ fn depth_owner(color: u64, depth: u64) -> Option<u64> {
     }
 }
 
-
 /// Copies a float texture's values into an integer texture of its size as their bits, texel for
 /// texel (`SCALAR`: `u32` or `i32`).
 /// Copies 8-bit normalized texels into a texture of their level's size in another channel count
@@ -4896,7 +4888,10 @@ mod tests {
         let read = UnityRenderer::unstarted_screen((64, 32), [0, 0, 64, 32], false);
         assert_eq!(read.len(), 64 * 32 * 4);
         assert!(read.iter().all(|&b| b == 0));
-        assert_eq!(UnityRenderer::unstarted_screen((64, 32), [60, 30, 10, 10], true).len(), 4 * 2 * 16);
+        assert_eq!(
+            UnityRenderer::unstarted_screen((64, 32), [60, 30, 10, 10], true).len(),
+            4 * 2 * 16
+        );
         assert!(UnityRenderer::unstarted_screen((64, 32), [70, 0, 4, 4], false).is_empty());
     }
 
