@@ -51,18 +51,29 @@ namespace UnityEngine
         /// roombakedenvironment-bakedset-now).</summary>
         internal void SetBaked(SphericalHarmonicsL2[] coefficients)
         {
-            var lit = (SphericalHarmonicsL2[])coefficients.Clone();
+            // The set's own arrays are written in place when they fit (a script may give
+            // coefficients in every frame); the caller's array is never kept.
+            int count = coefficients.Length;
+            var lit = Probes.Length == count ? Probes : new SphericalHarmonicsL2[count];
             if (Realtime)
             {
-                // The realtime part: what the probes hold beyond their baked coefficients.
-                for (int i = 0; i < lit.Length && i < Probes.Length; i++)
+                var alone = BakedAlone != null && BakedAlone.Length == count ? BakedAlone : new SphericalHarmonicsL2[count];
+                for (int i = 0; i < count; i++)
                 {
-                    var realtime = Baked && BakedAlone != null ? Probes[i] + BakedAlone[i] * -1f : Baked ? default : Probes[i];
-                    lit[i] = lit[i] + realtime;
+                    // The realtime part: what the probe holds beyond its baked coefficients.
+                    SphericalHarmonicsL2 realtime = default;
+                    if (i < Probes.Length)
+                        realtime = !Baked ? Probes[i] : BakedAlone != null && i < BakedAlone.Length ? Probes[i] + BakedAlone[i] * -1f : default;
+                    lit[i] = coefficients[i] + realtime;
+                    alone[i] = coefficients[i];
                 }
-                BakedAlone = (SphericalHarmonicsL2[])coefficients.Clone();
+                BakedAlone = alone;
             }
-            else BakedAlone = null;
+            else
+            {
+                Array.Copy(coefficients, lit, count);
+                BakedAlone = null;
+            }
             Probes = lit;
             Baked = true;
         }
