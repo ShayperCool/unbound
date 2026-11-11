@@ -281,6 +281,7 @@ public static class CollectionsProbe
         Section("tree-drag", () => TreeDrag(stage));
         Section("animated-clock", () => WithClock(() => AnimatedClockSteps(stage)));
         Section("tree-drag-positions", () => WithClock(() => TreeDragPositions(stage)));
+        Section("tree-controls", () => WithClock(() => TreeControls(stage)));
         File.WriteAllText(Path.Combine(Output, "collections.jsonl"), Out.ToString());
     }
 
@@ -659,6 +660,51 @@ public static class CollectionsProbe
             tree.handleDrop -= refuse;
         }, State);
         Step("tree-drag-positions", "remove", () => tree.RemoveFromHierarchy(), () => "null");
+    }
+
+    // Controls for single rules of tree data and tree drags: an item added at a child index and a
+    // move among siblings to an index below -1, both without a rebuild; a parent whose data is
+    // null; root items that give an id twice; and a drag resting over a row that has opened while
+    // item 0 is collapsed.
+    static void TreeControls(VisualElement stage)
+    {
+        TreeView tree = null;
+        Vector2 at = default;
+        string State() => "{\"tree\":" + TreeState(tree) + ",\"hierarchy\":" + TreeHierarchy(tree) + "}";
+        var c = (Func<BaseTreeViewController>)(() => tree.viewController);
+        Step("tree-controls", "attach", () => { tree = DataTree(stage, "tctl", 20); tree.reorderable = true; tree.ExpandAll(); }, State);
+        Step("tree-controls", "add-at-index-without-rebuild", () => tree.AddItem(new TreeViewItemData<string>(30, "Added 30"), 5, 0, false), State);
+        Step("tree-controls", "refresh-after-add-at-index", () => tree.RefreshItems(), State);
+        Step("tree-controls", "move-among-siblings-index-negative", () => c().Move(1, 0, -5), State);
+        Step("tree-controls", "refresh-after-negative-index", () => tree.RefreshItems(), State);
+        Step("tree-controls", "add-parent-with-null-data", () => tree.AddItem(new TreeViewItemData<string>(40, null)), State);
+        Step("tree-controls", "add-under-null-data", () => tree.AddItem(new TreeViewItemData<string>(41, "Added 41"), 40), State);
+        Step("tree-controls", "remove-under-null-data", () => Log.Add("removed " + tree.TryRemoveItem(41)), State);
+        Step("tree-controls", "root-items-with-an-id-twice", () => tree.SetRootItems(new List<TreeViewItemData<string>>
+        {
+            new TreeViewItemData<string>(0, "Root 0", new List<TreeViewItemData<string>> { new TreeViewItemData<string>(1, "Child 1"), new TreeViewItemData<string>(2, "Child 2") }),
+            new TreeViewItemData<string>(1, "Again 1", new List<TreeViewItemData<string>> { new TreeViewItemData<string>(3, "Leaf 3") }),
+            new TreeViewItemData<string>(5, "Root 5", new List<TreeViewItemData<string>> { new TreeViewItemData<string>(6, "Child 6") }),
+        }), State);
+        Step("tree-controls", "expand-with-an-id-twice", () => tree.ExpandAll(), State);
+        // All collapsed: rows Root 0, Root 5, Root 10. Root 10 dragged over Root 5 and held still.
+        Step("tree-controls", "collapsed-roots", () => { tree.SetRootItems(TreeItems(3, 2, 1)); tree.Rebuild(); }, State);
+        Step("tree-controls", "rest-over-root-5", () =>
+        {
+            at = RowCenter(tree, 2);
+            Pointer(EventType.MouseMove, at);
+            Pointer(EventType.MouseDown, at);
+            var to = RowCenter(tree, 1);
+            Pointer(EventType.MouseMove, Vector2.Lerp(at, to, 0.5f));
+            Update();
+            at = to;
+            Pointer(EventType.MouseMove, at);
+        }, State);
+        Step("tree-controls", "rest-800", () => { s_Clock += 800; Update(); }, State);
+        Step("tree-controls", "rest-1600", () => { s_Clock += 800; Update(); }, State);
+        Step("tree-controls", "rest-2400", () => { s_Clock += 800; Update(); }, State);
+        Step("tree-controls", "release-after-rest", () => Pointer(EventType.MouseUp, at), State);
+        Step("tree-controls", "remove", () => tree.RemoveFromHierarchy(), () => "null");
     }
 
     // ---- contextual menus ----

@@ -77,7 +77,11 @@ not depend on them):
   `handleDrop`, the hover bar and markers, the depth picked by the pointer's x, drops below the
   rows, three items at once with an item's own child among them, an item onto its own
   descendant, a collapsed row opening under a hovering drag and closing when the drag ends,
-  `canStartDrag` false and `handleDrop` Rejected).
+  `canStartDrag` false and `handleDrop` Rejected);
+- `tree-controls` (same clock): single rules of tree data and drags: an item added at a child
+  index and a move among siblings to an index below -1, both without a rebuild; a parent whose
+  data is null; root items that give an id twice; a drag resting over a row that has opened
+  while item 0 is collapsed.
 
 Every step records the item callbacks it caused (makeItem/bindItem/unbindItem/destroyItem, with
 the element: elements are numbered per control), the events the controls raised, and the state:
