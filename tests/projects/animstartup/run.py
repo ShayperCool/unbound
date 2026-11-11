@@ -35,8 +35,8 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 REPEATS = ('native1', 'native2')
-PROFILES = ('entry', 'delayed', 'human', 'humanMotion', 'initialization')
-GATE_PROFILES = ('entry', 'delayed', 'human', 'initialization')
+PROFILES = ('entry', 'delayed', 'human', 'humanMotion', 'initialization', 'director')
+GATE_PROFILES = ('entry', 'delayed', 'human', 'initialization', 'director')
 
 def reference():
     return PROBE/'Reference'/('unity-'+unity_version())
@@ -86,7 +86,7 @@ def create(work):
 
 def job(work, repeat, profile):
     project, out = work/'projects'/profile/repeat, work/profile/repeat
-    return EditorJob(project, out/'editor.log', out, env={'ANIMSTARTUP_PROBE_OUT': str(out), 'ANIMSTARTUP_DELAYED': '1' if profile != 'entry' else '0', 'ANIMSTARTUP_HUMAN': '1' if profile in ('human', 'humanMotion') else '0', 'ANIMSTARTUP_HUMAN_MOTION': '1' if profile == 'humanMotion' else '0', 'ANIMSTARTUP_REVIEW': '1' if profile == 'initialization' else '0'},
+    return EditorJob(project, out/'editor.log', out, env={'ANIMSTARTUP_PROBE_OUT': str(out), 'ANIMSTARTUP_DELAYED': '1' if profile != 'entry' else '0', 'ANIMSTARTUP_HUMAN': '1' if profile in ('human', 'humanMotion') else '0', 'ANIMSTARTUP_HUMAN_MOTION': '1' if profile == 'humanMotion' else '0', 'ANIMSTARTUP_REVIEW': '1' if profile == 'initialization' else '0', 'ANIMSTARTUP_DIRECTOR': '1' if profile == 'director' else '0'},
                      timeout=1200, progress_files=[out/OUT], progress_timeout=600,
                      screen='1280x720x24', label='animstartup-'+profile+'-'+repeat,
                      launch_inputs={'release': unity_version(),
@@ -158,7 +158,7 @@ def check_profile(work, profile):
     project = work/profile/'project'
     assemble('animstartup', unity_version(), 'startup', project)
     out = fresh_output(work/profile/'unbound')
-    env = dict(os.environ, ANIMSTARTUP_PROBE_OUT=str(out), ANIMSTARTUP_DELAYED='1' if profile != 'entry' else '0', ANIMSTARTUP_HUMAN='1' if profile in ('human', 'humanMotion') else '0', ANIMSTARTUP_HUMAN_MOTION='1' if profile == 'humanMotion' else '0', ANIMSTARTUP_REVIEW='1' if profile == 'initialization' else '0')
+    env = dict(os.environ, ANIMSTARTUP_PROBE_OUT=str(out), ANIMSTARTUP_DELAYED='1' if profile != 'entry' else '0', ANIMSTARTUP_HUMAN='1' if profile in ('human', 'humanMotion') else '0', ANIMSTARTUP_HUMAN_MOTION='1' if profile == 'humanMotion' else '0', ANIMSTARTUP_REVIEW='1' if profile == 'initialization' else '0', ANIMSTARTUP_DIRECTOR='1' if profile == 'director' else '0')
     with (out/'unbound.log').open('w') as log:
         code = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', cli, 'run', '-p', str(project),
                                '--scene', 'Assets/Scenes/Delayed.unity' if profile != 'entry' else 'Assets/Scenes/Probe.unity',
