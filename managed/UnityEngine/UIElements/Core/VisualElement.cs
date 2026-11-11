@@ -770,9 +770,11 @@ namespace UnityEngine.UIElements
 
             void MoveChildElement(VisualElement child, int currentIndex, int nextIndex)
             {
+                // The callers give the index the child has once it is taken out (past the end: last).
+                // The child keeps its last layout until the next layout pass, as a removed one does.
                 m_Owner.m_Children.RemoveAt(currentIndex);
-                m_Owner.yogaNode.RemoveAt(currentIndex);
-                if (nextIndex > currentIndex) nextIndex--;
+                m_Owner.yogaNode.RemoveAt(currentIndex, preserveLayout: true);
+                if (nextIndex > m_Owner.m_Children.Count) nextIndex = m_Owner.m_Children.Count;
                 m_Owner.m_Children.Insert(nextIndex, child);
                 m_Owner.yogaNode.Insert(nextIndex, child.yogaNode);
                 m_Owner.IncrementVersion(VersionChangeType.Hierarchy);
