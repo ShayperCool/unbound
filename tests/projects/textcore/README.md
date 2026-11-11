@@ -27,12 +27,18 @@ Make the project and record Unity's reference:
 
 The managed tests (`managed/UnityEngine.Tests/TextCoreTextTests.cs`) rebuild the font assets from the
 reference's glyphs, characters and pairs and require every case's preferred size, characters,
-lines and vertices to be the same floats. Run Unbound (font engine included) and compare (with the
-fonts copied in, `ProbeSetup` or `cp /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf
-~/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/Fonts/Inter-Regular.ttf tests/projects/textcore/Assets/Fonts/`):
+lines and vertices to be the same floats. Run Unbound (font engine included) and compare, with the
+two fonts copied in: `fonts.py` takes them from the OS and the Editor's resources (or from
+`TEXTCORE_LIBERATION_SANS` and `TEXTCORE_INTER`) and refuses a file whose SHA-256 is not the
+reference's. Without them the engine skips both fonts and no case is compared.
 
+    python3 tests/projects/textcore/fonts.py tests/projects/textcore tests/projects/textcore/Reference/unity-6000.0.71f1.jsonl.gz
     TEXTCORE_PROBE_OUT=/tmp/textcore-unbound.jsonl unbound run -p tests/projects/textcore --headless 5 --no-watch
     python3 tests/projects/textcore/compare.py tests/projects/textcore/Reference/unity-6000.0.71f1.jsonl.gz /tmp/textcore-unbound.jsonl
+
+`tools/agents/suite.py --only textcore` does the same on a copy of the project. With the fonts,
+372 cases are compared and 48 differ (42 italic, 2 bold italic, 4 normal), all by the cap line
+below: 8226 of 615779 values.
 
 Known differences: Unity's FaceInfo cap and mean lines are the tops of 'H' and 'x' hinted by the
 font's TrueType instructions, which Unbound approximates (Inter's cap line is 66 in Unity, 65 in
