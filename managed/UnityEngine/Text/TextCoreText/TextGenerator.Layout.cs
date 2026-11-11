@@ -338,7 +338,7 @@ namespace UnityEngine.TextCore.Text
                     topRight += topShift;
                     bottomRight += bottomShift;
                 }
-                if (m_FXRotation != Quaternion.identity)
+                if (!QuaternionMath.Equal(m_FXRotation, Quaternion.identity))
                 {
                     var rotation = Matrix4x4.Rotate(m_FXRotation);
                     var pivot = (topRight + bottomLeft) / 2f;

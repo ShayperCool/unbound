@@ -197,7 +197,7 @@ namespace Unbound.Runtime.Playables
                 if (weight <= 0f) continue;
                 delta += s.Motion.Delta * weight;
                 var q = s.Motion.Turn;
-                if (Quaternion.Dot(sum, q) < 0f) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
+                if (QuaternionMath.Dot(sum, q) < 0f) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
                 sum = new Quaternion(sum.x + q.x * weight, sum.y + q.y * weight, sum.z + q.z * weight, sum.w + q.w * weight);
                 total += weight;
             }

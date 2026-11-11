@@ -149,7 +149,7 @@ namespace Unbound.Runtime
             else
             {
                 var parentScale = parent.lossyScale;
-                rect.m_LocalRotation = Transform.ReflectRotation(Quaternion.Inverse(parent.rotation) * rotation, parentScale).normalized;
+                rect.m_LocalRotation = QuaternionMath.Normalize(Transform.ReflectRotation(Quaternion.Inverse(parent.rotation) * rotation, parentScale));
                 // Unity projects the parent's basis onto the requested world rotation before
                 // solving the scale. Dividing by parent.lossyScale fails under rotated,
                 // non-uniform scale because that basis contains shear.

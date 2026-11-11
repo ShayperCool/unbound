@@ -446,7 +446,7 @@ namespace Unbound.Runtime
         }
 
         static bool SamePose(Vector3 p1, Quaternion q1, Vector3 p2, Quaternion q2) =>
-            p1 == p2 && Mathf.Abs(Quaternion.Dot(q1, q2)) > 1f - 1e-7f;
+            p1 == p2 && Mathf.Abs(QuaternionMath.Dot(q1, q2)) > 1f - 1e-7f;
 
         // ------------------------------------------------------------------ membership
 
@@ -1529,7 +1529,7 @@ namespace Unbound.Runtime
         {
             var t = rb.m_GameObject.m_Transform;
             if (position != rb.m_SyncPosition) t.position = position;
-            if (Mathf.Abs(Quaternion.Dot(rotation, rb.m_SyncRotation)) <= 1f - 1e-7f) t.rotation = rotation;
+            if (Mathf.Abs(QuaternionMath.Dot(rotation, rb.m_SyncRotation)) <= 1f - 1e-7f) t.rotation = rotation;
             rb.m_SyncPosition = position;
             rb.m_SyncRotation = rotation;
             rb.m_TransformVersion = t.m_Version;

@@ -239,7 +239,7 @@ namespace UnityEngine
         public void SetLocalPositionAndRotation(Vector3 localPosition, Quaternion localRotation)
         {
             MainThreadCheck.Check("SetLocalPositionAndRotation");
-            m_LocalRotation = localRotation.normalized;
+            m_LocalRotation = QuaternionMath.Normalize(localRotation);
             SetLocalPosition(localPosition);
         }
 

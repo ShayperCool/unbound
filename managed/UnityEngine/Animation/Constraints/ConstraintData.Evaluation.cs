@@ -54,11 +54,11 @@ namespace Unbound.Runtime
                 var q = s.sourceTransform != null ? s.sourceTransform.rotation : Quaternion.identity;
                 if (parent) q *= Quaternion.Euler(GetOffset(RotationOffsets, i));
                 if (!found) { first = q; found = true; }
-                float w = Quaternion.Dot(first, q) < 0 ? -weight : weight;
+                float w = QuaternionMath.Dot(first, q) < 0 ? -weight : weight;
                 sum.x += q.x * w; sum.y += q.y * w; sum.z += q.z * w; sum.w += q.w * w;
             }
             if (!found) return Quaternion.Euler(RotationRest);
-            var value = LocalRotation(Quaternion.Normalize(sum));
+            var value = LocalRotation(QuaternionMath.Normalize(sum));
             return parent ? value : value * Quaternion.Euler(RotationOffset);
         }
 

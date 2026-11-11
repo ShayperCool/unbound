@@ -587,7 +587,7 @@ namespace Unbound.Runtime
                 // normalization of below·(1 - weight·w) + weight·sum (measured in a transition
                 // to a state without a motion with write defaults, at half layer weight).
                 if (partial) lv = new Quaternion(x, y, z, qw);
-                if (Quaternion.Dot(r, lv) < 0f) lv = new Quaternion(-lv.x, -lv.y, -lv.z, -lv.w);
+                if (QuaternionMath.Dot(r, lv) < 0f) lv = new Quaternion(-lv.x, -lv.y, -lv.z, -lv.w);
                 r = Normalized(r.x + (lv.x - r.x) * lw, r.y + (lv.y - r.y) * lw, r.z + (lv.z - r.z) * lw, r.w + (lv.w - r.w) * lw);
             }
             if (!any) return;

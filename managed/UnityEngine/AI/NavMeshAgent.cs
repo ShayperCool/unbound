@@ -1816,9 +1816,9 @@ namespace Unbound.Runtime
             if (speed < 1e-3f) return;
             var rotation = agent.transform.rotation;
             var target = Quaternion.LookRotation(heading);
-            float left = Quaternion.Angle(rotation, target);
+            float left = QuaternionMath.Angle(rotation, target);
             float step = Mathf.Min(agent.angularSpeed * dt, (TurnGain + speed) * left * dt);
-            agent.transform.rotation = Quaternion.RotateTowards(rotation, target, step);
+            agent.transform.rotation = QuaternionMath.RotateTowards(rotation, target, step);
         }
 
         /// <summary>The links an agent is on during the crowd update (also those taken in it).</summary>

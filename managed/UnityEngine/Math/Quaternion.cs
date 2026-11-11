@@ -237,7 +237,7 @@ namespace UnityEngine
 
         private static void ToAxisAngleRad(Quaternion q, out Vector3 axis, out float angle)
         {
-            q = Normalize(q);
+            q = QuaternionMath.Normalize(q);
             double w = Math.Clamp((double)q.w, -1.0, 1.0);
             angle = (float)(2.0 * Math.Acos(w));
             double sinHalf = Math.Sqrt(1.0 - w * w);
@@ -467,11 +467,11 @@ namespace UnityEngine
         /// <summary>Normalized linear interpolation along the shorter arc.</summary>
         public static Quaternion LerpUnclamped(Quaternion a, Quaternion b, float t)
         {
-            float sign = Dot(a, b) < 0F ? -1F : 1F;
+            float sign = QuaternionMath.Dot(a, b) < 0F ? -1F : 1F;
             float u = 1F - t;
             float st = sign * t;
             Quaternion r = new Quaternion(a.x * u + b.x * st, a.y * u + b.y * st, a.z * u + b.z * st, a.w * u + b.w * st);
-            return Normalize(r);
+            return QuaternionMath.Normalize(r);
         }
 
         public static Quaternion RotateTowards(Quaternion from, Quaternion to, float maxDegreesDelta)

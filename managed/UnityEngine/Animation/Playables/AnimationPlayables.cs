@@ -273,7 +273,7 @@ namespace Unbound.Runtime.Playables
             ClipSampling.Sample(bound, Clip.StartTime, 1f, m_StartPose);
             var startRot = Quaternion.identity;
             if (rot >= 0 && m_StartPose.Weight[rot] > 0f)
-                startRot = new Quaternion(m_StartPose.Value[rot], m_StartPose.Value[rot + 1], m_StartPose.Value[rot + 2], m_StartPose.Value[rot + 3]).normalized;
+                startRot = QuaternionMath.Normalize(new Quaternion(m_StartPose.Value[rot], m_StartPose.Value[rot + 1], m_StartPose.Value[rot + 2], m_StartPose.Value[rot + 3]));
             var inverse = Quaternion.Inverse(startRot);
             if (pos >= 0 && into.Animated[pos] && m_StartPose.Weight[pos] > 0f)
             {
@@ -876,7 +876,7 @@ namespace Unbound.Runtime.Playables
         {
             if (node.Inputs.Count > 0 && node.Inputs[0].Node != null)
                 e.EvaluateInto(node.Inputs[0].Node, node.Inputs[0].SourcePort, weight, into);
-            if (Position == Vector3.zero && Rotation == Quaternion.identity) return;
+            if (Position == Vector3.zero && QuaternionMath.Equal(Rotation, Quaternion.identity)) return;
             var b = e.Bindings;
             int pos = b.BindChannel(CurveBinding.ForType("", "m_LocalPosition.x", typeof(Transform)), false);
             int rot = b.BindChannel(CurveBinding.ForType("", "m_LocalRotation.x", typeof(Transform)), false);

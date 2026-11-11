@@ -343,9 +343,9 @@ namespace Unbound.Runtime
                 float sq = threshold * threshold;
                 if ((t.position - Position).sqrMagnitude > sq) return true;
                 var rotation = t.rotation;
-                if (rotation != Rotation)
+                if (!QuaternionMath.Equal(rotation, Rotation))
                 {
-                    float dot = Mathf.Min(Mathf.Abs(Quaternion.Dot(Rotation, rotation)), 1f);
+                    float dot = Mathf.Min(Mathf.Abs(QuaternionMath.Dot(Rotation, rotation)), 1f);
                     float angle = Mathf.Acos(dot) * 2f;
                     if (sq < angle * angle * Scale.sqrMagnitude * ExtentSq) return true;
                 }

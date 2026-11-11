@@ -351,7 +351,7 @@ namespace Unbound.Runtime.Playables
 
         internal Vector3 LocalPosition(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localPosition; }
 
-        internal Quaternion LocalRotation(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? AnimationEvaluation.Q(Stream.Values, channel).normalized : t.localRotation; }
+        internal Quaternion LocalRotation(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? QuaternionMath.Normalize(AnimationEvaluation.Q(Stream.Values, channel)) : t.localRotation; }
 
         internal Vector3 LocalScale(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localScale; }
 

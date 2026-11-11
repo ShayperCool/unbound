@@ -226,7 +226,7 @@ namespace Unbound.Runtime
                 var sum = m_RootTurns[i];
                 // An empty state's remaining weight contributes no rotation.
                 if (weight < 1) sum.w += sum.w < 0 ? weight - 1 : 1 - weight;
-                var own = sum.normalized;
+                var own = QuaternionMath.Normalize(sum);
                 if (!frozen)
                 {
                     layer.Own.Delta = m_RootDeltas[i];
@@ -253,7 +253,7 @@ namespace Unbound.Runtime
         {
             m_RootDeltas[layerIndex] += d * weight;
             var sum = m_RootTurns[layerIndex];
-            if (Quaternion.Dot(sum, q) < 0) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
+            if (QuaternionMath.Dot(sum, q) < 0) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
             m_RootTurns[layerIndex] = new Quaternion(sum.x + q.x * weight, sum.y + q.y * weight,
                 sum.z + q.z * weight, sum.w + q.w * weight);
             m_RootTurnWeights[layerIndex] += weight;
@@ -483,9 +483,9 @@ namespace Unbound.Runtime
                 else
                 {
                     t = Vector3.Lerp(t, lt, layerWeight);
-                    if (Quaternion.Dot(q, lq) < 0f) lq = new Quaternion(-lq.x, -lq.y, -lq.z, -lq.w);
-                    q = new Quaternion(q.x + (lq.x - q.x) * layerWeight, q.y + (lq.y - q.y) * layerWeight, q.z + (lq.z - q.z) * layerWeight,
-                        q.w + (lq.w - q.w) * layerWeight).normalized;
+                    if (QuaternionMath.Dot(q, lq) < 0f) lq = new Quaternion(-lq.x, -lq.y, -lq.z, -lq.w);
+                    q = QuaternionMath.Normalize(new Quaternion(q.x + (lq.x - q.x) * layerWeight, q.y + (lq.y - q.y) * layerWeight, q.z + (lq.z - q.z) * layerWeight,
+                        q.w + (lq.w - q.w) * layerWeight));
                 }
             }
             var turned = animator.m_MotionRootRotation * animator.m_DeltaRotation;
@@ -520,12 +520,12 @@ namespace Unbound.Runtime
                 var x = human.MatchPart(clip, clip.HumanClipMotion, input, (int)match.Target);
                 t += new Vector3(x.t.x, x.t.y, x.t.z) * weight;
                 var xq = new Quaternion(x.q.x, x.q.y, x.q.z, x.q.w);
-                float w = Quaternion.Dot(q, xq) < 0f ? -weight : weight;
+                float w = QuaternionMath.Dot(q, xq) < 0f ? -weight : weight;
                 q = new Quaternion(q.x + xq.x * w, q.y + xq.y * w, q.z + xq.z * w, q.w + xq.w * w);
             }
             if (total <= 0f) return false;
             t /= total;
-            q = q.normalized;
+            q = QuaternionMath.Normalize(q);
             return true;
         }
 
@@ -541,9 +541,9 @@ namespace Unbound.Runtime
             animator.m_DeltaPosition += turned * Vector3.Scale(rootCorrection, match.Mask.positionXYZWeight) * share;
             var remaining = match.Rotation * Quaternion.Inverse(predictedRotation);
             float g = share * Mathf.Clamp01(match.Mask.rotationWeight);
-            if (Quaternion.Dot(remaining, Quaternion.identity) < 0f) remaining = new Quaternion(-remaining.x, -remaining.y, -remaining.z, -remaining.w);
-            var part = new Quaternion(remaining.x * g, remaining.y * g, remaining.z * g, 1f - g + remaining.w * g).normalized;
-            animator.m_DeltaRotation = (Quaternion.Inverse(rotation) * (part * turned)).normalized;
+            if (QuaternionMath.Dot(remaining, Quaternion.identity) < 0f) remaining = new Quaternion(-remaining.x, -remaining.y, -remaining.z, -remaining.w);
+            var part = QuaternionMath.Normalize(new Quaternion(remaining.x * g, remaining.y * g, remaining.z * g, 1f - g + remaining.w * g));
+            animator.m_DeltaRotation = QuaternionMath.Normalize(Quaternion.Inverse(rotation) * (part * turned));
         }
 
         /// <summary>A clip's root movement from one time to another, in its root frame at the first.</summary>

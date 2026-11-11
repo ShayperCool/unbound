@@ -225,7 +225,7 @@ namespace UnityEngine
                     RangedFloat(-1.0f, 1.0f),
                     RangedFloat(-1.0f, 1.0f),
                     RangedFloat(-1.0f, 1.0f));
-                return Quaternion.Normalize(q);
+                return QuaternionMath.Normalize(q);
             }
         }
 
@@ -240,7 +240,7 @@ namespace UnityEngine
                 float u3 = RangedFloat(0.0f, 2.0f * Mathf.PI);
                 float sq1 = (float)Math.Sqrt(1.0f - u1);
                 float sq2 = (float)Math.Sqrt(u1);
-                return Quaternion.Normalize(new Quaternion(
+                return QuaternionMath.Normalize(new Quaternion(
                     sq1 * (float)Math.Sin(u2),
                     sq1 * (float)Math.Cos(u2),
                     sq2 * (float)Math.Sin(u3),

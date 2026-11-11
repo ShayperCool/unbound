@@ -183,7 +183,7 @@ namespace Unbound.Runtime
                 fixed (B3.Hit* hits = s_Hits)
                     count = ray
                         ? B3.ua3_raycast(world, a, translation, Mask(layerMask), flags, closest ? 1 : 0, hits, capacity)
-                        : B3.ua3_shapecast(world, (int)kind, a, b, Quaternion.Normalize(rotation), Mathf.Max(0f, radius), translation, Mask(layerMask), flags, closest ? 1 : 0, hits, capacity);
+                        : B3.ua3_shapecast(world, (int)kind, a, b, QuaternionMath.Normalize(rotation), Mathf.Max(0f, radius), translation, Mask(layerMask), flags, closest ? 1 : 0, hits, capacity);
                 if (bounded || count <= capacity) return Math.Min(count, capacity);
                 Array.Resize(ref s_Hits, count);
             }
@@ -243,7 +243,7 @@ namespace Unbound.Runtime
             while (true)
             {
                 fixed (ulong* shapes = s_Shapes)
-                    count = B3.ua3_overlap(world, (int)kind, a, b, Quaternion.Normalize(rotation), Mathf.Max(0f, radius), Mask(layerMask), HitTriggers(triggers), shapes, s_Shapes.Length);
+                    count = B3.ua3_overlap(world, (int)kind, a, b, QuaternionMath.Normalize(rotation), Mathf.Max(0f, radius), Mask(layerMask), HitTriggers(triggers), shapes, s_Shapes.Length);
                 if (bounded || count <= s_Shapes.Length) return Math.Min(count, s_Shapes.Length);
                 Array.Resize(ref s_Shapes, count);
             }

@@ -602,11 +602,11 @@ namespace UnityEngine
                 var body = Body;
                 if (body == 0)
                 {
-                    m_InactiveRotation = Quaternion.Normalize(value);
+                    m_InactiveRotation = QuaternionMath.Normalize(value);
                     return;
                 }
                 B3.ua3_body_get_transform(body, out var p, out _);
-                var q = Quaternion.Normalize(value);
+                var q = QuaternionMath.Normalize(value);
                 B3.ua3_body_set_transform(body, p, q);
                 if (m_IsKinematic) SetMoveTarget(m_HasMove ? m_MovePosition : p, q);
                 m_PreviousRotation = m_CurrentRotation = q;
@@ -621,7 +621,7 @@ namespace UnityEngine
         {
             // Native rejects Move commands while the actor is outside the scene.
             if (Body == 0) return;
-            rotation = Quaternion.Normalize(rotation);
+            rotation = QuaternionMath.Normalize(rotation);
             if (m_IsKinematic) SetMoveTarget(position, rotation);
             else
             {
