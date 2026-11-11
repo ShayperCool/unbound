@@ -276,12 +276,17 @@ namespace UnityEngine.Tests
             finally { asset.IsPersistentAsset = false; Debug.unityLogger.logHandler = logger; }
         }
 
-        [Fact]
-        public void EndOfFrameResumeFollowsLoopLeavesAndPrecedesFrameCounterAdvance()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void EndOfFrameResumeFollowsLoopLeavesAndPrecedesFrameCounterAdvance(bool enteredPlayMode)
         {
             using var scope = new Scope(measured: true);
             int counter = Time.s_RenderedFrameCount;
+            int originalCounter = counter;
             int interval = UnityEngine.Rendering.OnDemandRendering.s_FrameInterval;
+            var entered = typeof(PlayerLoopDriver).GetField("s_EnteredPlayMode", PrivateStatic);
+            bool previousEntered = (bool)entered.GetValue(null);
             bool resumed = false;
             System.Collections.IEnumerator Routine()
             {
@@ -292,18 +297,33 @@ namespace UnityEngine.Tests
             try
             {
                 UnityEngine.Rendering.OnDemandRendering.s_FrameInterval = 1;
+                entered.SetValue(null, enteredPlayMode);
                 scope.Subject("owner").StartCoroutine(Routine());
                 RunNode(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks));
                 RunNode(typeof(PL.PostLateUpdate.GUIClearEvents));
                 Assert.False(resumed);
                 Assert.Equal(counter, Time.s_RenderedFrameCount);
                 typeof(PlayerLoopDriver).GetMethod("AfterLoop", PrivateStatic).Invoke(null, null);
-                Assert.True(resumed);
+                Assert.Equal(enteredPlayMode, resumed);
                 Assert.Equal(counter + 1, Time.s_RenderedFrameCount);
+                if (!enteredPlayMode)
+                {
+                    // eofstartup: the first Play frame renders without completing EOF waits.
+                    // The same pending waiter resumes after the next loop's leaves.
+                    counter = Time.s_RenderedFrameCount;
+                    entered.SetValue(null, true);
+                    RunNode(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks));
+                    RunNode(typeof(PL.PostLateUpdate.GUIClearEvents));
+                    Assert.False(resumed);
+                    typeof(PlayerLoopDriver).GetMethod("AfterLoop", PrivateStatic).Invoke(null, null);
+                    Assert.True(resumed);
+                    Assert.Equal(counter + 1, Time.s_RenderedFrameCount);
+                }
             }
             finally
             {
-                Time.s_RenderedFrameCount = counter;
+                entered.SetValue(null, previousEntered);
+                Time.s_RenderedFrameCount = originalCounter;
                 UnityEngine.Rendering.OnDemandRendering.s_FrameInterval = interval;
             }
         }

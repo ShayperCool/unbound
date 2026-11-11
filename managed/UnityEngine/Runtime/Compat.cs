@@ -33,7 +33,8 @@ namespace Unbound.Runtime
         internal static bool DestroyPhasesMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Automatic rendering follows the public player loop and precedes end-of-frame
-        /// coroutine resumes, measured by destroyphases' rendering controls on 6000.0.71f1.</summary>
+        /// coroutine resumes. Its first Play frame renders without end-of-frame completion. Measured
+        /// by destroyphases and eofstartup on 6000.0.71f1; other releases retain their prior timing.</summary>
         internal static bool RenderingAfterPublicLoop => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Simulation mode checks, contact refresh across sub-steps and contact payload

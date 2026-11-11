@@ -227,7 +227,10 @@ namespace Unbound.Runtime
             }
             // In the measured Editor, these coroutine resumes follow every public loop leaf.
             // They still see the previous rendered-frame count (destroyphases, coreapis).
-            if (endOfFrame && UnityEngine.Rendering.OnDemandRendering.RendersThisFrame)
+            // The first Play frame renders, but has no end-of-frame completion phase.
+            // Scene loads during Play do not restart this state (tests/projects/eofstartup).
+            if (endOfFrame && UnityEngine.Rendering.OnDemandRendering.RendersThisFrame &&
+                (!Compat.RenderingAfterPublicLoop || s_EnteredPlayMode))
             {
                 Coroutines.Run(Coroutines.Phase.EndOfFrame);
                 if (Compat.RenderingAfterPublicLoop) AwaitableScheduler.RunEndOfFrame();
