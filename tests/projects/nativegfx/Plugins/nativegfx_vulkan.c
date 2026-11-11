@@ -466,6 +466,27 @@ static void on_event(int id)
 
 // ------------------------------------------------------------------ script entry points
 
+/// Native texture pointers of the other shapes: a Cubemap, a Texture2DArray, a Texture3D, a
+/// CubemapArray; their images as they are (no barrier), from a callback of its own.
+enum { ShapeCount = 4 };
+static void* s_shapes[ShapeCount];
+
+static void on_shape_event(int id)
+{
+    (void)id;
+    static const char* kNames[ShapeCount] = {"shape.cube", "shape.array", "shape.volume", "shape.cubearray"};
+    for (int i = 0; i < ShapeCount; i++) {
+        UnityVulkanImage image;
+        memset(&image, 0, sizeof image);
+        int ok = s_vulkan && s_shapes[i] && s_vulkan->AccessTexture(s_shapes[i], NULL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                                                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                                                                    ObserveOnly, &image);
+        record_image(kNames[i], ok, &image, s_shapes[i]);
+    }
+}
+
+EXPORT void* NativeGfxVk_ShapeEvent(void) { return (void*)on_shape_event; }
+EXPORT void NativeGfxVk_SetShape(int index, void* pointer) { if (index >= 0 && index < ShapeCount) s_shapes[index] = pointer; }
 EXPORT void* NativeGfxVk_Event(void) { return (void*)on_event; }
 EXPORT int NativeGfxVk_EventBase(void) { return s_event_base; }
 EXPORT void NativeGfxVk_SetTexture(int index, void* pointer) { if (index >= 0 && index < TextureCount) s_textures[index] = pointer; }

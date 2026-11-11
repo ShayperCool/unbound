@@ -146,6 +146,11 @@ static struct {
     void (*PixelStorei)(GLenum, GLint);
     void (*BindBuffer)(GLenum, GLuint);
     void (*Finish)(void);
+    void (*GetTexParameteriv)(GLenum, GLenum, GLint*);
+    void (*TexSubImage3D)(GLenum, GLint, GLint, GLint, GLint, GLsizei, GLsizei, GLsizei, GLenum, GLenum, const void*);
+    void (*CompressedTexImage2D)(GLenum, GLint, GLenum, GLsizei, GLsizei, GLint, GLsizei, const void*);
+    void (*BindRenderbuffer)(GLenum, GLuint);
+    void (*GetRenderbufferParameteriv)(GLenum, GLenum, GLint*);
 } gl;
 static int gl_loaded;
 
@@ -161,6 +166,8 @@ static void load_gl(void)
     L(Disable); L(IsEnabled); L(Scissor); L(ClearColor); L(Clear); L(ColorMask); L(BindTexture);
     L(GenTextures); L(TexImage2D); L(TexSubImage2D); L(TexParameteri); L(IsTexture);
     L(IsRenderbuffer); L(GetTexLevelParameteriv); L(PixelStorei); L(BindBuffer); L(Finish);
+    L(GetTexParameteriv); L(TexSubImage3D); L(CompressedTexImage2D); L(BindRenderbuffer);
+    L(GetRenderbufferParameteriv);
 #undef L
 }
 
@@ -922,6 +929,376 @@ static void on_custom_blit(int event, void* data)
 }
 
 // ------------------------------------------------------------------ script entry points
+
+#ifndef NATIVEGFX_PRELOAD
+// ------------------------------------------------------------------ textures of every shape
+
+#define GL_TEXTURE_3D 0x806F
+#define GL_TEXTURE_CUBE_MAP 0x8513
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_X 0x8515
+#define GL_TEXTURE_2D_ARRAY 0x8C1A
+#define GL_TEXTURE_CUBE_MAP_ARRAY 0x9009
+#define GL_TEXTURE_2D_MULTISAMPLE 0x9100
+#define GL_TEXTURE_2D_MULTISAMPLE_ARRAY 0x9102
+#define GL_TEXTURE_BINDING_3D 0x806A
+#define GL_TEXTURE_BINDING_CUBE_MAP 0x8514
+#define GL_TEXTURE_BINDING_2D_ARRAY 0x8C1D
+#define GL_TEXTURE_BINDING_CUBE_MAP_ARRAY 0x900A
+#define GL_TEXTURE_BINDING_2D_MULTISAMPLE 0x9104
+#define GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY 0x9105
+#define GL_TEXTURE_DEPTH 0x8071
+#define GL_TEXTURE_SAMPLES 0x9106
+#define GL_TEXTURE_IMMUTABLE_FORMAT 0x912F
+#define GL_TEXTURE_IMMUTABLE_LEVELS 0x82DF
+#define GL_RENDERBUFFER_BINDING 0x8CA7
+#define GL_RENDERBUFFER_WIDTH 0x8D42
+#define GL_RENDERBUFFER_HEIGHT 0x8D43
+#define GL_RENDERBUFFER_INTERNAL_FORMAT 0x8D44
+#define GL_RENDERBUFFER_SAMPLES 0x8CAB
+#define GL_RED 0x1903
+#define GL_RG 0x8227
+#define GL_RGB 0x1907
+#define GL_FLOAT 0x1406
+#define GL_R8 0x8229
+#define GL_RG8 0x822B
+#define GL_RGB8 0x8051
+#define GL_SRGB8_ALPHA8 0x8C43
+#define GL_RGBA16F 0x881A
+#define GL_RGBA32F 0x8814
+#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT 0x83F3
+#define GL_NEAREST_MIPMAP_NEAREST 0x2700
+#define GL_TEXTURE_MAX_LEVEL 0x813D
+
+/// The second record: what the texture callback found, read by the scripts line by line.
+static char s_texture_notes[8192];
+static size_t s_texture_notes_length;
+
+static void texture_note(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    size_t left = sizeof s_texture_notes - s_texture_notes_length;
+    int n = vsnprintf(s_texture_notes + s_texture_notes_length, left, format, args);
+    va_end(args);
+    if (n < 0 || (size_t)n + 2 > left) return;
+    s_texture_notes_length += n;
+    s_texture_notes[s_texture_notes_length++] = '\n';
+    s_texture_notes[s_texture_notes_length] = 0;
+}
+
+/// Native pointers of textures of the other shapes, by the scripts' labels.
+#define SHAPE_COUNT 32
+static struct { char label[32]; uintptr_t name; } s_shapes[SHAPE_COUNT];
+
+static uintptr_t shape_named(const char* label)
+{
+    for (int i = 0; i < SHAPE_COUNT; i++)
+        if (strcmp(s_shapes[i].label, label) == 0) return s_shapes[i].name;
+    return 0;
+}
+
+static const struct { GLenum target, binding; const char* kind; } kTargets[] = {
+    {GL_TEXTURE_2D, GL_TEXTURE_BINDING_2D, "2d"},
+    {GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BINDING_CUBE_MAP, "cube"},
+    {GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BINDING_2D_ARRAY, "array"},
+    {GL_TEXTURE_3D, GL_TEXTURE_BINDING_3D, "3d"},
+    {GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_BINDING_CUBE_MAP_ARRAY, "cubearray"},
+    {GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_BINDING_2D_MULTISAMPLE, "multisample"},
+    {GL_TEXTURE_2D_MULTISAMPLE_ARRAY, GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY, "multisamplearray"},
+};
+
+/// What GL says of a name, in `out`: a texture's target (the one it binds to), level 0's size
+/// and internal format, its sample count and its number of levels; a renderbuffer's size, format
+/// and sample count.
+static void describe_shape(uintptr_t name, char* out, size_t size)
+{
+    if (!gl_current()) { snprintf(out, size, "gl=0"); return; }
+    if (name == 0) { snprintf(out, size, "zero"); return; }
+    if (name > 0xffffffffu) { snprintf(out, size, "pointer"); return; }
+    while (gl.GetError() != 0) {}
+    if (gl.IsTexture((GLuint)name)) {
+        for (size_t i = 0; i < sizeof kTargets / sizeof kTargets[0]; i++) {
+            GLint bound = 0;
+            gl.GetIntegerv(kTargets[i].binding, &bound);
+            gl.BindTexture(kTargets[i].target, (GLuint)name);
+            // A texture binds to its own target only: GL_INVALID_OPERATION to another.
+            if (gl.GetError() != 0) continue;
+            GLenum target = kTargets[i].target;
+            GLenum level_target = target == GL_TEXTURE_CUBE_MAP ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : target;
+            GLint w = 0, h = 0, d = 0, format = 0, samples = 0, immutable = 0, levels = 0;
+            gl.GetTexLevelParameteriv(level_target, 0, GL_TEXTURE_WIDTH, &w);
+            gl.GetTexLevelParameteriv(level_target, 0, GL_TEXTURE_HEIGHT, &h);
+            gl.GetTexLevelParameteriv(level_target, 0, GL_TEXTURE_DEPTH, &d);
+            gl.GetTexLevelParameteriv(level_target, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+            gl.GetTexLevelParameteriv(level_target, 0, GL_TEXTURE_SAMPLES, &samples);
+            gl.GetTexParameteriv(target, GL_TEXTURE_IMMUTABLE_FORMAT, &immutable);
+            if (immutable) {
+                gl.GetTexParameteriv(target, GL_TEXTURE_IMMUTABLE_LEVELS, &levels);
+            } else {
+                // The levels that have texels.
+                for (; levels < 16; levels++) {
+                    GLint lw = 0;
+                    gl.GetTexLevelParameteriv(level_target, levels, GL_TEXTURE_WIDTH, &lw);
+                    if (gl.GetError() != 0 || lw == 0) break;
+                }
+            }
+            while (gl.GetError() != 0) {}
+            gl.BindTexture(target, (GLuint)bound);
+            snprintf(out, size, "%s %dx%dx%d format=0x%x levels=%d samples=%d", kTargets[i].kind, w, h, d, format, levels, samples);
+            return;
+        }
+        snprintf(out, size, "texture of an unknown target");
+    } else if (gl.IsRenderbuffer((GLuint)name)) {
+        GLint bound = 0, w = 0, h = 0, format = 0, samples = 0;
+        gl.GetIntegerv(GL_RENDERBUFFER_BINDING, &bound);
+        gl.BindRenderbuffer(GL_RENDERBUFFER, (GLuint)name);
+        gl.GetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &w);
+        gl.GetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &h);
+        gl.GetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_INTERNAL_FORMAT, &format);
+        gl.GetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_SAMPLES, &samples);
+        gl.BindRenderbuffer(GL_RENDERBUFFER, (GLuint)bound);
+        snprintf(out, size, "renderbuffer %dx%d format=0x%x samples=%d", w, h, format, samples);
+    } else {
+        snprintf(out, size, "unknown");
+    }
+    while (gl.GetError() != 0) {}
+}
+
+/// The plugin's own textures for external textures, by index (see `make_textures`).
+#define MADE_COUNT 12
+static GLuint s_made[MADE_COUNT];
+
+/// Texel (x, y) of the plugin's textures: (60x+10, 60y, 10, 255) as bytes.
+static void pattern(unsigned char* texels, int width, int height, int channels)
+{
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++) {
+            unsigned char full[4] = {(unsigned char)(x * 60 + 10), (unsigned char)(y * 60), 10, 255};
+            memcpy(texels + (y * width + x) * channels, full, channels);
+        }
+}
+
+static GLuint begin_texture(void)
+{
+    GLuint name = 0;
+    gl.GenTextures(1, &name);
+    gl.BindTexture(GL_TEXTURE_2D, name);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    return name;
+}
+
+/// An 8x8 RGBA8 texture with all four levels, each of one color: (40+60l, 200-50l, 0, 255).
+static GLuint make_mips(void)
+{
+    GLuint name = begin_texture();
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 3);
+    unsigned char texels[8 * 8 * 4];
+    for (int level = 0; level < 4; level++) {
+        int side = 8 >> level;
+        for (int i = 0; i < side * side; i++) {
+            texels[i * 4 + 0] = (unsigned char)(40 + 60 * level);
+            texels[i * 4 + 1] = (unsigned char)(200 - 50 * level);
+            texels[i * 4 + 2] = 0;
+            texels[i * 4 + 3] = 255;
+        }
+        gl.TexImage2D(GL_TEXTURE_2D, level, GL_RGBA8, side, side, 0, GL_RGBA, GL_UNSIGNED_BYTE, texels);
+    }
+    return name;
+}
+
+static GLuint make_bytes(GLenum internal, GLenum format, int channels)
+{
+    GLuint name = begin_texture();
+    unsigned char texels[4 * 4 * 4];
+    pattern(texels, 4, 4, channels);
+    gl.PixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    gl.TexImage2D(GL_TEXTURE_2D, 0, internal, 4, 4, 0, format, GL_UNSIGNED_BYTE, texels);
+    gl.PixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    return name;
+}
+
+/// Texel (x, y) = (x/4, y/4, 0.5, 1) as floats.
+static GLuint make_floats(GLenum internal)
+{
+    GLuint name = begin_texture();
+    float texels[4 * 4 * 4];
+    for (int y = 0; y < 4; y++)
+        for (int x = 0; x < 4; x++) {
+            float* t = texels + (y * 4 + x) * 4;
+            t[0] = x / 4.0f; t[1] = y / 4.0f; t[2] = 0.5f; t[3] = 1.0f;
+        }
+    gl.TexImage2D(GL_TEXTURE_2D, 0, internal, 4, 4, 0, GL_RGBA, GL_FLOAT, texels);
+    return name;
+}
+
+/// One DXT5 block: opaque, red and blue columns with their two blends between.
+static GLuint make_dxt5(void)
+{
+    GLuint name = begin_texture();
+    static const unsigned char block[16] = {
+        255, 255, 0, 0, 0, 0, 0, 0,   // alpha: both ends 255
+        0x00, 0xF8, 0x1F, 0x00,       // color0 = red (565), color1 = blue
+        0xB4, 0xB4, 0xB4, 0xB4,       // each row: 0, 1, 3, 2 = red, blue, 1/3 red, 2/3 red
+    };
+    gl.CompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, 4, 4, 0, 16, block);
+    return name;
+}
+
+/// Records the GL errors left since the last check, by what was done.
+static void texture_errors(const char* what)
+{
+    for (int i = 0; i < 8; i++) {
+        GLenum error = gl.GetError();
+        if (error == 0) break;
+        texture_note("glerror %s 0x%x", what, error);
+    }
+}
+
+static void make_textures(void)
+{
+    if (s_made[0] || !gl_current()) return;
+    GLint bound = 0;
+    gl.GetIntegerv(GL_TEXTURE_BINDING_2D, &bound);
+    unpack_defaults();
+    texture_errors("before");
+    s_made[0] = make_mips();
+    s_made[1] = make_mips();
+    texture_errors("mips");
+    s_made[2] = make_bytes(GL_SRGB8_ALPHA8, GL_RGBA, 4);
+    s_made[3] = make_bytes(GL_SRGB8_ALPHA8, GL_RGBA, 4);
+    s_made[4] = make_bytes(GL_RGBA8, GL_RGBA, 4);
+    texture_errors("rgba");
+    s_made[5] = make_bytes(GL_R8, GL_RED, 1);
+    s_made[6] = make_bytes(GL_RG8, GL_RG, 2);
+    s_made[7] = make_bytes(GL_RGB8, GL_RGB, 3);
+    texture_errors("bytes");
+    s_made[8] = make_floats(GL_RGBA16F);
+    s_made[9] = make_floats(GL_RGBA32F);
+    texture_errors("floats");
+    s_made[10] = make_dxt5();
+    texture_errors("dxt5");
+    s_made[11] = make_bytes(GL_R8, GL_RED, 1);
+    gl.BindTexture(GL_TEXTURE_2D, (GLuint)bound);
+    texture_errors("made");
+}
+
+/// Writes a 2x2 block (red, green / blue, white) at (1, 1) of one image of the shapes "cube"
+/// (its +X face), "array" (its layer 1) and "volume" (its slice 2).
+static void write_shapes(void)
+{
+    static const unsigned char texels[16] = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
+    unpack_defaults();
+    GLint bound = 0;
+    GLuint name = (GLuint)shape_named("cube");
+    if (name) {
+        gl.GetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &bound);
+        gl.BindTexture(GL_TEXTURE_CUBE_MAP, name);
+        gl.TexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, 1, 1, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, texels);
+        gl.BindTexture(GL_TEXTURE_CUBE_MAP, (GLuint)bound);
+    }
+    name = (GLuint)shape_named("array");
+    if (name) {
+        gl.GetIntegerv(GL_TEXTURE_BINDING_2D_ARRAY, &bound);
+        gl.BindTexture(GL_TEXTURE_2D_ARRAY, name);
+        gl.TexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 1, 1, 1, 2, 2, 1, GL_RGBA, GL_UNSIGNED_BYTE, texels);
+        gl.BindTexture(GL_TEXTURE_2D_ARRAY, (GLuint)bound);
+    }
+    name = (GLuint)shape_named("volume");
+    if (name) {
+        gl.GetIntegerv(GL_TEXTURE_BINDING_3D, &bound);
+        gl.BindTexture(GL_TEXTURE_3D, name);
+        gl.TexSubImage3D(GL_TEXTURE_3D, 0, 1, 1, 2, 2, 2, 1, GL_RGBA, GL_UNSIGNED_BYTE, texels);
+        gl.BindTexture(GL_TEXTURE_3D, (GLuint)bound);
+    }
+    texture_errors("write");
+}
+
+/// What is bound as the target: the framebuffer and the viewport, then its color and its depth
+/// attachment, a line each (a texture's shape label when the scripts named it); then a green 4x4
+/// square at (2, 2).
+static void describe_bound(void)
+{
+    GLint fbo = 0, viewport[4] = {0};
+    gl.GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
+    gl.GetIntegerv(GL_VIEWPORT, viewport);
+    char parts[2][200] = {"none", "none"};
+    static const GLenum kAttachments[2] = {GL_COLOR_ATTACHMENT0, GL_DEPTH_ATTACHMENT};
+    for (int i = 0; i < 2 && fbo != 0; i++) {
+        GLint type = 0, name = 0;
+        gl.GetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, kAttachments[i], GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &type);
+        if (type != 0)
+            gl.GetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, kAttachments[i], GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &name);
+        while (gl.GetError() != 0) {}
+        if (type == 0) continue;
+        const char* label = "unnamed";
+        for (int s = 0; s < SHAPE_COUNT; s++)
+            if (type == GL_TEXTURE && s_shapes[s].name == (uintptr_t)name && name != 0) label = s_shapes[s].label;
+        char shape[120];
+        describe_shape((uintptr_t)name, shape, sizeof shape);
+        // A renderbuffer and a texture may share a number: the attachment's type decides.
+        if (type == GL_RENDERBUFFER && strncmp(shape, "renderbuffer", 12) != 0) snprintf(shape, sizeof shape, "renderbuffer");
+        snprintf(parts[i], sizeof parts[i], "%.31s(%.119s)", label, shape);
+    }
+    texture_note("bound framebuffer=%s viewport=%d,%d,%d,%d", fbo ? "own" : "default", viewport[0], viewport[1], viewport[2], viewport[3]);
+    texture_note("color %s", parts[0]);
+    texture_note("depth %s", parts[1]);
+    fill_bound(2, 2, 4, 4, 0.0f, 1.0f, 0.0f);
+    while (gl.GetError() != 0) {}
+}
+
+/// The texture callback's events: 0 describes the shapes the scripts named, 1 makes the plugin's
+/// textures, 2 writes into three shapes, 3 describes the bound target and draws into it; any
+/// other does nothing (what Unity itself reports around a callback).
+static void on_texture_event(int id)
+{
+    if (!gl_current()) {
+        texture_note("event %d gl=0", id);
+        return;
+    }
+    switch (id) {
+    case 0:
+        for (int i = 0; i < SHAPE_COUNT; i++) {
+            if (!s_shapes[i].label[0]) continue;
+            char shape[160];
+            describe_shape(s_shapes[i].name, shape, sizeof shape);
+            texture_note("shape %s %s", s_shapes[i].label, shape);
+        }
+        break;
+    case 1: make_textures(); break;
+    case 2: write_shapes(); break;
+    case 3: describe_bound(); break;
+    default: break;
+    }
+}
+
+EXPORT void* NativeGfx_TextureEvent(void) { return (void*)on_texture_event; }
+
+EXPORT void NativeGfx_SetShape(int index, const char* label, void* name)
+{
+    if (index < 0 || index >= SHAPE_COUNT) return;
+    snprintf(s_shapes[index].label, sizeof s_shapes[index].label, "%s", label);
+    s_shapes[index].name = (uintptr_t)name;
+}
+
+EXPORT void* NativeGfx_Made(int index) { return index >= 0 && index < MADE_COUNT ? (void*)(uintptr_t)s_made[index] : NULL; }
+
+/// Copies the texture callback's record into `buffer` and empties it; returns its length.
+EXPORT int NativeGfx_TextureNotes(char* buffer, int capacity)
+{
+    int length = (int)s_texture_notes_length;
+    if (buffer && capacity > 0) {
+        int n = length < capacity - 1 ? length : capacity - 1;
+        if (n > 0) memcpy(buffer, s_texture_notes, n);
+        buffer[n] = 0;
+    }
+    s_texture_notes_length = 0;
+    s_texture_notes[0] = 0;
+    return length;
+}
+#endif
 
 EXPORT void* NativeGfx_RenderEvent(void) { return (void*)on_render_event; }
 EXPORT void* NativeGfx_RenderEventAndData(void) { return (void*)on_render_event_data; }

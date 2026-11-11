@@ -14,6 +14,8 @@ using UnityEngine.Rendering;
 /// recording state of rendering callbacks under each render pass precondition (from Update, a
 /// camera's command buffer and an executed command buffer), and the images and buffers behind
 /// native pointers, which the plugin clears and fills. Pixels and buffer contents are read back.
+/// Last, the images behind the pointers of a Cubemap, a Texture2DArray, a Texture3D and a
+/// CubemapArray (plugin.shape.*: a 2D image of 6, 3 and 12 layers, a 3D image).
 /// </summary>
 public class NativeGfxVulkanProbe : MonoBehaviour
 {
@@ -24,6 +26,8 @@ public class NativeGfxVulkanProbe : MonoBehaviour
     [DllImport(Plugin)] static extern void NativeGfxVk_SetRenderBuffer(int index, IntPtr pointer);
     [DllImport(Plugin)] static extern void NativeGfxVk_SetBuffer(IntPtr pointer);
     [DllImport(Plugin)] static extern void NativeGfxVk_Step(string step);
+    [DllImport(Plugin)] static extern IntPtr NativeGfxVk_ShapeEvent();
+    [DllImport(Plugin)] static extern void NativeGfxVk_SetShape(int index, IntPtr pointer);
     [DllImport(Plugin)] static extern int NativeGfxVk_Record(byte[] buffer, int capacity);
 
     // The plugin's events after its reserved base (render pass precondition).
@@ -195,8 +199,29 @@ public class NativeGfxVulkanProbe : MonoBehaviour
                 // The camera again: its render pass is the same object.
                 NativeGfxVk_Step("camera2");
                 probeCamera.Render();
+                Shapes();
                 break;
         }
+    }
+
+    /// <summary>The images of textures of the other shapes (<c>plugin.shape.*</c>), after
+    /// everything else.</summary>
+    void Shapes()
+    {
+        var cube = Keep(new Cubemap(8, TextureFormat.RGBA32, true) { name = "cube" });
+        cube.Apply(false);
+        var array = Keep(new Texture2DArray(8, 4, 3, TextureFormat.RGBA32, false, true) { name = "array" });
+        array.Apply(false);
+        var volume = Keep(new Texture3D(4, 4, 2, TextureFormat.RGBA32, false) { name = "volume" });
+        volume.Apply(false);
+        var cubeArray = Keep(new CubemapArray(4, 2, TextureFormat.RGBA32, false) { name = "cubearray" });
+        cubeArray.Apply(false);
+        NativeGfxVk_SetShape(0, cube.GetNativeTexturePtr());
+        NativeGfxVk_SetShape(1, array.GetNativeTexturePtr());
+        NativeGfxVk_SetShape(2, volume.GetNativeTexturePtr());
+        NativeGfxVk_SetShape(3, cubeArray.GetNativeTexturePtr());
+        NativeGfxVk_Step("shapes");
+        GL.IssuePluginEvent(NativeGfxVk_ShapeEvent(), 0);
     }
 
     void Finish()

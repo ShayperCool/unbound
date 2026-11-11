@@ -38,6 +38,29 @@ Recorded:
   `UpdateExternalTexture` with textures the plugin made, and with another texture's pointer
   (the same texture), also a render texture with depth and mips, which works on after the
   external texture is destroyed.
+* **Texture shapes** (`shape.*`, `Assets/Scripts/NativeGfxProbe.Textures.cs`; the plugin's
+  texture callback keeps a record of its own, so the records above stay as they are): the
+  native pointer of a Cubemap is a cube map (linear `GL_RGBA8` for `TextureFormat.RGBA32`:
+  `shape.formats`), of a Texture2DArray a 2D array (six square layers too), of a Texture3D a 3D
+  texture, of a CubemapArray a cube map array, with their levels; render textures of those
+  dimensions the same, an array's depth pointer a `GL_DEPTH24_STENCIL8` array, a cube's its
+  color texture. What the plugin writes through the names is read back from the textures
+  (`shape.*.written`). A multisampled render texture's pointer is its resolved 2D texture, its
+  depth pointer a single-sample depth texture (without a depth buffer: the multisampled color
+  texture); with `bindTextureMS` both are the multisampled textures. A callback while a
+  multisampled target is bound finds a multisampled color texture and a depth render buffer
+  attached (`shape.msaa.target*`), and what it draws shows after the resolve
+  (`shape.msaa.pixels`). After a buffer that drew into a multisampled target, with a callback
+  or without, the next callback (one that does nothing) is blamed for a `GL_INVALID_OPERATION`
+  the Editor left itself (`shape.msaa.after.logs`, `shape.msaa.plain.logs`).
+* **External textures of other formats** (`ext.*`): a plugin's 2D texture is sampled as OpenGL
+  samples it, whatever format and color space the external texture declares (they are its
+  `format` and `graphicsFormat`): `GL_SRGB8_ALPHA8` texels are decoded declared linear or not,
+  `GL_RGBA8` texels declared sRGB are not; `GL_R8`, `GL_RG8`, `GL_RGB8`, `GL_RGBA16F`,
+  `GL_RGBA32F` and DXT5 show as they are, one channel declared as four too. With a mip chain
+  the external texture has the levels of its size and shows the plugin's smaller levels
+  (drawn at half, quarter and eighth size); without one it shows the first level alone,
+  though the plugin's texture has four.
 * **Order** (`order.pixels`, `order.active`): a callback between two draws of an executed buffer
   draws over the first and under the second; after the buffer, the active render texture is the
   one before it.

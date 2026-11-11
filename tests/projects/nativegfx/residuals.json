@@ -8,11 +8,25 @@
  "Vulkan: a DontCare event from a script outside rendering gets the Editor's command buffer only while it has one recording (after resource access it has none); Unbound gives its own: unspecified by the interface (DontCare), accepted": [
   "plugin.dontcare.update"
  ],
- "Vulkan: the Editor's render textures are also input attachments (usage bit 128) and its multisampled colors also transfer sources and destinations; Unbound's images have the usage they are made with (wgpu allocates them, a multisampled color as a render attachment only): accepted, plugins see the real image": [
+ "Vulkan: the Editor's render textures are also input attachments (usage bit 128) and its multisampled colors also transfer sources and destinations; Unbound's images have the usage they are made with (wgpu allocates them, a multisampled color as a sampled render attachment): accepted, plugins see the real image": [
   "plugin.rendertexture.observe",
   "plugin.renderbuffer",
   "plugin.msaa.buffer",
   "plugin.msaa.resolve",
   "plugin.srgb.rendertexture"
+ ],
+ "A multisampled render texture with a depth buffer: the Editor's depth pointer names a single-sample depth texture (what it holds is not measured), which Unbound has none of: the pointer is not an OpenGL name (logged)": [
+  "shape.rt.msaa.depth"
+ ],
+ "RenderTexture.bindTextureMS is not modelled: the Editor's pointers name the multisampled textures themselves; Unbound's render texture resolves like any multisampled one and names its resolved image": [
+  "shape.rt.msaa.bound",
+  "shape.rt.msaa.bound.depth"
+ ],
+ "A multisampled target's depth samples are a render buffer in the Editor and a multisampled texture in Unbound (its depth copy reads them): a callback finds either attached": [
+  "shape.msaa.target.depth"
+ ],
+ "After a command buffer that drew into a multisampled target, with a callback or without, the Editor reports a GL error of its own (GL_INVALID_OPERATION) as the next plugin callback's, whatever that does: not reproduced": [
+  "shape.msaa.after.logs",
+  "shape.msaa.plain.logs"
  ]
 }

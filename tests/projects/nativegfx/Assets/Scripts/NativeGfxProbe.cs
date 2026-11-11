@@ -15,7 +15,7 @@ using UnityEngine.Rendering;
 /// scripts, thread and bound GL target), texture updates, custom blits, external textures and the
 /// native pointers of textures and render buffers. Pixels the plugin draws are read back.
 /// </summary>
-public class NativeGfxProbe : MonoBehaviour
+public partial class NativeGfxProbe : MonoBehaviour
 {
     const string Plugin = "NativeGfxProbe";
     [DllImport(Plugin)] static extern IntPtr NativeGfx_RenderEvent();
@@ -368,6 +368,11 @@ public class NativeGfxProbe : MonoBehaviour
             Execute("describe", cmd => cmd.IssuePluginEvent(render, eventBase + 4));
             // A GL error the callback leaves is reported after it.
             Execute("glerror", cmd => cmd.IssuePluginEvent(render, eventBase + 6));
+        }
+        else if (frame == 3)
+        {
+            Shapes();
+            ExternalFormats();
         }
     }
 
