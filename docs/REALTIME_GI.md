@@ -431,13 +431,30 @@ layout check below; `RoomSystems` gives three renderers parameters of their own 
   below and to the left of it, resting on the columns or against the rows already used (ties: the
   lowest, then the leftmost). The space starts at one block and, when a chart does not fit, grows
   along its shorter side (the height when square) by that chart's size; it ends cropped to what
-  is used.
+  is used. Every growth packs all charts again from the start.
+- Holes: a chart that finds no such place, in a space large enough for its mask, goes into a
+  free region between the charts placed before it. The free blocks form 4-connected regions; the
+  chart takes the first region, fewest free blocks first, that has at least its number of blocks
+  and holds its mask, at the lowest, then leftmost position. From that chart on the regions are
+  kept up to the end of the pass: a placed chart's blocks leave their regions, which split into
+  what is still connected, and a region that cannot hold the smallest chart (fewer free blocks
+  than it has, a narrower or lower box, or no place for it when it is a full rectangle) is given
+  up and counts as used. The places resting on the columns or against the rows still come
+  first, so in a grown space the same charts may leave a hole empty.
 
 In the Room scenes of tests/projects/realtimegi and the Realtime scene of
 tests/projects/lightingassets this gives the Editor's layouts: the size of each renderer's UV space
-and every chart's rectangle in the precomputed chart mask, which Unbound checks for every renderer
-(a difference keeps the system from being drawn, with a warning). A chart that only a hole between
-other charts would hold, which the precompute fills with another heuristic, fails loudly. With
+and every chart's blocks in the precomputed chart mask, which Unbound checks for every renderer
+(a difference keeps the system from being drawn, with a warning). `RoomCharts` measures the
+holes with four flat panels, each a chart with holes and loose square plates: a ring whose hole
+holds its two plates side by side; the same ring with three plates, whose UV space grows by two
+blocks and holds all three above the ring, the hole empty; a plate with two holes, where the
+first loose plate takes the hole of its own size although the larger hole comes first from the
+bottom left, and the second the larger hole's lowest, leftmost place; and an arch, whose pocket
+is open to the lower edge and takes a plate as a hole does. Not measured: what giving a region
+up changes for the charts placed after it, regions of equal size, and regions that reach the
+rows above every chart. (Within a system, other renderers' charts may lie in the blocks a
+renderer's own charts leave free: the check compares only the blocks its charts use.) With
 Preserve UVs off the precompute generates the charts themselves (not supported yet).
 
 ## Engine
