@@ -963,7 +963,7 @@
 {"k":"element/presetListWrongType/itemTemplate","v":"VisualTreeAsset:Preset"}
 {"k":"logs","v":["Error: Type: Invalid type \"System.String\". Type must derive from UnityEngine.UIElements.VisualElement.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Font'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Sprite'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.StyleSheet'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: TypeLoadException: Could not load type 'No.Such.Type' from assembly 'Nowhere'.","Warning:  (30,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (46,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (51,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.ttf","Warning:  (52,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (57,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (61,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (63,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (65,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (68,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uss","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Missing.png\" for referenced asset GUID \"0123456789abcdef0123456789abcdef\"","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : project://database/Assets/UI/Missing.png?fileID=2800000&guid=0123456789abcdef0123456789abcdef&type=3#Missing"]}
 {"k":"icons/asset","v":"UxmlIconsProbe"}
-{"k":"icons/rootChildren","v":"17"}
+{"k":"icons/rootChildren","v":"18"}
 {"k":"icons/element/tabs/class","v":"UnityEngine.UIElements.TabView"}
 {"k":"icons/element/tabNone/class","v":"UnityEngine.UIElements.Tab"}
 {"k":"icons/element/tabNone/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
@@ -1065,5 +1065,11 @@
 {"k":"icons/element/arrayUnknownGuid/mySpriteArray","v":"null"}
 {"k":"icons/element/arrayUnknownGuid/myTextureArray","v":"[null]"}
 {"k":"icons/element/arrayUnknownGuid/myTextureList","v":"[null]"}
+{"k":"icons/element/arrayGuidWithoutFileId/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayGuidWithoutFileId/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayGuidWithoutFileId/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayGuidWithoutFileId/mySpriteArray","v":"null"}
+{"k":"icons/element/arrayGuidWithoutFileId/myTextureArray","v":"[null]"}
+{"k":"icons/element/arrayGuidWithoutFileId/myTextureList","v":"[null]"}
 {"k":"icons/logs","v":["Warning:  (14,10): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (8,10): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (9,10): Semantic - The specified URL is empty or invalid : ''"]}
 {"k":"complete","v":true}
