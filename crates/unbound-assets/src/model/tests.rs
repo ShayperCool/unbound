@@ -226,9 +226,10 @@ fn mesh_optimization_reorders_triangles_and_vertices_by_its_flags() {
     assert_ne!(raw.meshes[0].positions, vertices.meshes[0].positions);
     assert!(first_use(&vertices) && first_use(&both) && !first_use(&raw));
     assert_eq!(triangles(&polygons), triangles(&both));
-    // No flags in the meta is everything; the setting before the flags turns both off.
+    // No flags in the meta is everything; the setting before the flags is the vertex order
+    // alone (lightmapuvs OldOptOff and OldOptOn).
     assert_eq!(with("    isReadable: 1\n").meshes[0], both.meshes[0]);
-    assert_eq!(with("    optimizeMeshForGPU: 0\n").meshes[0], raw.meshes[0]);
+    assert_eq!(with("    optimizeMeshForGPU: 0\n").meshes[0], polygons.meshes[0]);
     assert_eq!(with("    optimizeMeshForGPU: 1\n").meshes[0], both.meshes[0]);
 }
 

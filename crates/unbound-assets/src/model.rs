@@ -762,13 +762,17 @@ impl ImportedModel {
 /// The normal of a vertex no face uses (measured: tests/projects/lightmapuvs).
 const UNUSED_VERTEX_NORMAL: [f32; 3] = [1.0, 1.0, 1.0];
 
-/// `meshes.meshOptimizationFlags`; a meta from before the flags has `optimizeMeshForGPU`, on
-/// (everything) or off (nothing); without either, everything, the importer's default
-/// (`ModelImporter.meshOptimizationFlags`; the older setting's reading is not measured).
+/// `meshes.meshOptimizationFlags`. A meta from before the flags has `optimizeMeshForGPU`, which
+/// is the vertex order alone: the polygon order stays on with it off (measured: lightmapuvs
+/// OldOptOff equals OptPolygons, OldOptOn equals Off). Without either, everything, the
+/// importer's default.
 fn mesh_optimization_flags(imp: &Value) -> i64 {
-    int(imp, "meshes.meshOptimizationFlags")
-        .or_else(|| boolean(imp, "meshes.optimizeMeshForGPU").map(|on| if on { -1 } else { 0 }))
-        .unwrap_or(-1)
+    int(imp, "meshes.meshOptimizationFlags").unwrap_or_else(|| {
+        match boolean(imp, "meshes.optimizeMeshForGPU") {
+            Some(false) => MESH_OPTIMIZATION_POLYGON_ORDER,
+            _ => MESH_OPTIMIZATION_POLYGON_ORDER | MESH_OPTIMIZATION_VERTEX_ORDER,
+        }
+    })
 }
 
 /// `MeshOptimizationFlags.PolygonOrder`.

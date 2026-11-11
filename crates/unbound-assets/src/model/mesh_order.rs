@@ -41,13 +41,16 @@ fn valence_score(remaining: u32) -> i32 {
 
 /// The vertices with their remaining triangles, grouped by how many they have left.
 struct Vertices {
-    /// Triangles left per vertex.
+    /// Triangle corners left per vertex.
     count: Vec<u32>,
-    /// Where each vertex's triangles start in `triangles`.
-    offset: Vec<u32>,
-    /// Each vertex's remaining triangles, in their original order.
-    triangles: Vec<u32>,
-    /// Per number of triangles left (minus one), the vertex that got it last; the others follow
+    /// Each vertex's first remaining corner (corner `3 * triangle + k`); its other corners
+    /// follow through `next_corner`, in the triangles' original order.
+    first_corner: Vec<u32>,
+    next_corner: Vec<u32>,
+    previous_corner: Vec<u32>,
+    /// Whether a corner's triangle is still to be drawn.
+    left: Vec<bool>,
+    /// Per number of corners left (minus one), the vertex that got it last; the others follow
     /// through `next`.
     head: Vec<u32>,
     next: Vec<u32>,
@@ -56,35 +59,31 @@ struct Vertices {
 
 impl Vertices {
     fn new(vertex_count: usize, triangles: &[[u32; 3]]) -> Self {
-        let mut count = vec![0u32; vertex_count];
-        for t in triangles {
-            for &v in t {
-                count[v as usize] += 1;
-            }
-        }
-        let mut offset = vec![0u32; vertex_count];
-        let (mut total, mut most) = (0, 0);
-        for v in 0..vertex_count {
-            offset[v] = total;
-            total += count[v];
-            most = most.max(count[v]);
-        }
-        let mut fill = offset.clone();
-        let mut list = vec![0u32; total as usize];
-        for (i, t) in triangles.iter().enumerate() {
-            for &v in t {
-                list[fill[v as usize] as usize] = i as u32;
-                fill[v as usize] += 1;
-            }
-        }
         let mut vertices = Self {
-            count,
-            offset,
-            triangles: list,
-            head: vec![NONE; most as usize],
+            count: vec![0; vertex_count],
+            first_corner: vec![NONE; vertex_count],
+            next_corner: vec![NONE; 3 * triangles.len()],
+            previous_corner: vec![NONE; 3 * triangles.len()],
+            left: vec![true; 3 * triangles.len()],
+            head: Vec::new(),
             next: vec![NONE; vertex_count],
             previous: vec![NONE; vertex_count],
         };
+        let mut last_corner = vec![NONE; vertex_count];
+        for (corner, &v) in triangles.iter().flatten().enumerate() {
+            let (v, corner) = (v as usize, corner as u32);
+            vertices.count[v] += 1;
+            match last_corner[v] {
+                NONE => vertices.first_corner[v] = corner,
+                last => {
+                    vertices.next_corner[last as usize] = corner;
+                    vertices.previous_corner[corner as usize] = last;
+                }
+            }
+            last_corner[v] = corner;
+        }
+        let most = vertices.count.iter().copied().max().unwrap_or(0);
+        vertices.head = vec![NONE; most as usize];
         for v in 0..vertex_count as u32 {
             if vertices.count[v as usize] > 0 {
                 vertices.insert(v);
@@ -93,12 +92,20 @@ impl Vertices {
         vertices
     }
 
-    fn remaining(&self, v: u32) -> &[u32] {
-        let start = self.offset[v as usize] as usize;
-        &self.triangles[start..start + self.count[v as usize] as usize]
+    /// The vertex's remaining triangles in their original order (one named by two of its
+    /// corners comes twice).
+    fn remaining(&self, v: u32) -> impl Iterator<Item = u32> + '_ {
+        let mut corner = self.first_corner[v as usize];
+        std::iter::from_fn(move || {
+            (corner != NONE).then(|| {
+                let triangle = corner / 3;
+                corner = self.next_corner[corner as usize];
+                triangle
+            })
+        })
     }
 
-    /// Puts the vertex first among those with its number of triangles.
+    /// Puts the vertex first among those with its number of corners.
     fn insert(&mut self, v: u32) {
         let bucket = self.count[v as usize] as usize - 1;
         let first = self.head[bucket];
@@ -110,19 +117,35 @@ impl Vertices {
         self.head[bucket] = v;
     }
 
-    /// Takes the triangle from the vertex's list and moves the vertex to its new group. A vertex
-    /// named twice by the triangle comes here twice: the second time finds nothing to take.
-    fn remove(&mut self, v: u32, triangle: u32) {
-        let (start, count) = (self.offset[v as usize] as usize, self.count[v as usize]);
-        let mut kept = 0;
-        for i in 0..count as usize {
-            let t = self.triangles[start + i];
-            if t != triangle {
-                self.triangles[start + kept] = t;
-                kept += 1;
+    /// Takes the drawn triangle's corners from the vertex and puts the vertex first in its new
+    /// group. A vertex named by two corners comes here twice: the second time finds nothing to
+    /// take and only moves the vertex to the front of its group.
+    fn remove(&mut self, v: u32, triangle: u32, corners: [u32; 3]) {
+        let count = self.count[v as usize];
+        if count == 0 {
+            return;
+        }
+        let mut taken = 0;
+        for k in 0..3 {
+            let corner = 3 * triangle + k;
+            if corners[k as usize] != v || !self.left[corner as usize] {
+                continue;
+            }
+            self.left[corner as usize] = false;
+            taken += 1;
+            let (next, previous) = (
+                self.next_corner[corner as usize],
+                self.previous_corner[corner as usize],
+            );
+            match previous {
+                NONE => self.first_corner[v as usize] = next,
+                previous => self.next_corner[previous as usize] = next,
+            }
+            if next != NONE {
+                self.previous_corner[next as usize] = previous;
             }
         }
-        if count > 0 && self.head[count as usize - 1] == v {
+        if self.head[count as usize - 1] == v {
             self.head[count as usize - 1] = self.next[v as usize];
         }
         let (next, previous) = (self.next[v as usize], self.previous[v as usize]);
@@ -132,13 +155,14 @@ impl Vertices {
         if previous != NONE {
             self.next[previous as usize] = next;
         }
-        self.count[v as usize] = kept as u32;
-        if kept > 0 {
+        (self.next[v as usize], self.previous[v as usize]) = (NONE, NONE);
+        self.count[v as usize] = count - taken;
+        if count > taken {
             self.insert(v);
         }
     }
 
-    /// How many of the triangle's corners are their vertex's last triangle.
+    /// How many of the triangle's corners are their vertex's last.
     fn last_uses(&self, t: [u32; 3]) -> usize {
         t.iter().filter(|&&v| self.count[v as usize] == 1).count()
     }
@@ -172,7 +196,7 @@ pub fn triangle_order(vertex_count: usize, triangles: &[[u32; 3]]) -> Vec<u32> {
             if v == NONE {
                 continue;
             }
-            for &candidate in vertices.remaining(v) {
+            for candidate in vertices.remaining(v) {
                 let t = triangles[candidate as usize];
                 let hits = t.iter().filter(|&&c| cached[c as usize]).count() as i32;
                 if hits < best_hits {
@@ -206,16 +230,22 @@ pub fn triangle_order(vertex_count: usize, triangles: &[[u32; 3]]) -> Vec<u32> {
                 .copied()
                 .find(|&v| v != NONE)
                 .expect("a triangle is left, so a vertex has one");
-            best = vertices.remaining(v)[0];
+            best = vertices
+                .remaining(v)
+                .next()
+                .expect("a vertex in a group has a triangle");
         }
         let t = triangles[best as usize];
         done[best as usize] = true;
         for &v in &t {
-            vertices.remove(v, best);
+            vertices.remove(v, best, t);
         }
         for &v in &t {
             if vertices.count[v as usize] == 1 {
-                let last = vertices.remaining(v)[0];
+                let last = vertices
+                    .remaining(v)
+                    .next()
+                    .expect("a vertex with a corner left has a triangle");
                 match vertices.last_uses(triangles[last as usize]) {
                     1 => pending[1].push(last),
                     2 => pending[0].push(last),
@@ -313,8 +343,15 @@ pub fn order_vertices(mesh: &mut ModelMesh) {
     if from.iter().enumerate().all(|(i, &v)| i as u32 == v) {
         return;
     }
+    // A channel the mesh does not have is empty; one it has is as long as the positions.
     fn permute<T: Copy>(values: &mut Vec<T>, from: &[u32]) {
-        if values.len() == from.len() {
+        assert!(
+            values.is_empty() || values.len() == from.len(),
+            "a vertex channel of {} values for {} vertices",
+            values.len(),
+            from.len()
+        );
+        if !values.is_empty() {
             *values = from.iter().map(|&v| values[v as usize]).collect();
         }
     }
@@ -433,6 +470,55 @@ mod tests {
     }
 
     #[test]
+    fn triangles_naming_a_vertex_twice_are_ordered_without_losing_any() {
+        // The importer drops such triangles before this; the order is still total.
+        let cases: [&[[u32; 3]]; 3] = [
+            &[[0, 0, 0], [2, 3, 2], [3, 1, 1]],
+            &[[0, 1, 0], [1, 0, 1], [1, 1, 0], [0, 2, 2], [2, 2, 2]],
+            &[[4, 4, 5], [5, 4, 4], [4, 5, 4], [5, 5, 5], [0, 4, 5]],
+        ];
+        for triangles in cases {
+            let mut out = ordered(triangles);
+            let mut expected = triangles.to_vec();
+            out.sort_unstable();
+            expected.sort_unstable();
+            assert_eq!(out, expected);
+        }
+        // A pseudo-random soup over few vertices, repeats included.
+        let mut state = 12345u32;
+        let mut next = |n: u32| {
+            state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+            (state >> 16) % n
+        };
+        for _ in 0..500 {
+            let count = 1 + next(12) as usize;
+            let triangles: Vec<[u32; 3]> =
+                (0..count).map(|_| [next(5), next(5), next(5)]).collect();
+            let mut out = ordered(&triangles);
+            let mut expected = triangles.clone();
+            out.sort_unstable();
+            expected.sort_unstable();
+            assert_eq!(out, expected);
+        }
+    }
+
+    #[test]
+    fn a_large_fan_and_a_large_grid_are_ordered() {
+        // 20 000 triangles around one vertex, then a grid of 80 000 triangles.
+        let fan: Vec<[u32; 3]> = (1..=20_000).map(|i| [0, i, i + 1]).collect();
+        assert_eq!(ordered(&fan).len(), fan.len());
+        let mut grid = Vec::new();
+        for y in 0..200u32 {
+            for x in 0..200u32 {
+                let a = y * 201 + x;
+                grid.push([a, a + 1, a + 202]);
+                grid.push([a, a + 202, a + 201]);
+            }
+        }
+        assert_eq!(ordered(&grid).len(), grid.len());
+    }
+
+    #[test]
     fn a_sub_mesh_above_the_part_size_is_ordered_in_equal_parts() {
         // Seven separate pairs of triangles sharing an edge, listed far triangle first; with
         // parts of at most five triangles there are three parts of 4, 4 and 6.
@@ -476,16 +562,30 @@ mod tests {
             name: String::new(),
             file_id: (0, super::super::FileIdSource::Derived).into(),
             positions: (0..16).map(|i| [i as f32, 0.0, 0.0]).collect(),
-            normals: Vec::new(),
-            tangents: Vec::new(),
-            uvs: vec![(0..16).map(|i| [i as f32, 1.0]).collect()],
-            colors: Vec::new(),
+            normals: (0..16).map(|i| [0.0, i as f32, 0.0]).collect(),
+            tangents: (0..16).map(|i| [0.0, 0.0, i as f32, 1.0]).collect(),
+            // The second channel is one the mesh does not have.
+            uvs: vec![(0..16).map(|i| [i as f32, 1.0]).collect(), Vec::new()],
+            colors: (0..16).map(|i| [i as f32, 0.0, 0.0, 1.0]).collect(),
             submeshes,
-            bone_weights: Vec::new(),
+            bone_weights: (0..16)
+                .map(|i| super::super::BoneWeight {
+                    bones: [i, 0, 0, 0],
+                    weights: [1.0, 0.0, 0.0, 0.0],
+                })
+                .collect(),
             bind_poses: Vec::new(),
             bounds_min: [0.0; 3],
             bounds_max: [0.0; 3],
-            blend_shapes: Vec::new(),
+            blend_shapes: vec![super::super::ModelBlendShape {
+                name: String::new(),
+                frames: vec![super::super::ModelBlendFrame {
+                    weight: 100.0,
+                    vertices: (0..16).map(|i| [i as f32, 2.0, 0.0]).collect(),
+                    normals: (0..16).map(|i| [i as f32, 3.0, 0.0]).collect(),
+                    tangents: Vec::new(),
+                }],
+            }],
         };
         order_vertices(&mut mesh);
         assert_eq!(
@@ -501,11 +601,18 @@ mod tests {
                 9.0
             ]
         );
-        assert!(
-            mesh.uvs[0]
-                .iter()
-                .zip(&mesh.positions)
-                .all(|(uv, p)| uv[0] == p[0])
-        );
+        // Every channel moved with its vertex.
+        let frame = &mesh.blend_shapes[0].frames[0];
+        for (i, p) in mesh.positions.iter().enumerate() {
+            let old = p[0];
+            assert_eq!(mesh.normals[i][1], old);
+            assert_eq!(mesh.tangents[i][2], old);
+            assert_eq!(mesh.uvs[0][i][0], old);
+            assert_eq!(mesh.colors[i][0], old);
+            assert_eq!(mesh.bone_weights[i].bones[0] as f32, old);
+            assert_eq!(frame.vertices[i][0], old);
+            assert_eq!(frame.normals[i][0], old);
+        }
+        assert!(mesh.uvs[1].is_empty() && frame.tangents.is_empty());
     }
 }
