@@ -458,7 +458,8 @@ namespace UnityEngine
             {
                 // A light the conversion rejects (a negative intensity, say) must not stop the
                 // update: the frame has no lights, the environment still lights the scene.
-                Warn("pipeline-lights", $"precomputed realtime GI: the render pipeline's conversion of its lights failed, so lights add no realtime indirect light: {e.Message}");
+                if (!s_Warned.Contains("pipeline-lights"))
+                    Warn("pipeline-lights", $"precomputed realtime GI: the render pipeline's conversion of its lights failed, so lights add no realtime indirect light: {e.Message}");
                 return 0;
             }
             int count = 0;

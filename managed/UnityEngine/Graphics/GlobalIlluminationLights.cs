@@ -435,6 +435,7 @@ namespace UnityEngine.Experimental.GlobalIllumination
             disc.position = l.transform.position;
             disc.orientation = l.transform.rotation;
             Colors(l, out disc.color, out disc.indirectColor);
+            // (As a rectangle light's: not dilated.)
             disc.range = l.range;
             disc.radius = l.areaSize.x;
             disc.falloff = FalloffType.Legacy;
