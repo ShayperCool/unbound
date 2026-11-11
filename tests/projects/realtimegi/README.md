@@ -121,9 +121,13 @@ reflection and the ambient probe two frames after the additive load, right after
 Last, `RoomBakedEnvironment` (`run.py setup-baked-environment`: the room with baked global
 illumination on as well and its environment lighting baked, Lighting Settings' Realtime
 Environment Lighting off; its lights are realtime, so its baked lightmap holds the environment
-alone): `roombakedenvironment-base`, `-color` (a brighter ambient color), `-alone` (the point
-light off and the panel's emission black: the environment as the only light) and `-envdata`
-(`DynamicGI.SetEnvironmentData` then).
+alone): `roombakedenvironment-base` (and `-lightprobes`: its probes' baked coefficients, read
+while realtime GI lights them too), `-color` (a brighter ambient color), `-alone` (the point
+light off and the panel's emission black: the environment as the only light), `-envdata`
+(`DynamicGI.SetEnvironmentData` then), `-envdata-color` (another ambient color over the data),
+`-envdata-update` (the data set again, then `DynamicGI.UpdateEnvironment`) and `-bakedset`
+(`LightProbes.bakedProbes` given by the script, each probe's first coefficient of every color
+raised by a half, and the point light on again; `-bakedset-lightprobes` reads them back).
 
 ## What the Editor does (this capture)
 
@@ -187,8 +191,16 @@ Observations (not documented guarantees):
   source: the brighter ambient color changes no texel (`roombakedenvironment-color` is
   `-base`, byte for byte) and the environment alone leaves every texel at zero (`-alone`);
   `RenderSettings.ambientProbe` follows the color all the same. `DynamicGI.SetEnvironmentData`
-  lights it as it lights `Room` (`-envdata`). The scene's light probes have baked coefficients
-  too (the environment's).
+  lights it as it lights `Room` (`-envdata`), and there the data stays when the ambient color
+  changes (`-envdata-color` is `-envdata`), unlike in the other scenes; `UpdateEnvironment`
+  removes it (`-envdata-update` is black).
+- That scene's light probes have baked coefficients too (the environment's, about 0.002 to
+  0.007 in the first coefficient). `LightProbes.GetInterpolatedProbe` gives them plus realtime
+  GI's lighting: with the environment alone it is the baked coefficients, and after the script
+  raises every baked first coefficient by 0.5 the interpolated ones are 0.5 higher than the
+  realtime lighting alone accounts for (`-bakedset`). `LightProbes.bakedProbes` returns the
+  baked part while realtime GI lights the probes (`-lightprobes`) and what the script gave
+  after that (`-bakedset-lightprobes`).
 - `RenderSettings.ambientProbe` with a skybox follows the ambient intensity without
   `UpdateEnvironment`: 0.2140 times the intensity 1 probe at 0.5 and 4.5948 times at 2 (the
   intensity taken as an sRGB-encoded value). In the custom ambient mode it is the probe last
