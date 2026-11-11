@@ -723,9 +723,14 @@ namespace UnityEngine
         public float scaleInLightmap { get; set; } = 1f;
         public ReceiveGI receiveGI { get; set; } = ReceiveGI.Lightmaps;
         /// <summary>Lighting settings of the renderer that realtime lightmap UVs depend on
-        /// (Preserve UVs, Min Chart Size, its own Lightmap Parameters).</summary>
+        /// (Preserve UVs, Min Chart Size, its own Lightmap Parameters; without Preserve UVs,
+        /// the limits of the charts the precompute makes: Max Distance, Max Angle in degrees and
+        /// Ignore Normals).</summary>
         internal bool m_PreserveUVs;
         internal int m_MinimumChartSize = 4;
+        internal float m_AutoUVMaxDistance = 0.5f;
+        internal float m_AutoUVMaxAngle = 89f;
+        internal bool m_IgnoreNormalsForChartDetection;
         internal Unbound.Runtime.ObjectRef m_LightmapParameters;
 
         /// <summary>The mesh this renderer draws its realtime lightmap with: its mesh with the
@@ -764,6 +769,9 @@ namespace UnityEngine
             scaleInLightmap = body.Float("m_ScaleInLightmap", 1f);
             m_PreserveUVs = body.Bool("m_PreserveUVs");
             m_MinimumChartSize = body.Int("m_MinimumChartSize", 4);
+            m_AutoUVMaxDistance = body.Float("m_AutoUVMaxDistance", 0.5f);
+            m_AutoUVMaxAngle = body.Float("m_AutoUVMaxAngle", 89f);
+            m_IgnoreNormalsForChartDetection = body.Bool("m_IgnoreNormalsForChartDetection");
             m_LightmapParameters = body.Ref("m_LightmapParameters");
         }
 
@@ -774,6 +782,9 @@ namespace UnityEngine
             scaleInLightmap = s.scaleInLightmap;
             m_PreserveUVs = s.m_PreserveUVs;
             m_MinimumChartSize = s.m_MinimumChartSize;
+            m_AutoUVMaxDistance = s.m_AutoUVMaxDistance;
+            m_AutoUVMaxAngle = s.m_AutoUVMaxAngle;
+            m_IgnoreNormalsForChartDetection = s.m_IgnoreNormalsForChartDetection;
             m_LightmapParameters = s.m_LightmapParameters;
         }
     }

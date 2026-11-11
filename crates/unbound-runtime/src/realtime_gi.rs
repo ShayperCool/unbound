@@ -676,7 +676,9 @@ pub fn read_probes(handle: u64, out: &mut [f32]) -> Result<usize> {
 /// Format version of the realtime lightmap UV cache entries (`realtime_uvs`).
 /// 2: the chart rectangles are stored, and only layouts that passed the check.
 /// 3: each chart's blocks are stored; charts go into holes between the charts placed before them.
-const UV_CACHE_VERSION: u32 = 3;
+/// 4: how the charts are made is part of an entry's key (kept from the mesh, or automatic with
+/// its normals and limits).
+const UV_CACHE_VERSION: u32 = 4;
 
 /// Renderer `renderer` of system `system`'s realtime lightmap UVs
 /// (`unbound_gi::realtime_uv`), checked against the system's precomputed layout and cached under
@@ -699,6 +701,18 @@ pub fn realtime_uvs(
     key.update(&UV_CACHE_VERSION.to_le_bytes());
     key.update(&input.pixel_size.to_le_bytes());
     key.update(&input.min_chart_texels.to_le_bytes());
+    match input.charts {
+        unbound_gi::realtime_uv::Charts::Preserved => {
+            key.update(&[0]);
+        }
+        unbound_gi::realtime_uv::Charts::Automatic { normals, params } => {
+            key.update(&[1, params.ignore_normals as u8]);
+            key.update(&params.max_distance.to_le_bytes());
+            key.update(&params.max_angle.to_le_bytes());
+            key.update(&(normals.len() as u64).to_le_bytes());
+            key.update(bytes_of(normals));
+        }
+    }
     for list in [
         bytes_of(input.positions),
         bytes_of(input.uvs),

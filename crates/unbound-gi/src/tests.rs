@@ -1079,6 +1079,7 @@ fn cube_uvs(scale: [f32; 3], pixel_size: f32) -> crate::realtime_uv::Output {
         triangles: &CUBE_TRIANGLES,
         pixel_size,
         min_chart_texels: 4,
+        charts: crate::realtime_uv::Charts::Preserved,
     })
     .unwrap()
 }
@@ -1162,6 +1163,7 @@ fn realtime_uvs_of_irregular_meshes() {
         triangles: &triangles,
         pixel_size: 0.5,
         min_chart_texels: 4,
+        charts: crate::realtime_uv::Charts::Preserved,
     })
     .unwrap();
     // At 2 texels per metre (1 block): 2.83 + 0.5 -> 4 blocks, 1.41 + 0.5 -> 2 blocks.
@@ -1180,6 +1182,7 @@ fn realtime_uvs_of_irregular_meshes() {
         triangles: &[[0, 1, 2]],
         pixel_size: 0.5,
         min_chart_texels: 4,
+        charts: crate::realtime_uv::Charts::Preserved,
     })
     .unwrap();
     assert_eq!((out.width, out.height), (2, 2));
@@ -1207,6 +1210,7 @@ fn realtime_uvs_of_irregular_meshes() {
         triangles: &[[0, 1, 2], [3, 4, 5]],
         pixel_size: 0.1,
         min_chart_texels: 4,
+        charts: crate::realtime_uv::Charts::Preserved,
     })
     .unwrap();
     assert_eq!(out.charts.len(), 1);
@@ -1217,7 +1221,8 @@ fn realtime_uvs_of_irregular_meshes() {
             uvs: &uvs,
             triangles: &[[0, 1, 9]],
             pixel_size: 0.1,
-            min_chart_texels: 4
+            min_chart_texels: 4,
+            charts: crate::realtime_uv::Charts::Preserved
         })
         .is_err()
     );
@@ -1227,7 +1232,8 @@ fn realtime_uvs_of_irregular_meshes() {
             uvs: &uvs[..2],
             triangles: &[[0, 1, 2]],
             pixel_size: 0.1,
-            min_chart_texels: 4
+            min_chart_texels: 4,
+            charts: crate::realtime_uv::Charts::Preserved
         })
         .is_err()
     );
@@ -1238,7 +1244,8 @@ fn realtime_uvs_of_irregular_meshes() {
             uvs: &uvs[..3],
             triangles: &[[0, 1, 2]],
             pixel_size: 0.1,
-            min_chart_texels: 4
+            min_chart_texels: 4,
+            charts: crate::realtime_uv::Charts::Preserved
         })
         .is_err()
     );
@@ -1248,7 +1255,8 @@ fn realtime_uvs_of_irregular_meshes() {
             uvs: &uvs,
             triangles: &[[0, 1, 2]],
             pixel_size: 0.0,
-            min_chart_texels: 4
+            min_chart_texels: 4,
+            charts: crate::realtime_uv::Charts::Preserved
         })
         .is_err()
     );
@@ -1262,6 +1270,7 @@ fn realtime_uvs_of_irregular_meshes() {
         triangles: &[[0, 1, 2]],
         pixel_size: 0.5,
         min_chart_texels: 4,
+        charts: crate::realtime_uv::Charts::Preserved,
     })
     .unwrap_err()
     .to_string();
@@ -1310,6 +1319,7 @@ fn realtime_uvs_of_another_scene_match_its_layout() {
                 triangles: &triangles,
                 pixel_size: 0.5,
                 min_chart_texels: 4,
+                charts: crate::realtime_uv::Charts::Preserved,
             })
             .unwrap(),
             859734017 => cube_uvs([0.2, 3.0, 6.0], 0.5),
@@ -1737,6 +1747,7 @@ fn panel_uvs_from(name: &str, third_channel: bool) -> crate::realtime_uv::Output
         triangles: &triangles,
         pixel_size: 0.5,
         min_chart_texels: 4,
+        charts: crate::realtime_uv::Charts::Preserved,
     })
     .unwrap()
 }
@@ -1881,4 +1892,306 @@ fn charts_fill_holes_as_the_precompute_packs_them() {
         .unwrap_err()
         .to_string();
     assert!(error.contains("in UVs of 12x8 texels"), "{error}");
+}
+
+/// The built-in cube's normals, by face.
+const CUBE_NORMALS: [[f32; 3]; 24] = {
+    let (x, y, z) = ([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]);
+    let (nx, ny, nz) = ([-1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]);
+    [
+        z, z, z, z, y, y, nz, nz, y, y, nz, nz, ny, ny, ny, ny, nx, nx, nx, nx, x, x, x, x,
+    ]
+};
+
+/// The limits of Optimize Realtime UVs as a new renderer has them.
+const DEFAULT_LIMITS: crate::auto_charts::Params = crate::auto_charts::Params {
+    max_distance: 0.5,
+    max_angle: 89.0,
+    ignore_normals: false,
+};
+
+/// The realtime lightmap UVs of a mesh instance with Preserve UVs off: its positions and
+/// normals with `scale` applied.
+fn automatic_uvs(
+    positions: &[[f32; 3]],
+    normals: &[[f32; 3]],
+    uvs: &[[f32; 2]],
+    triangles: &[[u32; 3]],
+    scale: [f32; 3],
+    params: crate::auto_charts::Params,
+) -> anyhow::Result<crate::realtime_uv::Output> {
+    let positions: Vec<[f32; 3]> = positions
+        .iter()
+        .map(|p| [0, 1, 2].map(|k| p[k] * scale[k]))
+        .collect();
+    let normals: Vec<[f32; 3]> = normals
+        .iter()
+        .map(|n| {
+            let scaled = [0, 1, 2].map(|k| n[k] / scale[k]);
+            let length = scaled.iter().map(|x| x * x).sum::<f32>().sqrt();
+            scaled.map(|x| x / length)
+        })
+        .collect();
+    crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
+        positions: &positions,
+        uvs,
+        triangles,
+        pixel_size: 0.5,
+        min_chart_texels: 4,
+        charts: crate::realtime_uv::Charts::Automatic {
+            normals: &normals,
+            params,
+        },
+    })
+}
+
+type AutoMesh = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<[u32; 3]>);
+
+/// A mesh of flat faces as the probe's `RealtimeGISetup.Solid` makes it: each face a polygon
+/// with vertices and a normal of its own, looking away from `inside`, cut into a fan of
+/// triangles (wound against its normal with `inverted`); its lightmap UVs lay the faces side
+/// by side, each stretched over a square cell.
+fn solid(inside: [f32; 3], inverted: bool, faces: &[Vec<[f32; 3]>]) -> AutoMesh {
+    let sub = |a: [f32; 3], b: [f32; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    let dot = |a: [f32; 3], b: [f32; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    let cross = |a: [f32; 3], b: [f32; 3]| {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let unit = |a: [f32; 3]| {
+        let length = dot(a, a).sqrt();
+        a.map(|x| x / length)
+    };
+    let (mut positions, mut normals, mut uvs, mut triangles) =
+        (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    for (f, face) in faces.iter().enumerate() {
+        let mut face = face.clone();
+        let mut normal = unit(cross(sub(face[1], face[0]), sub(face[2], face[0])));
+        if dot(normal, sub(face[0], inside)) < 0.0 {
+            face.reverse();
+            normal = normal.map(|x| -x);
+        }
+        let across = unit(sub(face[1], face[0]));
+        let up = cross(normal, across);
+        let flat: Vec<[f32; 2]> = face
+            .iter()
+            .map(|&c| [dot(sub(c, face[0]), across), dot(sub(c, face[0]), up)])
+            .collect();
+        let (mut min, mut max) = (flat[0], flat[0]);
+        for point in &flat {
+            for k in 0..2 {
+                min[k] = min[k].min(point[k]);
+                max[k] = max[k].max(point[k]);
+            }
+        }
+        let first = positions.len() as u32;
+        for (i, &corner) in face.iter().enumerate() {
+            positions.push(corner);
+            normals.push(normal);
+            let cell = [0, 1].map(|k| (flat[i][k] - min[k]) / (max[k] - min[k]) * 0.9 + 0.05);
+            uvs.push([
+                (f as f32 + cell[0]) / faces.len() as f32,
+                cell[1] / faces.len() as f32,
+            ]);
+        }
+        for i in 1..face.len() as u32 - 1 {
+            triangles.push(if inverted {
+                [first, first + i + 1, first + i]
+            } else {
+                [first, first + i, first + i + 1]
+            });
+        }
+    }
+    (positions, normals, uvs, triangles)
+}
+
+/// A prism (`RealtimeGISetup.Prism`): a polygon in XY pushed along z, two caps and a side per
+/// edge.
+fn prism(section: &[[f32; 2]], depth: f32) -> Vec<Vec<[f32; 3]>> {
+    let count = section.len();
+    let front: Vec<[f32; 3]> = section.iter().map(|p| [p[0], p[1], 0.0]).collect();
+    let back: Vec<[f32; 3]> = section.iter().rev().map(|p| [p[0], p[1], depth]).collect();
+    let mut faces = vec![front, back];
+    for i in 0..count {
+        let (a, b) = (section[i], section[(i + 1) % count]);
+        faces.push(vec![
+            [a[0], a[1], 0.0],
+            [a[0], a[1], depth],
+            [b[0], b[1], depth],
+            [b[0], b[1], 0.0],
+        ]);
+    }
+    faces
+}
+
+/// An open roof (`RealtimeGISetup.Roof`): two rectangles falling away from a ridge on the z
+/// axis by `degrees`.
+fn roof(degrees: f32, width: f32, length: f32) -> Vec<Vec<[f32; 3]>> {
+    let radians = degrees * (std::f32::consts::PI / 180.0);
+    let side = [radians.cos() * width, -radians.sin() * width, 0.0];
+    let other = [-side[0], side[1], 0.0];
+    let along = [0.0, 0.0, length];
+    let add = |a: [f32; 3], b: [f32; 3]| [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    vec![
+        vec![[0.0; 3], along, add(side, along), side],
+        vec![[0.0; 3], other, add(other, along), along],
+    ]
+}
+
+const WEDGE: [[f32; 2]; 3] = [[0.0, 0.0], [1.2, 0.0], [0.0, 0.9]];
+const STEP: [[f32; 2]; 6] = [
+    [0.0, 0.0],
+    [1.0, 0.0],
+    [1.0, 0.3],
+    [0.4, 0.3],
+    [0.4, 0.7],
+    [0.0, 0.7],
+];
+
+/// A mesh of the RoomAuto scene, as `RealtimeGISetup.CreateRoom` makes it.
+fn auto_mesh(name: &str) -> AutoMesh {
+    match name {
+        "Wedge" => solid([0.4, 0.3, 0.4], false, &prism(&WEDGE, 0.8)),
+        "WedgeInverted" => solid([0.4, 0.3, 0.4], true, &prism(&WEDGE, 0.8)),
+        "Step" => solid([0.2, 0.15, 0.45], false, &prism(&STEP, 0.9)),
+        "RoofFlat" => solid([0.0, -1.0, 0.65], false, &roof(10.0, 0.7, 1.3)),
+        "RoofSteep" => solid([0.0, -1.0, 0.65], false, &roof(50.0, 0.7, 1.3)),
+        "RoofAngleWide" => solid([0.0, -1.0, 0.65], false, &roof(20.0, 0.7, 1.3)),
+        "RoofAngleTight" => solid([0.0, -1.0, 0.65], false, &roof(20.0, 0.6, 1.3)),
+        _ => panic!("no mesh {name}"),
+    }
+}
+
+/// The RoomAuto scene's renderers by name: a mesh (or the built-in cube), a scale, and Max
+/// Distance and Max Angle.
+const AUTO_SHAPES: [(&str, Option<&str>, [f32; 3], f32, f32); 18] = [
+    ("Floor", None, [6.0, 0.2, 6.0], 0.5, 89.0),
+    ("Ceiling", None, [6.0, 0.2, 6.0], 0.5, 89.0),
+    ("Back", None, [6.0, 4.0, 0.2], 0.5, 89.0),
+    ("Left", None, [0.2, 4.0, 6.0], 0.5, 89.0),
+    ("Right", None, [0.2, 4.0, 6.0], 0.5, 89.0),
+    ("Block", None, [1.2, 1.5, 1.2], 0.5, 89.0),
+    ("Panel", None, [1.0, 1.2, 0.1], 0.5, 89.0),
+    ("Bar", None, [2.0, 0.05, 0.3], 0.5, 89.0),
+    ("Wedge", Some("Wedge"), [1.0, 1.0, 1.0], 0.5, 89.0),
+    ("WedgeTall", Some("Wedge"), [1.0, 1.4, 0.75], 0.5, 89.0),
+    (
+        "WedgeInverted",
+        Some("WedgeInverted"),
+        [1.0, 1.0, 1.0],
+        0.5,
+        89.0,
+    ),
+    ("Step", Some("Step"), [1.0, 1.0, 1.0], 0.5, 89.0),
+    ("RoofFlat", Some("RoofFlat"), [1.0, 1.0, 1.0], 0.5, 89.0),
+    ("RoofSteep", Some("RoofSteep"), [1.0, 1.0, 1.0], 0.5, 89.0),
+    // The limits decide: the roof's sides are 40 degrees apart and 20 from the plane through
+    // both; the step's treads, as its risers, are 0.4 apart and have corners 0.2 from the
+    // plane through both.
+    (
+        "RoofAngleWide",
+        Some("RoofAngleWide"),
+        [1.0, 1.0, 1.0],
+        0.5,
+        30.0,
+    ),
+    (
+        "RoofAngleTight",
+        Some("RoofAngleTight"),
+        [1.0, 1.0, 1.0],
+        0.5,
+        15.0,
+    ),
+    ("StepMid", Some("Step"), [1.0, 1.0, 1.2], 0.3, 89.0),
+    ("StepNear", Some("Step"), [1.0, 1.0, 0.8], 0.15, 89.0),
+];
+
+fn auto_shape_uvs(name: &str) -> crate::realtime_uv::Output {
+    let &(_, asset, scale, max_distance, max_angle) =
+        AUTO_SHAPES.iter().find(|s| s.0 == name).unwrap();
+    let params = crate::auto_charts::Params {
+        max_distance,
+        max_angle,
+        ..DEFAULT_LIMITS
+    };
+    match asset {
+        None => automatic_uvs(
+            &CUBE_POSITIONS,
+            &CUBE_NORMALS,
+            &CUBE_UV2,
+            &CUBE_TRIANGLES,
+            scale,
+            params,
+        ),
+        Some(asset) => {
+            let (positions, normals, uvs, triangles) = auto_mesh(asset);
+            automatic_uvs(&positions, &normals, &uvs, &triangles, scale, params)
+        }
+    }
+    .unwrap_or_else(|e| panic!("{name}: {e:#}"))
+}
+
+#[test]
+fn automatic_charts_lie_where_the_precompute_put_them() {
+    // RoomAuto: the Room and other shapes, every renderer with Preserve UVs off. Each
+    // renderer's charts cover the texels of the precomputed chart mask, chart by chart in the
+    // precompute's order. (The scene's grid of shared vertices and the built-in quad and
+    // plane are single flat charts; the probe's gate draws them.)
+    let data = scene_data("RoomAuto");
+    assert_eq!(data.systems.len(), 1);
+    let system = &data.systems[0];
+    let names = renderer_names("RoomAuto");
+    let mut checked = 0;
+    for (k, &(object, _)) in data.renderers.iter().enumerate() {
+        let name = names[&object].as_str();
+        if !AUTO_SHAPES.iter().any(|s| s.0 == name) {
+            assert!(["Grid", "Quad", "Plane"].contains(&name), "{name}");
+            continue;
+        }
+        let out = auto_shape_uvs(name);
+        let st = data.renderer_st[k];
+        crate::realtime_uv::check_layout(system, st, &out)
+            .unwrap_or_else(|e| panic!("{name}: {e:#}"));
+        let sw = system.transport.width;
+        let origin =
+            [st[2] * sw as f32, st[3] * system.transport.height as f32].map(|v| v.round() as u32);
+        let ids: Vec<u32> = out
+            .charts
+            .iter()
+            .map(|chart| {
+                let at = chart.blocks.iter().position(|&used| used).unwrap() as u32;
+                let across = chart.rect[2] / 2;
+                let (x, y) = (
+                    chart.rect[0] + at % across * 2,
+                    chart.rect[1] + at / across * 2,
+                );
+                system.chart_mask[((origin[1] + y) * sw + origin[0] + x) as usize]
+            })
+            .collect();
+        assert!(
+            ids.windows(2).all(|pair| pair[0] < pair[1]),
+            "{name}: {ids:?}"
+        );
+        // How many charts the shapes that show a rule have: a slab's last end face folded into
+        // a large face's chart; roofs of 20, 40 and 100 degrees between their sides, and the
+        // one of 40 within a Max Angle of 30 and of 15; the step with its treads and its
+        // risers joined, and with a Max Distance of 0.3 and of 0.15 a chart a face (at 0.3
+        // their corners are within the limit of a plane through both, 0.2 away, and their
+        // bounds, 0.4 apart and grown by 0.18 each, do not meet).
+        let expected = match name {
+            "Floor" | "Wedge" | "Step" => Some(5),
+            "RoofFlat" | "RoofAngleWide" => Some(1),
+            "RoofSteep" | "RoofAngleTight" => Some(2),
+            "StepMid" | "StepNear" => Some(8),
+            _ => None,
+        };
+        if let Some(expected) = expected {
+            assert_eq!(out.charts.len(), expected, "{name}");
+        }
+        checked += 1;
+    }
+    assert_eq!(checked, AUTO_SHAPES.len());
 }

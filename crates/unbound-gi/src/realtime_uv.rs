@@ -1,9 +1,11 @@
 //! Realtime lightmap UVs: where each vertex of a mesh instance lands in its realtime lightmap, as
-//! the Unity 6000.0.71f1 Editor's precompute lays them out for renderers with Preserve UVs
-//! (tests/projects/realtimegi; docs/REALTIME_GI.md). The mesh's lightmap UV charts keep their
-//! shapes; each is scaled to its own world area at the realtime resolution, snapped to whole
+//! the Unity 6000.0.71f1 Editor's precompute lays them out (tests/projects/realtimegi;
+//! docs/REALTIME_GI.md). With Preserve UVs the mesh's lightmap UV charts keep their shapes, each
+//! scaled to its own world area at the realtime resolution; without it the precompute makes the
+//! charts ([`crate::auto_charts`]), in world units. Either way each chart is snapped to whole
 //! blocks of texels (at least the minimum chart size) and packed into the instance's UV space,
 //! whose size in texels the scene's precomputed data also records.
+use crate::auto_charts;
 use crate::data::{NO_CHART, System};
 use anyhow::{Result, bail, ensure};
 
@@ -22,6 +24,20 @@ const RASTER_ORIGIN_EPSILON: f64 = 1.192_092_895_507_812_5e-7;
 /// The rasterization bloat is the chart border less this.
 const BLOAT_MARGIN: f64 = 1e-4;
 
+/// How an instance's charts are made.
+#[derive(Debug, Clone, Copy)]
+pub enum Charts<'a> {
+    /// The mesh's lightmap UV charts keep their shapes (Preserve UVs).
+    Preserved,
+    /// The precompute makes the charts (Optimize Realtime UVs, serialized as Preserve UVs off):
+    /// from the mesh's shading normals and the renderer's limits. The instance's positions and
+    /// normals then have its scale applied and no rotation.
+    Automatic {
+        normals: &'a [[f32; 3]],
+        params: auto_charts::Params,
+    },
+}
+
 /// One mesh instance's input: world-space positions (the instance's scale applied), its lightmap
 /// UVs and triangles.
 pub struct Input<'a> {
@@ -32,6 +48,7 @@ pub struct Input<'a> {
     pub pixel_size: f32,
     /// The renderer's minimum chart size, in texels.
     pub min_chart_texels: u32,
+    pub charts: Charts<'a>,
 }
 
 /// A chart's place in its instance's UV space.
@@ -207,17 +224,23 @@ fn hull(mut points: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
 
 impl Chart {
     /// The chart's triangles in blocks within its mask.
-    fn placed(&self, input: &Input, t: usize) -> [[f64; 2]; 3] {
+    fn placed(&self, input: &Input, uvs: &[[f32; 2]], t: usize) -> [[f64; 2]; 3] {
         input.triangles[t].map(|v| {
-            let uv = input.uvs[v as usize];
+            let uv = uvs[v as usize];
             [0, 1].map(|k| uv[k] as f64 * self.scale[k] + self.offset[k])
         })
     }
 }
 
-/// Builds a chart: scaled to its world area, snapped to whole blocks, moved to its mask's origin
-/// and rasterized into the mask (each triangle grown by the border, every cell it touches).
-fn build_chart(input: &Input, triangles: Vec<usize>) -> Result<Chart> {
+/// Builds a chart from its UVs: scaled to its world area (or, with `world_units`, taken as it
+/// is: UVs in world units), snapped to whole blocks, moved to its mask's origin and rasterized
+/// into the mask (each triangle grown by the border, every cell it touches).
+fn build_chart(
+    input: &Input,
+    uvs: &[[f32; 2]],
+    world_units: bool,
+    triangles: Vec<usize>,
+) -> Result<Chart> {
     let block = BLOCK_TEXELS as f64;
     let (mut world, mut uv_area) = (0.0f64, 0.0f64);
     let (mut lo, mut hi) = ([f64::MAX; 2], [f64::MIN; 2]);
@@ -232,7 +255,7 @@ fn build_chart(input: &Input, triangles: Vec<usize>) -> Result<Chart> {
             e1[0] * e2[1] - e1[1] * e2[0],
         ];
         world += 0.5 * (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
-        let u = [a, b, c].map(|v| input.uvs[v].map(|x| x as f64));
+        let u = [a, b, c].map(|v| uvs[v].map(|x| x as f64));
         uv_area += 0.5 * cross2(u[0], u[1], u[2]).abs();
         for q in u {
             for k in 0..2 {
@@ -242,7 +265,9 @@ fn build_chart(input: &Input, triangles: Vec<usize>) -> Result<Chart> {
         }
     }
     // Blocks per UV unit: the chart's world size over its UV size, in blocks of texels.
-    let per_uv = if uv_area > 0.0 {
+    let per_uv = if world_units {
+        1.0 / (input.pixel_size as f64 * block)
+    } else if uv_area > 0.0 {
         (world / uv_area).sqrt() / (input.pixel_size as f64 * block)
     } else {
         0.0
@@ -279,7 +304,9 @@ fn build_chart(input: &Input, triangles: Vec<usize>) -> Result<Chart> {
     };
     let bloat = raster_border as f32 as f64 - BLOAT_MARGIN;
     for &t in &chart.triangles {
-        let tri = chart.placed(input, t).map(|p| p.map(|x| x as f32 as f64));
+        let tri = chart
+            .placed(input, uvs, t)
+            .map(|p| p.map(|x| x as f32 as f64));
         let polygon = hull(
             tri.iter()
                 .flat_map(|p| {
@@ -926,9 +953,26 @@ pub fn realtime_uvs(input: &Input) -> Result<Output> {
     {
         bail!("a vertex with a non-finite position or lightmap UV");
     }
-    let charts: Vec<Chart> = charts(input)
+    let made;
+    let (lists, chart_uvs, world_units) = match input.charts {
+        Charts::Preserved => (charts(input), input.uvs, false),
+        Charts::Automatic { normals, params } => {
+            let auto_charts::Charts { uvs, triangles } = auto_charts::auto_charts(
+                &auto_charts::Mesh {
+                    positions: input.positions,
+                    normals,
+                    uvs: input.uvs,
+                    triangles: input.triangles,
+                },
+                &params,
+            )?;
+            made = uvs;
+            (triangles, made.as_slice(), true)
+        }
+    };
+    let charts: Vec<Chart> = lists
         .into_iter()
-        .map(|t| build_chart(input, t))
+        .map(|t| build_chart(input, chart_uvs, world_units, t))
         .collect::<Result<_>>()?;
     let masks: Vec<&Mask> = charts.iter().map(|c| &c.mask).collect();
     let (positions, width, height) = pack(&masks)?;
@@ -936,7 +980,7 @@ pub fn realtime_uvs(input: &Input) -> Result<Output> {
     for (chart, &(x, y)) in charts.iter().zip(&positions) {
         for &t in &chart.triangles {
             for &v in &input.triangles[t] {
-                let uv = input.uvs[v as usize];
+                let uv = chart_uvs[v as usize];
                 uvs[v as usize] = [
                     ((uv[0] as f64 * chart.scale[0] + chart.offset[0] + x as f64) / width as f64)
                         as f32,

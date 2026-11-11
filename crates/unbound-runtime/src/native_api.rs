@@ -64,7 +64,8 @@ use std::ffi::c_void;
 /// 55: `external_texture` takes the mip levels where the declared size and color space were.
 /// 56: retained disabled audio components through the filter stage bypass bit, and the
 /// explicit Stop history flag.
-pub const NATIVE_API_VERSION: u32 = 57;
+/// 58: `gi_automatic_uvs` (realtime lightmap UVs of renderers with Optimize Realtime UVs).
+pub const NATIVE_API_VERSION: u32 = 58;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -270,6 +271,32 @@ pub struct NativeApi {
     /// (a plugin's `UnityRenderingExtQuery`, the query): asks it, with the plugins' graphics
     /// context current; its answer.
     pub plugin_query: extern "C" fn(*const c_void, i32) -> i32,
+    // Version 58: automatic realtime lightmap charts.
+    /// (scene, system, renderer within the system, positions and shading normals of an
+    /// instance that is not turned, with its scale applied (3 floats each), lightmap UVs (2
+    /// floats each), vertex count, triangle indices, index count, world units per texel,
+    /// minimum chart size in texels, Max Distance, Max Angle in degrees, flags (1: Ignore
+    /// Normals), out UVs (2 floats per vertex), out error): the realtime lightmap UVs of a
+    /// renderer with Optimize Realtime UVs (`realtime_gi::realtime_uvs` with automatic
+    /// charts); 0 on success.
+    pub gi_automatic_uvs: extern "C" fn(
+        u64,
+        i32,
+        i32,
+        *const f32,
+        *const f32,
+        *const f32,
+        i32,
+        *const u32,
+        i32,
+        f32,
+        i32,
+        f32,
+        f32,
+        i32,
+        *mut f32,
+        *mut NativeBuffer,
+    ) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -327,6 +354,7 @@ pub fn api() -> NativeApi {
         plugin_frame,
         plugin_events,
         plugin_query,
+        gi_automatic_uvs,
     }
 }
 
@@ -488,6 +516,71 @@ extern "C" fn gi_realtime_uvs(
             triangles,
             pixel_size,
             min_chart_texels: min_chart_texels as u32,
+            charts: unbound_gi::realtime_uv::Charts::Preserved,
+        };
+        crate::realtime_gi::realtime_uvs(scene, system as usize, renderer as usize, &input, out)?;
+        Ok(0)
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+extern "C" fn gi_automatic_uvs(
+    scene: u64,
+    system: i32,
+    renderer: i32,
+    positions: *const f32,
+    normals: *const f32,
+    uvs: *const f32,
+    vertices: i32,
+    indices: *const u32,
+    index_count: i32,
+    pixel_size: f32,
+    min_chart_texels: i32,
+    max_distance: f32,
+    max_angle: f32,
+    flags: i32,
+    out: *mut f32,
+    error: *mut NativeBuffer,
+) -> i32 {
+    reported(error, || {
+        anyhow::ensure!(
+            system >= 0
+                && renderer >= 0
+                && vertices >= 0
+                && index_count >= 0
+                && index_count % 3 == 0
+                && min_chart_texels >= 0
+                && !positions.is_null()
+                && !normals.is_null()
+                && !uvs.is_null()
+                && !indices.is_null()
+                && !out.is_null(),
+            "bad automatic realtime lightmap UV arguments"
+        );
+        let n = vertices as usize;
+        let (positions, normals, uvs, triangles, out) = unsafe {
+            (
+                std::slice::from_raw_parts(positions as *const [f32; 3], n),
+                std::slice::from_raw_parts(normals as *const [f32; 3], n),
+                std::slice::from_raw_parts(uvs as *const [f32; 2], n),
+                std::slice::from_raw_parts(indices as *const [u32; 3], index_count as usize / 3),
+                std::slice::from_raw_parts_mut(out, 2 * n),
+            )
+        };
+        let input = crate::realtime_gi::UvInput {
+            positions,
+            uvs,
+            triangles,
+            pixel_size,
+            min_chart_texels: min_chart_texels as u32,
+            charts: unbound_gi::realtime_uv::Charts::Automatic {
+                normals,
+                params: unbound_gi::auto_charts::Params {
+                    max_distance,
+                    max_angle,
+                    ignore_normals: flags & 1 != 0,
+                },
+            },
         };
         crate::realtime_gi::realtime_uvs(scene, system as usize, renderer as usize, &input, out)?;
         Ok(0)

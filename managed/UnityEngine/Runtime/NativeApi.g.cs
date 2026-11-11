@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 57;
+        internal const uint CurrentVersion = 58;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -177,5 +177,15 @@ namespace Unbound.Runtime
         /// context current; its answer.
         /// </summary>
         internal delegate* unmanaged<void*, int, int> PluginQuery;
+        /// <summary>
+        /// (scene, system, renderer within the system, positions and shading normals of an
+        /// instance that is not turned, with its scale applied (3 floats each), lightmap UVs (2
+        /// floats each), vertex count, triangle indices, index count, world units per texel,
+        /// minimum chart size in texels, Max Distance, Max Angle in degrees, flags (1: Ignore
+        /// Normals), out UVs (2 floats per vertex), out error): the realtime lightmap UVs of a
+        /// renderer with Optimize Realtime UVs (`realtime_gi::realtime_uvs` with automatic
+        /// charts); 0 on success.
+        /// </summary>
+        internal delegate* unmanaged<ulong, int, int, float*, float*, float*, int, uint*, int, float, int, float, float, int, float*, NativeBuffer*, int> GiAutomaticUvs;
     }
 }
