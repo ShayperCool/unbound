@@ -2603,6 +2603,18 @@ impl UnityRenderer {
                     self.plugin_pass_open |= open;
                     self.run_plugin(&call);
                     open = false;
+                    // What the callback drew into a multisampled target's samples reaches the
+                    // resolved image through a pass that draws nothing.
+                    if std::mem::take(&mut self.plugins.drew_into_samples)
+                        && let Some(target) = self.state.target.clone()
+                    {
+                        let next = self.msaa_targets(Some(&target));
+                        self.switch_msaa_targets(next, &mut passes);
+                        self.prepare_framebuffer(&mut passes);
+                        self.mark_msaa_written(&target);
+                        passes.push(Op::Pass(self.new_pass(target)));
+                        open = true;
+                    }
                 }
                 Command::EndFrame => {
                     self.process_mips(&mut passes);

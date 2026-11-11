@@ -1288,7 +1288,11 @@ pub fn upload_texture_with(
                     sample_count: samples,
                     dimension: wgpu::TextureDimension::D2,
                     format,
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    // A texture, as Unity's devices make it (not a render buffer): native
+                    // plugins get it by name (tests/projects/nativegfx `shape.msaa.target.color`,
+                    // `shape.rt.msaa.color.depth`).
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | wgpu::TextureUsages::TEXTURE_BINDING,
                     view_formats,
                 });
                 let raw = texture.create_view(&wgpu::TextureViewDescriptor::default());

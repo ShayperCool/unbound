@@ -245,12 +245,10 @@ namespace UnityEngine
         internal override IntPtr NativePointer() => m_Created ? NativePlugins.TexturePointer(m_NativeHandle, false) : IntPtr.Zero;
 
         /// <summary>The depth buffer's OpenGL texture; a texture without depth gives its color
-        /// texture, as in the Editor (tests/projects/nativegfx ptr.rt.nodepth.*).</summary>
-        public IntPtr GetNativeDepthBufferPtr()
-        {
-            if (!m_Created) return IntPtr.Zero;
-            return depth > 0 ? NativePlugins.TexturePointer(m_NativeHandle, true) : NativePointer();
-        }
+        /// texture (a multisampled one its samples), as in the Editor (tests/projects/nativegfx
+        /// ptr.rt.nodepth.*, shape.rt.msaa.color.depth): the renderer knows which.</summary>
+        public IntPtr GetNativeDepthBufferPtr() =>
+            m_Created ? NativePlugins.TexturePointer(m_NativeHandle, true) : IntPtr.Zero;
 
         [Unbound.EditorFaithful("no-op is equivalent: after a discard the contents are undefined, so keeping them is allowed")]
         public void DiscardContents() { }

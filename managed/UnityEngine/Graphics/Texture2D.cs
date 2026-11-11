@@ -479,8 +479,10 @@ namespace UnityEngine
         IntPtr m_ExternalTexture;
 
         /// <summary>A texture showing a native texture: one a plugin made, or another texture's
-        /// <see cref="Texture.GetNativeTexturePtr"/> (the same texels). Matches the Unity
-        /// 6000.0.71f1 Editor (tests/projects/nativegfx external.*).</summary>
+        /// <see cref="Texture.GetNativeTexturePtr"/> (the same texels). The format and color
+        /// space given here describe this texture (<c>format</c>, <c>graphicsFormat</c>); the
+        /// native texture is sampled in its own. Matches the Unity 6000.0.71f1 Editor
+        /// (tests/projects/nativegfx external.*, ext.*).</summary>
         public static Texture2D CreateExternalTexture(int width, int height, TextureFormat format, bool mipChain, bool linear, IntPtr nativeTex)
         {
             if (nativeTex == IntPtr.Zero) throw new ArgumentException("nativeTex can not be null");
@@ -496,9 +498,10 @@ namespace UnityEngine
             m_PixelsDirty = false;
             if (!Native.IsReady) return;
             GfxStream.Flush();
-            bool srgb = !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            // The native texture decides the size, the format and whether its texels are sRGB;
+            // this texture, through how many of its levels it is sampled.
             var error = new NativeBuffer();
-            if (Native.Api.ExternalTexture(m_NativeHandle, (ulong)nativeTex, width, height, srgb ? 1 : 0, &error) != 0)
+            if (Native.Api.ExternalTexture(m_NativeHandle, (ulong)nativeTex, mipmapCount, &error) != 0)
             {
                 var reason = error.Length == 0 ? "unknown error" : System.Text.Encoding.UTF8.GetString(error.Data, (int)error.Length);
                 Native.Free(error);

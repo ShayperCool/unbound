@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 54;
+        internal const uint CurrentVersion = 55;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -121,11 +121,12 @@ namespace Unbound.Runtime
         /// </summary>
         internal delegate* unmanaged<ulong, int, ulong> NativeTexture;
         /// <summary>
-        /// (texture handle, OpenGL texture name, width, height, sRGB, out error): makes the texture
-        /// show the named native texture (`Texture2D.CreateExternalTexture`,
-        /// `UpdateExternalTexture`); 0 on success, else the buffer holds the reason.
+        /// (texture handle, OpenGL texture name, mip levels, out error): makes the texture show the
+        /// named native texture through that many of its levels (`Texture2D.CreateExternalTexture`,
+        /// `UpdateExternalTexture`; version 55: the levels, where the declared size and color space
+        /// were, which the native texture decides); 0 on success, else the buffer holds the reason.
         /// </summary>
-        internal delegate* unmanaged<ulong, ulong, int, int, int, NativeBuffer*, int> ExternalTexture;
+        internal delegate* unmanaged<ulong, ulong, int, NativeBuffer*, int> ExternalTexture;
         /// <summary>
         /// (scene, frame, lights, count, out error): one frame's update; `realtime_gi::UPDATE_*`
         /// bits, or -1 with the reason in the buffer.

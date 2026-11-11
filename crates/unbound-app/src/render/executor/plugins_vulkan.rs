@@ -1424,6 +1424,12 @@ impl UnityRenderer {
     /// A texture's native pointer on the Vulkan device: the address of its `VkImage`, stable for
     /// the texture (`depth`: its depth buffer's). 0 for an unknown texture.
     pub(super) fn vulkan_native_texture(&mut self, handle: u64, depth: bool) -> u64 {
+        // A texture without a depth buffer gives its color image for it.
+        let depth = depth
+            && self
+                .textures
+                .get(&handle)
+                .is_some_and(|t| t.depth_texture.is_some());
         let image = self.textures.get(&handle).and_then(|t| {
             let texture = if depth {
                 t.depth_texture.as_ref()?

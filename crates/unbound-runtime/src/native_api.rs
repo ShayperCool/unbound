@@ -58,7 +58,7 @@ use std::ffi::c_void;
 /// 50: the `ScreenStandIn` render command (opcode 35).
 /// 51: `gi_set_environment`; `GiFrame` without its flat environment color.
 /// 52: `GiFrame.directional` and `gi_read_directionality` (directional realtime lightmaps).
-pub const NATIVE_API_VERSION: u32 = 54;
+pub const NATIVE_API_VERSION: u32 = 55;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -205,10 +205,11 @@ pub struct NativeApi {
     /// texture (or its depth buffer), sharing its memory with the renderer; 0 when there is no
     /// plugin OpenGL interop or the texture cannot be shared.
     pub native_texture: extern "C" fn(u64, i32) -> u64,
-    /// (texture handle, OpenGL texture name, width, height, sRGB, out error): makes the texture
-    /// show the named native texture (`Texture2D.CreateExternalTexture`,
-    /// `UpdateExternalTexture`); 0 on success, else the buffer holds the reason.
-    pub external_texture: extern "C" fn(u64, u64, i32, i32, i32, *mut NativeBuffer) -> i32,
+    /// (texture handle, OpenGL texture name, mip levels, out error): makes the texture show the
+    /// named native texture through that many of its levels (`Texture2D.CreateExternalTexture`,
+    /// `UpdateExternalTexture`; version 55: the levels, where the declared size and color space
+    /// were, which the native texture decides); 0 on success, else the buffer holds the reason.
+    pub external_texture: extern "C" fn(u64, u64, i32, *mut NativeBuffer) -> i32,
     // Version 43: precomputed realtime GI (`realtime_gi`; loaded with the `realtime-gi-load`
     // control call).
     /// (scene, frame, lights, count, out error): one frame's update; `realtime_gi::UPDATE_*`
@@ -1128,20 +1129,11 @@ extern "C" fn native_texture(texture: u64, depth: i32) -> u64 {
 extern "C" fn external_texture(
     texture: u64,
     native: u64,
-    width: i32,
-    height: i32,
-    srgb: i32,
+    mips: i32,
     out: *mut NativeBuffer,
 ) -> i32 {
-    let result = handle::plain(texture, "external_texture").and_then(|texture| {
-        state::backend().external_texture(
-            texture,
-            native,
-            width.max(1) as u32,
-            height.max(1) as u32,
-            srgb != 0,
-        )
-    });
+    let result = handle::plain(texture, "external_texture")
+        .and_then(|texture| state::backend().external_texture(texture, native, mips.max(1) as u32));
     match result {
         Ok(()) => 0,
         Err(error) => {

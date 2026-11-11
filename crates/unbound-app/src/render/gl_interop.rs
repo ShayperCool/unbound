@@ -26,6 +26,19 @@ pub mod format {
     pub const COMPRESSED_SRGB_ALPHA_S3TC_DXT5: u32 = 0x8C4F;
     pub const COMPRESSED_RGBA_BPTC_UNORM: u32 = 0x8E8C;
     pub const COMPRESSED_SRGB_ALPHA_BPTC_UNORM: u32 = 0x8E8D;
+    pub const COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT: u32 = 0x8E8F;
+    pub const COMPRESSED_RED_RGTC1: u32 = 0x8DBB;
+    pub const COMPRESSED_RG_RGTC2: u32 = 0x8DBD;
+    pub const R8: u32 = 0x8229;
+    pub const RG8: u32 = 0x822B;
+    pub const RGB8: u32 = 0x8051;
+    pub const SRGB8: u32 = 0x8C41;
+    pub const R16F: u32 = 0x822D;
+    pub const RG16F: u32 = 0x822F;
+    pub const RGBA16F: u32 = 0x881A;
+    pub const R32F: u32 = 0x822E;
+    pub const RG32F: u32 = 0x8230;
+    pub const RGBA32F: u32 = 0x8814;
 
     /// The sRGB format of a linear color format the device stores sRGB textures in (None: it has
     /// none, or it is sRGB already).
@@ -42,8 +55,12 @@ pub mod format {
     }
 }
 
-/// `GL_TEXTURE_2D`.
+/// The texture targets (`GL_TEXTURE_2D`, ...).
 pub const TEXTURE_2D: u32 = 0x0DE1;
+pub const TEXTURE_3D: u32 = 0x806F;
+pub const TEXTURE_CUBE_MAP: u32 = 0x8513;
+pub const TEXTURE_2D_ARRAY: u32 = 0x8C1A;
+pub const TEXTURE_CUBE_MAP_ARRAY: u32 = 0x9009;
 
 /// What OpenGL says of a texture name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,9 +69,20 @@ pub struct TextureInfo {
     pub target: u32,
     /// Level 0's internal format.
     pub format: InternalFormat,
+    /// Level 0's size.
+    pub width: u32,
+    pub height: u32,
     /// Its storage is immutable (`glTexStorage*`): it can have views.
     pub immutable: bool,
+    /// Its levels: an immutable storage's, else the levels that have texels, from the first.
     pub levels: u32,
+}
+
+/// What a framebuffer draws into: a texture's level, or a renderbuffer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Attachment {
+    Texture { name: u32, level: u32 },
+    Renderbuffer(u32),
 }
 
 /// The OpenGL error names and descriptions the Editor logs after a plugin callback that left an
@@ -174,13 +202,26 @@ impl Interop {
     pub fn texture_info(&self, _: u32) -> Option<TextureInfo> {
         match *self {}
     }
-    pub fn view(&mut self, _: u32, _: TextureInfo, _: InternalFormat) -> Result<u32, String> {
+    pub fn view(
+        &mut self,
+        _: u32,
+        _: TextureInfo,
+        _: u32,
+        _: InternalFormat,
+        _: u32,
+    ) -> Result<u32, String> {
         match *self {}
     }
     pub fn forget(&mut self, _: u32, _: bool) {
         match *self {}
     }
     pub fn bind_target(&mut self, _: Option<(u32, u32)>, _: Option<(u32, bool)>, _: [i32; 4]) {
+        match *self {}
+    }
+    pub fn bind_attachments(&mut self, _: Attachment, _: Option<(Attachment, bool)>, _: [i32; 4]) {
+        match *self {}
+    }
+    pub fn release_attachments(&mut self) {
         match *self {}
     }
     pub fn finish(&self) {
@@ -193,7 +234,7 @@ impl Interop {
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use super::{InternalFormat, TextureInfo};
+    use super::{Attachment, InternalFormat, TextureInfo};
     use std::ffi::{CStr, c_char, c_void};
 
     type EglDisplay = *mut c_void;
@@ -217,6 +258,11 @@ mod linux {
 
     const GL_TEXTURE_TARGET: u32 = 0x1006;
     const GL_TEXTURE_INTERNAL_FORMAT: u32 = 0x1003;
+    const GL_TEXTURE_WIDTH: u32 = 0x1000;
+    const GL_TEXTURE_HEIGHT: u32 = 0x1001;
+    const GL_RENDERBUFFER: u32 = 0x8D41;
+    /// More levels than any texture has.
+    const MAX_LEVELS: i32 = 32;
     const GL_TEXTURE_IMMUTABLE_FORMAT: u32 = 0x912F;
     const GL_TEXTURE_IMMUTABLE_LEVELS: u32 = 0x82DF;
     const GL_FRAMEBUFFER: u32 = 0x8D40;
@@ -241,6 +287,7 @@ mod linux {
         CreateFramebuffers: unsafe extern "C" fn(i32, *mut u32),
         DeleteFramebuffers: unsafe extern "C" fn(i32, *const u32),
         NamedFramebufferTexture: unsafe extern "C" fn(u32, u32, u32, i32),
+        NamedFramebufferRenderbuffer: unsafe extern "C" fn(u32, u32, u32, u32),
         NamedFramebufferParameteri: unsafe extern "C" fn(u32, u32, i32),
         BindFramebuffer: unsafe extern "C" fn(u32, u32),
         Viewport: unsafe extern "C" fn(i32, i32, i32, i32),
@@ -284,6 +331,9 @@ mod linux {
         empty_framebuffer: u32,
         /// Framebuffers of targets, by color, depth and mip.
         framebuffers: Vec<((u32, u32, u32), u32)>,
+        /// The framebuffer of attachments bound for one callback ([`Interop::bind_attachments`]):
+        /// they are detached after it, so it keeps none of them alive.
+        attachments_framebuffer: u32,
     }
 
     // SAFETY: the context is only used by the thread that makes it current (the renderer's
@@ -420,6 +470,7 @@ mod linux {
                 CreateFramebuffers: gl_fn!(egl, "glCreateFramebuffers"),
                 DeleteFramebuffers: gl_fn!(egl, "glDeleteFramebuffers"),
                 NamedFramebufferTexture: gl_fn!(egl, "glNamedFramebufferTexture"),
+                NamedFramebufferRenderbuffer: gl_fn!(egl, "glNamedFramebufferRenderbuffer"),
                 NamedFramebufferParameteri: gl_fn!(egl, "glNamedFramebufferParameteri"),
                 BindFramebuffer: gl_fn!(egl, "glBindFramebuffer"),
                 Viewport: gl_fn!(egl, "glViewport"),
@@ -469,8 +520,12 @@ mod linux {
                 own_display,
                 empty_framebuffer: 0,
                 framebuffers: Vec::new(),
+                attachments_framebuffer: 0,
             };
-            unsafe { (interop.gl.CreateFramebuffers)(1, &mut interop.empty_framebuffer) };
+            unsafe {
+                (interop.gl.CreateFramebuffers)(1, &mut interop.empty_framebuffer);
+                (interop.gl.CreateFramebuffers)(1, &mut interop.attachments_framebuffer);
+            }
             Ok(interop)
         }
 
@@ -570,40 +625,53 @@ mod linux {
                 unsafe { (gl.GetTextureParameteriv)(name, p, &mut value) };
                 value
             };
-            let mut format = 0;
-            unsafe {
-                (gl.GetTextureLevelParameteriv)(name, 0, GL_TEXTURE_INTERNAL_FORMAT, &mut format)
+            let level = |level, p| {
+                let mut value = 0;
+                unsafe { (gl.GetTextureLevelParameteriv)(name, level, p, &mut value) };
+                value
             };
             let immutable = parameter(GL_TEXTURE_IMMUTABLE_FORMAT) != 0;
+            let levels = if immutable {
+                parameter(GL_TEXTURE_IMMUTABLE_LEVELS)
+            } else {
+                // A level past the last one has no size (asking for one past the largest the
+                // context has leaves an error, cleared here).
+                let defined = (1..MAX_LEVELS)
+                    .find(|&l| level(l, GL_TEXTURE_WIDTH) == 0)
+                    .unwrap_or(MAX_LEVELS);
+                self.clear_errors();
+                defined
+            };
             Some(TextureInfo {
                 target: parameter(GL_TEXTURE_TARGET) as u32,
-                format: format as u32,
+                format: level(0, GL_TEXTURE_INTERNAL_FORMAT) as u32,
+                width: level(0, GL_TEXTURE_WIDTH).max(0) as u32,
+                height: level(0, GL_TEXTURE_HEIGHT).max(0) as u32,
                 immutable,
-                levels: if immutable {
-                    parameter(GL_TEXTURE_IMMUTABLE_LEVELS).max(1) as u32
-                } else {
-                    1
-                },
+                levels: levels.max(1) as u32,
             })
         }
 
-        /// A texture over all of `name`'s levels and layers in another (compatible) format.
+        /// A texture over all of `name`'s levels and its `layers` layers (a cube's six faces,
+        /// an array's layers, else 1) with another (compatible) target or format.
         pub fn view(
             &mut self,
             name: u32,
             info: TextureInfo,
+            target: u32,
             format: InternalFormat,
+            layers: u32,
         ) -> Result<u32, String> {
-            if info.target != super::TEXTURE_2D || !info.immutable {
+            if !info.immutable {
                 return Err(format!(
-                    "texture {name} has no views (only 2D textures with immutable storage do)"
+                    "texture {name} has no views (only textures with immutable storage do)"
                 ));
             }
             self.clear_errors();
             let mut view = 0;
             unsafe {
                 (self.gl.GenTextures)(1, &mut view);
-                (self.gl.TextureView)(view, info.target, name, format, 0, info.levels, 0, 1);
+                (self.gl.TextureView)(view, target, name, format, 0, info.levels, 0, layers);
             }
             let errors = self.clear_errors();
             if errors.is_empty() {
@@ -696,6 +764,54 @@ mod linux {
             unsafe {
                 (gl.BindFramebuffer)(GL_FRAMEBUFFER, framebuffer);
                 (gl.Viewport)(viewport[0], viewport[1], viewport[2], viewport[3]);
+            }
+        }
+
+        /// Binds a framebuffer of these attachments (a multisampled target's), with the
+        /// viewport; [`Interop::release_attachments`] detaches them after the callback.
+        pub fn bind_attachments(
+            &mut self,
+            color: Attachment,
+            depth: Option<(Attachment, bool)>,
+            viewport: [i32; 4],
+        ) {
+            let framebuffer = self.attachments_framebuffer;
+            self.attach(GL_COLOR_ATTACHMENT0, Some(color));
+            // The depth and stencil point is both points: cleared first, then the one given.
+            self.attach(GL_DEPTH_STENCIL_ATTACHMENT, None);
+            if let Some((depth, stencil)) = depth {
+                let point = if stencil {
+                    GL_DEPTH_STENCIL_ATTACHMENT
+                } else {
+                    GL_DEPTH_ATTACHMENT
+                };
+                self.attach(point, Some(depth));
+            }
+            unsafe {
+                (self.gl.BindFramebuffer)(GL_FRAMEBUFFER, framebuffer);
+                (self.gl.Viewport)(viewport[0], viewport[1], viewport[2], viewport[3]);
+            }
+        }
+
+        /// Detaches what [`Interop::bind_attachments`] attached.
+        pub fn release_attachments(&mut self) {
+            for point in [GL_COLOR_ATTACHMENT0, GL_DEPTH_STENCIL_ATTACHMENT] {
+                self.attach(point, None);
+            }
+        }
+
+        fn attach(&self, point: u32, attachment: Option<Attachment>) {
+            let (gl, framebuffer) = (&self.gl, self.attachments_framebuffer);
+            unsafe {
+                match attachment {
+                    Some(Attachment::Texture { name, level }) => {
+                        (gl.NamedFramebufferTexture)(framebuffer, point, name, level as i32)
+                    }
+                    Some(Attachment::Renderbuffer(name)) => {
+                        (gl.NamedFramebufferRenderbuffer)(framebuffer, point, GL_RENDERBUFFER, name)
+                    }
+                    None => (gl.NamedFramebufferTexture)(framebuffer, point, 0, 0),
+                }
             }
         }
 

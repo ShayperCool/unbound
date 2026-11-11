@@ -756,15 +756,9 @@ pub trait RenderBackend: Send + Sync {
     fn native_texture(&self, _texture: u64, _depth: bool) -> u64 {
         0
     }
-    /// Makes `texture` show the native texture `native` (`Texture2D.CreateExternalTexture`).
-    fn external_texture(
-        &self,
-        _texture: u64,
-        _native: u64,
-        _width: u32,
-        _height: u32,
-        _srgb: bool,
-    ) -> Result<(), String> {
+    /// Makes `texture` show the native texture `native` through `mips` of its levels
+    /// (`Texture2D.CreateExternalTexture`).
+    fn external_texture(&self, _texture: u64, _native: u64, _mips: u32) -> Result<(), String> {
         Err("native textures need the renderer".into())
     }
     /// A compute kernel's thread group size: (file, kernel, keywords).

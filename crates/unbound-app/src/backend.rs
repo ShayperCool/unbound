@@ -246,16 +246,9 @@ impl RenderBackend for GpuBackend {
         }
     }
 
-    fn external_texture(
-        &self,
-        texture: u64,
-        native: u64,
-        width: u32,
-        height: u32,
-        srgb: bool,
-    ) -> Result<(), String> {
+    fn external_texture(&self, texture: u64, native: u64, mips: u32) -> Result<(), String> {
         match self.inner.lock().unwrap().renderer.as_mut() {
-            Some(r) => r.external_texture(texture, native, width, height, srgb),
+            Some(r) => r.external_texture(texture, native, mips),
             None => Err("the renderer is not up yet".into()),
         }
     }
