@@ -122,12 +122,16 @@ Last, `RoomBakedEnvironment` (`run.py setup-baked-environment`: the room with ba
 illumination on as well and its environment lighting baked, Lighting Settings' Realtime
 Environment Lighting off; its lights are realtime, so its baked lightmap holds the environment
 alone): `roombakedenvironment-base` (and `-lightprobes`: its probes' baked coefficients, read
-while realtime GI lights them too), `-color` (a brighter ambient color), `-alone` (the point
-light off and the panel's emission black: the environment as the only light), `-envdata`
-(`DynamicGI.SetEnvironmentData` then), `-envdata-color` (another ambient color over the data),
-`-envdata-update` (the data set again, then `DynamicGI.UpdateEnvironment`) and `-bakedset`
-(`LightProbes.bakedProbes` given by the script, each probe's first coefficient of every color
-raised by a half, and the point light on again; `-bakedset-lightprobes` reads them back).
+while realtime GI lights them too); `-bakedset-now` (`LightProbes.bakedProbes` given by the
+script, each probe's first coefficient of every color raised by a half: the interpolated probes
+at the sample points in that frame, nothing else changed), `-bakedset` (the same after the usual
+wait, with `-bakedset-lightprobes` reading the coefficients back) and `-bakedrestored-now` (the
+scene's own coefficients given back); `-color` (a brighter ambient color); `-alone` (the point
+light off and the panel's emission black: the environment as the only light); `-envdata`
+(`DynamicGI.SetEnvironmentData` then); over the data, `-envdata-color` (another ambient color),
+`-envdata-source` (a gradient as the source), `-envdata-sky` (a skybox as the source) and
+`-envdata-intensity` (its ambient intensity 2), the data set again before each; and
+`-envdata-update` (the data set again, then `DynamicGI.UpdateEnvironment`).
 
 ## What the Editor does (this capture)
 
@@ -191,16 +195,19 @@ Observations (not documented guarantees):
   source: the brighter ambient color changes no texel (`roombakedenvironment-color` is
   `-base`, byte for byte) and the environment alone leaves every texel at zero (`-alone`);
   `RenderSettings.ambientProbe` follows the color all the same. `DynamicGI.SetEnvironmentData`
-  lights it as it lights `Room` (`-envdata`), and there the data stays when the ambient color
-  changes (`-envdata-color` is `-envdata`), unlike in the other scenes; `UpdateEnvironment`
-  removes it (`-envdata-update` is black).
+  lights it as it lights `Room` (`-envdata`), and there the data stays whatever the ambient
+  source does: another color, a gradient or a skybox as the source, a skybox's ambient
+  intensity (`-envdata-color`, `-source`, `-sky` and `-intensity` are `-envdata`), unlike in
+  the other scenes, where the documented overwriting shows; `UpdateEnvironment` removes it
+  (`-envdata-update` is black).
 - That scene's light probes have baked coefficients too (the environment's, about 0.002 to
   0.007 in the first coefficient). `LightProbes.GetInterpolatedProbe` gives them plus realtime
-  GI's lighting: with the environment alone it is the baked coefficients, and after the script
-  raises every baked first coefficient by 0.5 the interpolated ones are 0.5 higher than the
-  realtime lighting alone accounts for (`-bakedset`). `LightProbes.bakedProbes` returns the
-  baked part while realtime GI lights the probes (`-lightprobes`) and what the script gave
-  after that (`-bakedset-lightprobes`).
+  GI's lighting: with the environment alone it is the baked coefficients, and when the script
+  raises every baked first coefficient by 0.5 the interpolated ones are 0.5 higher in that
+  very frame (`-bakedset-now`: 1.3179 against `-base`'s 0.8179) and back when the scene's own
+  are given again (`-bakedrestored-now`). `LightProbes.bakedProbes` returns the baked part
+  while realtime GI lights the probes (`-lightprobes`) and what the script gave after that
+  (`-bakedset-lightprobes`).
 - `RenderSettings.ambientProbe` with a skybox follows the ambient intensity without
   `UpdateEnvironment`: 0.2140 times the intensity 1 probe at 0.5 and 4.5948 times at 2 (the
   intensity taken as an sRGB-encoded value). In the custom ambient mode it is the probe last
@@ -261,8 +268,9 @@ Unbound draws precomputed realtime GI for these scenes (docs/REALTIME_GI.md): it
 renderers' realtime lightmap UVs, renders their meta passes and updates the systems each frame.
 The gate fails on state values (cases, realtime lightmap indices and scale/offset, lightmaps mode,
 probe count and baked coefficients, `isConverged`, API defaults, what `SetEnvironmentData`
-throws, the default reflection, and which atlas texels the renderers cover), on
-`RenderSettings.ambientProbe`, on the frames (a mean difference of at most 2 of 255; the
+throws, the default reflection, the baked light probe coefficients, and which atlas texels the
+renderers cover), on `RenderSettings.ambientProbe` and the interpolated probes recorded around
+a script's baked coefficients, on the frames (a mean difference of at most 2 of 255; the
 engine's: 0.75 at most, 0.4 on average) and on the realtime lightmaps of every case
 (at most 0.5% of their values outside the tolerance, for
 the isolated texels docs/REALTIME_GI.md explains), and reports the other lighting values

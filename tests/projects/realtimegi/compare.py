@@ -11,7 +11,8 @@ Two classes of values:
   DynamicGI.SetEnvironmentData throws, the default reflection (ReflectionProbe.defaultTexture's
   name, dimension and size, its decode values) and which atlas texels renderers cover (their
   realtime lightmap UVs).
-- Lighting: light probe SH (each sample point, 27 coefficients) and the ambient probe
+- Lighting: light probe SH (each sample point, 27 coefficients; gated where a case records them
+  as `interpolated`) and the ambient probe
   (RenderSettings.ambientProbe, gated) within ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
   |reference|; frames (.png) report the shared image measure (mean, worst and pixels over 8 of
   the per-pixel max-channel difference) and are gated on its mean (at most FRAME_MEAN; a missing
@@ -112,14 +113,16 @@ def compare_values(ref, cap, result):
                        if not close(a, b)]
                 if bad:
                     result.fail('state', f'{name}: {len(bad)} baked coefficients off', bad)
-        for key in ('probes', 'ambientProbe'):
+        for key in ('probes', 'ambientProbe', 'interpolated'):
             if key not in r:
                 continue
             rv, cv = r[key], c.get(key)
             if key == 'ambientProbe':
                 rv, cv = [rv], [cv] if cv is not None else None
-            # RenderSettings.ambientProbe is an API's answer: gated. The light probes are reported.
-            kind = 'gated' if key == 'ambientProbe' else 'lighting'
+            # RenderSettings.ambientProbe is an API's answer: gated, as are the interpolated
+            # probes recorded for what a script's baked coefficients do to them (`interpolated`).
+            # The light probes of the lighting cases are reported.
+            kind = 'lighting' if key == 'probes' else 'gated'
             if cv is None or len(cv) != len(rv):
                 result.fail(kind, f'{name}: {key} missing or of another length')
                 continue

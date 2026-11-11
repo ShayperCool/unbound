@@ -422,8 +422,24 @@ public class RealtimeGIProbe : MonoBehaviour
         s = Scene();
         yield return Converge();
         Capture("roombakedenvironment-base", s);
-        // Its probes' baked coefficients, read while realtime GI lights the probes too.
+        // Its probes' baked coefficients, read while realtime GI lights the probes too. Then
+        // baked coefficients given by the script (every probe's first coefficient of each color
+        // raised by a half): the interpolated probes in that frame, with nothing else changed,
+        // and once more after the usual wait; then the scene's own coefficients given back.
         RecordBakedProbes("roombakedenvironment-lightprobes");
+        var lightProbes = LightmapSettings.lightProbes;
+        var own = lightProbes.bakedProbes;
+        var raised = lightProbes.bakedProbes;
+        for (int i = 0; i < raised.Length; i++)
+            for (int c = 0; c < 3; c++) raised[i][c, 0] += 0.5f;
+        lightProbes.bakedProbes = raised;
+        Record("roombakedenvironment-bakedset-now", "\"interpolated\":" + Interpolated(s));
+        yield return Converge();
+        Capture("roombakedenvironment-bakedset", s);
+        RecordBakedProbes("roombakedenvironment-bakedset-lightprobes");
+        lightProbes.bakedProbes = own;
+        Record("roombakedenvironment-bakedrestored-now", "\"interpolated\":" + Interpolated(s));
+
         RenderSettings.ambientLight = new Color(0.6f, 0.5f, 0.2f);
         yield return Converge();
         Capture("roombakedenvironment-color", s);
@@ -431,30 +447,37 @@ public class RealtimeGIProbe : MonoBehaviour
         DynamicGI.SetEmissive(s.panel, Color.black);
         yield return Converge();
         Capture("roombakedenvironment-alone", s);
-        DynamicGI.SetEnvironmentData(EnvironmentData());
+        var cube = EnvironmentData();
+        DynamicGI.SetEnvironmentData(cube);
         yield return Converge();
         Capture("roombakedenvironment-envdata", s);
-        // The ambient color changed over the data, then the data set again and
-        // DynamicGI.UpdateEnvironment called.
+        // Over the data: the ambient color changed; the ambient source changed (a gradient);
+        // a skybox as the source; its ambient intensity changed (each after the data was set
+        // again); and DynamicGI.UpdateEnvironment.
         RenderSettings.ambientLight = new Color(0.2f, 0.6f, 0.5f);
         yield return Converge();
         Capture("roombakedenvironment-envdata-color", s);
-        DynamicGI.SetEnvironmentData(EnvironmentData());
+        DynamicGI.SetEnvironmentData(cube);
+        yield return Converge();
+        RenderSettings.ambientMode = AmbientMode.Trilight;
+        yield return Converge();
+        Capture("roombakedenvironment-envdata-source", s);
+        DynamicGI.SetEnvironmentData(cube);
+        yield return Converge();
+        RenderSettings.skybox = new Material(Shader.Find("Skybox/Procedural"));
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        yield return Converge();
+        Capture("roombakedenvironment-envdata-sky", s);
+        DynamicGI.SetEnvironmentData(cube);
+        yield return Converge();
+        RenderSettings.ambientIntensity = 2f;
+        yield return Converge();
+        Capture("roombakedenvironment-envdata-intensity", s);
+        DynamicGI.SetEnvironmentData(cube);
         yield return Converge();
         DynamicGI.UpdateEnvironment();
         yield return Converge();
         Capture("roombakedenvironment-envdata-update", s);
-        // Baked coefficients given by the script (every probe's first coefficient of each
-        // color raised by a half), then the point light on again so that realtime GI updates.
-        var lightProbes = LightmapSettings.lightProbes;
-        var raised = lightProbes.bakedProbes;
-        for (int i = 0; i < raised.Length; i++)
-            for (int c = 0; c < 3; c++) raised[i][c, 0] += 0.5f;
-        lightProbes.bakedProbes = raised;
-        s.point.enabled = true;
-        yield return Converge();
-        Capture("roombakedenvironment-bakedset", s);
-        RecordBakedProbes("roombakedenvironment-bakedset-lightprobes");
         Finish();
     }
 
@@ -568,6 +591,23 @@ public class RealtimeGIProbe : MonoBehaviour
 
     void Record(string kind, string body) =>
         m_Out.Append("{\"case\":\"").Append(kind).Append("\",").Append(body).Append("}\n");
+
+    /// <summary>LightProbes.GetInterpolatedProbe at the scene's sample points: one array of 27
+    /// coefficients each.</summary>
+    static string Interpolated(RealtimeGIScene s)
+    {
+        var body = new StringBuilder("[");
+        for (int i = 0; i < s.samples.Length; i++)
+        {
+            LightProbes.GetInterpolatedProbe(s.samples[i], null, out var sh);
+            body.Append(i > 0 ? ",[" : "[");
+            for (int c = 0; c < 3; c++)
+                for (int k = 0; k < 9; k++)
+                    body.Append(c + k > 0 ? "," : "").Append(F(sh[c, k]));
+            body.Append(']');
+        }
+        return body.Append(']').ToString();
+    }
 
     static string AmbientProbe()
     {
