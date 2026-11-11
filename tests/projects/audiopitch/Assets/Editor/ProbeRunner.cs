@@ -117,6 +117,20 @@ public static class ProbeRunner
             Array.Copy(previous, exposed, previous.Length); exposed.SetValue(item, previous.Length);
             Set(mixer, "exposedParameters", exposed);
         }
+        var liveNames = new HashSet<string>();
+        foreach (var token in EffectProbe.Tokens(key)) if (token.StartsWith("live:")) {
+            string name = token.Substring(token.IndexOf(':', 5) + 1).Split('=')[0];
+            if (!name.Contains("_") || !liveNames.Add(name)) continue;
+            var pair = name.Split('_');
+            if (!units.TryGetValue("Music." + pair[0], out var unit)) unit = units["Master." + pair[0]];
+            var type = T("ExposedAudioParameter"); var item = Activator.CreateInstance(type);
+            type.GetField("name", F).SetValue(item, name);
+            type.GetField("guid", F).SetValue(item, Call(unit, "GetGUIDForParameter", pair[1]));
+            var previous = (Array)Get(mixer, "exposedParameters");
+            var exposed = Array.CreateInstance(type, previous.Length + 1);
+            Array.Copy(previous, exposed, previous.Length); exposed.SetValue(item, previous.Length);
+            Set(mixer, "exposedParameters", exposed);
+        }
         EditorUtility.SetDirty((UnityEngine.Object)mixer);
     }
 }

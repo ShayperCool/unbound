@@ -22,11 +22,23 @@ def all_cases():
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_')) and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_')) and key.startswith('context_') == contexts]
 
 
 def surround_cases():
     return [key for key in all_cases() if key.startswith('context_fx_')]
+
+
+def transition_cases():
+    return [key for key in all_cases() if key.startswith('context_live_') and not key.startswith('context_live_reset_')]
+
+
+def scheduled_reset_cases():
+    return [key for key in all_cases() if key.startswith('context_live_') and (not key.startswith('context_live_reset_') or key.endswith('_scheduled'))]
+
+
+def reset_cases():
+    return [key for key in all_cases() if key.startswith('context_live_') and not key.endswith('_scheduled')]
 
 
 def devices():
@@ -40,6 +52,9 @@ def profile(name, rate):
     if name == 'all': return dict.fromkeys(keys)
     if name == 'layouts': return dict.fromkeys(cases(True))
     if name == 'surround': return dict.fromkeys(surround_cases())
+    if name == 'transitions': return dict.fromkeys(transition_cases())
+    if name == 'scheduled-resets': return dict.fromkeys(scheduled_reset_cases())
+    if name == 'resets': return dict.fromkeys(reset_cases())
     if name == 'devices': return dict.fromkeys(key for key, _ in devices())
     raise ValueError(name)
 

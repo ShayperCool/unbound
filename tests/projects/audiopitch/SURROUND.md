@@ -44,10 +44,12 @@ are unchanged; the gate admits one 1/32768 device PCM step and no Master-float
 slack. Missing, extra and failing values stay in the reports. No residual or
 sample limit is added.
 
-This measures static effects at the listed rates, buffer and layouts. Surround
-live parameter/topology changes, transitions with retained effects between output
-layouts, other rates/buffers, Prologic, surround wet-slot controls, scripted zone
-send placement and overlapping surround zones remain unmeasured. General layout
+This measures static effects at the listed rates, buffer and layouts. The separate
+[transitions profile](TRANSITIONS.md) adds live parameter, filter enabled and zone
+activation/preset controls. Reset PCM is not repeatable in the recorded diagnostic
+sessions and remains open. Mixer topology changes, other rates/buffers, Prologic,
+surround wet-slot controls, scripted zone send placement and overlapping surround
+zones remain unmeasured. General layout
 reconfiguration updates component channel counts and offsets; a Rust control
 checks a retained listener reverb after quad-to-7.1 reconfiguration without
 claiming an Editor history-reset contract.

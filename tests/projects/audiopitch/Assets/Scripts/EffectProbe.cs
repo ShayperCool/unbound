@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.Audio;
 using Unity.Collections;
 
-public class EffectProbe : MonoBehaviour
+public partial class EffectProbe : MonoBehaviour
 {
     public static readonly string[][] Cases = {
         new[] { "plain", "music=imp", "Music:Att" },
@@ -284,6 +284,88 @@ public class EffectProbe : MonoBehaviour
         new[] { "device_1", "device=1" }, new[] { "device_2", "device=2" }, new[] { "device_3", "device=3" },
         new[] { "device_4", "device=4" }, new[] { "device_5", "device=5" }, new[] { "device_6", "device=6" },
         new[] { "device_7", "device=7" }, new[] { "device_8", "device=8" },
+        new[] { "context_live_quad_chorus", "mode=Quad", "music=generator", "gen=burst", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7", "live:5:Chorus_Delay=23", "live:8:Chorus_Depth=0.3", "live:11:Chorus_Rate=7" },
+        new[] { "context_live_quad_flange", "mode=Quad", "music=generator", "gen=burst", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7", "live:5:Flange_Depth=0.2", "live:8:Flange_Rate=7" },
+        new[] { "context_live_quad_reverb", "mode=Quad", "music=generator", "gen=burst", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "live:5:Reverb_Room HF=-1800", "live:8:Reverb_Dry Level=-1800", "live:11:Reverb_Decay Time=0.7" },
+        new[] { "context_live_quad_zone_enable", "mode=Quad", "music=dc:0.25", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1", "zone_live=enable" },
+        new[] { "context_live_quad_zone_preset", "mode=Quad", "music=dc:0.25", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1", "zone_live=preset" },
+        new[] { "context_live_surround_chorus", "mode=Surround", "music=generator", "gen=burst", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7", "live:5:Chorus_Delay=23", "live:8:Chorus_Depth=0.3", "live:11:Chorus_Rate=7" },
+        new[] { "context_live_surround_flange", "mode=Surround", "music=generator", "gen=burst", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7", "live:5:Flange_Depth=0.2", "live:8:Flange_Rate=7" },
+        new[] { "context_live_surround_reverb", "mode=Surround", "music=generator", "gen=burst", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "live:5:Reverb_Room HF=-1800", "live:8:Reverb_Dry Level=-1800", "live:11:Reverb_Decay Time=0.7" },
+        new[] { "context_live_surround_zone_enable", "mode=Surround", "music=dc:0.25", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1", "zone_live=enable" },
+        new[] { "context_live_surround_zone_preset", "mode=Surround", "music=dc:0.25", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1", "zone_live=preset" },
+        new[] { "context_live_51_chorus", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7", "live:5:Chorus_Delay=23", "live:8:Chorus_Depth=0.3", "live:11:Chorus_Rate=7" },
+        new[] { "context_live_51_flange", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7", "live:5:Flange_Depth=0.2", "live:8:Flange_Rate=7" },
+        new[] { "context_live_51_reverb", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "live:5:Reverb_Room HF=-1800", "live:8:Reverb_Dry Level=-1800", "live:11:Reverb_Decay Time=0.7" },
+        new[] { "context_live_51_zone_enable", "mode=Mode5point1", "music=dc:0.25", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1", "zone_live=enable" },
+        new[] { "context_live_51_zone_preset", "mode=Mode5point1", "music=dc:0.25", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1", "zone_live=preset" },
+        new[] { "context_live_71_chorus", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7", "live:5:Chorus_Delay=23", "live:8:Chorus_Depth=0.3", "live:11:Chorus_Rate=7" },
+        new[] { "context_live_71_flange", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7", "live:5:Flange_Depth=0.2", "live:8:Flange_Rate=7" },
+        new[] { "context_live_71_reverb", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "live:5:Reverb_Room HF=-1800", "live:8:Reverb_Dry Level=-1800", "live:11:Reverb_Decay Time=0.7" },
+        new[] { "context_live_71_zone_enable", "mode=Mode7point1", "music=dc:0.25", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1", "zone_live=enable" },
+        new[] { "context_live_71_zone_preset", "mode=Mode7point1", "music=dc:0.25", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1", "zone_live=preset" },
+        new[] { "context_live_quad_chorus_source", "mode=Quad", "music=generator", "gen=burst", "Music:Att", "component=chorus:source", "component_live=1" },
+        new[] { "context_live_quad_chorus_listener", "mode=Quad", "music=generator", "gen=burst", "Music:Att", "component=chorus:listener", "component_live=1" },
+        new[] { "context_live_quad_reverb_source", "mode=Quad", "music=generator", "gen=burst", "Music:Att", "component=reverb:source", "component_live=1" },
+        new[] { "context_live_quad_reverb_listener", "mode=Quad", "music=generator", "gen=burst", "Music:Att", "component=reverb:listener", "component_live=1" },
+        new[] { "context_live_surround_chorus_source", "mode=Surround", "music=generator", "gen=burst", "Music:Att", "component=chorus:source", "component_live=1" },
+        new[] { "context_live_surround_chorus_listener", "mode=Surround", "music=generator", "gen=burst", "Music:Att", "component=chorus:listener", "component_live=1" },
+        new[] { "context_live_surround_reverb_source", "mode=Surround", "music=generator", "gen=burst", "Music:Att", "component=reverb:source", "component_live=1" },
+        new[] { "context_live_surround_reverb_listener", "mode=Surround", "music=generator", "gen=burst", "Music:Att", "component=reverb:listener", "component_live=1" },
+        new[] { "context_live_51_chorus_source", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att", "component=chorus:source", "component_live=1" },
+        new[] { "context_live_51_chorus_listener", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att", "component=chorus:listener", "component_live=1" },
+        new[] { "context_live_51_reverb_source", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att", "component=reverb:source", "component_live=1" },
+        new[] { "context_live_51_reverb_listener", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att", "component=reverb:listener", "component_live=1" },
+        new[] { "context_live_71_chorus_source", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att", "component=chorus:source", "component_live=1" },
+        new[] { "context_live_71_chorus_listener", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att", "component=chorus:listener", "component_live=1" },
+        new[] { "context_live_71_reverb_source", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att", "component=reverb:source", "component_live=1" },
+        new[] { "context_live_71_reverb_listener", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att", "component=reverb:listener", "component_live=1" },
+        new[] { "context_live_reset_quad_mode7point1_dry", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1" },
+        new[] { "context_live_reset_quad_mode7point1_chorus_source", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source" },
+        new[] { "context_live_reset_quad_mode7point1_reverb_listener", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener" },
+        new[] { "context_live_reset_quad_mode7point1_reverb_mixer", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att,Reverb", "recover=1", "Music.Reverb.Room=-500", "Music.Reverb.Dry Level=-600" },
+        new[] { "context_live_reset_mode7point1_quad_dry", "mode=Mode7point1", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1" },
+        new[] { "context_live_reset_mode7point1_quad_chorus_source", "mode=Mode7point1", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source" },
+        new[] { "context_live_reset_mode7point1_quad_reverb_listener", "mode=Mode7point1", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener" },
+        new[] { "context_live_reset_mode7point1_quad_reverb_mixer", "mode=Mode7point1", "reset_to=Quad", "music=dc:0.25", "Music:Att,Reverb", "recover=1", "Music.Reverb.Room=-500", "Music.Reverb.Dry Level=-600" },
+        new[] { "context_live_reset_surround_mode5point1_dry", "mode=Surround", "reset_to=Mode5point1", "music=dc:0.25", "Music:Att", "recover=1" },
+        new[] { "context_live_reset_surround_mode5point1_chorus_source", "mode=Surround", "reset_to=Mode5point1", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source" },
+        new[] { "context_live_reset_surround_mode5point1_reverb_listener", "mode=Surround", "reset_to=Mode5point1", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener" },
+        new[] { "context_live_reset_surround_mode5point1_reverb_mixer", "mode=Surround", "reset_to=Mode5point1", "music=dc:0.25", "Music:Att,Reverb", "recover=1", "Music.Reverb.Room=-500", "Music.Reverb.Dry Level=-600" },
+        new[] { "context_live_reset_mode5point1_surround_dry", "mode=Mode5point1", "reset_to=Surround", "music=dc:0.25", "Music:Att", "recover=1" },
+        new[] { "context_live_reset_mode5point1_surround_chorus_source", "mode=Mode5point1", "reset_to=Surround", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source" },
+        new[] { "context_live_reset_mode5point1_surround_reverb_listener", "mode=Mode5point1", "reset_to=Surround", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener" },
+        new[] { "context_live_reset_mode5point1_surround_reverb_mixer", "mode=Mode5point1", "reset_to=Surround", "music=dc:0.25", "Music:Att,Reverb", "recover=1", "Music.Reverb.Room=-500", "Music.Reverb.Dry Level=-600" },
+        new[] { "context_live_reset_stereo_quad_idle", "mode=Stereo", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=0" },
+        new[] { "context_live_quad_comp", "mode=Quad", "music=generator", "gen=link", "dominant=2", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=20", "Music.Comp.Release=80", "live:8:Comp_Threshold=-30", "live:5:Comp_Attack=50", "live:11:Comp_Release=30" },
+        new[] { "context_live_quad_duck", "mode=Quad", "music=generator", "gen=link", "dominant=2", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1", "live:8:Duck_Threshold=-30", "live:5:Duck_Attack Time=0.05", "live:11:Duck_Release Time=0.02" },
+        new[] { "context_live_surround_comp", "mode=Surround", "music=generator", "gen=link", "dominant=2", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=20", "Music.Comp.Release=80", "live:8:Comp_Threshold=-30", "live:5:Comp_Attack=50", "live:11:Comp_Release=30" },
+        new[] { "context_live_surround_duck", "mode=Surround", "music=generator", "gen=link", "dominant=2", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1", "live:8:Duck_Threshold=-30", "live:5:Duck_Attack Time=0.05", "live:11:Duck_Release Time=0.02" },
+        new[] { "context_live_51_comp", "mode=Mode5point1", "music=generator", "gen=link", "dominant=2", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=20", "Music.Comp.Release=80", "live:8:Comp_Threshold=-30", "live:5:Comp_Attack=50", "live:11:Comp_Release=30" },
+        new[] { "context_live_51_duck", "mode=Mode5point1", "music=generator", "gen=link", "dominant=2", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1", "live:8:Duck_Threshold=-30", "live:5:Duck_Attack Time=0.05", "live:11:Duck_Release Time=0.02" },
+        new[] { "context_live_71_comp", "mode=Mode7point1", "music=generator", "gen=link", "dominant=2", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=20", "Music.Comp.Release=80", "live:8:Comp_Threshold=-30", "live:5:Comp_Attack=50", "live:11:Comp_Release=30" },
+        new[] { "context_live_71_duck", "mode=Mode7point1", "music=generator", "gen=link", "dominant=2", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1", "live:8:Duck_Threshold=-30", "live:5:Duck_Attack Time=0.05", "live:11:Duck_Release Time=0.02" },
+        new[] { "context_live_stereo_comp_thresholds", "mode=Stereo", "music=generator", "gen=link", "dominant=0", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=20", "Music.Comp.Release=80", "live:5:Comp_Attack=50", "live:8:Comp_Threshold=-30", "live:11:Comp_Release=30", "live:16:Comp_Threshold=-12", "live:21:Comp_Make up gain=6" },
+        new[] { "context_live_reset_quad_mode7point1_dry_scheduled", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1", "scheduled=1" },
+        new[] { "context_live_reset_quad_mode7point1_chorus_source_scheduled", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source", "scheduled=1" },
+        new[] { "context_live_reset_quad_mode7point1_reverb_listener_scheduled", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener", "scheduled=1" },
+        new[] { "context_live_reset_quad_mode7point1_reverb_mixer_scheduled", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att,Reverb", "recover=1", "Music.Reverb.Room=-500", "Music.Reverb.Dry Level=-600", "scheduled=1" },
+        new[] { "context_live_reset_mode7point1_quad_dry_scheduled", "mode=Mode7point1", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1", "scheduled=1" },
+        new[] { "context_live_reset_mode7point1_quad_chorus_source_scheduled", "mode=Mode7point1", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source", "scheduled=1" },
+        new[] { "context_live_reset_mode7point1_quad_reverb_listener_scheduled", "mode=Mode7point1", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener", "scheduled=1" },
+        new[] { "context_live_reset_mode7point1_quad_reverb_mixer_scheduled", "mode=Mode7point1", "reset_to=Quad", "music=dc:0.25", "Music:Att,Reverb", "recover=1", "Music.Reverb.Room=-500", "Music.Reverb.Dry Level=-600", "scheduled=1" },
+        new[] { "context_live_reset_surround_mode5point1_dry_scheduled", "mode=Surround", "reset_to=Mode5point1", "music=dc:0.25", "Music:Att", "recover=1", "scheduled=1" },
+        new[] { "context_live_reset_surround_mode5point1_chorus_source_scheduled", "mode=Surround", "reset_to=Mode5point1", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source", "scheduled=1" },
+        new[] { "context_live_reset_surround_mode5point1_reverb_listener_scheduled", "mode=Surround", "reset_to=Mode5point1", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener", "scheduled=1" },
+        new[] { "context_live_reset_surround_mode5point1_reverb_mixer_scheduled", "mode=Surround", "reset_to=Mode5point1", "music=dc:0.25", "Music:Att,Reverb", "recover=1", "Music.Reverb.Room=-500", "Music.Reverb.Dry Level=-600", "scheduled=1" },
+        new[] { "context_live_reset_mode5point1_surround_dry_scheduled", "mode=Mode5point1", "reset_to=Surround", "music=dc:0.25", "Music:Att", "recover=1", "scheduled=1" },
+        new[] { "context_live_reset_mode5point1_surround_chorus_source_scheduled", "mode=Mode5point1", "reset_to=Surround", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source", "scheduled=1" },
+        new[] { "context_live_reset_mode5point1_surround_reverb_listener_scheduled", "mode=Mode5point1", "reset_to=Surround", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener", "scheduled=1" },
+        new[] { "context_live_reset_mode5point1_surround_reverb_mixer_scheduled", "mode=Mode5point1", "reset_to=Surround", "music=dc:0.25", "Music:Att,Reverb", "recover=1", "Music.Reverb.Room=-500", "Music.Reverb.Dry Level=-600", "scheduled=1" },
+        new[] { "context_live_reset_stereo_quad_idle_scheduled", "mode=Stereo", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=0", "scheduled=1" },
+        new[] { "context_live_reset_stereo_quad_fraction_play_scheduled", "mode=Stereo", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1", "scheduled=1", "schedule_fraction=0.75", "schedule_edit=play" },
+        new[] { "context_live_reset_stereo_quad_fraction_start_scheduled", "mode=Stereo", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1", "scheduled=1", "schedule_fraction=0.75", "schedule_edit=start" },
+        new[] { "context_live_reset_stereo_quad_fraction_end_scheduled", "mode=Stereo", "reset_to=Quad", "music=dc:0.25", "Music:Att", "recover=1", "scheduled=1", "schedule_fraction=0.75", "schedule_edit=end" },
     };
     static int BlockCount, ClipFrames;
     public static string[] Selected()
@@ -444,21 +526,24 @@ public class EffectProbe : MonoBehaviour
                 : actual.speakerMode == AudioSpeakerMode.Mode7point1 ? 8 : 2;
             Time.captureDeltaTime = (float)actualBuffer / actual.sampleRate;
             OutputLayoutProbe layoutProbe = null;
-            if (!Engine && key.StartsWith("context_")) {
+            bool liveContext = key.StartsWith("context_live_");
+            if ((!Engine && key.StartsWith("context_")) || liveContext) {
                 OutputLayoutProbe.Channels = 0;
-                layoutProbe = gameObject.AddComponent<OutputLayoutProbe>();
+                if (!Engine) layoutProbe = gameObject.AddComponent<OutputLayoutProbe>();
                 // A configuration getter may retain the request when the output driver falls back.
                 // Measure the active DSP layout before choosing the capture buffer dimensions.
                 // The listener callback can start a few frames after a reset; this precedes the
                 // case's mixer and source, so the number of warm buffers does not reach the capture.
-                var warm = new NativeArray<float>(actualBuffer * 8, Allocator.Persistent);
-                for (int attempt = 0; attempt < 16 && OutputLayoutProbe.Channels == 0; attempt++) {
-                    yield return null;
+                int warmBlocks = liveContext ? 4 : 16;
+                var warm = new NativeArray<float>(actualBuffer * (liveContext ? outputChannels : 8), Allocator.Persistent);
+                for (int attempt = 0; attempt < warmBlocks && (liveContext || OutputLayoutProbe.Channels == 0); attempt++) {
+                    if (!Engine) yield return null; else FlushEngine();
                     if (!AudioRenderer.Render(warm)) throw new Exception("layout preflight render failed");
                 }
                 warm.Dispose();
-                if (OutputLayoutProbe.Channels == 0) throw new Exception("missing layout callback");
-                outputChannels = OutputLayoutProbe.Channels;
+                if (!Engine && OutputLayoutProbe.Channels == 0) throw new Exception("missing layout callback");
+                if (!Engine) outputChannels = OutputLayoutProbe.Channels;
+                if (liveContext) records.Add("\""+key+".preflight_blocks\":"+warmBlocks);
             }
             if (key.StartsWith("context_") || key.StartsWith("buffer_")) {
                 records.Add("\""+key+".buffer\":"+actualBuffer);
@@ -541,9 +626,11 @@ public class EffectProbe : MonoBehaviour
                 }
             }
             GameObject zoneObject = null;
+            AudioReverbZone liveZone = null;
             if (Option(key, "zone=", "0") == "1") {
                 zoneObject = new GameObject("ProbeZone");
                 var zone = zoneObject.AddComponent<AudioReverbZone>();
+                liveZone = zone;
                 zone.reverbPreset = AudioReverbPreset.Generic;
                 zone.minDistance = 10; zone.maxDistance = 15;
             }
@@ -566,6 +653,12 @@ public class EffectProbe : MonoBehaviour
                 }
             }
             source.Play();
+            if (Option(key, "reset_to=", "") != "") {
+                var resetting = CaptureLayoutReset(key, source, clip, mixer, config, output, records, sinks);
+                while (resetting.MoveNext()) yield return resetting.Current;
+                config = AudioSettings.GetConfiguration();
+                outputChannels = Channels(config.speakerMode);
+            } else {
             var sink = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent); sinks.Add(sink);
             var buffer = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
             var master = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
@@ -580,6 +673,20 @@ public class EffectProbe : MonoBehaviour
                         records.Add("\""+key+".live_set\":"+(ok ? "true" : "false"));
                         if (Engine) FlushEngine();
                     }
+                    if (component && Option(key, "component_live=", "0") == "1") {
+                        if (block == 8 || block == 12) ((Behaviour)component).enabled = block == 12;
+                        if (block == 14) {
+                            if (component is AudioChorusFilter chorus) { chorus.delay = 23; chorus.depth = 0.3f; }
+                            if (component is AudioReverbFilter reverb) { reverb.roomHF = -1800; reverb.dryLevel = -1800; }
+                        }
+                        if ((block == 8 || block == 12 || block == 14) && Engine) FlushEngine();
+                    }
+                    string zoneChange = Option(key, "zone_live=", "");
+                    if (liveZone && (block == 8 || block == 16)) {
+                        if (zoneChange == "enable") liveZone.enabled = block == 16;
+                        if (zoneChange == "preset") liveZone.reverbPreset = block == 8 ? AudioReverbPreset.Cave : AudioReverbPreset.Generic;
+                        if (zoneChange != "" && Engine) FlushEngine();
+                    }
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
@@ -592,14 +699,30 @@ public class EffectProbe : MonoBehaviour
             foreach (string suffix in new[] { "", ".master" })
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*actualBuffer)+",\"channels\":"+outputChannels+"}");
             Save(); buffer.Dispose();
+            }
             OutputLayoutProbe.WriteChannel = -1;
             if (layoutProbe != null) DestroyImmediate(layoutProbe);
             source.Stop(); if (component) DestroyImmediate(component); if (zoneObject) DestroyImmediate(zoneObject); DestroyImmediate(go); if (clip) DestroyImmediate(clip);
             var silence = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
-            for (int drain = 0; drain < 8; drain++) {
-                if (!Engine) yield return null; else FlushEngine();
-                if (!AudioRenderer.Render(silence)) throw new Exception("drain render failed");
+            bool resetTail = Option(key, "reset_to=", "") != "";
+            var drainSink = resetTail ? new NativeArray<float>(silence.Length, Allocator.Persistent) : default;
+            if (resetTail) sinks.Add(drainSink);
+            using (var drainWriter = resetTail ? new BinaryWriter(File.Create(Path.Combine(output, key + ".drain.f32"))) : null)
+            using (var drainMaster = resetTail ? new BinaryWriter(File.Create(Path.Combine(output, key + ".drain.master.f32"))) : null) {
+                for (int drain = 0; drain < 8; drain++) {
+                    if (!Engine) yield return null; else FlushEngine();
+                    if (resetTail) {
+                        var drainGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
+                        if (!(bool)typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags).Invoke(null, new object[] { drainGroup, drainSink, false }))
+                            throw new Exception("drain sink failed");
+                    }
+                    if (!AudioRenderer.Render(silence)) throw new Exception("drain render failed");
+                    if (resetTail) for (int i = 0; i < silence.Length; i++) { drainWriter.Write(silence[i]); drainMaster.Write(drainSink[i]); }
+                }
             }
+            if (resetTail) foreach (string suffix in new[] { "", ".master" })
+                records.Add("\"" + key + ".drain" + suffix + "\":{\"file\":\"" + key + ".drain" + suffix + ".f32\",\"frames\":"
+                    + (8 * actualBuffer) + ",\"channels\":" + outputChannels + "}");
             silence.Dispose();
         }
         AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); Save(); Exit(0);

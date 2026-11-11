@@ -5,7 +5,7 @@ import gzip
 import json
 from pathlib import Path
 import shutil
-from common import FIXTURE, devices, header, samples, surround_cases
+from common import FIXTURE, devices, header, samples, surround_cases, transition_cases
 from verify import verify
 
 p = argparse.ArgumentParser()
@@ -17,8 +17,9 @@ p.add_argument('--repeat', type=Path, required=True, help='Independent capture t
 p.add_argument('--contexts', action='store_true', help='Publish the output layout controls (Reference/.../layouts)')
 p.add_argument('--devices', action='store_true', help='Publish the device controls (Reference/.../devices, metadata only)')
 p.add_argument('--surround', action='store_true', help='Publish the independent surround effects profile')
+p.add_argument('--transitions', action='store_true', help='Publish the independent live surround profile')
 a = p.parse_args()
-selected = surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
+selected = transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
 verify(a.capture, a.release, a.rate, contexts=a.contexts, selected=selected)
 verify(a.repeat, a.release, a.rate, contexts=a.contexts, selected=selected)
 assert header(a.capture) == header(a.repeat), 'independent capture metadata differs'
@@ -29,6 +30,7 @@ target = FIXTURE/'Reference'/('unity-'+a.release)
 if a.contexts: target = target/'layouts'
 if a.devices: target = target/'devices'
 if a.surround: target = target/'surround'
+if a.transitions: target = target/'transitions'
 target = target/('rate-'+str(a.rate))
 if target.exists():
     assert a.extend, 'reference already exists; --extend may only add identical controls'
