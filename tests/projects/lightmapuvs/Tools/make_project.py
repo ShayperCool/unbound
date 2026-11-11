@@ -21,6 +21,10 @@ OptPolygons and OptVertices hold a few of the models and FlatPoly (a point no tr
 generateSecondaryUV off and one mesh optimization flag each: `meshOptimizationFlags` 1 (polygon
 order) and 2 (vertex order).
 
+NoWeld, NoWeldOff and NoWeldRaw hold some of the models, those of Sources/Normals with points at
+one position and two of Sources/Repair with `weldVertices` off: with the default settings, with
+generateSecondaryUV off, and with mesh optimization off as well.
+
 OldOptOff and OldOptOn hold Cylinder, Multi and FlatPoly with metas as Unity 2018 wrote them
 (ModelImporter serializedVersion 23), where mesh optimization is `optimizeMeshForGPU` 0 or 1.
 
@@ -52,7 +56,7 @@ import shutil
 PROBE = Path(__file__).resolve().parents[1]
 DEFAULTS = dict(generateSecondaryUV=1, secondaryUVAngleDistortion=8, secondaryUVAreaDistortion=15.000001,
                 secondaryUVHardAngle=88, secondaryUVMarginMethod=1, secondaryUVMinLightmapResolution=40,
-                secondaryUVMinObjectScale=1, secondaryUVPackMargin=4, meshOptimizationFlags=-1,
+                secondaryUVMinObjectScale=1, secondaryUVPackMargin=4, meshOptimizationFlags=-1, weldVertices=1,
                 normalSmoothAngle=60, normalImportMode=0, normalCalculationMode=4, normalSmoothingSource=0)
 VARIANTS = {
     'Default': {},
@@ -65,6 +69,8 @@ VARIANTS = {
     'RawOff': dict(meshOptimizationFlags=0, generateSecondaryUV=0),
 }
 NORMAL_MODELS = ('Cube', 'Cylinder', 'Grid', 'Ico', 'Multi', 'Organic', 'Pieces', 'Sphere', 'Torus', 'TwoUV')
+UNWELDED_MODELS = ('Cube', 'Cylinder', 'Multi', 'Organic', 'Pieces', 'TwoUV')
+UNWELDED_NORMAL_MODELS = ('Bridge', 'Cross', 'FlatPoly', 'Pinch', 'WeldDiag', 'WeldQuad', 'WeldTri')
 ORDER_MODELS = ('Cylinder', 'Grid', 'Multi', 'Organic', 'Torus', 'TwoUV')
 REPAIR_NORMAL_MODELS = ('FlatQuad', 'FlatTri', 'Pinch', 'WeldQuad')
 RAW = dict(meshOptimizationFlags=0, generateSecondaryUV=0)
@@ -135,7 +141,7 @@ ModelImporter:
     generateSecondaryUV: {generateSecondaryUV}
     useFileUnits: 1
     keepQuads: 0
-    weldVertices: 1
+    weldVertices: {weldVertices}
     bakeAxisConversion: 0
     preserveHierarchy: 0
     skinWeightsMode: 0
@@ -292,6 +298,12 @@ def main():
     ordered = [p for p in models if p.stem in ORDER_MODELS] + [p for p in normal_models if p.stem == 'FlatPoly']
     variants.append(('OptPolygons', dict(meshOptimizationFlags=1, generateSecondaryUV=0), ordered))
     variants.append(('OptVertices', dict(meshOptimizationFlags=2, generateSecondaryUV=0), ordered))
+    unwelded = [p for p in models if p.stem in UNWELDED_MODELS]
+    unwelded += [p for p in normal_models if p.stem in UNWELDED_NORMAL_MODELS]
+    unwelded += [p for p in repair if p.stem in ('Slivers', 'Fin')]
+    variants.append(('NoWeld', dict(weldVertices=0), unwelded))
+    variants.append(('NoWeldOff', dict(weldVertices=0, generateSecondaryUV=0), unwelded))
+    variants.append(('NoWeldRaw', dict(weldVertices=0, generateSecondaryUV=0, meshOptimizationFlags=0), unwelded))
     names = sorted(p for p in (PROBE/'Sources/Names').iterdir() if p.suffix in ('.fbx', '.obj'))
     variants.append(('Names', RAW, names))
     old_models = [p for p in ordered if p.stem in ('Cylinder', 'Multi', 'FlatPoly')]

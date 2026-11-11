@@ -96,6 +96,17 @@ OldOptOff and OldOptOn hold Cylinder, Multi and FlatPoly with metas as Unity 201
 OptPolygons (the polygon order stays, the unused point too); with it on Cylinder and Multi equal
 Off and FlatPoly drops its unused point.
 
+## Without vertex welding
+
+NoWeld, NoWeldOff and NoWeldRaw hold Cube, Cylinder, Multi, Organic, Pieces, TwoUV, the models of
+`Sources/Normals` with points at one position (Bridge, Cross, FlatPoly, Pinch, WeldDiag, WeldQuad,
+WeldTri), Slivers and Fin with `weldVertices` off: unwrapped with the defaults, not unwrapped, and
+not unwrapped with mesh optimization off. The reference shows (Unity 6000.0.71f1) that the
+meshes still get their UV2, a little different from the welded ones where points share a
+position. Unbound gives the unwrap every point as its own and matches 44 of the 45 records by
+index; in NoWeld/Organic two single-triangle charts of equal size are packed in each other's
+places (6 values 0.067 apart, passed to the gate as `--recorded`).
+
 ## Mesh and object names
 
 `Sources/Names` holds hand-written OBJ files of one quad per part with `o` and `g` statements in
