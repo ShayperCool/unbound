@@ -191,7 +191,11 @@ public class AnimCullingProbe : MonoBehaviour
 
     // How outputs bind their sources. sharedPort: two Animators' outputs with one source playable
     // and port (a ScriptPlayable over a clip), the culled Animator's output created after the
-    // always visible one's or, for sharedPortFirst, before it. controllerDirect and
+    // always visible one's or, for sharedPortFirst, before it; with the earlier output's
+    // Animator disabled, its GameObject inactive or no target at all (sharedPortDisabled,
+    // sharedPortInactive, sharedPortNone), with the probed output created first and connected
+    // last (sharedPortLate), and with both outputs on the probed Animator, the later one at half
+    // weight (sharedPortSame). controllerDirect and
     // controllerRoot: an AnimatorControllerPlayable as the output's source, with the Culling
     // controller (pose, events, a transition) and with the RootMotion controller under
     // applyRootMotion. weight/: one clip output at a weight of 0.5 or 0 over the scene's values or
@@ -202,6 +206,9 @@ public class AnimCullingProbe : MonoBehaviour
         foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
         foreach (string shape in new[] { "sharedPort", "sharedPortFirst", "controllerDirect", "controllerRoot" })
             ClockCase(shape, mode, clock);
+        foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
+        foreach (string shape in new[] { "sharedPortDisabled", "sharedPortInactive", "sharedPortNone", "sharedPortLate", "sharedPortSame" })
+            ClockCase(shape, AnimatorCullingMode.AlwaysAnimate, clock);
         foreach (var (name, mode) in modes)
         foreach (float weight in new[] { 0.5f, 0f })
         foreach (bool controller in new[] { false, true })
@@ -611,14 +618,17 @@ public class AnimCullingProbe : MonoBehaviour
         bool first = shape.EndsWith("First", StringComparison.Ordinal);
         if (first) shape = shape.Substring(0, shape.Length - 5);
         var output = first ? AnimationPlayableOutput.Create(g, "Animation", c.animator) : AnimationPlayableOutput.Null;
-        AnimationPlayableOutput OtherOutput()
+        AnimationPlayableOutput OtherOutput(string target = null)
         {
-            // A second Animator that is always on screen and never culled.
+            // A second Animator that is always on screen and never culled; "disabled": its
+            // component is off, "inactive": its GameObject, "none": the output has no target.
             var other = Animated(c.name + "/other", null, AnimatorCullingMode.AlwaysAnimate, Always);
             other.clockNodes = new List<(string, Playable)>();
             other.clockScripts = new List<(string, CullClock)>();
             other.clockOnly = c.clockOnly;
-            return AnimationPlayableOutput.Create(g, "Other", other.animator);
+            if (target == "disabled") other.animator.enabled = false;
+            if (target == "inactive") other.rig.gameObject.SetActive(false);
+            return AnimationPlayableOutput.Create(g, "Other", target == "none" ? null : other.animator);
         }
         switch (shape)
         {
@@ -696,6 +706,37 @@ public class AnimCullingProbe : MonoBehaviour
                 if (first) output.SetSourcePlayable(source);
                 OtherOutput().SetSourcePlayable(source);
                 break;
+            }
+            case "sharedPortDisabled":
+            case "sharedPortInactive":
+            case "sharedPortNone":
+                // The other output is created and connected first; its Animator is disabled, its
+                // GameObject inactive, or it has no target at all.
+                source = Script("S", Clip("C", pose));
+                OtherOutput(shape.Substring("sharedPort".Length).ToLowerInvariant()).SetSourcePlayable(source);
+                break;
+            case "sharedPortLate":
+            {
+                // The probed Animator's output is created first and connected last.
+                source = Script("S", Clip("C", pose));
+                output = AnimationPlayableOutput.Create(g, "Animation", c.animator);
+                OtherOutput().SetSourcePlayable(source);
+                output.SetSourcePlayable(source);
+                g.Play();
+                return;
+            }
+            case "sharedPortSame":
+            {
+                // Two outputs of the probed Animator on one port, the later one at weight 0.5:
+                // if both took part the clip's events would fire twice.
+                source = Script("S", Clip("C", pose));
+                var earlier = AnimationPlayableOutput.Create(g, "Earlier", c.animator);
+                earlier.SetSourcePlayable(source);
+                output = AnimationPlayableOutput.Create(g, "Animation", c.animator);
+                output.SetSourcePlayable(source);
+                output.SetWeight(0.5f);
+                g.Play();
+                return;
             }
             case "doneScript":
             {

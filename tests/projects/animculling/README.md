@@ -473,7 +473,11 @@ Observed (two byte-identical captures, 3,660 records):
 
 `clock/sharedPort` and `clock/sharedPortFirst` give two Animators' outputs one source
 playable and port (a ScriptPlayable over a clip): the probed Animator's output is created
-after the always visible Animator's, or before it. `clock/controllerDirect` and
+after the always visible Animator's, or before it. With AlwaysAnimate only: `sharedPortLate`
+creates the probed output first and connects it last; `sharedPortDisabled`,
+`sharedPortInactive` and `sharedPortNone` connect the other output first with its Animator
+disabled, its GameObject inactive or no target; `sharedPortSame` puts two outputs of the probed
+Animator on the port, the later one at half weight. `clock/controllerDirect` and
 `clock/controllerRoot` make an AnimatorControllerPlayable the output's source, with the
 `Culling` controller and with `RootMotion` under applyRootMotion. All four run in the three
 culling modes with GameTime and Manual graphs. `weight/` is one clip output at a weight of 0.5
@@ -482,22 +486,29 @@ builtin root motion, in the three modes (GameTime).
 
 Measured in the Unity 6000.0.71f1 Editor:
 
-- Of two animation outputs with one source playable and port, only the one created first takes
-  part. The later one's Animator keeps its values, gets no clip event and no root motion, in
-  every culling mode; culled completely it holds nothing, so the clip goes on for the first
+- Of two animation outputs with one source playable and port, only the one connected first
+  takes part. The other one's Animator keeps its values, gets no clip event and no root motion,
+  in every culling mode; culled completely it holds nothing, so the clip goes on for the first
   output's Animator. When the first output's Animator is the culled one, the clip is held and
-  the later output still does nothing. The Scripting API's PlayableOutput pages do not describe
-  two outputs on one port.
+  the other output still does nothing. The order of connection decides, not the order of
+  creation (`sharedPortLate`), and setting an output's source again leaves it its place
+  (`sharedPortFirst` does). The other output stays out even while the first one's Animator is
+  disabled, its GameObject inactive, or the first output has no target; two outputs of one
+  Animator fire the clip's events once. The Scripting API's
+  [PlayableOutputExtensions.SetSourcePlayable](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableOutputExtensions.SetSourcePlayable.html)
+  page does not describe two outputs on one port; this is an observation of this release.
 - A controller playable as the source poses the rig, fires its clips' events, takes its
   transition and moves the root like the clip outputs do under each mode: CullUpdateTransforms
   keeps time, events and root motion and writes no pose; CullCompletely holds its state time.
 - An output's weight blends the pose only. At 0.5 and at 0 the clip's time and its events go
   on as at 1; at 0 the pose and the root stay the scene's or the controller's.
+  [PlayableOutputExtensions.SetWeight](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableOutputExtensions.SetWeight.html)
+  calls it the weight of the connection to the source playable and leaves the rest to the
+  implementation.
 
-Unmeasured: outputs of one Animator on one port, an earlier output without a target or with a
-disabled Animator, outputs connected in another order than they were created in, script
-outputs on the port, the weight a clip event reports under a fractional output weight, and an
-IK pass at weight 0.
+Unmeasured: a first output destroyed or connected elsewhere later, script outputs on the
+port, the weight a clip event reports under a fractional output weight, and an IK pass at
+weight 0.
 
 Implementation: `PlayableKind.AnimatorClock` marks the animation playables;
 `PlayableGraphData.PreparePass` holds the trees below them for culled outputs (the hold
