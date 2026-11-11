@@ -2,9 +2,9 @@ namespace Unbound.Runtime.Humanoid
 {
     /// <summary>
     /// The body and the IK goals of one state's humanoid clips while an Animator Controller
-    /// samples them into a layer's pose. A clip gives both whole: its body (RootT, RootQ) as its
-    /// root motion sample reads it, the identity's components for the rotation curves it lacks
-    /// (<see cref="HumanRootMotion.ReadRoot"/>), so that bodies blend as positions and rotations
+    /// samples them into a layer's pose. A clip gives both whole: its body (RootT, RootQ) with
+    /// the identity's components for the rotation curves it lacks, normalized (as
+    /// <see cref="HumanRootMotion.ReadRoot"/> reads it), so that bodies blend as positions and rotations
     /// and not curve by curve (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
     /// body.*: a clip whose RootQ keys are negated blends as the same rotation, body.negTree and
     /// body.posTree; clips with RootQ.x and y only or RootQ.w only, body.partialTree, body.wTree,
@@ -24,9 +24,9 @@ namespace Unbound.Runtime.Humanoid
     /// hemisphere the clips' sum is in; above one, a goal's position is the clips' plain sum and
     /// its rotation their normalized sum (body.directLowFootIK, body.directHighFootIK, weights of
     /// 0.3 + 0.4 and 0.8 + 0.6; body.directEmptyChild).
-    /// The sampler hands a clip's goal curves over instead of adding them (<see cref="Take"/>)
-    /// and leaves its body curves out; <see cref="AddClip"/> collects the body and places and
-    /// collects the goals, <see cref="EndState"/> adds the state's body and goals to the layer's
+    /// The sampler hands a clip's body and goal curves over instead of adding them
+    /// (<see cref="TakeBody"/>, <see cref="Take"/>), at the time it samples the clip's other
+    /// curves at; <see cref="AddClip"/> collects the body and places and collects the goals, <see cref="EndState"/> adds the state's body and goals to the layer's
     /// pose, every curve of them with the state's weight, so that layers combine their rotations
     /// as rotations.
     /// </summary>
@@ -40,10 +40,12 @@ namespace Unbound.Runtime.Humanoid
         readonly float[] m_Values = new float[Curves];
         readonly AnimationBindings m_Bindings;
         readonly F4[] m_Positions = new F4[Goals], m_Rotations = new F4[Goals];
+        /// <summary>The clip's body curves (RootT, then RootQ) as the sampler read them.</summary>
+        readonly float[] m_BodyValues = new float[Width];
         F4 m_BodyPosition, m_BodyRotation;
         float m_Weight;
         int m_Clips;
-        Trs m_Body, m_Root;
+        Trs m_Body;
 
         internal HumanStateGoals(AnimationBindings bindings) => m_Bindings = bindings;
 
@@ -62,17 +64,21 @@ namespace Unbound.Runtime.Humanoid
             m_BodyPosition = m_BodyRotation = F4.Zero;
         }
 
-        /// <summary>Starts a clip whose body is <paramref name="root"/> in the clip's space and
-        /// <paramref name="body"/> relative to its motion: every goal the identity.</summary>
-        internal void BeginClip(in Trs body, in Trs root)
+        /// <summary>Starts a clip whose body relative to its motion is <paramref name="body"/>:
+        /// its body curves and every goal the identity until the sampler hands their values over.</summary>
+        internal void BeginClip(in Trs body)
         {
             m_Body = body;
-            m_Root = root;
             for (int i = 0; i < Curves; i++) m_Values[i] = i % Width == Width - 1 ? 1f : 0f;
+            for (int i = 0; i < Width; i++) m_BodyValues[i] = i == Width - 1 ? 1f : 0f;
         }
 
         /// <summary>A goal curve's sampled value (<paramref name="slot"/> from <see cref="Slot"/>).</summary>
         internal void Take(int slot, float value) => m_Values[slot] = value;
+
+        /// <summary>A body curve's sampled value (<paramref name="curve"/>: 0 to 2 RootT, 3 to 6
+        /// RootQ), at the time the clip's other curves are sampled at.</summary>
+        internal void TakeBody(int curve, float value) => m_BodyValues[curve] = value;
 
         /// <summary>The clip's body and its goals, placed by its body, join the state's with the
         /// clip's weight; a rotation in the hemisphere of what the state holds already.</summary>
@@ -80,8 +86,9 @@ namespace Unbound.Runtime.Humanoid
         {
             m_Weight += weight;
             m_Clips++;
-            m_BodyPosition = m_BodyPosition + m_Root.t * weight;
-            m_BodyRotation = m_BodyRotation + Aligned(m_BodyRotation, m_Root.q) * weight;
+            var v = m_BodyValues;
+            m_BodyPosition = m_BodyPosition + new F4(v[0], v[1], v[2], 0f) * weight;
+            m_BodyRotation = m_BodyRotation + Aligned(m_BodyRotation, M.QNormalize(new F4(v[3], v[4], v[5], v[6]))) * weight;
             for (int g = 0; g < Goals; g++)
             {
                 int s = g * Width;
@@ -116,8 +123,8 @@ namespace Unbound.Runtime.Humanoid
             Add(pose, mask, b.HumanChannel(curve), t.x, weight);
             Add(pose, mask, b.HumanChannel(curve + 1), t.y, weight);
             Add(pose, mask, b.HumanChannel(curve + 2), t.z, weight);
-            // One clip that fills the state: its unit rotation times its weight, as it is.
-            if (m_Clips != 1 || rest > 0f)
+            // One clip that fills the state exactly: its unit rotation times its weight, as it is.
+            if (m_Clips != 1 || rest != 0f)
             {
                 // The identity as it is, whatever hemisphere the clips' sum is in.
                 if (rest > 0f) q.w += rest;

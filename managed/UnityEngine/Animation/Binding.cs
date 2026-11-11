@@ -462,16 +462,16 @@ namespace Unbound.Runtime
         internal Object[] ObjectDefaults = new Object[4];
         internal PropertyGroup[] FloatOwner = new PropertyGroup[16];
         internal PropertyGroup[] ObjectOwner = new PropertyGroup[4];
-        /// <summary>Whether a channel starts a humanoid rotation (the body's RootQ, unless
-        /// <paramref name="goalsOnly"/>, or an IK goal's) bound as four consecutive curves, which
-        /// humanoid poses blend as a rotation and not curve by curve.</summary>
-        internal bool HumanRotationStart(int c, bool goalsOnly = false)
+        /// <summary>Whether a channel starts a humanoid rotation (the body's RootQ or an IK
+        /// goal's) bound as four consecutive curves, which humanoid poses blend as a rotation and
+        /// not curve by curve.</summary>
+        internal bool HumanRotationStart(int c)
         {
             const int RootQ = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst + 3;
             const int GoalFirst = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst, MuscleFirst = Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst;
             if (c < 0 || c + 3 >= FloatCount || c + 3 >= FloatOwner.Length) return false;
             int curve = FloatOwner[c]?.HumanCurve ?? -1;
-            if ((goalsOnly || curve != RootQ) && (curve < GoalFirst || curve >= MuscleFirst || (curve - GoalFirst) % 7 != 3)) return false;
+            if (curve != RootQ && (curve < GoalFirst || curve >= MuscleFirst || (curve - GoalFirst) % 7 != 3)) return false;
             for (int k = 1; k < 4; k++)
                 if (FloatOwner[c + k]?.HumanCurve != curve + k) return false;
             return true;
@@ -882,13 +882,14 @@ namespace Unbound.Runtime
 
         /// <summary>In <see cref="GoalSlots"/>: a curve that is neither a goal's nor the body's.</summary>
         internal const int NoSlot = -1;
-        /// <summary>In <see cref="GoalSlots"/>: a humanoid body curve (RootT, RootQ).</summary>
+        /// <summary>In <see cref="GoalSlots"/>: the first humanoid body curve (RootT.x); the six
+        /// after it (RootT.y to RootQ.w) count down from it.</summary>
         internal const int BodySlot = -2;
 
         /// <summary>Per curve, the humanoid IK goal curve it writes
         /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals.Slot"/>), <see cref="BodySlot"/>
-        /// for a body curve and <see cref="NoSlot"/> for the others; null when the clip has
-        /// neither goal nor body curves.</summary>
+        /// less the body curve's index for a body curve and <see cref="NoSlot"/> for the others;
+        /// null when the clip has neither goal nor body curves.</summary>
         internal int[] GoalSlots(AnimationBindings bindings)
         {
             if (m_GoalSlotsMade) return m_GoalSlots;
@@ -898,7 +899,8 @@ namespace Unbound.Runtime
                 int ch = Float[i];
                 var owner = ch >= 0 && ch < bindings.FloatOwner.Length ? bindings.FloatOwner[ch] : null;
                 if (owner == null) continue;
-                int slot = owner.HumanBody ? BodySlot : Unbound.Runtime.Humanoid.HumanStateGoals.Slot(owner.HumanCurve);
+                int slot = owner.HumanBody ? BodySlot - (owner.HumanCurve - Unbound.Runtime.Humanoid.HumanClipImport.RootFirst)
+                    : Unbound.Runtime.Humanoid.HumanStateGoals.Slot(owner.HumanCurve);
                 if (slot == NoSlot) continue;
                 if (m_GoalSlots == null)
                 {

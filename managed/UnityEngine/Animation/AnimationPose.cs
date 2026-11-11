@@ -119,9 +119,9 @@ namespace Unbound.Runtime
         /// With a <paramref name="reference"/> pose (additive layers) the values are differences from it:
         /// v - reference, and for rotations reference⁻¹·q.
         /// <paramref name="loopPose"/>: the Animator's sampling, which applies the clip's loop pose.
-        /// With <paramref name="goals"/>, a humanoid clip's IK goal curves go to it instead of the
-        /// pose and its body curves are left out; the caller adds the body and the goals the
-        /// clip's state blends (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>).</summary>
+        /// With <paramref name="goals"/>, a humanoid clip's body and IK goal curves go to it
+        /// instead of the pose; the caller adds the body and the goals the clip's state blends
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>).</summary>
         internal static void Sample(BoundClip bound, float time, float weight, AnimationPose pose, bool[] mask = null, bool[] objectMask = null,
             float[] reference = null, bool loopPose = false, Unbound.Runtime.Humanoid.HumanStateGoals goals = null)
         {
@@ -160,8 +160,8 @@ namespace Unbound.Runtime
                 float value = bound.Clip.LoopPose(i, curve.Evaluate(time), phase);
                 if (goalSlots != null && goalSlots[i] != BoundClip.NoSlot)
                 {
-                    // The state takes the clip's body whole from its root motion sample.
                     if (goalSlots[i] >= 0) goals.Take(goalSlots[i], value);
+                    else goals.TakeBody(BoundClip.BodySlot - goalSlots[i], value);
                     continue;
                 }
                 pose.Value[ch] += weight * (reference != null ? value - reference[ch] : value);
@@ -526,6 +526,16 @@ namespace Unbound.Runtime
             return m < 1e-6f ? new Quaternion(0f, 0f, 0f, 0f) : new Quaternion(x / m, y / m, z / m, w / m);
         }
 
+        /// <summary>Adds a part of a layer's weight to its rotation sum: <paramref name="q"/> in
+        /// the sum's hemisphere, times the part.</summary>
+        static void Complete(ref float x, ref float y, ref float z, ref float qw, ref float w, float part, Quaternion q)
+        {
+            if (part <= 0f) return;
+            float k = x * q.x + y * q.y + z * q.z + qw * q.w < 0f ? -part : part;
+            x += k * q.x; y += k * q.y; z += k * q.z; qw += k * q.w;
+            w += part;
+        }
+
         static void CombineRotation(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, int c, bool overDefaults,
             float[] kept, bool skipAdditive = false)
         {
@@ -557,13 +567,8 @@ namespace Unbound.Runtime
                 // The layer's own rotation: its states' sum completed to full weight, normalized.
                 float x = pose.Value[c], y = pose.Value[c + 1], z = pose.Value[c + 2], qw = pose.Value[c + 3];
                 float fill = w > 0f || keep > 0f ? pose.Fill[c] : 0f;
-                foreach (var (part, q) in new[] { (keep, written ? r : current), (fill, defaults) })
-                {
-                    if (part <= 0f) continue;
-                    float k = x * q.x + y * q.y + z * q.z + qw * q.w < 0f ? -part : part;
-                    x += k * q.x; y += k * q.y; z += k * q.z; qw += k * q.w;
-                    w += part;
-                }
+                Complete(ref x, ref y, ref z, ref qw, ref w, keep, written ? r : current);
+                Complete(ref x, ref y, ref z, ref qw, ref w, fill, defaults);
                 written = true;
                 bool partial = w < 1f;
                 if (partial)

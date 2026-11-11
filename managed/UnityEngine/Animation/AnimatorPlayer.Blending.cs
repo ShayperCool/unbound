@@ -180,7 +180,7 @@ namespace Unbound.Runtime
             var (animated, objects) = MotionMask(tree, mirror);
             for (int c = 0; c < Bindings.FloatCount; c++)
             {
-                if (!animated[c] || (mask != null && !mask[c])) continue;
+                if (!animated[c] || (mask != null && !mask[c]) || StateCompletes(c)) continue;
                 pose.Value[c] += weight * Bindings.Defaults[c];
                 pose.Weight[c] += weight;
             }
@@ -190,6 +190,16 @@ namespace Unbound.Runtime
                 pose.Objects[c] = Bindings.ObjectDefaults[c];
                 pose.ObjectWeight[c] = weight;
             }
+        }
+
+        /// <summary>Whether a channel is a humanoid body or IK goal curve that the state being
+        /// sampled writes itself, whole and completed (HumanStateGoals.EndState): a tree leaves
+        /// those out of what it completes with default values.</summary>
+        bool StateCompletes(int c)
+        {
+            if (m_SamplingGoals == null) return false;
+            var owner = Bindings.FloatOwner[c];
+            return owner.HumanBody || Unbound.Runtime.Humanoid.HumanStateGoals.Slot(owner.HumanCurve) >= 0;
         }
 
         void SampleDirect(LayerRun layer, int layerIndex, StateRun run, BlendTreeMotion tree, bool mirror, double normalized,
@@ -210,9 +220,7 @@ namespace Unbound.Runtime
                 for (int c = 0; c < Bindings.FloatCount; c++)
                 {
                     if (!animated[c] || (mask != null && !mask[c])) continue;
-                    // The body and placed IK goals join the pose with their state, completed there (HumanStateGoals).
-                    if (m_SamplingGoals != null && (Bindings.FloatOwner[c].HumanBody
-                        || Unbound.Runtime.Humanoid.HumanStateGoals.Slot(Bindings.FloatOwner[c].HumanCurve) >= 0)) continue;
+                    if (StateCompletes(c)) continue;
                     // A Direct node's output has its own weight. Its raw scalar sum may exceed one;
                     // a low sum is completed from the bound default, rather than the previous frame
                     // (in an additive layer: with no difference).

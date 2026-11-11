@@ -171,6 +171,27 @@ namespace UnityEngine.Tests
             Near.Equal(1f, Sample("B").GravityWeight);
         }
 
+        /// <summary>The pose's body is read at the time its muscles are, whatever the root motion
+        /// pass steps over: a state playing backwards, and a blend tree child with a cycle offset.
+        /// The clip's body height and one muscle rise alike, so the two tell the same time.
+        /// Control: the time is not the plain state time.</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TheBodyIsReadAtTheTimeTheMusclesAre(bool backwards)
+        {
+            var rising = Clip(1f, F4.QIdentity, more: ("Spine Front-Back+", 0f)).Select(c => c.Item1 == "RootT.y" ? ("RootT.y+", c.Item2) : c).ToArray();
+            string yaml = Fixture.TreeController(false, null, b: rising, c: rising);
+            string changed = backwards ? yaml.Replace("  m_Speed: 1\n", "  m_Speed: -1\n")
+                : yaml.Replace("    m_CycleOffset: 0\n    m_DirectBlendParameter: WB", "    m_CycleOffset: 0.25\n    m_DirectBlendParameter: WB");
+            Assert.NotEqual(yaml, changed);
+            var animator = Play(changed);
+            float spine = animator.Human.Value(s_Spine);
+            // The fixture's curves ease from 0 to 1: at the plain state time of 0.1 they are near 0.
+            Assert.True(spine > 0.1f);
+            Near.Equal(spine, BodyPosition(animator).y - 1f, 1e-4f);
+        }
+
         /// <summary>A state that gives no humanoid pose leaves the body to what the pose's other
         /// values take there (unmeasured in the Editor; as before): in a transition from an empty
         /// state on an override layer, the body moves from the layer below's to the clip's with
@@ -275,6 +296,28 @@ namespace UnityEngine.Tests
             var written = M.QNormalize(new F4(goals.Human.Value(LeftFoot + 3), goals.Human.Value(LeftFoot + 4), goals.Human.Value(LeftFoot + 5),
                 goals.Human.Value(LeftFoot + 6)));
             Assert.True(Fixture.Angle(plain, written) < 0.1f);
+        }
+
+        /// <summary>A Direct blend tree's weights decide its blend, not how many clips carry them:
+        /// one clip at 1.4 gives the body of the same clip twice at 0.7, in a transition too.</summary>
+        [Fact]
+        public void ADirectBlendTreesWeightsDecideNotItsClipCount()
+        {
+            var leaning = Clip(1.2f, Q(90f, 0f));
+            (F4 Position, F4 Rotation) Body(float wb, float wc)
+            {
+                var animator = Fixture.Rig(Fixture.TreeController(true, Clip(1f, F4.QIdentity), wb, wc, leaning, leaning), m_Created);
+                animator.Update(0f);
+                animator.Update(0.25f);
+                animator.Update(0.1f);
+                Assert.True(animator.IsInTransition(0));
+                return (BodyPosition(animator), BodyRotation(animator));
+            }
+            var one = Body(1.4f, 0f);
+            var two = Body(0.7f, 0.7f);
+            Assert.True(Fixture.Angle(F4.QIdentity, two.Rotation) > 5f);
+            Assert.True(Fixture.Angle(one.Rotation, two.Rotation) < 0.1f);
+            Near.Equal(two.Position.y, one.Position.y, 1e-5f);
         }
 
         /// <summary>A Direct blend tree whose humanoid clips are all at weight 0 gives the identity

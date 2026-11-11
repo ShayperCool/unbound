@@ -116,6 +116,41 @@ namespace UnityEngine.Tests
             return root;
         }
 
+        /// <summary>Combining layers' rotations allocates nothing, with states that keep the value
+        /// below and states that restore the default (both complete a layer's rotation).</summary>
+        [Fact]
+        public void CombiningLayerRotationsDoesNotAllocate()
+        {
+            var root = new GameObject("Rotations");
+            try
+            {
+                var bindings = new AnimationBindings(root);
+                int rotation = bindings.BindChannel(CurveBinding.ForType("", "m_LocalRotation.x", typeof(Transform)), false);
+                Assert.True(rotation >= 0);
+                var layers = new LayerPose[2];
+                for (int l = 0; l < layers.Length; l++)
+                {
+                    var pose = new AnimationPose();
+                    pose.Reset(bindings.FloatCount, bindings.ObjectCount);
+                    pose.Value[rotation + 3] = 0.5f;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        pose.Weight[rotation + i] = 0.5f;
+                        pose.Keep[rotation + i] = 0.25f;
+                        pose.Fill[rotation + i] = 0.25f;
+                    }
+                    layers[l] = new LayerPose { AnimationPose = pose, Weight = l == 0 ? 1f : 0.5f };
+                }
+                var values = new float[bindings.FloatCount];
+                for (int i = 0; i < 1000; i++) PoseWriter.CombineLayers(bindings, layers, layers.Length, values, null, overDefaults: true);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 1000; i++) PoseWriter.CombineLayers(bindings, layers, layers.Length, values, null, overDefaults: true);
+                Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+                Near.Equal(1f, MathF.Abs(values[rotation + 3]), 1e-5f);
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
         [Theory]
         [InlineData("controller", AnimatorCullingMode.AlwaysAnimate)]
         [InlineData("controller", AnimatorCullingMode.CullUpdateTransforms)]
