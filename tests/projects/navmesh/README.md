@@ -48,3 +48,25 @@ type, vertices, then the links as `neighbour:edge`) to `<path>.<agent type>.txt`
 `NAVMESH_PROBE_STEER=<frames>` adds each agent's position, velocity, desired velocity, steering
 target and next position in full precision for the first frames (in both engines, for working on
 the agents; the reference does not have them).
+
+Q361 build and movement isolation, Unity 6000.0.71f1:
+
+- `build.sources` matches all 101 values on the starting base, with 193 vertices
+  and 249 indices. This improvement predates Q361.
+- `build.surface` still differs in 13 of 110 values. Both recordings have
+  241 vertices and 321 indices, but 11 triangles on each side differ. A floor
+  contour moves from x = -3.833 to -3.667, and ramp/landing triangles also differ.
+  These are geometric differences, beyond the choice of a polygon's first vertex.
+  The generating rule remains open; no surface correction is inferred from the
+  matching source build.
+- `BuildSurface` restores the committed baked data before creating the agents.
+  Its mesh construction residual therefore does not explain the 238 differing
+  agent-frame scenarios. Movement first exceeds tolerance on frame 40; path
+  status and sampled corner counts agree.
+
+Two new GPU Editor captures are byte-identical to the committed reference.
+The full comparator still reports 239 differing scenarios, down from the
+sheriff-S19 count of 240 because the source-build scenario now matches.
+The existing comparators, raw differences and tolerances are unchanged.
+[BuildNavMeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshBuilder.BuildNavMeshData.html)
+documents sources and local build bounds; it does not specify polygon layout.
