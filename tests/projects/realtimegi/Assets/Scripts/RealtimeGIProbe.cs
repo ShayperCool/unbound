@@ -485,7 +485,8 @@ public class RealtimeGIProbe : MonoBehaviour
         Capture("roombakedenvironment-envdata-update", s);
 
         // The room with four panels whose lightmap UV charts leave holes, which the precompute
-        // packs their loose charts into: as it loads and with the point light moved.
+        // packs their loose charts into, and a plate with realtime lightmap UVs of its own in
+        // Mesh.uv3: as it loads and with the point light moved.
         yield return Load("RoomCharts");
         s = Scene();
         yield return Converge();

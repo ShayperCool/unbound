@@ -409,8 +409,8 @@ equals the Editor's):
 
 ## Realtime lightmap UVs
 
-Renderers draw realtime GI at their own realtime lightmap UVs, which are not the mesh's UV2 scaled
-by `realtimeLightmapScaleOffset`: the precompute repacks each mesh's charts. The Editor keeps the
+Renderers draw realtime GI at their own realtime lightmap UVs, which are not the mesh's lightmap
+UVs scaled by `realtimeLightmapScaleOffset`: the precompute repacks each mesh's charts. The Editor keeps the
 result in its GI cache, not in the project (a player build stores it in
 `MeshRenderer.enlightenVertexStream`); the LightingData asset holds only where each renderer's UV
 space lies in its system and the system's chart mask. Unbound makes them itself
@@ -465,9 +465,9 @@ precomputed chart of its own number. Not measured, and implemented as one consis
 giving a region up changes for the charts placed after it, the order of regions of equal size,
 how many blocks a region that reaches the rows above every chart counts, and up to what region
 size a place for the smallest chart is searched before a region is given up; a difference
-there shows as a failed layout check, not as wrong lighting. (Within a system, other renderers' charts may lie in the blocks a
-renderer's own charts leave free: the check compares only the blocks its charts use.) With
-Preserve UVs off the precompute generates the charts themselves (not supported yet).
+there shows as a failed layout check, not as wrong lighting. (Within a system, other renderers'
+charts may lie in the blocks a renderer's own charts leave free: the check compares only the
+blocks its charts use.) With Preserve UVs off the precompute generates the charts themselves (not supported yet).
 
 ## Engine
 

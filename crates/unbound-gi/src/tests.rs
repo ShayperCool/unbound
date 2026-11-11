@@ -1743,7 +1743,8 @@ fn panel_uvs_from(name: &str, third_channel: bool) -> crate::realtime_uv::Output
 
 #[test]
 fn charts_fill_holes_as_the_precompute_packs_them() {
-    // RoomCharts: the Room with four panels whose charts leave holes.
+    // RoomCharts: the Room with four panels whose charts leave holes and a plate with a third
+    // UV channel.
     let data = scene_data("RoomCharts");
     assert_eq!(data.systems.len(), 1);
     let system = &data.systems[0];
@@ -1874,4 +1875,10 @@ fn charts_fill_holes_as_the_precompute_packs_them() {
         .unwrap_err()
         .to_string();
     assert!(error.contains("did not lay out for it"), "{error}");
+    // A rectangle past every bound (a damaged cache entry) is an error, not a wrapped sum.
+    moved.charts[2].rect = [u32::MAX - 1, 0, 4, 4];
+    let error = crate::realtime_uv::check_layout(system, data.renderer_st[k], &moved)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("in UVs of 12x8 texels"), "{error}");
 }

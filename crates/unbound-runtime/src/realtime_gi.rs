@@ -711,33 +711,50 @@ pub fn realtime_uvs(
         .project_root
         .join("Library/Unbound/RealtimeUVs")
         .join(format!("{}.bin", key.finalize().to_hex()));
-    let cached = read_cached(&path, input.positions.len());
-    let fresh = cached.is_none();
-    let output = match cached {
-        Some(output) => output,
-        None => unbound_gi::realtime_uv::realtime_uvs(input)?,
-    };
-    // A cached layout is checked again (with its charts) against this scene's data.
-    with_scene(handle, |scene| {
-        let solver = scene
-            .systems
-            .get(system)
-            .with_context(|| format!("no system {system}"))?;
-        let st = *scene
-            .renderer_st
-            .get(system)
-            .and_then(|r| r.get(renderer))
-            .with_context(|| format!("no renderer {renderer} in system {system}"))?;
-        unbound_gi::realtime_uv::check_layout(solver.system(), st, &output)
-    })?;
-    // Only a layout that passed the check is cached.
-    if fresh && let Err(e) = write_cached(&path, &output) {
-        tracing::debug!("caching realtime lightmap UVs in {}: {e:#}", path.display());
-    }
+    let output = cached_or_fresh(
+        &path,
+        input.positions.len(),
+        || unbound_gi::realtime_uv::realtime_uvs(input),
+        |output| {
+            with_scene(handle, |scene| {
+                let solver = scene
+                    .systems
+                    .get(system)
+                    .with_context(|| format!("no system {system}"))?;
+                let st = *scene
+                    .renderer_st
+                    .get(system)
+                    .and_then(|r| r.get(renderer))
+                    .with_context(|| format!("no renderer {renderer} in system {system}"))?;
+                unbound_gi::realtime_uv::check_layout(solver.system(), st, output)
+            })
+        },
+    )?;
     for (o, uv) in out.chunks_exact_mut(2).zip(&output.uvs) {
         o.copy_from_slice(uv);
     }
     Ok(())
+}
+
+/// The cache entry at `path` when it passes `check` (a cached layout is checked again, with its
+/// charts, against this scene's data); else a layout made anew, which must pass it and then
+/// replaces the entry: only a layout that passed the check is cached, and a damaged entry does
+/// not outlive its first use.
+fn cached_or_fresh(
+    path: &Path,
+    vertices: usize,
+    make: impl FnOnce() -> Result<unbound_gi::realtime_uv::Output>,
+    check: impl Fn(&unbound_gi::realtime_uv::Output) -> Result<()>,
+) -> Result<unbound_gi::realtime_uv::Output> {
+    if let Some(cached) = read_cached(path, vertices).filter(|output| check(output).is_ok()) {
+        return Ok(cached);
+    }
+    let output = make()?;
+    check(&output)?;
+    if let Err(e) = write_cached(path, &output) {
+        tracing::debug!("caching realtime lightmap UVs in {}: {e:#}", path.display());
+    }
+    Ok(output)
 }
 
 fn bytes_of<T: Copy>(items: &[T]) -> &[u8] {
@@ -1319,6 +1336,25 @@ mod tests {
         let mut wrong = output.clone();
         wrong.charts[0].blocks.pop();
         assert!(write_cached(&dir.join("wrong.bin"), &wrong).is_err());
+        // An entry that passes the check is used as it is, without making a layout.
+        let passes = |o: &unbound_gi::realtime_uv::Output| {
+            ensure!(o.width == 16, "a layout {} texels wide", o.width);
+            Ok(())
+        };
+        let used = cached_or_fresh(&path, 2, || bail!("made anew"), passes).unwrap();
+        assert_eq!(used, output);
+        // One that fails it (a damaged entry) gives way to a layout made anew, which replaces it.
+        let mut damaged = output.clone();
+        damaged.width = 12;
+        write_cached(&path, &damaged).unwrap();
+        let made = cached_or_fresh(&path, 2, || Ok(output.clone()), passes).unwrap();
+        assert_eq!(made, output);
+        assert_eq!(read_cached(&path, 2), Some(output.clone()));
+        // A new layout that fails the check is an error and is not cached.
+        write_cached(&path, &damaged).unwrap();
+        let error = cached_or_fresh(&path, 2, || Ok(damaged.clone()), passes).unwrap_err();
+        assert!(error.to_string().contains("12 texels wide"), "{error}");
+        assert_eq!(read_cached(&path, 2), Some(damaged));
         // Another vertex count or a truncated entry is not used.
         assert_eq!(read_cached(&path, 3), None);
         let bytes = std::fs::read(&path).unwrap();
