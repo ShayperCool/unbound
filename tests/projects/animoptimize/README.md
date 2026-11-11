@@ -35,8 +35,11 @@ three evaluations of a manual graph without the controller. On `Rig` also: the j
 `Resolve` (`jobResolve`), `Animator.ResolveAllStreamHandles` before the first evaluation
 (`jobResolveAll`) or between the first two of a job that reads nothing (`jobIdleResolveAll`,
 beside `jobIdle`), a custom stream property's handle read or not (`jobProp`, `jobIdle`), a
-handle bound before the hierarchy is optimized with the hand exposed (`jobEarly`) and the
-handle of an exposed top node (`jobTop`). Every log message is recorded in order.
+handle bound before the hierarchy is optimized with the hand exposed (`jobEarly`), the
+handle of an exposed top node (`jobTop`), the hierarchy optimized between the first two
+evaluations of a job that read the handle (`jobReoptimize`) and the hand destroyed there
+(`jobDestroyed`, the job reading the stream handle only while it is unresolved). Every log
+message is recorded in order.
 
 The assets are committed. To make them again, regenerate the rig and let a disposable Editor
 copy write the `.meta` files and controllers back (the humanoid controls use `tests/projects/humanoid`'s `HumanA.fbx`, which every project copy takes from there):
@@ -85,8 +88,17 @@ What the Editor does (measured):
   [TransformStreamHandle.Resolve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.Resolve.html)
   says handles are lazily resolved as they are accessed). A job's `Resolve` resolves it; one
   the job never reads stays unresolved, and `Animator.ResolveAllStreamHandles` before or
-  between the evaluations of the manual graph does not change that. A custom stream
-  property's handle is resolved at its first read in the same way.
+  between the evaluations of the manual graph does not change that (its
+  [page](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimatorJobExtensions.ResolveAllStreamHandles.html)
+  says "you can manually resolve all handles from the main thread"; `IsResolved` does not
+  show it in this capture). A custom stream property's handle is resolved at its first read
+  in the same way.
+- [TransformStreamHandle.IsResolved](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.IsResolved.html)
+  says a handle "can become unresolved if the animator bindings have changed or if the
+  transform had been destroyed". Optimizing the hierarchy after the job read the handle
+  leaves it unresolved until the next access (`jobReoptimize`), and its scene handle then
+  reads the exposed hand. After the hand is destroyed the stream handle stays valid and
+  resolved and the scene handle is invalid (`jobDestroyed`).
 - An exposed transform bound with `Animator.BindStreamTransform` no longer follows its skeleton
   node: the stream holds the pose it was bound at, the job reads that and its writes land on
   the transform. With only a scene handle, or none, the exposed transform follows the node.
@@ -96,6 +108,8 @@ What the Editor does (measured):
   (its path is the node's) turns the skeleton below it, and the exposed transforms follow.
 
 Not recorded (an exploratory capture; docs/COMPATIBILITY_GAPS.md says how the engine differs):
+a job that goes on reading the stream handle of the destroyed hand gets the stream's values of
+its path in the Editor, local and world. Also
 the same job on the humanoid models. On the unoptimized humanoid the stream handle reads the
 bone of the stream's human pose and the job's write stays in the final pose; on the optimized
 one without a controller the Editor logs two messages per evaluation and plays nothing.

@@ -298,10 +298,11 @@ namespace UnityEngine.Tests
         {
             public TransformStreamHandle Hand;
             public PropertyStreamHandle Property;
+            public TransformSceneHandle Scene;
             /// <summary>Write: the job turns the handle's transform; Idle: it reads nothing of
             /// it; Resolve: it resolves the handle; ReadProperty: it reads the property.</summary>
             public bool Write, Idle, Resolve, ReadProperty;
-            public static bool Valid, ResolvedBefore, ResolvedAfter, PropertyBefore, PropertyAfter;
+            public static bool Valid, SceneValid, ResolvedBefore, ResolvedAfter, PropertyBefore, PropertyAfter;
             public static Vector3 Read, World;
 
             public void ProcessRootMotion(AnimationStream stream) { }
@@ -309,6 +310,7 @@ namespace UnityEngine.Tests
             public void ProcessAnimation(AnimationStream stream)
             {
                 Valid = Hand.IsValid(stream);
+                SceneValid = Scene.IsValid(stream);
                 if (!Valid) return;
                 ResolvedBefore = Hand.IsResolved(stream);
                 bool property = Property.IsValid(stream);
@@ -415,6 +417,80 @@ namespace UnityEngine.Tests
                 Assert.Equal(read, HandJob.PropertyAfter);
                 graph.Evaluate(0.5f);
                 Assert.Equal(read, HandJob.PropertyBefore);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>A handle is unresolved again once the Animator's bindings change (Scripting
+        /// API, TransformStreamHandle.IsResolved: a handle "can become unresolved if the animator
+        /// bindings have changed or if the transform had been destroyed"; PropertyStreamHandle
+        /// .IsResolved says the same of a property's): optimizing the hierarchy after the job
+        /// read the handle leaves IsResolved false until the next access (6000.0.71f1,
+        /// tests/projects/animoptimize jobReoptimize.Rig; the property's handle and the
+        /// deoptimization are unmeasured). Control: without a change both stay resolved.</summary>
+        [Fact]
+        public void AHandleIsUnresolvedAgainWhenTheHierarchyChanges()
+        {
+            var root = Rig(out var animator, out _);
+            var job = new HandJob
+            {
+                Hand = animator.BindStreamTransform(root.transform.Find("Rig/Hips/Spine/Hand")),
+                Property = animator.BindCustomStreamProperty("value", CustomStreamPropertyType.Float),
+                ReadProperty = true,
+            };
+            var graph = PlayJob(animator, Clip(), job);
+            try
+            {
+                graph.Evaluate(0f);
+                graph.Evaluate(0.1f);
+                Assert.True(HandJob.ResolvedBefore);
+                Assert.True(HandJob.PropertyBefore);
+                AnimatorUtility.OptimizeTransformHierarchy(root, new[] { "Rig/Hips/Spine/Hand" });
+                graph.Evaluate(0.1f);
+                Assert.False(HandJob.ResolvedBefore);
+                Assert.True(HandJob.ResolvedAfter);
+                Assert.False(HandJob.PropertyBefore);
+                Assert.True(HandJob.PropertyAfter);
+                graph.Evaluate(0.1f);
+                Assert.True(HandJob.ResolvedBefore);
+                AnimatorUtility.DeoptimizeTransformHierarchy(root);
+                graph.Evaluate(0.1f);
+                Assert.False(HandJob.ResolvedBefore);
+                Assert.True(HandJob.ResolvedAfter);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>Destroying a handle's transform makes its scene handle invalid; the stream
+        /// handle stays valid and resolved (6000.0.71f1, tests/projects/animoptimize
+        /// jobDestroyed.Rig: the Scripting API says a stream handle can become unresolved if the
+        /// transform had been destroyed, the Editor's stays resolved there). Control: the scene
+        /// handle is valid before.</summary>
+        [Fact]
+        public void ADestroyedTransformsSceneHandleIsInvalidAndItsStreamHandleStaysResolved()
+        {
+            var root = Rig(out var animator, out _);
+            var hand = root.transform.Find("Rig/Hips/Spine/Hand");
+            var job = new HandJob { Hand = animator.BindStreamTransform(hand), Scene = animator.BindSceneTransform(hand) };
+            var graph = PlayJob(animator, Clip(), job);
+            try
+            {
+                graph.Evaluate(0f);
+                Assert.True(HandJob.SceneValid);
+                Assert.True(HandJob.ResolvedAfter);
+                Object.DestroyImmediate(hand.gameObject);
+                graph.Evaluate(0.5f);
+                Assert.True(HandJob.Valid);
+                Assert.True(HandJob.ResolvedBefore);
+                Assert.False(HandJob.SceneValid);
             }
             finally
             {
