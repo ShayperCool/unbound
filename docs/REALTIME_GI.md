@@ -140,33 +140,38 @@ the delegate gives no indirect light, or none at all (`InitNoBake`), adds nothin
 with the Editor under the Universal Render Pipeline (tests/projects/realtimegi `run.py
 --pipeline urp`, its own reference set `Reference/unity-<version>/urp`: the Room with a point
 light moved, brighter, of a shorter range and with bounce intensity 3, the spot light with its
-own and a narrow inner angle, a directional light, an ambient color, and a skybox at ambient
-intensities 1 and 2; lightmaps, light probes and `RenderSettings.ambientProbe`, no frames):
+own and a narrow inner angle, a directional light, the point light close to the floor, an
+ambient color, and a skybox at ambient intensities 1 and 2; lightmaps, light probes and
+`RenderSettings.ambientProbe`, no frames):
 
 - **Distance falloff**: the table of step 1 above holds the light's own falloff: the
-  inverse-squared one is `(1 - x^4)^2 / max(distance^2, 1e-4)` over x = distance / range at the
+  inverse-squared one is `(1 - x^4)^2 / distance^2` over x = distance / range at the
   13 sampled positions (so it depends on the range) and 0 from the range on
   (`pipeline-range`: a range the far walls are beyond). At the light itself the table ends at 1,
   below its innermost sample (196 / range^2 at a fourteenth of the range), so a point nearer
-  than that gets less light than the curve gives: Unbound's table as for the legacy falloff,
-  not captured (no surface of the probe's room is that near a light).
-  `InverseSquaredNoRangeAttenuation` has no window (implemented from the same rule, not
-  captured); `Linear` and `Undefined` fail the scene's realtime GI loudly.
+  than that gets less light than the curve gives (`pipeline-near`: the light a fifth of a unit
+  above the floor, range 10). `InverseSquaredNoRangeAttenuation`, `Linear` and `Undefined`
+  are not measured and fail the scene's realtime GI loudly.
 - **Spot lights**: the cone of step 1 with the inner angle the delegate gives
-  (`pipeline-spot`, `pipeline-spot-inner`); the built-in pipeline's inner angle is the one
-  `LightmapperUtils.ExtractInnerCone` computes.
+  (`pipeline-spot` and `pipeline-spot-inner`, the bright spot light alone with inner angles
+  21.8 and 5: 139 of their 5070 values differ by more than the comparator's tolerance); the
+  built-in pipeline's inner angle is the one `LightmapperUtils.ExtractInnerCone` computes.
+- **Colors**: `LightmapperUtils` applies a light's color temperature, with linear light
+  intensity, to the components of the converted colors (not captured: the probe's lights use
+  none).
 - **Environment**: as in the built-in pipeline, the skybox included (`pipeline-sky`,
   `pipeline-sky-intensity`): the sky is drawn into the faces, and into the ambient probe, by
   the engine itself and not by the pipeline's camera (`RenderSettings.ambientProbe` after
   `DynamicGI.UpdateEnvironment` equals the built-in pipeline's).
 
-With these the engine's lightmaps differ from the Editor's by 0.001 on average in the light
-cases (one value of one case outside the comparator's tolerance) and 0.0007 to 0.0035 in the
-sky cases, and no light probe or ambient probe value is outside it. Not measured: other
+With these the engine's lightmaps differ from the Editor's by 0.0003 to 0.0016 on average in
+the light cases (one value of one case outside the comparator's tolerance) and 0.0007 to 0.0035
+in the sky cases, and no light probe or ambient probe value is outside it. Not measured: other
 pipelines' delegates (the High Definition Render Pipeline's), the other falloff types, area
-lights (baked only in the Universal Render Pipeline), directional lightmaps and several systems
-under a pipeline, and a delegate a script registers in the built-in pipeline (Unbound takes its
-lights the same way).
+lights (baked only in the Universal Render Pipeline; a light the delegate gives as one adds
+nothing, with a warning), directional lightmaps and several systems under a pipeline, and a
+delegate a script registers in the built-in pipeline (Unbound takes its lights the same way). A
+delegate that throws leaves the frame without lights, with a warning.
 
 ## Directionality
 
