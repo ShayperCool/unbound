@@ -325,7 +325,10 @@ namespace Unbound.UIElements
                 case StylePropertyId.WhiteSpace: whiteSpace = i.whiteSpace; break;
                 case StylePropertyId.Width: width = i.width; break;
                 case StylePropertyId.WordSpacing: wordSpacing = i.wordSpacing; break;
-                default: if (ReferenceEquals(i, Initial)) ApplyShorthandInitial(id); break;
+                default:
+                    if (!ReferenceEquals(i, Initial)) throw new ArgumentException("Only a longhand property is copied from another style: " + id);
+                    ApplyShorthandInitial(id);
+                    break;
             }
         }
 

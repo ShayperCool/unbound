@@ -175,6 +175,8 @@ namespace UnityEngine.Tests
             Assert.Equal(1f, e.resolvedStyle.opacity);
             e.style.color = StyleKeyword.Null;
             Assert.Equal(1f, e.resolvedStyle.opacity);
+            // The unset property itself is read from the rules as they match now (our choice).
+            Assert.Equal(Color.green, e.resolvedStyle.color);
             Update(panel);
             Assert.Equal(0.4f, e.resolvedStyle.opacity);
             Assert.Equal(Color.green, e.resolvedStyle.color);
