@@ -19,6 +19,10 @@ using UnityEngine.Rendering;
 /// <item><c>RoomBakedEnvironment</c>: as <c>Room</c> with baked global illumination on too and
 /// the environment lighting baked (<c>-executeMethod RealtimeGISetup.CreateBakedEnvironment</c>
 /// adds it alone).</item>
+/// <item><c>RoomCharts</c>: as <c>Room</c> with four flat panels whose lightmap UV charts leave
+/// holes: a ring whose hole holds its two loose plates, the same ring with a third plate, a plate
+/// with two holes of different sizes, and an arch (<c>-executeMethod
+/// RealtimeGISetup.CreateCharts</c> adds it alone).</item>
 /// </list>
 /// </summary>
 public static class RealtimeGISetup
@@ -65,6 +69,25 @@ public static class RealtimeGISetup
             CreateRoom("RoomBakedEnvironment", LightmapsMode.NonDirectional, 1f, 1f, bakedEnvironment: true);
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             scenes.Insert(4, new EditorBuildSettingsScene($"{Scenes}/RoomBakedEnvironment.unity", true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
+    /// <summary>Adds the <c>RoomCharts</c> scene alone: the room with the chart panels.</summary>
+    public static void CreateCharts()
+    {
+        try
+        {
+            CreateRoom("RoomCharts", LightmapsMode.NonDirectional, 1f, 1f, charts: true);
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            scenes.Add(new EditorBuildSettingsScene($"{Scenes}/RoomCharts.unity", true));
             EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets();
             EditorApplication.Exit(0);
@@ -124,7 +147,84 @@ public static class RealtimeGISetup
         return renderer;
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false)
+    /// <summary>The span of a panel's plane that its lightmap UVs map to 0..1, in metres.</summary>
+    const float PanelUVSpan = 8f;
+
+    /// <summary>
+    /// A flat panel in its local XY plane, facing -z: the solid cells (<c>#</c>) of a grid over
+    /// <paramref name="xs"/> x <paramref name="ys"/> (metres; <paramref name="rows"/> from the top
+    /// one down), which share their corners and so make one lightmap UV chart, and loose plates
+    /// (x, y, width, height), each a chart of its own. UVs are the positions over
+    /// <see cref="PanelUVSpan"/>.
+    /// </summary>
+    static Renderer Panel(string scene, string name, Vector3 position, Vector3 euler, Material material,
+        float[] xs, float[] ys, string[] rows, Rect[] plates)
+    {
+        var vertices = new List<Vector3>();
+        var triangles = new List<int>();
+        var cornerOf = new Dictionary<(int, int), int>();
+        int Vertex(float x, float y)
+        {
+            vertices.Add(new Vector3(x, y, 0f));
+            return vertices.Count - 1;
+        }
+        int Corner(int c, int r)
+        {
+            if (!cornerOf.TryGetValue((c, r), out var index))
+                cornerOf[(c, r)] = index = Vertex(xs[c], ys[r]);
+            return index;
+        }
+        void Quad(int a, int b, int c, int d)
+        {
+            triangles.AddRange(new[] { a, c, b, a, d, c });
+        }
+        for (var r = 0; r < rows.Length; r++)
+        {
+            var row = rows[rows.Length - 1 - r];
+            for (var c = 0; c < row.Length; c++)
+                if (row[c] == '#')
+                {
+                    // In this order: each corner is made when first met.
+                    var a = Corner(c, r);
+                    var b = Corner(c + 1, r);
+                    var d = Corner(c + 1, r + 1);
+                    var e = Corner(c, r + 1);
+                    Quad(a, b, d, e);
+                }
+        }
+        foreach (var plate in plates)
+        {
+            var a = Vertex(plate.xMin, plate.yMin);
+            var b = Vertex(plate.xMax, plate.yMin);
+            var d = Vertex(plate.xMax, plate.yMax);
+            var e = Vertex(plate.xMin, plate.yMax);
+            Quad(a, b, d, e);
+        }
+        var uvs = vertices.ConvertAll(v => new Vector2(v.x / PanelUVSpan, v.y / PanelUVSpan));
+        var mesh = new Mesh { name = name };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(vertices.ConvertAll(_ => Vector3.back));
+        mesh.SetUVs(0, uvs);
+        mesh.SetUVs(1, uvs);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        AssetDatabase.CreateAsset(mesh, $"{Scenes}/{scene}{name}.asset");
+
+        var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+        go.transform.position = position;
+        go.transform.rotation = Quaternion.Euler(euler);
+        go.GetComponent<MeshFilter>().sharedMesh = mesh;
+        var renderer = go.GetComponent<MeshRenderer>();
+        renderer.sharedMaterial = material;
+        renderer.receiveGI = ReceiveGI.Lightmaps;
+        GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.ContributeGI);
+        var so = new SerializedObject(renderer);
+        so.FindProperty("m_PreserveUVs").boolValue = true;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        return renderer;
+    }
+
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -155,6 +255,28 @@ public static class RealtimeGISetup
             Static(PrimitiveType.Cube, "Block", new Vector3(0.8f, 0.75f, 0.8f), new Vector3(1.2f, 1.5f, 1.2f), white),
             Static(PrimitiveType.Cube, "Panel", new Vector3(-1.2f, 0.6f, 1.6f), new Vector3(1f, 1.2f, 0.1f), emissive),
         };
+
+        if (charts)
+        {
+            var ringXs = new[] { 0f, 0.3f, 4.7f, 5f };
+            var ringYs = new[] { 0f, 0.3f, 3.1f, 3.4f };
+            var ring = new[] { "###", "#.#", "###" };
+            // On the back wall: a ring whose hole takes two plates exactly.
+            lit.Add(Panel(name, "Ring", new Vector3(-2.5f, 0.3f, 2.95f), Vector3.zero, white, ringXs, ringYs, ring,
+                new[] { new Rect(0.6f, 1.1f, 1.2f, 1.2f), new Rect(3.2f, 1.1f, 1.2f, 1.2f) }));
+            // On the right wall: the same ring with a third plate.
+            lit.Add(Panel(name, "RingGrown", new Vector3(2.95f, 0.3f, 2.5f), new Vector3(0f, 90f, 0f), white, ringXs, ringYs, ring,
+                new[] { new Rect(0.6f, 1.1f, 1.2f, 1.2f), new Rect(1.9f, 1.1f, 1.2f, 1.2f), new Rect(3.2f, 1.1f, 1.2f, 1.2f) }));
+            // Under the ceiling: two holes, the larger one first from the bottom left.
+            lit.Add(Panel(name, "Holes", new Vector3(-2.8f, 3.95f, 2.2f), new Vector3(-90f, 0f, 0f), white,
+                new[] { 0f, 0.3f, 2.65f, 2.95f, 5.3f, 5.6f }, new[] { 0f, 0.3f, 3.2f, 4.1f, 4.4f },
+                new[] { "#####", "#.###", "#.#.#", "#####" },
+                new[] { new Rect(0.9f, 1f, 1.2f, 1.2f), new Rect(3.5f, 1f, 1.2f, 1.2f) }));
+            // On the left wall: an arch, its pocket open downwards.
+            lit.Add(Panel(name, "Arch", new Vector3(-2.95f, 0.8f, -1.7f), new Vector3(0f, -90f, 0f), white,
+                new[] { 0f, 0.3f, 3.1f, 3.4f }, new[] { 0f, 2.1f, 2.4f }, new[] { "###", "#.#" },
+                new[] { new Rect(1.1f, 0.4f, 1.2f, 1.2f) }));
+        }
 
         if (twoSystems)
         {

@@ -483,6 +483,16 @@ public class RealtimeGIProbe : MonoBehaviour
         DynamicGI.UpdateEnvironment();
         yield return Converge();
         Capture("roombakedenvironment-envdata-update", s);
+
+        // The room with four panels whose lightmap UV charts leave holes, which the precompute
+        // packs their loose charts into: as it loads and with the point light moved.
+        yield return Load("RoomCharts");
+        s = Scene();
+        yield return Converge();
+        Capture("roomcharts-base", s);
+        s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+        yield return Converge();
+        Capture("roomcharts-moved", s);
         Finish();
     }
 

@@ -1109,7 +1109,7 @@ fn realtime_uvs_match_the_precomputed_layout() {
         // inside the chart).
         assert_eq!(out.charts.len(), 6);
         for (c, tri) in CUBE_TRIANGLES.chunks(2).enumerate() {
-            let rect = out.charts[c];
+            let rect = out.charts[c].rect;
             for &v in tri.iter().flatten() {
                 let uv = out.uvs[v as usize];
                 let p = [uv[0] * out.width as f32, uv[1] * out.height as f32];
@@ -1616,4 +1616,204 @@ fn a_directional_scene_solves_the_editors_directionality() {
     );
     room.solver.set_directional(false).unwrap();
     assert!(room.solver.directionality().is_none());
+}
+
+/// The span of a chart panel's plane that its lightmap UVs map to 0..1, in metres.
+const PANEL_UV_SPAN: f32 = 8.0;
+
+/// A flat panel of tests/projects/realtimegi's RoomCharts scene (RealtimeGISetup.Panel): the
+/// solid cells (`#`) of a grid over `xs` x `ys` (metres; `rows` from the top one down), which
+/// share their corners and so make one chart, and loose plates (x, y, width, height), each a
+/// chart of its own. Lightmap UVs are the positions over `PANEL_UV_SPAN`.
+fn panel(
+    xs: &[f32],
+    ys: &[f32],
+    rows: &[&str],
+    plates: &[[f32; 4]],
+) -> (Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<[u32; 3]>) {
+    let (mut positions, mut uvs, mut triangles) = (Vec::new(), Vec::new(), Vec::new());
+    let mut corner_of = std::collections::HashMap::new();
+    let vertex = |positions: &mut Vec<[f32; 3]>, uvs: &mut Vec<[f32; 2]>, x: f32, y: f32| {
+        positions.push([x, y, 0.0]);
+        uvs.push([x / PANEL_UV_SPAN, y / PANEL_UV_SPAN]);
+        positions.len() as u32 - 1
+    };
+    for (r, row) in rows.iter().rev().enumerate() {
+        for (c, cell) in row.chars().enumerate() {
+            if cell != '#' {
+                continue;
+            }
+            let corners = [(c, r), (c + 1, r), (c + 1, r + 1), (c, r + 1)].map(|key| {
+                *corner_of
+                    .entry(key)
+                    .or_insert_with(|| vertex(&mut positions, &mut uvs, xs[key.0], ys[key.1]))
+            });
+            triangles.push([corners[0], corners[2], corners[1]]);
+            triangles.push([corners[0], corners[3], corners[2]]);
+        }
+    }
+    for &[x, y, w, h] in plates {
+        let corners = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
+            .map(|(px, py)| vertex(&mut positions, &mut uvs, px, py));
+        triangles.push([corners[0], corners[2], corners[1]]);
+        triangles.push([corners[0], corners[3], corners[2]]);
+    }
+    (positions, uvs, triangles)
+}
+
+/// The RoomCharts scene's panels by renderer name: grid columns, rows, cells and plates.
+#[allow(clippy::type_complexity)]
+const PANELS: [(&str, &[f32], &[f32], &[&str], &[[f32; 4]]); 4] = [
+    // A ring whose hole takes two plates exactly.
+    (
+        "Ring",
+        &[0.0, 0.3, 4.7, 5.0],
+        &[0.0, 0.3, 3.1, 3.4],
+        &["###", "#.#", "###"],
+        &[[0.6, 1.1, 1.2, 1.2], [3.2, 1.1, 1.2, 1.2]],
+    ),
+    // The same ring with a third plate, which no hole holds once two are in.
+    (
+        "RingGrown",
+        &[0.0, 0.3, 4.7, 5.0],
+        &[0.0, 0.3, 3.1, 3.4],
+        &["###", "#.#", "###"],
+        &[
+            [0.6, 1.1, 1.2, 1.2],
+            [1.9, 1.1, 1.2, 1.2],
+            [3.2, 1.1, 1.2, 1.2],
+        ],
+    ),
+    // Two holes, the larger one first from the bottom left.
+    (
+        "Holes",
+        &[0.0, 0.3, 2.65, 2.95, 5.3, 5.6],
+        &[0.0, 0.3, 3.2, 4.1, 4.4],
+        &["#####", "#.###", "#.#.#", "#####"],
+        &[[0.9, 1.0, 1.2, 1.2], [3.5, 1.0, 1.2, 1.2]],
+    ),
+    // An arch: its pocket opens downwards.
+    (
+        "Arch",
+        &[0.0, 0.3, 3.1, 3.4],
+        &[0.0, 2.1, 2.4],
+        &["###", "#.#"],
+        &[[1.1, 0.4, 1.2, 1.2]],
+    ),
+];
+
+/// The realtime lightmap UVs of a panel of the RoomCharts scene.
+fn panel_uvs(name: &str) -> crate::realtime_uv::Output {
+    let &(_, xs, ys, rows, plates) = PANELS.iter().find(|p| p.0 == name).unwrap();
+    let (positions, uvs, triangles) = panel(xs, ys, rows, plates);
+    crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
+        positions: &positions,
+        uvs: &uvs,
+        triangles: &triangles,
+        pixel_size: 0.5,
+        min_chart_texels: 4,
+    })
+    .unwrap()
+}
+
+#[test]
+fn charts_fill_holes_as_the_precompute_packs_them() {
+    // RoomCharts: the Room with four panels whose charts leave holes.
+    let data = scene_data("RoomCharts");
+    assert_eq!(data.systems.len(), 1);
+    let system = &data.systems[0];
+    let names = renderer_names("RoomCharts");
+    let mut panels = 0;
+    for (k, &(object, _)) in data.renderers.iter().enumerate() {
+        let name = names[&object].as_str();
+        let is_panel = PANELS.iter().any(|p| p.0 == name);
+        let out = match name {
+            "Floor" | "Ceiling" => cube_uvs([6.0, 0.2, 6.0], 0.5),
+            "Back" => cube_uvs([6.0, 4.0, 0.2], 0.5),
+            "Left" | "Right" => cube_uvs([0.2, 4.0, 6.0], 0.5),
+            "Block" => cube_uvs([1.2, 1.5, 1.2], 0.5),
+            "Panel" => cube_uvs([1.0, 1.2, 0.1], 0.5),
+            _ => panel_uvs(name),
+        };
+        let st = data.renderer_st[k];
+        crate::realtime_uv::check_layout(system, st, &out)
+            .unwrap_or_else(|e| panic!("{name}: {e:#}"));
+        if !is_panel {
+            continue;
+        }
+        panels += 1;
+        // In this scene's panels, the blocks no chart uses are no chart's in the precomputed
+        // mask either: a hole that took no chart stays empty. (Not a rule of the check: the
+        // system's packing puts other instances' charts into such blocks, as in the ceiling's.)
+        let sw = system.transport.width;
+        let origin =
+            [st[2] * sw as f32, st[3] * system.transport.height as f32].map(|v| v.round() as u32);
+        for y in 0..out.height {
+            for x in 0..out.width {
+                let used = out.charts.iter().any(|chart| {
+                    let [left, bottom, width, height] = chart.rect;
+                    x >= left
+                        && x < left + width
+                        && y >= bottom
+                        && y < bottom + height
+                        && chart.blocks[((y - bottom) / 2 * (width / 2) + (x - left) / 2) as usize]
+                });
+                let found = system.chart_mask[((origin[1] + y) * sw + origin[0] + x) as usize];
+                assert_eq!(
+                    used,
+                    found != crate::data::NO_CHART,
+                    "{name}: texel ({x}, {y})"
+                );
+            }
+        }
+    }
+    assert_eq!(panels, PANELS.len());
+    let rects = |name: &str| {
+        let out = panel_uvs(name);
+        let rects: Vec<[u32; 4]> = out.charts.iter().map(|c| c.rect).collect();
+        (out.width, out.height, rects)
+    };
+    // The ring's two plates lie in its hole, side by side.
+    assert_eq!(
+        rects("Ring"),
+        (12, 8, vec![[0, 0, 12, 8], [2, 2, 4, 4], [6, 2, 4, 4]])
+    );
+    // With a third plate the hole cannot take them all: the UV space grows, and in the larger
+    // one all three lie on top of the ring, where the skylines put them; the hole stays empty.
+    assert_eq!(
+        rects("RingGrown"),
+        (
+            12,
+            12,
+            vec![[0, 0, 12, 8], [0, 8, 4, 4], [4, 8, 4, 4], [8, 8, 4, 4]]
+        )
+    );
+    // The first plate takes the hole of its own size, although the larger one comes first from
+    // the bottom left; the second takes the larger hole's lowest, leftmost place.
+    assert_eq!(
+        rects("Holes"),
+        (14, 10, vec![[0, 0, 14, 10], [8, 2, 4, 4], [2, 2, 4, 4]])
+    );
+    // A pocket open to the UV space's lower edge takes a plate as a hole does.
+    assert_eq!(rects("Arch"), (8, 6, vec![[0, 0, 8, 6], [2, 0, 4, 4]]));
+    // The ring's own blocks leave its hole out.
+    let ring = &panel_uvs("Ring").charts[0];
+    assert_eq!(ring.blocks.iter().filter(|&&used| !used).count(), 4 * 2);
+    // A control: a plate elsewhere in the same UV space does not pass the check.
+    let k = data
+        .renderers
+        .iter()
+        .position(|r| names[&r.0] == "Ring")
+        .unwrap();
+    let mut moved = panel_uvs("Ring");
+    moved.charts[2].rect = [2, 2, 4, 4];
+    let error = crate::realtime_uv::check_layout(system, data.renderer_st[k], &moved)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("two charts over one"), "{error}");
+    moved.charts[2].rect = [0, 0, 4, 4];
+    let error = crate::realtime_uv::check_layout(system, data.renderer_st[k], &moved)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("did not lay out for it"), "{error}");
 }
