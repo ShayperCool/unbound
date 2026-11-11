@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 using Object = UnityEngine.Object;
 
 /// <summary>
@@ -134,6 +136,10 @@ public class AnimOptimizeProbe : MonoBehaviour
             foreach (var name in Variants) Imported(name);
             foreach (var name in Placed) PlacedPlay(name);
             Runtime();
+            Humanoid();
+            foreach (var name in new[] { "Rig", "RigExposed" })
+            foreach (string mode in new[] { "job", "jobRead", "jobScene", "jobNone" })
+                Handles(name, mode);
         }
         catch (Exception e)
         {
@@ -255,5 +261,134 @@ public class AnimOptimizeProbe : MonoBehaviour
         AnimatorUtility.OptimizeTransformHierarchy(go, new string[0]);
         Record("rt.noAnimator", Hierarchy(go));
         Object.DestroyImmediate(go);
+    }
+
+    /// <summary>What a HumanPoseHandler on the instance's root reads.</summary>
+    static string HumanPoseOf(Animator animator, GameObject go)
+    {
+        var handler = new HumanPoseHandler(animator.avatar, go.transform);
+        var pose = new HumanPose();
+        handler.GetHumanPose(ref pose);
+        handler.Dispose();
+        return "{\"bodyPosition\":" + V(pose.bodyPosition) + ",\"bodyRotation\":" + Q(pose.bodyRotation) + ",\"muscles\":[" +
+               string.Join(",", pose.muscles.Select(F)) + "]}";
+    }
+
+    static string PathOf(Transform t, Transform root) =>
+        t == root ? "" : t.parent == root ? t.name : PathOf(t.parent, root) + "/" + t.name;
+
+    /// <summary>The humanoid controls: an optimized humanoid deoptimized after playing; the
+    /// unoptimized one optimized at runtime with its left hand exposed, played, deoptimized and
+    /// played on; and a HumanPoseHandler on both, reading the played pose and setting a pose with
+    /// one arm muscle and the body's height changed.</summary>
+    static void Humanoid()
+    {
+        var go = Spawn("HumanOpt", out var animator);
+        animator.Update(0f);
+        animator.Update(.5f);
+        Record("h.opt.pose", HumanPoseOf(animator, go));
+        AnimatorUtility.DeoptimizeTransformHierarchy(go);
+        Record("h.deopt", Hierarchy(go));
+        Record("h.deopt.facts", Facts(go));
+        Record("h.deopt.pose", HumanPoseOf(animator, go));
+        animator.Update(.25f);
+        Record("h.deopt.played", Pose(go));
+        Object.DestroyImmediate(go);
+
+        go = Spawn("Human", out animator);
+        animator.Update(0f);
+        animator.Update(.5f);
+        Record("h.human.pose", HumanPoseOf(animator, go));
+        string hand = PathOf(animator.GetBoneTransform(HumanBodyBones.LeftHand), go.transform);
+        AnimatorUtility.OptimizeTransformHierarchy(go, new[] { hand });
+        Record("h.rt.optimized", Hierarchy(go));
+        Record("h.rt.optimized.facts", Facts(go));
+        Record("h.rt.pose", HumanPoseOf(animator, go));
+        animator.Update(.25f);
+        Record("h.rt.played", Pose(go));
+        AnimatorUtility.DeoptimizeTransformHierarchy(go);
+        Record("h.rt.deoptimized", Hierarchy(go));
+        animator.Update(.125f);
+        Record("h.rt.replayed", Pose(go));
+        Object.DestroyImmediate(go);
+
+        foreach (var name in new[] { "Human", "HumanOpt" })
+        {
+            go = Spawn(name, out animator);
+            animator.Update(0f);
+            var handler = new HumanPoseHandler(animator.avatar, go.transform);
+            var pose = new HumanPose();
+            handler.GetHumanPose(ref pose);
+            int muscle = Array.IndexOf(HumanTrait.MuscleName, "Left Arm Down-Up");
+            pose.muscles[muscle] = 0.5f;
+            pose.bodyPosition += new Vector3(0f, 0.1f, 0f);
+            handler.SetHumanPose(ref pose);
+            var read = new HumanPose();
+            handler.GetHumanPose(ref read);
+            handler.Dispose();
+            Record("h.set." + name, Pose(go));
+            Record("h.set." + name + ".read", "{\"bodyPosition\":" + V(read.bodyPosition) + ",\"muscle\":" + F(read.muscles[muscle]) + "}");
+            Object.DestroyImmediate(go);
+        }
+    }
+
+    static readonly List<string> s_Job = new List<string>();
+
+    internal static void JobRecord(string value) => s_Job.Add(value);
+
+    /// <summary>An animation job over the model's take with a stream handle and a scene handle of
+    /// the rig's hand (exposed in the optimized model): what the handles read in the job, then,
+    /// in mode "job", the job turns the bone through its stream handle ("jobRead": it only
+    /// reads; "jobScene": only the scene handle is bound; "jobNone": neither). Three evaluations
+    /// (0, 0.5 and 0.25 s) of a manual graph without the controller.</summary>
+    static void Handles(string name, string mode)
+    {
+        string key = mode + "." + name;
+        bool write = mode == "job";
+        var go = Spawn(name, out var animator);
+        var clip = animator.runtimeAnimatorController.animationClips[0];
+        animator.runtimeAnimatorController = null;
+        var bone = animator.isHuman && animator.hasTransformHierarchy ? animator.GetBoneTransform(HumanBodyBones.LeftHand)
+            : go.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == (animator.isHuman ? "LeftHand" : "Hand"));
+        Record(key + ".bone", bone == null ? "null" : S(PathOf(bone, go.transform)));
+        if (bone == null) { Object.DestroyImmediate(go); return; }
+        var graph = PlayableGraph.Create("handles." + name);
+        graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+        var job = new HandleJob { write = write };
+        if (mode == "job" || mode == "jobRead") job.stream = animator.BindStreamTransform(bone);
+        if (mode != "jobNone") job.scene = animator.BindSceneTransform(bone);
+        var playable = AnimationScriptPlayable.Create(graph, job, 1);
+        playable.ConnectInput(0, AnimationClipPlayable.Create(graph, clip), 0, 1f);
+        AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+        graph.Play();
+        for (int step = 0; step < 3; step++)
+        {
+            s_Job.Clear();
+            graph.Evaluate(step == 0 ? 0f : step == 1 ? .5f : .25f);
+            Record(key + "." + step, "{\"job\":[" + string.Join(",", s_Job) + "],\"bone\":{\"p\":" + V(bone.localPosition) +
+                ",\"r\":" + Q(bone.localRotation) + ",\"w\":" + V(bone.position) + "}}");
+        }
+        graph.Destroy();
+        Object.DestroyImmediate(go);
+    }
+
+    struct HandleJob : IAnimationJob
+    {
+        public TransformStreamHandle stream;
+        public TransformSceneHandle scene;
+        public bool write;
+
+        public void ProcessRootMotion(AnimationStream s) { }
+
+        public void ProcessAnimation(AnimationStream s)
+        {
+            bool valid = stream.IsValid(s), resolved = valid && stream.IsResolved(s), sceneValid = scene.IsValid(s);
+            var json = "{\"valid\":" + B(valid) + ",\"resolved\":" + B(resolved) + ",\"scene\":" + B(sceneValid);
+            if (valid)
+                json += ",\"p\":" + V(stream.GetLocalPosition(s)) + ",\"r\":" + Q(stream.GetLocalRotation(s)) + ",\"w\":" + V(stream.GetPosition(s));
+            if (sceneValid) json += ",\"sp\":" + V(scene.GetLocalPosition(s)) + ",\"sw\":" + V(scene.GetPosition(s));
+            JobRecord(json + "}");
+            if (valid && write) stream.SetLocalRotation(s, stream.GetLocalRotation(s) * Quaternion.Euler(0f, 0f, 30f));
+        }
     }
 }

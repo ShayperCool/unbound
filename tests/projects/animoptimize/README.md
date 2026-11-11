@@ -25,7 +25,14 @@ to (3, 4, 5) and turned 30° (with world positions). Runtime controls start from
 rig with objects added under bones (an empty chain under `Hand`, a collider under `Leg`), from
 optimized models, and from objects without an Animator: optimize with and without exposed paths,
 optimize twice, a missing exposed path, the skin's root bone exposed by name, deoptimize (from optimized and unoptimized hierarchies)
-and play on. Every log message is recorded in order.
+and play on. Humanoid controls (`h.*`): the optimized humanoid deoptimized after playing, the
+unoptimized one optimized at run time with its left hand exposed, played, deoptimized and played
+on, and a `HumanPoseHandler` on both reading the played pose and setting one with an arm muscle
+and the body's height changed. Animation job controls (`job.*`, `jobRead.*`, `jobScene.*`,
+`jobNone.*` on `Rig` and `RigExposed`): a job over the take with a stream handle and a scene
+handle of the hand (the stream handle written or only read, the scene handle alone, or none),
+three evaluations of a manual graph without the controller. Every log message is recorded in
+order.
 
 The assets are committed. To make them again, regenerate the rig and let a disposable Editor
 copy write the `.meta` files and controllers back (the humanoid controls use `tests/projects/humanoid`'s `HumanA.fbx`, which every project copy takes from there):
@@ -65,3 +72,19 @@ What the Editor does (measured):
 - Deoptimizing: the skeleton's transforms come back in the avatar's order (the model file's, not
   the sorted hierarchy's), existing ones of the name reused, each at the avatar's default pose;
   the skinned renderers get their bones and root bone back. The Animator plays on from its state.
+
+- A humanoid deoptimizes the same way (default pose, the model file's order) and plays on.
+- A `HumanPoseHandler` on an optimized humanoid reads the stance pose placed at the root, not
+  the animated one, and `SetHumanPose` still moves the exposed hand.
+- A `TransformStreamHandle` reports `IsResolved` false in its first evaluation until the job
+  accesses it (the Scripting API's
+  [TransformStreamHandle.Resolve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.Resolve.html)
+  says handles are lazily resolved as they are accessed).
+- An exposed transform bound with `Animator.BindStreamTransform` no longer follows its skeleton
+  node: the stream holds the pose it was bound at, the job reads that and its writes land on
+  the transform. With only a scene handle, or none, the exposed transform follows the node.
+
+Not recorded (an exploratory capture; docs/COMPATIBILITY_GAPS.md says how the engine differs):
+the same job on the humanoid models. On the unoptimized humanoid the stream handle reads the
+bone of the stream's human pose and the job's write stays in the final pose; on the optimized
+one without a controller the Editor logs two messages per evaluation and plays nothing.
