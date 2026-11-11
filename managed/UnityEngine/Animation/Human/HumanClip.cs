@@ -236,18 +236,9 @@ namespace UnityEngine
                 if (i < 0) continue;
                 if (i >= HumanClipImport.GoalFirst && i < HumanClipImport.MuscleFirst && (i - HumanClipImport.GoalFirst) % 7 >= 3)
                     goalRotations[(i - HumanClipImport.GoalFirst) / 7]++;
-                int j = HumanClipImport.MirrorCurve[i];
-                if (j == i) continue;
-                float sign = j < 0 ? -1f : 1f;
-                if (j < 0) j = ~j;
-                var keys = c.Curve.keys;
-                for (int n = 0; n < keys.Length; n++) keys[n] = AnimationCurve.Negated(keys[n], sign);
-                var b = c.Binding;
-                m_Curves[k] = new ClipCurve
-                {
-                    Binding = new CurveBinding { Path = b.Path, Attribute = HumanClipImport.CurveNames[j], ClassId = b.ClassId },
-                    Curve = new AnimationCurve(keys) { preWrapMode = c.Curve.preWrapMode, postWrapMode = c.Curve.postWrapMode },
-                };
+                var mirrored = MirroredHumanCurve(c, i);
+                if (ReferenceEquals(mirrored, c)) continue;
+                m_Curves[k] = mirrored;
                 changed = true;
             }
             if (changed) m_Version++;
@@ -255,6 +246,42 @@ namespace UnityEngine
             if (Array.Exists(goalRotations, n => n != 0 && n != 4))
                 Unbound.Runtime.Stubs.Ignored("AnimationClip mirrored humanoid goal rotation without all four curves",
                     "a mirrored humanoid clip's goal rotation with some of its curves takes the defaults for the others before mirroring (not measured)");
+        }
+
+        /// <summary>A humanoid curve mirrored: the curve of the other side's name, negated where
+        /// the mirror flips it; the curve itself when it mirrors onto itself unchanged.</summary>
+        /// <param name="index">The curve's index among the humanoid curves.</param>
+        static ClipCurve MirroredHumanCurve(ClipCurve c, int index)
+        {
+            int j = HumanClipImport.MirrorCurve[index];
+            if (j == index) return c;
+            float sign = j < 0 ? -1f : 1f;
+            if (j < 0) j = ~j;
+            var keys = c.Curve.keys;
+            for (int n = 0; n < keys.Length; n++) keys[n] = AnimationCurve.Negated(keys[n], sign);
+            var b = c.Binding;
+            return new ClipCurve
+            {
+                Binding = new CurveBinding { Path = b.Path, Attribute = HumanClipImport.CurveNames[j], ClassId = b.ClassId },
+                Curve = new AnimationCurve(keys) { preWrapMode = c.Curve.preWrapMode, postWrapMode = c.Curve.postWrapMode },
+            };
+        }
+
+        /// <summary>The clip's float curves as the Editor's curve queries show them: a clip with
+        /// the Mirror setting shows its curves as imported, not mirrored (tests/projects/humanoid
+        /// tdof.curves, the clip named Mirror), whether it has played or not. Mirroring a curve
+        /// twice gives it back, so the stored mirrored curves are mirrored again for the view.</summary>
+        internal List<ClipCurve> CurvesAsImported()
+        {
+            ConvertHumanCurves();
+            if (!m_HumanMirrored) return m_Curves;
+            var view = new List<ClipCurve>(m_Curves.Count);
+            foreach (var c in m_Curves)
+            {
+                int i = c.Binding.ClassId == AnimatorClassId && c.Curve != null ? HumanClipImport.CurveIndex(c.Binding.Attribute) : -1;
+                view.Add(i < 0 ? c : MirroredHumanCurve(c, i));
+            }
+            return view;
         }
 
         /// <summary>A humanoid body curve (RootT, RootQ): loop pose moves the body relative to the
@@ -351,6 +378,7 @@ namespace UnityEngine
             {
                 var values = curvesOut.Values[i];
                 if (values == null) continue;
+                if (i >= HumanClipImport.TDoFFirst && !HumanClipImport.KeepsTDoFCurve(values)) continue;
                 var slopes = curvesOut.Slopes[i];
                 // A reducing animation compression drops the keys the curve does without.
                 bool flat = keptKeys != null

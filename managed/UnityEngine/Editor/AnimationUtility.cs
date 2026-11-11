@@ -85,9 +85,8 @@ namespace UnityEditor
         public static EditorCurveBinding[] GetCurveBindings(AnimationClip clip)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
-            // A Humanoid model's clip has its muscle curves, played or not.
-            clip.ConvertHumanCurves();
-            return clip.m_Curves.Select((c, i) => (c, i)).OrderBy(p => p.c.Binding.Path, StringComparer.Ordinal).ThenBy(p => p.i)
+            // A Humanoid model's clip has its muscle curves, played or not, and as imported.
+            return clip.CurvesAsImported().Select((c, i) => (c, i)).OrderBy(p => p.c.Binding.Path, StringComparer.Ordinal).ThenBy(p => p.i)
                 .Select(p => BindingOf(p.c)).ToArray();
         }
 
@@ -99,8 +98,7 @@ namespace UnityEditor
 
         static ClipCurve Find(AnimationClip clip, EditorCurveBinding binding)
         {
-            clip.ConvertHumanCurves();
-            return clip.m_Curves.FirstOrDefault(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.ResolveType() == binding.type);
+            return clip.CurvesAsImported().FirstOrDefault(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.ResolveType() == binding.type);
         }
 
         /// <summary>A copy of the curve a binding names (by its serialized property name), else null.</summary>

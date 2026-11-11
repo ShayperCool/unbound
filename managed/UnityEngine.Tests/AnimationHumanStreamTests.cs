@@ -52,8 +52,8 @@ namespace UnityEngine.Tests
         };
 
         /// <summary>A humanoid in a T-pose: the required bones plus chest and neck, an avatar built
-        /// from it with AvatarBuilder.</summary>
-        internal static GameObject Humanoid(out Animator animator, Vector3 position = default, float scale = 1f)
+        /// from it with AvatarBuilder (with translation DoF when asked).</summary>
+        internal static GameObject Humanoid(out Animator animator, Vector3 position = default, float scale = 1f, bool translationDoF = false)
         {
             var root = new GameObject("Human");
             root.transform.position = position;
@@ -74,7 +74,7 @@ namespace UnityEngine.Tests
             {
                 human = human.ToArray(), skeleton = skeleton.ToArray(),
                 upperArmTwist = 0.5f, lowerArmTwist = 0.5f, upperLegTwist = 0.5f, lowerLegTwist = 0.5f,
-                armStretch = 0.05f, legStretch = 0.05f, feetSpacing = 0f,
+                armStretch = 0.05f, legStretch = 0.05f, feetSpacing = 0f, hasTranslationDoF = translationDoF,
             };
             animator = root.AddComponent<Animator>();
             animator.avatar = AvatarBuilder.BuildHumanAvatar(root, description);
