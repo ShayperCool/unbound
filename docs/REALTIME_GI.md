@@ -245,18 +245,26 @@ lighting the room (the documented parts are in the contract above):
 - `RenderSettings.ambientProbe` in general (the probe's `end-*` cases, each read in the frame of
   its change; the documentation promises none of it): one stored probe seen through the ambient
   mode. The stored probe is the lighting data's after a scene's load (zero for data made without
-  a sky), then the sky's once `DynamicGI.UpdateEnvironment` derives it, then one a script gives,
-  the latest of them. The flat and gradient modes do not read it (a probe given in the flat mode
+  a sky and for a scene without lighting data, `nodata*`, whatever its skybox), then the sky's
+  once `DynamicGI.UpdateEnvironment` derives it, then one a script gives,
+  the latest of them. The flat and gradient modes do not read it (a probe given in either
   shows once the custom mode is set); the custom mode returns it as it is, whatever the ambient
   intensity (`room-ambient-custom`: the sky's probe at intensity 3, unscaled); the skybox mode
   returns it times the intensity's scale, and without a skybox material the ambient color's
   probe, unscaled. The Editor makes the probe again when an ambient input changes, not when
   `RenderSettings.skybox` alone is assigned: a skybox removed after the mode was set leaves the
   scaled sky probe (`room-sky-none`), one assigned in the skybox mode leaves the color's
-  (`end-skybox-material`) until the next change. Not measured: a gradient with a probe given,
-  the custom mode in a scene without lighting data (Unbound: the ambient color's probe), a probe
-  given after a skybox was assigned alone, gamma-space projects. Realtime GI's own environment
-  does not read the probe (the bullets above).
+  (`end-skybox-material`) until the next change. The intensity's scale is that of the bullet
+  above in a linear project; a gamma project's was measured for the lighting data's probe
+  (GammaToLinearSpace as well) and Unbound gives the sky's and a given probe the same. Not
+  measured: a probe given after a skybox was assigned alone, `DynamicGI.UpdateEnvironment`
+  without a skybox after a probe was given (Unbound keeps the probe), and a scene loaded beside
+  the one whose settings are in effect (Unbound keeps a probe given, and takes the loaded
+  lighting data's otherwise). Realtime GI's own environment does not read the probe (the
+  bullets above).
+- The default reflection: a scene whose lighting data was made without a sky, and one without
+  lighting data, reflect a black cube (`ReflectionProbe.defaultTexture` is `UnityBlackCube`,
+  one texel, decode values (1, 1, 0, 0); `end-reflection`, `nodata*-reflection`).
 
 Observed once and not modelled: data given to `SetEnvironmentData` one frame after the sun was
 destroyed did not show (the lightmap stayed the sky's): the Editor reads the sky back over
