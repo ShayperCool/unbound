@@ -16,7 +16,7 @@ public partial class HumanoidProbe
     {
         foreach (var name in new[] { "PosTree", "NegTree", "PartialTree", "WTree", "NoneTree", "NegTransition", "NoneTransition", "NegOverride",
                      "PartialOverride", "DirectNeg", "DirectLow", "DirectHigh", "DirectNormalized", "DirectLowFootIK",
-                     "DirectHighFootIK", "DirectHighTransition", "DirectLowNeg", "DirectHalfNegGoal", "DirectZeroB", "RotTree", "TTree" })
+                     "DirectHighFootIK", "DirectHighTransition", "DirectLowNeg", "DirectHalfNegGoal", "DirectZeroB", "RotTree", "TTree", "EmptyLayerTransition" })
         {
             string key = "body." + char.ToLowerInvariant(name[0]) + name.Substring(1);
             Guarded(key, () => Play(key, "HumanA", "HumanBody" + name, GoalSetup, motion: true, locals: false, detail: name.Contains("Transition"),
