@@ -345,7 +345,11 @@ lighting the room (the documented parts are in the contract above):
   load. Other ambient or reflection sources and another resolution are not measured and leave
   the scene without lighting data; a named sun that is disabled or not directional is taken
   as it is, and one that is not a light of the scene gives way to the brightest light (neither
-  measured). `Lightmapping.bakeOnSceneLoad` is not honoured (a warning once). All of this is the
+  measured, nor a named sun at the default angles: the named one measured is turned). The
+  rendering features were measured as a script sets them before the load: what a pipeline
+  declares itself is not, and Unbound's pipeline declares them when it first renders, after
+  its first scene's load, so that scene is read with the features of before; features changed
+  after a load are not measured either. `Lightmapping.bakeOnSceneLoad` is not honoured (a warning once). All of this is the
   measured release's, through the compatibility profile: in another release a scene without
   lighting data gets zero and black too, with a warning once, since releases before Unity 6
   bake the ambient probe and the sky's reflection by default (the Unity 6 upgrade guide) and

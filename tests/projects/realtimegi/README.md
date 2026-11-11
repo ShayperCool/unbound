@@ -296,13 +296,15 @@ Observations (not documented guarantees):
   its color nor its intensity (`legacydimsun`). The light is the one the scene names as its
   sun, else its brightest directional light: with a dimmer second light the scene is upgraded
   (`legacytwosuns`), with a brighter one it is not (`legacytwosunsturned`), and neither when
-  the dimmer one is named (`legacynamedsun`). With the rendering features saying that neither
+  the dimmer one is named (`legacynamedsun`; a named light at the default angles is not
+  captured). With the rendering features saying that neither
   the ambient probe nor the default reflection is baked the scene is not upgraded
   (`legacydefault-nobaking`); with one of the two off it still is (`-noambientbaking`,
   `-noreflectionbaking`). In a gamma-space project none of the seventeen scenes is upgraded:
   each reflects the black cube and has a zero ambient probe (`--color-space gamma`). Not
   captured: other ambient or reflection sources, another reflection resolution, a named sun
-  that is disabled, not directional or not a light of the scene, and a scene with
+  that is disabled, not directional or not a light of the scene, rendering features a render
+  pipeline declares itself or changed after a load, and a scene with
   `Lightmapping.bakeOnSceneLoad` on (Unbound does not bake it and says so once).
 - The reflection and the ambient probe are the active scene's: a scene added to another changes
   neither (`*-plus-*`), and `SceneManager.SetActiveScene` with the added scene switches both
@@ -336,12 +338,12 @@ Observations (not documented guarantees):
   three captures had one that differed more in the same two cases (up to 0.02 in 1505 and 221
   values). A reference is published from two identical captures; one that lands in another state
   is repeated.
-- Two more variations between captures, each seen once in eleven later runs: `room-moved-next-frame`
-  recorded `DynamicGI.isConverged` true where the reference and the other runs have false (the
-  frame after an input changes, the update may not have started); and a cube given with
-  `DynamicGI.SetEnvironmentData` two frames after a scene's load, before its first solve had
-  converged, gave a lightmap up to 0.0015 apart in 379 values, which is why
-  `room-envdata-alone` waits for the scene to converge before it gives the cube.
+- Two more variations between captures: in one of ten later captures `room-moved-next-frame`
+  recorded `DynamicGI.isConverged` true where the reference and the other nine have false (the
+  frame after an input changes, the update may not have started); and in one of the three
+  captures taken with a cube given two frames after a scene's load (`DynamicGI.SetEnvironmentData`
+  before the first solve had converged) the lightmap was up to 0.0015 apart in 379 values,
+  which is why `room-envdata-alone` waits for the scene to converge before it gives the cube.
 
 ## Unbound
 

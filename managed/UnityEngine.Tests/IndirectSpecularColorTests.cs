@@ -454,6 +454,7 @@ namespace Unbound.Tests
                     QualitySettings.s_ColorSpace = ColorSpace.Linear;
                     var legacy = state.Scene(EarlierDefault, default, null);
                     FileWithSun(new Vector3(50f, -30f, 0f), 0f, made, file: state.ResolverOf(legacy));
+                    Assert.True(RenderSettings.EarlierDefaultEnvironment(UnityEngine.Tests.TestYaml.DocumentBody(EarlierDefault), state.ResolverOf(legacy)));
                     RenderSettings.ReadLightingData(default, state.ResolverOf(legacy), firstScene: false);
                     Assert.Equal(before + 2, Hits());
                 }
