@@ -60,10 +60,9 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A conversion's curves do not depend on the sign the samples hold a node's
-        /// rotation with: the node takes the importer's sign either way. Controls: the foot's
-        /// goal rotation has the sign of the chain's rotations with the importer's signs (a
-        /// right upper leg half a turn about x negates it), and another rotation changes the
-        /// curves.</summary>
+        /// rotation with: the node takes the importer's sign either way. Control: another
+        /// rotation changes the curves. Which sign the goal curves then have is the probe's to
+        /// say (body.directLowB, body.directEmptyChild).</summary>
         [Fact]
         public void AConversionTakesItsNodesRotationsWithTheImportersSign()
         {
