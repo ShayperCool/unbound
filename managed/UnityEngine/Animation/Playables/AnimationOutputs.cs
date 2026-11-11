@@ -1393,6 +1393,9 @@ namespace Unbound.Runtime.Playables
                     if (output.Destroyed || output.Source == null || output.Graph.Destroyed
                         || !output.Graph.Playing || output.Graph.UpdateMode != DirectorUpdateMode.Manual) continue;
                     if (output.Engine is not AnimationOutputState state || state.Ticked) continue;
+                    // The graph need not have prepared its outputs yet.
+                    output.Graph.MarkInertOutputs();
+                    if (state.Inert) continue;
                     state.Ticked = true;
                     state.Automatic = false;
                     initial.Add((output, 0, true));
@@ -1439,9 +1442,10 @@ namespace Unbound.Runtime.Playables
 
         public void Process(PlayableOutputData output, double dt, bool seek)
         {
-            var target = (output.Engine as AnimationOutputState)?.Target;
+            var state = output.Engine as AnimationOutputState;
+            var target = state?.Target;
             if (target == null || !target.isActiveAndEnabled) return;
-            if ((output.Engine as AnimationOutputState)?.SkipEvaluation == true) return;
+            if (state.SkipEvaluation || state.Inert) return;
             if (!s_Pending.TryGetValue(target, out var list)) s_Pending[target] = list = RentList();
             list.Add((output, dt, seek));
             output.Graph.DeliverNotifications(output);

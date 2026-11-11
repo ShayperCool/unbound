@@ -19,6 +19,10 @@ namespace Unbound.Runtime.Playables
 
         internal UnityEngine.Animator Target;
         internal bool Ticked, Automatic, SkipEvaluation;
+        /// <summary>An earlier animation output of the graph has this output's source playable
+        /// and port, so this one does nothing (set by the graph's prepare pass, see
+        /// PlayableGraphData.PreparePass).</summary>
+        internal bool Inert;
         internal ushort SortingOrder = 100;
         internal AnimationStreamSource StreamSource = AnimationStreamSource.DefaultValues;
         /// <summary>The channels the output animates since its source was set (AnimationEvaluation.KeepBound).</summary>

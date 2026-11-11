@@ -731,10 +731,12 @@ namespace Unbound.Runtime.Playables
         /// other releases hold the whole source tree
         /// (<see cref="Compat.PlayableCullingHoldsAnimationPlayablesOnly"/>). An automatic update at
         /// Play entry gets a zero <paramref name="dt"/> (<see cref="AnimationSystem.AutomaticFrameDelta"/>).
+        /// An animation output whose source another has takes no part (<see cref="MarkInertOutputs"/>).
         /// </summary>
         internal void PreparePass(double dt, bool evaluate)
         {
             ulong frame = FrameId;
+            MarkInertOutputs();
             var outputs = Scratch<PlayableOutputData>.Rent();
             var held = Scratch<PlayableNode>.RentSet();
             var advancing = Scratch<PlayableNode>.RentSet();
@@ -749,6 +751,7 @@ namespace Unbound.Runtime.Playables
                         Reached = o.OutputType == typeof(ScriptPlayableOutput) ? scripted : o.Engine is AnimationOutputState ? animated : null };
                     if (o.Engine is AnimationOutputState animation)
                     {
+                        if (animation.Inert) continue;
                         animation.Automatic = !evaluate;
                         bool culled = CulledCompletely(animation);
                         // The first culled evaluation still samples the held pose.
@@ -777,6 +780,28 @@ namespace Unbound.Runtime.Playables
             }
         }
 
+        /// <summary>Of several animation outputs with one source playable and port, only the one
+        /// created first takes part: the later ones do not animate their Animators, fire no
+        /// events and, culled, hold nothing (AnimationOutputState.Inert). Matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animculling clock/sharedPort and sharedPortFirst:
+        /// two Animators' outputs, all three culling modes, both update modes. Outputs of one
+        /// Animator, an earlier output without a target or with a disabled Animator, outputs
+        /// connected in another order than they were created in, and script outputs sharing a
+        /// port are unmeasured.</summary>
+        internal void MarkInertOutputs()
+        {
+            var sources = Scratch<(PlayableNode, int)>.RentSet();
+            try
+            {
+                foreach (var o in Outputs)
+                {
+                    if (o.Destroyed || o.Engine is not AnimationOutputState animation) continue;
+                    animation.Inert = o.Source != null && !sources.Add((o.Source, o.SourcePort));
+                }
+            }
+            finally { Scratch<(PlayableNode, int)>.Return(sources); }
+        }
+
         static bool CulledCompletely(AnimationOutputState animation) =>
             animation.Target != null && animation.Target.isActiveAndEnabled
             && animation.Target.cullingMode == AnimatorCullingMode.CullCompletely
@@ -787,7 +812,8 @@ namespace Unbound.Runtime.Playables
         {
             foreach (var o in Outputs)
             {
-                if (o.Destroyed || o.Source == null || o.Engine is not AnimationOutputState animation || !CulledCompletely(animation)) continue;
+                if (o.Destroyed || o.Source == null || o.Engine is not AnimationOutputState animation || animation.Inert
+                    || !CulledCompletely(animation)) continue;
                 var mark = new Mark { Held = held, Advancing = null, Animation = true, Hold = true };
                 Walk(o, ref mark, WholeTreeOnAnimatorClock(o));
             }

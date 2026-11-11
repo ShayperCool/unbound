@@ -759,5 +759,90 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        public class ClipEventCounter : MonoBehaviour
+        {
+            public int Events;
+            void OnClipEvent() => Events++;
+        }
+
+        void StepBoth(PlayableGraph graph, Animator first, Animator second, float dt)
+        {
+            var data = PlayableGraphData.Get(graph);
+            data.PreparePass(dt, evaluate: false);
+            data.FrameId++;
+            foreach (var output in data.Outputs.ToArray()) OutputSystems.Process(output, dt, false);
+            first.Tick(dt);
+            second.Tick(dt);
+            AnimationOutputs.RunPending(first);
+            AnimationOutputs.RunPending(second);
+        }
+
+        /// <summary>Of two animation outputs with one source playable and port, only the one
+        /// created first takes part: the later one's Animator is not posed and gets no clip
+        /// event (6000.0.71f1, tests/projects/animculling clock/sharedPort, sharedPortFirst).
+        /// Control: through a second port of the same clip both Animators are animated
+        /// (clock/sharedClip).</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void OfTwoOutputsWithOneSourcePortOnlyTheFirstAnimates(bool samePort)
+        {
+            var (first, _, _) = Rig(AnimatorCullingMode.AlwaysAnimate);
+            var (second, _, _) = Rig(AnimatorCullingMode.AlwaysAnimate);
+            first.runtimeAnimatorController = second.runtimeAnimatorController = null;
+            var firstEvents = first.gameObject.AddComponent<ClipEventCounter>();
+            var secondEvents = second.gameObject.AddComponent<ClipEventCounter>();
+            var graph = PlayableRig(first, out var playable);
+            try
+            {
+                playable.GetAnimationClip().AddEvent(new AnimationEvent { time = 0.05f, functionName = "OnClipEvent" });
+                if (!samePort) playable.SetOutputCount(2);
+                AnimationPlayableOutput.Create(graph, "Later", second).SetSourcePlayable(playable, samePort ? 0 : 1);
+                StepBoth(graph, first, second, 0.1f);
+                StepBoth(graph, first, second, 0.1f);
+                Assert.True(first.transform.localPosition.y > 0.1f);
+                Assert.Equal(1, firstEvents.Events);
+                if (samePort)
+                {
+                    Assert.Equal(0f, second.transform.localPosition.y);
+                    Assert.Equal(0, secondEvents.Events);
+                }
+                else
+                {
+                    Assert.True(second.transform.localPosition.y > 0.1f);
+                    Assert.Equal(1, secondEvents.Events);
+                }
+            }
+            finally { graph.Destroy(); }
+        }
+
+        /// <summary>A later output on a taken source port holds nothing while its Animator is
+        /// culled: the clip goes on for the first output's Animator (animculling
+        /// clock/sharedPort/CullCompletely). Control: culled, the first output holds the clip
+        /// and the later one still does nothing (clock/sharedPortFirst/CullCompletely).</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ALaterOutputOnATakenSourcePortHoldsNothing(bool firstCulled)
+        {
+            var (first, _, _) = Rig(firstCulled ? AnimatorCullingMode.CullCompletely : AnimatorCullingMode.AlwaysAnimate);
+            var (second, _, _) = Rig(firstCulled ? AnimatorCullingMode.AlwaysAnimate : AnimatorCullingMode.CullCompletely);
+            first.runtimeAnimatorController = second.runtimeAnimatorController = null;
+            var graph = PlayableRig(first, out var playable);
+            try
+            {
+                AnimationPlayableOutput.Create(graph, "Later", second).SetSourcePlayable(playable);
+                StepBoth(graph, first, second, 0.1f);
+                StepBoth(graph, first, second, 0.1f);
+                Assert.Equal(0f, second.transform.localPosition.y);
+                if (firstCulled) Assert.Equal(0, playable.GetTime());
+                else
+                {
+                    Near.Equal(0.2f, (float)playable.GetTime(), 1e-6f);
+                    Assert.True(first.transform.localPosition.y > 0.1f);
+                }
+            }
+            finally { graph.Destroy(); }
+        }
     }
 }
