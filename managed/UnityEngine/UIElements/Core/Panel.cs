@@ -564,11 +564,15 @@ namespace UnityEngine.UIElements
 
         internal virtual void Update()
         {
+            // Scheduled items, styles and layout, then the animations: they see what this update
+            // laid out, and what they write is styled and laid out by the repaint or the next
+            // update. Measured with the gap an animated reorder opens when a drag starts (Unity
+            // 6000.0.71f1, tests/projects/uitkcollections animated-clock).
             uaScheduler.UpdateScheduledEvents();
-            uaValueAnimations.Update();
             ApplyStyles();
-            UpdateAnimations();
             ValidateLayout();
+            uaValueAnimations.Update();
+            UpdateAnimations();
         }
 
         internal Vector2 ScreenToPanel(Vector2 screen) => screenToPanelSpace(screen) / scale;
