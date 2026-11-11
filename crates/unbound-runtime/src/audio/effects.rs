@@ -1054,8 +1054,13 @@ impl Effect {
                     return;
                 }
                 if let Some(spec) = &self.spec.compressor {
-                    self.compressor
-                        .process_linked(front, extra, spec, self.rate);
+                    self.compressor.process_linked(
+                        front,
+                        extra,
+                        spec,
+                        self.rate,
+                        self.spec.effect_transitions_measured,
+                    );
                 }
             }
             Some(EffectKind::DuckVolume) => {
@@ -1212,7 +1217,13 @@ impl Effect {
             match kind {
                 EffectKind::Compressor => {
                     if let Some(spec) = &self.spec.compressor {
-                        self.compressor.process(samples, spec, rate);
+                        self.compressor.process_linked(
+                            samples,
+                            &mut [],
+                            spec,
+                            rate,
+                            self.spec.effect_transitions_measured,
+                        );
                     }
                 }
                 EffectKind::ParamEq => self.eq.process(samples),

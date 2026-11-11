@@ -38,7 +38,7 @@ const PEAK_DECAY: f64 = 10.0;
 pub struct Compressor {
     /// Peak detector: jumps to the louder channel, decays linearly.
     peak: f32,
-    /// Envelope that follows the peak; `None` until the first frame (it starts at the threshold).
+    /// Follower state in amplitude or threshold-relative units; initialized on its first frame.
     env: Option<f32>,
 }
 impl Default for Compressor {
@@ -59,25 +59,32 @@ impl Compressor {
     /// Scales interleaved stereo `samples` by the limiter gain: `threshold / envelope` once the
     /// envelope exceeds the threshold, times Make up gain. The envelope uses the attack time
     /// while the peak is above the threshold and the release time otherwise.
+    #[cfg(test)]
     pub fn process(&mut self, samples: &mut [f32], spec: &CompressorSpec, rate: u32) {
-        self.process_linked(samples, &mut [], spec, rate);
+        self.process_linked(samples, &mut [], spec, rate, false);
     }
 
     /// [`Compressor::process`] over a layout wider than stereo: the louder of every channel
     /// drives the gain of all of them, as within a stereo pair; `extra` are the other pairs.
+    /// Measured transitions retain the follower relative to the threshold.
     pub fn process_linked(
         &mut self,
         samples: &mut [f32],
         extra: &mut [&mut [f32]],
         spec: &CompressorSpec,
         rate: u32,
+        normalized: bool,
     ) {
         let threshold = 10_f64.powf(spec.threshold as f64 / 20.0) as f32;
         let makeup = 10_f64.powf(spec.makeup_gain as f64 / 20.0) as f32;
         let attack = Self::pole(spec.attack, rate);
         let release = Self::pole(spec.release, rate);
         let decay = (PEAK_DECAY / rate as f64) as f32;
-        let mut env = self.env.unwrap_or(threshold);
+        // A threshold change retains the envelope in units of the threshold, so its
+        // gain changes through the attack/release follower. Unity 6000.0.71f1,
+        // tests/projects/audiopitch transitions. Other profiles retain amplitude units.
+        let limit = if normalized { 1.0 } else { threshold };
+        let mut env = self.env.unwrap_or(limit);
         for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
             let mut level = stereo[0].abs().max(stereo[1].abs());
             for lane in extra.iter() {
@@ -91,8 +98,13 @@ impl Compressor {
             } else {
                 release
             };
-            env = env * pole + self.peak * step;
-            let gain = (threshold / env).min(1.0) * makeup;
+            env = if normalized {
+                let target = self.peak * threshold.recip();
+                (env - target) * pole + target
+            } else {
+                env * pole + self.peak * step
+            };
+            let gain = (limit / env).min(1.0) * makeup;
             for x in stereo {
                 *x *= gain;
             }
@@ -145,5 +157,48 @@ mod tests {
         let mut x: Vec<f32> = (0..9600).flat_map(|_| [0.0, 0.5]).collect();
         c.process(&mut x, &spec(), 48000);
         assert!(x[x.len() - 2] == 0.0 && (x[x.len() - 1] - 0.1).abs() < 1e-5);
+    }
+
+    #[test]
+    fn live_threshold_changes_retain_the_follower_and_link_every_channel() {
+        // Include a rate and partial period outside the recorded device configurations.
+        for rate in [32000, 44100, 48000] {
+            let mut compressor = Compressor::default();
+            let mut parameters = CompressorSpec {
+                threshold: -18.0,
+                attack: 20.0,
+                release: 80.0,
+                makeup_gain: 0.0,
+            };
+            let loud: Vec<f32> = (0..rate).flat_map(|_| [0.75, 0.015625]).collect();
+            let mut steady = loud.clone();
+            compressor.process_linked(&mut steady, &mut [], &parameters, rate, true);
+            let old = steady[steady.len() - 2];
+            parameters.threshold = -30.0;
+            let mut front = vec![0.015625; 97 * 2];
+            let mut rear = vec![0.015625; 97 * 2];
+            for frame in rear.chunks_exact_mut(2) {
+                frame[0] = 0.75;
+            }
+            compressor.process_linked(&mut front, &mut [&mut rear], &parameters, rate, true);
+            // Lowering the target does not jump to the new static gain on the first sample.
+            assert!((rear[0] - old).abs() < 0.001);
+            assert!(rear[192] > 0.08 && rear[192] < old);
+            for frame in 0..97 {
+                for value in [front[frame * 2], front[frame * 2 + 1], rear[frame * 2 + 1]] {
+                    assert!((value * 48.0 - rear[frame * 2]).abs() < 1e-6);
+                }
+            }
+            let mut settled = loud.clone();
+            compressor.process_linked(&mut settled, &mut [], &parameters, rate, true);
+            assert!((settled[settled.len() - 2] - 10_f32.powf(-1.5)).abs() < 2e-5);
+            parameters.threshold = -12.0;
+            let mut raised = vec![0.75; 97 * 2];
+            compressor.process_linked(&mut raised, &mut [], &parameters, rate, true);
+            assert!(raised[0] < 0.04 && raised[192] > raised[0] && raised[192] < 0.08);
+            let mut silent = vec![0.0; rate as usize * 2];
+            compressor.process_linked(&mut silent, &mut [], &parameters, rate, true);
+            assert!(silent.iter().all(|value| *value == 0.0));
+        }
     }
 }
