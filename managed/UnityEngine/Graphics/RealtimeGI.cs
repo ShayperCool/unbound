@@ -335,15 +335,7 @@ namespace UnityEngine
         static unsafe void Update()
         {
             if (s_Scenes.Count == 0 || !Native.IsReady) return;
-            s_FrameLights.Clear();
-            foreach (var light in Light.s_Enabled)
-                if (Contributes(light)) s_FrameLights.Add(light);
-            // A render pipeline's lights are what its delegate makes of them
-            // (Experimental.GlobalIllumination.Lightmapping.SetDelegate): the Universal Render
-            // Pipeline's have an inverse-squared falloff, a linear intensity and their own inner
-            // spot angle (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
-            // `--pipeline urp`). Without one: the built-in pipeline's.
-            int count = GI.Lightmapping.HasCustomDelegate ? PipelineLights() : BuiltinLights();
+            int count = CollectLights();
             var frame = new GiFrame
             {
                 IndirectScale = DynamicGI.indirectScale,
@@ -402,6 +394,23 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>Collects the frame's lights for realtime GI and returns how many. A render
+        /// pipeline's lights are what its delegate makes of them
+        /// (Experimental.GlobalIllumination.Lightmapping.SetDelegate): the Universal Render
+        /// Pipeline's have an inverse-squared falloff, a linear intensity and their own inner
+        /// spot angle (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
+        /// `--pipeline urp`). Without one: the built-in pipeline's.</summary>
+        internal static int CollectLights()
+        {
+            s_FrameLights.Clear();
+            foreach (var light in Light.s_Enabled)
+                if (Contributes(light)) s_FrameLights.Add(light);
+            return GI.Lightmapping.HasCustomDelegate ? PipelineLights() : BuiltinLights();
+        }
+
+        /// <summary>One of the lights <see cref="CollectLights"/> collected.</summary>
+        internal static GiLight CollectedLight(int index) => s_Lights[index];
+
         /// <summary>The frame's lights as the built-in pipeline gives them to realtime GI: the
         /// legacy falloff, the color scaled by the intensity and bounce intensity before its
         /// conversion to linear, LightmapperUtils' inner spot angle.</summary>
@@ -441,7 +450,17 @@ namespace UnityEngine
                 s_Converted = new Unity.Collections.NativeArray<GI.LightDataGI>(Math.Max(requested, 1), Unity.Collections.Allocator.Persistent);
             }
             for (int i = 0; i < requested; i++) s_Requests[i] = s_FrameLights[i];
-            GI.Lightmapping.GetDelegate()(s_Requests, s_Converted);
+            try
+            {
+                GI.Lightmapping.GetDelegate()(s_Requests, s_Converted);
+            }
+            catch (Exception e)
+            {
+                // A light the conversion rejects (a negative intensity, say) must not stop the
+                // update: the frame has no lights, the environment still lights the scene.
+                Warn("pipeline-lights", $"precomputed realtime GI: the render pipeline's conversion of its lights failed, so lights add no realtime indirect light: {e.Message}");
+                return 0;
+            }
             int count = 0;
             for (int i = 0; i < requested; i++)
             {
@@ -455,7 +474,7 @@ namespace UnityEngine
                     case GI.LightType.Point: kind = (int)LightType.Point; break;
                     case GI.LightType.Spot: kind = (int)LightType.Spot; break;
                     default:
-                        Warn("pipeline-light:" + data.type, $"precomputed realtime GI: lights the render pipeline gives as {data.type} are not supported: they add no realtime indirect light.");
+                        Warn("pipeline-light-type", "precomputed realtime GI: lights the render pipeline gives as other than directional, point or spot lights are not supported: they add no realtime indirect light.");
                         continue;
                 }
                 Add(ref count, kind, data.position, data.orientation * Vector3.forward,

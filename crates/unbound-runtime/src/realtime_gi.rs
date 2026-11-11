@@ -37,10 +37,9 @@ pub struct GiLight {
     pub falloff: i32,
 }
 
-/// Experimental.GlobalIllumination.FalloffType's values ([`GiLight::falloff`]); Linear (2) and
-/// Undefined (4) are not measured.
+/// Experimental.GlobalIllumination.FalloffType's values ([`GiLight::falloff`]) realtime GI
+/// takes; InverseSquaredNoRangeAttenuation (1), Linear (2) and Undefined (4) are not measured.
 pub const FALLOFF_INVERSE_SQUARED: i32 = 0;
-pub const FALLOFF_INVERSE_SQUARED_NO_RANGE: i32 = 1;
 pub const FALLOFF_LEGACY: i32 = 3;
 
 /// One frame's inputs (`RealtimeGI.Frame` in managed code).
@@ -416,9 +415,6 @@ impl Scene {
                     Ok(FalloffTable::of(
                         match light.falloff {
                             FALLOFF_INVERSE_SQUARED => Falloff::InverseSquared,
-                            FALLOFF_INVERSE_SQUARED_NO_RANGE => {
-                                Falloff::InverseSquaredNoRangeAttenuation
-                            }
                             FALLOFF_LEGACY => Falloff::Legacy,
                             other => bail!(
                                 "light falloff type {other} in precomputed realtime GI is not supported"
@@ -941,26 +937,24 @@ mod tests {
             update(handle, &frame, &[directional]).unwrap() & UPDATE_CONVERGED,
             0
         );
-        // A render pipeline's falloff types: the inverse-squared ones light the scene, and
-        // differently from the legacy one; the others fail loudly.
+        // A render pipeline's inverse-squared falloff lights the scene, and differently from
+        // the legacy one; the other falloff types fail loudly.
         let lights = [point([0.0, 2.0, 0.0])];
         assert!((0..500).any(|_| update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED != 0));
         let mut legacy = vec![0u16; 4 * 64 * 64];
         read_atlas(handle, 0, &mut legacy).unwrap();
-        for falloff in [FALLOFF_INVERSE_SQUARED, FALLOFF_INVERSE_SQUARED_NO_RANGE] {
-            let lights = [GiLight {
-                falloff,
-                ..lights[0]
-            }];
-            assert!(
-                (0..500).any(|_| update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED != 0)
-            );
-            let mut lit = vec![0u16; 4 * 64 * 64];
-            read_atlas(handle, 0, &mut lit).unwrap();
-            assert!(lit.chunks_exact(4).any(|t| t[0] != 0));
-            assert!(lit != legacy);
-        }
-        for falloff in [2, 4, 9] {
+        let inverse = [GiLight {
+            falloff: FALLOFF_INVERSE_SQUARED,
+            ..lights[0]
+        }];
+        assert!(
+            (0..500).any(|_| update(handle, &frame, &inverse).unwrap() & UPDATE_CONVERGED != 0)
+        );
+        let mut lit = vec![0u16; 4 * 64 * 64];
+        read_atlas(handle, 0, &mut lit).unwrap();
+        assert!(lit.chunks_exact(4).any(|t| t[0] != 0));
+        assert!(lit != legacy);
+        for falloff in [1, 2, 4, 9] {
             let error = update(
                 handle,
                 &frame,

@@ -55,7 +55,15 @@ namespace UnityEngine.Experimental.GlobalIllumination
         public float red { get => m_red; set => m_red = Component(value); }
         public float green { get => m_green; set => m_green = Component(value); }
         public float blue { get => m_blue; set => m_blue = Component(value); }
-        public float intensity { get => m_intensity; set => m_intensity = value; }
+        public float intensity
+        {
+            get => m_intensity;
+            set
+            {
+                if (value < 0f) throw new ArgumentOutOfRangeException(nameof(value), "Intensity must be positive.");
+                m_intensity = value;
+            }
+        }
 
         static float Component(float value)
         {
@@ -336,37 +344,52 @@ namespace UnityEngine.Experimental.GlobalIllumination
         public static LightMode Extract(LightmapBakeType baketype) =>
             baketype == LightmapBakeType.Realtime ? LightMode.Realtime : baketype == LightmapBakeType.Mixed ? LightMode.Mixed : LightMode.Baked;
 
-        /// <summary>The light's color (with its color temperature when lights use one).</summary>
-        static Color TintedColor(Light l) =>
-            l.useColorTemperature && GraphicsSettings.lightsUseColorTemperature ? l.color * Mathf.CorrelatedColorTemperatureToRGB(l.colorTemperature).gamma : l.color;
+        /// <summary>A light's color temperature as a linear tint: applied to the components of
+        /// its converted colors when lights use linear intensity, their intensity left as it is.</summary>
+        static Color Temperature(Light l) =>
+            l.useColorTemperature && GraphicsSettings.lightsUseLinearIntensity ? Mathf.CorrelatedColorTemperatureToRGB(l.colorTemperature) : Color.white;
 
-        static LinearColor Direct(Light l) => LinearColor.Convert(TintedColor(l), l.intensity);
+        static LinearColor Tinted(LinearColor color, Color tint)
+        {
+            color.red *= tint.r;
+            color.green *= tint.g;
+            color.blue *= tint.b;
+            return color;
+        }
 
-        public static LinearColor ExtractIndirect(Light l) => LinearColor.Convert(TintedColor(l), l.intensity * l.bounceIntensity);
+        /// <summary>The light's direct and indirect colors with its color temperature.</summary>
+        static void Colors(Light l, out LinearColor direct, out LinearColor indirect)
+        {
+            var tint = Temperature(l);
+            direct = Tinted(LinearColor.Convert(l.color, l.intensity), tint);
+            indirect = Tinted(ExtractIndirect(l), tint);
+        }
+
+        /// <summary>The light's color times its intensity and bounce intensity (without its color
+        /// temperature, which the Extract methods apply).</summary>
+        public static LinearColor ExtractIndirect(Light l) => LinearColor.Convert(l.color, l.intensity * l.bounceIntensity);
 
         public static float ExtractInnerCone(Light l) => 2f * Mathf.Atan(Mathf.Tan(l.spotAngle * 0.5f * Mathf.Deg2Rad) * InnerConeTangent);
 
         public static void Extract(Light l, ref DirectionalLight dir)
         {
             dir.instanceID = l.GetInstanceID();
-            dir.mode = Extract(l.bakingOutput.lightmapBakeType);
+            dir.mode = Extract(l.lightmapBakeType);
             dir.shadow = l.shadows != LightShadows.None;
             dir.position = l.transform.position;
             dir.orientation = l.transform.rotation;
-            dir.color = Direct(l);
-            dir.indirectColor = ExtractIndirect(l);
+            Colors(l, out dir.color, out dir.indirectColor);
             dir.penumbraWidthRadian = l.shadows == LightShadows.Soft ? Mathf.Deg2Rad * l.shadowAngle : 0f;
         }
 
         public static void Extract(Light l, ref PointLight point)
         {
             point.instanceID = l.GetInstanceID();
-            point.mode = Extract(l.bakingOutput.lightmapBakeType);
+            point.mode = Extract(l.lightmapBakeType);
             point.shadow = l.shadows != LightShadows.None;
             point.position = l.transform.position;
             point.orientation = l.transform.rotation;
-            point.color = Direct(l);
-            point.indirectColor = ExtractIndirect(l);
+            Colors(l, out point.color, out point.indirectColor);
             point.range = l.range;
             point.sphereRadius = l.shadows == LightShadows.Soft ? l.shadowRadius : 0f;
             point.falloff = FalloffType.Legacy;
@@ -375,12 +398,11 @@ namespace UnityEngine.Experimental.GlobalIllumination
         public static void Extract(Light l, ref SpotLight spot)
         {
             spot.instanceID = l.GetInstanceID();
-            spot.mode = Extract(l.bakingOutput.lightmapBakeType);
+            spot.mode = Extract(l.lightmapBakeType);
             spot.shadow = l.shadows != LightShadows.None;
             spot.position = l.transform.position;
             spot.orientation = l.transform.rotation;
-            spot.color = Direct(l);
-            spot.indirectColor = ExtractIndirect(l);
+            Colors(l, out spot.color, out spot.indirectColor);
             spot.range = l.range;
             spot.sphereRadius = l.shadows == LightShadows.Soft ? l.shadowRadius : 0f;
             spot.coneAngle = l.spotAngle * Mathf.Deg2Rad;
@@ -392,12 +414,13 @@ namespace UnityEngine.Experimental.GlobalIllumination
         public static void Extract(Light l, ref RectangleLight rect)
         {
             rect.instanceID = l.GetInstanceID();
-            rect.mode = Extract(l.bakingOutput.lightmapBakeType);
+            rect.mode = Extract(l.lightmapBakeType);
             rect.shadow = l.shadows != LightShadows.None;
             rect.position = l.transform.position;
             rect.orientation = l.transform.rotation;
-            rect.color = Direct(l);
-            rect.indirectColor = ExtractIndirect(l);
+            Colors(l, out rect.color, out rect.indirectColor);
+            // (Unity gives an area light's range dilated by its size, Light.dilatedRange, which
+            // Unbound does not compute.)
             rect.range = l.range;
             rect.width = l.areaSize.x;
             rect.height = l.areaSize.y;
@@ -407,12 +430,11 @@ namespace UnityEngine.Experimental.GlobalIllumination
         public static void Extract(Light l, ref DiscLight disc)
         {
             disc.instanceID = l.GetInstanceID();
-            disc.mode = Extract(l.bakingOutput.lightmapBakeType);
+            disc.mode = Extract(l.lightmapBakeType);
             disc.shadow = l.shadows != LightShadows.None;
             disc.position = l.transform.position;
             disc.orientation = l.transform.rotation;
-            disc.color = Direct(l);
-            disc.indirectColor = ExtractIndirect(l);
+            Colors(l, out disc.color, out disc.indirectColor);
             disc.range = l.range;
             disc.radius = l.areaSize.x;
             disc.falloff = FalloffType.Legacy;
@@ -438,32 +460,33 @@ namespace UnityEngine.Experimental.GlobalIllumination
             for (int i = 0; i < requests.Length; i++)
             {
                 var light = requests[i];
+                LightmapperUtils.Extract(light, out Cookie cookie);
                 switch (light.type)
                 {
                     case UnityEngine.LightType.Directional:
                         var directional = new DirectionalLight();
                         LightmapperUtils.Extract(light, ref directional);
-                        data.Init(ref directional);
+                        data.Init(ref directional, ref cookie);
                         break;
                     case UnityEngine.LightType.Point:
                         var point = new PointLight();
                         LightmapperUtils.Extract(light, ref point);
-                        data.Init(ref point);
+                        data.Init(ref point, ref cookie);
                         break;
                     case UnityEngine.LightType.Spot:
                         var spot = new SpotLight();
                         LightmapperUtils.Extract(light, ref spot);
-                        data.Init(ref spot);
+                        data.Init(ref spot, ref cookie);
                         break;
                     case UnityEngine.LightType.Rectangle:
                         var rectangle = new RectangleLight();
                         LightmapperUtils.Extract(light, ref rectangle);
-                        data.Init(ref rectangle);
+                        data.Init(ref rectangle, ref cookie);
                         break;
                     case UnityEngine.LightType.Disc:
                         var disc = new DiscLight();
                         LightmapperUtils.Extract(light, ref disc);
-                        data.Init(ref disc);
+                        data.Init(ref disc, ref cookie);
                         break;
                     default:
                         data.InitNoBake(light.GetInstanceID());

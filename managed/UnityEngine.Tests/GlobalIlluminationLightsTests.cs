@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -141,6 +142,164 @@ namespace UnityEngine.Tests
             finally
             {
                 UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void LightmapperUtilsAppliesTheColorTemperatureToTheConvertedComponents()
+        {
+            var go = new GameObject("Warm");
+            try
+            {
+                var light = go.AddComponent<Light>();
+                light.type = UnityEngine.LightType.Point;
+                light.color = new Color(1f, 0.5f, 0.25f);
+                light.intensity = 2f;
+                light.bounceIntensity = 3f;
+                light.useColorTemperature = true;
+                light.colorTemperature = 3000f;
+                var tint = Mathf.CorrelatedColorTemperatureToRGB(3000f);
+                // With linear light intensity: the converted components times the linear tint,
+                // the intensities as they are; the public indirect extraction carries no tint.
+                WithLinearIntensity(true, () =>
+                {
+                    var point = new GI.PointLight();
+                    GI.LightmapperUtils.Extract(light, ref point);
+                    Assert.Equal(2f, point.color.intensity, 5);
+                    Assert.Equal(6f, point.indirectColor.intensity, 5);
+                    Assert.Equal(tint.r, point.color.red, 6);
+                    Assert.Equal(Mathf.GammaToLinearSpace(0.5f) * tint.g, point.color.green, 6);
+                    Assert.Equal(Mathf.GammaToLinearSpace(0.25f) * tint.b, point.indirectColor.blue, 6);
+                    Assert.True(tint.b < 0.9f);
+                    var untinted = GI.LightmapperUtils.ExtractIndirect(light);
+                    Assert.Equal(Mathf.GammaToLinearSpace(0.25f), untinted.blue, 6);
+                    Assert.Equal(6f, untinted.intensity, 5);
+                });
+                // Without it the temperature is not applied.
+                WithLinearIntensity(false, () =>
+                {
+                    var point = new GI.PointLight();
+                    GI.LightmapperUtils.Extract(light, ref point);
+                    Assert.Equal(1f, point.color.red, 6);
+                    Assert.Equal(Mathf.GammaToLinearSpace(1f) / Mathf.GammaToLinearSpace(2f), point.color.green, 6);
+                });
+                Assert.Throws<ArgumentOutOfRangeException>(() => { var c = GI.LinearColor.Black(); c.intensity = -1f; });
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void RealtimeGITakesItsLightsFromAPipelinesDelegate()
+        {
+            var pointObject = new GameObject("GI Point");
+            var spotObject = new GameObject("GI Spot");
+            var skippedObject = new GameObject("GI Skipped");
+            var original = GI.Lightmapping.GetDelegate();
+            try
+            {
+                var point = pointObject.AddComponent<Light>();
+                point.type = UnityEngine.LightType.Point;
+                point.lightmapBakeType = LightmapBakeType.Realtime;
+                point.color = new Color(1f, 0.5f, 0.25f);
+                point.intensity = 2f;
+                point.bounceIntensity = 3f;
+                point.range = 7f;
+                pointObject.transform.position = new Vector3(901f, 2f, 3f);
+                var spot = spotObject.AddComponent<Light>();
+                spot.type = UnityEngine.LightType.Spot;
+                spot.lightmapBakeType = LightmapBakeType.Realtime;
+                spot.spotAngle = 60f;
+                spot.innerSpotAngle = 12f;
+                spot.range = 9f;
+                spotObject.transform.SetPositionAndRotation(new Vector3(902f, 2f, 3f), Quaternion.Euler(90f, 0f, 0f));
+                var skipped = skippedObject.AddComponent<Light>();
+                skipped.type = UnityEngine.LightType.Point;
+                skipped.lightmapBakeType = LightmapBakeType.Realtime;
+                skippedObject.transform.position = new Vector3(903f, 2f, 3f);
+
+                GiLight? Find(float x)
+                {
+                    int count = RealtimeGI.CollectLights();
+                    for (int i = 0; i < count; i++)
+                        if (RealtimeGI.CollectedLight(i).PositionX == x) return RealtimeGI.CollectedLight(i);
+                    return null;
+                }
+
+                // A pipeline's delegate, as the Universal Render Pipeline's: the inverse-squared
+                // falloff, a spot light's own inner angle, and one light it does not give.
+                GI.Lightmapping.SetDelegate((lights, converted) =>
+                {
+                    for (int i = 0; i < lights.Length; i++)
+                    {
+                        var data = new GI.LightDataGI();
+                        if (lights[i] == skipped) data.InitNoBake(lights[i].GetInstanceID());
+                        else if (lights[i].type == UnityEngine.LightType.Spot)
+                        {
+                            var s = new GI.SpotLight();
+                            GI.LightmapperUtils.Extract(lights[i], ref s);
+                            s.innerConeAngle = lights[i].innerSpotAngle * Mathf.Deg2Rad;
+                            data.Init(ref s);
+                        }
+                        else
+                        {
+                            var p = new GI.PointLight();
+                            GI.LightmapperUtils.Extract(lights[i], ref p);
+                            data.Init(ref p);
+                        }
+                        data.falloff = GI.FalloffType.InverseSquared;
+                        converted[i] = data;
+                    }
+                });
+                WithLinearIntensity(true, () =>
+                {
+                    var p = Find(901f).Value;
+                    Assert.Equal((int)UnityEngine.LightType.Point, p.Kind);
+                    Assert.Equal((int)GI.FalloffType.InverseSquared, p.Falloff);
+                    Assert.Equal(7f, p.Range);
+                    // The indirect color: the linear color times intensity and bounce intensity.
+                    Assert.Equal(6f, p.R, 4);
+                    Assert.Equal(6f * Mathf.GammaToLinearSpace(0.5f), p.G, 4);
+                    Assert.Equal(6f * Mathf.GammaToLinearSpace(0.25f), p.B, 4);
+                    var s = Find(902f).Value;
+                    Assert.Equal((int)UnityEngine.LightType.Spot, s.Kind);
+                    Assert.Equal(60f, s.SpotAngle, 3);
+                    Assert.Equal(12f, s.InnerSpotAngle, 3);
+                    Assert.Equal((0f, -1f, 0f), (Mathf.Round(s.DirectionX * 1e4f) / 1e4f, Mathf.Round(s.DirectionY * 1e4f) / 1e4f, Mathf.Round(s.DirectionZ * 1e4f) / 1e4f));
+                    Assert.Null(Find(903f));
+                    // A light without indirect light adds nothing either.
+                    point.bounceIntensity = 0f;
+                    Assert.Null(Find(901f));
+                    point.bounceIntensity = 3f;
+                    // A conversion that throws leaves the frame without lights, not the update.
+                    var converting = GI.Lightmapping.GetDelegate();
+                    GI.Lightmapping.SetDelegate((_, _) => throw new InvalidOperationException("no lights"));
+                    Assert.Equal(0, RealtimeGI.CollectLights());
+                    GI.Lightmapping.SetDelegate(converting);
+                    Assert.NotNull(Find(901f));
+                });
+
+                // Without a delegate of a pipeline's: the legacy falloff, the default inner cone
+                // and the color scaled before its conversion.
+                GI.Lightmapping.ResetDelegate();
+                WithLinearIntensity(false, () =>
+                {
+                    var p = Find(901f).Value;
+                    Assert.Equal((int)GI.FalloffType.Legacy, p.Falloff);
+                    Assert.Equal(Mathf.GammaToLinearSpace(6f), p.R, 3);
+                    var s = Find(902f).Value;
+                    Assert.Equal(2f * Mathf.Atan(Mathf.Tan(30f * Mathf.Deg2Rad) * 0.71875f) * Mathf.Rad2Deg, s.InnerSpotAngle, 3);
+                    Assert.NotNull(Find(903f));
+                });
+            }
+            finally
+            {
+                GI.Lightmapping.SetDelegate(original);
+                UnityEngine.Object.DestroyImmediate(pointObject);
+                UnityEngine.Object.DestroyImmediate(spotObject);
+                UnityEngine.Object.DestroyImmediate(skippedObject);
             }
         }
 

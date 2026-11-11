@@ -65,8 +65,6 @@ pub enum Falloff {
     Legacy,
     /// 1 / distance^2 times a window (1 - x^4)^2 that ends at the range.
     InverseSquared,
-    /// 1 / distance^2.
-    InverseSquaredNoRangeAttenuation,
 }
 
 /// Steps of a spot light's angular table between the cosine of half its angle and 1.
@@ -155,7 +153,9 @@ fn legacy_falloff(x2: f32) -> f32 {
 /// Number of samples of a light's distance falloff.
 const FALLOFF_SAMPLES: usize = 16;
 
-/// Below this squared distance an inverse-squared falloff stops growing.
+/// Below this squared distance an inverse-squared falloff stops growing: it keeps the samples
+/// of a light with next to no range finite (a guard, not a measured value: it shows only for
+/// ranges below 0.14).
 const INVERSE_SQUARED_MIN_DISTANCE2: f32 = 1e-4;
 
 /// A light's distance falloff as precomputed realtime GI evaluates it: sampled at
@@ -164,23 +164,20 @@ const INVERSE_SQUARED_MIN_DISTANCE2: f32 = 1e-4;
 /// are 0, whatever the falloff: an inverse-squared one therefore falls from its innermost
 /// sample (x = 1/14) to 1 at the light. Matches the Unity 6000.0.71f1 Editor,
 /// tests/projects/realtimegi (the legacy falloff: the direct light per cluster within 0.05%;
-/// the inverse-squared one: the lightmaps of `pipeline-*`, whose surfaces are all farther from
-/// the lights than the innermost sample).
+/// the inverse-squared one: the lightmaps of `pipeline-*`, `pipeline-near` with a light nearer
+/// the floor than the innermost sample).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FalloffTable([f32; FALLOFF_SAMPLES]);
 
 impl FalloffTable {
     /// The table of a light of `range` with the falloff `kind`.
     pub fn of(kind: Falloff, range: f32) -> Self {
-        let inverse_squared =
-            |x2: f32, window: f32| window / (x2 * range * range).max(INVERSE_SQUARED_MIN_DISTANCE2);
         match kind {
             Falloff::Legacy => Self(LEGACY_FALLOFF.0),
             Falloff::InverseSquared => Self::new(|x2| {
                 let window = (1.0 - x2 * x2).clamp(0.0, 1.0);
-                inverse_squared(x2, window * window)
+                window * window / (x2 * range * range).max(INVERSE_SQUARED_MIN_DISTANCE2)
             }),
-            Falloff::InverseSquaredNoRangeAttenuation => Self::new(|x2| inverse_squared(x2, 1.0)),
         }
     }
 
@@ -885,39 +882,30 @@ mod falloff_tests {
     #[test]
     fn an_inverse_squared_falloff_is_sampled_in_distance_and_ends_at_one() {
         // A light of range 4: at the sample positions 1 / distance^2 times the window
-        // (1 - x^4)^2; without range attenuation, 1 / distance^2 alone.
-        let windowed = FalloffTable::of(Falloff::InverseSquared, 4.0);
-        let plain = FalloffTable::of(Falloff::InverseSquaredNoRangeAttenuation, 4.0);
+        // (1 - x^4)^2.
+        let table = FalloffTable::of(Falloff::InverseSquared, 4.0);
+        let curve = |x2: f32| (1.0 - x2 * x2) * (1.0 - x2 * x2) / (x2 * 16.0);
         for i in 2..FALLOFF_SAMPLES - 1 {
             let x2 = (15.0 / i as f32 - 1.0) / 14.0;
-            let inverse = 1.0 / (x2 * 16.0);
-            let window = (1.0 - x2 * x2) * (1.0 - x2 * x2);
             assert!(
-                (plain.eval(x2) - inverse).abs() < 1e-5 * inverse,
-                "sample {i}"
-            );
-            assert!(
-                (windowed.eval(x2) - inverse * window).abs() < 1e-5 * inverse,
+                (table.eval(x2) - curve(x2)).abs() < 1e-5 * curve(x2).max(1.0),
                 "sample {i}"
             );
         }
         // Half the range: between samples 3 and 4, linear in the table position.
         let t = 15.0f32 / 4.5;
-        let at = |i: f32| 1.0 / ((15.0 / i - 1.0) / 14.0 * 16.0);
+        let at = |i: f32| curve((15.0 / i - 1.0) / 14.0);
         let expected = at(3.0) + (at(4.0) - at(3.0)) * (t - 3.0);
-        assert!((plain.eval(0.25) - expected).abs() < 1e-6);
-        // From the range on: nothing, also without range attenuation (the table's first two
-        // samples). At the light the table ends at 1, below its innermost sample
-        // (196 / range^2 at a fourteenth of the range).
-        for table in [&windowed, &plain] {
-            assert_eq!(table.eval(1.0), 0.0);
-            assert_eq!(table.eval(9.0), 0.0);
-            assert_eq!(table.eval(0.0), 1.0);
-            assert!((table.eval(1.0 / 196.0) - 196.0 / 16.0).abs() < 0.01);
-        }
+        assert!((table.eval(0.25) - expected).abs() < 1e-6);
+        // From the range on: nothing. At the light the table ends at 1, below its innermost
+        // sample (196 / range^2 at a fourteenth of the range).
+        assert_eq!(table.eval(1.0), 0.0);
+        assert_eq!(table.eval(9.0), 0.0);
+        assert_eq!(table.eval(0.0), 1.0);
+        assert!((table.eval(1.0 / 196.0) - 196.0 / 16.0).abs() < 0.01);
         // The range scales it: twice the range, a quarter at the same x.
         let wide = FalloffTable::of(Falloff::InverseSquared, 8.0);
-        assert!((wide.eval(0.25) - windowed.eval(0.25) / 4.0).abs() < 1e-6);
+        assert!((wide.eval(0.25) - table.eval(0.25) / 4.0).abs() < 1e-6);
         // A range of nothing stays finite.
         let none = FalloffTable::of(Falloff::InverseSquared, 0.0);
         assert!(none.eval(0.25).is_finite());
