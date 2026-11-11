@@ -116,6 +116,10 @@ struct Room {
     left_rendered: [f32; 3],
     /// The flat ambient color (gamma).
     ambient: [f32; 3],
+    /// A gradient (Trilight) ambient instead: sky, equator and ground colors (gamma).
+    gradient: Option<[[f32; 3]; 3]>,
+    /// The cube the probe gives DynamicGI.SetEnvironmentData instead ([`probe_cube`]).
+    cube: bool,
     point_light: bool,
     /// The spot light (intensity 3, range 9) at a position, direction and angle.
     spot: Option<([f32; 3], [f32; 3], f32)>,
@@ -135,6 +139,8 @@ const BASE: Room = Room {
     left: [0.8, 0.1, 0.1],
     left_rendered: [0.8, 0.1, 0.1],
     ambient: [0.1, 0.12, 0.2],
+    gradient: None,
+    cube: false,
     point_light: true,
     spot: None,
     sun: None,
@@ -143,6 +149,42 @@ const BASE: Room = Room {
 const MOVED: [f32; 3] = [1.5, 2.5, -1.5];
 /// The emissive panel's renderer (scene object file ID).
 const PANEL: i64 = 1629154324;
+
+/// The cube tests/projects/realtimegi gives DynamicGI.SetEnvironmentData (its
+/// `EnvironmentData`): every face its own colors, brighter along its columns (red) and rows
+/// (green).
+fn probe_cube() -> Vec<[f32; 3]> {
+    let size = crate::environment::RESOLUTION;
+    let mut faces = Vec::with_capacity(crate::environment::FACE_VALUES);
+    for face in 0..6 {
+        for y in 0..size {
+            for x in 0..size {
+                faces.push([
+                    (0.05 + 0.1 * face as f32) * (x + 1) as f32 / 4.0,
+                    (0.6 - 0.1 * face as f32) * (y + 1) as f32 / 4.0,
+                    0.2 * (1 + face % 2) as f32,
+                ]);
+            }
+        }
+    }
+    faces
+}
+
+/// The environment values of `room`: the cube a script set, its gradient's faces (+X, -X, +Y,
+/// -Y, +Z, -Z take the equator, sky and ground colors), or its flat ambient color.
+fn environment(room: &Room) -> Vec<[f32; 3]> {
+    let faces: Vec<[f32; 3]> = match room.gradient {
+        _ if room.cube => probe_cube(),
+        Some([sky, equator, ground]) => [equator, equator, sky, ground, equator, equator]
+            .iter()
+            .flat_map(|c| std::iter::repeat_n(c.map(gamma_to_linear), 64))
+            .collect(),
+        None => vec![room.ambient.map(gamma_to_linear); crate::environment::FACE_VALUES],
+    };
+    let mut values = vec![[0.0; 3]; crate::data::ENVIRONMENT_VALUES];
+    crate::environment::environment_values(&faces, &mut values).unwrap();
+    values
+}
 
 /// The scene's spot light position and rotation (x, y, z, w).
 const SPOT_AT: [f32; 3] = [1.5, 3.5, -1.0];
@@ -221,8 +263,7 @@ impl Replay {
             let panel = renderer_of(&self.data, PANEL);
             self.solver.set_renderer_emission(panel, color).unwrap();
         }
-        self.solver
-            .set_uniform_environment(room.ambient.map(gamma_to_linear));
+        self.solver.set_environment(&environment(&room)).unwrap();
         // The project has no linear light intensity: the gamma colors are scaled, then
         // converted.
         let mut lights = Vec::new();
@@ -314,7 +355,7 @@ impl Replay {
     /// which matches).
     fn probes(&self, case: &str) -> (usize, f32) {
         let room = self.room.unwrap();
-        let environment = vec![room.ambient.map(gamma_to_linear); crate::data::ENVIRONMENT_VALUES];
+        let environment = environment(&room);
         let mut sh = vec![[0.0; 27]; self.probes.probe_set().probes.len()];
         self.probes.solve(
             std::slice::from_ref(&self.solver),
@@ -524,6 +565,29 @@ fn replays_the_probes_cases() {
     // A new directional light without shadows (Light.shadows None) at the first direction: its
     // realtime GI is shadowed all the same.
     r.check(sun, "room-directional-noshadows", 2 * ISOLATED, 0.006);
+    // The environment alone (the panel's emission set to black): a gradient ambient (its faces
+    // flat, so their texel order does not matter here).
+    let gradient = Room {
+        sun: None,
+        panel_set_emissive: Some([0.0; 3]),
+        gradient: Some([[0.5, 0.6, 0.9], [0.4, 0.35, 0.3], [0.15, 0.12, 0.1]]),
+        ..sun
+    };
+    r.check(gradient, "room-gradient", 2 * ISOLATED, 0.006);
+    // A cube set by a script, whose faces are not flat: the order of a face's texels matters.
+    let cube = Room {
+        cube: true,
+        ..gradient
+    };
+    r.check(cube, "room-envdata", 2 * ISOLATED, 0.006);
+    // The ambient color again, as the skybox ambient mode without a skybox reads it.
+    let flat = Room {
+        ambient: [0.5, 0.6, 0.9],
+        gradient: None,
+        cube: false,
+        ..cube
+    };
+    r.check(flat, "room-sky-none", 2 * ISOLATED, 0.006);
 }
 
 #[test]
@@ -1196,7 +1260,9 @@ fn realtime_uvs_of_another_scene_match_its_layout() {
     }
     // The solver runs on it too.
     let mut solver = SystemSolver::new(Arc::new(system.clone()), true).unwrap();
-    solver.set_uniform_environment([0.1; 3]);
+    solver
+        .set_environment(&[[0.1; 3]; crate::data::ENVIRONMENT_VALUES])
+        .unwrap();
     // The first update solves every segment; the updates then stop solving.
     assert_eq!(solver.update(), system.transport.segments.len());
     assert!((0..100).any(|_| solver.update() == 0));
@@ -1277,7 +1343,7 @@ fn a_scene_of_two_systems_converges_as_the_editors() {
         let (albedo, emission) = material_textures(system, &colors);
         solver.set_albedo(&albedo).unwrap();
         solver.set_emission(&emission).unwrap();
-        solver.set_uniform_environment(BASE.ambient.map(gamma_to_linear));
+        solver.set_environment(&environment(&BASE)).unwrap();
         solver
             .set_lights(&[Light {
                 color: [1.0, 0.95, 0.85].map(|c: f32| gamma_to_linear(c * 2.0)),

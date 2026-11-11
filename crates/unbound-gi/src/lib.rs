@@ -3,6 +3,7 @@
 //! ([`probes`]) at runtime.
 //! See docs/REALTIME_GI.md.
 pub mod data;
+pub mod environment;
 pub mod probes;
 pub mod realtime_uv;
 pub mod solver;

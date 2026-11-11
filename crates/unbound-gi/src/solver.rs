@@ -608,6 +608,19 @@ impl SystemSolver {
         self.environment.fill(rgb);
     }
 
+    /// The environment's values ([`crate::environment::environment_values`]).
+    pub fn set_environment(&mut self, values: &[[f32; 3]]) -> Result<()> {
+        if values.len() != self.environment.len() {
+            bail!(
+                "{} environment values for {}",
+                values.len(),
+                self.environment.len()
+            );
+        }
+        self.environment.copy_from_slice(values);
+        Ok(())
+    }
+
     /// DynamicGI.indirectScale: scales the texels drawn; the bounce reads them divided by it
     /// again. A change solves every segment in the next update.
     pub fn set_indirect_scale(&mut self, scale: f32) {
