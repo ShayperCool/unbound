@@ -1008,9 +1008,9 @@ namespace Unbound.Runtime
         /// has a weight. Trees whose weights sum to one give the same either way. Matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/humanoid body.direct*: clips of 1 s at 0.8
         /// and 0.6 make a state of 1.4 s (body.directHigh), at 0.3 and 0.4 one of 1 s
-        /// (body.directLow), a clip of 2/3 s at 0 one of 1 s (body.directZeroB); at 0.5 it makes
-        /// one of 2/3 s in an Editor capture of the probe's HumanBodyDirectLowB controller, which
-        /// is not in the reference. A child without a motion counts as one second by its weight,
+        /// (body.directLow), a clip of 2/3 s at 0.5 one of 2/3 s (body.directLowB) and at 0 one
+        /// of 1 s (body.directZeroB); a child tree without clips counts for nothing
+        /// (body.directEmptyChild). A child without a motion counts as one second by its weight,
         /// as before (unmeasured).</summary>
         internal float MotionLength(LayerRun layer, Motion motion)
         {
