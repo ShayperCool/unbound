@@ -118,7 +118,9 @@ fn with_scene<T>(handle: u64, f: impl FnOnce(&mut Scene) -> Result<T>) -> Result
 
 /// Loads the precomputed realtime GI of lighting data `{guid, fileId}`: `null` without any, else
 /// `{ handle, atlases: [size], systems: [{ atlas, offset: [x, y], width, height, renderers:
-/// [{ object, prefab, st: [4] }] }] }`. `linear_space`: the project's color space.
+/// [{ object, prefab, st: [4] }] }], probes: { count, error }, directionality: { error, copies } }`
+/// (`directionality.error`: why the scene has none; `copies`: whether a system copies texels).
+/// `linear_space`: the project's color space.
 pub fn load(
     db: &AssetDb,
     unity_data: &Path,
@@ -1078,6 +1080,56 @@ mod tests {
         update(handle, &frame, &lights).unwrap();
         assert_eq!(read_directionality(handle, 0, &mut texels).unwrap(), 0);
         release(handle);
+    }
+
+    #[test]
+    fn a_scene_without_readable_blocks_draws_its_lightmap_in_the_directional_mode() {
+        // A system whose blocks could not be read: the scene says why, updates in the
+        // directional mode all the same, has no directionality and the lightmap of the scene
+        // as it is read whole in the other mode.
+        let mut data = room();
+        let transport = &mut data.systems[0].transport;
+        transport.block_error = Some("no blocks".into());
+        for segment in &mut transport.segments {
+            segment.block_normals.clear();
+            segment.block_directions.clear();
+        }
+        // A copy of a texel onto itself: the reply says that the scene has copies.
+        let texel = transport.segments[0].texels[0];
+        transport.segments[0].copies.push((texel, texel));
+        let reply = register(data, true, &[]).unwrap();
+        assert_eq!(
+            reply["directionality"],
+            json!({ "error": "no blocks", "copies": true })
+        );
+        let lights = [point([0.0, 2.0, 0.0])];
+        let lightmap = |handle: u64, directional: i32| {
+            set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
+            let frame = GiFrame {
+                indirect_scale: 1.0,
+                synchronous: 1,
+                budget_ms: 2.0,
+                update_threshold: 1.0,
+                directional,
+            };
+            let converged =
+                (0..1000).any(|_| update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED != 0);
+            assert!(converged);
+            let mut light = vec![0u16; 4 * 64 * 64];
+            read_atlas(handle, 0, &mut light).unwrap();
+            light
+        };
+        let handle = reply["handle"].as_u64().unwrap();
+        let light = lightmap(handle, 1);
+        let mut texels = vec![0u8; 4 * 64 * 64];
+        assert_eq!(read_directionality(handle, 0, &mut texels).unwrap(), 0);
+        release(handle);
+        let whole = register(room(), true, &[]).unwrap()["handle"]
+            .as_u64()
+            .unwrap();
+        assert!(light.chunks_exact(4).any(|l| l[0] != 0));
+        assert!(light == lightmap(whole, 0));
+        release(whole);
     }
 
     #[test]

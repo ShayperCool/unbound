@@ -250,7 +250,8 @@ pub struct NativeApi {
     ) -> i32,
     // Version 52: directional realtime lightmaps.
     /// (scene, atlas, out RGBA8 texels, capacity in bytes): the atlas's directionality texels
-    /// written (0 while the scene's lightmaps are not directional), or -1.
+    /// written (0 while the scene's lightmaps are not directional, and until every system of
+    /// the atlas has solved its directionality since they became so), or -1.
     pub gi_read_directionality: extern "C" fn(u64, i32, *mut u8, i32) -> i32,
 }
 

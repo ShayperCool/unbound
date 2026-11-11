@@ -163,7 +163,8 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, int, int, float*, float*, int, uint*, int, float, int, float*, NativeBuffer*, int> GiRealtimeUvs;
         /// <summary>
         /// (scene, atlas, out RGBA8 texels, capacity in bytes): the atlas's directionality texels
-        /// written (0 while the scene's lightmaps are not directional), or -1.
+        /// written (0 while the scene's lightmaps are not directional, and until every system of
+        /// the atlas has solved its directionality since they became so), or -1.
         /// </summary>
         internal delegate* unmanaged<ulong, int, byte*, int, int> GiReadDirectionality;
     }

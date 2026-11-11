@@ -832,6 +832,17 @@ fn malformed_data_fails_without_panicking() {
             for (a, b) in read.segments.iter().zip(&whole.segments) {
                 assert_eq!((&a.weights, &a.texels), (&b.weights, &b.texels));
             }
+            // More blocks than texels cannot be: the block count places the lightmap's data too.
+            let mut other = full.clone();
+            let texels = u16::from_le_bytes([other[96], other[97]]);
+            other[98..100].copy_from_slice(&(texels + 1).to_le_bytes());
+            let error = crate::data::read_transport(&other).unwrap_err().to_string();
+            assert!(error.contains("blocks for"), "{error}");
+            // An odd width leaves the last column's texels outside it.
+            let mut other = full.clone();
+            other[80..82].copy_from_slice(&51u16.to_le_bytes());
+            let error = crate::data::read_transport(&other).unwrap_err().to_string();
+            assert!(error.contains("outside 51x52"), "{error}");
             let mut system = room_data().systems[0].clone();
             system.transport = read;
             let mut solver = SystemSolver::new(Arc::new(system), true).unwrap();

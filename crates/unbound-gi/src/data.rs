@@ -295,7 +295,12 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
             }
         }
         ensure!(k == refs, "segment dependency counts do not add up");
-        // Per block and reference a direction precedes the per-texel weights.
+        // Per block and reference a direction precedes the per-texel weights: the block count
+        // places the lightmap's own data, and the blocks are the first of the segment's texels.
+        ensure!(
+            blocks <= texels,
+            "a segment of {blocks} blocks for {texels} texels"
+        );
         let directions_at = align(counts_at + 4 * deps, 16);
         let weights_at = directions_at + blocks * refs;
         let weights = r.slice(weights_at, texels * refs)?.to_vec();
@@ -328,8 +333,8 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
         // keeps its lightmap.
         let block_data = || -> Result<(Vec<[f32; 3]>, Vec<u8>)> {
             ensure!(
-                blocks <= texels && block_copies <= copies,
-                "a segment of {blocks} blocks and {block_copies} block copies for {texels} texels and {copies} copies"
+                block_copies <= copies,
+                "a segment of {block_copies} block copies for {copies} copies"
             );
             // A texel that stands for its block lies in the grid of whole blocks.
             let in_grid =
