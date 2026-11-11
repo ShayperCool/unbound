@@ -22,6 +22,10 @@ namespace Unbound.Runtime.Playables
             /// hierarchy last changed: what the handle's world values are read under once its
             /// transform is destroyed.</summary>
             internal Transform Parent;
+            /// <summary>The path <see cref="Transform"/> had below the Animator then (null:
+            /// none): what tells a destroyed transform's handle from the skeleton's paths and
+            /// the avatar's bones.</summary>
+            internal string Path;
             internal int Position, Rotation, Scale;
             /// <summary>The skeleton node the channels animate on an Animator without its
             /// transform hierarchy (-1: they animate <see cref="Transform"/>).</summary>
@@ -84,7 +88,11 @@ namespace Unbound.Runtime.Playables
             handle.Node = owner is SkeletonGroup node ? node.Node : -1;
             if (handle.Node < 0 && owner?.Transform != null) handle.Transform = owner.Transform;
             if (handle.Node < 0 && owner != null && handle.Transform != null) StreamOwned.Add(handle.Transform);
-            if (handle.Transform != null) handle.Parent = handle.Transform.m_Parent;
+            if (handle.Transform != null)
+            {
+                handle.Parent = handle.Transform.m_Parent;
+                handle.Path = PathOf(handle.Transform);
+            }
             handle.Human = 0;
             handle.HumanFor = null;
             return handle;
@@ -102,8 +110,9 @@ namespace Unbound.Runtime.Playables
         /// <summary>Whether a transform handle's path is none of the paths of the skeleton an
         /// Animator without its transform hierarchy animates: an exposed transform bound under
         /// its own path or an object added below the Animator, not the Animator's own transform
-        /// (the skeleton's first node). Found once for the handles and the avatar there are; a
-        /// handle whose transform is destroyed does not count (unmeasured).</summary>
+        /// (the skeleton's first node). Found once for the handles and the avatar there are,
+        /// from the paths the handles had when they were bound or the hierarchy last changed: a
+        /// handle whose transform is destroyed since counts as before (unmeasured).</summary>
         internal bool AnyOffSkeleton()
         {
             var avatar = Animator.Skeleton?.Avatar;
@@ -113,9 +122,8 @@ namespace Unbound.Runtime.Playables
             m_OffSkeleton = false;
             foreach (var handle in Transforms)
             {
-                if (handle.Node >= 0 || handle.Transform == null) continue;
-                var path = PathOf(handle.Transform);
-                if (path != null && avatar.NodeOfPath(HashedBindings.Crc32(path)) >= 0) continue;
+                if (handle.Node >= 0) continue;
+                if (handle.Path != null && avatar.NodeOfPath(HashedBindings.Crc32(handle.Path)) >= 0) continue;
                 m_OffSkeleton = true;
                 break;
             }
@@ -266,22 +274,21 @@ namespace Unbound.Runtime.Playables
             if (handle.Node >= 0 || animator == null) return false;
             using var engine = MainThreadCheck.Engine();
             if (!animator.IsHuman) return false;
-            if (handle.Transform == null)
-            {
-                if (handle.Human > 0)
-                    Stubs.Ignored("TransformStreamHandle of a humanoid's bone after the bone's transform is destroyed",
-                        "reads and writes the transform values of its path, not the human pose's bone (not measured)");
-                return false;
-            }
             var constant = animator.Human?.Constant;
             if (!ReferenceEquals(handle.HumanFor, constant))
             {
-                var path = Handles.PathOf(handle.Transform);
+                var path = handle.Transform != null ? Handles.PathOf(handle.Transform) : handle.Path;
                 handle.Human = path == null ? 0 : Unbound.Runtime.Playables.HumanStreamPose.BoneNode(constant, path);
                 handle.HumanFor = constant;
                 Handles.Transforms[index] = handle;
             }
             if (handle.Human <= 0) return false;
+            if (handle.Transform == null)
+            {
+                Stubs.Ignored("TransformStreamHandle of a humanoid's bone after the bone's transform is destroyed",
+                    "reads and writes the transform values of its path, not the human pose's bone (not measured)");
+                return false;
+            }
             pose = HumanPose();
             return true;
         }

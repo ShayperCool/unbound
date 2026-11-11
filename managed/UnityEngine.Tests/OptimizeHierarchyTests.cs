@@ -531,6 +531,8 @@ namespace UnityEngine.Tests
                     graph.Evaluate(time);
                     Assert.True(HandJob.Valid);
                     Assert.Equal(local, HandJob.Read);
+                    // With the parent gone too the local values stand for the world's: Unbound's
+                    // choice, the Editor is unmeasured there.
                     Assert.Equal(withItsParent && step > 0 ? local : world, HandJob.World);
                     Assert.NotEqual(local, world);
                     if (step == 0) before = local;
@@ -577,6 +579,23 @@ namespace UnityEngine.Tests
                 animator.BindStreamTransform(added);
             }
             return root;
+        }
+
+        /// <summary>AnimationFixtures.RootMotion with its clip replaced by a left arm muscle
+        /// curve (class 95, the Animator's): a controller whose one state lowers and raises the
+        /// arm.</summary>
+        static RuntimeAnimatorController ArmController(string name)
+        {
+            var file = ObjectGraphBuilder.Build(UnityYaml.Parse(AnimationFixtures.RootMotion), name, null, ObjectGraphBuilder.Kind.Asset, null);
+            var clip = (AnimationClip)file.Objects[7400001];
+            clip.m_Curves.Clear();
+            clip.m_Curves.Add(new ClipCurve
+            {
+                Binding = new CurveBinding { Path = "", Attribute = "Left Arm Down-Up", ClassId = 95 },
+                Curve = AnimationCurve.Linear(0f, -1f, 1f, 1f),
+            });
+            clip.m_Version++;
+            return (RuntimeAnimatorController)file.Objects[9100000];
         }
 
         static List<string> NoAvatarLogs(int times)
@@ -633,6 +652,7 @@ namespace UnityEngine.Tests
                 var expected = NoAvatarLogs(lost ? 4 : 0);
                 Assert.Equal(expected, logs);
 
+                // Unbound's choice, unmeasured in the Editor: without the handles it plays again.
                 animator.UnbindAllStreamHandles();
                 Vector3 before = hand.position;
                 graph.Evaluate(0.25f);
@@ -661,17 +681,7 @@ namespace UnityEngine.Tests
         {
             var root = BoundHumanoid(handle, true, out var animator, out var hand);
             var avatar = animator.avatar;
-            var file = ObjectGraphBuilder.Build(UnityYaml.Parse(AnimationFixtures.RootMotion), "lostcontroller.asset", null,
-                ObjectGraphBuilder.Kind.Asset, null);
-            var clip = (AnimationClip)file.Objects[7400001];
-            clip.m_Curves.Clear();
-            clip.m_Curves.Add(new ClipCurve
-            {
-                Binding = new CurveBinding { Path = "", Attribute = "Left Arm Down-Up", ClassId = 95 },
-                Curve = AnimationCurve.Linear(0f, -1f, 1f, 1f),
-            });
-            clip.m_Version++;
-            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            animator.runtimeAnimatorController = ArmController("lostcontroller.asset");
             var logs = new List<string>();
             void Capture(string message, string stack, LogType type) => logs.Add(type + ": " + message);
             Application.logMessageReceived += Capture;
@@ -687,6 +697,92 @@ namespace UnityEngine.Tests
             finally
             {
                 Application.logMessageReceived -= Capture;
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
+        /// <summary>The player loop's update of such an Animator (unmeasured in the Editor;
+        /// Unbound's choice follows the measured calls): with the exposed hand bound the
+        /// controller's state does not pose the hand and each update logs the two messages
+        /// once, or, with a playing graph output, as often as the output's evaluation does and
+        /// no more. Control: without the handle the state plays and nothing is logged.</summary>
+        [Theory]
+        [InlineData("hand", false)]
+        [InlineData("hand", true)]
+        [InlineData("none", false)]
+        [InlineData("none", true)]
+        public void AnOptimizedHumanoidWithAHandleOffItsSkeletonIsNotPlayedByThePlayerLoop(string handle, bool withOutput)
+        {
+            var root = BoundHumanoid(handle, true, out var animator, out var hand);
+            var avatar = animator.avatar;
+            animator.runtimeAnimatorController = ArmController("looplost.asset");
+            var graph = PlayableGraph.Create("looplost");
+            var logs = new List<string>();
+            void Capture(string message, string stack, LogType type) => logs.Add(type + ": " + message);
+            Application.logMessageReceived += Capture;
+            try
+            {
+                if (withOutput)
+                {
+                    var clip = new AnimationClip();
+                    clip.SetCurve("", typeof(Animator), "Right Arm Down-Up", AnimationCurve.Linear(0f, -1f, 1f, 1f));
+                    AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
+                    graph.Play();
+                }
+                bool lost = handle == "hand";
+                Vector3 start = hand.position;
+                const int updates = 3;
+                for (int i = 0; i < updates; i++)
+                {
+                    // The graphs' update queues the output for the Animator's.
+                    Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                    AnimationTestLoop.Update(fixedStep: false);
+                }
+                Assert.Equal(lost, start == hand.position);
+                int each = withOutput ? Animator.AvatarLostLogsPerEvaluation : Animator.AvatarLostLogsPerFrame;
+                Assert.Equal(NoAvatarLogs(lost ? updates * each : 0), logs);
+            }
+            finally
+            {
+                Application.logMessageReceived -= Capture;
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
+        /// <summary>A handle bound to an object below an optimized humanoid counts whether its
+        /// object is destroyed before or after the first evaluation (Unbound's choice, the
+        /// Editor is unmeasured: the handle keeps the path it was bound with).</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ADestroyedObjectsHandleStillCountsOffTheSkeleton(bool evaluateFirst)
+        {
+            var root = BoundHumanoid("added", true, out var animator, out var hand);
+            var avatar = animator.avatar;
+            var clip = new AnimationClip();
+            clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, -1f, 1f, 1f));
+            var graph = PlayableGraph.Create("lostdestroyed");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
+            var logs = new List<string>();
+            void Capture(string message, string stack, LogType type) => logs.Add(type + ": " + message);
+            Application.logMessageReceived += Capture;
+            try
+            {
+                Vector3 start = hand.position;
+                if (evaluateFirst) graph.Evaluate(0f);
+                Object.DestroyImmediate(root.transform.Find("Added").gameObject);
+                graph.Evaluate(0.5f);
+                Assert.Equal(start, hand.position);
+                Assert.Equal(NoAvatarLogs((evaluateFirst ? 2 : 1) * Animator.AvatarLostLogsPerEvaluation), logs);
+            }
+            finally
+            {
+                Application.logMessageReceived -= Capture;
+                graph.Destroy();
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(avatar);
             }

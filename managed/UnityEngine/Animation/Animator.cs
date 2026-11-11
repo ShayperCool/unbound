@@ -215,7 +215,12 @@ namespace UnityEngine
         {
             if (!m_NoHierarchy || m_StreamHandles == null || !IsHuman || !m_StreamHandles.AnyOffSkeleton()) return false;
             string error = Unbound.Runtime.Humanoid.AvatarBuild.HierarchyError(m_GameObject, m_Avatar.m_Description);
-            if (error == null) return false;
+            if (error == null)
+            {
+                Stubs.Ignored("stream handle off the skeleton of an optimized humanoid that still holds every mapped bone's transform",
+                    "plays as without the handle (not measured)");
+                return false;
+            }
             for (int i = 0; i < logs; i++)
             {
                 Debug.LogError(error);
@@ -445,7 +450,8 @@ namespace UnityEngine
         internal void Tick(float deltaTime)
         {
             // Pending outputs log it in their evaluation.
-            if (m_Controller != null && AvatarLostToStreamHandles(Unbound.Runtime.Playables.AnimationOutputs.HasPending(this) ? 0 : AvatarLostLogsPerFrame)) return;
+            if (m_NoHierarchy && m_StreamHandles != null && m_Controller != null
+                && AvatarLostToStreamHandles(Unbound.Runtime.Playables.AnimationOutputs.HasPending(this) ? 0 : AvatarLostLogsPerFrame)) return;
             if (m_CullingMode == AnimatorCullingMode.AlwaysAnimate || AnyRendererVisible(m_GameObject))
             {
                 m_Culled = CulledUpdate.None;
