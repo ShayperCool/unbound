@@ -69,9 +69,10 @@ namespace Unbound.Tests
             }
         }
 
-        /// <summary>Elements lie on the line from the flare to the view axis; a rotating one is a
-        /// diamond whose first corner points away from the axis, 1.4 half sides out; on the axis
-        /// it points along +x.</summary>
+        /// <summary>Elements lie on the line from the flare to the view axis, also under an
+        /// off-centre projection, where that is not the screen's centre (canonical `fl.shift.*`);
+        /// a rotating one is a diamond whose first corner points away from the axis, 1.4 half
+        /// sides out; on the axis it points along +x.</summary>
         [Fact]
         public void ElementsFollowTheLineToTheAxisAndRotateAwayFromIt()
         {
@@ -86,6 +87,12 @@ namespace Unbound.Tests
             Assert.Equal(1.4f, corner.magnitude, 5);
             Assert.Equal(0.6f, corner.x / corner.magnitude, 5);
             Assert.Equal(0.8f, corner.y / corner.magnitude, 5);
+
+            // A lens shift of a quarter of the width: the element at position 1 is on the view
+            // axis, which the projection shows a quarter of the width left of the centre.
+            var shifted = Matrix4x4.Perspective(60f, 1f, 0.3f, 1000f);
+            shifted.m02 = 0.5f;
+            Assert.Equal(new Vector2(32f, 64f), Pixel(shifted, Center(1), 128f, 128f));
 
             var onAxis = Source(new Vector3(0f, 0f, 10f), false, Element(10f, 0f, rotate: true));
             Assert.True(Halos.BuildFlare(onAxis, 1f, Halos.FlarePoint(view, onAxis, 0.3f)));
@@ -110,9 +117,9 @@ namespace Unbound.Tests
         }
 
         /// <summary>A directional flare is its direction at twice the near plane's distance,
-        /// whatever the camera's position: past 60 degrees from the view axis it is nearer than
-        /// the near plane, where the projection clips it (canonical `fl.directional.off50`
-        /// drawn, `fl.directional.off70` empty).</summary>
+        /// whatever the camera's position. The canonical `fl.directional.off50` is drawn and
+        /// `fl.directional.off70` is empty; that the change comes at 60 degrees, where the
+        /// point is as near as the near plane, follows from the placement and is not measured.</summary>
         [Fact]
         public void ADirectionalFlareSitsAtTwiceTheNearPlane()
         {

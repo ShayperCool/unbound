@@ -467,16 +467,19 @@ namespace Unbound.Runtime
 
         /// <summary>
         /// The flare's element quads, in view space at the flare's depth (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/flares): an element sits on the line from
-        /// the flare's point to the view axis at its position; its half side is its size times
-        /// the depth times <see cref="ElementScale"/> (a zooming element's also times the
-        /// visibility), so a perspective camera shows it at one size whatever the depth and an
-        /// orthographic one scales it by the depth; a rotating element is a diamond
-        /// <see cref="RotatedCorner"/> half sides wide whose first corner points away from the
-        /// axis. Being at the flare's depth, the quads are clipped by the camera's planes as
-        /// the Editor's are: a flare beyond the far plane or nearer than the near plane is not
-        /// drawn, nor is a directional one more than 60 degrees off the view axis (`fl.*`). The order of the products and sums matters to the last bit, as in
-        /// <see cref="FlarePoint"/>.
+        /// 6000.0.71f1 Editor, tests/projects/flares): an element sits on the line from the
+        /// flare's point to the view axis at its position; its half side is its size times the
+        /// depth times <see cref="ElementScale"/> (a zooming element's also times the
+        /// brightness and visibility, `fl.zoom.*`), so a perspective camera shows it at one size
+        /// whatever the depth and an orthographic one scales it by the depth; a rotating element
+        /// is a diamond <see cref="RotatedCorner"/> half sides wide whose first corner points
+        /// away from the axis. The Manual words the line as running "through the screen
+        /// center": the two are one place unless the projection is off centre, and there the
+        /// Editor's elements follow the view axis (`fl.shift.*`, a lens shift of a quarter of
+        /// the width). Being at the flare's depth, the quads take part in the projection's
+        /// clipping: a flare beyond the far plane or nearer than the near plane is not drawn
+        /// (`fl.beyondFar`, `fl.insideNear`: empty in the Editor too). The order of the products
+        /// and sums matters to the last bit, as in <see cref="FlarePoint"/>.
         /// </summary>
         internal static bool BuildFlare(in Source source, float visibility, Vector3 point)
         {

@@ -32,7 +32,8 @@ the scene file: there is no scripting API for it).
 * **Flare limits** (`fl.*`, appended last, after the first scene is loaded again): a zooming
   element under brightness 0.5 and 2 (also while fading in) and a light's zooming flare under
   flareStrength 0.5 and 2; a flare beyond the far plane and one nearer than the near plane;
-  a directional flare 50 and 70 degrees off the view axis of a 150 degree camera.
+  a directional flare 50 and 70 degrees off the view axis of a 150 degree camera; elements at
+  positions 0.5 and 1 and a rotating one under a lens shift of a quarter of the width.
 * **Fading** (`f.fade.*`, `f.speed.*`, `f.occ.*`, `q.light.*`): fade in and out speeds, colliders
   (triggers, the Ignore Raycast layer, ignored layers), renderers without colliders, off screen,
   behind the camera, disabling.
@@ -56,10 +57,10 @@ byte-identical complete captures and refuses to overwrite a reference. The compa
 whole key union and image manifest with the float tolerance of the render texture probes
 (absolute and relative 2e-4).
 
-`Reference/unity-6000.0.71f1/` holds the values and 228 images of two byte-identical captures
-(OpenGLCore, RTX 4060); the `hb.*` cases, and after them the `fl.*` cases (11 images), were
-appended later, each from two more byte-identical captures that reproduced every earlier value
-and image (`run.py extend`).
+`Reference/unity-6000.0.71f1/` holds the values and images of two byte-identical captures
+(OpenGLCore, RTX 4060); the `hb.*` cases, and after them the `fl.*` cases in two steps, were
+appended later, each time from two more byte-identical captures that reproduced every earlier
+value and image (`run.py extend`).
 
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core, Linear)
 
@@ -86,11 +87,16 @@ and image (`run.py extend`).
   with an orthographic one. `Rotate` turns it into a diamond whose corners are 1.4 half sides
   away, its top-right corner pointing away from the center. `Zoom` scales it by the flare's
   brightness times its visibility (`fl.zoom.*`, `fl.light.zoom.*`: half and twice the size at
-  brightness or flareStrength 0.5 and 2). A directional flare is its direction at twice the near
-  plane's distance. The camera's planes clip the quads: a flare beyond the far plane
-  (`fl.beyondFar`) or nearer than the near plane (`fl.insideNear`) is not drawn, and a
-  directional flare vanishes more than 60 degrees off the view axis (`fl.directional.off50`
-  drawn, `fl.directional.off70` empty, with a camera that sees 75 degrees to each side). Every
+  brightness or flareStrength 0.5 and 2). A flare beyond the far plane (`fl.beyondFar`) or
+  nearer than the near plane (`fl.insideNear`) is not drawn. A directional flare 50 degrees off
+  the view axis is drawn and one 70 degrees off is not (`fl.directional.off50`, `.off70`, with
+  a camera that sees 75 degrees to each side); placed at twice the near plane's distance, as
+  Unbound places it, it leaves the view at 60 degrees, which is not measured. Whether a flare
+  that is not drawn for one of these reasons keeps fading in is not measured either. The Manual
+  describes the line as running "through the screen center"; under an off-centre projection
+  (`fl.shift.*`: a physical camera with a lens shift of 0.25) the elements follow the view
+  axis instead: the element at position 1 is centred a quarter of the width left of the
+  screen's centre, where the axis meets the screen. Every
   flare image matches when the quads are built this way, with the sums in one order; built in
   viewport pixels they were right within a float step, which showed as one more line of pixels
   wherever an element's edge fell on pixel centres.

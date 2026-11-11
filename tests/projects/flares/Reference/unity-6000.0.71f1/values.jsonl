@@ -716,4 +716,14 @@
 {"k":"fl.directional.off70.f1.log","v":[]}
 {"k":"fl.directional.off70.f2.log","v":[]}
 {"k":"fl.directional.off70.f2.pixels","v":16384}
+{"k":"fl.shift.projection","v":[2.77777767,0.5,2.77777767,0]}
+{"k":"fl.shift.Pp05.f1.log","v":[]}
+{"k":"fl.shift.Pp05.f2.log","v":[]}
+{"k":"fl.shift.Pp05.f2.pixels","v":16384}
+{"k":"fl.shift.Pp1.f1.log","v":[]}
+{"k":"fl.shift.Pp1.f2.log","v":[]}
+{"k":"fl.shift.Pp1.f2.pixels","v":16384}
+{"k":"fl.shift.RotP05.f1.log","v":[]}
+{"k":"fl.shift.RotP05.f2.log","v":[]}
+{"k":"fl.shift.RotP05.f2.pixels","v":16384}
 {"k":"complete","v":true}

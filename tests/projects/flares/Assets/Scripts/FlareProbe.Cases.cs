@@ -615,6 +615,21 @@ public partial class FlareProbe
         yield return Shot("fl.directional.off70");
         directional.SetActive(false);
         ResetCamera();
+
+        // An off-centre projection: the view axis meets the screen a quarter of its width from
+        // its centre, so "towards the centre" and "towards the axis" are different places.
+        cam.usePhysicalProperties = true;
+        cam.lensShift = new Vector2(0.25f, 0f);
+        Value("fl.shift.projection", "[" + F(cam.projectionMatrix.m00) + "," + F(cam.projectionMatrix.m02) + "," + F(cam.projectionMatrix.m11) + "," + F(cam.projectionMatrix.m12) + "]");
+        foreach (var name in new[] { "Pp05", "Pp1", "RotP05" })
+        {
+            var shifted = Lens(name, new Vector3(1f, 0.5f, 0f));
+            yield return Shot("fl.shift." + name);
+            shifted.gameObject.SetActive(false);
+        }
+        cam.lensShift = Vector2.zero;
+        cam.usePhysicalProperties = false;
+        ResetCamera();
         Flush();
     }
 }
