@@ -879,7 +879,9 @@ mod tests {
             (v1.unregister_marker_event)(marker, Some(on_event), user(103)),
             -1
         );
-        // Threads: the main thread at once, a registered one when it registers.
+        // Threads: the main thread at once (the player loop's driver names it first), a
+        // registered one when it registers.
+        callbacks::on_main_thread();
         assert_eq!((v1.register_create_thread)(Some(on_thread), user(104)), 0);
         assert_eq!(heard(104)[0], "/Main Thread");
         let mut thread = 0u64;
