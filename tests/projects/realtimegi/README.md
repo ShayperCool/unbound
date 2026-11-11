@@ -93,7 +93,19 @@ skybox material (`end-custom-skybox`), a skybox material assigned (`end-skybox-m
 intensity 1.5 (`end-skybox-intensity`), another probe given (`end-skybox-set`), the intensity 0.5
 (`end-skybox-set-intensity`), the flat mode with a probe given (`end-flat-set`), another ambient
 color (`end-flat-set-color`), the skybox removed (`end-flat-noskybox`), the skybox mode
-(`end-skybox-none`) and the custom mode (`end-custom-last`).
+(`end-skybox-none`), the custom mode (`end-custom-last`), the gradient mode (`end-gradient`),
+another probe given in it (`end-gradient-set`) and the custom mode (`end-gradient-custom`).
+
+Then four scenes without lighting data (`m_LightingDataAsset` none; their files, in
+`Assets/NoData`, are written by hand, with nothing in them but their settings, each in the
+skybox ambient mode): `NoDataAuto`
+(LightmapSettings as an earlier release saved them with lighting generated automatically, the
+default skybox), `NoDataOnDemand` (the same with that off), `NoDataCurrent` (this release's
+format) and `NoDataAutoOwnSky` (as the first, with another material, the built-in default
+one, as its skybox). Each
+records, in the frame after its load, `<scene>-reflection` (as `end-reflection`),
+`<scene>-ambient` (`RenderSettings.ambientProbe` as loaded) and `<scene>-custom` (in the custom
+mode).
 
 ## What the Editor does (this capture)
 
@@ -164,8 +176,16 @@ Observations (not documented guarantees):
   without a skybox material the ambient color's, unscaled. Assigning `RenderSettings.skybox`
   alone changes nothing until an ambient input changes (`end-skybox-material`, as
   `room-sky-none`, where the skybox was removed after the mode was set).
+  The gradient mode does not read the stored probe either (`end-gradient*`).
 - Without a sky a scene's default reflection is black: `ReflectionProbe.defaultTexture` is a cube
   of one texel named `UnityBlackCube`, with decode values (1, 1, 0, 0) (`end-reflection`).
+- A scene without lighting data reflects that black cube too, whatever its skybox, and its
+  stored ambient probe is zero: `RenderSettings.ambientProbe` is zero in the skybox mode (with
+  the default skybox as with another material) and in the custom mode (`nodata*`). The same
+  four scenes gave the same answers as the scene open when Play mode starts, then and 120
+  frames later (one capture each, not part of the reference). The documentation's "default
+  ambient probe that matches the default skybox" of a scene whose lighting was not generated is
+  the built-in lighting data new scenes point at (tests/projects/ambient), not this case.
 - The directionality (`roomdirectional-*.dir`): where light arrives from one side its RGB is
   that direction times 1/2 plus 1/2 (the floor's texels (127, 211, 127): light from above, at
   about two thirds of a unit length since it comes from a spread of directions) and its alpha the

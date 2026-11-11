@@ -348,6 +348,28 @@ public class RealtimeGIProbe : MonoBehaviour
         Record("end-skybox-none", "\"ambientProbe\":" + AmbientProbe());
         RenderSettings.ambientMode = AmbientMode.Custom;
         Record("end-custom-last", "\"ambientProbe\":" + AmbientProbe());
+        // The gradient mode over the probe given, another one given in it, and the custom mode.
+        RenderSettings.ambientMode = AmbientMode.Trilight;
+        Record("end-gradient", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientProbe = other;
+        Record("end-gradient-set", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientMode = AmbientMode.Custom;
+        Record("end-gradient-custom", "\"ambientProbe\":" + AmbientProbe());
+
+        // Scenes without lighting data (their files written by hand, each in the skybox ambient
+        // mode): one saved by an earlier release with lighting generated automatically, one with
+        // that off, one in this release's format, all with the default skybox, and the first
+        // again with another material as its skybox. What each reflects, its ambient probe as
+        // loaded and in the custom mode.
+        foreach (var name in new[] { "NoDataAuto", "NoDataOnDemand", "NoDataCurrent", "NoDataAutoOwnSky" })
+        {
+            yield return Load(name);
+            var label = name.ToLowerInvariant();
+            Record(label + "-reflection", DefaultReflection());
+            Record(label + "-ambient", "\"ambientProbe\":" + AmbientProbe());
+            RenderSettings.ambientMode = AmbientMode.Custom;
+            Record(label + "-custom", "\"ambientProbe\":" + AmbientProbe());
+        }
         Finish();
     }
 
