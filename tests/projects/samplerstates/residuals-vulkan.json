@@ -18,5 +18,8 @@
   "DepthChannels.splitLinear.raw",
   "DepthChannels.map.raw",
   "DepthChannels.mapLinear.raw"
+ ],
+ "TextureWrapMode.MirrorOnce, inline as a texture's own, is sampled as Mirror (the mirror-once row of docs/COMPATIBILITY_GAPS.md)": [
+  "InlineMirrorOnce"
  ]
 }

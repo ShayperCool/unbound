@@ -49,4 +49,10 @@
 {"k":"DepthOnly.depth","v":[5,0,0,20]}
 {"k":"Fill.color","v":[0.125,0.25,0.5,1]}
 {"k":"DepthOnly.color","v":[0.25,0.5,0.75,1]}
+{"k":"InlineAxes","v":[1,0.8496094,0.5,1]}
+{"k":"InlineMirrorOnce","v":[1,0.6503906,0,1]}
+{"k":"InlineVolume","v":[0.75,0.25,0.75,0.25]}
+{"k":"InlineAniso","v":[0.7,0.1,0.5,0.1]}
+{"k":"UsedLoad","v":[0.400390625,0.5,0,1]}
+{"k":"UsedVertex","v":[0.400390625,1,0,1]}
 {"k":"complete","v":true}

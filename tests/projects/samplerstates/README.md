@@ -22,6 +22,11 @@ every sample lies between two texels, so its value tells the state it was sample
 | Inline | textures through inline samplers of another filter and wrap mode |
 | DepthPlain | a depth texture without comparisons: its own, an inline and another texture's sampler |
 | DepthChannels | the four channels of a depth texture's sample |
+| InlineAxes | inline samplers with wrap modes of one axis (`ClampU_RepeatV`, `RepeatU_ClampV`, `Repeat_ClampU`) and `Mirror` |
+| InlineMirrorOnce | an inline `MirrorOnce` sampler, outside 0..1 on both sides |
+| InlineVolume | a volume of two slices through inline samplers, outside 0..1 along W |
+| InlineAniso | a texture of constant mip levels through `Trilinear`, `Aniso8` and `Aniso2` inline samplers, with gradients eight times longer along U |
+| UsedLoad, UsedVertex | a sampler whose texture the program only loads, or uses in the vertex stage only |
 
 `_Shadow` is a point filtered `RenderTextureFormat.Depth` target cleared to the far plane. The
 cases that sample it are drawn again with four depth targets of two texels, 0.25 and 0.75
@@ -46,12 +51,15 @@ target reads the stored depth instead, as its other samples do.
 
 Vulkan (`Reference/unity-6000.0.71f1/vulkan.jsonl`, `--device vulkan`): a texture is sampled
 through the sampler the program names: an inline sampler is the state its name spells, another
-texture's sampler that texture's state, with comparisons too. An inline `...Compare` sampler
+texture's sampler that texture's state, with comparisons too. An inline name spells one filter,
+wrap modes for the whole sampler or for the axes their `U`, `V`, `W` letters name, along a
+volume's W too, and an anisotropic level. An inline `...Compare` sampler
 compares (greater or equal: depth is reversed, and the far plane is stored as 0); a texture's
 own sampler compares when the texture is a `Shadowmap`, and reads the stored depth when it is a
 `Depth` target. A program with a sampler of a texture it does not use (`Shapes`: `sampler_B`
 without `_B`) is an error there ("Unrecognized sampler 'sampler_b' - does not match any texture
-and is not a recognized inline name") and draws with the error shader.
+and is not a recognized inline name") and draws with the error shader; a texture the program
+loads, or uses in the other stage, is used.
 
 On both devices a program's depth output is the depth stored; without a depth buffer its colors
 are drawn alone, and a program without colors leaves the target as it was.
@@ -59,8 +67,8 @@ are drawn alone, and a program without colors leaves the target as it was.
 Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--force-vulkan` with
 `--device vulkan`) with the device's reference. `residuals.json` and `residuals-vulkan.json`
 list the cases that differ with their cause: Unbound compares where the Editor's comparison
-reads the depth of a texture whose state does not compare, and stores 24 bits where the
-Editor's depth buffer has 16.
+reads the depth of a texture whose state does not compare, stores 24 bits where the
+Editor's depth buffer has 16, and samples `MirrorOnce` as `Mirror`.
 
     python3 tests/projects/samplerstates/run.py native --label a   # the Editor, twice (a-1, a-2)
     python3 tests/projects/samplerstates/run.py publish a-1 a-2

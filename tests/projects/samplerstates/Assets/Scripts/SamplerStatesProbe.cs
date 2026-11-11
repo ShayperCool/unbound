@@ -32,6 +32,17 @@ public class UitkProbe : MonoBehaviour
         "Inline", "DepthPlain", "DepthChannels",
     };
 
+    /// <summary>What an inline sampler's name spells (wrap modes of one axis, a volume's W, the
+    /// anisotropic level) and what counts as using a sampler's texture; recorded after the
+    /// other rows.</summary>
+    static readonly string[] LateCases =
+    {
+        "InlineAxes", "InlineMirrorOnce", "InlineVolume", "InlineAniso", "UsedLoad", "UsedVertex",
+    };
+
+    /// <summary>The value of each mip level of `_Mips`.</summary>
+    static readonly float[] LevelValues = { 0.1f, 0.3f, 0.5f, 0.7f, 0.9f };
+
     /// <summary>The cases that sample `_Shadow`, drawn again with each depth target.</summary>
     static readonly string[] DepthCases =
     {
@@ -86,6 +97,26 @@ public class UitkProbe : MonoBehaviour
             volume.SetPixels(new[] { new Color(.25f, 0, 0, 1), new Color(.75f, 0, 0, 1) });
             volume.Apply(false);
 
+            // A volume of two slices along W, 0.25 and 0.75, and a texture whose mip levels
+            // are 0.1, 0.3, 0.5, 0.7 and 0.9.
+            var deep = new Texture3D(1, 1, 2, TextureFormat.RGBAFloat, false);
+            deep.filterMode = FilterMode.Point;
+            deep.wrapMode = TextureWrapMode.Clamp;
+            deep.SetPixels(new[] { new Color(.25f, 0, 0, 1), new Color(.75f, 0, 0, 1) });
+            deep.Apply(false);
+            var mips = new Texture2D(16, 16, TextureFormat.RGBAFloat, true, true);
+            mips.filterMode = FilterMode.Trilinear;
+            mips.wrapMode = TextureWrapMode.Clamp;
+            mips.anisoLevel = 1;
+            for (int level = 0; level < mips.mipmapCount; level++)
+            {
+                float value = LevelValues[level];
+                var levelTexels = new Color[Math.Max(1, 16 >> level) * Math.Max(1, 16 >> level)];
+                for (int i = 0; i < levelTexels.Length; i++) levelTexels[i] = new Color(value, value, value, 1);
+                mips.SetPixels(levelTexels, level);
+            }
+            mips.Apply(false);
+
             var target = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
             target.Create();
             var readback = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
@@ -114,13 +145,13 @@ public class UitkProbe : MonoBehaviour
             onlyDepth.Create();
             Graphics.Blit(a, onlyDepth, only);
             draws.Add(("DepthChannels", "DepthOnly.depth", onlyDepth, false));
-            foreach (var (name, key, depth, exact) in draws)
+            void Draw(string name, string key, RenderTexture depth, bool exact)
             {
                 var shader = Shader.Find("Probe/SamplerStates/" + name);
                 if (shader == null)
                 {
                     rows.Append("{\"k\":\"").Append(key).Append("\",\"v\":\"missing\"}\n");
-                    continue;
+                    return;
                 }
                 var material = new Material(shader);
                 material.SetTexture("_A", a);
@@ -129,10 +160,13 @@ public class UitkProbe : MonoBehaviour
                 material.SetTexture("_Shadow", depth);
                 material.SetTexture("_Cube", cube);
                 material.SetTexture("_Vol", volume);
+                material.SetTexture("_Deep", deep);
+                material.SetTexture("_Mips", mips);
                 Graphics.Blit(a, target, material);
                 if (!exact) Graphics.Blit(target, rounded, twentieths);
                 Row(rows, key, Read(exact ? target : rounded, readback));
             }
+            foreach (var (name, key, depth, exact) in draws) Draw(name, key, depth, exact);
             // The depth-writing programs where there is no depth buffer.
             Graphics.Blit(a, target, new Material(Shader.Find("Probe/SamplerStates/Fill")));
             Row(rows, "Fill.color", Read(target, readback));
@@ -142,6 +176,7 @@ public class UitkProbe : MonoBehaviour
             RenderTexture.active = previous;
             Graphics.Blit(a, target, only);
             Row(rows, "DepthOnly.color", Read(target, readback));
+            foreach (var name in LateCases) Draw(name, name, shadow, true);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
