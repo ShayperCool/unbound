@@ -142,6 +142,9 @@
 {"k":"ext.r8.rgba.ptr","v":true}
 {"k":"ext.r8.rgba.size","v":"4x4 RGBA32 R8G8B8A8_UNorm 1"}
 {"k":"ext.r8.rgba.pixels.4","v":["0a0000ff*1 460000ff*1 820000ff*1 be0000ff*1","0a0000ff*1 460000ff*1 820000ff*1 be0000ff*1","0a0000ff*1 460000ff*1 820000ff*1 be0000ff*1","0a0000ff*1 460000ff*1 820000ff*1 be0000ff*1"]}
+{"k":"ext.unsized.ptr","v":true}
+{"k":"ext.unsized.size","v":"4x4 RGBA32 R8G8B8A8_UNorm 1"}
+{"k":"ext.unsized.pixels.4","v":["0a000aff*1 46000aff*1 82000aff*1 be000aff*1","0a3c0aff*1 463c0aff*1 823c0aff*1 be3c0aff*1","0a780aff*1 46780aff*1 82780aff*1 be780aff*1","0ab40aff*1 46b40aff*1 82b40aff*1 beb40aff*1"]}
 {"k":"ext.mips.shape","v":"2d 8x8x1 format=0x8058 levels=4 samples=0"}
 {"k":"ext.mips.nochain.shape","v":"2d 8x8x1 format=0x8058 levels=4 samples=0"}
 {"k":"ext.srgb.linear.shape","v":"2d 4x4x1 format=0x8c43 levels=1 samples=0"}
@@ -154,6 +157,7 @@
 {"k":"ext.float.shape","v":"2d 4x4x1 format=0x8814 levels=1 samples=0"}
 {"k":"ext.dxt5.shape","v":"2d 4x4x1 format=0x83f3 levels=1 samples=0"}
 {"k":"ext.r8.rgba.shape","v":"2d 4x4x1 format=0x8229 levels=1 samples=0"}
+{"k":"ext.unsized.shape","v":"2d 4x4x1 format=0x1908 levels=1 samples=0"}
 {"k":"camera.pixels","v":["0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*40 ffff00ff*8 0000ffff*16","0000ffff*40 ffff00ff*8 0000ffff*16","0000ffff*40 ffff00ff*8 0000ffff*16","0000ffff*40 ffff00ff*8 0000ffff*16","0000ffff*4 ff0000ff*16 0000ffff*20 ffff00ff*8 0000ffff*16","0000ffff*4 ff0000ff*16 0000ffff*20 ffff00ff*8 0000ffff*16","0000ffff*4 ff0000ff*16 0000ffff*20 ffff00ff*8 0000ffff*16","0000ffff*4 ff0000ff*16 0000ffff*20 ffff00ff*8 0000ffff*16","0000ffff*4 ff0000ff*16 0000ffff*44","0000ffff*4 ff0000ff*16 0000ffff*44","0000ffff*4 ff0000ff*16 0000ffff*44","0000ffff*4 ff0000ff*16 0000ffff*44","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64","0000ffff*64"]}
 {"k":"written.final","v":["051430ff*8","051430ff*8","051430ff*1 ff0000ff*1 ff0300ff*1 ff0c00ff*1 ff1a00ff*1 051430ff*3","051430ff*1 ff3000ff*1 ff4e00ff*1 ff7500ff*1 ffa400ff*1 051430ff*3","051430ff*8","051430ff*8","051430ff*8","051430ff*8"]}
 {"k":"interface.IUnityGraphics","v":"1 split=same"}

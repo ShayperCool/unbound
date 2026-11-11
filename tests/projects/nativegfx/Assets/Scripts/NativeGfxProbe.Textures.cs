@@ -264,8 +264,10 @@ public partial class NativeGfxProbe
         ExternalCase("dxt5", 10, 4, 4, TextureFormat.DXT5, false, true, 4);
         // One channel declared as four.
         ExternalCase("r8.rgba", 11, 4, 4, TextureFormat.RGBA32, false, true, 4);
+        // Texels of an unsized format (GL_RGBA).
+        ExternalCase("unsized", 12, 4, 4, TextureFormat.RGBA32, false, true, 4);
         // The plugin's textures after Unity used them.
-        string[] labels = { "mips", "mips.nochain", "srgb.linear", "srgb", "rgba.srgb", "r8", "rg8", "rgb8", "half", "float", "dxt5", "r8.rgba" };
+        string[] labels = { "mips", "mips.nochain", "srgb.linear", "srgb", "rgba.srgb", "r8", "rg8", "rgb8", "half", "float", "dxt5", "r8.rgba", "unsized" };
         shapes = 0;
         for (int i = 0; i < 32; i++) NativeGfx_SetShape(i, "", IntPtr.Zero);
         for (int i = 0; i < labels.Length; i++) Shape(labels[i], NativeGfx_Made(i));

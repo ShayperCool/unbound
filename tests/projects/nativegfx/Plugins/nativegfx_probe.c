@@ -1068,7 +1068,7 @@ static void describe_shape(uintptr_t name, char* out, size_t size)
 }
 
 /// The plugin's own textures for external textures, by index (see `make_textures`).
-#define MADE_COUNT 12
+#define MADE_COUNT 13
 static GLuint s_made[MADE_COUNT];
 
 /// Texel (x, y) of the plugin's textures: (60x+10, 60y, 10, 255) as bytes.
@@ -1184,6 +1184,8 @@ static void make_textures(void)
     s_made[10] = make_dxt5();
     texture_errors("dxt5");
     s_made[11] = make_bytes(GL_R8, GL_RED, 1);
+    // An unsized internal format, as glTexImage2D takes one: what the driver makes of it.
+    s_made[12] = make_bytes(GL_RGBA, GL_RGBA, 4);
     gl.BindTexture(GL_TEXTURE_2D, (GLuint)bound);
     texture_errors("made");
 }

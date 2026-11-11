@@ -64,7 +64,8 @@ Recorded:
   samples it, whatever format and color space the external texture declares (they are its
   `format` and `graphicsFormat`): `GL_SRGB8_ALPHA8` texels are decoded declared linear or not,
   `GL_RGBA8` texels declared sRGB are not; `GL_R8`, `GL_RG8`, `GL_RGB8`, `GL_RGBA16F`,
-  `GL_RGBA32F` and DXT5 show as they are, one channel declared as four too. With a mip chain
+  `GL_RGBA32F` and DXT5 show as they are, one channel declared as four too, and so does a
+  texture made with the unsized `GL_RGBA` (`ext.unsized.*`: it reports that format). With a mip chain
   the external texture has the levels of its size and shows the plugin's smaller levels
   (drawn at half, quarter and eighth size); without one it shows the first level alone,
   though the plugin's texture has four.
