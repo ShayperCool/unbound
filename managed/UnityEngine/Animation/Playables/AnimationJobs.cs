@@ -18,6 +18,10 @@ namespace Unbound.Runtime.Playables
         internal struct StreamTransform
         {
             internal Transform Transform;
+            /// <summary>The parent <see cref="Transform"/> had when the handle was bound or the
+            /// hierarchy last changed: what the handle's world values are read under once its
+            /// transform is destroyed.</summary>
+            internal Transform Parent;
             internal int Position, Rotation, Scale;
             /// <summary>The skeleton node the channels animate on an Animator without its
             /// transform hierarchy (-1: they animate <see cref="Transform"/>).</summary>
@@ -30,6 +34,13 @@ namespace Unbound.Runtime.Playables
             /// (<see cref="HumanFor"/>).</summary>
             internal int Human;
             internal Unbound.Runtime.Humanoid.AvatarConstant HumanFor;
+
+            /// <summary>The handle's transform is destroyed and its channels go on in the
+            /// stream: the handle reads and writes them as before (6000.0.71f1,
+            /// tests/projects/animoptimize jobDestroyedRead.Rig: the handle stays valid and
+            /// resolved and reads what the clip gives its path, local and world; writes
+            /// unmeasured).</summary>
+            internal bool Departed => Node < 0 && Transform == null && Position >= 0 && Rotation >= 0 && Scale >= 0;
         }
 
         internal struct StreamProperty
@@ -73,6 +84,7 @@ namespace Unbound.Runtime.Playables
             handle.Node = owner is SkeletonGroup node ? node.Node : -1;
             if (handle.Node < 0 && owner?.Transform != null) handle.Transform = owner.Transform;
             if (handle.Node < 0 && owner != null && handle.Transform != null) StreamOwned.Add(handle.Transform);
+            if (handle.Transform != null) handle.Parent = handle.Transform.m_Parent;
             handle.Human = 0;
             handle.HumanFor = null;
             return handle;
@@ -462,11 +474,67 @@ namespace Unbound.Runtime.Playables
         internal void GlobalTR(in AnimatorHandles.StreamTransform handle, out Vector3 position, out Quaternion rotation)
         {
             if (NodeOf(handle, out var skeleton)) NodeGlobal(skeleton, handle.Node, out position, out rotation, out _);
-            else GlobalTR(handle.Transform, out position, out rotation);
+            else if (handle.Transform != null) GlobalTR(handle.Transform, out position, out rotation);
+            else
+            {
+                ParentGlobal(handle, out var pp, out var pr, out var ps);
+                position = pp + pr * Vector3.Scale(ps, LocalPosition(null, handle.Position));
+                rotation = pr * LocalRotation(null, handle.Rotation);
+            }
         }
 
-        internal Matrix4x4 LocalToWorld(in AnimatorHandles.StreamTransform handle) =>
-            NodeOf(handle, out var skeleton) ? NodeToWorld(skeleton, handle.Node) : LocalToWorld(handle.Transform);
+        internal Matrix4x4 LocalToWorld(in AnimatorHandles.StreamTransform handle)
+        {
+            if (NodeOf(handle, out var skeleton)) return NodeToWorld(skeleton, handle.Node);
+            if (handle.Transform != null) return LocalToWorld(handle.Transform);
+            var local = Matrix4x4.TRS(LocalPosition(null, handle.Position), LocalRotation(null, handle.Rotation), LocalScale(null, handle.Scale));
+            return DepartedParent(handle) is Transform parent ? LocalToWorld(parent) * local : local;
+        }
+
+        /// <summary>The parent a destroyed transform's handle is read under (null when that is
+        /// destroyed too: the handle's values are then taken as the world's, reported once;
+        /// the Editor is unmeasured there).</summary>
+        Transform DepartedParent(in AnimatorHandles.StreamTransform handle)
+        {
+            using var engine = MainThreadCheck.Engine();
+            if (handle.Parent != null) return handle.Parent;
+            Stubs.Ignored("TransformStreamHandle world value after its transform and the transform's parent were destroyed",
+                "gives the handle's local values (not measured)");
+            return null;
+        }
+
+        /// <summary>The world position, rotation and scale of what the handle's target is
+        /// below: a skeleton node's parent node, a transform's parent, or the parent a
+        /// destroyed transform had; all through the stream's values up to the Animator.</summary>
+        internal void ParentGlobal(in AnimatorHandles.StreamTransform handle, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            if (NodeParentGlobal(handle, out position, out rotation, out scale)) return;
+            using var engine = MainThreadCheck.Engine();
+            var animator = Handles.Animator.transform;
+            var parent = handle.Transform != null ? handle.Transform.m_Parent : DepartedParent(handle);
+            position = Vector3.zero;
+            rotation = Quaternion.identity;
+            scale = Vector3.one;
+            if (parent == null) return;
+            if (handle.Transform == animator)
+            {
+                position = parent.position;
+                rotation = parent.rotation;
+                scale = parent.lossyScale;
+                return;
+            }
+            GlobalTR(parent, out position, out rotation);
+            for (var p = parent; p != null; p = p.m_Parent)
+            {
+                Local(p, out _, out _, out var s);
+                scale = Vector3.Scale(scale, s);
+                if (p == animator)
+                {
+                    if (p.m_Parent != null) scale = Vector3.Scale(scale, p.m_Parent.lossyScale);
+                    break;
+                }
+            }
+        }
 
         /// <summary>The world position, rotation and scale of what the handle's target is below.</summary>
         internal bool NodeParentGlobal(in AnimatorHandles.StreamTransform handle, out Vector3 position, out Quaternion rotation, out Vector3 scale)
@@ -491,25 +559,6 @@ namespace Unbound.Runtime.Playables
             if (channel < 0) return;
             AnimationEvaluation.SetQ(Stream.Values, channel, q);
             for (int i = 0; i < 4; i++) Stream.Animated[channel + i] = true;
-        }
-
-        internal void ParentGlobalTR(Transform t, out Vector3 position, out Quaternion rotation)
-        {
-            using var engine = MainThreadCheck.Engine();
-            var parent = t.m_Parent;
-            if (parent == null)
-            {
-                position = Vector3.zero;
-                rotation = Quaternion.identity;
-                return;
-            }
-            if (t == Handles.Animator.transform)
-            {
-                position = parent.position;
-                rotation = parent.rotation;
-                return;
-            }
-            GlobalTR(parent, out position, out rotation);
         }
     }
 
@@ -945,7 +994,7 @@ namespace UnityEngine.Animations
                 data.Resolved = true;
                 context.Handles.Transforms[handleIndex] = data;
             }
-            return data.Node >= 0 ? context.Handles.Animator.Skeleton != null : data.Transform != null;
+            return data.Node >= 0 ? context.Handles.Animator.Skeleton != null : data.Transform != null || data.Departed;
         }
 
         public bool IsValid(AnimationStream stream) =>
@@ -974,7 +1023,7 @@ namespace UnityEngine.Animations
         {
             if (!Data(stream, out var c, out var d)) return;
             if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanSetGlobal(d, human, position, null); return; }
-            ParentGlobal(c, d, out var pp, out var pr, out var parentScale);
+            c.ParentGlobal(d, out var pp, out var pr, out var parentScale);
             var local = Quaternion.Inverse(pr) * (position - pp);
             c.Write(d.Position, new Vector3(StreamContext.Div(local.x, parentScale.x), StreamContext.Div(local.y, parentScale.y), StreamContext.Div(local.z, parentScale.z)));
         }
@@ -992,7 +1041,7 @@ namespace UnityEngine.Animations
         {
             if (!Data(stream, out var c, out var d)) return;
             if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanSetGlobal(d, human, null, rotation); return; }
-            ParentGlobal(c, d, out _, out var pr, out _);
+            c.ParentGlobal(d, out _, out var pr, out _);
             c.Write(d.Rotation, Quaternion.Inverse(pr) * rotation);
         }
 
@@ -1113,41 +1162,12 @@ namespace UnityEngine.Animations
                 c.HumanSetGlobal(d, human, position, rotation);
                 return;
             }
-            ParentGlobal(c, d, out var pp, out var pr, out var parentScale);
+            c.ParentGlobal(d, out var pp, out var pr, out var parentScale);
             var local = Quaternion.Inverse(pr) * (position - pp);
             if (!useMask || (d.Position >= 0))
                 c.Write(d.Position, new Vector3(StreamContext.Div(local.x, parentScale.x), StreamContext.Div(local.y, parentScale.y), StreamContext.Div(local.z, parentScale.z)));
             if (!useMask || (d.Rotation >= 0))
                 c.Write(d.Rotation, Quaternion.Inverse(pr) * rotation);
-        }
-
-
-        static void ParentGlobal(StreamContext c, in AnimatorHandles.StreamTransform d, out Vector3 position, out Quaternion rotation, out Vector3 scale)
-        {
-            if (c.NodeParentGlobal(d, out position, out rotation, out scale)) return;
-            c.ParentGlobalTR(d.Transform, out position, out rotation);
-            scale = ParentScale(c, d.Transform);
-        }
-
-        static Vector3 ParentScale(StreamContext c, Transform t)
-        {
-            using var engine = MainThreadCheck.Engine();
-            var parent = t.m_Parent;
-            if (parent == null) return Vector3.one;
-            if (t == c.Handles.Animator.transform) return parent.lossyScale;
-            var scale = Vector3.one;
-            var root = c.Handles.Animator.transform;
-            for (var p = parent; p != null; p = p.m_Parent)
-            {
-                c.Local(p, out _, out _, out var s);
-                scale = Vector3.Scale(scale, s);
-                if (p == root)
-                {
-                    if (p.m_Parent != null) scale = Vector3.Scale(scale, p.m_Parent.lossyScale);
-                    break;
-                }
-            }
-            return scale;
         }
     }
 

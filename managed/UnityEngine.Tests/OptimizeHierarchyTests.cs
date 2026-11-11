@@ -499,6 +499,52 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>After its transform is destroyed a stream handle goes on reading the
+        /// stream's values of its path: the local values the clip gives it and the world values
+        /// under the parent it had (6000.0.71f1, tests/projects/animoptimize
+        /// jobDestroyedRead.Rig). Control: a second rig whose hand stays reads the same in every
+        /// evaluation, and the values change between the evaluations. The parent destroyed with
+        /// it is unmeasured: the handle then gives its local values.</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ADestroyedTransformsStreamHandleReadsItsPathsValues(bool withItsParent)
+        {
+            var root = Rig(out var animator, out _);
+            var whole = Rig(out var wholeAnimator, out _);
+            root.transform.position = whole.transform.position = new Vector3(3f, 0f, -1f);
+            root.transform.localScale = whole.transform.localScale = new Vector3(2f, 2f, 2f);
+            var hand = root.transform.Find("Rig/Hips/Spine/Hand");
+            var graph = PlayJob(animator, Clip(), new HandJob { Hand = animator.BindStreamTransform(hand) });
+            var wholeGraph = PlayJob(wholeAnimator, Clip(), new HandJob { Hand = wholeAnimator.BindStreamTransform(whole.transform.Find("Rig/Hips/Spine/Hand")) });
+            try
+            {
+                Vector3 before = default;
+                for (int step = 0; step < 3; step++)
+                {
+                    if (step == 1) Object.DestroyImmediate((withItsParent ? hand.parent : hand).gameObject);
+                    float time = step == 0 ? 0f : step == 1 ? 0.5f : 0.25f;
+                    wholeGraph.Evaluate(time);
+                    Vector3 local = HandJob.Read, world = HandJob.World;
+                    HandJob.Read = HandJob.World = default;
+                    graph.Evaluate(time);
+                    Assert.True(HandJob.Valid);
+                    Assert.Equal(local, HandJob.Read);
+                    Assert.Equal(withItsParent && step > 0 ? local : world, HandJob.World);
+                    Assert.NotEqual(local, world);
+                    if (step == 0) before = local;
+                    else Assert.NotEqual(before, local);
+                }
+            }
+            finally
+            {
+                graph.Destroy();
+                wholeGraph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(whole);
+            }
+        }
+
         /// <summary>A handle bound before the hierarchy is optimized goes on as its path's
         /// skeleton node: the job reads the node's stream values and its write turns the node,
         /// which the exposed transform of the path follows, as the bone of a whole hierarchy
