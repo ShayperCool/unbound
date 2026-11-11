@@ -123,7 +123,21 @@ imported without keyframe reduction.
   `additiveLoopPoseModel`); and `layersAffectMassCenter` (`massCenter.api`, and on with layers
   without Root, `massCenter.*`).
   HumanT is `make_models.py`'s HumanA with bone translations, imported with translation DoF; the
-  other assets `Leftovers` makes and HumanT playing its own clips are not recorded yet.
+  other assets `Leftovers` makes are not recorded yet. HumanT playing its own clip and the clip
+  mirrored (`tdof.playT`, `tdof.playTMirror`, in `HumanoidBody.cs`) and the translation DoF curves
+  its clips have (`tdof.curves`: per clip the number of Animator curves; per translation DoF
+  curve its largest key and its last key, times 10000; the middle key of three muscle curves,
+  for the clip with the Mirror setting too) are recorded. The Manual's
+  [Muscle & Settings](https://docs.unity3d.com/6000.0/Documentation/Manual/MuscleDefinitions.html)
+  page says Translate DoF enables translation animations for the humanoid, for the chest,
+  upper chest, neck, upper leg and shoulder muscles, and names no minimum. Measured: the take
+  moves five bones, each mostly along one or two axes of its parent bone's frame; of the 63
+  translation DoF curves the clip has the seven whose keys reach 1e-4 (from 1.6e-4 to 4.3e-4;
+  the largest of the others would be 9.2e-5), and the bones play without the small components.
+  HumanT's local units are a hundredth of its world units, so a bone's local position 9e-5 off
+  (9 mm in the world) is inside the comparison's absolute tolerance; such an error shows in the
+  hips and the body instead, which are placed from every bone. The curve queries show the clip
+  with the Mirror setting as imported, after it has played mirrored.
 
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3

@@ -70,9 +70,55 @@ public partial class HumanoidProbe
                     else if (step == 14) played.Play();
                 });
         });
+        // HumanT's clip and its mirrored clip on HumanT itself: a rig whose avatar has translation
+        // DoF plays its own translations (on HumanA they are left out, tdof.playTOnA).
+        Guarded("tdof.playT", () => Play("tdof.playT", "HumanT", "HumanT", motion: true, localsEvery: 4, velocities: false));
+        Guarded("tdof.playTMirror", () => Play("tdof.playTMirror", "HumanT", "HumanTMirror", motion: true, localsEvery: 4, velocities: false));
+        Guarded("tdof.curves", TranslationCurves);
     }
 
     static void GoalReader(Animator animator) => animator.gameObject.AddComponent<HumanoidGoals>();
+
+    /// <summary>Which translation DoF curves the clips of HumanT have, and how large each gets:
+    /// the take moves five bones, each mostly along one or two axes of its parent bone's frame,
+    /// and the small components have no curve. Recorded per clip: the number of its Animator
+    /// curves; per translation DoF curve the largest magnitude of its keys and its last key's
+    /// value (times 10000); and the middle key of three muscle curves, two of which trade places
+    /// and one of which is negated when a clip is mirrored. One of the clips has the Mirror
+    /// setting and has been played mirrored by then (tdof.playTMirror): its curves are recorded
+    /// as the curve queries give them.</summary>
+    static void TranslationCurves()
+    {
+#if UNITY_EDITOR
+        foreach (var clip in Resources.LoadAll<AnimationClip>("HumanT"))
+        {
+            var bindings = UnityEditor.AnimationUtility.GetCurveBindings(clip);
+            int animator = 0, translation = 0;
+            foreach (var b in bindings)
+            {
+                if (b.type != typeof(Animator)) continue;
+                animator++;
+                if (b.propertyName.Contains("TDOF")) translation++;
+            }
+            Put("tdof.curves." + clip.name, "{\"animatorCurves\":" + animator + ",\"translationCurves\":" + translation + "}");
+            foreach (var b in bindings)
+            {
+                if (b.type != typeof(Animator)) continue;
+                var keys = UnityEditor.AnimationUtility.GetEditorCurve(clip, b).keys;
+                if (b.propertyName.Contains("TDOF"))
+                {
+                    float largest = 0f;
+                    foreach (var key in keys) largest = Mathf.Max(largest, Mathf.Abs(key.value));
+                    // In ten-thousandths, so the comparison's relative tolerance applies to them.
+                    Put("tdof.curves." + clip.name + "." + b.propertyName, "{\"largestTenThousandths\":" + F(largest * 10000f)
+                        + ",\"lastTenThousandths\":" + F(keys[keys.Length - 1].value * 10000f) + "}");
+                }
+                else if (b.propertyName == "Left Arm Down-Up" || b.propertyName == "Right Arm Down-Up" || b.propertyName == "Spine Left-Right")
+                    Put("tdof.curves." + clip.name + "." + b.propertyName, "{\"keys\":" + keys.Length + ",\"middle\":" + F(keys[keys.Length / 2].value) + "}");
+            }
+        }
+#endif
+    }
 
     /// <summary>A clip playable without Foot IK: "A" is HumanA's clip, the others the .anim clips
     /// of that name.</summary>
