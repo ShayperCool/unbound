@@ -42,6 +42,8 @@ SECTION_ENDS = (
     ('reverb_transitions', 'reverbfilter_decay_source'),
     ('component_lifecycle', 'life_echo_enabled_mono'),
     ('lifecycle_controls', 'life_echo_stopwait_shot'),
+    ('lifecycle_swaps', 'life_swap_listener'),
+    ('filter_slews', 'life_lowpass_cutoff_near_mono'),
 )
 
 

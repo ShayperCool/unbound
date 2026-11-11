@@ -391,6 +391,36 @@ namespace UnityEngine.Tests
             Assert.Empty(m_Errors);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SimultaneousEnableChangesKeepALaterUnitsAcceptedDescriptor(bool listener)
+        {
+            var go = new GameObject("swapped filter states");
+            m_Objects.Add(go);
+            var source = listener ? null : go.AddComponent<AudioSource>();
+            var hearing = listener ? go.AddComponent<AudioListener>() : null;
+            var low = go.AddComponent<AudioLowPassFilter>();
+            low.enabled = false;
+            var echo = go.AddComponent<AudioEchoFilter>();
+            AudioFilterDescriptor[] table = null;
+            int Collect() => listener ? AudioFilterChain.CollectListener(hearing, false, ref table)
+                : AudioFilterChain.Collect(source, false, ref table);
+            Assert.Equal(1, Collect());
+            Assert.Equal(Id(echo), table[0].Id);
+            low.enabled = true;
+            echo.enabled = false;
+            Assert.Equal(2, Collect());
+            Assert.Equal(Id(echo), table[1].Id);
+            Assert.Equal(AudioFilterStage.Bypassed, table[1].Stage);
+            low.enabled = false;
+            echo.enabled = true;
+            Assert.Equal(2, Collect());
+            Assert.Equal(AudioFilterStage.Bypassed, table[0].Stage);
+            Assert.Equal(AudioFilterStage.BeforeScripts, table[1].Stage);
+            Assert.Empty(m_Errors);
+        }
+
         [Fact]
         public void ASecondDistortionComponentIsRejectedWithoutChangingTheFirst()
         {

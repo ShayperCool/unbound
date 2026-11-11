@@ -943,6 +943,17 @@ impl Effect {
         let limit = (current.abs() + target.abs()) * 0.01;
         current + (target - current).clamp(-limit, limit)
     }
+    // Unity 6000.0.71f1, audiodistortion filter_slews: cutoff changes by its
+    // current value / 100 plus 10 Hz per sample; resonance changes by one per sample.
+    fn filter_step(current: f32, target: f32, step: f32) -> f32 {
+        if current < target {
+            (current + step).min(target)
+        } else if current > target {
+            (current - step).max(target)
+        } else {
+            current
+        }
+    }
     /// Units that exchange signal between groups, in chain order: a Send adds a copy at its
     /// level to its target's sidechain, a Receive mixes its sidechain in and a Duck Volume
     /// ducks by it. Native ignores bypass on them (the Editor disallows it), and nothing reaches
@@ -1181,8 +1192,26 @@ impl Effect {
             }
         } else if kind.fades_in_when_active() && !bypass && !self.spec.bypass {
             for stereo in samples.chunks_exact_mut(2) {
-                let cutoff = Self::slew(self.cutoff, self.spec.cutoff.clamp(10.0, 22000.0));
-                let resonance = Self::slew(self.resonance, self.spec.resonance.clamp(1.0, 10.0));
+                let cutoff_target = self.spec.cutoff.clamp(10.0, 22000.0);
+                let resonance_target = self.spec.resonance.clamp(1.0, 10.0);
+                let (cutoff, resonance) = if self.spec.effect_transitions_measured {
+                    const CUTOFF_DIVISOR: f32 = 100.0;
+                    const CUTOFF_OFFSET_HZ: f32 = 10.0;
+                    const RESONANCE_STEP: f32 = 1.0;
+                    (
+                        Self::filter_step(
+                            self.cutoff,
+                            cutoff_target,
+                            self.cutoff / CUTOFF_DIVISOR + CUTOFF_OFFSET_HZ,
+                        ),
+                        Self::filter_step(self.resonance, resonance_target, RESONANCE_STEP),
+                    )
+                } else {
+                    (
+                        Self::slew(self.cutoff, cutoff_target),
+                        Self::slew(self.resonance, resonance_target),
+                    )
+                };
                 if cutoff != self.cutoff || resonance != self.resonance {
                     self.cutoff = cutoff;
                     self.resonance = resonance;
@@ -1340,6 +1369,55 @@ fn sync_effects(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_newly_enabled_lowpass_matches_the_recorded_first_audible_buffer() {
+        use std::io::Read;
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/audiodistortion/Reference/unity-6000.0.71f1");
+        let mut seed = 12345_u32;
+        let signal: Vec<f32> = (0..7 * 1024 * 2)
+            .map(|_| {
+                seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+                ((seed >> 18) as i32 - 8192) as f32 / 32768.0
+            })
+            .collect();
+        for rate in [48000, 44100] {
+            let file = std::fs::File::open(
+                root.join(format!("live-rate-{rate}/life_swap_source.master.f32.gz")),
+            )
+            .unwrap();
+            let mut bytes = Vec::new();
+            flate2::read::GzDecoder::new(file)
+                .read_to_end(&mut bytes)
+                .unwrap();
+            let reference: Vec<_> = bytes
+                .chunks_exact(4)
+                .map(|v| f32::from_le_bytes(v.try_into().unwrap()))
+                .collect();
+            let spec: EffectSpec = serde_json::from_str(
+                r#"{
+                "id":"lowpass", "kind":"Lowpass", "cutoff":1700.0, "resonance":1.0,
+                "effectTransitionsMeasured":true
+            }"#,
+            )
+            .unwrap();
+            for period in [97, 1024] {
+                let mut effect = Effect::new(spec.clone(), rate, 1024).unwrap();
+                let mut actual = signal[6 * 1024 * 2..].to_vec();
+                for chunk in actual.chunks_mut(period * 2) {
+                    effect.process(chunk, false);
+                }
+                for (i, value) in actual.iter().enumerate() {
+                    let expected = reference[6 * 1024 * 2 + i];
+                    assert!(
+                        (value - expected).abs() <= 2e-5 + 2e-4 * expected.abs(),
+                        "rate={rate} period={period} sample={i} {value} != {expected}"
+                    );
+                }
+            }
+        }
+    }
 
     #[test]
     fn wet_transitions_survive_partial_chunks_and_repeated_descriptors() {

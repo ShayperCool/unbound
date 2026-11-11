@@ -525,19 +525,23 @@ namespace Unbound.Runtime
             return ((AudioEchoFilter)component).Describe(out descriptor);
         }
 
-        // Disabled units use their last accepted parameters. This also defers validation
-        // of edits made while disabled until the component can actually process them.
-        static bool DescribeRetained(Component component, bool active, AudioFilterDescriptor[] table, out AudioFilterDescriptor descriptor)
+        // Snapshot accepted descriptors before rebuilding the outgoing table. The lookup is
+        // reused and remains linear when several units change enabled state in one update.
+        static void Retain(ref Dictionary<ulong, AudioFilterDescriptor> retained, AudioFilterDescriptor[] table)
+        {
+            if (table == null) return;
+            retained ??= new Dictionary<ulong, AudioFilterDescriptor>(table.Length);
+            retained.Clear();
+            foreach (var previous in table)
+                if (previous.Id != 0) retained[previous.Id] = previous;
+        }
+
+        // Disabled edits are validated when the unit can actually process them.
+        static bool DescribeRetained(Component component, bool active, Dictionary<ulong, AudioFilterDescriptor> retained, out AudioFilterDescriptor descriptor)
         {
             if (active) return Describe(component, out descriptor);
             ulong id = unchecked((ulong)(long)component.GetInstanceID());
-            if (table != null)
-                foreach (var previous in table)
-                    if (previous.Id == id)
-                    {
-                        descriptor = previous;
-                        return true;
-                    }
+            if (retained != null && retained.TryGetValue(id, out descriptor)) return true;
             descriptor = default;
             return false;
         }
@@ -553,6 +557,7 @@ namespace Unbound.Runtime
         {
             var go = source.m_GameObject;
             if (go == null) return 0;
+            Retain(ref source.m_FilterDescriptors, table);
             int count = 0;
             bool scripts = false, below = false;
             bool spatial = !source.bypassEffects && source.UsesSpatialBlend;
@@ -573,7 +578,7 @@ namespace Unbound.Runtime
                 identity = unchecked(identity * 1000003 + (ulong)(long)c.GetInstanceID());
                 bool active = behaviour.isActiveAndEnabled;
                 if (!active && !Compat.AudioComponentActivationMeasured) continue;
-                bool ok = DescribeRetained(c, active, table, out var d);
+                bool ok = DescribeRetained(c, active, source.m_FilterDescriptors, out var d);
                 if (!ok) continue;
                 if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
                 if (spatial && (c is AudioDistortionFilter || c is AudioChorusFilter))
@@ -594,6 +599,7 @@ namespace Unbound.Runtime
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }
+            if (table != null) Array.Clear(table, count, table.Length - count);
             UpdateActivation(source, identity);
             source.ReportFilterChain(error);
             return error == null ? count : 0;
@@ -606,6 +612,7 @@ namespace Unbound.Runtime
         {
             var go = listener.m_GameObject;
             if (go == null) return 0;
+            Retain(ref listener.m_FilterDescriptors, table);
             int count = 0;
             string error = null;
             foreach (var c in go.m_Components)
@@ -613,7 +620,7 @@ namespace Unbound.Runtime
                 if (!IsFilterComponent(c) || ((Behaviour)c).m_Destroyed) continue;
                 bool active = ((Behaviour)c).isActiveAndEnabled;
                 if (!active && !Compat.AudioComponentActivationMeasured) continue;
-                if (!DescribeRetained(c, active, table, out var d)) continue;
+                if (!DescribeRetained(c, active, listener.m_FilterDescriptors, out var d)) continue;
                 if (!Compat.AudioListenerChainMeasured && !(c is AudioReverbFilter))
                 {
                     error ??= c.GetType().Name + " on the AudioListener '" + go.m_Name + "' is not supported; it is not applied";
@@ -642,6 +649,7 @@ namespace Unbound.Runtime
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }
+            if (table != null) Array.Clear(table, count, table.Length - count);
             if (error != null && s_ReportedListeners.Add(listener.GetInstanceID()))
                 Debug.LogError("Unbound: " + error, listener);
             return count;

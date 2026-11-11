@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine.Audio;
 
@@ -80,6 +81,7 @@ namespace UnityEngine
         float[] m_RolloffTable, m_SpatialBlendTable, m_SpreadTable;
         // The filter components sent with the last packet (reused), and the chain error reported.
         internal AudioFilterDescriptor[] m_FilterTable;
+        internal Dictionary<ulong, AudioFilterDescriptor> m_FilterDescriptors;
         string m_FilterChainError;
 
         /// <summary>Samples per distance curve sent to the mixer.</summary>

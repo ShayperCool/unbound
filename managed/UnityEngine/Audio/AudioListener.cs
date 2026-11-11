@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unbound.Runtime;
 
 namespace UnityEngine
@@ -18,6 +19,7 @@ namespace UnityEngine
         internal Vector3 m_LastPosition;
         internal Vector3 m_Velocity;
         internal bool m_HasLastPosition;
+        internal Dictionary<ulong, AudioFilterDescriptor> m_FilterDescriptors;
         // The loop the last position was sampled in (false: the frame loop).
         internal bool m_MotionInFixedStep;
 

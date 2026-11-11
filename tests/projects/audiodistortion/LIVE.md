@@ -7,12 +7,12 @@ Component controls include AudioDistortionFilter and AudioChorusFilter on source
 mono input clips and listeners. The listener controls retain the upstream Master
 sink as well as the processed device output.
 
-The canonical profile contains 154 cases and nine independent sessions per rate, declared by
+The canonical profile contains 163 cases and eleven independent sessions per rate, declared by
 `live.sections()`. Each session begins with a fresh Editor or engine process.
 The device output includes preceding mixers' tails inside that session, so the
 same session boundaries are part of both recording and replay. The merged
 capture records these case lists in `sessions`; every earlier sample is retained.
-The seven original sessions retain all 10,223,827 checked values per rate. The two appended lifecycle sessions add 4,915,300 values from independently agreeing Editor repeats. See [live component histories](LIFECYCLE.md). Separate
+The seven original sessions retain all 10,223,827 checked values per rate. The four appended lifecycle sessions add 5,800,054 values from independently agreeing Editor repeats. See [live component histories](LIFECYCLE.md). Separate
 public parameter/time traces of the timed Pitch control agree across another 96
 fields per rate; `parameter_trace.py` checks them exactly during engine replay.
 

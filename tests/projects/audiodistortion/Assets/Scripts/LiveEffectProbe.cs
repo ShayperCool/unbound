@@ -182,6 +182,15 @@ public class LiveEffectProbe : MonoBehaviour
         new LiveCase("life_echo_enabled_chain", "Echo", "delay", 37f, 37f, "life_enabled_chain"),
         new LiveCase("life_echo_restart_shot", "Echo", "delay", 37f, 37f, "life_restart_shot"),
         new LiveCase("life_echo_stopwait_shot", "Echo", "delay", 37f, 37f, "life_stopwait_shot"),
+        new LiveCase("life_swap_source", "Echo", "delay", 37f, 37f, "life_swap"),
+        new LiveCase("life_swap_listener", "Echo", "delay", 37f, 37f, "life_out_swap"),
+        new LiveCase("life_lowpass_cutoff_up", "LowPass", "cutoffFrequency", 1700f, 17000f, "life_parameter"),
+        new LiveCase("life_lowpass_cutoff_down", "LowPass", "cutoffFrequency", 17000f, 1700f, "life_parameter"),
+        new LiveCase("life_lowpass_resonance", "LowPass", "resonance", 1f, 9f, "life_parameter", "cutoffFrequency=1700"),
+        new LiveCase("life_highpass_cutoff_up", "HighPass", "cutoffFrequency", 1700f, 17000f, "life_parameter"),
+        new LiveCase("life_highpass_cutoff_down", "HighPass", "cutoffFrequency", 17000f, 1700f, "life_parameter"),
+        new LiveCase("life_highpass_resonance", "HighPass", "resonance", 1f, 9f, "life_parameter", "cutoffFrequency=1700"),
+        new LiveCase("life_lowpass_cutoff_near_mono", "LowPass", "cutoffFrequency", 1700f, 1720f, "life_parameter_mono"),
     };
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => Environment.GetEnvironmentVariable("EFFECT_PROBE_ENGINE") == "1";
@@ -240,8 +249,8 @@ public class LiveEffectProbe : MonoBehaviour
             return;
         }
         if (component is AudioEchoFilter echo) { echo.delay = value; return; }
-        if (component is AudioLowPassFilter low) { low.cutoffFrequency = value; return; }
-        if (component is AudioHighPassFilter high) { high.cutoffFrequency = value; return; }
+        if (component is AudioLowPassFilter low) { if (parameter == "resonance") low.lowpassResonanceQ = value; else low.cutoffFrequency = value; return; }
+        if (component is AudioHighPassFilter high) { if (parameter == "resonance") high.highpassResonanceQ = value; else high.cutoffFrequency = value; return; }
         var chorus = (AudioChorusFilter)component;
         switch (parameter) {
             case "Dry mix": chorus.dryMix = value; break;
@@ -293,11 +302,15 @@ public class LiveEffectProbe : MonoBehaviour
             Debug.Log("Live effect case " + c.Key);
             var mixer = Resources.Load<AudioMixer>(c.Key); if (!mixer) throw new Exception("Missing mixer " + c.Key);
             var go = new GameObject(c.Key); var source = go.AddComponent<AudioSource>();
-            Behaviour component = null, chainEdit = null, listenerControl = null;
+            Behaviour component = null, chainEdit = null, listenerControl = null, swap = null;
             bool lifecycle = c.Mode.StartsWith("life_");
             var group = mixer.FindMatchingGroups("Master")[0];
             if (c.Component) {
                 var host = c.Mode == "listener" || c.Mode.StartsWith("life_out_") ? gameObject : go;
+                if (c.Mode == "life_swap" || c.Mode == "life_out_swap") {
+                    var low = host.AddComponent<AudioLowPassFilter>(); low.cutoffFrequency = 1700f;
+                    low.enabled = false; swap = low;
+                }
                 if (lifecycle) component = AddLifecycleFilter(host, c);
                 else if (c.Kind == "Distortion") component = host.AddComponent<AudioDistortionFilter>();
                 else if (c.Kind == "Reverb") {
@@ -346,7 +359,9 @@ public class LiveEffectProbe : MonoBehaviour
                     if (lifecycle) {
                         if (block == 6 || block == 12 || block == 13 || block == 18) {
                             bool changed = block == 6 || block == 13;
-                            if (c.Mode.StartsWith("life_enabled") || c.Mode == "life_out_enabled") component.enabled = !changed;
+                            if (c.Mode.StartsWith("life_parameter")) SetComponent(component, c.Parameter, changed ? c.Changed : c.Initial);
+                            else if (swap) { swap.enabled = changed; component.enabled = !changed; }
+                            else if (c.Mode.StartsWith("life_enabled") || c.Mode == "life_out_enabled") component.enabled = !changed;
                             else if (c.Mode.StartsWith("life_listener")) source.bypassListenerEffects = changed;
                             else if (c.Mode.StartsWith("life_restart")) { source.Stop(); play(); }
                             else if (c.Mode.StartsWith("life_stopwait")) { if (changed) source.Stop(); else play(); }
@@ -391,6 +406,7 @@ public class LiveEffectProbe : MonoBehaviour
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
             if (c.Mode == "listener" || c.Mode.StartsWith("life_out_")) DestroyImmediate(component);
             if (listenerControl) DestroyImmediate(listenerControl);
+            if (c.Mode == "life_out_swap") DestroyImmediate(swap);
         }
         AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); Exit(0);
     }

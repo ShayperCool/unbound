@@ -119,8 +119,16 @@ Unbound's choices (unmeasured):
 - **Lifetime.**
   - An unchanged identity keeps its histories. Changed parameters ramp, using the mixer kernel's
     measured slew.
-  - A new identity starts empty: re-enabling, re-adding or replacing a component.
-  - Stop resets the chain.
+  - On Unity 6000.0.71f1, disabling a source or listener component freezes its history;
+    re-enabling keeps its identity. Explicit Stop also freezes source histories across idle
+    buffers. `Compat.AudioComponentActivationMeasured` selects these rules and the source
+    packet's history flag. Other releases retain their previous disabled-unit recreation and
+    idle reset behavior until measured.
+  - Adding/removing a source component reconnects the chain. Surviving units restart their
+    histories, while LowPass keeps its resonant state and Chorus keeps its sweep span. A new
+    component starts empty. The source/listener state-swap controls in
+    [the live lifecycle profile](../tests/projects/audiodistortion/LIFECYCLE.md) cover independent
+    units changing enabled state in the same update.
   - Measured with AudioReverbFilter (tests/projects/audioreverb): when a source without an
     OnAudioFilterRead path ends its last voice, the chain runs on to the end of the next DSP
     buffer, then the tail is cut and the chain reset (clip end at frame 12288: last sample 13311;
@@ -147,7 +155,8 @@ Unbound's choices (unmeasured):
 - Some chains cannot be placed: a component between two OnAudioFilterRead scripts, a component
   above a clipless generator script, or more than 64 components. Each logs an error once, and
   the source then sends no components.
-- A component with a non-finite parameter logs an error and is skipped.
+- An active component with a non-finite parameter logs an error and is skipped. Edits made
+  while a component is disabled are deferred until it is enabled.
 - On the hearing AudioListener all six component kinds use the same ordered chain on the
   measured release. Components next to listener OnAudioFilterRead scripts, or on a listener
   sharing its GameObject with a source, log an error once and are not applied on the listener.
@@ -156,8 +165,9 @@ Unbound's choices (unmeasured):
 
 ## Follow-up
 
-The compatibility stubs are regenerated. Source-chain parity for LowPass and HighPass
-still need Native captures; Echo coverage is described below.
+The compatibility stubs are regenerated. Broad source parameter sweeps for LowPass and HighPass
+still need Native captures; their 1700 Hz, Q 1 live lifecycle controls are measured in
+`audiodistortion`. Echo coverage is described below.
 - Run the managed `AudioFilterComponentTests` and `NativeApiVersionTests`.
 - Run the Rust `audio::mixer` and `audio::protocol` tests.
 - These need a fresh, matching NativeApi-18 CLI and Core. Current API-15 binaries cannot run
@@ -175,7 +185,7 @@ The extension preserves every pre-existing reference value and tolerance.
 | --- | --- |
 | Documented, Unity 6000.0 | [Use audio filters](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEffect.html) describes enabled listener and source filters in Inspector order. [Distortion](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionFilter.html) explicitly permits the listener; the [Chorus Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusFilter.html) describes the three taps and controls. Neither specifies their placement relative to mixer output or other rendering stages. |
 | Documented, Unity 6000.0 | [AudioSource.bypassListenerEffects](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-bypassListenerEffects.html) excludes listener effects from that source, with no effect when routed into a mixer group. [bypassEffects](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-bypassEffects.html) describes bypassing component and global listener effects. [AudioListener](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioListener.html) allows one listener in a scene. These pages do not define the per-sample arithmetic. |
-| Measured in this release/context | The listener runs after the mixer output and after source summation. Distortion paired with LowPass, HighPass, Echo, Reverb and Chorus, in both orders, follows Inspector order. The Master float sink remains upstream of listener components. The listener chain shares the source/mixer kernels, with independent histories per component. Disabled components are omitted. |
+| Measured in this release/context | The listener runs after the mixer output and after source summation. Distortion paired with LowPass, HighPass, Echo, Reverb and Chorus, in both orders, follows Inspector order. The Master float sink remains upstream of listener components. The listener chain shares the source/mixer kernels, with independent histories per component. Static disabled components are omitted. Live disable/re-enable retains the unit and its frozen history, measured by the appended audiodistortion lifecycle controls. |
 | Measured in this release/context | An unrouted source with `bypassListenerEffects` joins after the listener chain; another source still passes through it. `bypassEffects` bypasses only the source's components, and does **not** bypass listener components, including on an unrouted source. Mixer-routed sources pass through listener components with either flag. The unrouted `bypassEffects` result narrows the wording of its API description. |
 | Documented, Unity 6000.0 | [AudioEchoFilter.delay](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioEchoFilter-delay.html) and the [Echo Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEchoFilter.html) describe a float delay, 10..5000 ms, without specifying conversion. |
 | Measured in this release/context | Echo component setters/getters store unsigned whole milliseconds: 17/17.1/17.5/17.9 all read 17, 18 reads 18, 10.125 reads 10, 1.25 reads 1, -1.25 reads 4294967296 as float, and 5000.75 reads 5000. The DSP minimum is 1 ms; the shared Echo core then applies its existing eight-frame conversion. `Compat.AudioComponentEchoDelayMeasured` selects this mapping for both source and listener, including the same source mono/noise/impulse controls. Other releases retain the prior float setter and 10 ms minimum until measured. |
@@ -954,8 +964,19 @@ These are observations of this capture context, not a backend synchronization
 guarantee in the public Unity API. The linked probe contract table records the
 6000.0 documentation and its timing limits.
 
-Static references and tolerances stay unchanged. Live insertion, effect identity,
+Static references and tolerances stay unchanged. Live mixer-slot insertion, effect identity,
 placement and bypass changes remain rejected; other wet output contexts, alternate
 Pitch channel limits and other releases remain explicitly unmeasured
 and are listed by `unbound doctor`. Live source/listener Distortion and Chorus
 reuse the existing component kernels rather than separate transition code.
+
+Source filter membership edits, live enabled state, listener bypass, explicit Stop/Play
+histories and Reverb Dry Level changes are measured by the additional
+[lifecycle controls](../tests/projects/audiodistortion/LIFECYCLE.md). These controls retain
+all earlier sessions and use the existing float/PCM bounds at both rates.
+
+The resonant Lowpass/Highpass kernels use the measured per-sample parameter steps on
+`Compat.MixerEffectTransitionsMeasured`: cutoff moves toward its target by current cutoff /
+100 + 10 Hz and resonance by one, clamping each step to the target. This covers live setters
+and the first audible buffer of an initially disabled unit. Other releases retain the earlier
+unmeasured endpoint-sum ramp. The shared cores serve mixer effects and components.
