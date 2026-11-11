@@ -14,10 +14,16 @@
 //! inline sampler (`sampler_PointClamp`, `s_linear_clamp_sampler`: a sampler named like no
 //! texture's, whose name spells a state), and on OpenGL Core through another texture's, uses
 //! the texture's own sampler (`sampler<texture>`, declared when the program does not). glslang passes textures and samplers to functions
-//! resolved, so every sample names its texture and sampler variables. Comparison samples keep
-//! their sampler (a shadow map's comparison is the sampler's), and so does a sample whose
-//! texture is not a variable (an inline state is then what the sampler binds) or whose texture's
-//! own sampler compares (a sampler is one kind or the other).
+//! resolved, so every sample names its texture and sampler variables. A sample whose texture is
+//! not a variable keeps its sampler (an inline state is then what the sampler binds).
+//!
+//! A texture has an own sampler of each kind, both named `sampler<texture>`: the one its
+//! comparisons go through and the one its other samples do (a sampler variable is one kind or
+//! the other, by what samples through it; glslang likewise declares a texture sampled both
+//! ways as two variables of one name). Comparisons keep the sampler they name, but on OpenGL
+//! Core, where they go through the texture's own comparing one: the Editor there compares
+//! through the texture's state whatever sampler the program names
+//! (tests/projects/samplerstates CmpTwo.map, CmpOther.mapLinear).
 
 use crate::InlineSampler;
 use anyhow::{Result, bail};
@@ -293,42 +299,44 @@ pub(crate) fn own_samplers(words: &[u32], texture_state: bool) -> Result<Vec<u32
         .filter(|&&k| depth_samples.contains(&inst(k)[2]))
         .filter_map(|&k| origin(inst(k)[4]))
         .collect();
-    let compares = |t: u32| {
+    // A texture's own sampler of a kind, when the program declares it.
+    let own_of = |t: u32, compares: bool| {
         let own = format!("sampler{}", textures[&t]);
         samplers
             .keys()
-            .any(|id| comparing.contains(id) && names.get(id) == Some(&own))
+            .copied()
+            .find(|id| names.get(id) == Some(&own) && comparing.contains(id) == compares)
     };
-    // Each sample of a texture through an inline sampler (or, with `texture_state`, any other
-    // than its own), but comparisons and textures whose own sampler compares.
+    // Each sample that goes through its texture's own sampler instead of the one it names:
+    // through an inline sampler (or, with `texture_state`, any other), and with
+    // `texture_state` each comparison.
     let mut replaced = HashSet::new();
-    let rewrite_samples: Vec<(usize, u32)> = scan
+    let rewrite_samples: Vec<(usize, (u32, bool))> = scan
         .samples
         .iter()
         .filter_map(|&k| {
             let w = inst(k);
             let (t, s) = (origin(w[3])?, origin(w[4])?);
-            let rewrite = !depth_samples.contains(&w[2])
-                && textures.contains_key(&t)
-                && samplers.contains_key(&s)
-                && (inline.contains(&s) || (texture_state && foreign(t, s)))
-                && !compares(t);
+            if !textures.contains_key(&t) || !samplers.contains_key(&s) {
+                return None;
+            }
+            let compares = depth_samples.contains(&w[2]);
+            let rewrite = match compares {
+                true => texture_state,
+                false => inline.contains(&s) || (texture_state && foreign(t, s)),
+            } && own_of(t, compares) != Some(s);
             if rewrite {
                 replaced.insert(s);
             }
-            rewrite.then_some((k, t))
+            rewrite.then_some((k, (t, compares)))
         })
         .collect();
     if rewrite_samples.is_empty() {
         return Ok(words.to_vec());
     }
 
-    // The textures' own samplers, declared after an inline one where the program has none.
+    // The textures' own samplers, declared after a replaced one where the program has none.
     let mut bound = words[3];
-    let by_name: HashMap<&str, u32> = samplers
-        .keys()
-        .filter_map(|id| Some((names.get(id)?.as_str(), *id)))
-        .collect();
     let &(pointer_type, declared_at) = samplers
         .iter()
         .find(|(id, _)| replaced.contains(id))
@@ -336,30 +344,26 @@ pub(crate) fn own_samplers(words: &[u32], texture_state: bool) -> Result<Vec<u32
         .expect("a replaced sampler");
     // New variables are bound after the program's (the renderer rebinds them by name).
     let mut next_binding = scan.next_binding();
-    let mut own: HashMap<u32, u32> = HashMap::new();
+    let mut own: HashMap<(u32, bool), u32> = HashMap::new();
     let mut declarations: Vec<(u32, String)> = Vec::new();
-    for &(_, t) in &rewrite_samples {
-        if own.contains_key(&t) {
+    for &(_, (t, compares)) in &rewrite_samples {
+        if own.contains_key(&(t, compares)) {
             continue;
         }
-        let name = format!("sampler{}", textures[&t]);
-        let id = match by_name.get(name.as_str()) {
-            Some(id) => *id,
-            None => {
-                let id = bound;
-                bound += 1;
-                declarations.push((id, name));
-                id
-            }
-        };
-        own.insert(t, id);
+        let id = own_of(t, compares).unwrap_or_else(|| {
+            let id = bound;
+            bound += 1;
+            declarations.push((id, format!("sampler{}", textures[&t])));
+            id
+        });
+        own.insert((t, compares), id);
     }
 
     let mut out =
         Vec::with_capacity(words.len() + 8 * (declarations.len() + rewrite_samples.len()));
     out.extend_from_slice(&words[..5]);
     out[3] = 0;
-    let samples_at: HashMap<usize, u32> = rewrite_samples.into_iter().collect();
+    let samples_at: HashMap<usize, (u32, bool)> = rewrite_samples.into_iter().collect();
     let (mut named, mut decorated) = (false, false);
     for k in 0..list.len() {
         let w = inst(k);
@@ -377,13 +381,13 @@ pub(crate) fn own_samplers(words: &[u32], texture_state: bool) -> Result<Vec<u32
                 next_binding += 1;
             }
         }
-        if let Some(t) = samples_at.get(&k)
+        if let Some(sample) = samples_at.get(&k)
             && let Some(&sampler_type) = value_types.get(&w[4])
         {
             // A load of the texture's own sampler, sampled with instead.
             let loaded = bound;
             bound += 1;
-            out.extend_from_slice(&[(4 << 16) | OP_LOAD, sampler_type, loaded, own[t]]);
+            out.extend_from_slice(&[(4 << 16) | OP_LOAD, sampler_type, loaded, own[sample]]);
             out.extend_from_slice(&[w[0], w[1], w[2], w[3], loaded]);
             out.extend_from_slice(&w[5..]);
             continue;
@@ -660,9 +664,56 @@ float4 main(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_Target
         );
     }
 
-    /// A texture whose own sampler compares keeps the inline sampler for its other samples.
+    /// For every sample of the module: the texture, the sampler, and whether the sampler
+    /// variable compares.
+    fn sampled_kinds(words: &[u32]) -> Vec<(String, String, bool)> {
+        let module = crate::fit::parse(words, crate::fit::ClipSpace::OpenGl).unwrap();
+        naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all() - naga::valid::ValidationFlags::BINDINGS,
+            naga::valid::Capabilities::all(),
+        )
+        .validate(&module)
+        .unwrap();
+        let mut found = Vec::new();
+        let functions = module
+            .functions
+            .iter()
+            .map(|(_, f)| f)
+            .chain(module.entry_points.iter().map(|e| &e.function));
+        for f in functions {
+            let global = |h: naga::Handle<naga::Expression>| match &f.expressions[h] {
+                naga::Expression::GlobalVariable(g) => &module.global_variables[*g],
+                other => panic!("not a variable: {other:?}"),
+            };
+            for (_, e) in f.expressions.iter() {
+                if let naga::Expression::ImageSample { image, sampler, .. } = e {
+                    let sampler = global(*sampler);
+                    let compares = matches!(
+                        module.types[sampler.ty].inner,
+                        naga::TypeInner::Sampler { comparison: true }
+                    );
+                    found.push((
+                        global(*image).name.clone().unwrap(),
+                        sampler.name.clone().unwrap(),
+                        compares,
+                    ));
+                }
+            }
+        }
+        found.sort();
+        found
+    }
+
+    fn kinds(list: &[(&str, &str, bool)]) -> Vec<(String, String, bool)> {
+        list.iter()
+            .map(|(t, s, c)| (t.to_string(), s.to_string(), *c))
+            .collect()
+    }
+
+    /// A texture whose own sampler compares has an own sampler for its other samples too, of
+    /// the same name: a sample of it through an inline sampler goes through that one.
     #[test]
-    fn a_comparing_own_sampler_is_not_shared() {
+    fn a_compared_texture_has_an_own_sampler_of_each_kind() {
         let source = r#"
 Texture2D _Shadow;
 SamplerComparisonState sampler_Shadow;
@@ -673,14 +724,49 @@ float4 main(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_Target
 }
 "#;
         let words = spirv(source, "main", shaderc::ShaderKind::Fragment);
-        let pairs = sampled(&own_samplers(&words, false).unwrap());
         assert_eq!(
-            pairs,
-            [
-                ("_Shadow", "sampler_PointClamp"),
-                ("_Shadow", "sampler_Shadow")
-            ]
-            .map(|(a, b)| (a.to_string(), b.to_string()))
+            sampled_kinds(&own_samplers(&words, false).unwrap()),
+            kinds(&[
+                ("_Shadow", "sampler_Shadow", false),
+                ("_Shadow", "sampler_Shadow", true),
+            ])
+        );
+    }
+
+    /// Where the sampler state is the texture's (OpenGL Core), a comparison goes through the
+    /// texture's own comparing sampler whatever sampler it names, declared when the program
+    /// has none (its `sampler_Shadow` is the one the other samples go through); elsewhere a
+    /// comparison keeps the sampler it names.
+    #[test]
+    fn comparisons_go_through_the_textures_own_sampler_with_texture_state() {
+        let source = r#"
+Texture2D _Shadow; SamplerState sampler_Shadow;
+Texture2D _Map; SamplerComparisonState sampler_Map;
+SamplerComparisonState sampler_LinearClampCompare;
+float4 frag(float2 uv : TEXCOORD0) : SV_Target {
+    return _Shadow.SampleCmpLevelZero(sampler_LinearClampCompare, uv, .5)
+        + _Shadow.Sample(sampler_Shadow, uv)
+        + _Map.SampleCmpLevelZero(sampler_Map, uv, .5)
+        + _Map.SampleCmpLevelZero(sampler_LinearClampCompare, uv, .25);
+}"#;
+        let words = spirv(source, "frag", shaderc::ShaderKind::Fragment);
+        assert_eq!(
+            sampled_kinds(&own_samplers(&words, true).unwrap()),
+            kinds(&[
+                ("_Map", "sampler_Map", true),
+                ("_Map", "sampler_Map", true),
+                ("_Shadow", "sampler_Shadow", false),
+                ("_Shadow", "sampler_Shadow", true),
+            ])
+        );
+        assert_eq!(
+            sampled_kinds(&own_samplers(&words, false).unwrap()),
+            kinds(&[
+                ("_Map", "sampler_LinearClampCompare", true),
+                ("_Map", "sampler_Map", true),
+                ("_Shadow", "sampler_LinearClampCompare", true),
+                ("_Shadow", "sampler_Shadow", false),
+            ])
         );
     }
 

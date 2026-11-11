@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 32;
+pub const FORMAT_VERSION: u32 = 33;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2157,6 +2157,150 @@ float4 frag(float4 p : SV_POSITION) : SV_Target
         assert!(slot("_Unsigned").integer() && slot("_Signed").integer());
         assert!(!slot("_Filtered").integer() && !slot("_Shadow").integer());
         assert!(slot("_Shadow").depth() && slot("_Shadow").comparison);
+    }
+
+    /// A texture sampled with and without comparisons is a slot of each kind of its property
+    /// (the Unity 6000.0.71f1 Editor draws such programs: tests/projects/samplerstates CmpOwn,
+    /// CmpInline, CmpOther): the depth texture with a comparison sampler, and the texture as
+    /// its other samples read it.
+    #[test]
+    fn a_texture_sampled_with_and_without_comparisons_is_a_slot_of_each_kind() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2D _Shadow;
+SamplerComparisonState sampler_Shadow;
+Texture2D _B;
+SamplerState sampler_B;
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+float4 frag(float4 position : SV_POSITION) : SV_Target {
+    return float4(_Shadow.SampleCmpLevelZero(sampler_Shadow, position.xy, 0.5),
+        _Shadow.Sample(sampler_B, position.xy).r, _B.Sample(sampler_B, position.xy).r, 1);
+}
+"#;
+        // The (group, binding) of the texture and of the sampler of every sample, with
+        // whether the sample compares.
+        let samples = |wgsl: &str| {
+            let module = naga::front::wgsl::parse_str(wgsl).unwrap();
+            let mut found = std::collections::BTreeSet::new();
+            let functions = module
+                .functions
+                .iter()
+                .map(|(_, f)| f)
+                .chain(module.entry_points.iter().map(|e| &e.function));
+            for f in functions {
+                let binding = |h: naga::Handle<naga::Expression>| match &f.expressions[h] {
+                    naga::Expression::GlobalVariable(g) => {
+                        let b = module.global_variables[*g].binding.as_ref().unwrap();
+                        (b.group, b.binding)
+                    }
+                    other => panic!("not a variable: {other:?}"),
+                };
+                for (_, e) in f.expressions.iter() {
+                    if let naga::Expression::ImageSample {
+                        image,
+                        sampler,
+                        depth_ref,
+                        ..
+                    } = e
+                    {
+                        found.insert((binding(*image), binding(*sampler), depth_ref.is_some()));
+                    }
+                }
+            }
+            found.into_iter().collect::<Vec<_>>()
+        };
+        let compile = |device, source: &str| {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            compiler
+                .compile(&program(source, false), &[], false)
+                .unwrap()
+        };
+        for device in [
+            unbound_compat::GraphicsDevice::OpenGLCore,
+            unbound_compat::GraphicsDevice::Vulkan,
+        ] {
+            let compiled = compile(device, source);
+            assert_eq!(compiled.textures, ["_B", "_Shadow", "_Shadow"]);
+            let kinds: Vec<_> = compiled
+                .texture_slots
+                .iter()
+                .map(|slot| (slot.sample, slot.comparison))
+                .collect();
+            assert_eq!(
+                kinds,
+                [
+                    (SampleKind::Float, false),
+                    (SampleKind::Float, false),
+                    (SampleKind::Depth, true)
+                ]
+            );
+            assert!(compiled.texture_aliases.is_empty());
+            // The comparison through the comparing slot; the other sample of `_Shadow`
+            // through the texture's own sampler where the state is the texture's (OpenGL
+            // Core), else through the sampler it names (`_B`'s).
+            let plain_sampler = match device.samples_through_texture_state() {
+                true => 3,
+                false => 1,
+            };
+            assert_eq!(
+                samples(&compiled.fragment),
+                [
+                    ((1, 0), (1, 1), false),
+                    ((1, 2), (1, plain_sampler), false),
+                    ((1, 4), (1, 5), true),
+                ],
+                "{device:?}"
+            );
+        }
+        // The stages need not sample it alike: one compares, the other reads.
+        let stages = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2D _Shadow;
+SamplerComparisonState sampler_Shadow;
+SamplerState sampler_PointClamp;
+struct V { float4 position : SV_POSITION; float depth : TEXCOORD0; };
+V vert(float4 position : POSITION) {
+    V o;
+    o.position = position;
+    o.depth = _Shadow.SampleLevel(sampler_PointClamp, position.xy, 0).r;
+    return o;
+}
+float4 frag(V i) : SV_Target {
+    return i.depth + _Shadow.SampleCmpLevelZero(sampler_Shadow, i.position.xy, 0.5);
+}
+"#;
+        let compiled = compile(unbound_compat::GraphicsDevice::OpenGLCore, stages);
+        let shadow: Vec<_> = compiled
+            .textures
+            .iter()
+            .zip(&compiled.texture_slots)
+            .filter(|(name, _)| *name == "_Shadow")
+            .map(|(_, slot)| (slot.sample, slot.comparison))
+            .collect();
+        assert_eq!(
+            shadow,
+            [(SampleKind::Float, false), (SampleKind::Depth, true)]
+        );
+        // A texture that is only compared, or only read, stays one slot.
+        let only = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2D _Shadow;
+SamplerComparisonState sampler_Shadow;
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+float4 frag(float4 position : SV_POSITION) : SV_Target {
+    return _Shadow.SampleCmpLevelZero(sampler_Shadow, position.xy, 0.5);
+}
+"#;
+        let compiled = compile(unbound_compat::GraphicsDevice::OpenGLCore, only);
+        assert_eq!(compiled.textures, ["_Shadow"]);
+        assert!(compiled.texture_slots[0].depth() && compiled.texture_slots[0].comparison);
     }
 
     /// A fragment program's outputs go where their semantics say, by the DX9 names too, which

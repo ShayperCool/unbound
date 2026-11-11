@@ -12,7 +12,7 @@ use naga::{
     AddressSpace, BinaryOperator, Binding, Expression, Handle, Literal, Module, ResourceBinding,
     Span, Statement, StructMember, Type, TypeInner, VectorSize,
 };
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 const MAIN_TEXTURE: &str = "_MainTex";
 /// SPIR-V's `BuiltIn FragDepth`.
@@ -1083,12 +1083,12 @@ pub(crate) fn fit(
     flat_integer_varyings(&mut vertex, naga::ShaderStage::Vertex);
     flat_integer_varyings(&mut fragment, naga::ShaderStage::Fragment);
 
-    // Textures of both stages, bound alike.
-    let mut names = BTreeSet::new();
-    let mut dims: HashMap<String, TextureDim> = HashMap::new();
-    let mut slots: HashMap<String, TextureSlot> = HashMap::new();
-    // The further variables of textures sampled through several samplers, by name.
-    let mut further = BTreeSet::new();
+    // Textures of both stages, bound alike: a slot for each property and kind ([`SlotKey`]).
+    let mut names: BTreeSet<SlotKey> = BTreeSet::new();
+    let mut dims: HashMap<SlotKey, TextureDim> = HashMap::new();
+    let mut slots: HashMap<SlotKey, TextureSlot> = HashMap::new();
+    // The further variables of textures sampled through several samplers: name and slot.
+    let mut further: BTreeMap<String, SlotKey> = BTreeMap::new();
     for module in [&vertex, &fragment] {
         for (_, g) in module.global_variables.iter() {
             if g.space != AddressSpace::Handle {
@@ -1097,26 +1097,26 @@ pub(crate) fn fit(
             let variable = g.name.clone().unwrap_or_default();
             let sampler = matches!(module.types[g.ty].inner, TypeInner::Sampler { .. });
             // A further variable of a texture is its texture's slot again.
-            let name = if sampler {
-                variable
-            } else {
-                let texture = crate::samplers::variable_texture(&variable).to_string();
-                if texture != variable {
-                    further.insert(variable);
-                }
-                texture
+            let name = match sampler {
+                true => variable.as_str(),
+                false => crate::samplers::variable_texture(&variable),
             };
-            let property = slot_property(&name, sampler).ok_or_else(|| {
+            let property = slot_property(name, sampler).ok_or_else(|| {
                 anyhow!("sampler `{name}` is neither a texture's nor an inline sampler state")
             })?;
-            let slot = slots.entry(property.clone()).or_default();
+            let key: SlotKey = (property, compares(&module.types[g.ty].inner));
+            if !sampler && name != variable {
+                further.insert(variable.clone(), key.clone());
+            }
+            let slot = slots.entry(key.clone()).or_default();
+            slot.comparison = key.1;
             match module.types[g.ty].inner {
                 TypeInner::Image {
                     dim,
                     arrayed,
                     class,
                 } => {
-                    dims.insert(property.clone(), texture_dim(&name, dim, arrayed)?);
+                    dims.insert(key.clone(), texture_dim(name, dim, arrayed)?);
                     let sample = match class {
                         naga::ImageClass::Depth { .. } => SampleKind::Depth,
                         naga::ImageClass::Sampled {
@@ -1129,50 +1129,47 @@ pub(crate) fn fit(
                         } => SampleKind::Uint,
                         _ => SampleKind::Float,
                     };
-                    // Both stages declare a texture alike; a depth declaration wins over a float
-                    // one (the depth class is what comparisons need).
-                    if slot.sample == SampleKind::Float || sample == SampleKind::Depth {
+                    // Both stages declare a texture alike.
+                    if slot.sample == SampleKind::Float {
                         slot.sample = sample;
                     } else if sample != SampleKind::Float && sample != slot.sample {
-                        bail!("texture `{property}` is declared with different texel types");
+                        bail!("texture `{}` is declared with different texel types", key.0);
                     }
                 }
-                TypeInner::Sampler { comparison } => {
-                    slot.comparison |= comparison;
-                    if property == name {
-                        slot.inline = InlineSampler::from_name(&name);
-                    } else if !textures_named(module, &property) {
-                        slot.inline = InlineSampler::from_name(&property);
+                TypeInner::Sampler { .. } => {
+                    if key.0 == name {
+                        slot.inline = InlineSampler::from_name(name);
+                    } else if !textures_named(module, &key.0) {
+                        slot.inline = InlineSampler::from_name(&key.0);
                     }
                 }
                 _ => {}
             }
-            names.insert(property);
+            names.insert(key);
         }
     }
-    let further: Vec<String> = further.into_iter().collect();
-    let further_property = |variable: &String| {
-        slot_property(crate::samplers::variable_texture(variable), false).unwrap_or_default()
-    };
-    // A main texture with further variables is a slot of the program's, like a typed one.
-    let main_texture = dims.get(MAIN_TEXTURE).copied().unwrap_or(TextureDim::D2) == TextureDim::D2
+    // A main texture that is compared too or has further variables is a slot of the
+    // program's, like a typed one.
+    let main = (MAIN_TEXTURE.to_string(), false);
+    let main_texture = dims.get(&main).copied().unwrap_or(TextureDim::D2) == TextureDim::D2
         && slots
-            .get(MAIN_TEXTURE)
-            .is_none_or(|slot| slot.sample == SampleKind::Float && !slot.comparison)
-        && !further.iter().any(|v| further_property(v) == MAIN_TEXTURE)
-        && names.remove(MAIN_TEXTURE);
-    let textures: Vec<String> = names.into_iter().collect();
+            .get(&main)
+            .is_none_or(|slot| slot.sample == SampleKind::Float)
+        && !names.contains(&(MAIN_TEXTURE.to_string(), true))
+        && !further.values().any(|key| key.0 == MAIN_TEXTURE)
+        && names.remove(&main);
+    let keys: Vec<SlotKey> = names.into_iter().collect();
+    let slot_of = |key: &SlotKey| {
+        keys.iter()
+            .position(|k| k == key)
+            .map(|k| k as u32)
+            .ok_or_else(|| anyhow!("texture `{}`", key.0))
+    };
     let texture_aliases = further
-        .iter()
-        .map(|v| {
-            let property = further_property(v);
-            textures
-                .iter()
-                .position(|t| *t == property)
-                .map(|k| k as u32)
-                .ok_or_else(|| anyhow!("texture `{property}`"))
-        })
+        .values()
+        .map(slot_of)
         .collect::<Result<Vec<u32>>>()?;
+    let further: Vec<String> = further.into_keys().collect();
 
     // Structured (and byte address) buffers of both stages, bound alike: read-only unless the
     // fragment program writes one (a vertex program cannot).
@@ -1231,11 +1228,11 @@ pub(crate) fn fit(
             );
         }
     }
-    let texture_dims: Vec<TextureDim> = textures
+    let texture_dims: Vec<TextureDim> = keys
         .iter()
         .map(|t| dims.get(t).copied().unwrap_or(TextureDim::D2))
         .collect();
-    let texture_slots: Vec<TextureSlot> = textures
+    let texture_slots: Vec<TextureSlot> = keys
         .iter()
         .map(|t| slots.get(t).copied().unwrap_or_default())
         .collect();
@@ -1247,8 +1244,9 @@ pub(crate) fn fit(
     pad_member_gaps(&mut vertex)?;
     pad_member_gaps(&mut fragment)?;
 
-    let vertex_uniforms = rebind(&mut vertex, &textures, &further, &buffers)?;
-    let fragment_uniforms = rebind(&mut fragment, &textures, &further, &buffers)?;
+    let vertex_uniforms = rebind(&mut vertex, &keys, &further, &buffers)?;
+    let fragment_uniforms = rebind(&mut fragment, &keys, &further, &buffers)?;
+    let textures: Vec<String> = keys.into_iter().map(|(property, _)| property).collect();
     fit_vertex(&mut vertex, &vertex_scan.input_semantics, clip)?;
     let extra_vertex_inputs = vertex.entry_points.iter().any(|e| {
         e.function.arguments.iter().any(|a| {
@@ -1350,6 +1348,25 @@ fn textures_named(module: &Module, property: &str) -> bool {
                 .as_deref()
                 == Some(property)
     })
+}
+
+/// A texture slot of a program: its texture property (or inline sampler's name), and whether
+/// it is the property's comparing one. A texture a program samples with and without
+/// comparisons is a slot of each kind, as glslang declares it a variable of each: the depth
+/// texture with the sampler its comparisons go through, and the texture as its other samples
+/// read it with their sampler.
+type SlotKey = (String, bool);
+
+/// Whether a texture or sampler variable of this type is of its property's comparing slot: a
+/// depth texture (one sampled with comparisons), a comparison sampler.
+fn compares(ty: &TypeInner) -> bool {
+    matches!(
+        ty,
+        TypeInner::Image {
+            class: naga::ImageClass::Depth { .. },
+            ..
+        } | TypeInner::Sampler { comparison: true }
+    )
 }
 
 /// A texture or sampler variable's slot: its texture property, or (a sampler named like no
@@ -1698,7 +1715,7 @@ fn uniform_block(module: &Module) -> Option<(Handle<Type>, u32)> {
 /// Binds the uniform block and textures to the renderer's slots; returns the block's members.
 fn rebind(
     module: &mut Module,
-    textures: &[String],
+    textures: &[SlotKey],
     further: &[String],
     buffers: &[BufferSlot],
 ) -> Result<Vec<Uniform>> {
@@ -1733,14 +1750,17 @@ fn rebind(
                         )
                     }
                 };
-                let property = slot_property(&name, sampler).unwrap_or_default();
+                let key: SlotKey = (
+                    slot_property(&name, sampler).unwrap_or_default(),
+                    compares(&module.types[g.ty].inner),
+                );
                 let binding = if let Some(j) = further.iter().position(|v| *v == name) {
                     // A further variable of a texture, after the slots.
                     ResourceBinding {
                         group: 1,
                         binding: (2 * textures.len() + j) as u32,
                     }
-                } else if property == MAIN_TEXTURE && !textures.contains(&property) {
+                } else if key.0 == MAIN_TEXTURE && !textures.contains(&key) {
                     ResourceBinding {
                         group: 2,
                         binding: sampler as u32,
@@ -1748,8 +1768,8 @@ fn rebind(
                 } else {
                     let k = textures
                         .iter()
-                        .position(|t| *t == property)
-                        .ok_or_else(|| anyhow!("texture `{property}`"))?
+                        .position(|t| *t == key)
+                        .ok_or_else(|| anyhow!("texture `{}`", key.0))?
                         as u32;
                     ResourceBinding {
                         group: 1,
