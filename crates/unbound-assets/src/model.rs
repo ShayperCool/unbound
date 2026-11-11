@@ -804,7 +804,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 37;
+    const VERSION: u32 = 38;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -2754,22 +2754,25 @@ impl<'a> Builder<'a> {
         settings: &SecondaryUvSettings,
         welded: &[u32],
     ) -> Result<LightmapUvs, lightmap_uv::Failure> {
-        if !self.settings.weld_vertices {
-            return Err("meshes without weldVertices are not measured".into());
-        }
         let points = self.control_point_order(mesh, faces);
-        // Equal positions weld to the first (compared as floats: -0 and 0 weld).
+        // Equal positions weld to the first (compared as floats: -0 and 0 weld); without
+        // `weldVertices` every point stays its own.
         let mut index = vec![0u32; mesh.vertices.len()];
         let mut positions: Vec<[f32; 3]> = Vec::with_capacity(points.len());
         let mut first: HashMap<[u32; 3], u32> = HashMap::new();
         for &v in &points {
             let p = self.position(vertices[v as usize]);
-            index[v as usize] = *first
-                .entry(p.map(|c| (c + 0.0).to_bits()))
-                .or_insert_with(|| {
-                    positions.push(p);
-                    positions.len() as u32 - 1
-                });
+            let mut own = || {
+                positions.push(p);
+                positions.len() as u32 - 1
+            };
+            index[v as usize] = if self.settings.weld_vertices {
+                *first
+                    .entry(p.map(|c| (c + 0.0).to_bits()))
+                    .or_insert_with(own)
+            } else {
+                own()
+            };
         }
         let mut triangles = Vec::new();
         let mut uvs = Vec::new();

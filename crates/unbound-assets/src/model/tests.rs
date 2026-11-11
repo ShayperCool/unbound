@@ -586,10 +586,12 @@ fn lightmap_uvs_read_their_settings_and_replace_uv2() {
     let model = ModelImporter::default()
         .import(Path::new("Quad.obj"), obj.as_bytes(), &unwelded)
         .unwrap();
-    assert!(
-        model.warnings.iter().any(|w| w.contains("weldVertices")),
-        "{:?}",
-        model.warnings
+    // Without welding the mesh is unwrapped as well (lightmapuvs NoWeld).
+    assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+    assert_eq!(model.meshes[0].uvs.len(), 2);
+    assert_eq!(
+        model.meshes[0].uvs[1].len(),
+        model.meshes[0].positions.len()
     );
     let off = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 0\n");
     assert!(ModelSettings::read(&off).secondary_uv.is_none());
@@ -700,6 +702,41 @@ fn lightmap_uvs_are_generated_for_meshes_with_zero_area_and_stacked_faces() {
     let model = import_obj("Flat.obj", obj, off);
     assert_eq!(model.meshes[0].submeshes[0].len(), 6);
     assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+}
+
+#[test]
+fn lightmap_uvs_of_unwelded_points_at_one_position() {
+    // Two triangles of a quad that name their shared corners through separate points: without
+    // welding the mesh keeps six vertices, and the unwrap still joins the triangles into one
+    // chart (their UV2 agree along the shared edge).
+    let obj = "g Split\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3\nf 4 5 6\n";
+    let text = |weld: u8| {
+        format!(
+            "ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n    weldVertices: {weld}\n    \
+             meshOptimizationFlags: 0\n"
+        )
+    };
+    let unwelded = import_obj("Split.obj", obj, &text(0));
+    let welded = import_obj("Split.obj", obj, &text(1));
+    assert!(unwelded.warnings.is_empty(), "{:?}", unwelded.warnings);
+    let (a, b) = (&unwelded.meshes[0], &welded.meshes[0]);
+    assert_eq!((a.positions.len(), b.positions.len()), (6, 4));
+    let uv2_at = |mesh: &ModelMesh, position: [f32; 3]| -> Vec<[f32; 2]> {
+        let mut uvs: Vec<[f32; 2]> = mesh
+            .positions
+            .iter()
+            .zip(&mesh.uvs[1])
+            .filter(|(p, _)| **p == position)
+            .map(|(_, uv)| *uv)
+            .collect();
+        uvs.dedup();
+        uvs
+    };
+    for corner in [[-0.0, 0.0, 0.0], [-1.0, 1.0, 0.0]] {
+        // Both copies of a shared corner have one UV2, the welded mesh's.
+        assert_eq!(uv2_at(a, corner).len(), 1, "{corner:?}");
+        assert_eq!(uv2_at(a, corner), uv2_at(b, corner));
+    }
 }
 
 #[test]
@@ -909,20 +946,16 @@ fn edge_smoothing_with_unenclosed_sharp_edges_matches_the_editor_reference() {
 }
 
 #[test]
-fn unsupported_lightmap_settings_keep_the_supported_group_normals() {
+fn unwelded_points_keep_the_group_normals() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");
     let settings = meta(
-        "ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n    generateSecondaryUV: 1\n    weldVertices: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n",
+        "ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n    generateSecondaryUV: 0\n    weldVertices: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n",
     );
     let imported = ModelImporter::default()
         .import(&source, &std::fs::read(&source).unwrap(), &settings)
         .unwrap();
-    assert!(
-        imported.warnings.iter().any(|w| w.contains("weldVertices")),
-        "{:?}",
-        imported.warnings
-    );
+    assert!(imported.warnings.is_empty(), "{:?}", imported.warnings);
     assert_group_normals_match_reference(&imported);
 }
 
