@@ -461,6 +461,7 @@ public partial class HumanoidProbe : MonoBehaviour
                 motion: true, locals: false));
             FirstSteps();
             Leftovers();
+            GoalBlends();
         }
         catch (Exception e)
         {

@@ -59,6 +59,7 @@ public static class ProbeRunner
             MirrorStates();
             FirstSteps();
             Leftovers();
+            GoalBlends();
             AssetDatabase.SaveAssets();
         }
         catch (System.Exception e)
@@ -911,6 +912,100 @@ public static class ProbeRunner
             ik2.layers = layers;
             Layer(ik2, a, AnimatorLayerBlendingMode.Override, 1f, null, ik: true);
         }
+    }
+
+    /// <summary>Controllers whose base layer has an IK pass, for the goals a controller blends
+    /// (A: HumanA's clip, B: HumanB's, transitions after an exit time of 0.3 over 0.3 s, trees 1D of
+    /// A at 0 and B at 1 with blend 0.35): HumanGoalsTransition (A to B, both with Foot IK),
+    /// HumanGoalsTree (the tree with Foot IK), HumanGoalsTreeTransition (B without Foot IK to the
+    /// tree with it), HumanGoalsTreeSource (the tree with Foot IK to A without it),
+    /// HumanGoalsBackTransition (B to A, both with Foot IK), HumanGoalsNoGoals (A to FeetNoGoals,
+    /// a clip without goal curves, both with Foot IK); A with Foot IK under B on an override layer of weight 0.5: HumanGoalsOverride,
+    /// HumanGoalsOverrideNoFootIK (through MaskNoFootIK) and HumanGoalsOverrideUpper (through
+    /// MaskUpper); HumanGoalsOverrideFootIK (A without Foot IK, B with it on that layer);
+    /// HumanGoalsAdditive (A with Foot IK, B on an additive layer of weight 0.6) and
+    /// HumanGoalsAdditiveFootIK (A without Foot IK, B with it on that layer).</summary>
+    static void GoalBlends()
+    {
+        var a = ClipOf("HumanA");
+        var b = ClipOf("HumanB");
+        var noGoals = AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "FeetNoGoals.anim");
+        AnimatorController Make(string name)
+        {
+            var path = Dir + "HumanGoals" + name + ".controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) return null;
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            var layers = controller.layers;
+            layers[0].iKPass = true;
+            controller.layers = layers;
+            return controller;
+        }
+        AnimatorState State(AnimatorController controller, int layer, string name, Motion motion, bool footIK)
+        {
+            var state = controller.layers[layer].stateMachine.AddState(name);
+            state.motion = motion;
+            state.iKOnFeet = footIK;
+            return state;
+        }
+        AnimatorState Tree(AnimatorController controller, bool footIK)
+        {
+            controller.AddParameter("Blend", AnimatorControllerParameterType.Float);
+            var parameters = controller.parameters;
+            parameters[0].defaultFloat = 0.35f;
+            controller.parameters = parameters;
+            var state = controller.CreateBlendTreeInController("Tree", out var blend, 0);
+            blend.blendParameter = "Blend";
+            blend.AddChild(a, 0f);
+            blend.AddChild(b, 1f);
+            state.iKOnFeet = footIK;
+            return state;
+        }
+        void Go(AnimatorController controller, AnimatorState from, AnimatorState to)
+        {
+            controller.layers[0].stateMachine.defaultState = from;
+            var t = from.AddTransition(to);
+            t.hasExitTime = true;
+            t.exitTime = 0.3f;
+            t.hasFixedDuration = true;
+            t.duration = 0.3f;
+            EditorUtility.SetDirty(controller);
+        }
+        void Over(string name, bool footA, bool footB, AnimatorLayerBlendingMode mode, float weight, string mask)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            State(controller, 0, "A", a, footA);
+            controller.AddLayer("B");
+            var layers = controller.layers;
+            layers[1].blendingMode = mode;
+            layers[1].defaultWeight = weight;
+            layers[1].avatarMask = mask != null ? AssetDatabase.LoadAssetAtPath<AvatarMask>(Dir + mask + ".mask") : null;
+            controller.layers = layers;
+            State(controller, 1, "B", b, footB);
+            EditorUtility.SetDirty(controller);
+        }
+        var transition = Make("Transition");
+        if (transition != null) Go(transition, State(transition, 0, "A", a, true), State(transition, 0, "B", b, true));
+        var tree = Make("Tree");
+        if (tree != null)
+        {
+            Tree(tree, true);
+            EditorUtility.SetDirty(tree);
+        }
+        var treeTransition = Make("TreeTransition");
+        if (treeTransition != null) Go(treeTransition, State(treeTransition, 0, "B", b, false), Tree(treeTransition, true));
+        var treeSource = Make("TreeSource");
+        if (treeSource != null) Go(treeSource, Tree(treeSource, true), State(treeSource, 0, "A", a, false));
+        var back = Make("BackTransition");
+        if (back != null) Go(back, State(back, 0, "B", b, true), State(back, 0, "A", a, true));
+        var without = Make("NoGoals");
+        if (without != null) Go(without, State(without, 0, "A", a, true), State(without, 0, "NoGoals", noGoals, true));
+        Over("Override", true, false, AnimatorLayerBlendingMode.Override, 0.5f, null);
+        Over("OverrideFootIK", false, true, AnimatorLayerBlendingMode.Override, 0.5f, null);
+        Over("OverrideNoFootIK", true, false, AnimatorLayerBlendingMode.Override, 0.5f, "MaskNoFootIK");
+        Over("OverrideUpper", true, false, AnimatorLayerBlendingMode.Override, 0.5f, "MaskUpper");
+        Over("Additive", true, false, AnimatorLayerBlendingMode.Additive, 0.6f, null);
+        Over("AdditiveFootIK", false, true, AnimatorLayerBlendingMode.Additive, 0.6f, null);
     }
 
     public static void Record()
