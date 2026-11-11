@@ -467,7 +467,10 @@ namespace Unbound.Runtime
         internal void EvaluateInto(float[] values, bool[] animated, UnityEngine.Object[] objects, bool[] objectAnimated)
         {
             int count = BuildLayerPoses();
-            PoseWriter.CombineLayers(Bindings, m_LayerPoses, count, values, animated, overDefaults: false);
+            // A humanoid's body and goals as the Animator's own controller combines them.
+            bool human = m_PlacedHuman != null;
+            PoseWriter.CombineLayers(Bindings, m_LayerPoses, count, values, animated, overDefaults: false, humanBodyInRootMotion: human,
+                placedGoals: human);
             int m = Math.Min(Bindings.ObjectCount, objects.Length);
             for (int c = 0; c < m; c++)
             {
@@ -1191,26 +1194,13 @@ namespace Unbound.Runtime
         /// only): any state with it that the evaluation samples at a weight above 0, alone
         /// (tests/projects/humanoid footIK) or with other states in a transition, a blend tree or
         /// on a layer, an additive one included; the feet then go onto the goals all the sampled
-        /// clips blend to (6000.0.71f1, footIKTransition, goals.*). An AnimatorControllerPlayable's
-        /// player still blends goals relative to its clips' bodies (see <see cref="PlacesGoals"/>):
-        /// there Foot IK applies only while one humanoid clip is sampled and is otherwise left
-        /// out with a diagnostic.
+        /// clips blend to (6000.0.71f1, footIKTransition, goals.*), for an
+        /// AnimatorControllerPlayable's controller as for the Animator's own (controllerGraph.footIK).
         /// </summary>
         internal bool FootIK()
         {
-            bool asked = false;
-            int humanClips = 0;
-            foreach (var (layer, layerIndex, run, clip, weight, _) in m_Contributions)
-            {
-                if (weight <= 0f || (layerIndex > 0 && layer.Evaluated <= 0f)) continue;
-                if (run.Def.IKOnFeet) asked = true;
-                if (clip.HasHumanCurves) humanClips++;
-            }
-            if (!asked) return false;
-            if (Attached || humanClips <= 1) return true;
-            Stubs.Ignored("AnimatorControllerPlayable Foot IK of blended humanoid states",
-                "a state's Foot IK is not applied while an AnimatorControllerPlayable blends its clip with other humanoid clips "
-                + "(transitions, blend trees, layers): it blends their feet goals in another frame than Unity's (not supported yet)");
+            foreach (var (layer, layerIndex, run, _, weight, _) in m_Contributions)
+                if (weight > 0f && !(layerIndex > 0 && layer.Evaluated <= 0f) && run.Def.IKOnFeet) return true;
             return false;
         }
 
@@ -1227,11 +1217,40 @@ namespace Unbound.Runtime
         void WriteMassCenterPose(int count)
         {
             var human = m_Animator.Human;
-            if (human == null || m_Animator.layersAffectMassCenter) return;
+            if (!MassCenterPose(count)) return;
+            int n = Bindings.FloatCount;
+            for (int c = 0; c < n; c++)
+            {
+                var owner = Bindings.FloatOwner[c];
+                if (owner != null && owner.HumanCurve >= 0 && owner.First == c) human.SetMassCenter(owner.HumanCurve, m_MassCenterValues[c]);
+            }
+        }
+
+        /// <summary>The mass center pose of the evaluation that just built this player's layer
+        /// poses, for a controller playable's stream (<see cref="WriteMassCenterPose"/>).</summary>
+        internal void MassCenterInto(Unbound.Runtime.Playables.AnimStream into)
+        {
+            if (!MassCenterPose(Math.Min(Layers.Length, m_LayerPoses.Length))) return;
+            into.MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
+            for (int curve = 0; curve < into.MassCenter.Length; curve++)
+            {
+                int c = Bindings.HumanChannel(curve);
+                into.MassCenter[curve] = c >= 0 ? m_MassCenterValues[c] : 0f;
+            }
+            into.HasMassCenter = true;
+        }
+
+        /// <summary>Fills <see cref="m_MassCenterValues"/> (per channel) with the pose of the layers
+        /// that place the body; false when every layer with weight does, or the Animator's layers
+        /// affect the mass center.</summary>
+        bool MassCenterPose(int count)
+        {
+            var human = m_Animator.Human;
+            if (human == null || m_Animator.layersAffectMassCenter) return false;
             bool any = false;
             for (int i = 1; i < count && !any; i++)
                 any = m_LayerPoses[i].Weight > 0f && !PlacesBody(i);
-            if (!any) return;
+            if (!any) return false;
             if (m_MassCenterLayers.Length < count) m_MassCenterLayers = new LayerPose[count];
             int k = 0;
             for (int i = 0; i < count; i++)
@@ -1252,12 +1271,11 @@ namespace Unbound.Runtime
             }
             PoseWriter.CombineLayers(Bindings, m_MassCenterLayers, k, m_MassCenterValues, null, overDefaults: true, humanBodyInRootMotion: true,
                 placedGoals: m_PlacedHuman != null);
-            for (int c = 0; c < n; c++)
-            {
-                var owner = Bindings.FloatOwner[c];
-                if (owner != null && owner.HumanCurve >= 0 && owner.First == c) human.SetMassCenter(owner.HumanCurve, m_MassCenterValues[c]);
-            }
+            return true;
         }
+
+        /// <summary>Whether the base layer asks for an IK pass (its "IK Pass" setting).</summary>
+        internal bool BaseLayerIKPass => Layers.Length > 0 && Layers[0].Def.IKPass;
 
         /// <summary>Whether a layer's avatar mask lets it place the humanoid body (its Root part).</summary>
         bool PlacesBody(int layer)
@@ -1283,11 +1301,11 @@ namespace Unbound.Runtime
         bool m_MasksPlaceGoals;
 
         /// <summary>Whether this player's humanoid clips place their IK goals by their bodies while
-        /// they are sampled (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>): the
-        /// Animator's own controller, whose root motion pass gives each clip's body. An
-        /// AnimatorControllerPlayable's player has no humanoid root motion (unmeasured, see
-        /// ControllerKind.RootMotion) and keeps its goals relative to the clips' bodies.</summary>
-        bool PlacesGoals => Attached && m_Animator.Human != null;
+        /// they are sampled (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>): every
+        /// player on a humanoid Animator, its own controller's and an AnimatorControllerPlayable's
+        /// alike (6000.0.71f1, tests/projects/humanoid controllerGraph.*: a controller played
+        /// through a playable records the rows of the same controller on the Animator).</summary>
+        bool PlacesGoals => m_Animator.Human != null;
 
         /// <summary>A state's times for a humanoid clip's root motion.</summary>
         Unbound.Runtime.Humanoid.HumanClipMotionInput HumanInput(StateRun run, AnimationClip clip) => new Unbound.Runtime.Humanoid.HumanClipMotionInput

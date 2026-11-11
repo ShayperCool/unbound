@@ -769,10 +769,59 @@ namespace Unbound.Runtime.Playables
             if (player == null || player.Bindings != e.Bindings || e.ReferencePose) return;
             player.EvaluateInto(into.Values, into.Animated, into.Objects, into.ObjectAnimated);
             if (player.FootIK()) into.FootIK = true;
+            if (e.Animator.Human is { } human) Humanoid(e, player, human, weight, into);
             // Its parameter curves drive its own float parameters from its own layers, before the
             // graph mixes this pose with anything (see PlayableParameters.Sample).
             PlayableParameters.Sample(player, e.Animator);
             e.Note(this, node);
+        }
+
+        Unbound.Runtime.Humanoid.HumanRootMotionSample m_LastBody;
+        bool m_HumanClips;
+        int m_HumanClipsVersion = -1;
+
+        /// <summary>Whether one of the controller's clips is humanoid (its overrides included).</summary>
+        internal bool HasHumanClips
+        {
+            get
+            {
+                if (Controller == null) return false;
+                int version = Controller.OverrideVersion;
+                if (m_HumanClipsVersion == version) return m_HumanClips;
+                m_HumanClipsVersion = version;
+                m_HumanClips = false;
+                foreach (var clip in Controller.animationClips)
+                    if (clip != null && clip.HasHumanCurves) { m_HumanClips = true; break; }
+                return m_HumanClips;
+            }
+        }
+
+        /// <summary>On a humanoid Animator the controller's stream carries what the Animator's own
+        /// controller gives its pose and root motion passes: the humanoid root motion of its
+        /// clips blended over its layers, the body and goal curves placed by it, the pose that
+        /// places the body under layers masked without Root, and an IK pass for a base layer that
+        /// asks for one. Matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
+        /// controllerGraph.*: a controller as the source of an Animator's only output records
+        /// the rows of the same controller on the Animator (a state, Foot IK, a transition, a
+        /// blend tree, a Direct blend tree, an override and an additive layer). IK passes of the
+        /// layers above the first, OnStateIK and the controller below mixers or jobs are
+        /// unmeasured.</summary>
+        void Humanoid(AnimationEvaluation e, AnimatorPlayer player, Unbound.Runtime.Humanoid.AnimatorHuman human, float weight, AnimStream into)
+        {
+            if (e.Replay) into.BodyMotion = m_LastBody;
+            else
+            {
+                player.BlendHumanMotion(human, out into.BodyMotion);
+                m_LastBody = into.BodyMotion;
+            }
+            if (into.BodyMotion.HasMotion) into.GoalsInMotion = true;
+            else if (e.MotionMode == RootMotionMode.Human && (player.SampledRootNodeMotion()
+                || RootAnimation.Channels(e, out int pos, out int rot) && RootAnimation.Any(into.Animated, into.FloatCount, pos, rot)))
+                Stubs.Ignored("AnimatorControllerPlayable root motion of states without humanoid clips on a humanoid",
+                    "a controller with humanoid clips played through an AnimatorControllerPlayable does not move the root while only its states "
+                    + "without a humanoid clip play (their root curves pose the root; not measured)");
+            if (weight > 0f && player.BaseLayerIKPass) e.PlayableIK = true;
+            player.MassCenterInto(into);
         }
 
         /// <summary>

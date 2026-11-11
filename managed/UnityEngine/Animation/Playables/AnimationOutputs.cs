@@ -920,8 +920,10 @@ namespace Unbound.Runtime.Playables
         /// output without an attached controller, uses the humanoid sampler. Mixer composition is
         /// measured on 6000.0.71f1 only (<see cref="Compat.HumanPlayableMixerMotionMeasured"/>).
         /// Such an output of clips without humanoid curves, mixers and layer mixers moves a
-        /// humanoid by generic root motion (<see cref="GenericClipTree"/>). Other humanoid graph
-        /// shapes warn and carry no motion.</summary>
+        /// humanoid by generic root motion (<see cref="GenericClipTree"/>). An
+        /// AnimatorControllerPlayable with humanoid clips as such an output's source moves the
+        /// Animator by its clips' humanoid root motion, as the Animator's own controller does.
+        /// Other humanoid graph shapes warn and carry no motion.</summary>
         static RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs)
         {
             bool requested = animator.m_ApplyRootMotion || MoveCallbacks.Any(animator);
@@ -937,6 +939,9 @@ namespace Unbound.Runtime.Playables
                     // tests/projects/humanoid stream.*).
                     var source = BelowJobs(o.Source);
                     if (HumanMotionClip(source)) return RootMotionMode.Human;
+                    // A controller with humanoid clips moves the Animator as its own controller
+                    // would (6000.0.71f1, tests/projects/humanoid controllerGraph.*).
+                    if (o.Source.Kind is ControllerKind { HasHumanClips: true } && !o.Source.HasConnectedOutput()) return RootMotionMode.Human;
                     // Generic root curves alone move a humanoid as a generic Animator's, by its
                     // human scale (6000.0.71f1, tests/projects/humanoid genericOnHuman.graph).
                     if (source == o.Source && GenericClipTree(o.Source)) return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
@@ -950,8 +955,10 @@ namespace Unbound.Runtime.Playables
                     : "Animator root motion of composed playable graph outputs on humanoid avatars",
                     "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer or layer mixer tree of such clips "
                     + "with input weights that are not infinite, or of clips without humanoid curves, mixers and layer mixers, "
+                    + "or of an AnimatorControllerPlayable with humanoid clips, "
                     + "is supported, without a playing controller, shared nodes or loop overrides; "
-                    + "controller playables, animation jobs other than ones passing such a source on whole, fractional or multiple outputs remain unsupported");
+                    + "controller playables below mixers or jobs, animation jobs other than ones passing such a source on whole, "
+                    + "fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
         }
 

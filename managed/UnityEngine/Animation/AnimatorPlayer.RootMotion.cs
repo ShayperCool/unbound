@@ -691,7 +691,28 @@ namespace Unbound.Runtime
         bool HumanRootMotion(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human)
         {
             human.ClearMotion();
-            Unbound.Runtime.Humanoid.HumanRootMotionSample blended = default;
+            if (!BlendHumanMotion(human, out var blended))
+            {
+                human.IdleMotion(m_RootDeltaTime);
+                return false;
+            }
+            human.ApplyMotion(blended, m_RootDeltaTime, out var rm);
+            if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return true;
+            animator.m_DeltaPosition = new Vector3(rm.DeltaPosition.x, rm.DeltaPosition.y, rm.DeltaPosition.z);
+            animator.m_DeltaRotation = new Quaternion(rm.DeltaRotation.x, rm.DeltaRotation.y, rm.DeltaRotation.z, rm.DeltaRotation.w);
+            animator.m_RootVelocity = new Vector3(rm.Velocity.x, rm.Velocity.y, rm.Velocity.z);
+            animator.m_RootAngularVelocity = new Vector3(rm.AngularVelocity.x, rm.AngularVelocity.y, rm.AngularVelocity.z);
+            if (animator.m_Match != null) HumanMatchStep(animator, human, RootMotionScale(animator.transform));
+            return true;
+        }
+
+        /// <summary>The humanoid root motion of the evaluation that just built this player's
+        /// layer poses, blended over its layers (<see cref="HumanRootMotion"/>), without moving
+        /// anything: what an AnimatorControllerPlayable's stream carries to its output. False
+        /// when no humanoid clip plays.</summary>
+        internal bool BlendHumanMotion(Unbound.Runtime.Humanoid.AnimatorHuman human, out Unbound.Runtime.Humanoid.HumanRootMotionSample blended)
+        {
+            blended = default;
             bool any = false;
             for (int i = 0; i < Layers.Length; i++)
             {
@@ -735,19 +756,7 @@ namespace Unbound.Runtime
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights), additive, layerWeight,
                     mask != null && mask.MasksHumanoidParts ? mask.m_HumanoidParts : null);
             }
-            if (!any)
-            {
-                human.IdleMotion(m_RootDeltaTime);
-                return false;
-            }
-            human.ApplyMotion(blended, m_RootDeltaTime, out var rm);
-            if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return true;
-            animator.m_DeltaPosition = new Vector3(rm.DeltaPosition.x, rm.DeltaPosition.y, rm.DeltaPosition.z);
-            animator.m_DeltaRotation = new Quaternion(rm.DeltaRotation.x, rm.DeltaRotation.y, rm.DeltaRotation.z, rm.DeltaRotation.w);
-            animator.m_RootVelocity = new Vector3(rm.Velocity.x, rm.Velocity.y, rm.Velocity.z);
-            animator.m_RootAngularVelocity = new Vector3(rm.AngularVelocity.x, rm.AngularVelocity.y, rm.AngularVelocity.z);
-            if (animator.m_Match != null) HumanMatchStep(animator, human, RootMotionScale(animator.transform));
-            return true;
+            return any;
         }
     }
 }
