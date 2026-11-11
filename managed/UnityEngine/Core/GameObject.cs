@@ -40,6 +40,18 @@ namespace UnityEngine
             m_Name = name ?? "";
         }
 
+        /// <summary>A hidden object the engine keeps for its own work (a capture camera): it is in
+        /// no scene, so no scene lists it among its roots and it takes no sibling index there.</summary>
+        internal static GameObject CreateDetached(string name)
+        {
+            var go = new GameObject(name, bare: true) { m_Scene = SceneRegistry.Detached.Handle };
+            go.CheckMainThreadCreation("Internal_CreateGameObject");
+            go.AddTransform(typeof(Transform));
+            SceneRegistry.AddRoot(go);
+            go.hideFlags = HideFlags.HideAndDontSave;
+            return go;
+        }
+
         static void Internal_Create(GameObject go, Type[] components)
         {
             go.CheckMainThreadCreation("Internal_CreateGameObject");

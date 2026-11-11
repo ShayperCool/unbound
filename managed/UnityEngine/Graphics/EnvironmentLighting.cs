@@ -125,7 +125,7 @@ namespace UnityEngine
             return sh;
         }
 
-        static Camera s_SkyCamera;
+        internal static Camera s_SkyCamera;
         /// <summary>The capture's targets by size: the ambient probe's and realtime GI's.</summary>
         static readonly Dictionary<int, RenderTexture> s_SkyTargets = new Dictionary<int, RenderTexture>();
 
@@ -135,32 +135,38 @@ namespace UnityEngine
         /// camera and the target of each size are kept for the next call.</summary>
         internal static void RenderSky(int n, Vector3 forward, Vector3 up, Texture2D readback)
         {
-            if (s_SkyCamera == null)
-            {
-                var cameraObject = new GameObject("Unbound Environment Camera") { hideFlags = HideFlags.HideAndDontSave };
-                s_SkyCamera = cameraObject.AddComponent<Camera>();
-                s_SkyCamera.enabled = false;
-                s_SkyCamera.m_EnvironmentCapture = true;
-                s_SkyCamera.cullingMask = 0;
-                s_SkyCamera.clearFlags = CameraClearFlags.Skybox;
-                s_SkyCamera.fieldOfView = 90f;
-                s_SkyCamera.aspect = 1f;
-                s_SkyCamera.nearClipPlane = 0.1f;
-                s_SkyCamera.farClipPlane = 1000f;
-                s_SkyCamera.allowHDR = true;
-                s_SkyCamera.allowMSAA = false;
-            }
+            var camera = SkyCamera();
             if (!s_SkyTargets.TryGetValue(n, out var target) || target == null)
                 s_SkyTargets[n] = target = new RenderTexture(n, n, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear)
                     { hideFlags = HideFlags.HideAndDontSave };
-            s_SkyCamera.targetTexture = target;
-            s_SkyCamera.transform.SetPositionAndRotation(Vector3.zero, Quaternion.LookRotation(forward, up));
-            s_SkyCamera.Render();
+            camera.targetTexture = target;
+            camera.transform.SetPositionAndRotation(Vector3.zero, Quaternion.LookRotation(forward, up));
+            camera.Render();
             var previous = RenderTexture.active;
             RenderTexture.active = target;
             readback.ReadPixels(new Rect(0, 0, n, n), 0, 0, false);
             RenderTexture.active = previous;
-            s_SkyCamera.targetTexture = null;
+            camera.targetTexture = null;
+        }
+
+        /// <summary>The capture's camera, made on first use and kept. It is in no scene: an
+        /// environment update leaves the scenes' roots and their sibling indices as they were
+        /// (Unity 6000.0.71f1: tests/projects/coreapis, oroorder, instantiateasync).</summary>
+        internal static Camera SkyCamera()
+        {
+            if (s_SkyCamera != null) return s_SkyCamera;
+            var camera = GameObject.CreateDetached("Unbound Environment Camera").AddComponent<Camera>();
+            camera.enabled = false;
+            camera.m_EnvironmentCapture = true;
+            camera.cullingMask = 0;
+            camera.clearFlags = CameraClearFlags.Skybox;
+            camera.fieldOfView = 90f;
+            camera.aspect = 1f;
+            camera.nearClipPlane = 0.1f;
+            camera.farClipPlane = 1000f;
+            camera.allowHDR = true;
+            camera.allowMSAA = false;
+            return s_SkyCamera = camera;
         }
 
         /// <summary>One texel's radiance onto the stored coefficients: the projection's factor of
