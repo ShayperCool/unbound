@@ -150,6 +150,23 @@ imported without keyframe reduction.
   without it over 0.3 s (`footIKTransition`, HumanFootIKTransition). Measured: see
   docs/COMPATIBILITY_GAPS.md (humanoid row, layer mixers and Foot IK).
 
+- IK goals an Animator Controller blends (`HumanoidGoals.cs`, the HumanGoals* controllers from
+  `ProbeRunner.GoalBlends`, each with an IK pass on its base layer): on HumanA with root motion
+  applied, `HumanoidGoals` records the body and every goal's position, rotation and weights as
+  `OnAnimatorIK` reads them (`<key>.step<n>.goals<call>`), beside the pose and root motion of the
+  settings plays. A is HumanA's clip, B HumanB's, transitions leave after an exit time of 0.3 over
+  0.3 s and trees are 1D of A and B at 0.35: A to B with Foot IK on both (`goals.transition`, also
+  on HumanB, `goals.transitionB`) and B to A (`goals.backTransition`), the tree with Foot IK
+  (`goals.tree`), B without Foot IK to the tree with it (`goals.treeTransition`), the tree with
+  Foot IK to A without it (`goals.treeSource`), A to FeetNoGoals, a clip without goal curves
+  (`goals.noGoals`); A with Foot IK under B on an override layer of weight 0.5 (`goals.override`),
+  through MaskNoFootIK (`goals.overrideNoFootIK`) and through MaskUpper (`goals.overrideUpper`),
+  and with the Foot IK on B's state only (`goals.overrideFootIK`); A with Foot IK under B on an
+  additive layer of weight 0.6 (`goals.additive`) and with the Foot IK on B's state only
+  (`goals.additiveFootIK`). The plays with a transition record each layer's states and clips in
+  detail. Measured: see docs/COMPATIBILITY_GAPS.md (humanoid row, IK goals on Animator
+  Controllers).
+
 - GenericMove (root curves, no humanoid curves) on HumanA with root motion applied, alone on a
   controller (`genericOnHuman`, HumanGenericMove) and in a PlayableGraph (`genericOnHuman.graph`).
   Measured: the root moves by the curves times the human scale either way, and the avatar takes the
