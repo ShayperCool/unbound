@@ -1022,6 +1022,7 @@ namespace Unbound.Runtime
                 height = agent.height,
                 maxAcceleration = agent.acceleration,
                 maxSpeed = agent.isStopped ? 0f : agent.speed,
+                stopped = agent.isStopped,
                 reachSpeed = agent.speed,
                 separationWeight = 1.4f,
                 updateFlags = flags,
@@ -1292,8 +1293,8 @@ namespace Unbound.Runtime
             anim.initPos = oldAnim.initPos;
             anim.startPos = oldAnim.startPos;
             anim.endPos = oldAnim.endPos;
-            anim.t = oldAnim.t;
-            anim.tmax = oldAnim.tmax;
+            anim.distance = oldAnim.distance;
+            anim.length = oldAnim.length;
             // The old link polygon is not part of the new NavMesh; the link id stays.
             anim.polyRef = 0;
             agent.m_Crowd = ag;
@@ -1653,7 +1654,7 @@ namespace Unbound.Runtime
             else if (!anim.active && agent.autoTraverseOffMeshLink)
             {
                 anim.initPos = ag.npos;
-                anim.t = 0f;
+                anim.distance = 0f;
                 anim.active = true;
                 RestartSearch(agent);
             }

@@ -1185,12 +1185,12 @@ namespace DotRecast.Detour.Crowd
                         anim.initPos = ag.npos;
                         anim.polyRef = refs[1];
                         anim.active = true;
-                        anim.t = 0.0f;
+                        anim.distance = 0.0f;
                         // Unbound: Unity's agents cross from the start on the NavMesh to the link's own
                         // end point (not the point the end landed on), taking half the time the
                         // distance between them in 3D takes at full speed (measured).
                         anim.endPos = linkEnd;
-                        anim.tmax = (RcVec3f.Distance(anim.startPos, anim.endPos) / ag.option.maxSpeed) * 0.5f;
+                        anim.length = RcVec3f.Distance(anim.startPos, anim.endPos);
 
                         ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
                         ag.ncorners = 0;
@@ -1528,6 +1528,8 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
+        const float LinkApproachFraction = 0.15f;
+
         private void UpdateOffMeshConnections(IList<DtCrowdAgent> agents, float dt)
         {
             using var timer = _telemetry.ScopedTimer(DtCrowdTimerLabel.UpdateOffMeshConnections);
@@ -1536,36 +1538,40 @@ namespace DotRecast.Detour.Crowd
             {
                 var ag = agents[i];
                 DtCrowdAgentAnimation anim = ag.animation;
-                if (!anim.active)
+                if (!anim.active || ag.option.stopped)
                 {
                     continue;
                 }
 
-                anim.t += dt;
-                float ta = anim.tmax * 0.15f;
-                float tb = anim.tmax;
-                if (anim.t > anim.tmax)
+                // Traversal advances in distance, so a speed change takes effect on the next
+                // step. The approach occupies 15% of the length
+                // (Unity 6000.0.71f1, tests/projects/navlinks).
+                anim.distance += (ag.option.maxSpeed + ag.option.maxSpeed) * dt;
+                float ta = anim.length * LinkApproachFraction;
+                float tb = anim.length;
+                if (anim.distance >= anim.length)
                 {
                     // Reset animation
                     anim.active = false;
                     // Prepare agent for walking.
                     ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING;
-                    LeaveOffMeshConnection(ag, anim.t - anim.tmax, tb - ta);
+                    LeaveOffMeshConnection(ag, anim.distance - anim.length, tb - ta);
                     continue;
                 }
 
                 // Update position
-                if (anim.t < ta)
+                if (anim.distance < ta)
                 {
-                    float u = Tween(anim.t, 0.0f, ta);
+                    float u = Tween(anim.distance, 0.0f, ta);
                     ag.npos = RcVec3f.Lerp(anim.initPos, anim.startPos, u);
+                    ag.nvel = AlongAtSpeed(RcVec3f.Subtract(anim.startPos, anim.initPos), ag.option.maxSpeed);
                 }
                 else
                 {
-                    float u = Tween(anim.t, ta, tb);
+                    float u = Tween(anim.distance, ta, tb);
                     ag.npos = RcVec3f.Lerp(anim.startPos, anim.endPos, u);
                     // Unbound: crossing the link proper, the agent plans along it at its speed (Unity's
-                    // desiredVelocity; on the way to the link's start it keeps its plan; measured).
+                    // desiredVelocity; measured).
                     ag.nvel = AlongAtSpeed(RcVec3f.Subtract(anim.endPos, anim.startPos), ag.option.maxSpeed);
                 }
 
@@ -1606,7 +1612,7 @@ namespace DotRecast.Detour.Crowd
 
         private float Tween(float t, float t0, float t1)
         {
-            return Math.Clamp((t - t0) / (t1 - t0), 0.0f, 1.0f);
+            return t1 == t0 ? 1f : Math.Clamp((t - t0) / (t1 - t0), 0.0f, 1.0f);
         }
     }
 }

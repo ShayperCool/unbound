@@ -113,6 +113,61 @@ namespace UnityEngine.Tests
             Assert.True(Dist2D(agent.nextPosition, destination) <= 1e-2f, $"stopped at {agent.nextPosition}");
         }
 
+        [Fact]
+        public void StoppingOnALinkPreservesItsProgressAndPlanUntilResumed()
+        {
+            var agent = Agent(autoTraverse: true);
+            StepOntoLink(agent);
+            for (int i = 0; i < 10; i++) Step();
+            var position = agent.nextPosition;
+            var plan = agent.desiredVelocity;
+            agent.isStopped = true;
+            for (int i = 0; i < 40; i++)
+            {
+                Step();
+                Assert.True(agent.isOnOffMeshLink);
+                Assert.Equal(position, agent.nextPosition);
+                Assert.Equal(Vector3.zero, agent.velocity);
+                Assert.Equal(plan, agent.desiredVelocity);
+            }
+            agent.isStopped = false;
+            Step();
+            Assert.True(agent.nextPosition.x > position.x);
+            for (int i = 0; i < 200 && agent.isOnOffMeshLink; i++) Step();
+            Assert.False(agent.isOnOffMeshLink);
+            WalkTo(agent, Destination);
+        }
+
+        [Theory]
+        [InlineData(0f)]
+        [InlineData(1f)]
+        [InlineData(7f)]
+        public void ASpeedChangeOnALinkChangesTheNextStep(float speed)
+        {
+            var agent = Agent(autoTraverse: true);
+            StepOntoLink(agent);
+            // Past the approach, well before landing, on a longer link than the capture's.
+            for (int i = 0; i < 10; i++) Step();
+            var before = agent.nextPosition;
+            Step();
+            float originalStep = agent.nextPosition.x - before.x;
+            before = agent.nextPosition;
+            float originalSpeed = agent.speed;
+            agent.speed = speed;
+            Step();
+            Assert.InRange(MathF.Abs(originalStep * speed / originalSpeed - (agent.nextPosition.x - before.x)), 0f, 1e-4f);
+            Assert.InRange(MathF.Abs(speed - agent.desiredVelocity.magnitude), 0f, 1e-4f);
+            Assert.True(agent.isOnOffMeshLink);
+            if (speed == 0f)
+            {
+                for (int i = 0; i < 40; i++) Step();
+                Assert.Equal(before, agent.nextPosition);
+                agent.speed = originalSpeed;
+            }
+            for (int i = 0; i < 300 && agent.isOnOffMeshLink; i++) Step();
+            Assert.False(agent.isOnOffMeshLink);
+        }
+
         /// <summary>An agent standing at a link's start is on the link in the update that finds its
         /// path (measured: tests/projects/navlinks startonlink).</summary>
         [Fact]

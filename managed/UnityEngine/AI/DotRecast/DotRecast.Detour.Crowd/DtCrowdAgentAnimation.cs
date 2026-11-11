@@ -29,6 +29,6 @@ namespace DotRecast.Detour.Crowd
         public RcVec3f startPos = new RcVec3f();
         public RcVec3f endPos = new RcVec3f();
         public long polyRef;
-        public float t, tmax;
+        public float distance, length;
     }
 }

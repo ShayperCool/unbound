@@ -60,3 +60,21 @@ The setup and publish modes are explicit fixture/reference authoring operations;
 normal run logs, copies, captures and comparisons belong in the cache. A setup
 can replace scene/NavMesh assets, and publish can replace the selected reference.
 Neither operation is part of source staging or authorized by this source task.
+
+Traversal follow-up for Unity 6000.0.71f1: automatic crossing advances by the
+current speed on every step. `speedmid` changes from 3.5 to 1 m/s during the
+approach, and `stopmid` holds its position and desired velocity while stopped,
+then resumes the same crossing. Managed controls also exercise zero speed, a
+speed increase and stop/resume on a longer link. These observations refine the
+automatic traversal profile; the API documents stop/resume of the current path
+([isStopped](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-isStopped.html)),
+but does not specify an interpolation curve or crossing duration.
+
+The first differing frames of the sheriff-S19-a6f0d8af2 capture are `speedmid`
+86, `stopmid` 86, `nobraking` 110, `crosstile` 68 and `two` 83. The last two
+first differ in desired velocity, before their later positional differences.
+`nobraking` first differs in `hasPath` on landing and later overshoots its
+destination on frame 127. The speed and stop changes address the first pair;
+landing path state, arrival, crowd steering and route geometry remain visible
+in the unchanged comparator. A link's approach length relative to agent radius
+is not covered by the current reference.
