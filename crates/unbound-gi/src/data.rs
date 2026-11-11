@@ -236,6 +236,9 @@ pub struct Transport {
     /// neighbours belong to its chart ([`crate::directionality`]'s `NEIGHBOUR_*` bits): the
     /// directionality is interpolated between blocks of one chart only.
     pub block_neighbours: Vec<u8>,
+    /// Why the blocks' data could not be read: the system then has no directionality (no
+    /// segment has blocks; its lightmap is unaffected).
+    pub block_error: Option<String>,
     /// Per cluster, its first bounce sample; one more entry ends the last.
     pub bounce_samples: Vec<u32>,
     /// Bounce samples: output texel and weight.
@@ -257,6 +260,8 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
     let width = r.u16(16)? as u32;
     let height = r.u16(18)? as u32;
     let mut segments = Vec::with_capacity(segments_count);
+    // The first reason the blocks' data (the directionality's) could not be read.
+    let mut block_error: Option<String> = None;
     for s in 0..segments_count {
         let h = 0x20 + 0x20 * s;
         let texels = r.u16(h)? as usize;
@@ -290,25 +295,18 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
             }
         }
         ensure!(k == refs, "segment dependency counts do not add up");
-        ensure!(
-            blocks <= texels && block_copies <= copies,
-            "a segment of {blocks} blocks and {block_copies} block copies for {texels} texels and {copies} copies"
-        );
         // Per block and reference a direction precedes the per-texel weights.
         let directions_at = align(counts_at + 4 * deps, 16);
-        let block_directions = r.slice(directions_at, blocks * refs)?.to_vec();
         let weights_at = directions_at + blocks * refs;
         let weights = r.slice(weights_at, texels * refs)?.to_vec();
         let xs_at = align(weights_at + texels * refs, 4);
         let ys_at = xs_at + 2 * texels;
         let inside = |x: u16, y: u16| (x as u32) < width && (y as u32) < height;
-        // A texel that stands for its block lies in the grid of whole blocks.
-        let in_block = |x: u16, y: u16| (x as u32 / 2) < width / 2 && (y as u32 / 2) < height / 2;
         let texel_list = (0..texels)
             .map(|t| {
                 let texel = (r.u16(xs_at + 2 * t)?, r.u16(ys_at + 2 * t)?);
                 ensure!(
-                    inside(texel.0, texel.1) && (t >= blocks || in_block(texel.0, texel.1)),
+                    inside(texel.0, texel.1),
                     "a transport texel outside {width}x{height}"
                 );
                 Ok(texel)
@@ -320,22 +318,45 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
                 let at = |row: usize| r.u16(copies_at + 2 * (row * copies + c));
                 let copy = ((at(0)?, at(1)?), (at(2)?, at(3)?));
                 ensure!(
-                    inside(copy.0.0, copy.0.1)
-                        && inside(copy.1.0, copy.1.1)
-                        && (c >= block_copies
-                            || in_block(copy.0.0, copy.0.1) && in_block(copy.1.0, copy.1.1)),
+                    inside(copy.0.0, copy.0.1) && inside(copy.1.0, copy.1.1),
                     "a transport copy outside {width}x{height}"
                 );
                 Ok(copy)
             })
             .collect::<Result<Vec<_>>>()?;
-        // Four bytes per block after the copies: its normal's components as b * 2 / 255 - 1.
-        let normals_at = copies_at + 8 * copies;
-        let block_normals = r
-            .slice(normals_at, 4 * blocks)?
-            .chunks_exact(4)
-            .map(|b| std::array::from_fn(|k| b[k] as f32 * BLOCK_NORMAL_SCALE - 1.0))
-            .collect();
+        // The blocks' data: read on its own, so that a system whose blocks cannot be read
+        // keeps its lightmap.
+        let block_data = || -> Result<(Vec<[f32; 3]>, Vec<u8>)> {
+            ensure!(
+                blocks <= texels && block_copies <= copies,
+                "a segment of {blocks} blocks and {block_copies} block copies for {texels} texels and {copies} copies"
+            );
+            // A texel that stands for its block lies in the grid of whole blocks.
+            let in_grid =
+                |(x, y): (u16, u16)| (x as u32 / 2) < width / 2 && (y as u32 / 2) < height / 2;
+            ensure!(
+                texel_list[..blocks].iter().all(|&t| in_grid(t))
+                    && copy_list[..block_copies]
+                        .iter()
+                        .all(|&(to, from)| in_grid(to) && in_grid(from)),
+                "a block outside the whole blocks of {width}x{height}"
+            );
+            // Four bytes per block after the copies: its normal's components as b * 2 / 255 - 1.
+            let normals = r
+                .slice(copies_at + 8 * copies, 4 * blocks)?
+                .chunks_exact(4)
+                .map(|b| std::array::from_fn(|k| b[k] as f32 * BLOCK_NORMAL_SCALE - 1.0))
+                .collect();
+            Ok((normals, r.slice(directions_at, blocks * refs)?.to_vec()))
+        };
+        let (block_normals, block_directions) = match block_data() {
+            Ok(data) if block_error.is_none() => data,
+            Ok(_) => Default::default(),
+            Err(e) => {
+                block_error = Some(format!("{e:#}"));
+                Default::default()
+            }
+        };
         segments.push(Segment {
             references,
             reference_weights,
@@ -354,9 +375,22 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
     // After the dependencies and a 32-bit value for each (padded to a multiple of four values):
     // a byte per block of 2x2 texels.
     let neighbours_at = dependencies_at + 16 * dependency_count + 4 * align(dependency_count, 4);
-    let block_neighbours = r
-        .slice(neighbours_at, (width / 2 * (height / 2)) as usize)?
-        .to_vec();
+    let block_neighbours = match r.slice(neighbours_at, (width / 2 * (height / 2)) as usize) {
+        Ok(neighbours) if block_error.is_none() => neighbours.to_vec(),
+        Ok(_) => Vec::new(),
+        Err(e) => {
+            block_error = Some(format!("{e:#}"));
+            Vec::new()
+        }
+    };
+    if block_error.is_some() {
+        // No directionality: no segment has blocks.
+        for segment in &mut segments {
+            segment.block_normals.clear();
+            segment.block_directions.clear();
+            segment.block_copies = 0;
+        }
+    }
 
     let bounce = block(&blocks, BOUNCE_BLOCK)?;
     let b = Reader { bytes: bounce };
@@ -394,6 +428,7 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
         dependencies,
         segments,
         block_neighbours,
+        block_error,
         bounce_samples,
         bounce,
     })

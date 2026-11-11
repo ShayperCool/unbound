@@ -814,17 +814,31 @@ fn malformed_data_fails_without_panicking() {
             other[80..82].copy_from_slice(&10u16.to_le_bytes());
             let error = crate::data::read_transport(&other).unwrap_err().to_string();
             assert!(error.contains("outside 10x52"), "{error}");
-            // An odd width leaves the last column's block texels outside the grid of whole
-            // blocks; more blocks than texels cannot be either.
+            // Blocks that cannot be (more block copies than copies, here) leave the lightmap's
+            // data as it is and the system without a directionality.
+            let whole = crate::data::read_transport(full).unwrap();
+            assert!(whole.block_error.is_none());
+            assert!(whole.segments.iter().all(|s| !s.block_normals.is_empty()));
             let mut other = full.clone();
-            other[80..82].copy_from_slice(&51u16.to_le_bytes());
-            let error = crate::data::read_transport(&other).unwrap_err().to_string();
-            assert!(error.contains("outside 51x52"), "{error}");
-            let mut other = full.clone();
-            let texels = u16::from_le_bytes([other[96], other[97]]);
-            other[98..100].copy_from_slice(&(texels + 1).to_le_bytes());
-            let error = crate::data::read_transport(&other).unwrap_err().to_string();
-            assert!(error.contains("blocks"), "{error}");
+            other[102..104].copy_from_slice(&1u16.to_le_bytes());
+            let read = crate::data::read_transport(&other).unwrap();
+            let error = read.block_error.clone().unwrap();
+            assert!(error.contains("block copies"), "{error}");
+            assert!(read.segments.iter().all(|s| s.block_normals.is_empty()
+                && s.block_directions.is_empty()
+                && s.block_copies == 0));
+            assert!(read.block_neighbours.is_empty());
+            assert_eq!(read.segments.len(), whole.segments.len());
+            for (a, b) in read.segments.iter().zip(&whole.segments) {
+                assert_eq!((&a.weights, &a.texels), (&b.weights, &b.texels));
+            }
+            let mut system = room_data().systems[0].clone();
+            system.transport = read;
+            let mut solver = SystemSolver::new(Arc::new(system), true).unwrap();
+            let error = solver.set_directional(true).unwrap_err().to_string();
+            assert!(error.contains("no directionality"), "{error}");
+            assert!(solver.directionality().is_none());
+            solver.update();
         }
         if f.path.ends_with(".iws.ref") {
             let mut other = full.clone();
@@ -1485,7 +1499,7 @@ fn references_to_systems_outside_the_scene_fail() {
 fn a_directional_scene_solves_the_editors_directionality() {
     // RoomDirectional: the Room with directional realtime lightmaps, through the probe's cases.
     let mut r = Replay::scene("RoomDirectional");
-    r.solver.set_directional(true);
+    r.solver.set_directional(true).unwrap();
     let moved = Room {
         light: MOVED,
         ..BASE
@@ -1572,7 +1586,7 @@ fn a_directional_scene_solves_the_editors_directionality() {
     // The other scenes' lightmaps have the same data: a system is directional when asked to be.
     let mut room = Replay::new();
     assert!(room.solver.directionality().is_none());
-    room.solver.set_directional(true);
+    room.solver.set_directional(true).unwrap();
     room.set(BASE);
     room.converge();
     assert!(
@@ -1582,6 +1596,6 @@ fn a_directional_scene_solves_the_editors_directionality() {
             .iter()
             .any(|t| t[3] != 0)
     );
-    room.solver.set_directional(false);
+    room.solver.set_directional(false).unwrap();
     assert!(room.solver.directionality().is_none());
 }

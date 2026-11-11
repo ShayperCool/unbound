@@ -276,6 +276,7 @@ mod tests {
             dependencies: vec![[0; 16]],
             segments: vec![segment],
             block_neighbours: vec![0; (width / 2 * (height / 2)) as usize],
+            block_error: None,
             bounce_samples: vec![0],
             bounce: Vec::new(),
         }

@@ -479,14 +479,19 @@ impl SystemSolver {
 
     /// Whether the system's lightmap is directional (`LightmapsMode.CombinedDirectional`):
     /// updates then solve its directionality texture as well, from the next one on, which solves
-    /// every segment.
-    pub fn set_directional(&mut self, directional: bool) {
+    /// every segment. Fails, staying as it is, for a system whose blocks could not be read
+    /// ([`crate::data::Transport::block_error`]).
+    pub fn set_directional(&mut self, directional: bool) -> Result<()> {
         if !directional {
             self.directionality = None;
         } else if self.directionality.is_none() {
+            if let Some(error) = &self.system.transport.block_error {
+                bail!("no directionality: {error}");
+            }
             self.directionality = Some(Directionality::new(&self.system.transport));
             self.solve_all = true;
         }
+        Ok(())
     }
 
     /// The directionality texture ([`Directionality::texels`]) of a directional lightmap.
