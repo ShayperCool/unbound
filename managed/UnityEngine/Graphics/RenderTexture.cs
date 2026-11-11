@@ -242,13 +242,34 @@ namespace UnityEngine
 
         /// <summary>Zero until the texture is created (the call does not create it), as in the
         /// Unity 6000.0.71f1 Editor (tests/projects/nativegfx ptr.rt.*).</summary>
-        internal override IntPtr NativePointer() => m_Created ? NativePlugins.TexturePointer(m_NativeHandle, false) : IntPtr.Zero;
+        internal override IntPtr NativePointer()
+        {
+            if (!m_Created) return IntPtr.Zero;
+            WarnBindTextureMS();
+            return NativePlugins.TexturePointer(m_NativeHandle, false);
+        }
+
+        /// <summary>The Editor's pointers of a render texture with <see cref="bindTextureMS"/> name
+        /// its multisampled textures (tests/projects/nativegfx shape.rt.msaa.bound*); here it
+        /// resolves like any multisampled one: said once.</summary>
+        void WarnBindTextureMS()
+        {
+            if (!m_Descriptor.bindMS || m_Descriptor.msaaSamples <= 1 || s_WarnedBindTextureMS) return;
+            s_WarnedBindTextureMS = true;
+            Debug.LogWarning($"Unbound: RenderTexture.bindTextureMS is not supported: the native pointers of '{name}' name its resolved image and its samples' depth is not shared, not its multisampled textures.");
+        }
+
+        static bool s_WarnedBindTextureMS;
 
         /// <summary>The depth buffer's OpenGL texture; a texture without depth gives its color
         /// texture (a multisampled one its samples), as in the Editor (tests/projects/nativegfx
         /// ptr.rt.nodepth.*, shape.rt.msaa.color.depth): the renderer knows which.</summary>
-        public IntPtr GetNativeDepthBufferPtr() =>
-            m_Created ? NativePlugins.TexturePointer(m_NativeHandle, true) : IntPtr.Zero;
+        public IntPtr GetNativeDepthBufferPtr()
+        {
+            if (!m_Created) return IntPtr.Zero;
+            WarnBindTextureMS();
+            return NativePlugins.TexturePointer(m_NativeHandle, true, depth > 0);
+        }
 
         [Unbound.EditorFaithful("no-op is equivalent: after a discard the contents are undefined, so keeping them is allowed")]
         public void DiscardContents() { }

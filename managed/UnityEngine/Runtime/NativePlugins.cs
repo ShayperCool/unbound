@@ -171,7 +171,7 @@ namespace Unbound.Runtime
 
         /// <summary>The native pointer of a texture with a renderer handle (<paramref name="depth"/>:
         /// its depth buffer): the OpenGL texture name plugins see, sharing the renderer's memory.</summary>
-        internal static IntPtr TexturePointer(ulong handle, bool depth)
+        internal static IntPtr TexturePointer(ulong handle, bool depth, bool hasDepth = true)
         {
             if (handle == 0) return IntPtr.Zero;
             // The texture exists on the renderer once the commands so far have run.
@@ -183,7 +183,8 @@ namespace Unbound.Runtime
                 s_WarnedUnshared = true;
                 Native.Log(2, "a native texture pointer is not an OpenGL texture: the renderer could not share the texture with native plugins (see the log above)");
             }
-            return (IntPtr)(long)(UnsharedPointer | (depth ? UnsharedDepth : 0) | handle);
+            // A texture without a depth buffer gives its color texture for it.
+            return (IntPtr)(long)(UnsharedPointer | (depth && hasDepth ? UnsharedDepth : 0) | handle);
         }
 
         /// <summary>A render buffer's native pointer: stable for the render texture (none: the

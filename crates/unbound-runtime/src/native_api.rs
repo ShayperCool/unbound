@@ -58,6 +58,10 @@ use std::ffi::c_void;
 /// 50: the `ScreenStandIn` render command (opcode 35).
 /// 51: `gi_set_environment`; `GiFrame` without its flat environment color.
 /// 52: `GiFrame.directional` and `gi_read_directionality` (directional realtime lightmaps).
+/// 53: `realtime_gi::GiLight` with its falloff type.
+/// 54: `plugin_frame`, `plugin_events`, `plugin_query` (native plugins' profiler callbacks, event
+/// queue and rendering extension query).
+/// 55: `external_texture` takes the mip levels where the declared size and color space were.
 pub const NATIVE_API_VERSION: u32 = 55;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.

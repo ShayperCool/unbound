@@ -369,6 +369,9 @@ pub fn depth_copy_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::
         .create_view(&wgpu::TextureViewDescriptor::default())
 }
 
+/// `UnityEngine.Rendering.TextureDimension.Tex2DArray` in the texture packet.
+pub const TEX2D_ARRAY: i32 = 5;
+
 pub struct GpuTexture {
     pub texture: wgpu::Texture,
     /// Raw view (gamma projects; data textures).
@@ -397,6 +400,8 @@ pub struct GpuTexture {
     pub cube: bool,
     /// A CubemapArray: its view is a cube array.
     pub cube_array: bool,
+    /// A texture array (Texture2DArray, a render texture of that dimension), of one layer too.
+    pub array: bool,
     /// A 3D texture (`layers` is its depth).
     pub volume: bool,
     /// Writable views, prepared once for each mip.
@@ -1150,6 +1155,7 @@ pub fn upload_texture_with(
             && e.format == t.format
             && e.layers == layers
             && e.volume == volume
+            && e.array == (t.dimension == TEX2D_ARRAY)
             && e.samples == samples
             && e.render_target == render_target
             && e.random_write == t.random_write
@@ -1338,6 +1344,7 @@ pub fn upload_texture_with(
                 layers,
                 cube,
                 cube_array,
+                array: t.dimension == TEX2D_ARRAY,
                 volume,
                 volume_targets,
                 storage_views,

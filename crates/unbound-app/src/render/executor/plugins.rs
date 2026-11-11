@@ -115,16 +115,58 @@ fn device_format(
         .flatten()
 }
 
-/// The OpenGL target of a texture's shape and the layers a view of all of it has: Unity's
-/// device makes a Cubemap a cube map, a CubemapArray a cube map array, a texture array a 2D
-/// array whatever its size, a Texture3D a 3D texture (tests/projects/nativegfx `shape.*`).
-fn device_target(cube: bool, cube_array: bool, volume: bool, layers: u32) -> (u32, u32) {
-    match (cube, cube_array, volume, layers) {
-        (true, ..) => (gl_interop::TEXTURE_CUBE_MAP, 6),
-        (_, true, ..) => (gl_interop::TEXTURE_CUBE_MAP_ARRAY, layers),
-        (_, _, true, _) => (gl_interop::TEXTURE_3D, 1),
-        (_, _, _, 1) => (gl_interop::TEXTURE_2D, 1),
-        _ => (gl_interop::TEXTURE_2D_ARRAY, layers),
+/// A texture's shape, as its OpenGL target follows from it.
+#[derive(Clone, Copy)]
+struct Shape {
+    cube: bool,
+    cube_array: bool,
+    volume: bool,
+    array: bool,
+    layers: u32,
+}
+
+impl Shape {
+    fn of(gpu: &GpuTexture) -> Self {
+        Shape {
+            cube: gpu.cube,
+            cube_array: gpu.cube_array,
+            volume: gpu.volume,
+            array: gpu.array,
+            layers: gpu.layers,
+        }
+    }
+
+    /// A render target's depth buffer of this shape: a layer for each of the color's, but a
+    /// 3D target's is one image.
+    fn depth(self) -> Self {
+        Shape {
+            volume: false,
+            layers: if self.volume { 1 } else { self.layers },
+            ..self
+        }
+    }
+
+    /// The OpenGL target and the layers a view of all of the texture has: Unity's device makes
+    /// a Cubemap a cube map, a CubemapArray a cube map array, a texture array a 2D array
+    /// whatever its size (one layer, six square ones), a Texture3D a 3D texture
+    /// (tests/projects/nativegfx `shape.*`).
+    fn target(self) -> (u32, u32) {
+        if self.cube {
+            (gl_interop::TEXTURE_CUBE_MAP, 6)
+        } else if self.cube_array {
+            (gl_interop::TEXTURE_CUBE_MAP_ARRAY, self.layers)
+        } else if self.volume {
+            (gl_interop::TEXTURE_3D, 1)
+        } else if self.array || self.layers > 1 {
+            (gl_interop::TEXTURE_2D_ARRAY, self.layers)
+        } else {
+            (gl_interop::TEXTURE_2D, 1)
+        }
+    }
+
+    /// Whether a target of this shape is drawn an image at a time (a face, a layer, a slice).
+    fn layered(self) -> bool {
+        self.target().0 != gl_interop::TEXTURE_2D
     }
 }
 
@@ -132,8 +174,11 @@ fn device_target(cube: bool, cube_array: bool, volume: bool, layers: u32) -> (u3
 /// the formats shaders sample as floats, which the renderer samples through the plugin's own
 /// texture (so as OpenGL samples it: an sRGB format decoded, three channels with alpha 1). The
 /// description only sizes copies of it; a color code would ask for a view in another format,
-/// which a plugin's texture cannot have. None: a format that is not shown (integers, depth,
-/// formats without a code).
+/// which a plugin's texture cannot have. Measured in the Editor (tests/projects/nativegfx
+/// `ext.*`): `GL_RGBA8`, `GL_SRGB8_ALPHA8`, `GL_R8`, `GL_RG8`, `GL_RGB8`, `GL_RGBA16F`,
+/// `GL_RGBA32F`, DXT5; the others follow from the rule (OpenGL samples the texture itself).
+/// None: a format that is not shown (integers and depth, which shaders do not sample as
+/// colors; formats the packet has no code for, as DXT3).
 fn external_format(format: gl_interop::InternalFormat) -> Option<i32> {
     use gl_interop::format as gl;
     use unbound_runtime::render_protocol::texture_format as code;
@@ -141,6 +186,14 @@ fn external_format(format: gl_interop::InternalFormat) -> Option<i32> {
         gl::RGBA8 | gl::SRGB8_ALPHA8 | gl::RGB8 | gl::SRGB8 => code::LINEAR_RGBA8,
         gl::R8 => code::R8_UNORM,
         gl::RG8 => code::RG8_UNORM,
+        gl::R8_SNORM => code::R8_SNORM,
+        gl::RG8_SNORM => code::RG8_SNORM,
+        gl::RGBA8_SNORM => code::RGBA8_SNORM,
+        gl::R16 => code::R16_UNORM,
+        gl::RG16 => code::RG16_UNORM,
+        gl::RGBA16 => code::RGBA16_UNORM,
+        gl::RGB10_A2 => code::RGB10A2_UNORM,
+        gl::R11F_G11F_B10F => code::RG11B10_FLOAT,
         gl::R16F => code::R16_FLOAT,
         gl::RG16F => code::RG16_FLOAT,
         gl::RGBA16F => code::RGBA_HALF,
@@ -303,13 +356,14 @@ impl UnityRenderer {
         let depth = gpu.depth_texture.as_ref().filter(|_| gpu.samples == 1);
         let depth = depth.map(gl_name).transpose()?;
         let (srgb, color_space) = (gpu.srgb_view.is_some(), self.color_space);
-        let (target, layers) = device_target(gpu.cube, gpu.cube_array, gpu.volume, gpu.layers);
+        let shape = Shape::of(gpu);
         let texture = gpu.texture.clone();
         gl_interop::with(|interop| {
             let mut name = |name: u32, color: bool| -> Result<(u32, bool), String> {
                 let info = interop
                     .texture_info(name)
                     .ok_or("its OpenGL texture is not in the plugins' share group")?;
+                let (target, layers) = if color { shape } else { shape.depth() }.target();
                 let format = color
                     .then(|| device_format(info.format, srgb, color_space))
                     .flatten()
@@ -439,7 +493,7 @@ impl UnityRenderer {
         }
         let format = external_format(info.format).ok_or_else(|| {
             format!(
-                "texture {name} is not shown: its format (OpenGL internal format {:#x}) is not one shaders sample as colors",
+                "texture {name} is not shown: its format (OpenGL internal format {:#x}) is an integer or depth format, or one the renderer has no description for",
                 info.format
             )
         })?;
@@ -598,7 +652,7 @@ impl UnityRenderer {
     /// when the target is the screen or cannot be shared.
     fn bind_plugin_target(&mut self) {
         let (color, depth) = self.target_handles;
-        let (mip, _) = self.plugins.target;
+        let (mip, slice) = self.plugins.target;
         self.plugins.drew_into_samples = false;
         if let Some(Ok((samples, depth))) = self.sample_attachments(color, depth) {
             let gpu = &self.textures[&color];
@@ -618,12 +672,29 @@ impl UnityRenderer {
         } else if self.textures.contains_key(&color) {
             match self.share(color) {
                 Ok((color_name, own_depth)) => {
-                    let attached = match depth_owner(color, depth) {
+                    let owner = depth_owner(color, depth);
+                    let attached = match owner {
                         Some(owner) if owner == color => own_depth,
                         Some(owner) => self.share(owner).ok().and_then(|(_, d)| d),
                         None => None,
                     };
-                    bound = Some((color_name, attached));
+                    // The image being drawn of a cube, an array or a 3D target, and of a depth
+                    // buffer with as many (tests/projects/nativegfx `shape.cube.target*`,
+                    // `shape.array.target*`).
+                    let image = |handle: u64, depth: bool| {
+                        let shape = Shape::of(&self.textures[&handle]);
+                        let shape = if depth { shape.depth() } else { shape };
+                        shape.layered().then_some(slice.max(0) as u32)
+                    };
+                    bound = Some(gl_interop::TargetImages {
+                        color: color_name,
+                        mip: mip.max(0) as u32,
+                        layer: image(color, false),
+                        depth: attached.map(|d| (d, true)),
+                        depth_layer: owner
+                            .filter(|_| attached.is_some())
+                            .and_then(|owner| image(owner, true)),
+                    });
                 }
                 Err(reason) => self.warn_once(format!("plugin-target{color}"), || {
                     format!("a native plugin callback finds no target bound: render texture {color} is not shared ({reason})")
@@ -640,14 +711,7 @@ impl UnityRenderer {
         };
         let v = clamp_viewport(self.state.viewport, width, height);
         let viewport = [v[0] as i32, v[1] as i32, v[2] as i32, v[3] as i32];
-        let _ = gl_interop::with(|interop| match bound {
-            Some((color, depth)) => interop.bind_target(
-                Some((color, mip.max(0) as u32)),
-                depth.map(|d| (d, true)),
-                viewport,
-            ),
-            None => interop.bind_target(None, None, viewport),
-        });
+        let _ = gl_interop::with(|interop| interop.bind_target(bound, viewport));
     }
 
     /// `IssuePluginCustomTextureUpdateV1`/`V2`: the begin event, the upload of the data the
@@ -919,22 +983,51 @@ mod tests {
         use gl_interop::{
             TEXTURE_2D, TEXTURE_2D_ARRAY, TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_CUBE_MAP_ARRAY,
         };
-        assert_eq!(device_target(false, false, false, 1), (TEXTURE_2D, 1));
-        assert_eq!(device_target(true, false, false, 6), (TEXTURE_CUBE_MAP, 6));
-        assert_eq!(
-            device_target(false, true, false, 12),
-            (TEXTURE_CUBE_MAP_ARRAY, 12)
-        );
-        // A volume's slices are not layers.
-        assert_eq!(device_target(false, false, true, 4), (TEXTURE_3D, 1));
-        assert_eq!(device_target(false, false, false, 3), (TEXTURE_2D_ARRAY, 3));
-        // Six (or twelve) layers that are not a cube's faces: an array, whatever the
-        // renderer's backend stores them as.
-        assert_eq!(device_target(false, false, false, 6), (TEXTURE_2D_ARRAY, 6));
-        assert_eq!(
-            device_target(false, false, false, 12),
-            (TEXTURE_2D_ARRAY, 12)
-        );
+        let plain = Shape {
+            cube: false,
+            cube_array: false,
+            volume: false,
+            array: false,
+            layers: 1,
+        };
+        assert_eq!(plain.target(), (TEXTURE_2D, 1));
+        assert!(!plain.layered());
+        let cube = Shape {
+            cube: true,
+            layers: 6,
+            ..plain
+        };
+        assert_eq!(cube.target(), (TEXTURE_CUBE_MAP, 6));
+        let cubes = Shape {
+            cube_array: true,
+            layers: 12,
+            ..plain
+        };
+        assert_eq!(cubes.target(), (TEXTURE_CUBE_MAP_ARRAY, 12));
+        // A volume's slices are not layers; its depth buffer is one image.
+        let volume = Shape {
+            volume: true,
+            layers: 4,
+            ..plain
+        };
+        assert_eq!(volume.target(), (TEXTURE_3D, 1));
+        assert!(volume.layered());
+        assert_eq!(volume.depth().target(), (TEXTURE_2D, 1));
+        assert!(!volume.depth().layered());
+        // An array is an array whatever its size: one layer, and six or twelve square ones,
+        // which the renderer's backend stores as cube maps.
+        for layers in [1, 3, 6, 12] {
+            let array = Shape {
+                array: true,
+                layers,
+                ..plain
+            };
+            assert_eq!(array.target(), (TEXTURE_2D_ARRAY, layers));
+            assert!(array.layered());
+            assert_eq!(array.depth().target(), (TEXTURE_2D_ARRAY, layers));
+        }
+        // A cube target's depth buffer has a face for each of the color's.
+        assert_eq!(cube.depth().target(), (TEXTURE_CUBE_MAP, 6));
     }
 
     #[test]
@@ -950,6 +1043,9 @@ mod tests {
         assert_eq!(external_format(gl::RG8), Some(code::RG8_UNORM));
         assert_eq!(external_format(gl::RGBA16F), Some(code::RGBA_HALF));
         assert_eq!(external_format(gl::RGBA32F), Some(code::RGBA32_FLOAT));
+        assert_eq!(external_format(gl::RGBA16), Some(code::RGBA16_UNORM));
+        assert_eq!(external_format(gl::RGB10_A2), Some(code::RGB10A2_UNORM));
+        assert_eq!(external_format(gl::RG8_SNORM), Some(code::RG8_SNORM));
         for (format, block) in [
             (gl::COMPRESSED_SRGB_ALPHA_S3TC_DXT1, code::BC1_DATA),
             (gl::COMPRESSED_RGBA_S3TC_DXT5, code::BC3_DATA),

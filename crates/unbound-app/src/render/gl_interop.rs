@@ -31,6 +31,14 @@ pub mod format {
     pub const COMPRESSED_RG_RGTC2: u32 = 0x8DBD;
     pub const R8: u32 = 0x8229;
     pub const RG8: u32 = 0x822B;
+    pub const R8_SNORM: u32 = 0x8F94;
+    pub const RG8_SNORM: u32 = 0x8F95;
+    pub const RGBA8_SNORM: u32 = 0x8F97;
+    pub const R16: u32 = 0x822A;
+    pub const RG16: u32 = 0x822C;
+    pub const RGBA16: u32 = 0x805B;
+    pub const RGB10_A2: u32 = 0x8059;
+    pub const R11F_G11F_B10F: u32 = 0x8C3A;
     pub const RGB8: u32 = 0x8051;
     pub const SRGB8: u32 = 0x8C41;
     pub const R16F: u32 = 0x822D;
@@ -76,6 +84,18 @@ pub struct TextureInfo {
     pub immutable: bool,
     /// Its levels: an immutable storage's, else the levels that have texels, from the first.
     pub levels: u32,
+}
+
+/// The images of a render target that is textures: a level of its color texture, of one layer
+/// of it (`layer`: a cube's face, an array's layer, a 3D texture's slice) where it has several,
+/// and its depth texture's first level (`stencil`: with stencil), of one layer the same way.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TargetImages {
+    pub color: u32,
+    pub mip: u32,
+    pub layer: Option<u32>,
+    pub depth: Option<(u32, bool)>,
+    pub depth_layer: Option<u32>,
 }
 
 /// What a framebuffer draws into: a texture's level, or a renderbuffer.
@@ -215,7 +235,7 @@ impl Interop {
     pub fn forget(&mut self, _: u32, _: bool) {
         match *self {}
     }
-    pub fn bind_target(&mut self, _: Option<(u32, u32)>, _: Option<(u32, bool)>, _: [i32; 4]) {
+    pub fn bind_target(&mut self, _: Option<TargetImages>, _: [i32; 4]) {
         match *self {}
     }
     pub fn bind_attachments(&mut self, _: Attachment, _: Option<(Attachment, bool)>, _: [i32; 4]) {
@@ -234,7 +254,7 @@ impl Interop {
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use super::{Attachment, InternalFormat, TextureInfo};
+    use super::{Attachment, InternalFormat, TargetImages, TextureInfo};
     use std::ffi::{CStr, c_char, c_void};
 
     type EglDisplay = *mut c_void;
@@ -287,6 +307,7 @@ mod linux {
         CreateFramebuffers: unsafe extern "C" fn(i32, *mut u32),
         DeleteFramebuffers: unsafe extern "C" fn(i32, *const u32),
         NamedFramebufferTexture: unsafe extern "C" fn(u32, u32, u32, i32),
+        NamedFramebufferTextureLayer: unsafe extern "C" fn(u32, u32, u32, i32, i32),
         NamedFramebufferRenderbuffer: unsafe extern "C" fn(u32, u32, u32, u32),
         NamedFramebufferParameteri: unsafe extern "C" fn(u32, u32, i32),
         BindFramebuffer: unsafe extern "C" fn(u32, u32),
@@ -329,8 +350,8 @@ mod linux {
         /// The framebuffer bound where the plugin finds no shared target: no attachments, but
         /// complete (the viewport's size): what the plugin draws there is discarded.
         empty_framebuffer: u32,
-        /// Framebuffers of targets, by color, depth and mip.
-        framebuffers: Vec<((u32, u32, u32), u32)>,
+        /// Framebuffers of targets, by their images.
+        framebuffers: Vec<(TargetImages, u32)>,
         /// The framebuffer of attachments bound for one callback ([`Interop::bind_attachments`]):
         /// they are detached after it, so it keeps none of them alive.
         attachments_framebuffer: u32,
@@ -470,6 +491,7 @@ mod linux {
                 CreateFramebuffers: gl_fn!(egl, "glCreateFramebuffers"),
                 DeleteFramebuffers: gl_fn!(egl, "glDeleteFramebuffers"),
                 NamedFramebufferTexture: gl_fn!(egl, "glNamedFramebufferTexture"),
+                NamedFramebufferTextureLayer: gl_fn!(egl, "glNamedFramebufferTextureLayer"),
                 NamedFramebufferRenderbuffer: gl_fn!(egl, "glNamedFramebufferRenderbuffer"),
                 NamedFramebufferParameteri: gl_fn!(egl, "glNamedFramebufferParameteri"),
                 BindFramebuffer: gl_fn!(egl, "glBindFramebuffer"),
@@ -693,29 +715,23 @@ mod linux {
         /// go, and the texture too when it is a view made here (`owned`).
         pub fn forget(&mut self, name: u32, owned: bool) {
             let gl = &self.gl;
-            self.framebuffers
-                .retain(|((color, depth, _), framebuffer)| {
-                    let uses = *color == name || *depth == name;
-                    if uses {
-                        unsafe { (gl.DeleteFramebuffers)(1, framebuffer) };
-                    }
-                    !uses
-                });
+            self.framebuffers.retain(|(images, framebuffer)| {
+                let uses = images.color == name || images.depth.is_some_and(|d| d.0 == name);
+                if uses {
+                    unsafe { (gl.DeleteFramebuffers)(1, framebuffer) };
+                }
+                !uses
+            });
             if owned {
                 unsafe { (gl.DeleteTextures)(1, &name) };
             }
         }
 
-        /// Binds the framebuffer of a color texture's mip (and a depth texture), or one without
-        /// attachments of the viewport's size, with the viewport (pixels, origin at the first row).
-        pub fn bind_target(
-            &mut self,
-            color: Option<(u32, u32)>,
-            depth: Option<(u32, bool)>,
-            viewport: [i32; 4],
-        ) {
+        /// Binds the framebuffer of a target's images, or one without attachments of the
+        /// viewport's size, with the viewport (pixels, origin at the first row).
+        pub fn bind_target(&mut self, images: Option<TargetImages>, viewport: [i32; 4]) {
             let gl = &self.gl;
-            let framebuffer = match color {
+            let framebuffer = match images {
                 None => {
                     for (parameter, size) in [
                         (GL_FRAMEBUFFER_DEFAULT_WIDTH, viewport[0] + viewport[2]),
@@ -731,35 +747,43 @@ mod linux {
                     }
                     self.empty_framebuffer
                 }
-                Some((name, mip)) => {
-                    let depth_name = depth.map_or(0, |(d, _)| d);
-                    let key = (name, depth_name, mip);
-                    match self.framebuffers.iter().find(|(k, _)| *k == key) {
-                        Some((_, framebuffer)) => *framebuffer,
-                        None => {
-                            let mut framebuffer = 0;
-                            unsafe {
-                                (gl.CreateFramebuffers)(1, &mut framebuffer);
-                                (gl.NamedFramebufferTexture)(
+                Some(images) => match self.framebuffers.iter().find(|(k, _)| *k == images) {
+                    Some((_, framebuffer)) => *framebuffer,
+                    None => {
+                        let mut framebuffer = 0;
+                        unsafe { (gl.CreateFramebuffers)(1, &mut framebuffer) };
+                        let framebuffer = framebuffer;
+                        // One layer of a texture that has several, else the texture's level.
+                        let attach = |point, name, level: u32, layer: Option<u32>| unsafe {
+                            match layer {
+                                Some(layer) => (gl.NamedFramebufferTextureLayer)(
                                     framebuffer,
-                                    GL_COLOR_ATTACHMENT0,
+                                    point,
                                     name,
-                                    mip as i32,
-                                );
-                                if let Some((depth, stencil)) = depth {
-                                    let attachment = if stencil {
-                                        GL_DEPTH_STENCIL_ATTACHMENT
-                                    } else {
-                                        GL_DEPTH_ATTACHMENT
-                                    };
-                                    (gl.NamedFramebufferTexture)(framebuffer, attachment, depth, 0);
-                                }
+                                    level as i32,
+                                    layer as i32,
+                                ),
+                                None => (gl.NamedFramebufferTexture)(
+                                    framebuffer,
+                                    point,
+                                    name,
+                                    level as i32,
+                                ),
                             }
-                            self.framebuffers.push((key, framebuffer));
-                            framebuffer
+                        };
+                        attach(GL_COLOR_ATTACHMENT0, images.color, images.mip, images.layer);
+                        if let Some((depth, stencil)) = images.depth {
+                            let point = if stencil {
+                                GL_DEPTH_STENCIL_ATTACHMENT
+                            } else {
+                                GL_DEPTH_ATTACHMENT
+                            };
+                            attach(point, depth, 0, images.depth_layer);
                         }
+                        self.framebuffers.push((images, framebuffer));
+                        framebuffer
                     }
-                }
+                },
             };
             unsafe {
                 (gl.BindFramebuffer)(GL_FRAMEBUFFER, framebuffer);

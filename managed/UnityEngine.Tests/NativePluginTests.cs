@@ -76,12 +76,15 @@ namespace Unbound.Tests
         {
             readonly ILogHandler m_Inner = Debug.unityLogger.logHandler;
             internal readonly List<string> Errors = new List<string>();
+            internal readonly List<string> Warnings = new List<string>();
 
             internal ErrorCapture() => Debug.unityLogger.logHandler = this;
 
             public void LogFormat(LogType type, Object context, string format, params object[] args)
             {
-                if (type == LogType.Error) Errors.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+                string message = args == null || args.Length == 0 ? format : string.Format(format, args);
+                if (type == LogType.Error) Errors.Add(message);
+                if (type == LogType.Warning) Warnings.Add(message);
             }
 
             public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
@@ -261,6 +264,37 @@ namespace Unbound.Tests
             finally
             {
                 foreach (var t in new Object[] { uncreated, withDepth, withoutDepth }) Object.DestroyImmediate(t);
+            }
+        }
+
+        [Fact]
+        public void ARenderTextureBindingItsSamplesSaysOnceWhatItsPointersName()
+        {
+            typeof(RenderTexture).GetField("s_WarnedBindTextureMS", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).SetValue(null, false);
+            var resolved = new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+            var single = new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32) { bindTextureMS = true };
+            var bound = new RenderTexture(4, 4, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4, bindTextureMS = true };
+            try
+            {
+                foreach (var rt in new[] { resolved, single, bound }) rt.Create();
+                using var log = new ErrorCapture();
+                Func<int> said = () => log.Warnings.FindAll(w => w.Contains("bindTextureMS")).Count;
+                // A multisampled texture that resolves, and one sample: their pointers are theirs.
+                foreach (var rt in new[] { resolved, single })
+                {
+                    rt.GetNativeTexturePtr();
+                    rt.GetNativeDepthBufferPtr();
+                }
+                Assert.Equal(0, said());
+                bound.GetNativeTexturePtr();
+                Assert.Equal(1, said());
+                bound.GetNativeDepthBufferPtr();
+                bound.GetNativeTexturePtr();
+                Assert.Equal(1, said());
+            }
+            finally
+            {
+                foreach (var t in new Object[] { resolved, single, bound }) Object.DestroyImmediate(t);
             }
         }
 
