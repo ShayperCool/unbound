@@ -159,6 +159,16 @@ namespace Unbound.Runtime.Humanoid
             return null;
         }
 
+        /// <summary>Why a humanoid avatar with the description cannot be built from the hierarchy
+        /// of <paramref name="go"/> as it is now (null: every mapped transform is there once).</summary>
+        internal static string HierarchyError(GameObject go, in HumanDescription d)
+        {
+            if (d.human == null || d.human.Length == 0) return null;
+            var all = new List<NamedTransform>();
+            AllChildren(go.transform, "", all, null);
+            return ValidateHierarchy(d, all);
+        }
+
         /// <summary>Builds the avatar of <paramref name="go"/>; null with <paramref name="error"/> when
         /// the description does not fit. <paramref name="human"/>: a humanoid avatar;
         /// <paramref name="onlySkeletonNames"/>: keep only the transforms the description's skeleton

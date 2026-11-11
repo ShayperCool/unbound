@@ -545,6 +545,77 @@ namespace UnityEngine.Tests
             }
         }
 
+        struct NothingJob : IAnimationJob
+        {
+            public static int Ran;
+
+            public void ProcessRootMotion(AnimationStream stream) { }
+
+            public void ProcessAnimation(AnimationStream stream) => Ran++;
+        }
+
+        /// <summary>An optimized humanoid with a stream handle of an exposed transform's own
+        /// path plays nothing: every evaluation logs twice that the hips' transform is not
+        /// found and that the object has no avatar, the job does not run and the exposed hand
+        /// stays (6000.0.71f1, tests/projects/animoptimize graphJobHand.HumanOpt). Controls:
+        /// without the handle the job runs, the hand moves and nothing is logged
+        /// (graphJob.HumanOpt); once the handles are unbound it plays again, and so it does
+        /// while the hierarchy is whole (both unmeasured in the Editor).</summary>
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        public void AnOptimizedHumanoidWithAHandleOffItsSkeletonPlaysNothing(bool bind, bool optimized)
+        {
+            var root = AnimationHumanStreamTests.Humanoid(out var animator);
+            var avatar = animator.avatar;
+            const string path = "Hips/Spine/Chest/LeftUpperArm/LeftLowerArm/LeftHand";
+            if (optimized) AnimatorUtility.OptimizeTransformHierarchy(root, new[] { path });
+            var hand = root.transform.Find(optimized ? "LeftHand" : path);
+            var clip = new AnimationClip();
+            clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, -1f, 1f, 1f));
+            if (bind) animator.BindStreamTransform(hand);
+            var graph = PlayableGraph.Create("lost");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var playable = AnimationScriptPlayable.Create(graph, new NothingJob(), 1);
+            playable.ConnectInput(0, AnimationClipPlayable.Create(graph, clip), 0, 1f);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+            var logs = new List<string>();
+            void Capture(string message, string stack, LogType type) => logs.Add(type + ": " + message);
+            Application.logMessageReceived += Capture;
+            try
+            {
+                bool lost = bind && optimized;
+                NothingJob.Ran = 0;
+                Vector3 start = hand.position;
+                graph.Evaluate(0f);
+                graph.Evaluate(0.5f);
+                Assert.Equal(lost ? 0 : 2, NothingJob.Ran);
+                Assert.Equal(lost, start == hand.position);
+                var expected = new List<string>();
+                for (int i = 0; lost && i < 4; i++)
+                {
+                    expected.Add("Error: Transform 'Hips' for human bone 'Hips' not found");
+                    expected.Add("Warning: Object is set to Optimize Game Object but does not have an Avatar, Animation will not play.");
+                }
+                Assert.Equal(expected, logs);
+
+                animator.UnbindAllStreamHandles();
+                Vector3 before = hand.position;
+                graph.Evaluate(0.25f);
+                Assert.Equal(lost ? 1 : 3, NothingJob.Ran);
+                Assert.NotEqual(before, hand.position);
+                Assert.Equal(expected, logs);
+            }
+            finally
+            {
+                Application.logMessageReceived -= Capture;
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
         /// <summary>A handle bound before the hierarchy is optimized goes on as its path's
         /// skeleton node: the job reads the node's stream values and its write turns the node,
         /// which the exposed transform of the path follows, as the bone of a whole hierarchy

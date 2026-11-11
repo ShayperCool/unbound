@@ -92,6 +92,16 @@ namespace Unbound.Runtime.Playables
 
         internal void Bound(StreamTransform handle) => Transforms.Add(Target(handle));
 
+        /// <summary>Whether a transform handle's path is none of the nodes of the skeleton an
+        /// Animator without its transform hierarchy animates (an exposed transform bound under
+        /// its own path).</summary>
+        internal bool AnyOffSkeleton()
+        {
+            foreach (var handle in Transforms)
+                if (handle.Node < 0) return true;
+            return false;
+        }
+
         /// <summary>The hierarchy was optimized or deoptimized: the handles' channels moved to
         /// the skeleton's nodes or back to the transforms of their paths, and the handles are
         /// unresolved until their next access (Scripting API, TransformStreamHandle.IsResolved:
