@@ -255,10 +255,14 @@ pub struct NativeApi {
     pub gi_read_directionality: extern "C" fn(u64, i32, *mut u8, i32) -> i32,
     // Version 53: a realtime GI light carries its falloff type (`realtime_gi::GiLight`); no new
     // entry.
-    // Version 54: native plugins' profiler callbacks and event queue.
-    /// A frame ended: the native plugins' profiler frame callbacks (`IUnityProfilerCallbacks`),
-    /// then the events they sent through `IUnityEventQueue`.
+    // Version 54: native plugins' profiler callbacks, event queue and rendering extension query.
+    /// A frame ended: the native plugins' profiler frame callbacks (`IUnityProfilerCallbacks`).
     pub plugin_frame: extern "C" fn(),
+    /// A frame began: the events native plugins sent through `IUnityEventQueue`.
+    pub plugin_events: extern "C" fn(),
+    /// (a plugin's `UnityRenderingExtQuery`, the query): asks it, with the plugins' graphics
+    /// context current; its answer.
+    pub plugin_query: extern "C" fn(*const c_void, i32) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -314,6 +318,8 @@ pub fn api() -> NativeApi {
         gi_realtime_uvs,
         gi_read_directionality,
         plugin_frame,
+        plugin_events,
+        plugin_query,
     }
 }
 
@@ -1086,12 +1092,25 @@ extern "C" fn plugin_set_log(sink: Option<extern "C" fn(i32, *const u8, i32)>) {
 }
 
 extern "C" fn plugin_frame() {
-    // Nothing to call: no plugin context is needed (the usual frame).
-    if plugin_api::frame_pending() {
-        plugin_api::while_rendering(|| {
-            state::backend().with_plugin_context(&mut plugin_api::frame)
-        });
+    plugin_api::frame();
+}
+
+extern "C" fn plugin_events() {
+    plugin_api::dispatch_events();
+}
+
+extern "C" fn plugin_query(query: *const c_void, flags: i32) -> i32 {
+    if query.is_null() {
+        return 0;
     }
+    // SAFETY: the managed side passes a library's `UnityRenderingExtQuery` export, whose
+    // signature the plugin headers fix: `bool UnityRenderingExtQuery(UnityRenderingExtQueryType)`.
+    let query: extern "C" fn(i32) -> bool = unsafe { std::mem::transmute(query) };
+    let mut answer = false;
+    plugin_api::while_rendering(|| {
+        state::backend().with_plugin_context(&mut || answer = query(flags))
+    });
+    answer as i32
 }
 
 extern "C" fn plugin_shutdown() {

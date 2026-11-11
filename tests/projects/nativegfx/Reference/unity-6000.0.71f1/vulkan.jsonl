@@ -8,7 +8,6 @@
 {"k":"outer.pixels","v":["0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8"]}
 {"k":"buffer.words","v":["01020304","01020304","01020304","01020304"]}
 {"k":"plugin.load","v":"load renderer=21 vulkan=1 vulkanV2=1"}
-{"k":"plugin.interfaces","v":"interfaces profilerCallbacks=1 profilerCallbacksV2=1 eventQueue=1"}
 {"k":"plugin.intercept.late","v":"intercept.late=0"}
 {"k":"plugin.instance","v":"instance instance=1 physical=1 device=1 queue=1 gipa=1 cache=1"}
 {"k":"plugin.instance.2","v":"instance family.graphics=1 queue.first=1"}

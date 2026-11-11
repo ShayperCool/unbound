@@ -1,22 +1,28 @@
 //! `IUnityProfilerCallbacks` and `IUnityProfilerCallbacksV2` (`IUnityProfilerCallbacks.h`): a
 //! plugin's view of the profiler's categories, markers, threads, frames and marker events.
-//! Behaviour matches the Unity 6000.0.71f1 Editor (tests/projects/nativegfx `profiler.*`):
+//! Behaviour matches the Unity 6000.0.71f1 Editor (tests/projects/nativegfx `profiler.*`,
+//! `frames.sequence`):
 //!
 //! - registering a category, marker or thread callback calls it at once for everything that
-//!   exists, then for each new one; a callback registered twice is called twice;
+//!   exists, then for each new one; a callback registered twice is called twice; four category
+//!   callbacks and four marker callbacks can be registered, a fifth is refused (the header
+//!   says so of thread and frame callbacks too, of which the Editor takes more);
 //! - a marker event callback makes the marker's `callback` non-null, and `EmitEvent` calls it
-//!   whether or not a profiler records;
-//! - frame callbacks are called once a frame, between the scripts of two frames;
+//!   whether or not a profiler records; it is unregistered for one marker, or (no marker) for
+//!   every marker it was registered for with the user data, or (no user data either) at all;
+//! - frame callbacks are called once a frame, when the frame ends;
 //! - unregistering a category, marker event or flow callback that is not registered answers
 //!   -1; a marker, thread or frame callback, 0.
 //!
 //! What exists here is Unbound's: the Editor's built-in categories (their IDs, names and
 //! colors as it reports them), the markers and categories plugins make, the main thread and
-//! the threads plugins register. The Editor's own markers, worker threads and job flows are
-//! not modelled: flow callbacks register and are never called.
+//! the threads plugins register. Not modelled: the markers scripts make (`ProfilerMarker`,
+//! `Profiler.BeginSample`: the Editor reports them and their samples), the Editor's own
+//! markers, worker threads and job flows; flow callbacks register and are never called.
 use super::MarkerDesc;
 use std::ffi::{CStr, c_char, c_void};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
 
 /// `UnityProfilerCategoryDesc`.
 #[repr(C)]
@@ -136,8 +142,34 @@ const BUILTIN_CATEGORIES: [(u32, &CStr); 39] = [
 const SCRIPTS: usize = 1;
 /// The main thread as the Editor reports it: no group.
 const MAIN_THREAD: (&CStr, &CStr) = (c"", c"Main Thread");
-/// The main thread's ID; registered threads get the next ones (IDs are opaque and nonzero).
-const MAIN_THREAD_ID: u64 = 1;
+/// The category and the marker callbacks that can be registered at a time.
+const MAX_CALLBACKS: usize = 4;
+/// The main thread's ID (the thread that first asked for the plugin interfaces).
+static MAIN_THREAD_ID: AtomicU64 = AtomicU64::new(0);
+
+unsafe extern "C" {
+    /// The C library's: the calling thread's handle (an integer or an address, of the size of
+    /// one, on the platforms Unbound runs on).
+    fn pthread_self() -> usize;
+}
+
+/// The calling thread's ID as plugins see it: the operating system's, as the header says.
+fn thread_id() -> u64 {
+    // SAFETY: no arguments; the calling thread's own handle.
+    unsafe { pthread_self() as u64 }
+}
+
+/// Remembers the calling thread as the main thread (the first call's).
+pub(super) fn on_main_thread() {
+    let _ = MAIN_THREAD_ID.compare_exchange(0, thread_id(), Ordering::Relaxed, Ordering::Relaxed);
+}
+
+/// A marker's `callback` field: plugins read it while callbacks are registered and removed.
+fn listening(marker: *const MarkerDesc) -> &'static AtomicPtr<c_void> {
+    // SAFETY: markers are leaked allocations of this registry's, and the field is only read
+    // and written through this view.
+    unsafe { &*(std::ptr::addr_of!((*marker).callback) as *const AtomicPtr<c_void>) }
+}
 
 /// A registered callback: its address and the user data it is called with.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -268,7 +300,7 @@ pub(super) fn marker_created(marker: *const MarkerDesc) {
 pub(super) fn thread_registered(group: &CStr, name: &CStr) -> u64 {
     let (thread, callbacks) = with(|state| {
         let thread = Thread {
-            id: MAIN_THREAD_ID + 1 + state.threads.len() as u64,
+            id: thread_id(),
             group: Box::leak(group.to_owned().into_boxed_c_str()).as_ptr() as usize,
             name: Box::leak(name.to_owned().into_boxed_c_str()).as_ptr() as usize,
         };
@@ -294,7 +326,7 @@ fn call_thread(thread: Thread, callbacks: &[Registered]) {
 /// `EmitEvent`: the marker's event callbacks, at once.
 pub(super) fn marker_event(marker: *const MarkerDesc, kind: u16, count: u16, data: *const c_void) {
     // Nothing listens to a marker whose `callback` is null: the common case, without the lock.
-    if marker.is_null() || unsafe { (*marker).callback.is_null() } {
+    if marker.is_null() || listening(marker).load(Ordering::Acquire).is_null() {
         return;
     }
     let callbacks: Vec<Registered> = with(|state| {
@@ -309,11 +341,6 @@ pub(super) fn marker_event(marker: *const MarkerDesc, kind: u16, count: u16, dat
         let callback: MarkerEventCallback = unsafe { std::mem::transmute(callback) };
         callback(marker, kind, count, data, user as *mut c_void);
     }
-}
-
-/// Whether a frame callback is registered.
-pub(super) fn hears_frames() -> bool {
-    with(|state| !state.frame_callbacks.is_empty())
 }
 
 /// A frame ended: every frame callback, in registration order.
@@ -332,10 +359,14 @@ extern "C" fn register_create_category(
     let Some(callback) = callback else {
         return refuse_null("category");
     };
-    let made = with(|state| {
-        state.category_callbacks.push(key(callback, user));
-        state.categories.clone()
-    });
+    let Some(made) = with(|state| {
+        (state.category_callbacks.len() < MAX_CALLBACKS).then(|| {
+            state.category_callbacks.push(key(callback, user));
+            state.categories.clone()
+        })
+    }) else {
+        return -1;
+    };
     for id in 0..BUILTIN_CATEGORIES.len() {
         callback(&builtin_category(id), user);
     }
@@ -357,9 +388,20 @@ extern "C" fn register_create_marker(callback: Option<MarkerCallback>, user: *mu
     let Some(callback) = callback else {
         return refuse_null("marker");
     };
-    let made = with(|state| {
-        state.marker_callbacks.push(key(callback, user));
-        state.markers.clone()
+    let Some(made) = with(|state| {
+        (state.marker_callbacks.len() < MAX_CALLBACKS).then(|| {
+            state.marker_callbacks.push(key(callback, user));
+            state.markers.clone()
+        })
+    }) else {
+        return -1;
+    };
+    // What scripts make is not reported: said once, to whoever listens for markers.
+    static SAID: std::sync::Once = std::sync::Once::new();
+    SAID.call_once(|| {
+        tracing::warn!(
+            "a native plugin listens for profiler markers (IUnityProfilerCallbacks): it hears of the markers plugins make, not of the ones scripts make (ProfilerMarker, Profiler.BeginSample)"
+        );
     });
     for address in made {
         callback(address as *const MarkerDesc, user);
@@ -394,31 +436,42 @@ extern "C" fn register_marker_event(
             .event_callbacks
             .push((marker as usize, key(callback, user)));
         // The marker says that something listens (plugins read it before they emit).
-        unsafe { (*(marker as *mut MarkerDesc)).callback = marker as *const c_void };
+        listening(marker).store(marker as *mut c_void, Ordering::Release);
     });
     0
 }
 
+/// One registration for a marker; without a marker every registration of the callback with
+/// the user data, and without user data either every registration of the callback.
 extern "C" fn unregister_marker_event(
     marker: *const MarkerDesc,
     callback: Option<MarkerEventCallback>,
     user: *mut c_void,
 ) -> i32 {
-    let (Some(callback), false) = (callback, marker.is_null()) else {
-        return -1;
-    };
+    let Some(callback) = callback else { return -1 };
+    let wanted = key(callback, user);
     with(|state| {
-        let registered = (marker as usize, key(callback, user));
-        let Some(at) = state.event_callbacks.iter().position(|r| *r == registered) else {
-            return -1;
-        };
-        state.event_callbacks.remove(at);
-        if !state
+        let before = state.event_callbacks.len();
+        if marker.is_null() {
+            state
+                .event_callbacks
+                .retain(|(_, r)| r.0 != wanted.0 || (!user.is_null() && r.1 != wanted.1));
+        } else if let Some(at) = state
             .event_callbacks
             .iter()
-            .any(|(m, _)| *m == marker as usize)
+            .position(|r| *r == (marker as usize, wanted))
         {
-            unsafe { (*(marker as *mut MarkerDesc)).callback = std::ptr::null() };
+            state.event_callbacks.remove(at);
+        }
+        if state.event_callbacks.len() == before {
+            return -1;
+        }
+        // The markers nothing listens to any more say so.
+        for &address in &state.markers {
+            if !state.event_callbacks.iter().any(|(m, _)| *m == address) {
+                listening(address as *const MarkerDesc)
+                    .store(std::ptr::null_mut(), Ordering::Release);
+            }
         }
         0
     })
@@ -450,7 +503,7 @@ extern "C" fn register_create_thread(callback: Option<ThreadCallback>, user: *mu
         state.threads.clone()
     });
     let main = Thread {
-        id: MAIN_THREAD_ID,
+        id: MAIN_THREAD_ID.load(Ordering::Relaxed),
         group: MAIN_THREAD.0.as_ptr() as usize,
         name: MAIN_THREAD.1.as_ptr() as usize,
     };

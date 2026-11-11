@@ -167,10 +167,14 @@ namespace Unbound.Runtime
         /// the atlas has solved its directionality since they became so), or -1.
         /// </summary>
         internal delegate* unmanaged<ulong, int, byte*, int, int> GiReadDirectionality;
-        /// <summary>
-        /// A frame ended: the native plugins' profiler frame callbacks (`IUnityProfilerCallbacks`),
-        /// then the events they sent through `IUnityEventQueue`.
-        /// </summary>
+        /// <summary>A frame ended: the native plugins' profiler frame callbacks (`IUnityProfilerCallbacks`).</summary>
         internal delegate* unmanaged<void> PluginFrame;
+        /// <summary>A frame began: the events native plugins sent through `IUnityEventQueue`.</summary>
+        internal delegate* unmanaged<void> PluginEvents;
+        /// <summary>
+        /// (a plugin's `UnityRenderingExtQuery`, the query): asks it, with the plugins' graphics
+        /// context current; its answer.
+        /// </summary>
+        internal delegate* unmanaged<void*, int, int> PluginQuery;
     }
 }

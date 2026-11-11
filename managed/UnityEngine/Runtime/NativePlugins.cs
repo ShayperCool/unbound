@@ -40,6 +40,7 @@ namespace Unbound.Runtime
         /// <summary>The loaded plugins' <c>UnityRenderingExtQuery</c> exports, replaced whole when
         /// a plugin loads (read by every camera render, without the lock).</summary>
         static volatile IntPtr[] s_Queries = Array.Empty<IntPtr>();
+        static bool s_WarnedOverride;
 
         /// <summary>A native library was loaded (by its first call or by preloading): its
         /// <c>UnityPluginLoad</c> runs once.</summary>
@@ -52,9 +53,9 @@ namespace Unbound.Runtime
                 s_Loaded.Add(library);
                 s_AnyLoaded = true;
             }
-            // UnityRenderingExtEvent is not called: its events of the Editor's own are stereo
-            // rendering's, and the Editor sends none without XR (tests/projects/nativegfx
-            // ext.events).
+            // UnityRenderingExtEvent is not called: the Editor sent it nothing of its own
+            // accord in the measured run (tests/projects/nativegfx ext.sequence: one forward
+            // camera, no XR).
             if (NativeLibrary.TryGetExport(library, "UnityRenderingExtQuery", out var query))
             {
                 lock (s_Loaded)
@@ -83,26 +84,42 @@ namespace Unbound.Runtime
         /// <summary>While a camera renders, the Editor asks every loaded plugin that exports
         /// <c>UnityRenderingExtQuery</c> whether it overrides single-pass stereo
         /// (<c>kUnityRenderingExtQueryOverrideVRSinglePass</c>), on the main thread with the
-        /// plugins' context: <paramref name="times"/> times here (the built-in pipeline's camera
-        /// asks three times after OnPreRender, once before OnPostRender and once after:
-        /// tests/projects/nativegfx <c>ext.sequence</c>). The answers are not used: there is no
-        /// XR. They go with the other plugin callbacks, in stream order.</summary>
+        /// graphics context current: <paramref name="times"/> times here. Measured on one
+        /// built-in pipeline forward camera without XR, shadows or image effects: three times
+        /// after OnPreRender, once before OnPostRender and once after
+        /// (tests/projects/nativegfx <c>ext.sequence</c>, <c>ext.preload</c>). A plugin that says
+        /// it does (the probe's preloaded one) changes nothing there; here the answer has no
+        /// use, which is logged once: there is no XR.</summary>
         internal static void QueryStereoOverride(int times)
         {
             var queries = s_Queries;
-            if (queries.Length == 0) return;
+            if (queries.Length == 0 || !Native.IsReady) return;
             for (int i = 0; i < times; i++)
+            {
                 foreach (var query in queries)
-                    GfxStream.PluginEvent(query, QueryOverrideVRSinglePass);
+                {
+                    if (Native.Api.PluginQuery((void*)query, QueryOverrideVRSinglePass) == 0 || s_WarnedOverride) continue;
+                    s_WarnedOverride = true;
+                    Native.Log(2, "a native plugin answers UnityRenderingExtQuery that it overrides single-pass stereo rendering: Unbound has no XR, the answer changes nothing");
+                }
+            }
         }
 
         /// <summary>A frame ended (the player loop's <c>ProfilerEndFrame</c>): the plugins'
-        /// profiler frame callbacks, then the events they sent through the event queue, as the
-        /// Editor calls them between the scripts of two frames (tests/projects/nativegfx
-        /// <c>profiler.frames</c>, <c>events.*</c>).</summary>
+        /// profiler frame callbacks, as the Editor calls them after a frame's scripts
+        /// (tests/projects/nativegfx <c>frames.sequence</c>).</summary>
         internal static void EndFrame()
         {
             if (s_AnyLoaded && Native.IsReady) Native.Api.PluginFrame();
+        }
+
+        /// <summary>A frame began (the player loop's <c>DispatchEventQueueEvents</c>): the
+        /// events plugins sent through the event queue reach their handlers
+        /// (tests/projects/nativegfx <c>frames.sequence</c>: in the frame after the one they
+        /// were sent in).</summary>
+        internal static void DispatchEvents()
+        {
+            if (s_AnyLoaded && Native.IsReady) Native.Api.PluginEvents();
         }
 
         /// <summary>The application ends: the plugins' device Shutdown events.</summary>

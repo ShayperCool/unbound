@@ -294,6 +294,8 @@ pub fn provide(guid: Guid, interface: usize) {
 
 /// The `IUnityInterfaces` a plugin's `UnityPluginLoad` receives.
 pub fn interfaces() -> *const IUnityInterfaces {
+    // Plugins load on the main thread: the profiler reports it as such.
+    callbacks::on_main_thread();
     &INTERFACES
 }
 
@@ -364,16 +366,16 @@ pub fn send_device_event(event: i32) {
     }
 }
 
-/// A frame ended (the main thread, between the scripts of two frames): the profiler's frame
-/// callbacks, then the events plugins sent through `IUnityEventQueue`.
+/// A frame ended (the main thread): the profiler's frame callbacks. They run without the
+/// plugins' graphics context: a callback may call back into the engine.
 pub fn frame() {
     callbacks::frame();
-    events::dispatch();
 }
 
-/// Whether [`frame`] has anything to call: a frame callback, or an event that waits.
-pub fn frame_pending() -> bool {
-    callbacks::hears_frames() || events::waiting()
+/// A frame began (the main thread): the events plugins sent through `IUnityEventQueue`, like
+/// [`frame`] without the plugins' graphics context.
+pub fn dispatch_events() {
+    events::dispatch();
 }
 
 /// What the application's end sends plugins: the device's Shutdown event twice, as the Unity
@@ -886,12 +888,12 @@ mod tests {
         assert_eq!((v1.unregister_create_thread)(Some(on_thread), user(104)), 0);
         // Frames: once for each frame; unregistering answers 0 whatever was registered.
         assert_eq!((v1.register_frame)(Some(on_frame), user(105)), 0);
-        frame();
-        frame();
+        callbacks::frame();
+        callbacks::frame();
         assert_eq!(heard(105).len(), 2);
         assert_eq!((v1.unregister_frame)(Some(on_frame), user(105)), 0);
         assert_eq!((v1.unregister_frame)(Some(on_frame), user(105)), 0);
-        frame();
+        callbacks::frame();
         assert_eq!(heard(105).len(), 2);
         // Flow events register; a null callback is refused.
         extern "C" fn on_flow(_: u8, _: u32, _: *mut c_void) {}
@@ -906,6 +908,48 @@ mod tests {
         );
         assert_eq!((v1.unregister_create_thread)(Some(on_thread), user(104)), 0);
         assert_eq!((v1.register_frame)(None, user(107)), -1);
+        // A marker event callback is unregistered without naming the marker: with its user
+        // data, then at all.
+        let mut other = std::ptr::null();
+        (PROFILER.create_marker)(&mut other, c"Tested.Other".as_ptr(), category, 0, 0);
+        (v1.register_marker_event)(marker, Some(on_event), user(108));
+        (v1.register_marker_event)(other, Some(on_event), user(108));
+        (v1.register_marker_event)(other, Some(on_event), user(109));
+        assert_eq!(
+            (v1.unregister_marker_event)(std::ptr::null(), Some(on_event), user(108)),
+            0
+        );
+        assert!(unsafe { (*marker).callback.is_null() });
+        assert!(!unsafe { (*other).callback.is_null() });
+        (PROFILER.emit_event)(marker, 0, 0, std::ptr::null());
+        (PROFILER.emit_event)(other, 0, 0, std::ptr::null());
+        assert!(heard(108).is_empty());
+        assert_eq!(heard(109), ["Tested.Other 0 0"]);
+        let all = |user| (v1.unregister_marker_event)(std::ptr::null(), Some(on_event), user);
+        assert_eq!(all(std::ptr::null_mut()), 0);
+        assert!(unsafe { (*other).callback.is_null() });
+        assert_eq!(all(std::ptr::null_mut()), -1);
+        // Four category callbacks and four marker callbacks at a time.
+        // (One address each: a small function may have a copy wherever it is named.)
+        extern "C" fn no_category(_: *const callbacks::CategoryDesc, _: *mut c_void) {}
+        extern "C" fn no_marker(_: *const MarkerDesc, _: *mut c_void) {}
+        let idle_category: extern "C" fn(*const callbacks::CategoryDesc, *mut c_void) = no_category;
+        let idle_marker: extern "C" fn(*const MarkerDesc, *mut c_void) = no_marker;
+        let categories: Vec<i32> = (110..115)
+            .map(|n| (v1.register_create_category)(Some(idle_category), user(n)))
+            .collect();
+        assert_eq!(categories, [0, 0, 0, 0, -1]);
+        let markers: Vec<i32> = (110..115)
+            .map(|n| (v1.register_create_marker)(Some(idle_marker), user(n)))
+            .collect();
+        assert_eq!(markers, [0, 0, 0, 0, -1]);
+        for n in 110..114 {
+            assert_eq!(
+                (v1.unregister_create_category)(Some(idle_category), user(n)),
+                0
+            );
+            assert_eq!((v1.unregister_create_marker)(Some(idle_marker), user(n)), 0);
+        }
     }
 
     #[test]

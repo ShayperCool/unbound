@@ -195,6 +195,7 @@ namespace Unbound.Runtime
             Register(typeof(PL.PostLateUpdate.PlayerSendFrameComplete), Destruction.FlushEndOfFrame);
             Register(typeof(PL.PostLateUpdate.InputEndFrame), Input.EndFrame);
             Register(typeof(PL.PostLateUpdate.ProfilerEndFrame), Unbound.Runtime.NativePlugins.EndFrame);
+            Register(typeof(PL.EarlyUpdate.DispatchEventQueueEvents), Unbound.Runtime.NativePlugins.DispatchEvents);
             // Camera callbacks, OnGUI and WaitForEndOfFrame read the count of the frames before
             // this one, and the next Update reads it advanced; it advances on skipped frames too
             // (measured: tests/projects/coreapis). GUIClearEvents is the first node after the
