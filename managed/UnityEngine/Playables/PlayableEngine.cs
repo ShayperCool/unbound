@@ -197,8 +197,10 @@ namespace Unbound.Runtime.Playables
     /// <item>Passthrough playables lead an output that comes in through output port i to input i only.</item>
     /// <item>Notifications pushed on an output are delivered receiver by receiver: after its process
     /// pass in an Evaluate, in PreLateUpdate.DirectorDeferredEvaluate when the player loop plays it.</item>
-    /// <item>Stop and Play take effect in the next DirectorUpdate; Destroy at the next Director
-    /// system (DirectorUpdate, DirectorLateUpdate) or director evaluation.</item>
+    /// <item>Stop and Play take effect in the next DirectorUpdate, a Play on an automatic clock
+    /// also at a PlayableDirector's evaluation before it (<see cref="PlayableGraphData.StartPlayedGraphs"/>);
+    /// Destroy at the next Director system (DirectorUpdate, DirectorLateUpdate) or director
+    /// evaluation.</item>
     /// <item>Wrap modes at the duration: None clamps and reports done after the evaluation, Hold
     /// clamps and reports the time held, Loop wraps and reports the loop.</item>
     /// </list>
@@ -534,6 +536,7 @@ namespace Unbound.Runtime.Playables
             Playing = true;
             PendingStop = false;
             PendingStart = true;
+            s_StartsWaiting = true;
             Stopped = false;
             s_Playing.Remove(this);
             s_Playing.Add(this);
@@ -1186,24 +1189,28 @@ namespace Unbound.Runtime.Playables
             StartPass();
         }
 
-        /// <summary>The play-state changes waiting since the last pass, of every graph: the stop
-        /// pass of stopped graphs, then the start pass of played graphs on an automatic clock.
-        /// DirectorUpdate begins with it, and so does a PlayableDirector's Evaluate: the graphs
-        /// played before it, directors' and plain ones, get OnGraphStart and OnBehaviourPlay
-        /// there and not at the next DirectorUpdate (6000.0.71f1, tests/projects/animstartup
-        /// director profile: */play, */awake and */graph are started in the Update snapshot
-        /// that follows another director's Evaluate; a graph on a manual clock is not,
-        /// */manual; the stops and PlayableGraph.Evaluate are unmeasured).</summary>
-        internal static void ProcessPlayStateChanges()
+        /// <summary>A graph was played since the last <see cref="StartPlayedGraphs"/>.</summary>
+        static bool s_StartsWaiting;
+
+        /// <summary>The start pass of every graph on an automatic clock that was played and has
+        /// not started yet, but <paramref name="evaluated"/>, which starts in its own evaluation.
+        /// A PlayableDirector's Evaluate runs it first: the graphs played before it, other
+        /// directors' and plain ones, get OnGraphStart and OnBehaviourPlay there and not at the
+        /// next DirectorUpdate (6000.0.71f1, tests/projects/animstartup director profile:
+        /// */play, */awake and */graph are started in the Update snapshot that follows another
+        /// director's Evaluate; a graph on a manual clock is not, */manual). Waiting stops stay
+        /// for the DirectorUpdate; they, PlayableGraph.Evaluate and DeferredEvaluate as the
+        /// trigger, and the FrameData of the evaluated director's own OnBehaviourPlay are
+        /// unmeasured.</summary>
+        internal static void StartPlayedGraphs(PlayableGraphData evaluated)
         {
-            var graphs = Scratch<PlayableGraphData>.Rent(s_Graphs);
+            if (!s_StartsWaiting) return;
+            s_StartsWaiting = false;
+            var graphs = Scratch<PlayableGraphData>.Rent(s_Playing);
             try
             {
-                foreach (var g in graphs) g.RunPendingStop();
-                graphs.Clear();
-                graphs.AddRange(s_Playing);
                 foreach (var g in graphs)
-                    if (g.OnAutomaticClock) g.RunPendingStart();
+                    if (g != evaluated && g.OnAutomaticClock) g.RunPendingStart();
             }
             finally
             {

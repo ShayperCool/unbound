@@ -67,12 +67,14 @@ namespace UnityEngine.Tests
 
         sealed class Counting : PlayableBehaviour
         {
-            public int Starts, Plays, Prepares;
+            public int Starts, Plays, Pauses, Prepares;
             public float Delta = -1f;
 
             public override void OnGraphStart(Playable playable) => Starts++;
 
             public override void OnBehaviourPlay(Playable playable, FrameData info) => Plays++;
+
+            public override void OnBehaviourPause(Playable playable, FrameData info) => Pauses++;
 
             public override void PrepareFrame(Playable playable, FrameData info)
             {
@@ -160,12 +162,47 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A stop waiting on a director is not delivered by another director's Evaluate:
+        /// the paused director's behaviour gets OnBehaviourPause at the director update, as
+        /// before (Unbound's choice; what the Editor does with a waiting stop there is
+        /// unmeasured). Control: the Evaluate still starts the director played before it.</summary>
+        [Fact]
+        public void ADirectorsEvaluateLeavesWaitingStopsToTheDirectorUpdate()
+        {
+            var created = new List<Object>();
+            try
+            {
+                var paused = Director(created);
+                paused.Play();
+                Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                var counts = CountsOf(paused.playableGraph);
+                Assert.Equal(1, counts.Plays);
+                paused.Pause();
+                int pauses = counts.Pauses;
+                var played = Director(created);
+                played.Play();
+                var evaluated = Director(created);
+                evaluated.Evaluate();
+                Assert.Equal(1, CountsOf(played.playableGraph).Starts);
+                Assert.Equal(pauses, counts.Pauses);
+                Assert.Equal(1, counts.Plays);
+                Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                Assert.Equal(pauses + 1, counts.Pauses);
+                Assert.Equal(1, counts.Plays);
+            }
+            finally
+            {
+                foreach (var o in created) Object.DestroyImmediate(o);
+            }
+        }
+
         /// <summary>A PlayableDirector's Evaluate delivers the starts waiting on every graph on an
         /// automatic clock, other directors' and plain graphs': OnGraphStart and OnBehaviourPlay
         /// come there, once, and not at the next director update (6000.0.71f1,
         /// tests/projects/animstartup director profile, */play, */graph; the Scripting API's
         /// Evaluate page speaks of the director's own graph only). Controls: nothing is started
-        /// before the Evaluate, and a director on a manual clock is not started by it.</summary>
+        /// before the Evaluate, a director on a manual clock is not started by it, and a graph
+        /// played after it starts at the director update (*/unscaled of the later groups).</summary>
         [Fact]
         public void ADirectorsEvaluateStartsTheGraphsPlayedBeforeIt()
         {
@@ -194,8 +231,12 @@ namespace UnityEngine.Tests
                 Assert.Equal(0, CountsOf(played.playableGraph).Prepares);
                 Assert.Equal(1, CountsOf(evaluated.playableGraph).Prepares);
                 Assert.Equal(0, CountsOf(manual.playableGraph).Starts);
+                var late = Director(created);
+                late.Play();
+                Assert.Equal(0, CountsOf(late.playableGraph).Starts);
 
                 Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                Assert.Equal(1, CountsOf(late.playableGraph).Starts);
                 Assert.Equal(1, CountsOf(played.playableGraph).Starts);
                 Assert.Equal(1, CountsOf(plain).Plays);
                 Assert.Equal(1, CountsOf(played.playableGraph).Prepares);

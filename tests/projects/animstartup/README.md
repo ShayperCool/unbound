@@ -74,8 +74,15 @@ that it instantiates a playable and starts playback, of
 [initialTime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableDirector-initialTime.html)
 that it is the time at which the playable should start when first played, and of
 [Evaluate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableDirector.Evaluate.html)
-that it immediately evaluates the director's graph at its time. None of them promises a
-first-frame interval or says when another graph's start callbacks run.
+that it immediately evaluates the director's graph at its time. The Manual's
+[PlayableGraph](https://docs.unity3d.com/6000.0/Documentation/Manual/Playables-Graph.html)
+page names Play, Stop and Evaluate without any timing.
+[OnGraphStart](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableBehaviour.OnGraphStart.html)
+"is called when the graph starts playing, or on the first invocation of
+PlayableGraph.Evaluate", and
+[OnBehaviourPlay](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableBehaviour.OnBehaviourPlay.html)
+when the playable's play state changes to Playing. None of them promises a first-frame
+interval or says in which phase another graph's start callbacks run.
 
 | Question | Measured observation (6000.0.71f1 Editor Play mode) |
 | --- | --- |
@@ -86,7 +93,8 @@ first-frame interval or says when another graph's start callbacks run.
 | Manual clock | A played director on a manual clock is never started or prepared by the loop or by another director's `Evaluate`. |
 
 Not measured: DSP-clock directors, scene-authored directors, stops waiting when a director
-evaluates, `PlayableGraph.Evaluate` as the trigger, and Timeline assets.
+evaluates, `PlayableGraph.Evaluate` and `DeferredEvaluate` as the trigger, the FrameData of
+the evaluated director's own OnBehaviourPlay, and Timeline assets.
 
 Unmeasured: other releases, standalone player startup, custom PlayerLoop replacements,
 scene loads after entry, and creation inside animation callbacks. Explicit playable
