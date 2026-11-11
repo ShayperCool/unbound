@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unbound.Runtime;
 using Unbound.Tests;
 using UnityEngine;
@@ -62,6 +63,148 @@ namespace UnityEngine.Tests
 
         sealed class Idle : PlayableBehaviour
         {
+        }
+
+        sealed class Counting : PlayableBehaviour
+        {
+            public int Starts, Plays, Prepares;
+            public float Delta = -1f;
+
+            public override void OnGraphStart(Playable playable) => Starts++;
+
+            public override void OnBehaviourPlay(Playable playable, FrameData info) => Plays++;
+
+            public override void PrepareFrame(Playable playable, FrameData info)
+            {
+                Prepares++;
+                Delta = info.deltaTime;
+            }
+        }
+
+        sealed class CountingAsset : PlayableAsset
+        {
+            public override double duration => 10.0;
+
+            public override Playable CreatePlayable(PlayableGraph graph, GameObject owner) => Counted(graph);
+        }
+
+        static Playable Counted(PlayableGraph graph)
+        {
+            var playable = ScriptPlayable<Counting>.Create(graph);
+            ScriptPlayableOutput.Create(graph, "out").SetSourcePlayable(playable);
+            return playable;
+        }
+
+        static Counting CountsOf(PlayableGraph graph) => ((ScriptPlayable<Counting>)graph.GetRootPlayable(0)).GetBehaviour();
+
+        static PlayableDirector Director(List<Object> created, DirectorUpdateMode mode = DirectorUpdateMode.GameTime)
+        {
+            var go = new GameObject("director");
+            created.Add(go);
+            var asset = ScriptableObject.CreateInstance<CountingAsset>();
+            created.Add(asset);
+            var director = go.AddComponent<PlayableDirector>();
+            director.playOnAwake = false;
+            director.extrapolationMode = DirectorWrapMode.Hold;
+            director.timeUpdateMode = mode;
+            director.playableAsset = asset;
+            return director;
+        }
+
+        /// <summary>A PlayableDirector's own clock at Play entry (6000.0.71f1,
+        /// tests/projects/animstartup director profile; the Scripting API's Play and initialTime
+        /// pages say only that playback starts, at initialTime when first played): its first
+        /// automatic update prepares at the time it was played at, with a zero frame delta at
+        /// entry and the frame's delta later, and the next one advances. Control: a plain graph
+        /// played after entry advances in its first update.</summary>
+        [Theory]
+        [InlineData(true, 0.0)]
+        [InlineData(true, 0.25)]
+        [InlineData(false, 0.0)]
+        [InlineData(false, 0.25)]
+        public void ADirectorsFirstUpdatePreparesAtTheTimeItWasPlayedAt(bool entry, double initialTime)
+        {
+            string version = ProjectInfo.UnityVersion;
+            float delta = Time.s_DeltaTime, unscaled = Time.s_UnscaledDeltaTime;
+            var created = new List<Object>();
+            var plain = PlayableGraph.Create("plain");
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                Time.s_DeltaTime = Time.s_UnscaledDeltaTime = .02f;
+                if (entry) AnimationSystem.BeginPlayMode();
+                var director = Director(created);
+                director.initialTime = initialTime;
+                director.Play();
+                plain.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+                var plainRoot = Counted(plain);
+                plain.Play();
+                Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                Assert.Equal(initialTime, director.time);
+                var counts = CountsOf(director.playableGraph);
+                Assert.Equal(1, counts.Prepares);
+                Assert.Equal(entry ? 0f : .02f, counts.Delta);
+                Assert.Equal(entry ? 0.0 : .02, plainRoot.GetTime(), 6);
+                AnimationSystem.EndPlayModeEntry();
+                Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                Assert.Equal(initialTime + .02, director.time, 6);
+            }
+            finally
+            {
+                AnimationSystem.EndPlayModeEntry();
+                plain.Destroy();
+                foreach (var o in created) Object.DestroyImmediate(o);
+                Time.s_DeltaTime = delta;
+                Time.s_UnscaledDeltaTime = unscaled;
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
+        /// <summary>A PlayableDirector's Evaluate delivers the starts waiting on every graph on an
+        /// automatic clock, other directors' and plain graphs': OnGraphStart and OnBehaviourPlay
+        /// come there, once, and not at the next director update (6000.0.71f1,
+        /// tests/projects/animstartup director profile, */play, */graph; the Scripting API's
+        /// Evaluate page speaks of the director's own graph only). Controls: nothing is started
+        /// before the Evaluate, and a director on a manual clock is not started by it.</summary>
+        [Fact]
+        public void ADirectorsEvaluateStartsTheGraphsPlayedBeforeIt()
+        {
+            var created = new List<Object>();
+            var plain = PlayableGraph.Create("plain");
+            try
+            {
+                var played = Director(created);
+                played.Play();
+                var manual = Director(created, DirectorUpdateMode.Manual);
+                manual.Play();
+                plain.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+                Counted(plain);
+                plain.Play();
+                var evaluated = Director(created);
+                evaluated.Play();
+                Assert.Equal(0, CountsOf(played.playableGraph).Starts);
+                Assert.Equal(0, CountsOf(plain).Starts);
+
+                evaluated.Evaluate();
+                foreach (var counts in new[] { CountsOf(played.playableGraph), CountsOf(plain), CountsOf(evaluated.playableGraph) })
+                {
+                    Assert.Equal(1, counts.Starts);
+                    Assert.Equal(1, counts.Plays);
+                }
+                Assert.Equal(0, CountsOf(played.playableGraph).Prepares);
+                Assert.Equal(1, CountsOf(evaluated.playableGraph).Prepares);
+                Assert.Equal(0, CountsOf(manual.playableGraph).Starts);
+
+                Unbound.Runtime.Playables.PlayableGraphData.UpdateAll();
+                Assert.Equal(1, CountsOf(played.playableGraph).Starts);
+                Assert.Equal(1, CountsOf(plain).Plays);
+                Assert.Equal(1, CountsOf(played.playableGraph).Prepares);
+            }
+            finally
+            {
+                plain.Destroy();
+                foreach (var o in created) Object.DestroyImmediate(o);
+            }
         }
 
         /// <summary>Play entry's zero interval belongs to the frame, not to animation: a graph of

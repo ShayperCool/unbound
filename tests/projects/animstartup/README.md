@@ -56,6 +56,38 @@ establish startup behavior in other releases or player builds.
 | BeforeSceneLoad integration | Unity keeps rigs constructed by this callback. Unbound previously created them in an outgoing bootstrap scene and destroyed them on the first Single load. The callback now runs after scene objects are loaded, before their Awake, as the runtime initialization API documents. |
 
 
+## PlayableDirector (profile `director`)
+
+`AnimStartupDirectorProbe` records PlayableDirectors over a playable asset of one script
+playable with a script output (897 records, two Native captures agree byte for byte). In
+BeforeSceneLoad, AfterSceneLoad, Start, the first, the second and a later Update it creates a
+director that is played, one that plays on awake, one played from `initialTime` 0.25, one
+played and moved to 0.25, one played and evaluated, one on unscaled game time and one on a
+manual clock, and beside them a plain game-time graph of the same playable. Each snapshot has
+the director's time and state, the root playable's time, the behaviour's OnGraphStart,
+OnBehaviourPlay, PrepareFrame and ProcessFrame counts and its last prepared frame (delta time,
+playable time, evaluation type; of the unscaled control's wall-clock delta only the sign).
+
+The Scripting API for 6000.0 says of
+[PlayableDirector.Play](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableDirector.Play.html)
+that it instantiates a playable and starts playback, of
+[initialTime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableDirector-initialTime.html)
+that it is the time at which the playable should start when first played, and of
+[Evaluate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableDirector.Evaluate.html)
+that it immediately evaluates the director's graph at its time. None of them promises a
+first-frame interval or says when another graph's start callbacks run.
+
+| Question | Measured observation (6000.0.71f1 Editor Play mode) |
+| --- | --- |
+| Does a director's own clock take the entry interval? | Yes. Played in any entry context (up to the first Update), its first update prepares with a zero frame delta at the time it was played at (0, the initial time or the time it was moved to); from the next frame it advances by the frame's delta. The unscaled-time director does the same. |
+| A director played after entry | Its first update still prepares at the time it was played at, now with the frame's delta; the time advances from the next frame. The plain graph played in the same Update advances in its first update. |
+| Evaluate after Play | The explicit evaluation is the director's first one (delta 0, evaluation type Evaluate); the automatic update of the same frame then adds zero time at entry and the frame's delta after it. |
+| Start callbacks of other graphs | A director's `Evaluate` delivers OnGraphStart and OnBehaviourPlay of every director and plain graph played before it on an automatic clock: they are counted in the Update snapshot that follows it, before any director update. Graphs played after it start at the director update. |
+| Manual clock | A played director on a manual clock is never started or prepared by the loop or by another director's `Evaluate`. |
+
+Not measured: DSP-clock directors, scene-authored directors, stops waiting when a director
+evaluates, `PlayableGraph.Evaluate` as the trigger, and Timeline assets.
+
 Unmeasured: other releases, standalone player startup, custom PlayerLoop replacements,
 scene loads after entry, and creation inside animation callbacks. Explicit playable
 Graph.Evaluate, controller playables, shared graph nodes, fractional output weights
