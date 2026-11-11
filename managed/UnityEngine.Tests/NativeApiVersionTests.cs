@@ -16,7 +16,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheVersionIncludesCachedDisplayAndImeFrameVersions()
         {
-            Assert.Equal(55u, NativeApi.CurrentVersion);
+            Assert.Equal(56u, NativeApi.CurrentVersion);
             Assert.Equal(5, AudioCallbackKind.PrepareRenderBuffer);
             Assert.Equal(6, AudioCallbackKind.RenderBufferScope);
             Assert.Equal(7, AudioCallbackKind.ReleaseRenderBuffers);
@@ -65,6 +65,12 @@ namespace UnityEngine.Tests
         [InlineData(47u)]
         [InlineData(48u)]
         [InlineData(49u)]
+        [InlineData(50u)]
+        [InlineData(51u)]
+        [InlineData(52u)]
+        [InlineData(53u)]
+        [InlineData(54u)]
+        [InlineData(55u)]
         [InlineData(NativeApi.CurrentVersion + 1)]
         public void AnotherNativeVersionIsRejectedBeforeInstalling(uint version)
         {

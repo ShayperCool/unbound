@@ -176,10 +176,7 @@ unsafe fn decode_descriptors(
             f.kind
         );
         anyhow::ensure!(
-            matches!(
-                f.stage,
-                filter_stage::BEFORE_SCRIPTS | filter_stage::AFTER_SCRIPTS
-            ),
+            f.stage & !(filter_stage::AFTER_SCRIPTS | filter_stage::BYPASSED) == 0,
             "invalid AudioSource filter stage {}",
             f.stage
         );
@@ -225,7 +222,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
             _ => "Echo",
         }
         .into(),
-        bypass: false,
+        bypass: d.stage & filter_stage::BYPASSED != 0,
         gain: 0.0,
         gain_immediate: false,
         gain_ramp_measured: false,
@@ -355,7 +352,7 @@ impl FilterChain {
             chain.push(SourceFilter {
                 id: d.id,
                 kind: d.kind,
-                stage: d.stage,
+                stage: d.stage & !filter_stage::BYPASSED,
                 effect,
             });
         }
@@ -656,6 +653,8 @@ pub struct Source {
     bypass_extra: Vec<f32>,
     /// The mixer frame up to which the components still run after the last voice ended.
     chain_tail: Option<u64>,
+    /// Explicit Stop freezes component histories until playback resumes.
+    components_stopped: bool,
 }
 
 impl Source {
@@ -1759,6 +1758,7 @@ impl Mixer {
                     return true;
                 }
                 source.played = true;
+                source.components_stopped = false;
                 source.filter_paused = false;
                 source.completed_main = None;
                 let clip_handle = source.params.clip;
@@ -1818,9 +1818,10 @@ impl Mixer {
                 // A generator played again ramps its source gain up from silence. Unity
                 // 6000.0.71f1, tests/projects/audiodistortion script_generator_quiet_restart.
                 source.generator_gain = None;
-                // Components keep their state through Stop; an idle source resets them when it
-                // next renders unless Play follows in the same update. Unity 6000.0.71f1,
-                // tests/projects/audiodistortion script3d_live_bypass_restart.
+                // Explicit Stop freezes histories even across idle buffers. Natural completion
+                // still cuts the tail and clears them. Unity 6000.0.71f1,
+                // tests/projects/audiodistortion component_lifecycle controls.
+                source.components_stopped = source.params.has(source_flags::COMPONENT_HISTORY);
                 source.chain_tail = None;
             }
             command::RESET_COMPONENTS => {
@@ -1847,6 +1848,7 @@ impl Mixer {
                 source.one_shots.iter_mut().for_each(|v| v.paused = false);
             }
             command::PLAY_ONE_SHOT => {
+                source.components_stopped = false;
                 let Some(clip) = clips.get(&cmd.clip) else {
                     return false;
                 };
@@ -2336,7 +2338,9 @@ impl Mixer {
             let tail = !has_voices && source.chain_tail.is_some_and(|end| t0 < end);
             if !has_voices && !tail && !(filter && source.filter_started) {
                 source.chain_tail = None;
-                source.reset_chains();
+                if !source.components_stopped {
+                    source.reset_chains();
+                }
                 continue;
             }
             if listener_paused && flags & source_flags::IGNORE_LISTENER_PAUSE == 0 {
@@ -6396,6 +6400,95 @@ mod tests {
         assert_eq!(out, first);
     }
 
+    #[test]
+    fn explicit_stop_freezes_component_histories_across_idle_device_periods() {
+        for rate in [44100, 48000] {
+            for shot in [false, true] {
+                let run = |idle_period: usize| {
+                    let mut m = Mixer::new(MixerConfig {
+                        sample_rate: rate,
+                        ..Default::default()
+                    });
+                    let mut clip = stereo_tone(16384);
+                    clip.rate = rate;
+                    m.add_clip(1, clip);
+                    source_with(&mut m, 7, 1, |p| {
+                        p.flags = source_flags::COMPONENT_HISTORY;
+                        p.filters = components();
+                    });
+                    let start = |m: &mut Mixer| {
+                        if shot {
+                            m.command(
+                                7,
+                                &AudioSourceCommand {
+                                    kind: command::PLAY_ONE_SHOT,
+                                    clip: 1,
+                                    volume_scale: 1.0,
+                                    ..Default::default()
+                                },
+                            );
+                        } else {
+                            play(m, 7, command::PLAY, 0.0);
+                        }
+                    };
+                    start(&mut m);
+                    m.render(&mut vec![0.0; 4096 * 2], 2);
+                    play(&mut m, 7, command::STOP, 0.0);
+                    if idle_period > 0 {
+                        let mut idle = vec![1.0; idle_period * 2];
+                        for _ in 0..7 {
+                            m.render(&mut idle, 2);
+                            assert!(idle.iter().all(|v| *v == 0.0));
+                        }
+                    }
+                    start(&mut m);
+                    let mut replay = vec![0.0; 2048 * 2];
+                    m.render(&mut replay, 2);
+                    replay
+                };
+                let immediate = run(0);
+                for period in [100, 257, 1024, 1300] {
+                    assert_eq!(
+                        run(period),
+                        immediate,
+                        "rate={rate} shot={shot} period={period}"
+                    );
+                }
+                let mut fresh_clip = stereo_tone(16384);
+                fresh_clip.rate = rate;
+                let fresh = render_source(&components(), 0, fresh_clip, 2048);
+                assert_ne!(immediate, fresh);
+            }
+        }
+    }
+
+    #[test]
+    fn disabled_component_freezes_history_while_other_units_continue() {
+        let mut descriptors = components();
+        let mut paused = FilterChain::default();
+        let mut expected = FilterChain::default();
+        for chain in [&mut paused, &mut expected] {
+            chain.apply(&descriptors, 48000, 1024, true).unwrap();
+        }
+        let mut a = stereo_tone(4096).samples;
+        let mut b = a.clone();
+        paused.process(&mut a[..2048], None, false);
+        expected.process(&mut b[..2048], None, false);
+        descriptors[2].stage |= filter_stage::BYPASSED;
+        paused.apply(&descriptors, 48000, 1024, true).unwrap();
+        paused.process(&mut a[2048..4096], None, false);
+        // Only the Echo is bypassed. The two preceding filters keep processing.
+        for filter in &mut expected.filters[..2] {
+            filter.effect.process(&mut b[2048..4096], false);
+        }
+        assert_eq!(a[..4096], b[..4096]);
+        descriptors[2].stage &= !filter_stage::BYPASSED;
+        paused.apply(&descriptors, 48000, 1024, true).unwrap();
+        paused.process(&mut a[4096..], None, false);
+        expected.process(&mut b[4096..], None, false);
+        assert_eq!(a, b);
+    }
+
     fn impulse_clip(frames: usize) -> Clip {
         // After the voice's start ramp.
         let mut samples = vec![0.0; frames * 2];
@@ -7128,7 +7221,7 @@ mod tests {
                 .len(),
             1
         );
-        assert!(refused(&packet(1, 0, &[component(1, filter_kind::ECHO, 2)])).contains("stage"));
+        assert!(refused(&packet(1, 0, &[component(1, filter_kind::ECHO, 4)])).contains("stage"));
         let mut reverb = component(1, filter_kind::REVERB, 0);
         reverb.reverb[3] = f32::NAN;
         assert!(refused(&packet(1, 0, &[reverb])).contains("finite"));

@@ -208,10 +208,9 @@ namespace Unbound.Runtime
         /// inverse-source-velocity Doppler and max-distance clamp until measured.</summary>
         internal static bool AudioSpatialStereoMeasured => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>A live bypassEffects change deactivates the source's filter components and the
-        /// first one after a clip starts playing reconnects the chain, measured by the
-        /// tests/projects/audiodistortion spatial-script live bypass controls on 6000.0.71f1.
-        /// Other releases keep components frozen on the source's bypass flag.</summary>
+        /// <summary>Source/listener bypass activation, retained disabled units and source chain
+        /// reconnection measured by tests/projects/audiodistortion live controls on
+        /// 6000.0.71f1. Other releases keep the previous bypass and disabled-unit behavior.</summary>
         internal static bool AudioComponentActivationMeasured => Release == (6000, 0, 71, 'f', 1);
 
         // Per-voice zone send placement and completion (tests/projects/audioreverb).

@@ -443,15 +443,17 @@ namespace Unbound.Runtime
         // before it. A bypassEffects change sets the components' activation from it. The first
         // such change after a clip starts playing also reconnects the chain: every component
         // restarts empty and the last unit in Inspector order stays active, processing silence
-        // while the source is bypassed. bypassListenerEffects and component enable changes
-        // during playback are unmeasured and do not change activation; a disabled component
-        // leaves the chain, so the unit that is last can change (also unmeasured).
+        // while the source is bypassed. Listener-bypass changes share that reconnection;
+        // enable changes bypass only that unit and freeze its history. Membership changes
+        // restart every surviving unit. See the live component_lifecycle session.
         static void UpdateActivation(AudioSource source, ulong identity)
         {
             bool change = source.m_ActivationPending;
             if (identity != source.m_FilterIdentity)
             {
                 source.m_FilterIdentity = identity;
+                if (Compat.AudioComponentActivationMeasured && source.m_HasAudioFrame)
+                    source.m_ResetComponents = true;
                 source.m_ReconnectionPending = true;
             }
             if (source.m_ReconnectionPending)
@@ -523,6 +525,23 @@ namespace Unbound.Runtime
             return ((AudioEchoFilter)component).Describe(out descriptor);
         }
 
+        // Disabled units use their last accepted parameters. This also defers validation
+        // of edits made while disabled until the component can actually process them.
+        static bool DescribeRetained(Component component, bool active, AudioFilterDescriptor[] table, out AudioFilterDescriptor descriptor)
+        {
+            if (active) return Describe(component, out descriptor);
+            ulong id = unchecked((ulong)(long)component.GetInstanceID());
+            if (table != null)
+                foreach (var previous in table)
+                    if (previous.Id == id)
+                    {
+                        descriptor = previous;
+                        return true;
+                    }
+            descriptor = default;
+            return false;
+        }
+
         /// <summary>
         /// Fills <paramref name="table"/> with the enabled filter components of the source's
         /// GameObject in component order, each placed above or below its OnAudioFilterRead scripts,
@@ -552,8 +571,9 @@ namespace Unbound.Runtime
                 var behaviour = (Behaviour)c;
                 if (behaviour.m_Destroyed) continue;
                 identity = unchecked(identity * 1000003 + (ulong)(long)c.GetInstanceID());
-                if (!behaviour.isActiveAndEnabled) continue;
-                bool ok = Describe(c, out var d);
+                bool active = behaviour.isActiveAndEnabled;
+                if (!active && !Compat.AudioComponentActivationMeasured) continue;
+                bool ok = DescribeRetained(c, active, table, out var d);
                 if (!ok) continue;
                 if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
                 if (spatial && (c is AudioDistortionFilter || c is AudioChorusFilter))
@@ -563,8 +583,9 @@ namespace Unbound.Runtime
                 }
                 d.Id = unchecked((ulong)(long)c.GetInstanceID());
                 d.Stage = scripts ? AudioFilterStage.AfterScripts : AudioFilterStage.BeforeScripts;
+                if (!active) d.Stage |= AudioFilterStage.Bypassed;
                 if (scripts) below = true;
-                else if (generator) error ??= "a filter component above the OnAudioFilterRead script that generates a clipless source is not supported";
+                else if (generator && active) error ??= "a filter component above the OnAudioFilterRead script that generates a clipless source is not supported";
                 if (count == AudioFilterDescriptor.MaxPerSource)
                 {
                     error ??= "more than " + AudioFilterDescriptor.MaxPerSource + " filter components on one source are not supported";
@@ -589,7 +610,10 @@ namespace Unbound.Runtime
             string error = null;
             foreach (var c in go.m_Components)
             {
-                if (!IsFilterComponent(c) || ((Behaviour)c).m_Destroyed || !((Behaviour)c).isActiveAndEnabled) continue;
+                if (!IsFilterComponent(c) || ((Behaviour)c).m_Destroyed) continue;
+                bool active = ((Behaviour)c).isActiveAndEnabled;
+                if (!active && !Compat.AudioComponentActivationMeasured) continue;
+                if (!DescribeRetained(c, active, table, out var d)) continue;
                 if (!Compat.AudioListenerChainMeasured && !(c is AudioReverbFilter))
                 {
                     error ??= c.GetType().Name + " on the AudioListener '" + go.m_Name + "' is not supported; it is not applied";
@@ -608,13 +632,13 @@ namespace Unbound.Runtime
                     break;
                 }
                 if (Unmeasured(c) is string unmeasured) { error ??= unmeasured; continue; }
-                if (!Describe(c, out var d)) continue;
                 if (count == AudioFilterDescriptor.MaxPerSource)
                 {
                     error ??= "more than " + AudioFilterDescriptor.MaxPerSource + " filter components on the AudioListener are not supported";
                     break;
                 }
                 d.Id = unchecked((ulong)(long)c.GetInstanceID());
+                d.Stage = active ? AudioFilterStage.BeforeScripts : AudioFilterStage.Bypassed;
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }

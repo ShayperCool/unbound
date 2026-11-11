@@ -375,7 +375,7 @@ namespace Unbound.Runtime
             {
                 var f = copy[i];
                 if (!AudioFilterKind.Supported(f.Kind)) return "unsupported filter kind " + f.Kind;
-                if (f.Stage != AudioFilterStage.BeforeScripts && f.Stage != AudioFilterStage.AfterScripts) return "invalid filter stage " + f.Stage;
+                if ((f.Stage & ~(AudioFilterStage.AfterScripts | AudioFilterStage.Bypassed)) != 0) return "invalid filter stage " + f.Stage;
                 if (generator && f.Stage == AudioFilterStage.BeforeScripts) return "a filter component above a clipless OnAudioFilterRead generator is unsupported";
                 if (!float.IsFinite(f.Cutoff) || !float.IsFinite(f.Resonance) || !float.IsFinite(f.Delay)
                     || !float.IsFinite(f.Decay) || !float.IsFinite(f.DryMix) || !float.IsFinite(f.WetMix)) return "filter parameters must be finite";

@@ -290,6 +290,7 @@ namespace UnityEngine
             set
             {
                 MainThreadCheck.Check("set_bypassListenerEffects");
+                if (Compat.AudioComponentActivationMeasured && value != m_BypassListenerEffects) m_ActivationPending = true;
                 m_BypassListenerEffects = value; m_Dirty = true;
             }
         }
@@ -774,6 +775,7 @@ namespace UnityEngine
             if (m_KeepOutput) flags |= AudioSourceFlags.KeepOutput;
             if (Compat.DecodedAudioResamplingMeasured) flags |= AudioSourceFlags.DecodedResampling;
             if (Compat.AudioComponentTailMeasured) flags |= AudioSourceFlags.ComponentFilterTail;
+            if (Compat.AudioComponentActivationMeasured) flags |= AudioSourceFlags.ComponentHistory;
             if (Compat.AudioSpatialStereoMeasured) flags |= AudioSourceFlags.SpatialStereo;
             if (Compat.AudioSpatialStereoMeasured) flags |= AudioSourceFlags.ListenerSnapshot;
             if (Compat.AudioZoneVoiceSendMeasured) flags |= AudioSourceFlags.ZoneVoiceSend;

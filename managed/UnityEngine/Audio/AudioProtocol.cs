@@ -40,6 +40,7 @@ namespace Unbound.Runtime
         internal const uint ComponentsInactive = 1 << 15;
         internal const uint LastComponentActive = 1 << 16;
         internal const uint EffectTransitions = 1 << 17;
+        internal const uint ComponentHistory = 1 << 18;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -67,7 +68,7 @@ namespace Unbound.Runtime
         internal float* RolloffCurve;
         internal float* SpatialBlendCurve;
         internal float* SpreadCurve;
-        /// <summary>Enabled filter components (NativeApi 16); 0 when none.</summary>
+        /// <summary>Filter components, including retained disabled units (NativeApi 56); 0 when none.</summary>
         internal int FilterCount;
         internal int Pad2;
         /// <summary><see cref="FilterCount"/> descriptors in component order; null when none. Valid
@@ -103,6 +104,8 @@ namespace Unbound.Runtime
     {
         internal const int BeforeScripts = 0;
         internal const int AfterScripts = 1;
+        // The disabled unit stays connected and retains its history.
+        internal const int Bypassed = 2;
     }
 
     [StructLayout(LayoutKind.Sequential)]

@@ -121,6 +121,11 @@ namespace Unbound.Runtime
                 existing = go.FindComponent<ConstantForce>();
                 return existing != null;
             }
+            if (type == typeof(AudioDistortionFilter))
+            {
+                existing = go.FindComponent(type);
+                return existing != null;
+            }
             if (typeof(Effector2D).IsAssignableFrom(type))
             {
                 existing = go.FindComponent<Effector2D>();

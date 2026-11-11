@@ -106,21 +106,20 @@ namespace UnityEngine.Tests
 
         AudioFilterDescriptor[] Collected(AudioSource source, bool generator = false)
         {
-            AudioFilterDescriptor[] table = null;
-            int count = AudioFilterChain.Collect(source, generator, ref table);
-            return count == 0 ? Array.Empty<AudioFilterDescriptor>() : table.AsSpan(0, count).ToArray();
+            int count = AudioFilterChain.Collect(source, generator, ref source.m_FilterTable);
+            return count == 0 ? Array.Empty<AudioFilterDescriptor>() : source.m_FilterTable.AsSpan(0, count).ToArray();
         }
 
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsUnchangedInNativeApi55()
+        public void PacketAndDescriptorLayoutsUnchangedInNativeApi56()
         {
             // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands,
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects, 28 render protocol 12, 29
             // frame input versions, 30 the decoded-resampling flag and 31 the imported texture
             // format, 32 mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 source-loop listener poses 37 the downloaded audio decoder 38 prepared callback buffers and 39 retained MSAA resolves and 40 parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins, 42 legacy glyph bearings, 43 the zone startup frame flag, 44 Pitch Shifter Max channels, 45 realtime GI, 46 driver capabilities, 47 component activation flags, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment and 52 directional realtime lightmaps.
-            Assert.Equal(55u, NativeApi.CurrentVersion);
+            Assert.Equal(56u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
@@ -240,7 +239,7 @@ namespace UnityEngine.Tests
             var clone = Object.Instantiate(source.gameObject); m_Objects.Add(clone);
             Assert.Equal(0.37f, clone.GetComponent<AudioDistortionFilter>().distortionLevel);
             filter.enabled = false;
-            Assert.Empty(Collected(source));
+            Assert.Equal(AudioFilterStage.Bypassed, Assert.Single(Collected(source)).Stage);
             filter.enabled = true; filter.distortionLevel = float.NaN;
             Assert.Empty(Collected(source));
             Assert.Single(Errors("AudioDistortionFilter"));
@@ -266,7 +265,7 @@ namespace UnityEngine.Tests
             filter.feedback = 1; Assert.Equal(0, filter.feedback);
             Assert.Equal(2, m_Warnings.FindAll(w => w == "Warning! Feedback is deprecated. This property does nothing.").Count);
 #pragma warning restore CS0618
-            filter.enabled = false; Assert.Empty(Collected(source)); filter.enabled = true;
+            filter.enabled = false; Assert.Equal(AudioFilterStage.Bypassed, Assert.Single(Collected(source)).Stage); filter.enabled = true;
             filter.depth = float.NaN;
             Assert.Empty(Collected(source)); Assert.Empty(Collected(source));
             Assert.Single(Errors("AudioChorusFilter"));
@@ -330,25 +329,78 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ListenerBypassAndEnableChangesLeaveActivationUnchanged()
+        public void ListenerBypassReconnectsOnceAndDisabledComponentsRetainTheirIdentity()
         {
-            var source = Source("unmeasured triggers");
+            var source = Source("listener activation");
             var echo = source.gameObject.AddComponent<AudioEchoFilter>();
             source.gameObject.AddComponent<AudioLowPassFilter>();
             source.clip = AudioClip.Create("input", 48000, 1, 48000, false);
             source.Play();
             Assert.Equal(0u, Flags(source) & (Inactive | LastActive));
             source.bypassListenerEffects = true;
-            echo.enabled = false;
             Assert.Equal(0u, Flags(source) & (Inactive | LastActive));
-            Assert.Equal(0, m_Backend.ComponentResets);
-            echo.enabled = true;
-            source.bypassEffects = true;
-            Assert.Equal(Inactive | LastActive, Flags(source) & (Inactive | LastActive));
-            // Neither the listener bypass nor an enable change reconnects again.
-            source.bypassListenerEffects = false;
-            Assert.Equal(Inactive | LastActive, Flags(source) & (Inactive | LastActive));
             Assert.Equal(1, m_Backend.ComponentResets);
+            echo.enabled = false;
+            Flags(source);
+            var disabled = m_Backend.FiltersOf(source.m_Handle);
+            Assert.Equal(Id(echo), disabled[0].Id);
+            Assert.Equal(AudioFilterStage.Bypassed, disabled[0].Stage);
+            echo.enabled = true;
+            source.bypassListenerEffects = false;
+            Flags(source);
+            Assert.Equal(1, m_Backend.ComponentResets);
+            Assert.Equal(AudioFilterStage.BeforeScripts, m_Backend.FiltersOf(source.m_Handle)[0].Stage);
+            source.gameObject.AddComponent<AudioHighPassFilter>();
+            Flags(source);
+            Assert.Equal(2, m_Backend.ComponentResets);
+        }
+
+        [Fact]
+        public void DisabledEditsAreDeferredAndNeverEnabledInvalidUnitsStayAbsent()
+        {
+            var source = Source("deferred validation");
+            var echo = source.gameObject.AddComponent<AudioEchoFilter>();
+            echo.enabled = false;
+            echo.wetMix = float.NaN;
+            Assert.Empty(Collected(source));
+            Assert.Empty(m_Errors);
+            echo.wetMix = .5f;
+            echo.enabled = true;
+            var accepted = Assert.Single(Collected(source));
+            echo.enabled = false;
+            echo.wetMix = float.NaN;
+            var frozen = Assert.Single(Collected(source));
+            Assert.Equal(accepted.WetMix, frozen.WetMix);
+            Assert.Equal(AudioFilterStage.Bypassed, frozen.Stage);
+            Assert.Empty(m_Errors);
+            echo.enabled = true;
+            Assert.Empty(Collected(source));
+            Assert.Single(Errors("AudioEchoFilter"));
+        }
+
+        [Fact]
+        public void NeverEnabledListenerFiltersDoNotRejectAnExistingScriptChain()
+        {
+            var go = new GameObject("disabled listener filter");
+            m_Objects.Add(go);
+            var listener = go.AddComponent<AudioListener>();
+            go.AddComponent<AudioLowPassFilter>().enabled = false;
+            go.AddComponent<FilterScript>();
+            AudioFilterDescriptor[] table = null;
+            Assert.Equal(0, AudioFilterChain.CollectListener(listener, true, ref table));
+            Assert.Empty(m_Errors);
+        }
+
+        [Fact]
+        public void ASecondDistortionComponentIsRejectedWithoutChangingTheFirst()
+        {
+            var source = Source("duplicate distortion");
+            var first = source.gameObject.AddComponent<AudioDistortionFilter>();
+            first.distortionLevel = .6f;
+            Assert.Null(source.gameObject.AddComponent<AudioDistortionFilter>());
+            Assert.Equal(.6f, first.distortionLevel);
+            Assert.Single(source.GetComponents<AudioDistortionFilter>());
+            Assert.Single(Errors("already contains the same component"));
         }
 
         [Fact]
@@ -404,6 +456,7 @@ namespace UnityEngine.Tests
             source.bypassEffects = true;
             Assert.Equal(AudioSourceFlags.BypassEffects, Flags(source) & (AudioSourceFlags.BypassEffects | Inactive | LastActive));
             Assert.Equal(0, m_Backend.ComponentResets);
+            Assert.Equal(0u, m_Backend.ParamsOf(source.m_Handle).Flags & AudioSourceFlags.ComponentHistory);
         }
 
         [Fact]
@@ -433,17 +486,18 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ComponentsFollowComponentOrderAndOnlyEnabledOnesCount()
+        public void ComponentsKeepTheirOrderAndDisableOnlyTheirOwnProcessing()
         {
             var source = Source("order");
             var echo = source.gameObject.AddComponent<AudioEchoFilter>();
             var lowPass = source.gameObject.AddComponent<AudioLowPassFilter>();
             var highPass = source.gameObject.AddComponent<AudioHighPassFilter>();
+            Assert.Equal(3, Collected(source).Length);
             lowPass.enabled = false;
             var d = Collected(source);
-            Assert.Equal(new[] { Id(echo), Id(highPass) }, Array.ConvertAll(d, f => f.Id));
-            Assert.Equal(new[] { AudioFilterKind.Echo, AudioFilterKind.HighPass }, Array.ConvertAll(d, f => f.Kind));
-            Assert.All(d, f => Assert.Equal(AudioFilterStage.BeforeScripts, f.Stage));
+            Assert.Equal(new[] { Id(echo), Id(lowPass), Id(highPass) }, Array.ConvertAll(d, f => f.Id));
+            Assert.Equal(new[] { AudioFilterKind.Echo, AudioFilterKind.LowPass, AudioFilterKind.HighPass }, Array.ConvertAll(d, f => f.Kind));
+            Assert.Equal(new[] { 0, AudioFilterStage.Bypassed, 0 }, Array.ConvertAll(d, f => f.Stage));
             lowPass.enabled = true;
             Assert.Equal(new[] { Id(echo), Id(lowPass), Id(highPass) }, Array.ConvertAll(Collected(source), f => f.Id));
             Object.DestroyImmediate(echo);
@@ -529,7 +583,7 @@ namespace UnityEngine.Tests
             Assert.Equal(900f, m_Backend.FiltersOf(source.m_Handle)[0].Cutoff);
             highPass.enabled = false;
             source.Flush(always: true);
-            Assert.Empty(m_Backend.FiltersOf(source.m_Handle));
+            Assert.Equal(AudioFilterStage.Bypassed, Assert.Single(m_Backend.FiltersOf(source.m_Handle)).Stage);
             Assert.Empty(m_Backend.FilterRejections);
         }
 
@@ -612,7 +666,7 @@ namespace UnityEngine.Tests
             };
             var bad = new[]
             {
-                ("kind", valid with { Kind = 0 }), ("kind", valid with { Kind = AudioFilterKind.Last + 1 }), ("stage", valid with { Stage = 2 }),
+                ("kind", valid with { Kind = 0 }), ("kind", valid with { Kind = AudioFilterKind.Last + 1 }), ("stage", valid with { Stage = 4 }),
                 ("finite", valid with { Delay = float.NaN }), ("finite", valid with { Cutoff = float.PositiveInfinity }),
                 ("finite", NonFiniteReverb(valid with { Kind = AudioFilterKind.Reverb })),
             };
@@ -682,11 +736,13 @@ namespace UnityEngine.Tests
                 go.AddComponent<AudioChorusFilter>(), go.AddComponent<AudioHighPassFilter>(),
                 go.AddComponent<AudioEchoFilter>(), go.AddComponent<AudioReverbFilter>()
             };
-            go.AddComponent<AudioDistortionFilter>().enabled = false;
             AudioFilterDescriptor[] table = null;
+            Assert.Equal(6, AudioFilterChain.CollectListener(listener, false, ref table));
+            filters[1].enabled = false;
             Assert.Equal(6, AudioFilterChain.CollectListener(listener, false, ref table));
             Assert.Equal(6, AudioFilterChain.CollectListener(listener, false, ref table));
             Assert.Equal(new[] { 1, 5, 6, 2, 3, 4 }, table.Take(6).Select(d => d.Kind));
+            Assert.Equal(AudioFilterStage.Bypassed, table[1].Stage);
             Assert.Equal(filters.Select(c => unchecked((ulong)(long)c.GetInstanceID())), table.Take(6).Select(d => d.Id));
             Assert.Empty(Errors("AudioListener 'ears'"));
             ProjectInfo.UnityVersion = "6000.0.70f1";
