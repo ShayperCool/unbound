@@ -619,6 +619,14 @@ pub struct ModelClip {
     /// tests/projects/modelclips); else linear between the keys.
     #[serde(default)]
     pub smooth: bool,
+    /// A Humanoid clip under a reducing animation compression: the error (a fraction, the
+    /// importer's Position Error / 100) its muscle curves are reduced with once they are
+    /// converted from these every-frame transform curves. The Editor reduces every curve of
+    /// such a clip (body, goals, muscles) as a float curve with that one error, whatever the
+    /// rotation and scale errors (matches the Unity 6000.0.71f1 Editor, tests/projects/modelclips
+    /// HumanReduced, HumanOptimal). None: the keys stay on every frame.
+    #[serde(default)]
+    pub human_key_reduction: Option<f32>,
 }
 
 /// A clip's transform mask. The Editor removes the curves of transforms the mask leaves out
@@ -804,7 +812,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 39;
+    const VERSION: u32 = 42;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1440,9 +1448,11 @@ impl<'a> Builder<'a> {
         let every_frame = animation_compression_off(imp);
         // Humanoid clips become muscle curves converted from these transform curves; the
         // Editor reduces the muscle curves, not the transforms, so they keep every frame here
-        // (their muscle curves' reduction is not reproduced).
-        let reduction = (!every_frame && self.settings.animation_type != 3)
-            .then(|| Reduction::read(imp, fps));
+        // and the conversion reduces its curves (`ModelClip::human_key_reduction`).
+        let human = self.settings.animation_type == 3;
+        let reduction = (!every_frame && !human).then(|| Reduction::read(imp, fps));
+        let human_key_reduction =
+            (!every_frame && human).then(|| Reduction::read(imp, fps).position);
         // The root node of a generic avatar (`motionNodeName`): its motion relative to the model's
         // root becomes the clips' MotionT/MotionQ curves on the Animator, which root motion uses
         // (measured, tests/projects/modelroot). Without an avatar there is none. Humanoid clips
@@ -1548,10 +1558,15 @@ impl<'a> Builder<'a> {
                     (Vec::new(), Vec::new(), Vec::new());
                 for time in frame_times(start, end, fps) {
                     let t = ufbx::evaluate_transform(&stack.anim, source, time);
-                    // Humanoid clips keep the plain difference (unmeasured): their transform
-                    // keys feed the muscle conversion, and the curves of nodes outside the
-                    // human skeleton stay in the clip with these times.
-                    let rotation_time = if self.settings.animation_type == 3 {
+                    // Humanoid clips keep the plain difference. Their transform keys feed the
+                    // muscle conversion, whose own sample times are the muscle keys' times and
+                    // match the Editor's (single-precision frames, tests/projects/humanfirstpose
+                    // and modelclips HumanReduced). The frame arithmetic here is undecided by
+                    // the references: the first-pose body curves are as close either way (41 of
+                    // 217 values exact, two more last-digit tangent bits), the humanoid probe
+                    // has five fewer differences with it. Curves of nodes outside the human
+                    // skeleton stay in the clip with these times.
+                    let rotation_time = if human {
                         (time - start) as f32
                     } else {
                         frame_key_time(time, start, fps)
@@ -1727,7 +1742,9 @@ impl<'a> Builder<'a> {
                     })
                     .collect(),
                 mask: range.mask.clone(),
-                smooth: every_frame,
+                // A Humanoid clip's transform curves keep every frame under every compression.
+                smooth: every_frame || human,
+                human_key_reduction,
                 additive_reference,
                 settings: range.settings.clone(),
                 preview: range.preview,

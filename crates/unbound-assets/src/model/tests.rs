@@ -1251,3 +1251,38 @@ fn key_times_are_frames_times_the_frame_length_in_single_precision() {
         7.0 * (1.0f32 / 30.0)
     );
 }
+
+/// A Humanoid clip under a reducing compression keeps its transform keys on every frame, as
+/// with compression Off, and carries the Position Error its muscle curves are reduced with
+/// (tests/projects/modelclips HumanReduced: Keyframe Reduction with rotation and scale errors
+/// of 5 and the default position error; HumanOptimal: Optimal with a position error of 5).
+/// Controls: compression Off carries none, and a generic rig's reduced clip loses keys here.
+#[test]
+fn a_humanoid_clip_keeps_every_frame_and_carries_its_key_reduction() {
+    let import = |path: &str| {
+        let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects")
+            .join(path);
+        let meta = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+        let model = ModelImporter::default()
+            .import(&source, &std::fs::read(&source).unwrap(), &meta)
+            .unwrap();
+        model.clips.into_iter().find(|c| !c.preview).unwrap()
+    };
+    let keys = |clip: &ModelClip| -> usize { clip.curves.iter().map(|c| c.rotations.len()).sum() };
+    let off = import("humanoid/Assets/Resources/HumanB.fbx");
+    let reduced = import("modelclips/Assets/Resources/HumanReduced.fbx");
+    let optimal = import("modelclips/Assets/Resources/HumanOptimal.fbx");
+    assert_eq!(off.human_key_reduction, None);
+    assert_eq!(reduced.human_key_reduction, Some(0.5 / 100.0));
+    assert_eq!(optimal.human_key_reduction, Some(5.0 / 100.0));
+    assert!(off.smooth && reduced.smooth && optimal.smooth);
+    assert!(keys(&off) > 0);
+    assert_eq!(keys(&off), keys(&reduced));
+    assert_eq!(keys(&off), keys(&optimal));
+
+    let generic_off = import("modelclips/Assets/Resources/RigDefault.fbx");
+    let generic = import("modelclips/Assets/Resources/RigReduced.fbx");
+    assert_eq!(generic.human_key_reduction, None);
+    assert!(keys(&generic) < keys(&generic_off));
+}

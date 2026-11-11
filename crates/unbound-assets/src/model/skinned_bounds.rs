@@ -634,6 +634,7 @@ mod tests {
             settings: ClipSettings::default(),
             preview: false,
             smooth: false,
+            human_key_reduction: None,
         }
     }
 

@@ -893,6 +893,10 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
             ("m_SampleRate", scalar(clip.sample_rate)),
             ("m_WrapMode", scalar(clip.wrap_mode)),
             (
+                "m_UnboundHumanKeyReduction",
+                scalar(clip.human_key_reduction.unwrap_or(0.0)),
+            ),
+            (
                 "m_AnimationClipSettings",
                 map(vec![
                     ("m_StartTime", scalar(0)),
