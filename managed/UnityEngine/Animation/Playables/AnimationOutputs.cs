@@ -315,6 +315,9 @@ namespace Unbound.Runtime.Playables
         /// <summary>Evaluating an additive layer's reference: clips sample their first frame.</summary>
         internal bool ReferencePose;
         internal bool PlayableIK;
+        /// <summary>The weight of the output being sampled: the clips' events report their own
+        /// weight times it, as before, while it takes no part in whether they fire.</summary>
+        internal float OutputWeight = 1f;
         /// <summary>How this evaluation's streams carry root motion (set by <see cref="Run"/>).</summary>
         internal RootMotionMode MotionMode;
         readonly List<(AnimationKind Kind, PlayableNode Node, bool Combined)> m_Evaluated = new List<(AnimationKind, PlayableNode, bool)>();
@@ -360,6 +363,7 @@ namespace Unbound.Runtime.Playables
             e.Bindings = null;
             e.DeltaTime = 0f;
             e.Seek = e.AutomaticFrame = e.RootMotion = e.ReferencePose = e.PlayableIK = e.Replay = false;
+            e.OutputWeight = 1f;
             e.MotionMode = default;
             e.Combining = 0;
             e.PreviousInputs = null;
@@ -843,6 +847,7 @@ namespace Unbound.Runtime.Playables
                 // weight 0 fires its events; a PreviousInputs output follows unmeasured). An
                 // output at weight 0 asks for no IK pass, as before (unmeasured).
                 bool ik = e.PlayableIK;
+                e.OutputWeight = o.Weight;
                 if (source == AnimationStreamSource.PreviousInputs)
                 {
                     // Rigging layers: the stream starts as the result of the outputs before.
@@ -855,7 +860,8 @@ namespace Unbound.Runtime.Playables
                     e.PreviousInputs = null;
                 }
                 else s = e.Evaluate(o.Source, o.SourcePort, 1f);
-                if (o.Weight <= 0f) e.PlayableIK = ik;
+                e.OutputWeight = 1f;
+                if (!(o.Weight > 0f)) e.PlayableIK = ik;
                 if (e.MotionMode == RootMotionMode.Compute)
                 {
                     // Outputs blend their motion as their pose: over the motion so far by weight. A
@@ -934,7 +940,7 @@ namespace Unbound.Runtime.Playables
         {
             bool requested = animator.m_ApplyRootMotion || MoveCallbacks.Any(animator);
             if (!animator.isHuman) return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
-            if (animator.m_Player == null && outputs.Count == 1 && AnimationOutputs.Of(animator)?.Count == 1)
+            if (animator.m_Player == null && outputs.Count == 1 && AnimationOutputs.ActiveCount(animator) == 1)
             {
                 var o = outputs[0].Output;
                 // Outputs of the same graph for other Animators do not take part.
@@ -1262,6 +1268,21 @@ namespace Unbound.Runtime.Playables
 
         internal static List<PlayableOutputData> Of(Animator animator) => s_ByAnimator.TryGetValue(animator, out var list) ? list : null;
 
+        /// <summary>Whether an earlier output on its source port leaves this one out
+        /// (PlayableGraphData.MarkInertOutputs).</summary>
+        internal static bool Inert(PlayableOutputData output) => output.Engine is AnimationOutputState { Inert: true };
+
+        /// <summary>How many of the Animator's outputs take part (not left out by another
+        /// output on their source port).</summary>
+        internal static int ActiveCount(Animator animator)
+        {
+            int count = 0;
+            if (Of(animator) is { } outputs)
+                foreach (var output in outputs)
+                    if (!Inert(output)) count++;
+            return count;
+        }
+
         internal static bool HasPending(Animator animator) => s_Pending.TryGetValue(animator, out var list) && list.Count > 0;
 
         // The attached controller's write-defaults base also owns channels bound by its outputs
@@ -1275,7 +1296,7 @@ namespace Unbound.Runtime.Playables
             bool any = false;
             foreach (var output in outputs)
             {
-                if (output.Destroyed || output.Engine is not AnimationOutputState state || state.Bound == null) continue;
+                if (output.Destroyed || output.Engine is not AnimationOutputState state || state.Bound == null || state.Inert) continue;
                 if (!any)
                 {
                     if (floats.Length < floatCount) floats = new bool[floatCount];
@@ -1331,7 +1352,7 @@ namespace Unbound.Runtime.Playables
             int hash = 17;
             if (Of(animator) is { } outputs)
                 foreach (var output in outputs)
-                    if (!output.Destroyed && output.Source != null) hash = hash * 31 + MixerKind.TreeWeights(output.Source);
+                    if (!output.Destroyed && output.Source != null && !Inert(output)) hash = hash * 31 + MixerKind.TreeWeights(output.Source);
             return hash;
         }
 
@@ -1351,7 +1372,7 @@ namespace Unbound.Runtime.Playables
             if (Of(animator) is not { } outputs || animator.StreamBindings is not { } bindings) return;
             bool measured = Compat.PlayableCullingHoldsAnimationPlayablesOnly && animator.m_Player == null;
             foreach (var output in outputs)
-                if (!output.Destroyed && output.Source != null && !MixerKind.ClipMixerTree(output.Source)) measured = false;
+                if (!output.Destroyed && output.Source != null && !Inert(output) && !MixerKind.ClipMixerTree(output.Source)) measured = false;
             if (!measured)
             {
                 Stubs.Ignored("Animator visibility return after mixer weights changed (attached controller, other playables or unmeasured release)",

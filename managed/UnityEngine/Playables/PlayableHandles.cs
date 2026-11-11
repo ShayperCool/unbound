@@ -392,6 +392,9 @@ namespace UnityEngine.Playables
                 Debug.LogError("Cannot set the source of an output to a playable of another graph.");
                 return;
             }
+            // Setting the source it already has leaves the output its place on the port
+            // (6000.0.71f1, tests/projects/animculling clock/sharedPortFirst).
+            if (o.Source != n || o.SourcePort != port) o.Connected = ++o.Graph.Connections;
             o.Source = n;
             o.SourcePort = port;
         }

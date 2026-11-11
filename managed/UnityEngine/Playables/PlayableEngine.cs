@@ -164,6 +164,10 @@ namespace Unbound.Runtime.Playables
         internal string Name;
         internal PlayableNode Source;
         internal int SourcePort;
+        /// <summary>When the source was set, counted per graph (PlayableGraphData.Connections):
+        /// of the outputs on one source port the first connected is the one that plays
+        /// (PlayableGraphData.MarkInertOutputs).</summary>
+        internal long Connected;
         internal float Weight = 1f;
         internal Object ReferenceObject;
         internal Object UserData;
@@ -260,6 +264,7 @@ namespace Unbound.Runtime.Playables
             var o = g.CreateOutput(typeof(UnityEngine.Animations.AnimationPlayableOutput), "Animation");
             o.Engine = new AnimationOutputState { Target = animator, SortingOrder = 0 };
             o.Source = n;
+            o.Connected = ++g.Connections;
             return g;
         }
 
@@ -780,26 +785,47 @@ namespace Unbound.Runtime.Playables
             }
         }
 
+        /// <summary>How many times an output of this graph had its source set.</summary>
+        internal long Connections;
+
+        /// <summary>The first output connected to each source port in <see cref="MarkInertOutputs"/>.</summary>
+        static readonly Dictionary<(PlayableNode, int), PlayableOutputData> s_FirstOnPort = new Dictionary<(PlayableNode, int), PlayableOutputData>();
+
         /// <summary>Of several animation outputs with one source playable and port, only the one
-        /// created first takes part: the later ones do not animate their Animators, fire no
-        /// events and, culled, hold nothing (AnimationOutputState.Inert). Matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/animculling clock/sharedPort and sharedPortFirst:
-        /// two Animators' outputs, all three culling modes, both update modes. Outputs of one
-        /// Animator, an earlier output without a target or with a disabled Animator, outputs
-        /// connected in another order than they were created in, and script outputs sharing a
-        /// port are unmeasured.</summary>
+        /// connected first takes part: the others do not animate their Animators, fire no
+        /// events and, culled, hold nothing (AnimationOutputState.Inert), also while the first
+        /// one's Animator is disabled, its GameObject inactive or it has no target, and when
+        /// both are outputs of one Animator. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animculling clock/sharedPort* (two Animators' outputs in the three
+        /// culling modes and both update modes; sharedPortLate: the output created first and
+        /// connected last is the one left out; sharedPortDisabled, sharedPortInactive,
+        /// sharedPortNone, sharedPortSame). A first output that is destroyed or connected
+        /// elsewhere later, and script outputs on the port, are unmeasured.</summary>
         internal void MarkInertOutputs()
         {
-            var sources = Scratch<(PlayableNode, int)>.RentSet();
-            try
+            // One output cannot share.
+            if (Outputs.Count < 2)
             {
-                foreach (var o in Outputs)
-                {
-                    if (o.Destroyed || o.Engine is not AnimationOutputState animation) continue;
-                    animation.Inert = o.Source != null && !sources.Add((o.Source, o.SourcePort));
-                }
+                if (Outputs.Count == 1 && Outputs[0].Engine is AnimationOutputState only) only.Inert = false;
+                return;
             }
-            finally { Scratch<(PlayableNode, int)>.Return(sources); }
+            var first = s_FirstOnPort;
+            first.Clear();
+            foreach (var o in Outputs)
+            {
+                if (o.Destroyed || o.Source == null || o.Engine is not AnimationOutputState) continue;
+                var port = (o.Source, o.SourcePort);
+                if (!first.TryGetValue(port, out var taken) || o.Connected < taken.Connected) first[port] = o;
+            }
+            foreach (var o in Outputs)
+            {
+                if (o.Destroyed || o.Engine is not AnimationOutputState animation) continue;
+                bool inert = o.Source != null && first[(o.Source, o.SourcePort)] != o;
+                // What the output's Animator kept for its next visibility return is no longer its to replay.
+                if (inert && !animation.Inert && animation.Target != null) AnimationOutputs.ForgetCulled(animation.Target);
+                animation.Inert = inert;
+            }
+            first.Clear();
         }
 
         static bool CulledCompletely(AnimationOutputState animation) =>

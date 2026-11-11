@@ -1149,7 +1149,7 @@ namespace Unbound.Runtime
         /// <summary>The root a culled Animator still writes: an attached controller's, when
         /// playable outputs animate it too (measured, tests/projects/animculling).</summary>
         Transform RootDuringCull() =>
-            Attached && Unbound.Runtime.Playables.AnimationOutputs.Of(m_Animator)?.Count > 0 ? m_Animator.transform : null;
+            Attached && Unbound.Runtime.Playables.AnimationOutputs.ActiveCount(m_Animator) > 0 ? m_Animator.transform : null;
 
         void WritePose(int count, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null)
         {

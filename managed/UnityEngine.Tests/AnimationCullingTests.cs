@@ -816,6 +816,49 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        /// <summary>The output connected to the port first is the one that plays, also when it
+        /// was created later, and also while its Animator is disabled (animculling
+        /// clock/sharedPortLate, clock/sharedPortDisabled). Setting an output's source again
+        /// leaves it its place (clock/sharedPortFirst).</summary>
+        [Theory]
+        [InlineData("late")]
+        [InlineData("disabled")]
+        [InlineData("again")]
+        public void TheOutputConnectedFirstKeepsASourcePort(string shape)
+        {
+            var (probed, _, _) = Rig(AnimatorCullingMode.AlwaysAnimate);
+            var (other, _, _) = Rig(AnimatorCullingMode.AlwaysAnimate);
+            probed.runtimeAnimatorController = other.runtimeAnimatorController = null;
+            var graph = PlayableGraph.Create("port");
+            try
+            {
+                var clip = PlayableRig(probed, out var template).GetOutputByType<AnimationPlayableOutput>(0);
+                var playable = AnimationClipPlayable.Create(graph, template.GetAnimationClip());
+                template.GetGraph().Destroy();
+                var created = AnimationPlayableOutput.Create(graph, "Probed", probed);
+                var later = AnimationPlayableOutput.Create(graph, "Other", other);
+                if (shape == "late")
+                {
+                    later.SetSourcePlayable(playable);
+                    created.SetSourcePlayable(playable);
+                }
+                else
+                {
+                    created.SetSourcePlayable(playable);
+                    later.SetSourcePlayable(playable);
+                    if (shape == "again") created.SetSourcePlayable(playable);
+                    if (shape == "disabled") probed.enabled = false;
+                }
+                graph.Play();
+                StepBoth(graph, probed, other, 0.1f);
+                StepBoth(graph, probed, other, 0.1f);
+                bool otherPlays = shape == "late";
+                Assert.Equal(otherPlays, other.transform.localPosition.y > 0.1f);
+                Assert.Equal(shape == "again", probed.transform.localPosition.y > 0.1f);
+            }
+            finally { graph.Destroy(); }
+        }
+
         /// <summary>A later output on a taken source port holds nothing while its Animator is
         /// culled: the clip goes on for the first output's Animator (animculling
         /// clock/sharedPort/CullCompletely). Control: culled, the first output holds the clip
@@ -832,13 +875,17 @@ namespace UnityEngine.Tests
             try
             {
                 AnimationPlayableOutput.Create(graph, "Later", second).SetSourcePlayable(playable);
+                // From a time where the clip's pose is not the rig's own.
+                playable.SetTime(0.5);
+                playable.SetTime(0.5);
                 StepBoth(graph, first, second, 0.1f);
                 StepBoth(graph, first, second, 0.1f);
                 Assert.Equal(0f, second.transform.localPosition.y);
-                if (firstCulled) Assert.Equal(0, playable.GetTime());
+                if (firstCulled) Assert.Equal(0.5, playable.GetTime());
                 else
                 {
-                    Near.Equal(0.2f, (float)playable.GetTime(), 1e-6f);
+                    // The clip goes on (the update after a time was set keeps it).
+                    Assert.True(playable.GetTime() > 0.55);
                     Assert.True(first.transform.localPosition.y > 0.1f);
                 }
             }

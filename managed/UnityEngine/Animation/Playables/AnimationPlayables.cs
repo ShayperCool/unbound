@@ -148,7 +148,7 @@ namespace Unbound.Runtime.Playables
             if (node.PreviousTime == node.Time && !m_IncludeStart) return;
             m_From = EventClock(node.PreviousTime);
             m_To = EventClock(node.Time);
-            m_Weight = weight;
+            m_Weight = weight * e.OutputWeight;
             e.Note(this, node);
         }
 
