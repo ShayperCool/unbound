@@ -506,8 +506,9 @@ Measured in the Unity 6000.0.71f1 Editor:
   calls it the weight of the connection to the source playable and leaves the rest to the
   implementation.
 
-Unmeasured: a first output destroyed or connected elsewhere later, script outputs on the
-port, the weight a clip event reports under a fractional output weight, and an IK pass at
+Unmeasured: a first output or its Animator destroyed, or the output connected elsewhere,
+later; an output moved onto a taken port after it played another source; script outputs on the
+port; the weight a clip event reports under a fractional output weight; and an IK pass at
 weight 0.
 
 Implementation: `PlayableKind.AnimatorClock` marks the animation playables;

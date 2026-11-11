@@ -799,8 +799,11 @@ namespace Unbound.Runtime.Playables
         /// tests/projects/animculling clock/sharedPort* (two Animators' outputs in the three
         /// culling modes and both update modes; sharedPortLate: the output created first and
         /// connected last is the one left out; sharedPortDisabled, sharedPortInactive,
-        /// sharedPortNone, sharedPortSame). A first output that is destroyed or connected
-        /// elsewhere later, and script outputs on the port, are unmeasured.</summary>
+        /// sharedPortNone; sharedPortSame: two outputs of one Animator fire the clip's events
+        /// once, which fits the later one being left out and does not tell it from both
+        /// playing the same clip). A first output that is destroyed or connected elsewhere
+        /// later, an output moved onto a taken port after it played another source, and script
+        /// outputs on the port are unmeasured.</summary>
         internal void MarkInertOutputs()
         {
             // One output cannot share.
@@ -821,7 +824,8 @@ namespace Unbound.Runtime.Playables
             {
                 if (o.Destroyed || o.Engine is not AnimationOutputState animation) continue;
                 bool inert = o.Source != null && first[(o.Source, o.SourcePort)] != o;
-                // What the output's Animator kept for its next visibility return is no longer its to replay.
+                // What the output's Animator kept for its next visibility return is no longer its
+                // to replay (the Animator's whole sample goes, its other outputs' share too: unmeasured).
                 if (inert && !animation.Inert && animation.Target != null) AnimationOutputs.ForgetCulled(animation.Target);
                 animation.Inert = inert;
             }

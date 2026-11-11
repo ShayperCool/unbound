@@ -388,11 +388,13 @@ namespace UnityEngine.Tests
 
         // Weights changed while culled: the visibility return blends the retained clip steps with
         // the current weights (6000.0.71f1, animculling genericMixerSum/liveCulled); unmeasured
-        // releases keep replaying the last blend.
+        // releases keep replaying the last blend. An output of the Animator that another
+        // Animator's output keeps off its source port takes no part in the blend.
         [Theory]
-        [InlineData("6000.0.71f1", 0.15f)]
-        [InlineData("6000.0.70f1", 0.25f)]
-        public void AVisibilityReturnReblendsWeightsChangedWhileCulled(string release, float replayed)
+        [InlineData("6000.0.71f1", 0.15f, false)]
+        [InlineData("6000.0.70f1", 0.25f, false)]
+        [InlineData("6000.0.71f1", 0.15f, true)]
+        public void AVisibilityReturnReblendsWeightsChangedWhileCulled(string release, float replayed, bool withInertOutput)
         {
             string version = ProjectInfo.UnityVersion;
             ProjectInfo.UnityVersion = release;
@@ -420,6 +422,15 @@ namespace UnityEngine.Tests
                 mixer.ConnectInput(0, AnimationClipPlayable.Create(graph, Rising(1f)), 0, 0.25f);
                 mixer.ConnectInput(1, AnimationClipPlayable.Create(graph, Rising(3f)), 0, 0.75f);
                 output.SetSourcePlayable(mixer);
+                if (withInertOutput)
+                {
+                    // Another Animator's output takes a fast clip's port first.
+                    var (holder, _, _) = Rig(AnimatorCullingMode.AlwaysAnimate);
+                    holder.runtimeAnimatorController = null;
+                    var fast = AnimationClipPlayable.Create(graph, Rising(10f));
+                    AnimationPlayableOutput.Create(graph, "Holder", holder).SetSourcePlayable(fast);
+                    AnimationPlayableOutput.Create(graph, "LeftOut", animator).SetSourcePlayable(fast);
+                }
                 graph.Play();
                 PlayableStep(graph, animator, 0.1f);
                 MakeVisible(camera, renderer);
@@ -832,7 +843,7 @@ namespace UnityEngine.Tests
             var graph = PlayableGraph.Create("port");
             try
             {
-                var clip = PlayableRig(probed, out var template).GetOutputByType<AnimationPlayableOutput>(0);
+                PlayableRig(probed, out var template);
                 var playable = AnimationClipPlayable.Create(graph, template.GetAnimationClip());
                 template.GetGraph().Destroy();
                 var created = AnimationPlayableOutput.Create(graph, "Probed", probed);

@@ -1381,7 +1381,7 @@ namespace Unbound.Runtime.Playables
             }
             s_Replay.Clear();
             foreach (var output in outputs)
-                if (!output.Destroyed && output.Source != null && !output.Graph.Destroyed) s_Replay.Add((output, frame.DeltaTime, false));
+                if (!output.Destroyed && output.Source != null && !output.Graph.Destroyed && !Inert(output)) s_Replay.Add((output, frame.DeltaTime, false));
             if (s_Replay.Count == 0) return;
             var e = AnimationEvaluation.RentReplay(animator, bindings);
             try
