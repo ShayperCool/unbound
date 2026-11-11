@@ -93,7 +93,8 @@ index, except Hard30/Organic (the packing tie above, passed to the gate as `--re
 
 OldOptOff and OldOptOn hold Cylinder, Multi and FlatPoly with metas as Unity 2018 wrote them
 (`optimizeMeshForGPU` instead of the flags). The reference shows: with it off the meshes equal
-OptPolygons (the polygon order stays, the unused point too), with it on they equal Off.
+OptPolygons (the polygon order stays, the unused point too); with it on Cylinder and Multi equal
+Off and FlatPoly drops its unused point.
 
 ## Mesh and object names
 

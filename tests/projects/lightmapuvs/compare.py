@@ -13,7 +13,7 @@ differs. Exits 1 when anything differs; with --uv2, when the vertex count or `uv
 differs. With --expect, only the named meshes (in every variant) decide the exit status, with
 --expect-variants also every mesh of the named variants on either side (so a mesh that is missing
 or extra there fails), judged on its triangles, vertices, UV and UV2 by index as well (everything
-but the normals); a record named by --recorded never decides it. Every mesh is still listed.
+but the normals); a record named by --recorded decides it only when it is missing. Every mesh is still listed.
 """
 import argparse
 import json
@@ -102,6 +102,10 @@ def main():
     unknown = [n for n in (args.expect or '').split(',') if n and n not in {k[1] for k in expected}]
     if unknown:
         sys.exit(f'--expect names no reference mesh: {unknown}')
+    recorded = [n for n in (args.recorded or '').split(',') if n]
+    unknown = [n for n in recorded if tuple(n.split('/', 1)) not in expected]
+    if unknown:
+        sys.exit(f'--recorded names no reference record: {unknown}')
     def strict_variant(key):
         return key[0] in (args.expect_variants or '').split(',')
 
@@ -122,8 +126,9 @@ def main():
             # A variant named by --expect-variants is judged on everything but its normals.
             judged = ('vertexCount', 'uv2Corners') + (('subMeshes', 'vertices', 'uv', 'uv2') if strict_variant(key) else ())
             verdict = {f: d for f, d in verdict.items() if f in judged} or 'match'
+        # A recorded difference does not decide the result, unless the record is missing.
         expected_mesh = ((not args.expect or key[1] in args.expect.split(',') or strict_variant(key))
-                         and name not in (args.recorded or '').split(','))
+                         and (name not in recorded or report[name] == 'missing'))
         if verdict != 'match':
             failing += 1
             if expected_mesh:

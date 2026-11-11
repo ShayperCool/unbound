@@ -764,7 +764,7 @@ const UNUSED_VERTEX_NORMAL: [f32; 3] = [1.0, 1.0, 1.0];
 
 /// `meshes.meshOptimizationFlags`. A meta from before the flags has `optimizeMeshForGPU`, which
 /// is the vertex order alone: the polygon order stays on with it off (measured: lightmapuvs
-/// OldOptOff equals OptPolygons, OldOptOn equals Off). Without either, everything, the
+/// OldOptOff equals OptPolygons, OldOptOn's Cylinder and Multi equal Off). Without either, everything, the
 /// importer's default.
 fn mesh_optimization_flags(imp: &Value) -> i64 {
     int(imp, "meshes.meshOptimizationFlags").unwrap_or_else(|| {
