@@ -21,7 +21,7 @@ namespace UnityEngine.UIElements
     /// a closed path opened by QuadraticCurveTo closes to the origin). Fills of arcs and curves can
     /// triangulate their interior in another order where the triangulation of co-circular points is
     /// a tie; the covered area and every anti-aliased edge are the same. <see cref="strokeGradient"/>
-    /// is not implemented: a gradient stroke warns once and uses <see cref="strokeColor"/>.
+    /// colours a stroke along its length (see <see cref="Unbound.UIElements.UaVectorStroke"/>).
     /// </remarks>
     public partial class Painter2D : IDisposable
     {
@@ -33,10 +33,10 @@ namespace UnityEngine.UIElements
         readonly UaVectorMesh m_UaDetached;
         UaVectorStroke m_UaStroker;
         UaVectorFill m_UaFiller;
-        Gradient m_UaStrokeGradient;
+        // The gradient last set, also after null turned it off: the getter keeps answering it.
+        UaStrokeGradient m_UaStrokeGradient;
         bool m_UaBegun;
         bool m_UaDisposed;
-        static bool s_UaGradientWarned;
 
         UaVectorStyle m_UaStyle;
 
@@ -74,28 +74,42 @@ namespace UnityEngine.UIElements
                 Cap = LineCap.Butt,
                 MiterLimit = 10f,
             };
-            m_UaStrokeGradient = null;
+            // The gradient is off again; the getter still answers the last one set.
             m_UaPath.Clear();
             m_UaBegun = false;
         }
 
         public float lineWidth { get => m_UaStyle.LineWidth; set => m_UaStyle.LineWidth = value; }
 
-        public Color strokeColor { get => m_UaStyle.StrokeColor; set => m_UaStyle.StrokeColor = value; }
-
-        /// <summary>The stroke gradient. Not implemented: setting one warns once, and strokes keep
-        /// using <see cref="strokeColor"/>.</summary>
-        public Gradient strokeGradient
+        /// <summary>The stroke colour. Setting it turns a stroke gradient off: whichever of the two
+        /// was set last is used (Unity 6000.0.71f1, tests/projects/uitkpainter gradient-color-set-after).</summary>
+        public Color strokeColor
         {
-            get => m_UaStrokeGradient ?? new Gradient();
+            get => m_UaStyle.StrokeColor;
             set
             {
-                m_UaStrokeGradient = value;
-                if (value != null && !s_UaGradientWarned)
+                m_UaStyle.StrokeColor = value;
+                m_UaStyle.Gradient = null;
+            }
+        }
+
+        /// <summary>The stroke gradient. Documented: a gradient overrides <see cref="strokeColor"/>
+        /// and null falls back on it. The painter keeps the gradient as it is when set (later
+        /// changes to the caller's object do not show); the getter answers a copy of the last one
+        /// set, also after null, and a white gradient before any (Unity 6000.0.71f1,
+        /// tests/projects/uitkpainter).</summary>
+        public Gradient strokeGradient
+        {
+            get => m_UaStrokeGradient != null ? m_UaStrokeGradient.Copy() : new Gradient();
+            set
+            {
+                if (value == null)
                 {
-                    s_UaGradientWarned = true;
-                    Debug.LogWarning("Unbound: Painter2D.strokeGradient is not supported yet; strokes are drawn with strokeColor.");
+                    m_UaStyle.Gradient = null;
+                    return;
                 }
+                m_UaStrokeGradient = new UaStrokeGradient(value);
+                m_UaStyle.Gradient = m_UaStrokeGradient;
             }
         }
 

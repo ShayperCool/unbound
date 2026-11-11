@@ -13,6 +13,94 @@ namespace Unbound.UIElements
         public LineJoin Join;
         public LineCap Cap;
         public float MiterLimit;
+        /// <summary>The stroke gradient in use, or null: strokes then use <see cref="StrokeColor"/>.</summary>
+        public UaStrokeGradient Gradient;
+    }
+
+    /// <summary>A Painter2D stroke gradient as it was when set: the colour along a stroke comes
+    /// from it by the share of the path's length drawn so far. Colours are rounded to 8 bits per
+    /// channel as they are read, and a gradient in linear colour space is shown in sRGB. Matches
+    /// the Unity 6000.0.71f1 Editor (tests/projects/uitkpainter, gradient cases).</summary>
+    internal sealed class UaStrokeGradient
+    {
+        // A key closer than this after a position does not count as the next key.
+        const float KeyEpsilon = 0.001f;
+        // Gradient key times are kept in 16 bits.
+        const float KeySteps = 65535f;
+
+        readonly Gradient m_Gradient;
+        readonly float[] m_ColorTimes, m_AlphaTimes;
+        readonly bool m_Linear;
+
+        internal UaStrokeGradient(Gradient source)
+        {
+            m_Gradient = Copy(source);
+            var colors = m_Gradient.colorKeys;
+            var alphas = m_Gradient.alphaKeys;
+            m_ColorTimes = new float[colors.Length];
+            m_AlphaTimes = new float[alphas.Length];
+            for (int i = 0; i < colors.Length; i++) m_ColorTimes[i] = KeyTime(colors[i].time);
+            for (int i = 0; i < alphas.Length; i++) m_AlphaTimes[i] = KeyTime(alphas[i].time);
+            m_Linear = m_Gradient.colorSpace == ColorSpace.Linear;
+        }
+
+        static float KeyTime(float time) => (float)(ushort)(Math.Min(1f, Math.Max(0f, time)) * KeySteps + 0.5f) / KeySteps;
+
+        internal static Gradient Copy(Gradient source)
+        {
+            var copy = new Gradient { mode = source.mode, colorSpace = source.colorSpace };
+            copy.SetKeys(source.colorKeys, source.alphaKeys);
+            return copy;
+        }
+
+        internal Gradient Copy() => Copy(m_Gradient);
+
+        internal Color ColorAt(float t)
+        {
+            var c = m_Gradient.EvaluateUnrounded(t < 0f ? 0f : Math.Min(t, 1f));
+            float r = Channel(c.r), g = Channel(c.g), b = Channel(c.b);
+            if (m_Linear)
+            {
+                r = LinearToSrgb(r);
+                g = LinearToSrgb(g);
+                b = LinearToSrgb(b);
+            }
+            return new Color(r, g, b, c.a);
+        }
+
+        static float Channel(float v) => (float)((uint)(long)(Math.Min(1f, Math.Max(0f, v)) * 255f + 0.5f) & 0xff) / 255f;
+
+        static float LinearToSrgb(float v)
+        {
+            if (!(v > 0f)) return 0f;
+            if (v <= 0.0031308f) return v * 12.92f;
+            if (v < 1f) return MathF.Pow(v, 1f / 2.4f) * 1.055f + -0.055f;
+            return 1f;
+        }
+
+        /// <summary>The time of the first colour or alpha key after <paramref name="t"/>, 1 when
+        /// there is none.</summary>
+        internal float NextKey(float t)
+        {
+            float after = t + KeyEpsilon, next = 1f;
+            foreach (float time in m_ColorTimes)
+            {
+                if (after < time)
+                {
+                    next = time;
+                    break;
+                }
+            }
+            foreach (float time in m_AlphaTimes)
+            {
+                if (after < time && time < next)
+                {
+                    next = time;
+                    break;
+                }
+            }
+            return next;
+        }
     }
 
     /// <summary>Where a segment meets the next one or ends: its points, its direction there, its
@@ -35,12 +123,24 @@ namespace Unbound.UIElements
     /// rings of steps of at most 30°; curves are arc and line pieces. Joins (miter up to the miter
     /// limit, else bevel; bevel; round) fill the outer corner and move the inner side vertices to the
     /// intersection of the inner sides; round caps cover a square half-cell around the end.
+    /// With a stroke gradient the colour follows the share of the whole path's length (all
+    /// sub-paths, in order) drawn so far: a straight segment gets a row of vertices at every
+    /// gradient key and at least every eighth of its span of the gradient (at most 17 rows), an
+    /// arc one colour per ring step, a curve one per piece end after its pieces are cut at the
+    /// gradient keys; joins and caps take the colour of the segment end they belong to.
     /// </summary>
     internal sealed class UaVectorStroke
     {
         const float MaxArcStep = 0.5235987901687622f;
         const float ArcOuterScale = 1.1f;
         const float AlmostOne = 0.99999994f;
+        // Gradient strokes: the longest share of a straight segment's gradient span between two
+        // rows, the most rows after the first, the gap below which positions count as equal, and
+        // the path length below which the gradient stays at its start.
+        const float MaxLineStep = 0.125f;
+        const int MaxSections = 16;
+        const float ProgressEpsilon = 0.001f;
+        const float MinPathLength = 1e-4f;
 
         UaSegmentEnd[] m_Starts = new UaSegmentEnd[16], m_Ends = new UaSegmentEnd[16];
         readonly List<UaCurvePiece> m_Pieces = new List<UaCurvePiece>();
@@ -49,6 +149,10 @@ namespace Unbound.UIElements
         UaVectorMesh m_Mesh;
         UaVectorStyle m_Style;
         float m_Half;
+        UaStrokeGradient m_Gradient;
+        // The length drawn so far and the whole path's length (gradient strokes only).
+        float m_Done, m_Total;
+        readonly List<Color> m_PieceColors = new List<Color>();
 
         internal void Stroke(UaVectorPath path, in UaVectorStyle style, UaVectorMesh mesh)
         {
@@ -60,6 +164,9 @@ namespace Unbound.UIElements
             m_Half = width * 0.5f;
             var entries = path.Entries;
             int count = entries.Count;
+            m_Gradient = style.Gradient;
+            m_Done = 0f;
+            m_Total = m_Gradient != null ? PathLength(entries) : 0f;
             if (m_Starts.Length < count)
             {
                 Array.Resize(ref m_Starts, Math.Max(count, m_Starts.Length * 2));
@@ -114,6 +221,125 @@ namespace Unbound.UIElements
                 }
             }
             m_Mesh = null;
+            m_Gradient = null;
+        }
+
+        // ------------------------------------------------------------------ gradient
+
+        float PathLength(List<UaPathEntry> entries)
+        {
+            float total = 0f;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                var e = entries[i];
+                switch (e.Kind)
+                {
+                    case UaPathKind.Line:
+                        total += UaVector.Length(e.B - e.A);
+                        break;
+                    case UaPathKind.Arc:
+                        total += e.Arc.Radius * e.Arc.Sweep();
+                        break;
+                    case UaPathKind.ArcTo:
+                        if (UaArcTo.ToArc(e, out var arc)) total += arc.Radius * arc.Sweep();
+                        break;
+                    case UaPathKind.Bezier:
+                        UaCurveSubdivision.Subdivide(new UaCubic(e.A, e.B, e.C, e.D), m_Pieces);
+                        float length = 0f;
+                        foreach (var piece in m_Pieces)
+                        {
+                            if (piece.IsArc && piece.P0 == piece.P1) continue;
+                            length += PieceLength(piece);
+                        }
+                        total += length;
+                        break;
+                }
+            }
+            return total;
+        }
+
+        /// <summary>The share of the path drawn after <paramref name="done"/> of its length.</summary>
+        float Progress(float done)
+        {
+            float t = MinPathLength < m_Total ? done / m_Total : 0f;
+            return t >= 1f ? 1f : t <= 0f ? 0f : t;
+        }
+
+        Color ColorAt(float t) => m_Gradient != null ? m_Gradient.ColorAt(t) : m_Style.StrokeColor;
+
+        /// <summary>The angle between two directions from a centre.</summary>
+        static float AngleBetween(Vector2 a, Vector2 b)
+        {
+            float cos = (a.x * b.x + a.y * b.y) / (UaVector.Length(a) * UaVector.Length(b));
+            return MathF.Acos(cos <= -1f ? -1f : cos >= 1f ? 1f : cos);
+        }
+
+        static float PieceLength(in UaCurvePiece piece) =>
+            piece.IsArc ? AngleBetween(piece.P1 - piece.Center, piece.P0 - piece.Center) * piece.Radius : UaVector.Length(piece.P1 - piece.P0);
+
+        /// <summary>Cuts a curve's pieces at the gradient keys within their share of the path, so
+        /// each piece blends between two colours only. A piece is cut at most 16 times; each cut
+        /// is placed by the key's position within the whole piece's share, on what is left of the
+        /// piece.</summary>
+        void SplitPiecesAtKeys()
+        {
+            float done = m_Done;
+            for (int k = 0; k < m_Pieces.Count; k++)
+            {
+                var piece = m_Pieces[k];
+                float t0 = MinPathLength < m_Total ? done / m_Total : 0f;
+                if (t0 >= 1f) t0 = 1f;
+                if (t0 <= 0f) t0 = 0f;
+                done += PieceLength(piece);
+                float t1 = MinPathLength < m_Total ? done / m_Total : 0f;
+                if (t1 >= 1f) t1 = 1f;
+                if (t1 <= 0f) t1 = 0f;
+                float key = m_Gradient.NextKey(t0);
+                float end = t1 - ProgressEpsilon;
+                for (int cuts = 0; key < end && cuts < MaxSections; cuts++)
+                {
+                    float f = t0 != t1 ? (key - t0) / (t1 - t0) : t0;
+                    var rest = piece;
+                    Vector2 cut;
+                    if (!piece.IsArc)
+                    {
+                        Vector2 d = piece.P1 - piece.P0;
+                        float length = UaVector.Length(d);
+                        cut = new Vector2(d.x / length * length * f + piece.P0.x, d.y / length * length * f + piece.P0.y);
+                        rest.Pm = new Vector2((cut.x + piece.P1.x) * 0.5f, (cut.y + piece.P1.y) * 0.5f);
+                        piece.Pm = new Vector2((cut.x + piece.P0.x) * 0.5f, (cut.y + piece.P0.y) * 0.5f);
+                    }
+                    else
+                    {
+                        Vector2 c = piece.Center, v0 = piece.P0 - c, v1 = piece.P1 - c;
+                        float l0 = UaVector.Length(v0);
+                        var normal = new Vector2(-v0.y / l0, v0.x / l0);
+                        float angle = AngleBetween(v1, v0);
+                        if (v1.y * normal.y + v1.x * normal.x < 0f) angle = -angle;
+                        // Turned by half-angle terms, as the ring steps of an arc are.
+                        float h = angle * f * 0.5f;
+                        float qz = MathF.Sin(h), qw = MathF.Cos(h), z2 = qz + qz;
+                        cut = new Vector2(-(qw * z2) * v0.y + (1f - qz * z2) * v0.x + c.x, (1f - qz * z2) * v0.y + qw * z2 * v0.x + c.y);
+                        piece.Pm = OnCircle(new Vector2((piece.P0.x + cut.x) * 0.5f - c.x, (piece.P0.y + cut.y) * 0.5f - c.y), c, piece.Radius);
+                        rest.Pm = OnCircle(new Vector2((cut.x + piece.P1.x) * 0.5f - c.x, (cut.y + piece.P1.y) * 0.5f - c.y), c, piece.Radius);
+                    }
+                    float at = f * (piece.T1 - piece.T0) + piece.T0;
+                    piece.P1 = cut;
+                    piece.T1 = at;
+                    rest.P0 = cut;
+                    rest.T0 = at;
+                    m_Pieces[k] = piece;
+                    m_Pieces.Insert(++k, rest);
+                    piece = rest;
+                    key = m_Gradient.NextKey(key);
+                }
+            }
+        }
+
+        static Vector2 OnCircle(Vector2 direction, Vector2 center, float radius)
+        {
+            float l = UaVector.Length(direction);
+            return new Vector2(direction.x / l * radius + center.x, direction.y / l * radius + center.y);
         }
 
         // ------------------------------------------------------------------ lines
@@ -124,12 +350,44 @@ namespace Unbound.UIElements
             float dx = p1.x - p0.x, dy = p1.y - p0.y;
             float length = MathF.Sqrt(dx * dx + dy * dy);
             int b = m_Mesh.VertexCount;
-            var color = m_Style.StrokeColor;
-            LineSection(p0, dx, dy, length, color, 0, 0f);
-            LineSection(p0, dx, dy, length, color, 1, 1f);
+            // The segment's span of the gradient; without one, a single span.
+            float t0 = 0f, t1 = 1f;
+            if (m_Gradient != null)
+            {
+                t0 = Progress(m_Done);
+                t1 = Progress(m_Done + length);
+            }
+            if (t1 - ProgressEpsilon <= t0)
+            {
+                LineSection(p0, dx, dy, length, ColorAt(t0), 0, 0f);
+                LineSection(p0, dx, dy, length, ColorAt(t1), 1, 1f);
+            }
+            else
+            {
+                float maxStep = MaxLineStep * (t1 - t0);
+                float t = t0;
+                int row = 0;
+                do
+                {
+                    LineSection(p0, dx, dy, length, ColorAt(t), row, (t - t0) / (t1 - t0));
+                    float next = t1;
+                    if (m_Gradient != null)
+                    {
+                        next = m_Gradient.NextKey(t);
+                        if (maxStep < next - t) next = t + maxStep;
+                    }
+                    t = next;
+                    row++;
+                }
+                while (row < MaxSections && t < t1 - ProgressEpsilon);
+                LineSection(p0, dx, dy, length, ColorAt(t1), row, 1f);
+            }
+            m_Done += length;
+            // The start works from the first two rows, the end from the last two.
+            int n = m_Mesh.VertexCount;
             var dir = new Vector2(dx / length, dy / length);
-            m_Starts[index] = new UaSegmentEnd { P0 = p0, P1 = p1, Dir = dir, B0 = b + 2, B1 = b + 5, B2 = b, A0 = b + 1, A1 = b + 4, A2 = b, Color = color, Valid = true };
-            m_Ends[index] = new UaSegmentEnd { P0 = p0, P1 = p1, Dir = dir, B0 = b + 2, B1 = b + 5, B2 = b, A0 = b + 1, A1 = b + 4, A2 = b + 3, Color = color, Valid = true };
+            m_Starts[index] = new UaSegmentEnd { P0 = p0, P1 = p1, Dir = dir, B0 = b + 2, B1 = b + 5, B2 = b, A0 = b + 1, A1 = b + 4, A2 = b, Color = ColorAt(t0), Valid = true };
+            m_Ends[index] = new UaSegmentEnd { P0 = p0, P1 = p1, Dir = dir, B0 = n - 4, B1 = n - 1, B2 = n - 6, A0 = n - 5, A1 = n - 2, A2 = n - 3, Color = ColorAt(t1), Valid = true };
             float nx = dir.x * m_Half, ny = dir.y * m_Half;
             m_Mesh.AddBounds(p0.x + ny, p0.y - nx);
             m_Mesh.AddBounds(p0.x - ny, p0.y + nx);
@@ -170,8 +428,8 @@ namespace Unbound.UIElements
             float r = arc.Radius;
             float step = sweep > MaxArcStep ? MaxArcStep : sweep * 0.5f;
             if (arc.Ccw) step = -step;
-            var color = m_Style.StrokeColor;
-            var tint = UaVector.Tint(color);
+            var color = ColorAt(Progress(m_Done));
+            var endColor = color;
             Vector2 us = UaVector.Normalized(start - c), ue = UaVector.Normalized(end - c);
             if (!(UaVector.Epsilon < Math.Abs(step)))
             {
@@ -187,7 +445,7 @@ namespace Unbound.UIElements
                     return;
                 }
                 var dir = new Vector2(chord.x / length, chord.y / length);
-                m_Starts[index] = new UaSegmentEnd { P0 = start, P1 = end, Dir = dir, Arc = true, Color = m_Style.StrokeColor, Valid = true };
+                m_Starts[index] = new UaSegmentEnd { P0 = start, P1 = end, Dir = dir, Arc = true, Color = color, Valid = true };
                 m_Ends[index] = m_Starts[index];
                 return;
             }
@@ -202,6 +460,7 @@ namespace Unbound.UIElements
                 float inv1 = 1f / (r + half), inv2 = 1f / (r - half);
                 int first = m_Mesh.VertexCount;
                 var p = start;
+                Vector2 previous = default;
                 for (int k = -1; k < n; k++)
                 {
                     Vector2 v = k == -1 ? start - c : k == n - 1 ? end - c : p - c;
@@ -211,7 +470,14 @@ namespace Unbound.UIElements
                         float radius = side == 0 ? outer : inner;
                         var q = new Vector2(radius * d.x + c.x, radius * d.y + c.y);
                         Vector2 w = q - c;
-                        m_Mesh.Add(q, tint, new Vector4(w.x * inv1, w.y * inv1, w.x * inv2, w.y * inv2));
+                        if (m_Gradient != null)
+                        {
+                            // The length drawn grows by the angle from the vertex before, on the arc's own radius.
+                            if (k >= 0 || side == 1) m_Done += AngleBetween(w, previous - c) * r;
+                            previous = q;
+                            endColor = ColorAt(Progress(m_Done));
+                        }
+                        m_Mesh.Add(q, UaVector.Tint(endColor), new Vector4(w.x * inv1, w.y * inv1, w.x * inv2, w.y * inv2));
                     }
                     p = new Vector2(d.y * m01 + d.x * m00 + 0f + c.x, d.y * m00 + d.x * m10 + 0f + c.y);
                 }
@@ -224,7 +490,7 @@ namespace Unbound.UIElements
             Vector2 ds = arc.Ccw ? new Vector2(us.y, -us.x) : new Vector2(-us.y, us.x);
             Vector2 de = arc.Ccw ? new Vector2(ue.y, -ue.x) : new Vector2(-ue.y, ue.x);
             m_Starts[index] = new UaSegmentEnd { P0 = start, P1 = end, Dir = ds, Arc = true, Color = color, Valid = true };
-            m_Ends[index] = new UaSegmentEnd { P0 = start, P1 = end, Dir = de, Arc = true, Color = color, Valid = true };
+            m_Ends[index] = new UaSegmentEnd { P0 = start, P1 = end, Dir = de, Arc = true, Color = endColor, Valid = true };
             arc.AddBounds(m_Mesh, half, clockwise: false);
         }
 
@@ -235,13 +501,20 @@ namespace Unbound.UIElements
             var e = entries[index];
             var curve = new UaCubic(e.A, e.B, e.C, e.D);
             UaCurveSubdivision.Subdivide(curve, m_Pieces);
+            if (m_Pieces.Count == 0) return;
+            if (m_Gradient != null) SplitPiecesAtKeys();
             int n = m_Pieces.Count;
-            if (n == 0) return;
+            // The colour at each piece end: piece k runs from colour k to colour k + 1.
+            m_PieceColors.Clear();
+            m_PieceColors.Add(ColorAt(Progress(m_Done)));
+            for (int k = 0; k < n; k++)
+            {
+                if (m_Gradient != null) m_Done += PieceLength(m_Pieces[k]);
+                m_PieceColors.Add(ColorAt(Progress(m_Done)));
+            }
             bool capStart = index > 0 && entries[index - 1].Kind == UaPathKind.CapStart;
             bool capEnd = index + 1 < entries.Count && entries[index + 1].Kind == UaPathKind.CapEnd;
             float half = m_Half, extent = half + UaVector.EdgeBuffer;
-            var color = m_Style.StrokeColor;
-            var tint = UaVector.Tint(color);
             m_Quads.Clear();
             m_PieceFlags.Clear();
             for (int k = 0; k < n; k++)
@@ -271,6 +544,8 @@ namespace Unbound.UIElements
                 var piece = m_Pieces[k];
                 if (m_PieceFlags[k] == PieceSkipped) continue;
                 int q = k * 4, first = m_Mesh.VertexCount;
+                // A piece's quad: its start corner, the two end corners, the other start corner.
+                Color32 tint = UaVector.Tint(m_PieceColors[k]), endTint = UaVector.Tint(m_PieceColors[k + 1]);
                 if (piece.IsArc && piece.Radius > 0f)
                 {
                     float toHit = UaVector.Length(piece.Pm - m_Quads[q + 2]);
@@ -281,8 +556,8 @@ namespace Unbound.UIElements
                         var hit = m_Quads[q + 2];
                         float r = toHit + half;
                         m_Mesh.Add(m_Quads[q], tint, new Vector4((m_Quads[q].x - hit.x) / r, (m_Quads[q].y - hit.y) / r, UaVector.UnusedArc, UaVector.UnusedArc));
-                        m_Mesh.Add(m_Quads[q + 1], tint, new Vector4((m_Quads[q + 1].x - hit.x) / r, (m_Quads[q + 1].y - hit.y) / r, UaVector.UnusedArc, UaVector.UnusedArc));
-                        m_Mesh.Add(m_Quads[q + 2], tint, new Vector4(0f, 0f, UaVector.UnusedArc, UaVector.UnusedArc));
+                        m_Mesh.Add(m_Quads[q + 1], endTint, new Vector4((m_Quads[q + 1].x - hit.x) / r, (m_Quads[q + 1].y - hit.y) / r, UaVector.UnusedArc, UaVector.UnusedArc));
+                        m_Mesh.Add(m_Quads[q + 2], endTint, new Vector4(0f, 0f, UaVector.UnusedArc, UaVector.UnusedArc));
                         m_Mesh.Add(m_Quads[q + 3], tint, new Vector4(0f, 0f, UaVector.UnusedArc, UaVector.UnusedArc));
                     }
                     else
@@ -291,7 +566,7 @@ namespace Unbound.UIElements
                         for (int j = 0; j < 4; j++)
                         {
                             Vector2 v = m_Quads[q + j], d = v - piece.Center;
-                            m_Mesh.Add(v, tint, new Vector4(d.x * m1, d.y * m1, d.x * m2, d.y * m2));
+                            m_Mesh.Add(v, j == 1 || j == 2 ? endTint : tint, new Vector4(d.x * m1, d.y * m1, d.x * m2, d.y * m2));
                         }
                     }
                 }
@@ -300,19 +575,19 @@ namespace Unbound.UIElements
                     float m = 1f / (m_Style.LineWidth + 2f);
                     Vector2 c0 = m_Quads[q] - m_Quads[q + 3], c1 = m_Quads[q + 1] - m_Quads[q + 2];
                     m_Mesh.Add(m_Quads[q], tint, new Vector4(c0.x * m, c0.y * m, c0.x * 0.5f, c0.y * 0.5f));
-                    m_Mesh.Add(m_Quads[q + 1], tint, new Vector4(c1.x * m, c1.y * m, c1.x * 0.5f, c1.y * 0.5f));
-                    m_Mesh.Add(m_Quads[q + 2], tint, Vector4.zero);
+                    m_Mesh.Add(m_Quads[q + 1], endTint, new Vector4(c1.x * m, c1.y * m, c1.x * 0.5f, c1.y * 0.5f));
+                    m_Mesh.Add(m_Quads[q + 2], endTint, Vector4.zero);
                     m_Mesh.Add(m_Quads[q + 3], tint, Vector4.zero);
                 }
                 m_Mesh.TriangleCW(first, first + 1, first + 2);
                 m_Mesh.TriangleCW(first, first + 2, first + 3);
-                if (m_PieceFlags[k] == PieceCollapsed) OuterMargin(piece, q, half, tint);
+                if (m_PieceFlags[k] == PieceCollapsed) OuterMargin(piece, q, half, tint, endTint);
             }
             UaCurvePiece f = m_Pieces[0], l = m_Pieces[n - 1];
             var ds = f.IsArc && f.Radius > 0f ? UaCurveSubdivision.PieceTangent(f, curve, true) : curve.Tangent(0f);
             var de = l.IsArc && l.Radius > 0f ? UaCurveSubdivision.PieceTangent(l, curve, false) : curve.Tangent(1f);
-            m_Starts[index] = new UaSegmentEnd { P0 = f.P0, P1 = f.P1, Dir = ds, Arc = true, Color = color, Valid = true };
-            m_Ends[index] = new UaSegmentEnd { P0 = l.P0, P1 = l.P1, Dir = de, Arc = true, Color = color, Valid = true };
+            m_Starts[index] = new UaSegmentEnd { P0 = f.P0, P1 = f.P1, Dir = ds, Arc = true, Color = m_PieceColors[0], Valid = true };
+            m_Ends[index] = new UaSegmentEnd { P0 = l.P0, P1 = l.P1, Dir = de, Arc = true, Color = m_PieceColors[n], Valid = true };
             m_Mesh.AddBounds(curve.P0);
             m_Mesh.AddBounds(curve.P3);
             AddNormalBounds(curve.P0, ds);
@@ -322,8 +597,9 @@ namespace Unbound.UIElements
 
         /// <summary>A collapsed piece's outer edge q0→q1 pushed outwards past the coverage circles
         /// around the crossing (radius from each end's curve point plus half the line width), plus
-        /// the anti-aliasing margin when it moves at all.</summary>
-        void OuterMargin(in UaCurvePiece piece, int q, float half, Color32 tint)
+        /// the anti-aliasing margin when it moves at all. With a gradient the edge has the
+        /// piece's start colour and the pushed-out side its end colour, as measured.</summary>
+        void OuterMargin(in UaCurvePiece piece, int q, float half, Color32 tint, Color32 endTint)
         {
             Vector2 q0 = m_Quads[q], q1 = m_Quads[q + 1], hit = m_Quads[q + 2];
             float r0 = UaVector.Length(piece.P0 - hit) + half, r1 = UaVector.Length(piece.P1 - hit) + half;
@@ -337,8 +613,8 @@ namespace Unbound.UIElements
             float i0 = 1f / r0, i1 = 1f / r1;
             int first = m_Mesh.Add(q0, tint, new Vector4((q0.x - hit.x) * i0, (q0.y - hit.y) * i0, UaVector.UnusedArc, UaVector.UnusedArc));
             m_Mesh.Add(q1, tint, new Vector4((q1.x - hit.x) * i1, (q1.y - hit.y) * i1, UaVector.UnusedArc, UaVector.UnusedArc));
-            m_Mesh.Add(o1, tint, new Vector4((o1.x - hit.x) * i1, (o1.y - hit.y) * i1, UaVector.UnusedArc, UaVector.UnusedArc));
-            m_Mesh.Add(o0, tint, new Vector4((o0.x - hit.x) * i0, (o0.y - hit.y) * i0, UaVector.UnusedArc, UaVector.UnusedArc));
+            m_Mesh.Add(o1, endTint, new Vector4((o1.x - hit.x) * i1, (o1.y - hit.y) * i1, UaVector.UnusedArc, UaVector.UnusedArc));
+            m_Mesh.Add(o0, endTint, new Vector4((o0.x - hit.x) * i0, (o0.y - hit.y) * i0, UaVector.UnusedArc, UaVector.UnusedArc));
             m_Mesh.TriangleCW(first, first + 1, first + 2);
             m_Mesh.TriangleCW(first, first + 2, first + 3);
         }
