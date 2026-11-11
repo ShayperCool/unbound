@@ -12,7 +12,7 @@ use naga::{
     AddressSpace, BinaryOperator, Binding, Expression, Handle, Literal, Module, ResourceBinding,
     Span, Statement, StructMember, Type, TypeInner, VectorSize,
 };
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 const MAIN_TEXTURE: &str = "_MainTex";
 /// SPIR-V's `BuiltIn FragDepth`.
@@ -1063,10 +1063,11 @@ pub(crate) fn fit(
 ) -> Result<Compiled> {
     // A texture the program still samples through several samplers has a variable for each,
     // the same in both stages.
-    let (vertex, fragment) = (
-        crate::samplers::own_samplers(vertex, texture_state)?,
-        crate::samplers::own_samplers(fragment, texture_state)?,
-    );
+    let own = |stage: &[u32]| match texture_state {
+        true => crate::samplers::own_samplers(stage),
+        false => Ok(stage.to_vec()),
+    };
+    let (vertex, fragment) = (own(vertex)?, own(fragment)?);
     let mut pairs = crate::samplers::sampled_pairs(&vertex)?;
     pairs.extend(crate::samplers::sampled_pairs(&fragment)?);
     let primary = crate::samplers::primary_samplers(&pairs);
@@ -1153,6 +1154,9 @@ pub(crate) fn fit(
             }
             names.insert(key);
         }
+    }
+    if !texture_state {
+        named_samplers_resolve(&[&vertex, &fragment])?;
     }
     // A main texture that is compared too or has further variables is a slot of the
     // program's, like a typed one.
@@ -1342,6 +1346,56 @@ pub(crate) fn wgsl_entry(source: &str, stage: naga::ShaderStage) -> Result<Strin
         .find(|e| e.stage == stage)
         .map(|e| e.name.clone())
         .ok_or_else(|| anyhow!("emitted WGSL has no {stage:?} entry point"))
+}
+
+/// The global variables a module's functions read.
+fn referenced(module: &Module) -> HashSet<Handle<naga::GlobalVariable>> {
+    module
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter().map(|e| &e.function))
+        .flat_map(|f| f.expressions.iter())
+        .filter_map(|(_, e)| match e {
+            Expression::GlobalVariable(g) => Some(*g),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Where a program samples through the samplers it names, each sampler it uses is one of a
+/// texture the program (either stage) uses, or an inline state: the Vulkan Editor refuses a
+/// program with any other, in these words (tests/projects/samplerstates `Shapes`, where the
+/// program declares the sampler's texture and does not use it). Which stage must use the
+/// texture is unmeasured.
+fn named_samplers_resolve(stages: &[&Module]) -> Result<()> {
+    let used: Vec<(&Module, HashSet<Handle<naga::GlobalVariable>>)> =
+        stages.iter().map(|m| (*m, referenced(m))).collect();
+    let variables = |sampler: bool| {
+        used.iter().flat_map(move |(module, used)| {
+            module
+                .global_variables
+                .iter()
+                .filter(move |(h, g)| {
+                    used.contains(h)
+                        && g.space == AddressSpace::Handle
+                        && sampler == matches!(module.types[g.ty].inner, TypeInner::Sampler { .. })
+                })
+                .filter_map(|(_, g)| g.name.as_deref())
+        })
+    };
+    let textures: HashSet<String> = variables(false)
+        .filter_map(|name| texture_property(crate::samplers::variable_texture(name), false))
+        .collect();
+    for name in variables(true) {
+        let own = texture_property(name, true).is_some_and(|p| textures.contains(&p));
+        if !own && InlineSampler::from_name(name).is_none() {
+            bail!(
+                "Unrecognized sampler '{name}' - does not match any texture and is not a recognized inline name (should contain filter and wrap modes)"
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Whether a module has a texture (image) variable for a property.

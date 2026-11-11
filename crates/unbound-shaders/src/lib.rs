@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 34;
+pub const FORMAT_VERSION: u32 = 35;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2174,6 +2174,145 @@ float4 frag(float4 p : SV_POSITION) : SV_Target
         assert!(slot("_Unsigned").integer() && slot("_Signed").integer());
         assert!(!slot("_Filtered").integer() && !slot("_Shadow").integer());
         assert!(slot("_Shadow").depth() && slot("_Shadow").comparison);
+    }
+
+    /// Where a program samples through the sampler it names (the Vulkan device; the Manual
+    /// excludes only OpenGL from inline samplers, and the Vulkan Editor applies them:
+    /// tests/projects/samplerstates `Inline`, `--device vulkan`), an inline sampler is a slot
+    /// with its state and the samples go through it; on OpenGL Core they go through the
+    /// texture's own sampler.
+    #[test]
+    fn inline_samplers_keep_their_state_where_programs_name_their_samplers() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2D _A;
+SamplerState sampler_A;
+Texture2D _Shadow;
+SamplerState sampler_LinearRepeat;
+SamplerComparisonState sampler_PointClampCompare;
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+float4 frag(float4 position : SV_POSITION) : SV_Target {
+    return _A.Sample(sampler_LinearRepeat, position.xy) + _A.Sample(sampler_A, position.xy)
+        + _Shadow.SampleCmpLevelZero(sampler_PointClampCompare, position.xy, 0.5);
+}
+"#;
+        // For every sample: the slot of its texture and of its sampler (by `textures` index;
+        // further variables of a texture count as the texture).
+        fn sampled(compiled: &Compiled) -> Vec<(String, String)> {
+            let module = naga::front::wgsl::parse_str(&compiled.fragment).unwrap();
+            let slots = compiled.textures.len() as u32;
+            let mut found = std::collections::BTreeSet::new();
+            let functions = module
+                .functions
+                .iter()
+                .map(|(_, f)| f)
+                .chain(module.entry_points.iter().map(|e| &e.function));
+            for f in functions {
+                let slot = |h: naga::Handle<naga::Expression>| match &f.expressions[h] {
+                    naga::Expression::GlobalVariable(g) => {
+                        let b = module.global_variables[*g].binding.as_ref().unwrap();
+                        assert_eq!(b.group, 1);
+                        match b.binding < 2 * slots {
+                            true => b.binding / 2,
+                            false => compiled.texture_aliases[(b.binding - 2 * slots) as usize],
+                        }
+                    }
+                    other => panic!("not a variable: {other:?}"),
+                };
+                for (_, e) in f.expressions.iter() {
+                    if let naga::Expression::ImageSample { image, sampler, .. } = e {
+                        let name = |k: u32| compiled.textures[k as usize].clone();
+                        found.insert((name(slot(*image)), name(slot(*sampler))));
+                    }
+                }
+            }
+            found.into_iter().collect()
+        }
+        let pairs = |list: &[(&str, &str)]| -> Vec<(String, String)> {
+            list.iter()
+                .map(|(t, s)| (t.to_string(), s.to_string()))
+                .collect()
+        };
+        let compile = |device| {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            compiler
+                .compile(&program(source, false), &[], false)
+                .unwrap()
+        };
+        let named = compile(unbound_compat::GraphicsDevice::Vulkan);
+        assert_eq!(
+            sampled(&named),
+            pairs(&[
+                ("_A", "_A"),
+                ("_A", "_LinearRepeat"),
+                ("_Shadow", "_PointClampCompare")
+            ])
+        );
+        let slot = |compiled: &Compiled, name: &str| {
+            let k = compiled.textures.iter().position(|t| t == name).unwrap();
+            compiled.texture_slots[k]
+        };
+        assert_eq!(
+            slot(&named, "_LinearRepeat").inline,
+            Some(InlineSampler { filter: 1, wrap: 0 })
+        );
+        assert!(slot(&named, "_PointClampCompare").comparison);
+        assert_eq!(
+            slot(&named, "_PointClampCompare").inline,
+            Some(InlineSampler { filter: 0, wrap: 1 })
+        );
+        let own = compile(unbound_compat::GraphicsDevice::OpenGLCore);
+        assert_eq!(
+            sampled(&own),
+            pairs(&[("_A", "_A"), ("_Shadow", "_Shadow")])
+        );
+    }
+
+    /// Where a program samples through the sampler it names, a sampler that is neither a
+    /// texture's the program uses nor an inline state is an error, as in the Vulkan Editor
+    /// ("Unrecognized sampler ... does not match any texture and is not a recognized inline
+    /// name": tests/projects/samplerstates `Shapes`, `--device vulkan`); OpenGL Core, where
+    /// the state is the texture's, draws it.
+    #[test]
+    fn a_sampler_of_no_texture_of_the_program_is_refused_where_programs_name_their_samplers() {
+        let source = |fragment: &str| {
+            format!(
+                "#pragma vertex vert\n#pragma fragment frag\n\
+                 TextureCube _Cube; SamplerState sampler_Cube; Texture2D _B; SamplerState sampler_B;\n\
+                 float4 vert(float4 position : POSITION) : SV_POSITION {{ return position; }}\n\
+                 float4 frag(float4 position : SV_POSITION) : SV_Target {{ return {fragment}; }}\n"
+            )
+        };
+        let compile = |device, fragment: &str| {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            compiler.compile(&program(&source(fragment), false), &[], false)
+        };
+        let vulkan = unbound_compat::GraphicsDevice::Vulkan;
+        // `_B` is declared, but the program does not use it.
+        let unused =
+            "_Cube.Sample(sampler_Cube, position.xyz) + _Cube.Sample(sampler_B, position.xyz)";
+        let refused = compile(vulkan, unused).unwrap_err();
+        assert!(
+            format!("{refused:#}").contains("Unrecognized sampler 'sampler_B'"),
+            "{refused:#}"
+        );
+        compile(unbound_compat::GraphicsDevice::OpenGLCore, unused).unwrap();
+        // Used, by a sample or a load, its sampler samples the cube.
+        for used in [
+            "_Cube.Sample(sampler_B, position.xyz) + _B.Sample(sampler_B, position.xy)",
+            "_Cube.Sample(sampler_B, position.xyz) + _B.Load(int3(0, 0, 0))",
+        ] {
+            compile(vulkan, used).unwrap();
+        }
     }
 
     /// A texture sampled with and without comparisons is a slot of each kind of its property

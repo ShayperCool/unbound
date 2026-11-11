@@ -115,9 +115,10 @@ impl GraphicsDevice {
     }
 
     /// Whether a graphics program samples a texture through the texture's own sampler state
-    /// whatever sampler it names, another texture's too: OpenGL Core, where the state is the
-    /// texture's (tests/projects/samplerstates). The other devices keep the sampler a program
-    /// names when it is another texture's (unmeasured on their Editors).
+    /// whatever sampler it names, an inline one or another texture's: OpenGL Core, where the
+    /// state is the texture's. The other devices sample through the sampler a program names
+    /// (tests/projects/samplerstates, the OpenGL Core and Vulkan Editors; the Manual excludes
+    /// only OpenGL from inline samplers; unmeasured on Metal).
     pub fn samples_through_texture_state(self) -> bool {
         matches!(self, Self::OpenGLCore)
     }

@@ -1,29 +1,31 @@
-//! Inline sampler states in graphics programs on the OpenGL Core device
-//! (`SystemInfo.graphicsDeviceType`): the Unity 6000.0 Manual (Using sampler states) says "Inline
-//! samplers don't work if you target the OpenGL ES or OpenGL Core graphics APIs", and the Editor
-//! on OpenGL Core samples a texture through its own sampler state whatever inline sampler the
-//! program names (tests/projects/urp: `upscale_point` equals `upscale_linear`; `inline_sampler`).
-//! A texture sampled through another texture's sampler (`_Detail.Sample(sampler_MainTex, uv)`)
-//! is sampled through its own state there too, in either stage (tests/projects/samplerstates:
-//! the state is the texture's on OpenGL Core, `GraphicsDevice::samples_through_texture_state`);
-//! the other devices keep that sampler: unmeasured on their Editors.
+//! The sampler a graphics program samples a texture through, by device.
+//!
+//! On the OpenGL Core device (`SystemInfo.graphicsDeviceType`) the state is the texture's
+//! (`GraphicsDevice::samples_through_texture_state`): the Unity 6000.0 Manual (Using sampler
+//! states) says "Inline samplers don't work if you target the OpenGL ES or OpenGL Core graphics
+//! APIs", and the Editor there samples a texture through its own sampler state whatever sampler
+//! the program names, an inline one (tests/projects/urp: `upscale_point` equals
+//! `upscale_linear`; `inline_sampler`) or another texture's
+//! (`_Detail.Sample(sampler_MainTex, uv)`), in either stage, and with comparisons too
+//! (tests/projects/samplerstates). On the other devices a program samples through the sampler
+//! it names, as the Vulkan Editor does (tests/projects/samplerstates, `--device vulkan`): an
+//! inline state is that state, another texture's sampler that texture's state.
 //!
 //! Compute kernels retain predefined sampler states (tests/projects/renderapi computeSamplers).
 //!
-//! [`own_samplers`] rewrites a graphics program's SPIR-V so that every sample of a texture through an
-//! inline sampler (`sampler_PointClamp`, `s_linear_clamp_sampler`: a sampler named like no
-//! texture's, whose name spells a state), and on OpenGL Core through another texture's, uses
-//! the texture's own sampler (`sampler<texture>`, declared when the program does not). glslang passes textures and samplers to functions
-//! resolved, so every sample names its texture and sampler variables. A sample whose texture is
-//! not a variable keeps its sampler (an inline state is then what the sampler binds).
+//! [`own_samplers`] is the OpenGL Core rule: it rewrites a graphics program's SPIR-V so that
+//! every sample of a texture through an inline sampler (`sampler_PointClamp`,
+//! `s_linear_clamp_sampler`: a sampler named like no texture's, whose name spells a state) or
+//! through another texture's uses the texture's own sampler (`sampler<texture>`, declared when
+//! the program does not). glslang passes textures and samplers to functions resolved, so every
+//! sample names its texture and sampler variables. A sample whose texture is not a variable
+//! keeps its sampler (an inline state is then what the sampler binds).
 //!
 //! A texture has an own sampler of each kind, both named `sampler<texture>`: the one its
 //! comparisons go through and the one its other samples do (a sampler variable is one kind or
 //! the other, by what samples through it; glslang likewise declares a texture sampled both
-//! ways as two variables of one name). Comparisons keep the sampler they name, but on OpenGL
-//! Core, where they go through the texture's own comparing one: the Editor there compares
-//! through the texture's state whatever sampler the program names
-//! (tests/projects/samplerstates CmpTwo.map, CmpOther.mapLinear).
+//! ways as two variables of one name). A comparison goes through the texture's own comparing
+//! one whatever comparison sampler it names (samplerstates CmpTwo.map, CmpOther.mapLinear).
 
 use crate::InlineSampler;
 use anyhow::{Result, bail};
@@ -251,9 +253,9 @@ impl<'a> Sampling<'a> {
     }
 }
 
-/// The SPIR-V with samples through inline samplers turned to their texture's own sampler, and
-/// with `texture_state` those through another texture's sampler too (see the module).
-pub(crate) fn own_samplers(words: &[u32], texture_state: bool) -> Result<Vec<u32>> {
+/// The SPIR-V with every sample of a texture through the texture's own sampler of its kind,
+/// whatever sampler it names (see the module).
+pub(crate) fn own_samplers(words: &[u32]) -> Result<Vec<u32>> {
     let scan = Sampling::scan(words)?;
     let list = &scan.list;
     let inst = |k: usize| scan.inst(k);
@@ -280,9 +282,6 @@ pub(crate) fn own_samplers(words: &[u32], texture_state: bool) -> Result<Vec<u32
                 .is_some_and(|n| inline_state(n, &texture_names))
         })
         .collect();
-    if inline.is_empty() && !texture_state {
-        return Ok(words.to_vec());
-    }
     let origin = |id: u32| scan.origin(id);
     // A sampler of another texture than the one it samples (its own is the one of the
     // texture's property, as the renderer pairs them).
@@ -307,9 +306,8 @@ pub(crate) fn own_samplers(words: &[u32], texture_state: bool) -> Result<Vec<u32
             .copied()
             .find(|id| names.get(id) == Some(&own) && comparing.contains(id) == compares)
     };
-    // Each sample that goes through its texture's own sampler instead of the one it names:
-    // through an inline sampler (or, with `texture_state`, any other), and with
-    // `texture_state` each comparison.
+    // Each sample that goes through its texture's own sampler instead of the one it names: an
+    // inline sampler, another texture's, and for a comparison any other.
     let mut replaced = HashSet::new();
     let rewrite_samples: Vec<(usize, (u32, bool))> = scan
         .samples
@@ -321,10 +319,8 @@ pub(crate) fn own_samplers(words: &[u32], texture_state: bool) -> Result<Vec<u32
                 return None;
             }
             let compares = depth_samples.contains(&w[2]);
-            let rewrite = match compares {
-                true => texture_state,
-                false => inline.contains(&s) || (texture_state && foreign(t, s)),
-            } && own_of(t, compares) != Some(s);
+            let rewrite = (compares || inline.contains(&s) || foreign(t, s))
+                && own_of(t, compares) != Some(s);
             if rewrite {
                 replaced.insert(s);
             }
@@ -622,7 +618,7 @@ float4 main(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_Target
 }
 "#;
         let words = spirv(source, "main", shaderc::ShaderKind::Fragment);
-        let fixed = own_samplers(&words, false).unwrap();
+        let fixed = own_samplers(&words).unwrap();
         let pairs = sampled(&fixed);
         assert_eq!(
             pairs,
@@ -632,7 +628,7 @@ float4 main(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_Target
                 ("_Ids", "sampler_PointClamp"),
                 ("_Other", "sampler_Other"),
                 ("_Other", "sampler_Other"),
-                ("_ShadowMap", "sampler_LinearClampCompare"),
+                ("_ShadowMap", "sampler_ShadowMap"),
             ]
             .map(|(a, b)| (a.to_string(), b.to_string()))
         );
@@ -656,7 +652,7 @@ float4 main(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_Target
 }
 "#;
         let words = spirv(source, "main", shaderc::ShaderKind::Fragment);
-        let pairs = sampled(&own_samplers(&words, false).unwrap());
+        let pairs = sampled(&own_samplers(&words).unwrap());
         assert!(!pairs.is_empty());
         assert!(
             pairs.iter().all(|(t, s)| *s == format!("sampler{t}")),
@@ -725,7 +721,7 @@ float4 main(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_Target
 "#;
         let words = spirv(source, "main", shaderc::ShaderKind::Fragment);
         assert_eq!(
-            sampled_kinds(&own_samplers(&words, false).unwrap()),
+            sampled_kinds(&own_samplers(&words).unwrap()),
             kinds(&[
                 ("_Shadow", "sampler_Shadow", false),
                 ("_Shadow", "sampler_Shadow", true),
@@ -733,12 +729,11 @@ float4 main(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_Target
         );
     }
 
-    /// Where the sampler state is the texture's (OpenGL Core), a comparison goes through the
-    /// texture's own comparing sampler whatever sampler it names, declared when the program
-    /// has none (its `sampler_Shadow` is the one the other samples go through); elsewhere a
-    /// comparison keeps the sampler it names.
+    /// A comparison goes through the texture's own comparing sampler whatever sampler it
+    /// names, declared when the program has none (its `sampler_Shadow` is the one the other
+    /// samples go through).
     #[test]
-    fn comparisons_go_through_the_textures_own_sampler_with_texture_state() {
+    fn comparisons_go_through_the_textures_own_comparing_sampler() {
         let source = r#"
 Texture2D _Shadow; SamplerState sampler_Shadow;
 Texture2D _Map; SamplerComparisonState sampler_Map;
@@ -751,21 +746,21 @@ float4 frag(float2 uv : TEXCOORD0) : SV_Target {
 }"#;
         let words = spirv(source, "frag", shaderc::ShaderKind::Fragment);
         assert_eq!(
-            sampled_kinds(&own_samplers(&words, true).unwrap()),
-            kinds(&[
-                ("_Map", "sampler_Map", true),
-                ("_Map", "sampler_Map", true),
-                ("_Shadow", "sampler_Shadow", false),
-                ("_Shadow", "sampler_Shadow", true),
-            ])
-        );
-        assert_eq!(
-            sampled_kinds(&own_samplers(&words, false).unwrap()),
+            sampled_kinds(&words),
             kinds(&[
                 ("_Map", "sampler_LinearClampCompare", true),
                 ("_Map", "sampler_Map", true),
                 ("_Shadow", "sampler_LinearClampCompare", true),
                 ("_Shadow", "sampler_Shadow", false),
+            ])
+        );
+        assert_eq!(
+            sampled_kinds(&own_samplers(&words).unwrap()),
+            kinds(&[
+                ("_Map", "sampler_Map", true),
+                ("_Map", "sampler_Map", true),
+                ("_Shadow", "sampler_Shadow", false),
+                ("_Shadow", "sampler_Shadow", true),
             ])
         );
     }
@@ -966,11 +961,10 @@ RWStructuredBuffer<float4> _Out;
         assert_eq!(split(&words), words);
     }
 
-    /// Where the sampler state is the texture's (OpenGL Core), a sample through another
-    /// texture's sampler uses the texture's own too, declared when the program has none;
-    /// elsewhere it keeps the sampler it names.
+    /// A sample through another texture's sampler uses the texture's own too, declared when
+    /// the program has none.
     #[test]
-    fn another_textures_sampler_becomes_the_textures_own_with_texture_state() {
+    fn another_textures_sampler_becomes_the_textures_own() {
         let source = r#"
 Texture2D _A; SamplerState sampler_A;
 Texture2D _B; SamplerState sampler_B;
@@ -983,7 +977,7 @@ float4 frag(float2 uv : TEXCOORD0) : SV_Target {
         let words = spirv(source, "frag", shaderc::ShaderKind::Fragment);
         let named = |pairs: Vec<(String, String)>| -> Vec<(String, String)> { pairs };
         assert_eq!(
-            named(sampled(&own_samplers(&words, true).unwrap())),
+            named(sampled(&own_samplers(&words).unwrap())),
             [
                 ("_A", "sampler_A"),
                 ("_A", "sampler_A"),
@@ -993,19 +987,17 @@ float4 frag(float2 uv : TEXCOORD0) : SV_Target {
             ]
             .map(|(a, b)| (a.to_string(), b.to_string()))
         );
-        // The device keeps a named sampler of another texture: nothing to rewrite.
-        assert_eq!(own_samplers(&words, false).unwrap(), words);
     }
 
-    /// A program without inline samplers is returned as it was.
+    /// A program that samples each texture through its own sampler is returned as it was.
     #[test]
-    fn programs_without_inline_samplers_are_unchanged() {
+    fn programs_sampling_through_own_samplers_are_unchanged() {
         let source = r#"
 Texture2D _MainTex;
 SamplerState sampler_MainTex;
 float4 main(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_Target { return _MainTex.Sample(sampler_MainTex, uv); }
 "#;
         let words = spirv(source, "main", shaderc::ShaderKind::Fragment);
-        assert_eq!(own_samplers(&words, false).unwrap(), words);
+        assert_eq!(own_samplers(&words).unwrap(), words);
     }
 }
