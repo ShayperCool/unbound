@@ -7,6 +7,7 @@
     run.py record --label native1             # Editor capture (GPU, through the job pool)
     run.py publish native1 native2            # two identical captures become Reference/unity-<version>/
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
+    run.py record|publish|gate --pipeline urp # the same project drawn by URP: its own reference set, Reference/unity-<version>/urp
 
 The release is $UNBOUND_PROBE_UNITY_VERSION (default 6000.0.71f1). Run output stays under
 $XDG_CACHE_HOME/unbound/validation/runs/realtimegi/<label>/.
@@ -31,13 +32,40 @@ END = {'case': 'end'}
 MADE = ('Scenes', 'Settings')
 
 
-def copy_project(target):
+# The scriptable render pipeline a run can give the project (`--pipeline`): its package, and the
+# pipeline assets and graphics settings of the probe that owns them.
+PIPELINES = {'urp': {'package': ('com.unity.render-pipelines.universal', '17.0.4'),
+                     'modules': ('com.unity.modules.physics', 'com.unity.modules.terrain'),
+                     'project': PROBE.parent/'urp',
+                     'assets': ('Assets/Settings/ProbeURP.asset', 'Assets/Settings/ProbeRenderer.asset',
+                                'Assets/UniversalRenderPipelineGlobalSettings.asset', 'Assets/DefaultVolumeProfile.asset')}}
+
+
+def copy_project(target, pipeline=None):
     if target.exists():
         raise SystemExit(f'refusing to overwrite {target}')
     for folder in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/folder, target/folder)
     (target/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
+    if pipeline:
+        # The same project drawn by the pipeline: its package, its assets (with their GUIDs) and
+        # the graphics settings that name them.
+        made = PIPELINES[pipeline]
+        manifest = json.loads((target/'Packages/manifest.json').read_text())
+        manifest['dependencies'][made['package'][0]] = made['package'][1]
+        manifest['dependencies'].update({module: '1.0.0' for module in made['modules']})
+        (target/'Packages/manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
+        (target/'Assets/Pipeline').mkdir()
+        for asset in made['assets']:
+            for name in (asset, asset+'.meta'):
+                shutil.copy2(made['project']/name, target/'Assets/Pipeline'/Path(name).name)
+        shutil.copy2(made['project']/'ProjectSettings/GraphicsSettings.asset', target/'ProjectSettings/GraphicsSettings.asset')
     return target
+
+
+def reference(pipeline=None):
+    """The reference set: the built-in pipeline's, or a pipeline's own beside it."""
+    return reference_root(PROBE)/pipeline if pipeline else reference_root(PROBE)
 
 
 def work(label):
@@ -51,17 +79,17 @@ def outputs(directory):
     return [OUT, *names]
 
 
-def expected():
+def expected(pipeline=None):
     """Atlas and frame names the probe writes (from the committed reference when present)."""
-    reference = reference_root(PROBE)
-    return outputs(reference)[1:] if reference.is_dir() else []
+    committed = reference(pipeline)
+    return outputs(committed)[1:] if committed.is_dir() else []
 
 
-def complete(directory):
+def complete(directory, pipeline=None):
     problem = editor_runner.jsonl_complete(OUT, END)(directory)
     if problem:
         return problem
-    missing = [name for name in expected() if not (Path(directory)/name).is_file()]
+    missing = [name for name in expected(pipeline) if not (Path(directory)/name).is_file()]
     return f'missing {missing}' if missing else None
 
 
@@ -118,37 +146,37 @@ def setup_scene(label, scene, method):
     return 0
 
 
-def record(label):
+def record(label, pipeline=None):
     out = work(label)
-    project = copy_project(out/'project')
+    project = copy_project(out/'project', pipeline)
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', 'RealtimeGIRunner.Record'],
                                   batch=True, graphics=True, env={'REALTIME_GI_OUT': str(out)},
                                   timeout=1800, label='realtimegi-'+label)
     print(editor_runner.summary(editor_runner.run(job)))
-    problem = editor_runner.result_problem(out, gpu=True) or complete(out)
+    problem = editor_runner.result_problem(out, gpu=True) or complete(out, pipeline)
     if problem:
         print(f'capture {label}: {problem}', file=sys.stderr)
         return 1
     return 0
 
 
-def publish(labels):
-    target = reference_root(PROBE)
+def publish(labels, pipeline=None):
+    target = reference(pipeline)
 
     def write(path, source):
         path.mkdir(parents=True)
         for name in outputs(source):
             shutil.copy2(source/name, path/name)
     return editor_runner.publish([work(label) for label in labels], target, outputs, write,
-                                 complete=[complete], gpu=True)
+                                 complete=[lambda directory: complete(directory, pipeline)], gpu=True)
 
 
-def gate(label, frames):
+def gate(label, frames, pipeline=None):
     out = work(label)
     if out.exists():
         raise SystemExit(f'refusing to overwrite {out}')
     out.mkdir(parents=True)
-    project = copy_project(out/'project')
+    project = copy_project(out/'project', pipeline)
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = {**os.environ, 'REALTIME_GI_OUT': str(out/'engine')}
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '1500', cli, 'run', '-p', str(project),
@@ -156,7 +184,7 @@ def gate(label, frames):
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(f'engine exit {code}; log {out}/engine.log')
-    return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)),
+    return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference(pipeline)),
                            str(out/'engine')]).returncode
 
 
@@ -167,16 +195,18 @@ def main():
     parser.add_argument('--label', default='current')
     # Enough frames for every case to converge (each waits at least 360) and the run to end itself.
     parser.add_argument('--frames', type=int, default=40000)
+    parser.add_argument('--pipeline', choices=sorted(PIPELINES),
+                        help='record, publish or gate the project drawn by this render pipeline (its own reference set)')
     args = parser.parse_args()
     if args.mode == 'setup':
         return setup(args.label)
     if args.mode in ADDED:
         return setup_scene(args.label, *ADDED[args.mode])
     if args.mode == 'record':
-        return record(args.label)
+        return record(args.label, args.pipeline)
     if args.mode == 'publish':
-        return publish(args.labels)
-    return gate(args.label, args.frames)
+        return publish(args.labels, args.pipeline)
+    return gate(args.label, args.frames, args.pipeline)
 
 
 if __name__ == '__main__':

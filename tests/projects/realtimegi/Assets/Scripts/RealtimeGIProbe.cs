@@ -49,6 +49,11 @@ public class RealtimeGIProbe : MonoBehaviour
         Directory.CreateDirectory(m_Dir);
         m_Dump = new Material(Shader.Find("Hidden/RealtimeGIDump"));
         DynamicGI.synchronousMode = true;
+        if (GraphicsSettings.currentRenderPipeline != null)
+        {
+            yield return Pipeline();
+            yield break;
+        }
 
         yield return Load("Room");
         var s = Scene();
@@ -503,6 +508,66 @@ public class RealtimeGIProbe : MonoBehaviour
             + ",\"reflectionSize\":" + (texture == null ? 0 : texture.width) + ",\"decode\":" + V(ReflectionProbe.defaultTextureHDRDecodeValues);
     }
 
+    /// <summary>Under a scriptable render pipeline (run.py's `--pipeline`): the Room's lights as
+    /// the pipeline gives them to realtime GI, then the environment alone. Lightmaps and values
+    /// only: the room's materials are the built-in pipeline's.</summary>
+    IEnumerator Pipeline()
+    {
+        yield return Load("Room");
+        var s = Scene();
+        yield return Converge();
+        Capture("pipeline-base", s, false);
+        s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+        yield return Converge();
+        Capture("pipeline-moved", s, false);
+        s.point.intensity = 4f;
+        yield return Converge();
+        Capture("pipeline-intensity", s, false);
+        // A range the room's far walls are beyond.
+        s.point.range = 4f;
+        yield return Converge();
+        Capture("pipeline-range", s, false);
+        s.point.range = 10f;
+        s.point.intensity = 2f;
+        s.point.bounceIntensity = 3f;
+        yield return Converge();
+        Capture("pipeline-bounce", s, false);
+        s.point.bounceIntensity = 1f;
+
+        // The spot light, then with a narrow inner angle.
+        s.point.enabled = false;
+        s.spot.enabled = true;
+        yield return Converge();
+        Capture("pipeline-spot", s, false);
+        s.spot.innerSpotAngle = 5f;
+        yield return Converge();
+        Capture("pipeline-spot-inner", s, false);
+        s.spot.enabled = false;
+
+        var sun = Sun(LightShadows.Hard, 40f, 25f);
+        yield return Converge();
+        Capture("pipeline-directional", s, false);
+        Destroy(sun.gameObject);
+
+        // The environment alone: an ambient color, then a procedural skybox, then its ambient
+        // intensity 2.
+        DynamicGI.SetEmissive(s.panel, Color.black);
+        RenderSettings.ambientLight = new Color(0.6f, 0.5f, 0.2f);
+        yield return Converge();
+        Capture("pipeline-color", s, false);
+        var sky = new Material(Shader.Find("Skybox/Procedural"));
+        sky.SetFloat("_Exposure", 1f);
+        RenderSettings.skybox = sky;
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        DynamicGI.UpdateEnvironment();
+        yield return Converge();
+        Capture("pipeline-sky", s, false);
+        RenderSettings.ambientIntensity = 2f;
+        yield return Converge();
+        Capture("pipeline-sky-intensity", s, false);
+        Finish();
+    }
+
     /// <summary>An environment for DynamicGI.SetEnvironmentData: six faces of 8 x 8 RGBA texels.</summary>
     static float[] EnvironmentData()
     {
@@ -619,7 +684,7 @@ public class RealtimeGIProbe : MonoBehaviour
         return body.Append(']').ToString();
     }
 
-    void Capture(string name, RealtimeGIScene s)
+    void Capture(string name, RealtimeGIScene s, bool frame = true)
     {
         var body = new StringBuilder();
         body.Append("\"converged\":").Append(B(DynamicGI.isConverged));
@@ -663,7 +728,7 @@ public class RealtimeGIProbe : MonoBehaviour
             }
         }
         else Record(name + "-noatlas", "\"size\":" + size);
-        CaptureFrame(name + ".png");
+        if (frame) CaptureFrame(name + ".png");
     }
 
     /// <summary>The width of realtime lightmap atlas <paramref name="atlas"/>, read by the dump

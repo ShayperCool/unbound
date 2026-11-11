@@ -8,6 +8,59 @@
 Shader "Hidden/RealtimeGIDump"
 {
     Properties { _Channel ("Channel", Float) = 0 }
+    CGINCLUDE
+    #pragma vertex vert
+    #pragma fragment frag
+    #pragma target 4.5
+    #include "UnityCG.cginc"
+
+    float _Channel;
+
+    struct appdata { float4 vertex : POSITION; float2 uv2 : TEXCOORD2; };
+    struct v2f { float4 pos : SV_POSITION; };
+
+    v2f vert(appdata v)
+    {
+        v2f o;
+        float2 uv = v.uv2 * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
+        o.pos = float4(uv * 2 - 1, 0.5, 1);
+        if (_ProjectionParams.x < 0) o.pos.y = -o.pos.y;
+        return o;
+    }
+
+    float4 frag(v2f i) : SV_Target
+    {
+#if defined(DYNAMICLIGHTMAP_ON)
+        float width, height;
+        unity_DynamicLightmap.GetDimensions(width, height);
+        if (_Channel > 1.5)
+            return float4(width, height, 0, 1);
+        float2 uv = i.pos.xy / float2(width, height);
+        if (_Channel > 0.5)
+            return UNITY_SAMPLE_TEX2D_SAMPLER_LOD(unity_DynamicDirectionality, unity_DynamicLightmap, uv, 0);
+        return float4(UNITY_SAMPLE_TEX2D_LOD(unity_DynamicLightmap, uv, 0).rgb, 1);
+#else
+        return float4(-1, -1, -1, 1);
+#endif
+    }
+    ENDCG
+
+    // The Universal Render Pipeline's (a subshader of its own: a pass of the built-in pipeline
+    // beside it would be drawn again by the pipeline's check for unsupported shaders).
+    SubShader
+    {
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
+        Pass
+        {
+            Tags { "LightMode" = "UniversalForward" }
+            Cull Off ZWrite Off ZTest Always
+            CGPROGRAM
+            #pragma multi_compile _ DYNAMICLIGHTMAP_ON
+            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            ENDCG
+        }
+    }
+    // The built-in pipeline's.
     SubShader
     {
         Tags { "RenderType" = "Opaque" }
@@ -16,41 +69,7 @@ Shader "Hidden/RealtimeGIDump"
             Tags { "LightMode" = "ForwardBase" }
             Cull Off ZWrite Off ZTest Always
             CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma target 4.5
             #pragma multi_compile_fwdbase
-            #include "UnityCG.cginc"
-
-            float _Channel;
-
-            struct appdata { float4 vertex : POSITION; float2 uv2 : TEXCOORD2; };
-            struct v2f { float4 pos : SV_POSITION; };
-
-            v2f vert(appdata v)
-            {
-                v2f o;
-                float2 uv = v.uv2 * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
-                o.pos = float4(uv * 2 - 1, 0.5, 1);
-                if (_ProjectionParams.x < 0) o.pos.y = -o.pos.y;
-                return o;
-            }
-
-            float4 frag(v2f i) : SV_Target
-            {
-#if defined(DYNAMICLIGHTMAP_ON)
-                float width, height;
-                unity_DynamicLightmap.GetDimensions(width, height);
-                if (_Channel > 1.5)
-                    return float4(width, height, 0, 1);
-                float2 uv = i.pos.xy / float2(width, height);
-                if (_Channel > 0.5)
-                    return UNITY_SAMPLE_TEX2D_SAMPLER_LOD(unity_DynamicDirectionality, unity_DynamicLightmap, uv, 0);
-                return float4(UNITY_SAMPLE_TEX2D_LOD(unity_DynamicLightmap, uv, 0).rgb, 1);
-#else
-                return float4(-1, -1, -1, 1);
-#endif
-            }
             ENDCG
         }
     }

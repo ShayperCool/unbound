@@ -133,6 +133,17 @@ light off and the panel's emission black: the environment as the only light); `-
 `-envdata-intensity` (its ambient intensity 2), the data set again before each; and
 `-envdata-update` (the data set again, then `DynamicGI.UpdateEnvironment`).
 
+With `--pipeline urp` the same project is drawn by the Universal Render Pipeline (run.py adds
+the package and the pipeline assets of tests/projects/urp to the run's copy) and the probe
+records a shorter sequence in `Room`, lightmaps and values only (the room's materials are the
+built-in pipeline's, so no frames): `pipeline-base`, `pipeline-moved`, `pipeline-intensity` (4),
+`pipeline-range` (the point light's range 4, which the far walls are beyond),
+`pipeline-bounce` (range 10, intensity 2, bounce intensity 3), `pipeline-spot` (the spot light
+alone), `pipeline-spot-inner` (its inner angle 5 instead of 21.8), `pipeline-directional` (a
+directional light with shadows), then the environment alone: `pipeline-color` (an ambient
+color), `pipeline-sky` (a procedural skybox) and `pipeline-sky-intensity` (its ambient intensity
+2). That set is its own reference, `Reference/unity-<version>/urp`.
+
 ## What the Editor does (this capture)
 
 Unity updates realtime GI over several frames on worker threads; even with
@@ -244,6 +255,15 @@ Observations (not documented guarantees):
   neither (`*-plus-*`), and `SceneManager.SetActiveScene` with the added scene switches both
   within the frame (`-active`), as the documentation says of the active scene ("from what Scene
   the lighting settings are used").
+- Under the Universal Render Pipeline the lights reach realtime GI as the pipeline's delegate
+  gives them (`Lightmapping.SetDelegate`): an inverse-squared falloff with the range's window
+  (the lightmaps are a third to a tenth of the built-in pipeline's; with range 4 the far walls
+  get nothing from the light), intensity and bounce intensity scaling the light linearly
+  (`pipeline-intensity`, `pipeline-bounce`, where the built-in pipeline's grow fourfold and
+  tenfold), and a spot light's own inner angle (`pipeline-spot-inner` differs from
+  `pipeline-spot`). The skybox lights realtime GI there as in the built-in pipeline, and
+  `RenderSettings.ambientProbe` after `DynamicGI.UpdateEnvironment` is the built-in pipeline's
+  (0.0979 in its first coefficient, 0.45 at intensity 2).
 - The directionality (`roomdirectional-*.dir`): where light arrives from one side its RGB is
   that direction times 1/2 plus 1/2 (the floor's texels (127, 211, 127): light from above, at
   about two thirds of a unit length since it comes from a spread of directions) and its alpha the
@@ -292,8 +312,12 @@ python3 tests/projects/realtimegi/run.py setup --label setup1     # only to rema
 python3 tests/projects/realtimegi/run.py record --label native1   # and native2
 python3 tests/projects/realtimegi/run.py publish native1 native2
 python3 tests/projects/realtimegi/run.py gate --label gate1       # the land gate (gate.json)
+python3 tests/projects/realtimegi/run.py gate --pipeline urp --label gate-urp1   # and its URP part
 ```
 
 `gate` runs `$UNBOUND_CLI` (else `$UNBOUND`, else `target/release/unbound`) on a copy of the
-project and compares with `Reference/unity-<release>/`. Run output goes to
+project and compares with `Reference/unity-<release>/`; `gate --pipeline urp` (and `record`,
+`publish` with it) does the same with the Universal Render Pipeline and
+`Reference/unity-<release>/urp`. The engine's result there: no state or gated value failing and
+no value reported. Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/realtimegi/<label>/`.
