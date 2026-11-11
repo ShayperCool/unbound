@@ -206,7 +206,10 @@ imported without keyframe reduction.
   an empty state for HumanB's clip (`body.emptyLayerTransition`); the same clips without Foot IK in AnimationMixerPlayables
   (`bodyGraph.neg`, `.pos`, `.partial`, `.w`, `.none` at 0.35 and 0.65 of A, `.low`, `.high`, `.lowNeg`,
   `.three` of BodyNeg, A and BodyPartial, `.nested` with a mixer of BodyNeg and BodyPos as an
-  input) and A under BodyPartial in a layer mixer (`bodyGraph.layerPartial`). Authored but not
+  input) and A under BodyPartial in a layer mixer (`bodyGraph.layerPartial`); controllers of the
+  probe as the source of the Animator's only output through an AnimatorControllerPlayable
+  (`controllerGraph.a`, `.footIK`, `.goalsTransition`, `.goalsTree`, `.goalsOverride`,
+  `.goalsAdditive`, `.bodyNegTree`, `.bodyDirectLow`). Authored but not
   recorded, because the engine does not match them yet (docs/COMPATIBILITY_GAPS.md says how they
   differ): the controllers HumanBodyDirectEmptyChild (an empty child tree at 0.3 beside A at 0.7),
   HumanBodyDirectLowB (HumanB's clip alone at 0.5), HumanBodyGenericTransition (A to
