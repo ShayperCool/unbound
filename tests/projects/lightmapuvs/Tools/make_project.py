@@ -12,6 +12,10 @@ turns on generateSecondaryUV with the variant's unwrap settings:
     Raw       mesh optimization off (vertices and triangles in import order), defaults otherwise
     RawOff    mesh optimization and generateSecondaryUV off
 
+The Repair variant holds Sources/Repair and the flat and welded models of Sources/Normals
+(meshes the unwrap repairs: non-manifold edges and vertices, degenerate triangles) with the
+Default settings.
+
 The normals variants hold the smaller models and Sources/Normals, with mesh optimization and
 generateSecondaryUV off, under each normals setting (`tangentSpace`):
 
@@ -50,6 +54,7 @@ VARIANTS = {
     'RawOff': dict(meshOptimizationFlags=0, generateSecondaryUV=0),
 }
 NORMAL_MODELS = ('Cube', 'Cylinder', 'Grid', 'Ico', 'Multi', 'Organic', 'Pieces', 'Sphere', 'Torus', 'TwoUV')
+REPAIR_NORMAL_MODELS = ('FlatQuad', 'FlatTri', 'Pinch', 'WeldQuad')
 RAW = dict(meshOptimizationFlags=0, generateSecondaryUV=0)
 CALCULATE = dict(RAW, normalImportMode=1)
 NORMAL_VARIANTS = {
@@ -202,6 +207,9 @@ def main():
     normal_models += sorted(p for p in (PROBE/'Sources/Normals').iterdir() if p.suffix in ('.fbx', '.obj'))
     variants = [(v, o, models) for v, o in VARIANTS.items()]
     variants += [(v, o, normal_models) for v, o in NORMAL_VARIANTS.items()]
+    repair = sorted(p for p in (PROBE/'Sources/Repair').iterdir() if p.suffix in ('.fbx', '.obj'))
+    repair += [p for p in normal_models if p.stem in REPAIR_NORMAL_MODELS]
+    variants.append(('Repair', {}, repair))
     for variant, overrides, sources in variants:
         folder = resources/variant
         folder.mkdir()

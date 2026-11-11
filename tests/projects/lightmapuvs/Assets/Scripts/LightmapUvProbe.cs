@@ -16,7 +16,7 @@ public class LightmapUvProbe : MonoBehaviour
 {
     static readonly string[] Variants = { "Default", "Hard30", "Distort", "Manual", "Calc", "Off", "Raw", "RawOff",
         "NormImport", "NormCalc", "NormCalc30", "NormCalc180", "NormLegacy", "NormUnweighted", "NormArea", "NormAngle",
-        "NormGroups", "NormFromAngle", "NormNoSplit", "NormNone" };
+        "NormGroups", "NormFromAngle", "NormNoSplit", "NormNone", "Repair" };
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("LightmapUvProbe").AddComponent<LightmapUvProbe>();
