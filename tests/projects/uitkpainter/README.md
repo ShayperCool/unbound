@@ -11,6 +11,20 @@ ArcTo of radius 0, a tiny arc, a 0.1° arc with round caps, crossing sub-paths, 
 start). One more panel cell draws allocated quads, painter strokes and a DrawMesh quad in one
 callback (call order).
 
+A second list holds the stroke gradient cases (`gradient-*`): two, three and eight keys on a line
+(key rows, the eighth steps, Fixed and PerceptualBlend modes, linear and gamma colour space), every
+join and cap, closed and separate sub-paths, zero-length and very short segments, arcs both ways,
+a whole circle, ArcTo, curves (with keys inside their pieces, a straight curve, a stroke wider than
+the curve's radius), a mixed closed path, and the rules around the property: null after a
+gradient, strokeColor set after it, a transparent strokeColor or transparent keys, the caller's
+gradient changed after it was set, Fill beside it, two strokes of one path, a gradient left set
+for the next element. Their meshes follow every other line of `painter.jsonl`, and they are
+rendered on the panel at scale 1 after the two images above (`painter-gradient.png`), so the
+earlier lines and images do not depend on them. Key colours are whole 8-bit values whose
+differences are multiples of 16, and alpha keys sit away from the middle of a colour span: no
+colour a case reads lies halfway between two 8-bit values, where the last bit of the arithmetic
+would decide the rounding.
+
 Each case is drawn twice:
 
 - by a detached painter, saved with `SaveToVectorImage`; `painter.jsonl` records every vertex
@@ -20,7 +34,8 @@ Each case is drawn twice:
 
 API lines record what the Editor's `ILogHandler` sees for: drawing before `BeginPath` (detached and
 in a callback; the handler sees nothing, the Editor log has the messages), `Clear`,
-two calls accumulating, `SaveToVectorImage(null)`, the default `strokeGradient`, the context
+two calls accumulating, `SaveToVectorImage(null)`, the default `strokeGradient`, a gradient
+read back (after its source changed, after null, after `Clear`) and a stroke after `Clear`, the context
 painter's state at the start of three consecutive elements, and the context painter used outside
 its callback, after a detached painter was created, and for `Clear`/`SaveToVectorImage`.
 

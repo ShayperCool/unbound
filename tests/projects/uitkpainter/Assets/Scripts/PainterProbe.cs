@@ -196,6 +196,106 @@ public static class PainterProbe
         "{\"lineWidth\":" + F(p.lineWidth) + ",\"strokeColor\":" + Col(p.strokeColor) + ",\"fillColor\":" + Col(p.fillColor) +
         ",\"lineJoin\":\"" + p.lineJoin + "\",\"lineCap\":\"" + p.lineCap + "\",\"miterLimit\":" + F(p.miterLimit) + "}";
 
+    // ---- stroke gradients ----
+
+    // Key colours in whole 8-bit steps whose differences are multiples of 16, and alpha keys away
+    // from the middle of a colour span: no colour the cases read sits halfway between two 8-bit
+    // values, where the last bit of the arithmetic would decide the rounding.
+    static readonly Color KeyRed = new Color32(232, 56, 24, 255);
+    static readonly Color KeyGreen = new Color32(24, 184, 56, 255);
+    static readonly Color KeyBlue = new Color32(56, 104, 232, 255);
+
+    static Gradient TwoKeys()
+    {
+        var g = new Gradient();
+        g.SetKeys(new[] { new GradientColorKey(KeyRed, 0f), new GradientColorKey(KeyBlue, 1f) },
+            new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+        return g;
+    }
+
+    // Colour keys at 0, 0.25 and 1, alpha keys at 0, 0.5 and 1.
+    static Gradient ThreeKeys(GradientMode mode = GradientMode.Blend)
+    {
+        var g = new Gradient { mode = mode };
+        g.SetKeys(new[] { new GradientColorKey(KeyRed, 0f), new GradientColorKey(KeyGreen, 0.25f), new GradientColorKey(KeyBlue, 1f) },
+            new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.25f, 0.5f), new GradientAlphaKey(1f, 1f) });
+        return g;
+    }
+
+    static Gradient ManyKeys()
+    {
+        var g = new Gradient();
+        var keys = new GradientColorKey[8];
+        for (int i = 0; i < 8; i++) keys[i] = new GradientColorKey(i % 2 == 0 ? KeyRed : KeyBlue, i / 8f + 0.0625f);
+        g.SetKeys(keys, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.4f, 0.53125f), new GradientAlphaKey(1f, 1f) });
+        return g;
+    }
+
+    static string Keys(Gradient g)
+    {
+        if (g == null) return "null";
+        var sb = new StringBuilder("{\"mode\":\"").Append(g.mode).Append("\",\"space\":\"").Append(g.colorSpace).Append("\",\"color\":[");
+        var c = g.colorKeys; var a = g.alphaKeys;
+        for (int i = 0; i < c.Length; i++) { if (i > 0) sb.Append(','); sb.Append('[').Append(F(c[i].time)).Append(',').Append(Col(c[i].color)).Append(']'); }
+        sb.Append("],\"alpha\":[");
+        for (int i = 0; i < a.Length; i++) { if (i > 0) sb.Append(','); sb.Append('[').Append(F(a[i].time)).Append(',').Append(F(a[i].alpha)).Append(']'); }
+        return sb.Append("]}").ToString();
+    }
+
+    static Action<Painter2D> GradientStroke(float width, LineJoin join, LineCap cap, Func<Gradient> gradient, Action<Painter2D> path)
+    {
+        return p => {
+            p.lineWidth = width; p.lineJoin = join; p.lineCap = cap; p.strokeColor = Red; p.strokeGradient = gradient();
+            p.BeginPath(); path(p); p.Stroke();
+            p.strokeGradient = null;
+        };
+    }
+
+    static void Line(Painter2D p) { p.MoveTo(new Vector2(10, 12)); p.LineTo(new Vector2(70, 50)); }
+
+    static readonly Case[] GradientCases = {
+        // Left set on purpose: what the next element's painter starts with is recorded on the panel.
+        new Case { name = "gradient-left-set", draw = p => { p.lineWidth = 6; p.strokeColor = Red; p.strokeGradient = TwoKeys(); p.BeginPath(); Line(p); p.Stroke(); } },
+        // Drawn on the panel right after the element that left a gradient set, with strokeColor only.
+        new Case { name = "gradient-after-left-set", draw = p => { p.lineWidth = 6; p.strokeColor = Blue; p.BeginPath(); Line(p); p.Stroke(); } },
+        new Case { name = "gradient-line", draw = GradientStroke(8, LineJoin.Miter, LineCap.Butt, TwoKeys, Line) },
+        new Case { name = "gradient-line-keys", draw = GradientStroke(8, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(), Line) },
+        new Case { name = "gradient-line-round", draw = GradientStroke(8, LineJoin.Miter, LineCap.Round, () => ThreeKeys(), Line) },
+        new Case { name = "gradient-line-many-keys", draw = GradientStroke(6, LineJoin.Miter, LineCap.Butt, ManyKeys, Line) },
+        new Case { name = "gradient-line-fixed", draw = GradientStroke(8, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(GradientMode.Fixed), Line) },
+        new Case { name = "gradient-line-perceptual", draw = GradientStroke(8, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(GradientMode.PerceptualBlend), Line) },
+        new Case { name = "gradient-line-linear-space", draw = GradientStroke(8, LineJoin.Miter, LineCap.Butt, () => { var g = ThreeKeys(); g.colorSpace = ColorSpace.Linear; return g; }, Line) },
+        new Case { name = "gradient-line-gamma-space", draw = GradientStroke(8, LineJoin.Miter, LineCap.Butt, () => { var g = ThreeKeys(); g.colorSpace = ColorSpace.Gamma; return g; }, Line) },
+        new Case { name = "gradient-join-miter", draw = GradientStroke(8, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(), Zigzag) },
+        new Case { name = "gradient-join-bevel", draw = GradientStroke(8, LineJoin.Bevel, LineCap.Butt, () => ThreeKeys(), Zigzag) },
+        new Case { name = "gradient-join-round", draw = GradientStroke(8, LineJoin.Round, LineCap.Round, () => ThreeKeys(), Zigzag) },
+        new Case { name = "gradient-closed", draw = GradientStroke(6, LineJoin.Miter, LineCap.Round, () => ThreeKeys(), Square) },
+        new Case { name = "gradient-subpaths", draw = GradientStroke(4, LineJoin.Bevel, LineCap.Round, TwoKeys, p => { p.MoveTo(new Vector2(8, 10)); p.LineTo(new Vector2(36, 30)); p.MoveTo(new Vector2(44, 10)); p.LineTo(new Vector2(72, 30)); p.LineTo(new Vector2(44, 60)); }) },
+        new Case { name = "gradient-zero-length", draw = GradientStroke(10, LineJoin.Round, LineCap.Round, TwoKeys, p => { p.MoveTo(new Vector2(30, 30)); p.LineTo(new Vector2(30, 30)); }) },
+        new Case { name = "gradient-short-and-long", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(), p => { p.MoveTo(new Vector2(8, 20)); p.LineTo(new Vector2(8.03125f, 20)); p.LineTo(new Vector2(72, 20)); p.LineTo(new Vector2(72, 60)); }) },
+        new Case { name = "gradient-arc-cw", draw = GradientStroke(5, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(), p => p.Arc(new Vector2(40, 36), 26, 0, 270, ArcDirection.Clockwise)) },
+        new Case { name = "gradient-arc-ccw", draw = GradientStroke(5, LineJoin.Miter, LineCap.Round, () => ThreeKeys(), p => p.Arc(new Vector2(40, 36), 26, 0, 270, ArcDirection.CounterClockwise)) },
+        new Case { name = "gradient-arc-full", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => p.Arc(new Vector2(40, 36), 26, 0, 360)) },
+        new Case { name = "gradient-arc-joined", draw = GradientStroke(5, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(), p => { p.MoveTo(new Vector2(8, 60)); p.LineTo(new Vector2(20, 36)); p.Arc(new Vector2(40, 36), 20, 180, 360); p.LineTo(new Vector2(72, 60)); }) },
+        new Case { name = "gradient-arc-tiny", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(8, 36)); p.Arc(new Vector2(40, 36), 0.0005f, 0, 180); p.LineTo(new Vector2(72, 20)); }) },
+        new Case { name = "gradient-arcto", draw = GradientStroke(5, LineJoin.Round, LineCap.Butt, () => ThreeKeys(), p => { p.MoveTo(new Vector2(8, 60)); p.ArcTo(new Vector2(40, 8), new Vector2(72, 60), 14); p.LineTo(new Vector2(72, 60)); }) },
+        new Case { name = "gradient-bezier", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(8, 60)); p.BezierCurveTo(new Vector2(20, -10), new Vector2(60, 90), new Vector2(72, 10)); }) },
+        new Case { name = "gradient-bezier-keys", draw = GradientStroke(4, LineJoin.Miter, LineCap.Round, () => ThreeKeys(), p => { p.MoveTo(new Vector2(8, 60)); p.BezierCurveTo(new Vector2(20, -10), new Vector2(60, 90), new Vector2(72, 10)); }) },
+        new Case { name = "gradient-bezier-many-keys", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, ManyKeys, p => { p.MoveTo(new Vector2(8, 60)); p.BezierCurveTo(new Vector2(20, -10), new Vector2(60, 90), new Vector2(72, 10)); }) },
+        new Case { name = "gradient-quadratic", draw = GradientStroke(4, LineJoin.Round, LineCap.Round, () => ThreeKeys(), p => { p.MoveTo(new Vector2(8, 60)); p.QuadraticCurveTo(new Vector2(40, -20), new Vector2(72, 60)); p.LineTo(new Vector2(72, 66)); }) },
+        new Case { name = "gradient-bezier-straight", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(), p => { p.MoveTo(new Vector2(8, 20)); p.BezierCurveTo(new Vector2(24, 28), new Vector2(56, 44), new Vector2(72, 52)); }) },
+        new Case { name = "gradient-thick-curve", draw = GradientStroke(16, LineJoin.Round, LineCap.Butt, () => ThreeKeys(), p => { p.MoveTo(new Vector2(10, 60)); p.BezierCurveTo(new Vector2(40, -10), new Vector2(50, 70), new Vector2(20, 30)); }) },
+        new Case { name = "gradient-mixed-path", draw = GradientStroke(4, LineJoin.Round, LineCap.Round, ManyKeys, p => { p.MoveTo(new Vector2(8, 60)); p.LineTo(new Vector2(20, 20)); p.BezierCurveTo(new Vector2(30, 0), new Vector2(46, 0), new Vector2(52, 20)); p.Arc(new Vector2(60, 40), 12, 180, 90, ArcDirection.CounterClockwise); p.ClosePath(); }) },
+        // The documented rules: a gradient overrides strokeColor; null falls back on it.
+        new Case { name = "gradient-then-null", draw = p => { p.lineWidth = 6; p.strokeColor = Blue; p.strokeGradient = TwoKeys(); p.strokeGradient = null; p.BeginPath(); Line(p); p.Stroke(); } },
+        new Case { name = "gradient-color-set-after", draw = p => { p.lineWidth = 6; p.strokeGradient = TwoKeys(); p.strokeColor = HalfGreen; p.BeginPath(); Line(p); p.Stroke(); p.strokeGradient = null; } },
+        new Case { name = "gradient-transparent-color", draw = p => { p.lineWidth = 6; p.strokeColor = new Color(1, 0, 0, 0); p.strokeGradient = TwoKeys(); p.BeginPath(); Line(p); p.Stroke(); p.strokeGradient = null; } },
+        new Case { name = "gradient-transparent-keys", draw = p => { p.lineWidth = 6; p.strokeColor = Red; var g = new Gradient(); g.SetKeys(new[] { new GradientColorKey(KeyRed, 0f), new GradientColorKey(KeyBlue, 1f) }, new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0f, 1f) }); p.strokeGradient = g; p.BeginPath(); Line(p); p.Stroke(); p.strokeGradient = null; } },
+        new Case { name = "gradient-changed-after-set", draw = p => { p.lineWidth = 6; p.strokeColor = Red; var g = TwoKeys(); p.strokeGradient = g; g.SetKeys(new[] { new GradientColorKey(Color.green, 0f), new GradientColorKey(Color.green, 1f) }, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) }); p.BeginPath(); Line(p); p.Stroke(); p.strokeGradient = null; } },
+        new Case { name = "gradient-fill-and-stroke", draw = p => { p.fillColor = Blue; p.strokeColor = Red; p.lineWidth = 3; p.strokeGradient = ThreeKeys(); p.BeginPath(); Square(p); p.Fill(); p.Stroke(); p.strokeGradient = null; } },
+        new Case { name = "gradient-two-strokes", draw = p => { p.lineWidth = 4; p.strokeColor = Red; p.strokeGradient = TwoKeys(); p.BeginPath(); Line(p); p.Stroke(); p.LineTo(new Vector2(70, 12)); p.Stroke(); p.strokeGradient = null; } },
+    };
+
     public static void Run(UIDocument document, RenderTexture target)
     {
         Directory.CreateDirectory(Output);
@@ -236,7 +336,9 @@ public static class PainterProbe
         var fPos = VF("position"); var fTint = VF("tint"); var fUv = VF("uv"); var fFlags = VF("flags"); var fCircle = VF("circle");
 
         using (var fresh = new Painter2D()) Defaults(sb, "detached", fresh);
-        foreach (var c in Cases)
+        void Meshes(Case[] cases)
+        {
+        foreach (var c in cases)
         {
             using (var painter = new Painter2D())
             {
@@ -265,6 +367,8 @@ public static class PainterProbe
                 UnityEngine.Object.DestroyImmediate(image);
             }
         }
+        }
+        Meshes(Cases);
 
         // The same cases on the runtime panel, 80x72 cells in a 9-column grid.
         var root = document.rootVisualElement;
@@ -335,6 +439,47 @@ public static class PainterProbe
         Api(sb, logs, "attached-outside-callback", () => { captured.BeginPath(); captured.MoveTo(new Vector2(0, 0)); return "null"; });
         Api(sb, logs, "attached-after-detached", () => { new Painter2D().Dispose(); captured.BeginPath(); captured.MoveTo(new Vector2(0, 0)); return "null"; });
         Api(sb, logs, "attached-save-and-clear", () => { captured.Clear(); return captured.SaveToVectorImage(ScriptableObject.CreateInstance<VectorImage>()) ? "true" : "false"; });
+        // Stroke gradients: after everything above, so those lines and images do not depend on them.
+        Meshes(GradientCases);
+        Api(sb, logs, "gradient-roundtrip", () => {
+            var p = new Painter2D(); var g = TwoKeys(); p.strokeGradient = g; var back = p.strokeGradient;
+            string r = "{\"same\":" + (ReferenceEquals(back, g) ? "true" : "false") + ",\"keys\":" + Keys(back);
+            g.SetKeys(new[] { new GradientColorKey(Color.green, 0.5f) }, new[] { new GradientAlphaKey(0.25f, 0.5f) });
+            r += ",\"afterSourceChanged\":" + Keys(p.strokeGradient);
+            p.strokeGradient = null;
+            r += ",\"afterNull\":" + Keys(p.strokeGradient) + ",\"strokeColor\":" + Col(p.strokeColor) + "}";
+            p.Dispose(); return r; });
+        Api(sb, logs, "gradient-after-clear", () => {
+            var p = new Painter2D(); p.strokeGradient = TwoKeys(); p.Clear();
+            p.lineWidth = 6; p.strokeColor = Blue; p.BeginPath(); Line(p); p.Stroke();
+            string r = MeshSummary(p); p.Dispose(); return r; });
+        Api(sb, logs, "gradient-clear-resets", () => {
+            var p = new Painter2D(); p.strokeGradient = ThreeKeys(); p.Clear();
+            string r = Keys(p.strokeGradient); p.Dispose(); return r; });
+        {
+            document.panelSettings.scale = 1f;
+            root.Clear();
+            var gradientStates = new List<string>();
+            for (int i = 0; i < GradientCases.Length; i++)
+            {
+                var c = GradientCases[i];
+                var e = new VisualElement { name = c.name };
+                e.style.position = Position.Absolute;
+                e.style.left = 8 + (i % 9) * 88 + 0.3f * (i % 2);
+                e.style.top = 8 + (i / 9) * 74;
+                e.style.width = 80; e.style.height = 72;
+                int index = i;
+                e.generateVisualContent += ctx => {
+                    // The context painter's gradient on entry, after the previous element set one.
+                    if (index < 3) gradientStates.Add("{\"k\":\"gradient-on-entry\",\"element\":" + index + ",\"keys\":" + Keys(ctx.painter2D.strokeGradient) + "}\n");
+                    c.draw(ctx.painter2D);
+                };
+                root.Add(e);
+            }
+            Update(); Update();
+            Render(target, Path.Combine(Output, "painter-gradient.png"));
+            foreach (var g in gradientStates) sb.Append(g);
+        }
         Debug.unityLogger.logHandler = logs.Inner;
         File.WriteAllText(Path.Combine(Output, "painter.jsonl"), sb.ToString());
     }

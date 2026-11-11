@@ -12,7 +12,7 @@ co-circular points by the last bits of their coordinates, so the interior triang
 edge's apex, a strip's diagonal and the emission order may differ while every anti-aliased edge
 and the covered area agree. Every other line (painter state, API calls and their log messages) must
 be equal. Images (the same cases drawn on a runtime panel at scale 1 and 1.25, including a cell
-that mixes allocated meshes and a painter stroke) print their mean and worst channel difference
+that mixes allocated meshes and a painter stroke, and the gradient cases at scale 1) print their mean and worst channel difference
 and pixels over 8, and fail beyond the recorded residuals (IMAGE_LIMITS).
 """
 import argparse
@@ -29,8 +29,9 @@ AREA_TOLERANCE = 1e-2
 # The recorded image residuals (docs/COMPATIBILITY_GAPS.md, Known insignificant residuals): mean,
 # worst channel difference and pixels over 8 may not exceed them. Scale 1: one pixel of
 # fill-arc-closed-nomove; scale 1.25: two pixels of fill-rounded-rect and the panel background's
-# 9/255 pattern on the outermost row and column.
-IMAGE_LIMITS = {'painter-1.png': (0.02, 11, 1), 'painter-1.25.png': (0.02, 95, 32)}
+# 9/255 pattern on the outermost row and column. The gradient image: anti-aliased edge pixels
+# within 8/255, none over.
+IMAGE_LIMITS = {'painter-1.png': (0.02, 11, 1), 'painter-1.25.png': (0.02, 95, 32), 'painter-gradient.png': (0.02, 8, 0)}
 ORDER_FREE = {
     'fill-circle', 'fill-pie', 'fill-pie-ccw', 'fill-pie-small', 'fill-rounded-rect', 'fill-bezier',
     'fill-quadratic', 'fill-bezier-inflection', 'fill-arc-closed-nomove', 'fill-two-contours-oddeven',
@@ -210,7 +211,7 @@ def main():
             failures += 1
             print(f'line {i}: {json.dumps(y)} vs {json.dumps(x)}')
     checks = len(ref_meshes.keys() | meshes.keys()) + max(len(ref_other), len(other)) + len(IMAGE_LIMITS)
-    for image in ('painter-1.png', 'painter-1.25.png'):
+    for image in IMAGE_LIMITS:
         r, c = reference / image, a.candidate / image
         if not r.is_file() or not c.is_file():
             print(f'{image}: missing')
