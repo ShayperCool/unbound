@@ -580,6 +580,14 @@ namespace Unbound.Runtime
         internal static (ObjectRef Data, ObjectRef Settings) LightingReferences(YNode body) =>
             (body.Ref("m_LightingDataAsset"), body.Ref("m_LightingSettings"));
 
+        /// <summary>Says, once, that a scene which asks for a bake at its load
+        /// (Lightmapping.bakeOnSceneLoad, for a scene without lighting data) gets none.</summary>
+        internal static void NoteBakeOnLoad(YNode lightmapSettings, ObjectRef data)
+        {
+            if (data.IsNull && lightmapSettings.Int("m_BakeOnSceneLoad") != 0)
+                Stubs.Ignored("Lightmapping.bakeOnSceneLoad", "is not honoured: a scene without lighting data is not baked when it loads");
+        }
+
         internal static void Apply(YDocument doc, IReferenceResolver resolver, SceneData scene = null)
         {
             if (!IsSettingsClass(doc.ClassId)) return;
@@ -591,8 +599,7 @@ namespace Unbound.Runtime
                 // additive one adds to it.
                 bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
                 var references = LightingReferences(doc.Body);
-                if (references.Data.IsNull && doc.Body.Int("m_BakeOnSceneLoad") != 0)
-                    Stubs.Ignored("Lightmapping.bakeOnSceneLoad", "is not honoured: a scene without lighting data is not baked when it loads, and has none");
+                NoteBakeOnLoad(doc.Body, references.Data);
                 RenderSettings.ReadLightingData(references.Data, resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
                 if (scene != null)
                 {

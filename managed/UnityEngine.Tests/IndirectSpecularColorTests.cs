@@ -268,9 +268,9 @@ namespace Unbound.Tests
 
         /// <summary>A scene file holding one directional light with these angles of its own,
         /// under a parent turned about the vertical when <paramref name="parentTurn"/> is not 0.</summary>
-        static LoadedFile FileWithSun(Vector3 angles, float parentTurn, List<GameObject> made, float intensity = 1f)
+        static LoadedFile FileWithSun(Vector3 angles, float parentTurn, List<GameObject> made, float intensity = 1f, LoadedFile file = null, long id = 1)
         {
-            var file = new LoadedFile();
+            file ??= new LoadedFile();
             var sun = new GameObject("Sun");
             made.Add(sun);
             var light = sun.AddComponent<Light>();
@@ -284,7 +284,7 @@ namespace Unbound.Tests
                 sun.transform.SetParent(parent.transform, false);
             }
             sun.transform.localRotation = Quaternion.Euler(angles);
-            file.Objects[1] = light;
+            file.Objects[id] = light;
             return file;
         }
 
@@ -323,18 +323,107 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void AnEarlierReleasesDefaultSceneHasTheSunItsSettingsNameElseItsBrightestLight()
+        {
+            // tests/projects/realtimegi legacytwosuns (the default light the brighter of two:
+            // the built-in lighting data), legacytwosunsturned (the turned one the brighter:
+            // none) and legacynamedsun (the dimmer, turned one named as the sun: none).
+            var body = UnityEngine.Tests.TestYaml.DocumentBody(EarlierDefault);
+            var named = UnityEngine.Tests.TestYaml.DocumentBody(EarlierDefault.Replace("m_Sun: {fileID: 0}", "m_Sun: {fileID: 2}"));
+            var made = new List<GameObject>();
+            var colorSpace = QualitySettings.s_ColorSpace;
+            try
+            {
+                QualitySettings.s_ColorSpace = ColorSpace.Linear;
+                var defaultAngles = new Vector3(50f, -30f, 0f);
+                var turned = new Vector3(20f, 40f, 0f);
+                LoadedFile Two(float defaultIntensity, float turnedIntensity) =>
+                    FileWithSun(turned, 0f, made, turnedIntensity, FileWithSun(defaultAngles, 0f, made, defaultIntensity), id: 2);
+                Assert.True(RenderSettings.EarlierDefaultEnvironment(body, Two(1f, 0.3f)));
+                Assert.False(RenderSettings.EarlierDefaultEnvironment(body, Two(0.3f, 1f)));
+                Assert.False(RenderSettings.EarlierDefaultEnvironment(named, Two(1f, 0.3f)));
+            }
+            finally
+            {
+                QualitySettings.s_ColorSpace = colorSpace;
+                foreach (var go in made) UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void AnEarlierReleasesDefaultSceneIsLeftAloneWhenNeitherEnvironmentPartIsBaked()
+        {
+            // tests/projects/realtimegi legacydefault-noambientbaking and -noreflectionbaking
+            // (one of SupportedRenderingFeatures' two off: the built-in lighting data still)
+            // and legacydefault-nobaking (both off: no lighting data).
+            var body = UnityEngine.Tests.TestYaml.DocumentBody(EarlierDefault);
+            var made = new List<GameObject>();
+            var colorSpace = QualitySettings.s_ColorSpace;
+            var features = SupportedRenderingFeatures.active;
+            try
+            {
+                QualitySettings.s_ColorSpace = ColorSpace.Linear;
+                var file = FileWithSun(new Vector3(50f, -30f, 0f), 0f, made);
+                SupportedRenderingFeatures.active = new SupportedRenderingFeatures { ambientProbeBaking = false };
+                Assert.True(RenderSettings.EarlierDefaultEnvironment(body, file));
+                SupportedRenderingFeatures.active = new SupportedRenderingFeatures { defaultReflectionProbeBaking = false };
+                Assert.True(RenderSettings.EarlierDefaultEnvironment(body, file));
+                SupportedRenderingFeatures.active = new SupportedRenderingFeatures { ambientProbeBaking = false, defaultReflectionProbeBaking = false };
+                Assert.False(RenderSettings.EarlierDefaultEnvironment(body, file));
+            }
+            finally
+            {
+                SupportedRenderingFeatures.active = features;
+                QualitySettings.s_ColorSpace = colorSpace;
+                foreach (var go in made) UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void ASceneThatAsksForABakeAtItsLoadIsNamedOnce()
+        {
+            // Lightmapping.bakeOnSceneLoad: Unbound does not bake at a scene's load.
+            const string Member = "Lightmapping.bakeOnSceneLoad";
+            const string Settings = "LightmapSettings:\n  serializedVersion: 13\n  m_BakeOnSceneLoad: {0}\n  m_LightingDataAsset: {1}\n  m_LightingSettings: {{fileID: 0}}\n";
+            var logs = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new Capture(logs);
+            try
+            {
+                int before = StubHits(Member);
+                static void Load(int bake, string data)
+                {
+                    var body = UnityEngine.Tests.TestYaml.DocumentBody(string.Format(Settings, bake, data));
+                    SceneSettings.NoteBakeOnLoad(body, SceneSettings.LightingReferences(body).Data);
+                }
+                Load(0, "{fileID: 0}");
+                Load(1, "{fileID: 112000000, guid: cd1e7cf349cac13319b42bd6b2033b3d, type: 2}");
+                Assert.Equal(before, StubHits(Member));
+                Load(1, "{fileID: 0}");
+                Assert.Equal(before + 1, StubHits(Member));
+                if (before == 0) Assert.Contains(logs, l => l.Contains(Member) && l.Contains("not baked"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+        }
+
+        static int StubHits(string member)
+        {
+            foreach (var hit in Stubs.HitReport())
+                if (hit.Key == member) return hit.Value;
+            return 0;
+        }
+
+        [Fact]
         public void ASceneWithoutLightingDataIsNamedInAReleaseThatIsNotMeasured()
         {
             // Zero and black are what the Unity 6000.0.71f1 Editor gives; releases before Unity 6
             // bake the ambient probe and the sky's reflection by default (its upgrade guide), so
             // there Unbound says once that it gives none.
             const string Member = "A scene without lighting data";
-            static int Hits()
-            {
-                foreach (var hit in Stubs.HitReport())
-                    if (hit.Key == Member) return hit.Value;
-                return 0;
-            }
+            static int Hits() => StubHits(Member);
             using var state = new State();
             var release = ProjectInfo.UnityVersion;
             var logs = new List<string>();
@@ -356,6 +445,23 @@ namespace Unbound.Tests
                 // A scene with lighting data is not named.
                 RenderSettings.ReadLightingData(ProjectBake, state.ResolverOf(earlier), firstScene: false);
                 Assert.Equal(before + 1, Hits());
+                // An earlier release's default scene is named there too: the measured rule
+                // (the built-in lighting data) is the measured release's.
+                var colorSpace = QualitySettings.s_ColorSpace;
+                var made = new List<GameObject>();
+                try
+                {
+                    QualitySettings.s_ColorSpace = ColorSpace.Linear;
+                    var legacy = state.Scene(EarlierDefault, default, null);
+                    FileWithSun(new Vector3(50f, -30f, 0f), 0f, made, file: state.ResolverOf(legacy));
+                    RenderSettings.ReadLightingData(default, state.ResolverOf(legacy), firstScene: false);
+                    Assert.Equal(before + 2, Hits());
+                }
+                finally
+                {
+                    QualitySettings.s_ColorSpace = colorSpace;
+                    foreach (var go in made) UnityEngine.Object.DestroyImmediate(go);
+                }
             }
             finally
             {

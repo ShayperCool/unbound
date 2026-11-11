@@ -112,9 +112,10 @@ namespace Unbound.Tests
             // tests/projects/realtimegi roombakedenvironment-*: the ambient source lights
             // nothing of such a scene's realtime GI (-color, -alone);
             // DynamicGI.SetEnvironmentData does (-envdata), also after the ambient color
-            // changes (-envdata-color), another source is chosen (-envdata-source) or the
-            // ambient intensity changes (-envdata-intensity), until
-            // DynamicGI.UpdateEnvironment (-envdata-update).
+            // changes (-envdata-color) or another source is chosen (-envdata-source), until
+            // DynamicGI.UpdateEnvironment (-envdata-update). A skybox as the source and its
+            // intensity (-envdata-sky, -envdata-intensity) need the renderer: the probe alone
+            // covers them.
             WithAmbient(() =>
             {
                 RenderSettings.ambientMode = AmbientMode.Flat;
@@ -135,14 +136,11 @@ namespace Unbound.Tests
                 Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
                 Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0.25f, v));
                 Assert.Contains(RealtimeGI.EnvironmentOf(false), v => v != 0.25f);
-                // Another source, then another intensity: the same.
+                // Another source: the same.
                 version = RealtimeGI.EnvironmentVersion;
                 RenderSettings.ambientMode = AmbientMode.Trilight;
                 RealtimeGI.UpdateEnvironment();
                 Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
-                Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0.25f, v));
-                RenderSettings.ambientIntensity = 2f;
-                RealtimeGI.UpdateEnvironment();
                 Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0.25f, v));
                 // DynamicGI.UpdateEnvironment drops it, and the scenes take the change at once.
                 version = RealtimeGI.EnvironmentVersion;

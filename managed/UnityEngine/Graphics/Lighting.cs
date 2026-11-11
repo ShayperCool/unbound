@@ -583,17 +583,20 @@ namespace UnityEngine
         /// RenderSettings were saved by an earlier release (whatever saved its LightmapSettings)
         /// and its environment is that of a new scene of then (the skybox ambient mode, the
         /// default skybox reflected at the default resolution, a sun whose own angles are the
-        /// default light's, whatever its color and intensity), in a linear project. Matches the
-        /// Unity 6000.0.71f1 Editor, tests/projects/realtimegi legacy* and `--color-space gamma`:
-        /// with the sun turned or missing, with another sky, with this release's RenderSettings
-        /// (currentdefault, legacylightmapsonly, nodata*) or in a gamma-space project the scene
-        /// has no lighting data. Not measured, and without lighting data here: other ambient or
-        /// reflection sources, another reflection resolution, several directional lights, a
-        /// render pipeline that declares it bakes neither the ambient probe nor the default
-        /// reflection.</summary>
+        /// default light's, whatever its color and intensity), in a linear project, unless the
+        /// rendering features in effect say that neither the ambient probe nor the default
+        /// reflection is baked (a render pipeline's to declare; they are read at the scene's
+        /// load). Matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi legacy* and
+        /// `--color-space gamma`: with the sun turned or missing, with another sky, with this
+        /// release's RenderSettings (currentdefault, legacylightmapsonly, nodata*), in a
+        /// gamma-space project or with both features off (legacydefault-nobaking) the scene has
+        /// no lighting data. Not measured, and without lighting data here: other ambient or
+        /// reflection sources, another reflection resolution.</summary>
         internal static bool EarlierDefaultEnvironment(YNode body, LoadedFile file)
         {
             if (body.Int("serializedVersion") > AutomaticLightingSettingsVersion || QualitySettings.activeColorSpace != ColorSpace.Linear) return false;
+            var features = SupportedRenderingFeatures.active;
+            if (!features.ambientProbeBaking && !features.defaultReflectionProbeBaking) return false;
             if ((AmbientMode)body.Int("m_AmbientMode") != AmbientMode.Skybox) return false;
             if ((DefaultReflectionMode)body.Int("m_DefaultReflectionMode") != DefaultReflectionMode.Skybox || body.Int("m_DefaultReflectionResolution", 128) != 128) return false;
             var skybox = body.Ref("m_SkyboxMaterial");
@@ -607,8 +610,10 @@ namespace UnityEngine
         }
 
         /// <summary>The sun of a scene being loaded (its objects are built, not yet active): the
-        /// light its RenderSettings name, whatever it is, else its brightest enabled directional
-        /// light.</summary>
+        /// light its RenderSettings name, else its brightest enabled directional light
+        /// (tests/projects/realtimegi legacynamedsun, legacytwosuns, legacytwosunsturned). Not
+        /// measured: a named object that is not a light of the scene (the brightest light
+        /// here), a named light that is disabled or not directional (itself here).</summary>
         static Light SceneSun(YNode body, LoadedFile file)
         {
             var named = body.Ref("m_Sun");
