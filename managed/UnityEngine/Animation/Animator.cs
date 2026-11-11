@@ -185,35 +185,38 @@ namespace UnityEngine
             m_StreamHandles?.HierarchyChanged();
         }
 
-        /// <summary>How often the Editor tries to set the Animator up, and logs why it cannot,
-        /// in one evaluation of a manual graph (6000.0.71f1, tests/projects/animoptimize
-        /// graphJobHand.HumanOpt; an update on game time is unmeasured).</summary>
-        const int SetupAttemptsPerEvaluation = 2;
+        /// <summary>How often the Editor logs that an optimized humanoid has no avatar (see
+        /// <see cref="AvatarLostToStreamHandles"/>) in one evaluation of a manual graph and in
+        /// one Animator.Update (6000.0.71f1, tests/projects/animoptimize graphJobHand.HumanOpt
+        /// and updateHand.HumanOpt), and in one update of the player loop (unmeasured: once
+        /// here).</summary>
+        internal const int AvatarLostLogsPerEvaluation = 2, AvatarLostLogsPerUpdateCall = 3, AvatarLostLogsPerFrame = 1;
 
-        /// <summary>Whether the Animator's stream handles leave it without an avatar, logging
-        /// the Editor's messages. With a stream handle of a path the avatar's skeleton does not
-        /// hold, the Editor wants the avatar's bones among the Animator's own transforms, as
-        /// AvatarBuilder.BuildHumanAvatar on that hierarchy with the avatar's human description
-        /// does. On an optimized humanoid the bones' transforms are gone: every evaluation logs
-        /// that builder's error ("Transform 'Hips' for human bone 'Hips' not found") and the
-        /// warning "Object is set to Optimize Game Object but does not have an Avatar, Animation
-        /// will not play.", and nothing plays: no clip, no job, the exposed transforms stay as
-        /// they are (6000.0.71f1,
-        /// tests/projects/animoptimize graphJobHand.HumanOpt: the exposed hand of an imported
-        /// optimized humanoid bound with BindStreamTransform, a manual graph without a
-        /// controller; controls graphJob.HumanOpt, a job without the handle, and
-        /// graphOnly.HumanOpt play). The Scripting API does not describe it. Unmeasured, the
-        /// same rule here: a controller's own update. A humanoid whose hierarchy still holds
-        /// every mapped bone (all of them exposed) and a generic rig go on as before; on a
-        /// generic rig the Editor logs "The input bones do not match the skeleton of the
-        /// Avatar" and its skin differs between two runs (an Editor capture outside the
+        /// <summary>Whether the Animator's stream handles leave it without an avatar; logs the
+        /// Editor's messages <paramref name="logs"/> times. Measured (6000.0.71f1,
+        /// tests/projects/animoptimize): an optimized humanoid with a stream handle of a path
+        /// its avatar's skeleton does not hold, the exposed hand bound under its own path
+        /// (graphJobHand.HumanOpt, updateHand.HumanOpt) or an object added below the Animator
+        /// (graphJobAdded.HumanOpt), plays nothing: each evaluation of a manual graph and each
+        /// Animator.Update logs the error "Transform 'Hips' for human bone 'Hips' not found"
+        /// and the warning "Object is set to Optimize Game Object but does not have an Avatar,
+        /// Animation will not play.", no clip, controller or job runs and the exposed
+        /// transforms stay as they are. With a handle of the Animator's own transform, or none,
+        /// it plays (graphJobRoot.HumanOpt, graphJob.HumanOpt, update.HumanOpt). The Scripting
+        /// API does not describe it. Unbound's reading of it, not measured beyond those
+        /// controls: the error is the one AvatarBuilder.BuildHumanAvatar gives for the
+        /// avatar's human description on the Animator's hierarchy as it is, so a humanoid
+        /// whose hierarchy still holds every mapped bone goes on playing, and the hierarchy is
+        /// looked through in every evaluation while such a handle is bound. A generic rig goes
+        /// on as before; there the Editor logs "The input bones do not match the skeleton of
+        /// the Avatar" and its skin differs between two runs (an Editor capture outside the
         /// reference).</summary>
-        internal bool AvatarLostToStreamHandles()
+        internal bool AvatarLostToStreamHandles(int logs)
         {
-            if (!m_NoHierarchy || m_StreamHandles == null || !m_StreamHandles.AnyOffSkeleton() || !IsHuman) return false;
+            if (!m_NoHierarchy || m_StreamHandles == null || !IsHuman || !m_StreamHandles.AnyOffSkeleton()) return false;
             string error = Unbound.Runtime.Humanoid.AvatarBuild.HierarchyError(m_GameObject, m_Avatar.m_Description);
             if (error == null) return false;
-            for (int attempt = 0; attempt < SetupAttemptsPerEvaluation; attempt++)
+            for (int i = 0; i < logs; i++)
             {
                 Debug.LogError(error);
                 Debug.LogWarning("Object is set to Optimize Game Object but does not have an Avatar, Animation will not play.");
@@ -441,7 +444,8 @@ namespace UnityEngine
         /// </summary>
         internal void Tick(float deltaTime)
         {
-            if (m_Controller != null && AvatarLostToStreamHandles()) return;
+            // Pending outputs log it in their evaluation.
+            if (m_Controller != null && AvatarLostToStreamHandles(Unbound.Runtime.Playables.AnimationOutputs.HasPending(this) ? 0 : AvatarLostLogsPerFrame)) return;
             if (m_CullingMode == AnimatorCullingMode.AlwaysAnimate || AnyRendererVisible(m_GameObject))
             {
                 m_Culled = CulledUpdate.None;
@@ -518,7 +522,7 @@ namespace UnityEngine
         /// and the renderers' visibility.</summary>
         public void Update(float deltaTime)
         {
-            if (m_Controller != null && AvatarLostToStreamHandles()) return;
+            if (m_Controller != null && AvatarLostToStreamHandles(AvatarLostLogsPerUpdateCall)) return;
             m_Culled = CulledUpdate.None;
             Advance(deltaTime);
         }

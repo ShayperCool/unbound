@@ -503,8 +503,9 @@ namespace UnityEngine.Tests
         /// stream's values of its path: the local values the clip gives it and the world values
         /// under the parent it had (6000.0.71f1, tests/projects/animoptimize
         /// jobDestroyedRead.Rig). Control: a second rig whose hand stays reads the same in every
-        /// evaluation, and the values change between the evaluations. The parent destroyed with
-        /// it is unmeasured: the handle then gives its local values.</summary>
+        /// evaluation, and the values change between the evaluations. Unbound's choice,
+        /// unmeasured in the Editor: with the parent destroyed too the handle gives its local
+        /// values as the world's.</summary>
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -554,27 +555,64 @@ namespace UnityEngine.Tests
             public void ProcessAnimation(AnimationStream stream) => Ran++;
         }
 
-        /// <summary>An optimized humanoid with a stream handle of an exposed transform's own
-        /// path plays nothing: every evaluation logs twice that the hips' transform is not
-        /// found and that the object has no avatar, the job does not run and the exposed hand
-        /// stays (6000.0.71f1, tests/projects/animoptimize graphJobHand.HumanOpt). Controls:
-        /// without the handle the job runs, the hand moves and nothing is logged
-        /// (graphJob.HumanOpt); once the handles are unbound it plays again, and so it does
-        /// while the hierarchy is whole (both unmeasured in the Editor).</summary>
-        [Theory]
-        [InlineData(true, true)]
-        [InlineData(false, true)]
-        [InlineData(true, false)]
-        public void AnOptimizedHumanoidWithAHandleOffItsSkeletonPlaysNothing(bool bind, bool optimized)
+        const string LeftHandPath = "Hips/Spine/Chest/LeftUpperArm/LeftLowerArm/LeftHand";
+        const string NoAvatarError = "Error: Transform 'Hips' for human bone 'Hips' not found";
+        const string NoAvatarWarning = "Warning: Object is set to Optimize Game Object but does not have an Avatar, Animation will not play.";
+
+        /// <summary>The humanoid of AnimationHumanStreamTests, optimized with its left hand
+        /// exposed when asked, and the transform a stream handle is bound to: the hand (exposed,
+        /// its own path is not the skeleton's), an object added below the Animator, the
+        /// Animator's own transform, or none.</summary>
+        static GameObject BoundHumanoid(string handle, bool optimized, out Animator animator, out Transform hand)
         {
-            var root = AnimationHumanStreamTests.Humanoid(out var animator);
+            var root = AnimationHumanStreamTests.Humanoid(out animator);
+            if (optimized) AnimatorUtility.OptimizeTransformHierarchy(root, new[] { LeftHandPath });
+            hand = root.transform.Find(optimized ? "LeftHand" : LeftHandPath);
+            if (handle == "hand") animator.BindStreamTransform(hand);
+            else if (handle == "root") animator.BindStreamTransform(root.transform);
+            else if (handle == "added")
+            {
+                var added = new GameObject("Added").transform;
+                added.SetParent(root.transform, false);
+                animator.BindStreamTransform(added);
+            }
+            return root;
+        }
+
+        static List<string> NoAvatarLogs(int times)
+        {
+            var expected = new List<string>();
+            for (int i = 0; i < times; i++)
+            {
+                expected.Add(NoAvatarError);
+                expected.Add(NoAvatarWarning);
+            }
+            return expected;
+        }
+
+        /// <summary>An optimized humanoid with a stream handle of a path its skeleton does not
+        /// hold plays nothing: each evaluation of a manual graph logs twice that the hips'
+        /// transform is not found and that the object has no avatar, the job does not run and
+        /// the exposed hand stays (6000.0.71f1, tests/projects/animoptimize
+        /// graphJobHand.HumanOpt, the exposed hand under its own path, and
+        /// graphJobAdded.HumanOpt, an object added below the Animator). Controls: with a handle
+        /// of the Animator's own transform or none the job runs, the hand moves and nothing is
+        /// logged (graphJobRoot.HumanOpt, graphJob.HumanOpt), and so it does while the
+        /// hierarchy is whole (bone handles, tests/projects/humanoid bone.*). Unbound's choice,
+        /// unmeasured: once the handles are unbound it plays again.</summary>
+        [Theory]
+        [InlineData("hand", true)]
+        [InlineData("added", true)]
+        [InlineData("root", true)]
+        [InlineData("none", true)]
+        [InlineData("hand", false)]
+        [InlineData("added", false)]
+        public void AnOptimizedHumanoidWithAHandleOffItsSkeletonPlaysNothing(string handle, bool optimized)
+        {
+            var root = BoundHumanoid(handle, optimized, out var animator, out var hand);
             var avatar = animator.avatar;
-            const string path = "Hips/Spine/Chest/LeftUpperArm/LeftLowerArm/LeftHand";
-            if (optimized) AnimatorUtility.OptimizeTransformHierarchy(root, new[] { path });
-            var hand = root.transform.Find(optimized ? "LeftHand" : path);
             var clip = new AnimationClip();
             clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, -1f, 1f, 1f));
-            if (bind) animator.BindStreamTransform(hand);
             var graph = PlayableGraph.Create("lost");
             graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
             var playable = AnimationScriptPlayable.Create(graph, new NothingJob(), 1);
@@ -585,19 +623,14 @@ namespace UnityEngine.Tests
             Application.logMessageReceived += Capture;
             try
             {
-                bool lost = bind && optimized;
+                bool lost = optimized && (handle == "hand" || handle == "added");
                 NothingJob.Ran = 0;
                 Vector3 start = hand.position;
                 graph.Evaluate(0f);
                 graph.Evaluate(0.5f);
                 Assert.Equal(lost ? 0 : 2, NothingJob.Ran);
                 Assert.Equal(lost, start == hand.position);
-                var expected = new List<string>();
-                for (int i = 0; lost && i < 4; i++)
-                {
-                    expected.Add("Error: Transform 'Hips' for human bone 'Hips' not found");
-                    expected.Add("Warning: Object is set to Optimize Game Object but does not have an Avatar, Animation will not play.");
-                }
+                var expected = NoAvatarLogs(lost ? 4 : 0);
                 Assert.Equal(expected, logs);
 
                 animator.UnbindAllStreamHandles();
@@ -611,6 +644,49 @@ namespace UnityEngine.Tests
             {
                 Application.logMessageReceived -= Capture;
                 graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
+        /// <summary>The same under the Animator's controller: with the exposed hand bound each
+        /// Animator.Update logs the two messages three times and the controller's state does
+        /// not pose the hand (6000.0.71f1, tests/projects/animoptimize updateHand.HumanOpt).
+        /// Control: without the handle the state plays and nothing is logged
+        /// (update.HumanOpt).</summary>
+        [Theory]
+        [InlineData("hand")]
+        [InlineData("none")]
+        public void AnOptimizedHumanoidWithAHandleOffItsSkeletonDoesNotPlayItsController(string handle)
+        {
+            var root = BoundHumanoid(handle, true, out var animator, out var hand);
+            var avatar = animator.avatar;
+            var file = ObjectGraphBuilder.Build(UnityYaml.Parse(AnimationFixtures.RootMotion), "lostcontroller.asset", null,
+                ObjectGraphBuilder.Kind.Asset, null);
+            var clip = (AnimationClip)file.Objects[7400001];
+            clip.m_Curves.Clear();
+            clip.m_Curves.Add(new ClipCurve
+            {
+                Binding = new CurveBinding { Path = "", Attribute = "Left Arm Down-Up", ClassId = 95 },
+                Curve = AnimationCurve.Linear(0f, -1f, 1f, 1f),
+            });
+            clip.m_Version++;
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            var logs = new List<string>();
+            void Capture(string message, string stack, LogType type) => logs.Add(type + ": " + message);
+            Application.logMessageReceived += Capture;
+            try
+            {
+                bool lost = handle == "hand";
+                Vector3 start = hand.position;
+                animator.Update(0f);
+                animator.Update(0.5f);
+                Assert.Equal(lost, start == hand.position);
+                Assert.Equal(NoAvatarLogs(lost ? 6 : 0), logs);
+            }
+            finally
+            {
+                Application.logMessageReceived -= Capture;
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(avatar);
             }

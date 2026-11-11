@@ -90,16 +90,45 @@ namespace Unbound.Runtime.Playables
             return handle;
         }
 
-        internal void Bound(StreamTransform handle) => Transforms.Add(Target(handle));
+        internal void Bound(StreamTransform handle)
+        {
+            Transforms.Add(Target(handle));
+            m_OffSkeletonFor = null;
+        }
 
-        /// <summary>Whether a transform handle's path is none of the nodes of the skeleton an
-        /// Animator without its transform hierarchy animates (an exposed transform bound under
-        /// its own path).</summary>
+        Unbound.Runtime.Humanoid.AvatarConstant m_OffSkeletonFor;
+        bool m_OffSkeleton;
+
+        /// <summary>Whether a transform handle's path is none of the paths of the skeleton an
+        /// Animator without its transform hierarchy animates: an exposed transform bound under
+        /// its own path or an object added below the Animator, not the Animator's own transform
+        /// (the skeleton's first node). Found once for the handles and the avatar there are; a
+        /// handle whose transform is destroyed does not count (unmeasured).</summary>
         internal bool AnyOffSkeleton()
         {
+            var avatar = Animator.Skeleton?.Avatar;
+            if (avatar == null) return false;
+            if (ReferenceEquals(m_OffSkeletonFor, avatar)) return m_OffSkeleton;
+            m_OffSkeletonFor = avatar;
+            m_OffSkeleton = false;
             foreach (var handle in Transforms)
-                if (handle.Node < 0) return true;
-            return false;
+            {
+                if (handle.Node >= 0 || handle.Transform == null) continue;
+                var path = PathOf(handle.Transform);
+                if (path != null && avatar.NodeOfPath(HashedBindings.Crc32(path)) >= 0) continue;
+                m_OffSkeleton = true;
+                break;
+            }
+            return m_OffSkeleton;
+        }
+
+        /// <summary>The stream handles were unbound (Animator.UnbindAllStreamHandles).</summary>
+        internal void UnbindAll()
+        {
+            Transforms.Clear();
+            StreamOwned.Clear();
+            Properties.Clear();
+            m_OffSkeletonFor = null;
         }
 
         /// <summary>The hierarchy was optimized or deoptimized: the handles' channels moved to
@@ -111,6 +140,7 @@ namespace Unbound.Runtime.Playables
         {
             StreamOwned.Clear();
             m_NodeChannelsFor = -1;
+            m_OffSkeletonFor = null;
             for (int i = 0; i < Transforms.Count; i++)
             {
                 var handle = Target(Transforms[i]);
@@ -235,7 +265,14 @@ namespace Unbound.Runtime.Playables
             var animator = Handles.Animator;
             if (handle.Node >= 0 || animator == null) return false;
             using var engine = MainThreadCheck.Engine();
-            if (!animator.IsHuman || handle.Transform == null) return false;
+            if (!animator.IsHuman) return false;
+            if (handle.Transform == null)
+            {
+                if (handle.Human > 0)
+                    Stubs.Ignored("TransformStreamHandle of a humanoid's bone after the bone's transform is destroyed",
+                        "reads and writes the transform values of its path, not the human pose's bone (not measured)");
+                return false;
+            }
             var constant = animator.Human?.Constant;
             if (!ReferenceEquals(handle.HumanFor, constant))
             {
@@ -1474,9 +1511,7 @@ namespace UnityEngine.Animations
         public static void UnbindAllStreamHandles(this Animator animator)
         {
             if (animator?.m_StreamHandles == null) return;
-            animator.m_StreamHandles.Transforms.Clear();
-            animator.m_StreamHandles.StreamOwned.Clear();
-            animator.m_StreamHandles.Properties.Clear();
+            animator.m_StreamHandles.UnbindAll();
         }
 
         public static void UnbindAllSceneHandles(this Animator animator)

@@ -723,7 +723,7 @@ namespace Unbound.Runtime.Playables
         internal static void Run(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs,
             bool suppressMovement = false, bool deferPhases = false)
         {
-            if (animator == null || outputs.Count == 0 || animator.AvatarLostToStreamHandles()) return;
+            if (animator == null || outputs.Count == 0 || animator.AvatarLostToStreamHandles(Animator.AvatarLostLogsPerEvaluation)) return;
             var bindings = animator.StreamBindings;
             if (bindings == null) return;
             var e = Rent(animator, bindings);
