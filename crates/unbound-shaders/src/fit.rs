@@ -15,6 +15,8 @@ use naga::{
 use std::collections::{BTreeSet, HashMap};
 
 const MAIN_TEXTURE: &str = "_MainTex";
+/// SPIR-V's `BuiltIn FragDepth`.
+const BUILTIN_FRAG_DEPTH: u32 = 22;
 
 /// What glslang's SPIR-V says that naga drops: HLSL semantics of the stage's inputs, by location.
 pub(crate) struct Scanned {
@@ -47,9 +49,35 @@ pub(crate) fn instructions(words: &[u32]) -> Result<Vec<(usize, usize)>> {
     Ok(list)
 }
 
+/// Where a fragment output with an HLSL semantic goes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum FragmentOutput {
+    /// The color target of an index (`SV_Target2`, `COLOR2`).
+    Color(u32),
+    /// The depth (`DEPTH`, which Unity's HLSLSupport.cginc spells `SV_Depth` as).
+    Depth,
+}
+
+/// The output a fragment program's output semantic (in upper case) names, by the DX9 names as
+/// by the `SV_` ones: glslang numbers the DX9 ones (`COLOR1`, `DEPTH`) as it meets them, after
+/// the `SV_Target`s.
+fn fragment_output(semantic: &str) -> Option<FragmentOutput> {
+    if matches!(semantic, "DEPTH" | "DEPTH0") {
+        return Some(FragmentOutput::Depth);
+    }
+    let index = semantic
+        .strip_prefix("SV_TARGET")
+        .or_else(|| semantic.strip_prefix("COLOR"))?;
+    match index {
+        "" => Some(FragmentOutput::Color(0)),
+        _ => index.parse().ok().map(FragmentOutput::Color),
+    }
+}
+
 /// Reads the semantics (SPV_GOOGLE_hlsl_functionality1) and strips them for naga. The DX9
 /// position semantic (`POSITION` on a vertex output or fragment input, which Unity accepts for
-/// `SV_POSITION`) becomes the position built-in, as glslang only does for `SV_POSITION`.
+/// `SV_POSITION`) becomes the position built-in, as glslang only does for `SV_POSITION`, and a
+/// fragment program's outputs go where their semantics say ([`fragment_output`]).
 pub(crate) fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
     if words.len() < 5 {
         bail!("empty SPIR-V");
@@ -99,6 +127,13 @@ pub(crate) fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
     };
     // BuiltIn Position (0) on a vertex output, FragCoord (15) on a fragment input.
     let builtin = if stage == Stage::Vertex { 0 } else { 15 };
+    let fragment_outputs: HashMap<u32, FragmentOutput> = match stage {
+        Stage::Fragment => outputs
+            .iter()
+            .filter_map(|id| Some((*id, fragment_output(semantics.get(id)?)?)))
+            .collect(),
+        _ => HashMap::new(),
+    };
     let mut kept = words[..5].to_vec();
     for &(at, count) in &list {
         let inst = &words[at..at + count];
@@ -110,6 +145,14 @@ pub(crate) fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
             // OpDecorate Location of a DX9 position: OpDecorate BuiltIn instead.
             71 if inst.len() >= 4 && inst[2] == 30 && positions.contains(&inst[1]) => {
                 kept.extend_from_slice(&[(4 << 16) | 71, inst[1], 11, builtin]);
+            }
+            // OpDecorate Location of a fragment output: its semantic's target, or OpDecorate
+            // BuiltIn FragDepth.
+            71 if inst.len() >= 4 && inst[2] == 30 && fragment_outputs.contains_key(&inst[1]) => {
+                kept.extend_from_slice(&match fragment_outputs[&inst[1]] {
+                    FragmentOutput::Color(index) => [(4 << 16) | 71, inst[1], 30, index],
+                    FragmentOutput::Depth => [(4 << 16) | 71, inst[1], 11, BUILTIN_FRAG_DEPTH],
+                });
             }
             _ => kept.extend_from_slice(inst),
         }

@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 31;
+pub const FORMAT_VERSION: u32 = 32;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2157,6 +2157,54 @@ float4 frag(float4 p : SV_POSITION) : SV_Target
         assert!(slot("_Unsigned").integer() && slot("_Signed").integer());
         assert!(!slot("_Filtered").integer() && !slot("_Shadow").integer());
         assert!(slot("_Shadow").depth() && slot("_Shadow").comparison);
+    }
+
+    /// A fragment program's outputs go where their semantics say, by the DX9 names too, which
+    /// Unity's HLSLSupport.cginc spells `SV_Target<n>` and `SV_Depth` as: a color into the
+    /// target of its index whatever order the outputs are declared in, the depth as the
+    /// depth (the Unity 6000.0.71f1 Editor stores it: tests/projects/samplerstates `*.split`).
+    #[test]
+    fn fragment_outputs_go_where_their_semantics_say() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+void frag(out uint4 second : COLOR1, out float depth : DEPTH, out float4 first : COLOR0,
+    out int4 fourth : SV_Target3)
+{
+    first = 1; second = 2; fourth = 4; depth = 0.5;
+}
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let module = naga::front::wgsl::parse_str(&compiled.fragment).unwrap();
+        let result = module.entry_points[0].function.result.as_ref().unwrap();
+        let naga::TypeInner::Struct { members, .. } = &module.types[result.ty].inner else {
+            panic!("the outputs are not a struct");
+        };
+        let mut outputs: Vec<_> = members
+            .iter()
+            .map(|member| {
+                let kind = module.types[member.ty].inner.scalar_kind().unwrap();
+                match member.binding.as_ref().unwrap() {
+                    naga::Binding::Location { location, .. } => (Some(*location), kind),
+                    naga::Binding::BuiltIn(naga::BuiltIn::FragDepth) => (None, kind),
+                    other => panic!("an output bound to {other:?}"),
+                }
+            })
+            .collect();
+        outputs.sort_by_key(|(location, _)| *location);
+        assert_eq!(
+            outputs,
+            [
+                (None, naga::ScalarKind::Float),
+                (Some(0), naga::ScalarKind::Float),
+                (Some(1), naga::ScalarKind::Uint),
+                (Some(3), naga::ScalarKind::Sint),
+            ]
+        );
     }
 
     #[test]
