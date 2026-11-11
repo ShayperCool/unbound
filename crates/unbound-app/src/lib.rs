@@ -188,6 +188,14 @@ pub fn run(
                     title: options.title.clone(),
                     resolution: WindowResolution::new(options.width.max(1), options.height.max(1)),
                     resizable: true,
+                    // Any size the run asks for (`--size`, `Screen.SetResolution`): Bevy's default
+                    // minimum of 180x120 goes into the X11 size hints, and a smaller window is
+                    // then made that size.
+                    resize_constraints: bevy::window::WindowResizeConstraints {
+                        min_width: 1.0,
+                        min_height: 1.0,
+                        ..default()
+                    },
                     present_mode: PresentMode::AutoVsync,
                     ..default()
                 }),
