@@ -1226,7 +1226,7 @@ def default_jobs():
         return 4
 
 
-FAILURE_COUNT = re.compile(r'''\b(\d+) (?:record\(s\) )?(?:differences|differ|failures|failed|missing|extra)\b'''
+FAILURE_COUNT = re.compile(r'''\b(\d+) (?:of \d+ values differ\b|(?:record\(s\) )?(?:differences|differ|failures|failed|missing|extra))\b'''
                            r'''|["']?(?:differences|failures|failed|missing|extra)["']?:\s*(\d+)''')
 FAILED_STEP = re.compile(r'(?:^|\|\| )step (\d+) \(')
 

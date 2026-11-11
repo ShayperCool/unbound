@@ -44,6 +44,16 @@ class WorseTests(unittest.TestCase):
         self.assertIsNone(suite.worse(new, old))
         self.assertIsNone(suite.worse(old, old))
 
+    def test_values_differ_counts_numerator_and_detects_growth(self):
+        old = failing('372 cases; 8226 of 615779 values differ (font 2, atlas 12, case 7780, mesh 432)')
+        new = failing('372 cases; 8227 of 615779 values differ (font 2, atlas 12, case 7781, mesh 432)')
+        self.assertEqual(suite.counted(old['summary']), [8226])
+        self.assertIsNotNone(suite.worse(old, new))
+        self.assertIsNone(suite.worse(new, old))
+        self.assertIsNone(suite.worse(old, old))
+        self.assertEqual(suite.counted('0 of 19 values differ; 2 missing; {"failed":3}'), [0, 2, 3])
+        self.assertEqual(suite.counted('19 values compared; 5 of 9 cases differ'), [])
+
     def test_compact_json_counts(self):
         old = failing('{"tested":10,"failed":2061,"exact":false}')
         new = failing('{"tested":10,"failed":9000,"exact":false}')
