@@ -61,8 +61,10 @@ Q361 build and movement isolation, Unity 6000.0.71f1:
   matching source build.
 - `BuildSurface` restores the committed baked data before creating the agents.
   Its mesh construction residual therefore does not explain the 238 differing
-  agent-frame scenarios. Movement first exceeds tolerance on frame 40; path
-  status and sampled corner counts agree.
+  agent-frame scenarios. The first differing serialized movement record is frame 13: the climber
+  velocity is -1.732 versus -1.736 m/s. These movement fields are strings
+  rounded to three decimals and compared exactly; path status and sampled
+  corner counts agree.
 
 Two new GPU Editor captures are byte-identical to the committed reference.
 The full comparator still reports 239 differing scenarios, down from the
