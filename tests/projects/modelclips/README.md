@@ -9,8 +9,9 @@ with mask type None), additive reference frames (inside and outside the range, a
 Animator parameter curves (float, int and bool parameters, a curve without a parameter, with loop
 pose) and events (also with cycle offsets). `RigDefault`, `RigReduced` and `RigOptimal` are the same file with the default clip
 settings and animation compression Off, KeyframeReduction and Optimal, and `RigStatic` without
-animation import. Humanoid rigs are not
-covered.
+animation import. Two Humanoid rigs carry one clip each under a reducing compression:
+`HumanReduced` (Keyframe Reduction, Rotation and Scale Errors 5, Position Error 0.5) and
+`HumanOptimal` (Optimal, Position Error 5); other Humanoid clip settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
 `AnimationUtility.GetAnimationClipSettings`, curve bindings, the curves' values at every half
@@ -76,5 +77,37 @@ What the Editor does (measured):
 - Mirror has no effect on generic clips; the setting is kept. Wrap mode is kept and does not
   change Animator playback.
 
-Unbound matches 2949/2949 records. The reducing compression modes are compared by their bindings
-only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced` set).
+## Humanoid clips under a reducing compression
+
+`keys.<model>.<clip>` records the number of Animator curves of the clip, and
+`keys.<model>.<clip>.|<curve>` every such curve key by key: times, values and both tangents
+(compression Off keeps 21 keys a curve in this clip). The Manual's
+[Animation tab](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AnimationClip.html)
+says Keyframe Reduction applies to Legacy, Generic and Humanoid rigs and Optimal to Generic
+and Humanoid ones, and gives the test of the Position and Scale Errors: a key goes while the
+reduced value stays within the error's percentage of the original one. It does not say which
+error a Humanoid clip's curves take.
+
+- Every curve of the clip (the body's position and rotation components, the goals, the
+  muscles) is reduced on its own as a float curve with the Position Error. Rotation and Scale
+  Errors of 5 change nothing (`HumanReduced`), a Position Error of 5 drops more keys
+  (`HumanOptimal`); Keyframe Reduction and Optimal reduce alike.
+- Kept keys keep the time, value and tangents they have with compression Off; a curve whose
+  keys all lie within the error of its first key becomes its two end keys with zero tangents.
+- The key times are whole frames in single precision (frame times 1 / frame rate).
+- The Editor's clips have no transform curves (mask type None); the probe records Animator
+  curves only. Unbound keeps the transform curves of the two helper bones outside the human
+  skeleton (docs/COMPATIBILITY_GAPS.md).
+- A curve whose keys all stay below 1e-6 is recorded as `{"noise":1}`: such values are float
+  noise of the muscle conversion around zero, above the reduction's own zero limit, and which
+  of their keys stay follows their last bits (66 of the 130 curves of each model here).
+
+Not in the reference (an exploratory capture of a richer rig, 20 clips of 130 curves): the
+same rule gives the Editor's keys of all 2600 curves at Position Errors of 0.5 and 5 when it
+starts from the Editor's own every-frame curves (managed/UnityEngine.Tests
+`HumanClipReductionTests` holds four of them); starting from Unbound's converted curves, four
+muscle curves that stay below 6e-3 keep one key at a neighbouring frame at an error of 5.
+
+Unbound matches 3211/3211 records. The generic reducing compression modes are compared by their
+bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
+set).
