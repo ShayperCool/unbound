@@ -480,7 +480,8 @@ struct Region {
 /// The region that is open to the rows above every used cell.
 const OPEN_REGION: i32 = 1;
 /// A region smaller than this many times the smallest shape is searched for a place that holds
-/// that shape, when the shape is a full rectangle.
+/// that shape, when the shape is a full rectangle (the limit itself is not measured:
+/// docs/REALTIME_GI.md).
 const BLOCK_SEARCH_FACTOR: i32 = 100;
 
 /// The hole-filling heuristic: the target's free cells as 4-connected regions, kept from the
@@ -599,7 +600,8 @@ impl Regions {
         }
     }
 
-    /// Gives a region up: its cells count as used from now on, for the skylines as well.
+    /// Gives a region up: its cells count as used from now on, for the skylines as well (what
+    /// that changes for later shapes is not measured: docs/REALTIME_GI.md).
     fn give_up(&mut self, region: &Region, skylines: &mut Skylines) {
         for y in region.min_y..=region.max_y {
             for x in region.min_x..=region.max_x {
@@ -669,7 +671,8 @@ impl Regions {
         } else {
             None
         };
-        // The open region's rows above the scanned ones count one column short of its width.
+        // The open region's rows above the scanned ones count one column short of its width
+        // (not measured: docs/REALTIME_GI.md).
         let mut rest = Region {
             id: OPEN_REGION,
             min_x: 0,
@@ -720,7 +723,8 @@ impl Regions {
         if whole.id == OPEN_REGION {
             made.push(rest);
         }
-        // Largest first; of equal ones the later.
+        // Largest first; of equal ones the later (their order is not measured:
+        // docs/REALTIME_GI.md).
         let mut kept: Vec<Region> = Vec::with_capacity(made.len());
         for region in made {
             let (width, height) = (
@@ -985,12 +989,13 @@ pub fn check_layout(system: &System, st: [f32; 4], output: &Output) -> Result<()
     for chart in &output.charts {
         let [left, bottom, width, height] = chart.rect;
         let across = width / BLOCK_TEXELS;
+        // A cached layout may hold anything: no sum here may wrap.
         ensure!(
             width % BLOCK_TEXELS == 0
                 && height % BLOCK_TEXELS == 0
-                && chart.blocks.len() as u32 == across * (height / BLOCK_TEXELS)
-                && left + width <= output.width
-                && bottom + height <= output.height,
+                && chart.blocks.len() as u64 == across as u64 * (height / BLOCK_TEXELS) as u64
+                && left as u64 + width as u64 <= output.width as u64
+                && bottom as u64 + height as u64 <= output.height as u64,
             "a realtime lightmap chart at {:?} with {} blocks in UVs of {}x{} texels",
             chart.rect,
             chart.blocks.len(),
@@ -1073,7 +1078,7 @@ mod tests {
         assert_eq!(positions[0], (0, 0));
         assert!(positions[1].0 >= 5 || positions[1].1 >= 5, "{positions:?}");
         assert!(w * h >= 5 * 5 + 4 * 4, "{w}x{h}");
-        // An L of three blocks does not go into a 2x2 hole's row of two.
+        // An L of three blocks does not go into a hole of two.
         let frame = mask(4, 3, |x, y| x == 0 || x == 3 || y == 0 || y == 2);
         let corner = mask(2, 2, |x, y| x == 0 || y == 0);
         let (positions, _, _) = pack(&[&frame, &corner]).unwrap();
