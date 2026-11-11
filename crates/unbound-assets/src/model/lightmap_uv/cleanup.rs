@@ -391,16 +391,17 @@ pub fn clean(positions: &[[f64; 3]], triangles: &[[u32; 3]]) -> Cleaned {
     }
 }
 
-/// The geometry the unwrap parametrizes: the mesh fitted into a unit cube and cleaned.
-pub fn prepare(positions: &[[f32; 3]], triangles: &[[u32; 3]]) -> Result<Geometry, String> {
+/// The geometry the unwrap parametrizes: the mesh fitted into a unit cube and cleaned; none when
+/// the cleanup leaves no triangle.
+pub fn prepare(positions: &[[f32; 3]], triangles: &[[u32; 3]]) -> Option<Geometry> {
     let mut fitted = positions.to_vec();
     center_and_scale(&mut fitted);
     let doubles: Vec<[f64; 3]> = fitted.iter().map(|p| p.map(f64::from)).collect();
     let cleaned = clean(&doubles, triangles);
     if cleaned.triangles.is_empty() {
-        return Err("no triangles are left after the cleanup of degenerate geometry".into());
+        return None;
     }
-    Ok(Geometry {
+    Some(Geometry {
         positions: cleaned
             .positions
             .iter()

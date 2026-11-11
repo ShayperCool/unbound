@@ -87,10 +87,47 @@ impl UnwrapParams {
     }
 }
 
-/// UV2 per triangle corner: the mesh is cut into charts, each laid flat, and the charts are
-/// packed into the unit square.
-pub fn unwrap(input: &UnwrapInput, params: &UnwrapParams) -> Result<Vec<[[f32; 2]; 3]>, String> {
-    let geometry = cleanup::prepare(input.positions, input.triangles)?;
+/// Why a mesh gets no generated UV2.
+#[derive(Debug, PartialEq)]
+pub enum Failure {
+    /// The cleanup left no triangle to unwrap. The Editor aborts the unwrap and imports the mesh
+    /// empty (tests/projects/lightmapuvs, Repair/Lines against RepairOff/Lines).
+    NothingLeft,
+    /// A case the unwrap does not reproduce.
+    Unsupported(String),
+}
+
+impl From<String> for Failure {
+    fn from(reason: String) -> Self {
+        Self::Unsupported(reason)
+    }
+}
+
+impl From<&str> for Failure {
+    fn from(reason: &str) -> Self {
+        Self::Unsupported(reason.into())
+    }
+}
+
+/// UV2 per triangle corner under the importer's settings: the mesh is cleaned, cut into charts,
+/// each laid flat, and the charts are packed into the unit square. The cleanup comes first: a
+/// mesh it leaves nothing of has no area to derive a pack margin from.
+pub fn generate(
+    input: &UnwrapInput,
+    settings: &SecondaryUvSettings,
+) -> Result<Vec<[[f32; 2]; 3]>, Failure> {
+    let Some(geometry) = cleanup::prepare(input.positions, input.triangles) else {
+        return Err(Failure::NothingLeft);
+    };
+    let params = UnwrapParams::new(settings, input)?;
+    unwrap_cleaned(input, &geometry, &params)
+}
+
+fn unwrap_cleaned(
+    input: &UnwrapInput,
+    geometry: &cleanup::Geometry,
+    params: &UnwrapParams,
+) -> Result<Vec<[[f32; 2]; 3]>, Failure> {
     let uvs: Option<Vec<[[f32; 2]; 3]>> = input
         .uvs
         .map(|uvs| geometry.sources.iter().map(|&s| uvs[s as usize]).collect());
@@ -169,7 +206,7 @@ fn removed_triangle_uvs(
     let Some((order, e)) = EDGES
         .iter()
         .enumerate()
-        .filter(|(_, &(a, b, _))| r[a] != r[b])
+        .filter(|&(_, &(a, b, _))| r[a] != r[b])
         .filter_map(|(e, &(a, b, _))| Some((edges.first(r[a], r[b])?, e)))
         .min()
     else {

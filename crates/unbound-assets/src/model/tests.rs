@@ -586,6 +586,54 @@ fn lightmap_uvs_unwrap_parts_of_more_than_a_hundred_triangles() {
 }
 
 #[test]
+fn lightmap_uvs_are_generated_for_meshes_with_zero_area_and_stacked_faces() {
+    // A quad, a triangle of three collinear corners on its top edge, and a third face on the
+    // quad's right edge (an edge of three faces).
+    let obj = "o Rough\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0.3 1 0\nv 1.5 0 0.8\nv 1.5 1 0.8\n\
+               v 1.5 0 -0.8\nv 1.5 1 -0.8\n\
+               f 1 2 3 4\nf 4 3 5\nf 2 6 7 3\nf 2 8 9 3\n";
+    let on = "ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n";
+    let model = import_obj("Rough.obj", obj, on);
+    assert!(
+        !model.warnings.iter().any(|w| w.contains("lightmap UVs")),
+        "{:?}",
+        model.warnings
+    );
+    let mesh = &model.meshes[0];
+    // The zero-area triangle stays in the mesh.
+    assert_eq!(mesh.submeshes[0].len(), 3 * 7);
+    assert_eq!(mesh.uvs.len(), 2);
+    assert_eq!(mesh.uvs[1].len(), mesh.positions.len());
+    assert!(
+        mesh.uvs[1]
+            .iter()
+            .flatten()
+            .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
+    );
+
+    // Nothing but zero-area faces: the unwrap has no triangle left and the mesh is imported
+    // empty; without generated lightmap UVs the same faces stay.
+    let obj = "o Flat\nv 0 0 0\nv 1 0 0\nv 2 0 0\nv 3 0 0\nf 1 2 3\nf 2 3 4\n";
+    let model = import_obj("Flat.obj", obj, on);
+    assert!(
+        model
+            .warnings
+            .iter()
+            .any(|w| w.contains("the mesh is imported empty")),
+        "{:?}",
+        model.warnings
+    );
+    let mesh = &model.meshes[0];
+    assert_eq!(mesh.submeshes, vec![Vec::<u32>::new()]);
+    assert!(mesh.positions.is_empty() && mesh.normals.is_empty());
+    assert!(mesh.uvs.iter().all(|uv| uv.is_empty()));
+    let off = "ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 0\n";
+    let model = import_obj("Flat.obj", obj, off);
+    assert_eq!(model.meshes[0].submeshes[0].len(), 6);
+    assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+}
+
+#[test]
 fn weld_vertices_can_preserve_coincident_authored_points() {
     // The Model tab documents that disabling welding preserves distinct source vertices.
     let obj =

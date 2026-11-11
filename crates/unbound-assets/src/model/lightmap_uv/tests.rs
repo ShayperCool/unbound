@@ -388,8 +388,7 @@ fn assert_unwraps(
         polygons: &polygons,
         uvs: Some(uvs),
     };
-    let params = UnwrapParams::new(&default_settings(), &input).unwrap();
-    let out = unwrap(&input, &params).unwrap();
+    let out = generate(&input, &default_settings()).unwrap();
     for (t, (got, want)) in out.iter().zip(expected).enumerate() {
         for k in 0..3 {
             assert_eq!(
@@ -416,7 +415,7 @@ fn unwraps_a_grid_with_interior_vertices_like_unity() {
 fn unwrap_default(
     positions: &[[f32; 3]],
     triangles: &[[u32; 3]],
-) -> Result<Vec<[[f32; 2]; 3]>, String> {
+) -> Result<Vec<[[f32; 2]; 3]>, Failure> {
     let polygons: Vec<u32> = (0..triangles.len() as u32).collect();
     let input = UnwrapInput {
         positions,
@@ -424,8 +423,7 @@ fn unwrap_default(
         polygons: &polygons,
         uvs: None,
     };
-    let params = UnwrapParams::new(&default_settings(), &input)?;
-    unwrap(&input, &params)
+    generate(&input, &default_settings())
 }
 
 #[test]
@@ -453,9 +451,12 @@ fn a_degenerate_triangle_takes_the_uv2_of_a_neighbour_along_a_shared_edge() {
 }
 
 #[test]
-fn a_mesh_of_degenerate_triangles_only_is_refused() {
+fn a_mesh_of_degenerate_triangles_only_has_nothing_left_to_unwrap() {
     let positions = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0]];
-    assert!(unwrap_default(&positions, &[[0, 1, 2], [0, 0, 1]]).is_err());
+    assert_eq!(
+        unwrap_default(&positions, &[[0, 1, 2], [0, 0, 1]]),
+        Err(Failure::NothingLeft)
+    );
 }
 
 #[test]
@@ -475,6 +476,128 @@ fn the_cleanup_moves_removed_triangles_after_the_kept_ones() {
     assert_eq!(g.triangles, [[0, 1, 2], [1, 3, 2]]);
     // Vertex 4 is no longer used and is dropped.
     assert_eq!(g.positions.len(), 4);
+}
+
+#[test]
+fn a_triangle_with_coincident_corners_is_removed_and_the_rest_unwraps() {
+    // Vertices 3 and 4 are distinct but lie at one position: triangle 1 has no area.
+    let positions = [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+    ];
+    let triangles = [[0, 1, 2], [1, 3, 4], [1, 3, 2]];
+    let g = cleanup::prepare(&positions, &triangles).unwrap();
+    assert_eq!(g.sources, [0, 2]);
+    assert_eq!(g.removed, [1]);
+    assert_eq!(g.positions.len(), 4);
+    let out = unwrap_default(&positions, &triangles).unwrap();
+    // It shares the edge (1, 3) with triangle 2; its third corner lies on vertex 3.
+    assert_eq!(out[1], [out[2][0], out[2][1], out[2][1]]);
+    assert_ne!(out[2][0], out[2][1]);
+}
+
+#[test]
+fn a_large_mesh_full_of_degenerate_triangles_is_cleaned_and_filled_from_its_neighbours() {
+    // A grid of 200×200 quads, and on every horizontal edge a triangle with a repeated corner.
+    const N: u32 = 200;
+    let mut positions = Vec::new();
+    for y in 0..=N {
+        for x in 0..=N {
+            positions.push([x as f32, y as f32, ((x * 7 + y * 3) % 5) as f32 * 0.1]);
+        }
+    }
+    let at = |x: u32, y: u32| y * (N + 1) + x;
+    let mut triangles = Vec::new();
+    for y in 0..=N {
+        for x in 0..N {
+            if y < N {
+                triangles.push([at(x, y), at(x + 1, y), at(x + 1, y + 1)]);
+                triangles.push([at(x, y), at(x + 1, y + 1), at(x, y + 1)]);
+            }
+            triangles.push([at(x, y), at(x + 1, y), at(x, y)]);
+        }
+    }
+    let kept = (2 * N * N) as usize;
+    let g = cleanup::prepare(&positions, &triangles).unwrap();
+    assert_eq!(g.triangles.len(), kept);
+    assert_eq!(g.removed.len(), triangles.len() - kept);
+    assert_eq!(g.positions.len(), positions.len());
+    assert!(manifold(0, &g.triangles), "edges only");
+    let mut all: Vec<u32> = g.sources.iter().chain(&g.removed).copied().collect();
+    all.sort_unstable();
+    assert!(all.iter().copied().eq(0..triangles.len() as u32));
+
+    // Every removed triangle takes the corners of the first kept triangle (in the cleanup's
+    // order) that has its edge; a sample is checked against a plain search.
+    let polygons: Vec<u32> = (0..triangles.len() as u32).collect();
+    let input = UnwrapInput {
+        positions: &positions,
+        triangles: &triangles,
+        polygons: &polygons,
+        uvs: None,
+    };
+    let out: Vec<[[f32; 2]; 3]> = (0..triangles.len())
+        .map(|t| [0, 1, 2].map(|k| [t as f32, k as f32]))
+        .collect();
+    let edges = KeptEdges::new(&input, &g.sources);
+    for &removed in g.removed.iter().step_by(97) {
+        let [a, b, _] = triangles[removed as usize];
+        let neighbour = *g
+            .sources
+            .iter()
+            .find(|&&s| triangles[s as usize].contains(&a) && triangles[s as usize].contains(&b))
+            .unwrap();
+        let n = triangles[neighbour as usize];
+        let corner = |v: u32| n.iter().position(|&c| c == v).unwrap() as f32;
+        let uv = removed_triangle_uvs(&input, &g.sources, &edges, removed, &out);
+        // The third corner repeats the first, so it lies on the edge's first end.
+        assert_eq!(
+            uv,
+            [a, b, a].map(|v| [neighbour as f32, corner(v)]),
+            "triangle {removed}"
+        );
+    }
+}
+
+#[test]
+fn two_closed_solids_sharing_an_edge_are_split_apart_and_unwrap() {
+    // Two tetrahedra with the edge (0, 1) in common: four triangles along it.
+    let positions = [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.5, 1.0, 0.3],
+        [0.5, 0.4, 1.0],
+        [0.5, -1.0, -0.3],
+        [0.5, -0.4, -1.0],
+    ];
+    let solid = |c: u32, d: u32| [[0, 1, c], [0, d, 1], [0, c, d], [1, d, c]];
+    let triangles: Vec<[u32; 3]> = solid(2, 3).into_iter().chain(solid(4, 5)).collect();
+    assert!(!manifold(6, &triangles));
+    let g = cleanup::prepare(&positions, &triangles).unwrap();
+    assert!(g.removed.is_empty());
+    assert_eq!(g.sources, [0, 1, 2, 3, 4, 5, 6, 7]);
+    // Each end of the shared edge gets one copy: the solids no longer touch.
+    assert_eq!(g.positions.len(), 8);
+    assert!(manifold(g.positions.len(), &g.triangles));
+    let shared = |t: &[u32; 3], u: &[u32; 3]| t.iter().any(|v| u.contains(v));
+    for t in &g.triangles[..4] {
+        assert!(g.triangles[4..].iter().all(|u| !shared(t, u)));
+    }
+    let out = unwrap_default(&positions, &triangles).unwrap();
+    for (i, uv) in out.iter().enumerate() {
+        assert!(
+            uv.iter()
+                .flatten()
+                .all(|c| c.is_finite() && (0.0..=1.0).contains(c)),
+            "triangle {i}: {uv:?}"
+        );
+        let area = (uv[1][0] - uv[0][0]) * (uv[2][1] - uv[0][1])
+            - (uv[2][0] - uv[0][0]) * (uv[1][1] - uv[0][1]);
+        assert!(area.abs() > 1e-6, "triangle {i} has no UV2 area: {uv:?}");
+    }
 }
 
 /// Whether every edge has at most two triangles running opposite ways, and the triangles

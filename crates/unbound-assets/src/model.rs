@@ -2180,6 +2180,9 @@ impl<'a> Builder<'a> {
 
         // Lightmap UVs replace UV2 (measured: tests/projects/lightmapuvs).
         let mut warning = None;
+        // Whether the unwrap had no triangle left: the mesh is then imported without geometry
+        // (measured: lightmapuvs Repair/Lines against RepairOff/Lines, a mesh of one sub-mesh).
+        let mut emptied = false;
         let lightmap = settings.secondary_uv.as_ref().and_then(|unwrap| {
             match self.lightmap_uvs(
                 mesh,
@@ -2190,7 +2193,17 @@ impl<'a> Builder<'a> {
                 &welded,
             ) {
                 Ok(lightmap) => Some(lightmap),
-                Err(error) => {
+                Err(lightmap_uv::Failure::NothingLeft) => {
+                    emptied = true;
+                    warning = Some(
+                        "lightmap UVs are not generated: no triangles are left after the cleanup \
+                         of degenerate geometry; the mesh is imported empty, as the Unity \
+                         importer does"
+                            .to_string(),
+                    );
+                    None
+                }
+                Err(lightmap_uv::Failure::Unsupported(error)) => {
                     warning = Some(format!(
                         "lightmap UVs are not generated: {error}; the mesh keeps the file's UV2, \
                          so baked lightmaps do not land on it (not supported)"
@@ -2245,7 +2258,7 @@ impl<'a> Builder<'a> {
         let mut triangles: Vec<TriangleCorners> = Vec::new();
         let mut discarded = 0usize;
         let point = |c: u32| welded[mesh.vertex_indices[c as usize] as usize];
-        for &face_index in &order {
+        for &face_index in order.iter().filter(|_| !emptied) {
             let face_index = face_index as usize;
             let face = &mesh.faces[face_index];
             let Some(part) = part_of[face_index] else {
@@ -2642,7 +2655,7 @@ impl<'a> Builder<'a> {
         uv0: Option<&ufbx::VertexVec2>,
         settings: &SecondaryUvSettings,
         welded: &[u32],
-    ) -> Result<LightmapUvs, String> {
+    ) -> Result<LightmapUvs, lightmap_uv::Failure> {
         if !self.settings.weld_vertices {
             return Err("meshes without weldVertices are not measured".into());
         }
@@ -2708,8 +2721,7 @@ impl<'a> Builder<'a> {
             polygons: &polygons,
             uvs: uv0.map(|_| &uvs[..]),
         };
-        let params = lightmap_uv::UnwrapParams::new(settings, &input)?;
-        let uvs = lightmap_uv::unwrap(&input, &params)?;
+        let uvs = lightmap_uv::generate(&input, settings)?;
         Ok(LightmapUvs { first, uvs })
     }
 
