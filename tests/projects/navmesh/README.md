@@ -63,8 +63,9 @@ Q361 build and movement isolation, Unity 6000.0.71f1:
   Its mesh construction residual therefore does not explain the 238 differing
   agent-frame scenarios. The first differing serialized movement record is frame 13: the climber
   velocity is -1.732 versus -1.736 m/s. These movement fields are strings
-  rounded to three decimals and compared exactly; path status and sampled
-  corner counts agree.
+  rounded to three decimals and compared exactly. Path status agrees; corner
+  counts differ in seven records: blocked on frames 191 through 195 (4 versus
+  5), climber on 208 (1 versus 2), and right on 241 (1 versus 2).
 
 Two new GPU Editor captures are byte-identical to the committed reference.
 The full comparator still reports 239 differing scenarios, down from the
