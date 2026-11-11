@@ -332,10 +332,19 @@ lighting the room (the documented parts are in the contract above):
   (`legacydefault`, `legacyauto`; the 6000.0 upgrade guide: scenes that "use the default
   environment lighting settings" are upgraded "to use the default Lighting Data Asset"). With
   the sun turned or missing or with another sky it has none (`legacyturned`, `legacynolight`,
-  `legacyownsky`). Unbound applies the rule in a linear project with those settings, through
-  the compatibility profile; other ambient or reflection sources, another resolution, a
-  gamma-space project and several directional lights (Unbound takes the brightest as the sun)
-  are not measured and leave the scene without lighting data.
+  `legacyownsky`). What makes a scene an earlier release's is its RenderSettings' version alone
+  (`legacysettingsonly`, `legacylightmapsonly`, `currentdefault`); the sun's angles are its own,
+  not its direction under its parents (`legacychildsun`), and its color and intensity do not
+  count (`legacydimsun`); a gamma-space project upgrades no scene (`--color-space gamma`: all
+  fourteen scenes zero and black). Unbound applies the rule as measured. Other ambient or
+  reflection sources, another resolution, several directional lights (Unbound takes the
+  brightest as the sun) and a render pipeline that declares it bakes neither the ambient probe
+  nor the default reflection are not measured and leave the scene without lighting data, as
+  does `Lightmapping.bakeOnSceneLoad` (not honoured: a warning once). All of this is the
+  measured release's, through the compatibility profile: in another release a scene without
+  lighting data gets zero and black too, with a warning once, since releases before Unity 6
+  bake the ambient probe and the sky's reflection by default (the Unity 6 upgrade guide) and
+  later ones are not measured.
 
 Data set in the frame of a change of the ambient source stands when it is set after the change
 (`room-envdata-after-color`, `room-envdata-after-sky`) and is replaced by a change that follows
@@ -353,9 +362,13 @@ unlike there, stays whatever the ambient source does (another color, a gradient 
 the source, the skybox's ambient intensity: `-envdata-color`, `-source`, `-sky`, `-intensity`),
 until `DynamicGI.UpdateEnvironment` (`-envdata-update`: black again). Unbound keeps the script's
 cube beside the ambient source's faces and gives such a scene the cube or black faces; while
-every loaded scene is such a one it does not make the ambient source's faces at all. Not
-measured: a cube set in another scene before such a scene loads (Unbound: a scene loaded alone
-starts without it; one loaded beside others takes a cube still kept).
+every loaded scene is such a one it does not make the ambient source's faces at all.
+
+A scene loaded alone takes nothing of a cube given before it: its environment is made from its
+ambient source, also when the source's inputs are what they were when the cube was given
+(`room-envdata-loaded`), and a scene with baked environment lighting has none
+(`roombakedenvironment-envdata-loaded`). Not measured: a scene loaded beside others (Unbound:
+it takes a cube still kept).
 
 Not measured: sky materials other than the procedural one
 (they are drawn by the same capture), and gamma-space projects.
