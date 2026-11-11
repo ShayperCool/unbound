@@ -589,7 +589,7 @@ namespace Unbound.Box2D.Dynamics
             {
                 var proxy = (FixtureProxy)ContactManager
                                          .BroadPhase.GetUserData(proxyId);
-                return Callback.QueryCallback(proxy.Fixture);
+                return Callback.QueryCallback(proxy.Fixture, proxy.ChildIndex);
             }
         }
 

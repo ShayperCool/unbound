@@ -23,6 +23,7 @@ namespace Unbound.Box2D.Collision.Shapes
         public bool OneSided = true;
         public bool HasPrevVertex, HasNextVertex;
         readonly EdgeShape rayEdge = new EdgeShape();
+        readonly EdgeShape queryEdgeA = new EdgeShape(), queryEdgeB = new EdgeShape();
 
         public Vector2 PrevVertex;
 
@@ -134,10 +135,13 @@ namespace Unbound.Box2D.Collision.Shapes
         }
 
         /// Get a child edge.
-        public void GetChildEdge(out EdgeShape edge, int index)
+        // Query scratch stays valid until this chain supplies the same slot again.
+        // Two slots also allow both operands to refer to different children of one chain.
+        internal EdgeShape QueryChild(int index, bool second = false)
         {
-            edge = new EdgeShape();
+            var edge = second ? queryEdgeB : queryEdgeA;
             GetChildEdge(edge, index);
+            return edge;
         }
 
         /// <summary>Fill a reusable child edge, including connectivity at the chain ends.</summary>

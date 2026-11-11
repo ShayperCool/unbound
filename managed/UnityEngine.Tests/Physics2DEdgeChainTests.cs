@@ -168,6 +168,57 @@ namespace UnityEngine.Tests
             Assert.Equal(0, allocated); Assert.Equal(128, hits); Assert.True(manifold.PointCount > 0);
             Assert.True(chain.RayCast(out var hit, input, xfA, 0)); Assert.Equal(.4375f, hit.Fraction, 6);
         }
+        [Theory]
+        [InlineData(32)]
+        [InlineData(512)]
+        public void CastsRetainOnlyNearbyTargetChildren(int segments)
+        {
+            var source = Root().AddComponent<EdgeCollider2D>();
+            var target = Root().AddComponent<EdgeCollider2D>();
+            var points = new Vector2[segments + 1];
+            for (int i = 0; i <= segments; i++) points[i] = new Vector2(i, 0);
+            source.points = target.points = points;
+            target.transform.position = new Vector3(0, .5f, 0);
+            Physics2D.SyncTransforms();
+            var scratch = new Physics2DQueries.CastScratch();
+            var colliders = new Collider2D[] { source };
+            var hits = Physics2DQueries.CastColliders(colliders, null, Vector2.up, 1,
+                new ContactFilter2D().NoFilter(), null, scratch);
+            Assert.Single(hits); Assert.Same(target, hits[0].collider);
+            // The last source segment only overlaps neighboring proxies of each chain.
+            Assert.InRange(scratch.Query.Children.Count, 2, 6);
+            Assert.Contains(scratch.Query.Children, x => x.Fixture.UserData == target && x.Child == segments - 1);
+            foreach (var child in scratch.Query.Children) Assert.InRange(child.Child, segments - 3, segments - 1);
+        }
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void OverlappingCastsAndDistancesReuseChainChildren(bool castEdge)
+        {
+            var edge = Root().AddComponent<EdgeCollider2D>();
+            edge.points = new[] { Vector2.left, Vector2.right, Vector2.one };
+            var circle = Root().AddComponent<CircleCollider2D>(); circle.offset = new Vector2(0, .1f);
+            Physics2D.SyncTransforms();
+            var scratch = new Physics2DQueries.CastScratch();
+            var colliders = new Collider2D[] { castEdge ? edge : circle };
+            var filter = new ContactFilter2D().NoFilter();
+            ColliderDistance2D distance = default;
+            List<RaycastHit2D> hits = null;
+            for (int i = 0; i < 64; i++)
+            {
+                hits = Physics2DQueries.CastColliders(colliders, null, Vector2.right, 0, filter, null, scratch);
+                distance = edge.Distance(circle);
+            }
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 128; i++)
+            {
+                hits = Physics2DQueries.CastColliders(colliders, null, Vector2.right, 0, filter, null, scratch);
+                distance = edge.Distance(circle);
+            }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.Equal(0, allocated); Assert.Single(hits); Assert.True(distance.isValid && distance.isOverlapped);
+            Assert.Same(castEdge ? circle : edge, hits[0].collider);
+        }
         public void Dispose()
         {
             foreach (var value in objects) if (value) Object.DestroyImmediate(value);

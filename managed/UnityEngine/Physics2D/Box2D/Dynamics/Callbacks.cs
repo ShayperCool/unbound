@@ -5,7 +5,7 @@ namespace Unbound.Box2D.Dynamics
 {
     internal interface IQueryCallback
     {
-        bool QueryCallback(Fixture fixture);
+        bool QueryCallback(Fixture fixture, int childIndex);
     }
 
     internal interface IRayCastCallback

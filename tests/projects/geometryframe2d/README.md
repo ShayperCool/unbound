@@ -132,7 +132,10 @@ On Unity 6000.0.71f1, consecutive transformed points within squared distance
 0.00005025 join into one point. Raw pointCount and edgeCount remain authored
 counts. The generated shape is one two-sided chain with its endpoint metadata
 and exposed radius. Contact evaluation reuses pooled edge storage, including
-circle adjacency handling. Rounded chain rays include the exposed radius.
+circle adjacency handling. Rounded chain rays include the exposed radius. Casts and overlaps retain broad-phase
+child indices instead of rescanning every segment of a candidate chain. Query
+contacts reuse child edges; managed controls cover 32/512-segment casts and
+warmed overlapping casts and distance queries without temporary edge allocation.
 The same compatibility selector as other generated geometry selects this rule;
 unmeasured releases retain separate connected segments and their legacy weld
 threshold with a diagnostic. Query2dparity's 20 edge geometry differences are

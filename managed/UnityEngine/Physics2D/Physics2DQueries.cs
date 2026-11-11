@@ -24,15 +24,27 @@ namespace Unbound.Runtime
         internal sealed class AabbQuery : IQueryCallback
         {
             internal readonly List<Fixture> Found = new List<Fixture>();
-            readonly HashSet<Fixture> seen = new HashSet<Fixture>();
+            internal readonly List<(int Order, Fixture Fixture, int Child)> Children = new List<(int, Fixture, int)>();
+            readonly Dictionary<Fixture, int> order = new Dictionary<Fixture, int>();
+            readonly bool retainChildren;
 
-            internal void Clear() { Found.Clear(); seen.Clear(); }
+            internal AabbQuery(bool retainChildren = false) { this.retainChildren = retainChildren; }
+            internal void Clear() { Found.Clear(); Children.Clear(); order.Clear(); }
 
-            public bool QueryCallback(Fixture fixture)
+            public bool QueryCallback(Fixture fixture, int childIndex)
             {
-                if (seen.Add(fixture)) Found.Add(fixture);
+                if (!order.TryGetValue(fixture, out int index))
+                {
+                    index = Found.Count;
+                    order.Add(fixture, index);
+                    Found.Add(fixture);
+                }
+                if (retainChildren) Children.Add((index, fixture, childIndex));
                 return true;
             }
+
+            internal void OrderChildren() => Children.Sort(static (a, b) =>
+                a.Order != b.Order ? a.Order.CompareTo(b.Order) : a.Child.CompareTo(b.Child));
         }
 
         internal sealed class CastScratch
@@ -40,7 +52,7 @@ namespace Unbound.Runtime
             internal readonly Dictionary<Collider2D, RaycastHit2D> Best = new Dictionary<Collider2D, RaycastHit2D>(ReferenceComparer.Instance);
             internal readonly HashSet<Collider2D> Exclude = new HashSet<Collider2D>(ReferenceComparer.Instance);
             internal readonly HashSet<Collider2D> Skipped = new HashSet<Collider2D>(ReferenceComparer.Instance);
-            internal readonly AabbQuery Query = new AabbQuery();
+            internal readonly AabbQuery Query = new AabbQuery(true);
             internal readonly List<RaycastHit2D> Hits = new List<RaycastHit2D>();
             internal readonly List<(float Distance, int Index, RaycastHit2D Hit)> Ordered = new List<(float, int, RaycastHit2D)>();
 
@@ -241,77 +253,78 @@ namespace Unbound.Runtime
 
             var proxyB = new DistanceProxy();
             proxyB.Set(shape, childIndex);
-            query ??= new AabbQuery();
+            query ??= new AabbQuery(true);
             query.Clear();
             W.World.QueryAABB(query, swept);
-            foreach (var f in query.Found)
+            // Keep fixture encounter order and ascending child order for equal-distance hits.
+            query.OrderChildren();
+            foreach (var candidate in query.Children)
             {
+                var f = candidate.Fixture;
+                int child = candidate.Child;
                 var c = f.UserData as Collider2D;
                 if (c == null || !Passes(c, filter)) continue;
                 if (exclude != null && exclude.Contains(c)) continue;
                 if (ignoreBody != null && ReferenceEquals(c.m_AttachedBody, ignoreBody)) continue;
                 if (skipped.Contains(c)) continue;
                 var xfA = f.Body.GetTransform();
-                for (int child = 0; child < f.Shape.GetChildCount(); child++)
-                {
-                    var proxyA = new DistanceProxy();
-                    proxyA.Set(f.Shape, child);
+                var proxyA = new DistanceProxy();
+                proxyA.Set(f.Shape, child);
 
-                    // Starting in the collider?
-                    var input = new DistanceInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, UseRadii = false };
-                    var cache = new SimplexCache();
-                    DistanceAlgorithm.Distance(out var separation, ref cache, input);
-                    if (TimeOfImpact.StartsInside(proxyA, proxyB, separation.Distance, B2Settings.LinearCastSlop))
+                // Starting in the collider?
+                var input = new DistanceInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, UseRadii = false };
+                var cache = new SimplexCache();
+                DistanceAlgorithm.Distance(out var separation, ref cache, input);
+                if (TimeOfImpact.StartsInside(proxyA, proxyB, separation.Distance, B2Settings.LinearCastSlop))
+                {
+                    if (!Physics2D.s_QueriesStartInColliders)
                     {
-                        if (!Physics2D.s_QueriesStartInColliders)
-                        {
-                            // A cast that starts in a collider does not see it at all.
-                            skipped.Add(c);
-                            best.Remove(c);
-                            break;
-                        }
-                        // Unity's hit is the contact's: the normal that separates the shapes
-                        // (from the collider to the cast shape) and the point between them.
-                        var normal = -dir;
-                        var point = W.ToUnity(0.5f * (separation.PointA + separation.PointB));
-                        if (StartContact(f.Shape, child, xfA, shape, childIndex, pose, out var startNormal, out var startPoint))
-                        {
-                            normal = W.ToUnity(startNormal);
-                            point = W.ToUnity(startPoint);
-                        }
-                        if (filter.IsFilteringNormalAngle(normal)) continue;
-                        Keep(best, new RaycastHit2D(c, point, normal, 0f, 0f, origin));
+                        // A cast that starts in a collider does not see it at all.
+                        skipped.Add(c);
+                        best.Remove(c);
                         continue;
                     }
-                    if (length <= 0f || dir == Vector2.zero) continue;
-                    var cast = new ShapeCastInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, TranslationB = translation };
-                    // Unity's casts stop a linear slop deeper than Box2D's target separation.
-                    if (!TimeOfImpact.LinearCast(out var output, cast, B2Settings.LinearCastSlop)) continue;
-                    var hitPose = new B2Transform(pose.Position + output.Lambda * translation, pose.Rotation);
-                    var (b2Point, b2Normal) = DistanceAlgorithm.SurfaceContact(proxyA, xfA, proxyB, hitPose, output.Point, output.Normal, B2Settings.PolygonRadius);
-                    if (f.Shape is PolygonShape polygonA && shape is PolygonShape polygonB
-                        && (polygonA.Count == 2 || polygonA.Radius <= B2Settings.PolygonRadius
-                            || c is BoxCollider2D box && box.edgeRadius == 0f)
-                        && (polygonB.Count == 2 || polygonB.Radius <= B2Settings.PolygonRadius))
+                    // Unity's hit is the contact's: the normal that separates the shapes
+                    // (from the collider to the cast shape) and the point between them.
+                    var normal = -dir;
+                    var point = W.ToUnity(0.5f * (separation.PointA + separation.PointB));
+                    if (StartContact(f.Shape, child, xfA, shape, childIndex, pose, out var startNormal, out var startPoint))
                     {
-                        var manifold = new Manifold();
-                        CollisionUtils.CollidePolygons(ref manifold, polygonB, hitPose, polygonA, xfA,
-                            0.0005f, false, out float coreSpread);
-                        if (manifold.PointCount > 0)
-                        {
-                            var world = new WorldManifold();
-                            world.Initialize(manifold, hitPose, shape.Radius, xfA, f.Shape.Radius);
-                            b2Normal = -world.Normal;
-                            b2Point = world.GetRepresentativePoint(manifold.PointCount, coreSpread,
-                                B2Settings.CastContactSeparationTolerance);
-                        }
+                        normal = W.ToUnity(startNormal);
+                        point = W.ToUnity(startPoint);
                     }
-                    var hitNormal = W.ToUnity(b2Normal);
-                    if (filter.IsFilteringNormalAngle(hitNormal)) continue;
-                    float hitDistance = output.Lambda * length;
-                    Keep(best, new RaycastHit2D(c, W.ToUnity(b2Point), hitNormal, hitDistance,
-                        fractionScale > 0f ? hitDistance / fractionScale : 0f, origin + dir * hitDistance));
+                    if (filter.IsFilteringNormalAngle(normal)) continue;
+                    Keep(best, new RaycastHit2D(c, point, normal, 0f, 0f, origin));
+                    continue;
                 }
+                if (length <= 0f || dir == Vector2.zero) continue;
+                var cast = new ShapeCastInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, TranslationB = translation };
+                // Unity's casts stop a linear slop deeper than Box2D's target separation.
+                if (!TimeOfImpact.LinearCast(out var output, cast, B2Settings.LinearCastSlop)) continue;
+                var hitPose = new B2Transform(pose.Position + output.Lambda * translation, pose.Rotation);
+                var (b2Point, b2Normal) = DistanceAlgorithm.SurfaceContact(proxyA, xfA, proxyB, hitPose, output.Point, output.Normal, B2Settings.PolygonRadius);
+                if (f.Shape is PolygonShape polygonA && shape is PolygonShape polygonB
+                    && (polygonA.Count == 2 || polygonA.Radius <= B2Settings.PolygonRadius
+                        || c is BoxCollider2D box && box.edgeRadius == 0f)
+                    && (polygonB.Count == 2 || polygonB.Radius <= B2Settings.PolygonRadius))
+                {
+                    var manifold = new Manifold();
+                    CollisionUtils.CollidePolygons(ref manifold, polygonB, hitPose, polygonA, xfA,
+                        0.0005f, false, out float coreSpread);
+                    if (manifold.PointCount > 0)
+                    {
+                        var world = new WorldManifold();
+                        world.Initialize(manifold, hitPose, shape.Radius, xfA, f.Shape.Radius);
+                        b2Normal = -world.Normal;
+                        b2Point = world.GetRepresentativePoint(manifold.PointCount, coreSpread,
+                            B2Settings.CastContactSeparationTolerance);
+                    }
+                }
+                var hitNormal = W.ToUnity(b2Normal);
+                if (filter.IsFilteringNormalAngle(hitNormal)) continue;
+                float hitDistance = output.Lambda * length;
+                Keep(best, new RaycastHit2D(c, W.ToUnity(b2Point), hitNormal, hitDistance,
+                    fractionScale > 0f ? hitDistance / fractionScale : 0f, origin + dir * hitDistance));
             }
         }
 
@@ -323,12 +336,12 @@ namespace Unbound.Runtime
             point = default;
             if (a is ChainShape chainA)
             {
-                chainA.GetChildEdge(out var edge, childA);
+                var edge = chainA.QueryChild(childA);
                 a = edge;
             }
             if (b is ChainShape chainB)
             {
-                chainB.GetChildEdge(out var edge, childB);
+                var edge = chainB.QueryChild(childB, true);
                 b = edge;
             }
             var manifold = new Manifold();
@@ -420,20 +433,20 @@ namespace Unbound.Runtime
             HashSet<Collider2D> exclude, Rigidbody2D ignoreBody, int childIndex = 0)
         {
             shape.ComputeAABB(out var aabb, pose, childIndex);
-            foreach (var f in FixturesIn(aabb))
+            var query = new AabbQuery(true);
+            W.World.QueryAABB(query, aabb);
+            query.OrderChildren();
+            foreach (var candidate in query.Children)
             {
+                var f = candidate.Fixture;
                 var c = f.UserData as Collider2D;
                 if (c == null || seen.Contains(c) || !Passes(c, filter)) continue;
                 if (exclude != null && exclude.Contains(c)) continue;
                 if (ignoreBody != null && ReferenceEquals(c.m_AttachedBody, ignoreBody)) continue;
                 var xf = f.Body.GetTransform();
-                for (int child = 0; child < f.Shape.GetChildCount(); child++)
-                {
-                    if (!CollisionUtils.TestOverlap(f.Shape, child, shape, childIndex, xf, pose, null)) continue;
-                    seen.Add(c);
-                    result.Add(c);
-                    break;
-                }
+                if (!CollisionUtils.TestOverlap(f.Shape, candidate.Child, shape, childIndex, xf, pose, null)) continue;
+                seen.Add(c);
+                result.Add(c);
             }
         }
 
@@ -538,13 +551,13 @@ namespace Unbound.Runtime
                     break;
                 case ChainShape chain when second is CircleShape cb:
                 {
-                    chain.GetChildEdge(out var edge, indexFirst);
+                    var edge = chain.QueryChild(indexFirst);
                     CollisionUtils.CollideEdgeAndCircle(ref manifold, edge, xfFirst, cb, xfSecond);
                     break;
                 }
                 case ChainShape chain when second is PolygonShape pb:
                 {
-                    chain.GetChildEdge(out var edge, indexFirst);
+                    var edge = chain.QueryChild(indexFirst);
                     CollisionUtils.CollideEdgeAndPolygon(ref manifold, edge, xfFirst, pb, xfSecond);
                     break;
                 }
