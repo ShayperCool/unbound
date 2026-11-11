@@ -804,7 +804,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 38;
+    const VERSION: u32 = 39;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1149,6 +1149,19 @@ pub fn import_model(
     let mut model = builder.model;
     model.clips = clips;
     skinned_bounds::set_skinned_local_bounds(&mut model, &paths);
+    // Legacy clips under Keyframe Reduction and Compression play their rotation curves as
+    // stored packed, and under the value other rig types call Optimal too. The skinned bounds
+    // above come from the curves before packing (measured: tests/projects/modelaxis Reduced,
+    // where Packed and LegacyOptimal have the bounds of Default).
+    if settings.animation_type == 1
+        && int(imp, "animations.animationCompression")
+            .is_some_and(|c| c >= ANIMATION_COMPRESSION_REDUCTION_AND_COMPRESSION)
+    {
+        for node in model.clips.iter_mut().flat_map(|clip| &mut clip.curves) {
+            (node.rotations, node.rotation_slopes) =
+                rotation_packing::stored(&node.rotations, &node.rotation_slopes);
+        }
+    }
     model.warnings.extend(clip_warnings);
     model.animator = animator;
     if matches!(settings.animation_type, 2 | 3) && settings.avatar_setup == 1 {
@@ -1454,16 +1467,6 @@ impl<'a> Builder<'a> {
             });
         let mut clips = Vec::new();
         let mut warnings = Vec::new();
-        // Legacy clips with Keyframe Reduction and Compression also store their rotation
-        // curves packed, which loses more than the reduction (measured: up to 0.6 degrees in
-        // tests/projects/modelaxis); the reduced keys are imported unpacked.
-        if self.settings.animation_type == 1
-            && int(imp, "animations.animationCompression") == Some(2)
-        {
-            warnings.push(
-                "legacy rotation curve compression (Keyframe Reduction and Compression) is not reproduced: rotations keep the reduced keys (not supported)".into(),
-            );
-        }
         let preview_ranges = takes.iter().map(|take| {
             let name = take.stack.element.name.to_string();
             let mut range = ClipRange::take(&name, take.begin * fps, take.end * fps);
@@ -1525,12 +1528,13 @@ impl<'a> Builder<'a> {
                 }
                 // Every animated translation, rotation and scale gets its curves, constant ones
                 // too (measured with every animation compression); a node whose take animates
-                // none of them (only custom properties) gets none. Generic rigs only: humanoid
-                // clips keep every channel (their muscle curves are converted from the whole
-                // pose), legacy ones too (unmeasured), and so do pivoted nodes, whose position
-                // follows their rotation and scale (unmeasured).
+                // none of them (only custom properties) gets none. Generic and Legacy rigs
+                // (tests/projects/modeltoproot, tests/projects/modelaxis Reduced: a Legacy
+                // clip's unanimated rotation is not among its packed curves); humanoid clips keep
+                // every channel (their muscle curves are converted from the whole pose), and so
+                // do pivoted nodes, whose position follows their rotation and scale.
                 let source = self.sources[index as usize];
-                let channels = if self.settings.animation_type != 2 || self.pivoted(index) {
+                let channels = if self.settings.animation_type == 3 || self.pivoted(index) {
                     [true; 3]
                 } else {
                     animated_channels(stack, source)
@@ -1544,13 +1548,20 @@ impl<'a> Builder<'a> {
                     (Vec::new(), Vec::new(), Vec::new());
                 for time in frame_times(start, end, fps) {
                     let t = ufbx::evaluate_transform(&stack.anim, source, time);
-                    let time = (time - start) as f32;
+                    let rotation_time = frame_key_time(time, start, fps);
+                    // Positions and scales end exactly at the range's end (measured for
+                    // positions, tests/projects/modelaxis Reduced: Drift; scales unmeasured).
+                    let time = if time == end {
+                        (end - start) as f32
+                    } else {
+                        rotation_time
+                    };
                     positions.push(Key {
                         time,
                         value: self.position(self.placed(index, &t)),
                     });
                     rotations.push(Key {
-                        time,
+                        time: rotation_time,
                         value: [
                             t.rotation.x as f32,
                             -t.rotation.y as f32,
@@ -3335,6 +3346,21 @@ fn frame_times(start: f64, end: f64, fps: f64) -> Vec<f64> {
     times
 }
 
+/// The key time of a resampled transform curve at `time` of a range starting at `start`: a whole
+/// number of frames after the start is that number times one frame's length, both in single
+/// precision (matches the Unity 6000.0.71f1 Editor's key times, tests/projects/modelaxis
+/// Reduced, at 30, 60 and 120 frames a second; three seconds at 30 give 3.0000002). Other
+/// times (a range that ends between frames) are the difference itself.
+fn frame_key_time(time: f64, start: f64, fps: f64) -> f32 {
+    const EPSILON: f64 = 1e-6;
+    let frames = (time - start) * fps;
+    if (frames - frames.round()).abs() < EPSILON {
+        frames.round() as f32 * (1.0 / fps as f32)
+    } else {
+        (time - start) as f32
+    }
+}
+
 /// The level of a node named `<name>_LOD<n>`.
 fn lod_level(name: &str) -> Option<usize> {
     let (_, digits) = name.rsplit_once("_LOD")?;
@@ -3495,6 +3521,7 @@ mod normals;
 mod obj_groups;
 mod obj_smoothing;
 mod pivots;
+mod rotation_packing;
 mod skinned_bounds;
 mod tangent_space;
 mod triangulation;
@@ -3586,6 +3613,9 @@ struct Reduction {
     position: f32,
     scale: f32,
 }
+
+/// `ModelImporterAnimationCompression.KeyframeReductionAndCompression`.
+const ANIMATION_COMPRESSION_REDUCTION_AND_COMPRESSION: i64 = 2;
 
 impl Reduction {
     /// The meta's errors default to 0.5 (degrees, percent).

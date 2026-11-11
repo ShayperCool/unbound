@@ -1148,3 +1148,106 @@ fn take_spans_follow_local_times_and_keys() {
     close(take("TakeSingleKey"), (0.0, 0.0, true));
     assert!(take("TakeNoCurves").is_none() && take("TakeNoCurvesNoTime").is_none());
 }
+
+/// A model of tests/projects/modelaxis Reduced with its own meta.
+fn reduced_probe_model(name: &str) -> ImportedModel {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+        "../../tests/projects/modelaxis/Assets/Resources/Reduced/{name}.fbx"
+    ));
+    let settings = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+    ModelImporter::default()
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap()
+}
+
+fn clip_node<'a>(model: &'a ImportedModel, path: &str) -> &'a NodeCurves {
+    let clip = model.clips.iter().find(|c| !c.preview).unwrap();
+    clip.curves.iter().find(|c| c.path == path).unwrap()
+}
+
+#[test]
+fn legacy_clips_pack_rotations_under_reduction_and_compression() {
+    let reduced = reduced_probe_model("Default");
+    for name in ["Packed", "LegacyOptimal"] {
+        let packed = reduced_probe_model(name);
+        assert!(
+            !packed.warnings.iter().any(|w| w.contains("not supported")),
+            "{:?}",
+            packed.warnings
+        );
+        for path in ["Rig/Hips/Spine", "Rig/Hips/Spine/Head"] {
+            let (a, b) = (clip_node(&reduced, path), clip_node(&packed, path));
+            // The same keys survive; packing moves them, by less than its steps allow.
+            assert_eq!(a.rotations.len(), b.rotations.len());
+            assert_ne!(a.rotations, b.rotations);
+            for (a, b) in a.rotations.iter().zip(&b.rotations) {
+                let hundredths = f64::from(b.time) * 100.0;
+                assert!((hundredths - hundredths.round()).abs() < 1e-4, "{}", b.time);
+                assert!(b.time <= a.time && a.time - b.time < 0.01);
+                for c in 0..4 {
+                    assert!((a.value[c] - b.value[c]).abs() < 0.006);
+                }
+            }
+            // Positions and scales are not packed.
+            assert_eq!(a.positions, b.positions);
+            assert_eq!(a.scales, b.scales);
+            assert_eq!(a.scale_slopes, b.scale_slopes);
+        }
+        // Skinned bounds come from the curves before packing.
+        let bounds = |m: &ImportedModel| -> Vec<_> {
+            let bounds = m
+                .nodes
+                .iter()
+                .filter_map(|n| n.renderer.as_ref()?.local_bounds);
+            bounds.collect()
+        };
+        assert!(!bounds(&packed).is_empty());
+        assert_eq!(bounds(&packed), bounds(&reduced));
+    }
+    // Generic clips are not packed, whatever the compression.
+    let generic = reduced_probe_model("GenericOptimal");
+    assert_eq!(
+        clip_node(&generic, "Rig/Hips/Spine").rotations,
+        clip_node(&reduced, "Rig/Hips/Spine").rotations
+    );
+}
+
+#[test]
+fn legacy_clips_have_curves_for_animated_channels_only() {
+    // The take moves Hips, turns and scales Spine, turns Head.
+    let model = reduced_probe_model("Packed");
+    let hips = clip_node(&model, "Rig/Hips");
+    assert!(!hips.positions.is_empty() && hips.rotations.is_empty() && hips.scales.is_empty());
+    let spine = clip_node(&model, "Rig/Hips/Spine");
+    assert!(spine.positions.is_empty() && !spine.rotations.is_empty() && !spine.scales.is_empty());
+    let head = clip_node(&model, "Rig/Hips/Spine/Head");
+    assert!(head.positions.is_empty() && !head.rotations.is_empty() && head.scales.is_empty());
+}
+
+#[test]
+fn key_times_are_frames_times_the_frame_length_in_single_precision() {
+    // Three seconds at 30 frames a second: 90 frames of 1/30 s make 3.0000002, and the
+    // 50-frame limit of the reduction keeps frame 49.
+    let drift = reduced_probe_model("Drift");
+    let spine = clip_node(&drift, "Rig/Hips/Spine");
+    let times: Vec<f32> = spine.rotations.iter().map(|k| k.time).collect();
+    assert_eq!(times, [0.0, 1.633_333_4, 3.000_000_2]);
+    // Positions end at the range's end.
+    let hips = clip_node(&drift, "Rig/Hips");
+    let times: Vec<f32> = hips.positions.iter().map(|k| k.time).collect();
+    assert_eq!(times, [0.0, 1.633_333_4, 3.0]);
+    // Packed, the times are whole hundredths.
+    let packed = reduced_probe_model("PackedDrift");
+    let times: Vec<f32> = clip_node(&packed, "Rig/Hips/Spine")
+        .rotations
+        .iter()
+        .map(|k| k.time)
+        .collect();
+    assert_eq!(times, [0.0, 1.63, 3.0]);
+    // A time between frames is the difference itself.
+    assert_eq!(frame_key_time(1.25, 1.0, 30.0), 0.25);
+    assert_eq!(
+        frame_key_time(1.0 + 7.0 / 30.0, 1.0, 30.0),
+        7.0 * (1.0f32 / 30.0)
+    );
+}
