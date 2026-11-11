@@ -96,16 +96,23 @@ color (`end-flat-set-color`), the skybox removed (`end-flat-noskybox`), the skyb
 (`end-skybox-none`), the custom mode (`end-custom-last`), the gradient mode (`end-gradient`),
 another probe given in it (`end-gradient-set`) and the custom mode (`end-gradient-custom`).
 
-Then four scenes without lighting data (`m_LightingDataAsset` none; their files, in
-`Assets/NoData`, are written by hand, with nothing in them but their settings, each in the
-skybox ambient mode): `NoDataAuto`
-(LightmapSettings as an earlier release saved them with lighting generated automatically, the
-default skybox), `NoDataOnDemand` (the same with that off), `NoDataCurrent` (this release's
-format) and `NoDataAutoOwnSky` (as the first, with another material, the built-in default
-one, as its skybox). Each
-records, in the frame after its load, `<scene>-reflection` (as `end-reflection`),
+Then nine scenes without lighting data (`m_LightingDataAsset` none; their files, in
+`Assets/NoData`, are written by hand, with nothing in them but their settings and, where said, a
+directional light; each is in the skybox ambient mode). With this release's RenderSettings:
+`NoDataAuto` (LightmapSettings as an earlier release saved them with lighting generated
+automatically, the default skybox), `NoDataOnDemand` (the same with that off), `NoDataCurrent`
+(this release's LightmapSettings) and `NoDataAutoOwnSky` (as the first, with a procedural sky
+material of its own). With RenderSettings as an earlier release saved them: `LegacyDefault` (a
+new scene of then: the default skybox and a directional light at (50, -30, 0)), `LegacyAuto`
+(the same with lighting generated automatically), `LegacyTurned` (the light at (20, 40, 0)),
+`LegacyNoLight` (no light) and `LegacyOwnSky` (the default light, a sky material of its own).
+Each records, in the frame after its load, `<scene>-reflection` (as `end-reflection`),
 `<scene>-ambient` (`RenderSettings.ambientProbe` as loaded) and `<scene>-custom` (in the custom
-mode).
+mode). Then two pairs, the first scene loaded and the second added to it:
+`legacydefault-plus-nodatacurrent` and `nodatacurrent-plus-legacydefault`, each recording the
+reflection and the ambient probe two frames after the additive load, right after
+`SceneManager.SetActiveScene` with the added scene (`-active`) and a frame later
+(`-active-next-frame`).
 
 ## What the Editor does (this capture)
 
@@ -179,13 +186,24 @@ Observations (not documented guarantees):
   The gradient mode does not read the stored probe either (`end-gradient*`).
 - Without a sky a scene's default reflection is black: `ReflectionProbe.defaultTexture` is a cube
   of one texel named `UnityBlackCube`, with decode values (1, 1, 0, 0) (`end-reflection`).
-- A scene without lighting data reflects that black cube too, whatever its skybox, and its
-  stored ambient probe is zero: `RenderSettings.ambientProbe` is zero in the skybox mode (with
-  the default skybox as with another material) and in the custom mode (`nodata*`). The same
-  four scenes gave the same answers as the scene open when Play mode starts, then and 120
-  frames later (one capture each, not part of the reference). The documentation's "default
-  ambient probe that matches the default skybox" of a scene whose lighting was not generated is
-  the built-in lighting data new scenes point at (tests/projects/ambient), not this case.
+- A scene without lighting data reflects that black cube too and its stored ambient probe is
+  zero: `RenderSettings.ambientProbe` is zero in the skybox mode and in the custom mode
+  (`nodata*`, with the default skybox as with another sky; the four scenes gave the same
+  answers as the scene open when Play mode starts, then and 120 frames later: one capture each,
+  not part of the reference). One exception, which the 6000.0 upgrade guide describes ("If you
+  rely on the previous automatic baking behavior but you use the default environment lighting
+  settings, Unity upgrades the scene to use the default Lighting Data Asset"): a scene whose
+  RenderSettings an earlier release saved, with the default skybox and a directional light at
+  the default angles, reflects `Default-Skybox-Cubemap` (128, decode values (5^2.2, 2.2, 0, 1))
+  and has the default sky's ambient probe, also in the custom mode (`legacydefault`), whether
+  or not its lighting was generated automatically (`legacyauto`). With the light turned
+  (`legacyturned`), without a light (`legacynolight`) or with a sky of its own (`legacyownsky`)
+  it is as the other scenes without lighting data. Not captured: other ambient or reflection
+  sources, another reflection resolution, a gamma-space project, several directional lights.
+- The reflection and the ambient probe are the active scene's: a scene added to another changes
+  neither (`*-plus-*`), and `SceneManager.SetActiveScene` with the added scene switches both
+  within the frame (`-active`), as the documentation says of the active scene ("from what Scene
+  the lighting settings are used").
 - The directionality (`roomdirectional-*.dir`): where light arrives from one side its RGB is
   that direction times 1/2 plus 1/2 (the floor's texels (127, 211, 127): light from above, at
   about two thirds of a unit length since it comes from a spread of directions) and its alpha the

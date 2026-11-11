@@ -29,5 +29,20 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/NoData/NoDataAutoOwnSky.unity
     guid: 6fb1bf99eddb15faaee4412469949403
+  - enabled: 1
+    path: Assets/NoData/LegacyDefault.unity
+    guid: 99ba0a0a938c0a3645ab74c2f0330860
+  - enabled: 1
+    path: Assets/NoData/LegacyAuto.unity
+    guid: 31cc9ea0b0eaf22dd8a568c147a2f6b9
+  - enabled: 1
+    path: Assets/NoData/LegacyTurned.unity
+    guid: 7ef8ec34235fbd53330d225c598ebfde
+  - enabled: 1
+    path: Assets/NoData/LegacyNoLight.unity
+    guid: 9967a6f78baeeda806e65e585db92fdd
+  - enabled: 1
+    path: Assets/NoData/LegacyOwnSky.unity
+    guid: 27aac94ad1bde0d8ba2db6d3300a3e6c
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

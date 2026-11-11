@@ -69,7 +69,11 @@ public static class RealtimeGISetup
             scenes.Add(new EditorBuildSettingsScene($"{Scenes}/{name}.unity", true));
         }
         // The scenes without lighting data are written by hand (Assets/NoData): kept as they are.
-        foreach (var name in new[] { "NoDataAuto", "NoDataOnDemand", "NoDataCurrent", "NoDataAutoOwnSky" })
+        foreach (var name in new[]
+        {
+            "NoDataAuto", "NoDataOnDemand", "NoDataCurrent", "NoDataAutoOwnSky",
+            "LegacyDefault", "LegacyAuto", "LegacyTurned", "LegacyNoLight", "LegacyOwnSky",
+        })
             scenes.Add(new EditorBuildSettingsScene($"Assets/NoData/{name}.unity", true));
         EditorBuildSettings.scenes = scenes.ToArray();
         AssetDatabase.SaveAssets();

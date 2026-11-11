@@ -356,21 +356,53 @@ public class RealtimeGIProbe : MonoBehaviour
         RenderSettings.ambientMode = AmbientMode.Custom;
         Record("end-gradient-custom", "\"ambientProbe\":" + AmbientProbe());
 
-        // Scenes without lighting data (their files written by hand, each in the skybox ambient
-        // mode): one saved by an earlier release with lighting generated automatically, one with
-        // that off, one in this release's format, all with the default skybox, and the first
-        // again with another material as its skybox. What each reflects, its ambient probe as
-        // loaded and in the custom mode.
-        foreach (var name in new[] { "NoDataAuto", "NoDataOnDemand", "NoDataCurrent", "NoDataAutoOwnSky" })
+        // Scenes without lighting data (their files, in Assets/NoData, written by hand, each in
+        // the skybox ambient mode). With this release's RenderSettings: one whose
+        // LightmapSettings an earlier release saved with lighting generated automatically, one
+        // with that off, one in this release's format, all with the default skybox, and the
+        // first again with a sky material of its own. With an earlier release's RenderSettings:
+        // the default scene (default skybox, the default directional light), the same with
+        // lighting generated automatically, with the light turned, without a light, and with a
+        // sky material of its own. What each reflects, its ambient probe as loaded and in the
+        // custom mode.
+        foreach (var name in NoData)
         {
             yield return Load(name);
-            var label = name.ToLowerInvariant();
-            Record(label + "-reflection", DefaultReflection());
-            Record(label + "-ambient", "\"ambientProbe\":" + AmbientProbe());
+            RecordEnvironment(name.ToLowerInvariant());
             RenderSettings.ambientMode = AmbientMode.Custom;
-            Record(label + "-custom", "\"ambientProbe\":" + AmbientProbe());
+            Record(name.ToLowerInvariant() + "-custom", "\"ambientProbe\":" + AmbientProbe());
+        }
+
+        // A scene loaded beside another: the earlier release's default scene with a scene
+        // without lighting data added, and the other way round; then the added scene made the
+        // active one.
+        foreach (var (first, added) in new[] { ("LegacyDefault", "NoDataCurrent"), ("NoDataCurrent", "LegacyDefault") })
+        {
+            yield return Load(first);
+            SceneManager.LoadScene(added, LoadSceneMode.Additive);
+            yield return null;
+            yield return null;
+            var label = first.ToLowerInvariant() + "-plus-" + added.ToLowerInvariant();
+            RecordEnvironment(label);
+            SceneManager.SetActiveScene(SceneManager.GetSceneByName(added));
+            RecordEnvironment(label + "-active");
+            yield return null;
+            RecordEnvironment(label + "-active-next-frame");
         }
         Finish();
+    }
+
+    static readonly string[] NoData =
+    {
+        "NoDataAuto", "NoDataOnDemand", "NoDataCurrent", "NoDataAutoOwnSky",
+        "LegacyDefault", "LegacyAuto", "LegacyTurned", "LegacyNoLight", "LegacyOwnSky",
+    };
+
+    /// <summary>What the scene reflects by default and its ambient probe.</summary>
+    void RecordEnvironment(string label)
+    {
+        Record(label + "-reflection", DefaultReflection());
+        Record(label + "-ambient", "\"ambientProbe\":" + AmbientProbe());
     }
 
     /// <summary>ReflectionProbe.defaultTexture (its name, dimension and size, or "null") and its
