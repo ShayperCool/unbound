@@ -43,8 +43,11 @@ evaluations of a job that read the handle (`jobReoptimize`) and the hand destroy
 its controller, three evaluations of a manual graph each with the whole pose: the take as the
 output's source on `Rig`, `RigOpt`, `Human` and `HumanOpt` (`graphOnly.*`), and on the two
 humanoids under a job that does nothing (`graphJob.*`) or reads a stream handle of the left
-hand, a bone of `Human` and the exposed transform of `HumanOpt` (`graphJobHand.*`). Every log
-message is recorded in order.
+hand, a bone of `Human` and the exposed transform of `HumanOpt` (`graphJobHand.*`); on
+`HumanOpt` also a handle of the Animator's own transform (`graphJobRoot`) and of an object
+added below it (`graphJobAdded`), and three `Animator.Update` calls with the controller kept,
+without a handle and with the exposed hand bound (`update`, `updateHand`). Every log message
+is recorded in order.
 
 The assets are committed. To make them again, regenerate the rig and let a disposable Editor
 copy write the `.meta` files and controllers back (the humanoid controls use `tests/projects/humanoid`'s `HumanA.fbx`, which every project copy takes from there):
@@ -108,11 +111,14 @@ What the Editor does (measured):
   world ones under the hand's parent (`jobDestroyedRead`).
 - A manual graph plays the take on a rig without its controller, optimized or not, generic
   or humanoid, alone or under a job (`graphOnly.*`, `graphJob.*`). On the optimized humanoid
-  with its exposed hand bound by `Animator.BindStreamTransform` nothing plays: before each
-  evaluation's record the Editor logs twice the error `Transform 'Hips' for human bone
-  'Hips' not found` and the warning `Object is set to Optimize Game Object but does not have
-  an Avatar, Animation will not play.`, the job does not run and the hand stays
-  (`graphJobHand.HumanOpt`).
+  with its exposed hand bound by `Animator.BindStreamTransform`, or an object added below the
+  Animator bound, nothing plays: before each evaluation's record the Editor logs twice the
+  error `Transform 'Hips' for human bone 'Hips' not found` and the warning `Object is set to
+  Optimize Game Object but does not have an Avatar, Animation will not play.`, the job does
+  not run and the hand stays (`graphJobHand.HumanOpt`, `graphJobAdded.HumanOpt`). With the
+  controller kept and the hand bound each `Animator.Update` logs the pair three times and the
+  state does not play (`updateHand.HumanOpt`). A handle of the Animator's own transform
+  leaves it playing (`graphJobRoot.HumanOpt`), as none does (`update.HumanOpt`).
 - An exposed transform bound with `Animator.BindStreamTransform` no longer follows its skeleton
   node: the stream holds the pose it was bound at, the job reads that and its writes land on
   the transform. With only a scene handle, or none, the exposed transform follows the node.

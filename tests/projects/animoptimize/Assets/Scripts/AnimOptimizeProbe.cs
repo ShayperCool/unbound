@@ -147,6 +147,10 @@ public class AnimOptimizeProbe : MonoBehaviour
             foreach (string mode in new[] { "graphJob", "graphJobHand" })
             foreach (var name in new[] { "Human", "HumanOpt" })
                 GraphOnly(name, mode);
+            GraphOnly("HumanOpt", "graphJobRoot");
+            GraphOnly("HumanOpt", "graphJobAdded");
+            Updated("HumanOpt", false);
+            Updated("HumanOpt", true);
         }
         catch (Exception e)
         {
@@ -432,8 +436,9 @@ public class AnimOptimizeProbe : MonoBehaviour
     /// rig and the plain and the optimized humanoid (its human pose after the last one). The
     /// clip is the output's source ("graphOnly"), or the input of a job that does nothing
     /// ("graphJob") or reads a stream handle of the humanoid's left hand, a bone of the plain
-    /// rig and the exposed transform of the optimized one ("graphJobHand"). The messages the
-    /// Editor logs meanwhile are in the log records.</summary>
+    /// rig and the exposed transform of the optimized one ("graphJobHand"), of the Animator's
+    /// own transform ("graphJobRoot") or of an object added below it ("graphJobAdded"). The
+    /// messages the Editor logs meanwhile are in the log records.</summary>
     static void GraphOnly(string name, string mode)
     {
         string key = mode + "." + name;
@@ -445,9 +450,18 @@ public class AnimOptimizeProbe : MonoBehaviour
         Playable source = AnimationClipPlayable.Create(graph, clip);
         if (mode != "graphOnly")
         {
-            var job = new HandJob { read = mode == "graphJobHand" };
-            if (job.read)
+            var job = new HandJob { read = mode != "graphJob" };
+            if (mode == "graphJobHand")
                 job.hand = animator.BindStreamTransform(go.GetComponentsInChildren<Transform>(true).First(t => t.name == "LeftHand"));
+            else if (mode == "graphJobRoot")
+                job.hand = animator.BindStreamTransform(go.transform);
+            else if (mode == "graphJobAdded")
+            {
+                var added = new GameObject("Added").transform;
+                added.SetParent(go.transform, false);
+                added.localPosition = new Vector3(1f, 2f, 3f);
+                job.hand = animator.BindStreamTransform(added);
+            }
             var playable = AnimationScriptPlayable.Create(graph, job, 1);
             playable.ConnectInput(0, source, 0, 1f);
             source = playable;
@@ -463,6 +477,24 @@ public class AnimOptimizeProbe : MonoBehaviour
         }
         if (animator.isHuman) Record(key + ".human", HumanPoseOf(animator, go));
         graph.Destroy();
+        Object.DestroyImmediate(go);
+    }
+
+    /// <summary>The optimized humanoid with its controller, updated three times by
+    /// Animator.Update (0, 0.5 and 0.25 s) with the pose after each, and its human pose; with
+    /// <paramref name="bind"/> its exposed left hand is bound with BindStreamTransform
+    /// first.</summary>
+    static void Updated(string name, bool bind)
+    {
+        string key = (bind ? "updateHand." : "update.") + name;
+        var go = Spawn(name, out var animator);
+        if (bind) animator.BindStreamTransform(go.GetComponentsInChildren<Transform>(true).First(t => t.name == "LeftHand"));
+        for (int step = 0; step < 3; step++)
+        {
+            animator.Update(step == 0 ? 0f : step == 1 ? .5f : .25f);
+            Record(key + "." + step, Pose(go));
+        }
+        Record(key + ".human", HumanPoseOf(animator, go));
         Object.DestroyImmediate(go);
     }
 
