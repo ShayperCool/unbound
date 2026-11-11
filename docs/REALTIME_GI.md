@@ -7,7 +7,7 @@ environment, updated at runtime from data precomputed in the Editor. This page r
 data holds, how the runtime update behaves (documented, then measured against the Unity
 6000.0.71f1 Editor in [tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound
 implements it. Status: the engine draws precomputed realtime GI for scenes whose renderers have
-Preserve UVs, lit by point, spot and directional lights and the environment (an ambient color, a
+Preserve UVs or [automatic charts](#automatic-charts) of flat parts, lit by point, spot and directional lights and the environment (an ambient color, a
 gradient, the skybox or a cube a script sets), non-directional or directional (with its
 [directionality](#directionality)), in the built-in
 pipeline and, for its lights and environment, under a render pipeline that gives realtime GI its
@@ -15,7 +15,8 @@ lights (the Universal Render Pipeline: [Lights of a render pipeline](#lights-of-
 frames drawn by a pipeline's own shaders are not compared). For tests/projects/realtimegi every
 renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
 cases match within the comparator's tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
-drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
+drawn only in part. Not supported yet, each with a warning: automatic charts of curved parts and of
+turned renderers ([Automatic charts](#automatic-charts)),
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
 renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
@@ -489,7 +490,117 @@ how many blocks a region that reaches the rows above every chart counts, and up 
 size a place for the smallest chart is searched before a region is given up; a difference
 there shows as a failed layout check, not as wrong lighting. (Within a system, other renderers'
 charts may lie in the blocks a renderer's own charts leave free: the check compares only the
-blocks its charts use.) With Preserve UVs off the precompute generates the charts themselves (not supported yet).
+blocks its charts use.)
+
+### Automatic charts
+
+A renderer with Optimize Realtime UVs (Mesh Renderer, Lightmapping; serialized as
+`m_PreserveUVs: 0`, which a new renderer has) does not keep its mesh's charts. The Manual
+([Introduction to lightmap UVs](https://docs.unity3d.com/6000.0/Documentation/Manual/LightingGiUvs.html),
+Merging): "Optionally, you can instruct Unity to merge UV charts where possible during this
+process", with the note that it "sometimes makes mistakes about discontinuities in the original
+UV mapping. For example, an intentionally sharp edge may be misinterpreted as a continuous
+surface"; and under Packing: "Mesh Renderers that use the same mesh with the same scale and
+lightmap resolution share the same UVs". The
+[Mesh Renderer reference](https://docs.unity3d.com/6000.0/Documentation/Manual/class-MeshRenderer.html)
+gives the limits: Max Distance, "the maximum worldspace distance for UV chart simplification in
+real-time lightmaps. If charts are within this distance, Unity simplifies them"
+(`m_AutoUVMaxDistance`, 0.5 in a new renderer); Max Angle, "the maximum angle in degrees between
+faces sharing a UV edge in real-time lightmaps. If the angle between the faces is below this
+value, Unity simplifies the UV charts" (`m_AutoUVMaxAngle`, 89); Ignore Normals, "to prevent
+Unity from splitting the UV charts" (`m_IgnoreNormalsForChartDetection`). How charts are merged
+and laid out is not documented. What follows is Unbound's rule
+(`crates/unbound-gi/src/auto_charts.rs`); it gives the Editor's precomputed layouts for the
+shapes of `RoomAuto` in tests/projects/realtimegi, and is not measured beyond them.
+
+- Geometry: the mesh with the instance's scale and without its rotation (positions times the
+  scale, normals over it, normalised), which is what sharing by mesh and scale needs. Each
+  triangle counts as facing the way its vertices' normals do, whatever its winding.
+- Parts: triangles connected through their vertices, where vertices with the same position,
+  lightmap UV and normal are one vertex. A part has its area, its normal (the mean of its
+  triangles' normals by area, a triangle's normal being that of its three vertex normals
+  together) and the plane that fits its vertices by least squares. It is flat when that plane
+  is within Max Angle of its normal, all its vertices are within Max Distance of the plane and
+  no more than a tenth of its area faces away from its normal.
+- Joining, in rounds while at least two flat parts are left (at most a hundred rounds): 300
+  pairs are tried, a flat part and one of its neighbours (the flat parts whose bounds, grown
+  by 0.6 of Max Distance, meet its own; itself among them), picked by a fixed pseudo-random
+  sequence (the standard Mersenne Twister with its default seed). A pair whose normals face the
+  same half-space gets the plane that fits both; when both are within the two limits of that
+  plane, the flat parts on it that connect to the pair as neighbours join them. The set with
+  the largest area along its plane wins the round (the first of equals) and leaves the pool.
+  A part paired with itself is a set too, so the faces of a box leave one by one, largest first.
+- The limits bound a part against the plane through a set, not two parts against each other.
+  The two sides of `RoofAngleWide` are 40 degrees apart and each 20 from the plane through
+  both: with Max Angle 30 they are one chart, and with 15 (`RoofAngleTight`) two. That is
+  wider than the Manual's wording of Max Angle ("the angle between the faces is below this
+  value") read literally; it is what this release's precompute did with these two shapes.
+  The step has five charts for its eight faces with Max Distance 0.5, and a chart a face with
+  0.3 (`StepMid`) and with 0.15 (`StepNear`). By the rule its two treads join at 0.5, as its
+  two risers do: each pair is 0.4 m apart, its corners at most 0.2 m from the plane through
+  both. At 0.3 the corners are still within the limit of that plane; what keeps the pairs
+  apart is that their bounds, grown by 0.6 of the limit each, no longer meet.
+- Leftovers (parts that are not flat, then the flat parts no round took) are folded into the
+  nearest joined set whose bounds they meet, when they have less than a tenth of its area and
+  all their vertices are closer to its plane than Max Distance. Their normal is not asked: the
+  last end face of a 6 x 0.2 x 4 m slab becomes a line in a large face's chart, and the slab has
+  five charts. What is still left is a chart of its own.
+- Each set is projected onto its plane, in world units, with its axes turned to the direction
+  along which the legs of its right-angled triangles carry the most area (directions within 3
+  degrees of parallel or perpendicular count as one). A part left on its own is projected too,
+  unless its own lightmap UVs are truer to its shape (compared by the angles of its triangles).
+- The charts are sized and packed as [above](#realtime-lightmap-uvs), from their world extents
+  instead of their UV shapes: a width and a height in blocks, `max(ceil(extent / block + 0.5 +
+  1e-4), minimum chart size / 2)`, each axis stretched to fill its blocks. So a chart has the
+  proportions of the surface, not of its UVs: at two texels a metre a 6 x 4 m face takes 14 x 10
+  texels and a 6 x 0.2 m one 14 x 4.
+
+`RoomAuto` is the Room with Optimize Realtime UVs on every lit renderer (minimum chart size 4;
+the limits of a new renderer but for the four shapes named above) and fourteen more shapes: a
+thin bar, a wedge (five charts), the same wedge mesh scaled unevenly, a wedge whose triangles
+are wound against its normals, an L-shaped step (five charts for its eight faces), a roof of
+two quads 10 degrees to either side of level (one chart) and one of 50 degrees (two), a grid of
+cells that share their vertices, Unity's quad and plane meshes scaled unevenly, and the two
+roofs and two steps of the limits. For every one of its renderers Unbound's charts cover the
+blocks of the precomputed chart mask, in chart order, and its lightmaps match the Editor's
+(`roomauto-base`, `roomauto-moved`).
+
+The check against the precomputed chart mask compares the blocks the charts cover, not which
+face lies in them: two charts of one size taken in the other order would pass it with their
+lighting exchanged. So what Unbound cannot make as the Editor does is refused, not left to the
+check. Each refusal is a warning that names the renderer, and its system is then not drawn:
+
+- A turned renderer, and a renderer with the mesh and scale of a turned one in the same scene
+  (the Editor makes one set of UVs for both). The Editor's geometry of a turned instance
+  carries rounding in the last digits (a normal of (-1, 0, 3.7e-8), say), and that rounding
+  decides charts: faces at a right angle face the same half-space or not by it, and in a bake
+  of a turned slab of 3 x 0.2 x 2 m (not part of the probe's scene) the Editor joined each
+  thin side to a large face and made three charts, not five. Unbound does not reproduce that
+  rounding.
+- Choices that rounding decides in an instance that is not turned, where the mesh itself is
+  off the coordinate axes: two neighbouring flat parts at a right angle but for rounding that
+  one plane could hold within the limits; two different sets that are the largest of a round
+  but for rounding (within 1e-5 of each other, and not the same); a leftover as near to two
+  sets but for rounding. Along the coordinate axes the arithmetic is exact and such ties are
+  taken in order, as the Editor takes them in the scene's boxes and steps (the two charts of
+  a step's tread and riser of one size among them).
+- A part that is not flat within the limits and that nothing folds in: curved surfaces. Their
+  charts need a measure of overlap in the projection, which is not implemented.
+- A bent part left on its own (flat within the limits, not planar): whether it keeps its own
+  lightmap UVs or is projected is a comparison of the two that is not implemented. Joined in
+  a round, as when its mesh has other parts and it is not the last of them, it is projected.
+- A planar part left on its own on a plane that is not along the coordinate axes, whose own
+  lightmap UVs are an undistorted copy of its shape and are laid out otherwise than its
+  projection: both are then equally true but for rounding.
+- Ignore Normals, Max Distance or Max Angle of zero, a zero or mirrored scale, a mesh without
+  normals, and a part without area that lies by no chart: not measured.
+
+Not measured, and implemented as written above: scale under parents that skew it (the
+transform's `lossyScale` is used), and meshes that mix triangles wound with and against their
+normals. Not guarded: a part exactly at a limit but for rounding (its lean or its distance
+within the last digits of Max Angle or Max Distance, off the coordinate axes), and what the
+Editor's own cache of earlier bakes may share with a renderer (it keeps results by mesh and
+scale across bakes; a scratch bake reused one for a renderer that had since been turned).
 
 ## Engine
 
@@ -561,7 +672,7 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
 
 - Phase 2, runtime over Unity's precomputed data (above): unmeasured inputs fail loudly until a
   probe case covers them.
-- Phase 3, Unbound's own precompute from scene geometry (automatic charts for Preserve UVs off,
+- Phase 3, Unbound's own precompute from scene geometry (the rest of the automatic charts,
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
   precompute through the same probe.

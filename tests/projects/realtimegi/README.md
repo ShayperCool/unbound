@@ -35,6 +35,18 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
   plates; `Arch`, an arch and one. A fifth, `Channels`, lies on the floor: a 2 x 1 m plate
   whose `Mesh.uv3` is a square (the Manual's input of realtime lightmap UVs when a mesh has
   it), its `Mesh.uv2` the plate's own shape.
+- `RoomAuto`: as `Room`, every lit renderer with Optimize Realtime UVs (`m_PreserveUVs: 0`, the
+  limits of a new renderer), so the precompute makes their charts (`run.py setup-auto` adds this
+  scene alone; `RealtimeGISetup.Solid`, `Prism`, `Roof` and `Grid` make the meshes, with
+  lightmap UVs that stretch every face to a cell). Ten more shapes stand in the room, none
+  turned: `Bar` (a cube of 2 x 0.05 x 0.3), `Wedge` (a right-angled prism), `WedgeTall` (the
+  same mesh scaled (1, 1.4, 0.75)), `WedgeInverted` (its triangles wound against its normals),
+  `Step` (an L-shaped prism), `RoofFlat` and `RoofSteep` (two quads 10 and 50 degrees to
+  either side of level), `Grid` (3 x 2 cells that share their vertices), and Unity's quad and
+  plane meshes scaled (1.5, 1, 1) and (0.2, 1, 0.15). Four more have limits of their own:
+  `RoofAngleWide` and `RoofAngleTight` (roofs of 20 degrees with Max Angle 30 and 15),
+  `StepMid` and `StepNear` (the step's mesh, 1.2 and 0.8 times as long, with Max Distance 0.3
+  and 0.15).
 
 `Assets/Scripts/RealtimeGIProbe.cs` (with `REALTIME_GI_OUT` set) changes one input at a time and
 records, per case:
@@ -156,11 +168,15 @@ panel's charts lie is in the scene's precomputed data (`Assets/Scenes/RoomCharts
 each renderer's place in the system and the system's chart mask); the cases record the lightmap
 drawn at those texels.
 
-Last, a cube a script gave through a scene load: `Room` loaded again alone, its lights put out,
+A cube a script gave through a scene load: `Room` loaded again alone, its lights put out,
 then the cube given (`room-envdata-alone`); the same scene loaded alone once more, its ambient
 inputs what they were before the load, and its lights put out again (`room-envdata-loaded`);
 the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
 (`roombakedenvironment-envdata-loaded`).
+
+Last, `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
+`RoomCharts` cases are. The charts the precompute made are in the scene's precomputed data, as
+there.
 
 With `--color-space gamma` the same project is in the gamma color space (run.py changes the
 copy's player settings) and the probe records the scenes without lighting data alone, their
@@ -344,6 +360,21 @@ Observations (not documented guarantees):
   captures taken with a cube given two frames after a scene's load (`DynamicGI.SetEnvironmentData`
   before the first solve had converged) the lightmap was up to 0.0015 apart in 379 values,
   which is why `room-envdata-alone` waits for the scene to converge before it gives the cube.
+- Automatic charts (`RoomAuto`, each renderer's place in the system and the chart mask of
+  `Assets/Scenes/RoomAuto/LightingData.asset`): a chart has the proportions of its surface in
+  the world, not of its lightmap UVs, which stretch every face of the scene's meshes to a cell: at
+  the scene's two texels a metre a 6 x 4 m face has 14 x 10 texels and a 6 x 0.2 m one 14 x 4.
+  The 6 x 0.2 x 4 m floor slab has five charts for its six faces, one end face lying in a large
+  face's chart as a line; the wedge has five; the two quads of `RoofFlat`, 20 degrees apart, are
+  one chart and those of `RoofSteep`, 100 degrees apart, two; `Step` has five charts for its
+  eight faces; the wedge wound against its normals takes the same 10 x 12 texels as the wedge.
+  The limits bound each part against a plane through the parts joined: the sides of the roofs
+  of 20 degrees, 40 apart, are one chart with Max Angle 30 and two with 15; the step, five
+  charts with Max Distance 0.5, has a chart for each of its eight faces with 0.3 and with 0.15
+  (its treads, as its risers, are 0.4 m apart, their corners 0.2 m from the plane through
+  both).
+  docs/REALTIME_GI.md (Automatic charts) has the rule Unbound makes them by and what it does
+  not make.
 
 ## Unbound
 
