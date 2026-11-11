@@ -568,8 +568,8 @@ namespace Unbound.Runtime.Playables
 
         /// <summary>A stream whose goals are in the motion's frame takes them back relative to its
         /// body (<paramref name="body"/>'s; without one they stay as they are) before it is blended
-        /// with a stream whose goals are relative to its body (a controller playable's, a clip's
-        /// without body motion), so both blend in one frame.</summary>
+        /// with a stream whose goals are relative to its body (a clip's without body motion, a
+        /// controller playable's while no humanoid clip plays), so both blend in one frame.</summary>
         internal static void GoalsToBody(AnimStream s, in HumanRootMotionSample body)
         {
             if (!s.GoalsInMotion) return;

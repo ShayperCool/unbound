@@ -92,7 +92,7 @@ namespace Unbound.Runtime.Playables
             var sample = stream.BodyMotion;
             if (!sample.HasMotion)
                 Stubs.Ignored("AnimationHumanStream without humanoid body motion",
-                    "takes the body and goals of a stream without clip body motion below it (a controller playable, the previous outputs' pose) as its curves hold them (not measured)");
+                    "takes the body and goals of a stream without clip body motion below it (a controller playable while no humanoid clip plays, the previous outputs' pose) as its curves hold them (not measured)");
             if (sample.HasMotion)
             {
                 if (stream.GoalsInMotion)

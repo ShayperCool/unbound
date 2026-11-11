@@ -1277,6 +1277,17 @@ namespace Unbound.Runtime
         /// <summary>Whether the base layer asks for an IK pass (its "IK Pass" setting).</summary>
         internal bool BaseLayerIKPass => Layers.Length > 0 && Layers[0].Def.IKPass;
 
+        /// <summary>Whether a layer above the first asks for an IK pass.</summary>
+        internal bool UpperLayerIKPass
+        {
+            get
+            {
+                for (int i = 1; i < Layers.Length; i++)
+                    if (Layers[i].Def.IKPass) return true;
+                return false;
+            }
+        }
+
         /// <summary>Whether a layer's avatar mask lets it place the humanoid body (its Root part).</summary>
         bool PlacesBody(int layer)
         {
@@ -1660,7 +1671,7 @@ namespace Unbound.Runtime
                     // The clip reads the state's time (StateClipNormalized), then its cycle offsets.
                     double read = ClipSampling.StateClipNormalized(run.Normalized, clip.length);
                     double time = clip.isLooping ? read + (normalized - run.Normalized) + MirrorShift(run.Def, clip) + clip.m_CycleOffset : read;
-                    // A humanoid clip of the Animator's own controller: its root motion gives the body
+                    // A humanoid clip on a humanoid Animator: its root motion gives the body
                     // its goals are placed by (additive layers take neither, see LayerMask).
                     int humanSample = -1;
                     var goals = clip.HasHumanCurves ? m_SamplingGoals : null;
@@ -1788,9 +1799,8 @@ namespace Unbound.Runtime
         /// the humanoid IK goal curves. An additive layer leaves the goals of the layers below as
         /// they are, whatever its clips' goal curves hold and with or without a mask (matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/humanoid goals.additive, goals.additiveFootIK;
-        /// AnimationLayerMixerPlayables likewise, mixer.additiveNoRoot). An
-        /// AnimatorControllerPlayable's additive layers still add their goal curves' differences
-        /// (unmeasured).</summary>
+        /// AnimationLayerMixerPlayables likewise, mixer.additiveNoRoot; an
+        /// AnimatorControllerPlayable's controller too, controllerGraph.goalsAdditive).</summary>
         (bool[], bool[]) LayerMask(int index)
         {
             var mask = Layers[index].Def.Mask;

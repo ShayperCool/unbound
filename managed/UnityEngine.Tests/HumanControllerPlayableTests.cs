@@ -62,25 +62,32 @@ namespace UnityEngine.Tests
         };
 
         /// <summary>The controller on the Animator, stepped by <see cref="s_Steps"/>.</summary>
-        Animator Own(string yaml)
+        Animator Own(string yaml, Action<RuntimeAnimatorController> edit = null)
         {
             var animator = Fixture.Rig(yaml, m_Created);
+            edit?.Invoke(animator.runtimeAnimatorController);
             foreach (float step in s_Steps) animator.Update(step);
             return animator;
         }
 
         /// <summary>The controller as the source of the Animator's only output, evaluated by the
         /// same steps.</summary>
-        Animator Played(string yaml, Action<Animator> before = null)
+        Animator Played(string yaml, Action<Animator> before = null, Action<RuntimeAnimatorController> edit = null) =>
+            Played(yaml, out _, out _, before, edit);
+
+        Animator Played(string yaml, out PlayableGraph graph, out AnimatorControllerPlayable playable, Action<Animator> before = null,
+            Action<RuntimeAnimatorController> edit = null)
         {
             var own = Fixture.Rig(yaml, m_Created);
             var controller = own.runtimeAnimatorController;
             own.runtimeAnimatorController = null;
+            edit?.Invoke(controller);
             before?.Invoke(own);
-            var graph = PlayableGraph.Create("controller");
+            graph = PlayableGraph.Create("controller");
             m_Graphs.Add(graph);
             graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
-            AnimationPlayableOutput.Create(graph, "animation", own).SetSourcePlayable(AnimatorControllerPlayable.Create(graph, controller));
+            playable = AnimatorControllerPlayable.Create(graph, controller);
+            AnimationPlayableOutput.Create(graph, "animation", own).SetSourcePlayable(playable);
             foreach (float step in s_Steps) graph.Evaluate(step);
             return own;
         }
@@ -128,6 +135,64 @@ namespace UnityEngine.Tests
             var own = Own(yaml);
             var played = Played(yaml);
             SamePose(own, played);
+        }
+
+        /// <summary>A layer whose avatar mask leaves out Root does not place the body, played
+        /// through the playable as on the Animator (6000.0.71f1, tests/projects/humanoid
+        /// controllerGraph.maskOverrideNoRoot, .maskAdditiveNoRoot). Control: the mask changes
+        /// the override layer's pose.</summary>
+        [Theory]
+        [InlineData(0, 1f)]
+        [InlineData(0, 0.5f)]
+        [InlineData(1, 0.5f)]
+        public void AControllerPlayablesMaskedLayerLeavesTheBodyAsItsOwnControllerDoes(int blending, float weight)
+        {
+            void NoRoot(RuntimeAnimatorController controller)
+            {
+                var mask = new AvatarMask();
+                m_Created.Add(mask);
+                mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Root, false);
+                controller.Graph.Layers[1].Mask = mask;
+            }
+            string yaml = Fixture.LayerController(blending, weight);
+            var own = Own(yaml, NoRoot);
+            var played = Played(yaml, edit: NoRoot);
+            SamePose(own, played);
+            // The fixture's additive layer adds no body difference (its clip is constant).
+            if (blending != 0) return;
+            var unmasked = Played(yaml);
+            var a = played.GetComponentsInChildren<Transform>();
+            var b = unmasked.GetComponentsInChildren<Transform>();
+            Assert.Contains(Enumerable.Range(0, a.Length), i => (a[i].localPosition - b[i].localPosition).magnitude > 0.05f
+                || Quaternion.Angle(a[i].localRotation, b[i].localRotation) > 1f);
+        }
+
+        /// <summary>A paused controller playable does not advance its states, and each evaluation
+        /// moves the root by its last step again (6000.0.71f1, tests/projects/humanoid
+        /// controllerGraph.paused: paused for eight updates, the Editor's root keeps the step of
+        /// the update before the pause; the Scripting API says of PlayState.Paused only that the
+        /// playable's local time does not advance). Control: playing again, the states go on.</summary>
+        [Fact]
+        public void APausedControllerPlayableRepeatsItsLastRootStep()
+        {
+            var played = Played(MovingTransition(false), out var graph, out var playable);
+            float time = playable.GetCurrentAnimatorStateInfo(0).normalizedTime;
+            playable.Pause();
+            graph.Evaluate(0.2f);
+            // The step of the states' last interval, over this update.
+            var step = played.deltaPosition;
+            Assert.True(step.magnitude > 0.05f, step.ToString());
+            for (int i = 0; i < 3; i++)
+            {
+                var before = played.transform.position;
+                graph.Evaluate(0.2f);
+                Assert.Equal(time, playable.GetCurrentAnimatorStateInfo(0).normalizedTime);
+                Assert.True((played.deltaPosition - step).magnitude < 1e-5f, played.deltaPosition.ToString());
+                Assert.True((played.transform.position - before - step).magnitude < 1e-4f);
+            }
+            playable.Play();
+            graph.Evaluate(0.2f);
+            Assert.True(playable.GetCurrentAnimatorStateInfo(0).normalizedTime > time + 0.1f);
         }
 
         /// <summary>Controls of the comparison: the clips move the root and pose the muscles, a

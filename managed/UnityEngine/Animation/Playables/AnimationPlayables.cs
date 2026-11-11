@@ -803,9 +803,12 @@ namespace Unbound.Runtime.Playables
         /// asks for one. Matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
         /// controllerGraph.*: a controller as the source of an Animator's only output records
         /// the rows of the same controller on the Animator (a state, Foot IK, a transition, a
-        /// blend tree, a Direct blend tree, an override and an additive layer). IK passes of the
-        /// layers above the first, OnStateIK and the controller below mixers or jobs are
-        /// unmeasured.</summary>
+        /// blend tree, a Direct blend tree, an override and an additive layer, also with masks
+        /// without Root and of the upper body). IK passes of the layers above the first,
+        /// OnStateIK and the controller below mixers or jobs are unmeasured; other releases
+        /// take the same path unmeasured. A paused playable is not prepared, so its states keep
+        /// their last interval and every evaluation moves the root by that step again, as the
+        /// Editor does (controllerGraph.paused).</summary>
         void Humanoid(AnimationEvaluation e, AnimatorPlayer player, Unbound.Runtime.Humanoid.AnimatorHuman human, float weight, AnimStream into)
         {
             if (e.Replay) into.BodyMotion = m_LastBody;
@@ -821,6 +824,9 @@ namespace Unbound.Runtime.Playables
                     "a controller with humanoid clips played through an AnimatorControllerPlayable does not move the root while only its states "
                     + "without a humanoid clip play (their root curves pose the root; not measured)");
             if (weight > 0f && player.BaseLayerIKPass) e.PlayableIK = true;
+            if (weight > 0f && player.UpperLayerIKPass)
+                Stubs.Ignored("AnimatorControllerPlayable IK passes of layers above the first",
+                    "an AnimatorControllerPlayable's controller runs the IK pass of its base layer only (the others are not measured)");
             player.MassCenterInto(into);
         }
 
@@ -831,7 +837,8 @@ namespace Unbound.Runtime.Playables
         /// this playable, turned back into a step by <see cref="RootMotionStep.FromVelocities"/>,
         /// the conversion a job above a controller playable already uses. Zero when the Animator
         /// requests no root motion; unknown when the evaluation sampled nothing (no player, another
-        /// Animator's bindings, an additive layer's reference) or humanoid clips play. Unbound's
+        /// Animator's bindings, an additive layer's reference) or humanoid clips play (their motion
+        /// is the stream's body motion, <see cref="Humanoid"/>). Unbound's
         /// choices (unmeasured): the motion is the Animator's own controller root motion for the
         /// same states; a zero delta time carries no motion; the controller animates the root when
         /// its evaluation animated the root's position or rotation channels (its clips' curves,
