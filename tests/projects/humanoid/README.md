@@ -200,8 +200,8 @@ imported without keyframe reduction.
   at 0.8 and 0.6 (`body.directHigh`, with normalized blend values `body.directNormalized`), both
   with Foot IK (`body.directLowFootIK`, `body.directHighFootIK`), the latter leaving for HumanB's
   clip (`body.directHighTransition`), BodyNeg and A at 0.3 and 0.4 (`body.directLowNeg`), BodyNegGoal
-  (BodyPos with a left foot goal rotation of four negative components) alone at 0.5
-  (`body.directHalfNegGoal`) and HumanB's clip at 0 (`body.directZeroB`); BodyRot (RootQ curves
+  (BodyPos with a negated left foot goal rotation, which its body places with four negative
+  components except in one recorded update) alone at 0.5 (`body.directHalfNegGoal`) and HumanB's clip at 0 (`body.directZeroB`); BodyRot (RootQ curves
   only) and BodyT (RootT curves only) in 1D trees with A (`body.rotTree`, `body.tTree`); the same clips without Foot IK in AnimationMixerPlayables
   (`bodyGraph.neg`, `.pos`, `.partial`, `.w`, `.none` at 0.35 and 0.65 of A, `.low`, `.high`, `.lowNeg`,
   `.three` of BodyNeg, A and BodyPartial, `.nested` with a mixer of BodyNeg and BodyPos as an

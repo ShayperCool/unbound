@@ -486,9 +486,9 @@ namespace Unbound.Runtime.Humanoid
         /// for generic channels (6000.0.71f1, tests/projects/animculling humanMixerShape: sums 0,
         /// 0.5 and 1.5 scale the body and step; rotations are the normalized filled sum). Unit sums
         /// give the same result either way. The identity that takes the rest of a rotation is
-        /// (0, 0, 0, 1) as it is, whatever hemisphere the inputs' sum is in (tests/projects/humanoid
-        /// body.directLowNeg, bodyGraph.lowNeg: a body whose rotation has a negative w at 0.3
-        /// beside a clip at 0.4; <see cref="InSum"/> says which hemisphere a sum starts in); with
+        /// (0, 0, 0, 1) as it is, whatever hemisphere the inputs' sum is in (<see cref="InSum"/>
+        /// says which hemisphere a sum starts in and what measures it: a goal's rotation in a
+        /// controller's state; the bodies and feet here follow that rule unmeasured); with
         /// <paramref name="alignRest"/> it is taken in the sum's hemisphere, as a layer's blend
         /// from the identity is (<see cref="OverNoClip"/>).</summary>
         public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights, bool sum = false,
@@ -686,10 +686,15 @@ namespace Unbound.Runtime.Humanoid
         /// empty sum a rotation whose four components are all negative (a dot product of −0),
         /// which so starts the sum as its positive twin; any other first rotation starts it as
         /// it is. Matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
-        /// body.directHalfNegGoal (a goal rotation with four negative components alone at 0.5
-        /// in a Direct blend tree: the identity completes its positive twin) and
-        /// body.directLowNeg, bodyGraph.lowNeg (a body rotation with a negative w and mixed
-        /// signs at 0.3 beside a clip at 0.4: the identity completes it as it is).</summary>
+        /// body.directHalfNegGoal: a foot goal alone at 0.5 in a Direct blend tree, whose
+        /// rotation as its clip's body places it has four negative components in 28 recorded
+        /// updates, where the identity completes its positive twin, and a positive z beside a
+        /// negative w in one (step 25), where the identity completes it as it is, in the other
+        /// hemisphere. Measured for that goal; a body's rotation, a mixer's inputs and a zero
+        /// component (which counts by its sign here) follow the same arithmetic unmeasured. A
+        /// body's curves do not bring their sign to a sum: body.directLowNeg and
+        /// bodyGraph.lowNeg, with every RootQ key negated, record the rows of body.directLow
+        /// and bodyGraph.low.</summary>
         internal static F4 InSum(F4 sum, F4 q) =>
             float.IsNegative((sum.x * q.x + sum.y * q.y) + (sum.z * q.z + sum.w * q.w)) ? -q : q;
 

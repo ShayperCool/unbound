@@ -275,10 +275,10 @@ namespace UnityEngine.Tests
         /// <summary>What a Direct blend tree's clips leave of one is the identity (0, 0, 0, 1) as it
         /// is, whatever hemisphere the clips' sum is in, and a sum starts with its first rotation
         /// as it is unless all four of its components are negative, which starts it as the
-        /// positive twin (6000.0.71f1, tests/projects/humanoid body.directLowNeg and
-        /// bodyGraph.lowNeg for a body with a negative w and mixed signs, body.directHalfNegGoal
-        /// for a goal with four negative components; a body with four negative components
-        /// follows the goal's rule unmeasured). Control: the two readings differ.</summary>
+        /// positive twin (6000.0.71f1, tests/projects/humanoid body.directHalfNegGoal: a goal
+        /// whose placed rotation has four negative components, and mixed signs with a negative
+        /// w in one update; the body's rotation curves follow the goal's rule unmeasured).
+        /// Control: the two readings differ.</summary>
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -308,7 +308,8 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>The hemisphere a rotation joins a sum in: the sum's; into an empty sum as it
-        /// is, unless its four components all have the sign bit set (a zero counts by its sign).</summary>
+        /// is, unless its four components all have the sign bit set (a zero counts by its sign:
+        /// unmeasured, what the rule's arithmetic gives).</summary>
         [Fact]
         public void ARotationJoinsASumInItsHemisphereAndStartsOneByItsSigns()
         {
