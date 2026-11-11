@@ -442,7 +442,7 @@ namespace UnityEngine
         /// gamma project's scale is unmeasured and stays the plain intensity.</summary>
         static float SkyboxProbeScale =>
             QualitySettings.activeColorSpace == ColorSpace.Linear ? Mathf.GammaToLinearSpace(s_AmbientIntensity) : s_AmbientIntensity;
-        static Cubemap s_BakedReflection;
+        internal static Cubemap s_BakedReflection;
         static readonly System.Collections.Generic.Dictionary<(string, long), Cubemap> s_Cubemaps = new System.Collections.Generic.Dictionary<(string, long), Cubemap>();
         static DefaultReflectionMode s_DefaultReflectionMode;
         static Texture s_CustomReflection;
@@ -456,9 +456,11 @@ namespace UnityEngine
         internal static Cubemap defaultReflection => s_BakedReflection;
 
         /// <summary>The reflection objects without a probe reflect: the custom cubemap, else the
-        /// skybox's.</summary>
+        /// skybox's, else (lighting data made without a sky, or none) a black cube, as in the
+        /// Unity 6000.0.71f1 Editor (tests/projects/realtimegi end-reflection).</summary>
         internal static Texture DefaultReflectionTexture =>
-            s_DefaultReflectionMode == DefaultReflectionMode.Custom && s_CustomReflection != null ? s_CustomReflection : s_BakedReflection ?? s_SerializedReflection;
+            s_DefaultReflectionMode == DefaultReflectionMode.Custom && s_CustomReflection != null ? s_CustomReflection
+                : s_BakedReflection ?? s_SerializedReflection ?? (Texture)ReflectionProbe.Black;
         /// <summary>The scene's lighting data's ambient probe (baked, or the built-in data's for
         /// the default skybox).</summary>
         internal static SphericalHarmonicsL2? s_BakedProbe;
@@ -467,7 +469,7 @@ namespace UnityEngine
         internal static SphericalHarmonicsL2? s_EnvironmentProbe;
         /// <summary>A built scene's own ambient probe and skybox reflection (an AssetBundle's scene).</summary>
         static SphericalHarmonicsL2? s_SerializedProbe;
-        static Cubemap s_SerializedReflection;
+        internal static Cubemap s_SerializedReflection;
 
         /// <summary>Reads a scene's lighting data (LightmapSettings' m_LightingDataAsset): the
         /// ambient probe, the skybox's reflection and the baked lighting

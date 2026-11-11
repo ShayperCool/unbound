@@ -5,6 +5,7 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
+    [Collection("RenderSettings state")]
     public class ReflectionProbeTests
     {
         static ReflectionProbe Probe(string name, Vector3 position, Vector3 size, int importance, Vector3 center = default)
@@ -114,6 +115,55 @@ namespace UnityEngine.Tests
             finally
             {
                 Object.DestroyImmediate(probe.gameObject);
+            }
+        }
+
+        [Fact]
+        public void AScenesDefaultReflectionIsABlackCubeWithoutOne()
+        {
+            // The Unity 6000.0.71f1 Editor, tests/projects/realtimegi end-reflection (a scene
+            // whose lighting data was made without a sky): a cube of one texel named
+            // UnityBlackCube, decoded as it is stored.
+            var mode = RenderSettings.defaultReflectionMode;
+            var custom = RenderSettings.customReflectionTexture;
+            var baked = RenderSettings.s_BakedReflection;
+            var serialized = RenderSettings.s_SerializedReflection;
+            float intensity = RenderSettings.reflectionIntensity;
+            var own = new Cubemap(4, TextureFormat.RGBA32, false);
+            try
+            {
+                RenderSettings.s_BakedReflection = null;
+                RenderSettings.s_SerializedReflection = null;
+                RenderSettings.customReflectionTexture = null;
+                foreach (var source in new[] { DefaultReflectionMode.Skybox, DefaultReflectionMode.Custom })
+                {
+                    RenderSettings.defaultReflectionMode = source;
+                    var black = Assert.IsType<Cubemap>(ReflectionProbe.defaultTexture);
+                    Assert.Equal("UnityBlackCube", black.name);
+                    Assert.Equal(1, black.width);
+                    Assert.Equal(TextureDimension.Cube, black.dimension);
+                    for (int face = 0; face < 6; face++)
+                        Assert.Equal(new Color(0f, 0f, 0f, 0f), black.GetPixel((CubemapFace)face, 0, 0) * new Color(1f, 1f, 1f, 0f));
+                    Assert.Equal(new Vector4(1f, 1f, 0f, 0f), ReflectionProbe.defaultTextureHDRDecodeValues);
+                }
+                // The frame's decode values carry the reflection intensity all the same.
+                RenderSettings.reflectionIntensity = 0.5f;
+                Assert.Equal(new Vector4(0.5f, 1f, 0f, 0f), ReflectionProbe.DefaultDecode);
+                // Control: a scene's own reflection is the default one.
+                RenderSettings.customReflectionTexture = own;
+                Assert.Same(own, ReflectionProbe.defaultTexture);
+                RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+                RenderSettings.s_BakedReflection = own;
+                Assert.Same(own, ReflectionProbe.defaultTexture);
+            }
+            finally
+            {
+                RenderSettings.defaultReflectionMode = mode;
+                RenderSettings.customReflectionTexture = custom;
+                RenderSettings.s_BakedReflection = baked;
+                RenderSettings.s_SerializedReflection = serialized;
+                RenderSettings.reflectionIntensity = intensity;
+                Object.DestroyImmediate(own);
             }
         }
 

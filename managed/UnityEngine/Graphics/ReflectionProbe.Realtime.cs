@@ -26,7 +26,9 @@ namespace UnityEngine
         /// <summary>The cube a realtime probe renders into (made by its first render).</summary>
         public RenderTexture realtimeTexture { get => m_RealtimeTexture; set => m_RealtimeTexture = value; }
 
-        /// <summary>A black cube: what a realtime probe reflects before it renders.</summary>
+        /// <summary>A black cube: what a realtime probe reflects before it renders, and the
+        /// default reflection of a scene without one (the Editor's is a cube of one texel named
+        /// UnityBlackCube: tests/projects/realtimegi end-reflection).</summary>
         internal static Cubemap Black
         {
             get
@@ -34,7 +36,7 @@ namespace UnityEngine
                 if (s_Black == null)
                 {
                     using (ObjectRegistry.AsAssets())
-                        s_Black = new Cubemap(1, TextureFormat.RGBA32, false) { name = "Unbound black cube", hideFlags = HideFlags.HideAndDontSave };
+                        s_Black = new Cubemap(1, TextureFormat.RGBA32, false) { name = "UnityBlackCube", hideFlags = HideFlags.HideAndDontSave };
                     for (int f = 0; f < 6; f++) s_Black.SetPixel((CubemapFace)f, 0, 0, Color.black);
                     s_Black.Apply();
                 }

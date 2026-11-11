@@ -499,29 +499,26 @@ namespace Unbound.Runtime
             LightingGlobals.Collect(s_Lighting, s_FrameKeywords);
             foreach (var (name, value) in s_Lighting) GfxStream.GlobalVector(name, value);
             foreach (var fog in s_FogKeywords) GfxStream.Keyword(fog, s_FrameKeywords.Contains(fog));
-            // Renderers outside every reflection probe reflect the default reflection.
-            var reflection = ReflectionProbe.defaultTexture;
-            if (reflection != null)
+            // Renderers outside every reflection probe reflect the default reflection (a black
+            // cube when the scene has none).
+            ulong handle = TextureHandles.Of(ReflectionProbe.defaultTexture);
+            // The lighting settings' reflection intensity scales what it gives.
+            var decode = ReflectionProbe.DefaultDecode;
+            GfxStream.GlobalTexture("unity_SpecCube0", handle);
+            GfxStream.GlobalTexture("unity_SpecCube1", handle);
+            GfxStream.GlobalVector("unity_SpecCube0_HDR", decode);
+            GfxStream.GlobalVector("unity_SpecCube1_HDR", decode);
+            if (srp)
             {
-                ulong handle = TextureHandles.Of(reflection);
-                // The lighting settings' reflection intensity scales what it gives.
-                var decode = ReflectionProbe.DefaultDecode;
-                GfxStream.GlobalTexture("unity_SpecCube0", handle);
-                GfxStream.GlobalTexture("unity_SpecCube1", handle);
-                GfxStream.GlobalVector("unity_SpecCube0_HDR", decode);
-                GfxStream.GlobalVector("unity_SpecCube1_HDR", decode);
-                if (srp)
-                {
-                    GfxStream.GlobalVector("unity_SpecCube0_BoxMin", s_UnboundedMin);
-                    GfxStream.GlobalVector("unity_SpecCube0_BoxMax", s_UnboundedMax);
-                    GfxStream.GlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
-                    GfxStream.GlobalVector("unity_SpecCube1_BoxMin", s_UnboundedMin);
-                    GfxStream.GlobalVector("unity_SpecCube1_BoxMax", s_UnboundedMax);
-                    GfxStream.GlobalVector("unity_SpecCube1_ProbePosition", Vector4.zero);
-                }
-                // Weight 1: the built-in shaders' probe blending keeps the first cubemap alone.
-                else GfxStream.GlobalVector("unity_SpecCube0_BoxMin", new Vector4(0f, 0f, 0f, 1f));
+                GfxStream.GlobalVector("unity_SpecCube0_BoxMin", s_UnboundedMin);
+                GfxStream.GlobalVector("unity_SpecCube0_BoxMax", s_UnboundedMax);
+                GfxStream.GlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
+                GfxStream.GlobalVector("unity_SpecCube1_BoxMin", s_UnboundedMin);
+                GfxStream.GlobalVector("unity_SpecCube1_BoxMax", s_UnboundedMax);
+                GfxStream.GlobalVector("unity_SpecCube1_ProbePosition", Vector4.zero);
             }
+            // Weight 1: the built-in shaders' probe blending keeps the first cubemap alone.
+            else GfxStream.GlobalVector("unity_SpecCube0_BoxMin", new Vector4(0f, 0f, 0f, 1f));
             // A renderer without a lightmap keeps its lightmapScaleOffset's default.
             GfxStream.GlobalVector("unity_LightmapST", s_IdentityScaleOffset);
         }

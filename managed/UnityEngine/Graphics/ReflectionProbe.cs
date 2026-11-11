@@ -310,7 +310,7 @@ namespace UnityEngine
         /// pipeline's draws get without a probe; <paramref name="weight"/> is BoxMin.w).</summary>
         static void SetUnbounded(Dictionary<int, object> properties, BoxedVectors boxes, int slot, int cube, int hdr, int min, int max, int position, float weight)
         {
-            properties[cube] = defaultTexture ?? Black;
+            properties[cube] = defaultTexture;
             properties[hdr] = BoxedVectors.Of(boxes, slot, DefaultDecode);
             properties[min] = BoxedVectors.Of(boxes, slot + 1, new Vector4(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity, weight));
             properties[max] = BoxedVectors.Of(boxes, slot + 2, new Vector4(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 0f));

@@ -131,8 +131,9 @@ namespace Unbound.Runtime
                 s_DeferredReflectionsOver.SetFloat(s_DstBlend, (float)BlendMode.OneMinusSrcAlpha);
             }
             ulong reflectionOverMaterial = s_DeferredReflectionsOver.Sync();
+            // The default reflection first; a scene without one reflects black, which adds nothing.
             var defaultReflection = ReflectionProbe.defaultTexture;
-            if (defaultReflection != null)
+            if (!ReferenceEquals(defaultReflection, ReflectionProbe.Black))
             {
                 var decode = ReflectionProbe.defaultTextureHDRDecodeValues;
                 decode.x *= RenderSettings.reflectionIntensity;
