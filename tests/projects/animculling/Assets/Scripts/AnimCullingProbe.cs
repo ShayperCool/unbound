@@ -186,6 +186,39 @@ public class AnimCullingProbe : MonoBehaviour
         ld.step = f => ld.renderers[0].enabled = f < 10 || f >= 30;
         foreach (var offscreen in new[] { false, true })
             Legacy("ls/based/" + (offscreen ? "on" : "off"), AnimationCullingType.BasedOnRenderers, ScheduleA, body: false, skinned: true, updateWhenOffscreen: offscreen);
+        OutputCases(modes);
+    }
+
+    // How outputs bind their sources. sharedPort: two Animators' outputs with one source playable
+    // and port (a ScriptPlayable over a clip), the culled Animator's output created after the
+    // always visible one's or, for sharedPortFirst, before it. controllerDirect and
+    // controllerRoot: an AnimatorControllerPlayable as the output's source, with the Culling
+    // controller (pose, events, a transition) and with the RootMotion controller under
+    // applyRootMotion. weight/: one clip output at a weight of 0.5 or 0 over the scene's values or
+    // an attached controller's pose, without and with builtin root motion.
+    void OutputCases((string name, AnimatorCullingMode mode)[] modes)
+    {
+        foreach (var (_, mode) in modes)
+        foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
+        foreach (string shape in new[] { "sharedPort", "sharedPortFirst", "controllerDirect", "controllerRoot" })
+            ClockCase(shape, mode, clock);
+        foreach (var (name, mode) in modes)
+        foreach (float weight in new[] { 0.5f, 0f })
+        foreach (bool controller in new[] { false, true })
+        foreach (string motion in new[] { "pose", "builtin" })
+        {
+            var c = Animated("weight/" + F(weight) + "/" + name + "/" + (controller ? "controller" : "bare") + "/" + motion,
+                controller ? Resources.Load<RuntimeAnimatorController>("Culling") : null, mode, ScheduleA);
+            c.animator.applyRootMotion = motion != "pose";
+            c.graph = PlayableGraph.Create(c.name);
+            c.graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+            var output = AnimationPlayableOutput.Create(c.graph, "Animation", c.animator);
+            c.clip = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayablePose"));
+            c.source = c.clip;
+            output.SetSourcePlayable(c.source);
+            output.SetWeight(weight);
+            c.graph.Play();
+        }
     }
 
     void PlayableCases((string name, AnimatorCullingMode mode)[] modes)
@@ -518,8 +551,8 @@ public class AnimCullingProbe : MonoBehaviour
     // stays visible, with its own tree or sharing the clip through a second output port (that
     // Animator's output created after or, for sharedClipFirst, before the culled one). The
     // records keep every node's time, previous time, done flag and duration, and each
-    // behaviour's callback counts and last deltas. Outputs sharing one source port are a
-    // separate output-binding question and are not part of this probe.
+    // behaviour's callback counts and last deltas. Outputs sharing one source port are
+    // OutputCases' sharedPort.
     static readonly string[] ClockShapes = { "clip", "plain", "script", "plainLeaf", "scriptLeaf", "mixer", "mixerPlain",
         "mixerScript", "plainMixer", "plainPlain", "nestedScript", "layer", "job", "speed", "duration",
         "twoTrees", "sharedClip", "sharedClipFirst", "controller" };
@@ -649,6 +682,21 @@ public class AnimCullingProbe : MonoBehaviour
                 // An AnimatorControllerPlayable below a plain Playable; nt records its state time.
                 source = Plain("P", Node("A", AnimatorControllerPlayable.Create(g, Resources.Load<RuntimeAnimatorController>("Culling"))));
                 break;
+            case "controllerDirect":
+                source = Node("A", AnimatorControllerPlayable.Create(g, Resources.Load<RuntimeAnimatorController>("Culling")));
+                break;
+            case "controllerRoot":
+                source = Node("A", AnimatorControllerPlayable.Create(g, Resources.Load<RuntimeAnimatorController>("RootMotion")));
+                c.animator.applyRootMotion = true;
+                break;
+            case "sharedPort":
+            {
+                // One source playable and port for both Animators' outputs.
+                source = Script("S", Clip("C", pose));
+                if (first) output.SetSourcePlayable(source);
+                OtherOutput().SetSourcePlayable(source);
+                break;
+            }
             case "doneScript":
             {
                 // A clip with a duration under a script output only.

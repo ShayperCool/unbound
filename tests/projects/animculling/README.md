@@ -115,8 +115,10 @@ observations of this release and these cases. No callback ordering between diffe
 Animators is asserted.
 
 Unmeasured playable contexts include Animator.Update with graph outputs, controller
-playables beyond the `clock/` clocks, humanoid output root motion, output
-weights other than one, and other releases. Explicit Graph.Evaluate is measured
+playables below mixers or with state machine behaviours, composed humanoid output root
+motion, fractional weights of humanoid or several outputs, and other releases. Outputs
+sharing a source port, a controller playable as an output's source and one output's weight
+are measured in "Output binding" below. Explicit Graph.Evaluate is measured
 separately below; which playables a culled output stops, including nodes other
 outputs share, is measured in "Playable clocks under culling" below.
 
@@ -466,6 +468,36 @@ Observed (two byte-identical captures, 3,660 records):
   0.02f in double) of a 0.5 s loop samples the loop's start. The pose reads the time rounded up
   (0.0999999978 s samples the pose of 0.1 s, as tests/projects/humanoid longClipA/B measures at
   70000 s), while an event at 0.1 s fires only in the next update.
+
+## Output binding
+
+`clock/sharedPort` and `clock/sharedPortFirst` give two Animators' outputs one source
+playable and port (a ScriptPlayable over a clip): the probed Animator's output is created
+after the always visible Animator's, or before it. `clock/controllerDirect` and
+`clock/controllerRoot` make an AnimatorControllerPlayable the output's source, with the
+`Culling` controller and with `RootMotion` under applyRootMotion. All four run in the three
+culling modes with GameTime and Manual graphs. `weight/` is one clip output at a weight of 0.5
+or 0, over the scene's values or the attached `Culling` controller's pose, without and with
+builtin root motion, in the three modes (GameTime).
+
+Measured in the Unity 6000.0.71f1 Editor:
+
+- Of two animation outputs with one source playable and port, only the one created first takes
+  part. The later one's Animator keeps its values, gets no clip event and no root motion, in
+  every culling mode; culled completely it holds nothing, so the clip goes on for the first
+  output's Animator. When the first output's Animator is the culled one, the clip is held and
+  the later output still does nothing. The Scripting API's PlayableOutput pages do not describe
+  two outputs on one port.
+- A controller playable as the source poses the rig, fires its clips' events, takes its
+  transition and moves the root like the clip outputs do under each mode: CullUpdateTransforms
+  keeps time, events and root motion and writes no pose; CullCompletely holds its state time.
+- An output's weight blends the pose only. At 0.5 and at 0 the clip's time and its events go
+  on as at 1; at 0 the pose and the root stay the scene's or the controller's.
+
+Unmeasured: outputs of one Animator on one port, an earlier output without a target or with a
+disabled Animator, outputs connected in another order than they were created in, script
+outputs on the port, the weight a clip event reports under a fractional output weight, and an
+IK pass at weight 0.
 
 Implementation: `PlayableKind.AnimatorClock` marks the animation playables;
 `PlayableGraphData.PreparePass` holds the trees below them for culled outputs (the hold
