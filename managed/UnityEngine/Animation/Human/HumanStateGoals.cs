@@ -11,9 +11,12 @@ namespace Unbound.Runtime.Humanoid
     /// A state's clips (a blend tree's) blend among themselves first and the layer then blends its
     /// states: a goal's rotation is the normalized sum of the state's clips, each in the
     /// hemisphere of the ones before, before a transition blends it with another state's
-    /// (goals.treeTransition, goals.treeSource); what a state's clips leave of its weight is the
-    /// identity goal, as an AnimationMixerPlayable's missing weight is (unmeasured on a
-    /// controller: Direct blend trees whose weights do not sum to one).
+    /// (goals.treeTransition, goals.treeSource). A state whose humanoid clips do not fill its
+    /// weight (a Direct blend tree whose weights do not sum to one, a tree with clips without
+    /// humanoid curves) is unmeasured (diagnostic): below one, what the clips leave of the state's weight is
+    /// the identity goal, as an AnimationMixerPlayable's missing weight is; above one, a goal's
+    /// position is the clips' raw sum, as a Direct tree's other values are, and its rotation
+    /// their normalized sum.
     /// The sampler hands a clip's goal curves over instead of adding them (<see cref="Take"/>);
     /// <see cref="AddClip"/> places and collects them, <see cref="EndState"/> adds the state's goals
     /// to the layer's pose, every goal curve with the state's weight.
@@ -31,6 +34,13 @@ namespace Unbound.Runtime.Humanoid
         float m_Weight;
         int m_Clips;
         Trs m_Body;
+
+        /// <summary>How far a state's clips may be from filling its weight before the state counts
+        /// as an unmeasured Direct blend (single-precision sums of a tree's weights stay well within).</summary>
+        const float WeightTolerance = 1e-4f;
+
+        /// <summary>Whether the state has sampled a humanoid clip so far.</summary>
+        internal bool HasClips => m_Clips > 0;
 
         internal HumanStateGoals(AnimationBindings bindings) => m_Bindings = bindings;
 
@@ -86,6 +96,10 @@ namespace Unbound.Runtime.Humanoid
             var b = m_Bindings;
             // What the clips leave of the state's weight is the identity goal.
             float rest = weight - m_Weight;
+            if (System.MathF.Abs(rest) > WeightTolerance * weight)
+                Unbound.Runtime.Stubs.Ignored("Animator IK goals of a state whose humanoid clips do not fill its weight",
+                    "(a Direct blend tree whose weights do not sum to one, a tree with clips without humanoid curves) are blended by Unbound's own rule: "
+                    + "the missing weight counts as the identity goal, a surplus adds to the goals' positions (not measured)");
             for (int g = 0; g < Goals; g++)
             {
                 int curve = First + g * Width;

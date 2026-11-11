@@ -99,7 +99,8 @@ namespace UnityEngine.Tests
         static readonly (string, float)[] s_B = Body(1.3f, true).Concat(Goal("LeftFoot", -0.12f, -1f, 0.2f)).Concat(Goal("RightFoot", 0.12f, -1f, -0.1f))
             .Concat(Goal("LeftHand", -0.2f, 0.5f, 0.3f)).Concat(Goal("RightHand", 0.2f, 0.5f, 0.3f)).ToArray();
 
-        /// <summary>A looping humanoid clip of 1 s holding each curve at one value.</summary>
+        /// <summary>A looping humanoid clip of 1 s holding each curve at one value; a curve named
+        /// with a trailing '+' rises by one over the second.</summary>
         static string Clip(long id, string name, (string Attribute, float Value)[] curves) => $$"""
 --- !u!74 &{{id}}
 AnimationClip:
@@ -117,13 +118,13 @@ AnimationClip:
         tangentMode: 0
       - serializedVersion: 3
         time: 1
-        value: {{F(c.Value)}}
+        value: {{F(c.Value + (c.Attribute.EndsWith("+") ? 1f : 0f))}}
         inSlope: 0
         outSlope: 0
         tangentMode: 0
       m_PreInfinity: 2
       m_PostInfinity: 2
-    attribute: {{c.Attribute}}
+    attribute: {{c.Attribute.TrimEnd('+')}}
     path:
     classID: 95
     script: {fileID: 0}
@@ -280,7 +281,7 @@ BlendTree:
 
         /// <summary>The tree of B and C alone (<paramref name="from"/> null), or after
         /// <paramref name="from"/> on state A, left after an exit time of 0.2 over 0.5 s.</summary>
-        static string TreeController(bool direct, (string, float)[] from, float wb = 0.5f, float wc = 0.5f) =>
+        static string TreeController(bool direct, (string, float)[] from, float wb = 0.5f, float wc = 0.5f, (string, float)[] b = null) =>
             "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!91 &9100000\nAnimatorController:\n  m_Name: Goals\n  serializedVersion: 5\n"
             + "  m_AnimatorParameters:\n" + Parameter("Blend", 0.5f) + Parameter("WB", wb) + Parameter("WC", wc) + "  m_AnimatorLayers:\n"
             + Layer("Base Layer", 1107000001, 0, 1f)
@@ -288,7 +289,7 @@ BlendTree:
                 ? Machine(1107000001, StateA, StateA, StateTree) + State(StateA, "A", ClipA, false, 1101000001)
                     + Transition(1101000001, StateTree, 0.2f, 0.5f) + Clip(ClipA, "A", from)
                 : Machine(1107000001, StateTree, StateTree))
-            + State(StateTree, "Tree", Tree, false) + BlendTree(direct) + Clip(ClipB, "B", Turned(80f)) + Clip(ClipC, "C", Turned(-80f));
+            + State(StateTree, "Tree", Tree, false) + BlendTree(direct) + Clip(ClipB, "B", b ?? Turned(80f)) + Clip(ClipC, "C", Turned(-80f));
 
         Animator Rig(string yaml)
         {
@@ -506,6 +507,29 @@ BlendTree:
             var uneven = Goal(TreeController(true, null, 0.75f, 0.25f));
             AssertNear(tree.Position, uneven.Position);
             Assert.True(Angle(F4.QIdentity, uneven.Rotation) > 20f);
+        }
+
+        /// <summary>A Direct blend tree whose weights sum above one moves the root by each clip's
+        /// own weight: a rising clip at weight 1 beside a level one at weight 1 raises it as the
+        /// rising clip alone does (unmeasured in the Editor; Unbound's rule, kept as it was). The
+        /// height is used because the feet pivot only corrects the step on the ground plane.</summary>
+        [Fact]
+        public void ADirectBlendTreeAboveOneMovesTheRootByEachClipsWeight()
+        {
+            var moving = Turned(80f);
+            for (int i = 0; i < moving.Length; i++)
+                if (moving[i].Item1 == "RootT.y") moving[i].Item1 = "RootT.y+";
+            float Step(float wc)
+            {
+                var animator = Rig(TreeController(true, null, 1f, wc, moving));
+                animator.Update(0f);
+                animator.Update(0.25f);
+                animator.Update(0.25f);
+                return animator.deltaPosition.y;
+            }
+            float alone = Step(0f);
+            Assert.True(alone > 0.05f);
+            Assert.InRange(Step(1f) / alone, 0.9f, 1.1f);
         }
 
         /// <summary>A playable output on the same Animator takes the controller's pose on with its

@@ -1247,6 +1247,9 @@ namespace Unbound.Runtime
         /// <summary>The goals of the state being sampled (null: its clips' goals are not placed).</summary>
         Unbound.Runtime.Humanoid.HumanStateGoals m_SamplingGoals;
         Unbound.Runtime.Humanoid.AnimatorHuman m_PlacedHuman;
+        /// <summary>Whether the cached motion, layer channel and layer masks were made for a player
+        /// that places goals (<see cref="Collect"/>, <see cref="LayerMask"/>).</summary>
+        bool m_MasksPlaceGoals;
 
         /// <summary>Whether this player's humanoid clips place their IK goals by their bodies while
         /// they are sampled (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>): the
@@ -1276,6 +1279,15 @@ namespace Unbound.Runtime
             m_Contributions.Clear();
             m_HumanClipSamples.Clear();
             m_PlacedHuman = PlacesGoals ? m_Animator.Human : null;
+            if (m_MasksPlaceGoals != (m_PlacedHuman != null))
+            {
+                // The channel masks depend on it (an avatar assigned or removed since they were made).
+                m_MasksPlaceGoals = m_PlacedHuman != null;
+                m_MotionMasks.Clear();
+                m_NullMotionMask = default;
+                Array.Clear(m_LayerChannels);
+                Array.Clear(m_LayerMasks);
+            }
             // Holding states keep the root motion of the layer's last evaluation.
             for (int i = 0; i < count; i++) Layers[i].Kept = Layers[i].Own;
             for (int i = 0; i < count; i++)
@@ -1684,7 +1696,7 @@ namespace Unbound.Runtime
                     foreach (var ch in bound.Object) if (ch >= 0 && ch < objects.Length) objects[ch] = true;
                     // A humanoid clip gives every IK goal, with or without a curve for it
                     // (HumanStateGoals).
-                    if (clip.HasHumanCurves && PlacesGoals)
+                    if (clip.HasHumanCurves && m_MasksPlaceGoals)
                         for (int curve = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst; curve < Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst; curve++)
                         {
                             int ch = Bindings.HumanChannel(curve);
@@ -1699,16 +1711,18 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The channels a layer may animate (null: all): what its avatar mask lets through
-        /// and, on an additive layer, not the humanoid IK goal curves. An additive layer leaves the
-        /// goals of the layers below as they are, whatever its clips' goal curves hold and with or
-        /// without a mask (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
-        /// goals.additive, goals.additiveFootIK; AnimationLayerMixerPlayables likewise,
-        /// mixer.additiveNoRoot).</summary>
+        /// and, on an additive layer of a player that places goals (<see cref="PlacesGoals"/>), not
+        /// the humanoid IK goal curves. An additive layer leaves the goals of the layers below as
+        /// they are, whatever its clips' goal curves hold and with or without a mask (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/humanoid goals.additive, goals.additiveFootIK;
+        /// AnimationLayerMixerPlayables likewise, mixer.additiveNoRoot). An
+        /// AnimatorControllerPlayable's additive layers still add their goal curves' differences
+        /// (unmeasured).</summary>
         (bool[], bool[]) LayerMask(int index)
         {
             var mask = Layers[index].Def.Mask;
             bool filters = mask != null && mask.Filters;
-            bool noGoals = Layers[index].Def.Additive && AnyGoalChannel();
+            bool noGoals = m_MasksPlaceGoals && Layers[index].Def.Additive && AnyGoalChannel();
             if (!filters && !noGoals) return (null, null);
             var cached = m_LayerMasks[index];
             if (cached.Floats != null && cached.FloatCount == Bindings.FloatCount && cached.Objects.Length == Bindings.ObjectCount)
