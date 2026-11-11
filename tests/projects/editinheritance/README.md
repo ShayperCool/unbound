@@ -6,7 +6,7 @@ Unity 6000.0.71f1 controls for inherited `ExecuteInEditMode`, `ExecuteAlways`, a
 
 `transition.jsonl` records a plain scene root, a disabled script and an inactive root created in Edit mode before Play entry with domain and scene reload disabled. The first two receive Awake on Play entry; the inactive one waits for activation. This controls the existing scene activation path separately from package startup.
 
-`startup-packages.jsonl` additionally creates the actual Addressables callback hook from the version selected by `tests/projects/packages/Packages/manifest.json`. The singleton is created while `isPlaying` is false, has HideAndDontSave flags, and must invoke an attached Update delegate after Play starts. The staged project installs Addressables and its dependencies; other packages are outside this control.
+`startup-packages.jsonl` additionally creates the actual Addressables callback hook from the version selected by `tests/projects/packages/Packages/manifest.json`. The singleton is created while `isPlaying` is false, has HideAndDontSave flags, and must invoke an attached Update delegate after Play starts. Both startup profiles also record the active scene root count and the sibling index of a later user object, after the hidden singleton exists. The staged project installs Addressables and its dependencies; other packages are outside this control.
 
 Each canonical reference has two identical, normally exited GPU Editor captures. Captures, receipts and repeats remain outside Git. All values compare exactly.
 

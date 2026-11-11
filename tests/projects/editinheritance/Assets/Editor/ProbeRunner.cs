@@ -183,6 +183,10 @@ public static class ProbeRunner
     {
         if (!Application.isPlaying || ++ticks < 12) return;
         Snapshot("play");
+        Put("play.scene.rootCount", SceneManager.GetActiveScene().rootCount.ToString());
+        var after = new GameObject("AfterStartupSingletons");
+        Put("play.after.sibling", after.transform.GetSiblingIndex().ToString());
+        Object.DestroyImmediate(after);
         if (packageHooks != null) Put("addressables.updated", (packageUpdates > 0).ToString());
         Clear();
         counters[6].enabled = true;

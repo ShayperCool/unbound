@@ -523,6 +523,11 @@ namespace UnityEngine.SceneManagement
 
         static void Perform(SceneData data, LoadSceneParameters parameters, LoadSceneMode? reported = null, bool sceneManagerLoad = false, List<YDocument> documents = null, bool prepared = false)
         {
+            // Initial integration keeps the Editor's unsaved singleton roots outside the scene,
+            // as a later Single load does for its outgoing scene's unsaved roots.
+            if (reported == PlayModeEntry)
+                foreach (var root in data.Roots.ToArray())
+                    if (root != null && KeptBySingleLoad(root)) SceneRegistry.MoveToScene(root, SceneRegistry.Detached);
             if (parameters.loadSceneMode == LoadSceneMode.Single)
             {
                 UnloadForSingleLoad(data, sceneManagerLoad);

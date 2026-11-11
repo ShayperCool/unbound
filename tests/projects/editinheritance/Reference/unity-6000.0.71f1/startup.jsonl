@@ -26,6 +26,8 @@
 {"k":"play.hidden","v":""}
 {"k":"play.disabled","v":""}
 {"k":"play.inactive","v":""}
+{"k":"play.scene.rootCount","v":"0"}
+{"k":"play.after.sibling","v":"0"}
 {"k":"enabled.edit","v":""}
 {"k":"enabled.always","v":""}
 {"k":"enabled.generic","v":""}
