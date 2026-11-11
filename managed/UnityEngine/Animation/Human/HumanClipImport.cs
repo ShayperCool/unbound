@@ -225,16 +225,20 @@ namespace Unbound.Runtime.Humanoid
         // ---------------------------------------------------------------- import
 
         /// <summary>The magnitude one key of a translation DoF curve must reach for the clip to
-        /// have the curve (1e-4 in single precision).</summary>
-        public const float TDoFCurveMinimum = 9.99999975e-05f;
+        /// have the curve. The reference brackets it between 9.2e-5 (absent) and 1.6e-4
+        /// (present); the value itself and a key equal to it counting are Unbound's choice
+        /// inside that bracket.</summary>
+        public const float TDoFCurveMinimum = 1e-4f;
 
         /// <summary>Whether a converted translation DoF curve stays in the clip: only when one of
         /// its keys reaches <see cref="TDoFCurveMinimum"/>. Each of a bone's three curves is
         /// tested on its own, so a bone moved along one axis of its parent's frame keeps that
         /// component and plays the others as zero (Unity 6000.0.71f1 Editor,
         /// tests/projects/humanoid HumanT: of 63 curves the seven with keys from 1.6e-4 to 4.3e-4
-        /// stay and those up to 9.2e-5 are absent; tdof.playT). The other curves of a Humanoid
-        /// clip always stay, whatever their values.</summary>
+        /// stay and those up to 9.2e-5 are absent; tdof.curves, tdof.playT). The keys tested are
+        /// the every-frame ones, before any keyframe reduction (unmeasured under a reducing
+        /// compression). The other curves of a Humanoid clip always stay, whatever their
+        /// values.</summary>
         public static bool KeepsTDoFCurve(float[] values)
         {
             foreach (float value in values)

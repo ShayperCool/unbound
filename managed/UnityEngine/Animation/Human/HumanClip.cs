@@ -267,10 +267,15 @@ namespace UnityEngine
             };
         }
 
+        /// <summary>The index of a stored curve among the humanoid curves, or -1.</summary>
+        static int HumanCurveIndex(ClipCurve c) =>
+            c.Binding.ClassId == AnimatorClassId && c.Curve != null ? HumanClipImport.CurveIndex(c.Binding.Attribute) : -1;
+
         /// <summary>The clip's float curves as the Editor's curve queries show them: a clip with
-        /// the Mirror setting shows its curves as imported, not mirrored (tests/projects/humanoid
-        /// tdof.curves, the clip named Mirror), whether it has played or not. Mirroring a curve
-        /// twice gives it back, so the stored mirrored curves are mirrored again for the view.</summary>
+        /// the Mirror setting shows its curves as imported, not mirrored, after it has played
+        /// mirrored (tests/projects/humanoid tdof.curves, the clip named Mirror). Mirroring a
+        /// curve twice gives it back, so the stored mirrored curves are mirrored again for the
+        /// view. Before the clip plays the stored curves are the imported ones.</summary>
         internal List<ClipCurve> CurvesAsImported()
         {
             ConvertHumanCurves();
@@ -278,10 +283,41 @@ namespace UnityEngine
             var view = new List<ClipCurve>(m_Curves.Count);
             foreach (var c in m_Curves)
             {
-                int i = c.Binding.ClassId == AnimatorClassId && c.Curve != null ? HumanClipImport.CurveIndex(c.Binding.Attribute) : -1;
+                int i = HumanCurveIndex(c);
                 view.Add(i < 0 ? c : MirroredHumanCurve(c, i));
             }
             return view;
+        }
+
+        /// <summary>One curve of <see cref="CurvesAsImported"/> by its path, name and type, or
+        /// null: a mirrored clip's is found under its mirror name and only that one is mirrored
+        /// back.</summary>
+        internal ClipCurve CurveAsImported(string path, string attribute, Type type)
+        {
+            ConvertHumanCurves();
+            foreach (var c in m_Curves)
+            {
+                if (c.Binding.Path != path) continue;
+                int i = m_HumanMirrored ? HumanCurveIndex(c) : -1;
+                if (i < 0)
+                {
+                    if (c.Binding.Attribute == attribute && c.Binding.ResolveType() == type) return c;
+                    continue;
+                }
+                int j = HumanClipImport.MirrorCurve[i];
+                if (HumanClipImport.CurveNames[j < 0 ? ~j : j] == attribute && c.Binding.ResolveType() == type) return MirroredHumanCurve(c, i);
+            }
+            return null;
+        }
+
+        /// <summary>Puts the stored curves back as imported before they are edited: a clip that
+        /// has played mirrored holds its curves mirrored, and an edit names the imported ones
+        /// (what the curve queries show). The next use mirrors them again.</summary>
+        internal void RestoreImportedCurves()
+        {
+            if (!m_HumanMirrored) return;
+            MirrorHumanCurves();
+            m_HumanMirrored = false;
         }
 
         /// <summary>A humanoid body curve (RootT, RootQ): loop pose moves the body relative to the

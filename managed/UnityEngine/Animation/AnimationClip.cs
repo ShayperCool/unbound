@@ -374,6 +374,7 @@ namespace UnityEngine
             if (propertyName == null) throw new ArgumentNullException(nameof(propertyName));
             relativePath ??= "";
             var attribute = CurveBinding.NormalizeScriptName(type, propertyName);
+            RestoreImportedCurves();
             m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute == attribute && c.Binding.Matches(type));
             if (curve != null)
             {

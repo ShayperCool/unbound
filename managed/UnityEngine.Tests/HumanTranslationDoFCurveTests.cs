@@ -10,8 +10,8 @@ namespace UnityEngine.Tests
     /// <summary>
     /// Which translation DoF curves a Humanoid model clip has (6000.0.71f1 Editor,
     /// tests/projects/humanoid tdof.curves and tdof.playT): a curve stays only when one of its
-    /// keys reaches 1e-4 in magnitude, each of a bone's three curves on its own, and a curve that
-    /// is absent plays as zero. The Manual's Avatar Muscle and Settings page describes
+    /// keys reaches a minimum (between 9.2e-5 and 1.6e-4 by the reference; 1e-4 here), each of a
+    /// bone's three curves on its own, and a curve that is absent plays as zero. The Manual's Avatar Muscle and Settings page describes
     /// Translation DoF as enabling translation animations for the humanoid and does not mention
     /// a minimum.
     /// </summary>
@@ -31,6 +31,7 @@ namespace UnityEngine.Tests
         {
             Assert.False(HumanClipImport.KeepsTDoFCurve(new float[0]));
             Assert.False(HumanClipImport.KeepsTDoFCurve(new[] { 0f, 9.9e-5f, -9.9e-5f }));
+            // A key equal to the minimum counts (Unbound's choice inside the measured bracket).
             Assert.True(HumanClipImport.KeepsTDoFCurve(new[] { 0f, HumanClipImport.TDoFCurveMinimum, 0f }));
             Assert.True(HumanClipImport.KeepsTDoFCurve(new[] { 0f, 0f, -2e-4f }));
             // The largest absent and the smallest present curve of the probe's clip.
@@ -100,8 +101,9 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>The Editor's curve queries show a clip with the Mirror setting as imported
-        /// (tests/projects/humanoid tdof.curves, the clip named Mirror, after it has played): the
-        /// same names and values before and after the mirrored curves exist. Control: the curves
+        /// (tests/projects/humanoid tdof.curves, the clip named Mirror, after it has played;
+        /// before it has played the Editor is unmeasured): here the same names and values before
+        /// and after the mirrored curves exist. Control: the curves
         /// the clip plays have traded sides and signs by then.</summary>
         [Fact]
         public void AMirroredClipsCurvesAreQueriedAsImported()
@@ -130,6 +132,75 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Right Arm Down-Up", "Spine Left-Right", "RightUpperLegTDOF.x", "NeckTDOF.y" }, clip.m_Curves.Select(c => c.Binding.Attribute));
             Assert.Equal(new[] { 0.25f, -0.5f, -3e-4f, 2e-4f }, clip.m_Curves.Select(c => c.Curve[1].value));
             QueriesShowTheImportedCurves();
+        }
+
+        static AnimationClip MirroredArms(List<Object> created)
+        {
+            var clip = new AnimationClip { frameRate = 30f };
+            created.Add(clip);
+            foreach (var (name, value) in new[] { ("Left Arm Down-Up", 0.25f), ("Right Arm Down-Up", 0.75f) })
+                clip.m_Curves.Add(new ClipCurve
+                {
+                    Binding = new CurveBinding { Path = "", Attribute = name, ClassId = 95 },
+                    Curve = AnimationCurve.Linear(0f, 0f, 1f, value),
+                });
+            clip.m_Mirror = true;
+            clip.EnsureHumanCurves();
+            return clip;
+        }
+
+        static float Queried(AnimationClip clip, string name)
+        {
+            foreach (var b in UnityEditor.AnimationUtility.GetCurveBindings(clip))
+                if (b.propertyName == name) return UnityEditor.AnimationUtility.GetEditorCurve(clip, b)[1].value;
+            return float.NaN;
+        }
+
+        /// <summary>An edit of a clip that has played mirrored names the curves the queries
+        /// show: what is set is read back and the other curves stay, as when the clip is edited
+        /// before it plays. Unmeasured in the Editor; the rule keeps a query, an edit and the
+        /// next query consistent. Control: the stored curves were the mirrored ones before the
+        /// edit, so a write under the stored names would have replaced the other arm's curve.</summary>
+        [Fact]
+        public void AnEditOfAMirroredClipIsReadBack()
+        {
+            var clip = MirroredArms(m_Created);
+            Assert.Equal(new[] { "Right Arm Down-Up", "Left Arm Down-Up" }, clip.m_Curves.Select(c => c.Binding.Attribute));
+            Assert.Equal(new[] { 0.25f, 0.75f }, clip.m_Curves.Select(c => c.Curve[1].value));
+
+            var left = UnityEditor.AnimationUtility.GetCurveBindings(clip).Single(b => b.propertyName == "Left Arm Down-Up");
+            UnityEditor.AnimationUtility.SetEditorCurve(clip, left, AnimationCurve.Linear(0f, 0f, 1f, 0.5f));
+
+            Assert.Equal(2, UnityEditor.AnimationUtility.GetCurveBindings(clip).Length);
+            Assert.Equal(0.5f, Queried(clip, "Left Arm Down-Up"));
+            Assert.Equal(0.75f, Queried(clip, "Right Arm Down-Up"));
+
+            // The same edit before the clip plays gives the same curves.
+            var unplayed = new AnimationClip { frameRate = 30f };
+            m_Created.Add(unplayed);
+            foreach (var (name, value) in new[] { ("Left Arm Down-Up", 0.25f), ("Right Arm Down-Up", 0.75f) })
+                unplayed.m_Curves.Add(new ClipCurve
+                {
+                    Binding = new CurveBinding { Path = "", Attribute = name, ClassId = 95 },
+                    Curve = AnimationCurve.Linear(0f, 0f, 1f, value),
+                });
+            unplayed.m_Mirror = true;
+            left = UnityEditor.AnimationUtility.GetCurveBindings(unplayed).Single(b => b.propertyName == "Left Arm Down-Up");
+            UnityEditor.AnimationUtility.SetEditorCurve(unplayed, left, AnimationCurve.Linear(0f, 0f, 1f, 0.5f));
+            Assert.Equal(0.5f, Queried(unplayed, "Left Arm Down-Up"));
+            Assert.Equal(0.75f, Queried(unplayed, "Right Arm Down-Up"));
+        }
+
+        /// <summary>Removing a curve of a played mirrored clip removes the one the queries show
+        /// under that name.</summary>
+        [Fact]
+        public void ARemovalFromAMirroredClipTakesTheQueriedCurve()
+        {
+            var clip = MirroredArms(m_Created);
+            var left = UnityEditor.AnimationUtility.GetCurveBindings(clip).Single(b => b.propertyName == "Left Arm Down-Up");
+            UnityEditor.AnimationUtility.SetEditorCurve(clip, left, null);
+            Assert.Equal(new[] { "Right Arm Down-Up" }, UnityEditor.AnimationUtility.GetCurveBindings(clip).Select(b => b.propertyName));
+            Assert.Equal(0.75f, Queried(clip, "Right Arm Down-Up"));
         }
     }
 }

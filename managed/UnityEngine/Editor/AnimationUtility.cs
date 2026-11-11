@@ -98,7 +98,7 @@ namespace UnityEditor
 
         static ClipCurve Find(AnimationClip clip, EditorCurveBinding binding)
         {
-            return clip.CurvesAsImported().FirstOrDefault(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.ResolveType() == binding.type);
+            return clip.CurveAsImported(binding.path ?? "", binding.propertyName, binding.type);
         }
 
         /// <summary>A copy of the curve a binding names (by its serialized property name), else null.</summary>
@@ -115,6 +115,7 @@ namespace UnityEditor
         public static void SetEditorCurve(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
+            clip.RestoreImportedCurves();
             clip.m_Curves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.ResolveType() == binding.type);
             if (curve != null)
             {
