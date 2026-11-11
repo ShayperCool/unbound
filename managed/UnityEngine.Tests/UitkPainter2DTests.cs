@@ -566,6 +566,58 @@ namespace UnityEngine.Tests
             Assert.InRange(curve.Vertices[curve.Vertices.Length - 2].tint.r, 0, 1);
         }
 
+        // Arcs whose inner side reaches the centre (radius = half the width + the 2-unit margin)
+        // or passes it: the gradient advances by half a circle of the radius per vertex there, so
+        // it is used up within the first vertices and what follows has the end colour (Editor:
+        // gradient-arc-inner-at-centre, gradient-arc-inner-past-centre, gradient-arcto-small).
+        [Theory]
+        [InlineData(4f, 4f)]
+        [InlineData(3f, 4f)]
+        [InlineData(5f, 6f)]
+        public void SmallArcsUseTheGradientUpAndStayVisible(float radius, float width)
+        {
+            var s = Save(p =>
+            {
+                p.lineWidth = width; p.strokeGradient = TwoKeys(Black, White);
+                p.BeginPath(); p.Arc(new Vector2(20, 20), radius, 0, 180); p.LineTo(new Vector2(60, 40)); p.Stroke();
+            });
+            Assert.Equal(0, s.Vertices[0].tint.r);
+            foreach (var v in s.Vertices)
+            {
+                Assert.Equal(255, v.tint.a);
+                Assert.False(float.IsNaN(v.position.x) || float.IsNaN(v.position.y));
+            }
+            // The line after the arc is drawn in the end colour throughout.
+            Assert.Equal(240, s.Vertices[s.Vertices.Length - 1].tint.r);
+        }
+
+        // A curve piece whose ends coincide has no length, wherever it lies (Editor:
+        // gradient-curve-loop-at-origin): the curve keeps the start colour and the line after it
+        // runs through the whole gradient.
+        [Theory]
+        [InlineData(0f)]
+        [InlineData(10f)]
+        public void ACurveBackToItsStartHasNoLength(float at)
+        {
+            var s = Save(p =>
+            {
+                p.lineWidth = 4; p.strokeGradient = TwoKeys(Black, White);
+                p.BeginPath(); p.MoveTo(new Vector2(at, at));
+                p.BezierCurveTo(new Vector2(at + 60, at), new Vector2(at, at + 60), new Vector2(at, at));
+                p.LineTo(new Vector2(at + 40, at + 30)); p.Stroke();
+            });
+            byte max = 0;
+            foreach (var v in s.Vertices)
+            {
+                Assert.Equal(255, v.tint.a);
+                max = Math.Max(max, v.tint.r);
+            }
+            Assert.Equal(0, s.Vertices[0].tint.r);
+            Assert.Equal(240, max);
+            // Eight steps of 30 along the line: every eighth of the gradient is there.
+            for (int step = 1; step < 8; step++) Assert.Contains(s.Vertices, v => v.tint.r == 30 * step);
+        }
+
         [Fact]
         public void ALinearGradientIsShownInSrgb()
         {

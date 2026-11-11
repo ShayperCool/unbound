@@ -165,6 +165,21 @@ namespace Unbound.Tests
             Assert.Equal(GradientMode.Blend, g.mode);
         }
 
+        // Unity 6000.0.71f1, tests/projects/uitkpainter (gradient-roundtrip, gradient-clear-resets).
+        [Fact]
+        public void KeyTimesReadBackInSixteenBitStepsAndTheColourSpaceStartsUnset()
+        {
+            var g = new Gradient();
+            Assert.Equal(ColorSpace.Uninitialized, g.colorSpace);
+            g.SetKeys(new[] { new GradientColorKey(Color.red, 0.25f), new GradientColorKey(Color.blue, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.5f, 0.625f) });
+            Assert.Equal(16384f / 65535f, g.colorKeys[0].time);
+            Assert.Equal(1f, g.colorKeys[1].time);
+            Assert.Equal(40959f / 65535f, g.alphaKeys[1].time);
+            // The stored steps are what a time is looked up in: the colour at the key is the key's.
+            Assert.Equal(Color.red.r, g.Evaluate(0.25f).r);
+        }
+
         private static Gradient RedToBlue()
         {
             var g = new Gradient();

@@ -25,9 +25,6 @@ namespace Unbound.UIElements
     {
         // A key closer than this after a position does not count as the next key.
         const float KeyEpsilon = 0.001f;
-        // Gradient key times are kept in 16 bits.
-        const float KeySteps = 65535f;
-
         readonly Gradient m_Gradient;
         readonly float[] m_ColorTimes, m_AlphaTimes;
         readonly bool m_Linear;
@@ -39,12 +36,10 @@ namespace Unbound.UIElements
             var alphas = m_Gradient.alphaKeys;
             m_ColorTimes = new float[colors.Length];
             m_AlphaTimes = new float[alphas.Length];
-            for (int i = 0; i < colors.Length; i++) m_ColorTimes[i] = KeyTime(colors[i].time);
-            for (int i = 0; i < alphas.Length; i++) m_AlphaTimes[i] = KeyTime(alphas[i].time);
+            for (int i = 0; i < colors.Length; i++) m_ColorTimes[i] = colors[i].time;
+            for (int i = 0; i < alphas.Length; i++) m_AlphaTimes[i] = alphas[i].time;
             m_Linear = m_Gradient.colorSpace == ColorSpace.Linear;
         }
-
-        static float KeyTime(float time) => (float)(ushort)(Math.Min(1f, Math.Max(0f, time)) * KeySteps + 0.5f) / KeySteps;
 
         internal static Gradient Copy(Gradient source)
         {
@@ -246,11 +241,7 @@ namespace Unbound.UIElements
                     case UaPathKind.Bezier:
                         UaCurveSubdivision.Subdivide(new UaCubic(e.A, e.B, e.C, e.D), m_Pieces);
                         float length = 0f;
-                        foreach (var piece in m_Pieces)
-                        {
-                            if (piece.IsArc && piece.P0 == piece.P1) continue;
-                            length += PieceLength(piece);
-                        }
+                        foreach (var piece in m_Pieces) length += PieceLength(piece);
                         total += length;
                         break;
                 }
@@ -267,15 +258,24 @@ namespace Unbound.UIElements
 
         Color ColorAt(float t) => m_Gradient != null ? m_Gradient.ColorAt(t) : m_Style.StrokeColor;
 
-        /// <summary>The angle between two directions from a centre.</summary>
+        /// <summary>The angle between two directions from a centre. A direction without length
+        /// counts as opposite (a half turn): an arc whose inner side lies on its centre advances
+        /// the gradient by half a circle of its radius per vertex, as measured
+        /// (gradient-arc-inner-at-centre).</summary>
         static float AngleBetween(Vector2 a, Vector2 b)
         {
             float cos = (a.x * b.x + a.y * b.y) / (UaVector.Length(a) * UaVector.Length(b));
-            return MathF.Acos(cos <= -1f ? -1f : cos >= 1f ? 1f : cos);
+            return MathF.Acos(!(cos > -1f) ? -1f : cos >= 1f ? 1f : cos);
         }
 
-        static float PieceLength(in UaCurvePiece piece) =>
-            piece.IsArc ? AngleBetween(piece.P1 - piece.Center, piece.P0 - piece.Center) * piece.Radius : UaVector.Length(piece.P1 - piece.P0);
+        /// <summary>A curve piece's length: its chord, or its arc's radius times the angle between
+        /// its ends; an arc piece whose ends coincide has none.</summary>
+        static float PieceLength(in UaCurvePiece piece)
+        {
+            if (!piece.IsArc) return UaVector.Length(piece.P1 - piece.P0);
+            if (piece.P0 == piece.P1) return 0f;
+            return AngleBetween(piece.P1 - piece.Center, piece.P0 - piece.Center) * piece.Radius;
+        }
 
         /// <summary>Cuts a curve's pieces at the gradient keys within their share of the path, so
         /// each piece blends between two colours only. A piece is cut at most 16 times; each cut
@@ -287,13 +287,9 @@ namespace Unbound.UIElements
             for (int k = 0; k < m_Pieces.Count; k++)
             {
                 var piece = m_Pieces[k];
-                float t0 = MinPathLength < m_Total ? done / m_Total : 0f;
-                if (t0 >= 1f) t0 = 1f;
-                if (t0 <= 0f) t0 = 0f;
+                float t0 = Progress(done);
                 done += PieceLength(piece);
-                float t1 = MinPathLength < m_Total ? done / m_Total : 0f;
-                if (t1 >= 1f) t1 = 1f;
-                if (t1 <= 0f) t1 = 0f;
+                float t1 = Progress(done);
                 float key = m_Gradient.NextKey(t0);
                 float end = t1 - ProgressEpsilon;
                 for (int cuts = 0; key < end && cuts < MaxSections; cuts++)
