@@ -267,7 +267,7 @@ namespace UnityEngine
         }
 
         /// <summary>Converts a Humanoid model's transform curves into muscle curves (once).</summary>
-        void ConvertHumanCurves()
+        internal void ConvertHumanCurves()
         {
             if (m_HumanConverted || m_HumanAvatar == null) return;
             m_HumanConverted = true;
@@ -336,17 +336,23 @@ namespace UnityEngine
                 }
             }, settings);
             m_Curves = kept;
+            var keptKeys = m_HumanKeyReduction > 0f ? new List<int>() : null;
             for (int i = 0; i < HumanClipImport.CurveCount; i++)
             {
                 var values = curvesOut.Values[i];
                 if (values == null) continue;
                 var slopes = curvesOut.Slopes[i];
-                var keys = new Keyframe[values.Length];
+                // A reducing animation compression drops the keys the curve does without.
+                bool flat = keptKeys != null
+                    && HumanClipReduction.Reduce(curvesOut.Times, values, slopes, 1f / m_SampleRate, m_HumanKeyReduction, keptKeys);
+                var keys = new Keyframe[keptKeys?.Count ?? values.Length];
                 // Unweighted keys with the default 1/3 weights, as imported muscle keys report them
                 // (tests/projects/humanfirstpose); they evaluate as plain Hermite segments.
                 for (int k = 0; k < keys.Length; k++)
                 {
-                    keys[k] = new Keyframe(curvesOut.Times[k], values[k], slopes[k], slopes[k], 1f / 3f, 1f / 3f);
+                    int source = keptKeys != null ? keptKeys[k] : k;
+                    float slope = flat ? 0f : slopes[source];
+                    keys[k] = new Keyframe(curvesOut.Times[source], values[source], slope, slope, 1f / 3f, 1f / 3f);
                     keys[k].weightedMode = WeightedMode.None;
                 }
                 m_Curves.Add(new ClipCurve

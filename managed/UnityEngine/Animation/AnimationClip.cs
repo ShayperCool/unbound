@@ -73,6 +73,10 @@ namespace UnityEngine
         internal List<ClipObjectCurve> m_ObjectCurves = new List<ClipObjectCurve>();
         internal List<AnimationEvent> m_Events = new List<AnimationEvent>();
         internal float m_SampleRate = 60f;
+        /// <summary>A Humanoid model clip under a reducing animation compression: the error (a
+        /// fraction) its converted curves are reduced with (<see cref="Unbound.Runtime.Humanoid.HumanClipReduction"/>);
+        /// 0: the keys stay on every frame.</summary>
+        internal float m_HumanKeyReduction;
         internal WrapMode m_WrapMode;
         internal Bounds m_Bounds;
         internal bool m_Legacy;
@@ -557,6 +561,7 @@ namespace UnityEngine
                 m_Curves = new List<ClipCurve>(m_Curves),
                 m_ObjectCurves = new List<ClipObjectCurve>(m_ObjectCurves),
                 m_SampleRate = m_SampleRate,
+                m_HumanKeyReduction = m_HumanKeyReduction,
                 m_WrapMode = m_WrapMode,
                 m_Bounds = m_Bounds,
                 m_Legacy = m_Legacy,
@@ -930,6 +935,7 @@ namespace Unbound.Runtime
         {
             clip.m_Legacy = body.Bool("m_Legacy");
             clip.m_SampleRate = body.Float("m_SampleRate", 60f);
+            clip.m_HumanKeyReduction = body.Float("m_UnboundHumanKeyReduction", 0f);
             clip.m_WrapMode = (WrapMode)body.Int("m_WrapMode");
             var bounds = body.Get("m_Bounds");
             if (bounds != null) clip.m_Bounds = new Bounds(bounds.Vector3("m_Center"), bounds.Vector3("m_Extent") * 2f);
