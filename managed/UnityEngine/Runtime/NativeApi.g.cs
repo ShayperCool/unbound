@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 51;
+        internal const uint CurrentVersion = 52;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -161,5 +161,10 @@ namespace Unbound.Runtime
         /// realtime lightmap UVs (`realtime_gi::realtime_uvs`); 0 on success.
         /// </summary>
         internal delegate* unmanaged<ulong, int, int, float*, float*, int, uint*, int, float, int, float*, NativeBuffer*, int> GiRealtimeUvs;
+        /// <summary>
+        /// (scene, atlas, out RGBA8 texels, capacity in bytes): the atlas's directionality texels
+        /// written (0 while the scene's lightmaps are not directional), or -1.
+        /// </summary>
+        internal delegate* unmanaged<ulong, int, byte*, int, int> GiReadDirectionality;
     }
 }

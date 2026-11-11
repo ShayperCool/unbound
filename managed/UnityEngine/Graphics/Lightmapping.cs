@@ -232,6 +232,7 @@ namespace UnityEngine
         static readonly int s_LightmapST = Shader.PropertyToID("unity_LightmapST");
         static readonly int s_DynamicLightmap = Shader.PropertyToID("unity_DynamicLightmap");
         static readonly int s_DynamicLightmapST = Shader.PropertyToID("unity_DynamicLightmapST");
+        static readonly int s_DynamicDirectionality = Shader.PropertyToID("unity_DynamicDirectionality");
         static readonly int[] s_ShIds =
         {
             Shader.PropertyToID("unity_SHAr"), Shader.PropertyToID("unity_SHAg"), Shader.PropertyToID("unity_SHAb"),
@@ -252,13 +253,22 @@ namespace UnityEngine
             if (renderer == null) return properties;
             // Precomputed realtime GI's lightmap (unity_DynamicLightmap with the renderer's realtime
             // scale and offset, DYNAMICLIGHTMAP_ON); a renderer with one takes no light probes.
+            // With directional lightmaps its directionality too (unity_DynamicDirectionality,
+            // DIRLIGHTMAP_COMBINED).
             bool realtime = lightmaps && renderer.m_RealtimeLightmap != null && IsLightmapIndex(renderer.realtimeLightmapIndex);
+            bool directional = LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional;
+            bool realtimeDirectional = realtime && directional && renderer.m_RealtimeDirectionality != null;
             if (realtime)
             {
                 properties = DrawPropertyPool.Copy(properties);
                 properties[s_DynamicLightmap] = renderer.m_RealtimeLightmap;
                 properties[s_DynamicLightmapST] = renderer.realtimeLightmapScaleOffset;
                 keywords.Add("DYNAMICLIGHTMAP_ON");
+                if (realtimeDirectional)
+                {
+                    properties[s_DynamicDirectionality] = renderer.m_RealtimeDirectionality;
+                    keywords.Add("DIRLIGHTMAP_COMBINED");
+                }
             }
             var map = lightmaps ? LightmapSettings.Of(renderer.lightmapIndex) : null;
             // Terrain selects the lightmapped variant from its index, even for a missing
@@ -272,10 +282,10 @@ namespace UnityEngine
                 properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.Gray);
                 properties[s_LightmapST] = renderer.lightmapScaleOffset;
                 keywords.Add("LIGHTMAP_ON");
-                if ((map?.m_Dir != null || terrainLightmapped) && LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
+                if ((map?.m_Dir != null || terrainLightmapped) && directional)
                 {
                     properties[s_LightmapInd] = map?.m_Dir ?? DefaultTextures.Black;
-                    keywords.Add("DIRLIGHTMAP_COMBINED");
+                    if (!realtimeDirectional) keywords.Add("DIRLIGHTMAP_COMBINED");
                 }
                 if (map?.m_ShadowMask != null)
                 {

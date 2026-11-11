@@ -174,6 +174,8 @@ namespace UnityEngine
         /// <summary>The realtime lightmap atlas precomputed realtime GI updates for this renderer
         /// (<see cref="RealtimeGI"/>), null without one.</summary>
         internal Texture2D m_RealtimeLightmap;
+        /// <summary>That atlas's directionality, once a directional scene's update made it.</summary>
+        internal Texture2D m_RealtimeDirectionality;
         public Vector4 realtimeLightmapScaleOffset
         {
             get { MainThreadCheck.Check("GetLightmapST"); return m_RealtimeLightmapScaleOffset; }

@@ -465,6 +465,67 @@ LightingSettings:
             }
         }
 
+        /// <summary>With directional lightmaps a renderer whose realtime lightmap has a
+        /// directionality draws with it too: unity_DynamicDirectionality and
+        /// DIRLIGHTMAP_COMBINED, once whichever lightmaps it has. In the non-directional mode,
+        /// or before the directionality exists, it draws as without one.</summary>
+        [Fact]
+        public void DirectionalRealtimeLightmapsBindTheirDirectionality()
+        {
+            var previous = LightmapSettings.lightmaps;
+            var mode = LightmapSettings.lightmapsMode;
+            var go = new GameObject("Directional");
+            var atlas = new Texture2D(8, 8, TextureFormat.RGBAHalf, false, true);
+            var directionality = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+            var bakedDirection = new Texture2D(4, 4, TextureFormat.RGBA32, false, true);
+            int id = Shader.PropertyToID("unity_DynamicDirectionality");
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.m_RealtimeLightmap = atlas;
+                renderer.realtimeLightmapIndex = 0;
+                var keywords = new List<string>();
+
+                LightmapSettings.lightmapsMode = LightmapsMode.CombinedDirectional;
+                var properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
+                Assert.False(properties.ContainsKey(id));
+
+                renderer.m_RealtimeDirectionality = directionality;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON", "DIRLIGHTMAP_COMBINED" }, keywords);
+                Assert.Same(directionality, properties[id]);
+
+                LightmapSettings.lightmaps = new[] { new LightmapData
+                {
+                    lightmapColor = new Texture2D(4, 4, TextureFormat.RGBAHalf, false),
+                    lightmapDir = bakedDirection,
+                } };
+                renderer.lightmapIndex = 0;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON", "DIRLIGHTMAP_COMBINED", "LIGHTMAP_ON" }, keywords);
+                Assert.Same(directionality, properties[id]);
+                Assert.Same(bakedDirection, properties[Shader.PropertyToID("unity_LightmapInd")]);
+
+                LightmapSettings.lightmapsMode = LightmapsMode.NonDirectional;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON", "LIGHTMAP_ON" }, keywords);
+                Assert.False(properties.ContainsKey(id));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(atlas);
+                UnityEngine.Object.DestroyImmediate(directionality);
+                UnityEngine.Object.DestroyImmediate(bakedDirection);
+                LightmapSettings.lightmaps = previous;
+                LightmapSettings.lightmapsMode = mode;
+            }
+        }
+
         [Fact]
         public void TheDoctorChecksSettingsTogetherWithSceneLightingData()
         {

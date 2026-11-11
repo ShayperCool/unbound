@@ -30,6 +30,8 @@ namespace Unbound.Runtime
         internal int Synchronous;
         internal float BudgetMs;
         internal float UpdateThreshold;
+        /// <summary>LightmapsMode.CombinedDirectional: the systems solve their directionality.</summary>
+        internal int Directional;
     }
 }
 
@@ -43,7 +45,8 @@ namespace UnityEngine
     /// each system's albedo and emission textures (at load, after
     /// <see cref="RendererExtensions.UpdateGIMaterials"/>), passes the frame's inputs in
     /// PostLateUpdate.EnlightenRuntimeUpdate and uploads the atlases renderers draw with
-    /// (unity_DynamicLightmap, <see cref="BakedLighting.Apply"/>).
+    /// (unity_DynamicLightmap and, for directional lightmaps, unity_DynamicDirectionality,
+    /// <see cref="BakedLighting.Apply"/>).
     /// </summary>
     internal static partial class RealtimeGI
     {
@@ -76,6 +79,8 @@ namespace UnityEngine
             internal ulong Handle;
             internal GISystem[] Systems;
             internal Texture2D[] Atlases;
+            /// <summary>Per atlas, its directionality; made when the lightmaps are directional.</summary>
+            internal Texture2D[] Directionality;
             internal float AlbedoBoost = 1f;
             internal bool Converged, Failed;
             /// <summary>The scene's own light probes its probe sets light, and the probes'
@@ -92,6 +97,7 @@ namespace UnityEngine
         static GiLight[] s_Lights = new GiLight[8];
         static readonly List<Renderer> s_Released = new List<Renderer>();
         static ushort[] s_Texels = Array.Empty<ushort>();
+        static byte[] s_Directions = Array.Empty<byte>();
         internal static readonly HashSet<string> s_Warned = new HashSet<string>(StringComparer.Ordinal);
         static bool s_Registered;
         /// <summary>Mixed lights are lit as realtime ones when the first scene bakes no global
@@ -159,6 +165,7 @@ namespace UnityEngine
                 });
             }
             loaded.Atlases = sizes.ToArray();
+            loaded.Directionality = new Texture2D[sizes.Count];
             var systems = new List<GISystem>();
             foreach (var s in root.GetProperty("systems").EnumerateArray())
             {
@@ -201,8 +208,6 @@ namespace UnityEngine
             s_Scenes.Add(loaded);
             if (settings != null && !settings.realtimeEnvironmentLighting)
                 Warn("environment-baked:" + file.Path, $"{file.Path}: its environment lighting is baked (Lighting Settings); what precomputed realtime GI takes as its environment then is not measured: it takes the ambient source all the same.");
-            if (LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
-                Warn("directional:" + file.Path, $"{file.Path}: directional realtime lightmaps are not supported yet: its precomputed realtime GI is drawn without directionality.");
             BindProbes(loaded, root.GetProperty("probes"), file);
             if (!s_Registered)
             {
@@ -233,6 +238,8 @@ namespace UnityEngine
                 if (pair.Value.Scene == scene) s_Released.Add(pair.Key);
             foreach (var renderer in s_Released) s_Renderers.Remove(renderer);
             foreach (var atlas in scene.Atlases) Object.DestroyImmediate(atlas);
+            foreach (var directionality in scene.Directionality)
+                if (directionality != null) Object.DestroyImmediate(directionality);
             if (Native.IsReady) Native.Call("realtime-gi-release", JsonSerializer.Serialize(new { handle = scene.Handle }));
         }
 
@@ -284,6 +291,7 @@ namespace UnityEngine
                     if (renderer != null)
                     {
                         renderer.m_RealtimeLightmap = null;
+                        renderer.m_RealtimeDirectionality = null;
                         if (renderer is MeshRenderer mesh) mesh.enlightenVertexStream = null;
                     }
                 DestroyStreams(system);
@@ -335,6 +343,7 @@ namespace UnityEngine
                 Synchronous = Synchronous ? 1 : 0,
                 BudgetMs = FrameBudgetMs,
                 UpdateThreshold = DynamicGI.updateThreshold,
+                Directional = LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional ? 1 : 0,
             };
             UpdateEnvironment();
             foreach (var scene in s_Scenes)
@@ -369,7 +378,7 @@ namespace UnityEngine
                     continue;
                 }
                 scene.Converged = (result & UpdateConverged) != 0;
-                if ((result & UpdateChanged) != 0) Upload(scene);
+                if ((result & UpdateChanged) != 0) Upload(scene, frame.Directional != 0);
                 if ((result & UpdateProbes) != 0) UploadProbes(scene);
             }
         }
@@ -475,7 +484,7 @@ namespace UnityEngine
                 Warn("probes-not-current", "light probes of a scene loaded beside others are lit by its precomputed realtime GI but are not the current light probes, which keep their own lighting (unmeasured).");
         }
 
-        static unsafe void Upload(GIScene scene)
+        static unsafe void Upload(GIScene scene, bool directional)
         {
             for (int a = 0; a < scene.Atlases.Length; a++)
             {
@@ -488,7 +497,40 @@ namespace UnityEngine
                 if (written < 0) continue;
                 atlas.SetPixelData(s_Texels, 0);
                 atlas.Apply(false);
+                if (directional) UploadDirectionality(scene, a, values);
             }
+        }
+
+        /// <summary>An atlas's directionality (unity_DynamicDirectionality): made with the first
+        /// update of a directional scene and given to the renderers of the atlas's systems, which
+        /// then draw with it while the lightmaps mode is directional.</summary>
+        static unsafe void UploadDirectionality(GIScene scene, int index, int bytes)
+        {
+            if (s_Directions.Length < bytes) s_Directions = new byte[bytes];
+            int written;
+            fixed (byte* texels = s_Directions)
+                written = Native.Api.GiReadDirectionality(scene.Handle, index, texels, bytes);
+            if (written <= 0) return;
+            var texture = scene.Directionality[index];
+            if (texture == null)
+            {
+                var atlas = scene.Atlases[index];
+                texture = scene.Directionality[index] = new Texture2D(atlas.width, atlas.height, TextureFormat.RGBA32, false, true)
+                {
+                    name = "Realtime Directionality",
+                    hideFlags = HideFlags.HideAndDontSave,
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp,
+                };
+                foreach (var system in scene.Systems)
+                {
+                    if (system.Atlas != index || system.Failed) continue;
+                    foreach (var renderer in system.Renderers)
+                        if (renderer != null) renderer.m_RealtimeDirectionality = texture;
+                }
+            }
+            texture.SetPixelData(s_Directions, 0);
+            texture.Apply(false);
         }
 
         /// <summary>The built-in Lightmap Parameters asset scenes use by default ("Default-Medium",

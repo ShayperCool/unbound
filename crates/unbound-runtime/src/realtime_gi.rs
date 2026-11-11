@@ -43,6 +43,9 @@ pub struct GiFrame {
     pub budget_ms: f32,
     /// DynamicGI.updateThreshold, in percent.
     pub update_threshold: f32,
+    /// The lightmaps are directional (LightmapsMode.CombinedDirectional): the systems solve
+    /// their directionality too ([`read_directionality`]).
+    pub directional: i32,
 }
 
 /// `update`'s result bits.
@@ -55,6 +58,9 @@ struct Atlas {
     size: u32,
     /// RGB9E5, row-major from v = 0.
     texels: Vec<u32>,
+    /// The directionality of a directional lightmap (RGBA8, as the texels; empty until the
+    /// scene is directional).
+    directionality: Vec<[u8; 4]>,
 }
 
 struct Scene {
@@ -246,6 +252,7 @@ fn register(
         .map(|&size| Atlas {
             size,
             texels: vec![0; size as usize * size as usize],
+            directionality: Vec::new(),
         })
         .collect();
     let handle = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -410,7 +417,21 @@ impl Scene {
                 system.set_update_threshold(frame.update_threshold);
             }
         }
-        if lights_changed || threshold_changed || scale_changed {
+        // Directional lightmaps: every system solves its directionality from its next update
+        // on (and stops when the mode is left, keeping the atlases' last texels).
+        let directional = frame.directional != 0;
+        let directional_changed = last.is_none_or(|l| (l.directional != 0) != directional);
+        if directional_changed {
+            for system in &mut self.systems {
+                system.set_directional(directional);
+            }
+            if directional {
+                for atlas in &mut self.atlases {
+                    atlas.directionality.resize(atlas.texels.len(), [0; 4]);
+                }
+            }
+        }
+        if lights_changed || threshold_changed || scale_changed || directional_changed {
             self.restart();
         }
         Ok(())
@@ -438,7 +459,9 @@ impl Scene {
             let system = &self.systems[index];
             let atlas = &mut self.atlases[system.system().atlas];
             let drawn = copy_into(system, atlas);
-            self.changed |= drawn;
+            // The directionality changes only with solved segments; convergence is the drawn
+            // light's, which the bounce reads.
+            self.changed |= drawn | copy_directionality(system, atlas);
             self.stable = if drawn { 0 } else { self.stable + 1 };
             done += 1;
         }
@@ -487,6 +510,27 @@ fn copy_into(system: &SystemSolver, atlas: &mut Atlas) -> bool {
     changed
 }
 
+/// Copies a directional system's directionality into its atlas; whether any texel changed.
+fn copy_directionality(system: &SystemSolver, atlas: &mut Atlas) -> bool {
+    let Some(texels) = system.directionality() else {
+        return false;
+    };
+    let s = system.system();
+    let (width, height) = (s.transport.width as usize, s.transport.height as usize);
+    let (ox, oy) = (s.atlas_offset.0 as usize, s.atlas_offset.1 as usize);
+    let size = atlas.size as usize;
+    let mut changed = false;
+    for y in 0..height {
+        let row = &texels[y * width..(y + 1) * width];
+        let target = &mut atlas.directionality[(oy + y) * size + ox..][..width];
+        if target != row {
+            target.copy_from_slice(row);
+            changed = true;
+        }
+    }
+    changed
+}
+
 /// One frame: the inputs, then the updates the budget allows. Returns `UPDATE_*` bits.
 pub fn update(handle: u64, frame: &GiFrame, lights: &[GiLight]) -> Result<i32> {
     with_scene(handle, |scene| {
@@ -519,6 +563,29 @@ pub fn read_atlas(handle: u64, atlas: usize, out: &mut [u16]) -> Result<usize> {
             out[3] = one;
         }
         Ok(atlas.texels.len())
+    })
+}
+
+/// Atlas `atlas`'s directionality as RGBA8 (`unity_DynamicDirectionality`), `size * size` texels
+/// row-major from v = 0, into `out`; returns the number of texels written: 0 while the scene is
+/// not directional.
+pub fn read_directionality(handle: u64, atlas: usize, out: &mut [u8]) -> Result<usize> {
+    with_scene(handle, |scene| {
+        let atlas = scene
+            .atlases
+            .get(atlas)
+            .with_context(|| format!("no atlas {atlas}"))?;
+        let texels = &atlas.directionality;
+        ensure!(
+            out.len() >= 4 * texels.len(),
+            "{} bytes for {} texels",
+            out.len(),
+            texels.len()
+        );
+        for (texel, out) in texels.iter().zip(out.chunks_exact_mut(4)) {
+            out.copy_from_slice(texel);
+        }
+        Ok(texels.len())
     })
 }
 
@@ -727,6 +794,7 @@ mod tests {
             synchronous: 1,
             budget_ms: 2.0,
             update_threshold: 1.0,
+            directional: 0,
         };
         let lights = [point([0.0, 2.0, 0.0])];
         let mut frames = 0;
@@ -833,6 +901,7 @@ mod tests {
             // Every part solved until the output stops changing: the probes then scale with the
             // indirect scale (RGB9E5 rounding aside).
             update_threshold: 0.0,
+            directional: 0,
         };
         let lights = [point([0.0, 2.0, 0.0])];
         let converge = |frame: &GiFrame| {
@@ -899,6 +968,7 @@ mod tests {
             synchronous: 1,
             budget_ms: 2.0,
             update_threshold: 0.0,
+            directional: 0,
         };
         let lights = [point([0.0, 2.0, 0.0])];
         for _ in 0..3 {
@@ -916,6 +986,69 @@ mod tests {
             Ok(())
         })
         .unwrap();
+        release(handle);
+    }
+
+    #[test]
+    fn a_directional_scene_fills_its_directionality_atlas() {
+        let handle = register(room(), true, &[]).unwrap()["handle"]
+            .as_u64()
+            .unwrap();
+        set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
+        let mut frame = GiFrame {
+            indirect_scale: 1.0,
+            synchronous: 1,
+            budget_ms: 2.0,
+            update_threshold: 1.0,
+            directional: 0,
+        };
+        let lights = [point([0.0, 2.0, 0.0])];
+        let converge = |frame: &GiFrame| {
+            for _ in 0..1000 {
+                if update(handle, frame, &lights).unwrap() & UPDATE_CONVERGED != 0 {
+                    return;
+                }
+            }
+            panic!("no convergence");
+        };
+        // Not directional: nothing to read.
+        converge(&frame);
+        let mut texels = vec![0u8; 4 * 64 * 64];
+        assert_eq!(read_directionality(handle, 0, &mut texels).unwrap(), 0);
+        // Directional from a converged state: the update starts again (every part of the
+        // lightmap is solved once more, for its directionality) and changes the atlases.
+        frame.directional = 1;
+        let first = update(handle, &frame, &lights).unwrap();
+        assert_eq!(first & UPDATE_CHANGED, UPDATE_CHANGED);
+        converge(&frame);
+        assert_eq!(
+            read_directionality(handle, 0, &mut texels).unwrap(),
+            64 * 64
+        );
+        // The room's sides are lit from its inside: the floor from above (the direction's y well
+        // above 1/2), the ceiling from below, the walls from their sides, each with a fourth
+        // channel (the half Lambert term of the direction with the side's normal) well above
+        // its least.
+        let lit: Vec<&[u8]> = texels.chunks_exact(4).filter(|t| t[3] != 0).collect();
+        assert!(lit.len() > 2000, "{} texels", lit.len());
+        assert!(lit.iter().all(|t| t[3] >= 127));
+        let facing = |f: fn(&[u8]) -> bool| lit.iter().filter(|t| t[3] > 180 && f(t)).count();
+        assert!(facing(|t| t[1] > 180) > 150, "the floor");
+        assert!(facing(|t| t[1] < 75) > 150, "the ceiling");
+        assert!(
+            facing(|t| t[0] > 180 || t[0] < 75 || t[2] > 180 || t[2] < 75) > 400,
+            "the walls"
+        );
+        // A capacity below the atlas fails; back in the other mode the atlas keeps its texels.
+        assert!(read_directionality(handle, 0, &mut texels[..16]).is_err());
+        frame.directional = 0;
+        update(handle, &frame, &lights).unwrap();
+        let before = texels.clone();
+        assert_eq!(
+            read_directionality(handle, 0, &mut texels).unwrap(),
+            64 * 64
+        );
+        assert_eq!(before, texels);
         release(handle);
     }
 

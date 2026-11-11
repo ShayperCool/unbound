@@ -57,7 +57,8 @@ use std::ffi::c_void;
 /// 49: `gi_read_probes`, light probes lit by precomputed realtime GI.
 /// 50: the `ScreenStandIn` render command (opcode 35).
 /// 51: `gi_set_environment`; `GiFrame` without its flat environment color.
-pub const NATIVE_API_VERSION: u32 = 51;
+/// 52: `GiFrame.directional` and `gi_read_directionality` (directional realtime lightmaps).
+pub const NATIVE_API_VERSION: u32 = 52;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -247,6 +248,10 @@ pub struct NativeApi {
         *mut f32,
         *mut NativeBuffer,
     ) -> i32,
+    // Version 52: directional realtime lightmaps.
+    /// (scene, atlas, out RGBA8 texels, capacity in bytes): the atlas's directionality texels
+    /// written (0 while the scene's lightmaps are not directional), or -1.
+    pub gi_read_directionality: extern "C" fn(u64, i32, *mut u8, i32) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -300,6 +305,7 @@ pub fn api() -> NativeApi {
         gi_set_emissive,
         gi_set_environment,
         gi_realtime_uvs,
+        gi_read_directionality,
     }
 }
 
@@ -357,6 +363,16 @@ extern "C" fn gi_read_atlas(scene: u64, atlas: i32, out: *mut u16, capacity: i32
     let out = unsafe { std::slice::from_raw_parts_mut(out, capacity as usize) };
     reported(std::ptr::null_mut(), || {
         Ok(crate::realtime_gi::read_atlas(scene, atlas as usize, out)? as i32)
+    })
+}
+
+extern "C" fn gi_read_directionality(scene: u64, atlas: i32, out: *mut u8, capacity: i32) -> i32 {
+    if out.is_null() || capacity <= 0 || atlas < 0 {
+        return -1;
+    }
+    let out = unsafe { std::slice::from_raw_parts_mut(out, capacity as usize) };
+    reported(std::ptr::null_mut(), || {
+        Ok(crate::realtime_gi::read_directionality(scene, atlas as usize, out)? as i32)
     })
 }
 
