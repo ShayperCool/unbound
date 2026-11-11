@@ -851,14 +851,13 @@ namespace Unbound.UIElements
         // and "Tab", attribute `icon-image` of type Object: "The Texture, Sprite, or VectorImage that
         // will represent an icon within a Button element" / "Sets the icon for the Tab's header";
         // Background.FromTexture2D, FromRenderTexture, FromSprite and FromVectorImage). Measured (Unity
-        // 6000.0.71f1, tests/projects/uxmlattributes, on Button and a Button subclass with a preset
-        // icon): the url names an object as an Object member's does (project url, path or relative;
+        // 6000.0.71f1, tests/projects/uxmlattributes, on Button, Tab and subclasses of both with a
+        // preset icon): the url names an object as an Object member's does (project url, path or relative;
         // a texture file's main asset is its texture, a fileID picks its sprite), and the property is
         // always replaced by the Background made from it: an empty or unresolved url logs the
         // importer's warnings and clears the icon, an object no Background can show (a style sheet, a
-        // UXML document) clears it silently. Unbound's choices: other texture types (Cubemap, ...)
-        // follow the same rule (cleared silently); a file the asset database cannot load logs ONE
-        // error and keeps the value.
+        // UXML document, a Cubemap) clears it silently. Unbound's choice: a file the asset database
+        // cannot load logs ONE error and keeps the value.
         static void ApplyImageAttribute(VisualElement element, PropertyInfo property, string name, string value, VisualTreeAsset asset, UxmlNode node)
         {
             if (!TryReadObjectReference(element, name, value, typeof(Object), property.Name, asset, node, out var referenced)) return;

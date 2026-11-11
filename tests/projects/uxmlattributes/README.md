@@ -14,6 +14,11 @@ control with only the legacy UxmlFactory/UxmlTraits, one with both, a control wi
 Font members, Button `icon-image` and ListView/TreeView `item-template`, and preset controls (a
 Button with an icon, a ListView with a template, Background and Texture2D members with initial
 values, and a List<Background> member) that tell a kept value from a cleared one.
+
+A second document, `Assets/Resources/UxmlIconsProbe.uxml` (keys under `icons/`, with its own log
+line), holds Tab `icon-image` in every reference form, Cubemap and RenderTexture icons on Button
+and Tab (also over a preset icon), Background arrays, and Texture2D and Sprite arrays and a
+Texture2D list with items by project url, by path, missing, of another type and mixed.
 Values: valid ones, project urls with guid and fileID, absolute, relative and guid-less paths,
 references to another sub-asset or another type, missing assets, empty values, malformed numbers,
 booleans, enums, colours (short hex, names, rgb()), vectors and list items, unknown types.
