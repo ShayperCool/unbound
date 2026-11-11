@@ -10,7 +10,9 @@ implements it. Status: the engine draws precomputed realtime GI for scenes whose
 Preserve UVs, lit by point, spot and directional lights and the environment (an ambient color, a
 gradient, the skybox or a cube a script sets), non-directional or directional (with its
 [directionality](#directionality)), in the built-in
-pipeline (URP binds the same inputs; unmeasured there). For tests/projects/realtimegi every
+pipeline and, for its lights and environment, under a render pipeline that gives realtime GI its
+lights (the Universal Render Pipeline: [Lights of a render pipeline](#lights-of-a-render-pipeline);
+frames drawn by a pipeline's own shaders are not compared). For tests/projects/realtimegi every
 renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
 cases match within the comparator's tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
@@ -18,7 +20,7 @@ light types other than point, spot and directional (the scene's realtime GI is t
 renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
 systems that reference another scene's systems, gamma-space
-projects and linear light intensity.
+projects and linear light intensity in the built-in pipeline.
 
 ## Documented contract (6000.0)
 
@@ -122,6 +124,49 @@ after the brighter `room-bounce` case the Editor's texels are 2.00 to 2.07 times
 the two). The update is converged (`DynamicGI.isConverged`) once an update of every system
 leaves its drawn texels unchanged: the bounce reads them, so nothing changes until the inputs
 do.
+
+## Lights of a render pipeline
+
+A scriptable render pipeline decides what its lights give global illumination: it registers a
+delegate (`UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate`; Unity 6000.0
+Scripting API) that turns each `Light` into a `LightDataGI` with the helpers of
+`LightmapperUtils`. The Universal Render Pipeline's gives every light the inverse-squared
+falloff (`FalloffType.InverseSquared`), a spot light its own `Light.innerSpotAngle`, and, with
+the linear light intensity the pipeline sets, colors scaled after their conversion to linear.
+Unbound implements that API (`Graphics/GlobalIlluminationLights.cs`) and, when a delegate is
+registered, takes the frame's lights from it: the indirect color (the color times intensity and
+bounce intensity), position, orientation, range, cone angles and falloff type of each; a light
+the delegate gives no indirect light, or none at all (`InitNoBake`), adds nothing. Compared
+with the Editor under the Universal Render Pipeline (tests/projects/realtimegi `run.py
+--pipeline urp`, its own reference set `Reference/unity-<version>/urp`: the Room with a point
+light moved, brighter, of a shorter range and with bounce intensity 3, the spot light with its
+own and a narrow inner angle, a directional light, an ambient color, and a skybox at ambient
+intensities 1 and 2; lightmaps, light probes and `RenderSettings.ambientProbe`, no frames):
+
+- **Distance falloff**: the table of step 1 above holds the light's own falloff: the
+  inverse-squared one is `(1 - x^4)^2 / max(distance^2, 1e-4)` over x = distance / range at the
+  13 sampled positions (so it depends on the range) and 0 from the range on
+  (`pipeline-range`: a range the far walls are beyond). At the light itself the table ends at 1,
+  below its innermost sample (196 / range^2 at a fourteenth of the range), so a point nearer
+  than that gets less light than the curve gives: Unbound's table as for the legacy falloff,
+  not captured (no surface of the probe's room is that near a light).
+  `InverseSquaredNoRangeAttenuation` has no window (implemented from the same rule, not
+  captured); `Linear` and `Undefined` fail the scene's realtime GI loudly.
+- **Spot lights**: the cone of step 1 with the inner angle the delegate gives
+  (`pipeline-spot`, `pipeline-spot-inner`); the built-in pipeline's inner angle is the one
+  `LightmapperUtils.ExtractInnerCone` computes.
+- **Environment**: as in the built-in pipeline, the skybox included (`pipeline-sky`,
+  `pipeline-sky-intensity`): the sky is drawn into the faces, and into the ambient probe, by
+  the engine itself and not by the pipeline's camera (`RenderSettings.ambientProbe` after
+  `DynamicGI.UpdateEnvironment` equals the built-in pipeline's).
+
+With these the engine's lightmaps differ from the Editor's by 0.001 on average in the light
+cases (one value of one case outside the comparator's tolerance) and 0.0007 to 0.0035 in the
+sky cases, and no light probe or ambient probe value is outside it. Not measured: other
+pipelines' delegates (the High Definition Render Pipeline's), the other falloff types, area
+lights (baked only in the Universal Render Pipeline), directional lightmaps and several systems
+under a pipeline, and a delegate a script registers in the built-in pipeline (Unbound takes its
+lights the same way).
 
 ## Directionality
 
@@ -307,9 +352,7 @@ every loaded scene is such a one it does not make the ambient source's faces at 
 measured: a cube set in another scene before such a scene loads (Unbound: a scene loaded alone
 starts without it; one loaded beside others takes a cube still kept).
 
-Not measured: a skybox under a scriptable render pipeline (it
-adds no realtime GI light there, with a warning: the capture is the built-in pipeline's; colors,
-gradients and a script's cube work), sky materials other than the procedural one
+Not measured: sky materials other than the procedural one
 (they are drawn by the same capture), and gamma-space projects.
 
 Unbound (`Graphics/RealtimeGIEnvironment.cs`) keeps the cube and what it was made from (the
