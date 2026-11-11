@@ -148,6 +148,12 @@ Rules:
 - Never edit a Unity reference, a comparator tolerance or an existing assertion to make a probe
   pass. The oracle guard refuses it unless a commit carries `Oracle-Change: <why>` (for example,
   a re-recorded reference) or `Test-Removal: <why>`.
+- A probe that already fails may not count more failures than the sheriff baseline. When a rise is
+  decided (by the user, for an insignificant residual that comes with a fix), declare it in the
+  probe's `gate.json` as `"accepted_failures": [{"baseline": <the baseline's count>, "accepted":
+  <the new count>, "reason": "..."}]`, in a commit with the `Oracle-Change:` trailer, and record
+  the residual in the gap table. The entry covers only a rise from that exact baseline count and
+  stops applying once the sheriff promotes a new baseline; the suite lists it as `accepted`.
 - No run output, evidence or environment dumps in Git or in files (they leak tokens). Run output goes
   to `Library/Unbound/` or `~/.cache/unbound/`. No test-game names anywhere.
 - Unsupported behaviour fails loudly. Behaviour that differs between Unity releases goes through

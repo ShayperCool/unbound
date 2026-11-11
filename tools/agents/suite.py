@@ -19,7 +19,11 @@ line. Optional engine_paths lists repository-relative files, directories or glob
 select this probe in land.py. fast_commands lists static/short checks to run on every code landing,
 without Editor captures or long engine runs. Metadata-only declarations may accompany a recipe
 already defined in this file. Automatic checks share land.py's printed time budget; explicit
---probe commands retain their existing behavior. A probe that declares
+--probe commands retain their existing behavior. accepted_failures records a decided rise of a
+failing probe's counted failures: [{"baseline": 599, "accepted": 601, "reason": "..."}] keeps a
+count of up to 601 from being worse while the baseline's count is exactly 599, and is listed as
+`accepted` in the comparison. It stops applying once the baseline moves; a new entry needs an
+Oracle-Change trailer (tools/agents/oracle_guard.py). A probe that declares
 nothing, or declares it wrongly, is listed as "no recipe" with the reason; none is skipped
 silently. Comparators, references and tolerances are used as they are.
 
@@ -220,6 +224,7 @@ def trigger2d(probes):
 
 NOTES = {}
 GATE_FILE = 'gate.json'
+ACCEPTED = 'accepted_failures'
 RELEASE_NAME = re.compile(r'\b\d{4}\.\d+\.\d+[abfp]\d+\b')
 
 
@@ -233,7 +238,7 @@ def gate_spec(path):
         return NoRecipe(f'{GATE_FILE} is not JSON: {error}')
     if not isinstance(spec, dict):
         return NoRecipe(f'{GATE_FILE} is not a JSON object')
-    unknown = sorted(set(spec) - {'commands', 'summary', 'engine_paths', 'fast_commands'})
+    unknown = sorted(set(spec) - {'commands', 'summary', 'engine_paths', 'fast_commands', ACCEPTED})
     if unknown:
         return NoRecipe(f'{GATE_FILE} has unknown keys: {", ".join(unknown)}')
     commands, summary = spec.get('commands'), spec.get('summary')
@@ -251,7 +256,30 @@ def gate_spec(path):
     for pattern in spec.get('engine_paths', []):
         if pattern.startswith('/') or '..' in pattern.split('/') or '\\' in pattern:
             return NoRecipe(f'{GATE_FILE} "engine_paths" must be repository-relative: {pattern}')
+    entries = spec.get(ACCEPTED, [])
+    if not isinstance(entries, list) or not all(accepted_entry(entry) for entry in entries):
+        return NoRecipe(f'{GATE_FILE} "{ACCEPTED}" must be a list of '
+                        '{"baseline": count, "accepted": higher count, "reason": text}')
     return spec
+
+
+def accepted_entry(entry):
+    """Whether a declared accepted count is well formed: a rise from one exact baseline count."""
+    def count(value):
+        return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+    return (isinstance(entry, dict) and set(entry) == {'baseline', 'accepted', 'reason'}
+            and count(entry['baseline']) and count(entry['accepted']) and entry['accepted'] > entry['baseline']
+            and isinstance(entry['reason'], str) and bool(entry['reason'].strip()))
+
+
+def accepted_counts(names, projects=None):
+    """Each named probe's declared accepted counts (probes that declare none are left out)."""
+    counts = {}
+    for name in names:
+        spec = gate_spec((PROJECTS if projects is None else projects)/name/GATE_FILE)
+        if isinstance(spec, dict) and spec.get(ACCEPTED):
+            counts[name] = spec[ACCEPTED]
+    return counts
 
 
 def declared(name, release, projects=None):
@@ -260,7 +288,7 @@ def declared(name, release, projects=None):
     if spec is None or isinstance(spec, NoRecipe):
         return spec
     commands, summary = spec.get('commands'), spec.get('summary')
-    if commands is None and ('engine_paths' in spec or 'fast_commands' in spec):
+    if commands is None and any(key in spec for key in ('engine_paths', 'fast_commands', ACCEPTED)):
         return None  # selection metadata for a built-in recipe, not a second recipe
     if not commands:
         return NoRecipe(f'{GATE_FILE} needs "commands": a non-empty list of shell commands')
@@ -1194,15 +1222,24 @@ def failed_step(result):
     return int(found[1]) if found else None
 
 
-def worse(old, new):
+def within_accepted(before, after, accepted):
+    """Whether a rise of counted failures is one the probe declares as accepted: only from that
+    exact baseline count, and only up to the accepted count."""
+    return any(entry['baseline'] == before and after <= entry['accepted'] for entry in accepted)
+
+
+def worse(old, new, accepted=()):
     """Why a probe that failed before fails worse now (None if it does not): a step that ran before
-    fails now, fewer checks pass or more fail, or its comparators count more failures."""
+    fails now, fewer checks pass or more fail, or its comparators count more failures than the
+    baseline's and than the probe's accepted count for that baseline (`accepted`, its gate.json
+    entries)."""
     for index, (a, b) in enumerate(zip(old.get('steps', []), new.get('steps', [])), 1):
         if 'status' not in a or 'status' not in b:
             continue
         if a['status'] != 'fail' and b['status'] == 'fail':
             return f'step {index} now fails'
-        if b.get('failures', 0) > a.get('failures', 0):
+        if (b.get('failures', 0) > a.get('failures', 0)
+                and not within_accepted(a.get('failures', 0), b.get('failures', 0), accepted)):
             return f'step {index} counts {b["failures"]} failures, was {a.get("failures", 0)}'
     old_step, new_step = failed_step(old), failed_step(new)
     if new_step is not None and (old_step is None or new_step < old_step):
@@ -1218,14 +1255,17 @@ def worse(old, new):
         before, after = old['failures'], new['failures']
     else:  # older summaries: count what the stored (truncated) summary still shows
         before, after = count_failures(old.get('summary')), count_failures(new.get('summary'))
-    if after > before:
+    if after > before and not within_accepted(before, after, accepted):
         return f'{after} counted failures, was {before}'
     return None
 
 
-def compare_runs(current, previous):
+def compare_runs(current, previous, accepted=None):
     """Lines describing what changed since the previous summary; and whether a failure is new or
-    an earlier failure got worse."""
+    an earlier failure got worse. `accepted` holds the accepted counts of the probes that declare
+    them (accepted_counts); a rise they cover is listed as accepted, with its reasons, instead of
+    worse."""
+    accepted = accepted or {}
     lines, regressed = [], False
     before = previous.get('probes', {})
     for name, result in sorted(current['probes'].items()):
@@ -1236,11 +1276,16 @@ def compare_runs(current, previous):
         elif old['status'] != result['status']:
             lines.append(f'changed   {name}: {old["status"]} -> {result["status"]}')
             regressed |= result['status'] == 'fail'
-        elif result['status'] == 'fail' and worse(old, result):
-            lines.append(f'worse     {name}: {worse(old, result)}\n'
+        elif result['status'] == 'fail' and worse(old, result, accepted.get(name, ())):
+            lines.append(f'worse     {name}: {worse(old, result, accepted.get(name, ()))}\n'
                          f'       was {old.get("summary", "")[:150]}\n'
                          f'       ->  {result.get("summary", "")[:150]}')
             regressed = True
+        elif result['status'] == 'fail' and worse(old, result):
+            reasons = '; '.join(entry['reason'] for entry in accepted[name])
+            lines.append(f'accepted  {name}: {worse(old, result)} ({GATE_FILE}: {reasons})\n'
+                         f'       was {old.get("summary", "")[:150]}\n'
+                         f'       ->  {result.get("summary", "")[:150]}')
         elif old.get('summary') != result.get('summary') and result['status'] != 'no recipe':
             lines.append(f'summary   {name}: {old.get("summary", "")[:150]}\n'
                          f'       ->  {result.get("summary", "")[:150]}')
@@ -1384,7 +1429,7 @@ def main():
         previous = json.loads(path.read_text())
         if args.only:
             previous['probes'] = {k: v for k, v in previous.get('probes', {}).items() if k in results}
-        changes, regressed = compare_runs(summary, previous)
+        changes, regressed = compare_runs(summary, previous, accepted_counts(results))
         print(f'suite: against {path}: ' + (f'{len(changes)} change(s)' if changes else 'no changes'))
         for line in changes:
             print('  ' + line)
