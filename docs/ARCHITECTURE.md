@@ -165,11 +165,16 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   are drawn with the projection's y flipped (`_ProjectionParams.x` -1; their rows stay bottom-up,
   as Unity's texture data is) and the screen with it unflipped (its rows top-down; the window,
   screenshots and `ReadPixels` turn them back), as is a screen camera's stand-in (`ScreenStandIn`), and the render pipelines' framebuffer inputs are
-  read as their input attachments' textures (`_UnityFBInput<i>`). OpenGL Core is drawn by the
-  OS's native wgpu backend for now (Vulkan on Linux, Metal on macOS), Vulkan by wgpu's Vulkan
-  backend: wgpu's OpenGL backend lacks what the renderer uses (texture views in another format,
-  sampler LOD bias; an OpenGL 3.3 context); see the gap table. The suite selects the device of
-  each reference set explicitly (`--force-glcore`, `--force-vulkan`).
+  read as their input attachments' textures (`_UnityFBInput<i>`). On Linux each device is drawn by
+  its own wgpu backend: OpenGL Core by the OpenGL backend (EGL, a 4.5 core context; the vendored
+  changes it needs, from texture views in another format to sampler LOD bias, are in
+  `vendor/wgpu-sampler/PATCHES.md`), Vulkan by the Vulkan backend; macOS draws with Metal. The
+  GPU device is made when the device is chosen, before the game boots (`render::device::start`):
+  the first device whose backend starts wins, and the window's renderer takes it. The OpenGL
+  device's EGL display is X11's: it draws into an X11 window (the Linux Editor is an X11
+  application), under Wayland through Xwayland; without an X11 display it does not start, and the
+  next device of the list is tried. The suite selects the device of each reference
+  set explicitly (`--force-glcore`, `--force-vulkan`).
 * **Native rendering plugins on Vulkan**: on the Vulkan device plugins get `IUnityGraphicsVulkan`
   and `V2` (`render/executor/plugins_vulkan.rs`, tests/projects/nativegfx `vulkan.jsonl`): the
   renderer's instance, physical device, device, queue and its family, a pipeline cache; native
@@ -195,26 +200,22 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (EnsureInside events are skipped there); initialization is intercepted too late for every
   plugin, preloaded ones too (the device is made before any plugin loads).
 * **Native rendering plugins**: on the OpenGL Core device (`SystemInfo.graphicsDeviceType`,
-  `IUnityGraphics::GetRenderer`), the Linux Editor's default, the renderer still draws with
-  Vulkan (Metal on macOS; see above). Plugins written for that device call OpenGL on the main
-  thread with a context current and use OpenGL texture names, so they get a real OpenGL 4.5
-  core context on the
-  renderer's GPU (EGL without a surface, `render/gl_interop.rs`), current on the game thread: in
-  `UnityPluginLoad` and in every rendering callback, as in the Editor, whose callbacks run on its
-  main thread (tests/projects/nativegfx). A texture whose native pointer is asked for moves once
-  into exported Vulkan memory (`VK_KHR_external_memory_fd`), which OpenGL imports
-  (`GL_EXT_memory_object_fd`): both see the same texels, without copies. A callback runs when the
+  `IUnityGraphics::GetRenderer`), the Linux Editor's default, plugins call OpenGL on the main
+  thread with a context current and use OpenGL texture names. Their context is an OpenGL 4.5 core
+  EGL context in the renderer's share group (`render/gl_interop.rs`): a texture's native pointer
+  is the renderer's own OpenGL texture (where Unity's device stores the texture in another format,
+  as sRGB color textures of a Linear project, a view of it in that format), current on the game
+  thread: in `UnityPluginLoad` and in every rendering callback, as in the Editor, whose callbacks
+  run on its main thread (tests/projects/nativegfx). The game thread drives the renderer too, whose
+  backend gives the thread the plugins' context back after its own work. A callback runs when the
   renderer's work before it is done (`Plugin` commands, render protocol 15); OpenGL finishes the
   plugin's before the renderer goes on. The current target is bound for the callback (its color
   level, its depth texture, the viewport); the screen is not shared. A texture made with
   `CreateExternalTexture` from another texture's pointer is that texture; from a plugin's own
-  texture it is a copy made again after every callback. Chosen over drawing everything with
-  wgpu's OpenGL backend (a different renderer for every project) and over copying textures through
-  the CPU around every callback. Synchronization is by waiting (no semaphores): rendering callbacks
-  are rare, and image layouts are not handed over, which the measured NVIDIA driver does not need;
-  on other GPUs the interop is refused (logged) until layouts are handed over. macOS has no such
-  interop either: plugin callbacks are skipped with an error there, texture updates still run, and
-  native pointers are not OpenGL names.
+  2D texture it samples that texture, as OpenGL samples it in its own format. A headless run has
+  no renderer: the plugins' context shares nothing there. macOS has no plugin context: plugin
+  callbacks are skipped with an error there, texture updates still run, and native pointers are
+  not OpenGL names.
 * **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,
