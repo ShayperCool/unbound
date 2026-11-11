@@ -71,11 +71,17 @@ def copy_project(target):
     plugins.mkdir(parents=True)
     # $CC may be a command with arguments (a compiler cache before the compiler).
     compiler = shlex.split(os.environ.get('CC') or 'cc')
+    # The event queue is a C++ interface: that part of the plugin the scripts call is C++
+    # (`c++`, else $CXX), linked into it.
+    events = plugins/'nativegfx_events.o'
+    subprocess.run([*shlex.split(os.environ.get('CXX') or 'c++'), '-c', '-fPIC', '-O2', '-fvisibility=hidden', '-fno-exceptions',
+                    '-fno-rtti', '-o', str(events), str(ROOT/'Plugins/nativegfx_events.cpp')], check=True)
     for library, prefix in LIBRARIES:
         defines = [f'-DNATIVEGFX_PRELOAD="{prefix} "'] if prefix else []
         subprocess.run([*compiler, *defines, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/library),
-                        str(ROOT/'Plugins/nativegfx_probe.c'), '-ldl', '-lpthread'], check=True)
+                        str(ROOT/'Plugins/nativegfx_probe.c'), *([] if prefix else [str(events)]), '-ldl', '-lpthread'], check=True)
         shutil.copyfile(ROOT/'Plugins'/(library + '.meta'), plugins/(library + '.meta'))
+    events.unlink()
     if DEVICE == 'vulkan':
         subprocess.run([*compiler, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/VULKAN_LIBRARY),
                         str(ROOT/'Plugins/nativegfx_vulkan.c'), '-lpthread'], check=True)
@@ -90,6 +96,9 @@ def assemble(out):
         return False
     rows = [json.loads(line) for line in scripts.read_text().splitlines() if line.strip()]
     lines = (out/PLUGIN_LOG).read_text().splitlines() if (out/PLUGIN_LOG).exists() else []
+    # What the variants' rendering extension exports were asked (lines of their own kind).
+    extensions = [line[4:] for line in lines if line.startswith('ext ')]
+    lines = [line for line in lines if not line.startswith('ext ')]
     variants = {prefix: [line for line in lines if line.startswith(prefix + ' ')] for _, prefix in LIBRARIES if prefix}
     lines = [line for line in lines if not any(line in found for found in variants.values())]
     exit_at = next((i for i, line in enumerate(lines) if line.startswith('mark exit')), None)
@@ -98,6 +107,9 @@ def assemble(out):
     rows.append({'k': 'plugin.exit', 'v': tail})
     rows.append({'k': 'plugin.preloaded', 'v': variants['preload']})
     rows.append({'k': 'plugin.prefixed', 'v': variants['prefix']})
+    for _, prefix in LIBRARIES:
+        if prefix:
+            rows.append({'k': 'ext.' + prefix, 'v': [line for line in extensions if line.startswith(prefix + ' ')]})
     if complete is not None:
         rows.append(complete)
     (out/OUT).write_text(''.join(json.dumps(row, separators=(',', ':')) + '\n' for row in rows))
@@ -153,11 +165,26 @@ def engine(label):
 
 
 def publish(labels):
+    """A capture replaces an existing reference only when it keeps every row of it as it is, in
+    its order (a probe with added records, recorded again)."""
+    target = reference()
+    fresh = target.with_name(target.name + '.new')
+
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
-    return editor_runner.publish([WORK/label for label in labels], reference(), lambda d: [OUT], write,
+    fresh.unlink(missing_ok=True)
+    code = editor_runner.publish([WORK/label for label in labels], fresh, lambda d: [OUT], write,
                                  complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
+    if code:
+        return code
+    if target.exists():
+        rest = iter(fresh.read_bytes().splitlines())
+        if not all(row in rest for row in target.read_bytes().splitlines()):
+            fresh.unlink()
+            raise SystemExit(f'the captures change rows of the reference; not replacing {target}')
+    fresh.replace(target)
+    return 0
 
 
 def verify(candidate):

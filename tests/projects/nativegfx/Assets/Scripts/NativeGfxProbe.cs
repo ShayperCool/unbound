@@ -28,6 +28,8 @@ public class NativeGfxProbe : MonoBehaviour
     [DllImport(Plugin)] static extern IntPtr NativeGfx_Created(int index);
     [DllImport(Plugin)] static extern void NativeGfx_Mark(string text);
     [DllImport(Plugin)] static extern int NativeGfx_Record(byte[] buffer, int capacity);
+    [DllImport(Plugin)] static extern int NativeGfx_Notes(byte[] buffer, int capacity);
+    [DllImport(Plugin)] static extern void NativeGfx_Finish();
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
@@ -148,6 +150,36 @@ public class NativeGfxProbe : MonoBehaviour
         Value("plugin.sequence", L(done < 0 ? new List<string>() : lines.Skip(done + 1)));
     }
 
+    /// <summary>The plugin's notes: what the profiler callbacks, the event queue and the
+    /// rendering extension exports observed. Recorded while it loaded: the built-in categories
+    /// (<c>profiler.categories</c>), what only the Editor has (<c>profiler.editor</c>, with the
+    /// same from the end of the run), the event queue's (<c>events.load</c>) and the rest
+    /// (<c>profiler.load</c>); from then on, each kind between the scripts' marks:
+    /// <c>ext.sequence</c> (rendering extension queries and events), <c>frames.sequence</c>
+    /// (frame callbacks, handled events); the end (<c>profiler.finish</c>); and what is bound
+    /// for an event issued with no render texture active (<c>screen.target</c>).</summary>
+    void NotesRecord()
+    {
+        NativeGfx_Finish();
+        var buffer = new byte[1 << 20];
+        int length = NativeGfx_Notes(buffer, buffer.Length);
+        var lines = Encoding.UTF8.GetString(buffer, 0, Math.Min(length, buffer.Length - 1)).Split('\n').Where(s => s.Length > 0).ToList();
+        int marks = lines.FindIndex(l => l.StartsWith("mark "));
+        var load = marks < 0 ? lines : lines.Take(marks).ToList();
+        var run = marks < 0 ? new List<string>() : lines.Skip(marks).ToList();
+        Func<string, Func<string, bool>> starts = prefix => line => line.StartsWith(prefix);
+        Value("profiler.categories", L(load.Where(starts("category "))));
+        Value("profiler.load", L(load.Where(l => !l.StartsWith("category ") && !l.StartsWith("editor ") && !l.StartsWith("queue"))));
+        Value("profiler.editor", L(lines.Where(starts("editor "))));
+        Value("events.load", L(load.Where(starts("queue"))));
+        Value("ext.sequence", L(run.Where(l => l.StartsWith("mark ") || l.StartsWith("ext."))));
+        Value("frames.sequence", L(run.Where(l => l.StartsWith("mark ") || l.StartsWith("frame ") || l.StartsWith("queue") || l.StartsWith("event ") || l.StartsWith("thread "))));
+        Value("profiler.finish", L(run.Where(starts("finish "))));
+        // The viewport as the screen's size (the Editor's and Unbound's windows differ).
+        string screen = "viewport=0,0," + Screen.width + "," + Screen.height;
+        Value("screen.target", L(run.Where(starts("screen ")).Select(l => l.Replace(screen, "viewport=screen"))));
+    }
+
     IEnumerator Run()
     {
         yield return null;
@@ -167,6 +199,7 @@ public class NativeGfxProbe : MonoBehaviour
         }
         PluginRecord();
         if (logs.Count > 0) Value("logs", L(logs));
+        NotesRecord();
         NativeGfx_Mark("exit");
         Value("complete", B(code == 0));
         File.WriteAllText(output, records.ToString());

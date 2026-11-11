@@ -225,6 +225,11 @@ EXPORT void UnityPluginLoad(IUnityInterfaces* interfaces)
     IUnityGraphicsVulkan* v1 = (IUnityGraphicsVulkan*)interfaces->GetInterface(&kVulkan);
     IUnityGraphicsVulkan* v2 = (IUnityGraphicsVulkan*)interfaces->GetInterface(&kVulkanV2);
     record("load renderer=%d vulkan=%d vulkanV2=%d", s_graphics ? s_graphics->GetRenderer() : -1, v1 != NULL, v2 != NULL);
+    // The interfaces every device has: the profiler's callbacks and the event queue.
+    const Guid callbacks = {0x572FDB38CE3C4B1FULL, 0xA6071A9A7C4F52D8ULL}, callbacksV2 = {0x5DEB59E88F2D4571ULL, 0x81E8583069A5E33CULL};
+    const Guid eventQueue = {0x9959C347F5AE374DULL, 0x9BADE6FC8EF49E7FULL};
+    record("interfaces profilerCallbacks=%d profilerCallbacksV2=%d eventQueue=%d", interfaces->GetInterface(&callbacks) != NULL,
+           interfaces->GetInterface(&callbacksV2) != NULL, interfaces->GetInterface(&eventQueue) != NULL);
     s_vulkan = v2 ? v2 : v1;
     if (s_graphics) {
         s_event_base = s_graphics->ReserveEventIDRange(EventCount);

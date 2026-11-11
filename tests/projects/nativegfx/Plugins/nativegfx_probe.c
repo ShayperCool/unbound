@@ -7,6 +7,11 @@
 // and one named with the GfxPlugin prefix): it records only its load, device events and unload,
 // each line prefixed with that word.
 //
+// A second record, the notes, holds what the profiler callbacks, the event queue
+// (nativegfx_events.cpp) and the rendering extension exports observe, with the scripts' marks
+// between: the first record's lines stay what they were. The variants write their rendering
+// extension calls as lines that start with "ext ".
+//
 // Only the public plugin headers' declarations are used (repeated here so the build needs no
 // Editor installation).
 #include <dlfcn.h>
@@ -218,6 +223,32 @@ static const char* thread_name(void)
     return pthread_equal(pthread_self(), s_main) ? "main" : "other";
 }
 
+// ------------------------------------------------------------------ notes
+
+static char* s_notes;
+static size_t s_notes_length, s_notes_capacity;
+
+static void note(const char* format, ...)
+{
+    char line[512];
+    va_list args;
+    va_start(args, format);
+    int n = vsnprintf(line, sizeof line - 1, format, args);
+    va_end(args);
+    if (n < 0) return;
+    if (n > (int)sizeof line - 2) n = sizeof line - 2;
+    line[n++] = '\n';
+    line[n] = 0;
+    pthread_mutex_lock(&s_lock);
+    if (s_notes_length + n + 1 > s_notes_capacity) {
+        s_notes_capacity = (s_notes_length + n + 1) * 2;
+        s_notes = realloc(s_notes, s_notes_capacity);
+    }
+    memcpy(s_notes + s_notes_length, line, n + 1);
+    s_notes_length += n;
+    pthread_mutex_unlock(&s_lock);
+}
+
 // ------------------------------------------------------------------ state
 
 static IUnityInterfaces* s_interfaces;
@@ -238,6 +269,256 @@ static void on_device_event(int type)
     record("device event=%d renderer=%d thread=%s gl=%d", type,
            s_graphics ? s_graphics->GetRenderer() : -1, thread_name(), gl_current());
 }
+
+// ------------------------------------------------------------------ rendering extensions
+
+static int gl_current(void);
+
+/// UnityRenderingExtQuery and UnityRenderingExtEvent (IUnityRenderingExtensions.h): what the
+/// Editor asks and tells a loaded plugin of its own accord.
+EXPORT int UnityRenderingExtQuery(int query)
+{
+#ifdef NATIVEGFX_PRELOAD
+    pthread_mutex_lock(&s_lock);
+    if (!s_file) {
+        const char* path = getenv("NATIVEGFX_PLUGIN_LOG");
+        if (path) s_file = fopen(path, "a");
+    }
+    if (s_file) {
+        fprintf(s_file, "ext %squery flags=%d thread=%s gl=%d\n", RECORD_PREFIX, query, thread_name(), gl_current());
+        fflush(s_file);
+    }
+    pthread_mutex_unlock(&s_lock);
+#else
+    note("ext.query flags=%d thread=%s gl=%d", query, thread_name(), gl_current());
+#endif
+    return 0;
+}
+
+EXPORT void UnityRenderingExtEvent(int event, void* data)
+{
+#ifndef NATIVEGFX_PRELOAD
+    note("ext.event type=%d data=%d thread=%s gl=%d", event, data != NULL, thread_name(), gl_current());
+#else
+    (void)event;
+    (void)data;
+#endif
+}
+
+#ifndef NATIVEGFX_PRELOAD
+// ------------------------------------------------------------------ profiler callbacks
+
+typedef struct { uint16_t id, reserved0; uint32_t rgbaColor; const char* name; } CategoryDesc;
+typedef struct { const void* callback; uint32_t id; uint16_t flags, categoryId; const char* name; const void* metaDataDesc; } MarkerDesc;
+typedef struct { uint64_t threadId; const char* groupName; const char* name; } ThreadDesc;
+typedef struct IUnityProfilerCallbacksV2 {
+    int (*RegisterCreateCategoryCallback)(void (*callback)(const CategoryDesc*, void*), void* user);
+    int (*UnregisterCreateCategoryCallback)(void (*callback)(const CategoryDesc*, void*), void* user);
+    int (*RegisterCreateMarkerCallback)(void (*callback)(const MarkerDesc*, void*), void* user);
+    int (*UnregisterCreateMarkerCallback)(void (*callback)(const MarkerDesc*, void*), void* user);
+    int (*RegisterMarkerEventCallback)(const MarkerDesc* desc, void (*callback)(const MarkerDesc*, uint16_t, uint16_t, const void*, void*), void* user);
+    int (*UnregisterMarkerEventCallback)(const MarkerDesc* desc, void (*callback)(const MarkerDesc*, uint16_t, uint16_t, const void*, void*), void* user);
+    int (*RegisterFrameCallback)(void (*callback)(void*), void* user);
+    int (*UnregisterFrameCallback)(void (*callback)(void*), void* user);
+    int (*RegisterCreateThreadCallback)(void (*callback)(const ThreadDesc*, void*), void* user);
+    int (*UnregisterCreateThreadCallback)(void (*callback)(const ThreadDesc*, void*), void* user);
+    // IUnityProfilerCallbacks ends here.
+    int (*RegisterFlowEventCallback)(void (*callback)(uint8_t, uint32_t, void*), void* user);
+    int (*UnregisterFlowEventCallback)(void (*callback)(uint8_t, uint32_t, void*), void* user);
+} IUnityProfilerCallbacksV2;
+typedef struct IUnityProfilerV2 {
+    void (*EmitEvent)(const MarkerDesc* desc, uint16_t type, uint16_t count, const void* data);
+    int (*IsEnabled)(void);
+    int (*IsAvailable)(void);
+    int (*CreateMarker)(const MarkerDesc** desc, const char* name, uint16_t category, uint16_t flags, int dataCount);
+    int (*SetMarkerMetadataName)(const MarkerDesc* desc, int index, const char* name, uint8_t type, uint8_t unit);
+    int (*CreateCategory)(uint16_t* category, const char* name, uint32_t unused);
+    int (*RegisterThread)(uint64_t* id, const char* group, const char* name);
+    int (*UnregisterThread)(uint64_t id);
+} IUnityProfilerV2;
+
+int nativegfx_events_load(IUnityInterfaces* interfaces, void (*note)(const char*, ...));
+void nativegfx_events_frame(int frame);
+
+static IUnityProfilerCallbacksV2* s_callbacks;
+static IUnityProfilerV2* s_profiler;
+static const MarkerDesc* s_marker;
+/// What the callbacks heard: categories (all, and the plugin's own), markers, threads, frames,
+/// flows, marker events.
+static int s_categories, s_own_categories, s_markers, s_own_markers, s_threads, s_own_threads, s_frames, s_flows, s_events;
+static int s_listing;
+static uint32_t s_own_color;
+static char s_last_mark[96] = "(none)";
+static char s_first_thread[96];
+
+static int own(const char* name) { return name && strncmp(name, "NativeGfx", 9) == 0; }
+
+static void on_category(const CategoryDesc* desc, void* user)
+{
+    s_categories++;
+    if (own(desc->name)) {
+        s_own_categories++;
+        s_own_color = desc->rgbaColor;
+    }
+    // The categories that exist when the first callback registers.
+    if (s_listing) note("category %u %08x %s user=%ld thread=%s", desc->id, desc->rgbaColor, desc->name, (long)user, thread_name());
+}
+
+static void on_marker(const MarkerDesc* desc, void* user)
+{
+    s_markers++;
+    if (!own(desc->name)) return;
+    s_own_markers++;
+    note("marker name=%s flags=%u category.own=%d callback=%d user=%ld thread=%s", desc->name, desc->flags, desc->categoryId >= 39, desc->callback != NULL, (long)user, thread_name());
+}
+
+static void on_thread(const ThreadDesc* desc, void* user)
+{
+    if (s_threads++ == 0)
+        snprintf(s_first_thread, sizeof s_first_thread, "group=%s name=%s id=%s user=%ld", desc->groupName ? desc->groupName : "(null)",
+                 desc->name ? desc->name : "(null)", desc->threadId ? "nonzero" : "zero", (long)user);
+    if (!own(desc->name)) return;
+    s_own_threads++;
+    note("thread group=%s name=%s id=%s user=%ld thread=%s", desc->groupName, desc->name, desc->threadId ? "nonzero" : "zero", (long)user, thread_name());
+}
+
+static void on_frame(void* user)
+{
+    s_frames++;
+    note("frame n=%d user=%ld thread=%s after=%s", s_frames, (long)user, thread_name(), s_last_mark);
+}
+
+static void on_flow(uint8_t type, uint32_t id, void* user)
+{
+    (void)type; (void)id; (void)user;
+    s_flows++;
+}
+
+static void on_marker_event(const MarkerDesc* desc, uint16_t type, uint16_t count, const void* data, void* user)
+{
+    s_events++;
+    note("event marker=%s type=%u count=%u data=%d user=%ld thread=%s", desc->name, type, count, data != NULL, (long)user, thread_name());
+}
+
+static void never_registered(const MarkerDesc* desc, void* user) { (void)desc; (void)user; }
+static void never_registered_thread(const ThreadDesc* desc, void* user) { (void)desc; (void)user; }
+static void never_registered_frame(void* user) { (void)user; }
+static void never_registered_flow(uint8_t type, uint32_t id, void* user) { (void)type; (void)id; (void)user; }
+
+/// A thread of the plugin's that registers with the profiler and unregisters.
+static void* registered_thread(void* unused)
+{
+    (void)unused;
+    uint64_t id = 0;
+    int registered = s_profiler->RegisterThread(&id, "NativeGfxGroup", "NativeGfxThread");
+    int unregistered = s_profiler->UnregisterThread(id);
+    note("register.thread.own=%d id=%s unregister=%d", registered, id ? "nonzero" : "zero", unregistered);
+    return NULL;
+}
+
+/// What the profiler callbacks answer and call, recorded while the plugin loads.
+static void profiler_load(IUnityInterfaces* interfaces)
+{
+    // By their place in kInterfaces.
+    void* profiler = interfaces->GetInterface(&kInterfaces[2].guid);
+    s_profiler = interfaces->GetInterface(&kInterfaces[3].guid);
+    void* callbacks = interfaces->GetInterface(&kInterfaces[4].guid);
+    s_callbacks = interfaces->GetInterface(&kInterfaces[5].guid);
+    void* vulkan = interfaces->GetInterface(&kInterfaces[8].guid);
+    void* vulkan2 = interfaces->GetInterface(&kInterfaces[9].guid);
+    // Each version of an interface is an object of its own.
+    note("distinct profiler=%d callbacks=%d vulkan=%d", profiler && profiler != (void*)s_profiler, callbacks && callbacks != (void*)s_callbacks,
+         vulkan && vulkan != vulkan2);
+    if (!s_callbacks || !s_profiler) return;
+    IUnityProfilerCallbacksV2* cb = s_callbacks;
+    note("profiler enabled=%d available=%d", s_profiler->IsEnabled(), s_profiler->IsAvailable());
+
+    s_listing = 1;
+    int r = cb->RegisterCreateCategoryCallback(on_category, (void*)1);
+    s_listing = 0;
+    note("register.category=%d heard=%d", r, s_categories);
+    r = cb->RegisterCreateMarkerCallback(on_marker, (void*)2);
+    note("register.marker=%d", r);
+    note("editor markers=%d", s_markers > 0);
+    r = cb->RegisterCreateThreadCallback(on_thread, (void*)3);
+    note("register.thread=%d first %s", r, s_first_thread);
+    note("editor threads=%d", s_threads > 1);
+    note("register.frame=%d", cb->RegisterFrameCallback(on_frame, (void*)4));
+    note("register.flow=%d", cb->RegisterFlowEventCallback(on_flow, (void*)6));
+
+    // A category of the plugin's: the first ID after the built-in ones, heard of once; its
+    // name again is the same category; a built-in category's name.
+    uint16_t category = 0xffff, again = 0xffff, builtin = 0xffff;
+    r = s_profiler->CreateCategory(&category, "NativeGfxCategory", 0);
+    note("create.category=%d id=%u heard=%d color=%08x", r, category, s_own_categories, s_own_color);
+    int heard = s_categories;
+    r = s_profiler->CreateCategory(&again, "NativeGfxCategory", 0);
+    note("create.category.again=%d same=%d heard=%d", r, again == category, s_categories - heard);
+    r = s_profiler->CreateCategory(&builtin, "Render", 0);
+    note("create.category.builtin=%d id=%u heard=%d", r, builtin, s_categories - heard);
+    // Registered twice, a callback is called twice and unregistered twice.
+    r = cb->RegisterCreateCategoryCallback(on_category, (void*)1);
+    heard = s_own_categories;
+    s_profiler->CreateCategory(&again, "NativeGfxCategory2", 0);
+    note("register.category.twice=%d heard=%d", r, s_own_categories - heard);
+    int first = cb->UnregisterCreateCategoryCallback(on_category, (void*)1);
+    int second = cb->UnregisterCreateCategoryCallback(on_category, (void*)1);
+    note("unregister.category=%d,%d,%d", first, second, cb->UnregisterCreateCategoryCallback(on_category, (void*)1));
+
+    // A marker of the plugin's, and its events.
+    r = s_profiler->CreateMarker(&s_marker, "NativeGfx.Marker", category, 0, 0);
+    note("create.marker=%d heard=%d", r, s_own_markers);
+    const MarkerDesc* same = NULL;
+    r = s_profiler->CreateMarker(&same, "NativeGfx.Marker", category, 0, 0);
+    note("create.marker.again=%d same=%d heard=%d", r, same == s_marker, s_own_markers);
+    s_profiler->EmitEvent(s_marker, 0, 0, NULL);
+    note("emit.unregistered events=%d", s_events);
+    r = cb->RegisterMarkerEventCallback(s_marker, on_marker_event, (void*)5);
+    note("register.event=%d marker.callback=%d", r, s_marker->callback != NULL);
+    s_profiler->EmitEvent(s_marker, 0, 0, NULL);
+    s_profiler->EmitEvent(s_marker, 1, 0, NULL);
+    s_profiler->EmitEvent(s_marker, 2, 0, NULL);
+    r = cb->UnregisterMarkerEventCallback(s_marker, on_marker_event, (void*)5);
+    note("unregister.event=%d marker.callback=%d", r, s_marker->callback != NULL);
+    s_profiler->EmitEvent(s_marker, 0, 0, NULL);
+    note("emit.after events=%d unregister.event.again=%d", s_events, cb->UnregisterMarkerEventCallback(s_marker, on_marker_event, (void*)5));
+
+    // Callbacks that were never registered.
+    note("unregister.unknown marker=%d thread=%d frame=%d flow=%d", cb->UnregisterCreateMarkerCallback(never_registered, NULL),
+         cb->UnregisterCreateThreadCallback(never_registered_thread, NULL), cb->UnregisterFrameCallback(never_registered_frame, NULL),
+         cb->UnregisterFlowEventCallback(never_registered_flow, NULL));
+
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, registered_thread, NULL) == 0) pthread_join(thread, NULL);
+    note("thread.heard=%d", s_own_threads);
+}
+
+/// The end of the scripts' run: every callback unregistered, and what was heard meanwhile.
+EXPORT void NativeGfx_Finish(void)
+{
+    if (!s_callbacks) return;
+    IUnityProfilerCallbacksV2* cb = s_callbacks;
+    note("finish frame=%d marker=%d thread=%d flow=%d frames=%d", cb->UnregisterFrameCallback(on_frame, (void*)4),
+         cb->UnregisterCreateMarkerCallback(on_marker, (void*)2), cb->UnregisterCreateThreadCallback(on_thread, (void*)3),
+         cb->UnregisterFlowEventCallback(on_flow, (void*)6), s_frames);
+    note("editor flows=%d", s_flows > 0);
+}
+
+/// Copies the notes into `buffer` (at most `capacity` bytes with the terminator); returns
+/// their length.
+EXPORT int NativeGfx_Notes(char* buffer, int capacity)
+{
+    pthread_mutex_lock(&s_lock);
+    int length = (int)s_notes_length;
+    if (buffer && capacity > 0) {
+        int n = length < capacity - 1 ? length : capacity - 1;
+        if (n > 0) memcpy(buffer, s_notes, n);
+        buffer[n] = 0;
+    }
+    pthread_mutex_unlock(&s_lock);
+    return length;
+}
+#endif
 
 EXPORT void UnityPluginLoad(IUnityInterfaces* interfaces)
 {
@@ -283,6 +564,10 @@ EXPORT void UnityPluginLoad(IUnityInterfaces* interfaces)
         s_unity_log->Log(0, "nativegfx: an error", "nativegfx_probe.c", 3);
     }
     record("load done");
+#ifndef NATIVEGFX_PRELOAD
+    profiler_load(interfaces);
+    note("queue=%d", nativegfx_events_load(interfaces, note));
+#endif
 }
 
 EXPORT void UnityPluginUnload(void)
@@ -463,6 +748,22 @@ static void on_render_event(int id)
     describe_target(target, sizeof target);
     int rel = id - s_event_base;
     record("event id=base+%d thread=%s gl=%d target=%s", rel, thread_name(), gl_current(), target);
+#ifndef NATIVEGFX_PRELOAD
+    // The event a script issues with no render texture active: what is bound then.
+    if (rel == 1 && gl_current()) {
+        GLint fbo = 0, color = 0, depth = 0, viewport[4] = {0};
+        gl.GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
+        if (fbo != 0) {
+            gl.GetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &color);
+            gl.GetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &depth);
+            while (gl.GetError() != 0) {}
+        }
+        gl.GetIntegerv(GL_VIEWPORT, viewport);
+        note("screen framebuffer=%s color=%s depth=%s viewport=%d,%d,%d,%d", fbo ? "own" : "default",
+             color == GL_TEXTURE ? "texture" : color == GL_RENDERBUFFER ? "renderbuffer" : "none",
+             depth == GL_TEXTURE ? "texture" : depth == GL_RENDERBUFFER ? "renderbuffer" : "none", viewport[0], viewport[1], viewport[2], viewport[3]);
+    }
+#endif
     switch (rel) {
     case 0: fill_bound(4, 8, 16, 8, 1.0f, 0.0f, 0.0f); break;
     case 1: write_texture(s_names[2]); break;
@@ -568,7 +869,15 @@ EXPORT void NativeGfx_SetRenderBuffer(int index, void* buffer)
 EXPORT void* NativeGfx_Created(int index) { return index >= 0 && index < 2 ? (void*)(uintptr_t)s_created[index] : NULL; }
 
 /// A script's marker in the record: what the scripts did between the callbacks.
-EXPORT void NativeGfx_Mark(const char* text) { record("mark %s thread=%s", text, thread_name()); }
+EXPORT void NativeGfx_Mark(const char* text)
+{
+    record("mark %s thread=%s", text, thread_name());
+#ifndef NATIVEGFX_PRELOAD
+    note("mark %s", text);
+    snprintf(s_last_mark, sizeof s_last_mark, "%s", text);
+    if (strncmp(text, "frame ", 6) == 0) nativegfx_events_frame(atoi(text + 6));
+#endif
+}
 
 /// Copies the record into `buffer` (at most `capacity` bytes with the terminator); returns the
 /// record's length.
