@@ -1169,6 +1169,48 @@ namespace Unbound.Runtime.Playables
             }
         }
 
+        bool OnAutomaticClock => !Destroyed && Playing && UpdateMode != DirectorUpdateMode.Manual;
+
+        void RunPendingStop()
+        {
+            if (!PendingStop || Destroyed) return;
+            PendingStop = false;
+            StopPass();
+        }
+
+        void RunPendingStart()
+        {
+            if (!PendingStart) return;
+            PendingStart = false;
+            EverStarted = true;
+            StartPass();
+        }
+
+        /// <summary>The play-state changes waiting since the last pass, of every graph: the stop
+        /// pass of stopped graphs, then the start pass of played graphs on an automatic clock.
+        /// DirectorUpdate begins with it, and so does a PlayableDirector's Evaluate: the graphs
+        /// played before it, directors' and plain ones, get OnGraphStart and OnBehaviourPlay
+        /// there and not at the next DirectorUpdate (6000.0.71f1, tests/projects/animstartup
+        /// director profile: */play, */awake and */graph are started in the Update snapshot
+        /// that follows another director's Evaluate; a graph on a manual clock is not,
+        /// */manual; the stops and PlayableGraph.Evaluate are unmeasured).</summary>
+        internal static void ProcessPlayStateChanges()
+        {
+            var graphs = Scratch<PlayableGraphData>.Rent(s_Graphs);
+            try
+            {
+                foreach (var g in graphs) g.RunPendingStop();
+                graphs.Clear();
+                graphs.AddRange(s_Playing);
+                foreach (var g in graphs)
+                    if (g.OnAutomaticClock) g.RunPendingStart();
+            }
+            finally
+            {
+                Scratch<PlayableGraphData>.Return(graphs);
+            }
+        }
+
         /// <summary>DirectorUpdate: pending stops and starts, then the prepare pass of every playing
         /// graph, then their script outputs.</summary>
         internal static void UpdateAll()
@@ -1178,28 +1220,12 @@ namespace Unbound.Runtime.Playables
             var frame = Scratch<(PlayableGraphData Graph, double Delta)>.Rent();
             try
             {
-                foreach (var g in graphs)
-                {
-                    if (g.PendingStop && !g.Destroyed)
-                    {
-                        g.PendingStop = false;
-                        g.StopPass();
-                    }
-                }
+                foreach (var g in graphs) g.RunPendingStop();
                 graphs.Clear();
                 graphs.AddRange(s_Playing);
                 foreach (var g in graphs)
-                {
-                    if (g.Destroyed || !g.Playing || g.UpdateMode == DirectorUpdateMode.Manual) continue;
-                    frame.Add((g, 0));
-                }
-                foreach (var (g, _) in frame)
-                {
-                    if (!g.PendingStart) continue;
-                    g.PendingStart = false;
-                    g.EverStarted = true;
-                    g.StartPass();
-                }
+                    if (g.OnAutomaticClock) frame.Add((g, 0));
+                foreach (var (g, _) in frame) g.RunPendingStart();
                 for (int i = 0; i < frame.Count; i++)
                 {
                     var g = frame[i].Graph;

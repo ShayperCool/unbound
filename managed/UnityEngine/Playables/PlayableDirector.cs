@@ -163,12 +163,14 @@ namespace UnityEngine.Playables
         }
 
         /// <summary>Evaluates the graph at the current time (building it first if needed); graphs
-        /// destroyed earlier are torn down first.</summary>
+        /// destroyed earlier are torn down first, and the play-state changes waiting on any
+        /// graph are delivered (<see cref="PlayableGraphData.ProcessPlayStateChanges"/>).</summary>
         public void Evaluate()
         {
             ThrowIfDestroyed();
             PlayableGraphData.FlushDestroyed();
             if (playableAsset == null || !EnsureGraph()) return;
+            PlayableGraphData.ProcessPlayStateChanges();
             m_Graph.Evaluate(0);
         }
 
