@@ -517,12 +517,15 @@ namespace Unbound.UIElements
             if (IsList(type, out var element) && !IsList(element, out _))
             {
                 var items = new List<object>();
+                bool assets = typeof(Object).IsAssignableFrom(element) && UxmlTypeIndex.ConverterFor(element) == null;
                 if (text.Length > 0)
                 {
                     var parts = text.Split(',');
                     for (int i = 0; i < parts.Length; i++)
                     {
-                        if (!TryRead(parts[i], element, member, document, out var item, out var itemError))
+                        object item;
+                        string itemError;
+                        if (!(assets ? TryReadListAsset(parts[i], element, document, out item, out itemError) : TryRead(parts[i], element, member, document, out item, out itemError)))
                         {
                             error = $"item {i}: {itemError}";
                             return false;
@@ -850,6 +853,32 @@ namespace Unbound.UIElements
             }
             result = found;
             return true;
+        }
+
+        /// <summary>An asset url as an item of an array or list of objects. Measured (Unity
+        /// 6000.0.71f1, tests/projects/uxmlattributes icons document, Texture2D and Sprite arrays
+        /// and a Texture2D list): the item is the object the url's guid and file id name when it
+        /// is of the item type; a path, a project url without a guid, an unknown guid, a missing
+        /// file and an object of another type (also in a file that holds one of the type) give a
+        /// null item without a message. Unmeasured: a guid without a file id (a null item here).
+        /// Unbound's choice: a file the asset database cannot load is an error.</summary>
+        static bool TryReadListAsset(string text, Type type, VisualTreeAsset document, out object result, out string error)
+        {
+            result = null;
+            error = null;
+            AssetPaths.Resolve(document?.m_UaAssetPath, text.Trim(), out var guid, out var fileId, out _);
+            if (guid == null || fileId == 0) return true;
+            try
+            {
+                var referenced = AssetDatabaseRuntime.Load(guid, fileId, null);
+                if (referenced != null && type.IsInstanceOfType(referenced)) result = referenced;
+                return true;
+            }
+            catch (Exception e)
+            {
+                error = $"the asset at '{text}' could not be loaded ({e.GetType().Name}: {e.Message})";
+                return false;
+            }
         }
 
         /// <summary>An asset by its UXML url, resolved as a [UxmlAttribute] object member's is

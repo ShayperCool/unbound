@@ -269,8 +269,8 @@ namespace UnityEngine.Tests
         }
 
         // [doc] A Background holds a Texture2D (texture), RenderTexture, Sprite or VectorImage.
-        // [choice] Another texture type (a Cubemap) follows the measured rule for objects no
-        // Background can show: the icon is cleared without a log.
+        // [measured] iconCube, tabCube, presetIconCube, presetTabCube (icons document): another
+        // texture type (a Cubemap) clears the icon without a log, on Button and on Tab.
         [Fact]
         public void OtherTextureTypesClearTheIconSilently()
         {
@@ -280,6 +280,37 @@ namespace UnityEngine.Tests
             VisualElement root = null;
             logs = LoggedAll(() => root = Clone($"<UxmlImageProbes.PresetIconButton icon-image=\"{Ref("Assets/UI/Sky.cubemap", CubeGuid, 8900000, "Sky")}\" />").Root);
             Assert.True(Assert.IsType<PresetIconButton>(root[0]).iconImage.IsEmpty());
+            Assert.Empty(logs);
+        }
+
+        // [measured] arrayTextures, arrayMixed, arraySpriteAsTexture, arrayUnknownGuid, arrayPaths,
+        // arrayEmpty (icons document): an item of an array or list of assets is the object its
+        // guid and file id name when that is of the item type; another type (also in a file that
+        // holds one of the type), an unknown guid and a path give a null item; an empty attribute
+        // an empty collection; nothing is logged. A single member reads the same urls otherwise
+        // (the control at the end: the sprite's url gives a Texture2D member the file's texture).
+        [Fact]
+        public void AssetArraysAndListsTakeOnlyTheNamedObjectOfTheItemType()
+        {
+            using var icon = new IconFile();
+            var texture = Ref("Assets/UI/Icons/Icon.png", IconGuid, TextureId, "Icon");
+            var sprite = Ref("Assets/UI/Icons/Icon.png", IconGuid, SpriteId, "Icon");
+            var unknown = Ref("Assets/UI/Icons/Icon.png", MissingGuid, TextureId, "Icon");
+            VisualElement root = null;
+            var logs = LoggedAll(() => root = Clone(
+                $"<UxmlImageProbes.TextureArrayProbe pictures=\"{texture},{sprite},{unknown},/Assets/UI/Icons/Icon.png,{texture}\" picture-list=\"{sprite},{texture}\" sprites=\"{sprite},{texture}\" />"
+                + "<UxmlImageProbes.TextureArrayProbe pictures=\"\" picture-list=\"\" />"
+                + "<UxmlImageProbes.TextureArrayProbe />"
+                + $"<UxmlImageProbes.TextureProbe picture=\"{sprite}\" />").Root);
+            var probe = Assert.IsType<TextureArrayProbe>(root[0]);
+            Assert.Equal(new[] { icon.Texture, null, null, null, icon.Texture }, probe.pictures);
+            Assert.Equal(new List<Texture2D> { null, icon.Texture }, probe.pictureList);
+            Assert.Equal(new[] { icon.Sprite, null }, probe.sprites);
+            var empty = Assert.IsType<TextureArrayProbe>(root[1]);
+            Assert.Empty(empty.pictures);
+            Assert.Empty(empty.pictureList);
+            Assert.Null(Assert.IsType<TextureArrayProbe>(root[2]).pictures);
+            Assert.Same(icon.Texture, Assert.IsType<TextureProbe>(root[3]).picture);
             Assert.Empty(logs);
         }
 
@@ -439,6 +470,14 @@ namespace UxmlImageProbes
     public partial class BadgeListProbe : VisualElement
     {
         [UxmlAttribute] public List<Background> badges;
+    }
+
+    [UxmlElement]
+    public partial class TextureArrayProbe : VisualElement
+    {
+        [UxmlAttribute] public Texture2D[] pictures { get; set; }
+        [UxmlAttribute] public List<Texture2D> pictureList { get; set; }
+        [UxmlAttribute] public Sprite[] sprites { get; set; }
     }
 
     [UxmlElement]
