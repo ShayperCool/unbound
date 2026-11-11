@@ -414,6 +414,170 @@ namespace UnityEngine.Tests
 
         // Editor: allocate-stroke-order (panel image). A callback's meshes are drawn in call order:
         // an allocated quad, a painter stroke, another allocated quad.
+        // ---- stroke gradients (tests/projects/uitkpainter, gradient cases) ----
+
+        static Gradient TwoKeys(Color from, Color to)
+        {
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(from, 0f), new GradientColorKey(to, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+            return g;
+        }
+
+        static readonly Color Black = new Color32(0, 0, 0, 255), White = new Color32(240, 240, 240, 255);
+
+        static Saved GradientLine(Gradient g, float length = 80f, Action<Painter2D> before = null) => Save(p =>
+        {
+            p.lineWidth = 4; p.strokeColor = Red; p.strokeGradient = g;
+            before?.Invoke(p);
+            p.BeginPath(); p.MoveTo(new Vector2(0, 10)); p.LineTo(new Vector2(length, 10)); p.Stroke();
+        });
+
+        // Documented: a gradient overrides strokeColor, null falls back on it. A horizontal line
+        // of another length than the probe's: rows of three vertices at every eighth.
+        [Fact]
+        public void AGradientColoursAStraightStrokeInEighths()
+        {
+            var s = GradientLine(TwoKeys(Black, White));
+            Assert.Equal(27, s.Vertices.Length);
+            Assert.Equal(96, s.Indices.Length);
+            for (int row = 0; row < 9; row++)
+            {
+                for (int k = 0; k < 3; k++) Assert.Equal((byte)(30 * row), s.Vertices[row * 3 + k].tint.r);
+                // Vertices are saved relative to the bounds, which start at the line's start.
+                Near(row * 10f, s.Vertices[row * 3].position.x);
+            }
+            var solid = GradientLine(TwoKeys(Black, White), before: p => p.strokeGradient = null);
+            Assert.Equal(6, solid.Vertices.Length);
+            Assert.Equal(UaVector.Tint(Red), solid.Vertices[0].tint);
+        }
+
+        [Fact]
+        public void TheLastOfColourAndGradientSetIsUsed()
+        {
+            var s = GradientLine(TwoKeys(Black, White), before: p => p.strokeColor = Blue);
+            Assert.Equal(6, s.Vertices.Length);
+            Assert.Equal(UaVector.Tint(Blue), s.Vertices[0].tint);
+            // A transparent stroke colour draws nothing, also under a gradient.
+            using var painter = new Painter2D();
+            painter.strokeColor = new Color(1, 0, 0, 0);
+            painter.strokeGradient = TwoKeys(Black, White);
+            painter.lineWidth = 4;
+            painter.BeginPath(); painter.MoveTo(Vector2.zero); painter.LineTo(new Vector2(10, 0)); painter.Stroke();
+            var image = ScriptableObject.CreateInstance<VectorImage>();
+            painter.SaveToVectorImage(image);
+            Assert.True(image.vertices == null || image.vertices.Length == 0);
+        }
+
+        [Fact]
+        public void TheGradientIsTakenWhenSetAndReadBackAsACopy()
+        {
+            using var p = new Painter2D();
+            Assert.Equal(Color.white, p.strokeGradient.colorKeys[0].color);
+            var g = TwoKeys(Black, White);
+            p.strokeGradient = g;
+            g.SetKeys(new[] { new GradientColorKey(Red, 0.5f) }, new[] { new GradientAlphaKey(1f, 0f) });
+            var back = p.strokeGradient;
+            Assert.NotSame(g, back);
+            Assert.Equal(2, back.colorKeys.Length);
+            // Null and Clear turn the gradient off; the getter still answers the last one.
+            p.strokeGradient = null;
+            Assert.Equal(2, p.strokeGradient.colorKeys.Length);
+            p.strokeGradient = g;
+            p.Clear();
+            Assert.Single(p.strokeGradient.colorKeys);
+            p.lineWidth = 4; p.strokeColor = Blue;
+            p.BeginPath(); p.MoveTo(Vector2.zero); p.LineTo(new Vector2(10, 0)); p.Stroke();
+            var image = ScriptableObject.CreateInstance<VectorImage>();
+            p.SaveToVectorImage(image);
+            Assert.Equal(6, image.vertices.Length);
+        }
+
+        [Fact]
+        public void RowsFallOnGradientKeysAndFixedKeysGiveFlatSteps()
+        {
+            var g = new Gradient { mode = GradientMode.Fixed };
+            g.SetKeys(new[] { new GradientColorKey(Black, 0.3f), new GradientColorKey(White, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+            var s = GradientLine(g, 100f);
+            // Rows at 0, 12.5, 25, then the key at 30 (its 16-bit time), and on in eighths from there.
+            Near(25f, s.Vertices[6].position.x);
+            Near(100f * (19661f / 65535f), s.Vertices[9].position.x, 1e-3f);
+            Near(100f * (19661f / 65535f) + 12.5f, s.Vertices[12].position.x, 1e-3f);
+            Assert.Equal(0, s.Vertices[6].tint.r);
+            Assert.Equal(240, s.Vertices[12].tint.r);
+        }
+
+        // The gradient runs over the whole path: a second sub-path continues where the first ended,
+        // and joins and caps take the colour of the segment end they sit on.
+        [Fact]
+        public void TheGradientRunsAlongAllSubPaths()
+        {
+            var s = Save(p =>
+            {
+                p.lineWidth = 4; p.lineCap = LineCap.Round; p.strokeGradient = TwoKeys(Black, White);
+                p.BeginPath();
+                p.MoveTo(new Vector2(0, 10)); p.LineTo(new Vector2(40, 10));
+                p.MoveTo(new Vector2(0, 30)); p.LineTo(new Vector2(40, 30));
+                p.Stroke();
+            });
+            // Per sub-path: 9 rows, then the start cap and the end cap (5 vertices each).
+            Assert.Equal(2 * (27 + 10), s.Vertices.Length);
+            Assert.Equal(0, s.Vertices[0].tint.r);
+            Assert.Equal(120, s.Vertices[24].tint.r);
+            Assert.Equal(0, s.Vertices[27].tint.r);   // first sub-path's start cap
+            Assert.Equal(120, s.Vertices[32].tint.r); // its end cap
+            Assert.Equal(120, s.Vertices[37].tint.r); // the second sub-path starts at half
+            Assert.Equal(240, s.Vertices[37 + 24].tint.r);
+        }
+
+        [Fact]
+        public void ArcsAndCurvesChangeColourAlongTheirLength()
+        {
+            var arc = Save(p =>
+            {
+                p.lineWidth = 4; p.strokeGradient = TwoKeys(Black, White);
+                p.BeginPath(); p.Arc(new Vector2(50, 50), 40, 0, 180); p.Stroke();
+            });
+            // Ring steps of at most 30°: the colour grows from step to step by the angle turned,
+            // the same on both sides of the ring, from the first key to the last.
+            Assert.Equal(0, arc.Vertices[0].tint.r);
+            Assert.InRange(arc.Vertices[2].tint.r, 39, 41);
+            for (int i = 2; i < arc.Vertices.Length; i += 2)
+            {
+                Assert.True(arc.Vertices[i].tint.r >= arc.Vertices[i - 2].tint.r);
+                Assert.InRange(arc.Vertices[i + 1].tint.r, arc.Vertices[i].tint.r - 1, arc.Vertices[i].tint.r + 1);
+            }
+            Assert.InRange(arc.Vertices[arc.Vertices.Length - 1].tint.r, 239, 240);
+            var curve = Save(p =>
+            {
+                var g = new Gradient();
+                g.SetKeys(new[] { new GradientColorKey(Black, 0f), new GradientColorKey(White, 0.5f), new GradientColorKey(Black, 1f) },
+                    new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+                p.lineWidth = 4; p.strokeGradient = g;
+                p.BeginPath(); p.MoveTo(new Vector2(0, 40)); p.BezierCurveTo(new Vector2(20, 0), new Vector2(60, 0), new Vector2(80, 40)); p.Stroke();
+            });
+            // The pieces are cut at the middle key: some piece end shows its colour in full, and
+            // the curve starts and ends black.
+            byte max = 0;
+            foreach (var v in curve.Vertices) max = Math.Max(max, v.tint.r);
+            Assert.InRange(max, 239, 240);
+            Assert.Equal(0, curve.Vertices[0].tint.r);
+            Assert.InRange(curve.Vertices[curve.Vertices.Length - 2].tint.r, 0, 1);
+        }
+
+        [Fact]
+        public void ALinearGradientIsShownInSrgb()
+        {
+            var g = TwoKeys(Black, new Color32(128, 128, 128, 255));
+            g.colorSpace = ColorSpace.Linear;
+            var s = GradientLine(g);
+            // The end key 128/255 read as linear: 0.50196 -> sRGB 0.7354 -> 188.
+            Assert.Equal(188, s.Vertices[24].tint.r);
+            g.colorSpace = ColorSpace.Gamma;
+            Assert.Equal(128, GradientLine(g).Vertices[24].tint.r);
+        }
+
         [Fact]
         public void CallbackMeshesKeepCallOrder()
         {
