@@ -287,6 +287,17 @@ public class RealtimeGIProbe : MonoBehaviour
             }
             DynamicGI.updateThreshold = 1f;
             DynamicGI.indirectScale = sceneScale;
+
+            // Directionality with hardly any light: no light on, the panel's emission black and
+            // a dark ambient color, so that parts of the lightmap receive next to nothing.
+            if (LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
+            {
+                s.point.enabled = false;
+                DynamicGI.SetEmissive(s.panel, Color.black);
+                RenderSettings.ambientLight = new Color(0.02f, 0.025f, 0.03f);
+                yield return Converge();
+                Capture(label + "-dim", s);
+            }
         }
         Finish();
     }

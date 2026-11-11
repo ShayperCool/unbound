@@ -1510,6 +1510,18 @@ fn a_directional_scene_solves_the_editors_directionality() {
             },
             "roomdirectional-threshold0",
         ),
+        // Hardly any light (no light on, the panel black, a dark ambient color): the directions
+        // of the texels that receive less than 0.001 shorten.
+        (
+            None,
+            Room {
+                point_light: false,
+                panel_set_emissive: Some([0.0; 3]),
+                ambient: [0.02, 0.025, 0.03],
+                ..moved
+            },
+            "roomdirectional-dim",
+        ),
     ];
     for (before, room, case) in cases {
         if let Some(before) = before {
