@@ -1,0 +1,10 @@
+{
+ "commands": [
+  "python3 tests/projects/samplerstates/run.py check"
+ ],
+ "summary": "\\d+/\\d+ records match.*",
+ "engine_paths": [
+  "crates/unbound-shaders/src/samplers.rs",
+  "crates/unbound-shaders/src/fit.rs"
+ ]
+}

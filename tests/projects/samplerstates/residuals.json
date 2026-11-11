@@ -1,0 +1,7 @@
+{
+ "A graphics program sampling one texture with and without comparisons (two variables of one name) does not compile for Unbound and draws with the error shader, as before this probe; the Editor samples both: follow-up": [
+  "CmpOwn",
+  "CmpInline",
+  "CmpOther"
+ ]
+}
