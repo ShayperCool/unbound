@@ -539,6 +539,18 @@ public class RealtimeGIProbe : MonoBehaviour
         DynamicGI.SetEmissive(s.panel, Color.black);
         yield return Converge();
         Capture("roombakedenvironment-envdata-loaded", s);
+
+        // The room and other shapes (a wedge, the same wound against its normals, a taller
+        // one, an L-shaped step, two roofs, a grid, a thin bar, a quad and a plane), every
+        // renderer with Preserve UVs off, so that the precompute made their charts: as it
+        // loads and with the point light moved.
+        yield return Load("RoomAuto");
+        s = Scene();
+        yield return Converge();
+        Capture("roomauto-base", s);
+        s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+        yield return Converge();
+        Capture("roomauto-moved", s);
         Finish();
     }
 
