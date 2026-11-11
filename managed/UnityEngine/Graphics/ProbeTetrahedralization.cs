@@ -32,8 +32,10 @@ namespace UnityEngine
             foreach (var set in sets)
             {
                 positions.AddRange(set.Positions);
-                // The baked coefficients: realtime GI's lighting stays with the set it lights.
-                probes.AddRange(set.BakedAlone ?? set.Probes);
+                // The baked coefficients (none: zeros): realtime GI's lighting stays with the set
+                // it lights.
+                if (set.Baked) probes.AddRange(set.BakedAlone ?? set.Probes);
+                else probes.AddRange(new SphericalHarmonicsL2[set.Positions.Length]);
                 for (int i = 0; i < set.Positions.Length; i++)
                     occlusion.Add(i < set.Occlusion.Length ? set.Occlusion[i] : Vector4.one);
             }

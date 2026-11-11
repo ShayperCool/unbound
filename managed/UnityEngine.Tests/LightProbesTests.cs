@@ -162,12 +162,35 @@ namespace Unbound.Tests
                 Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));
                 Assert.Equal(0.875f, sh[1, 0]);
                 Assert.Equal(0.875f, set.Snapshot().Probes[2][1, 0]);
+                // Baked coefficients given while realtime GI lights the probes show at once,
+                // with the realtime lighting still added (roombakedenvironment-bakedset-now).
+                assigned[2][1, 0] = 0.5f;
+                first.bakedProbes = assigned;
+                Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));
+                Assert.Equal(0.625f, sh[1, 0]);
+                Assert.Equal(-0.5f, sh[0, 3]);
+                Assert.Equal(0.5f, first.bakedProbes[2][1, 0]);
+                assigned[2][1, 0] = 0.75f;
+                first.bakedProbes = assigned;
+                // The same for probes that had realtime lighting alone.
+                var realtimeOnly = second.m_Self;
+                RealtimeGI.ApplyProbes(realtimeOnly, coefficients, 4);
+                Assert.Empty(second.bakedProbes);
                 // Probes of several scenes combined (LightProbes.Tetrahedralize) join their
-                // baked coefficients: realtime GI's lighting stays with the set it lights.
-                var combined = ProbeTetrahedralization.Combine(new List<ProbeSet> { set, second.m_Self });
+                // baked coefficients, zeros for a set without any: realtime GI's lighting stays
+                // with the set it lights.
+                var combined = ProbeTetrahedralization.Combine(new List<ProbeSet> { set, realtimeOnly });
                 Assert.Equal(0.75f, combined.Probes[2][1, 0]);
                 Assert.Equal(-0.5f, combined.Probes[2][0, 3]);
+                Assert.Equal(0f, combined.Probes[4 + 2][1, 0]);
                 Assert.Null(combined.BakedAlone);
+                second.bakedProbes = assigned;
+                Assert.True(realtimeOnly.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));
+                Assert.Equal(0.875f, sh[1, 0]);
+                Assert.Equal(0.75f, second.bakedProbes[2][1, 0]);
+                RealtimeGI.ReleaseProbes(realtimeOnly, Array.Empty<ProbeSet>());
+                Assert.True(realtimeOnly.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));
+                Assert.Equal(0.75f, sh[1, 0]);
                 RealtimeGI.ReleaseProbes(set, Array.Empty<ProbeSet>());
                 Assert.False(set.Realtime);
                 Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));

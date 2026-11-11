@@ -45,6 +45,28 @@ namespace UnityEngine
 
         internal static readonly ProbeSet Empty = new ProbeSet();
 
+        /// <summary>Gives the probes baked coefficients (LightProbes.bakedProbes): what
+        /// interpolation reads is these plus the lighting realtime GI gives the probes, at once
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
+        /// roombakedenvironment-bakedset-now).</summary>
+        internal void SetBaked(SphericalHarmonicsL2[] coefficients)
+        {
+            var lit = (SphericalHarmonicsL2[])coefficients.Clone();
+            if (Realtime)
+            {
+                // The realtime part: what the probes hold beyond their baked coefficients.
+                for (int i = 0; i < lit.Length && i < Probes.Length; i++)
+                {
+                    var realtime = Baked && BakedAlone != null ? Probes[i] + BakedAlone[i] * -1f : Baked ? default : Probes[i];
+                    lit[i] = lit[i] + realtime;
+                }
+                BakedAlone = (SphericalHarmonicsL2[])coefficients.Clone();
+            }
+            else BakedAlone = null;
+            Probes = lit;
+            Baked = true;
+        }
+
         /// <summary>A copy whose coefficients do not change with the original's: what
         /// interpolation reads (not the baked part alone of probes realtime GI lights too).</summary>
         internal ProbeSet Snapshot() => new ProbeSet
@@ -396,9 +418,7 @@ namespace UnityEngine
                     Debug.LogError($"Coefficients array must have probeCount ({m_Set.Positions.Length}) elements.");
                     return;
                 }
-                m_Set.Probes = (SphericalHarmonicsL2[])value.Clone();
-                m_Set.Baked = true;
-                m_Set.BakedAlone = null;
+                m_Set.SetBaked(value);
             }
         }
 
@@ -420,12 +440,10 @@ namespace UnityEngine
                     Debug.LogError($"Coefficients array must have 27*probeCount ({m_Set.Probes.Length * 27}) elements.");
                     return;
                 }
-                var probes = (SphericalHarmonicsL2[])m_Set.Probes.Clone();
+                var probes = new SphericalHarmonicsL2[m_Set.Probes.Length];
                 for (int i = 0; i < probes.Length; i++)
                     for (int k = 0; k < 27; k++) probes[i][k / 9, k % 9] = value[i * 27 + k];
-                m_Set.Probes = probes;
-                m_Set.Baked = true;
-                m_Set.BakedAlone = null;
+                m_Set.SetBaked(probes);
             }
         }
 

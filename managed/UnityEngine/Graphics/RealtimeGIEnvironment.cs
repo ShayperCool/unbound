@@ -28,7 +28,9 @@ namespace UnityEngine
         static readonly float[] s_NoEnvironment = new float[6 * FaceTexels * 3];
         /// <summary>The cube a script gave (<see cref="DynamicGI.SetEnvironmentData"/>), as a
         /// scene whose environment lighting is baked keeps it: until
-        /// <see cref="DynamicGI.UpdateEnvironment"/>, whatever the ambient source does.</summary>
+        /// <see cref="DynamicGI.UpdateEnvironment"/>, whatever the ambient source does (its
+        /// color, another source, a skybox's intensity: tests/projects/realtimegi
+        /// roombakedenvironment-envdata-*), or a scene loaded alone (unmeasured).</summary>
         static readonly float[] s_ScriptFaces = new float[6 * FaceTexels * 3];
         static bool s_ScriptFacesSet;
         /// <summary>Counts the changes of <see cref="s_Faces"/>; each native scene takes them once.</summary>
@@ -106,13 +108,20 @@ namespace UnityEngine
         internal static void EnvironmentChanged()
         {
             s_EnvironmentStale = true;
+            DropScriptFaces();
+        }
+
+        /// <summary>The cube a script gave no longer stands for the scenes that keep it.</summary>
+        static void DropScriptFaces()
+        {
             if (!s_ScriptFacesSet) return;
             s_ScriptFacesSet = false;
             s_EnvironmentVersion++;
         }
 
         /// <summary>DynamicGI.SetEnvironmentData: the cube's texels as given (their alpha is not
-        /// read), until the ambient source's inputs change or DynamicGI.UpdateEnvironment.</summary>
+        /// read), until DynamicGI.UpdateEnvironment or, for scenes that take the ambient source,
+        /// a change of its inputs.</summary>
         internal static void SetEnvironmentData(float[] input)
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
