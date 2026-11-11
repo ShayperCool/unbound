@@ -420,8 +420,17 @@ their Lightmap Parameters (parameters that change the charts, such as their reso
 layout check below; `RoomSystems` gives three renderers parameters of their own with System Tag
 1):
 
-- Charts: the triangles of the lightmap UVs (UV2, else UV1) that share a vertex, or a vertex
-  position and UV; in the order of their first triangle.
+- Input: `Mesh.uv3` when the mesh has it, else the baked lightmap UVs (`Mesh.uv2`), else
+  `Mesh.uv`. The Manual documents the first two
+  ([Generate lightmap UVs](https://docs.unity3d.com/6000.0/Documentation/Manual/LightingGiUvs-GeneratingLightmappingUVs.html):
+  "If you already have baked lightmap UVs in `Mesh.uv2`, and you want to provide different UVs
+  as input for your real-time lightmaps, place the real-time lightmap UVs in Mesh.uv3";
+  otherwise "Unity falls back to sharing the baked lightmap UVs"); `RoomCharts`' `Channels`
+  plate, 2 x 1 m with a square in `Mesh.uv3`, gets a square of 4 x 4 texels, not the 6 x 4 of
+  its `Mesh.uv2`. How the precompute then scales and packs the charts is not documented: what
+  follows is what the Editor's precomputed data shows in the probes' scenes.
+- Charts: the triangles of those UVs that share a vertex, or a vertex position and UV; in the
+  order of their first triangle.
 - Each chart keeps its UV shape, scaled uniformly so its area is its world area at the realtime
   resolution (Lighting Settings' resolution times the renderer's Scale In Lightmap), in blocks of
   2x2 texels. Its width and height become whole blocks separately: `max(ceil(size + 0.5 +
@@ -451,9 +460,12 @@ holds its two plates side by side; the same ring with three plates, whose UV spa
 blocks and holds all three above the ring, the hole empty; a plate with two holes, where the
 first loose plate takes the hole of its own size although the larger hole comes first from the
 bottom left, and the second the larger hole's lowest, leftmost place; and an arch, whose pocket
-is open to the lower edge and takes a plate as a hole does. Not measured: what giving a region
-up changes for the charts placed after it, regions of equal size, and regions that reach the
-rows above every chart. (Within a system, other renderers' charts may lie in the blocks a
+is open to the lower edge and takes a plate as a hole does. Each loose plate lies on the
+precomputed chart of its own number. Not measured, and implemented as one consistent rule: what
+giving a region up changes for the charts placed after it, the order of regions of equal size,
+how many blocks a region that reaches the rows above every chart counts, and up to what region
+size a place for the smallest chart is searched before a region is given up; a difference
+there shows as a failed layout check, not as wrong lighting. (Within a system, other renderers' charts may lie in the blocks a
 renderer's own charts leave free: the check compares only the blocks its charts use.) With
 Preserve UVs off the precompute generates the charts themselves (not supported yet).
 
