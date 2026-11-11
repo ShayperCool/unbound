@@ -143,8 +143,9 @@ imported without keyframe reduction.
 - stream handles of a humanoid's bones in a job (`HumanoidBones.cs`, `bone.*`): a job above
   HumanA's clip with `Animator.BindStreamTransform` handles of the hips, the spine, the left lower
   arm, the head and the left hand, one job per change: none (`bone.read`), a local rotation of
-  the lower arm (`bone.rotateLocal`, and `bone.rotateThenHuman`), a world rotation of the head
-  (`bone.rotateWorld`), the hips' local position (`bone.moveHips`), the lower arm's world position
+  the lower arm (`bone.rotateLocal`), a world rotation of the head (`bone.rotateWorld`), both
+  with the human stream and the bones read in between (`bone.rotateThenHuman`: `.job.humanBetween`,
+  `.bones.between`), the hips' local position (`bone.moveHips`), the lower arm's world position
   (`bone.moveArm`), the spine's scale (`bone.scale`), and a muscle set before the bones are read
   (`bone.humanThenRead`). Each step records what the handles read before and after the change
   (`.bones.before`, `.bones.after`: local position times 100, the inverse of the rig's root
@@ -153,7 +154,10 @@ imported without keyframe reduction.
   Measured: the handles read the bones of the stream's pose; rotations and the hips' position
   written through them reach the final pose; a position or scale below the hips stays in the
   stream; the hips read the root's scale of 100 as their own and the positions below them are
-  that much further from the hips than the transforms end up.
+  that much further from the hips than the transforms end up. Once the job has read the human
+  stream after a bone change, the bones' local values are as before and their world positions
+  are read under the root without its scale (the hips 1.02 units from the root where the
+  transform is 101.8).
 
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
