@@ -533,10 +533,17 @@ public class RealtimeGIProbe : MonoBehaviour
         yield return Converge();
         Capture("pipeline-bounce", s, false);
         s.point.bounceIntensity = 1f;
+        // The light a fifth of a unit above the floor, far inside a fourteenth of its range.
+        s.point.transform.position = new Vector3(0.5f, 0.2f, -0.5f);
+        yield return Converge();
+        Capture("pipeline-near", s, false);
 
-        // The spot light, then with a narrow inner angle.
+        // The spot light alone (the panel's emission black), bright, then with a narrow inner
+        // angle.
         s.point.enabled = false;
+        DynamicGI.SetEmissive(s.panel, Color.black);
         s.spot.enabled = true;
+        s.spot.intensity = 30f;
         yield return Converge();
         Capture("pipeline-spot", s, false);
         s.spot.innerSpotAngle = 5f;
@@ -551,7 +558,6 @@ public class RealtimeGIProbe : MonoBehaviour
 
         // The environment alone: an ambient color, then a procedural skybox, then its ambient
         // intensity 2.
-        DynamicGI.SetEmissive(s.panel, Color.black);
         RenderSettings.ambientLight = new Color(0.6f, 0.5f, 0.2f);
         yield return Converge();
         Capture("pipeline-color", s, false);

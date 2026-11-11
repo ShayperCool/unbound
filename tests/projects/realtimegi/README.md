@@ -138,9 +138,11 @@ the package and the pipeline assets of tests/projects/urp to the run's copy) and
 records a shorter sequence in `Room`, lightmaps and values only (the room's materials are the
 built-in pipeline's, so no frames): `pipeline-base`, `pipeline-moved`, `pipeline-intensity` (4),
 `pipeline-range` (the point light's range 4, which the far walls are beyond),
-`pipeline-bounce` (range 10, intensity 2, bounce intensity 3), `pipeline-spot` (the spot light
-alone), `pipeline-spot-inner` (its inner angle 5 instead of 21.8), `pipeline-directional` (a
-directional light with shadows), then the environment alone: `pipeline-color` (an ambient
+`pipeline-bounce` (range 10, intensity 2, bounce intensity 3), `pipeline-near` (bounce
+intensity 1, the light a fifth of a unit above the floor), `pipeline-spot` (the spot light
+alone at intensity 30, the panel's emission black), `pipeline-spot-inner` (its inner angle 5
+instead of 21.8), `pipeline-directional` (a directional light with shadows), then the
+environment alone: `pipeline-color` (an ambient
 color), `pipeline-sky` (a procedural skybox) and `pipeline-sky-intensity` (its ambient intensity
 2). That set is its own reference, `Reference/unity-<version>/urp`.
 
@@ -261,7 +263,9 @@ Observations (not documented guarantees):
   get nothing from the light), intensity and bounce intensity scaling the light linearly
   (`pipeline-intensity`, `pipeline-bounce`, where the built-in pipeline's grow fourfold and
   tenfold), and a spot light's own inner angle (`pipeline-spot-inner` differs from
-  `pipeline-spot`). The skybox lights realtime GI there as in the built-in pipeline, and
+  `pipeline-spot` in 139 of 5070 values by more than the comparator's tolerance). Next to the
+  light the lightmap is far below the inverse square of the distance (`pipeline-near`: at most
+  1.95 on the floor a fifth of a unit under a light of intensity 2). The skybox lights realtime GI there as in the built-in pipeline, and
   `RenderSettings.ambientProbe` after `DynamicGI.UpdateEnvironment` is the built-in pipeline's
   (0.0979 in its first coefficient, 0.45 at intensity 2).
 - The directionality (`roomdirectional-*.dir`): where light arrives from one side its RGB is
