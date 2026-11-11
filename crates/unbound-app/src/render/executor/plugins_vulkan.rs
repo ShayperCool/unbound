@@ -25,7 +25,6 @@
 //! skipped), swapchain configuration, `Recreate` access, and a render pass over the screen or
 //! several colors (EnsureInside events are then skipped).
 use super::UnityRenderer;
-use super::plugins::vulkan::vk_format;
 use ash::vk;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
@@ -1835,6 +1834,14 @@ fn buffer_usage(usage: wgpu::BufferUsages) -> vk::BufferUsageFlags {
         }
     }
     flags
+}
+
+/// The Vulkan format wgpu-hal stores a wgpu format in on this device (None: not Vulkan, or a
+/// format it has none for).
+pub fn vk_format(adapter: &wgpu::Adapter, format: wgpu::TextureFormat) -> Option<vk::Format> {
+    // SAFETY: the hal adapter is only read, while the wgpu adapter lives.
+    let hal = unsafe { adapter.as_hal::<Vulkan>() }?;
+    Some(hal.texture_format_as_raw(format)).filter(|f| *f != vk::Format::UNDEFINED)
 }
 
 #[cfg(test)]

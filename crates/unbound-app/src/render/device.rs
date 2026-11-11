@@ -2,13 +2,9 @@
 //! device's conventions as the renderer applies them. Resolved once at startup.
 use unbound_compat::GraphicsDevice;
 
-/// The wgpu backend that draws the device.
-///
-/// OpenGL Core is drawn by the OS's native backend for now (Vulkan on Linux, Metal on macOS):
-/// wgpu's OpenGL backend lacks what the renderer needs (texture views in another format,
-/// independent blending on its 3.3 context, sampler LOD bias), see docs/COMPATIBILITY_GAPS.md
-/// (graphics devices). Native plugins on that device get an OpenGL context sharing the
-/// renderer's memory on Linux (`gl_interop`).
+/// The wgpu backend that draws the device: OpenGL Core by wgpu's OpenGL backend (EGL; its
+/// vendored changes are in vendor/wgpu-sampler/PATCHES.md), Vulkan by its Vulkan backend. macOS
+/// has neither and draws with Metal.
 pub fn backends(device: GraphicsDevice) -> wgpu::Backends {
     backends_on(device, unbound_compat::HostOs::current())
 }
@@ -16,20 +12,105 @@ pub fn backends(device: GraphicsDevice) -> wgpu::Backends {
 fn backends_on(device: GraphicsDevice, os: unbound_compat::HostOs) -> wgpu::Backends {
     match (device, os) {
         (GraphicsDevice::Metal, _) | (_, unbound_compat::HostOs::MacOs) => wgpu::Backends::METAL,
-        (GraphicsDevice::OpenGLCore | GraphicsDevice::Vulkan, unbound_compat::HostOs::Linux) => {
-            wgpu::Backends::VULKAN
-        }
+        (GraphicsDevice::OpenGLCore, unbound_compat::HostOs::Linux) => wgpu::Backends::GL,
+        (GraphicsDevice::Vulkan, unbound_compat::HostOs::Linux) => wgpu::Backends::VULKAN,
     }
 }
 
-/// Whether the device's backend has an adapter on this machine.
-pub fn starts(device: GraphicsDevice) -> bool {
+/// What the renderer needs of a backend beyond WebGPU's downlevel defaults: compute programs and
+/// views of a texture in another format (sRGB and linear views of one texture).
+const REQUIRED: wgpu::DownlevelFlags =
+    wgpu::DownlevelFlags::COMPUTE_SHADERS.union(wgpu::DownlevelFlags::VIEW_FORMATS);
+
+/// The renderer's GPU device, made once by [`start`] before the game boots.
+static STARTED: std::sync::Mutex<Option<bevy::render::settings::RenderResources>> =
+    std::sync::Mutex::new(None);
+
+/// How the device's GPU device is made.
+fn settings(device: GraphicsDevice) -> bevy::render::settings::WgpuSettings {
+    bevy::render::settings::WgpuSettings {
+        // GPU memory in blocks sized to what is used, not the large blocks of the default
+        // (`Performance`): the test game held 812 MB of VRAM, half of it unused block space.
+        memory_hints: bevy::render::settings::MemoryHints::MemoryUsage,
+        backends: Some(backends(device)),
+        ..Default::default()
+    }
+}
+
+/// Whether `$DISPLAY` (its value) names an X11 display.
+fn names_x11_display(display: Option<&std::ffi::OsStr>) -> bool {
+    display.is_some_and(|name| !name.is_empty())
+}
+
+/// Makes the device's GPU device, as the Editor makes its graphics device before Play mode (the
+/// plugins loaded when the game boots find it); false when its backend has no adapter with what
+/// the renderer needs, or no window system it presents to. The window's renderer takes it
+/// ([`take_started`]).
+pub fn start(device: GraphicsDevice) -> bool {
     let backends = backends(device);
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+    if backends == wgpu::Backends::GL && !names_x11_display(std::env::var_os("DISPLAY").as_deref())
+    {
+        // Its EGL display is X11's (below): without one it could draw but not present.
+        tracing::warn!(
+            "the {device} graphics device draws into an X11 window and $DISPLAY names no X11 \
+             display (under Wayland: Xwayland)"
+        );
+        return false;
+    }
+    let usable = |adapter: &wgpu::Adapter| {
+        adapter
+            .get_downlevel_capabilities()
+            .flags
+            .contains(REQUIRED)
+    };
+    // This instance goes before the renderer's is made: the OpenGL backend's terminates the
+    // process's EGL display when it goes.
+    let any_usable = {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends,
+            ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
+        });
+        bevy::tasks::block_on(instance.enumerate_adapters(backends))
+            .iter()
+            .any(usable)
+    };
+    if !any_usable {
+        return false;
+    }
+    let resources = bevy::tasks::block_on(bevy::render::renderer::initialize_renderer(
         backends,
-        ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
-    });
-    !bevy::tasks::block_on(instance.enumerate_adapters(backends)).is_empty()
+        None,
+        &settings(device),
+    ));
+    if !usable(&resources.3) {
+        return false;
+    }
+    if backends == wgpu::Backends::GL {
+        // The OpenGL device draws into an X11 window, as the Linux Editor (an X11 application)
+        // does: its EGL display is X11's (vendor/wgpu-sampler/PATCHES.md), and EGL presents to
+        // windows of its display's window system only. winit takes Wayland where these name it.
+        // SAFETY: once, at startup, before the window, the game and its runtime exist. Rust's
+        // own reads of the environment are serialized with this; nothing else in the process
+        // reads it at this point.
+        unsafe {
+            std::env::remove_var("WAYLAND_DISPLAY");
+            std::env::remove_var("WAYLAND_SOCKET");
+        }
+    }
+    super::gl_interop::set_renderer(resources.0.wgpu_device());
+    *STARTED.lock().unwrap_or_else(|e| e.into_inner()) = Some(resources);
+    true
+}
+
+/// The GPU device [`start`] made for the run's device (made now when none was).
+pub fn take_started(device: GraphicsDevice) -> bevy::render::settings::RenderResources {
+    let started = || STARTED.lock().unwrap_or_else(|e| e.into_inner()).take();
+    started()
+        .or_else(|| {
+            start(device);
+            started()
+        })
+        .unwrap_or_else(|| panic!("the {device} graphics device has no GPU that can draw it"))
 }
 
 /// How the renderer draws for the device: Unity's GPU projection, depth direction and target
@@ -217,10 +298,19 @@ mod tests {
             ])
         );
         assert_eq!(vulkan.depth(1.0), 0.0);
-        // The OS's native backend draws OpenGL Core for now (macOS: Metal, as before devices).
+        // The OpenGL device needs an X11 display to present to.
+        use std::ffi::OsStr;
+        assert!(names_x11_display(Some(OsStr::new(":0"))));
+        assert!(!names_x11_display(Some(OsStr::new(""))));
+        assert!(!names_x11_display(None));
+        // Each device by its own backend on Linux (macOS: Metal, as before devices).
         use unbound_compat::HostOs;
         assert_eq!(
             backends_on(GraphicsDevice::OpenGLCore, HostOs::Linux),
+            wgpu::Backends::GL
+        );
+        assert_eq!(
+            backends_on(GraphicsDevice::Vulkan, HostOs::Linux),
             wgpu::Backends::VULKAN
         );
         assert_eq!(

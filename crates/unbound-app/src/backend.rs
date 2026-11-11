@@ -223,26 +223,12 @@ impl RenderBackend for GpuBackend {
     }
 
     fn with_plugin_context(&self, work: &mut dyn FnMut()) {
-        use crate::render::gl_interop;
         // The renderer is not held meanwhile: the plugin may call back into the engine.
-        let device = self
-            .inner
-            .lock()
-            .unwrap()
-            .renderer
-            .as_mut()
-            .map(|r| r.plugin_device());
         let mut ran = false;
-        let mut run = |_: &mut gl_interop::Interop| {
+        let _ = crate::render::gl_interop::with(|_| {
             ran = true;
             work();
-        };
-        let _ = match device {
-            Some(Ok(uuid)) => gl_interop::with(uuid, &mut run),
-            Some(Err(_)) => Ok(()),
-            // Before the GPU is up: the first one that can share textures.
-            None => gl_interop::with(None, &mut run),
-        };
+        });
         if !ran {
             work();
         }

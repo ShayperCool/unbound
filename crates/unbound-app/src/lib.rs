@@ -157,10 +157,10 @@ struct RunSettings {
     remote_capture: remote::CaptureState,
 }
 
-/// Whether the graphics device's GPU backend has an adapter on this machine (the device can
-/// start).
-pub fn device_starts(device: unbound_compat::GraphicsDevice) -> bool {
-    render::device::starts(device)
+/// Starts the graphics device: makes its GPU device, which the window's renderer then takes;
+/// false when its backend has no GPU that can draw it.
+pub fn start_device(device: unbound_compat::GraphicsDevice) -> bool {
+    render::device::start(device)
 }
 
 /// Offers the graphics device's own plugin interfaces (`IUnityGraphicsVulkan` on Vulkan), before
@@ -197,6 +197,11 @@ pub fn run(
                         ..default()
                     },
                     present_mode: PresentMode::AutoVsync,
+                    // The OpenGL backend's window surfaces take its EGL config's visual, 32-bit
+                    // with alpha: winit makes a window of that visual when it may be transparent
+                    // (the present writes opaque alpha).
+                    transparent: render::device::backends(unbound_runtime::graphics_device::get())
+                        == wgpu::Backends::GL,
                     ..default()
                 }),
                 exit_condition: ExitCondition::DontExit,
@@ -204,17 +209,10 @@ pub fn run(
                 ..default()
             })
             .set(bevy::render::RenderPlugin {
-                // GPU memory in blocks sized to what is used, not the large blocks of the default
-                // (`Performance`): the test game held 812 MB of VRAM, half of it unused block space.
-                render_creation: bevy::render::settings::WgpuSettings {
-                    memory_hints: bevy::render::settings::MemoryHints::MemoryUsage,
-                    // The backend that draws the run's graphics device.
-                    backends: Some(render::device::backends(
-                        unbound_runtime::graphics_device::get(),
-                    )),
-                    ..default()
-                }
-                .into(),
+                // The GPU device started for the run's graphics device.
+                render_creation: bevy::render::settings::RenderCreation::Manual(Box::new(
+                    render::device::take_started(unbound_runtime::graphics_device::get()),
+                )),
                 ..default()
             })
             .build(),

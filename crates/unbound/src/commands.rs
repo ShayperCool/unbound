@@ -114,7 +114,7 @@ fn choose_graphics_device(
 ) -> Result<unbound_compat::GraphicsDevice> {
     let request = project.settings.device_request(forced);
     let device = unbound_compat::select_device(&request, unbound_compat::HostOs::current(), |d| {
-        let starts = !windowed || unbound_app::device_starts(d);
+        let starts = !windowed || unbound_app::start_device(d);
         if !starts {
             tracing::warn!("the {d} graphics device did not start; trying the next one");
         }

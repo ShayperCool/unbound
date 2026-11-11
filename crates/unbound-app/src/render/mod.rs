@@ -81,6 +81,9 @@ impl Plugin for UnityRenderPlugin {
         let device = render_app.world().resource::<RenderDevice>().clone();
         let queue = render_app.world().resource::<RenderQueue>().clone();
         let adapter = render_app.world().resource::<RenderAdapterInfo>();
+        // Measured against the OpenGL Core Editor when Vulkan drew that device
+        // (tests/projects/samplerbias); the OpenGL backend has the transition natively. Still
+        // applied to what Vulkan draws, the Vulkan device: unmeasured against the Vulkan Editor.
         let center_anisotropic_lod =
             adapter.backend == wgpu::Backend::Vulkan && adapter.vendor == 0x10de;
         let resolver = self.backend.take_resolver(&self.shader_roots);
