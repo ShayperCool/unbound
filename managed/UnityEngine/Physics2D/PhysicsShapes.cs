@@ -239,21 +239,31 @@ namespace UnityEngine
 
     public partial class Collider2D
     {
-        public int GetShapes(PhysicsShapeGroup2D physicsShapeGroup) => GetShapes(physicsShapeGroup, 0, int.MaxValue);
+        public int GetShapes(PhysicsShapeGroup2D physicsShapeGroup) => GetShapes(physicsShapeGroup, 0, 0, true);
 
         /// <summary>The collider's shapes as Unity reports them: in its rigidbody's space (the world
         /// for colliders without one), polygons and edges without Box2D's skin radius, loops with
         /// their first vertex repeated at the end.</summary>
         public int GetShapes(PhysicsShapeGroup2D physicsShapeGroup, int shapeIndex, [Internal.DefaultValue("1")] int shapeCount = 1)
+            => GetShapes(physicsShapeGroup, shapeIndex, shapeCount, false);
+
+        int GetShapes(PhysicsShapeGroup2D physicsShapeGroup, int shapeIndex, int shapeCount, bool all)
         {
             if (physicsShapeGroup == null) throw new ArgumentNullException(nameof(physicsShapeGroup));
             W.PrepareQuery();
+            if (all)
+            {
+                shapeCount = m_Fixtures.Count;
+                if (shapeCount == 0) { physicsShapeGroup.Clear(); return 0; }
+            }
+            else if (shapeIndex < 0 || shapeIndex >= m_Fixtures.Count || shapeCount <= 0 ||
+                (long)shapeIndex + shapeCount > m_Fixtures.Count)
+                throw new ArgumentOutOfRangeException($"Cannot get shape range from {shapeIndex} to {(long)shapeIndex + shapeCount - 1} as Collider2D only has {m_Fixtures.Count} shape(s).");
             physicsShapeGroup.m_GroupState.ClearGeometry();
             var rb = m_AttachedBody;
             var space = rb != null ? (Matrix4x4)rb.localToWorldMatrix : Matrix4x4.identity;
             physicsShapeGroup.localToWorldMatrix = space;
-            if (shapeIndex < 0 || shapeIndex >= m_Fixtures.Count) return 0;
-            int last = (int)Math.Min((long)shapeIndex + shapeCount, m_Fixtures.Count);
+            int last = shapeIndex + shapeCount;
             var points = new List<Vector2>();
             for (int i = shapeIndex; i < last; i++)
             {
@@ -291,7 +301,9 @@ namespace UnityEngine
                     }
                     case ChainShape chain:
                         for (int v = 0; v < chain.Count; v++) points.Add(Out(chain.Vertices[v]));
-                        physicsShapeGroup.AddShape(PhysicsShapeType2D.Edges, Mathf.Max(0f, chain.Radius - B2Settings.PolygonRadius), points);
+                        int chainIndex = physicsShapeGroup.AddShape(PhysicsShapeType2D.Edges, Mathf.Max(0f, chain.Radius - B2Settings.PolygonRadius), points);
+                        physicsShapeGroup.SetShapeAdjacentVertices(chainIndex, chain.HasPrevVertex, chain.HasNextVertex,
+                            Out(chain.PrevVertex), Out(chain.NextVertex));
                         break;
                 }
             }

@@ -132,7 +132,8 @@ namespace Unbound.Box2D.Collision.Shapes
             float rounding = Radius - Settings.PolygonRadius;
             if (rounding > 1e-6f)
             {
-                if (!RoundedRayCast(new[] { Vertex1, Vertex2 }, 2, false, rounding, p1, p2, input.MaxFraction, out var f, out var n)) return false;
+                Span<Vector2> segment = stackalloc Vector2[] { Vertex1, Vertex2 };
+                if (!RoundedRayCast(segment, 2, false, rounding, p1, p2, input.MaxFraction, out var f, out var n)) return false;
                 output.Fraction = f;
                 output.Normal = MathUtils.Mul(transform.Rotation, n);
                 return true;
@@ -163,7 +164,7 @@ namespace Unbound.Box2D.Collision.Shapes
             }
 
             var t = numerator / denominator;
-            if (t < 0.0f || input.MaxFraction < t)
+            if (!(t >= 0.0f && t <= input.MaxFraction))
             {
                 return false;
             }
@@ -180,7 +181,7 @@ namespace Unbound.Box2D.Collision.Shapes
             }
 
             var s = Vector2.Dot(q - v1, r) / rr;
-            if (s < 0.0f || 1.0f < s)
+            if (!(s >= 0.0f && s <= 1.0f))
             {
                 return false;
             }

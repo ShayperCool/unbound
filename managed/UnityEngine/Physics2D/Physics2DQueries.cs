@@ -114,7 +114,10 @@ namespace Unbound.Runtime
             foreach (var f in FixturesIn(pointBox))
             {
                 var c = f.UserData as Collider2D;
-                if (c == null || !f.TestPoint(W.ToB2(origin))) continue;
+                if (c == null) continue;
+                bool containsOrigin = f.Shape is ChainShape chain
+                    ? chain.ContainsRayOrigin(f.Body.GetTransform(), W.ToB2(origin)) : f.TestPoint(W.ToB2(origin));
+                if (!containsOrigin) continue;
                 inside.Add(c);
                 if (!Physics2D.s_QueriesStartInColliders || !Passes(c, filter)) continue;
                 var normal = -dir;

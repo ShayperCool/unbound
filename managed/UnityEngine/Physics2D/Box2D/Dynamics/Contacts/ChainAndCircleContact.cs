@@ -9,18 +9,21 @@ namespace Unbound.Box2D.Dynamics.Contacts
 {
     internal class ChainAndCircleContact : Contact
     {
+        readonly EdgeShape edge = new EdgeShape();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal override void Evaluate(ref Manifold manifold, in Transform xfA, Transform xfB)
         {
             var chain = (ChainShape)FixtureA.Shape;
 
-            chain.GetChildEdge(out var edge, ChildIndexA);
+            chain.GetChildEdge(edge, ChildIndexA);
             CollisionUtils.CollideEdgeAndCircle(
                 ref manifold,
                 edge,
                 xfA,
                 (CircleShape)FixtureB.Shape,
-                xfB);
+                xfB,
+                useAdjacency: true);
         }
     }
 

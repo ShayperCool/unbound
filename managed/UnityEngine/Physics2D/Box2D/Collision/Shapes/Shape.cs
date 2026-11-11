@@ -16,7 +16,7 @@ namespace Unbound.Box2D.Collision.Shapes
         /// edge radius, which Unity's ray casts include; the collision skin they do not), in the
         /// shape's frame. The ray enters through an offset edge or a vertex's disc.
         /// </summary>
-        internal static bool RoundedRayCast(Vector2[] vertices, int count, bool closed, float r, Vector2 p1, Vector2 p2,
+        internal static bool RoundedRayCast(ReadOnlySpan<Vector2> vertices, int count, bool closed, float r, Vector2 p1, Vector2 p2,
             float maxFraction, out float fraction, out Vector2 normal)
         {
             fraction = float.MaxValue;
@@ -32,8 +32,9 @@ namespace Unbound.Box2D.Collision.Shapes
                 if (length <= 0f) continue;
                 var t = e / length;
                 // Outward normal (counter-clockwise polygons); a segment has both sides.
-                foreach (var n in closed ? new[] { new Vector2(t.Y, -t.X) } : new[] { new Vector2(t.Y, -t.X), new Vector2(-t.Y, t.X) })
+                for (int side = 0; side < (closed ? 1 : 2); side++)
                 {
+                    var n = side == 0 ? new Vector2(t.Y, -t.X) : new Vector2(-t.Y, t.X);
                     float denominator = Vector2.Dot(n, d);
                     if (denominator >= 0f) continue;
                     var o = a + r * n;

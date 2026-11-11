@@ -65,6 +65,13 @@ public static class ProbeEntry
         foreach (bool delaunay in new[] { false, true })
         foreach (int cellFrame in new[] { 0, 1, 2 })
         foreach (float extrusion in new[] { 0f, .1f }) TilemapControl(body, delaunay, cellFrame, extrusion);
+        foreach (int frame in new[] { 0, 1, 2 })
+        foreach (bool ghosts in new[] { false, true })
+        foreach (float radius in new[] { 0f, .125f })
+        foreach (string kind in new[] { "plain", "repeated", "short", "long" }) EdgeControl(frame, ghosts, radius, kind);
+        EdgeSpecial(false); EdgeSpecial(true); EdgeMassControl(); CompositeOutlineAdjacency(); ShapeRangeControl();
+        foreach (bool first in new[] { false, true })
+        foreach (float radius in new[] { 0f, .125f }) EdgeNonfinite(first, radius);
         File.WriteAllText(output, ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -231,6 +238,176 @@ public static class ProbeEntry
             top.compositeOperation = Collider2D.CompositeOperation.Merge;
             Physics2D.SyncTransforms(); composite.GenerateGeometry(); Physics2D.SyncTransforms();
             ProbeLog.Begin($"partition-delaunay/{delaunay}"); Shapes(composite, composite);
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void EdgeControl(int frame, bool ghosts, float radius, string kind)
+    {
+        var parent = new GameObject("edge-parent");
+        if (frame == 2)
+        {
+            parent.transform.rotation = Quaternion.Euler(17, 29, 11);
+            parent.transform.localScale = new Vector3(1.4f, .7f, 1.2f);
+        }
+        var root = new GameObject("edge"); root.transform.SetParent(parent.transform, false);
+        root.transform.localPosition = new Vector3(.3f, -.2f, 0);
+        root.transform.localRotation = Quaternion.Euler(0, 0, 23);
+        root.transform.localScale = new Vector3(1.25f, .75f, 1);
+        Rigidbody2D body = null;
+        if (frame != 0) { body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Kinematic; }
+        var edge = root.AddComponent<EdgeCollider2D>();
+        try
+        {
+            var points = new List<Vector2> { Vector2.zero };
+            if (kind == "repeated") points.Add(Vector2.zero);
+            else if (kind == "short") points.Add(new Vector2(.0056f, 0));
+            else if (kind == "long") points.Add(new Vector2(.00568f, 0));
+            points.Add(Vector2.right); points.Add(Vector2.one); points.Add(new Vector2(2, 1));
+            edge.SetPoints(points); edge.offset = new Vector2(.2f, -.1f); edge.edgeRadius = radius;
+            edge.useAdjacentStartPoint = edge.useAdjacentEndPoint = ghosts;
+            edge.adjacentStartPoint = Vector2.left; edge.adjacentEndPoint = new Vector2(3, 1);
+            Physics2D.SyncTransforms();
+            ProbeLog.Begin("edge-frame/" + frame + "/" + ghosts + "/" + radius.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "/" + kind);
+            ProbeLog.Value("collider.shapeCount", edge.shapeCount); ProbeLog.Value("edgeCount", edge.edgeCount);
+            ProbeLog.Value("pointCount", edge.pointCount); ProbeLog.Value("errorState", edge.errorState.ToString());
+            Shapes(edge, null);
+            var group = new PhysicsShapeGroup2D(); edge.GetShapes(group);
+            if (group.shapeCount > 0)
+            {
+                var shape = group.GetShape(0);
+                ProbeLog.Value("adjacent.start.use", shape.useAdjacentStart); ProbeLog.Value("adjacent.end.use", shape.useAdjacentEnd);
+                ProbeLog.Value("adjacent.start", shape.adjacentStart); ProbeLog.Value("adjacent.end", shape.adjacentEnd);
+            }
+            var slice = new PhysicsShapeGroup2D();
+            ProbeLog.Value("slice.first", edge.GetShapes(slice, 0, 1));
+            try { ProbeLog.Value("slice.after", edge.GetShapes(slice, 1, 1)); }
+            catch (ArgumentOutOfRangeException error) { ProbeLog.Value("slice.after.error", error.GetType().Name); }
+            ProbeLog.Value("slice.after.shapes", slice.shapeCount);
+            var sample = (Vector2)root.transform.TransformPoint(new Vector3(1.04f + edge.offset.x, .5f + edge.offset.y, 0));
+            ProbeLog.Value("overlap", edge.OverlapPoint(sample));
+            var origin = (Vector2)root.transform.TransformPoint(new Vector3(1.5f + edge.offset.x, .5f + edge.offset.y, 0));
+            var direction = (Vector2)root.transform.TransformVector(Vector3.left);
+            Hit("ray", Physics2D.Raycast(origin, direction, 10));
+            Hit("inside.ray", Physics2D.Raycast(sample, direction, 10));
+            if (frame == 1)
+            {
+                body.position += new Vector2(3, .25f); body.rotation += 17; Physics2D.SyncTransforms();
+                var moved = new PhysicsShapeGroup2D(); edge.GetShapes(moved);
+                var shapes = new List<PhysicsShape2D>(); var vertices = new List<Vector2>(); moved.GetShapeData(shapes, vertices);
+                ProbeLog.Value("moved.shapeCount", moved.shapeCount);
+                for (int j = 0; j < vertices.Count; j++)
+                {
+                    ProbeLog.Value("moved.local." + j, vertices[j]);
+                    ProbeLog.Value("moved.world." + j, (Vector2)moved.localToWorldMatrix.MultiplyPoint3x4(vertices[j]));
+                }
+            }
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(parent); }
+    }
+    static void EdgeSpecial(bool distant)
+    {
+        var root = new GameObject("edge-special"); var edge = root.AddComponent<EdgeCollider2D>();
+        try
+        {
+            edge.points = distant ? new[] { new Vector2(9000000, 0), new Vector2(9001000, 0) }
+                : new[] { Vector2.one, Vector2.one, Vector2.one };
+            Physics2D.SyncTransforms(); ProbeLog.Begin("edge-special/" + distant);
+            ProbeLog.Value("collider.shapeCount", edge.shapeCount); ProbeLog.Value("pointCount", edge.pointCount);
+            ProbeLog.Value("errorState", edge.errorState.ToString()); Shapes(edge, null);
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+    static void EdgeMassControl()
+    {
+        var root = new GameObject("edge-mass"); root.transform.position = new Vector3(15, 0, 0);
+        var body = root.AddComponent<Rigidbody2D>(); body.useAutoMass = true;
+        var box = root.AddComponent<BoxCollider2D>(); box.size = new Vector2(.5f, .5f); box.offset = new Vector2(0, 3);
+        var edge = root.AddComponent<EdgeCollider2D>(); edge.points = new[] { Vector2.left, Vector2.right };
+        try
+        {
+            Physics2D.SyncTransforms(); ProbeLog.Begin("edge-mass");
+            ProbeLog.Value("before.mass", body.mass); ProbeLog.Value("before.overlap", edge.OverlapPoint(new Vector2(15, .1f)));
+            edge.edgeRadius = .125f; Physics2D.SyncTransforms();
+            ProbeLog.Value("after.mass", body.mass); ProbeLog.Value("after.overlap", edge.OverlapPoint(new Vector2(15, .1f)));
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+    static void CompositeOutlineAdjacency()
+    {
+        var root = new GameObject("outline-adjacency"); root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
+        var composite = root.AddComponent<CompositeCollider2D>();
+        var box = root.AddComponent<BoxCollider2D>(); box.size = new Vector2(2, 2);
+        box.compositeOperation = Collider2D.CompositeOperation.Merge;
+        try
+        {
+            Physics2D.SyncTransforms(); composite.GenerateGeometry(); Physics2D.SyncTransforms();
+            ProbeLog.Begin("outline-adjacency");
+            var group = new PhysicsShapeGroup2D(); composite.GetShapes(group);
+            ProbeLog.Value("shapeCount", group.shapeCount);
+            var shape = group.GetShape(0);
+            ProbeLog.Value("adjacent.start.use", shape.useAdjacentStart); ProbeLog.Value("adjacent.end.use", shape.useAdjacentEnd);
+            ProbeLog.Value("adjacent.start", shape.adjacentStart); ProbeLog.Value("adjacent.end", shape.adjacentEnd);
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void ShapeRangeControl()
+    {
+        var root = new GameObject("shape-ranges"); var box = root.AddComponent<BoxCollider2D>();
+        var group = new PhysicsShapeGroup2D();
+        try
+        {
+            Physics2D.SyncTransforms(); ProbeLog.Begin("shape-ranges");
+            box.GetShapes(group);
+            void Range(string key, int index, int count)
+            {
+                try { ProbeLog.Value(key + ".result", box.GetShapes(group, index, count)); }
+                catch (Exception error) { ProbeLog.Value(key + ".error", error.GetType().Name); }
+                ProbeLog.Value(key + ".shapes", group.shapeCount); ProbeLog.Value(key + ".matrixX", group.localToWorldMatrix.m03);
+            }
+            Range("negative-index", -1, 1); Range("zero-count", 0, 0); Range("negative-count", 0, -1);
+            Range("excess-count", 0, 2); Range("excess-index", 1, 1); Range("maximum-count", 0, int.MaxValue);
+            box.enabled = false; Physics2D.SyncTransforms();
+            group.localToWorldMatrix = Matrix4x4.Translate(new Vector3(7, 0, 0));
+            ProbeLog.Value("empty.result", box.GetShapes(group)); ProbeLog.Value("empty.shapes", group.shapeCount);
+            ProbeLog.Value("empty.matrixX", group.localToWorldMatrix.m03);
+            Range("empty-range", 0, 1);
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void EdgeNonfinite(bool goodFirst, float radius)
+    {
+        var root = new GameObject("edge-nonfinite"); CircleCollider2D good = null;
+        CircleCollider2D MakeGood()
+        {
+            var child = new GameObject("finite-circle"); child.transform.SetParent(root.transform, false); child.layer = 1;
+            var circle = child.AddComponent<CircleCollider2D>(); circle.offset = new Vector2(5, 0); return circle;
+        }
+        if (goodFirst) good = MakeGood();
+        var edge = root.AddComponent<EdgeCollider2D>(); edge.edgeRadius = radius;
+        try
+        {
+            ProbeLog.Begin("edge-nonfinite/" + goodFirst + "/" + radius.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            ProbeLog.Value("accepted", edge.SetPoints(new List<Vector2> { Vector2.zero, new Vector2(float.NaN, 0), Vector2.right }));
+            Physics2D.SyncTransforms();
+            ProbeLog.Value("pointCount", edge.pointCount); ProbeLog.Value("shapeCount", edge.shapeCount);
+            ProbeLog.Value("errorState", edge.errorState.ToString());
+            ProbeLog.Value("overlap", edge.OverlapPoint(new Vector2(.5f, 0)));
+            if (!goodFirst) good = MakeGood();
+            Physics2D.SyncTransforms();
+            ProbeLog.Value("other.overlap", good.OverlapPoint(new Vector2(5, 0)));
+            ProbeLog.Value("other.global.overlap", Physics2D.OverlapPoint(new Vector2(5, 0), 1 << 1) == good);
+            var hit = Physics2D.Raycast(new Vector2(5, 2), Vector2.down, 3);
+            ProbeLog.Value("other.ray", hit.collider == good);
+            ProbeLog.Value("other.ray.finite", float.IsFinite(hit.point.x) && float.IsFinite(hit.point.y) && float.IsFinite(hit.distance));
         }
         catch (Exception error) { ProbeLog.Error(error); }
         finally { UnityEngine.Object.DestroyImmediate(root); }

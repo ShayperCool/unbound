@@ -17,19 +17,6 @@ namespace Unbound.Box2D.Dynamics.Contacts
         {
             var edge = (EdgeShape)FixtureA.Shape;
 
-            // Unbound: every two-sided edge uses the same endpoint and adjacency rules,
-            // including an isolated segment with no adjacent points.
-            if (!edge.OneSided)
-            {
-                CollisionUtils.CollideEdgeAndPolygonAdjacent(
-                    ref manifold,
-                    edge,
-                    xfA,
-                    (PolygonShape)FixtureB.Shape,
-                    xfB);
-                return;
-            }
-
             CollisionUtils.CollideEdgeAndPolygon(
                 ref manifold,
                 edge,

@@ -9,12 +9,14 @@ namespace Unbound.Box2D.Dynamics.Contacts
 {
     internal class ChainAndPolygonContact : Contact
     {
+        readonly EdgeShape edge = new EdgeShape();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal override void Evaluate(ref Manifold manifold, in Transform xfA, Transform xfB)
         {
             var chain = (ChainShape)FixtureA.Shape;
 
-            chain.GetChildEdge(out var edge, ChildIndexA);
+            chain.GetChildEdge(edge, ChildIndexA);
             CollisionUtils.CollideEdgeAndPolygon(ref manifold, edge, xfA, (PolygonShape)FixtureB.Shape, xfB);
         }
     }

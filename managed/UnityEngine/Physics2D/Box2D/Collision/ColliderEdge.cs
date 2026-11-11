@@ -256,7 +256,7 @@ namespace Unbound.Box2D.Collision
                 Normal = default
             };
 
-            var axes = new[] {normal1, -normal1};
+            Span<Vector2> axes = stackalloc Vector2[] {normal1, -normal1};
 
             // Find axis with least overlap (min-max problem)
             for (int j = 0; j < 2; ++j)
@@ -321,6 +321,12 @@ namespace Unbound.Box2D.Collision
             PolygonShape polygonB,
             in Transform xfB)
         {
+            if (!edgeA.OneSided)
+            {
+                CollideEdgeAndPolygonAdjacent(ref manifold, edgeA, xfA, polygonB, xfB);
+                return;
+            }
+
             manifold.PointCount = 0;
 
             Transform xf = MathUtils.MulT(xfA, xfB);
@@ -437,7 +443,7 @@ namespace Unbound.Box2D.Collision
                 }
             }
 
-            ClipVertex[] clipPoints = new ClipVertex[2];
+            Span<ClipVertex> clipPoints = stackalloc ClipVertex[2];
             ReferenceFace refFace = new ReferenceFace();
             if (primaryAxis.Type == EPAxis.EPAxisType.EdgeA)
             {

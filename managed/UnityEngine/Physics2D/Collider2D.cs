@@ -1134,7 +1134,42 @@ namespace UnityEngine
             return true;
         }
 
+        // Consecutive points closer than this squared body-frame distance are joined,
+        // measured by geometryframe2d's short/long edge controls on Unity 6000.0.71f1.
+        const float MinimumEdgeDistanceSquared = .00005025f;
+
         internal override void BuildShapes(Matrix4x4 toBody, List<Shape> shapes)
+        {
+            if (!Compat.Physics2DGeneratedGeometryMeasured)
+            {
+                Stubs.Ignored("EdgeCollider2D generated geometry", "this release is unmeasured; using separate connected segment fixtures and the legacy vertex distance");
+                BuildLegacyEdges(toBody, shapes);
+                return;
+            }
+            var points = new List<System.Numerics.Vector2>(m_Points.Length);
+            foreach (var point in m_Points)
+            {
+                var bodyPoint = ToBody(toBody, point + m_Offset);
+                if (points.Count > 0 && System.Numerics.Vector2.DistanceSquared(points[points.Count - 1], bodyPoint) <= MinimumEdgeDistanceSquared)
+                    continue;
+                points.Add(bodyPoint);
+            }
+            if (points.Count < 2)
+            {
+                m_ErrorState = ColliderErrorState2D.NoShapes;
+                return;
+            }
+            var chain = new ChainShape { OneSided = false, Radius = B2Settings.PolygonRadius + m_EdgeRadius };
+            chain.CreateChain(points.ToArray(), points.Count, default, default);
+            chain.HasPrevVertex = m_UseAdjacentStartPoint;
+            chain.HasNextVertex = m_UseAdjacentEndPoint;
+            if (m_UseAdjacentStartPoint) chain.PrevVertex = ToBody(toBody, m_AdjacentStartPoint + m_Offset);
+            if (m_UseAdjacentEndPoint) chain.NextVertex = ToBody(toBody, m_AdjacentEndPoint + m_Offset);
+            shapes.Add(chain);
+            m_ErrorState = ColliderErrorState2D.None;
+        }
+
+        void BuildLegacyEdges(Matrix4x4 toBody, List<Shape> shapes)
         {
             // Unity does not scale the edge radius with the transform.
             float radius = B2Settings.PolygonRadius + m_EdgeRadius;

@@ -3,8 +3,8 @@
 This probe records local and world shape data, composite paths and cast contacts
 for static, body, child and rotated-child frames. It varies small displacements,
 collider offsets, reflected/nonuniform scale, large positions and nonplanar
-parents. The canonical Unity 6000.0.71f1 reference contains 357 scenarios and
-47,376 observations from two byte-identical independent Editor runs.
+parents. The canonical Unity 6000.0.71f1 reference contains 414 scenarios and
+50,513 observations from two byte-identical independent Editor runs.
 
 Run from the repository root. Each label gets a fresh project in the external
 cache; the runner wraps each Editor or engine process in `with-heavy-job`.
@@ -45,12 +45,11 @@ Delaunay refinement, plus a tilted outline with manual setting changes and cloni
 large body-local contours beside a valid island. The refinement discriminator produces four shapes with the
 option disabled and two with it enabled. The two independent GPU Editor captures
 agree byte for byte, SHA-256
-`00215a10c77ae32fda1717c9b7c74c7d8a8ccfd71e523f6a335e0768a44fe5a4`.
+`a77a7d583d6ead85acd5056bfa7898cfdcdfb18fe829fc6fe2b37a8fdea0ef71`.
 All 320 original scenarios and the first thirteen added controls retain their
 original values. A further 24 tilemap controls use the existing concave sprite
 fixture from tests/projects/twod. They vary cell rotation/reflection, extrusion,
-body attachment and refinement. Both independent GPU runs agree for all 357
-scenarios. Refinement changes the per-polygon vertex counts from 4/5/6 to 4/4/7
+body attachment and refinement. The first 357 scenarios remain unchanged in the extended reference. Refinement changes the per-polygon vertex counts from 4/5/6 to 4/4/7
 for each extruded cell, even though both versions produce three polygons.
 
 The [Unity 6000.0 component reference](https://docs.unity3d.com/6000.0/Documentation/Manual/2d-physics/collider/composite-collider/composite-collider-2d-reference.html)
@@ -100,3 +99,41 @@ collider offset are composed with the body matrix before transforming the convex
 pieces. This resolves the original extruded-tile shape count and ordering, as
 well as all 24 frame controls. Other releases retain the diagnosed transformed
 contour partition without refinement. No sprite importer or cache format changes.
+
+
+A further 57 controls cover EdgeCollider2D geometry and shared shape access.
+They vary body attachment, nonplanar parents, adjacent endpoints, radius,
+repeated points and distances on either side of the weld threshold. They also
+cover coincident points, distant finite points, loop adjacency, invalid shape
+ranges and nonfinite segment data. All 57 controls match. The four nonfinite
+controls establish metadata, overlap and finite ray behavior in both insertion
+orders with radius zero and 0.125. They do not establish dynamic-contact parity
+for arbitrary nonfinite geometry.
+
+The [Unity 6000.0 Edge Collider reference](https://docs.unity3d.com/6000.0/Documentation/Manual/2d-physics/collider/edge-collider-2d-reference.html)
+describes open connected paths and endpoint adjacency. The
+[GetShapes API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider2D.GetShapes.html)
+specifies one Edges shape, vertices relative to the attached body, and valid
+shape ranges. Body-movement controls change position and rotation, then verify
+unchanged local vertices and a changed world matrix. Invalid-range controls
+exercise the exceptions and preserve preexisting group data. Empty retrieval
+clears the group. The
+[edgeRadius API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EdgeCollider2D-edgeRadius.html)
+describes rounded collision edges whose radius does not contribute to automatic
+mass. A control increases the radius, changes point overlap from false to true,
+and retains mass 0.25. The
+[adjacentStartPoint API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EdgeCollider2D-adjacentStartPoint.html)
+describes the endpoint normal formed by a virtual neighboring edge. Existing
+physics2dadvanced seam controls distinguish an enabled adjacent point from a
+disabled one through a changed trajectory, including vertical velocity at step
+49 of -0.8105497 versus zero.
+
+On Unity 6000.0.71f1, consecutive transformed points within squared distance
+0.00005025 join into one point. Raw pointCount and edgeCount remain authored
+counts. The generated shape is one two-sided chain with its endpoint metadata
+and exposed radius. Contact evaluation reuses pooled edge storage, including
+circle adjacency handling. Rounded chain rays include the exposed radius.
+The same compatibility selector as other generated geometry selects this rule;
+unmeasured releases retain separate connected segments and their legacy weld
+threshold with a diagnostic. Query2dparity's 20 edge geometry differences are
+resolved; its seven nearly parallel cast witnesses remain for the cast follow-up.

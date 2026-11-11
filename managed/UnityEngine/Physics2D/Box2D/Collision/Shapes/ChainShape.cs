@@ -20,6 +20,10 @@ namespace Unbound.Box2D.Collision.Shapes
 
         bool pointOverlapMeasured = Unbound.Runtime.Compat.Physics2DGeneratedGeometryMeasured;
 
+        public bool OneSided = true;
+        public bool HasPrevVertex, HasNextVertex;
+        readonly EdgeShape rayEdge = new EdgeShape();
+
         public Vector2 PrevVertex;
 
         public Vector2 NextVertex;
@@ -43,6 +47,9 @@ namespace Unbound.Box2D.Collision.Shapes
             clone.Count = Count;
             clone.Radius = Radius;
             clone.pointOverlapMeasured = pointOverlapMeasured;
+            clone.OneSided = OneSided;
+            clone.HasPrevVertex = HasPrevVertex;
+            clone.HasNextVertex = HasNextVertex;
             clone.PrevVertex = PrevVertex;
             clone.NextVertex = NextVertex;
             return clone;
@@ -89,6 +96,7 @@ namespace Unbound.Box2D.Collision.Shapes
             Vertices[count] = Vertices[0];
             PrevVertex = Vertices[Count - 2];
             NextVertex = Vertices[1];
+            HasPrevVertex = HasNextVertex = true;
         }
 
         /// <summary>
@@ -116,6 +124,7 @@ namespace Unbound.Box2D.Collision.Shapes
 
             PrevVertex = prevVertex;
             NextVertex = nextVertex;
+            HasPrevVertex = HasNextVertex = true;
         }
 
         /// @see b2Shape::GetChildCount
@@ -127,28 +136,40 @@ namespace Unbound.Box2D.Collision.Shapes
         /// Get a child edge.
         public void GetChildEdge(out EdgeShape edge, int index)
         {
+            edge = new EdgeShape();
+            GetChildEdge(edge, index);
+        }
+
+        /// <summary>Fill a reusable child edge, including connectivity at the chain ends.</summary>
+        public void GetChildEdge(EdgeShape edge, int index)
+        {
             Debug.Assert(0 <= index && index < Count - 1);
-            edge = new EdgeShape
-            {
-                ShapeType = ShapeType.Edge,
-                Radius = Radius,
-                Vertex1 = Vertices[index + 0],
-                Vertex2 = Vertices[index + 1],
-                OneSided = true,
-                Vertex0 = index > 0 ? Vertices[index - 1] : PrevVertex,
-                Vertex3 = index < Count - 2 ? Vertices[index + 2] : NextVertex
-            };
+            edge.Radius = Radius;
+            edge.Vertex1 = Vertices[index];
+            edge.Vertex2 = Vertices[index + 1];
+            edge.OneSided = OneSided;
+            edge.HasVertex0 = index > 0 || HasPrevVertex;
+            edge.HasVertex3 = index < Count - 2 || HasNextVertex;
+            edge.Vertex0 = index > 0 ? Vertices[index - 1] : PrevVertex;
+            edge.Vertex3 = index < Count - 2 ? Vertices[index + 2] : NextVertex;
         }
 
         /// <summary>Tests the exposed edge radius, excluding the solver skin.</summary>
-        public override bool TestPoint(in Transform transform, in Vector2 p)
+        public override bool TestPoint(in Transform transform, in Vector2 p) => ContainsPoint(transform, p, false);
+
+        // A malformed segment cannot provide a finite witness for a ray hit.
+        internal bool ContainsRayOrigin(in Transform transform, in Vector2 p) => ContainsPoint(transform, p, true);
+
+        bool ContainsPoint(in Transform transform, in Vector2 p, bool rayOrigin)
         {
             if (!pointOverlapMeasured) return false;
             var local = MathUtils.MulT(transform, p);
             float radius = Radius - Settings.PolygonRadius;
             for (int i = 0; i + 1 < Count; i++)
-                if (MathUtils.DistanceSquaredToSegment(local, Vertices[i], Vertices[i + 1]) <= radius * radius)
-                    return true;
+            {
+                float distance = MathUtils.DistanceSquaredToSegment(local, Vertices[i], Vertices[i + 1]);
+                if (rayOrigin ? distance <= radius * radius : !(distance > radius * radius)) return true;
+            }
             return false;
         }
 
@@ -161,19 +182,10 @@ namespace Unbound.Box2D.Collision.Shapes
         {
             Debug.Assert(childIndex < Count);
 
-            var edgeShape = new EdgeShape();
-
-            var i1 = childIndex;
-            var i2 = childIndex + 1;
-            if (i2 == Count)
-            {
-                i2 = 0;
-            }
-
-            edgeShape.Vertex1 = Vertices[i1];
-            edgeShape.Vertex2 = Vertices[i2];
-
-            return edgeShape.RayCast(out output, input, transform, 0);
+            rayEdge.Vertex1 = Vertices[childIndex];
+            rayEdge.Vertex2 = Vertices[(childIndex + 1) % Count];
+            rayEdge.Radius = Radius;
+            return rayEdge.RayCast(out output, input, transform, 0);
         }
 
         /// @see b2Shape::ComputeAABB
