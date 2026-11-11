@@ -11,12 +11,13 @@ namespace Unbound.Runtime.Humanoid
     /// A state's clips (a blend tree's) blend among themselves first and the layer then blends its
     /// states: a goal's rotation is the normalized sum of the state's clips, each in the
     /// hemisphere of the ones before, before a transition blends it with another state's
-    /// (goals.treeTransition, goals.treeSource). A state whose humanoid clips do not fill its
+    /// (goals.treeTransition, goals.treeSource). Where the humanoid clips do not fill the state's
     /// weight (a Direct blend tree whose weights do not sum to one, a tree with clips without
-    /// humanoid curves) is unmeasured (diagnostic): below one, what the clips leave of the state's weight is
-    /// the identity goal, as an AnimationMixerPlayable's missing weight is; above one, a goal's
-    /// position is the clips' raw sum, as a Direct tree's other values are, and its rotation
-    /// their normalized sum.
+    /// humanoid curves), the state blends as an AnimationMixerPlayable's inputs do: below one,
+    /// what the clips leave is the identity goal, its rotation (0, 0, 0, 1) as it is whatever
+    /// hemisphere the clips' sum is in; above one, a goal's position is the clips' plain sum and
+    /// its rotation their normalized sum (body.directLowFootIK, body.directHighFootIK, weights of
+    /// 0.3 + 0.4 and 0.8 + 0.6; body.directEmptyChild).
     /// The sampler hands a clip's goal curves over instead of adding them (<see cref="Take"/>);
     /// <see cref="AddClip"/> places and collects them, <see cref="EndState"/> adds the state's goals
     /// to the layer's pose, every goal curve with the state's weight.
@@ -34,13 +35,6 @@ namespace Unbound.Runtime.Humanoid
         float m_Weight;
         int m_Clips;
         Trs m_Body;
-
-        /// <summary>How far a state's clips may be from filling its weight before the state counts
-        /// as an unmeasured Direct blend (single-precision sums of a tree's weights stay well within).</summary>
-        const float WeightTolerance = 1e-4f;
-
-        /// <summary>Whether the state has sampled a humanoid clip so far.</summary>
-        internal bool HasClips => m_Clips > 0;
 
         internal HumanStateGoals(AnimationBindings bindings) => m_Bindings = bindings;
 
@@ -88,18 +82,15 @@ namespace Unbound.Runtime.Humanoid
 
         /// <summary>Adds the state's goals to a layer's pose with the state's weight, on the goal
         /// channels that are bound and that <paramref name="mask"/> lets through; a rotation in
-        /// the hemisphere of what its channels hold already. Nothing for a state without a
-        /// humanoid clip.</summary>
-        internal void EndState(AnimationPose pose, bool[] mask, float weight)
+        /// the hemisphere of what its channels hold already. Nothing for a state that sampled no
+        /// humanoid clip, unless its motion has one (<paramref name="humanoid"/>: a Direct blend
+        /// tree whose humanoid clips are all at weight 0), which gives the identity goals.</summary>
+        internal void EndState(AnimationPose pose, bool[] mask, float weight, bool humanoid)
         {
-            if (!(m_Weight > 0f) || !(weight > 0f)) return;
+            if (!(m_Weight > 0f) && !humanoid || !(weight > 0f)) return;
             var b = m_Bindings;
             // What the clips leave of the state's weight is the identity goal.
             float rest = weight - m_Weight;
-            if (System.MathF.Abs(rest) > WeightTolerance * weight)
-                Unbound.Runtime.Stubs.Ignored("Animator IK goals of a state whose humanoid clips do not fill its weight",
-                    "(a Direct blend tree whose weights do not sum to one, a tree with clips without humanoid curves) are blended by Unbound's own rule: "
-                    + "the missing weight counts as the identity goal, a surplus adds to the goals' positions (not measured)");
             for (int g = 0; g < Goals; g++)
             {
                 int curve = First + g * Width;
@@ -109,9 +100,10 @@ namespace Unbound.Runtime.Humanoid
                 Add(pose, mask, b.HumanChannel(curve + 2), t.z, weight);
                 // One clip that fills the state: its unit rotation times its weight, as it is.
                 var q = m_Rotations[g];
-                if (m_Clips > 1 || rest > 0f)
+                if (m_Clips != 1 || rest > 0f)
                 {
-                    if (rest > 0f) q.w += q.w < 0f ? -rest : rest;
+                    // The identity as it is, whatever hemisphere the clips' sum is in.
+                    if (rest > 0f) q.w += rest;
                     q = M.QNormalize(q) * weight;
                 }
                 int cx = b.HumanChannel(curve + 3), cy = b.HumanChannel(curve + 4), cz = b.HumanChannel(curve + 5), cw = b.HumanChannel(curve + 6);

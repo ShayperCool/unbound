@@ -537,6 +537,10 @@ namespace Unbound.Runtime
         {
             clip.EnsureHumanCurves();
             if (m_Clips.TryGetValue(clip, out var bound) && bound.Version == clip.m_Version && !NowOwned(bound)) return bound;
+            // A humanoid clip is a whole human pose, whatever curves it has: on a humanoid
+            // Animator every humanoid curve is bound with it, the body's and each goal's in
+            // curve order.
+            if (!m_HumanCurvesBound && clip.HasHumanCurves && Root != null && Root.GetComponent<Animator>() is { isHuman: true }) BindHumanCurves();
             bound = Map(clip, create: true);
             m_Clips[clip] = bound;
             ClipEpoch++;
@@ -653,10 +657,27 @@ namespace Unbound.Runtime
         internal void BindHumanCurves()
         {
             if (m_HumanCurvesBound) return;
-            m_HumanCurvesBound = true;
             var names = Unbound.Runtime.Humanoid.HumanClipImport.CurveNames;
             for (int c = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst; c < names.Length; c++)
                 BindChannel(CurveBinding.ForType("", names[c], typeof(Animator)), false);
+            // An Animator without a human avatar binds none of them; it may get one later.
+            m_HumanCurvesBound = HumanChannel(Unbound.Runtime.Humanoid.HumanClipImport.RootFirst) >= 0;
+        }
+
+        /// <summary>Writes a humanoid body (RootT, RootQ) to its seven curves' channels in
+        /// <paramref name="values"/> and marks them in <paramref name="animated"/> (when given):
+        /// the body a root motion pass or a mixer blended as a position and a rotation replaces
+        /// what the curves hold.</summary>
+        internal void SetHumanBody(float[] values, bool[] animated, in Unbound.Runtime.Humanoid.Trs body)
+        {
+            const int first = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst;
+            for (int k = 0; k < 7; k++)
+            {
+                int c = HumanChannel(first + k);
+                if (c < 0 || c >= values.Length) continue;
+                values[c] = k switch { 0 => body.t.x, 1 => body.t.y, 2 => body.t.z, 3 => body.q.x, 4 => body.q.y, 5 => body.q.z, _ => body.q.w };
+                if (animated != null) animated[c] = true;
+            }
         }
 
         List<int> m_QuaternionStarts = new List<int>();
@@ -829,6 +850,30 @@ namespace Unbound.Runtime
                 foreach (var ch in EulerRotation) if (ch >= 0 && ch + 3 < floatCount) m_FloatMask[ch + 3] = true;
             m_MaskFloatCount = floatCount;
             return m_FloatMask;
+        }
+
+        int[] m_HumanRest;
+        int m_HumanRestFor = -1;
+
+        /// <summary>The channels of the humanoid curves bound in <paramref name="bindings"/> that
+        /// the clip has no curve for, IK goals aside (their states or streams complete them): the
+        /// body, muscles and translations a humanoid clip leaves at rest.</summary>
+        internal int[] HumanRest(AnimationBindings bindings)
+        {
+            if (m_HumanRestFor == bindings.FloatCount) return m_HumanRest;
+            const int rootFirst = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst, goalFirst = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst;
+            const int muscleFirst = Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst, count = Unbound.Runtime.Humanoid.HumanClipImport.CurveCount;
+            var present = Clip.HumanPresent;
+            var rest = new List<int>();
+            for (int curve = rootFirst; curve < count; curve++)
+            {
+                if (curve >= goalFirst && curve < muscleFirst || present[curve]) continue;
+                int ch = bindings.HumanChannel(curve);
+                if (ch >= 0) rest.Add(ch);
+            }
+            m_HumanRest = rest.ToArray();
+            m_HumanRestFor = bindings.FloatCount;
+            return m_HumanRest;
         }
 
         int[] m_GoalSlots;

@@ -413,19 +413,12 @@ namespace UnityEngine.Tests
         [InlineData("release")]
         [InlineData("shared")]
         [InlineData("fractional")]
-        [InlineData("sparse0")]
-        [InlineData("sparse1")]
         public void UnmeasuredHumanMixerContextsStayDiagnostic(string context)
         {
             string version = ProjectInfo.UnityVersion;
             ProjectInfo.UnityVersion = context == "release" ? "6000.0.72f1" : "6000.0.71f1";
             var root = Rig(out var animator, out var avatar);
             var clip = Clip();
-            if (context.StartsWith("sparse", StringComparison.Ordinal))
-            {
-                clip.m_Curves.RemoveAll(curve => curve.Binding.Attribute == "RootQ.w");
-                clip.m_Version++;
-            }
             var graph = PlayableGraph.Create("unsupported-human-mixer");
             graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
             var logger = Debug.unityLogger;
@@ -443,7 +436,7 @@ namespace UnityEngine.Tests
                 first.SetApplyFootIK(false);
                 second.SetApplyFootIK(false);
                 var mixer = AnimationMixerPlayable.Create(graph, 2);
-                float firstWeight = context == "sparse0" ? 0f : context == "sparse1" ? 1f : 0.25f;
+                const float firstWeight = 0.25f;
                 mixer.ConnectInput(0, first, 0, firstWeight);
                 mixer.ConnectInput(1, second, 0, 1f - firstWeight);
                 var output = AnimationPlayableOutput.Create(graph, "animation", animator);
@@ -476,6 +469,78 @@ namespace UnityEngine.Tests
                 graph.Destroy();
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(clip);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
+        /// <summary>A mixer of clips with only some of the body's rotation curves moves the root
+        /// as the humanoid sampler does (6000.0.71f1, tests/projects/humanoid bodyGraph.partial,
+        /// bodyGraph.w): a clip without RootQ.w mixed with itself at 0.25 and 0.75, or at 0 and 1,
+        /// moves and turns the root as the clip alone does, without the unsupported-mixer
+        /// diagnostic. Control: the clip alone does move and turn it.</summary>
+        [Theory]
+        [InlineData(0.25f)]
+        [InlineData(0f)]
+        [InlineData(1f)]
+        public void AMixerOfClipsWithSomeBodyRotationCurvesMovesTheRoot(float firstWeight)
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var clip = Clip();
+            clip.m_Curves.RemoveAll(curve => curve.Binding.Attribute == "RootQ.w");
+            clip.m_Version++;
+            (Vector3 Position, Quaternion Rotation) Play(bool mixed)
+            {
+                var root = Rig(out var animator, out var avatar);
+                var graph = PlayableGraph.Create("sparse-human-mixer");
+                graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+                try
+                {
+                    var first = AnimationClipPlayable.Create(graph, clip);
+                    first.SetApplyFootIK(false);
+                    Playable source = first;
+                    if (mixed)
+                    {
+                        var second = AnimationClipPlayable.Create(graph, clip);
+                        second.SetApplyFootIK(false);
+                        var mixer = AnimationMixerPlayable.Create(graph, 2);
+                        mixer.ConnectInput(0, first, 0, firstWeight);
+                        mixer.ConnectInput(1, second, 0, 1f - firstWeight);
+                        source = mixer;
+                    }
+                    AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(source);
+                    graph.Evaluate(0f);
+                    graph.Evaluate(0.25f);
+                    graph.Evaluate(0.25f);
+                    return (root.transform.position, root.transform.rotation);
+                }
+                finally
+                {
+                    graph.Destroy();
+                    Object.DestroyImmediate(root);
+                    Object.DestroyImmediate(avatar);
+                }
+            }
+            try
+            {
+                const string diagnostic = "Animator root motion of unsupported humanoid mixer output";
+                int Hits()
+                {
+                    foreach (var hit in Stubs.HitReport()) if (hit.Key == diagnostic) return hit.Value;
+                    return 0;
+                }
+                var alone = Play(false);
+                Assert.True(alone.Position.x > 0.5f);
+                Assert.True(Quaternion.Angle(Quaternion.identity, alone.Rotation) > 5f);
+                int before = Hits();
+                var mixed = Play(true);
+                Assert.Equal(before, Hits());
+                Near.Equal(alone.Position, mixed.Position, 1e-4f);
+                Assert.True(Quaternion.Angle(alone.Rotation, mixed.Rotation) < 0.01f);
+            }
+            finally
+            {
                 Object.DestroyImmediate(clip);
                 ProjectInfo.UnityVersion = version;
             }

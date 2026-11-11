@@ -179,6 +179,28 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A humanoid clip is a whole human pose: the body, muscle and translation
+        /// curves it lacks join <paramref name="pose"/> at rest (their default values) with the
+        /// clip's weight, as if the clip had them, so the clip blends them towards rest wherever
+        /// it blends (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
+        /// body.partialOverride and bodyGraph.layerPartial: an override layer of weight 0.5 whose
+        /// clip has four muscle curves halves every other muscle of the layer below). IK goals
+        /// are completed by their states (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>)
+        /// or streams.</summary>
+        internal static void CompleteHuman(BoundClip bound, AnimationBindings bindings, float weight, AnimationPose pose, bool[] mask = null)
+        {
+            if (weight <= 0f) return;
+            var rest = bound.HumanRest(bindings);
+            var defaults = bindings.Defaults;
+            for (int i = 0; i < rest.Length; i++)
+            {
+                int ch = rest[i];
+                if (ch >= pose.Weight.Length || (mask != null && !mask[ch])) continue;
+                pose.Value[ch] += weight * defaults[ch];
+                pose.Weight[ch] += weight;
+            }
+        }
+
         static void SampleQuaternion(BoundClip bound, int first, float time, float weight, AnimationPose pose, bool[] mask, float[] reference, float phase)
         {
             var curves = bound.Clip.m_Curves;
@@ -329,16 +351,19 @@ namespace Unbound.Runtime
         /// <paramref name="skipTransforms"/>, Transforms and humanoid curves are left as they are
         /// (an Animator culled by CullUpdateTransforms), except <paramref name="rootDuringCull"/>
         /// when an attached controller restores its output-bound root pose. With <paramref name="stream"/>, captures
-        /// the same composed result and bookkeeping without writing the scene.</summary>
+        /// the same composed result and bookkeeping without writing the scene. With
+        /// <paramref name="humanBody"/>, the humanoid body curves take that body whole, whatever
+        /// the layers' body curves combine to (<see cref="AnimationBindings.SetHumanBody"/>).</summary>
         internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null,
             bool humanBodyInRootMotion = false, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null,
-            Transform rootDuringCull = null, bool placedGoals = false)
+            Transform rootDuringCull = null, bool placedGoals = false, Unbound.Runtime.Humanoid.Trs? humanBody = null)
         {
             var s = Rent(b);
             try
             {
                 int n = b.FloatCount;
                 var touched = s.Touched;
+                if (humanBody is { } placed) b.SetHumanBody(s.Result, touched, placed);
                 for (int c = 0; c < n; c++)
                 {
                     for (int l = 0; l < count; l++)
@@ -362,6 +387,7 @@ namespace Unbound.Runtime
                     for (int c = 0; c < n; c++) kept[c] = c < held.Length && held[c] ? written[c] : s.Current[c];
                 }
                 CombineLayers(b, layers, count, s.Result, null, overDefaults: true, kept, humanBodyInRootMotion, placedGoals);
+                if (humanBody is { } body) b.SetHumanBody(s.Result, null, body);
                 if (written != null)
                 {
                     for (int c = 0; c < n && c < written.Length; c++)

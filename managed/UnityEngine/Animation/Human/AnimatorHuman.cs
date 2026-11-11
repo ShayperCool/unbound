@@ -147,6 +147,13 @@ namespace Unbound.Runtime.Humanoid
             HumanRootMotion.Evaluate(motion, input, m_Previous, m_Current, clip.HumanPresent, out sample);
         }
 
+        /// <summary>A clip's body at a clip time, read whole (<see cref="HumanRootMotion.ReadRoot"/>).</summary>
+        internal Trs SampleBody(AnimationClip clip, float time)
+        {
+            clip.SampleHuman(time, m_Current);
+            return HumanRootMotion.ReadRoot(m_Current, clip.HumanPresent);
+        }
+
         /// <summary>A target body part of a clip at <c>input.Time</c> relative to the clip's motion at
         /// <c>input.PreviousTime</c> (<see cref="HumanRootMotion.MatchPart"/>).</summary>
         internal Trs MatchPart(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input, int target)

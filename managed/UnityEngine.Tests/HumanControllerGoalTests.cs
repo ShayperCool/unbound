@@ -45,7 +45,7 @@ namespace UnityEngine.Tests
             ProjectInfo.UnityVersion = m_Version;
         }
 
-        sealed class CaptureHandler : ILogHandler
+        internal sealed class CaptureHandler : ILogHandler
         {
             readonly ILogHandler m_Inner;
             readonly List<string> m_Logs;
@@ -82,26 +82,26 @@ namespace UnityEngine.Tests
         // placed by B's body lands elsewhere than the same goal under A's.
         static readonly float s_LeanX = MathF.Sin(15f * MathF.PI / 180f), s_LeanW = MathF.Cos(15f * MathF.PI / 180f);
 
-        static (string, float)[] Body(float height, bool lean) => new[]
+        internal static (string, float)[] Body(float height, bool lean) => new[]
         {
             ("RootT.x", 0f), ("RootT.y", height), ("RootT.z", 0f),
             ("RootQ.x", lean ? s_LeanX : 0f), ("RootQ.y", 0f), ("RootQ.z", 0f), ("RootQ.w", lean ? s_LeanW : 1f),
         };
 
-        static (string, float)[] Goal(string name, float x, float y, float z) => new[]
+        internal static (string, float)[] Goal(string name, float x, float y, float z) => new[]
         {
             (name + "T.x", x), (name + "T.y", y), (name + "T.z", z),
             (name + "Q.x", 0f), (name + "Q.y", 0f), (name + "Q.z", 0f), (name + "Q.w", 1f),
         };
 
-        static readonly (string, float)[] s_A = Body(1f, false).Concat(Goal("LeftFoot", -0.1f, -0.9f, 0.05f)).Concat(Goal("RightFoot", 0.1f, -0.9f, 0f))
+        internal static readonly (string, float)[] s_A = Body(1f, false).Concat(Goal("LeftFoot", -0.1f, -0.9f, 0.05f)).Concat(Goal("RightFoot", 0.1f, -0.9f, 0f))
             .Concat(Goal("LeftHand", -0.4f, 0.3f, 0.1f)).Concat(Goal("RightHand", 0.4f, 0.3f, 0.1f)).ToArray();
-        static readonly (string, float)[] s_B = Body(1.3f, true).Concat(Goal("LeftFoot", -0.12f, -1f, 0.2f)).Concat(Goal("RightFoot", 0.12f, -1f, -0.1f))
+        internal static readonly (string, float)[] s_B = Body(1.3f, true).Concat(Goal("LeftFoot", -0.12f, -1f, 0.2f)).Concat(Goal("RightFoot", 0.12f, -1f, -0.1f))
             .Concat(Goal("LeftHand", -0.2f, 0.5f, 0.3f)).Concat(Goal("RightHand", 0.2f, 0.5f, 0.3f)).ToArray();
 
         /// <summary>A looping humanoid clip of 1 s holding each curve at one value; a curve named
         /// with a trailing '+' rises by one over the second.</summary>
-        static string Clip(long id, string name, (string Attribute, float Value)[] curves) => $$"""
+        internal static string Clip(long id, string name, (string Attribute, float Value)[] curves) => $$"""
 --- !u!74 &{{id}}
 AnimationClip:
   m_Name: {{name}}
@@ -210,16 +210,17 @@ AnimatorStateMachine:
             + "  serializedVersion: 5\n  m_AnimatorParameters: []\n  m_AnimatorLayers:\n";
 
         /// <summary>A, then <paramref name="second"/> after an exit time of 0.2 over 0.5 s.</summary>
-        static string TransitionController((string, float)[] second, bool footA, bool footB) =>
+        internal static string TransitionController((string, float)[] second, bool footA, bool footB) =>
             Header + Layer("Base Layer", 1107000001, 0, 1f) + Machine(1107000001, StateA, StateA, StateB)
             + State(StateA, "A", ClipA, footA, 1101000001) + State(StateB, "B", ClipB, footB) + Transition(1101000001, StateB, 0.2f, 0.5f)
             + Clip(ClipA, "A", s_A) + Clip(ClipB, "B", second);
 
         /// <summary>A with B on a second layer (blending mode 0 override, 1 additive).</summary>
-        static string LayerController(int blending, float weight, bool footA = false, bool footB = false) =>
+        internal static string LayerController(int blending, float weight, bool footA = false, bool footB = false,
+            (string, float)[] a = null, (string, float)[] b = null) =>
             Header + Layer("Base Layer", 1107000001, 0, 1f) + Layer("Above", 1107000002, blending, weight)
             + Machine(1107000001, StateA, StateA) + Machine(1107000002, StateB, StateB)
-            + State(StateA, "A", ClipA, footA) + State(StateB, "B", ClipB, footB) + Clip(ClipA, "A", s_A) + Clip(ClipB, "B", s_B);
+            + State(StateA, "A", ClipA, footA) + State(StateB, "B", ClipB, footB) + Clip(ClipA, "A", a ?? s_A) + Clip(ClipB, "B", b ?? s_B);
 
         const long ClipC = 7400003, Tree = 20600001, StateTree = 1102000003;
 
@@ -281,7 +282,8 @@ BlendTree:
 
         /// <summary>The tree of B and C alone (<paramref name="from"/> null), or after
         /// <paramref name="from"/> on state A, left after an exit time of 0.2 over 0.5 s.</summary>
-        static string TreeController(bool direct, (string, float)[] from, float wb = 0.5f, float wc = 0.5f, (string, float)[] b = null) =>
+        internal static string TreeController(bool direct, (string, float)[] from, float wb = 0.5f, float wc = 0.5f, (string, float)[] b = null,
+            (string, float)[] c = null) =>
             "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!91 &9100000\nAnimatorController:\n  m_Name: Goals\n  serializedVersion: 5\n"
             + "  m_AnimatorParameters:\n" + Parameter("Blend", 0.5f) + Parameter("WB", wb) + Parameter("WC", wc) + "  m_AnimatorLayers:\n"
             + Layer("Base Layer", 1107000001, 0, 1f)
@@ -289,21 +291,25 @@ BlendTree:
                 ? Machine(1107000001, StateA, StateA, StateTree) + State(StateA, "A", ClipA, false, 1101000001)
                     + Transition(1101000001, StateTree, 0.2f, 0.5f) + Clip(ClipA, "A", from)
                 : Machine(1107000001, StateTree, StateTree))
-            + State(StateTree, "Tree", Tree, false) + BlendTree(direct) + Clip(ClipB, "B", b ?? Turned(80f)) + Clip(ClipC, "C", Turned(-80f));
+            + State(StateTree, "Tree", Tree, false) + BlendTree(direct) + Clip(ClipB, "B", b ?? Turned(80f)) + Clip(ClipC, "C", c ?? Turned(-80f));
 
-        Animator Rig(string yaml)
+        Animator Rig(string yaml) => Rig(yaml, m_Created);
+
+        /// <summary>A humanoid rig playing the controller of <paramref name="yaml"/>, root motion
+        /// applied; what it makes goes to <paramref name="created"/>.</summary>
+        internal static Animator Rig(string yaml, List<Object> created)
         {
             var file = ObjectGraphBuilder.Build(UnityYaml.Parse(yaml), "goals.asset", null, ObjectGraphBuilder.Kind.Asset, null);
-            foreach (var o in file.Objects.Values) m_Created.Add(o);
+            foreach (var o in file.Objects.Values) created.Add(o);
             var root = AnimationHumanStreamTests.Humanoid(out var animator);
-            m_Created.Add(root);
-            m_Created.Add(animator.avatar);
+            created.Add(root);
+            created.Add(animator.avatar);
             animator.applyRootMotion = true;
             animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
             return animator;
         }
 
-        static AnimationClip ClipOf(Animator animator, string name) => animator.runtimeAnimatorController.animationClips.First(c => c.name == name);
+        internal static AnimationClip ClipOf(Animator animator, string name) => animator.runtimeAnimatorController.animationClips.First(c => c.name == name);
 
         /// <summary>A goal of a clip as the clip alone gives it: placed by the clip's body relative
         /// to its motion (the fixture's curves are constant, so any time will do).</summary>
@@ -330,7 +336,7 @@ BlendTree:
             animator.Human.Value(first + 4), animator.Human.Value(first + 5), animator.Human.Value(first + 6)));
 
         /// <summary>The angle between two rotations, in degrees.</summary>
-        static float Angle(F4 a, F4 b)
+        internal static float Angle(F4 a, F4 b)
         {
             float dot = MathF.Abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
             return 2f * MathF.Acos(MathF.Min(1f, dot)) * 180f / MathF.PI;
@@ -338,7 +344,7 @@ BlendTree:
 
         static F4 Lerp(F4 a, F4 b, float t) => a * (1f - t) + b * t;
 
-        static void AssertNear(F4 expected, F4 actual, float tolerance = 2e-5f)
+        internal static void AssertNear(F4 expected, F4 actual, float tolerance = 2e-5f)
         {
             Near.Equal(expected.x, actual.x, tolerance);
             Near.Equal(expected.y, actual.y, tolerance);
@@ -509,27 +515,35 @@ BlendTree:
             Assert.True(Angle(F4.QIdentity, uneven.Rotation) > 20f);
         }
 
-        /// <summary>A Direct blend tree whose weights sum above one moves the root by each clip's
-        /// own weight: a rising clip at weight 1 beside a level one at weight 1 raises it as the
-        /// rising clip alone does (unmeasured in the Editor; Unbound's rule, kept as it was). The
-        /// height is used because the feet pivot only corrects the step on the ground plane.</summary>
+        /// <summary>A Direct blend tree whose weights sum above one lasts its clips' lengths summed
+        /// by their weights and moves the root by the sum of its clips' steps (6000.0.71f1,
+        /// tests/projects/humanoid body.directHigh): a rising clip at weight 1 beside a level one at
+        /// weight 1 makes a state twice as long, so the second quarter second raises the root as
+        /// the rising clip alone does over the eighth of its length that it then plays. The height
+        /// is used because the feet pivot only corrects the step on the ground plane.</summary>
         [Fact]
-        public void ADirectBlendTreeAboveOneMovesTheRootByEachClipsWeight()
+        public void ADirectBlendTreeAboveOneSumsItsClipsStepsOverItsSummedLength()
         {
             var moving = Turned(80f);
             for (int i = 0; i < moving.Length; i++)
                 if (moving[i].Item1 == "RootT.y") moving[i].Item1 = "RootT.y+";
-            float Step(float wc)
+            float Step(float wc, out float time)
             {
                 var animator = Rig(TreeController(true, null, 1f, wc, moving));
                 animator.Update(0f);
                 animator.Update(0.25f);
                 animator.Update(0.25f);
+                time = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
                 return animator.deltaPosition.y;
             }
-            float alone = Step(0f);
+            // The fixture's curves ease between their two keys (flat tangents).
+            static float Eased(float t) => t * t * (3f - 2f * t);
+            float alone = Step(0f, out float aloneTime);
+            Near.Equal(0.5f, aloneTime, 1e-5f);
             Assert.True(alone > 0.05f);
-            Assert.InRange(Step(1f) / alone, 0.9f, 1.1f);
+            float both = Step(1f, out float bothTime);
+            Near.Equal(0.25f, bothTime, 1e-5f);
+            Near.Equal((Eased(0.25f) - Eased(0.125f)) / (Eased(0.5f) - Eased(0.25f)), both / alone, 1e-3f);
         }
 
         /// <summary>A playable output on the same Animator takes the controller's pose on with its

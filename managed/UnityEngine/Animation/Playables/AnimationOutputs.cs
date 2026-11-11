@@ -949,7 +949,7 @@ namespace Unbound.Runtime.Playables
                     ? "Animator root motion of unsupported humanoid mixer output"
                     : "Animator root motion of composed playable graph outputs on humanoid avatars",
                     "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer or layer mixer tree of such clips "
-                    + "with complete RootQ curves and input weights that are not infinite, or of clips without humanoid curves, mixers and layer mixers, "
+                    + "with input weights that are not infinite, or of clips without humanoid curves, mixers and layer mixers, "
                     + "is supported, without a playing controller, shared nodes or loop overrides; "
                     + "controller playables, animation jobs other than ones passing such a source on whole, fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;

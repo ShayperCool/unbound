@@ -85,7 +85,9 @@ namespace Unbound.Runtime.Playables
             if (!e.ReferencePose && weight > 0f && ApplyFootIK) into.FootIK = true;
             into.ClipSampled = true;
             var bound = e.Bindings.Bind(Clip);
-            if (!e.ReferencePose && e.Animator.Human is { } human && Clip.HasHumanCurves && Clip.length > 0f)
+            // A humanoid clip on a humanoid Animator: a whole human pose (WholeHuman).
+            bool wholeHuman = e.Animator.Human != null && Clip.HasHumanCurves;
+            if (!e.ReferencePose && wholeHuman && e.Animator.Human is { } human && Clip.length > 0f)
             {
                 if (e.Replay) into.BodyMotion = m_LastBody;
                 else
@@ -105,6 +107,7 @@ namespace Unbound.Runtime.Playables
             // additive reference pose keeps the plain curves of generic clips (unmeasured).
             ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose,
                 loopPose: !e.ReferencePose || e.MotionMode == RootMotionMode.Human);
+            if (wholeHuman) ClipSampling.CompleteHuman(bound, e.Bindings, 1f, m_Pose);
             int n = Math.Min(into.FloatCount, e.Bindings.FloatCount);
             for (int c = 0; c < n; c++)
             {
@@ -113,6 +116,7 @@ namespace Unbound.Runtime.Playables
                 into.Values[c] = m_Pose.Value[c] / w;
                 into.Animated[c] = true;
             }
+            if (wholeHuman) WholeHuman(e, into, (float)ClipTime(t));
             if (!e.ReferencePose && e.MotionMode != RootMotionMode.Unsupported)
             {
                 var motion = e.Replay ? m_LastMotion : e.MotionMode == RootMotionMode.Compute ? Motion(e, bound, node) : RootMotionStep.Zero;
@@ -146,6 +150,31 @@ namespace Unbound.Runtime.Playables
             m_To = EventClock(node.Time);
             m_Weight = weight;
             e.Note(this, node);
+        }
+
+        /// <summary>A humanoid clip's stream holds a whole human pose, as the mixers that blend it
+        /// take it (6000.0.71f1, tests/projects/humanoid bodyGraph.*): the body curves hold the
+        /// clip's body read whole (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.ReadRoot"/>:
+        /// the identity's components for the RootQ curves it lacks, normalized), so a clip with
+        /// some or none of them blends as a rotation (bodyGraph.partial, bodyGraph.w,
+        /// bodyGraph.none, bodyGraph.layerPartial); a goal it has no curve for is the identity
+        /// (which <see cref="AnimationEvaluation.GoalsToMotion"/> then places at the clip's
+        /// body). The muscles and translations it lacks are at rest already
+        /// (<see cref="ClipSampling.CompleteHuman"/>).</summary>
+        void WholeHuman(AnimationEvaluation e, AnimStream into, float clipTime)
+        {
+            var b = e.Bindings;
+            b.SetHumanBody(into.Values, into.Animated,
+                into.BodyMotion.HasMotion ? into.BodyMotion.Root : e.Animator.Human.SampleBody(Clip, clipTime));
+            var present = Clip.HumanPresent;
+            for (int curve = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst; curve < Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst; curve++)
+            {
+                if (present[curve]) continue;
+                int c = b.HumanChannel(curve);
+                if (c < 0 || c >= into.FloatCount) continue;
+                into.Values[c] = Unbound.Runtime.Humanoid.AnimatorHuman.DefaultValue(curve);
+                into.Animated[c] = true;
+            }
         }
 
         bool BodyMoves(AnimationEvaluation e) => Clip.BodyMovesRoot(e.Animator);
@@ -327,9 +356,9 @@ namespace Unbound.Runtime.Playables
         /// mixer on measured releases, <see cref="Compat.HumanPlayableMixerMotionMeasured"/>, a layer
         /// mixer, <see cref="Compat.HumanPlayableLayerMixerMotionMeasured"/>),
         /// is reached through port 0 and feeds only this mixer, at a weight that is not infinite
-        /// (any sum: <see cref="HumanRootMotion.Blend"/> sums the inputs unnormalized). Clips
-        /// under a mixer need all four RootQ curves, because the blended body is written back to
-        /// those bindings (sparse body rotations are a separate gap).</summary>
+        /// (any sum: <see cref="HumanRootMotion.Blend"/> sums the inputs unnormalized). A clip
+        /// gives its body whole, with some of the body curves or none
+        /// (<see cref="ClipKind.WholeHuman"/>).</summary>
         internal static bool HumanMotionTree(PlayableNode node, int depth = 0)
         {
             if (node == null || node.Destroyed || depth > MaxHumanTreeDepth || node.Traversal != PlayableTraversalMode.Mix) return false;
@@ -347,9 +376,6 @@ namespace Unbound.Runtime.Playables
                     continue;
                 }
                 if (!AnimationEvaluation.HumanMotionClip(input.Node)) return false;
-                var present = ((ClipKind)input.Node.Kind).Clip.HumanPresent;
-                for (int q = 0; q < 4; q++)
-                    if (!present[Unbound.Runtime.Humanoid.HumanClipImport.RootFirst + 3 + q]) return false;
             }
             return connected > 0;
         }
@@ -435,22 +461,11 @@ namespace Unbound.Runtime.Playables
             }
         }
 
-        /// <summary>Human clip rotations are normalized before blending. The scalar body curve
-        /// bindings otherwise blend their unnormalized quaternion components, which
-        /// ApplyToPose would mistake for an additional rotation, so the blended body
-        /// (RootT/RootQ) replaces them.</summary>
-        static void WriteHumanRoot(AnimationEvaluation e, AnimStream into)
-        {
-            var root = into.BodyMotion.Root;
-            foreach (var group in e.Bindings.Groups)
-            {
-                int human = group.HumanCurve - Unbound.Runtime.Humanoid.HumanClipImport.RootFirst;
-                if (human < 0 || human >= 7) continue;
-                var value = human < 3 ? root.t : root.q;
-                int component = human < 3 ? human : human - 3;
-                into.Values[group.First] = component == 0 ? value.x : component == 1 ? value.y : component == 2 ? value.z : value.w;
-            }
-        }
+        /// <summary>The body the mixer blended from its inputs' bodies (RootT/RootQ) replaces
+        /// what the body curves' channels mixed to, so that the pose's body is exactly the
+        /// blended one (HumanRootMotion.PoseBody takes any difference for an additional turn).</summary>
+        static void WriteHumanRoot(AnimationEvaluation e, AnimStream into) =>
+            e.Bindings.SetHumanBody(into.Values, into.Animated, into.BodyMotion.Root);
     }
 
     /// <summary>The root motion root's channels (the Animator transform's position and rotation),

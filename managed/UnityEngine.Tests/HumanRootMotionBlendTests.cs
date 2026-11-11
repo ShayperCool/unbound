@@ -150,24 +150,6 @@ namespace UnityEngine.Tests
             Near(1f, over.GravityWeight);
         }
 
-        /// <summary>A partial layer over humanoid clips without body curves is not measured: it warns.</summary>
-        [Fact]
-        public void APartialLayerOverHumanoidClipsWithoutBodyCurvesWarns()
-        {
-            const string member = "Animator humanoid root motion of a partial layer over humanoid clips without body curves";
-            int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
-            int before = Hits();
-            var below = default(HumanRootMotionSample);
-            bool any = true;
-            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 0.5f, null);
-            Assert.Equal(before + 1, Hits());
-            // Over no humanoid clip at all it is measured: no warning.
-            below = default;
-            any = false;
-            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 0.5f, null);
-            Assert.Equal(before + 1, Hits());
-        }
-
         /// <summary>An update without a humanoid clip rests the feet pivot at the root and ends the
         /// first evaluation; the next clip's first update then moves the root by its feet pivot's
         /// way back to the root (humanoid emptyExit, emptyCond, emptyBack).</summary>

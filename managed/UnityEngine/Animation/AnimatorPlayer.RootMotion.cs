@@ -114,6 +114,7 @@ namespace Unbound.Runtime
         /// State move callbacks intercept the root pose too, but do not request deltas themselves.</summary>
         void ComputeRootMotion(int count)
         {
+            m_HumanBody = null;
             if (!Attached) return;
             var animator = m_Animator;
             animator.CaptureRootMotionPose();
@@ -585,46 +586,29 @@ namespace Unbound.Runtime
         readonly List<Unbound.Runtime.Humanoid.Trs> m_HumanBodyDifferences = new List<Unbound.Runtime.Humanoid.Trs>();
 
         readonly List<Unbound.Runtime.Humanoid.HumanRootMotionSample> m_StateSamples = new List<Unbound.Runtime.Humanoid.HumanRootMotionSample>();
-        readonly List<float> m_StateWeights = new List<float>();
+        readonly List<float> m_StateShares = new List<float>();
 
-        /// <summary>One state's humanoid clips join the layer's samples: a state's clips (a blend
-        /// tree's) blend among themselves first, by their shares of the state's weight, and the
-        /// layer then blends its states, so the rotations of a tree's blend are normalized before
-        /// a transition blends the tree with another state (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/humanoid goals.treeTransition, goals.treeSource; a tree alone or a
-        /// transition between single clips blends the same either way). Clips without body
-        /// curves take no part in a blend and pass as they are, and so do a state's clips while
-        /// their weights in the layer sum above one (a Direct blend tree's, unmeasured; in a
-        /// transition that depends on its progress): each still moves the root by its own
-        /// weight.</summary>
-        void AddStateMotion()
+        /// <summary>One state's humanoid clips join the layer's samples as one: a state's clips (a
+        /// blend tree's) blend among themselves first, each by its weight within the state, as an
+        /// AnimationMixerPlayable blends its inputs (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.Blend"/>
+        /// with sum): every part is the sum of the clips' by weight, a rotation normalized, and
+        /// where the weights do not fill the state the identity takes the rest. The layer then
+        /// blends its states by their weights, so the rotations of a tree's blend are normalized
+        /// before a transition blends the tree with another state. Matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/humanoid goals.treeTransition, goals.treeSource (trees in
+        /// transitions) and body.direct* (Direct blend trees whose weights sum to 0.7 and 1.4:
+        /// the body is 0.7 and 1.4 times as far from the root, body.directLow and
+        /// body.directHigh; an empty child tree leaves its weight to the identity,
+        /// body.directEmptyChild).</summary>
+        void AddStateMotion(float stateWeight)
         {
-            int moving = 0;
-            float total = 0f;
-            for (int k = 0; k < m_StateSamples.Count; k++)
-                if (m_StateSamples[k].HasMotion) { moving++; total += m_StateWeights[k]; }
-            if (moving > 1 && total > 0f && total <= 1f)
-            {
-                for (int k = m_StateSamples.Count - 1; k >= 0; k--)
-                {
-                    if (m_StateSamples[k].HasMotion) { m_StateWeights[k] /= total; continue; }
-                    m_HumanSamples.Add(m_StateSamples[k]);
-                    m_HumanWeights.Add(m_StateWeights[k]);
-                    m_StateSamples.RemoveAt(k);
-                    m_StateWeights.RemoveAt(k);
-                }
-                m_HumanSamples.Add(Unbound.Runtime.Humanoid.HumanRootMotion.Blend(
-                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_StateSamples),
-                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_StateWeights)));
-                m_HumanWeights.Add(total);
-            }
-            else
-            {
-                m_HumanSamples.AddRange(m_StateSamples);
-                m_HumanWeights.AddRange(m_StateWeights);
-            }
+            if (m_StateSamples.Count == 0) return;
+            m_HumanSamples.Add(Unbound.Runtime.Humanoid.HumanRootMotion.Blend(
+                System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_StateSamples),
+                System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_StateShares), sum: true));
+            m_HumanWeights.Add(stateWeight);
             m_StateSamples.Clear();
-            m_StateWeights.Clear();
+            m_StateShares.Clear();
         }
 
         /// <summary>A layer's holding states keep its last humanoid root motion (see
@@ -648,8 +632,9 @@ namespace Unbound.Runtime
 
         /// <summary>A humanoid Animator's root motion: each humanoid clip's body motion between its
         /// state's previous and current times as the clip reads them
-        /// (<see cref="ClipSampling.StateClipNormalized"/>), blended by the clips' weights in each
-        /// layer (the states of a transition, a blend tree's clips); override layers move it towards theirs by
+        /// (<see cref="ClipSampling.StateClipNormalized"/>), blended within each state (a blend tree's clips,
+        /// <see cref="AddStateMotion"/>) and then by the states' weights in each layer (a
+        /// transition's); override layers move it towards theirs by
         /// the layer weight, additive layers leave it (measured, tests/projects/humanoid) and compose
         /// their body differences onto the body below instead; layer masks filter both
         /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer"/>). It becomes a delta of the root
@@ -667,6 +652,7 @@ namespace Unbound.Runtime
                 m_HumanWeights.Clear();
                 m_HumanBodyDifferences.Clear();
                 StateRun state = null;
+                float stateWeight = 0f;
                 bool additive = Layers[i].Def.Additive;
                 foreach (var (layer, layerIndex, run, clip, weight, sampled) in m_Contributions)
                 {
@@ -679,21 +665,24 @@ namespace Unbound.Runtime
                         m_HumanWeights.Add(weight);
                         continue;
                     }
+                    // Sampled with the clip's pose, which placed its goals by this body; a clip
+                    // sampled without one stands for its whole state.
+                    float share = sampled >= 0 ? m_HumanClipShares[sampled] : 1f;
                     if (run != state)
                     {
-                        AddStateMotion();
+                        AddStateMotion(stateWeight);
                         state = run;
+                        stateWeight = weight / share;
                     }
-                    // Sampled with the clip's pose, which placed its goals by this body.
                     if (sampled >= 0) m_StateSamples.Add(m_HumanClipSamples[sampled]);
                     else
                     {
                         human.SampleMotion(clip, clip.HumanClipMotion, HumanInput(run, clip), out var sample);
                         m_StateSamples.Add(sample);
                     }
-                    m_StateWeights.Add(weight);
+                    m_StateShares.Add(share);
                 }
-                AddStateMotion();
+                AddStateMotion(stateWeight);
                 if (!additive) HoldHumanMotion(i);
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
                 var mask = Layers[i].Def.Mask;
@@ -709,6 +698,7 @@ namespace Unbound.Runtime
                 return false;
             }
             human.ApplyMotion(blended, m_RootDeltaTime, out var rm);
+            if (blended.HasMotion) m_HumanBody = blended.Root;
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return true;
             animator.m_DeltaPosition = new Vector3(rm.DeltaPosition.x, rm.DeltaPosition.y, rm.DeltaPosition.z);
             animator.m_DeltaRotation = new Quaternion(rm.DeltaRotation.x, rm.DeltaRotation.y, rm.DeltaRotation.z, rm.DeltaRotation.w);
