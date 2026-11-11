@@ -584,6 +584,46 @@ namespace Unbound.Runtime
         readonly List<float> m_HumanWeights = new List<float>();
         readonly List<Unbound.Runtime.Humanoid.Trs> m_HumanBodyDifferences = new List<Unbound.Runtime.Humanoid.Trs>();
 
+        readonly List<Unbound.Runtime.Humanoid.HumanRootMotionSample> m_StateSamples = new List<Unbound.Runtime.Humanoid.HumanRootMotionSample>();
+        readonly List<float> m_StateWeights = new List<float>();
+
+        /// <summary>One state's humanoid clips join the layer's samples: a state's clips (a blend
+        /// tree's) blend among themselves first, by their shares of the state's weight, and the
+        /// layer then blends its states, so the rotations of a tree's blend are normalized before
+        /// a transition blends the tree with another state (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/humanoid goals.treeTransition, goals.treeSource; a tree alone or a
+        /// transition between single clips blends the same either way). Clips without body
+        /// curves take no part in a blend and pass as they are.</summary>
+        void AddStateMotion()
+        {
+            int moving = 0;
+            float total = 0f;
+            for (int k = 0; k < m_StateSamples.Count; k++)
+                if (m_StateSamples[k].HasMotion) { moving++; total += m_StateWeights[k]; }
+            if (moving > 1 && total > 0f)
+            {
+                for (int k = m_StateSamples.Count - 1; k >= 0; k--)
+                {
+                    if (m_StateSamples[k].HasMotion) { m_StateWeights[k] /= total; continue; }
+                    m_HumanSamples.Add(m_StateSamples[k]);
+                    m_HumanWeights.Add(m_StateWeights[k]);
+                    m_StateSamples.RemoveAt(k);
+                    m_StateWeights.RemoveAt(k);
+                }
+                m_HumanSamples.Add(Unbound.Runtime.Humanoid.HumanRootMotion.Blend(
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_StateSamples),
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_StateWeights)));
+                m_HumanWeights.Add(total);
+            }
+            else
+            {
+                m_HumanSamples.AddRange(m_StateSamples);
+                m_HumanWeights.AddRange(m_StateWeights);
+            }
+            m_StateSamples.Clear();
+            m_StateWeights.Clear();
+        }
+
         /// <summary>A layer's holding states keep its last humanoid root motion (see
         /// <see cref="HoldWeight"/>): the layer's own blended sample.</summary>
         void HoldHumanMotion(int i)
@@ -623,6 +663,7 @@ namespace Unbound.Runtime
                 m_HumanSamples.Clear();
                 m_HumanWeights.Clear();
                 m_HumanBodyDifferences.Clear();
+                StateRun state = null;
                 bool additive = Layers[i].Def.Additive;
                 foreach (var (layer, layerIndex, run, clip, weight, sampled) in m_Contributions)
                 {
@@ -635,15 +676,21 @@ namespace Unbound.Runtime
                         m_HumanWeights.Add(weight);
                         continue;
                     }
+                    if (run != state)
+                    {
+                        AddStateMotion();
+                        state = run;
+                    }
                     // Sampled with the clip's pose, which placed its goals by this body.
-                    if (sampled >= 0) m_HumanSamples.Add(m_HumanClipSamples[sampled]);
+                    if (sampled >= 0) m_StateSamples.Add(m_HumanClipSamples[sampled]);
                     else
                     {
                         human.SampleMotion(clip, clip.HumanClipMotion, HumanInput(run, clip), out var sample);
-                        m_HumanSamples.Add(sample);
+                        m_StateSamples.Add(sample);
                     }
-                    m_HumanWeights.Add(weight);
+                    m_StateWeights.Add(weight);
                 }
+                AddStateMotion();
                 if (!additive) HoldHumanMotion(i);
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
                 var mask = Layers[i].Def.Mask;
