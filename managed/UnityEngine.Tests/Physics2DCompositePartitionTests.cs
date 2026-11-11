@@ -146,9 +146,26 @@ namespace UnityEngine.Tests
                 Assert.InRange(piece.Count, 3, 8);
                 foreach (var point in piece) Assert.True(float.IsFinite(point.X) && float.IsFinite(point.Y));
             }
-            Assert.False(PolygonPartition.TryGenerate(new IReadOnlyList<V>[]
-                { new[] { V.Zero, V.One, new V(float.NaN, 0) } }, false, out var invalid));
+            Assert.True(PolygonPartition.TryGenerate(new IReadOnlyList<V>[]
+                { new[] { V.Zero, V.One, new V(float.NaN, 0) } }, false, out var invalid, out bool removed));
+            Assert.True(removed);
             Assert.Empty(invalid);
+        }
+        [Theory]
+        [InlineData(800000f, 2, true)]
+        [InlineData(1000000f, 1, false)]
+        [InlineData(9000000f, 1, false)]
+        [InlineData(-9000000f, 1, false)]
+        public void InvalidDistantContourDoesNotRemoveTheValidIsland(float coordinate, int count, bool far)
+        {
+            var composite = Composite();
+            Box(composite, new Vector2(2, 2), Vector2.zero);
+            Box(composite, new Vector2(1000, 1000), new Vector2(coordinate, 0));
+            var group = Shapes(composite);
+            Assert.Equal(count, group.shapeCount);
+            Assert.True(composite.OverlapPoint(Vector2.zero));
+            Assert.Equal(far, composite.OverlapPoint(new Vector2(coordinate, 0)));
+            Assert.Equal(2, composite.pathCount);
         }
         public void Dispose()
         {

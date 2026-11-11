@@ -3,8 +3,8 @@
 This probe records local and world shape data, composite paths and cast contacts
 for static, body, child and rotated-child frames. It varies small displacements,
 collider offsets, reflected/nonuniform scale, large positions and nonplanar
-parents. The canonical Unity 6000.0.71f1 reference contains 327 scenarios and
-43,940 observations from two byte-identical independent Editor runs.
+parents. The canonical Unity 6000.0.71f1 reference contains 333 scenarios and
+44,352 observations from two byte-identical independent Editor runs.
 
 Run from the repository root. Each label gets a fresh project in the external
 cache; the runner wraps each Editor or engine process in `with-heavy-job`.
@@ -39,12 +39,13 @@ its reference and passing displacement tests do not establish geometry parity.
 Run artifacts and rejected experiments stay in the cache. Other Unity releases
 remain unmeasured.
 
-The seven appended controls cover an interior hole, a disconnected island,
+The thirteen appended controls cover an interior hole, a disconnected island,
 a repeated/zero-area source path, manual source edits, polygon edge radius and
-Delaunay refinement, plus a tilted outline with manual setting changes and cloning. The refinement discriminator produces four shapes with the
+Delaunay refinement, plus a tilted outline with manual setting changes and cloning. Six more controls cover
+large body-local contours beside a valid island. The refinement discriminator produces four shapes with the
 option disabled and two with it enabled. The two independent GPU Editor captures
 agree byte for byte, SHA-256
-`62dcfdb722873adfd1f11abb35d27e8add6b8a11d7978e2b86a9eb2a861f3caa`.
+`6c5bc51d56a84f165c17eca53c606bdc29f49117b9d4a2b539c3af68f31f6e65`.
 All 320 earlier scenarios retain their original values.
 
 The [Unity 6000.0 component reference](https://docs.unity3d.com/6000.0/Documentation/Manual/2d-physics/collider/composite-collider/composite-collider-2d-reference.html)
@@ -64,6 +65,11 @@ baked transform scale. Coordinates enter the integer contour grid after a
 single-precision multiplication and truncation, and leave it through a
 single-precision multiplication. Convex partitioning uses odd-even contour filling,
 at most eight vertices per piece, optional refinement and near-collinear cleanup.
+Contours containing nonfinite points or points beyond a body-local squared
+distance of 1e12 are omitted individually; other islands remain collidable.
+The controls distinguish valid centers at 800,000 and 999,000 units from a
+1,000,000-unit center whose corners exceed that distance, and exercise both
+signs beyond the tessellation input range.
 The [edge-radius API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CompositeCollider2D-edgeRadius.html)
 describes rounded edges; the polygon-mode reference reports zero shape radius
 even when edgeRadius is 0.125. These numerical and ordering observations apply to

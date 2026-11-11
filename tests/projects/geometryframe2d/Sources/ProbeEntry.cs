@@ -59,6 +59,7 @@ public static class ProbeEntry
             PartitionControl(delaunay, radius);
         foreach (bool delaunay in new[] { false, true }) PartitionDelaunay(delaunay);
         OutlineFrameControl();
+        foreach (float coordinate in new[] { 800000f, 999000f, 1000000f, 8000000f, 9000000f, -9000000f }) LargeBodyLocalControl(coordinate);
         File.WriteAllText(output, ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -225,6 +226,29 @@ public static class ProbeEntry
             top.compositeOperation = Collider2D.CompositeOperation.Merge;
             Physics2D.SyncTransforms(); composite.GenerateGeometry(); Physics2D.SyncTransforms();
             ProbeLog.Begin($"partition-delaunay/{delaunay}"); Shapes(composite, composite);
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void LargeBodyLocalControl(float coordinate)
+    {
+        var root = new GameObject("large-body-local");
+        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
+        var composite = root.AddComponent<CompositeCollider2D>();
+        composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+        composite.generationType = CompositeCollider2D.GenerationType.Manual;
+        try
+        {
+            var near = root.AddComponent<BoxCollider2D>(); near.size = new Vector2(2, 2);
+            near.compositeOperation = Collider2D.CompositeOperation.Merge;
+            var far = root.AddComponent<BoxCollider2D>(); far.size = new Vector2(1000, 1000);
+            far.offset = new Vector2(coordinate, 0); far.compositeOperation = Collider2D.CompositeOperation.Merge;
+            Physics2D.SyncTransforms(); composite.GenerateGeometry(); Physics2D.SyncTransforms();
+            ProbeLog.Begin("large-body-local/" + coordinate.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            Shapes(composite, composite);
+            ProbeLog.Value("near", composite.OverlapPoint(Vector2.zero));
+            ProbeLog.Value("far", composite.OverlapPoint(new Vector2(coordinate, 0)));
         }
         catch (Exception error) { ProbeLog.Error(error); }
         finally { UnityEngine.Object.DestroyImmediate(root); }

@@ -16,6 +16,9 @@ namespace Unbound.Runtime
         // their chord, measured by tests/projects/geometryframe2d.
         const float CollinearCosine = .99999f;
         const float CollinearDistance = .01f;
+        // Body-local polygon points beyond this squared distance are removed before
+        // partitioning, measured by geometryframe2d's large-body-local controls.
+        const float MaximumPointDistanceSquared = 1e12f;
 
         static void Clean(List<V> polygon)
         {
@@ -44,12 +47,27 @@ namespace Unbound.Runtime
             int delaunay, int polygonSize, float* vertices, int* vertexIndices, int vertexCapacity,
             int* elements, int elementCapacity, int* vertexCount, int* elementCount);
 
+        internal static bool TryGenerate(IReadOnlyList<IReadOnlyList<V>> paths, bool delaunay,
+            out List<List<V>> result) => TryGenerate(paths, delaunay, out result, out _);
+
         internal static unsafe bool TryGenerate(IReadOnlyList<IReadOnlyList<V>> paths, bool delaunay,
-            out List<List<V>> result)
+            out List<List<V>> result, out bool removedPaths)
         {
             result = new List<List<V>>();
+            removedPaths = false;
+            var valid = new List<IReadOnlyList<V>>(paths.Count);
             int pointCount = 0;
-            foreach (var path in paths) pointCount = checked(pointCount + path.Count);
+            foreach (var path in paths)
+            {
+                bool accepted = true;
+                foreach (var point in path)
+                    if (!float.IsFinite(point.X) || !float.IsFinite(point.Y) ||
+                        point.LengthSquared() > MaximumPointDistanceSquared) { accepted = false; break; }
+                if (!accepted) { removedPaths = true; continue; }
+                valid.Add(path);
+                pointCount = checked(pointCount + path.Count);
+            }
+            paths = valid;
             if (pointCount == 0) return true;
             var input = new float[checked(pointCount * 2)];
             var counts = new int[paths.Count];
@@ -60,7 +78,6 @@ namespace Unbound.Runtime
                 counts[i] = path.Count;
                 foreach (var point in path)
                 {
-                    if (!float.IsFinite(point.X) || !float.IsFinite(point.Y)) return false;
                     input[offset++] = point.X;
                     input[offset++] = point.Y;
                 }

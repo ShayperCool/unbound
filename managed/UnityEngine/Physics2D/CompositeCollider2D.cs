@@ -45,7 +45,7 @@ namespace UnityEngine
             set
             {
                 m_GeometryType = value;
-                GeometrySettingChanged();
+                GeneratedSettingChanged();
             }
         }
 
@@ -65,7 +65,7 @@ namespace UnityEngine
             set
             {
                 m_UseDelaunayMesh = value;
-                GeometrySettingChanged();
+                GeneratedSettingChanged();
             }
         }
 
@@ -85,7 +85,7 @@ namespace UnityEngine
             set
             {
                 m_EdgeRadius = Mathf.Max(0f, value);
-                GeometrySettingChanged();
+                GeneratedSettingChanged();
             }
         }
 
@@ -99,7 +99,7 @@ namespace UnityEngine
             }
         }
 
-        void GeometrySettingChanged()
+        void GeneratedSettingChanged()
         {
             if (Compat.Physics2DGeneratedGeometryMeasured) Regenerate();
             else ShapeChanged();
@@ -305,7 +305,7 @@ namespace UnityEngine
                 List<List<System.Numerics.Vector2>> pieces;
                 if (measured)
                 {
-                    if (!PolygonPartition.TryGenerate(body, delaunay, out pieces)) dropped++;
+                    if (!PolygonPartition.TryGenerate(body, delaunay, out pieces, out bool removed) || removed) dropped++;
                 }
                 else pieces = PolygonDecomposition.ConvexPiecesWithHoles(body);
                 foreach (var piece in pieces)
