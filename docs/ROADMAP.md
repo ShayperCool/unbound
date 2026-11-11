@@ -8,37 +8,52 @@ need is implemented in the engine, and every behaviour is checked against the Un
 The measure is `tests/projects/packages`: a Unity 6000.0.71f1 project with 86 packages (every
 runtime-relevant package the Editor ships offline, URP, Shader Graph, VFX Graph and all built-in
 modules). `unbound graph --compare-bee` checks the assembly graph against the Editor's record;
-`unbound api-gaps -p tests/projects/packages` lists the API the packages' code references that Unbound
-lacks.
+`unbound api-gaps -p tests/projects/packages` reports referenced API that remains stubbed or
+absent.
 
 What is still missing or only partly done, found by auditing the engine, is mapped in
 `COMPATIBILITY_GAPS.md`.
 
-## Where it stands (2026-10-24)
+## Where it stands (2026-11-11)
+
+Measured on commit `61e8aa8fae87bb45a3213195792dc2cc9dc7cbf1` with
+`unbound api-gaps -p tests/projects/packages --json`.
 
 * Compiling: the 188 script assemblies of the packages project match the Editor's graph exactly
   (references, defines, .NET Standard 2.1 and .NET Framework levels) and all compile.
-* API the packages reference: 2698 of 5970 members implemented (80% of uses), 722 of 1406 types.
+* API members: 4943 of 5974 referenced satisfied, 1031 stubbed;
+  uses 74051 of 76289 satisfied.
+* API types: 1186 of 1406 referenced satisfied, 220 stubbed;
+  uses 84200 of 86159 satisfied.
 * Works in a real game: core objects and lifecycle, scenes and prefabs, Unity
   serialization, uGUI, TextMeshPro, IMGUI, 2D physics (Box2D), 3D physics (PhysX 4.1), legacy and
   Animator animation, particles, audio and mixers, UnityWebRequest, Addressables in Play mode
   (AssetDatabase mode), Localization, shaders compiled from Unity's sources (built-in RP),
   ScriptedImporters, source generators, hot reload.
 
-Missing API by package (members / uses):
+A stubbed member exists but does nothing. These are the tool's API-coverage
+classifications; they do not establish behavior parity.
 
-| Package | Missing | Mostly |
+Missing API by package (stubbed members / reported uses):
+
+Each row counts distinct stubbed member entries referenced by that package group's
+assemblies. Uses are the JSON's total reported uses of those entries across the scan:
+the JSON lists referencing assemblies but does not split uses between them. Shared
+entries and their uses can appear in several rows, so the rows are not additive.
+
+| Package | Stubbed members / reported uses | Most referenced stubbed types |
 |---|---|---|
-| Render Pipelines Core, URP, URP 2D, GPU Driven, Light Transport | 1700 / 14800 | SRP: CommandBuffer, ScriptableRenderContext, culling, RenderTexture descriptors, compute, GraphicsBuffer |
-| Input System (+ ForUI) | 486 / 3560 | editor UI (inspectors, settings windows), UI Toolkit; the engine side is done |
-| Timeline, Sequences, Cinemachine, Animation Rigging | 53 / 231 | Editor API (Undo, AnimationUtility), BoundingSphere, CompositeCollider2D, humanoid avatars |
-| VFX Graph | 160 / 1700 | VisualEffect, compute |
-| Post Processing v2 | 100 / 1570 | CommandBuffer, RenderTexture, compute |
-| Collections, Burst, Logging, Transport, Serialization | 100 / 350 | UnityTLS (secure Transport), Editor hooks |
-| 2D Animation, SpriteShape, Tilemap Extras | 130 / 1760 | SpriteShape module, sprite data access, jobs |
-| AI Navigation | 60 / 140 | NavMesh |
-| Notifications, Ads, IAP, LevelPlay | 50 / 900 | AndroidJNI as the Editor answers it |
-| Test Framework, UnityEditor.UI | 450 / 3300 | Editor UI API (inspectors), build pipeline |
+| Render Pipelines Core, URP/2D, Shader Graph, GPU Driven, Light Transport | 398 / 1010 | `UnityEngine.VFX.VisualEffect`, `UnityEngine.Rendering.GPUDrivenRendererGroupData`, `UnityEngine.Rendering.BatchCullingContext` |
+| Input System (+ ForUI) | 166 / 345 | `UnityEditor.EditorGUILayout`, `UnityEditor.AssetDatabase`, `UnityEditor.IMGUI.Controls.TreeView/RowGUIArgs` |
+| Timeline, Sequences, Cinemachine, Animation Rigging | 19 / 56 | `UnityEditor.PrefabUtility`, `UnityEditor.AssetDatabase`, `UnityEditor.AnimationUtility` |
+| VFX Graph | 74 / 223 | `UnityEngine.VFX.VisualEffect`, `UnityEngine.VFX.VFXEventAttribute`, `UnityEngine.VFX.VFXSpawnerState` |
+| Post Processing v2 | 7 / 23 | `UnityEngine.Camera`, `UnityEngine.Rendering.GraphicsSettings` |
+| Collections, Burst, Logging, Transport, Serialization | 40 / 84 | `Unity.TLS.LowLevel.Binding`, `Unity.TLS.LowLevel.Binding/unitytls_client_config`, `Unity.TLS.LowLevel.Binding/unitytls_dataRef` |
+| 2D Animation, IK, Pixel Perfect, SpriteShape, Tilemap Extras | 1 / 5 | `UnityEditor.AssetDatabase` |
+| AI Navigation | 2 / 5 | `UnityEditor.SceneManagement.PrefabStage`, `UnityEditor.SceneManagement.EditorSceneManager` |
+| Notifications, Ads, IAP, LevelPlay | 3 / 10 | `UnityEditor.AssetDatabase`, `UnityEngine.Analytics.Analytics` |
+| Test Framework, UnityEditor.UI | 256 / 523 | `UnityEditor.EditorGUILayout`, `UnityEditor.BuildPlayerOptions`, `UnityEditor.PlayerSettings` |
+| Other scanned packages | 120 / 312 | `UnityEditor.PrefabUtility`, `UnityEngine.UIElements.UxmlObjectAttribute`, `UnityEditor.AssetDatabase` |
 
 ## Work list
 
