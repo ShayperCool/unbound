@@ -821,7 +821,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 45;
+    const VERSION: u32 = 46;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1520,7 +1520,9 @@ impl<'a> Builder<'a> {
             let start = range.first / fps;
             let end = (range.last.max(range.first) / fps).min(time_end.max(start));
             // Humanoid clips are converted to muscle curves from these transform curves; that
-            // conversion is measured for whole takes without a transform mask only.
+            // conversion is measured for whole takes with every body part on, and the
+            // transform curves they keep for mask type None and for masks made from the model
+            // that list transforms.
             if self.settings.animation_type == 3 && !range.preview {
                 let half_frame = 0.5 / fps;
                 if (start - time_begin).abs() > half_frame || (time_end - end).abs() > half_frame {
@@ -1528,6 +1530,30 @@ impl<'a> Builder<'a> {
                         "humanoid clip '{}' covers only a part of its take: its muscle curves are not measured (not supported)",
                         range.name
                     ));
+                }
+                // The body parts are the clip's own with a mask made from the model; with
+                // mask type None the meta's copy is not a mask, and a mask from another asset
+                // has its own, which is not read.
+                match &range.mask {
+                    ClipMask::Asset { .. } => warnings.push(format!(
+                        "humanoid clip '{}' takes its mask from another asset: its body parts are not read and every muscle curve is imported (not supported); the transform curves it keeps are not measured (the asset's transform list is applied as the model's own is)",
+                        range.name
+                    )),
+                    ClipMask::Paths(paths) => {
+                        if range.body_parts_off {
+                            warnings.push(format!(
+                                "humanoid clip '{}' has body parts off in its mask: every muscle curve is imported (not supported)",
+                                range.name
+                            ));
+                        }
+                        if paths.is_empty() {
+                            warnings.push(format!(
+                                "humanoid clip '{}' has a mask made from the model without transforms: the transform curves it keeps are not measured (every animated transform keeps its curves)",
+                                range.name
+                            ));
+                        }
+                    }
+                    ClipMask::None => {}
                 }
             }
             let mut human_transforms = human.then(Vec::new);
@@ -3090,6 +3116,8 @@ struct ClipRange {
     /// Times normalized to the clip's length.
     parameters: Vec<ParameterCurve>,
     mask: ClipMask,
+    /// `bodyMask` has a part of the humanoid body off.
+    body_parts_off: bool,
     settings: ClipSettings,
     preview: bool,
 }
@@ -3111,6 +3139,7 @@ impl ClipRange {
             events: Vec::new(),
             parameters: Vec::new(),
             mask: ClipMask::None,
+            body_parts_off: false,
             settings: ClipSettings::default(),
             preview: false,
         }
@@ -3227,6 +3256,7 @@ impl ClipRange {
                 })
                 .collect(),
             mask,
+            body_parts_off: body_parts_off(item.get("bodyMask").and_then(Value::as_str)),
             settings: ClipSettings {
                 mirror: flag("mirror", defaults.mirror),
                 orientation_offset_y: float(item, "orientationOffsetY").unwrap_or(0.0),
@@ -3255,6 +3285,25 @@ impl ClipMask {
             ClipMask::None | ClipMask::Asset { .. } => true,
         }
     }
+}
+
+/// Whether a clip's `bodyMask` (the meta's string of thirteen 32-bit values, one per part of the
+/// humanoid body, low byte first) has a part off. A missing or malformed mask has none off.
+fn body_parts_off(mask: Option<&str>) -> bool {
+    mask.is_some_and(|mask| {
+        mask.len() % 8 == 0
+            && mask.as_bytes().chunks(8).any(|part| part.iter().all(|&digit| digit == b'0'))
+    })
+}
+
+/// The paths of [`ModelClip::human_transforms`] an asset mask's transform list leaves on (all
+/// of them without one).
+pub fn human_transforms_kept(listed: &[String], mask: Option<&[(String, f32)]>) -> Vec<String> {
+    listed
+        .iter()
+        .filter(|path| mask.is_none_or(|mask| mask_keeps(mask, path)))
+        .cloned()
+        .collect()
 }
 
 /// An AvatarMask's transform list: a path stays when listed with a weight above one half, or

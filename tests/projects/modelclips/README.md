@@ -120,20 +120,22 @@ under three clip masks: None; made from the model with every transform on; and t
 the left twist bone off. `curves.<model>.<clip>` records the number of Animator curves, of
 curves of other kinds and of paths with transform curves; `curves.<model>.<clip>.<path>` the
 properties of such a path, the number of keys and the first and the middle key of each
-(positions times 100, the inverse of the rig's root scale). The Manual's Animation tab
-([Mask](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AnimationClip.html)) says
-the Transform list picks which transforms are animated; it does not say what a Humanoid clip
-keeps without a mask.
+(positions times 100, the inverse of the rig's root scale). The Manual's
+[Avatar Mask](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AvatarMask.html) page
+says a mask picks portions of the humanoid body or bones of the Transform hierarchy and can be
+applied in the import settings of animation files; it does not say what a Humanoid clip keeps
+without a mask.
 
 - With mask type None the clip has its 130 Animator curves and no transform curve.
 - With a mask made from the model the two twist bones keep their curves, all ten properties
-  each (position, rotation and scale, 21 keys), though the take turns one and moves the
-  other; the human bones, the root above the hips and the model's root have none.
+  each (position, rotation and scale, 21 keys); the human bones, the `Spine` transform between
+  two of them, the root above the hips and the model's root have none.
 - A transform the mask turns off has no curves (`HumanTwistPart`: the right twist bone only).
 - The Animator curves are 130 under each mask.
 
-Not measured: a mask copied from another asset, an empty mask made from the model, a transform
-between two human bones, and a bone the take does not animate (the exporter keys every bone).
+Not measured: a mask copied from another asset, an empty mask made from the model, a body part
+or a human bone turned off, and a transform with only some channels keyed or none (the
+exporter keys every channel of every bone).
 
 Not in the reference (an exploratory capture of a richer rig, 130 curves over 31 frames, the
 same in each of its 20 clips): the same rule gives the Editor's keys of all 130 curves at

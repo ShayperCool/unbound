@@ -10,9 +10,9 @@ namespace UnityEngine.Tests
     /// The transform curves a Humanoid model clip keeps beside its muscle curves (6000.0.71f1
     /// Editor, tests/projects/modelclips HumanTwistNone, HumanTwistAll, HumanTwistPart): those of
     /// transforms that are not bones of the human skeleton, when the take animates them and the
-    /// clip's mask leaves them on; none with mask type None. The Manual's Mask section of the
-    /// Animation tab says a mask's Transform list picks "which transforms are animated", and
-    /// does not say what a Humanoid clip without a mask keeps.
+    /// clip's mask leaves them on; none with mask type None. The Manual's Avatar Mask page says a
+    /// mask picks body portions or bones of the Transform hierarchy and can be applied in the
+    /// import settings; it does not say what a Humanoid clip without a mask keeps.
     /// </summary>
     [Collection("Animation")]
     public sealed class HumanClipTransformCurveTests : IDisposable

@@ -1320,8 +1320,12 @@ fn a_humanoid_clip_lists_the_transforms_its_mask_keeps() {
         let model = ModelImporter::default()
             .import(&source, &std::fs::read(&source).unwrap(), &meta)
             .unwrap();
+        // The measured shapes import without a word about the clip.
         assert!(
-            !model.warnings.iter().any(|w| w.contains("transform mask")),
+            !model
+                .warnings
+                .iter()
+                .any(|w| w.starts_with("humanoid clip '")),
             "{:?}",
             model.warnings
         );
@@ -1348,8 +1352,92 @@ fn a_humanoid_clip_lists_the_transforms_its_mask_keeps() {
     assert_eq!(paths(&none), paths(&part));
     assert!(paths(&part).iter().any(|p| p == left));
 
-    let generic = import("Rig.fbx");
-    assert_eq!(generic.human_transforms, None);
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelclips/Assets/Resources/Rig.fbx");
+    let settings = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+    let generic = ModelImporter::default()
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap();
+    assert!(generic.clips.iter().all(|c| c.human_transforms.is_none()));
+
+    // A mask from another asset leaves on the listed paths its transform list keeps.
+    let listed = vec![left.to_string(), right.to_string()];
+    assert_eq!(human_transforms_kept(&listed, None), listed);
+    let asset = [(left.to_string(), 0.0), (right.to_string(), 1.0)];
+    assert_eq!(
+        human_transforms_kept(&listed, Some(&asset)),
+        [right.to_string()]
+    );
+    assert_eq!(human_transforms_kept(&listed, Some(&[])), listed);
+}
+
+/// Mask shapes of Humanoid clips that are not measured say so: a body part off (every muscle
+/// curve is still imported), a mask from another asset and a mask made from the model without
+/// transforms. The measured shapes (mask None, a mask with transforms) do not warn.
+#[test]
+fn unmeasured_masks_of_humanoid_clips_warn() {
+    assert!(!body_parts_off(None));
+    assert!(!body_parts_off(Some(&"01000000".repeat(13))));
+    assert!(body_parts_off(Some(&format!(
+        "{}00000000{}",
+        "01000000".repeat(5),
+        "01000000".repeat(7)
+    ))));
+    assert!(!body_parts_off(Some("0100000")));
+
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelclips/Assets/Resources/HumanTwistAll.fbx");
+    let bytes = std::fs::read(&source).unwrap();
+    let text = std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap();
+    let warnings = |text: &str| -> Vec<String> {
+        ModelImporter::default()
+            .import(&source, &bytes, &meta(text))
+            .unwrap()
+            .warnings
+            .into_iter()
+            .filter(|w| w.starts_with("humanoid clip '"))
+            .collect()
+    };
+    assert!(warnings(&text).is_empty(), "{:?}", warnings(&text));
+
+    let all_on = "01000000".repeat(13);
+    assert!(text.contains(&all_on));
+    let part_off = text.replace(
+        &all_on,
+        &format!("{}00000000{}", "01000000".repeat(5), "01000000".repeat(7)),
+    );
+    assert!(
+        warnings(&part_off)
+            .iter()
+            .any(|w| w.contains("body parts off"))
+    );
+
+    let start = text.find("      transformMask:").unwrap();
+    let end = text.find("      maskType: 0").unwrap();
+    let empty = format!(
+        "{}      transformMask: []\n{}",
+        &text[..start],
+        &text[end..]
+    );
+    assert!(
+        warnings(&empty)
+            .iter()
+            .any(|w| w.contains("without transforms"))
+    );
+
+    let asset = empty
+        .replace("      maskType: 0", "      maskType: 1")
+        .replace(
+            "maskSource: {instanceID: 0}",
+            "maskSource: {fileID: 31900000, guid: 0123456789abcdef0123456789abcdef, type: 2}",
+        );
+    assert!(
+        warnings(&asset)
+            .iter()
+            .any(|w| w.contains("from another asset")),
+        "{:?}",
+        warnings(&asset)
+    );
 }
 
 /// A Humanoid clip under a reducing compression keeps its transform keys on every frame, as

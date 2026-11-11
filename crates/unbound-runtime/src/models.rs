@@ -7,7 +7,8 @@ use unbound_assets::{
     ImportedModel,
     model::{
         ClipMask, CurveKey, Key, MaterialDescription, MaterialImportMode, MaterialLocation,
-        ModelClip, ModelMaterial, ModelMesh, RendererKind, curves, mask_keeps,
+        ModelClip, ModelMaterial, ModelMesh, RendererKind, curves, human_transforms_kept,
+        mask_keeps,
     },
 };
 use unbound_project::AssetDb;
@@ -740,7 +741,8 @@ fn mask_asset(db: &AssetDb, model: &str, clip: &str, guid: &str) -> Vec<(String,
 
 /// A clip as Unity serializes an AnimationClip, so the managed clip reader takes it as it is:
 /// position, rotation and scale curves per node path, with slopes from the neighbouring keys;
-/// curves of transforms an asset `mask` leaves out are not there.
+/// curves of transforms an asset `mask` leaves out are not there. A Humanoid clip keeps every
+/// node's curves for its conversion, and the mask applies to the paths it lists as kept.
 fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
     fn axes<const N: usize>(names: &[&'static str; N], v: [f32; N]) -> Value {
         // A float curve's values are plain numbers.
@@ -795,9 +797,8 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
     // A Humanoid clip's nodes all stay for the conversion; its mask picks, among the paths the
     // importer lists, the transforms whose curves the converted clip keeps.
     let human_transforms: Option<Vec<Value>> = clip.human_transforms.as_ref().map(|paths| {
-        paths
+        human_transforms_kept(paths, mask)
             .iter()
-            .filter(|path| mask.is_none_or(|m| mask_keeps(m, path)))
             .map(|path| scalar(path.as_str()))
             .collect()
     });
@@ -1067,7 +1068,78 @@ pub(crate) fn base64(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::base64;
+    use super::{base64, clip_document};
+    use unbound_assets::{Importer, ModelImporter};
+    use unbound_yaml::Value;
+
+    /// A Humanoid clip under a mask from another asset keeps every node's curves for the
+    /// conversion (a masked human bone too), and the mask picks among the paths the importer
+    /// lists as kept. Control: a Generic clip loses the curves of the transform the mask
+    /// turns off.
+    #[test]
+    fn an_asset_mask_filters_a_humanoid_clips_kept_paths_not_its_nodes() {
+        let clip_of = |file: &str| {
+            let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests/projects/modelclips/Assets/Resources")
+                .join(file);
+            let meta = std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap();
+            let model = ModelImporter::default()
+                .import(
+                    &source,
+                    &std::fs::read(&source).unwrap(),
+                    &unbound_yaml::parse_value(&meta).unwrap(),
+                )
+                .unwrap();
+            model.clips.into_iter().find(|c| !c.preview).unwrap()
+        };
+        fn paths(document: &unbound_yaml::Document, key: &str) -> Vec<String> {
+            let items = document
+                .body
+                .get(key)
+                .and_then(Value::as_seq)
+                .unwrap_or_default();
+            items
+                .iter()
+                .map(|item| match item {
+                    Value::Scalar(path) => path.clone(),
+                    _ => item
+                        .get("path")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string(),
+                })
+                .collect()
+        }
+        let left = "Root/Hips/SpineHelper/Spine/LeftUpperArm/LeftUpperArmTwist";
+        let right = "Root/Hips/SpineHelper/Spine/RightUpperArm/RightUpperArmTwist";
+        let leg = "Root/Hips/LeftUpperLeg";
+        let mask = [
+            (left.to_string(), 0.0),
+            (right.to_string(), 1.0),
+            (leg.to_string(), 0.0),
+        ];
+
+        let human = clip_of("HumanTwistAll.fbx");
+        let document = clip_document(&human, Some(&mask));
+        let rotations = paths(&document, "m_RotationCurves");
+        assert!(rotations.iter().any(|p| p == left) && rotations.iter().any(|p| p == leg));
+        assert_eq!(paths(&document, "m_UnboundHumanTransformPaths"), [right]);
+        let unmasked = paths(&clip_document(&human, None), "m_UnboundHumanTransformPaths");
+        assert!(unmasked.iter().any(|p| p == left) && unmasked.iter().any(|p| p == right));
+
+        let generic = clip_of("RigDefault.fbx");
+        let all = paths(&clip_document(&generic, None), "m_RotationCurves");
+        let off = [(all[0].clone(), 0.0)];
+        let masked = paths(&clip_document(&generic, Some(&off)), "m_RotationCurves");
+        assert!(!all.is_empty() && masked.is_empty());
+        assert!(
+            paths(
+                &clip_document(&generic, None),
+                "m_UnboundHumanTransformPaths"
+            )
+            .is_empty()
+        );
+    }
 
     #[test]
     fn base64_matches_the_rfc_vectors() {
