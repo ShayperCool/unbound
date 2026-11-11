@@ -90,20 +90,38 @@ namespace TextureRaw.Tests
             finally { Object.DestroyImmediate(texture); }
         }
 
+        /// <summary>The canonical unreadable.* rows: views handed out before the CPU data is
+        /// removed stay valid until the texture ends, while new views are refused.</summary>
         [Fact]
-        public void RemovingCpuDataRevokesBorrowedViewsAndRawGetterThrowsUnityException()
+        public void RemovingCpuDataKeepsBorrowedViewsAndRawGetterThrowsUnityException()
         {
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            var second = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             try
             {
                 var raw = texture.GetRawTextureData<byte>();
+                var pixel = texture.GetPixelData<byte>(0);
+                raw[5] = 77;
                 texture.Apply(false, true);
                 Assert.False(texture.isReadable);
-                Assert.Throws<ObjectDisposedException>(() => AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(raw)));
+                AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(raw));
+                AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(pixel));
+                Assert.Equal((byte)77, raw[5]);
+                Assert.Equal((byte)77, pixel[5]);
                 Assert.Throws<UnityException>(() => texture.GetRawTextureData<byte>());
                 Assert.Throws<UnityException>(() => texture.GetRawTextureData<TextureRawProbe.ThreeBytes>());
+                Assert.Equal(16, texture.GetRawTextureData().Length);
+                // The kept views end with the texture.
+                var kept = second.GetRawTextureData<byte>();
+                second.Apply(false, true);
+                Object.DestroyImmediate(second);
+                Assert.Throws<ObjectDisposedException>(() => AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(kept)));
             }
-            finally { Object.DestroyImmediate(texture); }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+                if (second) Object.DestroyImmediate(second);
+            }
         }
 
         [Fact]

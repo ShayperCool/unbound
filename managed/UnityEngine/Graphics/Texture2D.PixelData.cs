@@ -12,11 +12,15 @@ namespace UnityEngine
         /// texture's format, one level after another as Unity stores it. It is then the texture's
         /// pixels: every reader and writer goes through it, so a view sees later writes and writes
         /// through a view are what the texture holds, until the texture is recreated, loses its
-        /// CPU copy or an engine path takes the cells back.</summary>
+        /// CPU copy (its views stay valid over the bytes: <see cref="RetireStore"/>) or an engine
+        /// path takes the cells back.</summary>
         byte[] m_Store;
         int[] m_StoreOffsets;
         GCHandle m_StorePin;
         AtomicSafetyHandle m_StoreSafety;
+        /// <summary>The safety handle and pin of a store whose views outlive it (<see cref="RetireStore"/>).</summary>
+        AtomicSafetyHandle m_RetiredSafety;
+        GCHandle m_RetiredPin;
 
         /// <summary>The stored bytes of a mip level (no copy, as in Unity).</summary>
         public unsafe NativeArray<T> GetPixelData<T>(int mipLevel) where T : struct
@@ -101,6 +105,29 @@ namespace UnityEngine
         void ReleaseStore()
         {
             TexturePixelStore.Release(ref m_StoreSafety, ref m_StorePin);
+            TexturePixelStore.Release(ref m_RetiredSafety, ref m_RetiredPin);
+            m_Store = null;
+            m_StoreOffsets = null;
+        }
+
+        /// <summary>
+        /// The store stops being the texture's pixels, while the views handed out stay valid
+        /// over its bytes until the texture is reinitialized or destroyed: the Editor keeps the
+        /// views of a texture that <c>Apply(…, makeNoLongerReadable: true)</c> made unreadable
+        /// (Unity 6000.0.71f1, tests/projects/textureraw `unreadable.old_raw`,
+        /// `unreadable.old_pixel`: readable; the same views end with `Reinitialize` and with
+        /// the texture). What the old views read afterwards is not measured: here, the bytes
+        /// they had.
+        /// </summary>
+        void RetireStore()
+        {
+            if (m_Store == null) return;
+            TexturePixelStore.Complete(m_StoreSafety);
+            TexturePixelStore.Release(ref m_RetiredSafety, ref m_RetiredPin);
+            m_RetiredSafety = m_StoreSafety;
+            m_RetiredPin = m_StorePin;
+            m_StoreSafety = default;
+            m_StorePin = default;
             m_Store = null;
             m_StoreOffsets = null;
         }

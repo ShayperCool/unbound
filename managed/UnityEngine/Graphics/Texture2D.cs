@@ -340,7 +340,7 @@ namespace UnityEngine
             Upload();
             if (makeNoLongerReadable)
             {
-                ReleaseStore();
+                RetireStore();
                 m_Pixels = null;
                 m_Hdr = null;
                 m_Raw = null;
