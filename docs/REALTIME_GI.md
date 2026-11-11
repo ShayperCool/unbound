@@ -163,16 +163,22 @@ tests/projects/realtimegi `roomdirectional-*`:
    texels.
 7. **Copies**: a segment's first copies, as many as its header says, copy whole blocks before
    the texels are made; the others copy texels afterwards. None of the probe's systems has
-   copies, so this part is unmeasured.
+   copies, so this part is unmeasured (a directional scene with copies says so in a warning).
+
+A system whose blocks cannot be read keeps its lightmap and has no directionality: its scene is
+drawn as a non-directional one, with a warning.
 
 With these rules the engine's directionality differs from the Editor's by 0.2/255 on average; at
-most 2 of a case's 6760 values differ by more than 2/255 (by up to 4/255), as the lightmap's
+most 3 of a case's 6760 values differ by more than 2.5/255 (by up to 4/255), as the lightmap's
 isolated texels do. Not measured: `LightmapSettings.lightmapsMode` changed by a script (Unbound
 follows the mode of each frame: a scene that becomes directional solves every part of its
-lightmaps once more, one that stops being directional draws without directionality), frames in
-which the directionality matters (none of the probe's materials has a normal map, so its frames
-show the lightmap alone), directionality under a scriptable render pipeline, and gamma-space
-projects.
+lightmaps once more and draws an atlas with its directionality once every system of the atlas
+has, one that stops being directional draws without directionality), a directional scene of
+several systems or atlases (the probe's has one system), a renderer with a baked and a realtime
+lightmap of which only one has a direction (the other then reads a direction that leaves its
+light as it is: (128, 128, 128, 128)), frames in which the directionality matters (none of the
+probe's materials has a normal map, so its frames show the lightmap alone), directionality under
+a scriptable render pipeline, and gamma-space projects.
 
 ## Light probes
 
@@ -330,8 +336,9 @@ is converged once an update of every system left its drawn texels unchanged. Cha
 uploaded as RGBA half floats; renderers draw them as `unity_DynamicLightmap` with their realtime
 scale and offset and `DYNAMICLIGHTMAP_ON`, and take no light probes. In a frame whose lightmaps
 mode is directional the systems solve their directionality too; each atlas then has a second
-texture (RGBA8, `gi_read_directionality`), which its renderers draw as
-`unity_DynamicDirectionality` with `DIRLIGHTMAP_COMBINED`. The light probes'
+texture (RGBA8, `gi_read_directionality`, readable once every system of the atlas has solved its
+directionality), which its renderers draw as `unity_DynamicDirectionality` with
+`DIRLIGHTMAP_COMBINED`. The light probes'
 coefficients are read back after each update (`gi_read_probes`) into the scene's LightProbes.
 `DynamicGI.isConverged`, `synchronousMode`, `SetEmissive`, `SetEnvironmentData`,
 `UpdateEnvironment`, `indirectScale` and `updateThreshold` act on it.
@@ -357,7 +364,7 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   (two states in six captures, 64 to 68 of 5070 values apart by at most 1%, each stable once
   reached; tests/projects/realtimegi README). The reference holds the more frequent one; both are
   well within the comparator's tolerance of Unbound's, which updates the systems in their order.
-- Directionality: at most 2 of a case's 6760 values more than 2/255 from the Editor's (up to
+- Directionality: at most 3 of a case's 6760 values more than 2.5/255 from the Editor's (up to
   4/255), 0.2/255 on average (see [Directionality](#directionality)).
 - Environment: with the environment as the only light the lightmaps differ from the Editor's by
   0.0004 to 0.001 on average for colors and gradients (at most 0.015), 0.001 for the sky (at
