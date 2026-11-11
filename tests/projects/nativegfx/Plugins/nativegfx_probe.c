@@ -289,10 +289,12 @@ EXPORT int UnityRenderingExtQuery(int query)
         fflush(s_file);
     }
     pthread_mutex_unlock(&s_lock);
+    // A variant says that it overrides what is asked; the plugin the scripts call says no.
+    return 1;
 #else
     note("ext.query flags=%d thread=%s gl=%d", query, thread_name(), gl_current());
-#endif
     return 0;
+#endif
 }
 
 EXPORT void UnityRenderingExtEvent(int event, void* data)
@@ -353,6 +355,10 @@ static char s_first_thread[96];
 
 static int own(const char* name) { return name && strncmp(name, "NativeGfx", 9) == 0; }
 
+/// The scripts' frame count since they began (a managed function), -1 before they give it.
+static int (*s_clock)(void);
+int nativegfx_clock(void) { return s_clock ? s_clock() : -1; }
+
 static void on_category(const CategoryDesc* desc, void* user)
 {
     s_categories++;
@@ -364,12 +370,17 @@ static void on_category(const CategoryDesc* desc, void* user)
     if (s_listing) note("category %u %08x %s user=%ld thread=%s", desc->id, desc->rgbaColor, desc->name, (long)user, thread_name());
 }
 
+static void on_marker_event(const MarkerDesc* desc, uint16_t type, uint16_t count, const void* data, void* user);
+
 static void on_marker(const MarkerDesc* desc, void* user)
 {
     s_markers++;
     if (!own(desc->name)) return;
     s_own_markers++;
     note("marker name=%s flags=%u category.own=%d callback=%d user=%ld thread=%s", desc->name, desc->flags, desc->categoryId >= 39, desc->callback != NULL, (long)user, thread_name());
+    // A marker a script makes: its events too.
+    if (strcmp(desc->name, "NativeGfx.Script") == 0)
+        note("register.event.script=%d (NativeGfx.Script)", s_callbacks->RegisterMarkerEventCallback(desc, on_marker_event, (void*)8));
 }
 
 static void on_thread(const ThreadDesc* desc, void* user)
@@ -385,7 +396,7 @@ static void on_thread(const ThreadDesc* desc, void* user)
 static void on_frame(void* user)
 {
     s_frames++;
-    note("frame n=%d user=%ld thread=%s after=%s", s_frames, (long)user, thread_name(), s_last_mark);
+    note("frame n=%d user=%ld thread=%s after=%s clock=%d", s_frames, (long)user, thread_name(), s_last_mark, nativegfx_clock());
 }
 
 static void on_flow(uint8_t type, uint32_t id, void* user)
@@ -399,6 +410,20 @@ static void on_marker_event(const MarkerDesc* desc, uint16_t type, uint16_t coun
     s_events++;
     note("event marker=%s type=%u count=%u data=%d user=%ld thread=%s", desc->name, type, count, data != NULL, (long)user, thread_name());
 }
+
+// Five callbacks of each kind that do nothing: the header allows four of a kind.
+#define FIVE(name, ...) \
+    static void name##0(__VA_ARGS__) {} static void name##1(__VA_ARGS__) {} static void name##2(__VA_ARGS__) {} \
+    static void name##3(__VA_ARGS__) {} static void name##4(__VA_ARGS__) {}
+FIVE(idle_category, const CategoryDesc* desc, void* user)
+FIVE(idle_marker, const MarkerDesc* desc, void* user)
+FIVE(idle_thread, const ThreadDesc* desc, void* user)
+FIVE(idle_frame, void* user)
+FIVE(idle_flow, uint8_t type, uint32_t id, void* user)
+#define REGISTER_FIVE(kind, Register, Unregister, name) do { \
+    int r[5] = {cb->Register(name##0, NULL), cb->Register(name##1, NULL), cb->Register(name##2, NULL), cb->Register(name##3, NULL), cb->Register(name##4, NULL)}; \
+    int u[5] = {cb->Unregister(name##0, NULL), cb->Unregister(name##1, NULL), cb->Unregister(name##2, NULL), cb->Unregister(name##3, NULL), cb->Unregister(name##4, NULL)}; \
+    note("limit." kind " register=%d,%d,%d,%d,%d unregister=%d,%d,%d,%d,%d", r[0], r[1], r[2], r[3], r[4], u[0], u[1], u[2], u[3], u[4]); } while (0)
 
 static void never_registered(const MarkerDesc* desc, void* user) { (void)desc; (void)user; }
 static void never_registered_thread(const ThreadDesc* desc, void* user) { (void)desc; (void)user; }
@@ -491,7 +516,52 @@ static void profiler_load(IUnityInterfaces* interfaces)
     pthread_t thread;
     if (pthread_create(&thread, NULL, registered_thread, NULL) == 0) pthread_join(thread, NULL);
     note("thread.heard=%d", s_own_threads);
+
+    // The Vulkan interfaces on a device that is not Vulkan: what can be asked without the
+    // device (the rest ends the Editor).
+    typedef struct {
+        unsigned char (*InterceptInitialization)(void* callback, void* user);
+        void* (*InterceptVulkanAPI)(const char* name, void* function);
+        void* needDevice[10];
+        unsigned char (*ConfigureSwapchain)(const void* config);
+        void* accessTextureByID;
+        unsigned char (*AddInterceptInitialization)(void* callback, void* user, int priority);
+        unsigned char (*RemoveInterceptInitialization)(void* callback);
+    } VulkanElsewhere;
+    VulkanElsewhere* elsewhere = vulkan2;
+    if (elsewhere && s_graphics && s_graphics->GetRenderer() != 21) {
+        int config[4] = {0, 0, 0, 0};
+        note("vulkan.elsewhere intercept=%d add=%d remove=%d api=%d swapchain=%d", elsewhere->InterceptInitialization((void*)never_registered_frame, NULL),
+             elsewhere->AddInterceptInitialization((void*)never_registered_frame, NULL, 0), elsewhere->RemoveInterceptInitialization((void*)never_registered_frame),
+             elsewhere->InterceptVulkanAPI("vkCreateImage", (void*)never_registered_frame) != NULL, elsewhere->ConfigureSwapchain(config));
+    }
+
+    // A fifth callback of a kind, beside the ones registered above (one marker, one thread, one
+    // frame and one flow callback; no category callback).
+    REGISTER_FIVE("category", RegisterCreateCategoryCallback, UnregisterCreateCategoryCallback, idle_category);
+    REGISTER_FIVE("marker", RegisterCreateMarkerCallback, UnregisterCreateMarkerCallback, idle_marker);
+    REGISTER_FIVE("thread", RegisterCreateThreadCallback, UnregisterCreateThreadCallback, idle_thread);
+    REGISTER_FIVE("frame", RegisterFrameCallback, UnregisterFrameCallback, idle_frame);
+    REGISTER_FIVE("flow", RegisterFlowEventCallback, UnregisterFlowEventCallback, idle_flow);
+
+    // Marker event callbacks unregistered without naming the marker: by callback and user data,
+    // then by callback alone.
+    const MarkerDesc* other = NULL;
+    s_profiler->CreateMarker(&other, "NativeGfx.Marker2", category, 0, 0);
+    cb->RegisterMarkerEventCallback(s_marker, on_marker_event, (void*)5);
+    cb->RegisterMarkerEventCallback(other, on_marker_event, (void*)5);
+    cb->RegisterMarkerEventCallback(other, on_marker_event, (void*)7);
+    r = cb->UnregisterMarkerEventCallback(NULL, on_marker_event, (void*)5);
+    note("unregister.event.user=%d marker.callback=%d second.callback=%d", r, s_marker->callback != NULL, other->callback != NULL);
+    s_profiler->EmitEvent(s_marker, 2, 0, NULL);
+    s_profiler->EmitEvent(other, 2, 0, NULL);
+    r = cb->UnregisterMarkerEventCallback(NULL, on_marker_event, NULL);
+    note("unregister.event.all=%d second.callback=%d again=%d", r, other->callback != NULL, cb->UnregisterMarkerEventCallback(NULL, on_marker_event, NULL));
+    s_profiler->EmitEvent(other, 2, 0, NULL);
+    note("emit.none events=%d", s_events);
 }
+
+EXPORT void NativeGfx_SetClock(int (*clock)(void)) { s_clock = clock; }
 
 /// The end of the scripts' run: every callback unregistered, and what was heard meanwhile.
 EXPORT void NativeGfx_Finish(void)

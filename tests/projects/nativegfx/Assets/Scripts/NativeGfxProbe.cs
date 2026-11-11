@@ -30,6 +30,19 @@ public class NativeGfxProbe : MonoBehaviour
     [DllImport(Plugin)] static extern int NativeGfx_Record(byte[] buffer, int capacity);
     [DllImport(Plugin)] static extern int NativeGfx_Notes(byte[] buffer, int capacity);
     [DllImport(Plugin)] static extern void NativeGfx_Finish();
+    [DllImport(Plugin)] static extern void NativeGfx_SetClock(IntPtr clock);
+
+    /// <summary>The plugin's clock: frames since the scripts began. The plugin calls it from
+    /// its frame callback and its event handlers, and it calls back into the engine (a native
+    /// texture pointer), as a handler's managed code may.</summary>
+    delegate int Clock();
+    static int s_FirstFrame;
+    static Texture s_Reentered;
+    static readonly Clock s_Clock = () =>
+    {
+        if (s_Reentered != null) s_Reentered.GetNativeTexturePtr();
+        return Time.frameCount - s_FirstFrame;
+    };
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
@@ -173,7 +186,10 @@ public class NativeGfxProbe : MonoBehaviour
         Value("profiler.editor", L(lines.Where(starts("editor "))));
         Value("events.load", L(load.Where(starts("queue"))));
         Value("ext.sequence", L(run.Where(l => l.StartsWith("mark ") || l.StartsWith("ext."))));
-        Value("frames.sequence", L(run.Where(l => l.StartsWith("mark ") || l.StartsWith("frame ") || l.StartsWith("queue") || l.StartsWith("event ") || l.StartsWith("thread "))));
+        // What a script's marker brings (the plugin hears of it, registers for its events).
+        Func<string, bool> script = line => line.Contains("NativeGfx.Script");
+        Value("frames.sequence", L(run.Where(l => !script(l) && (l.StartsWith("mark ") || l.StartsWith("frame ") || l.StartsWith("queue") || l.StartsWith("event ") || l.StartsWith("thread ")))));
+        Value("profiler.script", L(run.Where(script)));
         Value("profiler.finish", L(run.Where(starts("finish "))));
         // The viewport as the screen's size (the Editor's and Unbound's windows differ).
         string screen = "viewport=0,0," + Screen.width + "," + Screen.height;
@@ -219,6 +235,8 @@ public class NativeGfxProbe : MonoBehaviour
         Value("load.logs", L(logs));
         logs.Clear();
         eventBase = NativeGfx_EventBase();
+        s_FirstFrame = Time.frameCount;
+        NativeGfx_SetClock(Marshal.GetFunctionPointerForDelegate(s_Clock));
         Value("device.type", Q(SystemInfo.graphicsDeviceType.ToString()));
         Value("device.multithreaded", B(SystemInfo.graphicsMultiThreaded));
         Value("device.threading", Q(SystemInfo.renderingThreadingMode.ToString()));
@@ -261,6 +279,7 @@ public class NativeGfxProbe : MonoBehaviour
         blitTarget = Keep(new RenderTexture(8, 4, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "blit" });
         blitTarget.Create();
         written = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, false, false) { name = "written", filterMode = FilterMode.Point });
+        s_Reentered = written;
         written.SetPixels32(Enumerable.Repeat(new Color32(40, 80, 120, 255), 64).ToArray());
         written.Apply();
         updated = Keep(new Texture2D(4, 4, TextureFormat.RGBA32, false, true) { name = "updated", filterMode = FilterMode.Point });
@@ -323,6 +342,13 @@ public class NativeGfxProbe : MonoBehaviour
         NativeGfx_Mark("frame " + frame);
         cam.Render();
         NativeGfx_Mark("rendered " + frame);
+        if (frame == 2)
+        {
+            // A marker a script makes, with one sample.
+            var marker = new Unity.Profiling.ProfilerMarker("NativeGfx.Script");
+            marker.Begin();
+            marker.End();
+        }
         if (frame == 1)
         {
             // Outside any camera: GL.IssuePluginEvent from a script, then an executed buffer.

@@ -48,32 +48,45 @@ Recorded:
   prefix alone does not preload in the Editor.
 
 * **Profiler callbacks** (`profiler.categories`, `profiler.load`, `profiler.finish`,
-  `frames.sequence`, `profiler.editor`): `IUnityProfilerCallbacks` and `V2` are objects of their
-  own. Registering a category callback calls it at once for the 39 built-in categories (ID, color,
-  name), a thread callback for the threads that exist (the main thread first, without a group), a
-  marker callback for the markers that exist; a category or marker the plugin makes is heard of
-  once (the first category ID is 39; the same name is the same category or marker, a built-in
-  category's name that category); a callback registered twice is called twice. A marker event
-  callback makes the marker's `callback` non-null and `EmitEvent` calls it at once, with no
-  profiler recording. A thread that registers is heard of on that thread. The frame callback is
-  called once a frame, after the frame's scripts. Unregistering what is not registered answers
-  -1 for category, marker event and flow callbacks and 0 for marker, thread and frame callbacks.
-  `profiler.editor` is what only the Editor has: markers and threads of its own, job flows.
+  `frames.sequence`, `profiler.editor`, `profiler.script`): `IUnityProfilerCallbacks` and `V2` are
+  objects of their own. Registering a category callback calls it at once for the 39 built-in
+  categories (ID, color, name), a thread callback for the threads that exist (the main thread
+  first, without a group), a marker callback for the markers that exist; a category or marker the
+  plugin makes is heard of once (the first category ID is 39; the same name is the same category
+  or marker, a built-in category's name that category); a callback registered twice is called
+  twice. Four category callbacks and four marker callbacks can be registered, a fifth is refused
+  (-1); thread, frame and flow callbacks beyond four are taken. A marker event callback makes the
+  marker's `callback` non-null and `EmitEvent` calls it at once, with no profiler recording; it is
+  unregistered for a marker, without a marker for every marker it was registered for with the user
+  data, and without user data either for all. A thread that registers is heard of on that thread.
+  The frame callback is called once a frame, after the frame's scripts and before the frame count
+  advances. Unregistering what is not registered answers -1 for category, marker event and flow
+  callbacks and 0 for marker, thread and frame callbacks. `profiler.editor` is what only the
+  Editor has (markers and threads of its own, job flows); `profiler.script` is a marker a script
+  makes (`ProfilerMarker`): the marker callback hears of it (flag `ScriptUser`) and an event
+  callback gets its begin and end.
 * **Event queue** (`events.load`, `frames.sequence`; Plugins/nativegfx_events.cpp):
-  `IUnityEventQueue` hands a sent event out once a frame, right after the frame callbacks: to the
-  handler of its ID, added after the event was sent too, then to the type's cleanup handler; an
-  event nothing handles is dropped, and one whose handler was removed reaches the cleanup
-  handler alone.
+  `IUnityEventQueue` hands the sent events out when the next frame begins, in the order sent: each
+  to the handlers of its ID, the last added first, added after the event was sent too, then to
+  the type's cleanup handler (the one set for the type, or the destructor its handlers name); an
+  event a handler sends is handed out in the same turn; an event nothing handles is dropped, and
+  one whose handler was removed reaches the cleanup handler alone. The header's
+  `AddEventHandler` and `RemoveEventHandler` events add and remove a handler in their turn. The
+  plugin's callbacks call a managed function that calls back into the engine.
 * **Rendering extensions** (`ext.sequence`, `ext.preload`, `ext.prefix`): the Editor calls a
   loaded plugin's `UnityRenderingExtQuery` with `kUnityRenderingExtQueryOverrideVRSinglePass` while
   a camera renders, four times between OnPreRender and OnPostRender and once after (three of the
-  four before the camera's `AfterForwardOpaque` buffer), the preloaded plugin's too, and never
-  its `UnityRenderingExtEvent`.
+  four before the camera's `AfterForwardOpaque` buffer), the preloaded plugin's too, which
+  answers that it does without any other record changing, and never its
+  `UnityRenderingExtEvent`. One forward camera of the built-in pipeline, without shadows, image
+  effects or XR.
 * **No render texture active** (`screen.target`): in this batch-mode Editor an event issued then
   finds a framebuffer of the Editor's without attachments and the screen's size as the viewport.
 * **The Vulkan interfaces on OpenGL Core** (`interface.IUnityGraphicsVulkan*`, `profiler.load`
-  `distinct`): both are answered, as objects of their own. Calling into them is not recorded:
-  `Instance` and `CommandRecordingState` end the Editor there.
+  `distinct`, `vulkan.elsewhere`): both are answered, as objects of their own; intercepting the
+  initialization or a Vulkan function and configuring the swapchain answer no. What needs the
+  device is not recorded: `Instance`, `CommandRecordingState`, `ConfigureEvent` and the render
+  pass calls end the Editor there.
 
 Documented (Manual, "Low-level native plug-in interface", and the plugin headers): plugins
 receive `IUnityInterfaces` in `UnityPluginLoad`; the Initialize event may be missed by a plugin
@@ -82,4 +95,5 @@ Measured here (Editor, OpenGL Core, Direct threading mode): the render thread is
 the order of the callbacks against the scripts above; the bound targets; the two Shutdown events
 at exit. Unmeasured: multithreaded rendering, the Metal device, MSAA and HDR camera
 intermediates, the Game view of a windowed Editor as the target, the rendering extension
-queries under a render pipeline or with XR, events sent to the queue from other threads.
+queries under a render pipeline, with other cameras or with XR, events sent to the queue from
+other threads, a custom player loop.
