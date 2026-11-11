@@ -121,6 +121,7 @@ public static class RealtimeGISetup
             "NoDataAuto", "NoDataOnDemand", "NoDataCurrent", "NoDataAutoOwnSky",
             "LegacyDefault", "LegacyAuto", "LegacyTurned", "LegacyNoLight", "LegacyOwnSky",
             "CurrentDefault", "LegacySettingsOnly", "LegacyLightmapsOnly", "LegacyChildSun", "LegacyDimSun",
+            "LegacyTwoSuns", "LegacyTwoSunsTurned", "LegacyNamedSun",
         })
             scenes.Add(new EditorBuildSettingsScene($"Assets/NoData/{name}.unity", true));
         EditorBuildSettings.scenes = scenes.ToArray();

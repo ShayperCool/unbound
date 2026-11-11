@@ -401,10 +401,23 @@ public class RealtimeGIProbe : MonoBehaviour
         // sky material of its own. Then the default scene again with one thing changed: both
         // settings as this release saves them, the RenderSettings alone as an earlier release
         // saved them, the LightmapSettings alone, the light under a turned parent (its own
-        // angles the default ones), and the light dim and red. What each reflects, its ambient
-        // probe as loaded and in the custom mode. (A gamma-space project, run.py's
-        // `--color-space gamma`, records these scenes alone.)
+        // angles the default ones), the light dim and red, and with a second, turned light:
+        // dimmer than the default one, brighter, and dimmer but named as the scene's sun. What
+        // each reflects, its ambient probe as loaded and in the custom mode. (A gamma-space
+        // project, run.py's `--color-space gamma`, records these scenes alone.)
         yield return WithoutLightingData();
+
+        // The earlier release's default scene loaded while the rendering features in effect
+        // (SupportedRenderingFeatures.active, a render pipeline's to declare) say that the
+        // ambient probe is not baked, that the default reflection is not, and that neither is.
+        var features = SupportedRenderingFeatures.active;
+        foreach (var (label, ambient, reflection) in new[] { ("noambientbaking", false, true), ("noreflectionbaking", true, false), ("nobaking", false, false) })
+        {
+            SupportedRenderingFeatures.active = new SupportedRenderingFeatures { ambientProbeBaking = ambient, defaultReflectionProbeBaking = reflection };
+            yield return Load("LegacyDefault");
+            RecordEnvironment("legacydefault-" + label);
+        }
+        SupportedRenderingFeatures.active = features;
 
         // A scene loaded beside another: the earlier release's default scene with a scene
         // without lighting data added, and the other way round; then the added scene made the
@@ -534,6 +547,7 @@ public class RealtimeGIProbe : MonoBehaviour
         "NoDataAuto", "NoDataOnDemand", "NoDataCurrent", "NoDataAutoOwnSky",
         "LegacyDefault", "LegacyAuto", "LegacyTurned", "LegacyNoLight", "LegacyOwnSky",
         "CurrentDefault", "LegacySettingsOnly", "LegacyLightmapsOnly", "LegacyChildSun", "LegacyDimSun",
+        "LegacyTwoSuns", "LegacyTwoSunsTurned", "LegacyNamedSun",
     };
 
     /// <summary>Each scene without lighting data: what it reflects by default, its ambient

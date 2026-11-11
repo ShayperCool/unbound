@@ -40,4 +40,13 @@
 {"case":"legacydimsun-reflection","defaultTexture":"UnityBlackCube","dimension":4,"reflectionSize":1,"decode":[1,1,0,0]}
 {"case":"legacydimsun-ambient","ambientProbe":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
 {"case":"legacydimsun-custom","ambientProbe":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"case":"legacytwosuns-reflection","defaultTexture":"UnityBlackCube","dimension":4,"reflectionSize":1,"decode":[1,1,0,0]}
+{"case":"legacytwosuns-ambient","ambientProbe":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"case":"legacytwosuns-custom","ambientProbe":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"case":"legacytwosunsturned-reflection","defaultTexture":"UnityBlackCube","dimension":4,"reflectionSize":1,"decode":[1,1,0,0]}
+{"case":"legacytwosunsturned-ambient","ambientProbe":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"case":"legacytwosunsturned-custom","ambientProbe":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"case":"legacynamedsun-reflection","defaultTexture":"UnityBlackCube","dimension":4,"reflectionSize":1,"decode":[1,1,0,0]}
+{"case":"legacynamedsun-ambient","ambientProbe":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"case":"legacynamedsun-custom","ambientProbe":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
 {"case":"end"}

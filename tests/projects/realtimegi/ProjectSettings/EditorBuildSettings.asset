@@ -65,5 +65,14 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/NoData/LegacyDimSun.unity
     guid: 59db8d2f3217a21b81cf8ca2cf905f9a
+  - enabled: 1
+    path: Assets/NoData/LegacyTwoSuns.unity
+    guid: 391843e6dbf5d1dff3017aac4b3853b4
+  - enabled: 1
+    path: Assets/NoData/LegacyTwoSunsTurned.unity
+    guid: 60b20f0470a25ab9ea1b1a11faba54ed
+  - enabled: 1
+    path: Assets/NoData/LegacyNamedSun.unity
+    guid: 4abf398331ca6bc1642455bceed818a4
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0
