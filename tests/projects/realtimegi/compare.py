@@ -7,15 +7,15 @@ Two classes of values:
 
 - State, always gated (exit 1 on any difference): every reference case present, no extra case,
   each renderer's realtime lightmap index and scale/offset, the lightmaps mode, the light probe
-  count and baked coefficients, DynamicGI.isConverged, the recorded API defaults and which atlas
-  texels renderers cover (their realtime lightmap UVs).
+  count and baked coefficients, DynamicGI.isConverged, the recorded API defaults, what
+  DynamicGI.SetEnvironmentData throws and which atlas texels renderers cover (their realtime
+  lightmap UVs).
 - Lighting: light probe SH (each sample point, 27 coefficients) and the ambient probe within
   ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
   |reference|; frames (.png) report the shared image measure (mean, worst and pixels over 8 of
-  the per-pixel max-channel difference). The realtime lightmaps (.atlas) of the cases whose
-  inputs Unbound supports (point and spot lights and a flat ambient color: every case but the
-  skybox ones) are gated: at most ISOLATED of their values may be outside the tolerance,
-  each within ABS + ISOLATED_REL * |reference|, and a missing lightmap fails. With
+  the per-pixel max-channel difference). The realtime lightmaps (.atlas) are gated: at most
+  ISOLATED of their values may be outside the tolerance, each within ABS + ISOLATED_REL *
+  |reference|, and a missing lightmap fails. With
   DynamicGI.updateThreshold a part of the lightmap is updated only when its inputs changed by
   more than the threshold, so converged texels depend on which update last solved them; input
   differences well below the threshold move a few isolated texels by up to about 10%. The rest
@@ -39,16 +39,7 @@ REL = 0.05
 # and how far those may be off.
 ISOLATED = 0.005
 ISOLATED_REL = 0.10
-# Cases whose inputs Unbound does not support yet: their lighting is reported only.
-UNSUPPORTED = ('room-sky',)
-
-
-def gated(case):
-    """Whether the realtime lightmap of `case` is gated."""
-    return not case.startswith(UNSUPPORTED)
-
-
-STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode')
+STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode', 'wrongLength', 'noArray')
 
 
 def records(path):
@@ -85,10 +76,8 @@ class Result:
 def compare_values(ref, cap, result):
     for name in sorted(set(cap) - set(ref)):
         # `<case>-noatlas`: the capture found no realtime lightmap to read (a lighting difference,
-        # gated where the case's lightmap is).
-        kind = 'state'
-        if name.endswith('-noatlas'):
-            kind = 'gated' if gated(name[:-len('-noatlas')]) else 'lighting'
+        # gated as the case's lightmap is).
+        kind = 'gated' if name.endswith('-noatlas') else 'state'
         result.fail(kind, f'{name}: extra case', [json.dumps(cap[name])[:2000]])
     for name, r in ref.items():
         c = cap.get(name)
@@ -133,7 +122,7 @@ def compare_values(ref, cap, result):
 
 
 def compare_atlas(name, ref_path, cap_path, result):
-    gate = name.endswith('.atlas') and gated(name)
+    gate = name.endswith('.atlas')
     if not cap_path.is_file():
         result.fail('gated' if gate else 'lighting', f'{name}: missing')
         return

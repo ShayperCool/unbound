@@ -4,7 +4,10 @@ Unity 6000.0.71f1, built-in render pipeline, linear color space. What precompute
 (Lighting window: Realtime Global Illumination) draws in Play mode, case by case, with
 `DynamicGI.synchronousMode` on. Unity documentation (6000.0):
 [Realtime GI](https://docs.unity3d.com/6000.0/Documentation/Manual/realtime-gi-using-enlighten.html),
-[DynamicGI](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/DynamicGI.html),
+[DynamicGI](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/DynamicGI.html)
+([SetEnvironmentData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/DynamicGI.SetEnvironmentData.html),
+[UpdateEnvironment](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/DynamicGI.UpdateEnvironment.html)),
+[RenderSettings.ambientIntensity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderSettings-ambientIntensity.html),
 [Renderer.UpdateGIMaterials](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.UpdateGIMaterials.html),
 [LightmapSettings](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightmapSettings.html),
 [LightProbes](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightProbes.html).
@@ -53,7 +56,19 @@ exposure changed, before and after the call); `room-pointoff`; `room-spot`; `roo
 shadow); `room-directional` and `room-directional-turned` (the spot light off, a realtime
 directional light with shadows added through the open front, at Euler angles (40, 25) and (57,
 -33)); `room-directional-noshadows` (that light replaced by a new one without shadows at (40,
-25)); `roomscaled-base`,
+25)); then the environment as the only light (no light on, the panel's emission set to black with
+`DynamicGI.SetEmissive`): `room-gradient` (a gradient ambient), `room-sky-only` (the procedural
+skybox as the ambient source), `room-sky-only-intensity` (ambient intensity 2;
+`room-sky-only-intensity-half` records `RenderSettings.ambientProbe` at 0.5 within the frame),
+`room-sky-sun` (intensity 1 and a directional light of bounce intensity 0 at (40, 25), without
+`UpdateEnvironment`) and `room-sky-sun-turned` (that light at (15, -120)); once the sky without
+the light has settled, `room-envdata` (`DynamicGI.SetEnvironmentData` with a cube whose faces
+differ and grow brighter along their columns and rows), `room-envdata-intensity` (the ambient
+intensity then set to 2), `room-envdata-update` (the data set again, then `UpdateEnvironment`)
+and `room-envdata-errors` (what the call throws for an array of 100 floats and for none); with
+the intensity still 2, `room-sky-none` (the skybox material removed, the ambient mode still
+Skybox), `room-gradient-intensity` (the gradient again) and `room-ambient-custom` (a custom
+ambient mode with another ambient color); `roomscaled-base`,
 `roomscaled-moved`, then from bounce intensity 3 `roomscaled-indirectscale` (indirect scale 2,
 bounce intensity 1) and, from bounce intensity 3 again, `roomscaled-threshold0` (the same with
 `DynamicGI.updateThreshold` 0; restored after it); `roomdirectional-base`,
@@ -98,22 +113,45 @@ Observations (not documented guarantees):
 - Realtime GI picks up an ambient color change and a skybox exposure change without
   `DynamicGI.UpdateEnvironment` (the atlases and frames do not change with the call); the call is
   what updates `RenderSettings.ambientProbe` after the skybox change.
+- The ambient intensity scales the realtime GI of a skybox (`room-sky-only-intensity`) and of
+  nothing else, as documented: the gradient's lightmap at intensity 2
+  (`room-gradient-intensity`) equals `room-gradient` within 0.002; a skybox ambient mode
+  without a skybox material (`room-sky-none`) and a custom ambient mode (`room-ambient-custom`)
+  give the ambient color's light, unscaled.
+- A directional light changes the sky's realtime GI by its direction, added and turned without
+  `UpdateEnvironment` (`room-sky-sun`, `room-sky-sun-turned`), while `RenderSettings.ambientProbe`
+  stays as the last call left it.
+- `DynamicGI.SetEnvironmentData` replaces the environment (`room-envdata`); the ambient intensity
+  changed afterwards brings the sky back, as documented (`room-envdata-intensity` equals
+  `room-sky-only-intensity` within 0.005), and so does `UpdateEnvironment`
+  (`room-envdata-update`). An array of another length throws ArgumentException with the message
+  recorded in `room-envdata-errors`; none throws ArgumentNullException.
+- In an earlier capture the data was set one frame after the directional light was destroyed and
+  did not show: the lightmap was the sky's. The probe therefore waits for the sky to settle
+  before the call.
+- `RenderSettings.ambientProbe` with a skybox follows the ambient intensity without
+  `UpdateEnvironment`: 0.2140 times the intensity 1 probe at 0.5 and 4.5948 times at 2 (the
+  intensity taken as an sRGB-encoded value). In the custom ambient mode it is the probe last
+  derived from the sky, at intensity 1.
+- Three captures were recorded for this reference: two are byte-identical in every file and are
+  published; the third differs from them in `roomsystems-base` and `roomsystems-moved` only (up
+  to 0.02 in 1505 and 221 of 5070 lightmap values).
 
 ## Unbound
 
 Unbound draws precomputed realtime GI for these scenes (docs/REALTIME_GI.md): it makes the
 renderers' realtime lightmap UVs, renders their meta passes and updates the systems each frame.
 The gate fails on state values (cases, realtime lightmap indices and scale/offset, lightmaps mode,
-probe count and baked coefficients, `isConverged`, API defaults, and which atlas texels the
-renderers cover) and on the realtime lightmaps of the cases whose inputs Unbound supports (every
-case but the skybox ones; at most 0.5% of their values outside the tolerance, for
+probe count and baked coefficients, `isConverged`, API defaults, what `SetEnvironmentData`
+throws, and which atlas texels the renderers cover) and on the realtime lightmaps of every case
+(at most 0.5% of their values outside the tolerance, for
 the isolated texels docs/REALTIME_GI.md explains), and reports the other lighting values
 (`realtimegi: 0 failing state values, 0 failing gated lighting values, N failing lighting
 values`); `compare.py --strict` gates those too. Every failing value, and every allowed isolated
 one, is written to `compare-details.txt` in the run directory. Light probes are lit by realtime GI
 (their coefficients are reported: a few small higher-band ones differ in the brightest case);
-the skybox cases and directional output are not supported yet (the lighting values of those
-differ).
+directional output is not supported yet (its values differ), and `RenderSettings.ambientProbe`
+in the custom ambient mode differs (reported).
 
 ## Running
 
