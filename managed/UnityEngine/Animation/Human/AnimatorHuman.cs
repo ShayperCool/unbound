@@ -10,7 +10,7 @@ namespace Unbound.Runtime.Humanoid
     {
         readonly Animator m_Animator;
         readonly AvatarConstant m_Constant;
-        readonly Transform[] m_Bound;
+        Transform[] m_Bound;
         readonly SkeletonPose m_AvatarPose, m_W0, m_W1, m_W2;
         readonly HumanPose m_Pose = new HumanPose();
 
@@ -25,6 +25,11 @@ namespace Unbound.Runtime.Humanoid
         internal AvatarConstant Constant => m_Constant;
 
         internal Animator Animator => m_Animator;
+
+        /// <summary>Binds the avatar's transforms again: the hierarchy was optimized or
+        /// deoptimized, and the pose and its memory stay (6000.0.71f1, tests/projects/animoptimize
+        /// h.deopt.played, h.rt.replayed: a deoptimized humanoid plays on).</summary>
+        internal void Rebind() => m_Bound = AvatarBinding.Bind(m_Animator.transform, m_Constant);
 
         internal AnimatorHuman(Animator animator, AvatarConstant constant)
         {

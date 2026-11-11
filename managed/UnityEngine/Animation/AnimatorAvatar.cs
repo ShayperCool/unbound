@@ -45,7 +45,9 @@ namespace UnityEngine
                 m_Built = true;
                 if (m_Human && m_Root != null)
                 {
-                    m_Constant = AvatarBuild.Build(m_Root, m_Description, true, false, out string error);
+                    // In the model file's order, as the generic skeleton: what a deoptimized
+                    // hierarchy is rebuilt in (6000.0.71f1, tests/projects/animoptimize h.deopt).
+                    m_Constant = AvatarBuild.Build(m_Root, m_Description, true, false, out string error, m_SkeletonOrder);
                     if (m_Constant == null) Debug.LogError($"Avatar '{name}' is invalid: {error}");
                 }
                 return m_Constant;

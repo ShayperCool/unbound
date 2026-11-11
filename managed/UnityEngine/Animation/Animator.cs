@@ -177,6 +177,7 @@ namespace UnityEngine
             m_NoHierarchy = true;
             m_Skeleton = skeleton;
             skeleton.BindExposed();
+            m_Human?.Rebind();
             if (moves == null) return;
             foreach (var (bindings, group, node, property) in moves)
                 bindings.Replace(group, (this, Unbound.Runtime.PropertyBinder.SkeletonKey(node, property)),
@@ -207,6 +208,7 @@ namespace UnityEngine
             }
             m_NoHierarchy = false;
             m_Skeleton = null;
+            m_Human?.Rebind();
         }
 
         public float speed
