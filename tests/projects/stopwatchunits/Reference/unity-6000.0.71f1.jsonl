@@ -1,5 +1,7 @@
 {"k":"frequency","v":10000000}
 {"k":"isHighResolution","v":true}
+{"k":"stackControlSum","v":8256}
+{"k":"frequencyFromEscapedReference","v":10000000}
 {"k":"elapsedTicksEqualsElapsed","v":true}
 {"k":"elapsedTicksEqualsHelper","v":true}
 {"k":"elapsedTicksPerTimeSpanTick","v":1}

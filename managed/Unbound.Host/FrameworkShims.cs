@@ -6,7 +6,6 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Mono.Cecil.Rocks;
 
 namespace Unbound.Host;
 
@@ -43,12 +42,10 @@ static class FrameworkShims
         [("System.Diagnostics.Stopwatch", "get_ElapsedTicks")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.get_ElapsedTicks))!,
     };
 
-    /// <summary>Static fields read as the Editor's Mono has them: a load becomes a call of the
-    /// getter; a load of the address (C# calls a method of a readonly primitive field in place)
-    /// becomes the address of a local holding the getter's value.</summary>
-    static readonly Dictionary<(string Type, string Name), System.Reflection.MethodInfo> s_ReplacedFields = new()
+    /// <summary>Keep field loads and escaping readonly references on stable shared storage.</summary>
+    static readonly Dictionary<(string Type, string Name), System.Reflection.FieldInfo> s_ReplacedFields = new()
     {
-        [("System.Diagnostics.Stopwatch", "Frequency")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.get_Frequency))!,
+        [("System.Diagnostics.Stopwatch", "Frequency")] = typeof(Unbound.MonoStopwatch).GetField(nameof(Unbound.MonoStopwatch.Frequency))!,
     };
 
     internal static byte[] Redirect(byte[] image)
@@ -58,34 +55,18 @@ static class FrameworkShims
         using var assembly = AccessChecks.Read(input);
         var module = assembly.MainModule;
         bool changed = false;
-        var simplified = new HashSet<Mono.Cecil.MethodDefinition>();
         foreach (var type in module.GetTypes())
         {
             foreach (var method in type.Methods)
             {
                 if (!method.HasBody) continue;
-                foreach (var instruction in method.Body.Instructions.ToArray())
+                foreach (var instruction in method.Body.Instructions)
                 {
                     if ((instruction.OpCode == OpCodes.Ldsfld || instruction.OpCode == OpCodes.Ldsflda)
                         && instruction.Operand is FieldReference field
-                        && s_ReplacedFields.TryGetValue((field.DeclaringType.FullName, field.Name), out var getter))
+                        && s_ReplacedFields.TryGetValue((field.DeclaringType.FullName, field.Name), out var replacementField))
                     {
-                        bool address = instruction.OpCode == OpCodes.Ldsflda;
-                        instruction.OpCode = OpCodes.Call;
-                        instruction.Operand = module.ImportReference(getter);
-                        if (address)
-                        {
-                            // The call keeps the instruction (branches to it stay valid); the value
-                            // goes to a fresh local whose address is what the code reads.
-                            method.Body.SimplifyMacros();
-                            var local = new VariableDefinition(module.ImportReference(getter.ReturnType));
-                            method.Body.Variables.Add(local);
-                            var il = method.Body.GetILProcessor();
-                            var store = il.Create(OpCodes.Stloc, local);
-                            il.InsertAfter(instruction, store);
-                            il.InsertAfter(store, il.Create(OpCodes.Ldloca, local));
-                            simplified.Add(method);
-                        }
+                        instruction.Operand = module.ImportReference(replacementField);
                         changed = true;
                         continue;
                     }
@@ -117,7 +98,6 @@ static class FrameworkShims
             }
         }
         if (!changed) return image;
-        foreach (var method in simplified) method.Body.OptimizeMacros();
         using var output = new MemoryStream();
         AccessChecks.Write(assembly, output);
         return output.ToArray();

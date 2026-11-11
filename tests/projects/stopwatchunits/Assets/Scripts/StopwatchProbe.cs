@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using UnityEngine;
@@ -32,10 +33,28 @@ public class StopwatchProbe : MonoBehaviour
 
     static long Ticks(Stopwatch watch) => watch.ElapsedTicks;
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static ref readonly long FrequencyReference() => ref Stopwatch.Frequency;
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static long TouchStack()
+    {
+        // Reuse stack space after FrequencyReference returns, before its reference is read.
+        const int StackControlLength = 128;
+        Span<long> values = stackalloc long[StackControlLength];
+        long sum = 0;
+        for (int i = 0; i < values.Length; i++) values[i] = i + 1;
+        for (int i = 0; i < values.Length; i++) sum += values[i];
+        return sum;
+    }
+
     void Start()
     {
         Record("frequency", Stopwatch.Frequency.ToString());
         Record("isHighResolution", B(Stopwatch.IsHighResolution));
+        ref readonly long frequency = ref FrequencyReference();
+        Record("stackControlSum", TouchStack().ToString());
+        Record("frequencyFromEscapedReference", frequency.ToString());
 
         long start = Stopwatch.GetTimestamp();
         var watch = Stopwatch.StartNew();

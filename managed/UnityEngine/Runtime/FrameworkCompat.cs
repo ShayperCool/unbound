@@ -29,17 +29,16 @@ namespace Unbound
     }
 
     /// <summary>
-    /// <c>System.Diagnostics.Stopwatch</c> as the Editor's Mono has it: its ticks are 100 ns on
-    /// every platform (<c>Frequency</c> 10 000 000, <c>ElapsedTicks</c> equal to
-    /// <c>Elapsed.Ticks</c>, measured in 6000.0.71f1 by tests/projects/stopwatchunits), where .NET
-    /// counts nanoseconds on macOS and Linux. Game code that divides raw ticks by
+    /// <c>System.Diagnostics.Stopwatch</c> in the Linux 6000.0.71f1 Editor: ticks are 100 ns,
+    /// <c>Frequency</c> is 10 000 000 and stopped <c>ElapsedTicks</c> equals <c>Elapsed.Ticks</c>
+    /// (tests/projects/stopwatchunits). The measured .NET host counts nanoseconds. Game code that divides raw ticks by
     /// <c>TimeSpan.TicksPerSecond</c> works in the Editor and would run 100 times too fast here.
     /// Game assemblies' uses of these members are redirected here when they load
     /// (Unbound.Host.FrameworkShims).
     /// </summary>
     public static class MonoStopwatch
     {
-        public static long get_Frequency() => TimeSpan.TicksPerSecond;
+        public static readonly long Frequency = TimeSpan.TicksPerSecond;
 
         public static long GetTimestamp() => ToMonoTicks(System.Diagnostics.Stopwatch.GetTimestamp());
 
