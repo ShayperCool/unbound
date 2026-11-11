@@ -8,8 +8,8 @@ namespace UnityEngine.Tests
     /// <summary>
     /// How a Humanoid model clip's conversion samples the clip (6000.0.71f1 Editor). The clip
     /// ends at its last key, the frame count times the frame length in single precision. The
-    /// samples are a frame apart from the start, ceil(length / frame length) + 1 of them; for
-    /// some frame counts that division rounds past the count, and the sample after the end
+    /// samples are a frame apart from the first key, ceil(span / frame length) + 1 of them; for
+    /// some frame counts that division rounds past the count, and the sample after the last key
     /// halves the last key's slope (the mean of the slopes on both sides, the far one flat)
     /// without becoming a key. Measured: tests/projects/modelclips HumanLong (31 frames at 30 a
     /// second: 32 keys a curve, the last slope halved, length 1.03333342), and an import of the
@@ -101,6 +101,30 @@ namespace UnityEngine.Tests
             }
             Assert.True(moving > 0);
             Assert.Equal(frames * frame, clip.length);
+        }
+
+        /// <summary>A Humanoid clip with a range and no curve on the avatar's nodes (a take
+        /// without keys in its span, or curves of another hierarchy) gains no muscle curves:
+        /// the samples span the curves' keys, not the clip's range, so nothing is sampled from
+        /// the avatar's default pose. Not measured in the Editor.</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AClipWithoutCurvesOfTheAvatarsNodesIsLeftAsItIs(bool foreignCurve)
+        {
+            var clip = ModelClip(30f, 20);
+            clip.m_Curves.Clear();
+            if (foreignCurve)
+                clip.m_Curves.Add(new ClipCurve
+                {
+                    Binding = new CurveBinding { Path = "Elsewhere/Bone", Attribute = "m_LocalPosition.y", ClassId = EngineTypes.TransformId },
+                    Curve = AnimationCurve.Linear(0f, 0f, 20f / 30f, 1f),
+                });
+
+            clip.ConvertHumanCurves();
+
+            Assert.Equal(foreignCurve ? 1 : 0, clip.m_Curves.Count);
+            foreach (var c in clip.m_Curves) Assert.Equal(EngineTypes.TransformId, c.Binding.ClassId);
         }
     }
 }
