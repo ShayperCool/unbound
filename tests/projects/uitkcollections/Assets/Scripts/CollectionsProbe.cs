@@ -265,7 +265,444 @@ public static class CollectionsProbe
             if (name == "animated") continue; // rows animate in real time
             Out.Append("{\"k\":\"tree\",\"section\":").Append(Str(name)).Append(",\"tree\":").Append(Tree(e)).Append("}\n");
         }
+        // Later sections run after the final image on a cover above everything recorded so far, so
+        // the lines and images above do not depend on them.
+        var stage = new VisualElement { name = "stage" };
+        Place(stage, 0, 0, 800, 600);
+        stage.style.backgroundColor = Color.white;
+        root.Add(stage);
+        Update();
+        Section("sibling-order", () => SiblingOrder(stage));
+        Section("menu-api", MenuApi);
+        Section("manipulator", () => MenuManipulator(stage));
+        Section("header-menu", () => HeaderMenu(stage));
+        Section("header-drag", () => HeaderDrag(stage));
         File.WriteAllText(Path.Combine(Output, "collections.jsonl"), Out.ToString());
+    }
+
+    // ---- sibling order ----
+
+    // PlaceBehind, PlaceInFront, BringToFront and SendToBack on five children of a row: the
+    // children's order and where layout puts them.
+    static void SiblingOrder(VisualElement stage)
+    {
+        var row = new VisualElement { name = "siblings" };
+        Place(row, 400, 20, 150, 20);
+        row.style.flexDirection = FlexDirection.Row;
+        var e = new Dictionary<string, VisualElement>();
+        foreach (var n in new[] { "a", "b", "c", "d", "e" })
+        {
+            e[n] = new VisualElement { name = n };
+            e[n].style.width = 10 * (1 + row.childCount);
+            row.Add(e[n]);
+        }
+        string State()
+        {
+            var sb = new StringBuilder("[");
+            foreach (var child in row.Children()) { if (sb.Length > 1) sb.Append(','); sb.Append('[').Append(Str(child.name)).Append(',').Append(F(child.layout.x)).Append(']'); }
+            return sb.Append(']').ToString();
+        }
+        Step("sibling-order", "attach", () => stage.Add(row), State);
+        Step("sibling-order", "a-behind-d", () => e["a"].PlaceBehind(e["d"]), State);
+        Step("sibling-order", "d-behind-b", () => e["d"].PlaceBehind(e["b"]), State);
+        Step("sibling-order", "c-behind-first", () => e["c"].PlaceBehind(row[0]), State);
+        Step("sibling-order", "first-behind-last", () => row[0].PlaceBehind(row[4]), State);
+        Step("sibling-order", "b-behind-next", () => e["b"].PlaceBehind(row[row.IndexOf(e["b"]) + 1]), State);
+        Step("sibling-order", "a-in-front-of-e", () => e["a"].PlaceInFront(e["e"]), State);
+        Step("sibling-order", "e-in-front-of-first", () => e["e"].PlaceInFront(row[0]), State);
+        Step("sibling-order", "first-in-front-of-last", () => row[0].PlaceInFront(row[4]), State);
+        Step("sibling-order", "d-in-front-of-previous", () => e["d"].PlaceInFront(row[row.IndexOf(e["d"]) - 1]), State);
+        Step("sibling-order", "c-to-front", () => e["c"].BringToFront(), State);
+        Step("sibling-order", "c-to-front-again", () => e["c"].BringToFront(), State);
+        Step("sibling-order", "a-to-back", () => e["a"].SendToBack(), State);
+        Step("sibling-order", "behind-itself", () => e["b"].PlaceBehind(e["b"]), State);
+        Step("sibling-order", "in-front-of-itself", () => e["b"].PlaceInFront(e["b"]), State);
+        Step("sibling-order", "not-a-sibling", () => e["b"].PlaceBehind(row), State);
+        Step("sibling-order", "remove", () => row.RemoveFromHierarchy(), () => "null");
+    }
+
+    // ---- contextual menus ----
+
+    static string Menu(DropdownMenu menu)
+    {
+        var sb = new StringBuilder("[");
+        foreach (var item in menu.MenuItems())
+        {
+            if (sb.Length > 1) sb.Append(',');
+            if (item is DropdownMenuAction action) sb.Append('[').Append(Str(action.name)).Append(',').Append((int)action.status).Append(']');
+            else if (item is DropdownMenuSeparator separator) sb.Append("[\"--\",").Append(Str(separator.subMenuPath)).Append(']');
+            else sb.Append(Str(item.GetType().Name));
+        }
+        return sb.Append(']').ToString();
+    }
+
+    static DropdownMenuAction MenuAction(DropdownMenu menu, string name)
+    {
+        foreach (var item in menu.MenuItems())
+            if (item is DropdownMenuAction action && action.name == name) return action;
+        throw new InvalidOperationException("no menu action " + name);
+    }
+
+    static void ButtonEvent(EventType type, Vector2 position, int button, EventModifiers modifiers = EventModifiers.None)
+    {
+        var imgui = new Event { type = type, mousePosition = position, button = button, modifiers = modifiers, clickCount = 1 };
+        EventBase evt = type == EventType.MouseDown ? PointerDownEvent.GetPooled(imgui) : (EventBase)PointerUpEvent.GetPooled(imgui);
+        using (evt) s_PanelRoot.SendEvent(evt);
+    }
+
+    static void RightClick(Vector2 position)
+    {
+        Pointer(EventType.MouseMove, position);
+        ButtonEvent(EventType.MouseDown, position, 1);
+        ButtonEvent(EventType.MouseUp, position, 1);
+    }
+
+    // What a contextual menu manager would do for a right button release at the position: the
+    // populate event sent to the element, then the menu prepared for display.
+    static DropdownMenu Populate(VisualElement target, Vector2 position, EventModifiers modifiers = EventModifiers.None)
+    {
+        var menu = new DropdownMenu();
+        using (var trigger = PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, mousePosition = position, button = 1, modifiers = modifiers, clickCount = 1 }))
+        {
+            using (var e = ContextualMenuPopulateEvent.GetPooled(trigger, menu, target, null)) target.SendEvent(e);
+            menu.PrepareForDisplay(trigger);
+        }
+        return menu;
+    }
+
+    // DropdownMenu on its own: which separators are kept, insertion, statuses, the event info.
+    static void MenuApi()
+    {
+        var menu = new DropdownMenu();
+        string State() => Menu(menu);
+        Step("menu-api", "separator-on-empty", () => menu.AppendSeparator(), State);
+        Step("menu-api", "action-and-two-separators", () =>
+        {
+            menu.AppendAction("A", a => Log.Add("exec A userData " + (a.userData ?? "null") + " info " + (a.eventInfo == null ? "null" : a.eventInfo.modifiers + " " + V2(a.eventInfo.mousePosition) + " " + V2(a.eventInfo.localMousePosition))));
+            menu.AppendSeparator();
+            menu.AppendSeparator();
+        }, State);
+        Step("menu-api", "sub-menu-separators", () =>
+        {
+            menu.AppendAction("Sub/B", a => Log.Add("exec B"), DropdownMenuAction.Status.Checked);
+            menu.AppendSeparator("Sub/");
+            menu.AppendSeparator("Sub/");
+            menu.AppendSeparator("Other/");
+        }, State);
+        Step("menu-api", "no-status-callback", () => menu.AppendAction("C", null, (Func<DropdownMenuAction, DropdownMenuAction.Status>)null, "data"), State);
+        Step("menu-api", "insert", () =>
+        {
+            menu.InsertAction(0, "First", a => Log.Add("exec First"), a => DropdownMenuAction.Status.Disabled | DropdownMenuAction.Status.Checked);
+            menu.InsertSeparator(null, 0);
+            menu.InsertSeparator("x", 1);
+            menu.InsertSeparator(null, 2);
+            menu.InsertSeparator(null, 99);
+            menu.AppendAction("Last", a => Log.Add("exec Last"), DropdownMenuAction.Status.Disabled);
+            menu.AppendSeparator();
+        }, State);
+        Step("menu-api", "prepare", () =>
+        {
+            using (var trigger = PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, mousePosition = new Vector2(30, 40), button = 1, modifiers = EventModifiers.Shift, clickCount = 1 }))
+                menu.PrepareForDisplay(trigger);
+        }, State);
+        Step("menu-api", "execute", () =>
+        {
+            MenuAction(menu, "A").Execute();
+            MenuAction(menu, "C").Execute();
+            MenuAction(menu, "Last").Execute();
+            Log.Add("C userData " + MenuAction(menu, "C").userData + " allowDuplicateNames " + menu.allowDuplicateNames);
+        }, State);
+        Step("menu-api", "prepare-null", () => { menu.AppendSeparator(); menu.PrepareForDisplay(null); MenuAction(menu, "A").Execute(); }, State);
+        Step("menu-api", "remove-first", () => menu.RemoveItemAt(0), State);
+        Step("menu-api", "clear", () => { menu.ClearItems(); menu.PrepareForDisplay(null); }, State);
+    }
+
+    // A ContextualMenuManipulator on a runtime panel: a right click, the Menu key, and a populate
+    // event sent to its element.
+    static void MenuManipulator(VisualElement stage)
+    {
+        var box = new VisualElement { name = "menu-box", focusable = true };
+        Place(box, 600, 20, 100, 40);
+        DropdownMenu menu = null;
+        string State() => "{\"manager\":" + (s_PanelRoot.panel.contextualMenuManager == null ? "null" : Str(s_PanelRoot.panel.contextualMenuManager.GetType().Name)) +
+            ",\"menu\":" + (menu == null ? "null" : Menu(menu)) + ",\"panelChildren\":" + s_PanelRoot.hierarchy.childCount + "}";
+        Step("manipulator", "attach", () =>
+        {
+            box.AddManipulator(new ContextualMenuManipulator(e =>
+            {
+                Log.Add("builder target " + ((VisualElement)e.target).name + " button " + e.button + " mouse " + V2(e.mousePosition) + " local " + V2(e.localMousePosition) +
+                    " trigger " + (e.triggerEvent == null ? "null" : e.triggerEvent.GetType().Name));
+                e.menu.AppendAction("X", a => Log.Add("exec X"));
+            }));
+            stage.RegisterCallback<PointerUpEvent>(e => { if (e.target == box) Log.Add("stage sees up button " + e.button); });
+            stage.RegisterCallback<KeyUpEvent>(e => { if (e.target == box) Log.Add("stage sees key up " + e.keyCode); });
+            stage.Add(box);
+        }, State);
+        Step("manipulator", "right-click", () => RightClick(box.worldBound.center), State);
+        Step("manipulator", "menu-key", () =>
+        {
+            using (var up = KeyUpEvent.GetPooled('\0', KeyCode.Menu, EventModifiers.None)) { up.target = box; box.SendEvent(up); }
+        }, State);
+        Step("manipulator", "populate-sent", () => menu = Populate(box, box.worldBound.center + new Vector2(10, 5)), State);
+        Step("manipulator", "populate-without-trigger", () =>
+        {
+            menu = new DropdownMenu();
+            using (var e = ContextualMenuPopulateEvent.GetPooled(null, menu, box, null)) box.SendEvent(e);
+            menu.PrepareForDisplay(null);
+        }, State);
+        Step("manipulator", "remove", () => box.RemoveFromHierarchy(), () => "null");
+    }
+
+    // ---- multi-column header: contextual menu and column dragging ----
+
+    static string HeaderState(BaseVerticalCollectionView view)
+    {
+        var header = view.Q(className: "unity-multi-column-header");
+        var sb = new StringBuilder("{\"columns\":[");
+        bool first = true;
+        header.Query(className: "unity-multi-column-header__column").ForEach(c =>
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            sb.Append('[').Append(Str(c.name)).Append(',').Append(Rect(c.layout)).Append(',')
+              .Append(c.ClassListContains("unity-multi-column-header__column--moving") ? "\"moving\"" : "\"still\"").Append(',')
+              .Append(c.ClassListContains("unity-multi-column-header__column--sorted-ascending") ? "\"asc\"" : c.ClassListContains("unity-multi-column-header__column--sorted-descending") ? "\"desc\"" : "\"unsorted\"").Append(']');
+        });
+        sb.Append("],\"handles\":[");
+        var handles = header.Q(className: "unity-multi-column-header__resize-handle-container");
+        sb.Append(handles.resolvedStyle.display == DisplayStyle.None ? "\"none\"" : "\"flex\"");
+        foreach (var h in handles.Children())
+            sb.Append(",[").Append(F(h.layout.x)).Append(',').Append(h.resolvedStyle.display == DisplayStyle.None ? "\"none\"" : "\"flex\"").Append(']');
+        var preview = view.Q(className: "unity-multi-column-header__column__move-preview");
+        sb.Append("],\"movePreview\":").Append(preview == null ? "null" : "[" + Str(FirstClass(preview.parent)) + "," + Rect(preview.layout) + "]");
+        var location = view.Q(className: "unity-multi-column-header__column__move-location-preview");
+        sb.Append(",\"locationPreview\":").Append(location == null ? "null" : "[" + Str(FirstClass(location.parent)) + "," + Rect(location.layout) + "," + Rect(location.hierarchy[0].layout) + "]");
+        var capture = s_PanelRoot.panel.GetCapturingElement(PointerId.mousePointerId) as VisualElement;
+        sb.Append(",\"capture\":").Append(capture == null ? "null" : Str(FirstClass(capture) + " " + capture.name));
+        sb.Append(",\"cells\":[");
+        var row = view.GetRootElementForIndex(0);
+        first = true;
+        if (row != null)
+            row.Query<Label>().ForEach(l => { if (!(l.userData is string)) return; if (!first) sb.Append(','); first = false; sb.Append('[').Append(Str(Id(l))).Append(',').Append(Str(l.text)).Append(',').Append(F(l.worldBound.x)).Append(',').Append(F(l.worldBound.width)).Append(']'); });
+        sb.Append("],\"sorted\":[");
+        var sorted = view is MultiColumnListView lv ? lv.sortedColumns : ((MultiColumnTreeView)view).sortedColumns;
+        first = true;
+        foreach (var d in sorted) { if (!first) sb.Append(','); first = false; sb.Append('[').Append(Str(d.columnName)).Append(',').Append(Str(d.direction.ToString())).Append(']'); }
+        return sb.Append("]}").ToString();
+    }
+
+    static MultiColumnListView HeaderView(VisualElement stage, string tag, float top, List<string> items)
+    {
+        var view = new MultiColumnListView { name = tag, fixedItemHeight = 20, itemsSource = items };
+        Place(view, 20, top, 300, 100);
+        view.columns.Add(MakeColumn(tag + ":", "a", "Alpha", 80, false, i => items[i]));
+        view.columns.Add(MakeColumn(tag + ":", "b", "", 60, false, i => "b" + i));
+        view.columns.Add(MakeColumn(tag + ":", null, null, 40, false, i => "c" + i));
+        view.columns.Add(MakeColumn(tag + ":", "d", "Delta", 50, false, i => "d" + i));
+        view.columnSortingChanged += () => Log.Add(tag + ":columnSortingChanged");
+        HookEvents(view, tag + ":");
+        stage.Add(view);
+        return view;
+    }
+
+    static VisualElement Header(VisualElement view) => view.Q(className: "unity-multi-column-header");
+
+    static VisualElement HeaderColumnAt(VisualElement view, int index) =>
+        view.Query(className: "unity-multi-column-header__column").AtIndex(index);
+
+    static void HeaderMenu(VisualElement stage)
+    {
+        var items = new List<string> { "one", "two", "three" };
+        MultiColumnListView view = null;
+        DropdownMenu menu = null;
+        string State() => "{\"menu\":" + (menu == null ? "null" : Menu(menu)) + ",\"header\":" + HeaderState(view) + "}";
+        Step("header-menu", "attach", () =>
+        {
+            view = HeaderView(stage, "hmenu", 20, items);
+            view.columns["d"].optional = false;
+            view.headerContextMenuPopulateEvent += (e, column) => Log.Add("hmenu:populate column " + (column == null ? "null" : Str(column.name) + " " + Str(column.title)) +
+                " items " + e.menu.MenuItems().Count + " local " + V2(e.localMousePosition) + " mouse " + V2(e.mousePosition) + " button " + e.button +
+                " target " + FirstClass((VisualElement)e.target));
+        }, State);
+        // A runtime panel has no contextual menu manager: nothing asks the header for a menu.
+        Step("header-menu", "right-click-header", () => RightClick(HeaderColumnAt(view, 0).worldBound.center), State);
+        Step("header-menu", "populate-on-b", () => menu = Populate(Header(view), HeaderColumnAt(view, 1).worldBound.center), State);
+        Step("header-menu", "populate-past-columns", () => menu = Populate(Header(view), new Vector2(Header(view).worldBound.xMax - 10, Header(view).worldBound.center.y)), State);
+        Step("header-menu", "execute-alpha", () => MenuAction(menu, "Alpha").Execute(), State);
+        Step("header-menu", "populate-alpha-hidden", () => menu = Populate(Header(view), HeaderColumnAt(view, 0).worldBound.center), State);
+        Step("header-menu", "execute-alpha-again", () => MenuAction(menu, "Alpha").Execute(), State);
+        Step("header-menu", "execute-disabled-delta", () => MenuAction(menu, "Delta").Execute(), State);
+        Step("header-menu", "show-delta", () => { view.columns["d"].visible = true; menu = Populate(Header(view), HeaderColumnAt(view, 0).worldBound.center); }, State);
+        Step("header-menu", "primary-b", () => { view.columns.primaryColumnName = "b"; menu = Populate(Header(view), HeaderColumnAt(view, 0).worldBound.center); }, State);
+        Step("header-menu", "primary-none", () => { view.columns.primaryColumnName = null; menu = Populate(Header(view), HeaderColumnAt(view, 0).worldBound.center); }, State);
+        // Resize To Fit: columns narrower than the header, then wider, then with a stretchable
+        // column in each stretch mode.
+        Step("header-menu", "resize-to-fit-narrower", () => MenuAction(menu, "Resize To Fit").Execute(), State);
+        Step("header-menu", "resize-to-fit-wider", () =>
+        {
+            view.columns["a"].width = 200; view.columns["b"].width = 60; view.columns[2].width = 40; view.columns["d"].width = 50;
+            Update();
+            MenuAction(menu, "Resize To Fit").Execute();
+        }, State);
+        Step("header-menu", "restore-widths", () => { view.columns["a"].width = 80; view.columns["b"].width = 60; view.columns[2].width = 40; view.columns["d"].width = 50; }, State);
+        Step("header-menu", "stretchable-grow-and-fill", () => { view.columns["a"].stretchable = true; Update(); menu = Populate(Header(view), HeaderColumnAt(view, 0).worldBound.center); }, State);
+        Step("header-menu", "stretchable-grow", () => { view.columns.stretchMode = UnityEngine.UIElements.Columns.StretchMode.Grow; Update(); menu = Populate(Header(view), HeaderColumnAt(view, 0).worldBound.center); }, State);
+        Step("header-menu", "stretchable-grow-fit", () => MenuAction(menu, "Resize To Fit").Execute(), State);
+        Step("header-menu", "not-stretchable-again", () =>
+        {
+            view.columns.stretchMode = UnityEngine.UIElements.Columns.StretchMode.GrowAndFill; view.columns["a"].stretchable = false;
+            view.columns["a"].width = 80; view.columns["b"].width = 60; view.columns[2].width = 40; view.columns["d"].width = 50;
+        }, State);
+        Step("header-menu", "one-visible-column", () =>
+        {
+            view.columns["b"].visible = false; view.columns[2].visible = false; view.columns["d"].visible = false;
+            Update();
+            menu = Populate(Header(view), HeaderColumnAt(view, 0).worldBound.center);
+        }, State);
+        Step("header-menu", "execute-last-visible", () => MenuAction(menu, "Alpha").Execute(), State);
+        Step("header-menu", "populate-none-visible", () => menu = Populate(Header(view), Header(view).worldBound.center), State);
+        Step("header-menu", "show-all", () => { foreach (var c in view.columns) c.visible = true; }, State);
+        Step("header-menu", "game-entry", () =>
+        {
+            view.headerContextMenuPopulateEvent += (e, column) => { e.menu.AppendSeparator(); e.menu.AppendAction("Custom", a => Log.Add("hmenu:exec Custom")); };
+            menu = Populate(Header(view), HeaderColumnAt(view, 3).worldBound.center, EventModifiers.Control);
+            MenuAction(menu, "Custom").Execute();
+        }, State);
+        Step("header-menu", "remove", () => view.RemoveFromHierarchy(), () => "null");
+        // A tree's header: the same menu; the named primary column cannot be hidden.
+        MultiColumnTreeView tree = null;
+        string TreeMenu() => "{\"menu\":" + (menu == null ? "null" : Menu(menu)) + ",\"header\":" + HeaderState(tree) + "}";
+        Step("header-menu", "tree-attach", () =>
+        {
+            tree = new MultiColumnTreeView { name = "hmenu-tree", fixedItemHeight = 20 };
+            Place(tree, 20, 20, 300, 100);
+            tree.SetRootItems(TreeItems(2, 1, 0));
+            tree.columns.Add(MakeColumn("hmenutree:", "name", "Name", 140, false, i => tree.GetItemDataForIndex<string>(i)));
+            tree.columns.Add(MakeColumn("hmenutree:", "id", "Id", 60, false, i => tree.GetIdForIndex(i).ToString(Inv)));
+            tree.headerContextMenuPopulateEvent += (e, column) => Log.Add("hmenutree:populate column " + (column == null ? "null" : column.name) + " items " + e.menu.MenuItems().Count);
+            stage.Add(tree);
+        }, () => HeaderState(tree));
+        Step("header-menu", "tree-populate", () => menu = Populate(Header(tree), HeaderColumnAt(tree, 1).worldBound.center), TreeMenu);
+        Step("header-menu", "tree-primary-named", () => { tree.columns.primaryColumnName = "id"; Update(); menu = Populate(Header(tree), HeaderColumnAt(tree, 1).worldBound.center); }, TreeMenu);
+        Step("header-menu", "tree-remove", () => tree.RemoveFromHierarchy(), () => "null");
+    }
+
+    static void HeaderDrag(VisualElement stage)
+    {
+        var items = new List<string> { "one", "two", "three" };
+        MultiColumnListView view = null;
+        string State() => HeaderState(view);
+        Vector2 Center(string name) => view.Q(name, "unity-multi-column-header__column").worldBound.center;
+        UnityEngine.Rect Bound(string name) => view.Q(name, "unity-multi-column-header__column").worldBound;
+        void DragTo(Vector2 from, Vector2 to)
+        {
+            Pointer(EventType.MouseMove, from);
+            Pointer(EventType.MouseDown, from);
+            Pointer(EventType.MouseMove, Vector2.Lerp(from, to, 0.5f));
+            Update();
+            Pointer(EventType.MouseMove, to);
+            Update();
+            Pointer(EventType.MouseUp, to);
+        }
+        Step("header-drag", "attach", () => view = HeaderView(stage, "hdrag", 20, items), State);
+        // One drag step by step: b moved to the right of the unnamed third column.
+        Vector2 start = default;
+        Step("header-drag", "press-b", () => { start = Center("b"); Pointer(EventType.MouseMove, start); Pointer(EventType.MouseDown, start); }, State);
+        Step("header-drag", "move-4", () => Pointer(EventType.MouseMove, start + new Vector2(4, 0)), State);
+        Step("header-drag", "move-6", () => Pointer(EventType.MouseMove, start + new Vector2(6, 0)),
+            () => "{\"header\":" + State() + ",\"tree\":" + Tree(view) + "}");
+        Step("header-drag", "move-back-2", () => Pointer(EventType.MouseMove, start + new Vector2(2, 0)), State);
+        Step("header-drag", "move-third-left-half", () => Pointer(EventType.MouseMove, new Vector2(HeaderColumnAt(view, 2).worldBound.xMin + 5, start.y)), State);
+        Step("header-drag", "move-third-right-half", () => Pointer(EventType.MouseMove, new Vector2(HeaderColumnAt(view, 2).worldBound.xMax - 5, start.y + 60)), State);
+        Step("header-drag", "release", () => Pointer(EventType.MouseUp, new Vector2(HeaderColumnAt(view, 2).worldBound.xMax - 5, start.y + 60)), State);
+        Step("header-drag", "a-past-the-columns", () => DragTo(Center("a"), new Vector2(view.worldBound.xMax - 5, Center("a").y)), State);
+        Step("header-drag", "d-to-first-left-half", () => DragTo(Center("d"), new Vector2(HeaderColumnAt(view, 0).worldBound.xMin + 3, Center("d").y)), State);
+        Step("header-drag", "b-left-of-the-view", () => DragTo(Center("b"), new Vector2(view.worldBound.xMin - 30, Center("b").y)), State);
+        Step("header-drag", "a-own-right-half", () => DragTo(Center("a"), new Vector2(Bound("a").xMax - 3, Center("a").y)), State);
+        Step("header-drag", "a-next-left-half", () => DragTo(Center("a"), new Vector2(Bound("a").xMax + 3, Center("a").y)), State);
+        Step("header-drag", "a-previous-right-half", () => DragTo(Center("a"), new Vector2(Bound("a").xMin - 3, Center("a").y)), State);
+        // A release that ends a drag is not a click: with sorting on, a click and a move short of a
+        // drag sort by the column, a drag does not.
+        Step("header-drag", "sorting-on-click-b", () =>
+        {
+            view.columns["b"].comparison = (x, y) => y.CompareTo(x);
+            view.columns["a"].comparison = (x, y) => x.CompareTo(y);
+            view.sortingMode = ColumnSortingMode.Default;
+            Update();
+            Click(Center("b"));
+        }, State);
+        Step("header-drag", "short-move-a", () =>
+        {
+            var from = Center("a");
+            Pointer(EventType.MouseMove, from); Pointer(EventType.MouseDown, from);
+            Pointer(EventType.MouseMove, from + new Vector2(4, 0)); Pointer(EventType.MouseUp, from + new Vector2(4, 0));
+        }, State);
+        Step("header-drag", "drag-d-while-sorting", () => DragTo(Center("d"), new Vector2(view.worldBound.xMax - 5, Center("d").y)), State);
+        // Escape while dragging ends the drag without moving; so does losing the pointer capture.
+        Step("header-drag", "escape-press-move", () =>
+        {
+            start = Center("d");
+            Pointer(EventType.MouseMove, start); Pointer(EventType.MouseDown, start);
+            Pointer(EventType.MouseMove, new Vector2(view.worldBound.xMin + 5, start.y));
+        }, State);
+        Step("header-drag", "escape-key", () =>
+        {
+            var column = view.Q("d", "unity-multi-column-header__column");
+            using (var down = KeyDownEvent.GetPooled('\0', KeyCode.Escape, EventModifiers.None)) { down.target = column; column.SendEvent(down); }
+        }, State);
+        Step("header-drag", "escape-move-after", () => Pointer(EventType.MouseMove, new Vector2(view.worldBound.xMin + 40, start.y)), State);
+        Step("header-drag", "escape-release", () => Pointer(EventType.MouseUp, new Vector2(view.worldBound.xMin + 40, start.y)), State);
+        Step("header-drag", "capture-lost-press-move", () =>
+        {
+            start = Center("d");
+            Pointer(EventType.MouseMove, start); Pointer(EventType.MouseDown, start);
+            Pointer(EventType.MouseMove, new Vector2(view.worldBound.xMin + 5, start.y));
+        }, State);
+        Step("header-drag", "capture-lost", () => view.Q("d", "unity-multi-column-header__column").ReleasePointer(PointerId.mousePointerId), State);
+        Step("header-drag", "capture-lost-release", () => Pointer(EventType.MouseUp, new Vector2(view.worldBound.xMin + 5, start.y)), State);
+        Step("header-drag", "sorting-off", () => { view.sortColumnDescriptions.Clear(); view.sortingMode = ColumnSortingMode.None; }, State);
+        // Columns that are not reorderable: the press and the moves change nothing.
+        Step("header-drag", "not-reorderable-press-move", () =>
+        {
+            view.columns.reorderable = false;
+            start = Center("a");
+            Pointer(EventType.MouseMove, start); Pointer(EventType.MouseDown, start);
+            Pointer(EventType.MouseMove, start + new Vector2(100, 0));
+        }, State);
+        Step("header-drag", "not-reorderable-release", () => Pointer(EventType.MouseUp, start + new Vector2(100, 0)), State);
+        Step("header-drag", "reorderable-again", () => view.columns.reorderable = true, State);
+        // A hidden column keeps its place in the display order.
+        Step("header-drag", "hidden-drag", () =>
+        {
+            view.columns["b"].visible = false;
+            Update();
+            DragTo(Center("a"), new Vector2(view.worldBound.xMax - 5, Center("a").y));
+        }, State);
+        Step("header-drag", "hidden-shown", () => view.columns["b"].visible = true, State);
+        Step("header-drag", "reorder-display-0-2", () => view.columns.ReorderDisplay(0, 2), State);
+        Step("header-drag", "reorder-display-1-1", () => view.columns.ReorderDisplay(1, 1), State);
+        Step("header-drag", "reorder-display-3-0", () => view.columns.ReorderDisplay(3, 0), State);
+        Step("header-drag", "column-added-after-reorder", () => view.columns.Add(MakeColumn("hdrag:", "e", "Echo", 30, false, i => "e" + i)), State);
+        Step("header-drag", "remove", () => view.RemoveFromHierarchy(), () => "null");
+        // A tree: the toggle and indent follow the first visible column.
+        MultiColumnTreeView tree = null;
+        string TreeShape() => "{\"header\":" + HeaderState(tree) + ",\"shape\":" + TreeRowShape(tree) + "}";
+        Step("header-drag", "tree-attach", () =>
+        {
+            tree = new MultiColumnTreeView { name = "hdrag-tree", fixedItemHeight = 20 };
+            Place(tree, 20, 20, 300, 100);
+            tree.SetRootItems(TreeItems(2, 1, 0));
+            tree.columns.Add(MakeColumn("hdragtree:", "name", "Name", 140, false, i => tree.GetItemDataForIndex<string>(i)));
+            tree.columns.Add(MakeColumn("hdragtree:", "id", "Id", 60, false, i => tree.GetIdForIndex(i).ToString(Inv)));
+            stage.Add(tree);
+            tree.ExpandAll();
+        }, TreeShape);
+        Step("header-drag", "tree-drag-name-after-id", () =>
+        {
+            var from = tree.Q("name", "unity-multi-column-header__column").worldBound.center;
+            DragTo(from, new Vector2(tree.Q("id", "unity-multi-column-header__column").worldBound.xMax - 3, from.y));
+        }, TreeShape);
+        Step("header-drag", "tree-remove", () => tree.RemoveFromHierarchy(), () => "null");
     }
 
     // ---- ListView, fixed height ----

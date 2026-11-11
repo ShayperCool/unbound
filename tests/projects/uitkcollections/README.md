@@ -41,6 +41,25 @@ Stages the `uitk` fixture in a fresh cache directory and replaces its interactio
   source changes, updates), results, a binding cleared, an element removed and re-added, a list
   whose rows get their data sources automatically, a tree with makeItem and no bindItem.
 
+After the final image, on a cover above everything else (so the lines and images before them do
+not depend on them):
+
+- `sibling-order`: PlaceBehind, PlaceInFront, BringToFront and SendToBack on five children of a
+  row, forward and backward, with where layout puts them;
+- `menu-api`: a DropdownMenu on its own: which separators are kept, inserted items, statuses
+  before and after PrepareForDisplay, the event info, Execute;
+- `manipulator`: a ContextualMenuManipulator on the runtime panel (which has no contextual menu
+  manager): a right click, the Menu key, then a ContextualMenuPopulateEvent the probe sends itself;
+- `header-menu`: the menu a MultiColumnListView header fills for such an event (also on a
+  MultiColumnTreeView): its entries and their statuses over a column, past the columns, with a
+  hidden, a non-optional, an unnamed and a primary column, stretchable columns in both stretch
+  modes, no visible column, a game's own entry; what "Resize To Fit" and the column entries do;
+- `header-drag`: a header column dragged step by step (press, a move short of a drag, the move
+  preview and drop line, either half of the target column, release), drops past the columns and
+  left of the view, onto the column's own and its neighbours' halves, with sorting on (a click,
+  a short move and a drag), Escape, a lost pointer capture, columns that are not reorderable, a
+  hidden column, `Columns.ReorderDisplay`, a column added afterwards, and a tree's primary column.
+
 Every step records the item callbacks it caused (makeItem/bindItem/unbindItem/destroyItem, with
 the element: elements are numbered per control), the events the controls raised, and the state:
 visible rows (element, text, layout, selected, shown), scroll offset, content rect, scroller
