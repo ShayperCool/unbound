@@ -617,10 +617,12 @@ impl Engine {
         mixer.has_listener = packet.flags & frame_flags::HAS_LISTENER != 0;
         mixer.listener_paused = packet.flags & frame_flags::PAUSED != 0;
         mixer.listener_filter = packet.flags & frame_flags::LISTENER_FILTER != 0;
+        mixer.surround_effects = packet.flags & frame_flags::SURROUND_EFFECTS != 0;
         // SAFETY: native_api passes a packet whose pointers are valid for this call.
         mixer.update_listener_filters(
             unsafe { mixer::decode_listener_filters(packet) },
             packet.flags & frame_flags::EFFECT_TRANSITIONS != 0,
+            packet.flags & frame_flags::SURROUND_EFFECTS != 0,
         );
         mixer.update_zone(&packet.zone, packet.flags & frame_flags::ZONE_STARTUP != 0);
         mixer.update_suspension();

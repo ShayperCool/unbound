@@ -185,6 +185,12 @@ namespace Unbound.Runtime
         /// tests/projects/audioflange). Other releases fail until measured.</summary>
         internal static bool ModulatedDelayMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Compressor DSP parameter clamps, measured by tests/projects/audiopitch.</summary>
+        internal static bool MixerCompressorParametersMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Speaker-wide effects, measured by tests/projects/audiopitch's surround profile.</summary>
+        internal static bool AudioSurroundEffectsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Block-constant effect parameters applying the measured history rules,
         /// measured on 6000.0.71f1 by tests/projects/audiodistortion's live profile.</summary>
         internal static bool MixerEffectTransitionsMeasured => Release == (6000, 0, 71, 'f', 1);

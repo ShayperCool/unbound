@@ -52,6 +52,8 @@ pub mod source_flags {
     pub const EFFECT_TRANSITIONS: u32 = 1 << 17;
     /// Explicit Stop freezes source-component histories across idle buffers.
     pub const COMPONENT_HISTORY: u32 = 1 << 18;
+    /// Speaker-wide component processing selected by the compatibility profile.
+    pub const SURROUND_EFFECTS: u32 = 1 << 19;
 }
 
 /// An AudioSource's parameters, sent when they change and once per frame (its transform).
@@ -228,6 +230,8 @@ pub mod frame_flags {
     pub const ZONE_STARTUP: i32 = 1 << 3;
     /// Listener component parameter changes use the measured effect transitions.
     pub const EFFECT_TRANSITIONS: i32 = 1 << 4;
+    /// Speaker-wide components and zone return selected by the compatibility profile.
+    pub const SURROUND_EFFECTS: i32 = 1 << 5;
 }
 
 /// Sent once per frame from `PostLateUpdate.UpdateAudio`.
@@ -361,7 +365,7 @@ mod tests {
     /// The managed side pins the same version and refuses every other version.
     #[test]
     fn the_filter_descriptor_layout_is_native_api_56() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 56);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 57);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

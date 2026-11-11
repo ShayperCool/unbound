@@ -100,8 +100,24 @@ impl Duck {
         spec: &DuckSpec,
         rate: u32,
     ) {
-        let attack = Self::coefficient(spec.attack_time, rate);
-        let release = Self::coefficient(spec.release_time, rate);
+        self.process_linked_channels(samples, extra, sidechain, extra_sidechains, spec, rate, 2);
+    }
+
+    /// The measured detector time scales with the active speaker count. Stereo retains the
+    /// existing 90%-step coefficient; wider layouts use the same sample-time rule.
+    pub fn process_linked_channels(
+        &mut self,
+        samples: &mut [f32],
+        extra: &mut [&mut [f32]],
+        sidechain: Option<&[f32]>,
+        extra_sidechains: &[&[f32]],
+        spec: &DuckSpec,
+        rate: u32,
+        channels: usize,
+    ) {
+        let time_scale = channels as f32 * 0.5;
+        let attack = Self::coefficient(spec.attack_time * time_scale, rate);
+        let release = Self::coefficient(spec.release_time * time_scale, rate);
         let makeup = 10_f32.powf(spec.makeup_gain / 20.0);
         let mix = spec.sidechain_mix;
         for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {

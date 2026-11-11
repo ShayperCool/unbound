@@ -237,6 +237,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         mix_level: None,
         slot_wet_measured: false,
         effect_transitions_measured: false,
+        surround_effects_measured: false,
         slot_wet_transitions_measured: false,
         mix_audible: true,
         duck: None,
@@ -249,10 +250,10 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         normalize: None,
         pitch_shifter: None,
         chorus: (d.kind == filter_kind::CHORUS).then(|| super::chorus::ChorusSpec {
-            // r[3], Wet mix tap 3, has no measured effect on stereo output.
             dry: r[0].clamp(0.0, 1.0),
             wet1: r[1].clamp(0.0, 1.0),
             wet2: r[2].clamp(0.0, 1.0),
+            wet3: r[3].clamp(0.0, 1.0),
             delay: (r[4] <= 100.0).then_some(r[4].max(0.0)),
             rate: r[5].clamp(0.0, 20.0),
             depth: r[6].clamp(0.0, 1.0),
@@ -360,28 +361,64 @@ impl FilterChain {
         Ok(())
     }
 
-    /// Runs the components of `stage` (every one with `None`) in order on stereo `samples`.
-    /// `bypass` (`AudioSource.bypassEffects`) leaves the samples and the histories as they are.
-    fn process(&mut self, samples: &mut [f32], stage: Option<i32>, bypass: bool) {
+    fn set_layout(&mut self, config: &MixerConfig, measured: bool, offset: usize) {
         for filter in &mut self.filters {
-            if stage.is_none_or(|s| filter.stage == s) {
+            filter.effect.set_layout(config.output_channels());
+            filter.effect.set_channel_offset(offset);
+            filter.effect.spec.surround_effects_measured = measured;
+        }
+    }
+
+    /// Runs each component across the complete layout before advancing to the next component.
+    /// A shared reverb network sees every speaker; other effects retain per-pair histories.
+    fn process_layout(
+        &mut self,
+        lanes: &mut [FilterChain],
+        samples: &mut [f32],
+        extra: Option<&mut Lanes<'_>>,
+        stage: Option<i32>,
+        bypass: bool,
+        last: bool,
+    ) {
+        let frames = samples.len() / 2;
+        let selected = last
+            .then(|| {
+                self.filters
+                    .iter()
+                    .rposition(|f| stage.is_none_or(|s| f.stage == s))
+            })
+            .flatten();
+        let mut blocks = extra.map(|e| e.pairs(frames));
+        for (index, filter) in self.filters.iter_mut().enumerate() {
+            if stage.is_some_and(|s| filter.stage != s) || (last && selected != Some(index)) {
+                continue;
+            }
+            if let Some(blocks) = blocks
+                .as_mut()
+                .filter(|_| !lanes.is_empty() && filter.effect.links_channels())
+            {
+                filter
+                    .effect
+                    .process_shared_reverb(samples, &mut blocks[..lanes.len()], bypass);
+            } else {
                 filter.effect.process(samples, bypass);
-                self.primed |= !bypass;
+                if let Some(blocks) = blocks.as_mut() {
+                    for (pair, chain) in lanes.iter_mut().enumerate() {
+                        chain.filters[index].effect.process(blocks[pair], bypass);
+                    }
+                }
+            }
+            self.primed |= !bypass;
+            for lane in lanes.iter_mut() {
+                lane.primed |= !bypass;
             }
         }
     }
 
-    /// Runs only the last component of `stage` (every one with `None`) on `samples`.
-    fn process_last(&mut self, samples: &mut [f32], stage: Option<i32>) {
-        if let Some(filter) = self
-            .filters
-            .iter_mut()
-            .rev()
-            .find(|filter| stage.is_none_or(|s| filter.stage == s))
-        {
-            filter.effect.process(samples, false);
-            self.primed = true;
-        }
+    /// Runs the components of `stage` on the front pair alone.
+    #[cfg(test)]
+    fn process(&mut self, samples: &mut [f32], stage: Option<i32>, bypass: bool) {
+        self.process_layout(&mut [], samples, None, stage, bypass, false);
     }
 
     /// A chain of the same components with the same parameters, each starting empty: the
@@ -444,6 +481,19 @@ fn sync_lanes(
         }
     }
     Ok(())
+}
+
+/// Assigns the actual layout and global speaker offsets to a component chain and its lanes.
+fn configure_chains(
+    chain: &mut FilterChain,
+    lanes: &mut [FilterChain],
+    config: &MixerConfig,
+    measured: bool,
+) {
+    chain.set_layout(config, measured, 0);
+    for (pair, lane) in lanes.iter_mut().enumerate() {
+        lane.set_layout(config, measured, (pair + 1) * 2);
+    }
 }
 
 impl SourceParams {
@@ -688,61 +738,16 @@ impl Source {
         );
     }
 
-    /// Runs each extra pair's `frames` frames through its own components, as
-    /// `chain.process` does for the front pair.
-    fn process_lanes(
+    fn process_components(
         &mut self,
+        samples: &mut [f32],
         extra: Option<&mut Lanes<'_>>,
-        frames: usize,
         stage: Option<i32>,
         bypass: bool,
         last: bool,
     ) {
-        let Some(extra) = extra else {
-            return;
-        };
-        for (pair, chain) in self.lanes.iter_mut().enumerate() {
-            let samples = extra.pair(pair, frames);
-            if last {
-                chain.process_last(samples, stage);
-            } else {
-                chain.process(samples, stage, bypass);
-            }
-        }
-    }
-
-    /// [`Source::run_bypassed_components`] on each extra pair.
-    fn run_bypassed_lanes(
-        &mut self,
-        extra: Option<&mut Lanes<'_>>,
-        frames: usize,
-        stage: Option<i32>,
-        last: bool,
-    ) {
-        let Some(extra) = extra else {
-            return;
-        };
-        if self.chain.filters.is_empty() {
-            return;
-        }
-        let length = self.bypass_extra.len() / self.lanes.len().max(1);
-        for (pair, chain) in self.lanes.iter_mut().enumerate() {
-            let Some(silence) = self
-                .bypass_extra
-                .get_mut(pair * length..pair * length + frames * 2)
-            else {
-                return;
-            };
-            silence.fill(0.0);
-            if last {
-                chain.process_last(silence, stage);
-            } else {
-                chain.process(silence, stage, false);
-            }
-            for (sample, wet) in extra.pair(pair, frames).iter_mut().zip(silence.iter()) {
-                *sample += *wet;
-            }
-        }
+        self.chain
+            .process_layout(&mut self.lanes, samples, extra, stage, bypass, last);
     }
 
     /// `begin`: the extra pairs' dry signal moves aside and the pairs carry silence, as
@@ -811,8 +816,13 @@ impl Source {
 
     /// Active components of a bypassed source process silence; their output (tails of earlier
     /// input) joins the dry route.
-    fn run_bypassed_components(&mut self, samples: &mut [f32], stage: Option<i32>, last: bool) {
-        // A source without components has nothing to run (and no scratch buffer).
+    fn run_bypassed_components(
+        &mut self,
+        samples: &mut [f32],
+        mut extra: Option<&mut Lanes<'_>>,
+        stage: Option<i32>,
+        last: bool,
+    ) {
         if self.chain.filters.is_empty() {
             return;
         }
@@ -820,13 +830,35 @@ impl Source {
             return;
         };
         silence.fill(0.0);
-        if last {
-            self.chain.process_last(silence, stage);
-        } else {
-            self.chain.process(silence, stage, false);
-        }
+        self.bypass_extra.fill(0.0);
+        let stride = self.bypass_extra.len() / self.lanes.len().max(1);
+        let mut lanes = Lanes {
+            samples: &mut self.bypass_extra,
+            stride,
+            offset: 0,
+            channels: extra.as_ref().map_or(0, |e| e.channels),
+        };
+        self.chain.process_layout(
+            &mut self.lanes,
+            silence,
+            extra.as_ref().map(|_| &mut lanes),
+            stage,
+            false,
+            last,
+        );
         for (sample, wet) in samples.iter_mut().zip(silence.iter()) {
             *sample += *wet;
+        }
+        if let Some(extra) = extra.as_mut() {
+            for pair in 0..self.lanes.len() {
+                for (sample, wet) in extra
+                    .pair(pair, samples.len() / 2)
+                    .iter_mut()
+                    .zip(&self.bypass_extra[pair * stride..pair * stride + samples.len()])
+                {
+                    *sample += *wet;
+                }
+            }
         }
     }
 
@@ -1014,6 +1046,8 @@ pub struct Mixer {
     /// The zone id whose non-finite parameters were reported (once).
     zone_rejected: Option<u64>,
     zone_input: Vec<f32>,
+    zone_extra: Vec<f32>,
+    pub(crate) surround_effects: bool,
     /// Unrouted sources with `bypassListenerEffects`, added after `listener_chain`.
     listener_bypass: Vec<f32>,
     /// The listener scripts' block in the output layout's channel count.
@@ -1160,6 +1194,8 @@ impl Mixer {
             zone: None,
             zone_rejected: None,
             zone_input: vec![0.0; BLOCK * 2],
+            zone_extra: vec![0.0; MAX_EXTRA_PAIRS * BLOCK * 2],
+            surround_effects: false,
             listener_bypass: vec![0.0; BLOCK * 2],
             listener_layout: Vec::with_capacity(BLOCK * MAX_OUTPUT_CHANNELS),
             speakers: SpeakerLayout::of(config.output_channels()),
@@ -1237,6 +1273,12 @@ impl Mixer {
             config.extra_pairs(),
             &config,
         )?;
+        configure_chains(
+            &mut self.listener_chain,
+            &mut self.listener_lanes,
+            &config,
+            self.surround_effects,
+        );
         self.warn_surround_reverb();
         // The next frame packet sets the zone up again at the new rate.
         self.zone = None;
@@ -1269,6 +1311,12 @@ impl Mixer {
                 config.extra_pairs(),
                 &config,
             )?;
+            configure_chains(
+                &mut source.chain,
+                &mut source.lanes,
+                &config,
+                source.params.has(source_flags::SURROUND_EFFECTS),
+            );
         }
         Ok(())
     }
@@ -1389,6 +1437,12 @@ impl Mixer {
             tracing::error!("AudioSource {handle}: surround components dropped: {error:#}");
             source.lanes.clear();
         }
+        configure_chains(
+            &mut source.chain,
+            &mut source.lanes,
+            &self.config,
+            params.has(source_flags::SURROUND_EFFECTS),
+        );
         source.params = params;
     }
 
@@ -1398,6 +1452,7 @@ impl Mixer {
         &mut self,
         filters: anyhow::Result<Vec<AudioFilterDescriptor>>,
         transitions: bool,
+        surround: bool,
     ) {
         let filters = match filters {
             Ok(filters) => filters,
@@ -1443,6 +1498,12 @@ impl Mixer {
         {
             self.listener_lanes.clear();
         }
+        configure_chains(
+            &mut self.listener_chain,
+            &mut self.listener_lanes,
+            &self.config,
+            surround,
+        );
         self.listener_filters = filters;
     }
 
@@ -1707,9 +1768,9 @@ impl Mixer {
         if self.config.extra_pairs() > 0
             && !self.warned_surround_reverb
             && self.group_nodes.values().any(|node| {
-                node.effects
-                    .iter()
-                    .any(|e| e.kind() == Some(EffectKind::SfxReverb))
+                node.effects.iter().any(|e| {
+                    e.kind() == Some(EffectKind::SfxReverb) && !e.spec.surround_effects_measured
+                })
             })
         {
             self.warned_surround_reverb = true;
@@ -2312,6 +2373,7 @@ impl Mixer {
         let zone_id = self.zone.as_ref().map_or(0, |zone| zone.id);
         if zone_on {
             self.zone_input[..n * 2].fill(0.0);
+            self.zone_extra.fill(0.0);
         }
         let Self {
             sources,
@@ -2322,6 +2384,8 @@ impl Mixer {
             source_buffer,
             listener_bypass,
             zone_input,
+            zone_extra,
+            surround_effects,
             mix_extra,
             listener_bypass_extra,
             source_extra,
@@ -2483,23 +2547,15 @@ impl Mixer {
                     if voices_running && (!inactive || last_active) {
                         source.run_bypassed_components(
                             buffer,
-                            Some(filter_stage::AFTER_SCRIPTS),
-                            last_active,
-                        );
-                        source.run_bypassed_lanes(
                             lanes.as_mut(),
-                            n,
                             Some(filter_stage::AFTER_SCRIPTS),
                             last_active,
                         );
                     }
                 } else if voices_running {
-                    source
-                        .chain
-                        .process(buffer, Some(filter_stage::AFTER_SCRIPTS), bypass);
-                    source.process_lanes(
+                    source.process_components(
+                        buffer,
                         lanes.as_mut(),
-                        n,
                         Some(filter_stage::AFTER_SCRIPTS),
                         bypass,
                         false,
@@ -2581,8 +2637,13 @@ impl Mixer {
                             if !inactive {
                                 let bypass = bypass && !separate_return;
                                 let stage = Some(filter_stage::BEFORE_SCRIPTS);
-                                source.chain.process(&mut input, stage, bypass);
-                                source.process_lanes(queued.as_mut(), frames, stage, bypass, false);
+                                source.process_components(
+                                    &mut input,
+                                    queued.as_mut(),
+                                    stage,
+                                    bypass,
+                                    false,
+                                );
                             }
                             if let Some(cb) = callback.filter(|_| !below_inactive) {
                                 call_in_layout(
@@ -2598,8 +2659,13 @@ impl Mixer {
                             let stage = Some(filter_stage::AFTER_SCRIPTS);
                             if !inactive {
                                 let bypass = bypass && !separate_return;
-                                source.chain.process(&mut input, stage, bypass);
-                                source.process_lanes(queued.as_mut(), frames, stage, bypass, false);
+                                source.process_components(
+                                    &mut input,
+                                    queued.as_mut(),
+                                    stage,
+                                    bypass,
+                                    false,
+                                );
                             } else if last_active && after_count > 0 {
                                 if after_count > 1 {
                                     input.fill(0.0);
@@ -2607,8 +2673,13 @@ impl Mixer {
                                         queued.samples.fill(0.0);
                                     }
                                 }
-                                source.chain.process_last(&mut input, stage);
-                                source.process_lanes(queued.as_mut(), frames, stage, false, true);
+                                source.process_components(
+                                    &mut input,
+                                    queued.as_mut(),
+                                    stage,
+                                    false,
+                                    true,
+                                );
                             }
                             if separate_return {
                                 source.end_bypass(&mut input);
@@ -2639,6 +2710,12 @@ impl Mixer {
                 let mut zone_send = ZoneSend {
                     return_id: zone_id,
                     samples: &mut zone_input[..n * 2],
+                    extra: (*surround_effects && pairs > 0).then(|| Lanes {
+                        samples: zone_extra,
+                        stride: BLOCK * 2,
+                        offset: 0,
+                        channels: layout - 2,
+                    }),
                     gain: source.params.reverb_zone_mix,
                     buffer_size: dsp_frames,
                 };
@@ -2676,11 +2753,9 @@ impl Mixer {
                 // volume, mute and panning, the signal OnAudioFilterRead receives here.
                 if voices_running || tail {
                     if !separate_return {
-                        source.chain.process(buffer, None, bypass);
-                        source.process_lanes(lanes.as_mut(), n, None, bypass, false);
+                        source.process_components(buffer, lanes.as_mut(), None, bypass, false);
                     } else if !inactive || last_active {
-                        source.run_bypassed_components(buffer, None, last_active);
-                        source.run_bypassed_lanes(lanes.as_mut(), n, None, last_active);
+                        source.run_bypassed_components(buffer, lanes.as_mut(), None, last_active);
                     }
                 }
                 if let Some(end) = source.chain_tail.filter(|_| tail) {
@@ -2706,6 +2781,14 @@ impl Mixer {
             if zone_on && send > 0.0 && (filter || flags & source_flags::ZONE_VOICE_SEND == 0) {
                 for (z, b) in zone_input.iter_mut().zip(buffer.iter()) {
                     *z += *b * send;
+                }
+                if *surround_effects && let Some(lanes) = lanes.as_mut() {
+                    for pair in 0..pairs {
+                        let target = &mut zone_extra[pair * BLOCK * 2..pair * BLOCK * 2 + n * 2];
+                        for (z, b) in target.iter_mut().zip(lanes.pair(pair, n).iter()) {
+                            *z += *b * send;
+                        }
+                    }
                 }
             }
             if need_mix || filter {
@@ -2881,19 +2964,51 @@ impl Mixer {
         // Before the listener's components, which process it too (unmeasured).
         if zone_on && let Some(zone) = &mut self.zone {
             let input = &mut self.zone_input[..n * 2];
-            zone.reverb.process(input);
+            if self.surround_effects && pairs > 0 {
+                let mut lanes = Lanes {
+                    samples: &mut self.zone_extra,
+                    stride: BLOCK * 2,
+                    offset: 0,
+                    channels: self.config.output_channels() - 2,
+                };
+                let mut blocks = lanes.pairs(n);
+                zone.reverb.process_linked(
+                    input,
+                    &mut blocks[..pairs],
+                    self.config.output_channels(),
+                );
+                for pair in 0..pairs {
+                    let start = pair * BLOCK * 2;
+                    for (m, z) in self.mix_extra[start..start + n * 2]
+                        .iter_mut()
+                        .zip(&self.zone_extra[start..start + n * 2])
+                    {
+                        *m += *z;
+                    }
+                }
+            } else {
+                zone.reverb.process(input);
+            }
             for (m, z) in self.mix.iter_mut().zip(input.iter()) {
                 *m += *z;
             }
         }
         if listener_components {
             if has_listener {
-                self.listener_chain
-                    .process(&mut self.mix[..n * 2], None, false);
-                for (pair, chain) in self.listener_lanes.iter_mut().enumerate().take(pairs) {
-                    let range = pair * BLOCK * 2..pair * BLOCK * 2 + n * 2;
-                    chain.process(&mut self.mix_extra[range], None, false);
-                }
+                let mut lanes = Lanes {
+                    samples: &mut self.mix_extra,
+                    stride: BLOCK * 2,
+                    offset: 0,
+                    channels: self.config.output_channels().saturating_sub(2),
+                };
+                self.listener_chain.process_layout(
+                    &mut self.listener_lanes,
+                    &mut self.mix[..n * 2],
+                    (pairs > 0).then_some(&mut lanes),
+                    None,
+                    false,
+                    false,
+                );
             }
             for (m, b) in self.mix[..n * 2]
                 .iter_mut()
@@ -3067,6 +3182,7 @@ impl ZoneSendState {
 struct ZoneSend<'a> {
     return_id: u64,
     samples: &'a mut [f32],
+    extra: Option<Lanes<'a>>,
     gain: f32,
     buffer_size: u64,
 }
@@ -3260,6 +3376,15 @@ struct Lanes<'a> {
 }
 
 impl Lanes<'_> {
+    fn pairs(&mut self, frames: usize) -> [&mut [f32]; MAX_EXTRA_PAIRS] {
+        let mut pairs = self.samples.chunks_mut(self.stride);
+        let offset = self.offset;
+        std::array::from_fn(|_| {
+            pairs
+                .next()
+                .map_or(&mut [][..], |pair| &mut pair[offset..offset + frames * 2])
+        })
+    }
     fn index(&self, channel: usize, frame: usize) -> usize {
         (channel / 2) * self.stride + self.offset + frame * 2 + channel % 2
     }
@@ -3594,6 +3719,12 @@ fn render_voice(
                 if voice.zone_send.include {
                     send.samples[f * 2] += left * gain;
                     send.samples[f * 2 + 1] += right * gain;
+                    if let Some(lanes) = send.extra.as_mut() {
+                        for channel in 0..lanes.channels {
+                            let i = 4 + channel * 2;
+                            lanes.add(channel, f, ((m[i] * l + m[i + 1] * r) * v) * gain);
+                        }
+                    }
                 }
             }
         }
@@ -6173,6 +6304,47 @@ mod tests {
         }
     }
 
+    #[test]
+    fn retained_listener_reverb_uses_the_new_layout_after_reconfiguration() {
+        let mut mixer = Mixer::new(MixerConfig {
+            speaker_mode: speaker_mode::QUAD,
+            ..MixerConfig::default()
+        });
+        mixer.surround_effects = true;
+        let descriptor = component(1, filter_kind::REVERB, 0);
+        mixer.update_listener_filters(Ok(vec![descriptor]), false, true);
+        mixer
+            .reconfigure(MixerConfig {
+                speaker_mode: speaker_mode::MODE_7POINT1,
+                ..MixerConfig::default()
+            })
+            .unwrap();
+        // An identical next frame leaves the existing listener chain in place.
+        mixer.update_listener_filters(Ok(vec![descriptor]), false, true);
+        let frames = 16384;
+        let mut front = vec![0.0; frames * 2];
+        let mut extra = vec![0.0; frames * 2 * 3];
+        extra[frames * 2 * 2 + 123 * 2 + 1] = 0.25;
+        let mut lanes = Lanes {
+            samples: &mut extra,
+            stride: frames * 2,
+            offset: 0,
+            channels: 6,
+        };
+        mixer.listener_chain.process_layout(
+            &mut mixer.listener_lanes,
+            &mut front,
+            Some(&mut lanes),
+            None,
+            false,
+            false,
+        );
+        assert!(
+            front.iter().any(|v| v.abs() > 1e-6),
+            "the new side speaker must feed the shared network"
+        );
+    }
+
     fn components() -> Vec<AudioFilterDescriptor> {
         vec![
             component(11, filter_kind::LOWPASS, filter_stage::BEFORE_SCRIPTS),
@@ -6781,7 +6953,7 @@ mod tests {
         let listen = |bypass: u32| {
             let mut m = Mixer::new(MixerConfig::default());
             m.add_clip(1, impulse_clip(300));
-            m.update_listener_filters(Ok(vec![component(5, filter_kind::REVERB, 0)]), false);
+            m.update_listener_filters(Ok(vec![component(5, filter_kind::REVERB, 0)]), false, false);
             source_with(&mut m, 7, 1, |p| {
                 p.flags = bypass;
             });
@@ -6801,7 +6973,7 @@ mod tests {
         );
         assert_eq!(listen(source_flags::BYPASS_EFFECTS), listen(0));
         let mut m = Mixer::new(MixerConfig::default());
-        m.update_listener_filters(Err(anyhow::anyhow!("refused")), false);
+        m.update_listener_filters(Err(anyhow::anyhow!("refused")), false, false);
         assert!(m.listener_chain.filters.is_empty());
     }
 

@@ -229,6 +229,9 @@ pub struct EffectSpec {
     /// Compat selects block-constant parameter changes using each kernel's state rules.
     #[serde(default)]
     pub effect_transitions_measured: bool,
+    /// Compat selects the measured speaker-wide reverb, modulation and channel linking.
+    #[serde(default)]
+    pub surround_effects_measured: bool,
     /// Compat selects the shared 64-frame effect-slot gain transition.
     #[serde(default)]
     pub slot_wet_transitions_measured: bool,
@@ -280,6 +283,7 @@ impl EffectSpec {
             && self.bypass == other.bypass
             && self.slot_wet_measured == other.slot_wet_measured
             && self.effect_transitions_measured == other.effect_transitions_measured
+            && self.surround_effects_measured == other.surround_effects_measured
             && self.slot_wet_transitions_measured == other.slot_wet_transitions_measured
     }
     pub(crate) fn kernel_settings_match(&self, other: &Self) -> bool {
@@ -705,6 +709,14 @@ fn distortion(samples: &mut [f32], level: f32) {
     }
 }
 
+/// The shared effect-slot dry/wet mix and startup gain, for every speaker channel.
+fn slot_blend(output: &mut [f32], input: &[f32], wet: f32, dry: f32, frame: usize) {
+    let ramp = (frame as f32 / SLOT_STARTUP_FRAMES).min(1.0);
+    for (out, input) in output.iter_mut().zip(input) {
+        *out = (wet * *out + dry * input) * ramp;
+    }
+}
+
 pub struct Effect {
     pub spec: EffectSpec,
     /// `spec.kind`, parsed once; None for a kind the mixer does not run (bypassed only).
@@ -736,6 +748,7 @@ pub struct Effect {
     buffer: u32,
     /// Channels of the output layout the group carries (see [`Effect::set_layout`]).
     layout: usize,
+    channel_offset: usize,
 }
 impl Effect {
     pub fn new(spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<Self> {
@@ -770,6 +783,7 @@ impl Effect {
             dry_ramp: ParameterRamp::new((1.0 - spec.mix_level.unwrap_or(1.0)).max(-1.0)),
             buffer: buffer.max(1),
             layout: 2,
+            channel_offset: 0,
             gain: if spec.kind == EffectKind::Send.name() {
                 spec.send_level
             } else {
@@ -856,6 +870,10 @@ impl Effect {
         if let (Some(pitch), Some(parameters)) = (&mut self.pitch, &self.spec.pitch_shifter) {
             pitch.set_channel_limit(channels, parameters.max_channels);
         }
+    }
+
+    pub(crate) fn set_channel_offset(&mut self, offset: usize) {
+        self.channel_offset = offset;
     }
 
     /// A reconnected source component restarts empty like [`Effect::reset`], except that the
@@ -1011,16 +1029,16 @@ impl Effect {
         self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
         true
     }
-    /// Compressor and Duck Volume link their channels: the louder one drives the gain of all.
+    /// Effects whose histories or detector are shared by all speakers.
     pub fn links_channels(&self) -> bool {
         matches!(
             self.kind,
             Some(EffectKind::Compressor | EffectKind::DuckVolume)
-        )
+        ) || (self.spec.surround_effects_measured && self.kind == Some(EffectKind::SfxReverb))
     }
     /// A linked effect ([`Effect::links_channels`]) on every channel of a layout wider than
-    /// stereo: `front` and the `extra` pairs, with each pair's sidechain blocks. One detector
-    /// and one gain serve all channels, as within a stereo pair (beyond stereo unmeasured).
+    /// stereo: `front` and the `extra` pairs, with each pair's sidechain blocks. A compressor
+    /// shares its detector and gain; measured surround reverb shares its feedback network.
     pub fn process_linked(
         &mut self,
         front: &mut [f32],
@@ -1051,14 +1069,61 @@ impl Effect {
                             .map_or(&[][..], |s| &s[..length])
                     });
                     let count = extra.len().min(MAX_EXTRA_PAIRS);
-                    self.duck
-                        .process_linked(front, extra, side, &sides[..count], duck, self.rate);
+                    self.duck.process_linked_channels(
+                        front,
+                        extra,
+                        side,
+                        &sides[..count],
+                        duck,
+                        self.rate,
+                        if self.spec.surround_effects_measured {
+                            self.layout
+                        } else {
+                            2
+                        },
+                    );
                 }
+            }
+            Some(EffectKind::SfxReverb) => {
+                self.process_shared_reverb(front, extra, bypass);
+                return;
             }
             _ => return,
         }
         self.frames = self.frames.saturating_add(frames as u32);
     }
+    /// One reverb network and one effect-slot wrapper across the complete speaker layout.
+    pub(crate) fn process_shared_reverb(
+        &mut self,
+        front: &mut [f32],
+        extra: &mut [&mut [f32]],
+        bypass: bool,
+    ) {
+        if bypass || self.spec.bypass {
+            return;
+        }
+        if let Some(reverb) = &mut self.reverb {
+            let level = self.spec.mix_level;
+            let identity = level == Some(0.0) && self.spec.slot_wet_measured;
+            let audible = self.spec.mix_audible;
+            let age = self.frames as usize;
+            reverb.process_linked_with(front, extra, self.layout, |output, input, frame| {
+                if identity {
+                    output.copy_from_slice(input);
+                } else if let Some(level) = level {
+                    slot_blend(
+                        output,
+                        input,
+                        if audible { level } else { 0.0 },
+                        (1.0 - level).max(-1.0),
+                        age + frame,
+                    );
+                }
+            });
+        }
+        self.frames = self.frames.saturating_add((front.len() / 2) as u32);
+    }
+
     fn send_gain_at(&self, position: u32, channel: usize) -> f32 {
         if position >= self.buffer {
             self.spec.send_level
@@ -1103,10 +1168,7 @@ impl Effect {
                 } else {
                     (wet, dry)
                 };
-                let ramp = ((self.frames as usize + frame) as f32 / SLOT_STARTUP_FRAMES).min(1.0);
-                for (x, input) in out.iter_mut().zip(input) {
-                    *x = (wet * *x + dry * input) * ramp;
-                }
+                slot_blend(out, input, wet, dry, self.frames as usize + frame);
             }
         }
         if !bypass && !self.spec.bypass {
@@ -1176,7 +1238,15 @@ impl Effect {
                 }
                 EffectKind::Chorus => {
                     if let (Some(chorus), Some(spec)) = (&mut self.chorus, &self.spec.chorus) {
-                        chorus.process(samples, spec);
+                        chorus.process_pair(
+                            samples,
+                            spec,
+                            if self.spec.surround_effects_measured {
+                                self.channel_offset
+                            } else {
+                                0
+                            },
+                        );
                     }
                 }
                 _ => self.simple.process(
@@ -1263,8 +1333,11 @@ impl GroupNode {
                 effects: Vec::new(),
             });
         }
-        for lane in &mut self.lanes {
+        for (pair, lane) in self.lanes.iter_mut().enumerate() {
             lane.effects = sync_effects(std::mem::take(&mut lane.effects), &spec.effects, config)?;
+            for effect in &mut lane.effects {
+                effect.set_channel_offset((pair + 1) * 2);
+            }
         }
         let mut after_attenuation = false;
         self.input_fade = self.effects.iter().any(|effect| {

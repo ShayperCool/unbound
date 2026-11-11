@@ -563,6 +563,7 @@ namespace UnityEngine.Audio
                     mixLevel = !bypass && rule.Wet && effect.m_EnableWetMix ? AudioMixer.DspGain(wetDb, rule.MaxWetDb) : (float?)null,
                     slotWetMeasured = Compat.MixerStaticWetMeasured,
                     effectTransitionsMeasured = Compat.MixerEffectTransitionsMeasured,
+                    surroundEffectsMeasured = Compat.AudioSurroundEffectsMeasured,
                     slotWetTransitionsMeasured = Compat.MixerWetTransitionsMeasured,
                     mixAudible = wetDb > (Compat.MixerStaticWetMeasured ? AudioMixer.MeasuredWetAudibilityDb : AudioMixer.LegacyWetAudibilityDb),
                     duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
@@ -777,7 +778,11 @@ namespace Unbound.Runtime
             for (int i = 0; i < v.Length; i++)
             {
                 v[i] = Parameter(names[i]) is string guid ? mixer.Value(guid) : defaults[i];
-                if (!(v[i] >= minimums[i] && v[i] <= maximums[i]))
+                if (Compat.MixerCompressorParametersMeasured && m_EffectName == Compressor) {
+                    if (!float.IsFinite(v[i])) throw new NotSupportedException("AudioMixer Compressor " + names[i] + " must be finite");
+                    v[i] = Mathf.Clamp(v[i], minimums[i], maximums[i]);
+                }
+                else if (!(v[i] >= minimums[i] && v[i] <= maximums[i]))
                     throw new NotSupportedException("AudioMixer " + m_EffectName + " " + names[i] + " " + v[i] + " is outside the Editor's range " + minimums[i] + " to " + maximums[i]);
             }
             return v;
@@ -868,8 +873,7 @@ namespace Unbound.Runtime
             // Feedback is obsolete and has no measured effect, including the mixer's signed range.
             float rawDelay = Parameter("Delay") is string delayGuid ? mixer.Value(delayGuid) : ChorusDefaults[4];
             float? delay = rawDelay <= 100f ? Mathf.Max(0f, rawDelay) : null;
-            // Wet mix tap 3 (v[3]) has no measured effect on stereo output; wider layouts are unmeasured.
-            return new { dry = v[0], wet1 = v[1], wet2 = v[2], delay, rate = v[5], depth = v[6] };
+            return new { dry = v[0], wet1 = v[1], wet2 = v[2], wet3 = v[3], delay, rate = v[5], depth = v[6] };
         }
         internal object ParamEqConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

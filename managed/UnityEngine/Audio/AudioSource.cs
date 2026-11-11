@@ -784,6 +784,7 @@ namespace UnityEngine
             if (m_HasFilter && isActiveAndEnabled) flags |= AudioSourceFlags.Filter;
             // Component parameter changes share the measured mixer effect transitions.
             if (Compat.MixerEffectTransitionsMeasured) flags |= AudioSourceFlags.EffectTransitions;
+            if (Compat.AudioSurroundEffectsMeasured) flags |= AudioSourceFlags.SurroundEffects;
             var packet = new AudioSourcePacket
             {
                 Clip = clip != null ? clip.m_Handle : 0,

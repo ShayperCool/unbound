@@ -338,102 +338,139 @@ impl SfxReverb {
 
     /// Processes interleaved stereo in place: dry level plus early and late reverb.
     pub fn process(&mut self, samples: &mut [f32]) {
-        for stereo in samples.chunks_exact_mut(2) {
-            if self.buffer_position == 0 {
-                self.previous = self.c;
-                self.c = self.pending;
-                self.transitioning = self.previous != self.c;
-            }
-            let phase = self.buffer_position;
-            let size = self.buffer_size;
-            let c = if self.transitioning {
-                self.previous.at(self.c, phase, size)
-            } else {
-                self.c
-            };
+        self.process_linked(samples, &mut [], 2);
+    }
 
-            let mut mono = stereo[0] + stereo[1];
-            if c.hf != 0.0 {
-                self.hf[0] = (self.hf[0] - mono) * c.hf + mono;
-                self.hf[1] = (self.hf[1] - self.hf[0]) * c.hf + self.hf[0];
-                mono = self.hf[1];
+    /// One common eight-line network for all active speakers. Extra lanes store channel pairs;
+    /// `channels` excludes the unused slot of an odd layout. No histories are allocated here.
+    pub fn process_linked(&mut self, front: &mut [f32], extra: &mut [&mut [f32]], channels: usize) {
+        self.process_linked_with(front, extra, channels, |_, _, _| {});
+    }
+
+    /// Runs the network and an optional caller-owned output mix with the original dry frame.
+    pub(crate) fn process_linked_with(
+        &mut self,
+        front: &mut [f32],
+        extra: &mut [&mut [f32]],
+        channels: usize,
+        mut finish: impl FnMut(&mut [f32], &[f32], usize),
+    ) {
+        debug_assert!((2..=8).contains(&channels));
+        for frame in 0..front.len() / 2 {
+            let mut input = [0.0; 8];
+            input[..2].copy_from_slice(&front[frame * 2..frame * 2 + 2]);
+            for channel in 2..channels {
+                input[channel] = extra[(channel - 2) / 2][frame * 2 + channel % 2];
+            }
+            let dry = input;
+            self.process_frame(&mut input[..channels]);
+            finish(&mut input[..channels], &dry[..channels], frame);
+            front[frame * 2..frame * 2 + 2].copy_from_slice(&input[..2]);
+            for channel in 2..channels {
+                extra[(channel - 2) / 2][frame * 2 + channel % 2] = input[channel];
+            }
+        }
+    }
+
+    pub(crate) fn process_frame(&mut self, speakers: &mut [f32]) {
+        let channels = speakers.len();
+        if self.buffer_position == 0 {
+            self.previous = self.c;
+            self.c = self.pending;
+            self.transitioning = self.previous != self.c;
+        }
+        let phase = self.buffer_position;
+        let size = self.buffer_size;
+        let c = if self.transitioning {
+            self.previous.at(self.c, phase, size)
+        } else {
+            self.c
+        };
+
+        let mut mono = speakers[0] + speakers[1];
+        for &sample in &speakers[2..] {
+            mono += sample;
+        }
+        if c.hf != 0.0 {
+            self.hf[0] = (self.hf[0] - mono) * c.hf + mono;
+            self.hf[1] = (self.hf[1] - self.hf[0]) * c.hf + self.hf[0];
+            mono = self.hf[1];
+        } else {
+            self.hf.fill(mono);
+        }
+        if c.lf {
+            let [x1, x2, y1, y2] = self.lf;
+            let y = c.lf_b[0] * mono + c.lf_b[1] * x1 + c.lf_b[2] * x2
+                - c.lf_a[0] * y1
+                - c.lf_a[1] * y2;
+            self.lf = [mono, x1, y, y1];
+            mono = y;
+        }
+        let n = self.input.len();
+        self.input[self.pos % n] = mono;
+        let mut out = [0.0f32; 8];
+        let mut x =
+            self.input_tap(self.previous.early[0][0], c.early[0][0], phase, size) * c.early_gain;
+        for (line, pos) in self.allpass.iter_mut().zip(&mut self.allpass_pos) {
+            let delayed = line[*pos];
+            let v = x + EARLY_ALLPASS_GAIN * delayed;
+            x = delayed - EARLY_ALLPASS_GAIN * v;
+            line[*pos] = v;
+            *pos = (*pos + 1) % line.len();
+        }
+        let early_len = self.early_output.len();
+        self.early_output[self.pos % early_len] = x;
+        for (ch, output) in out[..channels].iter_mut().enumerate() {
+            for tap in (0..8 / channels).map(|k| ch + k * channels) {
+                let offset = c.early[tap % 2][tap / 2] - c.early[0][0];
+                *output += self.early_output[(self.pos + early_len - offset) % early_len];
+            }
+        }
+        let mut y = [0.0f32; 8];
+        for (k, y) in y.iter_mut().enumerate() {
+            let input = self.input_tap(self.previous.late[k], c.late[k], phase, size);
+            let line = (k + 1) % 8;
+            let feedback = if self.previous.feedback[k] == c.feedback[k]
+                && self.previous.decay[k] == c.decay[k]
+            {
+                c.decay[k] * self.line_at(line, c.feedback[k])
             } else {
-                self.hf.fill(mono);
+                blend(
+                    self.previous.decay[k] * self.line_at(line, self.previous.feedback[k]),
+                    c.decay[k] * self.line_at(line, c.feedback[k]),
+                    phase,
+                    size,
+                )
+            };
+            let v = (input * c.late_gain + feedback) * c.rotation.1;
+            self.damped[k] = (self.damped[k] - v) * c.damping[k] + v;
+            *y = self.damped[k];
+        }
+        // Rotate the eight feedback lines through three unnormalized butterfly stages.
+        let (rotation, _) = c.rotation;
+        for bit in [1, 2, 4] {
+            for i in (0..8).filter(|i| i & bit == 0) {
+                let (a, b) = (y[i], y[i | bit]);
+                y[i] = a + rotation * b;
+                y[i | bit] = b - rotation * a;
             }
-            if c.lf {
-                let [x1, x2, y1, y2] = self.lf;
-                let y = c.lf_b[0] * mono + c.lf_b[1] * x1 + c.lf_b[2] * x2
-                    - c.lf_a[0] * y1
-                    - c.lf_a[1] * y2;
-                self.lf = [mono, x1, y, y1];
-                mono = y;
+        }
+        let len = self.line_len;
+        let at = self.pos % len;
+        for (u, value) in y.iter().enumerate() {
+            self.lines[u * len + at] = *value;
+        }
+        for ch in 0..channels {
+            let mut late = 0.0;
+            for tap in (0..8 / channels).map(|k| ch + k * channels) {
+                late += self.line_at((tap + 1) % 8, c.fan_out[tap]);
             }
-            let n = self.input.len();
-            self.input[self.pos % n] = mono;
-            let mut out = [0.0f32; 2];
-            let mut x = self.input_tap(self.previous.early[0][0], c.early[0][0], phase, size)
-                * c.early_gain;
-            for (line, pos) in self.allpass.iter_mut().zip(&mut self.allpass_pos) {
-                let delayed = line[*pos];
-                let v = x + EARLY_ALLPASS_GAIN * delayed;
-                x = delayed - EARLY_ALLPASS_GAIN * v;
-                line[*pos] = v;
-                *pos = (*pos + 1) % line.len();
-            }
-            let early_len = self.early_output.len();
-            self.early_output[self.pos % early_len] = x;
-            for (ch, taps) in c.early.iter().enumerate() {
-                for delay in taps {
-                    let offset = delay - c.early[0][0];
-                    out[ch] += self.early_output[(self.pos + early_len - offset) % early_len];
-                }
-            }
-            let mut y = [0.0f32; 8];
-            for (k, y) in y.iter_mut().enumerate() {
-                let input = self.input_tap(self.previous.late[k], c.late[k], phase, size);
-                let line = (k + 1) % 8;
-                let feedback = if self.previous.feedback[k] == c.feedback[k]
-                    && self.previous.decay[k] == c.decay[k]
-                {
-                    c.decay[k] * self.line_at(line, c.feedback[k])
-                } else {
-                    blend(
-                        self.previous.decay[k] * self.line_at(line, self.previous.feedback[k]),
-                        c.decay[k] * self.line_at(line, c.feedback[k]),
-                        phase,
-                        size,
-                    )
-                };
-                let v = (input * c.late_gain + feedback) * c.rotation.1;
-                self.damped[k] = (self.damped[k] - v) * c.damping[k] + v;
-                *y = self.damped[k];
-            }
-            // Rotate the eight feedback lines through three unnormalized butterfly stages.
-            let (rotation, _) = c.rotation;
-            for bit in [1, 2, 4] {
-                for i in (0..8).filter(|i| i & bit == 0) {
-                    let (a, b) = (y[i], y[i | bit]);
-                    y[i] = a + rotation * b;
-                    y[i | bit] = b - rotation * a;
-                }
-            }
-            let len = self.line_len;
-            let at = self.pos % len;
-            for (u, value) in y.iter().enumerate() {
-                self.lines[u * len + at] = *value;
-            }
-            let mut late = [0.0f32; 2];
-            for (j, &delay) in c.fan_out.iter().enumerate() {
-                late[j % 2] += self.line_at((j + 1) % 8, delay);
-            }
-            for ch in 0..2 {
-                stereo[ch] = c.dry * stereo[ch] + out[ch] + late[ch];
-            }
-            self.pos = self.pos.wrapping_add(1);
-            self.buffer_position += 1;
-            if self.buffer_position == self.buffer_size {
-                self.buffer_position = 0;
-            }
+            speakers[ch] = c.dry * speakers[ch] + out[ch] + late;
+        }
+        self.pos = self.pos.wrapping_add(1);
+        self.buffer_position += 1;
+        if self.buffer_position == self.buffer_size {
+            self.buffer_position = 0;
         }
     }
 }
@@ -697,6 +734,60 @@ mod tests {
                 assert_eq!(a, b, "{rate} {buffer} block {block}");
                 if block == 9 {
                     assert!(a.iter().zip(input).any(|(a, b)| (a - b).abs() > 0.0001));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn one_surround_network_carries_rear_input_to_every_speaker_across_partial_buffers() {
+        for channels in [4, 5, 6, 8] {
+            // Non-probe rate and buffer also exercise the general history indexing rule.
+            for (rate, buffer) in [(48000, 1024), (32000, 257)] {
+                let frames = 16384;
+                let mut front = vec![0.0; frames * 2];
+                let mut extra = vec![vec![0.0; frames * 2]; (channels - 2_usize).div_ceil(2)];
+                let channel = channels - 1;
+                extra[(channel - 2) / 2][123 * 2 + channel % 2] = 0.25;
+                let (mut split_front, mut split_extra) = (front.clone(), extra.clone());
+                let mut whole = SfxReverb::new(rate, buffer).unwrap();
+                let mut split = SfxReverb::new(rate, buffer).unwrap();
+                let parameters = spec(&[("dry", -10000.0), ("room", 0.0)]);
+                whole.tune(&parameters);
+                split.tune(&parameters);
+                whole.process_linked(
+                    &mut front,
+                    &mut extra.iter_mut().map(Vec::as_mut_slice).collect::<Vec<_>>(),
+                    channels,
+                );
+                for start in (0..frames).step_by(97) {
+                    let end = (start + 97).min(frames);
+                    let mut lanes: Vec<_> = split_extra
+                        .iter_mut()
+                        .map(|p| &mut p[start * 2..end * 2])
+                        .collect();
+                    split.process_linked(
+                        &mut split_front[start * 2..end * 2],
+                        &mut lanes,
+                        channels,
+                    );
+                }
+                assert_eq!(front, split_front);
+                assert_eq!(extra, split_extra);
+                for channel in 0..channels {
+                    let samples = if channel < 2 {
+                        &front
+                    } else {
+                        &extra[(channel - 2) / 2]
+                    };
+                    assert!(
+                        samples
+                            .iter()
+                            .skip(channel % 2)
+                            .step_by(2)
+                            .any(|x| x.abs() > 1e-6),
+                        "silent speaker {channel}"
+                    );
                 }
             }
         }

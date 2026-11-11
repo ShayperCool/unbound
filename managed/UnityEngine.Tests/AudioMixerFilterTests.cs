@@ -678,6 +678,38 @@ namespace UnityEngine.Tests
             Assert.Throws<NotSupportedException>(() => master.DspConfiguration());
         }
 
+        [Theory]
+        [InlineData(8f, 35f, 10f, 35f)]
+        [InlineData(500f, 35f, 200f, 35f)]
+        [InlineData(8f, 10f, 10f, 20f)]
+        [InlineData(8f, 1500f, 10f, 1000f)]
+        public void CompressorTimesClampForDspAndKeepTheirExposedValues(float attack, float release, float expectedAttack, float expectedRelease)
+        {
+            var (mixer, group, effect) = Fixture();
+            UseEffect(mixer, effect, "Compressor", AudioMixerEffectController.CompressorParameters);
+            Assert.True(mixer.SetFloat("Attack", attack));
+            Assert.True(mixer.SetFloat("Release", release));
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+            var config = payload.RootElement.GetProperty("effects")[0].GetProperty("compressor");
+            Assert.Equal(expectedAttack, config.GetProperty("attack").GetSingle());
+            Assert.True(mixer.GetFloat("Attack", out var rawAttack)); Assert.Equal(attack, rawAttack);
+            Assert.Equal(expectedRelease, config.GetProperty("release").GetSingle());
+            Assert.True(mixer.GetFloat("Release", out var rawRelease)); Assert.Equal(release, rawRelease);
+            ProjectInfo.UnityVersion = "6000.0.72f1";
+            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+        }
+
+        [Theory]
+        [InlineData(float.NaN)]
+        [InlineData(float.PositiveInfinity)]
+        public void InvalidCompressorTimesStillFail(float value)
+        {
+            var (mixer, group, effect) = Fixture();
+            UseEffect(mixer, effect, "Compressor", AudioMixerEffectController.CompressorParameters);
+            Assert.True(mixer.SetFloat("Attack", value));
+            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+        }
+
         [Fact]
         public void CompressorParamEqAndSimpleFiltersSendMeasuredDefaults()
         {
@@ -713,9 +745,10 @@ namespace UnityEngine.Tests
                 Assert.Equal(1000f, effects[2].GetProperty("cutoff").GetSingle());
                 Assert.Equal(5000f, effects[3].GetProperty("cutoff").GetSingle());
             }
-            // Values outside the Editor's ranges are unmeasured, unless the unit is bypassed.
+            // The Compressor clamps its DSP value; the exposed script value stays raw.
             Assert.True(mixer.SetFloat("Threshold", -70f));
-            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
+                Assert.Equal(-60f, payload.RootElement.GetProperty("effects")[0].GetProperty("compressor").GetProperty("threshold").GetSingle());
             compressor.m_Bypass = true;
             using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
                 Assert.Equal(JsonValueKind.Null, payload.RootElement.GetProperty("effects")[0].GetProperty("compressor").ValueKind);
@@ -768,9 +801,9 @@ namespace UnityEngine.Tests
             var chorus = payload.RootElement.GetProperty("effects")[0].GetProperty("chorus");
             Assert.Equal(0f, chorus.GetProperty("delay").GetSingle());
             Assert.Equal(20f, chorus.GetProperty("rate").GetSingle());
-            // Wet mix tap 3 keeps its exposed value but has no measured effect on stereo output.
+            // Tap 3 keeps its exposed value and supplies the clamped surround tap.
             Assert.True(mixer.GetFloat("Wet mix tap 3", out float tap3)); Assert.Equal(200f, tap3);
-            Assert.False(chorus.TryGetProperty("wet3", out _));
+            Assert.Equal(1f, chorus.GetProperty("wet3").GetSingle());
             effect.m_EnableWetMix = true;
             group.DspConfiguration();
             effect.m_Bypass = true; group.DspConfiguration();

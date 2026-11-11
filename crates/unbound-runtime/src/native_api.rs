@@ -64,7 +64,7 @@ use std::ffi::c_void;
 /// 55: `external_texture` takes the mip levels where the declared size and color space were.
 /// 56: retained disabled audio components through the filter stage bypass bit, and the
 /// explicit Stop history flag.
-pub const NATIVE_API_VERSION: u32 = 56;
+pub const NATIVE_API_VERSION: u32 = 57;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

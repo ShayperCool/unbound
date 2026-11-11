@@ -1,8 +1,8 @@
 //! Chorus matching the Unity 6000.0.71f1 Editor, tests/projects/audiochorus, on AudioMixer
 //! groups and `AudioChorusFilter`. It is the shared [`ModulatedDelay`] with a 100 ms history and
 //! one tap per output channel, the right channel's sweep a quarter period after the left's.
-//! The left channel takes Wet mix tap 1 and the right tap 2; tap 3 has no measured effect on
-//! stereo output, and wider layouts are unmeasured. Feedback is obsolete and has no measured
+//! Speaker channels cycle through Wet mix taps 1, 2 and 3, at phase offsets 0, 0.25 and 0.5.
+//! The surround profile in tests/projects/audiopitch measures this allocation. Feedback is obsolete and has no measured
 //! effect. These are measurements of one release, not a documented Unity algorithm.
 use super::modulated_delay::{ModulatedDelay, Taps};
 use serde::Deserialize;
@@ -13,6 +13,8 @@ pub struct ChorusSpec {
     pub dry: f32,
     pub wet1: f32,
     pub wet2: f32,
+    #[serde(default = "default_wet3")]
+    pub wet3: f32,
     /// `None`: a Delay above 100 ms, which keeps the previous valid control value.
     pub delay: Option<f32>,
     pub rate: f32,
@@ -21,7 +23,7 @@ pub struct ChorusSpec {
 impl ChorusSpec {
     pub fn validate(&self) -> anyhow::Result<()> {
         anyhow::ensure!(
-            [self.dry, self.wet1, self.wet2, self.depth]
+            [self.dry, self.wet1, self.wet2, self.wet3, self.depth]
                 .iter()
                 .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
                 && self
@@ -37,6 +39,9 @@ impl ChorusSpec {
 
 /// The Delay parameter's default, in milliseconds.
 const DEFAULT_DELAY_MS: f32 = 40.0;
+fn default_wet3() -> f32 {
+    0.5
+}
 
 pub struct Chorus {
     line: ModulatedDelay,
@@ -76,6 +81,10 @@ impl Chorus {
         self.span = 0.0;
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &ChorusSpec) {
+        self.process_pair(samples, spec, 0);
+    }
+    /// Channel taps cycle through the three wet controls and quarter-period phase offsets.
+    pub fn process_pair(&mut self, samples: &mut [f32], spec: &ChorusSpec, offset: usize) {
         if let Some(delay) = spec.delay {
             self.delay = delay;
         }
@@ -90,9 +99,12 @@ impl Chorus {
             samples,
             self.span,
             spec.rate,
-            Taps::Quadrature,
+            Taps::Phases([(offset % 3) as f32 * 0.25, ((offset + 1) % 3) as f32 * 0.25]),
             spec.dry,
-            [spec.wet1, spec.wet2],
+            [
+                [spec.wet1, spec.wet2, spec.wet3][offset % 3],
+                [spec.wet1, spec.wet2, spec.wet3][(offset + 1) % 3],
+            ],
         );
     }
 }
@@ -105,6 +117,7 @@ mod tests {
             dry: 0.0,
             wet1: 1.0,
             wet2: 1.0,
+            wet3: 1.0,
             delay: Some(40.0),
             rate: 0.8,
             depth: 0.03,

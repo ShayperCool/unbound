@@ -190,7 +190,7 @@ The extension preserves every pre-existing reference value and tolerance.
 | Documented, Unity 6000.0 | [AudioEchoFilter.delay](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioEchoFilter-delay.html) and the [Echo Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEchoFilter.html) describe a float delay, 10..5000 ms, without specifying conversion. |
 | Measured in this release/context | Echo component setters/getters store unsigned whole milliseconds: 17/17.1/17.5/17.9 all read 17, 18 reads 18, 10.125 reads 10, 1.25 reads 1, -1.25 reads 4294967296 as float, and 5000.75 reads 5000. The DSP minimum is 1 ms; the shared Echo core then applies its existing eight-frame conversion. `Compat.AudioComponentEchoDelayMeasured` selects this mapping for both source and listener, including the same source mono/noise/impulse controls. Other releases retain the prior float setter and 10 ms minimum until measured. |
 | Compatibility | `Compat.AudioListenerChainMeasured` selects listener support and packet routing on 6000.0.71f1. Other releases retain their previous reverb-only listener support and unmeasured bypass routing. No DSP kernel or audio-thread allocation is added. |
-| Still unmeasured | Listener components interleaved with OnAudioFilterRead scripts and listeners sharing their GameObject with an AudioSource fail clearly. Live Distortion/Chorus parameter changes are measured below; source bypass transitions are measured by the scripted spatial controls; listener bypass transitions and wider output layouts remain unmeasured. |
+| Still unmeasured | Listener components interleaved with OnAudioFilterRead scripts and listeners sharing their GameObject with an AudioSource fail clearly. Live Distortion/Chorus parameter changes are measured below; source bypass transitions are measured by the scripted spatial controls; listener bypass transitions are measured by Q327. Q337 measures source/listener Chorus and Reverb in quad/5.0/5.1/7.1 output; other wide listener chains remain unmeasured. |
 
 # 3D component placement
 
@@ -621,8 +621,8 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   mixer floats, with no evidence of dither or a different clamp order. The timed threshold cases
   add six such samples at 48000 Hz and five at 44100 Hz. Q167 totals 918 and 913 one-step device
   differences respectively across 146 cases; every master/listener float passes the unchanged tolerance.
-- Surround output, sample rates other than 48000/44100 Hz, other DSP buffer sizes and live effect
-  insertion/retargeting remain unmeasured.
+- Q337 measures static surround Duck linking and detector timing in the audiopitch surround profile.
+  Surround timed transitions, other sample rates/buffers and live effect insertion/retargeting remain unmeasured.
 - Compressor, ParamEQ, the simple filters and Distortion are below; the other mixer effects
   still fail loudly.
 
@@ -681,9 +681,11 @@ Measured from the captures, not documented:
 - ParamEQ: Native's single-precision arithmetic is not reproduced. A 100 Hz peak with gain 3
   changes the DC level by up to 3.4e-4 (`eq_startup`, about 2e-4 relative); see the residual
   ledger in docs/COMPATIBILITY_GAPS.md.
-- Values outside the Editor's ranges (through exposed parameters) fail loudly as unmeasured, as do
-  wet mixing on these effects.
-- Unmeasured: other releases, surround output, parameter changes and snapshot transitions while
+- Compressor DSP parameters clamp to the Inspector ranges on 6000.0.71f1 through
+  `Compat.MixerCompressorParametersMeasured`; exposed values stay raw. Other units still reject
+  out-of-range values as unmeasured. Wet mixing on these effects remains unsupported.
+- Q337 measures Compressor linking in quad/5.0/5.1/7.1; ParamEQ and simple-filter surround output remain unmeasured.
+- Unmeasured: other releases, parameter changes and snapshot transitions while
   the effects run, resuming after a bypass, and sample rates other than 48000 and 44100 Hz.
 
 # Mixer and source Distortion
@@ -862,8 +864,8 @@ Max channels is a channel limit: the clamped whole value (0..16), or the output 
 count when it is 0. A group carrying more channels than the limit passes its input through
 unchanged; a change of the processed count restarts the histories, an unchanged count keeps them.
 In mono output the effect processes the single mono channel (see Output layouts below); in quad,
-5.0, 5.1 and 7.1 it processes the front pair the engine graph carries, the other channels being
-silent for stereo sources. The Manual documents only the range and default of Max channels; the
+5.0, 5.1 and 7.1 it processes each active channel. Stereo 2D clips feed the front pair;
+3D clips and scripts can feed other speakers. The Manual documents only the range and default of Max channels; the
 rest is the measured release's behavior, recorded in the probe cause table.
 
 Static slot Wet follows the shared rule below; live Pitch and wet changes are covered below. Active unmeasured releases,
@@ -881,8 +883,8 @@ page says the device may override a request ("Always check the actual mode at ru
 that it uses "the closest match that it supports". The engine mixes every layout channel: the
 front pair in the stereo graph and the other channels as extra stereo pairs in layout order
 (`Lanes` in `mixer.rs`). Voices, source components, scripts, group effects, sends, receives, the
-listener's components and its script all carry them; every extra pair runs through its own
-instances of each component or effect with the same parameters. Measured in Unity 6000.0.71f1 by
+listener's components and its script all carry them. Channel-local histories stay in per-pair
+instances; linked detectors and measured reverb networks process the complete layout together. Measured in Unity 6000.0.71f1 by
 tests/projects/audiopitch layout and device controls:
 
 | Basis | Behavior |
@@ -891,7 +893,8 @@ tests/projects/audiopitch layout and device controls:
 | Measured scripts | `OnAudioFilterRead` on a clipless source and on the listener receives the layout's channel count: 1 in mono, 6 in 5.1. A listener script's writes reach every output channel in AudioRenderer captures (`context_*_listener`, `context_*_generator`). Engine: `call_in_layout`, generators in `GeneratorState`. |
 | Measured quad/5.0/5.1/7.1 | Stereo 2D clips reach FL/FR exactly as in stereo; a mono 2D clip uses the stereo pan law on FL/FR and, in 5.1 and 7.1, feeds LFE at unity gain whatever the pan. 3D directions (listener-space lateral and forward components) pan between the two neighbouring speakers with power-normalized vector-base gains; speakers sit at (∓1, 1) and (∓1, −1), the centre at (0, 1), and in 7.1 at (∓0.5, 0.866), (0, 1), (∓0.707, −0.707) and (∓1, 0). Each 3D channel also feeds LFE at unity; a source at the listener reaches every speaker at √2/n. Spread rotates each clip channel's direction by half the spread either way, and a mono clip averages its two directions. Spatial blend mixes the 2D and 3D speaker levels; attenuation blends apart. Group effects on extra pairs, generators writing every channel and clip-source scripts writing beyond the front pair match. Engine: `spatial::surround`, `SpeakerLayout`. |
 | Measured devices | `driverCapabilities` follows the device's channel count: 4 report Quad, 6 report 5.1, 8 report 7.1, and 1, 2, 3, 5 and 7 report Stereo. A request above the capabilities runs at them (5.0/5.1/7.1 on four channels run quad, 7.1 on six runs 5.1); Prologic always runs as two channels; `GetConfiguration` keeps the request (`device_1`..`device_8`). Engine: `driver_capabilities` and `active_speaker_mode` in `audio/mod.rs`. Without an output device the virtual device stands for a stereo device; `UNBOUND_AUDIO_DEVICE_CHANNELS` sets its channel count (the probe uses the capture device's). Normalize, static Wet and Pitch Shifter check the layout the mixer runs. |
-| Unmeasured | Compressor and Duck Volume link every layout channel (one detector on the loudest channel, one gain), as they link a stereo pair. SFX Reverb, Chorus and Flange run one instance per channel pair beyond stereo (the engine warns once for SFX Reverb); Normalize stays limited to stereo output; reverb zones send and return the front pair only; channel-asymmetric effects in mono (Chorus/Flange modulation, reverbs). The mono and surround rules apply to every release; only 6000.0.71f1 is measured. |
+| Measured surround effects | Q337, tests/projects/audiopitch `surround`: Compressor/Duck link every active speaker including LFE, with Duck timing scaled by channel count; SFX Reverb shares an eight-line network; Chorus cycles three wet taps across speakers; Flange shares its sweep with separate channel histories. Source/listener Chorus/Reverb and front/rear mono 3D zone sends/returns pass at 48000/44100 Hz, 1024-frame buffers, quad/5.0/5.1/7.1. `Compat.AudioSurroundEffectsMeasured` selects the rule. See [contracts and scope](../tests/projects/audiopitch/SURROUND.md). |
+| Unmeasured | Other releases retain per-pair effects and front-pair zones, with a warning for SFX Reverb. Normalize stays limited to stereo. Surround live parameter/topology/layout transitions, wet slots, other rates/buffers, Prologic, scripted zone sends and overlapping surround zones remain unmeasured, as do channel-asymmetric effects in mono. |
 
 AudioRenderer buffers and group sinks hold the layout's channel count in every layout.
 

@@ -488,7 +488,8 @@ namespace Unbound.Runtime
                 ListenerForward = Vector3.forward,
                 ListenerUp = Vector3.up,
                 ListenerVolume = ListenerVolume,
-                Flags = s_ListenerPaused ? AudioFrameFlags.Paused : 0,
+                Flags = (s_ListenerPaused ? AudioFrameFlags.Paused : 0)
+                    | (Compat.AudioSurroundEffectsMeasured ? AudioFrameFlags.SurroundEffects : 0),
             };
             s_Listeners.RemoveAll(l => l == null);
             int listeners = s_Listeners.Count;

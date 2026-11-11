@@ -17,12 +17,12 @@ const SPAN_STEP: f32 = 0.015625;
 const MIN_SPAN: f32 = 4.0;
 
 /// How the two channels read the history.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Taps {
     /// Both channels read at one coordinate (Flange).
     Shared,
-    /// The right channel's sweep runs a quarter period after the left's (Chorus).
-    Quadrature,
+    /// Independent offsets for this pair of speaker channels.
+    Phases([f32; 2]),
 }
 
 pub(crate) struct ModulatedDelay {
@@ -170,10 +170,14 @@ impl ModulatedDelay {
                     target
                 };
                 let frame = (self.offset + f) as f32;
-                let left = self.tap(base, frame, self.phase);
+                let left_phase = match taps {
+                    Taps::Phases(p) => self.phase + p[0],
+                    _ => self.phase,
+                };
+                let left = self.tap(base, frame, left_phase);
                 let right = match taps {
                     Taps::Shared => left,
-                    Taps::Quadrature => self.tap(base, frame, self.phase + 0.25),
+                    Taps::Phases(p) => self.tap(base, frame, self.phase + p[1]),
                 };
                 for (c, (read, next, fraction)) in [left, right].into_iter().enumerate() {
                     let a = self.sample(read, c);
@@ -209,7 +213,7 @@ mod tests {
             &mut samples,
             210.0,
             5.0,
-            Taps::Quadrature,
+            Taps::Phases([0.0, 0.25]),
             0.25,
             [0.75, 0.375],
         );
@@ -256,7 +260,7 @@ mod tests {
                 &mut quadrature,
                 300.0,
                 3.0,
-                Taps::Quadrature,
+                Taps::Phases([0.0, 0.25]),
                 0.5,
                 [0.5, 0.5],
             );
