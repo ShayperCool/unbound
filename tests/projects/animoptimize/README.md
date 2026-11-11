@@ -128,6 +128,7 @@ What the Editor does (measured):
   (its path is the node's) turns the skeleton below it, and the exposed transforms follow.
 
 Not recorded (an exploratory capture; docs/COMPATIBILITY_GAPS.md says how the engine differs):
-the same job on the optimized generic rig with its exposed hand bound. The Editor logs `The
-input bones do not match the skeleton of the Avatar` there and the skin's vertices differ
-between two captures.
+the graph control on the optimized generic rig with its exposed hand bound, whose record
+bakes the skin. The Editor logs `The input bones do not match the skeleton of the Avatar`
+there and the skin's vertices differ between two captures; the job controls on that rig,
+which do not bake the skin, log nothing.
