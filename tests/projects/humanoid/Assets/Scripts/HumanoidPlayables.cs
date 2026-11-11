@@ -20,7 +20,7 @@ public partial class HumanoidProbe
     /// with the body, the human pose and the root motion (its velocities unless
     /// <paramref name="velocities"/> is off).</summary>
     static void PlayGraph(string key, Func<PlayableGraph, Playable> build, bool rootMotion, string rig = "HumanA", Action<Animator> setup = null,
-        bool velocities = true, Action<int> before = null)
+        bool velocities = true, Action<int> before = null, int localsEvery = 0)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
@@ -36,7 +36,7 @@ public partial class HumanoidProbe
             s_JobKey = s_IKKey = key + ".step" + step;
             before?.Invoke(step);
             graph.Evaluate(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
-            Step(key + ".step" + step, animator, handler, false);
+            Step(key + ".step" + step, animator, handler, localsEvery > 0 && step % localsEvery == 0);
             Put(key + ".step" + step + ".motion", "{\"deltaPosition\":" + V(animator.deltaPosition) + ",\"deltaRotation\":" + Q(animator.deltaRotation)
                 + (velocities ? ",\"velocity\":" + V(animator.velocity) + ",\"angularVelocity\":" + V(animator.angularVelocity) : "") + "}");
         }

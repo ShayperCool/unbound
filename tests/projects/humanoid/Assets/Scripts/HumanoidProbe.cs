@@ -463,6 +463,7 @@ public partial class HumanoidProbe : MonoBehaviour
             Leftovers();
             GoalBlends();
             BodyBlends();
+            BoneHandles();
         }
         catch (Exception e)
         {
