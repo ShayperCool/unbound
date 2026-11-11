@@ -593,9 +593,10 @@ namespace Unbound.Runtime
         /// a transition blends the tree with another state (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/humanoid goals.treeTransition, goals.treeSource; a tree alone or a
         /// transition between single clips blends the same either way). Clips without body
-        /// curves take no part in a blend and pass as they are, and so do the clips of a state
-        /// whose weights sum above one (a Direct blend tree's, unmeasured): each still moves
-        /// the root by its own weight.</summary>
+        /// curves take no part in a blend and pass as they are, and so do a state's clips while
+        /// their weights in the layer sum above one (a Direct blend tree's, unmeasured; in a
+        /// transition that depends on its progress): each still moves the root by its own
+        /// weight.</summary>
         void AddStateMotion()
         {
             int moving = 0;
