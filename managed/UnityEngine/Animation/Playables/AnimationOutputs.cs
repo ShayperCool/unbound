@@ -244,7 +244,7 @@ namespace Unbound.Runtime.Playables
             angularVelocity = Vector3.zero;
             if (deltaTime == 0f) return;
             velocity = deltaPosition / deltaTime;
-            deltaRotation.ToAngleAxis(out float angle, out var axis);
+            QuaternionMath.ToAngleAxis(deltaRotation, out float angle, out var axis);
             if (angle > 180f) angle -= 360f;
             angularVelocity = rootRotation * axis * (angle * Mathf.Deg2Rad / deltaTime);
         }

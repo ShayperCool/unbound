@@ -17,6 +17,26 @@ namespace UnityEngine
             return new Quaternion(q.x / mag, q.y / mag, q.z / mag, q.w / mag);
         }
 
+        internal static void ToAngleAxis(Quaternion q, out float angle, out Vector3 axis)
+        {
+            ToAxisAngleRad(q, out axis, out angle);
+            angle *= Mathf.Rad2Deg;
+        }
+
+        internal static void ToAxisAngleRad(Quaternion q, out Vector3 axis, out float angle)
+        {
+            q = Normalize(q);
+            double w = Math.Clamp((double)q.w, -1.0, 1.0);
+            angle = (float)(2.0 * Math.Acos(w));
+            double sinHalf = Math.Sqrt(1.0 - w * w);
+            if (Mathf.Approximately(angle, 0.0f) || sinHalf < 1e-7)
+            {
+                axis = new Vector3(1F, 0F, 0F);
+                return;
+            }
+            axis = new Vector3((float)(q.x / sinHalf), (float)(q.y / sinHalf), (float)(q.z / sinHalf));
+        }
+
         internal static bool Equal(Quaternion a, Quaternion b) => Dot(a, b) > 1f - Quaternion.kEpsilon;
 
         internal static float Angle(Quaternion a, Quaternion b)

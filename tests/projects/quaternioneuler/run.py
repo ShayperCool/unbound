@@ -74,7 +74,7 @@ else:
     command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600']
     if a.mode == 'native':
         job = EditorJob(project, work/(a.label+'-unity.log'), work/(a.label+'-editor'),
-                        args=['-executeMethod', 'ProbeRunner.Record'], graphics=False,
+                        args=['-executeMethod', 'ProbeRunner.Record'], graphics=True, batch=True,
                         env={'PHYSICS_PROBE_OUT': str(out)}, timeout=600,
                         progress_files=[out], progress_timeout=180)
         command = job.command()

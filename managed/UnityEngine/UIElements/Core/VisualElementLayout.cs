@@ -441,7 +441,7 @@ namespace UnityEngine.UIElements
             get => resolvedStyle.rotate.ToQuaternion();
             set
             {
-                value.ToAngleAxis(out float angle, out Vector3 axis);
+                QuaternionMath.ToAngleAxis(value, out float angle, out Vector3 axis);
                 style.rotate = new Rotate(Angle.Degrees(angle), axis);
             }
         }

@@ -102,12 +102,16 @@ namespace UnityEngine
 
         public static bool operator !=(Quaternion lhs, Quaternion rhs) => !(lhs == rhs);
 
-        public static float Dot(Quaternion a, Quaternion b) => a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+        public static float Dot(Quaternion a, Quaternion b) => Unbound.Runtime.Compat.QuaternionApiPrecisionMeasured
+            ? (float)((double)a.x * b.x + (double)a.y * b.y + (double)a.z * b.z + (double)a.w * b.w)
+            : QuaternionMath.Dot(a, b);
 
         /// <summary>The angle in degrees between two rotations.</summary>
         public static float Angle(Quaternion a, Quaternion b)
         {
-            float dot = Math.Min(Math.Abs(Dot(a, b)), 1.0F);
+            float product = Dot(a, b);
+            float dot = Unbound.Runtime.Compat.QuaternionApiPrecisionMeasured
+                ? Mathf.Min(Mathf.Abs(product), 1.0F) : Math.Min(Math.Abs(product), 1.0F);
             return IsEqualUsingDot(dot) ? 0.0f : (float)Math.Acos(dot) * 2.0F * Mathf.Rad2Deg;
         }
 
@@ -237,16 +241,25 @@ namespace UnityEngine
 
         private static void ToAxisAngleRad(Quaternion q, out Vector3 axis, out float angle)
         {
-            q = QuaternionMath.Normalize(q);
-            double w = Math.Clamp((double)q.w, -1.0, 1.0);
-            angle = (float)(2.0 * Math.Acos(w));
-            double sinHalf = Math.Sqrt(1.0 - w * w);
-            if (Mathf.Approximately(angle, 0.0f) || sinHalf < 1e-7)
+            if (!Unbound.Runtime.Compat.QuaternionApiPrecisionMeasured)
             {
-                axis = new Vector3(1F, 0F, 0F);
+                QuaternionMath.ToAxisAngleRad(q, out axis, out angle);
                 return;
             }
-            axis = new Vector3((float)(q.x / sinHalf), (float)(q.y / sinHalf), (float)(q.z / sinHalf));
+            // Axis conversion has its own small-input cutoff, measured by quaternioneuler.
+            const float minimumMagnitude = 1e-5f;
+            float magnitude = MathF.Sqrt(QuaternionMath.Dot(q, q));
+            q = magnitude < minimumMagnitude ? identity
+                : new Quaternion(q.x / magnitude, q.y / magnitude, q.z / magnitude, q.w / magnitude);
+            angle = 2f * MathF.Acos(q.w);
+            float sinHalf = MathF.Sqrt(1f - q.w * q.w);
+            if (sinHalf <= 1e-6f)
+            {
+                axis = Vector3.right;
+                return;
+            }
+            float inverse = 1f / sinHalf;
+            axis = new Vector3(q.x * inverse, q.y * inverse, q.z * inverse);
         }
 
         // ---- Look / from-to ----------------------------------------------------------------
