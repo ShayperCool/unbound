@@ -140,8 +140,11 @@ namespace Unbound.Runtime
         float[] m_Written = Array.Empty<float>();
         bool[] m_WrittenHeld = Array.Empty<bool>();
         (bool[] Floats, bool[] Objects, int FloatCount)[] m_LayerMasks;
-        readonly List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight)> m_Contributions =
-            new List<(LayerRun, int, StateRun, AnimationClip, float)>();
+        /// <summary>The clips an evaluation sampled, each with its weight and, for a humanoid clip
+        /// whose root motion the sampling already evaluated, its place in
+        /// <see cref="m_HumanClipSamples"/> (−1: none).</summary>
+        readonly List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight, int HumanSample)> m_Contributions =
+            new List<(LayerRun, int, StateRun, AnimationClip, float, int)>();
 
         /// <summary>States left within this update through a transition that completed at once
         /// (no duration): the stretch they played before leaving, up to the exit point, still fires
@@ -149,8 +152,8 @@ namespace Unbound.Runtime
         List<(LayerRun Layer, StateRun Run, double End)> m_Left = new List<(LayerRun, StateRun, double)>();
         // Spare lists for FireEvents (taken while it runs, so a reentrant update allocates its own).
         List<(LayerRun Layer, StateRun Run, double End)> m_LeftSpare = new List<(LayerRun, StateRun, double)>();
-        List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight)> m_ContributionsSpare =
-            new List<(LayerRun, int, StateRun, AnimationClip, float)>();
+        List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight, int HumanSample)> m_ContributionsSpare =
+            new List<(LayerRun, int, StateRun, AnimationClip, float, int)>();
 
         /// <summary>Whether this is the Animator's own player (its speed applies, Animator API
         /// calls reach it) rather than an AnimatorControllerPlayable's.</summary>
@@ -1048,6 +1051,8 @@ namespace Unbound.Runtime
                 m_DeferredPose ??= new Unbound.Runtime.Playables.AnimStream();
                 m_DeferredPose.Reset(Bindings);
                 WritePose(count, stream: m_DeferredPose);
+                // The playable outputs that take this pose on blend and write goals relative to the body.
+                if (PlacesGoals) m_Animator.Human.PlacedGoalsToBody(m_DeferredPose);
                 return;
             }
             if (m_AutomaticUpdate && Attached && AnimationPhases.Split)
@@ -1131,7 +1136,7 @@ namespace Unbound.Runtime
                 Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
             }
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached,
-                skipTransforms: skipTransforms, stream: stream, rootDuringCull: RootDuringCull());
+                skipTransforms: skipTransforms, stream: stream, rootDuringCull: RootDuringCull(), placedGoals: m_PlacedHuman != null);
             if (skipTransforms || stream != null) return;
             FinishWrite(count);
         }
@@ -1142,7 +1147,12 @@ namespace Unbound.Runtime
         {
             if (!Attached) return;
             WriteMassCenterPose(count);
-            if (FootIK() && m_Animator.Human is { } human) human.FootIK = true;
+            if (m_Animator.Human is { } human)
+            {
+                // The goal curves just written hold placed goals (HumanStateGoals).
+                human.GoalsInMotion = true;
+                if (FootIK()) human.FootIK = true;
+            }
             m_Animator.Human?.DefaultPoseUnlessWritten();
             m_Animator.ApplyHumanPose();
             m_Animator.CaptureRootMotionPose();
@@ -1150,28 +1160,31 @@ namespace Unbound.Runtime
 
         /// <summary>
         /// Whether the humanoid pose solves its feet onto their goals for a state's "Foot IK"
-        /// (AnimatorState.iKOnFeet, see <see cref="Unbound.Runtime.Humanoid.HumanIK.SetIKOnFeet"/>):
-        /// a state with it whose humanoid clip is the only one the evaluation samples (6000.0.71f1,
-        /// tests/projects/humanoid footIK). Blended with other humanoid clips (transitions, blend
-        /// trees, layers) the feet goals would be blended relative to the clips' bodies, which Unity
-        /// blends in the motion's frame (footIKTransition): Foot IK is then not applied, with a
-        /// diagnostic.
+        /// (AnimatorState.iKOnFeet, see <see cref="Unbound.Runtime.Humanoid.HumanIK.SetIKOnFeet"/>;
+        /// Manual 6000.0 Animation States: "Enable to respect Foot IK for this state", humanoid
+        /// only): any state with it that the evaluation samples at a weight above 0, alone
+        /// (tests/projects/humanoid footIK) or with other states in a transition, a blend tree or
+        /// on a layer, an additive one included; the feet then go onto the goals all the sampled
+        /// clips blend to (6000.0.71f1, footIKTransition, goals.*). An AnimatorControllerPlayable's
+        /// player still blends goals relative to its clips' bodies (see <see cref="PlacesGoals"/>):
+        /// there Foot IK applies only while one humanoid clip is sampled and is otherwise left
+        /// out with a diagnostic.
         /// </summary>
         internal bool FootIK()
         {
             bool asked = false;
             int humanClips = 0;
-            foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
+            foreach (var (layer, layerIndex, run, clip, weight, _) in m_Contributions)
             {
                 if (weight <= 0f || (layerIndex > 0 && layer.Evaluated <= 0f)) continue;
                 if (run.Def.IKOnFeet) asked = true;
                 if (clip.HasHumanCurves) humanClips++;
             }
             if (!asked) return false;
-            if (humanClips <= 1) return true;
-            Stubs.Ignored("Animator Foot IK of blended humanoid states",
-                "a state's Foot IK is not applied while other humanoid clips blend with its clip (transitions, blend trees, layers): "
-                + "their feet goals blend in another frame than Unity's (not supported yet)");
+            if (Attached || humanClips <= 1) return true;
+            Stubs.Ignored("AnimatorControllerPlayable Foot IK of blended humanoid states",
+                "a state's Foot IK is not applied while an AnimatorControllerPlayable blends its clip with other humanoid clips "
+                + "(transitions, blend trees, layers): it blends their feet goals in another frame than Unity's (not supported yet)");
             return false;
         }
 
@@ -1211,7 +1224,8 @@ namespace Unbound.Runtime
                 var owner = Bindings.FloatOwner[c];
                 m_MassCenterValues[c] = owner != null && owner.HumanCurve >= 0 ? Bindings.Defaults[c] : 0f;
             }
-            PoseWriter.CombineLayers(Bindings, m_MassCenterLayers, k, m_MassCenterValues, null, overDefaults: true, humanBodyInRootMotion: true);
+            PoseWriter.CombineLayers(Bindings, m_MassCenterLayers, k, m_MassCenterValues, null, overDefaults: true, humanBodyInRootMotion: true,
+                placedGoals: m_PlacedHuman != null);
             for (int c = 0; c < n; c++)
             {
                 var owner = Bindings.FloatOwner[c];
@@ -1226,6 +1240,31 @@ namespace Unbound.Runtime
             return mask == null || mask.m_HumanoidParts[(int)AvatarMaskBodyPart.Root];
         }
 
+        /// <summary>The root motion of the humanoid clips this evaluation sampled
+        /// (<see cref="m_Contributions"/> names each clip's), reused by the root motion pass.</summary>
+        readonly List<Unbound.Runtime.Humanoid.HumanRootMotionSample> m_HumanClipSamples = new List<Unbound.Runtime.Humanoid.HumanRootMotionSample>();
+        Unbound.Runtime.Humanoid.HumanStateGoals m_StateGoals;
+        /// <summary>The goals of the state being sampled (null: its clips' goals are not placed).</summary>
+        Unbound.Runtime.Humanoid.HumanStateGoals m_SamplingGoals;
+        Unbound.Runtime.Humanoid.AnimatorHuman m_PlacedHuman;
+
+        /// <summary>Whether this player's humanoid clips place their IK goals by their bodies while
+        /// they are sampled (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>): the
+        /// Animator's own controller, whose root motion pass gives each clip's body. An
+        /// AnimatorControllerPlayable's player has no humanoid root motion (unmeasured, see
+        /// ControllerKind.RootMotion) and keeps its goals relative to the clips' bodies.</summary>
+        bool PlacesGoals => Attached && m_Animator.Human != null;
+
+        /// <summary>A state's times for a humanoid clip's root motion.</summary>
+        Unbound.Runtime.Humanoid.HumanClipMotionInput HumanInput(StateRun run, AnimationClip clip) => new Unbound.Runtime.Humanoid.HumanClipMotionInput
+        {
+            Time = (float)ClipSampling.StateClipNormalized(run.Normalized, clip.length),
+            // A state entered in this update steps the whole update (see Enter).
+            PreviousTime = (float)ClipSampling.StateClipNormalized(run.MotionPrevious ?? run.Previous, clip.length),
+            Speed = SpeedOf(run.Def),
+            CycleOffset = run.Def.CycleOffset + (float)MirrorShift(run.Def, clip),
+        };
+
         int BuildLayerPoses()
         {
             int count = Layers.Length;
@@ -1235,6 +1274,8 @@ namespace Unbound.Runtime
                 m_LayerPoses = new LayerPose[count];
             }
             m_Contributions.Clear();
+            m_HumanClipSamples.Clear();
+            m_PlacedHuman = PlacesGoals ? m_Animator.Human : null;
             // Holding states keep the root motion of the layer's last evaluation.
             for (int i = 0; i < count; i++) Layers[i].Kept = Layers[i].Own;
             for (int i = 0; i < count; i++)
@@ -1341,7 +1382,7 @@ namespace Unbound.Runtime
             {
                 var entry = m_Contributions[k];
                 if (weight <= 0f) m_Contributions.RemoveAt(k);
-                else m_Contributions[k] = (entry.Layer, entry.LayerIndex, entry.Run, entry.Clip, entry.Weight * weight);
+                else m_Contributions[k] = (entry.Layer, entry.LayerIndex, entry.Run, entry.Clip, entry.Weight * weight, entry.HumanSample);
             }
         }
 
@@ -1440,7 +1481,13 @@ namespace Unbound.Runtime
             var motion = MotionOf(layer.Def, run.Def);
             double normalized = run.Normalized + run.Def.CycleOffset + (run.Def.CycleOffsetParameter >= 0 ? Floats[run.Def.CycleOffsetParameter] : 0f);
             bool mirror = Mirrored(run.Def);
+            // The state's humanoid clips place their IK goals and blend them among themselves
+            // before the state joins the layer's pose (additive layers leave the goals alone).
+            m_SamplingGoals = m_PlacedHuman != null && !layer.Def.Additive ? m_StateGoals ??= new Unbound.Runtime.Humanoid.HumanStateGoals(Bindings) : null;
+            m_SamplingGoals?.BeginState();
             SampleMotion(layer, layerIndex, run, motion, mirror, normalized, weight, pose, mask, objectMask);
+            m_SamplingGoals?.EndState(pose, mask, weight);
+            m_SamplingGoals = null;
             if (layer.Def.Additive)
             {
                 // Additive poses are differences. Without write defaults, a state without a motion
@@ -1537,9 +1584,21 @@ namespace Unbound.Runtime
                     // The clip reads the state's time (StateClipNormalized), then its cycle offsets.
                     double read = ClipSampling.StateClipNormalized(run.Normalized, clip.length);
                     double time = clip.isLooping ? read + (normalized - run.Normalized) + MirrorShift(run.Def, clip) + clip.m_CycleOffset : read;
+                    // A humanoid clip of the Animator's own controller: its root motion gives the body
+                    // its goals are placed by (additive layers take neither, see LayerMask).
+                    int humanSample = -1;
+                    var goals = clip.HasHumanCurves ? m_SamplingGoals : null;
+                    if (goals != null)
+                    {
+                        m_PlacedHuman.SampleMotion(clip, clip.HumanClipMotion, HumanInput(run, clip), out var sample);
+                        humanSample = m_HumanClipSamples.Count;
+                        m_HumanClipSamples.Add(sample);
+                        goals.BeginClip(sample.Body);
+                    }
                     ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, time, clip.isLooping), weight, pose, mask, objectMask,
-                        layer.Def.Additive ? Bindings.AdditiveReference(bound) : null, loopPose: true);
-                    m_Contributions.Add((layer, layerIndex, run, clip, weight));
+                        layer.Def.Additive ? Bindings.AdditiveReference(bound) : null, loopPose: true, goals);
+                    goals?.AddClip(weight);
+                    m_Contributions.Add((layer, layerIndex, run, clip, weight, humanSample));
                     break;
                 }
                 case BlendTreeMotion tree:
@@ -1623,6 +1682,14 @@ namespace Unbound.Runtime
                     if (bound.EulerRotation != null)
                         foreach (var ch in bound.EulerRotation) if (ch >= 0 && ch + 3 < floats.Length) floats[ch + 3] = true;
                     foreach (var ch in bound.Object) if (ch >= 0 && ch < objects.Length) objects[ch] = true;
+                    // A humanoid clip gives every IK goal, with or without a curve for it
+                    // (HumanStateGoals).
+                    if (clip.HasHumanCurves && PlacesGoals)
+                        for (int curve = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst; curve < Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst; curve++)
+                        {
+                            int ch = Bindings.HumanChannel(curve);
+                            if (ch >= 0 && ch < floats.Length) floats[ch] = true;
+                        }
                     break;
                 }
                 case BlendTreeMotion tree:
@@ -1631,21 +1698,41 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>The channels a layer's avatar mask lets it animate (null: all).</summary>
+        /// <summary>The channels a layer may animate (null: all): what its avatar mask lets through
+        /// and, on an additive layer, not the humanoid IK goal curves. An additive layer leaves the
+        /// goals of the layers below as they are, whatever its clips' goal curves hold and with or
+        /// without a mask (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
+        /// goals.additive, goals.additiveFootIK; AnimationLayerMixerPlayables likewise,
+        /// mixer.additiveNoRoot).</summary>
         (bool[], bool[]) LayerMask(int index)
         {
             var mask = Layers[index].Def.Mask;
-            if (mask == null || !mask.Filters) return (null, null);
+            bool filters = mask != null && mask.Filters;
+            bool noGoals = Layers[index].Def.Additive && AnyGoalChannel();
+            if (!filters && !noGoals) return (null, null);
             var cached = m_LayerMasks[index];
             if (cached.Floats != null && cached.FloatCount == Bindings.FloatCount && cached.Objects.Length == Bindings.ObjectCount)
-                return (cached.Floats, cached.Objects);
+                return (cached.Floats, filters ? cached.Objects : null);
             var floats = new bool[Bindings.FloatCount];
             var objects = new bool[Bindings.ObjectCount];
             var root = Bindings.Root != null ? Bindings.Root.transform : null;
-            for (int c = 0; c < floats.Length; c++) floats[c] = mask.AllowsGroup(root, Bindings.FloatOwner[c]);
-            for (int c = 0; c < objects.Length; c++) objects[c] = mask.AllowsGroup(root, Bindings.ObjectOwner[c]);
+            for (int c = 0; c < floats.Length; c++)
+            {
+                var owner = Bindings.FloatOwner[c];
+                floats[c] = (!filters || mask.AllowsGroup(root, owner))
+                    && !(noGoals && owner != null && Unbound.Runtime.Humanoid.HumanStateGoals.Slot(owner.HumanCurve) >= 0);
+            }
+            for (int c = 0; c < objects.Length; c++) objects[c] = !filters || mask.AllowsGroup(root, Bindings.ObjectOwner[c]);
             m_LayerMasks[index] = (floats, objects, Bindings.FloatCount);
-            return (floats, objects);
+            return (floats, filters ? objects : null);
+        }
+
+        /// <summary>Whether any humanoid IK goal curve is bound.</summary>
+        bool AnyGoalChannel()
+        {
+            for (int curve = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst; curve < Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst; curve++)
+                if (Bindings.HumanChannel(curve) >= 0) return true;
+            return false;
         }
 
         // ------------------------------------------------------------------ events and callbacks
@@ -1656,7 +1743,7 @@ namespace Unbound.Runtime
             var left = m_Left;
             m_Left = m_LeftSpare ?? new List<(LayerRun, StateRun, double)>();
             m_LeftSpare = null;
-            var contributions = m_ContributionsSpare ?? new List<(LayerRun, int, StateRun, AnimationClip, float)>();
+            var contributions = m_ContributionsSpare ?? new List<(LayerRun, int, StateRun, AnimationClip, float, int)>();
             m_ContributionsSpare = null;
             try
             {
@@ -1669,7 +1756,7 @@ namespace Unbound.Runtime
                         run.Fresh && !run.EventsStarted);
                 }
                 contributions.AddRange(m_Contributions);
-                foreach (var (layer, layerIndex, run, played, weight) in contributions)
+                foreach (var (layer, layerIndex, run, played, weight, _) in contributions)
                 {
                     var clip = played.Asset;
                     if (clip.m_Events.Count == 0 || weight <= 0f) continue;

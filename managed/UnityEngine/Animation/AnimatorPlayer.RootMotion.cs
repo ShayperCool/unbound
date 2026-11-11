@@ -205,7 +205,7 @@ namespace Unbound.Runtime
             Array.Clear(m_RootTurns);
             Array.Clear(m_RootTurnWeights);
             Array.Clear(m_RootDeltas);
-            foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
+            foreach (var (layer, layerIndex, run, clip, weight, _) in m_Contributions)
             {
                 // A layer of weight 0 moves nothing; its step only matters to a state that may hold it.
                 if (weight <= 0f || (!m_MayHold && layerIndex > 0 && layer.Evaluated <= 0f)) continue;
@@ -307,7 +307,7 @@ namespace Unbound.Runtime
             start = parent == null ? t.localPosition
                 : parent.position + parent.rotation * Vector3.Scale(parent.lossyScale, t.localPosition);
             startRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
-            foreach (var (_, _, _, clip, _) in m_Contributions)
+            foreach (var (_, _, _, clip, _, _) in m_Contributions)
                 if (clip.HasHumanCurves && !clip.BodyMovesRoot(animator)) return false;
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
             if (!animator.m_ApplyRootMotion && !MoveCallbacks.Any(animator))
@@ -326,7 +326,7 @@ namespace Unbound.Runtime
         /// it without the root's own channels showing it (for a controller playable).</summary>
         internal bool SampledRootNodeMotion()
         {
-            foreach (var (_, _, _, clip, _) in m_Contributions)
+            foreach (var (_, _, _, clip, _, _) in m_Contributions)
                 if (clip.MotionCurves() != null || clip.BodyMovesRoot(m_Animator)) return true;
             return false;
         }
@@ -425,7 +425,7 @@ namespace Unbound.Runtime
             // Where the base layer's motion would bring the root by the end of the match.
             var toEnd = Vector3.zero;
             var turnToEnd = Quaternion.identity;
-            foreach (var (_, layerIndex, contribution, clip, weight) in m_Contributions)
+            foreach (var (_, layerIndex, contribution, clip, weight, _) in m_Contributions)
             {
                 if (layerIndex != 0 || contribution != run || weight <= 0f) continue;
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
@@ -504,7 +504,7 @@ namespace Unbound.Runtime
             t = Vector3.zero;
             q = new Quaternion(0f, 0f, 0f, 0f);
             float total = 0f;
-            foreach (var (_, layerIndex, run, clip, weight) in m_Contributions)
+            foreach (var (_, layerIndex, run, clip, weight, _) in m_Contributions)
             {
                 if (layerIndex != layer || weight <= 0f || !clip.HasHumanCurves) continue;
                 total += weight;
@@ -624,28 +624,24 @@ namespace Unbound.Runtime
                 m_HumanWeights.Clear();
                 m_HumanBodyDifferences.Clear();
                 bool additive = Layers[i].Def.Additive;
-                foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
+                foreach (var (layer, layerIndex, run, clip, weight, sampled) in m_Contributions)
                 {
                     if (layerIndex != i || weight <= 0f || !clip.HasHumanCurves) continue;
-                    var def = run.Def;
-                    var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
-                    {
-                        Time = (float)ClipSampling.StateClipNormalized(run.Normalized, clip.length),
-                        // A state entered in this update steps the whole update (see Enter).
-                        PreviousTime = (float)ClipSampling.StateClipNormalized(run.MotionPrevious ?? run.Previous, clip.length),
-                        Speed = SpeedOf(def),
-                        CycleOffset = def.CycleOffset + (float)MirrorShift(def, clip),
-                    };
                     if (additive)
                     {
                         // Additive layers leave the root motion alone; only their body differences apply.
                         if (!Unbound.Runtime.Humanoid.HumanRootMotion.HasRoot(clip.HumanPresent)) continue;
-                        m_HumanBodyDifferences.Add(human.AdditiveBodyDifference(clip, clip.HumanClipMotion, input));
+                        m_HumanBodyDifferences.Add(human.AdditiveBodyDifference(clip, clip.HumanClipMotion, HumanInput(run, clip)));
                         m_HumanWeights.Add(weight);
                         continue;
                     }
-                    human.SampleMotion(clip, clip.HumanClipMotion, input, out var sample);
-                    m_HumanSamples.Add(sample);
+                    // Sampled with the clip's pose, which placed its goals by this body.
+                    if (sampled >= 0) m_HumanSamples.Add(m_HumanClipSamples[sampled]);
+                    else
+                    {
+                        human.SampleMotion(clip, clip.HumanClipMotion, HumanInput(run, clip), out var sample);
+                        m_HumanSamples.Add(sample);
+                    }
                     m_HumanWeights.Add(weight);
                 }
                 if (!additive) HoldHumanMotion(i);

@@ -210,6 +210,8 @@ namespace Unbound.Runtime
                 for (int c = 0; c < Bindings.FloatCount; c++)
                 {
                     if (!animated[c] || (mask != null && !mask[c])) continue;
+                    // Placed IK goals join the pose with their state, completed there (HumanStateGoals).
+                    if (m_SamplingGoals != null && Unbound.Runtime.Humanoid.HumanStateGoals.Slot(Bindings.FloatOwner[c].HumanCurve) >= 0) continue;
                     // A Direct node's output has its own weight. Its raw scalar sum may exceed one;
                     // a low sum is completed from the bound default, rather than the previous frame
                     // (in an additive layer: with no difference).

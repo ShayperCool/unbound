@@ -462,6 +462,21 @@ namespace Unbound.Runtime
         internal Object[] ObjectDefaults = new Object[4];
         internal PropertyGroup[] FloatOwner = new PropertyGroup[16];
         internal PropertyGroup[] ObjectOwner = new PropertyGroup[4];
+        /// <summary>Whether a channel starts a humanoid rotation (the body's RootQ, unless
+        /// <paramref name="goalsOnly"/>, or an IK goal's) bound as four consecutive curves, which
+        /// humanoid poses blend as a rotation and not curve by curve.</summary>
+        internal bool HumanRotationStart(int c, bool goalsOnly = false)
+        {
+            const int RootQ = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst + 3;
+            const int GoalFirst = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst, MuscleFirst = Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst;
+            if (c < 0 || c + 3 >= FloatCount || c + 3 >= FloatOwner.Length) return false;
+            int curve = FloatOwner[c]?.HumanCurve ?? -1;
+            if ((goalsOnly || curve != RootQ) && (curve < GoalFirst || curve >= MuscleFirst || (curve - GoalFirst) % 7 != 3)) return false;
+            for (int k = 1; k < 4; k++)
+                if (FloatOwner[c + k]?.HumanCurve != curve + k) return false;
+            return true;
+        }
+
         int[] m_HumanChannels;
         int m_HumanChannelsFor = -1;
 
@@ -814,6 +829,32 @@ namespace Unbound.Runtime
                 foreach (var ch in EulerRotation) if (ch >= 0 && ch + 3 < floatCount) m_FloatMask[ch + 3] = true;
             m_MaskFloatCount = floatCount;
             return m_FloatMask;
+        }
+
+        int[] m_GoalSlots;
+        bool m_GoalSlotsMade;
+
+        /// <summary>Per curve, the humanoid IK goal curve it writes
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals.Slot"/>, −1 for the others);
+        /// null when the clip has no goal curve.</summary>
+        internal int[] GoalSlots(AnimationBindings bindings)
+        {
+            if (m_GoalSlotsMade) return m_GoalSlots;
+            m_GoalSlotsMade = true;
+            for (int i = 0; i < Float.Length; i++)
+            {
+                int ch = Float[i];
+                var owner = ch >= 0 && ch < bindings.FloatOwner.Length ? bindings.FloatOwner[ch] : null;
+                int slot = owner != null ? Unbound.Runtime.Humanoid.HumanStateGoals.Slot(owner.HumanCurve) : -1;
+                if (slot < 0) continue;
+                if (m_GoalSlots == null)
+                {
+                    m_GoalSlots = new int[Float.Length];
+                    Array.Fill(m_GoalSlots, -1);
+                }
+                m_GoalSlots[i] = slot;
+            }
+            return m_GoalSlots;
         }
 
         internal bool[] ObjectMask(int objectCount)

@@ -685,17 +685,35 @@ namespace Unbound.Runtime.Humanoid
         /// becomes the clips' bodies relative to their motions, blended, plus what the layers'
         /// values hold beyond the clips' blended RootX (additive layers); the goals (relative to the
         /// body) move with it.</summary>
-        public static void ApplyToPose(HumanPose pose, in HumanRootMotionSample sample)
+        /// <param name="placed">Per curve index, whether the pose's curve was written, when the
+        /// written goal curves hold goals placed by their clips' bodies already
+        /// (<see cref="HumanStateGoals"/>): those goals stay as they are, whatever additive
+        /// layers add to the body (null: every goal is relative to the body).</param>
+        public static void ApplyToPose(HumanPose pose, in HumanRootMotionSample sample, bool[] placed = null)
         {
-            var body = sample.Body;
-            if (!Same(pose.RootX.t, sample.Root.t) || !Same(pose.RootX.q, sample.Root.q))
-            {
-                var extra = M.QRotate(M.QConj(sample.Motion.q), pose.RootX.t - sample.Root.t);
-                var turn = M.QMul(M.QConj(sample.Root.q), pose.RootX.q);
-                body = new Trs(sample.Body.t + extra, M.QNormalize(M.QMul(sample.Body.q, turn)), F4.One3);
-            }
+            var body = PoseBody(pose.RootX, sample);
             pose.RootX = body;
-            for (int g = 0; g < pose.Goals.Length; g++) pose.Goals[g].X = M.Mul(body, pose.Goals[g].X);
+            for (int g = 0; g < pose.Goals.Length; g++)
+                if (placed == null || !AnyGoalCurve(placed, g)) pose.Goals[g].X = M.Mul(body, pose.Goals[g].X);
+        }
+
+        static bool AnyGoalCurve(bool[] present, int goal)
+        {
+            int first = GoalFirst + HumanStateGoals.Width * goal;
+            for (int c = first; c < first + HumanStateGoals.Width; c++)
+                if (present[c]) return true;
+            return false;
+        }
+
+        /// <summary>The body relative to the motion that <see cref="ApplyToPose"/> gives a pose whose
+        /// body curves hold <paramref name="rootX"/>: the sample's, plus what the curves hold
+        /// beyond the clips' blended RootX.</summary>
+        internal static Trs PoseBody(in Trs rootX, in HumanRootMotionSample sample)
+        {
+            if (Same(rootX.t, sample.Root.t) && Same(rootX.q, sample.Root.q)) return sample.Body;
+            var extra = M.QRotate(M.QConj(sample.Motion.q), rootX.t - sample.Root.t);
+            var turn = M.QMul(M.QConj(sample.Root.q), rootX.q);
+            return new Trs(sample.Body.t + extra, M.QNormalize(M.QMul(sample.Body.q, turn)), F4.One3);
         }
 
         /// <summary>The Animator's root motion pass for a humanoid avatar: the feet pivot, the

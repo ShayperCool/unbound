@@ -457,19 +457,8 @@ namespace Unbound.Runtime.Playables
             var g = c < b.FloatOwner.Length ? b.FloatOwner[c] : null;
             width = 1;
             if (g == null || g.First != c) return false;
-            if (!g.IsQuaternion && !HumanRotationStart(b, c, g.HumanCurve)) return false;
+            if (!g.IsQuaternion && !b.HumanRotationStart(c)) return false;
             width = 4;
-            return true;
-        }
-
-        static bool HumanRotationStart(AnimationBindings b, int c, int curve)
-        {
-            const int RootQ = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst + 3;
-            const int GoalFirst = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst, MuscleFirst = Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst;
-            if (curve != RootQ && (curve < GoalFirst || curve >= MuscleFirst || (curve - GoalFirst) % 7 != 3)) return false;
-            if (c + 3 >= b.FloatCount || c + 3 >= b.FloatOwner.Length) return false;
-            for (int k = 1; k < 4; k++)
-                if (b.FloatOwner[c + k]?.HumanCurve != curve + k) return false;
             return true;
         }
 

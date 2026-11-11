@@ -118,15 +118,19 @@ namespace Unbound.Runtime
         /// a weight. <paramref name="mask"/>, when given, excludes channels (layer masks, mixing transforms).
         /// With a <paramref name="reference"/> pose (additive layers) the values are differences from it:
         /// v - reference, and for rotations reference⁻¹·q.
-        /// <paramref name="loopPose"/>: the Animator's sampling, which applies the clip's loop pose.</summary>
+        /// <paramref name="loopPose"/>: the Animator's sampling, which applies the clip's loop pose.
+        /// With <paramref name="goals"/>, a humanoid clip's IK goal curves go to it instead of the
+        /// pose; the caller adds the goals the clip's state places and blends
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>).</summary>
         internal static void Sample(BoundClip bound, float time, float weight, AnimationPose pose, bool[] mask = null, bool[] objectMask = null,
-            float[] reference = null, bool loopPose = false)
+            float[] reference = null, bool loopPose = false, Unbound.Runtime.Humanoid.HumanStateGoals goals = null)
         {
             if (weight <= 0f) return;
             pose.Total += weight;
             var curves = bound.Clip.m_Curves;
             float phase = loopPose ? bound.Clip.LoopPosePhase(time) : -1f;
             var channels = bound.Float;
+            var goalSlots = goals?.Slots(bound);
             for (int i = 0; i < curves.Count && i < channels.Length; i++)
             {
                 var curve = curves[i];
@@ -154,6 +158,11 @@ namespace Unbound.Runtime
                 int ch = channels[i];
                 if (ch < 0 || (mask != null && !mask[ch])) continue;
                 float value = bound.Clip.LoopPose(i, curve.Evaluate(time), phase);
+                if (goalSlots != null && goalSlots[i] >= 0)
+                {
+                    goals.Take(goalSlots[i], value);
+                    continue;
+                }
                 pose.Value[ch] += weight * (reference != null ? value - reference[ch] : value);
                 pose.Weight[ch] += weight;
             }
@@ -315,14 +324,15 @@ namespace Unbound.Runtime
         /// states without write defaults keep is the value it holds (where <paramref name="held"/>)
         /// instead of the current one, and it receives what is written. With
         /// <paramref name="humanBodyInRootMotion"/>, additive layers leave a humanoid body's curves to
-        /// the root motion pass (see <see cref="CombineLayers"/>). With
+        /// the root motion pass and with <paramref name="placedGoals"/> the IK goals' rotations
+        /// combine as rotations (see <see cref="CombineLayers"/>). With
         /// <paramref name="skipTransforms"/>, Transforms and humanoid curves are left as they are
         /// (an Animator culled by CullUpdateTransforms), except <paramref name="rootDuringCull"/>
         /// when an attached controller restores its output-bound root pose. With <paramref name="stream"/>, captures
         /// the same composed result and bookkeeping without writing the scene.</summary>
         internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null,
             bool humanBodyInRootMotion = false, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null,
-            Transform rootDuringCull = null)
+            Transform rootDuringCull = null, bool placedGoals = false)
         {
             var s = Rent(b);
             try
@@ -351,7 +361,7 @@ namespace Unbound.Runtime
                     kept = s.Kept;
                     for (int c = 0; c < n; c++) kept[c] = c < held.Length && held[c] ? written[c] : s.Current[c];
                 }
-                CombineLayers(b, layers, count, s.Result, null, overDefaults: true, kept, humanBodyInRootMotion);
+                CombineLayers(b, layers, count, s.Result, null, overDefaults: true, kept, humanBodyInRootMotion, placedGoals);
                 if (written != null)
                 {
                     for (int c = 0; c < n && c < written.Length; c++)
@@ -409,16 +419,26 @@ namespace Unbound.Runtime
         /// weight times the weight of the motions sampled (<see cref="AdditiveRotation"/>). With
         /// <paramref name="humanBodyInRootMotion"/>, a humanoid body's curves (RootT, RootQ) take no
         /// additive differences here: the Animator's root motion pass composes them onto the body
-        /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.AdditiveBody"/>).
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.AdditiveBody"/>). With
+        /// <paramref name="placedGoals"/>, the poses hold humanoid IK goals that their states wrote
+        /// whole, every curve of a goal with one weight
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>): a goal's rotation combines as a
+        /// rotation. Without, each goal curve combines on its own, as a clip with only some of a
+        /// rotation's curves needs.
         /// </summary>
         internal static void CombineLayers(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, bool overDefaults,
-            float[] kept = null, bool humanBodyInRootMotion = false)
+            float[] kept = null, bool humanBodyInRootMotion = false, bool placedGoals = false)
         {
             int n = Math.Min(b.FloatCount, values.Length);
             for (int c = 0; c < n; c++)
             {
                 var owner = b.FloatOwner[c];
-                if (owner != null && owner.IsQuaternion && owner.First == c && owner.Width == 4 && c + 3 < n)
+                // A placed humanoid IK goal's rotation blends as a rotation too (6000.0.71f1,
+                // tests/projects/humanoid goals.override*: an override layer turns the goals of
+                // the layers below towards its own by its weight).
+                if (owner != null && c + 3 < n
+                    && (owner.IsQuaternion && owner.First == c && owner.Width == 4
+                        || placedGoals && owner.HumanCurve >= 0 && b.HumanRotationStart(c, goalsOnly: true)))
                 {
                     CombineRotation(b, layers, count, values, animated, c, overDefaults, kept);
                     c += 3;

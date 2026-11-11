@@ -47,11 +47,20 @@ namespace Unbound.Runtime.Humanoid
         /// applies and clears it.</summary>
         internal bool FootIK;
 
+        /// <summary>Set by the pose's writer when the goal curves it wrote hold the goals in the
+        /// motion's frame, each placed by its clip's body already (an Animator Controller's,
+        /// <see cref="HumanStateGoals"/>), instead of relative to the body; the next
+        /// <see cref="ApplyPose"/> takes them so and clears it.</summary>
+        internal bool GoalsInMotion;
+        // Whether a goal curve was written since the last pose, and the frame of the held ones.
+        bool m_GoalsWritten, m_HeldGoalsInMotion;
+
         internal void Set(int curve, float value)
         {
             m_Values[curve] = value;
             m_Present[curve] = true;
             m_Dirty = true;
+            if (HumanStateGoals.Slot(curve) >= 0) m_GoalsWritten = true;
         }
 
         internal float Value(int curve) => m_Values[curve];
@@ -65,6 +74,7 @@ namespace Unbound.Runtime.Humanoid
             ClearMotion();
             for (int i = 0; i < m_Values.Length; i++) m_Values[i] = DefaultValue(i);
             Array.Clear(m_Present);
+            m_HeldGoalsInMotion = false;
             m_Dirty = true;
         }
 
@@ -99,6 +109,25 @@ namespace Unbound.Runtime.Humanoid
         internal bool PivotHidden;
 
         internal void ClearMotion() => m_HasSample = false;
+
+        /// <summary>A stream of an Animator Controller's pose, whose goal curves hold placed goals
+        /// (<see cref="HumanStateGoals"/>), takes them relative to the body this update's motion
+        /// and the stream's body curves give (<see cref="HumanRootMotion.PoseBody"/>), as the
+        /// playable outputs that blend over it and write it have theirs.</summary>
+        internal void PlacedGoalsToBody(Unbound.Runtime.Playables.AnimStream stream)
+        {
+            if (!m_HasSample) return;
+            var b = stream.Bindings;
+            float V(int curve)
+            {
+                int c = b.HumanChannel(curve);
+                return c >= 0 && c < stream.FloatCount ? stream.Values[c] : DefaultValue(curve);
+            }
+            const int root = HumanClipImport.RootFirst;
+            var rootX = new Trs(new F4(V(root), V(root + 1), V(root + 2), 0f),
+                M.QNormalize(new F4(V(root + 3), V(root + 4), V(root + 5), V(root + 6))), F4.One3);
+            Unbound.Runtime.Playables.AnimationEvaluation.GoalsToMotion(stream, HumanRootMotion.PoseBody(rootX, m_Sample), inverse: true);
+        }
 
         /// <summary>A playable's body relative to its motion, retained for visibility replay.
         /// Does not apply root movement or step the feet-pivot memory.</summary>
@@ -288,18 +317,24 @@ namespace Unbound.Runtime.Humanoid
             m_IKLayers = 0;
             bool footIK = FootIK;
             FootIK = false;
+            bool goalsInMotion = GoalsInMotion;
+            GoalsInMotion = false;
             if (!m_Dirty) return 0;
             m_Dirty = false;
+            // Goal curves nobody wrote this time stay in the frame they were written in.
+            if (m_GoalsWritten) m_HeldGoalsInMotion = goalsInMotion;
+            m_GoalsWritten = false;
+            var placed = m_HeldGoalsInMotion ? m_Present : null;
             var human = m_Constant.Human;
             HumanClipImport.PoseFromCurves(m_Values, m_Present, m_Pose);
-            if (m_HasSample) HumanRootMotion.ApplyToPose(m_Pose, m_Sample);
+            if (m_HasSample) HumanRootMotion.ApplyToPose(m_Pose, m_Sample, placed);
             // The mass center pose places the body, then the animated pose's muscles apply.
             bool massCenter = m_HasMassCenter;
             m_HasMassCenter = false;
             if (massCenter)
             {
                 HumanClipImport.PoseFromCurves(m_MassCenterValues, m_Present, m_Base);
-                if (m_HasSample) HumanRootMotion.ApplyToPose(m_Base, m_Sample);
+                if (m_HasSample) HumanRootMotion.ApplyToPose(m_Base, m_Sample, placed);
             }
             HumanIK.Retarget(human, m_Base, m_Pose, !massCenter, AvatarX(), Output, m_W0, m_W1, true);
             HasOutput = true;
