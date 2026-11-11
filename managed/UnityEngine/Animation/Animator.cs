@@ -877,7 +877,7 @@ namespace UnityEngine
             // the other state is an empty one the clips play beside alone (measured,
             // tests/projects/humanoid detail records).
             float weight = 1f;
-            if (source.Transition != null && source.Next != null && !player.AloneBesideEmpty(layer, layerIndex, run, next ? source.Current : source.Next))
+            if (source.Transition != null && source.Next != null && !player.WholeBesideEmpty(layer, run, next ? source.Current : source.Next))
                 weight = next ? source.Transition.Progress : 1f - source.Transition.Progress;
             player.ClipWeights(player.MotionOf(layer.Def, run.Def), weight, result);
             return result;

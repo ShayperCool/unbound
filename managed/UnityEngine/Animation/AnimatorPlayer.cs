@@ -1390,7 +1390,19 @@ namespace Unbound.Runtime
         /// pose, clip infos and root motion, tests/projects/humanoid emptyBack, generic.emptyBack;
         /// events unmeasured).</summary>
         internal bool AloneBesideEmpty(LayerRun layer, int layerIndex, StateRun run, StateRun other) =>
-            layerIndex == 0 && EmptyWithDefaults(layer, other) && run != null && MotionOf(layer.Def, run.Def) != null;
+            layerIndex == 0 && WholeBesideEmpty(layer, run, other);
+
+        /// <summary>A state with a motion in a transition with a state without a motion and with
+        /// write defaults, on any layer: its clip infos report its clips at their whole weight
+        /// whatever the transition's progress. On the base layer the pose and root motion are
+        /// whole too (<see cref="AloneBesideEmpty"/>); a layer above blends them over the layers
+        /// below by the transition's progress (6000.0.71f1, tests/projects/humanoid
+        /// body.emptyLayerTransition: an override layer's clip reports weight 1 from the
+        /// transition's start while its muscles and body follow the transition; additive layers
+        /// unmeasured; the Scripting API's AnimatorClipInfo.weight page says only that it is
+        /// the weight the clip blends with).</summary>
+        internal bool WholeBesideEmpty(LayerRun layer, StateRun run, StateRun other) =>
+            EmptyWithDefaults(layer, other) && run != null && MotionOf(layer.Def, run.Def) != null;
 
         bool Holds(LayerRun layer, StateRun run) => run != null && !run.Def.WriteDefaults && MotionOf(layer.Def, run.Def) == null;
 
