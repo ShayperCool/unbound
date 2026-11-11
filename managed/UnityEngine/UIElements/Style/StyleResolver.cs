@@ -33,30 +33,87 @@ namespace Unbound.UIElements
         {
             if (!root.uaStyleDirty && !root.uaStyleDirtyDescendants) return;
             m_Stack.Clear();
-            // Sheets of the root's ancestors (none for a panel root).
-            Traverse(root, VariableContext.none, false, pixelsPerPoint);
+            m_Updating = true;
+            try
+            {
+                // Sheets of the root's ancestors (none for a panel root).
+                Traverse(root, VariableContext.none, false, pixelsPerPoint);
+            }
+            finally
+            {
+                m_Updating = false;
+            }
+        }
+
+        bool m_Updating;
+        readonly List<VisualElement> m_Ancestors = new List<VisualElement>();
+
+        /// <summary>What an element's style is without its inline values: the matching rules of
+        /// the sheets on its ancestors and itself over the values it inherits, with the variables
+        /// its last style pass gave it. Null while a style pass is running.</summary>
+        internal ComputedValues RuleValues(VisualElement element, float pixelsPerPoint)
+        {
+            if (m_Updating) return null;
+            m_Stack.Clear();
+            m_Ancestors.Clear();
+            for (var e = element.hierarchy.parent; e != null; e = e.hierarchy.parent) m_Ancestors.Add(e);
+            for (int i = m_Ancestors.Count - 1; i >= 0; i--) PushSheets(m_Ancestors[i]);
+            m_Ancestors.Clear();
+            int before = m_Stack.Count;
+            PushSheets(element);
+            FindMatches(element, before - 1);
+            m_Matches.Sort(Compare);
+            var style = ApplyRules(element, element.uaVariables ?? VariableContext.none, pixelsPerPoint);
+            m_Matches.Clear();
+            m_Stack.Clear();
+            return style;
+        }
+
+        void PushSheets(VisualElement element)
+        {
+            var sheets = element.styleSheetList;
+            if (sheets == null) return;
+            foreach (var sheet in sheets)
+            {
+                if (sheet == null) continue;
+                sheet.EnsureReferences();
+                if (sheet.flattenedRecursiveImports != null)
+                    foreach (var imported in sheet.flattenedRecursiveImports)
+                        if (imported != null)
+                        {
+                            imported.EnsureReferences();
+                            m_Stack.Add(imported);
+                        }
+                m_Stack.Add(sheet);
+            }
+        }
+
+        /// <summary>The sorted matches applied over the inherited values, then the element's UXML
+        /// inline rule.</summary>
+        ComputedValues ApplyRules(VisualElement element, VariableContext variables, float pixelsPerPoint)
+        {
+            var parentStyle = element.hierarchy.parent?.computedValues;
+            var style = ComputedValues.CreateFor(parentStyle);
+            foreach (var m in m_Matches)
+            {
+                if (m.Selector.rule == null) continue;
+                m_Reader.SetContext(m.Sheet, m.Selector.rule.properties, variables, pixelsPerPoint);
+                Apply(style, m_Reader, parentStyle);
+            }
+            FinalizeApply(style, parentStyle);
+            if (element.uaInlineRule != null && element.uaInlineSheet != null)
+            {
+                m_Reader.SetContext(element.uaInlineSheet, element.uaInlineRule.properties, variables, pixelsPerPoint);
+                Apply(style, m_Reader, parentStyle);
+                FinalizeApply(style, parentStyle);
+            }
+            return style;
         }
 
         void Traverse(VisualElement element, VariableContext inheritedVariables, bool forced, float pixelsPerPoint)
         {
             int before = m_Stack.Count;
-            var sheets = element.styleSheetList;
-            if (sheets != null)
-            {
-                foreach (var sheet in sheets)
-                {
-                    if (sheet == null) continue;
-                    sheet.EnsureReferences();
-                    if (sheet.flattenedRecursiveImports != null)
-                        foreach (var imported in sheet.flattenedRecursiveImports)
-                            if (imported != null)
-                            {
-                                imported.EnsureReferences();
-                                m_Stack.Add(imported);
-                            }
-                    m_Stack.Add(sheet);
-                }
-            }
+            PushSheets(element);
             bool restyle = forced || element.uaStyleDirty;
             var variables = inheritedVariables;
             if (restyle)
@@ -99,23 +156,9 @@ namespace Unbound.UIElements
             }
             element.uaVariables = variables;
 
-            var parent = element.hierarchy.parent;
-            var parentStyle = parent?.computedValues;
-            var style = ComputedValues.CreateFor(parentStyle);
+            var parentStyle = element.hierarchy.parent?.computedValues;
             float dpi = pixelsPerPoint;
-            foreach (var m in m_Matches)
-            {
-                if (m.Selector.rule == null) continue;
-                m_Reader.SetContext(m.Sheet, m.Selector.rule.properties, variables, dpi);
-                Apply(style, m_Reader, parentStyle);
-            }
-            FinalizeApply(style, parentStyle);
-            if (element.uaInlineRule != null && element.uaInlineSheet != null)
-            {
-                m_Reader.SetContext(element.uaInlineSheet, element.uaInlineRule.properties, variables, dpi);
-                Apply(style, m_Reader, parentStyle);
-                FinalizeApply(style, parentStyle);
-            }
+            var style = ApplyRules(element, variables, dpi);
             element.uaInlineStyle?.ApplyTo(style);
             if (element.uaInlineStyle != null) FinalizeApply(style, parentStyle);
             style.dpiScaling = dpi;

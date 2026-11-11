@@ -65,6 +65,8 @@ namespace UnityEngine.UIElements
         internal Unbound.UIElements.UaRetainedGeometry uaGeometry;
         internal bool uaStyleDirtyDescendants;
         internal bool styleInitialized { get; set; }
+        // Whether a style pass has ever reached the element (it stays set when the element leaves its panel).
+        bool m_UaEverStyled;
 
         // Layout state.
         internal readonly YogaNode yogaNode;
@@ -863,12 +865,39 @@ namespace UnityEngine.UIElements
         }
 
         /// <summary>Applies the inline style to the computed style at once, as Unity's inline style access
-        /// does (resolvedStyle reflects a value set from code before the next style update); values
-        /// reset to null wait for the next update to fall back to the style sheets.</summary>
+        /// does: resolvedStyle reflects a value set from code before the next style update, also on
+        /// an element no style pass has reached yet (in a panel or outside one), and a value reset
+        /// to null falls back at once to what the style sheets give, or to the initial value where
+        /// no style pass has run (Unity 6000.0.71f1, tests/projects/uitkbindings nested/fresh rows).
+        /// An element that was styled and then left its panel keeps its values until it is styled
+        /// again (unmeasured).</summary>
         internal void UaApplyInlineNow(StylePropertyId id)
         {
-            if (!styleInitialized || m_InlineStyle == null) return;
-            var applied = (uaTransitions?.target ?? computedValues).Clone();
+            if (m_InlineStyle == null) return;
+            bool removed = !m_InlineStyle.IsValueSet(id);
+            if (!styleInitialized)
+            {
+                if (m_UaEverStyled) return;
+                // The computed style is still the initial one: the element gets its own, with
+                // the inline values set so far (after a removal, without the removed one).
+                if (removed || ReferenceEquals(computedValues, ComputedValues.Initial)) computedValues = ComputedValues.Initial.Clone();
+                m_InlineStyle.ApplyTo(computedValues);
+                Unbound.UIElements.StyleResolver.FinalizeApply(computedValues, null);
+                OnUaStyleResolved(ComputedValues.Initial, computedValues);
+                return;
+            }
+            ComputedValues applied;
+            if (removed)
+            {
+                // Without the value the element has what its rules give; while those cannot be
+                // asked for (outside a panel, during a style pass) the next style pass restores it.
+                applied = elementPanel?.UaRuleValues(this);
+                if (applied == null) return;
+            }
+            else
+            {
+                applied = (uaTransitions?.target ?? computedValues).Clone();
+            }
             m_InlineStyle.ApplyTo(applied);
             Unbound.UIElements.StyleResolver.FinalizeApply(applied, hierarchy.parent?.computedValues);
             // Removing a transition declaration does not cancel its current event batch. The
@@ -902,6 +931,7 @@ namespace UnityEngine.UIElements
                 for (int i = 0; i < hierarchy.childCount; i++) hierarchy[i].UaStyleChanged();
             }
             styleInitialized = true;
+            m_UaEverStyled = true;
             UaLayout.SyncStyle(this, style);
             if (previous.display != style.display) IncrementVersion(VersionChangeType.Size);
             if (previous.translate != style.translate || previous.rotate != style.rotate || previous.scale != style.scale || previous.transformOrigin != style.transformOrigin)

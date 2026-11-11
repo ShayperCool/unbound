@@ -240,6 +240,9 @@ namespace UnityEngine.UIElements
 
         internal void UaApplyStyles() => m_StyleResolver.Update(visualTree, scaledPixelsPerPoint);
 
+        /// <summary>An element's style without its inline values (null during a style pass).</summary>
+        internal ComputedValues UaRuleValues(VisualElement element) => m_StyleResolver.RuleValues(element, scaledPixelsPerPoint);
+
         public virtual void UpdateAnimations()
         {
             // Native controls show panel-wide value-type phases. All owners in a type are
