@@ -692,7 +692,11 @@ namespace UnityEngine
                 float scale = renderer.scaleInLightmap * resolution;
                 if (!(scale > 0f)) return $"'{renderer.name}' has no realtime lightmap resolution";
                 var vertices = mesh.vertices;
-                var source = mesh.uv2;
+                // The input of realtime lightmap UVs is Mesh.uv3 when the mesh has it, else the
+                // baked lightmap UVs (Mesh.uv2), else Mesh.uv (Unity 6000.0 Manual, "Generate
+                // lightmap UVs"; tests/projects/realtimegi RoomCharts, Channels).
+                var source = mesh.uv3;
+                if (source.Length != vertices.Length) source = mesh.uv2;
                 if (source.Length != vertices.Length) source = mesh.uv;
                 if (source.Length != vertices.Length) return $"'{renderer.name}' has no lightmap UVs";
                 var matrix = renderer.transform.localToWorldMatrix;
