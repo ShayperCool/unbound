@@ -32,7 +32,9 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
   lightmap UV charts leave holes (`run.py setup-charts` adds this scene alone;
   `RealtimeGISetup.Panel` makes the meshes): `Ring`, a ring and two loose square plates; `RingGrown`,
   the same ring with three; `Holes`, a plate with two holes of different sizes and two loose
-  plates; `Arch`, an arch and one.
+  plates; `Arch`, an arch and one. A fifth, `Channels`, lies on the floor: a 2 x 1 m plate
+  whose `Mesh.uv3` is a square (the Manual's input of realtime lightmap UVs when a mesh has
+  it), its `Mesh.uv2` the plate's own shape.
 
 `Assets/Scripts/RealtimeGIProbe.cs` (with `REALTIME_GI_OUT` set) changes one input at a time and
 records, per case:

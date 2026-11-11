@@ -1661,9 +1661,10 @@ fn panel(
     (positions, uvs, triangles)
 }
 
-/// The RoomCharts scene's panels by renderer name: grid columns, rows, cells and plates.
+/// The RoomCharts scene's panels by renderer name: grid columns, rows, cells, plates and, for a
+/// mesh with a third UV channel, that channel's scale of the lightmap UVs.
 #[allow(clippy::type_complexity)]
-const PANELS: [(&str, &[f32], &[f32], &[&str], &[[f32; 4]]); 4] = [
+const PANELS: [(&str, &[f32], &[f32], &[&str], &[[f32; 4]], Option<[f32; 2]>); 5] = [
     // A ring whose hole takes two plates exactly.
     (
         "Ring",
@@ -1671,6 +1672,7 @@ const PANELS: [(&str, &[f32], &[f32], &[&str], &[[f32; 4]]); 4] = [
         &[0.0, 0.3, 3.1, 3.4],
         &["###", "#.#", "###"],
         &[[0.6, 1.1, 1.2, 1.2], [3.2, 1.1, 1.2, 1.2]],
+        None,
     ),
     // The same ring with a third plate, which no hole holds once two are in.
     (
@@ -1683,6 +1685,7 @@ const PANELS: [(&str, &[f32], &[f32], &[&str], &[[f32; 4]]); 4] = [
             [1.9, 1.1, 1.2, 1.2],
             [3.2, 1.1, 1.2, 1.2],
         ],
+        None,
     ),
     // Two holes, the larger one first from the bottom left.
     (
@@ -1691,6 +1694,7 @@ const PANELS: [(&str, &[f32], &[f32], &[&str], &[[f32; 4]]); 4] = [
         &[0.0, 0.3, 3.2, 4.1, 4.4],
         &["#####", "#.###", "#.#.#", "#####"],
         &[[0.9, 1.0, 1.2, 1.2], [3.5, 1.0, 1.2, 1.2]],
+        None,
     ),
     // An arch: its pocket opens downwards.
     (
@@ -1699,13 +1703,34 @@ const PANELS: [(&str, &[f32], &[f32], &[&str], &[[f32; 4]]); 4] = [
         &[0.0, 2.1, 2.4],
         &["###", "#.#"],
         &[[1.1, 0.4, 1.2, 1.2]],
+        None,
+    ),
+    // A 2 x 1 m plate whose third UV channel is a square.
+    (
+        "Channels",
+        &[0.0, 2.0],
+        &[0.0, 1.0],
+        &["#"],
+        &[],
+        Some([0.5, 1.0]),
     ),
 ];
 
-/// The realtime lightmap UVs of a panel of the RoomCharts scene.
+/// The realtime lightmap UVs of a panel of the RoomCharts scene, from its third UV channel when
+/// it has one.
 fn panel_uvs(name: &str) -> crate::realtime_uv::Output {
-    let &(_, xs, ys, rows, plates) = PANELS.iter().find(|p| p.0 == name).unwrap();
-    let (positions, uvs, triangles) = panel(xs, ys, rows, plates);
+    panel_uvs_from(name, true)
+}
+
+/// The same from the mesh's third UV channel (if any) or from its lightmap UVs alone.
+fn panel_uvs_from(name: &str, third_channel: bool) -> crate::realtime_uv::Output {
+    let &(_, xs, ys, rows, plates, scale) = PANELS.iter().find(|p| p.0 == name).unwrap();
+    let (positions, mut uvs, triangles) = panel(xs, ys, rows, plates);
+    if let Some(scale) = scale.filter(|_| third_channel) {
+        for uv in &mut uvs {
+            *uv = [uv[0] * scale[0], uv[1] * scale[1]];
+        }
+    }
     crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
         positions: &positions,
         uvs: &uvs,
@@ -1766,6 +1791,25 @@ fn charts_fill_holes_as_the_precompute_packs_them() {
                 );
             }
         }
+        // The precompute numbers a renderer's charts in their order: each chart lies on its own
+        // one (two equal plates in each other's places would pass the check too).
+        let ids: Vec<u32> = out
+            .charts
+            .iter()
+            .map(|chart| {
+                let at = chart.blocks.iter().position(|&used| used).unwrap() as u32;
+                let across = chart.rect[2] / 2;
+                let (x, y) = (
+                    chart.rect[0] + at % across * 2,
+                    chart.rect[1] + at / across * 2,
+                );
+                system.chart_mask[((origin[1] + y) * sw + origin[0] + x) as usize]
+            })
+            .collect();
+        assert!(
+            ids.windows(2).all(|pair| pair[0] < pair[1]),
+            "{name}: {ids:?}"
+        );
     }
     assert_eq!(panels, PANELS.len());
     let rects = |name: &str| {
@@ -1796,6 +1840,20 @@ fn charts_fill_holes_as_the_precompute_packs_them() {
     );
     // A pocket open to the UV space's lower edge takes a plate as a hole does.
     assert_eq!(rects("Arch"), (8, 6, vec![[0, 0, 8, 6], [2, 0, 4, 4]]));
+    // The plate with a third UV channel is laid out from it: a square of the plate's area (two
+    // blocks a side), where its lightmap UVs would give three blocks by two.
+    assert_eq!(rects("Channels"), (4, 4, vec![[0, 0, 4, 4]]));
+    let k = data
+        .renderers
+        .iter()
+        .position(|r| names[&r.0] == "Channels")
+        .unwrap();
+    let other = panel_uvs_from("Channels", false);
+    assert_eq!((other.width, other.height), (6, 4));
+    let error = crate::realtime_uv::check_layout(system, data.renderer_st[k], &other)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("realtime lightmap UVs of 6x4"), "{error}");
     // The ring's own blocks leave its hole out.
     let ring = &panel_uvs("Ring").charts[0];
     assert_eq!(ring.blocks.iter().filter(|&&used| !used).count(), 4 * 2);

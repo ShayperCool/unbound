@@ -21,8 +21,9 @@ using UnityEngine.Rendering;
 /// adds it alone).</item>
 /// <item><c>RoomCharts</c>: as <c>Room</c> with four flat panels whose lightmap UV charts leave
 /// holes: a ring whose hole holds its two loose plates, the same ring with a third plate, a plate
-/// with two holes of different sizes, and an arch (<c>-executeMethod
-/// RealtimeGISetup.CreateCharts</c> adds it alone).</item>
+/// with two holes of different sizes, and an arch; and a plate with realtime lightmap UVs of
+/// its own in <c>Mesh.uv3</c> (<c>-executeMethod RealtimeGISetup.CreateCharts</c> adds it
+/// alone).</item>
 /// </list>
 /// </summary>
 public static class RealtimeGISetup
@@ -155,10 +156,11 @@ public static class RealtimeGISetup
     /// <paramref name="xs"/> x <paramref name="ys"/> (metres; <paramref name="rows"/> from the top
     /// one down), which share their corners and so make one lightmap UV chart, and loose plates
     /// (x, y, width, height), each a chart of its own. UVs are the positions over
-    /// <see cref="PanelUVSpan"/>.
+    /// <see cref="PanelUVSpan"/>; with <paramref name="realtimeUVScale"/> the mesh also has a
+    /// third UV channel, those UVs scaled by it.
     /// </summary>
     static Renderer Panel(string scene, string name, Vector3 position, Vector3 euler, Material material,
-        float[] xs, float[] ys, string[] rows, Rect[] plates)
+        float[] xs, float[] ys, string[] rows, Rect[] plates, Vector2? realtimeUVScale = null)
     {
         var vertices = new List<Vector3>();
         var triangles = new List<int>();
@@ -206,6 +208,8 @@ public static class RealtimeGISetup
         mesh.SetNormals(vertices.ConvertAll(_ => Vector3.back));
         mesh.SetUVs(0, uvs);
         mesh.SetUVs(1, uvs);
+        if (realtimeUVScale is Vector2 scale)
+            mesh.SetUVs(2, uvs.ConvertAll(uv => Vector2.Scale(uv, scale)));
         mesh.SetTriangles(triangles, 0);
         mesh.RecalculateBounds();
         AssetDatabase.CreateAsset(mesh, $"{Scenes}/{scene}{name}.asset");
@@ -276,6 +280,10 @@ public static class RealtimeGISetup
             lit.Add(Panel(name, "Arch", new Vector3(-2.95f, 0.8f, -1.7f), new Vector3(0f, -90f, 0f), white,
                 new[] { 0f, 0.3f, 3.1f, 3.4f }, new[] { 0f, 2.1f, 2.4f }, new[] { "###", "#.#" },
                 new[] { new Rect(1.1f, 0.4f, 1.2f, 1.2f) }));
+            // On the floor: a 2 x 1 m plate whose third UV channel is a square. Realtime lightmap
+            // UVs come from Mesh.uv3 when a mesh has it (Manual, "Generate lightmap UVs").
+            lit.Add(Panel(name, "Channels", new Vector3(-2.6f, 0.02f, -2.6f), new Vector3(90f, 0f, 0f), white,
+                new[] { 0f, 2f }, new[] { 0f, 1f }, new[] { "#" }, new Rect[0], new Vector2(0.5f, 1f)));
         }
 
         if (twoSystems)
