@@ -449,7 +449,8 @@ namespace Unbound.Runtime
         /// <summary>Target matching of a humanoid rig: the target body part as the clips would place it
         /// at the end of the match (each clip at that normalized time, also a loop apart from the
         /// base layer) relative to their motion now, blended as their root motion is (by weight
-        /// within a layer; layers whose mask keeps Root lerp towards theirs by their weight), from the
+        /// within a layer; layers whose mask keeps Root lerp towards theirs by their weight times
+        /// the share they cover the layers below with, <see cref="CoveredShare"/>), from the
         /// root after this step (tests/projects/humanoid match.*, match.layers, match.layersLoop).</summary>
         void HumanMatchStep(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human, Vector3 scale)
         {
@@ -474,7 +475,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < Layers.Length; i++)
             {
                 var def = Layers[i].Def;
-                float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
+                float layerWeight = i == 0 ? 1f : Layers[i].Evaluated * CoveredShare(i);
                 if (def.Additive || layerWeight <= 0f || def.Mask != null && def.Mask.MasksHumanoidParts && !def.Mask.m_HumanoidParts[0])
                     continue;
                 if (!LayerMatchPart(human, match, i, to, out var lt, out var lq)) continue;
@@ -610,27 +611,50 @@ namespace Unbound.Runtime
             m_StateShares.Clear();
         }
 
-        /// <summary>State weights that sum to one within their rounding fill a layer.</summary>
-        const float LayerFilled = 1f - 1e-6f;
-
-        /// <summary>The share of a layer above the first that its states with humanoid clips
-        /// fill, whose weights then become their shares of it: where a state gives the layer no
-        /// humanoid motion (a transition with a state without a motion), the others are the
-        /// layer's whole motion and the layer covers the ones below by its weight times that
-        /// share, as the rest of its pose does. Matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/humanoid body.emptyLayerTransition (an override layer of weight 1
-        /// leaving an empty state for a clip over a clip: the body and the root's step move from
-        /// the layer below's to the clip's with the transition; an override layer over no
-        /// humanoid clip and a state with a generic clip beside a humanoid one follow
-        /// unmeasured).</summary>
-        float FillLayer()
+        /// <summary>Whether a state's pose leaves the humanoid values to the layers below: a state
+        /// without a motion and with write defaults, or a state without write defaults whose
+        /// motion has no humanoid clip (<see cref="SampleState"/>; the other states without a
+        /// humanoid clip write default values there, or hold).</summary>
+        bool LeavesHumanBelow(LayerRun layer, StateRun run)
         {
-            float total = 0f;
-            for (int k = 0; k < m_HumanSamples.Count; k++)
-                if (m_HumanSamples[k].HasMotion) total += m_HumanWeights[k];
-            if (!(total > 0f) || total >= LayerFilled) return 1f;
-            for (int k = 0; k < m_HumanWeights.Count; k++) m_HumanWeights[k] /= total;
-            return total;
+            var motion = MotionOf(layer.Def, run.Def);
+            if (motion == null) return run.Def.WriteDefaults;
+            return !run.Def.WriteDefaults && !AnimatesGoals(motion, Mirrored(run.Def));
+        }
+
+        /// <summary>The share of a layer above the first with which its humanoid motion covers
+        /// the layers below: all of it, less the weight of a state whose pose leaves the humanoid
+        /// values to them (<see cref="LeavesHumanBelow"/>), as the layer's pose covers theirs.
+        /// Matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
+        /// body.emptyLayerTransition (an override layer of weight 1 leaving a state without a
+        /// motion for a clip, over a clip: the body, the goals and the root's step move from the
+        /// layer below's to the clip's with the transition). Unmeasured: the other direction, a
+        /// state without write defaults whose motion has no humanoid clip, a layer over no
+        /// humanoid clip, and target matching (<see cref="HumanMatchStep"/>).</summary>
+        float CoveredShare(int i)
+        {
+            var layer = Layers[i];
+            var source = PlayedBy(layer);
+            if (i == 0 || source.Current == null) return 1f;
+            bool current = LeavesHumanBelow(layer, source.Current);
+            if (source.Next == null || source.Transition == null) return current ? 0f : 1f;
+            bool next = LeavesHumanBelow(layer, source.Next);
+            if (current == next) return current ? 0f : 1f;
+            // The other state's weight, as the transition gives it to its clips.
+            float p = source.Transition.Progress;
+            return current ? p : 1f - p;
+        }
+
+        /// <summary>Makes the humanoid samples of a layer above the first its whole motion where
+        /// they share the layer with a state that leaves the layers below as they are, and gives
+        /// the share with which the layer then covers those (<see cref="CoveredShare"/>). A state
+        /// that writes default values or holds keeps its share of the layer as before.</summary>
+        float FillLayer(int i)
+        {
+            float share = CoveredShare(i);
+            if (!(share > 0f) || share >= 1f) return 1f;
+            for (int k = 0; k < m_HumanWeights.Count; k++) m_HumanWeights[k] /= share;
+            return share;
         }
 
         /// <summary>A layer's holding states keep its last humanoid root motion (see
@@ -702,7 +726,7 @@ namespace Unbound.Runtime
                 AddStateMotion(stateWeight);
                 if (!additive) HoldHumanMotion(i);
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
-                if (i > 0 && !additive) layerWeight *= FillLayer();
+                if (!additive) layerWeight *= FillLayer(i);
                 var mask = Layers[i].Def.Mask;
                 Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer(ref blended, ref any,
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),

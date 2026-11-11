@@ -1398,9 +1398,10 @@ namespace Unbound.Runtime
         /// whole too (<see cref="AloneBesideEmpty"/>); a layer above blends them over the layers
         /// below by the transition's progress (6000.0.71f1, tests/projects/humanoid
         /// body.emptyLayerTransition: an override layer's clip reports weight 1 from the
-        /// transition's start while its muscles and body follow the transition; additive layers
-        /// unmeasured; the Scripting API's AnimatorClipInfo.weight page says only that it is
-        /// the weight the clip blends with).</summary>
+        /// transition's start while its muscles and body follow the transition; a clip leaving
+        /// for such a state on a layer above and additive layers follow unmeasured; the
+        /// Scripting API's AnimatorClipInfo.weight page says only that it is the weight the clip
+        /// blends with).</summary>
         internal bool WholeBesideEmpty(LayerRun layer, StateRun run, StateRun other) =>
             EmptyWithDefaults(layer, other) && run != null && MotionOf(layer.Def, run.Def) != null;
 

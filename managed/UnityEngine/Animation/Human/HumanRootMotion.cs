@@ -475,8 +475,10 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>The root motion of several clip evaluations blended by weight (the states of a
         /// transition, a blend tree's clips): every part (step, motion, body, feet, feet slips)
         /// summed by weight, rotations by their weighted sum (aligned), normalized (measured,
-        /// tests/projects/humanoid). Weights summing to less than 1 (a transition from a state
-        /// without a motion outside the cases <c>AloneBesideEmpty</c> covers, <see cref="Override"/>
+        /// tests/projects/humanoid). Weights summing to less than 1 (a transition with a state
+        /// without a humanoid clip that writes default values or holds, outside the cases
+        /// <c>AloneBesideEmpty</c> covers on the base layer and <c>CoveredShare</c> on the layers
+        /// above, <see cref="Override"/>
         /// over no motion) leave the rest of the step still, the feet slipping by what the root no longer covers; the other parts are
         /// normalized by the total weight (not measured).
         /// With <paramref name="sum"/> (an AnimationMixerPlayable's inputs, <see cref="OverNoClip"/>)

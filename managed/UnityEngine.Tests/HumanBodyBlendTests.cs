@@ -228,62 +228,123 @@ namespace UnityEngine.Tests
             Near.Equal(1f - p, BodyPosition(generic).y, 1e-4f);
         }
 
-        /// <summary>An override layer that leaves an empty state for a clip covers the layer
-        /// below by the transition's progress: the root's step is the layer below's moved
-        /// towards the clip's by it, and the clip infos report the clip whole from the start
-        /// (6000.0.71f1, tests/projects/humanoid body.emptyLayerTransition). Controls: the two
-        /// clips move the root along different axes, the clip's own step times the progress
-        /// (the layer taken as full) differs, and a transition between two clips on the base
-        /// layer reports its clips by the progress.</summary>
-        [Fact]
-        public void AnOverrideLayerLeavingAnEmptyStateMovesTheRootWithItsTransition()
+        const long EmptyState = 1102000009, AboveTransition = 1101000009, StateC = 1102000010, ClipC = 7400010;
+
+        static (string, float)[] Moving(string axis, float height) =>
+            Clip(height, F4.QIdentity).Select(c => c.Item1 == "RootT." + axis ? (c.Item1 + "+", 0f) : c).ToArray();
+
+        static readonly (string, float)[] s_MovingA = Moving("z", 1f), s_MovingB = Moving("x", 1.3f), s_MovingC = Moving("z", 1.2f);
+
+        /// <summary>A moving along z on the base layer under an override layer of a weight whose
+        /// first state leaves for its second after an exit time of 0.2 over 0.5 s. The states: B
+        /// and C (clips moving along x and z), "empty" (no motion, write defaults), "generic" (a
+        /// clip without a humanoid curve, write defaults) and "genericKeep" (the same without
+        /// write defaults).</summary>
+        static string Layered(float layerWeight, string first, string second)
         {
-            const long empty = 1102000009, transition = 1101000009;
-            static (string, float)[] Moving(string axis, float height) =>
-                Clip(height, F4.QIdentity).Select(c => c.Item1 == "RootT." + axis ? (c.Item1 + "+", 0f) : c).ToArray();
-            var a = Moving("z", 1f);
-            var b = Moving("x", 1.3f);
-            string layered = Fixture.Header + Fixture.Layer("Base Layer", 1107000001, 0, 1f) + Fixture.Layer("Above", 1107000002, 0, 1f)
-                + Fixture.Machine(1107000001, Fixture.StateA, Fixture.StateA) + Fixture.Machine(1107000002, empty, empty, Fixture.StateB)
-                + Fixture.State(Fixture.StateA, "A", Fixture.ClipA, false) + Fixture.State(empty, "Empty", 0, false, transition)
-                + Fixture.State(Fixture.StateB, "B", Fixture.ClipB, false) + Fixture.Transition(transition, Fixture.StateB, 0.2f, 0.5f)
-                + Fixture.Clip(Fixture.ClipA, "A", a) + Fixture.Clip(Fixture.ClipB, "B", b);
-            var above = Fixture.Rig(layered, m_Created);
+            static long Id(string state) => state == "B" ? Fixture.StateB : state == "C" ? StateC : EmptyState;
+            static string State(string state, long transition)
+            {
+                long clip = state == "B" ? Fixture.ClipB : state == "empty" ? 0 : ClipC;
+                string yaml = Fixture.State(Id(state), state, clip, false, transition);
+                return state == "genericKeep" ? yaml.Replace("m_WriteDefaultValues: 1", "m_WriteDefaultValues: 0") : yaml;
+            }
+            bool third = first != "B" && first != "empty" || second != "B" && second != "empty";
+            return Fixture.Header + Fixture.Layer("Base Layer", 1107000001, 0, 1f) + Fixture.Layer("Above", 1107000002, 0, layerWeight)
+                + Fixture.Machine(1107000001, Fixture.StateA, Fixture.StateA) + Fixture.Machine(1107000002, Id(first), Id(first), Id(second))
+                + Fixture.State(Fixture.StateA, "A", Fixture.ClipA, false) + State(first, AboveTransition) + State(second, 0)
+                + Fixture.Transition(AboveTransition, Id(second), 0.2f, 0.5f)
+                + Fixture.Clip(Fixture.ClipA, "A", s_MovingA) + Fixture.Clip(Fixture.ClipB, "B", s_MovingB)
+                + (third ? Fixture.Clip(ClipC, "C", first == "C" || second == "C" ? s_MovingC : new[] { ("NotAHumanCurve", 1f) }) : "");
+        }
+
+        /// <summary>A clip's own root step over the update the layered rigs are read in, from the
+        /// time it has played before it.</summary>
+        Vector3 Step((string, float)[] clip, float played)
+        {
+            var alone = Fixture.Rig(Fixture.Header + Fixture.Layer("Base Layer", 1107000001, 0, 1f)
+                + Fixture.Machine(1107000001, Fixture.StateA, Fixture.StateA) + Fixture.State(Fixture.StateA, "A", Fixture.ClipA, false)
+                + Fixture.Clip(Fixture.ClipA, "A", clip), m_Created);
+            alone.Update(0f);
+            alone.Update(played);
+            alone.Update(0.2f);
+            return alone.deltaPosition;
+        }
+
+        /// <summary>A layer above the first covers the layers below with its humanoid motion by
+        /// its weight times the share of its states that do not leave the humanoid values to
+        /// them: leaving a state without a motion (write defaults) for a clip, the root's step
+        /// moves from the layer below's to the clip's with the transition (6000.0.71f1,
+        /// tests/projects/humanoid body.emptyLayerTransition, a layer of weight 1); the other
+        /// direction, a partial layer weight and a state without write defaults whose clip has
+        /// no humanoid curve follow the same rule (unmeasured). Controls: a state with write
+        /// defaults whose clip has no humanoid curve keeps its share of the step still, as
+        /// before (unmeasured), two clips in a transition on the layer cover the layer below
+        /// wholly, and every case's step differs from the other rule's.</summary>
+        [Theory]
+        [InlineData("empty", "B", 1f)]
+        [InlineData("empty", "B", 0.5f)]
+        [InlineData("B", "empty", 1f)]
+        [InlineData("genericKeep", "B", 1f)]
+        [InlineData("generic", "B", 1f)]
+        [InlineData("generic", "B", 0.5f)]
+        [InlineData("B", "C", 1f)]
+        [InlineData("B", "C", 0.5f)]
+        public void ALayerCoversTheRootStepBelowByTheShareItsPoseCovers(string first, string second, float layerWeight)
+        {
+            var above = Fixture.Rig(Layered(layerWeight, first, second), m_Created);
             above.Update(0f);
             above.Update(0.25f);
-            Assert.True(above.IsInTransition(1));
-            Assert.Equal(1f, Assert.Single(above.GetNextAnimatorClipInfo(1)).weight);
             above.Update(0.2f);
             Assert.True(above.IsInTransition(1));
             float p = above.GetAnimatorTransitionInfo(1).normalizedTime;
             Assert.InRange(p, 0.2f, 0.8f);
-            Assert.Equal(1f, Assert.Single(above.GetNextAnimatorClipInfo(1)).weight);
 
-            // Each clip's own step over the same update: A from 0.25 s, B from the 0.05 s it has played.
-            Vector3 Step(string yaml, float first)
-            {
-                var alone = Fixture.Rig(yaml, m_Created);
-                alone.Update(0f);
-                alone.Update(first);
-                alone.Update(0.2f);
-                return alone.deltaPosition;
-            }
-            string One((string, float)[] clip) => Fixture.Header + Fixture.Layer("Base Layer", 1107000001, 0, 1f)
-                + Fixture.Machine(1107000001, Fixture.StateA, Fixture.StateA) + Fixture.State(Fixture.StateA, "A", Fixture.ClipA, false)
-                + Fixture.Clip(Fixture.ClipA, "A", clip);
-            var below = Step(One(a), 0.25f);
-            var clip = Step(One(b), 0.05f);
-            Assert.True(below.z > 0.05f && clip.x > 0.01f);
-            var expected = Vector3.Lerp(below, clip, p);
+            // Over the read update A has played 0.25 s, the layer's first state too, its second 0.05 s.
+            var below = Step(s_MovingA, 0.25f);
+            Vector3 Own(string state, float played) => state == "B" ? Step(s_MovingB, played) : state == "C" ? Step(s_MovingC, played) : Vector3.zero;
+            Vector3 from = Own(first, 0.25f), to = Own(second, 0.05f);
+            Assert.True(below.z > 0.05f);
+            float share = first == "B" ? 1f - p : p;
+            Vector3 covering = Vector3.Lerp(below, first == "B" ? from : to, layerWeight * share);
+            Vector3 still = Vector3.Lerp(below, from * (1f - p) + to * p, layerWeight);
+            bool leavesBelow = first is "empty" or "genericKeep" || second == "empty";
+            var expected = leavesBelow ? covering : still;
             Assert.True((above.deltaPosition - expected).magnitude < 1e-4f, $"{above.deltaPosition} != {expected}");
-            Assert.True((clip * p - expected).magnitude > 0.02f);
+            if (first != "B" || second != "C") Assert.True((covering - still).magnitude > 0.01f);
+        }
 
-            var two = Fixture.Rig(Fixture.TransitionController(Fixture.s_B, false, false), m_Created);
+        /// <summary>A clip in a transition with a state without a motion (write defaults) reports
+        /// its whole weight in the clip infos on a layer above the first too, from the
+        /// transition's start (6000.0.71f1, tests/projects/humanoid body.emptyLayerTransition;
+        /// the clip leaving for such a state follows unmeasured there). Control: two clips in a
+        /// transition report the transition's progress.</summary>
+        [Fact]
+        public void AClipBesideAnEmptyStateReportsItsWholeWeightOnALayerAbove()
+        {
+            var entering = Fixture.Rig(Layered(1f, "empty", "B"), m_Created);
+            entering.Update(0f);
+            entering.Update(0.2f);
+            entering.Update(0.01f);
+            Assert.True(entering.IsInTransition(1));
+            Assert.True(entering.GetAnimatorTransitionInfo(1).normalizedTime < 0.05f);
+            Assert.Equal(1f, Assert.Single(entering.GetNextAnimatorClipInfo(1)).weight);
+
+            var leaving = Fixture.Rig(Layered(1f, "B", "empty"), m_Created);
+            leaving.Update(0f);
+            leaving.Update(0.25f);
+            leaving.Update(0.2f);
+            Assert.True(leaving.IsInTransition(1));
+            Assert.Equal(1f, Assert.Single(leaving.GetCurrentAnimatorClipInfo(1)).weight);
+
+            var two = Fixture.Rig(Layered(1f, "B", "C"), m_Created);
             two.Update(0f);
             two.Update(0.25f);
             two.Update(0.2f);
-            Assert.True(two.IsInTransition(0));
-            Near.Equal(two.GetAnimatorTransitionInfo(0).normalizedTime, Assert.Single(two.GetNextAnimatorClipInfo(0)).weight, 1e-6f);
+            Assert.True(two.IsInTransition(1));
+            float p = two.GetAnimatorTransitionInfo(1).normalizedTime;
+            Near.Equal(p, Assert.Single(two.GetNextAnimatorClipInfo(1)).weight, 1e-6f);
+            Near.Equal(1f - p, Assert.Single(two.GetCurrentAnimatorClipInfo(1)).weight, 1e-6f);
         }
 
         // ------------------------------------------------------------------ muscles at rest
