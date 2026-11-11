@@ -173,6 +173,216 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A prefab saved without its transform hierarchy (the Animator's
+        /// m_HasTransformHierarchy: 0, as the Editor saves an optimized hierarchy): the loaded
+        /// Animator animates its avatar's skeleton and poses the exposed child named as a node.
+        /// Control: the same prefab saved with its hierarchy leaves that child alone, the curves
+        /// finding no transform at their paths.</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void APrefabSavedWithoutItsHierarchyAnimatesItsAvatarsSkeleton(bool hasHierarchy)
+        {
+            var full = Rig(out var fullAnimator, out _);
+            string yaml = """
+                %YAML 1.1
+                %TAG !u! tag:unity3d.com,2011:
+                --- !u!1 &1
+                GameObject:
+                  m_Name: R
+                  m_IsActive: 1
+                  m_Component:
+                  - component: {fileID: 2}
+                  - component: {fileID: 3}
+                --- !u!4 &2
+                Transform:
+                  m_GameObject: {fileID: 1}
+                  m_LocalPosition: {x: 0, y: 0, z: 0}
+                  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+                  m_LocalScale: {x: 1, y: 1, z: 1}
+                  m_Children:
+                  - {fileID: 5}
+                  m_Father: {fileID: 0}
+                --- !u!95 &3
+                Animator:
+                  m_GameObject: {fileID: 1}
+                  m_Enabled: 1
+                  m_Avatar: {fileID: 0}
+                  m_Controller: {fileID: 0}
+                  m_CullingMode: 0
+                  m_HasTransformHierarchy: HIERARCHY
+                --- !u!1 &4
+                GameObject:
+                  m_Name: Hand
+                  m_IsActive: 1
+                  m_Component:
+                  - component: {fileID: 5}
+                --- !u!4 &5
+                Transform:
+                  m_GameObject: {fileID: 4}
+                  m_LocalPosition: {x: 9, y: 9, z: 9}
+                  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+                  m_LocalScale: {x: 1, y: 1, z: 1}
+                  m_Father: {fileID: 2}
+                """.Replace("HIERARCHY", hasHierarchy ? "1" : "0");
+            var file = ObjectGraphBuilder.Build(UnityYaml.Parse(yaml), "optimized.prefab", null, ObjectGraphBuilder.Kind.PrefabAsset, null);
+            var root = Object.Instantiate((GameObject)file.Objects[1]);
+            var animator = root.GetComponent<Animator>();
+            animator.avatar = fullAnimator.avatar;
+            var hand = root.transform.Find("Hand");
+            var graph = Play(animator, Clip());
+            var fullGraph = Play(fullAnimator, Clip());
+            try
+            {
+                Assert.Equal(hasHierarchy, animator.hasTransformHierarchy);
+                graph.Evaluate(0.5f);
+                fullGraph.Evaluate(0.5f);
+                var expected = full.transform.Find("Rig/Hips/Spine/Hand");
+                Assert.True((expected.position - new Vector3(9f, 9f, 9f)).magnitude > 1f);
+                if (hasHierarchy) Near(new Vector3(9f, 9f, 9f), hand.localPosition);
+                else
+                {
+                    Near(expected.position, hand.localPosition);
+                    Assert.True(Quaternion.Angle(expected.rotation, hand.localRotation) < 0.01f);
+                }
+            }
+            finally
+            {
+                graph.Destroy();
+                fullGraph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate((GameObject)file.Objects[1]);
+                Object.DestroyImmediate(full);
+            }
+        }
+
+        /// <summary>A humanoid whose hierarchy is deoptimized plays on: its pose goes to the
+        /// restored bones (6000.0.71f1, tests/projects/animoptimize h.deopt.played and
+        /// h.rt.replayed). Control: the bone is at the avatar's default pose right after the
+        /// deoptimization.</summary>
+        [Fact]
+        public void ADeoptimizedHumanoidPlaysOn()
+        {
+            var created = new List<Object>();
+            var animator = HumanControllerGoalTests.Rig(HumanControllerGoalTests.TransitionController(HumanControllerGoalTests.s_B, false, false), created);
+            try
+            {
+                var root = animator.gameObject;
+                animator.Update(0f);
+                animator.Update(0.1f);
+                var arm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+                string path = HierarchyOptimizer.PathBelow(arm, root.transform);
+                var posed = arm.localRotation;
+                AnimatorUtility.OptimizeTransformHierarchy(root, Array.Empty<string>());
+                Assert.False(animator.hasTransformHierarchy);
+                animator.Update(0.1f);
+                AnimatorUtility.DeoptimizeTransformHierarchy(root);
+                arm = root.transform.Find(path);
+                Assert.NotNull(arm);
+                var rest = arm.localRotation;
+                Assert.True(Quaternion.Angle(rest, posed) > 1f);
+                animator.Update(0.1f);
+                Assert.True(Quaternion.Angle(posed, arm.localRotation) < 0.1f, $"{arm.localRotation} != {posed}");
+            }
+            finally
+            {
+                foreach (var o in created)
+                    if (o != null) Object.DestroyImmediate(o);
+            }
+        }
+
+        struct HandJob : IAnimationJob
+        {
+            public TransformStreamHandle Hand;
+            public bool Write;
+            public static bool ResolvedBefore, ResolvedAfter;
+            public static Vector3 Read;
+
+            public void ProcessRootMotion(AnimationStream stream) { }
+
+            public void ProcessAnimation(AnimationStream stream)
+            {
+                ResolvedBefore = Hand.IsResolved(stream);
+                Read = Hand.GetLocalPosition(stream);
+                ResolvedAfter = Hand.IsResolved(stream);
+                if (Write) Hand.SetLocalRotation(stream, Quaternion.Euler(0f, 0f, 30f));
+            }
+        }
+
+        static PlayableGraph PlayJob(Animator animator, AnimationClip clip, HandJob job)
+        {
+            var graph = PlayableGraph.Create("handles");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var playable = AnimationScriptPlayable.Create(graph, job, 1);
+            playable.ConnectInput(0, AnimationClipPlayable.Create(graph, clip), 0, 1f);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+            return graph;
+        }
+
+        /// <summary>A stream handle is resolved at its first access (Scripting API,
+        /// TransformStreamHandle.Resolve: "Handles are lazily resolved as they're accessed"):
+        /// IsResolved is false in the first evaluation until the job reads it and true from then
+        /// on (6000.0.71f1, tests/projects/animoptimize job.Rig.0 and job.Rig.1).</summary>
+        [Fact]
+        public void AStreamHandleIsResolvedAtItsFirstAccess()
+        {
+            var root = Rig(out var animator, out _);
+            var job = new HandJob { Hand = animator.BindStreamTransform(root.transform.Find("Rig/Hips/Spine/Hand")) };
+            var graph = PlayJob(animator, Clip(), job);
+            try
+            {
+                graph.Evaluate(0f);
+                Assert.False(HandJob.ResolvedBefore);
+                Assert.True(HandJob.ResolvedAfter);
+                graph.Evaluate(0.5f);
+                Assert.True(HandJob.ResolvedBefore);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>An exposed transform of an optimized hierarchy that is bound to the stream is
+        /// the stream's own: it keeps the pose it was bound at, with a job's writes, while the
+        /// skeleton's node moves (6000.0.71f1, tests/projects/animoptimize job.RigExposed,
+        /// jobRead.RigExposed). Control: unbound, it follows the node (jobNone.RigExposed), and
+        /// it does again once the stream handles are unbound (unmeasured).</summary>
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, false)]
+        public void AnExposedTransformBoundToTheStreamIsTheStreamsOwn(bool bound, bool write)
+        {
+            var root = Rig(out var animator, out _);
+            AnimatorUtility.OptimizeTransformHierarchy(root, new[] { "Rig/Hips/Spine/Hand" });
+            var hand = root.transform.Find("Hand");
+            var job = new HandJob { Write = write };
+            if (bound) job.Hand = animator.BindStreamTransform(hand);
+            var graph = bound ? PlayJob(animator, Clip(), job) : Play(animator, Clip());
+            try
+            {
+                graph.Evaluate(0f);
+                var first = hand.localPosition;
+                graph.Evaluate(0.5f);
+                if (bound)
+                {
+                    Near(first, hand.localPosition);
+                    Near(first, HandJob.Read);
+                    if (write) Assert.True(Quaternion.Angle(Quaternion.Euler(0f, 0f, 30f), hand.localRotation) < 0.01f);
+                    animator.UnbindAllStreamHandles();
+                    graph.Evaluate(0.25f);
+                }
+                Assert.True((hand.localPosition - first).magnitude > 0.1f, $"{hand.localPosition} stayed at {first}");
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
         [Fact]
         public void OptimizingWithoutAvatarOrTwiceDoesNothingAndAMissingPathWarns()
         {
