@@ -145,12 +145,17 @@ fn choose_config(
                     log::info!("EGL says it can present to the window but not natively",);
                 }
                 // Android emulator can't natively present either.
-                let tier_threshold =
-                    if cfg!(target_os = "android") || cfg!(windows) || cfg!(target_env = "ohos") {
-                        1
-                    } else {
-                        2
-                    };
+                // Unbound: Linux too (the measured NVIDIA driver has no natively renderable
+                // configs, yet presents to X11 windows).
+                let tier_threshold = if cfg!(target_os = "android")
+                    || cfg!(windows)
+                    || cfg!(target_env = "ohos")
+                    || cfg!(target_os = "linux")
+                {
+                    1
+                } else {
+                    2
+                };
                 return Ok((config, tier_max >= tier_threshold));
             }
             Ok(None) => {
@@ -882,6 +887,24 @@ impl crate::Instance for Instance {
                 .map_err(instance_err("failed to get XCB display"))?;
                 (display, WindowKind::X11)
             }
+            // Unbound: without a display handle, the X11 display of `$DISPLAY` where there is
+            // one (its windows are presented to whichever connection made them), so that a
+            // device made before its window can present to it; else surfaceless, as before.
+            (None, Some(egl))
+                if client_ext_str.contains("EGL_EXT_platform_x11")
+                    && std::env::var_os("DISPLAY").is_some_and(|d| !d.is_empty()) =>
+            {
+                log::debug!("Using X11 platform of $DISPLAY");
+                let display = unsafe {
+                    egl.get_platform_display(
+                        EGL_PLATFORM_X11_KHR,
+                        khronos_egl::DEFAULT_DISPLAY,
+                        &[khronos_egl::ATTRIB_NONE],
+                    )
+                }
+                .map_err(instance_err("failed to get X11 display"))?;
+                (display, WindowKind::X11)
+            }
             x if client_ext_str.contains("EGL_MESA_platform_surfaceless") => {
                 log::debug!(
                     "No (or unknown) windowing system ({x:?}) present. Using surfaceless platform"
@@ -1046,6 +1069,12 @@ impl crate::Instance for Instance {
         // as otherwise the user has to do the sRGB conversion.
         if !matches!(inner.srgb_kind, SrgbFrameBufferKind::None) {
             unsafe { gl.enable(glow::FRAMEBUFFER_SRGB) };
+        }
+
+        // Unbound: desktop OpenGL filters a cube map across the edges of its faces only when
+        // asked to (OpenGL ES and the other backends always do).
+        if !gl.version().is_embedded {
+            unsafe { gl.enable(glow::TEXTURE_CUBE_MAP_SEAMLESS) };
         }
 
         if self.flags.contains(wgt::InstanceFlags::DEBUG) && gl.supports_debug() {

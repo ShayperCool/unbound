@@ -193,6 +193,38 @@ impl super::Adapter {
         }
     }
 
+    /// Unbound: whether the driver draws into a texture of an internal format (a framebuffer of
+    /// one is complete).
+    unsafe fn renders_into(gl: &glow::Context, internal_format: u32) -> bool {
+        let (Ok(texture), Ok(framebuffer)) = (unsafe { gl.create_texture() }, unsafe {
+            gl.create_framebuffer()
+        }) else {
+            return false;
+        };
+        let complete = unsafe {
+            gl.bind_texture(glow::TEXTURE_2D, Some(texture));
+            gl.tex_storage_2d(glow::TEXTURE_2D, 1, internal_format, 4, 4);
+            gl.bind_framebuffer(glow::FRAMEBUFFER, Some(framebuffer));
+            gl.framebuffer_texture_2d(
+                glow::FRAMEBUFFER,
+                glow::COLOR_ATTACHMENT0,
+                glow::TEXTURE_2D,
+                Some(texture),
+                0,
+            );
+            let complete =
+                gl.check_framebuffer_status(glow::FRAMEBUFFER) == glow::FRAMEBUFFER_COMPLETE;
+            gl.bind_framebuffer(glow::FRAMEBUFFER, None);
+            gl.bind_texture(glow::TEXTURE_2D, None);
+            gl.delete_framebuffer(framebuffer);
+            gl.delete_texture(texture);
+            // A refusal leaves an error behind.
+            while gl.get_error() != glow::NO_ERROR {}
+            complete
+        };
+        complete
+    }
+
     pub(super) unsafe fn expose(
         context: super::AdapterContext,
         backend_options: wgt::GlBackendOptions,
@@ -461,6 +493,17 @@ impl super::Adapter {
         let supports_16bit_snorm_renderable = supports_16bit_norm
             && (extensions.contains("GL_EXT_render_snorm")
                 || extensions.contains("EXT_render_snorm"));
+        // Unbound: desktop OpenGL draws into signed normalized formats where the driver makes a
+        // framebuffer of one complete (they are color-renderable, but no driver has to
+        // support them): asked of the driver.
+        let (snorm8_renderable, supports_16bit_snorm_renderable) = if full_ver.is_some() {
+            (
+                unsafe { Self::renders_into(&gl, glow::RGBA8_SNORM) },
+                unsafe { Self::renders_into(&gl, glow::RGBA16_SNORM) },
+            )
+        } else {
+            (false, supports_16bit_snorm_renderable)
+        };
         // Storage on norm16. ARB_shader_image_load_store / GL 4.2 Table X.2 and
         // NV_image_formats Table 8.27 both list `r16/rg16/rgba16` and the SNORM
         // variants as image-unit formats, so one gate covers UNORM and SNORM.
@@ -696,6 +739,14 @@ impl super::Adapter {
         #[cfg(any(windows, webgl))]
         let texture_view: Option<super::TextureViewFn> = None;
         downlevel_flags.set(wgt::DownlevelFlags::VIEW_FORMATS, texture_view.is_some());
+        // Unbound: desktop OpenGL's image formats (4.2 or `GL_ARB_shader_image_load_store`): more
+        // than OpenGL ES 3.1's.
+        let desktop_image_formats = full_ver.is_some_and(|v| v >= (4, 2))
+            || (full_ver.is_some() && extensions.contains("GL_ARB_shader_image_load_store"));
+        // Unbound: copies between textures as image copies (`glCopyImageSubData`, desktop OpenGL
+        // 4.3).
+        let copy_image =
+            full_ver.is_some_and(|v| v >= (4, 3)) || extensions.contains("GL_ARB_copy_image");
         // Unbound: sampler LOD bias, desktop OpenGL only (`GL_TEXTURE_LOD_BIAS`).
         let max_lod_bias = full_ver
             .is_some()
@@ -975,6 +1026,9 @@ impl super::Adapter {
                     es: es_ver.is_some(),
                     max_msaa_samples: max_samples,
                     texture_view,
+                    copy_image,
+                    desktop_image_formats,
+                    snorm8_renderable,
                     max_lod_bias,
                 }),
             },
@@ -1261,41 +1315,58 @@ impl crate::Adapter for super::Adapter {
             storage,
         );
 
+        // Unbound: desktop OpenGL loads and stores images of every format of its table (OpenGL
+        // 4.5, table 8.26), not only OpenGL ES 3.1's.
+        let desktop_storage = if self.shared.desktop_image_formats {
+            storage
+        } else {
+            empty
+        };
+
+        // Unbound: the 8-bit signed normalized formats where the driver draws into them.
+        let snorm8 = if self.shared.snorm8_renderable {
+            filterable_renderable
+        } else {
+            filterable
+        };
+
         match format {
-            Tf::R8Unorm => filterable_renderable,
-            Tf::R8Snorm => filterable,
-            Tf::R8Uint => renderable,
-            Tf::R8Sint => renderable,
-            Tf::R16Uint => renderable,
-            Tf::R16Sint => renderable,
+            Tf::R8Unorm => filterable_renderable | desktop_storage,
+            Tf::R8Snorm => snorm8 | desktop_storage,
+            Tf::R8Uint => renderable | desktop_storage,
+            Tf::R8Sint => renderable | desktop_storage,
+            Tf::R16Uint => renderable | desktop_storage,
+            Tf::R16Sint => renderable | desktop_storage,
             Tf::R16Unorm => norm16_unorm | norm16_storage,
             Tf::R16Snorm => norm16_snorm | norm16_storage,
-            Tf::R16Float => filterable | half_float_renderable,
-            Tf::Rg8Unorm => filterable_renderable,
-            Tf::Rg8Snorm => filterable,
-            Tf::Rg8Uint => renderable,
-            Tf::Rg8Sint => renderable,
+            Tf::R16Float => filterable | half_float_renderable | desktop_storage,
+            Tf::Rg8Unorm => filterable_renderable | desktop_storage,
+            Tf::Rg8Snorm => snorm8 | desktop_storage,
+            Tf::Rg8Uint => renderable | desktop_storage,
+            Tf::Rg8Sint => renderable | desktop_storage,
             Tf::R32Uint => renderable | storage | image_atomic,
             Tf::R32Sint => renderable | storage | image_atomic,
             Tf::R32Float => unfilterable | storage | float_renderable | texture_float_linear,
-            Tf::Rg16Uint => renderable,
-            Tf::Rg16Sint => renderable,
+            Tf::Rg16Uint => renderable | desktop_storage,
+            Tf::Rg16Sint => renderable | desktop_storage,
             Tf::Rg16Unorm => norm16_unorm | norm16_storage,
             Tf::Rg16Snorm => norm16_snorm | norm16_storage,
-            Tf::Rg16Float => filterable | half_float_renderable,
+            Tf::Rg16Float => filterable | half_float_renderable | desktop_storage,
             Tf::Rgba8Unorm => filterable_renderable | storage,
             Tf::Rgba8UnormSrgb => filterable_renderable,
             Tf::Bgra8Unorm | Tf::Bgra8UnormSrgb => filterable_renderable,
-            Tf::Rgba8Snorm => filterable | storage,
+            Tf::Rgba8Snorm => snorm8 | storage,
             Tf::Rgba8Uint => renderable | storage,
             Tf::Rgba8Sint => renderable | storage,
-            Tf::Rgb10a2Uint => renderable,
-            Tf::Rgb10a2Unorm => filterable_renderable,
-            Tf::Rg11b10Ufloat => filterable | float_renderable,
+            Tf::Rgb10a2Uint => renderable | desktop_storage,
+            Tf::Rgb10a2Unorm => filterable_renderable | desktop_storage,
+            Tf::Rg11b10Ufloat => filterable | float_renderable | desktop_storage,
             Tf::R64Uint => image_64_atomic,
-            Tf::Rg32Uint => renderable,
-            Tf::Rg32Sint => renderable,
-            Tf::Rg32Float => unfilterable | float_renderable | texture_float_linear,
+            Tf::Rg32Uint => renderable | desktop_storage,
+            Tf::Rg32Sint => renderable | desktop_storage,
+            Tf::Rg32Float => {
+                unfilterable | float_renderable | texture_float_linear | desktop_storage
+            }
             Tf::Rgba16Uint => renderable | storage,
             Tf::Rgba16Sint => renderable | storage,
             Tf::Rgba16Unorm => norm16_unorm | norm16_storage,

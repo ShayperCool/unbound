@@ -31,8 +31,10 @@ fn gl_device() -> Option<(wgpu::Device, wgpu::Queue)> {
         version >= vec![4, 5],
         "a desktop OpenGL context below 4.5: {info:?}"
     );
+    // The adapter's features and limits, as the renderer's device has them.
     bevy::tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
         label: Some("gl backend test"),
+        required_features: adapter.features(),
         required_limits: adapter.limits(),
         ..Default::default()
     }))
@@ -67,6 +69,16 @@ fn texture(
 
 /// Level 0, layer 0 of a 4x4 RGBA8 texture, row by row.
 fn read(device: &wgpu::Device, queue: &wgpu::Queue, texture: &wgpu::Texture) -> Vec<[u8; 4]> {
+    read_layer(device, queue, texture, 0)
+}
+
+/// Level 0 of a layer of a 4x4 RGBA8 texture, row by row.
+fn read_layer(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    texture: &wgpu::Texture,
+    layer: u32,
+) -> Vec<[u8; 4]> {
     let buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: None,
         size: 256 * 4,
@@ -75,7 +87,14 @@ fn read(device: &wgpu::Device, queue: &wgpu::Queue, texture: &wgpu::Texture) -> 
     });
     let mut encoder = device.create_command_encoder(&Default::default());
     encoder.copy_texture_to_buffer(
-        texture.as_image_copy(),
+        wgpu::TexelCopyTextureInfo {
+            origin: wgpu::Origin3d {
+                x: 0,
+                y: 0,
+                z: layer,
+            },
+            ..texture.as_image_copy()
+        },
         wgpu::TexelCopyBufferInfo {
             buffer: &buffer,
             layout: wgpu::TexelCopyBufferLayout {
@@ -128,6 +147,7 @@ fn clear(
 struct Source<'a> {
     view: &'a wgpu::TextureView,
     sample_type: wgpu::TextureSampleType,
+    dimension: wgpu::TextureViewDimension,
     multisampled: bool,
     sampler: Option<&'a wgpu::Sampler>,
 }
@@ -156,7 +176,7 @@ fn draw(
         visibility: wgpu::ShaderStages::FRAGMENT,
         ty: wgpu::BindingType::Texture {
             sample_type: source.sample_type,
-            view_dimension: wgpu::TextureViewDimension::D2,
+            view_dimension: source.dimension,
             multisampled: source.multisampled,
         },
         count: None,
@@ -252,6 +272,7 @@ fn sampled<'a>(view: &'a wgpu::TextureView, sampler: &'a wgpu::Sampler) -> Sourc
     Source {
         view,
         sample_type: wgpu::TextureSampleType::Float { filterable: true },
+        dimension: wgpu::TextureViewDimension::D2,
         multisampled: false,
         sampler: Some(sampler),
     }
@@ -337,6 +358,399 @@ fn a_view_of_one_layer_samples_that_layer() {
     }
 }
 
+/// A cube texture (six square layers) is drawn into face by face and read back face by face:
+/// `Camera.RenderToCubemap`, reflection probes and `Cubemap.GetPixels` do both.
+#[test]
+fn each_face_of_a_cube_is_drawn_and_read() {
+    let Some((device, queue)) = gl_device() else {
+        return;
+    };
+    let cube = texture(
+        &device,
+        (4, 4, 6),
+        1,
+        1,
+        wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::COPY_SRC,
+        &[],
+    );
+    let shade = |face: u32| (40 * (face + 1)) as u8;
+    let mut encoder = device.create_command_encoder(&Default::default());
+    for face in 0..6 {
+        let view = cube.create_view(&wgpu::TextureViewDescriptor {
+            dimension: Some(wgpu::TextureViewDimension::D2),
+            base_array_layer: face,
+            array_layer_count: Some(1),
+            ..Default::default()
+        });
+        let value = f64::from(shade(face)) / 255.0;
+        clear(
+            &mut encoder,
+            &view,
+            None,
+            wgpu::Color {
+                r: value,
+                g: value,
+                b: value,
+                a: 1.0,
+            },
+        );
+    }
+    queue.submit([encoder.finish()]);
+    for face in 0..6 {
+        let s = shade(face);
+        assert_eq!(
+            read_layer(&device, &queue, &cube, face)[5],
+            [s, s, s, 255],
+            "face {face}"
+        );
+    }
+    // A face is copied out into a 2D texture, and a 2D texture into a face.
+    let flat = |usage| texture(&device, (4, 4, 1), 1, 1, usage, &[]);
+    let out = flat(wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::COPY_SRC);
+    let whole_level = wgpu::Extent3d {
+        width: 4,
+        height: 4,
+        depth_or_array_layers: 1,
+    };
+    let face = |texture, z| wgpu::TexelCopyTextureInfo {
+        origin: wgpu::Origin3d { x: 0, y: 0, z },
+        ..wgpu::Texture::as_image_copy(texture)
+    };
+    let mut encoder = device.create_command_encoder(&Default::default());
+    encoder.copy_texture_to_texture(face(&cube, 3), out.as_image_copy(), whole_level);
+    queue.submit([encoder.finish()]);
+    let s = shade(3);
+    assert_eq!(read(&device, &queue, &out)[5], [s, s, s, 255]);
+    let into = texture(
+        &device,
+        (4, 4, 6),
+        1,
+        1,
+        wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::COPY_SRC,
+        &[],
+    );
+    let mut encoder = device.create_command_encoder(&Default::default());
+    encoder.copy_texture_to_texture(out.as_image_copy(), face(&into, 4), whole_level);
+    // Several faces in one copy.
+    encoder.copy_texture_to_texture(
+        face(&cube, 0),
+        face(&into, 0),
+        wgpu::Extent3d {
+            depth_or_array_layers: 2,
+            ..whole_level
+        },
+    );
+    queue.submit([encoder.finish()]);
+    for (layer, shade) in [(4, shade(3)), (0, shade(0)), (1, shade(1)), (5, 0)] {
+        let alpha = if shade == 0 { 0 } else { 255 };
+        assert_eq!(
+            read_layer(&device, &queue, &into, layer)[5],
+            [shade, shade, shade, alpha],
+            "copied face {layer}"
+        );
+    }
+    // The cube samples each face in its direction.
+    let whole = cube.create_view(&wgpu::TextureViewDescriptor {
+        dimension: Some(wgpu::TextureViewDimension::Cube),
+        ..Default::default()
+    });
+    let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+        mag_filter: wgpu::FilterMode::Linear,
+        min_filter: wgpu::FilterMode::Linear,
+        ..Default::default()
+    });
+    let declarations = "@group(0) @binding(0) var t: texture_cube<f32>;\n\
+                        @group(0) @binding(1) var s: sampler;\n";
+    let sample = |direction: &str| {
+        let fragment = format!(
+            "@fragment fn fs() -> @location(0) vec4<f32> {{\n\
+             return textureSample(t, s, vec3<f32>({direction}));\n}}"
+        );
+        let source = Source {
+            view: &whole,
+            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+            dimension: wgpu::TextureViewDimension::Cube,
+            multisampled: false,
+            sampler: Some(&sampler),
+        };
+        draw(&device, &queue, declarations, &fragment, source)[5]
+    };
+    for (face, direction) in [
+        "1.0, 0.0, 0.0",
+        "-1.0, 0.0, 0.0",
+        "0.0, 1.0, 0.0",
+        "0.0, -1.0, 0.0",
+        "0.0, 0.0, 1.0",
+        "0.0, 0.0, -1.0",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let s = shade(face as u32);
+        assert_eq!(
+            sample(direction),
+            [s, s, s, 255],
+            "direction of face {face}"
+        );
+    }
+    // On the edge two faces share, their texels are filtered together (seamless cube maps), as
+    // Unity's devices filter them: halfway between the +X and the +Z face.
+    let edge = sample("1.0, 0.0, 1.0")[0];
+    let halfway = (u32::from(shade(0)) + u32::from(shade(4))) / 2;
+    assert!(
+        u32::from(edge).abs_diff(halfway) <= 1,
+        "the +X/+Z edge samples {edge}, not {halfway}"
+    );
+}
+
+/// A volume's slices are read back from any first slice (`AsyncGPUReadback` of a Texture3D's
+/// depth range): the first texel of each slice read, in the buffer's order.
+#[test]
+fn slices_of_a_volume_are_read_from_any_first_slice() {
+    let Some((device, queue)) = gl_device() else {
+        return;
+    };
+    let volume = device.create_texture(&wgpu::TextureDescriptor {
+        label: None,
+        size: wgpu::Extent3d {
+            width: 4,
+            height: 4,
+            depth_or_array_layers: 4,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D3,
+        format: TARGET,
+        usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    let texels: Vec<u8> = (0..4u8)
+        .flat_map(|slice| [50 * (slice + 1), 0, 0, 255].repeat(16))
+        .collect();
+    queue.write_texture(
+        volume.as_image_copy(),
+        &texels,
+        wgpu::TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(16),
+            rows_per_image: Some(4),
+        },
+        volume.size(),
+    );
+    let read_slices = |first: u32, count: u32| -> Vec<u8> {
+        // Rows of 256 bytes, 4 rows a slice.
+        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: 256 * 4 * 4,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        let mut encoder = device.create_command_encoder(&Default::default());
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                origin: wgpu::Origin3d {
+                    x: 0,
+                    y: 0,
+                    z: first,
+                },
+                ..volume.as_image_copy()
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(256),
+                    rows_per_image: Some(4),
+                },
+            },
+            wgpu::Extent3d {
+                width: 4,
+                height: 4,
+                depth_or_array_layers: count,
+            },
+        );
+        queue.submit([encoder.finish()]);
+        buffer
+            .slice(..)
+            .map_async(wgpu::MapMode::Read, |r| r.unwrap());
+        device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
+        let data = buffer.slice(..).get_mapped_range().unwrap();
+        (0..count as usize).map(|i| data[i * 256 * 4]).collect()
+    };
+    assert_eq!(read_slices(0, 4), [50, 100, 150, 200]);
+    assert_eq!(read_slices(1, 2), [100, 150]);
+    assert_eq!(read_slices(3, 1), [200]);
+}
+
+/// Kernels write textures of desktop OpenGL's image formats in those formats (RW render
+/// textures of integer and 10-10-10-2 formats): the texel a kernel stored, as the format keeps
+/// it.
+#[test]
+fn kernels_store_into_desktop_opengl_image_formats() {
+    let Some((device, queue)) = gl_device() else {
+        return;
+    };
+    let store = |format: wgpu::TextureFormat, name: &str, value: &str| -> Vec<u8> {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d {
+                width: 4,
+                height: 4,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: None,
+            source: wgpu::ShaderSource::Wgsl(
+                format!(
+                    "@group(0) @binding(0) var t: texture_storage_2d<{name}, write>;\n\
+                     @compute @workgroup_size(1) fn main() {{\n\
+                     textureStore(t, vec2<i32>(1, 1), {value});\n}}"
+                )
+                .into(),
+            ),
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: None,
+            layout: None,
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &pipeline.get_bind_group_layout(0),
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(
+                    &texture.create_view(&Default::default()),
+                ),
+            }],
+        });
+        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: 256 * 4,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        let mut encoder = device.create_command_encoder(&Default::default());
+        {
+            let mut pass = encoder.begin_compute_pass(&Default::default());
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, &group, &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        }
+        encoder.copy_texture_to_buffer(
+            texture.as_image_copy(),
+            wgpu::TexelCopyBufferInfo {
+                buffer: &buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(256),
+                    rows_per_image: None,
+                },
+            },
+            texture.size(),
+        );
+        queue.submit([encoder.finish()]);
+        buffer
+            .slice(..)
+            .map_async(wgpu::MapMode::Read, |r| r.unwrap());
+        device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
+        let data = buffer.slice(..).get_mapped_range().unwrap();
+        let texel = format.block_copy_size(None).unwrap() as usize;
+        // The texel at (1, 1).
+        data[256 + texel..256 + 2 * texel].to_vec()
+    };
+    // One 16-bit channel: the others are not kept.
+    assert_eq!(
+        store(
+            wgpu::TextureFormat::R16Sint,
+            "r16sint",
+            "vec4<i32>(-5, 7, 9, 11)"
+        ),
+        (-5i16).to_le_bytes()
+    );
+    assert_eq!(
+        store(
+            wgpu::TextureFormat::Rg8Uint,
+            "rg8uint",
+            "vec4<u32>(200u, 7u, 9u, 11u)"
+        ),
+        [200, 7]
+    );
+    // Ten bits a color and two of alpha: 0.678 is stored as two thirds.
+    let packed = store(
+        wgpu::TextureFormat::Rgb10a2Unorm,
+        "rgb10a2unorm",
+        "vec4<f32>(1.0, 0.0, 0.0, 0.678)",
+    );
+    let packed = u32::from_le_bytes([packed[0], packed[1], packed[2], packed[3]]);
+    assert_eq!((packed & 0x3ff, packed >> 30), (1023, 2));
+}
+
+/// Signed normalized targets are drawn into where the driver draws into them (URP's normals
+/// texture is `R8G8B8A8_SNorm`): negative values are kept.
+#[test]
+fn a_signed_normalized_target_keeps_negative_values() {
+    let Some((device, queue)) = gl_device() else {
+        return;
+    };
+    let format = wgpu::TextureFormat::Rgba8Snorm;
+    let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC;
+    let features = device.adapter_info();
+    // Creating the target fails validation where the driver has no such framebuffers; the
+    // measured NVIDIA driver has them.
+    let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let target = device.create_texture(&wgpu::TextureDescriptor {
+        label: None,
+        size: wgpu::Extent3d {
+            width: 4,
+            height: 4,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage,
+        view_formats: &[],
+    });
+    if let Some(error) = bevy::tasks::block_on(scope.pop()) {
+        assert_ne!(features.vendor, 0x10de, "{error}");
+        eprintln!("skipped: {features:?} does not draw into {format:?}");
+        return;
+    }
+    let mut encoder = device.create_command_encoder(&Default::default());
+    clear(
+        &mut encoder,
+        &target.create_view(&Default::default()),
+        None,
+        wgpu::Color {
+            r: -0.5,
+            g: 0.5,
+            b: -1.0,
+            a: 1.0,
+        },
+    );
+    queue.submit([encoder.finish()]);
+    let texel = read(&device, &queue, &target)[5].map(|byte| byte as i8);
+    assert!(
+        (-64..=-63).contains(&texel[0]) && (63..=64).contains(&texel[1]),
+        "{texel:?}"
+    );
+    assert_eq!(texel[2..], [-127, 127]);
+}
+
 #[test]
 fn a_sampled_multisampled_texture_renders_resolves_and_is_read() {
     let Some((device, queue)) = gl_device() else {
@@ -403,6 +817,7 @@ fn a_sampled_multisampled_texture_renders_resolves_and_is_read() {
     let unfilterable = |view| Source {
         view,
         sample_type: wgpu::TextureSampleType::Float { filterable: false },
+        dimension: wgpu::TextureViewDimension::D2,
         multisampled: true,
         sampler: None,
     };

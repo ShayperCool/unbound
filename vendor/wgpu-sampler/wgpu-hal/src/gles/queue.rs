@@ -699,6 +699,35 @@ impl super::Queue {
                 dst_target,
                 ref copy,
             } => {
+                // Unbound: an image copy where the context has them: every format (depth,
+                // blocks), every layer or slice of the region, and a cube's faces as its layers.
+                if self.shared.copy_image {
+                    let z = |target: u32, base: &crate::TextureCopyBase| match target {
+                        glow::TEXTURE_3D => base.origin.z,
+                        glow::TEXTURE_2D | glow::TEXTURE_2D_MULTISAMPLE => 0,
+                        _ => base.array_layer,
+                    };
+                    unsafe {
+                        gl.copy_image_sub_data(
+                            src,
+                            src_target,
+                            copy.src_base.mip_level as i32,
+                            copy.src_base.origin.x as i32,
+                            copy.src_base.origin.y as i32,
+                            z(src_target, &copy.src_base) as i32,
+                            dst,
+                            dst_target,
+                            copy.dst_base.mip_level as i32,
+                            copy.dst_base.origin.x as i32,
+                            copy.dst_base.origin.y as i32,
+                            z(dst_target, &copy.dst_base) as i32,
+                            copy.size.width as i32,
+                            copy.size.height as i32,
+                            copy.size.depth as i32,
+                        )
+                    };
+                    return;
+                }
                 //TODO: handle 3D copies
                 unsafe { gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Some(self.copy_fbo)) };
                 if is_layered_target(src_target) {
@@ -905,12 +934,6 @@ impl super::Queue {
                     log::error!("Not implemented yet: compressed texture copy to buffer");
                     return;
                 }
-                if src_target == glow::TEXTURE_CUBE_MAP
-                    || src_target == glow::TEXTURE_CUBE_MAP_ARRAY
-                {
-                    log::error!("Not implemented yet: cubemap texture copy to buffer");
-                    return;
-                }
                 let format_desc = self.shared.describe_texture_format(src_format);
                 let row_texels = copy
                     .buffer_layout
@@ -964,7 +987,8 @@ impl super::Queue {
                         };
                         read_pixels(copy.buffer_layout.offset);
                     }
-                    glow::TEXTURE_2D_ARRAY => {
+                    // Unbound: a cube array's faces are its layers.
+                    glow::TEXTURE_2D_ARRAY | glow::TEXTURE_CUBE_MAP_ARRAY => {
                         unsafe {
                             gl.framebuffer_texture_layer(
                                 glow::READ_FRAMEBUFFER,
@@ -976,23 +1000,41 @@ impl super::Queue {
                         };
                         read_pixels(copy.buffer_layout.offset);
                     }
+                    // Unbound: a cube's face is attached by its face target.
+                    glow::TEXTURE_CUBE_MAP => {
+                        unsafe {
+                            gl.framebuffer_texture_2d(
+                                glow::READ_FRAMEBUFFER,
+                                glow::COLOR_ATTACHMENT0,
+                                get_2d_target(src_target, copy.texture_base.array_layer),
+                                Some(src),
+                                copy.texture_base.mip_level as i32,
+                            )
+                        };
+                        read_pixels(copy.buffer_layout.offset);
+                    }
                     glow::TEXTURE_3D => {
-                        for z in copy.texture_base.origin.z..copy.size.depth {
+                        // Unbound: the region's slices from its first one, each after the last in
+                        // the buffer (before: the slices from the first up to the count, each at
+                        // its own index).
+                        for slice in 0..copy.size.depth {
                             unsafe {
                                 gl.framebuffer_texture_layer(
                                     glow::READ_FRAMEBUFFER,
                                     glow::COLOR_ATTACHMENT0,
                                     Some(src),
                                     copy.texture_base.mip_level as i32,
-                                    z as i32,
+                                    (copy.texture_base.origin.z + slice) as i32,
                                 )
                             };
                             let offset = copy.buffer_layout.offset
-                                + (z * block_size * row_texels * column_texels) as u64;
+                                + u64::from(slice)
+                                    * u64::from(block_size)
+                                    * u64::from(row_texels)
+                                    * u64::from(column_texels);
                             read_pixels(offset);
                         }
                     }
-                    glow::TEXTURE_CUBE_MAP | glow::TEXTURE_CUBE_MAP_ARRAY => unimplemented!(),
                     _ => unreachable!(),
                 }
             }

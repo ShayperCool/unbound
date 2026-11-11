@@ -305,6 +305,12 @@ struct AdapterShared {
     /// Unbound: `glTextureView` (OpenGL 4.3), when the context has it: views of another format,
     /// dimension, level or layer range are textures of their own.
     texture_view: Option<TextureViewFn>,
+    /// Unbound: the context copies between textures with `glCopyImageSubData` (OpenGL 4.3).
+    copy_image: bool,
+    /// Unbound: desktop OpenGL's image load and store formats (OpenGL 4.2).
+    desktop_image_formats: bool,
+    /// Unbound: the driver draws into 8-bit signed normalized formats (desktop OpenGL).
+    snorm8_renderable: bool,
     /// Unbound: `GL_MAX_TEXTURE_LOD_BIAS` on desktop OpenGL (sampler LOD bias), else `None`.
     max_lod_bias: Option<f32>,
 }
@@ -327,6 +333,9 @@ impl fmt::Debug for AdapterShared {
             program_cache: _,
             es,
             texture_view: _,
+            copy_image: _,
+            desktop_image_formats: _,
+            snorm8_renderable: _,
             max_lod_bias: _,
             max_msaa_samples,
         } = self;
