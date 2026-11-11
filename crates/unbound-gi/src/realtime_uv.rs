@@ -34,15 +34,24 @@ pub struct Input<'a> {
     pub min_chart_texels: u32,
 }
 
+/// A chart's place in its instance's UV space.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlacedChart {
+    /// Its rectangle in texels: x, y, width, height (whole blocks).
+    pub rect: [u32; 4],
+    /// Which blocks of the rectangle the chart uses, row-major from the bottom row. The others
+    /// are free for other charts (a ring's hole).
+    pub blocks: Vec<bool>,
+}
+
 /// The instance's UV space (`width` x `height` texels) and each vertex's position in it (0..1);
-/// vertices no triangle uses stay at 0. `charts`: each chart's rectangle in texels (x, y, width,
-/// height), in chart order.
+/// vertices no triangle uses stay at 0. `charts`: each chart's place, in chart order.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Output {
     pub width: u32,
     pub height: u32,
     pub uvs: Vec<[f32; 2]>,
-    pub charts: Vec<[u32; 4]>,
+    pub charts: Vec<PlacedChart>,
 }
 
 /// A packing mask: `width * height` cells, row-major from the bottom row; `true` is used.
@@ -448,58 +457,409 @@ impl Skylines {
     }
 }
 
+/// The smallest shape of a packing pass, each measure taken on its own over all shapes: free
+/// regions that could not hold it are given up.
+#[derive(Clone, Copy)]
+struct Smallest {
+    usage: i32,
+    width: i32,
+    height: i32,
+}
+
+/// A connected region of free cells: its bounding box (inclusive) and cell count.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Region {
+    id: i32,
+    min_x: i32,
+    min_y: i32,
+    max_x: i32,
+    max_y: i32,
+    count: i32,
+}
+
+/// The region that is open to the rows above every used cell.
+const OPEN_REGION: i32 = 1;
+/// A region smaller than this many times the smallest shape is searched for a place that holds
+/// that shape, when the shape is a full rectangle.
+const BLOCK_SEARCH_FACTOR: i32 = 100;
+
+/// The hole-filling heuristic: the target's free cells as 4-connected regions, kept from the
+/// first shape on that the skylines find no place for. A shape goes into the smallest region
+/// that holds it, at its lowest, then leftmost position.
+struct Regions {
+    width: usize,
+    /// Per cell: 0 when used or given up, else the id of its region.
+    labels: Vec<i32>,
+    /// The regions, fewest cells first.
+    list: Vec<Region>,
+    /// The highest used row, -1 without one. The open region's rows above the next one are
+    /// neither scanned nor relabelled.
+    top: i32,
+}
+
+impl Regions {
+    fn new(target: &Mask, smallest: Smallest, skylines: &mut Skylines) -> Self {
+        let (w, h) = (target.width as i32, target.height as i32);
+        let mut regions = Self {
+            width: target.width,
+            labels: target
+                .cells
+                .iter()
+                .map(|&used| if used { 0 } else { OPEN_REGION })
+                .collect(),
+            list: vec![Region {
+                id: OPEN_REGION,
+                min_x: 0,
+                min_y: 0,
+                max_x: w - 1,
+                max_y: h - 1,
+                count: w * h,
+            }],
+            top: (0..target.height)
+                .rev()
+                .find(|&y| (0..target.width).any(|x| target.get(x, y)))
+                .map_or(-1, |y| y as i32),
+        };
+        regions.split(0, OPEN_REGION, smallest, skylines);
+        regions
+    }
+
+    fn label(&self, x: i32, y: i32) -> i32 {
+        self.labels[y as usize * self.width + x as usize]
+    }
+
+    fn label_mut(&mut self, x: i32, y: i32) -> &mut i32 {
+        &mut self.labels[y as usize * self.width + x as usize]
+    }
+
+    /// Where `mask` goes: the first region in the list with enough cells and a large enough box
+    /// that holds every used cell of it, at the lowest, then leftmost such position.
+    fn find(&self, mask: &Mask, usage: i32) -> Option<(usize, usize)> {
+        let (w, h) = (mask.width as i32, mask.height as i32);
+        for region in &self.list {
+            if usage > region.count
+                || w > region.max_x - region.min_x + 1
+                || h > region.max_y - region.min_y + 1
+            {
+                continue;
+            }
+            for y in region.min_y..=region.max_y - h + 1 {
+                for x in region.min_x..=region.max_x - w + 1 {
+                    let inside = (0..h).all(|cy| {
+                        (0..w).all(|cx| {
+                            !mask.get(cx as usize, cy as usize)
+                                || self.label(x + cx, y + cy) == region.id
+                        })
+                    });
+                    if inside {
+                        return Some((x as usize, y as usize));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Takes the cells of a placed shape out of their regions. A region left with fewer free
+    /// cells than the smallest shape (counting the whole shape against it) is given up; the
+    /// others are split into what is still connected.
+    fn place(
+        &mut self,
+        mask: &Mask,
+        x: usize,
+        y: usize,
+        smallest: Smallest,
+        skylines: &mut Skylines,
+    ) {
+        let mut touched: Vec<i32> = Vec::new();
+        for cy in 0..mask.height {
+            for cx in 0..mask.width {
+                if mask.get(cx, cy) {
+                    let (tx, ty) = ((x + cx) as i32, (y + cy) as i32);
+                    let label = std::mem::replace(self.label_mut(tx, ty), 0);
+                    if !touched.contains(&label) {
+                        touched.push(label);
+                    }
+                    self.top = self.top.max(ty);
+                }
+            }
+        }
+        let usage = mask.usage() as i32;
+        for id in touched {
+            let Some(index) = self.list.iter().position(|r| r.id == id) else {
+                continue;
+            };
+            if self.list[index].count - usage < smallest.usage {
+                let region = self.list.remove(index);
+                self.give_up(&region, skylines);
+            } else {
+                let last_id = self.list.iter().map(|r| r.id).max().unwrap_or(OPEN_REGION);
+                self.split(index, last_id, smallest, skylines);
+            }
+        }
+    }
+
+    /// Gives a region up: its cells count as used from now on, for the skylines as well.
+    fn give_up(&mut self, region: &Region, skylines: &mut Skylines) {
+        for y in region.min_y..=region.max_y {
+            for x in region.min_x..=region.max_x {
+                if self.label(x, y) == region.id {
+                    *self.label_mut(x, y) = 0;
+                    let end = &mut skylines.row_end[y as usize];
+                    *end = (*end).max(x + 1);
+                    let top = &mut skylines.column_top[x as usize];
+                    *top = (*top).max(y + 1);
+                }
+            }
+        }
+    }
+
+    /// Whether a `width` x `height` block of the region's cells lies somewhere in it.
+    fn holds_block(&self, region: &Region, width: i32, height: i32) -> bool {
+        (region.min_y..=region.max_y - height + 1).any(|y| {
+            (region.min_x..=region.max_x - width + 1).any(|x| {
+                (0..height).all(|cy| (0..width).all(|cx| self.label(x + cx, y + cy) == region.id))
+            })
+        })
+    }
+
+    /// Replaces the region at `index` by its 4-connected parts, numbered after `last_id` in the
+    /// order of their first cells (bottom row first, left to right). Of the open region, the part
+    /// that reaches the row above the highest used one stays the open region, with all rows above
+    /// it. Parts that cannot hold the smallest shape are given up; the others join the list,
+    /// which stays ordered by cell count.
+    fn split(&mut self, index: usize, last_id: i32, smallest: Smallest, skylines: &mut Skylines) {
+        if self.top < 0 {
+            return;
+        }
+        let whole = self.list[index];
+        let end = (self.top + 1).min(whole.max_y);
+        // The parts, marked -1, -2, ... for now.
+        let mut parts = 0i32;
+        let mut pending: Vec<(i32, i32)> = Vec::new();
+        for y in whole.min_y..=end {
+            for x in whole.min_x..=whole.max_x {
+                if self.label(x, y) != whole.id {
+                    continue;
+                }
+                parts += 1;
+                *self.label_mut(x, y) = -parts;
+                pending.push((x, y));
+                while let Some((px, py)) = pending.pop() {
+                    for (nx, ny) in [(px - 1, py), (px + 1, py), (px, py - 1), (px, py + 1)] {
+                        if nx >= whole.min_x
+                            && nx <= whole.max_x
+                            && ny >= whole.min_y
+                            && ny <= end
+                            && self.label(nx, ny) == whole.id
+                        {
+                            *self.label_mut(nx, ny) = -parts;
+                            pending.push((nx, ny));
+                        }
+                    }
+                }
+            }
+        }
+        let open = if whole.id == OPEN_REGION && self.top < whole.max_y {
+            (whole.min_x..=whole.max_x)
+                .rev()
+                .map(|x| self.label(x, end))
+                .find(|&label| label != 0)
+                .filter(|&label| label < 0)
+        } else {
+            None
+        };
+        // The open region's rows above the scanned ones count one column short of its width.
+        let mut rest = Region {
+            id: OPEN_REGION,
+            min_x: 0,
+            min_y: whole.max_y,
+            max_x: whole.max_x,
+            max_y: whole.max_y,
+            count: (whole.max_x - whole.min_x) * (whole.max_y - self.top - 1),
+        };
+        let mut made: Vec<Region> = Vec::with_capacity(parts as usize + 1);
+        // Per part: its index in `made`, none for the open one.
+        let mut made_of: Vec<Option<usize>> = Vec::with_capacity(parts as usize);
+        for part in 1..=parts {
+            if open == Some(-part) {
+                made_of.push(None);
+                continue;
+            }
+            made_of.push(Some(made.len()));
+            made.push(Region {
+                id: last_id + 1 + made.len() as i32,
+                min_x: whole.max_x,
+                min_y: whole.max_y,
+                max_x: whole.min_x,
+                max_y: whole.min_y,
+                count: 0,
+            });
+        }
+        for y in whole.min_y..=end {
+            for x in whole.min_x..=whole.max_x {
+                let label = self.label(x, y);
+                if label >= 0 {
+                    continue;
+                }
+                let region = match made_of[(-label - 1) as usize] {
+                    Some(i) => {
+                        let region = &mut made[i];
+                        region.min_x = region.min_x.min(x);
+                        region.max_x = region.max_x.max(x);
+                        region.max_y = region.max_y.max(y);
+                        region
+                    }
+                    None => &mut rest,
+                };
+                region.min_y = region.min_y.min(y);
+                region.count += 1;
+                *self.label_mut(x, y) = region.id;
+            }
+        }
+        if whole.id == OPEN_REGION {
+            made.push(rest);
+        }
+        // Largest first; of equal ones the later.
+        let mut kept: Vec<Region> = Vec::with_capacity(made.len());
+        for region in made {
+            let (width, height) = (
+                region.max_x - region.min_x + 1,
+                region.max_y - region.min_y + 1,
+            );
+            let too_small = region.count < smallest.usage
+                || width < smallest.width
+                || height < smallest.height
+                || ((smallest.width > 1 || smallest.height > 1)
+                    && smallest.usage == smallest.width * smallest.height
+                    && region.count < smallest.usage * BLOCK_SEARCH_FACTOR
+                    && !self.holds_block(&region, smallest.width, smallest.height));
+            if too_small {
+                self.give_up(&region, skylines);
+            } else {
+                let at = kept
+                    .iter()
+                    .position(|k| region.count >= k.count)
+                    .unwrap_or(kept.len());
+                kept.insert(at, region);
+            }
+        }
+        // Each goes before the whole region's place, behind every region there with no more
+        // cells than it has.
+        self.list.remove(index);
+        let mut at = index;
+        for region in kept {
+            while at > 0 && region.count < self.list[at - 1].count {
+                at -= 1;
+            }
+            self.list.insert(at, region);
+            at += 1;
+        }
+    }
+}
+
+/// One packing pass: the target, its skylines and, once the skylines failed a shape that the
+/// target's size admits, its free regions.
+struct Pass {
+    target: Mask,
+    skylines: Skylines,
+    regions: Option<Regions>,
+    smallest: Smallest,
+}
+
+impl Pass {
+    fn new(width: usize, height: usize, smallest: Smallest) -> Self {
+        Self {
+            target: Mask::new(width, height),
+            skylines: Skylines::new(width, height),
+            regions: None,
+            smallest,
+        }
+    }
+
+    /// The shape's position: where the skylines put it, else a free region that holds it.
+    fn best(&mut self, mask: &Mask) -> Option<(usize, usize)> {
+        let (width, height) = (self.target.width, self.target.height);
+        if let Some(found) = self.skylines.best(mask, width, height) {
+            return Some(found);
+        }
+        if mask.width > width || mask.height > height {
+            return None;
+        }
+        if self.regions.is_none() {
+            self.regions = Some(Regions::new(
+                &self.target,
+                self.smallest,
+                &mut self.skylines,
+            ));
+        }
+        self.regions
+            .as_ref()
+            .and_then(|regions| regions.find(mask, mask.usage() as i32))
+    }
+
+    fn place(&mut self, mask: &Mask, x: usize, y: usize) {
+        self.skylines.place(mask, x, y);
+        for cy in 0..mask.height {
+            for cx in 0..mask.width {
+                if mask.get(cx, cy) {
+                    self.target.cells[(y + cy) * self.target.width + x + cx] = true;
+                }
+            }
+        }
+        if let Some(regions) = &mut self.regions {
+            regions.place(mask, x, y, self.smallest, &mut self.skylines);
+        }
+    }
+
+    /// The target's used size: one past its last used column and row.
+    fn used(&self) -> (usize, usize) {
+        let target = &self.target;
+        let columns = (0..target.width)
+            .rev()
+            .find(|&x| (0..target.height).any(|y| target.get(x, y)));
+        let rows = (0..target.height)
+            .rev()
+            .find(|&y| (0..target.width).any(|x| target.get(x, y)));
+        (columns.map_or(0, |x| x + 1), rows.map_or(0, |y| y + 1))
+    }
+}
+
 /// Packs the masks, largest first (ties in chart order), into a target that starts at one
 /// block and grows along its shorter side by the size of a shape that does not fit, until all
-/// fit; then crops it to what is used. Returns each mask's position and the target's size.
+/// fit; then crops it to what is used. A shape goes where the skylines put it, else into a hole
+/// between the shapes placed before it. Returns each mask's position and the target's size.
 fn pack(masks: &[&Mask]) -> Result<(Vec<(usize, usize)>, usize, usize)> {
     let max = (MAX_TEXELS / BLOCK_TEXELS) as usize;
     let mut order: Vec<usize> = (0..masks.len()).collect();
     let usage: Vec<usize> = masks.iter().map(|m| m.usage()).collect();
     order.sort_by(|&a, &b| usage[b].cmp(&usage[a]).then(a.cmp(&b)));
+    let least = |of: &dyn Fn(usize) -> usize| (0..masks.len()).map(of).min().unwrap_or(0) as i32;
+    let smallest = Smallest {
+        usage: least(&|i| usage[i]),
+        width: least(&|i| masks[i].width),
+        height: least(&|i| masks[i].height),
+    };
     let (mut width, mut height) = (1usize, 1usize);
     loop {
-        let mut skylines = Skylines::new(width, height);
-        let mut target = Mask::new(width, height);
+        let mut pass = Pass::new(width, height, smallest);
         let mut positions = vec![(0, 0); masks.len()];
         let (mut need_w, mut need_h) = (0usize, 0usize);
         for &i in &order {
             let mask = masks[i];
-            match skylines.best(mask, width, height) {
+            match pass.best(mask) {
                 Some((x, y)) => {
-                    skylines.place(mask, x, y);
-                    for (cy, cx) in
-                        (0..mask.height).flat_map(|cy| (0..mask.width).map(move |cx| (cy, cx)))
-                    {
-                        if mask.get(cx, cy) {
-                            target.cells[(y + cy) * width + x + cx] = true;
-                        }
-                    }
+                    pass.place(mask, x, y);
                     positions[i] = (x, y);
                 }
                 None => {
-                    // The skylines found no place; where a hole they do not see would hold the
-                    // shape, the precompute places it with another heuristic (not supported yet).
-                    if fits_somewhere(&target, mask) {
-                        bail!(
-                            "a chart that only fits into a hole between others: its packing is not supported yet"
-                        );
-                    }
                     need_w = need_w.max(mask.width);
                     need_h = need_h.max(mask.height);
                 }
             }
         }
         if need_w == 0 && need_h == 0 {
-            let used_w = skylines
-                .column_top
-                .iter()
-                .rposition(|&t| t > 0)
-                .map_or(0, |c| c + 1);
-            let used_h = skylines
-                .row_end
-                .iter()
-                .rposition(|&e| e > 0)
-                .map_or(0, |r| r + 1);
+            let (used_w, used_h) = pass.used();
             return Ok((positions, used_w, used_h));
         }
         if width == max && height == max {
@@ -528,20 +888,6 @@ fn pack(masks: &[&Mask]) -> Result<(Vec<(usize, usize)>, usize, usize)> {
         width = (width + dx).min(max);
         height = (height + dy).min(max);
     }
-}
-
-/// Whether `mask` fits on free cells of `target` anywhere.
-fn fits_somewhere(target: &Mask, mask: &Mask) -> bool {
-    if mask.width > target.width || mask.height > target.height {
-        return false;
-    }
-    (0..=target.height - mask.height).any(|y| {
-        (0..=target.width - mask.width).any(|x| {
-            (0..mask.height).all(|cy| {
-                (0..mask.width).all(|cx| !mask.get(cx, cy) || !target.get(x + cx, y + cy))
-            })
-        })
-    })
 }
 
 /// The instance's realtime lightmap UVs.
@@ -599,7 +945,10 @@ pub fn realtime_uvs(input: &Input) -> Result<Output> {
     let charts = charts
         .iter()
         .zip(&positions)
-        .map(|(c, &(x, y))| [x, y, c.mask.width, c.mask.height].map(|v| v as u32 * BLOCK_TEXELS))
+        .map(|(c, &(x, y))| PlacedChart {
+            rect: [x, y, c.mask.width, c.mask.height].map(|v| v as u32 * BLOCK_TEXELS),
+            blocks: c.mask.cells.clone(),
+        })
         .collect();
     Ok(Output {
         width: width as u32 * BLOCK_TEXELS,
@@ -611,8 +960,8 @@ pub fn realtime_uvs(input: &Input) -> Result<Output> {
 
 /// Checks generated UVs against a system's precomputed layout: the instance's UV space has the
 /// size its scale and offset in the system give it (`st`, `dynamicLightmapSTInSystem`), and each
-/// chart covers texels of one precomputed chart of its own. A difference means Unbound would draw
-/// the system's lightmap at other texels than the precompute lit.
+/// chart's blocks cover texels of one precomputed chart of its own. A difference means Unbound
+/// would draw the system's lightmap at other texels than the precompute lit.
 pub fn check_layout(system: &System, st: [f32; 4], output: &Output) -> Result<()> {
     let (sw, sh) = (system.transport.width, system.transport.height);
     let size = [st[0] * sw as f32, st[1] * sh as f32].map(|v| v.round() as i64);
@@ -634,14 +983,32 @@ pub fn check_layout(system: &System, st: [f32; 4], output: &Output) -> Result<()
     );
     let mut seen = Vec::with_capacity(output.charts.len());
     for chart in &output.charts {
+        let [left, bottom, width, height] = chart.rect;
+        let across = width / BLOCK_TEXELS;
+        ensure!(
+            width % BLOCK_TEXELS == 0
+                && height % BLOCK_TEXELS == 0
+                && chart.blocks.len() as u32 == across * (height / BLOCK_TEXELS)
+                && left + width <= output.width
+                && bottom + height <= output.height,
+            "a realtime lightmap chart at {:?} with {} blocks in UVs of {}x{} texels",
+            chart.rect,
+            chart.blocks.len(),
+            output.width,
+            output.height
+        );
         let mut id = None;
-        for y in chart[1]..chart[1] + chart[3] {
-            for x in chart[0]..chart[0] + chart[2] {
-                let texel = (origin[1] as u32 + y) * sw + origin[0] as u32 + x;
+        for y in 0..height {
+            for x in 0..width {
+                if !chart.blocks[((y / BLOCK_TEXELS) * across + x / BLOCK_TEXELS) as usize] {
+                    continue;
+                }
+                let texel = (origin[1] as u32 + bottom + y) * sw + origin[0] as u32 + left + x;
                 let found = system.chart_mask[texel as usize];
                 ensure!(
                     found != NO_CHART && id.is_none_or(|i| i == found),
-                    "a realtime lightmap chart at {chart:?} over texels the precompute did not lay out for it"
+                    "a realtime lightmap chart at {:?} over texels the precompute did not lay out for it",
+                    chart.rect
                 );
                 id = Some(found);
             }
@@ -683,11 +1050,98 @@ mod tests {
     }
 
     #[test]
-    fn a_shape_only_a_hole_holds_fails_loudly() {
-        // A ring with a 3x3 hole the skylines cannot reach, then a block that fits only there.
+    fn a_shape_goes_into_a_hole_the_skylines_do_not_see() {
+        // A ring with a 3x3 hole, then a block that fits only there: the target stays the ring.
         let ring = mask(5, 5, |x, y| x == 0 || y == 0 || x == 4 || y == 4);
         let small = mask(2, 2, |_, _| true);
-        let error = pack(&[&ring, &small]).unwrap_err().to_string();
-        assert!(error.contains("hole"), "{error}");
+        let (positions, w, h) = pack(&[&ring, &small]).unwrap();
+        assert_eq!(positions, vec![(0, 0), (1, 1)]);
+        assert_eq!((w, h), (5, 5));
+        // A pocket that opens downwards is no hole, and hidden from both skylines all the same.
+        let arch = mask(5, 4, |x, y| x == 0 || x == 4 || y == 3);
+        let (positions, w, h) = pack(&[&arch, &small]).unwrap();
+        assert_eq!(positions, vec![(0, 0), (1, 0)]);
+        assert_eq!((w, h), (5, 4));
+    }
+
+    #[test]
+    fn a_shape_no_hole_holds_grows_the_target() {
+        // The hole is one block short of the second shape: the target grows as without a hole.
+        let ring = mask(5, 5, |x, y| x == 0 || y == 0 || x == 4 || y == 4);
+        let large = mask(4, 4, |_, _| true);
+        let (positions, w, h) = pack(&[&ring, &large]).unwrap();
+        assert_eq!(positions[0], (0, 0));
+        assert!(positions[1].0 >= 5 || positions[1].1 >= 5, "{positions:?}");
+        assert!(w * h >= 5 * 5 + 4 * 4, "{w}x{h}");
+        // An L of three blocks does not go into a 2x2 hole's row of two.
+        let frame = mask(4, 3, |x, y| x == 0 || x == 3 || y == 0 || y == 2);
+        let corner = mask(2, 2, |x, y| x == 0 || y == 0);
+        let (positions, _, _) = pack(&[&frame, &corner]).unwrap();
+        assert!(positions[1].0 >= 4 || positions[1].1 >= 3, "{positions:?}");
+    }
+
+    #[test]
+    fn the_smallest_hole_that_holds_a_shape_takes_it() {
+        // Two holes, the larger one first in every scan order: 3x3 at (1, 1), 2x2 at (5, 1).
+        let plate = mask(8, 5, |x, y| {
+            !((1..4).contains(&x) && (1..4).contains(&y))
+                && !((5..7).contains(&x) && (1..3).contains(&y))
+        });
+        let small = mask(2, 2, |_, _| true);
+        let (positions, w, h) = pack(&[&plate, &small, &small]).unwrap();
+        // The first block takes the hole of its own size; the second the lowest, leftmost place
+        // of the other.
+        assert_eq!(positions, vec![(0, 0), (5, 1), (1, 1)]);
+        assert_eq!((w, h), (8, 5));
+    }
+
+    #[test]
+    fn free_regions_split_as_shapes_are_placed() {
+        // A 6x4 target with a wall in column 2 up to row 2, and a used cell at (4, 0).
+        let target = mask(6, 4, |x, y| (x == 2 && y < 3) || (x == 4 && y == 0));
+        let smallest = Smallest {
+            usage: 1,
+            width: 1,
+            height: 1,
+        };
+        let mut skylines = Skylines::new(6, 4);
+        let mut regions = Regions::new(&target, smallest, &mut skylines);
+        // Everything is still one region through the top row: the open one.
+        assert_eq!(regions.list.len(), 1);
+        let open = regions.list[0];
+        assert_eq!((open.id, open.min_x, open.max_x, open.max_y), (1, 0, 5, 3));
+        assert_eq!(open.min_y, 0);
+        assert_eq!(open.count, 6 * 4 - 4);
+        // The open region's rows above the scanned ones count one column short of its width:
+        // with one used cell in a 6x6 target, rows 0 and 1 give 11 cells and the four rows above
+        // five each.
+        let corner = mask(6, 6, |x, y| x == 0 && y == 0);
+        let above = Regions::new(&corner, smallest, &mut Skylines::new(6, 6));
+        assert_eq!(above.list.len(), 1);
+        assert_eq!((above.list[0].id, above.list[0].count), (1, 11 + 4 * 5));
+        // A bar across row 3 closes both sides: two regions, the smaller first, numbered by
+        // their first cells; the open one is used up and given up.
+        let bar = mask(6, 1, |_, _| true);
+        regions.place(&bar, 0, 3, smallest, &mut skylines);
+        let ids: Vec<(i32, i32)> = regions.list.iter().map(|r| (r.id, r.count)).collect();
+        assert_eq!(ids, vec![(2, 6), (3, 8)]);
+        assert_eq!(regions.list[0].min_x, 0);
+        assert_eq!(regions.list[0].max_x, 1);
+        assert_eq!(regions.list[1].min_x, 3);
+        assert_eq!(regions.list[1].max_x, 5);
+        // A block leaves the left region with two cells, fewer than a smallest shape of three
+        // would need: with that smallest shape the rest is given up and counts as used.
+        let smallest = Smallest {
+            usage: 3,
+            width: 1,
+            height: 1,
+        };
+        let block = mask(2, 2, |_, _| true);
+        assert_eq!(regions.find(&block, 4), Some((0, 0)));
+        regions.place(&block, 0, 0, smallest, &mut skylines);
+        assert!(regions.list.iter().all(|r| r.id != 2));
+        assert_eq!(regions.label(0, 2), 0);
+        assert_eq!(skylines.column_top[0], 3);
+        assert_eq!(skylines.row_end[2], 2);
     }
 }

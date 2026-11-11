@@ -675,7 +675,8 @@ pub fn read_probes(handle: u64, out: &mut [f32]) -> Result<usize> {
 
 /// Format version of the realtime lightmap UV cache entries (`realtime_uvs`).
 /// 2: the chart rectangles are stored, and only layouts that passed the check.
-const UV_CACHE_VERSION: u32 = 2;
+/// 3: each chart's blocks are stored; charts go into holes between the charts placed before them.
+const UV_CACHE_VERSION: u32 = 3;
 
 /// Renderer `renderer` of system `system`'s realtime lightmap UVs
 /// (`unbound_gi::realtime_uv`), checked against the system's precomputed layout and cached under
@@ -744,8 +745,18 @@ fn bytes_of<T: Copy>(items: &[T]) -> &[u8] {
     unsafe { std::slice::from_raw_parts(items.as_ptr() as *const u8, std::mem::size_of_val(items)) }
 }
 
-/// A cache entry: width, height, vertex count, chart count, the UVs, then the chart rectangles
-/// (little-endian 32-bit words).
+/// Bits per word of a cached chart's blocks.
+const BLOCK_WORD_BITS: usize = u32::BITS as usize;
+
+/// The blocks of a chart rectangle of `rect` texels, none when it is not of whole blocks.
+fn rect_blocks(rect: [u32; 4]) -> Option<usize> {
+    let block = unbound_gi::realtime_uv::BLOCK_TEXELS;
+    (rect[2] % block == 0 && rect[3] % block == 0)
+        .then(|| (rect[2] / block) as usize * (rect[3] / block) as usize)
+}
+
+/// A cache entry: width, height, vertex count, chart count, the UVs, the chart rectangles, then
+/// each chart's blocks, one bit each from a word's lowest (little-endian 32-bit words).
 fn read_cached(path: &Path, vertices: usize) -> Option<unbound_gi::realtime_uv::Output> {
     let bytes = std::fs::read(path).ok()?;
     let word = |k: usize| -> Option<u32> {
@@ -755,7 +766,7 @@ fn read_cached(path: &Path, vertices: usize) -> Option<unbound_gi::realtime_uv::
     };
     let (width, height) = (word(0)?, word(1)?);
     let (count, charts) = (word(2)? as usize, word(3)? as usize);
-    if count != vertices || bytes.len() != 4 * (4 + 2 * count + 4 * charts) {
+    if count != vertices {
         return None;
     }
     let uvs = (0..count)
@@ -767,35 +778,60 @@ fn read_cached(path: &Path, vertices: usize) -> Option<unbound_gi::realtime_uv::
         })
         .collect::<Option<Vec<_>>>()?;
     let at = 4 + 2 * count;
-    let charts = (0..charts)
+    let rects = (0..charts)
         .map(|c| {
-            let w = |k: usize| word(at + 4 * c + k);
+            let w = |k: usize| word(at.checked_add(4 * c)?.checked_add(k)?);
             Some([w(0)?, w(1)?, w(2)?, w(3)?])
         })
         .collect::<Option<Vec<_>>>()?;
+    let mut at = at + 4 * charts;
+    let mut placed = Vec::with_capacity(charts);
+    for rect in rects {
+        let blocks = rect_blocks(rect)?;
+        let words = blocks.div_ceil(BLOCK_WORD_BITS);
+        let blocks = (0..blocks)
+            .map(|b| Some(word(at + b / BLOCK_WORD_BITS)? >> (b % BLOCK_WORD_BITS) & 1 != 0))
+            .collect::<Option<Vec<_>>>()?;
+        at += words;
+        placed.push(unbound_gi::realtime_uv::PlacedChart { rect, blocks });
+    }
+    if bytes.len() != 4 * at {
+        return None;
+    }
     Some(unbound_gi::realtime_uv::Output {
         width,
         height,
         uvs,
-        charts,
+        charts: placed,
     })
 }
 
 fn write_cached(path: &Path, output: &unbound_gi::realtime_uv::Output) -> Result<()> {
-    let mut bytes = Vec::with_capacity(4 * (4 + 2 * output.uvs.len() + 4 * output.charts.len()));
     let header = [
         output.width,
         output.height,
         output.uvs.len() as u32,
         output.charts.len() as u32,
     ];
-    let words = header
+    let mut words: Vec<u32> = header
         .into_iter()
         .chain(output.uvs.iter().flat_map(|uv| uv.map(f32::to_bits)))
-        .chain(output.charts.iter().flatten().copied());
-    for v in words {
-        bytes.extend_from_slice(&v.to_le_bytes());
+        .chain(output.charts.iter().flat_map(|chart| chart.rect))
+        .collect();
+    for chart in &output.charts {
+        ensure!(
+            rect_blocks(chart.rect) == Some(chart.blocks.len()),
+            "a chart at {:?} with {} blocks",
+            chart.rect,
+            chart.blocks.len()
+        );
+        words.extend(chart.blocks.chunks(BLOCK_WORD_BITS).map(|bits| {
+            bits.iter()
+                .enumerate()
+                .fold(0u32, |word, (b, &used)| word | (used as u32) << b)
+        }));
     }
+    let bytes: Vec<u8> = words.into_iter().flat_map(u32::to_le_bytes).collect();
     let dir = path.parent().context("no cache folder")?;
     std::fs::create_dir_all(dir)?;
     let temp = path.with_extension(format!("tmp{}", std::process::id()));
@@ -1262,13 +1298,27 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("unbound-uv-cache-{}", std::process::id()));
         let path = dir.join("entry.bin");
         let output = unbound_gi::realtime_uv::Output {
-            width: 8,
+            width: 16,
             height: 12,
             uvs: vec![[0.25, 0.5], [0.75, 1.0]],
-            charts: vec![[0, 0, 4, 4], [4, 0, 4, 12]],
+            // A full chart and one of more blocks than a word holds, with a hole.
+            charts: vec![
+                unbound_gi::realtime_uv::PlacedChart {
+                    rect: [0, 0, 4, 4],
+                    blocks: vec![true; 4],
+                },
+                unbound_gi::realtime_uv::PlacedChart {
+                    rect: [4, 0, 12, 12],
+                    blocks: (0..36).map(|b| b % 7 != 3).collect(),
+                },
+            ],
         };
         write_cached(&path, &output).unwrap();
-        assert_eq!(read_cached(&path, 2), Some(output));
+        assert_eq!(read_cached(&path, 2), Some(output.clone()));
+        // A chart whose blocks are not its rectangle's is not written.
+        let mut wrong = output.clone();
+        wrong.charts[0].blocks.pop();
+        assert!(write_cached(&dir.join("wrong.bin"), &wrong).is_err());
         // Another vertex count or a truncated entry is not used.
         assert_eq!(read_cached(&path, 3), None);
         let bytes = std::fs::read(&path).unwrap();
