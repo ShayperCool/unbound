@@ -30,10 +30,13 @@ const CACHE_SIZE: usize = 16;
 const TRIANGLES_PER_PART: usize = 1_000_000;
 const NONE: u32 = u32::MAX;
 
-/// What a corner adds to a candidate triangle's score: more, the fewer triangles its vertex has
-/// left (256 for one, 16 for two, 1 for three, nothing above; the count is read modulo 8).
+/// What a corner adds to a candidate triangle's score, by the triangles its vertex has left
+/// modulo 8: most for one, less for two and three, nothing above, and the top value for a
+/// multiple of 8 (lightmapuvs Organic has such vertices: its order differs without the wrap).
+const VALENCE_SCORE: [i32; 8] = [4096, 256, 16, 1, 0, 0, 0, 0];
+
 fn valence_score(remaining: u32) -> i32 {
-    (0x1000u32 >> ((remaining & 7) << 2)) as i32
+    VALENCE_SCORE[(remaining & 7) as usize]
 }
 
 /// The vertices with their remaining triangles, grouped by how many they have left.
