@@ -515,7 +515,7 @@ fn replays_the_probes_cases() {
     };
     r.check(ambient, "room-env-nocall", ISOLATED, 0.006);
     r.check(ambient, "room-env-call", ISOLATED, 0.006);
-    // (The skybox cases are not supported yet; the probe returns to the same flat ambient.)
+    // (The probe's skybox cases need the renderer; it returns to the same ambient color.)
     r.check(
         Room {
             point_light: false,
