@@ -17,9 +17,9 @@ using UnityEngine.UIElements.Internal;
 // sortColumnDescriptions, sortingMode, columnSortingChanged.
 // Matches the Unity 6000.0.71f1 Editor, tests/projects/uitkcollections (columns and column-tree
 // sections: header and row structure, widths, cell callbacks in order, hiding and showing a
-// column, a new width, adding and removing columns, clicks, tree expansion). Not implemented:
-// reordering columns by dragging their header, the header's context menu (resize to fit, column
-// visibility), view-data persistence of the header state.
+// column, a new width, adding and removing columns, clicks, tree expansion; header-drag and
+// header-menu sections: a header column dragged to another place, the items the header puts in a
+// contextual menu and what each does). Not implemented: view-data persistence of the header state.
 namespace UnityEngine.UIElements
 {
     public enum SortDirection
@@ -1065,11 +1065,16 @@ namespace UnityEngine.UIElements
 
         public event Action columnSortingChanged;
 
+        public event Action<ContextualMenuPopulateEvent, Column> headerContextMenuPopulateEvent;
+
+        void OnHeaderContextMenuPopulate(ContextualMenuPopulateEvent evt, Column column) => headerContextMenuPopulateEvent?.Invoke(evt, column);
+
         public MultiColumnController(Columns columns, SortColumnDescriptions sortDescriptions, List<SortColumnDescription> sortedColumns)
         {
             m_CombinedComparison = CombinedComparison;
             m_MultiColumnHeader = new MultiColumnCollectionHeader(columns, sortDescriptions, sortedColumns);
             m_MultiColumnHeader.columnSortingChanged += OnColumnSortingChanged;
+            m_MultiColumnHeader.contextMenuPopulateEvent += OnHeaderContextMenuPopulate;
             m_MultiColumnHeader.columnResized += OnColumnResized;
             m_MultiColumnHeader.columns.columnAdded += OnColumnAdded;
             m_MultiColumnHeader.columns.columnRemoved += OnColumnRemoved;
@@ -1171,6 +1176,7 @@ namespace UnityEngine.UIElements
             }
             m_MultiColumnHeader.columnContainer.UnregisterCallback<GeometryChangedEvent>(OnColumnContainerGeometryChanged);
             m_MultiColumnHeader.columnSortingChanged -= OnColumnSortingChanged;
+            m_MultiColumnHeader.contextMenuPopulateEvent -= OnHeaderContextMenuPopulate;
             m_MultiColumnHeader.columnResized -= OnColumnResized;
             m_MultiColumnHeader.columns.columnAdded -= OnColumnAdded;
             m_MultiColumnHeader.columns.columnRemoved -= OnColumnRemoved;
@@ -1335,10 +1341,18 @@ namespace UnityEngine.UIElements
         public readonly List<SortColumnDescription> sortedColumns = new List<SortColumnDescription>();
 
         public event Action sortingChanged;
+        public event Action<ContextualMenuPopulateEvent, Column> headerContextMenuPopulate;
+        readonly Action<ContextualMenuPopulateEvent, Column> m_RaiseHeaderContextMenuPopulate;
 
-        public UaMultiColumnViewState() => m_RaiseSortingChanged = RaiseSortingChanged;
+        public UaMultiColumnViewState()
+        {
+            m_RaiseSortingChanged = RaiseSortingChanged;
+            m_RaiseHeaderContextMenuPopulate = RaiseHeaderContextMenuPopulate;
+        }
 
         void RaiseSortingChanged() => sortingChanged?.Invoke();
+
+        void RaiseHeaderContextMenuPopulate(ContextualMenuPopulateEvent evt, Column column) => headerContextMenuPopulate?.Invoke(evt, column);
 
         public void SetSortingMode(ColumnSortingMode value)
         {
@@ -1363,11 +1377,16 @@ namespace UnityEngine.UIElements
 
         public void Attach(MultiColumnController controller)
         {
-            if (m_Controller != null) m_Controller.columnSortingChanged -= m_RaiseSortingChanged;
+            if (m_Controller != null)
+            {
+                m_Controller.columnSortingChanged -= m_RaiseSortingChanged;
+                m_Controller.headerContextMenuPopulateEvent -= m_RaiseHeaderContextMenuPopulate;
+            }
             m_Controller = controller;
             if (controller == null) return;
             controller.sortingMode = sortingMode;
             controller.columnSortingChanged += m_RaiseSortingChanged;
+            controller.headerContextMenuPopulateEvent += m_RaiseHeaderContextMenuPopulate;
         }
     }
 
@@ -1419,6 +1438,12 @@ namespace UnityEngine.UIElements
         {
             add => m_State.sortingChanged += value;
             remove => m_State.sortingChanged -= value;
+        }
+
+        public event Action<ContextualMenuPopulateEvent, Column> headerContextMenuPopulateEvent
+        {
+            add => m_State.headerContextMenuPopulate += value;
+            remove => m_State.headerContextMenuPopulate -= value;
         }
 
         public MultiColumnListView() : this(new Columns()) { }
@@ -1592,6 +1617,12 @@ namespace UnityEngine.UIElements
         {
             add => m_State.sortingChanged += value;
             remove => m_State.sortingChanged -= value;
+        }
+
+        public event Action<ContextualMenuPopulateEvent, Column> headerContextMenuPopulateEvent
+        {
+            add => m_State.headerContextMenuPopulate += value;
+            remove => m_State.headerContextMenuPopulate -= value;
         }
 
         public MultiColumnTreeView() : this(new Columns()) { }
@@ -1813,6 +1844,8 @@ namespace UnityEngine.UIElements.Internal
 
         public event Action columnSortingChanged;
 
+        public event Action<ContextualMenuPopulateEvent, Column> contextMenuPopulateEvent;
+
         public MultiColumnCollectionHeader() : this(new Columns(), new SortColumnDescriptions(), new List<SortColumnDescription>()) { }
 
         public MultiColumnCollectionHeader(Columns columns, SortColumnDescriptions sortDescriptions, List<SortColumnDescription> sortedColumns)
@@ -1836,6 +1869,7 @@ namespace UnityEngine.UIElements.Internal
             columns.columnRemoved += OnColumnRemoved;
             columns.columnChanged += OnColumnChanged;
             columns.columnReordered += OnColumnReordered;
+            this.AddManipulator(new ContextualMenuManipulator(PopulateContextualMenu));
             RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
         }
 
@@ -1926,6 +1960,7 @@ namespace UnityEngine.UIElements.Internal
                 var handle = new MultiColumnHeaderColumnResizeHandle();
                 control.RegisterCallback<GeometryChangedEvent>(OnColumnControlGeometryChanged);
                 control.clickable.clickedWithEventInfo += OnColumnClicked;
+                control.mover.activeChanged += OnMoverActiveChanged;
                 handle.dragArea.AddManipulator(new ColumnResizer(column));
                 columnDataMap[column] = new ColumnData { control = control, resizeHandle = handle };
                 columnContainer.Insert(column.visibleIndex, control);
@@ -1971,6 +2006,43 @@ namespace UnityEngine.UIElements.Internal
             }
             UpdateColumnControls();
         }
+
+        /// <summary>The header's menu: "Resize To Fit" (disabled without visible columns, and in
+        /// GrowAndFill mode with a stretchable one, which already fills the header), a separator,
+        /// then one entry per column in collection order, named by its title, else its name, else
+        /// "Unnamed Column_" and its index: checked while visible, choosing it shows or hides the
+        /// column; disabled for the named primary column and for columns that are not optional.
+        /// The game's handlers then get the event and the visible column under the pointer.</summary>
+        void PopulateContextualMenu(ContextualMenuPopulateEvent evt)
+        {
+            Column under = null;
+            bool canResizeToFit = columns.visibleColumns.Count > 0;
+            foreach (var column in columns.visibleColumns)
+            {
+                if (columns.stretchMode == Columns.StretchMode.GrowAndFill && column.stretchable) canResizeToFit = false;
+                if (under == null && columnDataMap.TryGetValue(column, out var data) && data.control.layout.Contains(evt.localMousePosition)) under = column;
+            }
+            evt.menu.AppendAction("Resize To Fit", _ => columnLayout.ResizeToFit(layout.width),
+                canResizeToFit ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+            evt.menu.AppendSeparator();
+            foreach (var column in columns)
+            {
+                var entry = column;
+                string text = !string.IsNullOrEmpty(entry.title) ? entry.title
+                    : !string.IsNullOrEmpty(entry.name) ? entry.name : "Unnamed Column_" + entry.index;
+                evt.menu.AppendAction(text, _ => entry.visible = !entry.visible, _ =>
+                {
+                    if (!string.IsNullOrEmpty(entry.name) && columns.primaryColumnName == entry.name) return DropdownMenuAction.Status.Disabled;
+                    if (!entry.optional) return DropdownMenuAction.Status.Disabled;
+                    return entry.visible ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal;
+                });
+            }
+            contextMenuPopulateEvent?.Invoke(evt, under);
+        }
+
+        // The resize handles lie over the header columns: hidden while a column may be dragged.
+        void OnMoverActiveChanged(ColumnMover mover) =>
+            resizeHandleContainer.style.display = mover.active ? DisplayStyle.None : DisplayStyle.Flex;
 
         void OnGeometryChanged(GeometryChangedEvent e)
         {
@@ -2088,6 +2160,7 @@ namespace UnityEngine.UIElements.Internal
         {
             data.control.UnregisterCallback<GeometryChangedEvent>(OnColumnControlGeometryChanged);
             data.control.clickable.clickedWithEventInfo -= OnColumnClicked;
+            data.control.mover.activeChanged -= OnMoverActiveChanged;
             data.control.RemoveFromHierarchy();
             data.control.Dispose();
             data.resizeHandle.RemoveFromHierarchy();
@@ -2135,6 +2208,8 @@ namespace UnityEngine.UIElements.Internal
         bool m_ContentBound;
 
         public Clickable clickable { get; private set; }
+
+        public ColumnMover mover { get; private set; }
 
         public string sortOrderLabel
         {
@@ -2188,6 +2263,11 @@ namespace UnityEngine.UIElements.Internal
             Add(m_ContentContainer);
             UpdateHeaderTemplate();
             UpdateGeometryFromColumn();
+            // The mover is added first: it sees a release before the click does, and a release
+            // that ends a drag is not a click.
+            mover = new ColumnMover();
+            this.AddManipulator(mover);
+            mover.movingChanged += OnMoverMovingChanged;
             clickable = new Clickable((Action)null);
             this.AddManipulator(clickable);
             clickable.activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse, modifiers = EventModifiers.Shift });
@@ -2211,6 +2291,8 @@ namespace UnityEngine.UIElements.Internal
         }
 
         void OnColumnResized(Column c) => UpdateGeometryFromColumn();
+
+        void OnMoverMovingChanged(ColumnMover m) => EnableInClassList(movingUssClassName, m.moving);
 
         void UpdateDataFromColumn()
         {
@@ -2312,7 +2394,10 @@ namespace UnityEngine.UIElements.Internal
         {
             column.changed -= OnColumnChanged;
             column.resized -= OnColumnResized;
+            mover.movingChanged -= OnMoverMovingChanged;
+            this.RemoveManipulator(mover);
             this.RemoveManipulator(clickable);
+            mover = null;
             column = null;
             content = null;
         }
@@ -2488,6 +2573,247 @@ namespace UnityEngine.UIElements.Internal
             }
             columnLayout?.EndDragResize(m_Column, cancelled);
             m_Resizing = false;
+        }
+    }
+
+    /// <summary>The header column shown at the pointer while a column is dragged.</summary>
+    internal partial class MultiColumnHeaderColumnMovePreview : VisualElement
+    {
+        public static readonly string ussClassName = MultiColumnHeaderColumn.ussClassName + "__move-preview";
+
+        public MultiColumnHeaderColumnMovePreview()
+        {
+            AddToClassList(ussClassName);
+            pickingMode = PickingMode.Ignore;
+        }
+    }
+
+    /// <summary>The line across the view where a dragged column would be dropped.</summary>
+    internal partial class MultiColumnHeaderColumnMoveLocationPreview : VisualElement
+    {
+        public static readonly string ussClassName = MultiColumnHeaderColumn.ussClassName + "__move-location-preview";
+        public static readonly string visualUssClassName = ussClassName + "__visual";
+
+        public MultiColumnHeaderColumnMoveLocationPreview()
+        {
+            AddToClassList(ussClassName);
+            pickingMode = PickingMode.Ignore;
+            var visual = new VisualElement { pickingMode = PickingMode.Ignore };
+            visual.AddToClassList(visualUssClassName);
+            Add(visual);
+        }
+    }
+
+    /// <summary>Moves a column by dragging its header column (Columns.reorderable). A press
+    /// captures the pointer; once the pointer is more than the start distance from the press, along
+    /// the header, the column under the press is being moved: a preview follows the pointer and a
+    /// line marks the drop place, before or after the visible column under the pointer according
+    /// to the half of it the pointer is in (past the last column: after it). The release moves the
+    /// column there in display order; Escape, a cancelled pointer or a lost capture end the drag
+    /// without moving. A release that ends a drag is hidden from the other handlers of the header
+    /// column, so it is not a click.</summary>
+    internal partial class ColumnMover : PointerManipulator
+    {
+        // Pointer travel along the header, in points, before a press becomes a drag.
+        const float k_StartDragDistance = 5f;
+
+        float m_StartPos;
+        float m_LastPos;
+        bool m_Active;
+        bool m_Moving;
+        bool m_Cancelled;
+        MultiColumnCollectionHeader m_Header;
+        VisualElement m_PreviewElement;
+        MultiColumnHeaderColumnMoveLocationPreview m_LocationPreviewElement;
+        Column m_ColumnToMove;
+        float m_ColumnToMovePos;
+        float m_ColumnToMoveWidth;
+        Column m_DestinationColumn;
+        bool m_MoveBeforeDestination;
+
+        public ColumnLayout columnLayout { get; set; }
+
+        public bool active
+        {
+            get => m_Active;
+            set
+            {
+                if (m_Active == value) return;
+                m_Active = value;
+                activeChanged?.Invoke(this);
+            }
+        }
+
+        public bool moving
+        {
+            get => m_Moving;
+            set
+            {
+                if (m_Moving == value) return;
+                m_Moving = value;
+                movingChanged?.Invoke(this);
+            }
+        }
+
+        public event Action<ColumnMover> activeChanged;
+
+        public event Action<ColumnMover> movingChanged;
+
+        public ColumnMover()
+        {
+            activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse });
+        }
+
+        protected override void RegisterCallbacksOnTarget()
+        {
+            target.RegisterCallback<PointerDownEvent>(OnPointerDown);
+            target.RegisterCallback<PointerMoveEvent>(OnPointerMove);
+            target.RegisterCallback<PointerUpEvent>(OnPointerUp);
+            target.RegisterCallback<PointerCancelEvent>(OnPointerCancel);
+            target.RegisterCallback<PointerCaptureOutEvent>(OnPointerCaptureOut);
+            target.RegisterCallback<KeyDownEvent>(OnKeyDown);
+        }
+
+        protected override void UnregisterCallbacksFromTarget()
+        {
+            target.UnregisterCallback<PointerDownEvent>(OnPointerDown);
+            target.UnregisterCallback<PointerMoveEvent>(OnPointerMove);
+            target.UnregisterCallback<PointerUpEvent>(OnPointerUp);
+            target.UnregisterCallback<PointerCancelEvent>(OnPointerCancel);
+            target.UnregisterCallback<PointerCaptureOutEvent>(OnPointerCaptureOut);
+            target.UnregisterCallback<KeyDownEvent>(OnKeyDown);
+        }
+
+        void OnPointerDown(PointerDownEvent e)
+        {
+            if (!CanStartManipulation(e)) return;
+            if (active)
+            {
+                e.StopImmediatePropagation();
+                return;
+            }
+            // The pointer is captured even when the columns cannot be reordered.
+            target.CapturePointer(e.pointerId);
+            var current = (VisualElement)e.currentTarget;
+            var header = current.GetFirstAncestorOfType<MultiColumnCollectionHeader>();
+            if (!header.columns.reorderable) return;
+            m_Header = header;
+            columnLayout = header.columnLayout;
+            m_Cancelled = false;
+            m_StartPos = current.ChangeCoordinatesTo(header, e.localPosition).x;
+            active = true;
+            e.StopPropagation();
+        }
+
+        void OnPointerMove(PointerMoveEvent e)
+        {
+            if (!active || m_Cancelled) return;
+            float pos = ((VisualElement)e.currentTarget).ChangeCoordinatesTo(m_Header, e.localPosition).x;
+            if (!moving && Mathf.Abs(m_StartPos - pos) > k_StartDragDistance) BeginDragMove(m_StartPos);
+            if (moving)
+            {
+                m_LastPos = pos;
+                UpdateMoveLocation();
+            }
+            e.StopPropagation();
+        }
+
+        void OnPointerUp(PointerUpEvent e)
+        {
+            if (!active || !CanStopManipulation(e)) return;
+            active = false;
+            target.ReleasePointer(e.pointerId);
+            bool dragged = moving || m_Cancelled;
+            EndDragMove(false);
+            if (dragged) e.StopImmediatePropagation();
+            else e.StopPropagation();
+        }
+
+        void OnPointerCancel(PointerCancelEvent e)
+        {
+            if (active && CanStopManipulation(e)) Cancel(e, e.pointerId);
+        }
+
+        void OnPointerCaptureOut(PointerCaptureOutEvent e)
+        {
+            if (active) Cancel(e, e.pointerId);
+        }
+
+        void Cancel(EventBase e, int pointerId)
+        {
+            active = false;
+            target.ReleasePointer(pointerId);
+            if (moving) EndDragMove(true);
+            e.StopPropagation();
+        }
+
+        void OnKeyDown(KeyDownEvent e)
+        {
+            if (e.keyCode == KeyCode.Escape && moving) EndDragMove(true);
+        }
+
+        void BeginDragMove(float pos)
+        {
+            float end = 0f;
+            foreach (var column in columnLayout.columns.visibleColumns)
+            {
+                end += columnLayout.GetDesiredWidth(column);
+                if (m_ColumnToMove == null && end > pos) m_ColumnToMove = column;
+            }
+            moving = true;
+            m_LastPos = pos;
+            m_PreviewElement = new MultiColumnHeaderColumnMovePreview();
+            m_LocationPreviewElement = new MultiColumnHeaderColumnMoveLocationPreview();
+            m_Header.hierarchy.Add(m_PreviewElement);
+            // The drop line spans the view: it goes beside the scroll view the header is in.
+            (m_Header.GetFirstAncestorOfType<ScrollView>()?.parent ?? m_Header).hierarchy.Add(m_LocationPreviewElement);
+            m_ColumnToMovePos = columnLayout.GetDesiredPosition(m_ColumnToMove);
+            m_ColumnToMoveWidth = columnLayout.GetDesiredWidth(m_ColumnToMove);
+            UpdateMoveLocation();
+        }
+
+        void UpdateMoveLocation()
+        {
+            float end = 0f;
+            m_DestinationColumn = null;
+            m_MoveBeforeDestination = false;
+            foreach (var column in columnLayout.columns.visibleColumns)
+            {
+                m_DestinationColumn = column;
+                float width = columnLayout.GetDesiredWidth(column);
+                float middle = end + width / 2f;
+                end += width;
+                if (end > m_LastPos)
+                {
+                    m_MoveBeforeDestination = m_LastPos < middle;
+                    break;
+                }
+            }
+            m_PreviewElement.style.left = m_ColumnToMovePos + m_LastPos - m_StartPos;
+            m_PreviewElement.style.width = m_ColumnToMoveWidth;
+            if (m_DestinationColumn != null)
+                m_LocationPreviewElement.style.left = columnLayout.GetDesiredPosition(m_DestinationColumn) +
+                    (m_MoveBeforeDestination ? 0f : columnLayout.GetDesiredWidth(m_DestinationColumn));
+        }
+
+        void EndDragMove(bool cancelled)
+        {
+            if (!moving || m_Cancelled) return;
+            m_Cancelled = cancelled;
+            if (!cancelled)
+            {
+                int from = m_ColumnToMove.displayIndex;
+                int to = m_DestinationColumn.displayIndex;
+                if (!m_MoveBeforeDestination) to++;
+                if (from < to) to--;
+                if (from != to) columnLayout.columns.ReorderDisplay(from, to);
+            }
+            m_PreviewElement?.RemoveFromHierarchy();
+            m_PreviewElement = null;
+            m_LocationPreviewElement?.RemoveFromHierarchy();
+            m_LocationPreviewElement = null;
+            m_ColumnToMove = null;
+            moving = false;
         }
     }
 }
