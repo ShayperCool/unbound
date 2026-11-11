@@ -2,8 +2,8 @@
 //! tests/projects/lightmapuvs): the mesh is fitted into a unit cube, then vertices closer than
 //! 1e-6 weld unless their triangles face opposite ways, renumbering them in the order the
 //! triangles' corners first use them. Degenerate triangles are removed ([`remove_degenerate`]),
-//! vertices where the mesh is not a single fan are split ([`split_non_manifold`]), and triangles
-//! that split made degenerate are removed again.
+//! vertices where the mesh is not a single fan are split ([`split_non_manifold`]), and the removal
+//! runs once more (the split only copies positions, so it finds nothing new).
 
 use super::math;
 
@@ -362,7 +362,7 @@ fn split_non_manifold(vertex_count: usize, triangles: &mut [[u32; 3]]) -> Vec<u3
 }
 
 /// The cleanup of a mesh: welding, then the removal of degenerate triangles, the split of
-/// non-manifold vertices and a second removal.
+/// non-manifold vertices and a second removal pass, kept for the Editor's sequence.
 pub struct Cleaned {
     pub positions: Vec<[f64; 3]>,
     pub triangles: Vec<[u32; 3]>,

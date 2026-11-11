@@ -116,6 +116,14 @@ pub fn generate(
     input: &UnwrapInput,
     settings: &SecondaryUvSettings,
 ) -> Result<Vec<[[f32; 2]; 3]>, Failure> {
+    if input.triangles.is_empty() {
+        return Ok(Vec::new());
+    }
+    // A position that is not a number would make every triangle degenerate; the Editor's result
+    // for such a mesh is not measured, so it is kept as it is.
+    if !input.positions.iter().flatten().all(|c| c.is_finite()) {
+        return Err("the mesh has positions that are not finite".into());
+    }
     let Some(geometry) = cleanup::prepare(input.positions, input.triangles) else {
         return Err(Failure::NothingLeft);
     };
@@ -131,8 +139,8 @@ fn unwrap_cleaned(
     let uvs: Option<Vec<[[f32; 2]; 3]>> = input
         .uvs
         .map(|uvs| geometry.sources.iter().map(|&s| uvs[s as usize]).collect());
-    // The polygons stay indexed by the cleaned triangles' positions, not by their sources: the
-    // Editor's UV2 comes out that way when the cleanup reorders triangles.
+    // The polygons are read at the cleaned triangles' positions. The importer gives every
+    // triangle its own polygon, so reading them by source instead would give the same result.
     let desc = mesh::Triangles {
         positions: &geometry.positions,
         triangles: &geometry.triangles,

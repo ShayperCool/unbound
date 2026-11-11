@@ -479,6 +479,27 @@ fn the_cleanup_moves_removed_triangles_after_the_kept_ones() {
 }
 
 #[test]
+fn a_position_that_is_not_a_number_keeps_the_mesh_instead_of_emptying_it() {
+    let mut positions = vec![
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+    ];
+    let triangles = [[0, 1, 2], [1, 3, 2]];
+    assert!(unwrap_default(&positions, &triangles).is_ok());
+    for bad in [f32::NAN, f32::INFINITY] {
+        positions[3][2] = bad;
+        assert!(matches!(
+            unwrap_default(&positions, &triangles),
+            Err(Failure::Unsupported(_))
+        ));
+    }
+    // No triangles at all: nothing to unwrap and nothing to report.
+    assert_eq!(unwrap_default(&positions, &[]), Ok(Vec::new()));
+}
+
+#[test]
 fn a_triangle_with_coincident_corners_is_removed_and_the_rest_unwraps() {
     // Vertices 3 and 4 are distinct but lie at one position: triangle 1 has no area.
     let positions = [

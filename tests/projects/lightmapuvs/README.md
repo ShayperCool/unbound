@@ -65,7 +65,7 @@ without area keeps its place in the mesh and its corners take the UV2 of a neigh
 corners. For Lines the Editor logs that no triangles are left after the cleanup and imports the
 mesh empty (no vertices, one empty sub-mesh), while RepairOff/Lines keeps its six vertices. That
 is measured for this one mesh of one sub-mesh; a mesh of several sub-meshes or with blend shapes
-or skinning is not measured.
+or skinning, or with mesh optimization off, is not measured.
 
 State in Unbound: the unwrap is reproduced, for connected parts of up to 100 triangles and for
 larger ones (simplified first, segmented on the simplified copy and refined back), including
