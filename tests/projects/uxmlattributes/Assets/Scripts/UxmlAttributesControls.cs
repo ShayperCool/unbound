@@ -152,6 +152,25 @@ namespace UxmlAttributesProbes
         [UxmlAttribute] public Texture2D myTexture { get; set; } = ProbePresets.Texture;
     }
 
+    /// <summary>A Tab whose icon is set before its UXML attributes are read.</summary>
+    [UxmlElement]
+    public partial class PresetTab : Tab
+    {
+        public PresetTab() { iconImage = Background.FromTexture2D(ProbePresets.Texture); }
+    }
+
+    /// <summary>Arrays and a list of asset reference members: Backgrounds (one starting empty, one
+    /// with an initial value), textures and sprites.</summary>
+    [UxmlElement]
+    public partial class ArrayRefProbe : VisualElement
+    {
+        [UxmlAttribute] public Background[] myBackgroundArray { get; set; }
+        [UxmlAttribute] public Background[] myPresetArray { get; set; } = { Background.FromTexture2D(ProbePresets.Texture) };
+        [UxmlAttribute] public Texture2D[] myTextureArray { get; set; }
+        [UxmlAttribute] public List<Texture2D> myTextureList { get; set; }
+        [UxmlAttribute] public Sprite[] mySpriteArray { get; set; }
+    }
+
     /// <summary>A ListView whose item template is set before its UXML attributes are read.</summary>
     [UxmlElement]
     public partial class PresetTemplateList : ListView

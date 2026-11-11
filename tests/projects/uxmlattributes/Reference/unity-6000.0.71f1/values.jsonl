@@ -962,4 +962,108 @@
 {"k":"element/presetListWrongType/class","v":"UxmlAttributesProbes.PresetTemplateList"}
 {"k":"element/presetListWrongType/itemTemplate","v":"VisualTreeAsset:Preset"}
 {"k":"logs","v":["Error: Type: Invalid type \"System.String\". Type must derive from UnityEngine.UIElements.VisualElement.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Font'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Sprite'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.StyleSheet'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: TypeLoadException: Could not load type 'No.Such.Type' from assembly 'Nowhere'.","Warning:  (30,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (46,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (51,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.ttf","Warning:  (52,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (57,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (61,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (63,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (65,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (68,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uss","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Missing.png\" for referenced asset GUID \"0123456789abcdef0123456789abcdef\"","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : project://database/Assets/UI/Missing.png?fileID=2800000&guid=0123456789abcdef0123456789abcdef&type=3#Missing"]}
+{"k":"icons/asset","v":"UxmlIconsProbe"}
+{"k":"icons/rootChildren","v":"17"}
+{"k":"icons/element/tabs/class","v":"UnityEngine.UIElements.TabView"}
+{"k":"icons/element/tabNone/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabNone/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabTexture/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabTexture/iconImage","v":"texture=Texture2D:Probe sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabSprite/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabSprite/iconImage","v":"texture=null sprite=Sprite:ProbeSprite renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabPath/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabPath/iconImage","v":"texture=Texture2D:Probe sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabRelative/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabRelative/iconImage","v":"texture=Texture2D:Probe sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabMissing/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabMissing/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabEmpty/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabEmpty/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabWrongType/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabWrongType/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabCube/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabCube/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/tabRenderTexture/class","v":"UnityEngine.UIElements.Tab"}
+{"k":"icons/element/tabRenderTexture/iconImage","v":"texture=null sprite=null renderTexture=RenderTexture:ProbeRT vectorImage=null"}
+{"k":"icons/element/presetTabNone/class","v":"UxmlAttributesProbes.PresetTab"}
+{"k":"icons/element/presetTabNone/iconImage","v":"texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/presetTabMissing/class","v":"UxmlAttributesProbes.PresetTab"}
+{"k":"icons/element/presetTabMissing/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/presetTabWrongType/class","v":"UxmlAttributesProbes.PresetTab"}
+{"k":"icons/element/presetTabWrongType/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/presetTabCube/class","v":"UxmlAttributesProbes.PresetTab"}
+{"k":"icons/element/presetTabCube/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/iconCube/class","v":"UnityEngine.UIElements.Button"}
+{"k":"icons/element/iconCube/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/iconCubePath/class","v":"UnityEngine.UIElements.Button"}
+{"k":"icons/element/iconCubePath/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/iconRenderTexture/class","v":"UnityEngine.UIElements.Button"}
+{"k":"icons/element/iconRenderTexture/iconImage","v":"texture=null sprite=null renderTexture=RenderTexture:ProbeRT vectorImage=null"}
+{"k":"icons/element/iconRenderTexturePath/class","v":"UnityEngine.UIElements.Button"}
+{"k":"icons/element/iconRenderTexturePath/iconImage","v":"texture=null sprite=null renderTexture=RenderTexture:ProbeRT vectorImage=null"}
+{"k":"icons/element/presetIconCube/class","v":"UxmlAttributesProbes.PresetIconButton"}
+{"k":"icons/element/presetIconCube/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"icons/element/presetIconRenderTexture/class","v":"UxmlAttributesProbes.PresetIconButton"}
+{"k":"icons/element/presetIconRenderTexture/iconImage","v":"texture=null sprite=null renderTexture=RenderTexture:ProbeRT vectorImage=null"}
+{"k":"icons/element/arrayNone/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayNone/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayNone/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayNone/mySpriteArray","v":"null"}
+{"k":"icons/element/arrayNone/myTextureArray","v":"null"}
+{"k":"icons/element/arrayNone/myTextureList","v":"null"}
+{"k":"icons/element/arrayTextures/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayTextures/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayTextures/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayTextures/mySpriteArray","v":"[Sprite:ProbeSprite]"}
+{"k":"icons/element/arrayTextures/myTextureArray","v":"[Texture2D:Probe|Texture2D:Probe]"}
+{"k":"icons/element/arrayTextures/myTextureList","v":"[Texture2D:Probe|Texture2D:Probe]"}
+{"k":"icons/element/arrayPaths/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayPaths/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayPaths/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayPaths/mySpriteArray","v":"[null]"}
+{"k":"icons/element/arrayPaths/myTextureArray","v":"[null]"}
+{"k":"icons/element/arrayPaths/myTextureList","v":"[null]"}
+{"k":"icons/element/arrayMissing/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayMissing/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayMissing/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayMissing/mySpriteArray","v":"null"}
+{"k":"icons/element/arrayMissing/myTextureArray","v":"[null]"}
+{"k":"icons/element/arrayMissing/myTextureList","v":"null"}
+{"k":"icons/element/arrayEmpty/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayEmpty/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayEmpty/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayEmpty/mySpriteArray","v":"[]"}
+{"k":"icons/element/arrayEmpty/myTextureArray","v":"[]"}
+{"k":"icons/element/arrayEmpty/myTextureList","v":"[]"}
+{"k":"icons/element/arrayWrongType/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayWrongType/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayWrongType/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayWrongType/mySpriteArray","v":"null"}
+{"k":"icons/element/arrayWrongType/myTextureArray","v":"[null]"}
+{"k":"icons/element/arrayWrongType/myTextureList","v":"null"}
+{"k":"icons/element/arrayMixed/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayMixed/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayMixed/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayMixed/mySpriteArray","v":"[Sprite:ProbeSprite|null]"}
+{"k":"icons/element/arrayMixed/myTextureArray","v":"[Texture2D:Probe|null|Texture2D:Probe]"}
+{"k":"icons/element/arrayMixed/myTextureList","v":"[Texture2D:Probe|null|Texture2D:Probe]"}
+{"k":"icons/element/arrayProjectPath/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayProjectPath/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayProjectPath/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayProjectPath/mySpriteArray","v":"[null]"}
+{"k":"icons/element/arrayProjectPath/myTextureArray","v":"[null]"}
+{"k":"icons/element/arrayProjectPath/myTextureList","v":"[null]"}
+{"k":"icons/element/arraySpriteAsTexture/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arraySpriteAsTexture/myBackgroundArray","v":"null"}
+{"k":"icons/element/arraySpriteAsTexture/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arraySpriteAsTexture/mySpriteArray","v":"null"}
+{"k":"icons/element/arraySpriteAsTexture/myTextureArray","v":"[null]"}
+{"k":"icons/element/arraySpriteAsTexture/myTextureList","v":"[null]"}
+{"k":"icons/element/arrayUnknownGuid/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayUnknownGuid/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayUnknownGuid/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayUnknownGuid/mySpriteArray","v":"null"}
+{"k":"icons/element/arrayUnknownGuid/myTextureArray","v":"[null]"}
+{"k":"icons/element/arrayUnknownGuid/myTextureList","v":"[null]"}
+{"k":"icons/logs","v":["Warning:  (14,10): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (8,10): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (9,10): Semantic - The specified URL is empty or invalid : ''"]}
 {"k":"complete","v":true}

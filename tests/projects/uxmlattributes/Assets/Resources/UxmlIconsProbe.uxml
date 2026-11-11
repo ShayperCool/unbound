@@ -1,0 +1,34 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:probe="UxmlAttributesProbes">
+    <ui:TabView name="tabs">
+        <ui:Tab name="tabNone" label="none" />
+        <ui:Tab name="tabTexture" label="texture" icon-image="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
+        <ui:Tab name="tabSprite" icon-image="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" />
+        <ui:Tab name="tabPath" icon-image="/Assets/UI/Probe.png" />
+        <ui:Tab name="tabRelative" icon-image="../UI/Probe.png" />
+        <ui:Tab name="tabMissing" icon-image="/Assets/UI/Missing.png" />
+        <ui:Tab name="tabEmpty" icon-image="" />
+        <ui:Tab name="tabWrongType" icon-image="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" />
+        <ui:Tab name="tabCube" icon-image="project://database/Assets/UI/ProbeCube.png?fileID=8900000&amp;guid=a1b2c3d4e5f647a8b9c0d1e2f3a4b5c6&amp;type=3#ProbeCube" />
+        <ui:Tab name="tabRenderTexture" icon-image="project://database/Assets/UI/ProbeRT.renderTexture?fileID=8400000&amp;guid=b2c3d4e5f6a748b9c0d1e2f3a4b5c6d7&amp;type=2#ProbeRT" />
+        <probe:PresetTab name="presetTabNone" />
+        <probe:PresetTab name="presetTabMissing" icon-image="/Assets/UI/Missing.png" />
+        <probe:PresetTab name="presetTabWrongType" icon-image="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" />
+        <probe:PresetTab name="presetTabCube" icon-image="project://database/Assets/UI/ProbeCube.png?fileID=8900000&amp;guid=a1b2c3d4e5f647a8b9c0d1e2f3a4b5c6&amp;type=3#ProbeCube" />
+    </ui:TabView>
+    <ui:Button name="iconCube" icon-image="project://database/Assets/UI/ProbeCube.png?fileID=8900000&amp;guid=a1b2c3d4e5f647a8b9c0d1e2f3a4b5c6&amp;type=3#ProbeCube" />
+    <ui:Button name="iconCubePath" icon-image="/Assets/UI/ProbeCube.png" />
+    <ui:Button name="iconRenderTexture" icon-image="project://database/Assets/UI/ProbeRT.renderTexture?fileID=8400000&amp;guid=b2c3d4e5f6a748b9c0d1e2f3a4b5c6d7&amp;type=2#ProbeRT" />
+    <ui:Button name="iconRenderTexturePath" icon-image="/Assets/UI/ProbeRT.renderTexture" />
+    <probe:PresetIconButton name="presetIconCube" icon-image="project://database/Assets/UI/ProbeCube.png?fileID=8900000&amp;guid=a1b2c3d4e5f647a8b9c0d1e2f3a4b5c6&amp;type=3#ProbeCube" />
+    <probe:PresetIconButton name="presetIconRenderTexture" icon-image="project://database/Assets/UI/ProbeRT.renderTexture?fileID=8400000&amp;guid=b2c3d4e5f6a748b9c0d1e2f3a4b5c6d7&amp;type=2#ProbeRT" />
+    <probe:ArrayRefProbe name="arrayNone" />
+    <probe:ArrayRefProbe name="arrayTextures" my-background-array="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe,project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" my-preset-array="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" my-texture-array="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe,project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" my-texture-list="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe,project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" my-sprite-array="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" />
+    <probe:ArrayRefProbe name="arrayPaths" my-background-array="/Assets/UI/Probe.png" my-preset-array="/Assets/UI/Probe.png" my-texture-array="/Assets/UI/Probe.png" my-texture-list="/Assets/UI/Probe.png" my-sprite-array="/Assets/UI/ProbeSprite.png" />
+    <probe:ArrayRefProbe name="arrayMissing" my-background-array="/Assets/UI/Missing.png" my-preset-array="/Assets/UI/Missing.png" my-texture-array="/Assets/UI/Missing.png" />
+    <probe:ArrayRefProbe name="arrayEmpty" my-background-array="" my-preset-array="" my-texture-array="" my-texture-list="" my-sprite-array="" />
+    <probe:ArrayRefProbe name="arrayWrongType" my-background-array="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" my-preset-array="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" my-texture-array="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" />
+    <probe:ArrayRefProbe name="arrayMixed" my-texture-array="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe,/Assets/UI/Missing.png,project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" my-texture-list="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe,/Assets/UI/Missing.png,project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" my-sprite-array="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite,project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
+    <probe:ArrayRefProbe name="arrayProjectPath" my-texture-array="project://database/Assets/UI/Probe.png" my-texture-list="project://database/Assets/UI/Probe.png" my-sprite-array="project://database/Assets/UI/ProbeSprite.png" />
+    <probe:ArrayRefProbe name="arraySpriteAsTexture" my-texture-array="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" my-texture-list="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" />
+    <probe:ArrayRefProbe name="arrayUnknownGuid" my-texture-array="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=0123456789abcdef0123456789abcdef&amp;type=3#Probe" my-texture-list="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=0123456789abcdef0123456789abcdef&amp;type=3#Probe" />
+</ui:UXML>

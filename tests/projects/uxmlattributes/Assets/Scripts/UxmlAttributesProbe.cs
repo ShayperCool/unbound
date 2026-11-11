@@ -23,27 +23,44 @@ public static class UxmlAttributesProbe
     {
         var dir = Environment.GetEnvironmentVariable("UXML_ATTRIBUTES_OUT");
         if (string.IsNullOrEmpty(dir)) return;
+        var output = new StringBuilder();
+        Record(dir, "UxmlAttributesProbe", "", "import-logs.txt", output);
+        Record(dir, "UxmlIconsProbe", "icons/", "import-logs-icons.txt", output);
+        output.Append("{\"k\":\"complete\",\"v\":true}\n");
+        File.WriteAllText(Path.Combine(dir, "values.jsonl"), output.ToString());
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit();
+#endif
+    }
+
+    // One document: its named elements' classes and probe properties under `prefix`, then the
+    // warnings and errors of its import, load and clone. The icons document skips the elements a
+    // control builds for itself (named unity-*).
+    static void Record(string dir, string resource, string prefix, string importLogs, StringBuilder output)
+    {
         var logs = new List<string>();
-        var imported = Path.Combine(dir, "import-logs.txt");
+        var imported = Path.Combine(dir, importLogs);
         if (File.Exists(imported)) logs.AddRange(File.ReadAllLines(imported).Where(l => l.Length > 0));
         Application.LogCallback capture = (message, stack, type) =>
         {
             if (type != LogType.Log) logs.Add(type + ": " + message);
         };
         Application.logMessageReceived += capture;
-        var asset = Resources.Load<VisualTreeAsset>("UxmlAttributesProbe");
+        var asset = Resources.Load<VisualTreeAsset>(resource);
         var root = new VisualElement();
         asset?.CloneTree(root);
         Application.logMessageReceived -= capture;
 
-        var output = new StringBuilder();
-        void Put(string key, string value) => output.Append("{\"k\":").Append(Json(key)).Append(",\"v\":").Append(Json(value)).Append("}\n");
+        void Put(string key, string value) => output.Append("{\"k\":").Append(Json(prefix + key)).Append(",\"v\":").Append(Json(value)).Append("}\n");
         Put("asset", asset == null ? "null" : asset.name);
         Put("rootChildren", root.childCount.ToString(Inv));
         foreach (var element in root.Query<VisualElement>().ToList())
         {
             if (string.IsNullOrEmpty(element.name) || element == root) continue;
             if (element.GetFirstAncestorOfType<BaseVerticalCollectionView>() != null) continue;
+            if (prefix.Length > 0 && element.name.StartsWith("unity-", StringComparison.Ordinal)) continue;
             var key = "element/" + element.name + "/";
             Put(key + "class", element.GetType().FullName);
             if (element is ListView list)
@@ -62,6 +79,12 @@ public static class UxmlAttributesProbe
                 Put(key + "iconImage", $"texture={Name(image.texture)} sprite={Name(image.sprite)} renderTexture={Name(image.renderTexture)} vectorImage={Name(image.vectorImage)}");
                 continue;
             }
+            if (element is Tab tab)
+            {
+                var image = tab.iconImage;
+                Put(key + "iconImage", $"texture={Name(image.texture)} sprite={Name(image.sprite)} renderTexture={Name(image.renderTexture)} vectorImage={Name(image.vectorImage)}");
+                continue;
+            }
             if (element.GetType().Namespace != "UxmlAttributesProbes") continue;
             foreach (var property in element.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Concat(element.GetType().BaseType.Namespace == "UxmlAttributesProbes"
@@ -71,14 +94,7 @@ public static class UxmlAttributesProbe
                 Put(key + property.Name, Format(property.GetValue(element)));
         }
         logs.Sort(StringComparer.Ordinal);
-        output.Append("{\"k\":\"logs\",\"v\":[").Append(string.Join(",", logs.Select(Json))).Append("]}\n");
-        output.Append("{\"k\":\"complete\",\"v\":true}\n");
-        File.WriteAllText(Path.Combine(dir, "values.jsonl"), output.ToString());
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.Exit(0);
-#else
-        Application.Quit();
-#endif
+        output.Append("{\"k\":").Append(Json(prefix + "logs")).Append(",\"v\":[").Append(string.Join(",", logs.Select(Json))).Append("]}\n");
     }
 
     static string Name(UnityEngine.Object o) => o == null ? "null" : o.GetType().Name + ":" + o.name;

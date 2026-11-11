@@ -21,8 +21,11 @@ public static class UxmlAttributesRunner
         Application.logMessageReceived += capture;
         AssetDatabase.ImportAsset("Assets/UI/Child.uxml", ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
         AssetDatabase.ImportAsset("Assets/Resources/UxmlAttributesProbe.uxml", ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
-        Application.logMessageReceived -= capture;
         File.WriteAllLines(Path.Combine(output, "import-logs.txt"), logs);
+        logs.Clear();
+        AssetDatabase.ImportAsset("Assets/Resources/UxmlIconsProbe.uxml", ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+        Application.logMessageReceived -= capture;
+        File.WriteAllLines(Path.Combine(output, "import-logs-icons.txt"), logs);
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
         EditorApplication.EnterPlaymode();
     }
