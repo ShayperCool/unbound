@@ -1342,7 +1342,8 @@ fn a_humanoid_clip_lists_the_transforms_its_mask_keeps() {
     let listed = part.human_transforms.clone().unwrap();
     assert!(!listed.iter().any(|p| p == left) && listed.iter().any(|p| p == right));
     // The curves themselves are the same under every mask: the conversion needs each node.
-    let paths = |clip: &ModelClip| -> Vec<String> { clip.curves.iter().map(|c| c.path.clone()).collect() };
+    let paths =
+        |clip: &ModelClip| -> Vec<String> { clip.curves.iter().map(|c| c.path.clone()).collect() };
     assert_eq!(paths(&none), paths(&all));
     assert_eq!(paths(&none), paths(&part));
     assert!(paths(&part).iter().any(|p| p == left));
