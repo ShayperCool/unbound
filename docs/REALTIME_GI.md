@@ -245,7 +245,9 @@ lighting the room (the documented parts are in the contract above):
 - `RenderSettings.ambientProbe` in general (the probe's `end-*` cases, each read in the frame of
   its change; the documentation promises none of it): one stored probe seen through the ambient
   mode. The stored probe is the lighting data's after a scene's load (zero for data made without
-  a sky and for a scene without lighting data, `nodata*`, whatever its skybox), then the sky's
+  a sky and for a scene without lighting data, `nodata*`; the active scene's: a scene added to
+  it changes nothing until `SceneManager.SetActiveScene` makes it the active one, `*-plus-*`),
+  then the sky's
   once `DynamicGI.UpdateEnvironment` derives it, then one a script gives,
   the latest of them. The flat and gradient modes do not read it (a probe given in either
   shows once the custom mode is set); the custom mode returns it as it is, whatever the ambient
@@ -258,13 +260,24 @@ lighting the room (the documented parts are in the contract above):
   above in a linear project; a gamma project's was measured for the lighting data's probe
   (GammaToLinearSpace as well) and Unbound gives the sky's and a given probe the same. Not
   measured: a probe given after a skybox was assigned alone, `DynamicGI.UpdateEnvironment`
-  without a skybox after a probe was given (Unbound keeps the probe), and a scene loaded beside
-  the one whose settings are in effect (Unbound keeps a probe given, and takes the loaded
-  lighting data's otherwise). Realtime GI's own environment does not read the probe (the
-  bullets above).
+  without a skybox after a probe was given (Unbound keeps the probe), and a probe given before
+  another scene becomes the active one (Unbound keeps it with the scene it was given in).
+  Realtime GI's own environment does not read the probe (the bullets above).
 - The default reflection: a scene whose lighting data was made without a sky, and one without
   lighting data, reflect a black cube (`ReflectionProbe.defaultTexture` is `UnityBlackCube`,
-  one texel, decode values (1, 1, 0, 0); `end-reflection`, `nodata*-reflection`).
+  one texel, decode values (1, 1, 0, 0); `end-reflection`, `nodata*-reflection`). It is the
+  active scene's, as the ambient probe is.
+- A scene without lighting data takes the built-in lighting data (the default sky's probe and
+  reflection, `Default-Skybox-Cubemap`) when its RenderSettings were saved by an earlier
+  release with a new scene's environment: the skybox ambient mode, the default skybox reflected
+  at the default resolution and a sun at the default light's angles, (50, -30, 0)
+  (`legacydefault`, `legacyauto`; the 6000.0 upgrade guide: scenes that "use the default
+  environment lighting settings" are upgraded "to use the default Lighting Data Asset"). With
+  the sun turned or missing or with another sky it has none (`legacyturned`, `legacynolight`,
+  `legacyownsky`). Unbound applies the rule in a linear project with those settings, through
+  the compatibility profile; other ambient or reflection sources, another resolution, a
+  gamma-space project and several directional lights (Unbound takes the brightest as the sun)
+  are not measured and leave the scene without lighting data.
 
 Observed once and not modelled: data given to `SetEnvironmentData` one frame after the sun was
 destroyed did not show (the lightmap stayed the sky's): the Editor reads the sky back over
