@@ -32,6 +32,10 @@ namespace Unbound.Runtime.Playables
         internal readonly HumanPose Pose = new HumanPose();
         readonly HumanPose m_World = new HumanPose();
         readonly SkeletonPose m_Local, m_Global, m_Source, m_W4, m_W5, m_W6, m_W7;
+        /// <summary>The skeleton as the bones' stream handles see it, kept apart once the pose was
+        /// made again from it: <see cref="m_Local"/> is then re-based for the goal reads.</summary>
+        readonly SkeletonPose m_Bones;
+        bool m_BonesKept, m_Rebased;
         readonly float[] m_Values = new float[HumanClipImport.CurveCount];
         readonly Trs[] m_Saved = new Trs[GoalCount];
         readonly bool[] m_GoalSet = new bool[GoalCount], m_HintSet = new bool[GoalCount];
@@ -65,6 +69,7 @@ namespace Unbound.Runtime.Playables
             m_Human = constant.Human;
             int n = m_Human.Skeleton.Count;
             m_Local = new SkeletonPose(n);
+            m_Bones = new SkeletonPose(n);
             m_Global = new SkeletonPose(n);
             m_Source = new SkeletonPose(n);
             m_W4 = new SkeletonPose(n);
@@ -114,6 +119,8 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = false;
             m_Changed = false;
             m_BonesMoved = false;
+            m_BonesKept = false;
+            m_Rebased = false;
             Array.Clear(m_GoalSet);
             Array.Clear(m_HintSet);
         }
@@ -210,6 +217,9 @@ namespace Unbound.Runtime.Playables
         {
             if (m_SkeletonValid) return;
             m_SkeletonValid = true;
+            m_BonesKept = false;
+            m_Rebased = false;
+            m_BonesMoved = false;
             HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_Local, m_Global, true);
         }
 
@@ -225,8 +235,11 @@ namespace Unbound.Runtime.Playables
             for (int g = 0; g < GoalCount; g++) m_Saved[g] = Pose.Goals[g].X;
             var s = m_Human.Skeleton;
             int hips = m_Human.BoneIndex[Bone.Hips];
-            var hipsX = M.Mul(m_Local.X[s.Parent[hips]], m_Local.X[hips]);
-            m_Source.CopyFrom(m_Local);
+            // The skeleton the pose is made from is the one the bones' handles see; it stays as it
+            // is for them (a job's later bone reads and writes), while m_Local is re-based below.
+            var bones = m_BonesKept ? m_Bones : m_Local;
+            var hipsX = M.Mul(bones.X[s.Parent[hips]], bones.X[hips]);
+            m_Source.CopyFrom(bones);
             // Positions and scales a job gave bones below the hips are the stream's only: the
             // pose is made from the bones' rotations and the hips (bone.moveArm, bone.scale).
             if (m_BonesMoved && !m_Human.HasTDoF)
@@ -251,8 +264,9 @@ namespace Unbound.Runtime.Playables
             // the root's scale: positions read from it later (GetGoalPositionFromPose, hints) are
             // the root's position plus the offsets in the root's frame unscaled
             // (tests/projects/humanoid stream.ik, stream.stance).
-            m_Local.X[0] = Trs.Identity;
-            m_Local.X[hips] = M.Mul(new Trs(Root.t, Root.q, F4.One3), M.InvMul(Root, hipsX));
+            if (!m_BonesKept) m_Bones.CopyFrom(m_Local);
+            m_BonesKept = true;
+            Rebase();
             for (int g = 0; g < GoalCount; g++) Pose.Goals[g].X = m_Saved[g];
             TakeSetGoals();
         }
@@ -277,8 +291,19 @@ namespace Unbound.Runtime.Playables
         /// relative to the body, see <see cref="BoneWorld"/> for what a handle reads).</summary>
         internal void BoneLocal(int node, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
-            UpdateSkeletonPose();
-            var x = m_Local.X[node];
+            var x = BoneSkeleton().X[node];
+            position = P(x.t);
+            rotation = Q(x.q);
+            scale = P(x.s);
+        }
+
+        /// <summary>The hips as the pose places them in the world (what their handle's local values
+        /// are taken from, before and after the pose is read back).</summary>
+        internal void HipsPlaced(out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            var bones = BoneSkeleton();
+            int hips = m_Human.BoneIndex[Bone.Hips];
+            var x = M.Mul(bones.X[m_Human.Skeleton.Parent[hips]], bones.X[hips]);
             position = P(x.t);
             rotation = Q(x.q);
             scale = P(x.s);
@@ -287,24 +312,28 @@ namespace Unbound.Runtime.Playables
         /// <summary>A bone's world position and rotation as the stream's skeleton has them, and the
         /// scale its children's positions take. The hips are where the pose puts them, and their
         /// scale is the body's times the one the human skeleton has above the hips: on a rig
-        /// whose root is scaled the root's scale comes in twice, so a handle reads the hips'
-        /// own scale as the root's and the positions below the hips that much too far from them
-        /// (tests/projects/humanoid bone.read, a root scale of 100: a bone 0.1 world units above
-        /// the hips reads 10 units above them). Rotations are the pose's.</summary>
+        /// whose avatar holds its root's scale that scale comes in twice, so a handle reads the
+        /// hips' own scale as the root's and the positions below the hips that much too far from
+        /// them (tests/projects/humanoid bone.read, a root scale of 100: a bone 0.1 world units
+        /// above the hips reads 10 units above them). Rotations are the pose's.</summary>
         internal void BoneWorld(int node, out F4 position, out F4 rotation, out F4 scale)
         {
-            UpdateSkeletonPose();
+            // Once the pose was read back the world values are those of the re-based skeleton:
+            // the hips an unscaled offset from the root, the bones below as far from the hips
+            // as the hips' own scale puts them (bone.rotateThenHuman).
+            BoneSkeleton();
+            var bones = m_Local;
             var s = m_Human.Skeleton;
             if (IsHips(node))
             {
-                var hips = M.Mul(m_Local.X[s.Parent[node]], m_Local.X[node]);
+                var hips = M.Mul(bones.X[s.Parent[node]], bones.X[node]);
                 position = hips.t;
                 rotation = hips.q;
                 scale = hips.s;
                 return;
             }
             BoneWorld(s.Parent[node], out F4 pp, out F4 pr, out F4 ps);
-            var x = m_Local.X[node];
+            var x = bones.X[node];
             position = pp + M.QRotate(pr, ps * x.t);
             rotation = M.QNormalize(M.QMul(pr, x.q));
             scale = ps * x.s;
@@ -323,7 +352,18 @@ namespace Unbound.Runtime.Playables
         internal void BoneParentWorld(int node, out Vector3 position, out Quaternion rotation, out Vector3 scale) =>
             BoneWorld(m_Human.Skeleton.Parent[node], out position, out rotation, out scale);
 
-        internal void SetHipsWorld(Vector3 position, Quaternion rotation) => SetHipsWorld(V(position), Q(rotation));
+        /// <summary>The hips written through their handle's world values (the ones
+        /// <see cref="BoneWorld"/> reads).</summary>
+        internal void SetHipsWorld(Vector3 position, Quaternion rotation)
+        {
+            if (Finite(position) && UnitRotation(rotation, out var q)) SetHipsWorld(V(position), q, m_BonesKept && m_Rebased);
+        }
+
+        /// <summary>The hips written where the pose places them (<see cref="HipsPlaced"/>).</summary>
+        internal void SetHipsPlaced(Vector3 position, Quaternion rotation)
+        {
+            if (Finite(position) && UnitRotation(rotation, out var q)) SetHipsWorld(V(position), q, false);
+        }
 
         /// <summary>A job changed the skeleton through a bone's handle: the pose is made again from
         /// it when next read and at the end of the job.</summary>
@@ -331,15 +371,42 @@ namespace Unbound.Runtime.Playables
         {
             m_HumanValid = false;
             m_Changed = true;
+            if (m_BonesKept) Rebase();
         }
 
         /// <summary>A bone's local rotation (not the hips': <see cref="SetHipsWorld"/>). It reaches
         /// the final pose through the muscles the retargeting gives it (bone.rotateLocal).</summary>
         internal void SetBoneLocalRotation(int node, Quaternion rotation)
         {
-            UpdateSkeletonPose();
-            m_Local.X[node].q = Q(rotation);
+            if (!UnitRotation(rotation, out var q)) return;
+            BoneSkeleton().X[node].q = q;
             BoneChanged();
+        }
+
+        /// <summary>A rotation a job writes on a bone, as the pose takes it: of unit length (a
+        /// zero quaternion as the identity, what a stream channel reads back for one). A rotation
+        /// with a component that is not a number is not taken (unmeasured).</summary>
+        static bool UnitRotation(Quaternion rotation, out F4 q)
+        {
+            q = F4.QIdentity;
+            float sum = rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w;
+            if (!float.IsFinite(sum))
+            {
+                Stubs.Ignored("TransformStreamHandle rotation of a humanoid bone that is not a number", "is not taken (unmeasured)");
+                return false;
+            }
+            if (sum > 1e-30f) q = M.QNormalize(Q(rotation));
+            return true;
+        }
+
+        static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+
+        /// <summary>The skeleton the bones' handles read and write: the one the pose gave, with what
+        /// the job changed in it since.</summary>
+        SkeletonPose BoneSkeleton()
+        {
+            UpdateSkeletonPose();
+            return m_BonesKept ? m_Bones : m_Local;
         }
 
         /// <summary>A bone's local position or scale (not the hips' position): they stay in the
@@ -349,32 +416,52 @@ namespace Unbound.Runtime.Playables
         /// that case is unmeasured.</summary>
         internal void SetBoneLocalPosition(int node, Vector3 position)
         {
-            UpdateSkeletonPose();
-            m_Local.X[node].t = V(position);
+            if (!Finite(position)) return;
+            if (m_Human.HasTDoF)
+                Stubs.Ignored("TransformStreamHandle position of a humanoid bone on an avatar with translation DoF",
+                    "reaches the pose as the retargeting reads bone positions there (unmeasured)");
+            BoneSkeleton().X[node].t = V(position);
             m_BonesMoved = true;
             BoneChanged();
         }
 
         internal void SetBoneLocalScale(int node, Vector3 scale)
         {
-            UpdateSkeletonPose();
-            m_Local.X[node].s = V(scale);
+            if (!Finite(scale)) return;
+            BoneSkeleton().X[node].s = V(scale);
             m_BonesMoved = true;
             BoneChanged();
         }
 
-        /// <summary>The hips' world position and rotation (bone.moveHips): the body follows when the
-        /// pose is made again.</summary>
-        internal void SetHipsWorld(F4 position, F4 rotation)
+        /// <summary>The hips' position and rotation in the world (bone.moveHips): the body follows
+        /// when the pose is made again.</summary>
+        void SetHipsWorld(F4 position, F4 rotation, bool rebased)
         {
-            UpdateSkeletonPose();
+            var bones = BoneSkeleton();
+            // A world position read after the pose was read back is one of the re-based
+            // skeleton: taken back to where the pose places the hips (unmeasured).
+            if (rebased) position = M.MulPoint(Root, M.InvMulPoint(new Trs(Root.t, Root.q, F4.One3), position));
             int hips = m_Human.BoneIndex[Bone.Hips];
-            var parent = m_Local.X[m_Human.Skeleton.Parent[hips]];
-            var x = m_Local.X[hips];
+            var parent = bones.X[m_Human.Skeleton.Parent[hips]];
+            var x = bones.X[hips];
             x.t = M.InvMulPoint(parent, position);
             x.q = M.QNormalize(M.QMul(M.QConj(parent.q), rotation));
-            m_Local.X[hips] = x;
+            bones.X[hips] = x;
             BoneChanged();
+        }
+
+        /// <summary>The skeleton the pose was made from, re-based: an identity root and the hips
+        /// placed under the avatar root without the root's scale. World values read from the
+        /// skeleton afterwards (goals from the pose, hints, the bones' handles) are composed
+        /// that way (tests/projects/humanoid stream.ik, stream.stance, bone.rotateThenHuman).</summary>
+        void Rebase()
+        {
+            int hips = m_Human.BoneIndex[Bone.Hips];
+            var hipsX = M.Mul(m_Bones.X[m_Human.Skeleton.Parent[hips]], m_Bones.X[hips]);
+            m_Local.CopyFrom(m_Bones);
+            m_Local.X[0] = Trs.Identity;
+            m_Local.X[hips] = M.Mul(new Trs(Root.t, Root.q, F4.One3), M.InvMul(Root, hipsX));
+            m_Rebased = true;
         }
 
         /// <summary>The goals the job set go into the pose, back in the pose's goal frame (a foot's
@@ -506,6 +593,8 @@ namespace Unbound.Runtime.Playables
             m_Changed = true;
             m_SkeletonValid = true;
             m_HumanValid = false;
+            m_BonesKept = false;
+            m_Rebased = false;
         }
 
         internal Vector3 GetGoalPosition(int g) => ToWorldPoint(GoalLocalPosition(g));
@@ -609,6 +698,8 @@ namespace Unbound.Runtime.Playables
             HumanIK.SolveFullBody(m_Human, m_World, m_Local, m_Global, m_W4);
             m_Changed = true;
             m_HumanValid = false;
+            m_BonesKept = false;
+            m_Rebased = false;
         }
 
         static F4 V(Vector3 v) => new F4(v.x, v.y, v.z, 0f);

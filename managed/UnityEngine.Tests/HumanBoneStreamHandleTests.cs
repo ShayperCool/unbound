@@ -85,6 +85,161 @@ namespace UnityEngine.Tests
             Near(hips.position, hipsWorld);
         }
 
+        /// <summary>The combined accessors and the matrices give what the single ones give.</summary>
+        [Fact]
+        public void TheCombinedAccessorsAgreeWithTheSingleOnes()
+        {
+            var animator = Human(scale: 2f);
+            var arm = animator.transform.Find("Hips/Spine/Chest/LeftUpperArm");
+            var handle = animator.BindStreamTransform(arm);
+            Evaluate(animator, (stream, _) =>
+            {
+                stream.AsHuman().SetMuscle(new MuscleHandle(HumanPartDof.LeftArm, ArmDof.ArmDownUp), 0.6f);
+                handle.GetLocalTRS(stream, out var p, out var r, out var s);
+                Near(handle.GetLocalPosition(stream), p);
+                Near(handle.GetLocalRotation(stream), r);
+                Near(handle.GetLocalScale(stream), s);
+                handle.GetGlobalTR(stream, out var wp, out var wr);
+                Near(handle.GetPosition(stream), wp);
+                Near(handle.GetRotation(stream), wr);
+                Near((Vector3)handle.GetLocalToParentMatrix(stream).GetColumn(3), p);
+                Near((Vector3)handle.GetLocalToWorldMatrix(stream).GetColumn(3), wp);
+
+                var turned = r * Quaternion.Euler(0f, 0f, 25f);
+                handle.SetLocalTRS(stream, p, turned, s, false);
+                Near(turned, handle.GetLocalRotation(stream));
+                var world = Quaternion.Euler(10f, 20f, 30f);
+                handle.SetGlobalTR(stream, wp, world, false);
+                Near(world, handle.GetRotation(stream));
+                Near(wp, handle.GetPosition(stream), 1e-3f);
+            });
+            // The final pose spreads a limb's twist over its bones, so the bone ends near, not
+            // at, the rotation written (as with the Editor's lower arm, bone.rotateLocal).
+            Near(Quaternion.Euler(10f, 20f, 30f), arm.rotation, 10f);
+        }
+
+        /// <summary>A handle is a bone of the avatar the Animator has when the job runs: one bound
+        /// before the avatar was assigned, and one bound for an avatar that was then replaced by
+        /// another of the same hierarchy with a bone fewer, read the pose's bone like a handle
+        /// bound afterwards.</summary>
+        [Fact]
+        public void AHandleFollowsTheAnimatorsAvatar()
+        {
+            var animator = Human();
+            var head = animator.transform.Find("Hips/Spine/Chest/Neck/Head");
+            var foot = animator.transform.Find("Hips/RightUpperLeg/RightLowerLeg/RightFoot");
+            var full = animator.avatar;
+
+            animator.avatar = null;
+            var early = animator.BindStreamTransform(head);
+            animator.avatar = full;
+            var earlyFoot = animator.BindStreamTransform(foot);
+            Quaternion read = default;
+            Evaluate(animator, (stream, _) =>
+            {
+                stream.AsHuman().SetMuscle(new MuscleHandle(HeadDof.HeadFrontBack), 0.7f);
+                read = early.GetLocalRotation(stream);
+            });
+            Assert.True(Quaternion.Angle(Quaternion.identity, head.localRotation) > 5f);
+            Near(head.localRotation, read);
+
+            // Another avatar of the same hierarchy without the neck: the nodes are numbered anew.
+            var description = full.humanDescription;
+            var bones = new List<HumanBone>(description.human);
+            bones.RemoveAll(b => b.humanName == "Neck");
+            description.human = bones.ToArray();
+            var fewer = AvatarBuilder.BuildHumanAvatar(animator.gameObject, description);
+            m_Created.Add(fewer);
+            Assert.True(fewer.isHuman);
+            animator.avatar = fewer;
+            Vector3 footRead = default;
+            Evaluate(animator, (stream, _) =>
+            {
+                stream.AsHuman().SetMuscle(new MuscleHandle(HeadDof.HeadFrontBack), -0.7f);
+                read = early.GetLocalRotation(stream);
+                footRead = earlyFoot.GetPosition(stream);
+            });
+            Near(head.localRotation, read);
+            Near(foot.position, footRead, 1e-3f);
+        }
+
+        /// <summary>After the job read the pose back, the bones are still the ones it changed: their
+        /// local values stay, and a further bone write keeps the body where it was, also on a
+        /// scaled root (control: the same job without the further write). World positions are
+        /// then read under the root without its scale (tests/projects/humanoid
+        /// bone.rotateThenHuman): on this rig, half as far from the root as before.</summary>
+        [Fact]
+        public void BonesStayAfterThePoseIsReadBack()
+        {
+            var animator = Human(scale: 2f);
+            var forearm = animator.transform.Find("Hips/Spine/Chest/LeftUpperArm/LeftLowerArm");
+            var head = animator.transform.Find("Hips/Spine/Chest/Neck/Head");
+            var hips = animator.transform.Find("Hips");
+            var forearmHandle = animator.BindStreamTransform(forearm);
+            var headHandle = animator.BindStreamTransform(head);
+            var hipsHandle = animator.BindStreamTransform(hips);
+            void Turn(AnimationStream stream)
+            {
+                Touch(stream);
+                forearmHandle.SetLocalRotation(stream, forearmHandle.GetLocalRotation(stream) * Quaternion.Euler(0f, 0f, 40f));
+            }
+
+            Evaluate(animator, (stream, _) => Turn(stream));
+            Vector3 controlHips = hips.position, controlHead = head.position;
+            var controlForearm = forearm.localRotation;
+
+            Vector3 scaleBefore = default, scaleAfter = default, headBefore = default, headAfter = default;
+            Evaluate(animator, (stream, _) =>
+            {
+                Turn(stream);
+                scaleBefore = hipsHandle.GetLocalScale(stream);
+                headBefore = headHandle.GetPosition(stream);
+                stream.AsHuman().GetMuscle(new MuscleHandle(BodyDof.SpineFrontBack));
+                var bodyRead = stream.AsHuman().bodyPosition;
+                scaleAfter = hipsHandle.GetLocalScale(stream);
+                headAfter = headHandle.GetPosition(stream);
+                headHandle.SetRotation(stream, headHandle.GetRotation(stream));
+            });
+            Near(scaleBefore, scaleAfter);
+            var root = animator.transform.position;
+            Assert.True((headBefore - root).magnitude > 1f);
+            Near(root + (headBefore - root) / 2f, headAfter, 1e-3f);
+            Near(controlHips, hips.position, 1e-3f);
+            Near(controlHead, head.position, 1e-3f);
+            Near(controlForearm, forearm.localRotation, 0.5f);
+        }
+
+        /// <summary>A rotation that is not of unit length is taken at unit length, a zero one as
+        /// the identity, and one that is not a number is not taken.</summary>
+        [Fact]
+        public void ARotationIsTakenAtUnitLength()
+        {
+            var unit = Quaternion.Euler(0f, 0f, 30f);
+            Animator animator = null;
+
+            // Each on a rig of its own: an update starts from the pose the last one left.
+            Vector3 Final(Quaternion? written)
+            {
+                animator = Human();
+                var forearm = animator.transform.Find("Hips/Spine/Chest/LeftUpperArm/LeftLowerArm");
+                var handle = animator.BindStreamTransform(forearm);
+                Evaluate(animator, (stream, _) =>
+                {
+                    Touch(stream);
+                    if (written.HasValue) handle.SetLocalRotation(stream, written.Value);
+                });
+                return animator.transform.Find("Hips/Spine/Chest/LeftUpperArm/LeftLowerArm/LeftHand").position;
+            }
+
+            var plain = Final(null);
+            var turned = Final(unit);
+            Assert.True((plain - turned).magnitude > 0.05f);
+            Near(turned, Final(new Quaternion(unit.x * 2.5f, unit.y * 2.5f, unit.z * 2.5f, unit.w * 2.5f)), 1e-3f);
+            Near(Final(Quaternion.identity), Final(new Quaternion(0f, 0f, 0f, 0f)), 1e-3f);
+            Near(plain, Final(new Quaternion(float.NaN, 0f, 0f, 1f)), 1e-3f);
+            Assert.False(float.IsNaN(animator.transform.Find("Hips").position.x));
+        }
+
         /// <summary>A rotation written through a bone's handle stays in the final pose, local and
         /// world; the job reads it back at once. Control: without the write the bone is elsewhere.</summary>
         [Fact]

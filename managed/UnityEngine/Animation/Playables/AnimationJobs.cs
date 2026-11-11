@@ -26,8 +26,10 @@ namespace Unbound.Runtime.Playables
             internal bool Resolved;
             /// <summary>The node of the avatar's human skeleton the handle reads and writes in a
             /// humanoid's stream: the hips or a node below them (0: none, the channels are
-            /// its values).</summary>
+            /// its values), found at an access for the avatar the Animator has then
+            /// (<see cref="HumanFor"/>).</summary>
             internal int Human;
+            internal Unbound.Runtime.Humanoid.AvatarConstant HumanFor;
         }
 
         internal struct StreamProperty
@@ -71,10 +73,8 @@ namespace Unbound.Runtime.Playables
             handle.Node = owner is SkeletonGroup node ? node.Node : -1;
             if (handle.Node < 0 && owner?.Transform != null) handle.Transform = owner.Transform;
             if (handle.Node < 0 && owner != null && handle.Transform != null) StreamOwned.Add(handle.Transform);
-            // A bone of a humanoid's pose is the pose's, not a channel's (an optimized humanoid's
-            // handles are unmeasured and stay with their nodes).
-            var path = handle.Node < 0 && handle.Transform != null && Animator.IsHuman ? PathOf(handle.Transform) : null;
-            handle.Human = path == null ? 0 : Unbound.Runtime.Playables.HumanStreamPose.BoneNode(Animator.Human?.Constant, path);
+            handle.Human = 0;
+            handle.HumanFor = null;
             return handle;
         }
 
@@ -203,11 +203,28 @@ namespace Unbound.Runtime.Playables
             return m_Human;
         }
 
-        /// <summary>The stream's human pose when the handle is one of its bones.</summary>
-        internal bool HumanBone(in AnimatorHandles.StreamTransform handle, out Unbound.Runtime.Playables.HumanStreamPose pose)
+        /// <summary>The stream's human pose when the handle is one of its bones: a bone of the
+        /// avatar the Animator has now (a handle bound before the avatar was assigned or replaced
+        /// follows it). An optimized humanoid's handles stay with their skeleton nodes
+        /// (unmeasured).</summary>
+        internal bool HumanBone(int index, ref AnimatorHandles.StreamTransform handle, out Unbound.Runtime.Playables.HumanStreamPose pose)
         {
-            pose = handle.Human > 0 && Handles.Animator != null && Handles.Animator.IsHuman ? HumanPose() : null;
-            return pose != null;
+            pose = null;
+            var animator = Handles.Animator;
+            if (handle.Node >= 0 || animator == null) return false;
+            using var engine = MainThreadCheck.Engine();
+            if (!animator.IsHuman || handle.Transform == null) return false;
+            var constant = animator.Human?.Constant;
+            if (!ReferenceEquals(handle.HumanFor, constant))
+            {
+                var path = Handles.PathOf(handle.Transform);
+                handle.Human = path == null ? 0 : Unbound.Runtime.Playables.HumanStreamPose.BoneNode(constant, path);
+                handle.HumanFor = constant;
+                Handles.Transforms[index] = handle;
+            }
+            if (handle.Human <= 0) return false;
+            pose = HumanPose();
+            return true;
         }
 
         /// <summary>The world position, rotation and scale of the hips' parent in the stream: the
@@ -244,7 +261,7 @@ namespace Unbound.Runtime.Playables
                 pose.BoneLocal(d.Human, out p, out r, out s);
                 return;
             }
-            pose.BoneWorld(d.Human, out Vector3 wp, out Quaternion wr, out Vector3 ws);
+            pose.HipsPlaced(out var wp, out var wr, out var ws);
             HipsParentGlobal(d.Transform, pose, out var pp, out var pr, out var ps);
             var local = Quaternion.Inverse(pr) * (wp - pp);
             p = new Vector3(Div(local.x, ps.x), Div(local.y, ps.y), Div(local.z, ps.z));
@@ -266,12 +283,12 @@ namespace Unbound.Runtime.Playables
                 if (s.HasValue) pose.SetBoneLocalScale(d.Human, s.Value);
                 return;
             }
-            if (s.HasValue)
+            HumanLocal(d, pose, out var lp, out var lr, out var ls);
+            if (s.HasValue && (s.Value - ls).sqrMagnitude > 1e-10f * ls.sqrMagnitude)
                 Stubs.Ignored("TransformStreamHandle scale of a humanoid's hips", "is not taken: the hips' scale in the stream comes from the pose's body (unmeasured)");
             if (!p.HasValue && !r.HasValue) return;
-            HumanLocal(d, pose, out var lp, out var lr, out _);
             HipsParentGlobal(d.Transform, pose, out var pp, out var pr, out var ps);
-            pose.SetHipsWorld(pp + pr * Vector3.Scale(ps, p ?? lp), pr * (r ?? lr));
+            pose.SetHipsPlaced(pp + pr * Vector3.Scale(ps, p ?? lp), pr * (r ?? lr));
         }
 
         /// <summary>A write through a humanoid bone's handle, in the world (null: unchanged).</summary>
@@ -293,6 +310,11 @@ namespace Unbound.Runtime.Playables
         }
 
         internal static float Div(float a, float b) => Math.Abs(b) > 1e-12f ? a / b : a;
+
+        /// <summary>A write with a read mask on a humanoid bone writes everything: which of a
+        /// bone's values the Editor's masks let through is unmeasured.</summary>
+        internal static void BoneMaskUnmeasured() =>
+            Stubs.Ignored("TransformStreamHandle write with useMask on a humanoid bone", "writes every value (the bone's read masks are unmeasured)");
 
         /// <summary>The end of a job: a human pose it opened goes back into the stream.</summary>
         void CloseHuman()
@@ -940,7 +962,7 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Vector3.zero;
-            if (c.HumanBone(d, out var human)) { c.HumanGlobal(d, human, out var hp, out _, out _); return hp; }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanGlobal(d, human, out var hp, out _, out _); return hp; }
             c.GlobalTR(d, out var p, out _);
             return p;
         }
@@ -948,7 +970,7 @@ namespace UnityEngine.Animations
         public void SetPosition(AnimationStream stream, Vector3 position)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (c.HumanBone(d, out var human)) { c.HumanSetGlobal(d, human, position, null); return; }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanSetGlobal(d, human, position, null); return; }
             ParentGlobal(c, d, out var pp, out var pr, out var parentScale);
             var local = Quaternion.Inverse(pr) * (position - pp);
             c.Write(d.Position, new Vector3(StreamContext.Div(local.x, parentScale.x), StreamContext.Div(local.y, parentScale.y), StreamContext.Div(local.z, parentScale.z)));
@@ -958,7 +980,7 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Quaternion.identity;
-            if (c.HumanBone(d, out var human)) { c.HumanGlobal(d, human, out _, out var hr, out _); return hr; }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanGlobal(d, human, out _, out var hr, out _); return hr; }
             c.GlobalTR(d, out _, out var r);
             return r;
         }
@@ -966,7 +988,7 @@ namespace UnityEngine.Animations
         public void SetRotation(AnimationStream stream, Quaternion rotation)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (c.HumanBone(d, out var human)) { c.HumanSetGlobal(d, human, null, rotation); return; }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanSetGlobal(d, human, null, rotation); return; }
             ParentGlobal(c, d, out _, out var pr, out _);
             c.Write(d.Rotation, Quaternion.Inverse(pr) * rotation);
         }
@@ -980,7 +1002,7 @@ namespace UnityEngine.Animations
         public void SetLocalPosition(AnimationStream stream, Vector3 position)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (c.HumanBone(d, out var human)) c.HumanSetLocal(d, human, position, null, null);
+            if (c.HumanBone(handleIndex, ref d, out var human)) c.HumanSetLocal(d, human, position, null, null);
             else c.Write(d.Position, position);
         }
 
@@ -988,14 +1010,14 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Quaternion.identity;
-            if (c.HumanBone(d, out var human)) { c.HumanLocal(d, human, out _, out var hr, out _); return hr; }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanLocal(d, human, out _, out var hr, out _); return hr; }
             return c.LocalRotation(d.Transform, d.Rotation);
         }
 
         public void SetLocalRotation(AnimationStream stream, Quaternion rotation)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (c.HumanBone(d, out var human)) c.HumanSetLocal(d, human, null, rotation, null);
+            if (c.HumanBone(handleIndex, ref d, out var human)) c.HumanSetLocal(d, human, null, rotation, null);
             else c.Write(d.Rotation, rotation);
         }
 
@@ -1003,14 +1025,14 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Vector3.one;
-            if (c.HumanBone(d, out var human)) { c.HumanLocal(d, human, out _, out _, out var hs); return hs; }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanLocal(d, human, out _, out _, out var hs); return hs; }
             return c.LocalScale(d.Transform, d.Scale);
         }
 
         public void SetLocalScale(AnimationStream stream, Vector3 scale)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (c.HumanBone(d, out var human)) c.HumanSetLocal(d, human, null, null, scale);
+            if (c.HumanBone(handleIndex, ref d, out var human)) c.HumanSetLocal(d, human, null, null, scale);
             else c.Write(d.Scale, scale);
         }
 
@@ -1018,7 +1040,7 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Matrix4x4.identity;
-            if (c.HumanBone(d, out var human)) { c.HumanLocal(d, human, out var hp, out var hr, out var hs); return Matrix4x4.TRS(hp, hr, hs); }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanLocal(d, human, out var hp, out var hr, out var hs); return Matrix4x4.TRS(hp, hr, hs); }
             return Matrix4x4.TRS(c.LocalPosition(d.Transform, d.Position), c.LocalRotation(d.Transform, d.Rotation), c.LocalScale(d.Transform, d.Scale));
         }
 
@@ -1038,7 +1060,7 @@ namespace UnityEngine.Animations
                 scale = Vector3.one;
                 return;
             }
-            if (c.HumanBone(d, out var human)) { c.HumanLocal(d, human, out position, out rotation, out scale); return; }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanLocal(d, human, out position, out rotation, out scale); return; }
             position = c.LocalPosition(d.Transform, d.Position);
             rotation = c.LocalRotation(d.Transform, d.Rotation);
             scale = c.LocalScale(d.Transform, d.Scale);
@@ -1047,7 +1069,12 @@ namespace UnityEngine.Animations
         public void SetLocalTRS(AnimationStream stream, Vector3 position, Quaternion rotation, Vector3 scale, bool useMask)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (c.HumanBone(d, out var human)) { c.HumanSetLocal(d, human, position, rotation, scale); return; }
+            if (c.HumanBone(handleIndex, ref d, out var human))
+            {
+                if (useMask) StreamContext.BoneMaskUnmeasured();
+                c.HumanSetLocal(d, human, position, rotation, scale);
+                return;
+            }
             if (!useMask || (d.Position >= 0)) c.Write(d.Position, position);
             if (!useMask || (d.Rotation >= 0)) c.Write(d.Rotation, rotation);
             if (!useMask || (d.Scale >= 0)) c.Write(d.Scale, scale);
@@ -1062,7 +1089,7 @@ namespace UnityEngine.Animations
                 rotation = Quaternion.identity;
                 return;
             }
-            if (c.HumanBone(d, out var human)) { c.HumanGlobal(d, human, out position, out rotation, out _); return; }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanGlobal(d, human, out position, out rotation, out _); return; }
             c.GlobalTR(d, out position, out rotation);
         }
 
@@ -1070,14 +1097,19 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Matrix4x4.identity;
-            if (c.HumanBone(d, out var human)) { c.HumanGlobal(d, human, out var hp, out var hr, out var hs); return Matrix4x4.TRS(hp, hr, hs); }
+            if (c.HumanBone(handleIndex, ref d, out var human)) { c.HumanGlobal(d, human, out var hp, out var hr, out var hs); return Matrix4x4.TRS(hp, hr, hs); }
             return c.LocalToWorld(d);
         }
 
         public void SetGlobalTR(AnimationStream stream, Vector3 position, Quaternion rotation, bool useMask)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (c.HumanBone(d, out var human)) { c.HumanSetGlobal(d, human, position, rotation); return; }
+            if (c.HumanBone(handleIndex, ref d, out var human))
+            {
+                if (useMask) StreamContext.BoneMaskUnmeasured();
+                c.HumanSetGlobal(d, human, position, rotation);
+                return;
+            }
             ParentGlobal(c, d, out var pp, out var pr, out var parentScale);
             var local = Quaternion.Inverse(pr) * (position - pp);
             if (!useMask || (d.Position >= 0))
