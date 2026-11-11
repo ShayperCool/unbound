@@ -740,6 +740,25 @@ fn lightmap_uvs_of_unwelded_points_at_one_position() {
 }
 
 #[test]
+fn a_mesh_the_unwrap_cannot_take_keeps_its_faces_and_warns() {
+    // A coordinate beyond the float range: the unwrap is not attempted, nothing else changes.
+    let obj = "g Far\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 1e39 1 0\nf 1 2 3\nf 1 3 4\n";
+    let on = "ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n";
+    let off = "ModelImporter:\n  meshes:\n    generateSecondaryUV: 0\n";
+    let (with, without) = (import_obj("Far.obj", obj, on), import_obj("Far.obj", obj, off));
+    assert!(
+        with.warnings
+            .iter()
+            .any(|w| w.contains("lightmap UVs are not generated") && w.contains("not finite")),
+        "{:?}",
+        with.warnings
+    );
+    assert_eq!(with.meshes[0].submeshes, without.meshes[0].submeshes);
+    assert_eq!(with.meshes[0].submeshes[0].len(), 6);
+    assert_eq!(with.meshes[0].uvs, without.meshes[0].uvs);
+}
+
+#[test]
 fn weld_vertices_can_preserve_coincident_authored_points() {
     // The Model tab documents that disabling welding preserves distinct source vertices.
     let obj =

@@ -2742,7 +2742,8 @@ impl<'a> Builder<'a> {
 
     /// UV2 per triangle corner from the lightmap unwrap of the whole mesh. Unity unwraps the
     /// mesh as it holds it after triangulation and welding: the control points in file order (an
-    /// OBJ's in the order the faces' corners first use them) with each position kept once, the
+    /// OBJ's in the order the faces' corners first use them) with each position kept once, or
+    /// every point as its own without `weldVertices` (lightmapuvs NoWeld), the
     /// triangles in face order, each its own source polygon (inferred; checked by the unwrap
     /// against tests/projects/lightmapuvs).
     fn lightmap_uvs(
