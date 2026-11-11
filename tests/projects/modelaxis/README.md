@@ -201,8 +201,8 @@ scales, Head turns): Legacy under Keyframe Reduction with the default errors (`D
 (`Loose`: 3 degrees, 2%), tighter (`Tight`: 0.2 degrees, 0.1%) and unequal position and scale
 errors (`Split`: 3%, 0.1%), at 60 fps (`Rate60`); Generic under Keyframe Reduction
 (`GenericReduced`) and Optimal (`GenericOptimal`); three seconds of slow straight motion where
-segments reach the 50-frame limit (`Drift`); and the pivoted `AnimPivot` take of the Pivots set
-reduced. The probe samples every clip of each model (`AnimationClip.SampleAnimation`) each
+segments reach the 50-frame limit (`Drift`); the pivoted `AnimPivot` take of the Pivots set
+reduced; and Legacy under Keyframe Reduction and Compression (`Packed*`, `LegacyOptimal`, below). The probe samples every clip of each model (`AnimationClip.SampleAnimation`) each
 1/60 s over its length. The [Animation tab](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/asset-types/models/importing/class-animation-clip)
 documents the errors (rotation as an angle in degrees, position and scale as a percentage of
 the original value, tested per axis and on the whole vector) but not which keys are tested; the
@@ -225,9 +225,42 @@ rotations and scales with smooth slopes):
 A first attempt with 0.05 degrees and 0.05% put the rotation threshold within a few single
 precision steps of a unit dot product, where keeping or dropping a key is a rounding tie
 (our captures differed by up to 0.0009 in basis vectors there); `Tight` uses errors above that.
-Legacy clips under Keyframe Reduction and Compression: the page says the compression affects
-only file size, but a capture of `Default` with it sampled rotations up to 0.6 degrees from the
-reduced keys (positions and scales equal); that rotation packing is not reproduced and warns.
+
+Key times: a key a whole number of frames after the range's start lies at that number times
+the frame length, both in single precision (3 s at 30 fps: 3.0000002 for rotations; the
+position curve of `Drift` ends at 3 exactly, scales unmeasured). With these times a segment of
+exactly 50 frames is not "fewer than 50": `Drift` keeps frame 49. Legacy clips, like Generic
+ones, have curves only for the channels the take animates (`Packed`: the unanimated rotation of
+Hips is not packed), pivoted nodes aside.
+
+#### Legacy rotation packing (`Packed*`, `LegacyOptimal`)
+
+The page says Keyframe Reduction and Compression affects only file size, but Legacy clips
+imported with it (or with the value 3, Optimal for the other rig types: `LegacyOptimal` equals
+`Packed`) play rotations up to 0.6 degrees from the reduced keys; positions and scales are
+unchanged, Generic clips are not affected (`GenericOptimal`). After the reduction each
+rotation curve is stored packed and plays what unpacking returns:
+
+- key times cut off to whole hundredths of a second (`PackedRate60`, `PackedRate120`: frames
+  closer than that; `PackedDrift`: 1.6333 s becomes 1.63);
+- three quaternion components cut off to 10 bits over -1..1 (9 bits for the component after the
+  largest), the largest in magnitude rebuilt from them with its sign (`PackedTurn`: past half a
+  turn the largest component changes and turns negative);
+- slopes rounded to 6 bits over the range the curve's slopes span.
+
+Controls: default errors (`Packed`), looser (`PackedLoose`), 60 and 120 fps, the 3 s clip and
+more than half a turn in one second. The keys `AnimationUtility.GetEditorCurve` returns for
+these clips agree with the imported ones to 5e-9 in value and exactly in time (slopes to 4e-6,
+as for unpacked clips). Not measured: clips whose first key lies before zero, ranges that start
+or end between frames, curves with different incoming and outgoing slopes (the importer makes
+none for rotations).
+
+`PackedRate120` uses a scale error of 1%: at 0.5% dropping its scale corner at 1/3 s is a tie
+(the segment over it misses the corner by 0.5% of its value to within 4e-6), and the Editor,
+whose sampled key beside the corner is one single-precision step above ours (1.48750007
+against 1.4875), drops the corner where we keep it: scales differ by 0.0075 for two samples,
+both reductions within the error. A reduction exactly on its limit follows the last step of the
+sampled values, which are not reproduced to that step.
 
 ```sh
 python3 tests/projects/modelaxis/Tools/make_pivots.py
