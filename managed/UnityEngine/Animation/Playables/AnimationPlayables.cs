@@ -807,8 +807,10 @@ namespace Unbound.Runtime.Playables
         /// without Root and of the upper body). IK passes of the layers above the first,
         /// OnStateIK and the controller below mixers or jobs are unmeasured; other releases
         /// take the same path unmeasured. A paused playable is not prepared, so its states keep
-        /// their last interval and every evaluation moves the root by that step again, as the
-        /// Editor does (controllerGraph.paused).</summary>
+        /// their last interval and every evaluation steps the root over it again
+        /// (controllerGraph.paused: for eight updates of one delta time the Editor's root keeps
+        /// the turn and the forward step of the update before the pause while the feet pivot
+        /// goes on correcting the rest; another delta time while paused is unmeasured).</summary>
         void Humanoid(AnimationEvaluation e, AnimatorPlayer player, Unbound.Runtime.Humanoid.AnimatorHuman human, float weight, AnimStream into)
         {
             if (e.Replay) into.BodyMotion = m_LastBody;

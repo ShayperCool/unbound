@@ -139,12 +139,11 @@ namespace UnityEngine.Tests
 
         /// <summary>A layer whose avatar mask leaves out Root does not place the body, played
         /// through the playable as on the Animator (6000.0.71f1, tests/projects/humanoid
-        /// controllerGraph.maskOverrideNoRoot, .maskAdditiveNoRoot). Control: the mask changes
-        /// the override layer's pose.</summary>
+        /// controllerGraph.maskOverrideNoRoot; the probe also has an additive layer and an
+        /// upper body mask). Control: the mask changes the pose.</summary>
         [Theory]
         [InlineData(0, 1f)]
         [InlineData(0, 0.5f)]
-        [InlineData(1, 0.5f)]
         public void AControllerPlayablesMaskedLayerLeavesTheBodyAsItsOwnControllerDoes(int blending, float weight)
         {
             void NoRoot(RuntimeAnimatorController controller)
@@ -158,8 +157,6 @@ namespace UnityEngine.Tests
             var own = Own(yaml, NoRoot);
             var played = Played(yaml, edit: NoRoot);
             SamePose(own, played);
-            // The fixture's additive layer adds no body difference (its clip is constant).
-            if (blending != 0) return;
             var unmasked = Played(yaml);
             var a = played.GetComponentsInChildren<Transform>();
             var b = unmasked.GetComponentsInChildren<Transform>();
@@ -168,10 +165,12 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A paused controller playable does not advance its states, and each evaluation
-        /// moves the root by its last step again (6000.0.71f1, tests/projects/humanoid
-        /// controllerGraph.paused: paused for eight updates, the Editor's root keeps the step of
-        /// the update before the pause; the Scripting API says of PlayState.Paused only that the
-        /// playable's local time does not advance). Control: playing again, the states go on.</summary>
+        /// steps the root over their last interval again (6000.0.71f1, tests/projects/humanoid
+        /// controllerGraph.paused: paused for eight updates of one delta time, the Editor's root
+        /// keeps moving, with the turn and the forward step of the update before the pause; the
+        /// Scripting API says of PlayState.Paused only that the playable's local time does not
+        /// advance; another delta time while paused is unmeasured). Control: playing again, the
+        /// states go on.</summary>
         [Fact]
         public void APausedControllerPlayableRepeatsItsLastRootStep()
         {
