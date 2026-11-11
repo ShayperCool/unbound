@@ -28,6 +28,11 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
 - `RoomSystems`: as `Room`, with the left and right walls and the panel given Lightmap Parameters
   of their own (the defaults with System Tag 1): two systems in one atlas, each reading the
   other's values (`run.py setup-systems` adds this scene alone).
+- `RoomCharts`: as `Room`, with four flat panels on the walls and under the ceiling whose
+  lightmap UV charts leave holes (`run.py setup-charts` adds this scene alone;
+  `RealtimeGISetup.Panel` makes the meshes): `Ring`, a ring and two loose square plates; `RingGrown`,
+  the same ring with three; `Holes`, a plate with two holes of different sizes and two loose
+  plates; `Arch`, an arch and one.
 
 `Assets/Scripts/RealtimeGIProbe.cs` (with `REALTIME_GI_OUT` set) changes one input at a time and
 records, per case:
@@ -132,6 +137,11 @@ light off and the panel's emission black: the environment as the only light); `-
 `-envdata-source` (a gradient as the source), `-envdata-sky` (a skybox as the source) and
 `-envdata-intensity` (its ambient intensity 2), the data set again before each; and
 `-envdata-update` (the data set again, then `DynamicGI.UpdateEnvironment`).
+
+Then `RoomCharts`: `roomcharts-base` and `roomcharts-moved` (the point light moved). Where each
+panel's charts lie is in the scene's precomputed data (`Assets/Scenes/RoomCharts/LightingData.asset`:
+each renderer's place in the system and the system's chart mask); the cases record the lightmap
+drawn at those texels.
 
 With `--pipeline urp` the same project is drawn by the Universal Render Pipeline (run.py adds
 the package and the pipeline assets of tests/projects/urp to the run's copy) and the probe
