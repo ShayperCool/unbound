@@ -220,9 +220,11 @@ pub fn provide_interfaces() {
 }
 
 /// The interfaces on a device that is not Vulkan. The OpenGL Core Editor answers both there
-/// (tests/projects/nativegfx `interface.IUnityGraphicsVulkan`), and a plugin that calls into
-/// them crashes it (measured: `Instance` and `CommandRecordingState`). Here they are answered
-/// too; a call is an error in the script log and gives nothing.
+/// (tests/projects/nativegfx `interface.IUnityGraphicsVulkan`). Asking them to intercept the
+/// device's initialization or a Vulkan function, or to configure the swapchain, answers no
+/// (`profiler.load` `vulkan.elsewhere`), and so it does here. What needs the device ends the
+/// Editor there (measured: `Instance`, `CommandRecordingState`, `ConfigureEvent`, the render
+/// pass calls); here such a call is an error in the script log and gives nothing.
 mod elsewhere {
     use super::*;
 
@@ -239,7 +241,6 @@ mod elsewhere {
     }
 
     unsafe extern "C" fn intercept_initialization(_: InitCallback, _: *mut c_void) -> bool {
-        refuse("InterceptInitialization");
         false
     }
 
@@ -248,12 +249,10 @@ mod elsewhere {
         _: *mut c_void,
         _: i32,
     ) -> bool {
-        refuse("AddInterceptInitialization");
         false
     }
 
     unsafe extern "C" fn remove_intercept_initialization(_: InitCallback) -> bool {
-        refuse("RemoveInterceptInitialization");
         false
     }
 
@@ -261,7 +260,6 @@ mod elsewhere {
         _: *const c_char,
         _: vk::PFN_vkVoidFunction,
     ) -> vk::PFN_vkVoidFunction {
-        refuse("InterceptVulkanAPI");
         None
     }
 
@@ -319,7 +317,6 @@ mod elsewhere {
     }
 
     unsafe extern "C" fn configure_swapchain(_: *const c_void) -> bool {
-        refuse("ConfigureSwapchain");
         false
     }
 
@@ -2001,6 +1998,30 @@ pub fn vk_format(adapter: &wgpu::Adapter, format: wgpu::TextureFormat) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// On a device that is not Vulkan the interfaces answer no to what needs no device, and
+    /// give nothing where the Editor would end.
+    #[test]
+    fn the_interfaces_elsewhere_refuse_without_a_device() {
+        let v2 = &elsewhere::V2;
+        unsafe {
+            assert!(!(v2.v1.intercept_initialization)(
+                None,
+                std::ptr::null_mut()
+            ));
+            assert!(!(v2.add_intercept_initialization)(
+                None,
+                std::ptr::null_mut(),
+                0
+            ));
+            assert!(!(v2.remove_intercept_initialization)(None));
+            assert!((v2.v1.intercept_vulkan_api)(c"vkCreateImage".as_ptr(), None).is_none());
+            assert!(!(v2.v1.configure_swapchain)(std::ptr::null()));
+            let instance = (v2.v1.instance)();
+            assert_eq!(instance.instance, vk::Instance::null());
+            assert!(!(v2.v1.command_recording_state)(std::ptr::null_mut(), 0));
+        }
+    }
     use std::mem::{offset_of, size_of};
 
     /// The structs are laid out as IUnityGraphicsVulkan.h's on LP64 (x86-64, arm64).
