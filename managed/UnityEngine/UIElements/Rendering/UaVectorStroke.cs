@@ -265,7 +265,8 @@ namespace Unbound.UIElements
         static float AngleBetween(Vector2 a, Vector2 b)
         {
             float cos = (a.x * b.x + a.y * b.y) / (UaVector.Length(a) * UaVector.Length(b));
-            return MathF.Acos(!(cos > -1f) ? -1f : cos >= 1f ? 1f : cos);
+            if (float.IsNaN(cos)) return MathF.PI;
+            return MathF.Acos(cos <= -1f ? -1f : cos >= 1f ? 1f : cos);
         }
 
         /// <summary>A curve piece's length: its chord, or its arc's radius times the angle between

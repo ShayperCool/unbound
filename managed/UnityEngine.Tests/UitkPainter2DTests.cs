@@ -587,8 +587,16 @@ namespace UnityEngine.Tests
                 Assert.Equal(255, v.tint.a);
                 Assert.False(float.IsNaN(v.position.x) || float.IsNaN(v.position.y));
             }
-            // The line after the arc is drawn in the end colour throughout.
+            // The gradient is used up on the arc: the last vertex has the end colour.
             Assert.Equal(240, s.Vertices[s.Vertices.Length - 1].tint.r);
+            // Inner side on the centre: every vertex of the arc advances by half a circle of the
+            // radius, the same step from vertex to vertex until the gradient ends.
+            if (radius == 4f && width == 4f)
+            {
+                int step = s.Vertices[1].tint.r;
+                Assert.InRange(step, 1, 239);
+                Assert.InRange(s.Vertices[2].tint.r, Math.Min(240, 2 * step) - 1, Math.Min(240, 2 * step) + 1);
+            }
         }
 
         // A curve piece whose ends coincide has no length, wherever it lies (Editor:

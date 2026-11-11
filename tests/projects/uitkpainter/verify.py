@@ -10,7 +10,7 @@ tints, arc flags and indices exactly, sizes within 2e-4. Fills bounded by arcs o
 and flags; the faded edges' interior apexes left out) plus the area of their plain interior triangles: libtess2 breaks ties between
 co-circular points by the last bits of their coordinates, so the interior triangulation, a faded
 edge's apex, a strip's diagonal and the emission order may differ while every anti-aliased edge
-and the covered area agree. Cases in OPEN are compared and printed, not counted. Every other line (painter state, API calls and their log messages) must
+and the covered area agree. Cases in OPEN are compared and printed; of them only the order of their distinct tints is counted. Every other line (painter state, API calls and their log messages) must
 be equal. Images (the same cases drawn on a runtime panel at scale 1 and 1.25, including a cell
 that mixes allocated meshes and a painter stroke, and the gradient cases at scale 1) print their mean and worst channel difference
 and pixels over 8, and fail beyond the recorded residuals (IMAGE_LIMITS).
@@ -33,9 +33,9 @@ AREA_TOLERANCE = 1e-2
 # within 8/255, none over.
 IMAGE_LIMITS = {'painter-1.png': (0.02, 11, 1), 'painter-1.25.png': (0.02, 95, 32), 'painter-gradient.png': (0.02, 8, 0)}
 # Cases recorded in the reference whose mesh is known to differ: compared and printed with their
-# difference on every run, not counted (each names its follow-up in docs/COMPATIBILITY_GAPS.md).
-# Their gradient colours follow the reference in managed tests; the geometry of a curve without
-# length (a loop back to its start, a curve shorter than the path epsilon) is the open part.
+# difference on every run (each names its follow-up in docs/COMPATIBILITY_GAPS.md). The order of
+# their distinct tints is checked; the geometry of a curve without length (a loop back to its
+# start, a curve shorter than the path epsilon) is the open part.
 OPEN = {
     'gradient-curve-loop': 'stroke geometry of a curve whose ends coincide',
     'gradient-curve-loop-at-origin': 'stroke geometry of a curve whose ends coincide',
@@ -141,6 +141,16 @@ def compare_mesh(name, a, b):
     return out
 
 
+def tints(r):
+    """The distinct vertex tints in the order they first appear."""
+    out = []
+    for v in r['v']:
+        t = tuple(v[2:6])
+        if t not in out:
+            out.append(t)
+    return out
+
+
 def read_png(path):
     data = path.read_bytes()
     pos, chunks = 8, []
@@ -212,6 +222,14 @@ def main():
         diff = compare_mesh(name, ref_meshes[name], meshes[name])
         if name in OPEN:
             print(f'open: {name} ({OPEN[name]}): ' + ('; '.join(diff) if diff else 'matches'))
+            # Counted for an open case: the colours along the stroke, in order. A case that
+            # matches altogether no longer belongs in OPEN.
+            if tints(ref_meshes[name]) != tints(meshes[name]):
+                failures += 1
+                print(f'{name}: tints in order {tints(meshes[name])} vs {tints(ref_meshes[name])}')
+            elif not diff:
+                failures += 1
+                print(f'{name}: matches the reference; remove it from OPEN')
             continue
         if diff:
             failures += 1
@@ -222,7 +240,7 @@ def main():
         if x != y:
             failures += 1
             print(f'line {i}: {json.dumps(y)} vs {json.dumps(x)}')
-    checks = len((ref_meshes.keys() | meshes.keys()) - OPEN.keys()) + max(len(ref_other), len(other)) + len(IMAGE_LIMITS)
+    checks = len(ref_meshes.keys() | meshes.keys()) + max(len(ref_other), len(other)) + len(IMAGE_LIMITS)
     for image in IMAGE_LIMITS:
         r, c = reference / image, a.candidate / image
         if not r.is_file() or not c.is_file():
