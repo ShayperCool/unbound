@@ -1,0 +1,8 @@
+{
+ "engine_paths": [
+  "crates/unbound-app/src/render/executor.rs",
+  "crates/unbound-app/src/render/resources.rs",
+  "crates/unbound-app/src/render/mod.rs",
+  "vendor/wgpu-sampler/"
+ ]
+}

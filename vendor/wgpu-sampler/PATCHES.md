@@ -54,10 +54,10 @@ trilinear filters, strengths1..16, and higher mip transitions. Bilinear and reus
 policy controls are separate profiles. Full scalar unions keep every value and residual;
 GPU tolerance0.002/state1e-6 are unchanged. A passing float tolerance is not exact sampling.
 
-The measured NVIDIA Vulkan anisotropic transition has the same slopes as Native but a
-different origin. Only measured 2D samplers on that backend receive centering selected by
-the effective sampler strength/filter policy. Other backends and release profiles have not
-been certified. Shader cache14 uses a distinct native-sampler implementation key; rejected
+The measured NVIDIA Vulkan anisotropic transition has the same slopes as the OpenGL Core
+Editor's but another origin, which is the Vulkan Editor's too (tests/projects/samplerbias,
+`Reference/unity-<version>/vulkan`): each device's backend keeps its own, and no sampler is
+centred any more. Other drivers and release profiles have not been measured. Shader cache14 uses a distinct native-sampler implementation key; rejected
 shader-emulation entries cannot be reused. Final validation status and rejected experiments
 belong in cache handoff reports, never in this source ledger.
 
