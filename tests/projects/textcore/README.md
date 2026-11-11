@@ -37,8 +37,10 @@ reference's. Without them the engine skips both fonts and no case is compared.
     python3 tests/projects/textcore/compare.py tests/projects/textcore/Reference/unity-6000.0.71f1.jsonl.gz /tmp/textcore-unbound.jsonl
 
 `tools/agents/suite.py --only textcore` does the same on a copy of the project. With the fonts,
-372 cases are compared and 48 differ (42 italic, 2 bold italic, 4 normal), all by the cap line
-below: 8226 of 615779 values.
+372 cases are compared and 48 differ (42 italic, 2 bold italic, 4 normal) by the cap line below;
+with the atlas differences of the same paragraph the total is 8226 of 615779 values. On macOS set
+`UNBOUND_PROBE_UNITY` to the Editor's executable (or `TEXTCORE_INTER`) and
+`TEXTCORE_LIBERATION_SANS`: neither default path exists there.
 
 Known differences: Unity's FaceInfo cap and mean lines are the tops of 'H' and 'x' hinted by the
 font's TrueType instructions, which Unbound approximates (Inter's cap line is 66 in Unity, 65 in

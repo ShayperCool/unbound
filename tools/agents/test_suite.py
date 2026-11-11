@@ -912,6 +912,14 @@ class PartialRecipeTests(unittest.TestCase):
             self.assertTrue(complete)
             self.assertEqual(values, {('main', 'get'): 'ok'})
 
+    def test_uncommitted_probe_fonts_go_to_the_staged_project_only(self):
+        fonts, engine, compare = suite.recipes('6000.0.71f1')['textcore']
+        self.assertEqual(fonts.kind, 'driver')
+        self.assertEqual(fonts.argv[1:3], ['{probe}/fonts.py', '{project}'])
+        self.assertIn('{project}', engine.argv)
+        self.assertNotIn('{probe}', engine.argv)
+        self.assertEqual(compare.kind, 'compare')
+
     def test_color_variants_have_independent_settings_outputs_and_comparisons(self):
         table = suite.recipes('6000.0.71f1')
         for name, variants in [('uicolors', ('Linear', 'Gamma')),
