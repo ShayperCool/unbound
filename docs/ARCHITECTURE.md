@@ -203,16 +203,19 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `IUnityGraphics::GetRenderer`), the Linux Editor's default, plugins call OpenGL on the main
   thread with a context current and use OpenGL texture names. Their context is an OpenGL 4.5 core
   EGL context in the renderer's share group (`render/gl_interop.rs`): a texture's native pointer
-  is the renderer's own OpenGL texture (where Unity's device stores the texture in another format,
-  as sRGB color textures of a Linear project, a view of it in that format), current on the game
+  is the renderer's own OpenGL texture (where Unity's device has the texture with another target
+  or in another format, as sRGB color textures of a Linear project or a square array of six
+  layers, a view of it with them; a multisampled render texture's resolved image), current on the game
   thread: in `UnityPluginLoad` and in every rendering callback, as in the Editor, whose callbacks
   run on its main thread (tests/projects/nativegfx). The game thread drives the renderer too, whose
   backend gives the thread the plugins' context back after its own work. A callback runs when the
   renderer's work before it is done (`Plugin` commands, render protocol 15); OpenGL finishes the
   plugin's before the renderer goes on. The current target is bound for the callback (its color
-  level, its depth texture, the viewport); the screen is not shared. A texture made with
+  level, its depth texture, the viewport; a multisampled target's samples, resolved again after
+  the callback); the screen is not shared. A texture made with
   `CreateExternalTexture` from another texture's pointer is that texture; from a plugin's own
-  2D texture it samples that texture, as OpenGL samples it in its own format. A headless run has
+  2D texture it samples that texture, as OpenGL samples it in its own format, through as many of
+  its mip levels as the external texture has. A headless run has
   no renderer: the plugins' context shares nothing there. macOS has no plugin context: plugin
   callbacks are skipped with an error there, texture updates still run, and native pointers are
   not OpenGL names.

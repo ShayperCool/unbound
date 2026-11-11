@@ -192,7 +192,7 @@ before anything renders, in both directions.
 | `font_glyph(font, codepoint, size, style, *mut GlyphInfo, *mut NativeBuffer) -> i32` | Rasterizes a glyph of a font opened with the `font-open` call (version 3); 1 when the font has it. The buffer holds `width * height` coverage bytes, top row first. |
 | `plugin_load(load)`, `plugin_set_log(sink)`, `plugin_shutdown()` | A native plugin's `UnityPluginLoad` with the plugin interfaces; where plugin messages go; the device's Shutdown events at the end (version 41, `plugin_api.rs`). |
 | `native_texture(texture, depth) -> u64` | The OpenGL texture name plugins see for a texture (its depth buffer's), sharing its memory; 0 when it cannot be shared (version 41). |
-| `external_texture(texture, native, w, h, srgb, *mut NativeBuffer) -> i32` | Makes a texture show a native OpenGL texture (`CreateExternalTexture`); 0 on success, else the reason (version 41). |
+| `external_texture(texture, native, mips, *mut NativeBuffer) -> i32` | Makes a texture show a native OpenGL texture through that many of its mip levels (`CreateExternalTexture`); 0 on success, else the reason (version 41; 55: the levels, where the declared size and color space were). |
 
 ## Conventions
 
