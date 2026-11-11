@@ -237,19 +237,20 @@ namespace UnityEngine.Tests
 
         /// <summary>A moving along z on the base layer under an override layer of a weight whose
         /// first state leaves for its second after an exit time of 0.2 over 0.5 s. The states: B
-        /// and C (clips moving along x and z), "empty" (no motion, write defaults), "generic" (a
-        /// clip without a humanoid curve, write defaults) and "genericKeep" (the same without
-        /// write defaults).</summary>
+        /// and C (clips moving along x and z), "empty" (no motion, write defaults), "hold" (no
+        /// motion, no write defaults), "generic" (a clip without a humanoid curve, write
+        /// defaults) and "genericKeep" (the same without write defaults).</summary>
         static string Layered(float layerWeight, string first, string second)
         {
             static long Id(string state) => state == "B" ? Fixture.StateB : state == "C" ? StateC : EmptyState;
             static string State(string state, long transition)
             {
-                long clip = state == "B" ? Fixture.ClipB : state == "empty" ? 0 : ClipC;
+                long clip = state == "B" ? Fixture.ClipB : state is "empty" or "hold" ? 0 : ClipC;
                 string yaml = Fixture.State(Id(state), state, clip, false, transition);
-                return state == "genericKeep" ? yaml.Replace("m_WriteDefaultValues: 1", "m_WriteDefaultValues: 0") : yaml;
+                return state is "genericKeep" or "hold" ? yaml.Replace("m_WriteDefaultValues: 1", "m_WriteDefaultValues: 0") : yaml;
             }
-            bool third = first != "B" && first != "empty" || second != "B" && second != "empty";
+            static bool Third(string state) => state is not ("B" or "empty" or "hold");
+            bool third = Third(first) || Third(second);
             return Fixture.Header + Fixture.Layer("Base Layer", 1107000001, 0, 1f) + Fixture.Layer("Above", 1107000002, 0, layerWeight)
                 + Fixture.Machine(1107000001, Fixture.StateA, Fixture.StateA) + Fixture.Machine(1107000002, Id(first), Id(first), Id(second))
                 + Fixture.State(Fixture.StateA, "A", Fixture.ClipA, false) + State(first, AboveTransition) + State(second, 0)
@@ -278,9 +279,10 @@ namespace UnityEngine.Tests
         /// tests/projects/humanoid body.emptyLayerTransition, a layer of weight 1); the other
         /// direction, a partial layer weight and a state without write defaults whose clip has
         /// no humanoid curve follow the same rule (unmeasured). Controls: a state with write
-        /// defaults whose clip has no humanoid curve keeps its share of the step still, as
-        /// before (unmeasured), two clips in a transition on the layer cover the layer below
-        /// wholly, and every case's step differs from the other rule's.</summary>
+        /// defaults whose clip has no humanoid curve and a state that holds (no motion, no write
+        /// defaults, nothing kept yet) keep their share of the step still, as before
+        /// (unmeasured), two clips in a transition on the layer cover the layer below wholly,
+        /// and every case's step differs from the other rule's.</summary>
         [Theory]
         [InlineData("empty", "B", 1f)]
         [InlineData("empty", "B", 0.5f)]
@@ -288,6 +290,7 @@ namespace UnityEngine.Tests
         [InlineData("genericKeep", "B", 1f)]
         [InlineData("generic", "B", 1f)]
         [InlineData("generic", "B", 0.5f)]
+        [InlineData("hold", "B", 1f)]
         [InlineData("B", "C", 1f)]
         [InlineData("B", "C", 0.5f)]
         public void ALayerCoversTheRootStepBelowByTheShareItsPoseCovers(string first, string second, float layerWeight)

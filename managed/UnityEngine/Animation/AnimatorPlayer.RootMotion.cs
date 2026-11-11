@@ -652,6 +652,7 @@ namespace Unbound.Runtime
         float FillLayer(int i)
         {
             float share = CoveredShare(i);
+            // No share: every state leaves the layers below, and none of them gives a sample.
             if (!(share > 0f) || share >= 1f) return 1f;
             for (int k = 0; k < m_HumanWeights.Count; k++) m_HumanWeights[k] /= share;
             return share;
