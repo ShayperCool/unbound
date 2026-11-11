@@ -9,6 +9,9 @@ namespace UnityEngine
     {
         internal readonly List<Component> m_Components = new List<Component>(4);
         internal Transform m_Transform;
+        /// <summary>Creation order for the existing application callback traversal, independent
+        /// of the public instance ID and retained when the source scene is unloaded.</summary>
+        internal long m_CreationOrder;
         internal int m_Layer;
         internal string m_Tag = "Untagged";
         internal bool m_IsActive = true;

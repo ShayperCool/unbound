@@ -15,6 +15,7 @@ namespace Unbound.Runtime
         static readonly Dictionary<int, WeakReference<Object>> s_Objects = new Dictionary<int, WeakReference<Object>>();
         static int s_NextRuntimeId = -2;
         static int s_NextAssetId = 2;
+        static long s_GameObjectCreationOrder;
         [ThreadStatic] static bool t_RegisterAsAsset;
 
         internal static int Register(Object obj)
@@ -22,6 +23,7 @@ namespace Unbound.Runtime
             int id;
             lock (s_Objects)
             {
+                if (obj is GameObject go) go.m_CreationOrder = ++s_GameObjectCreationOrder;
                 if (t_RegisterAsAsset)
                 {
                     id = s_NextAssetId;

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine;
 using Xunit;
@@ -10,6 +11,62 @@ namespace Unbound.Tests
     [Collection("Frames")]
     public class SceneObjectIdentityTests
     {
+        static readonly List<string> FocusRecords = new List<string>();
+
+        public class FocusReceiver : MonoBehaviour
+        {
+            void OnApplicationFocus(bool focused) => FocusRecords.Add(name);
+        }
+
+        // Preserve Unbound's existing traversal and messages reference; cross-object callback
+        // order is not a documented Unity guarantee.
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void FileIdSignDoesNotReverseExistingApplicationCallbackTraversal(bool positiveFileIds)
+        {
+            var previousScene = SceneRegistry.Active;
+            var scene = SceneRegistry.Create("IdentityCallbacks", "Assets/IdentityCallbacks.unity", -1);
+            var objects = new List<GameObject>();
+            FocusRecords.Clear();
+            try
+            {
+                scene.IsLoaded = true;
+                SceneRegistry.Loaded.Add(scene);
+                SceneRegistry.Active = scene;
+                GameObject New(string name)
+                {
+                    var go = new GameObject(name);
+                    objects.Add(go);
+                    return go;
+                }
+                using (positiveFileIds ? ObjectRegistry.AsAssets() : default)
+                {
+                    scene.FileIds[New("FileFirst")] = 10;
+                    scene.FileIds[New("FileSecond")] = 20;
+                }
+                foreach (var go in objects) go.AddComponent<FocusReceiver>();
+                New("RuntimeOlder").AddComponent<FocusReceiver>();
+                New("RuntimeNewer").AddComponent<FocusReceiver>().enabled = false;
+                var messages = ScriptMessages.For(typeof(FocusReceiver));
+                Lifecycle.BroadcastByObject(m => ReferenceEquals(m, messages) ? m.OnApplicationFocus : null, true);
+                Assert.Equal(new[] { "RuntimeNewer", "RuntimeOlder", "FileFirst", "FileSecond" }, FocusRecords);
+                // Source-scene metadata is retired after its surviving objects leave that scene.
+                // The objects keep their creation order even when they no longer have a file marker.
+                scene.FileIds.Clear();
+                FocusRecords.Clear();
+                Lifecycle.BroadcastByObject(m => ReferenceEquals(m, messages) ? m.OnApplicationFocus : null, false);
+                Assert.Equal(new[] { "RuntimeNewer", "RuntimeOlder", "FileSecond", "FileFirst" }, FocusRecords);
+            }
+            finally
+            {
+                foreach (var go in objects) if (go != null) Object.DestroyImmediate(go);
+                SceneRegistry.Forget(scene);
+                SceneRegistry.Active = previousScene;
+                FocusRecords.Clear();
+            }
+        }
+
         [Theory]
         [InlineData("6000.0.71f1", 1)]
         [InlineData("2022.3.62f1", -1)]

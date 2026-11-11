@@ -474,16 +474,16 @@ namespace Unbound.Runtime
         /// <summary>A message to every behaviour of the active objects, disabled ones too, in the
         /// order measured for OnApplicationFocus/Pause in 6000.0.71f1 (tests/projects/messages):
         /// runtime objects first, newest first, then scene-loaded objects in load order. Unity
-        /// documents no cross-object order here. The loaded-object marker and instance-id keys
-        /// reproduce that observation; they do not establish Unity's id-allocation mechanism.</summary>
+        /// documents no cross-object order here. Creation order preserves the existing traversal
+        /// independently of public IDs, including objects surviving their source scene.</summary>
         internal static void BroadcastByObject(Func<ScriptMessages, Delegate> pick, object argument)
         {
-            var objects = new List<(bool Loaded, int Key, GameObject Go)>();
+            var objects = new List<(bool Loaded, long Key, GameObject Go)>();
             foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
             {
                 bool loaded = SceneRegistry.TryGetFileId(go, out _, out _);
-                int id = go.GetInstanceID();
-                objects.Add((loaded, loaded ? -id : id, go));
+                long order = go.m_CreationOrder;
+                objects.Add((loaded, loaded ? order : -order, go));
             }
             objects.Sort((a, b) => a.Loaded != b.Loaded ? a.Loaded.CompareTo(b.Loaded) : a.Key.CompareTo(b.Key));
             foreach (var (_, _, go) in objects) Send(go, pick, argument, includeDisabled: true);
