@@ -185,30 +185,34 @@ impl Shape {
 /// description only sizes copies of it; a color code would ask for a view in another format,
 /// which a plugin's texture cannot have. Measured in the Editor (tests/projects/nativegfx
 /// `ext.*`): `GL_RGBA8`, `GL_SRGB8_ALPHA8`, `GL_R8`, `GL_RG8`, `GL_RGB8`, `GL_RGBA16F`,
-/// `GL_RGBA32F`, DXT5; the others follow from the rule (OpenGL samples the texture itself).
+/// `GL_RGBA32F`, DXT5 and the unsized `GL_RGBA` (which the texture reports as it was asked
+/// for); the others follow from the rule (OpenGL samples the texture itself). A format of
+/// three channels is described by the one of four.
 /// None: a format that is not shown (integers and depth, which shaders do not sample as
-/// colors; formats the packet has no code for, as DXT3).
+/// colors; formats the packet has no code for: DXT3, 16-bit signed normalized ones, the
+/// signed blocks).
 fn external_format(format: gl_interop::InternalFormat) -> Option<i32> {
     use gl_interop::format as gl;
     use unbound_runtime::render_protocol::texture_format as code;
     Some(match format {
         gl::RGBA8 | gl::SRGB8_ALPHA8 | gl::RGB8 | gl::SRGB8 => code::LINEAR_RGBA8,
-        gl::R8 => code::R8_UNORM,
-        gl::RG8 => code::RG8_UNORM,
+        gl::RGBA | gl::SRGB_ALPHA | gl::RGB | gl::SRGB => code::LINEAR_RGBA8,
+        gl::R8 | gl::RED => code::R8_UNORM,
+        gl::RG8 | gl::RG => code::RG8_UNORM,
         gl::R8_SNORM => code::R8_SNORM,
         gl::RG8_SNORM => code::RG8_SNORM,
-        gl::RGBA8_SNORM => code::RGBA8_SNORM,
+        gl::RGBA8_SNORM | gl::RGB8_SNORM => code::RGBA8_SNORM,
         gl::R16 => code::R16_UNORM,
         gl::RG16 => code::RG16_UNORM,
-        gl::RGBA16 => code::RGBA16_UNORM,
+        gl::RGBA16 | gl::RGB16 => code::RGBA16_UNORM,
         gl::RGB10_A2 => code::RGB10A2_UNORM,
         gl::R11F_G11F_B10F => code::RG11B10_FLOAT,
         gl::R16F => code::R16_FLOAT,
         gl::RG16F => code::RG16_FLOAT,
-        gl::RGBA16F => code::RGBA_HALF,
+        gl::RGBA16F | gl::RGB16F => code::RGBA_HALF,
         gl::R32F => code::R32_FLOAT,
         gl::RG32F => code::RG32_FLOAT,
-        gl::RGBA32F => code::RGBA32_FLOAT,
+        gl::RGBA32F | gl::RGB32F => code::RGBA32_FLOAT,
         gl::COMPRESSED_RGB_S3TC_DXT1
         | gl::COMPRESSED_RGBA_S3TC_DXT1
         | gl::COMPRESSED_SRGB_S3TC_DXT1
@@ -1049,6 +1053,16 @@ mod tests {
         for format in [gl::RGBA8, gl::SRGB8_ALPHA8, gl::RGB8, gl::SRGB8] {
             assert_eq!(external_format(format), Some(code::LINEAR_RGBA8));
         }
+        // An unsized format, as a texture made with one reports it: its 8-bit channels.
+        for format in [gl::RGBA, gl::SRGB_ALPHA, gl::RGB, gl::SRGB] {
+            assert_eq!(external_format(format), Some(code::LINEAR_RGBA8));
+        }
+        assert_eq!(external_format(gl::RED), Some(code::R8_UNORM));
+        assert_eq!(external_format(gl::RG), Some(code::RG8_UNORM));
+        // Three channels are described by four.
+        assert_eq!(external_format(gl::RGB16F), Some(code::RGBA_HALF));
+        assert_eq!(external_format(gl::RGB32F), Some(code::RGBA32_FLOAT));
+        assert_eq!(external_format(gl::RGB16), Some(code::RGBA16_UNORM));
         assert_eq!(external_format(gl::R8), Some(code::R8_UNORM));
         assert_eq!(external_format(gl::RG8), Some(code::RG8_UNORM));
         assert_eq!(external_format(gl::RGBA16F), Some(code::RGBA_HALF));
@@ -1069,10 +1083,16 @@ mod tests {
         const GL_DEPTH24_STENCIL8: u32 = 0x88F0;
         const GL_RGBA8UI: u32 = 0x8D7C;
         const GL_COMPRESSED_RGBA_S3TC_DXT3: u32 = 0x83F2;
+        const GL_RGBA16_SNORM: u32 = 0x8F9B;
+        const GL_COMPRESSED_SIGNED_RED_RGTC1: u32 = 0x8DBC;
+        const GL_DEPTH_COMPONENT: u32 = 0x1902;
         for format in [
             GL_DEPTH24_STENCIL8,
+            GL_DEPTH_COMPONENT,
             GL_RGBA8UI,
             GL_COMPRESSED_RGBA_S3TC_DXT3,
+            GL_RGBA16_SNORM,
+            GL_COMPRESSED_SIGNED_RED_RGTC1,
             0,
         ] {
             assert_eq!(external_format(format), None);

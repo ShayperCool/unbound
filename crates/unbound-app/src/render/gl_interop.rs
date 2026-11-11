@@ -29,6 +29,14 @@ pub mod format {
     pub const COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT: u32 = 0x8E8F;
     pub const COMPRESSED_RED_RGTC1: u32 = 0x8DBB;
     pub const COMPRESSED_RG_RGTC2: u32 = 0x8DBD;
+    /// Unsized formats, as `glTexImage2D` takes them and the texture reports them: 8 bits a
+    /// channel.
+    pub const RED: u32 = 0x1903;
+    pub const RG: u32 = 0x8227;
+    pub const RGB: u32 = 0x1907;
+    pub const RGBA: u32 = 0x1908;
+    pub const SRGB: u32 = 0x8C40;
+    pub const SRGB_ALPHA: u32 = 0x8C42;
     pub const R8: u32 = 0x8229;
     pub const RG8: u32 = 0x822B;
     pub const R8_SNORM: u32 = 0x8F94;
@@ -36,7 +44,11 @@ pub mod format {
     pub const RGBA8_SNORM: u32 = 0x8F97;
     pub const R16: u32 = 0x822A;
     pub const RG16: u32 = 0x822C;
+    pub const RGB16: u32 = 0x8054;
     pub const RGBA16: u32 = 0x805B;
+    pub const RGB8_SNORM: u32 = 0x8F96;
+    pub const RGB16F: u32 = 0x881B;
+    pub const RGB32F: u32 = 0x8815;
     pub const RGB10_A2: u32 = 0x8059;
     pub const R11F_G11F_B10F: u32 = 0x8C3A;
     pub const RGB8: u32 = 0x8051;
