@@ -178,10 +178,11 @@ namespace UnityEngine
             m_Skeleton = skeleton;
             skeleton.BindExposed();
             m_Human?.Rebind();
-            if (moves == null) return;
-            foreach (var (bindings, group, node, property) in moves)
-                bindings.Replace(group, (this, Unbound.Runtime.PropertyBinder.SkeletonKey(node, property)),
-                    new Unbound.Runtime.SkeletonGroup(skeleton, node, property));
+            if (moves != null)
+                foreach (var (bindings, group, node, property) in moves)
+                    bindings.Replace(group, (this, Unbound.Runtime.PropertyBinder.SkeletonKey(node, property)),
+                        new Unbound.Runtime.SkeletonGroup(skeleton, node, property));
+            m_StreamHandles?.HierarchyChanged();
         }
 
         /// <summary>The hierarchy was deoptimized: the skeleton's bound properties move back to the
@@ -209,6 +210,7 @@ namespace UnityEngine
             m_NoHierarchy = false;
             m_Skeleton = null;
             m_Human?.Rebind();
+            m_StreamHandles?.HierarchyChanged();
         }
 
         public float speed

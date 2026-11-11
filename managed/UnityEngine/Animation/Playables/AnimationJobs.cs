@@ -19,6 +19,9 @@ namespace Unbound.Runtime.Playables
         {
             internal Transform Transform;
             internal int Position, Rotation, Scale;
+            /// <summary>The skeleton node the channels animate on an Animator without its
+            /// transform hierarchy (-1: they animate <see cref="Transform"/>).</summary>
+            internal int Node;
             /// <summary>A stream has read or written the handle, or resolved it (TransformStreamHandle.IsResolved).</summary>
             internal bool Resolved;
         }
@@ -27,14 +30,17 @@ namespace Unbound.Runtime.Playables
         {
             internal int Channel;
             internal bool IsObject;
+            /// <summary>A stream has read or written the handle, or resolved it (PropertyStreamHandle.IsResolved).</summary>
+            internal bool Resolved;
         }
 
         internal readonly Animator Animator;
         internal readonly uint Id;
         internal readonly List<StreamTransform> Transforms = new List<StreamTransform>();
-        /// <summary>The transforms of <see cref="Transforms"/>: the stream's own, which an
-        /// optimized hierarchy's skeleton no longer poses (AnimatorSkeleton.Apply).</summary>
-        internal readonly HashSet<Transform> StreamBound = new HashSet<Transform>();
+        /// <summary>The transforms of <see cref="Transforms"/> whose handle animates the transform
+        /// itself and not a node of an optimized hierarchy's skeleton: the stream's own, which
+        /// the skeleton no longer poses (AnimatorSkeleton.Apply).</summary>
+        internal readonly HashSet<Transform> StreamOwned = new HashSet<Transform>();
         internal readonly List<StreamProperty> Properties = new List<StreamProperty>();
         internal readonly List<Transform> SceneTransforms = new List<Transform>();
         internal readonly List<PropertyGroup> SceneProperties = new List<PropertyGroup>();
@@ -49,6 +55,64 @@ namespace Unbound.Runtime.Playables
         }
 
         internal static AnimatorHandles Of(Animator animator) => animator.m_StreamHandles ??= new AnimatorHandles(animator);
+
+        /// <summary>What the handle's channels animate: a skeleton node while the hierarchy is
+        /// optimized and the handle's path is a node's (its transform is then the node's exposed
+        /// copy, or gone), else the transform at its path.</summary>
+        StreamTransform Target(StreamTransform handle)
+        {
+            int channel = handle.Position >= 0 ? handle.Position : handle.Rotation >= 0 ? handle.Rotation : handle.Scale;
+            var owner = channel >= 0 ? Animator.StreamBindings.FloatOwner[channel] : null;
+            handle.Node = owner is SkeletonGroup node ? node.Node : -1;
+            if (handle.Node < 0 && owner?.Transform != null) handle.Transform = owner.Transform;
+            if (handle.Node < 0 && owner != null && handle.Transform != null) StreamOwned.Add(handle.Transform);
+            return handle;
+        }
+
+        internal void Bound(StreamTransform handle) => Transforms.Add(Target(handle));
+
+        /// <summary>The hierarchy was optimized or deoptimized: the handles' channels moved to
+        /// the skeleton's nodes or back to the transforms of their paths.</summary>
+        internal void HierarchyChanged()
+        {
+            StreamOwned.Clear();
+            m_NodeChannelsFor = -1;
+            for (int i = 0; i < Transforms.Count; i++) Transforms[i] = Target(Transforms[i]);
+        }
+
+        int[] m_NodeChannels = Array.Empty<int>();
+        AnimationBindings m_NodeChannelsOf;
+        int m_NodeChannelsFor = -1;
+
+        /// <summary>The channels of a skeleton node's position, rotation and scale in
+        /// <paramref name="bindings"/> (-1: not bound).</summary>
+        internal void NodeChannels(AnimationBindings bindings, int node, out int position, out int rotation, out int scale)
+        {
+            if (!ReferenceEquals(m_NodeChannelsOf, bindings) || m_NodeChannelsFor != bindings.FloatCount) IndexNodes(bindings);
+            int i = node * 3;
+            bool known = node >= 0 && i + 2 < m_NodeChannels.Length;
+            position = known ? m_NodeChannels[i] : -1;
+            rotation = known ? m_NodeChannels[i + 1] : -1;
+            scale = known ? m_NodeChannels[i + 2] : -1;
+        }
+
+        /// <summary>Bindings only grow between hierarchy changes, so their channel count dates the index.</summary>
+        void IndexNodes(AnimationBindings bindings)
+        {
+            m_NodeChannelsOf = bindings;
+            m_NodeChannelsFor = bindings.FloatCount;
+            int count = (Animator.Skeleton?.Avatar.AvatarSkeleton.Count ?? 0) * 3;
+            if (m_NodeChannels.Length != count) m_NodeChannels = new int[count];
+            Array.Fill(m_NodeChannels, -1);
+            foreach (var entry in bindings.Index)
+            {
+                if (!(entry.Value is SkeletonGroup group) || group.IsObject) continue;
+                int slot = group.Property == TransformProperty.Position ? 0 : group.Property == TransformProperty.Rotation ? 1
+                    : group.Property == TransformProperty.Scale ? 2 : -1;
+                int i = group.Node * 3 + slot;
+                if (slot >= 0 && i < count) m_NodeChannels[i] = group.First;
+            }
+        }
 
         internal static AnimatorHandles Get(uint id) => id < s_ById.Count ? s_ById[(int)id] : null;
 
@@ -207,6 +271,71 @@ namespace Unbound.Runtime.Playables
             }
             position = wp;
             rotation = wr;
+        }
+
+        // ------------------------------------------------------------------ skeleton nodes in the stream
+
+        /// <summary>A skeleton node's local TRS as the stream has it (the skeleton's where it does not).</summary>
+        void NodeLocal(AnimatorSkeleton skeleton, int node, out Vector3 p, out Quaternion r, out Vector3 s)
+        {
+            var x = skeleton.Local(node);
+            Handles.NodeChannels(Stream.Bindings, node, out int position, out int rotation, out int scale);
+            p = position >= 0 ? LocalPosition(null, position) : new Vector3(x.t.x, x.t.y, x.t.z);
+            r = rotation >= 0 ? LocalRotation(null, rotation) : Unbound.Runtime.Humanoid.AnimatorHuman.Rotation(x.q);
+            s = scale >= 0 ? LocalScale(null, scale) : new Vector3(x.s.x, x.s.y, x.s.z);
+        }
+
+        /// <summary>A skeleton node's world position, rotation and scale through the stream: the
+        /// Animator's own (node 0), then the nodes' locals down to it.</summary>
+        void NodeGlobal(AnimatorSkeleton skeleton, int node, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            if (node <= 0)
+            {
+                var root = Handles.Animator.transform;
+                GlobalTR(root, out position, out rotation);
+                Local(root, out _, out _, out scale);
+                if (root.m_Parent != null) scale = Vector3.Scale(root.m_Parent.lossyScale, scale);
+                return;
+            }
+            NodeGlobal(skeleton, skeleton.Avatar.AvatarSkeleton.Parent[node], out position, out rotation, out scale);
+            NodeLocal(skeleton, node, out var lp, out var lr, out var ls);
+            position = position + rotation * Vector3.Scale(scale, lp);
+            rotation = rotation * lr;
+            scale = Vector3.Scale(scale, ls);
+        }
+
+        Matrix4x4 NodeToWorld(AnimatorSkeleton skeleton, int node)
+        {
+            if (node <= 0) return LocalToWorld(Handles.Animator.transform);
+            NodeLocal(skeleton, node, out var p, out var r, out var s);
+            return NodeToWorld(skeleton, skeleton.Avatar.AvatarSkeleton.Parent[node]) * Matrix4x4.TRS(p, r, s);
+        }
+
+        /// <summary>The skeleton node a handle animates, when it does (see AnimatorHandles.StreamTransform.Node).</summary>
+        bool NodeOf(in AnimatorHandles.StreamTransform handle, out AnimatorSkeleton skeleton)
+        {
+            skeleton = handle.Node >= 0 ? Handles.Animator.Skeleton : null;
+            return skeleton != null;
+        }
+
+        internal void GlobalTR(in AnimatorHandles.StreamTransform handle, out Vector3 position, out Quaternion rotation)
+        {
+            if (NodeOf(handle, out var skeleton)) NodeGlobal(skeleton, handle.Node, out position, out rotation, out _);
+            else GlobalTR(handle.Transform, out position, out rotation);
+        }
+
+        internal Matrix4x4 LocalToWorld(in AnimatorHandles.StreamTransform handle) =>
+            NodeOf(handle, out var skeleton) ? NodeToWorld(skeleton, handle.Node) : LocalToWorld(handle.Transform);
+
+        /// <summary>The world position, rotation and scale of what the handle's target is below.</summary>
+        internal bool NodeParentGlobal(in AnimatorHandles.StreamTransform handle, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            position = default;
+            rotation = default;
+            scale = default;
+            if (!NodeOf(handle, out var skeleton)) return false;
+            NodeGlobal(skeleton, skeleton.Avatar.AvatarSkeleton.Parent[handle.Node], out position, out rotation, out scale);
+            return true;
         }
 
         internal void Write(int channel, Vector3 v)
@@ -675,7 +804,7 @@ namespace UnityEngine.Animations
                 data.Resolved = true;
                 context.Handles.Transforms[handleIndex] = data;
             }
-            return data.Transform != null;
+            return data.Transform != null || data.Node >= 0;
         }
 
         public bool IsValid(AnimationStream stream) =>
@@ -695,15 +824,14 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Vector3.zero;
-            c.GlobalTR(d.Transform, out var p, out _);
+            c.GlobalTR(d, out var p, out _);
             return p;
         }
 
         public void SetPosition(AnimationStream stream, Vector3 position)
         {
             if (!Data(stream, out var c, out var d)) return;
-            c.ParentGlobalTR(d.Transform, out var pp, out var pr);
-            var parentScale = ParentScale(c, d.Transform);
+            ParentGlobal(c, d, out var pp, out var pr, out var parentScale);
             var local = Quaternion.Inverse(pr) * (position - pp);
             c.Write(d.Position, new Vector3(Div(local.x, parentScale.x), Div(local.y, parentScale.y), Div(local.z, parentScale.z)));
         }
@@ -712,14 +840,14 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Quaternion.identity;
-            c.GlobalTR(d.Transform, out _, out var r);
+            c.GlobalTR(d, out _, out var r);
             return r;
         }
 
         public void SetRotation(AnimationStream stream, Quaternion rotation)
         {
             if (!Data(stream, out var c, out var d)) return;
-            c.ParentGlobalTR(d.Transform, out _, out var pr);
+            ParentGlobal(c, d, out _, out var pr, out _);
             c.Write(d.Rotation, Quaternion.Inverse(pr) * rotation);
         }
 
@@ -789,16 +917,15 @@ namespace UnityEngine.Animations
                 rotation = Quaternion.identity;
                 return;
             }
-            c.GlobalTR(d.Transform, out position, out rotation);
+            c.GlobalTR(d, out position, out rotation);
         }
 
-        public Matrix4x4 GetLocalToWorldMatrix(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalToWorld(d.Transform) : Matrix4x4.identity; }
+        public Matrix4x4 GetLocalToWorldMatrix(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalToWorld(d) : Matrix4x4.identity; }
 
         public void SetGlobalTR(AnimationStream stream, Vector3 position, Quaternion rotation, bool useMask)
         {
             if (!Data(stream, out var c, out var d)) return;
-            c.ParentGlobalTR(d.Transform, out var pp, out var pr);
-            var parentScale = ParentScale(c, d.Transform);
+            ParentGlobal(c, d, out var pp, out var pr, out var parentScale);
             var local = Quaternion.Inverse(pr) * (position - pp);
             if (!useMask || (d.Position >= 0))
                 c.Write(d.Position, new Vector3(Div(local.x, parentScale.x), Div(local.y, parentScale.y), Div(local.z, parentScale.z)));
@@ -807,6 +934,13 @@ namespace UnityEngine.Animations
         }
 
         static float Div(float a, float b) => Math.Abs(b) > 1e-12f ? a / b : a;
+
+        static void ParentGlobal(StreamContext c, in AnimatorHandles.StreamTransform d, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            if (c.NodeParentGlobal(d, out position, out rotation, out scale)) return;
+            c.ParentGlobalTR(d.Transform, out position, out rotation);
+            scale = ParentScale(c, d.Transform);
+        }
 
         static Vector3 ParentScale(StreamContext c, Transform t)
         {
@@ -846,6 +980,11 @@ namespace UnityEngine.Animations
             if (m_AnimatorBindingsVersion != context.Handles.Id || handleIndex < 0 || handleIndex >= context.Handles.Properties.Count)
                 throw new InvalidOperationException("The PropertyStreamHandle is invalid. Please use proper function to create the handle.");
             var p = context.Handles.Properties[handleIndex];
+            if (!p.Resolved)
+            {
+                p.Resolved = true;
+                context.Handles.Properties[handleIndex] = p;
+            }
             channel = p.Channel;
             return channel >= 0 && !p.IsObject && channel < context.Stream.FloatCount;
         }
@@ -853,10 +992,14 @@ namespace UnityEngine.Animations
         public bool IsValid(AnimationStream stream) =>
             stream.Context is StreamContext c && m_AnimatorBindingsVersion == c.Handles.Id && handleIndex >= 0 && handleIndex < c.Handles.Properties.Count;
 
-        [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
-        public void Resolve(AnimationStream stream) { }
+        /// <summary>Resolves the handle now instead of at its first access.</summary>
+        public void Resolve(AnimationStream stream) => Channel(stream, out _, out _);
 
-        public bool IsResolved(AnimationStream stream) => IsValid(stream);
+        /// <summary>Whether a stream has accessed or resolved the handle, as a transform's
+        /// (6000.0.71f1, tests/projects/animoptimize jobIdle.Rig and jobProp.Rig: a custom
+        /// property's handle is unresolved until the job reads it).</summary>
+        public bool IsResolved(AnimationStream stream) =>
+            IsValid(stream) && ((StreamContext)stream.Context).Handles.Properties[handleIndex].Resolved;
 
         public float GetFloat(AnimationStream stream) => Channel(stream, out var c, out int ch) ? c.Stream.Values[ch] : 0f;
 
@@ -1008,8 +1151,7 @@ namespace UnityEngine.Animations
             var path = handles.PathOf(transform);
             if (path == null) throw new InvalidOperationException($"The transform '{transform.name}' is not in the hierarchy of the Animator '{animator.name}'.");
             var b = animator.StreamBindings;
-            handles.StreamBound.Add(transform);
-            handles.Transforms.Add(new AnimatorHandles.StreamTransform
+            handles.Bound(new AnimatorHandles.StreamTransform
             {
                 Transform = transform,
                 Position = b.BindChannel(CurveBinding.ForType(path, "m_LocalPosition.x", typeof(Transform)), false),
@@ -1096,7 +1238,7 @@ namespace UnityEngine.Animations
             stream = default;
         }
 
-        [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
+        [Unbound.EditorFaithful("6000.0.71f1, tests/projects/animoptimize jobResolveAll.Rig and jobIdleResolveAll.Rig: called before a manual graph's first evaluation or between two, it leaves IsResolved false; a handle resolves at its first access in a stream")]
         public static void ResolveAllStreamHandles(this Animator animator) { }
 
         [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
@@ -1112,7 +1254,7 @@ namespace UnityEngine.Animations
         {
             if (animator?.m_StreamHandles == null) return;
             animator.m_StreamHandles.Transforms.Clear();
-            animator.m_StreamHandles.StreamBound.Clear();
+            animator.m_StreamHandles.StreamOwned.Clear();
             animator.m_StreamHandles.Properties.Clear();
         }
 
