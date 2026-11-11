@@ -54,6 +54,12 @@ public class RealtimeGIProbe : MonoBehaviour
             yield return Pipeline();
             yield break;
         }
+        if (QualitySettings.activeColorSpace == ColorSpace.Gamma)
+        {
+            yield return WithoutLightingData();
+            Finish();
+            yield break;
+        }
 
         yield return Load("Room");
         var s = Scene();
@@ -392,15 +398,13 @@ public class RealtimeGIProbe : MonoBehaviour
         // first again with a sky material of its own. With an earlier release's RenderSettings:
         // the default scene (default skybox, the default directional light), the same with
         // lighting generated automatically, with the light turned, without a light, and with a
-        // sky material of its own. What each reflects, its ambient probe as loaded and in the
-        // custom mode.
-        foreach (var name in NoData)
-        {
-            yield return Load(name);
-            RecordEnvironment(name.ToLowerInvariant());
-            RenderSettings.ambientMode = AmbientMode.Custom;
-            Record(name.ToLowerInvariant() + "-custom", "\"ambientProbe\":" + AmbientProbe());
-        }
+        // sky material of its own. Then the default scene again with one thing changed: both
+        // settings as this release saves them, the RenderSettings alone as an earlier release
+        // saved them, the LightmapSettings alone, the light under a turned parent (its own
+        // angles the default ones), and the light dim and red. What each reflects, its ambient
+        // probe as loaded and in the custom mode. (A gamma-space project, run.py's
+        // `--color-space gamma`, records these scenes alone.)
+        yield return WithoutLightingData();
 
         // A scene loaded beside another: the earlier release's default scene with a scene
         // without lighting data added, and the other way round; then the added scene made the
@@ -494,6 +498,34 @@ public class RealtimeGIProbe : MonoBehaviour
         s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
         yield return Converge();
         Capture("roomcharts-moved", s);
+
+        // A cube a script gave, through a scene load. The room loaded again alone and its
+        // lights put out, then the cube given (the environment the only light); the same scene
+        // loaded alone once more (its ambient inputs as before the load) and its lights put
+        // out again; then the cube given again and the room with baked environment lighting
+        // loaded alone, its lights put out.
+        yield return Load("Room");
+        s = Scene();
+        s.point.enabled = false;
+        DynamicGI.SetEmissive(s.panel, Color.black);
+        yield return Converge();
+        DynamicGI.SetEnvironmentData(cube);
+        yield return Converge();
+        Capture("room-envdata-alone", s);
+        yield return Load("Room");
+        s = Scene();
+        s.point.enabled = false;
+        DynamicGI.SetEmissive(s.panel, Color.black);
+        yield return Converge();
+        Capture("room-envdata-loaded", s);
+        DynamicGI.SetEnvironmentData(cube);
+        yield return Converge();
+        yield return Load("RoomBakedEnvironment");
+        s = Scene();
+        s.point.enabled = false;
+        DynamicGI.SetEmissive(s.panel, Color.black);
+        yield return Converge();
+        Capture("roombakedenvironment-envdata-loaded", s);
         Finish();
     }
 
@@ -501,7 +533,21 @@ public class RealtimeGIProbe : MonoBehaviour
     {
         "NoDataAuto", "NoDataOnDemand", "NoDataCurrent", "NoDataAutoOwnSky",
         "LegacyDefault", "LegacyAuto", "LegacyTurned", "LegacyNoLight", "LegacyOwnSky",
+        "CurrentDefault", "LegacySettingsOnly", "LegacyLightmapsOnly", "LegacyChildSun", "LegacyDimSun",
     };
+
+    /// <summary>Each scene without lighting data: what it reflects by default, its ambient
+    /// probe as loaded and in the custom mode.</summary>
+    IEnumerator WithoutLightingData()
+    {
+        foreach (var name in NoData)
+        {
+            yield return Load(name);
+            RecordEnvironment(name.ToLowerInvariant());
+            RenderSettings.ambientMode = AmbientMode.Custom;
+            Record(name.ToLowerInvariant() + "-custom", "\"ambientProbe\":" + AmbientProbe());
+        }
+    }
 
     /// <summary>What the scene reflects by default and its ambient probe.</summary>
     void RecordEnvironment(string label)

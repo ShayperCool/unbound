@@ -107,7 +107,7 @@ color (`end-flat-set-color`), the skybox removed (`end-flat-noskybox`), the skyb
 (`end-skybox-none`), the custom mode (`end-custom-last`), the gradient mode (`end-gradient`),
 another probe given in it (`end-gradient-set`) and the custom mode (`end-gradient-custom`).
 
-Then nine scenes without lighting data (`m_LightingDataAsset` none; their files, in
+Then fourteen scenes without lighting data (`m_LightingDataAsset` none; their files, in
 `Assets/NoData`, are written by hand, with nothing in them but their settings and, where said, a
 directional light; each is in the skybox ambient mode). With this release's RenderSettings:
 `NoDataAuto` (LightmapSettings as an earlier release saved them with lighting generated
@@ -117,6 +117,11 @@ material of its own). With RenderSettings as an earlier release saved them: `Leg
 new scene of then: the default skybox and a directional light at (50, -30, 0)), `LegacyAuto`
 (the same with lighting generated automatically), `LegacyTurned` (the light at (20, 40, 0)),
 `LegacyNoLight` (no light) and `LegacyOwnSky` (the default light, a sky material of its own).
+Then the default scene with one thing changed: `CurrentDefault` (both settings as this release
+saves them), `LegacySettingsOnly` (the RenderSettings an earlier release's, the
+LightmapSettings this release's), `LegacyLightmapsOnly` (the other way round),
+`LegacyChildSun` (the light under a parent turned 90 degrees about the vertical, its own
+angles still (50, -30, 0)) and `LegacyDimSun` (the light red at intensity 0.3).
 Each records, in the frame after its load, `<scene>-reflection` (as `end-reflection`),
 `<scene>-ambient` (`RenderSettings.ambientProbe` as loaded) and `<scene>-custom` (in the custom
 mode). Then two pairs, the first scene loaded and the second added to it:
@@ -144,6 +149,16 @@ Then `RoomCharts`: `roomcharts-base` and `roomcharts-moved` (the point light mov
 panel's charts lie is in the scene's precomputed data (`Assets/Scenes/RoomCharts/LightingData.asset`:
 each renderer's place in the system and the system's chart mask); the cases record the lightmap
 drawn at those texels.
+
+Last, a cube a script gave through a scene load: `Room` loaded again alone, its lights put out,
+then the cube given (`room-envdata-alone`); the same scene loaded alone once more, its ambient
+inputs what they were before the load, and its lights put out again (`room-envdata-loaded`);
+the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
+(`roombakedenvironment-envdata-loaded`).
+
+With `--color-space gamma` the same project is in the gamma color space (run.py changes the
+copy's player settings) and the probe records the scenes without lighting data alone, their
+rows named as above. That set is its own reference, `Reference/unity-<version>/gamma`.
 
 With `--pipeline urp` the same project is drawn by the Universal Render Pipeline (run.py adds
 the package and the pipeline assets of tests/projects/urp to the run's copy) and the probe
@@ -225,6 +240,10 @@ Observations (not documented guarantees):
   intensity (`-envdata-color`, `-source`, `-sky` and `-intensity` are `-envdata`), unlike in
   the other scenes, where the documented overwriting shows; `UpdateEnvironment` removes it
   (`-envdata-update` is black).
+- A scene loaded alone has nothing of a cube given before: `room-envdata-loaded` is lit by the
+  ambient color (a mean of 0.006, 0.009, 0.021 against `room-envdata-alone`'s 0.218, 0.244,
+  0.196), although the ambient inputs are the same before and after the load, and
+  `roombakedenvironment-envdata-loaded` is black.
 - That scene's light probes have baked coefficients too (the environment's, about 0.002 to
   0.007 in the first coefficient). `LightProbes.GetInterpolatedProbe` gives them plus realtime
   GI's lighting: with the environment alone it is the baked coefficients, and when the script
@@ -263,8 +282,18 @@ Observations (not documented guarantees):
   and has the default sky's ambient probe, also in the custom mode (`legacydefault`), whether
   or not its lighting was generated automatically (`legacyauto`). With the light turned
   (`legacyturned`), without a light (`legacynolight`) or with a sky of its own (`legacyownsky`)
-  it is as the other scenes without lighting data. Not captured: other ambient or reflection
-  sources, another reflection resolution, a gamma-space project, several directional lights.
+  it is as the other scenes without lighting data. It is the RenderSettings' version that
+  counts: with them an earlier release's and the LightmapSettings this release's the scene is
+  upgraded (`legacysettingsonly`), with this release's RenderSettings it is not, whatever its
+  LightmapSettings (`currentdefault`, `legacylightmapsonly`). The light's own angles count, not
+  its direction in the scene (`legacychildsun` is upgraded under a turned parent), and neither
+  its color nor its intensity (`legacydimsun`). In a gamma-space project none of the fourteen
+  scenes is upgraded: each reflects the black cube and has a zero ambient probe
+  (`--color-space gamma`). Not captured: other ambient or reflection sources, another
+  reflection resolution, several directional lights, a render pipeline that declares it bakes
+  neither the ambient probe nor the default reflection
+  (`SupportedRenderingFeatures.ambientProbeBaking`, `defaultReflectionProbeBaking`), and a
+  scene with `Lightmapping.bakeOnSceneLoad` on (Unbound does not bake it and says so once).
 - The reflection and the ambient probe are the active scene's: a scene added to another changes
   neither (`*-plus-*`), and `SceneManager.SetActiveScene` with the added scene switches both
   within the frame (`-active`), as the documentation says of the active scene ("from what Scene
@@ -329,11 +358,13 @@ python3 tests/projects/realtimegi/run.py record --label native1   # and native2
 python3 tests/projects/realtimegi/run.py publish native1 native2
 python3 tests/projects/realtimegi/run.py gate --label gate1       # the land gate (gate.json)
 python3 tests/projects/realtimegi/run.py gate --pipeline urp --label gate-urp1   # and its URP part
+python3 tests/projects/realtimegi/run.py gate --color-space gamma --label gate-gamma1   # and its gamma part
 ```
 
 `gate` runs `$UNBOUND_CLI` (else `$UNBOUND`, else `target/release/unbound`) on a copy of the
 project and compares with `Reference/unity-<release>/`; `gate --pipeline urp` (and `record`,
 `publish` with it) does the same with the Universal Render Pipeline and
-`Reference/unity-<release>/urp`. The engine's result there: no state or gated value failing and
-no value reported. Run output goes to
+`Reference/unity-<release>/urp`, and `--color-space gamma` with the project in the gamma color
+space and `Reference/unity-<release>/gamma`. The engine's result in both: no state or gated
+value failing and no value reported. Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/realtimegi/<label>/`.

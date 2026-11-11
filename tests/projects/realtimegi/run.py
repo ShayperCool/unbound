@@ -9,6 +9,7 @@
     run.py publish native1 native2            # two identical captures become Reference/unity-<version>/
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
     run.py record|publish|gate --pipeline urp # the same project drawn by URP: its own reference set, Reference/unity-<version>/urp
+    run.py record|publish|gate --color-space gamma # the same project in the gamma color space: Reference/unity-<version>/gamma
 
 The release is $UNBOUND_PROBE_UNITY_VERSION (default 6000.0.71f1). Run output stays under
 $XDG_CACHE_HOME/unbound/validation/runs/realtimegi/<label>/.
@@ -42,16 +43,34 @@ PIPELINES = {'urp': {'package': ('com.unity.render-pipelines.universal', '17.0.4
                                 'Assets/UniversalRenderPipelineGlobalSettings.asset', 'Assets/DefaultVolumeProfile.asset')}}
 
 
-def copy_project(target, pipeline=None):
+# The color space a run can give the project (`--color-space`): PlayerSettings' m_ActiveColorSpace.
+COLOR_SPACES = {'gamma': 0}
+
+
+def variant(pipeline=None, color_space=None):
+    """The one way a run's project differs from the committed one, if any."""
+    if pipeline and color_space:
+        raise SystemExit('--pipeline and --color-space together are not recorded')
+    return pipeline or color_space
+
+
+def copy_project(target, variant=None):
     if target.exists():
         raise SystemExit(f'refusing to overwrite {target}')
     for folder in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/folder, target/folder)
     (target/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
-    if pipeline:
+    if variant in COLOR_SPACES:
+        settings = target/'ProjectSettings/ProjectSettings.asset'
+        text = settings.read_text()
+        linear = '  m_ActiveColorSpace: 1\n'
+        if text.count(linear) != 1:
+            raise SystemExit(f'{settings}: expected one linear m_ActiveColorSpace')
+        settings.write_text(text.replace(linear, f'  m_ActiveColorSpace: {COLOR_SPACES[variant]}\n'))
+    if variant in PIPELINES:
         # The same project drawn by the pipeline: its package, its assets (with their GUIDs) and
         # the graphics settings that name them.
-        made = PIPELINES[pipeline]
+        made = PIPELINES[variant]
         manifest = json.loads((target/'Packages/manifest.json').read_text())
         manifest['dependencies'][made['package'][0]] = made['package'][1]
         manifest['dependencies'].update({module: '1.0.0' for module in made['modules']})
@@ -64,9 +83,9 @@ def copy_project(target, pipeline=None):
     return target
 
 
-def reference(pipeline=None):
-    """The reference set: the built-in pipeline's, or a pipeline's own beside it."""
-    return reference_root(PROBE)/pipeline if pipeline else reference_root(PROBE)
+def reference(variant=None):
+    """The reference set: the committed project's, or a variant's own beside it."""
+    return reference_root(PROBE)/variant if variant else reference_root(PROBE)
 
 
 def work(label):
@@ -80,17 +99,17 @@ def outputs(directory):
     return [OUT, *names]
 
 
-def expected(pipeline=None):
+def expected(variant=None):
     """Atlas and frame names the probe writes (from the committed reference when present)."""
-    committed = reference(pipeline)
+    committed = reference(variant)
     return outputs(committed)[1:] if committed.is_dir() else []
 
 
-def complete(directory, pipeline=None):
+def complete(directory, variant=None):
     problem = editor_runner.jsonl_complete(OUT, END)(directory)
     if problem:
         return problem
-    missing = [name for name in expected(pipeline) if not (Path(directory)/name).is_file()]
+    missing = [name for name in expected(variant) if not (Path(directory)/name).is_file()]
     return f'missing {missing}' if missing else None
 
 
@@ -148,37 +167,37 @@ def setup_scene(label, scene, method):
     return 0
 
 
-def record(label, pipeline=None):
+def record(label, variant=None):
     out = work(label)
-    project = copy_project(out/'project', pipeline)
+    project = copy_project(out/'project', variant)
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', 'RealtimeGIRunner.Record'],
                                   batch=True, graphics=True, env={'REALTIME_GI_OUT': str(out)},
                                   timeout=1800, label='realtimegi-'+label)
     print(editor_runner.summary(editor_runner.run(job)))
-    problem = editor_runner.result_problem(out, gpu=True) or complete(out, pipeline)
+    problem = editor_runner.result_problem(out, gpu=True) or complete(out, variant)
     if problem:
         print(f'capture {label}: {problem}', file=sys.stderr)
         return 1
     return 0
 
 
-def publish(labels, pipeline=None):
-    target = reference(pipeline)
+def publish(labels, variant=None):
+    target = reference(variant)
 
     def write(path, source):
         path.mkdir(parents=True)
         for name in outputs(source):
             shutil.copy2(source/name, path/name)
     return editor_runner.publish([work(label) for label in labels], target, outputs, write,
-                                 complete=[lambda directory: complete(directory, pipeline)], gpu=True)
+                                 complete=[lambda directory: complete(directory, variant)], gpu=True)
 
 
-def gate(label, frames, pipeline=None):
+def gate(label, frames, variant=None):
     out = work(label)
     if out.exists():
         raise SystemExit(f'refusing to overwrite {out}')
     out.mkdir(parents=True)
-    project = copy_project(out/'project', pipeline)
+    project = copy_project(out/'project', variant)
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = {**os.environ, 'REALTIME_GI_OUT': str(out/'engine')}
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '1500', cli, 'run', '-p', str(project),
@@ -186,7 +205,7 @@ def gate(label, frames, pipeline=None):
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(f'engine exit {code}; log {out}/engine.log')
-    return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference(pipeline)),
+    return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference(variant)),
                            str(out/'engine')]).returncode
 
 
@@ -199,16 +218,19 @@ def main():
     parser.add_argument('--frames', type=int, default=40000)
     parser.add_argument('--pipeline', choices=sorted(PIPELINES),
                         help='record, publish or gate the project drawn by this render pipeline (its own reference set)')
+    parser.add_argument('--color-space', choices=sorted(COLOR_SPACES),
+                        help='record, publish or gate the project in this color space (its own reference set)')
     args = parser.parse_args()
+    made = variant(args.pipeline, args.color_space)
     if args.mode == 'setup':
         return setup(args.label)
     if args.mode in ADDED:
         return setup_scene(args.label, *ADDED[args.mode])
     if args.mode == 'record':
-        return record(args.label, args.pipeline)
+        return record(args.label, made)
     if args.mode == 'publish':
-        return publish(args.labels, args.pipeline)
-    return gate(args.label, args.frames, args.pipeline)
+        return publish(args.labels, made)
+    return gate(args.label, args.frames, made)
 
 
 if __name__ == '__main__':

@@ -50,5 +50,20 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/RoomCharts.unity
     guid: e8da7ce2d3a221a2ba92362cf5ec142a
+  - enabled: 1
+    path: Assets/NoData/CurrentDefault.unity
+    guid: 6734ead2d3d861d07b015910e5943465
+  - enabled: 1
+    path: Assets/NoData/LegacySettingsOnly.unity
+    guid: f9085f3d8d7d8af25dec05acb2dca368
+  - enabled: 1
+    path: Assets/NoData/LegacyLightmapsOnly.unity
+    guid: af88f9ff6dce8815bcc978310127c8d5
+  - enabled: 1
+    path: Assets/NoData/LegacyChildSun.unity
+    guid: cde3525e91337151ec14b9bc7f40854d
+  - enabled: 1
+    path: Assets/NoData/LegacyDimSun.unity
+    guid: 59db8d2f3217a21b81cf8ca2cf905f9a
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0
