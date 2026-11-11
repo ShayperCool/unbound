@@ -112,7 +112,9 @@ namespace Unbound.Tests
             // tests/projects/realtimegi roombakedenvironment-*: the ambient source lights
             // nothing of such a scene's realtime GI (-color, -alone);
             // DynamicGI.SetEnvironmentData does (-envdata), also after the ambient color
-            // changes (-envdata-color), until DynamicGI.UpdateEnvironment (-envdata-update).
+            // changes (-envdata-color), another source is chosen (-envdata-source) or the
+            // ambient intensity changes (-envdata-intensity), until
+            // DynamicGI.UpdateEnvironment (-envdata-update).
             WithAmbient(() =>
             {
                 RenderSettings.ambientMode = AmbientMode.Flat;
@@ -133,11 +135,84 @@ namespace Unbound.Tests
                 Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
                 Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0.25f, v));
                 Assert.Contains(RealtimeGI.EnvironmentOf(false), v => v != 0.25f);
+                // Another source, then another intensity: the same.
+                version = RealtimeGI.EnvironmentVersion;
+                RenderSettings.ambientMode = AmbientMode.Trilight;
+                RealtimeGI.UpdateEnvironment();
+                Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
+                Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0.25f, v));
+                RenderSettings.ambientIntensity = 2f;
+                RealtimeGI.UpdateEnvironment();
+                Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0.25f, v));
                 // DynamicGI.UpdateEnvironment drops it, and the scenes take the change at once.
                 version = RealtimeGI.EnvironmentVersion;
                 DynamicGI.UpdateEnvironment();
                 Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
                 Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0f, v));
+            });
+        }
+
+        [Fact]
+        public void ASceneLoadedAloneTakesNothingOfAnEarlierCube()
+        {
+            // tests/projects/realtimegi room-envdata-loaded and
+            // roombakedenvironment-envdata-loaded: after DynamicGI.SetEnvironmentData, a scene
+            // loaded alone has the environment its ambient source makes, also when the source's
+            // inputs are what they were when the cube was given; with baked environment
+            // lighting it has none.
+            WithAmbient(() =>
+            {
+                RenderSettings.ambientMode = AmbientMode.Flat;
+                var ambient = new Color(0.6f, 0.5f, 0.2f);
+                RenderSettings.ambientLight = ambient;
+                RealtimeGI.EnvironmentChanged();
+                RealtimeGI.UpdateEnvironment();
+                var data = new float[6 * 8 * 8 * 4];
+                for (int i = 0; i < data.Length; i++) data[i] = 0.25f;
+                DynamicGI.SetEnvironmentData(data);
+                RealtimeGI.UpdateEnvironment();
+                Assert.All(RealtimeGI.EnvironmentOf(false), v => Assert.Equal(0.25f, v));
+                Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0.25f, v));
+                RealtimeGI.Reset();
+                Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0f, v));
+                RealtimeGI.UpdateEnvironment();
+                for (int face = 0; face < 6; face++) AssertFace(face, ambient);
+            });
+        }
+
+        [Fact]
+        public void TheAmbientSourceIsNotReadWhileEveryLoadedSceneHasBakedEnvironmentLighting()
+        {
+            // The faces are made once a scene takes them (no measurement of its own: nothing
+            // reads them meanwhile).
+            const System.Reflection.BindingFlags Hidden = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var scenes = (System.Collections.IList)typeof(RealtimeGI).GetField("s_Scenes", Hidden).GetValue(null);
+            var type = typeof(RealtimeGI).GetNestedType("GIScene", Hidden);
+            var baked = Activator.CreateInstance(type, true);
+            type.GetField("BakedEnvironment", Hidden).SetValue(baked, true);
+            WithAmbient(() =>
+            {
+                RenderSettings.ambientMode = AmbientMode.Flat;
+                RenderSettings.ambientLight = new Color(0.6f, 0.5f, 0.2f);
+                RealtimeGI.EnvironmentChanged();
+                RealtimeGI.UpdateEnvironment();
+                scenes.Add(baked);
+                try
+                {
+                    var other = new Color(0.1f, 0.5f, 0.2f);
+                    RenderSettings.ambientLight = other;
+                    int version = RealtimeGI.EnvironmentVersion;
+                    RealtimeGI.UpdateEnvironment();
+                    Assert.Equal(version, RealtimeGI.EnvironmentVersion);
+                    scenes.Remove(baked);
+                    RealtimeGI.UpdateEnvironment();
+                    Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
+                    for (int face = 0; face < 6; face++) AssertFace(face, other);
+                }
+                finally
+                {
+                    scenes.Remove(baked);
+                }
             });
         }
 
@@ -437,8 +512,8 @@ namespace Unbound.Tests
             // Measured (tests/projects/realtimegi, a linear project): after
             // DynamicGI.UpdateEnvironment at intensity 2, RenderSettings.ambientProbe at 0.5 and 1
             // without another call is the sky's probe times GammaToLinearSpace(intensity). A
-            // gamma project scales the lighting data's probe the same way (measured), and so
-            // the sky's.
+            // gamma project scales the lighting data's probe the same way (measured); for the
+            // sky's probe there that scale is inferred from it, not measured.
             var mode = RenderSettings.ambientMode;
             float intensity = RenderSettings.ambientIntensity;
             var probe = RenderSettings.s_EnvironmentProbe;

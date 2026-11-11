@@ -79,7 +79,9 @@ namespace UnityEngine
 
         /// <summary>Sets the environment of precomputed realtime GI: a cube of six faces of 8 x 8
         /// texels of four floats (1536 in all; another length throws). The ambient source
-        /// replaces it when its inputs change.</summary>
+        /// replaces it when its inputs change, except in a scene whose environment lighting is
+        /// baked, which keeps it; <see cref="UpdateEnvironment"/> and a scene loaded alone drop
+        /// it for both.</summary>
         public static void SetEnvironmentData(float[] input) => RealtimeGI.SetEnvironmentData(input);
 
         static SphericalHarmonicsL2? SkyboxProbe()

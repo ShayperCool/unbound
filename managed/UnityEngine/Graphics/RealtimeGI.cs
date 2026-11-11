@@ -249,8 +249,9 @@ namespace UnityEngine
         internal static void Reset()
         {
             for (int i = s_Scenes.Count - 1; i >= 0; i--) Release(i);
-            // A cube a script gave an earlier scene does not light the next one's baked environment.
-            DropScriptFaces();
+            // A scene loaded alone takes nothing of a cube a script gave before it: its
+            // environment is made from its ambient source, whatever that was before the load.
+            EnvironmentChanged();
         }
 
         static void Release(int index)

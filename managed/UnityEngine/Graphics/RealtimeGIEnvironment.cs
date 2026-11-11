@@ -30,7 +30,7 @@ namespace UnityEngine
         /// scene whose environment lighting is baked keeps it: until
         /// <see cref="DynamicGI.UpdateEnvironment"/>, whatever the ambient source does (its
         /// color, another source, a skybox's intensity: tests/projects/realtimegi
-        /// roombakedenvironment-envdata-*), or a scene loaded alone (unmeasured).</summary>
+        /// roombakedenvironment-envdata-*), or a scene loaded alone (-envdata-loaded).</summary>
         static readonly float[] s_ScriptFaces = new float[6 * FaceTexels * 3];
         static bool s_ScriptFacesSet;
         /// <summary>Counts the changes of <see cref="s_Faces"/>; each native scene takes them once.</summary>
@@ -103,8 +103,10 @@ namespace UnityEngine
             static int Thousandths(float v) => (int)(v * 1000f + 0.5f);
         }
 
-        /// <summary>DynamicGI.UpdateEnvironment: the environment is made again from the ambient
-        /// source in the next update, also over data a script set.</summary>
+        /// <summary>DynamicGI.UpdateEnvironment, or a scene loaded alone: the environment is made
+        /// again from the ambient source in the next update, also over data a script set and
+        /// with the source's inputs as they were (tests/projects/realtimegi room-envdata-update,
+        /// room-envdata-loaded).</summary>
         internal static void EnvironmentChanged()
         {
             s_EnvironmentStale = true;
@@ -120,8 +122,8 @@ namespace UnityEngine
         }
 
         /// <summary>DynamicGI.SetEnvironmentData: the cube's texels as given (their alpha is not
-        /// read), until DynamicGI.UpdateEnvironment or, for scenes that take the ambient source,
-        /// a change of its inputs.</summary>
+        /// read), until DynamicGI.UpdateEnvironment, a scene loaded alone or, for scenes that
+        /// take the ambient source, a change of its inputs.</summary>
         internal static void SetEnvironmentData(float[] input)
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
