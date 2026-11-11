@@ -444,15 +444,21 @@ pub fn create_pipeline(
             module: fragment.0,
             entry_point: Some(fragment.1),
             compilation_options: Default::default(),
-            // Further colors take the outputs after the first; one the program does not write
-            // keeps its pixels (a write mask of nothing, as WebGPU requires).
+            // Further colors take the outputs after the first; one the program does not write,
+            // the first too (a program that writes only the depth), keeps its pixels (a write
+            // mask of nothing, as WebGPU requires).
             // Integer targets do not blend (OpenGL ignores blending for them).
             targets: &std::iter::once({
+                let written = outputs & 1 != 0;
                 let (blend, write_mask) = target(0);
                 Some(wgpu::ColorTargetState {
                     format: key.format,
-                    blend: blend.filter(|_| !super::resources::is_integer(key.format)),
-                    write_mask,
+                    blend: blend.filter(|_| written && !super::resources::is_integer(key.format)),
+                    write_mask: if written {
+                        write_mask
+                    } else {
+                        wgpu::ColorWrites::empty()
+                    },
                 })
             })
             .chain(key.extra.iter().flatten().enumerate().map(|(i, &format)| {
@@ -493,9 +499,14 @@ pub enum OutputKind {
     Uint,
 }
 
+/// Whether a compiled fragment program writes the depth.
+pub fn writes_depth(wgsl: &str) -> bool {
+    wgsl.contains("@builtin(frag_depth)")
+}
+
 /// The scalar each color location a compiled fragment program writes holds (see
 /// [`fragment_outputs`]); location 0 as floats where the entry's result cannot be read, none for
-/// an entry that writes only builtins.
+/// an entry that writes only builtins or nothing.
 pub fn fragment_output_kinds(wgsl: &str) -> [Option<OutputKind>; 8] {
     let kind = |ty: &str| {
         Some(if ty.contains("i32") {
@@ -516,12 +527,13 @@ pub fn fragment_output_kinds(wgsl: &str) -> [Option<OutputKind>; 8] {
         return fallback;
     };
     let rest = &wgsl[at..];
-    let (Some(arrow), Some(open)) = (rest.find("->"), rest.find('{')) else {
+    let Some(open) = rest.find('{') else {
         return fallback;
     };
-    if arrow > open {
-        return fallback;
-    }
+    // An entry without a result writes nothing.
+    let Some(arrow) = rest[..open].find("->") else {
+        return kinds;
+    };
     let result = rest[arrow + 2..open].trim();
     if let Some(single) = result.strip_prefix("@location(0)") {
         kinds[0] = kind(single);
@@ -632,6 +644,12 @@ mod tests {
         );
         let depth = "@fragment fn f() -> @builtin(frag_depth) f32 {}";
         assert_eq!(super::fragment_output_kinds(depth), [None; 8]);
+        assert!(super::writes_depth(depth));
+        // An entry without a result writes nothing, whatever a function after it returns.
+        let nothing = "@fragment fn f() { }\nfn g() -> vec4<f32> { return vec4<f32>(0.0); }";
+        assert_eq!(super::fragment_output_kinds(nothing), [None; 8]);
+        assert_eq!(super::fragment_outputs(nothing), 0);
+        assert!(!super::writes_depth(nothing));
         assert!(super::takes_output(wgpu::TextureFormat::R8Sint, K::Sint));
         assert!(!super::takes_output(wgpu::TextureFormat::R8Sint, K::Float));
         assert!(!super::takes_output(

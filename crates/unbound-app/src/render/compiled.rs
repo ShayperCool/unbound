@@ -25,6 +25,9 @@ struct ProgramGpu {
     by_name: rustc_hash::FxHashMap<String, u32>,
     vertex: wgpu::ShaderModule,
     fragment: wgpu::ShaderModule,
+    /// The fragment program without its depth output ([`Depthless`]), made the first time a
+    /// target without a depth buffer is drawn with a program that writes the depth.
+    depthless: Option<Result<Depthless, String>>,
     uniform_layout: wgpu::BindGroupLayout,
     pub texture_layout: wgpu::BindGroupLayout,
     /// Group 3: the program's buffers (none without any).
@@ -34,6 +37,13 @@ struct ProgramGpu {
     /// Whether the vertex program reads vertex inputs: one that reads none (built from its
     /// vertex and instance ids) draws without vertex buffers.
     vertex_inputs: bool,
+}
+
+/// A fragment program without its depth output: its module, entry point and WGSL.
+struct Depthless {
+    module: wgpu::ShaderModule,
+    entry: String,
+    wgsl: String,
 }
 
 /// Compiled programs and this frame's uniform blocks.
@@ -366,6 +376,7 @@ impl CompiledPrograms {
             vertex_inputs: program.vertex_inputs,
             vertex: module(&format!("{shader} (vertex)"), &program.vertex),
             fragment: module(&format!("{shader} (fragment)"), &program.fragment),
+            depthless: None,
             program,
             uniform_layout,
             texture_layout,
@@ -430,8 +441,39 @@ impl CompiledPrograms {
         if let Some(p) = gpu.pipelines.get(&key) {
             return Ok(p.clone());
         }
+        // A target without a depth buffer has nowhere to write a program's depth output: it is
+        // drawn with the program's colors alone.
+        if !key.depth
+            && gpu.depthless.is_none()
+            && super::pipelines::writes_depth(&gpu.program.fragment)
+        {
+            gpu.depthless = Some(
+                unbound_shaders::without_depth_output(&gpu.program.fragment)
+                    .map_err(|e| format!("its depth output cannot be left out: {e:#}"))
+                    .and_then(|found| found.ok_or_else(|| "it has no depth output".to_string()))
+                    .map(|(wgsl, entry)| Depthless {
+                        module: device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                            label: Some(&format!("{} (fragment, no depth)", gpu.shader)),
+                            source: wgpu::ShaderSource::Wgsl(wgsl.as_str().into()),
+                        }),
+                        entry,
+                        wgsl,
+                    }),
+            );
+        }
+        let (fragment, entry, wgsl) = match (&gpu.depthless, key.depth) {
+            (Some(depthless), false) => {
+                let depthless = depthless.as_ref().map_err(String::clone)?;
+                (&depthless.module, &depthless.entry, &depthless.wgsl)
+            }
+            _ => (
+                &gpu.fragment,
+                &gpu.program.fragment_entry,
+                &gpu.program.fragment,
+            ),
+        };
         // Each output a target takes must be of its scalar type (an integer target integers).
-        let kinds = super::pipelines::fragment_output_kinds(&gpu.program.fragment);
+        let kinds = super::pipelines::fragment_output_kinds(wgsl);
         if let Some((location, kind, format)) =
             super::pipelines::output_mismatch(key.format, &key.extra, kinds)
         {
@@ -443,14 +485,14 @@ impl CompiledPrograms {
             device,
             &gpu.layout,
             (&gpu.vertex, &gpu.program.vertex_entry),
-            (&gpu.fragment, &gpu.program.fragment_entry),
+            (fragment, entry),
             key,
             match (gpu.vertex_inputs, gpu.program.extra_vertex_inputs) {
                 (false, _) => 0,
                 (true, false) => 1,
                 (true, true) => 2,
             },
-            super::pipelines::fragment_outputs(&gpu.program.fragment),
+            super::pipelines::fragment_outputs(wgsl),
         );
         gpu.pipelines.insert(key, pipeline.clone());
         Ok(pipeline)

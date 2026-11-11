@@ -116,6 +116,9 @@ pub struct Compiled {
     pub mesh_instance_max_count: Option<u32>,
     /// The uniform block's size (0 without one).
     pub uniform_size: u32,
+    /// The texture slots' properties, bound in group 1 (slot `k`: the texture at `2 * k`, its
+    /// sampler at `2 * k + 1`). A property sampled with and without comparisons is two slots,
+    /// the plain one first ([`TextureSlot`]).
     pub textures: Vec<String>,
     /// Each texture's dimension.
     pub texture_dims: Vec<TextureDim>,
@@ -185,6 +188,14 @@ pub enum SampleKind {
     Sint,
     Uint,
     Depth,
+}
+
+/// A compiled fragment program ([`Compiled::fragment`]) without its depth output, and its
+/// entry point: what a target without a depth buffer is drawn with (there is nothing to write
+/// the depth to; the colors are drawn as they are, tests/projects/samplerstates `Fill.color`).
+/// None for a program that writes no depth.
+pub fn without_depth_output(fragment: &str) -> Result<Option<(String, String)>> {
+    fit::without_depth_output(fragment)
 }
 
 impl TextureSlot {
@@ -2301,6 +2312,62 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         let compiled = compile(unbound_compat::GraphicsDevice::OpenGLCore, only);
         assert_eq!(compiled.textures, ["_Shadow"]);
         assert!(compiled.texture_slots[0].depth() && compiled.texture_slots[0].comparison);
+    }
+
+    /// A program that writes the depth has a variant without that output, for targets without
+    /// a depth buffer: its colors stay where they were; a program that writes only the depth
+    /// writes nothing then, and one that writes no depth has no variant.
+    #[test]
+    fn a_depth_output_can_be_left_out() {
+        let compile = |frag: &str| {
+            let source = format!(
+                "#pragma vertex vert\n#pragma fragment frag\n\
+                 float4 vert(float4 position : POSITION) : SV_POSITION {{ return position; }}\n{frag}\n"
+            );
+            let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+            compiler
+                .compile(&program(&source, false), &[], false)
+                .unwrap()
+        };
+        // The fragment entry's outputs: a color's location, None for the depth.
+        let outputs = |wgsl: &str, entry: &str| -> Vec<Option<u32>> {
+            let module = naga::front::wgsl::parse_str(wgsl).unwrap();
+            let function = &module
+                .entry_points
+                .iter()
+                .find(|e| e.name == entry)
+                .unwrap()
+                .function;
+            let Some(result) = &function.result else {
+                return Vec::new();
+            };
+            let output = |binding: &Option<naga::Binding>| match binding {
+                Some(naga::Binding::Location { location, .. }) => Some(*location),
+                Some(naga::Binding::BuiltIn(naga::BuiltIn::FragDepth)) => None,
+                other => panic!("an output bound to {other:?}"),
+            };
+            match &module.types[result.ty].inner {
+                naga::TypeInner::Struct { members, .. } => {
+                    members.iter().map(|m| output(&m.binding)).collect()
+                }
+                _ => vec![output(&result.binding)],
+            }
+        };
+        let both = compile(
+            "void frag(out float4 a : SV_Target0, out float d : SV_Depth, out float4 b : SV_Target1) { a = 1; d = 0.5; b = 2; }",
+        );
+        assert_eq!(
+            outputs(&both.fragment, &both.fragment_entry),
+            [Some(0), None, Some(1)]
+        );
+        let (wgsl, entry) = without_depth_output(&both.fragment).unwrap().unwrap();
+        assert_eq!(outputs(&wgsl, &entry), [Some(0), Some(1)]);
+        let only = compile("float frag() : SV_Depth { return 0.5; }");
+        assert_eq!(outputs(&only.fragment, &only.fragment_entry), [None]);
+        let (wgsl, entry) = without_depth_output(&only.fragment).unwrap().unwrap();
+        assert!(outputs(&wgsl, &entry).is_empty());
+        let color = compile("float4 frag() : SV_Target { return 1; }");
+        assert_eq!(without_depth_output(&color.fragment).unwrap(), None);
     }
 
     /// A fragment program's outputs go where their semantics say, by the DX9 names too, which

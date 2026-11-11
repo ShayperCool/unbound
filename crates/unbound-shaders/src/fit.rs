@@ -2339,14 +2339,23 @@ fn fragment_targets(module: &Module) -> u32 {
         .unwrap_or(0)
 }
 
-fn pad_fragment_outputs(module: &mut Module) {
-    let short = |module: &Module, ty: Handle<Type>| -> Option<(naga::Scalar, u32)> {
-        match module.types[ty].inner {
-            TypeInner::Scalar(s) => Some((s, 1)),
-            TypeInner::Vector { size, scalar } if (size as u32) < 4 => Some((scalar, size as u32)),
-            _ => None,
-        }
-    };
+/// What a fragment entry's wrapper does with one output of the program.
+#[derive(Clone, Copy, PartialEq)]
+enum Rewrap {
+    Keep,
+    /// A scalar or a short vector (its scalar and width): four components, the missing ones 0.
+    Pad(naga::Scalar, u32),
+    Drop,
+}
+
+/// Replaces each fragment entry by one that calls the program's (kept as an ordinary function
+/// named `<entry><suffix>`) and returns its outputs as `plan` says for each (its binding and
+/// type). An entry whose outputs are all kept stays as it is.
+fn rewrap_fragment_outputs(
+    module: &mut Module,
+    suffix: &str,
+    plan: impl Fn(&Module, &Option<Binding>, Handle<Type>) -> Rewrap,
+) {
     for e in 0..module.entry_points.len() {
         if module.entry_points[e].stage != naga::ShaderStage::Fragment {
             continue;
@@ -2358,14 +2367,11 @@ fn pad_fragment_outputs(module: &mut Module) {
             TypeInner::Struct { members, .. } => Some(members.clone()),
             _ => None,
         };
-        let location = |b: &Option<Binding>| matches!(b, Some(Binding::Location { .. }));
-        let needs = match &members {
-            Some(ms) => ms
-                .iter()
-                .any(|m| location(&m.binding) && short(module, m.ty).is_some()),
-            None => location(&result.binding) && short(module, result.ty).is_some(),
+        let plans: Vec<Rewrap> = match &members {
+            Some(ms) => ms.iter().map(|m| plan(module, &m.binding, m.ty)).collect(),
+            None => vec![plan(module, &result.binding, result.ty)],
         };
-        if !needs {
+        if plans.iter().all(|p| *p == Rewrap::Keep) {
             continue;
         }
         let vec4 = |module: &mut Module, scalar: naga::Scalar| {
@@ -2388,62 +2394,54 @@ fn pad_fragment_outputs(module: &mut Module) {
         if let Some(r) = inner.result.as_mut() {
             r.binding = None;
         }
-        inner.name = Some(format!("{}_unpadded", module.entry_points[e].name));
+        inner.name = Some(format!("{}{suffix}", module.entry_points[e].name));
         let arguments = module.entry_points[e].function.arguments.clone();
         let inner = module.functions.append(inner, Span::UNDEFINED);
-        // The padded result type.
-        let (new_ty, plan): (Handle<Type>, Vec<Option<(naga::Scalar, u32)>>) = match &members {
+        // The result with its outputs as planned: none when all are dropped.
+        let new_result = match &members {
             Some(ms) => {
-                let mut padded = Vec::new();
-                let mut plan = Vec::new();
-                for (i, m) in ms.iter().enumerate() {
-                    let pad = if location(&m.binding) {
-                        short(module, m.ty)
-                    } else {
-                        None
+                let mut kept = Vec::new();
+                for (m, plan) in ms.iter().zip(&plans) {
+                    let ty = match plan {
+                        Rewrap::Drop => continue,
+                        Rewrap::Pad(scalar, _) => vec4(module, *scalar),
+                        Rewrap::Keep => m.ty,
                     };
-                    let ty = match pad {
-                        Some((scalar, _)) => vec4(module, scalar),
-                        None => m.ty,
-                    };
-                    padded.push(StructMember {
+                    kept.push(StructMember {
                         name: m.name.clone(),
                         ty,
                         binding: m.binding.clone(),
-                        offset: 16 * i as u32,
+                        offset: 16 * kept.len() as u32,
                     });
-                    plan.push(pad);
                 }
-                let span = 16 * padded.len() as u32;
-                let ty = module.types.insert(
-                    Type {
-                        name: Some("UnboundFragmentOutput".into()),
-                        inner: TypeInner::Struct {
-                            members: padded,
-                            span,
+                let span = 16 * kept.len() as u32;
+                (!kept.is_empty()).then(|| naga::FunctionResult {
+                    ty: module.types.insert(
+                        Type {
+                            name: Some("UnboundFragmentOutput".into()),
+                            inner: TypeInner::Struct {
+                                members: kept,
+                                span,
+                            },
                         },
-                    },
-                    Span::UNDEFINED,
-                );
-                (ty, plan)
+                        Span::UNDEFINED,
+                    ),
+                    binding: None,
+                })
             }
-            None => {
-                let pad = short(module, result.ty);
-                let (scalar, _) = pad.unwrap();
-                (vec4(module, scalar), vec![pad])
-            }
+            None => match plans[0] {
+                Rewrap::Drop => None,
+                Rewrap::Pad(scalar, _) => Some(naga::FunctionResult {
+                    ty: vec4(module, scalar),
+                    binding: result.binding.clone(),
+                }),
+                Rewrap::Keep => Some(result.clone()),
+            },
         };
         let mut f = naga::Function {
             name: Some(module.entry_points[e].name.clone()),
             arguments,
-            result: Some(naga::FunctionResult {
-                ty: new_ty,
-                binding: if members.is_some() {
-                    None
-                } else {
-                    result.binding.clone()
-                },
-            }),
+            result: new_result.clone(),
             ..Default::default()
         };
         let args: Vec<Handle<Expression>> = (0..f.arguments.len() as u32)
@@ -2452,18 +2450,22 @@ fn pad_fragment_outputs(module: &mut Module) {
                     .append(Expression::FunctionArgument(i), Span::UNDEFINED)
             })
             .collect();
-        let zero = |f: &mut naga::Function, scalar: naga::Scalar| {
-            let literal = match scalar.kind {
-                naga::ScalarKind::Sint => Literal::I32(0),
-                naga::ScalarKind::Uint => Literal::U32(0),
-                _ => Literal::F32(0.0),
-            };
-            f.expressions
-                .append(Expression::Literal(literal), Span::UNDEFINED)
-        };
-        let zeros: Vec<Option<Handle<Expression>>> = plan
+        let zeros: Vec<Option<Handle<Expression>>> = plans
             .iter()
-            .map(|p| p.map(|(scalar, _)| zero(&mut f, scalar)))
+            .map(|p| match p {
+                Rewrap::Pad(scalar, _) => {
+                    let literal = match scalar.kind {
+                        naga::ScalarKind::Sint => Literal::I32(0),
+                        naga::ScalarKind::Uint => Literal::U32(0),
+                        _ => Literal::F32(0.0),
+                    };
+                    Some(
+                        f.expressions
+                            .append(Expression::Literal(literal), Span::UNDEFINED),
+                    )
+                }
+                _ => None,
+            })
             .collect();
         let call = f
             .expressions
@@ -2478,7 +2480,10 @@ fn pad_fragment_outputs(module: &mut Module) {
         );
         let start = f.expressions.len();
         let mut parts = Vec::new();
-        for (i, p) in plan.iter().enumerate() {
+        for (i, p) in plans.iter().enumerate() {
+            if *p == Rewrap::Drop {
+                continue;
+            }
             let value = if members.is_some() {
                 f.expressions.append(
                     Expression::AccessIndex {
@@ -2491,7 +2496,7 @@ fn pad_fragment_outputs(module: &mut Module) {
                 call
             };
             let value = match (p, zeros[i]) {
-                (Some((scalar, n)), Some(z)) => {
+                (Rewrap::Pad(scalar, n), Some(z)) => {
                     let mut components = vec![value];
                     components.extend(std::iter::repeat_n(z, (4 - n) as usize));
                     let ty = vec4(module, *scalar);
@@ -2502,17 +2507,16 @@ fn pad_fragment_outputs(module: &mut Module) {
             };
             parts.push(value);
         }
-        let value = if members.is_some() {
-            f.expressions.append(
+        let value = new_result.map(|r| match members.is_some() {
+            true => f.expressions.append(
                 Expression::Compose {
-                    ty: new_ty,
+                    ty: r.ty,
                     components: parts,
                 },
                 Span::UNDEFINED,
-            )
-        } else {
-            parts[0]
-        };
+            ),
+            false => parts[0],
+        });
         let end = f.expressions.len();
         if end > start {
             f.body.push(
@@ -2520,8 +2524,54 @@ fn pad_fragment_outputs(module: &mut Module) {
                 Span::UNDEFINED,
             );
         }
-        f.body
-            .push(Statement::Return { value: Some(value) }, Span::UNDEFINED);
+        f.body.push(Statement::Return { value }, Span::UNDEFINED);
         module.entry_points[e].function = f;
     }
+}
+
+/// Color outputs narrower than four components are widened with zeros (a target takes four).
+fn pad_fragment_outputs(module: &mut Module) {
+    rewrap_fragment_outputs(module, "_unpadded", |module, binding, ty| {
+        let short = match module.types[ty].inner {
+            TypeInner::Scalar(s) => Some((s, 1)),
+            TypeInner::Vector { size, scalar } if (size as u32) < 4 => Some((scalar, size as u32)),
+            _ => None,
+        };
+        match (binding, short) {
+            (Some(Binding::Location { .. }), Some((scalar, width))) => Rewrap::Pad(scalar, width),
+            _ => Rewrap::Keep,
+        }
+    });
+}
+
+/// A fitted fragment program (its WGSL) without its depth output, and its entry point: None
+/// for a program that writes no depth.
+pub(crate) fn without_depth_output(wgsl: &str) -> Result<Option<(String, String)>> {
+    let mut module = naga::front::wgsl::parse_str(wgsl)
+        .map_err(|e| anyhow!("reading the WGSL: {}", e.emit_to_string(wgsl)))?;
+    let depth = |binding: &Option<Binding>| {
+        matches!(binding, Some(Binding::BuiltIn(naga::BuiltIn::FragDepth)))
+    };
+    let writes = module.entry_points.iter().any(|e| {
+        e.stage == naga::ShaderStage::Fragment
+            && e.function
+                .result
+                .as_ref()
+                .is_some_and(|r| match &module.types[r.ty].inner {
+                    TypeInner::Struct { members, .. } => members.iter().any(|m| depth(&m.binding)),
+                    _ => depth(&r.binding),
+                })
+    });
+    if !writes {
+        return Ok(None);
+    }
+    rewrap_fragment_outputs(&mut module, "_with_depth", |_, binding, _| {
+        match depth(binding) {
+            true => Rewrap::Drop,
+            false => Rewrap::Keep,
+        }
+    });
+    let wgsl = to_wgsl(&module)?;
+    let entry = wgsl_entry(&wgsl, naga::ShaderStage::Fragment)?;
+    Ok(Some((wgsl, entry)))
 }
