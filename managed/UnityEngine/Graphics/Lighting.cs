@@ -297,7 +297,7 @@ namespace UnityEngine
         {
             nameof(s_Fog), nameof(s_FogColor), nameof(s_FogMode), nameof(s_FogDensity), nameof(s_FogStart), nameof(s_FogEnd),
             nameof(s_AmbientSky), nameof(s_AmbientEquator), nameof(s_AmbientGround), nameof(s_AmbientIntensity), nameof(s_AmbientMode),
-            nameof(s_CustomProbe), nameof(s_SubtractiveShadowColor), nameof(s_IndirectSpecular), nameof(s_IndirectSpecularSerialized), nameof(s_ReflectionIntensity),
+            nameof(s_CustomProbe), nameof(s_AmbientSkybox), nameof(s_SubtractiveShadowColor), nameof(s_IndirectSpecular), nameof(s_IndirectSpecularSerialized), nameof(s_ReflectionIntensity),
             nameof(s_ReflectionBounces), nameof(s_DefaultReflectionMode), nameof(s_DefaultReflectionResolution), nameof(s_CustomReflection),
             nameof(s_SerializedProbe), nameof(s_SerializedReflection), nameof(s_HaloStrength), nameof(s_FlareStrength),
             nameof(s_FlareFadeSpeed), nameof(s_HaloTexture), nameof(s_Skybox), nameof(s_Sun), nameof(s_PendingSun), nameof(s_SettingsOwner),
@@ -395,6 +395,7 @@ namespace UnityEngine
             Halos.UseHaloTexture(s_HaloTexture);
             var skybox = b.Ref("m_SkyboxMaterial");
             s_Skybox = skybox.IsNull ? null : resolver.Resolve(skybox, typeof(Material)) as Material;
+            s_AmbientSkybox = s_Skybox != null;
             s_Sun = null;
             var sun = b.Ref("m_Sun");
             s_PendingSun = sun.IsNull ? null : (sun, resolver);
@@ -406,14 +407,41 @@ namespace UnityEngine
         public static FogMode fogMode { get => s_FogMode; set => s_FogMode = value; }
         public static Color fogColor { get => s_FogColor; set => s_FogColor = value; }
         public static float fogDensity { get => s_FogDensity; set => s_FogDensity = value; }
-        public static AmbientMode ambientMode { get => s_AmbientMode; set { s_AmbientMode = value; s_CustomProbe = null; } }
-        public static Color ambientSkyColor { get => s_AmbientSky; set { s_AmbientSky = value; s_CustomProbe = null; } }
-        public static Color ambientEquatorColor { get => s_AmbientEquator; set { s_AmbientEquator = value; s_CustomProbe = null; } }
-        public static Color ambientGroundColor { get => s_AmbientGround; set { s_AmbientGround = value; s_CustomProbe = null; } }
-        public static float ambientIntensity { get => s_AmbientIntensity; set { s_AmbientIntensity = value; s_CustomProbe = null; } }
-        public static Color ambientLight { get => s_AmbientSky; set { s_AmbientSky = value; s_CustomProbe = null; } }
+        public static AmbientMode ambientMode { get => s_AmbientMode; set { s_AmbientMode = value; AmbientChanged(); } }
+        public static Color ambientSkyColor { get => s_AmbientSky; set { s_AmbientSky = value; AmbientChanged(); } }
+        public static Color ambientEquatorColor { get => s_AmbientEquator; set { s_AmbientEquator = value; AmbientChanged(); } }
+        public static Color ambientGroundColor { get => s_AmbientGround; set { s_AmbientGround = value; AmbientChanged(); } }
+        public static float ambientIntensity { get => s_AmbientIntensity; set { s_AmbientIntensity = value; AmbientChanged(); } }
+        public static Color ambientLight { get => s_AmbientSky; set { s_AmbientSky = value; AmbientChanged(); } }
 
-        static SphericalHarmonicsL2? s_CustomProbe;
+        /// <summary>The probe a script gave (<see cref="ambientProbe"/>'s setter): the stored
+        /// ambient probe until DynamicGI.UpdateEnvironment derives the sky's or a scene's
+        /// RenderSettings and lighting data are read.</summary>
+        internal static SphericalHarmonicsL2? s_CustomProbe;
+        /// <summary>Whether a skybox material was assigned when an ambient input last changed:
+        /// the Editor makes the ambient probe again then, not when RenderSettings.skybox alone
+        /// is assigned (measured: tests/projects/realtimegi room-sky-none, end-skybox-material).</summary>
+        static bool s_AmbientSkybox;
+
+        /// <summary>An ambient input changed (a mode, color, the intensity, a probe given, the
+        /// environment updated).</summary>
+        internal static void AmbientChanged() => s_AmbientSkybox = s_Skybox != null;
+
+        /// <summary>The sky's probe DynamicGI.UpdateEnvironment derived: the stored ambient probe
+        /// from now on.</summary>
+        internal static void SetEnvironmentProbe(SphericalHarmonicsL2 probe)
+        {
+            s_EnvironmentProbe = probe;
+            s_CustomProbe = null;
+        }
+
+        /// <summary>What a skybox's ambient probe, stored at ambient intensity 1, is scaled by:
+        /// in a linear project the intensity taken as a gamma value (measured:
+        /// tests/projects/realtimegi room-sky-only-intensity, then 0.5 and 1 without
+        /// DynamicGI.UpdateEnvironment, and end-skybox-intensity for a probe a script gave); a
+        /// gamma project's scale is unmeasured and stays the plain intensity.</summary>
+        static float SkyboxProbeScale =>
+            QualitySettings.activeColorSpace == ColorSpace.Linear ? Mathf.GammaToLinearSpace(s_AmbientIntensity) : s_AmbientIntensity;
         static Cubemap s_BakedReflection;
         static readonly System.Collections.Generic.Dictionary<(string, long), Cubemap> s_Cubemaps = new System.Collections.Generic.Dictionary<(string, long), Cubemap>();
         static DefaultReflectionMode s_DefaultReflectionMode;
@@ -449,6 +477,7 @@ namespace UnityEngine
             s_BakedProbe = null;
             s_BakedReflection = null;
             s_EnvironmentProbe = null;
+            s_CustomProbe = null;
             if (firstScene) LightmapSettings.Reset();
             BindBakedSkybox(file, reference, null);
             if (reference.IsNull || reference.Guid == null || !Native.IsReady) return;
@@ -515,16 +544,23 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// The ambient lighting as spherical harmonics (linear color): a flat color in its first
-        /// coefficient; a gradient's sky, equator and ground projected with the weights the Editor
-        /// gives them (measured); a skybox's is baked by the Editor, which Unbound does not do yet: the
-        /// sky color stands in. A probe set here stands until the ambient settings change.
+        /// The ambient lighting as spherical harmonics (linear color), from the ambient mode and
+        /// one stored probe: the lighting data's, then the sky's that DynamicGI.UpdateEnvironment
+        /// derives, then one given here, the latest of them. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/realtimegi (the end-* cases, read in the frame of each change):
+        /// a flat color in its first coefficient, whatever probe is stored, and a gradient's sky,
+        /// equator and ground projected with the Editor's weights; the custom mode gives
+        /// the stored probe as it is; the skybox mode the stored probe times the ambient
+        /// intensity's scale, or without a skybox material the ambient color, which the
+        /// intensity does not scale. Not measured: a gradient with a probe given (as the flat
+        /// mode: the colors), the custom mode without any stored probe (a scene without lighting
+        /// data: the ambient color), a probe given after a skybox was assigned alone, gamma-space
+        /// projects.
         /// </summary>
         public static SphericalHarmonicsL2 ambientProbe
         {
             get
             {
-                if (s_CustomProbe.HasValue) return s_CustomProbe.Value;
                 var sh = new SphericalHarmonicsL2();
                 var sky = s_AmbientSky.linear;
                 switch (s_AmbientMode)
@@ -545,14 +581,16 @@ namespace UnityEngine
                         }
                         break;
                     }
+                    case AmbientMode.Custom when (s_CustomProbe ?? s_EnvironmentProbe ?? s_BakedProbe ?? s_SerializedProbe) is { } stored:
+                        return stored;
+                    // A built scene's own probe is the one its player data was made with.
+                    case AmbientMode.Skybox when !s_AmbientSkybox && !s_SerializedProbe.HasValue:
+                        sh.AddAmbientLight(sky);
+                        break;
+                    case AmbientMode.Skybox when s_CustomProbe.HasValue:
+                        return s_CustomProbe.Value * SkyboxProbeScale;
                     case AmbientMode.Skybox when s_EnvironmentProbe.HasValue:
-                        // Kept at intensity 1 and scaled by the intensity of the moment, in a
-                        // linear project taken as a gamma value (measured:
-                        // tests/projects/realtimegi room-sky-only-intensity, then 0.5 and 1
-                        // without DynamicGI.UpdateEnvironment); a gamma project's scale is
-                        // unmeasured and stays the plain intensity.
-                        return s_EnvironmentProbe.Value
-                            * (QualitySettings.activeColorSpace == ColorSpace.Linear ? Mathf.GammaToLinearSpace(s_AmbientIntensity) : s_AmbientIntensity);
+                        return s_EnvironmentProbe.Value * SkyboxProbeScale;
                     case AmbientMode.Skybox when s_BakedProbe.HasValue:
                         // The lighting data's probe is at intensity 1; the Editor scales it by the
                         // intensity taken as a gamma value (measured: 0.18, 0.36 and 2).
@@ -573,7 +611,11 @@ namespace UnityEngine
                 }
                 return sh;
             }
-            set => s_CustomProbe = value;
+            set
+            {
+                s_CustomProbe = value;
+                AmbientChanged();
+            }
         }
         public static Color subtractiveShadowColor { get => s_SubtractiveShadowColor; set => s_SubtractiveShadowColor = value; }
         public static Material skybox { get => s_Skybox; set => s_Skybox = value; }

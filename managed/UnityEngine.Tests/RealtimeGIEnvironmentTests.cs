@@ -25,6 +25,8 @@ namespace Unbound.Tests
             float intensity = RenderSettings.ambientIntensity;
             var skybox = RenderSettings.skybox;
             var probe = RenderSettings.s_EnvironmentProbe;
+            var baked = RenderSettings.s_BakedProbe;
+            var given = RenderSettings.s_CustomProbe;
             try
             {
                 RenderSettings.skybox = null;
@@ -33,6 +35,9 @@ namespace Unbound.Tests
             finally
             {
                 RenderSettings.s_EnvironmentProbe = probe;
+                RenderSettings.s_BakedProbe = baked;
+                RenderSettings.s_CustomProbe = given;
+                RenderSettings.skybox = skybox;
                 RenderSettings.ambientMode = mode;
                 RenderSettings.ambientSkyColor = sky;
                 RenderSettings.ambientEquatorColor = equator;
@@ -388,12 +393,18 @@ namespace Unbound.Tests
             var mode = RenderSettings.ambientMode;
             float intensity = RenderSettings.ambientIntensity;
             var probe = RenderSettings.s_EnvironmentProbe;
+            var given = RenderSettings.s_CustomProbe;
+            var skybox = RenderSettings.skybox;
             var colorSpace = QualitySettings.s_ColorSpace;
+            var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
             try
             {
                 var sh = new SphericalHarmonicsL2();
                 sh[0, 0] = 0.0979f; sh[1, 1] = 0.0366f; sh[2, 4] = -0.02f;
                 RenderSettings.s_EnvironmentProbe = sh;
+                RenderSettings.s_CustomProbe = null;
+                // The intensity scales a skybox's light: the scene has a skybox material.
+                RenderSettings.skybox = sky;
                 RenderSettings.ambientMode = AmbientMode.Skybox;
                 foreach (var space in new[] { ColorSpace.Linear, ColorSpace.Gamma })
                 {
@@ -414,9 +425,118 @@ namespace Unbound.Tests
             {
                 QualitySettings.s_ColorSpace = colorSpace;
                 RenderSettings.s_EnvironmentProbe = probe;
+                RenderSettings.s_CustomProbe = given;
+                RenderSettings.skybox = skybox;
                 RenderSettings.ambientIntensity = intensity;
                 RenderSettings.ambientMode = mode;
+                UnityEngine.Object.DestroyImmediate(sky);
             }
+        }
+
+        static void AssertProbe(SphericalHarmonicsL2 expected, float scale, string what)
+        {
+            var read = RenderSettings.ambientProbe;
+            for (int c = 0; c < 3; c++)
+                for (int k = 0; k < 9; k++)
+                    Assert.True(Mathf.Abs(expected[c, k] * scale - read[c, k]) < 2e-6f * Mathf.Max(1f, scale), $"{what}: [{c},{k}] {read[c, k]} != {expected[c, k] * scale}");
+        }
+
+        static SphericalHarmonicsL2 Flat(Color gamma)
+        {
+            var sh = new SphericalHarmonicsL2();
+            sh.AddAmbientLight(gamma.linear);
+            return sh;
+        }
+
+        [Fact]
+        public void TheAmbientProbeFollowsTheModeAndOneStoredProbe()
+        {
+            // The Unity 6000.0.71f1 Editor's answers, tests/projects/realtimegi end-* (a linear
+            // project; a scene whose lighting data was made without a sky: its probe is zero).
+            var colorSpace = QualitySettings.s_ColorSpace;
+            var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
+            WithAmbient(() =>
+            {
+                try
+                {
+                    QualitySettings.s_ColorSpace = ColorSpace.Linear;
+                    var color = new Color(0.1f, 0.12f, 0.2f);
+                    RenderSettings.s_BakedProbe = new SphericalHarmonicsL2();
+                    RenderSettings.s_EnvironmentProbe = null;
+                    RenderSettings.s_CustomProbe = null;
+                    RenderSettings.ambientLight = color;
+                    RenderSettings.ambientIntensity = 1f;
+                    // The custom mode: the stored probe, here the lighting data's.
+                    RenderSettings.ambientMode = AmbientMode.Custom;
+                    AssertProbe(new SphericalHarmonicsL2(), 1f, "custom, as loaded");
+                    var given = new SphericalHarmonicsL2();
+                    given.AddAmbientLight(new Color(0.3f, 0.2f, 0.1f));
+                    given.AddDirectionalLight(Vector3.up, new Color(0.1f, 0.4f, 0.2f), 1f);
+                    RenderSettings.ambientProbe = given;
+                    AssertProbe(given, 1f, "custom, given");
+                    Assert.Equal(0.347058833f, RenderSettings.ambientProbe[0, 0], 6);
+                    // The intensity does not scale it, and it stands through another mode.
+                    RenderSettings.ambientIntensity = 2f;
+                    AssertProbe(given, 1f, "custom, intensity 2");
+                    RenderSettings.ambientMode = AmbientMode.Flat;
+                    AssertProbe(Flat(color), 1f, "flat");
+                    Assert.Equal(0.0100228256f, RenderSettings.ambientProbe[0, 0], 7);
+                    RenderSettings.ambientMode = AmbientMode.Custom;
+                    AssertProbe(given, 1f, "custom again");
+                    // The skybox mode without a skybox material: the ambient color, unscaled;
+                    // a skybox assigned alone does not make the probe again.
+                    RenderSettings.ambientMode = AmbientMode.Skybox;
+                    AssertProbe(Flat(color), 1f, "skybox mode without a skybox");
+                    RenderSettings.skybox = sky;
+                    AssertProbe(Flat(color), 1f, "a skybox assigned alone");
+                    // With the material, the stored probe times the intensity as a gamma value.
+                    RenderSettings.ambientIntensity = 1.5f;
+                    AssertProbe(given, Mathf.Pow(1.5f, 2.2f), "skybox, intensity 1.5");
+                    Assert.Equal(0.8468f, RenderSettings.ambientProbe[0, 0], 3);
+                    var other = new SphericalHarmonicsL2();
+                    other.AddAmbientLight(new Color(0.05f, 0.1f, 0.4f));
+                    other.AddDirectionalLight(Vector3.right, new Color(0.5f, 0.1f, 0.1f), 1f);
+                    RenderSettings.ambientProbe = other;
+                    AssertProbe(other, Mathf.Pow(1.5f, 2.2f), "skybox, another probe given");
+                    RenderSettings.ambientIntensity = 0.5f;
+                    AssertProbe(other, Mathf.GammaToLinearSpace(0.5f), "skybox, intensity 0.5");
+                    Assert.Equal(0.0611f, RenderSettings.ambientProbe[0, 0], 3);
+                    // The flat mode gives its color whatever probe is given, and keeps the probe.
+                    RenderSettings.ambientMode = AmbientMode.Flat;
+                    RenderSettings.ambientProbe = given;
+                    AssertProbe(Flat(color), 1f, "flat, a probe given");
+                    var next = new Color(0.4f, 0.3f, 0.6f);
+                    RenderSettings.ambientLight = next;
+                    AssertProbe(Flat(next), 1f, "flat, another color");
+                    RenderSettings.skybox = null;
+                    RenderSettings.ambientMode = AmbientMode.Skybox;
+                    AssertProbe(Flat(next), 1f, "skybox mode without a skybox, intensity 0.5");
+                    RenderSettings.ambientMode = AmbientMode.Custom;
+                    AssertProbe(given, 1f, "custom, the probe given in the flat mode");
+
+                    // The sky's probe DynamicGI.UpdateEnvironment derives is the stored one from
+                    // then on (room-ambient-custom: the custom mode gives it at intensity 3), and
+                    // a skybox removed after the mode was set leaves the probe as it was made
+                    // (room-sky-none).
+                    var derived = new SphericalHarmonicsL2();
+                    derived[0, 0] = 0.0979f; derived[1, 1] = 0.0366f; derived[2, 4] = -0.02f;
+                    RenderSettings.SetEnvironmentProbe(derived);
+                    RenderSettings.ambientIntensity = 3f;
+                    AssertProbe(derived, 1f, "custom, the sky's probe");
+                    RenderSettings.skybox = sky;
+                    RenderSettings.ambientMode = AmbientMode.Skybox;
+                    RenderSettings.skybox = null;
+                    AssertProbe(derived, Mathf.Pow(3f, 2.2f), "skybox removed after the mode was set");
+                    // The next change of an ambient input finds no skybox.
+                    RenderSettings.ambientIntensity = 2f;
+                    AssertProbe(Flat(next), 1f, "then an ambient input changed");
+                }
+                finally
+                {
+                    QualitySettings.s_ColorSpace = colorSpace;
+                    UnityEngine.Object.DestroyImmediate(sky);
+                }
+            });
         }
     }
 }

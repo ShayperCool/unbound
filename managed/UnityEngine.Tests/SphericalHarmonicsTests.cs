@@ -6,6 +6,7 @@ namespace Unbound.Tests
 {
     /// <summary>Spherical harmonics and the ambient probe against the Editor's answers
     /// (tests/projects/urp/Reference/caps-6000.0.71f1.jsonl, CapsProbe.Record).</summary>
+    [Collection("RenderSettings state")]
     public class SphericalHarmonicsTests
     {
         static void AssertCoefficients(float[] expected, SphericalHarmonicsL2 sh)
@@ -49,11 +50,19 @@ namespace Unbound.Tests
             var mode = RenderSettings.ambientMode;
             var intensity = RenderSettings.ambientIntensity;
             var baked = RenderSettings.s_BakedProbe;
+            var environment = RenderSettings.s_EnvironmentProbe;
+            var given = RenderSettings.s_CustomProbe;
+            var skybox = RenderSettings.skybox;
+            var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
             try
             {
                 var sh = new SphericalHarmonicsL2();
                 sh[0, 0] = 0.633008f; sh[0, 1] = 0.460993f; sh[0, 4] = -0.197994f;
                 RenderSettings.s_BakedProbe = sh;
+                RenderSettings.s_EnvironmentProbe = null;
+                RenderSettings.s_CustomProbe = null;
+                // The scene has a skybox material (without one the mode gives the ambient color).
+                RenderSettings.skybox = sky;
                 RenderSettings.ambientMode = AmbientMode.Skybox;
                 foreach (var (value, l0) in new[] { (0.18f, 0.017225f), (0.36f, 0.067440f), (1f, 0.633008f), (2f, 2.908540f) })
                 {
@@ -66,8 +75,12 @@ namespace Unbound.Tests
             finally
             {
                 RenderSettings.s_BakedProbe = baked;
+                RenderSettings.s_EnvironmentProbe = environment;
+                RenderSettings.s_CustomProbe = given;
+                RenderSettings.skybox = skybox;
                 RenderSettings.ambientIntensity = intensity;
                 RenderSettings.ambientMode = mode;
+                Object.DestroyImmediate(sky);
             }
         }
 

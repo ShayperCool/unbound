@@ -72,7 +72,8 @@ namespace UnityEngine
         public static void UpdateEnvironment()
         {
             var sh = SkyboxProbe();
-            if (sh.HasValue) RenderSettings.s_EnvironmentProbe = sh;
+            if (sh.HasValue) RenderSettings.SetEnvironmentProbe(sh.Value);
+            RenderSettings.AmbientChanged();
             RealtimeGI.EnvironmentChanged();
         }
 
