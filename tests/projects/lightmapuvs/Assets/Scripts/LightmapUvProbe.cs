@@ -16,7 +16,7 @@ public class LightmapUvProbe : MonoBehaviour
 {
     static readonly string[] Variants = { "Default", "Hard30", "Distort", "Manual", "Calc", "Off", "Raw", "RawOff",
         "NormImport", "NormCalc", "NormCalc30", "NormCalc180", "NormLegacy", "NormUnweighted", "NormArea", "NormAngle",
-        "NormGroups", "NormFromAngle", "NormNoSplit", "NormNone", "Repair", "RepairOff" };
+        "NormGroups", "NormFromAngle", "NormNoSplit", "NormNone", "Repair", "RepairOff", "Names" };
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("LightmapUvProbe").AddComponent<LightmapUvProbe>();
@@ -29,6 +29,25 @@ public class LightmapUvProbe : MonoBehaviour
 
     static IEnumerable<Tuple<string, Mesh>> Entries(string variant)
     {
+        if (variant == "Names")
+        {
+            // Each model's renderers in hierarchy order: the object's path and its mesh's name.
+            foreach (var root in Resources.LoadAll<GameObject>(variant).OrderBy(g => g.name, StringComparer.Ordinal))
+            {
+                var filters = root.GetComponentsInChildren<MeshFilter>(true);
+                for (int i = 0; i < filters.Length; ++i)
+                {
+                    var path = filters[i].name;
+                    for (var t = filters[i].transform; t != root.transform; t = t.parent)
+                        if (t != filters[i].transform) path = t.name + "/" + path;
+                    if (filters[i].transform == root.transform) path = ".";
+                    yield return Tuple.Create(root.name + "/" + i + ":" + path + ":" + filters[i].sharedMesh.name, filters[i].sharedMesh);
+                }
+                if (filters.Length == 0)
+                    yield return Tuple.Create(root.name + "/none", new Mesh());
+            }
+            yield break;
+        }
         if (!variant.StartsWith("Norm", StringComparison.Ordinal))
         {
             foreach (var mesh in Resources.LoadAll<Mesh>(variant).OrderBy(m => m.name, StringComparer.Ordinal))

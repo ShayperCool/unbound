@@ -24,6 +24,7 @@ with the variant's unwrap settings:
 | RawOff | mesh optimization and generateSecondaryUV off |
 | Repair | defaults, for the models the unwrap has to repair (below) |
 | RepairOff | generateSecondaryUV off, for Lines |
+| Names | mesh optimization and generateSecondaryUV off, for `Sources/Names` |
 
 `LightmapUvProbe` records every mesh of every variant (vertex count, sub-mesh triangles,
 vertices, normals, UV, UV2) as one JSON line per mesh and quits. The Editor records in Play mode
@@ -75,8 +76,29 @@ n-gon triangulation, Grid and TwoUV match in every variant (vertex count and UV2
 so do the twelve Repair models. Organic matches in five of its six unwrap variants; in Hard30 four
 single-triangle charts of equal size are packed in each other's places (968 triangles, 12 corners
 differ by up to 0.034). Imported normals are normalized and attributes split with the measured
-thresholds. The Torus is unwrapped as the Editor does, but its mesh is named after the OBJ
-object, not "default", so the comparison cannot pair it.
+thresholds. The Torus (an OBJ file, its mesh named `default`) matches in every variant.
+
+## Mesh and object names
+
+`Sources/Names` holds hand-written OBJ files of one quad per part with `o` and `g` statements in
+different arrangements, Order.obj with group names that sort differently by letter case, digits
+and punctuation, and OrderFbx.fbx (`Tools/make_name_models.py`, Blender) with objects of the same
+names. The Names variant records each model's renderers in hierarchy order: the object's path
+and its mesh's name are part of the record's key.
+
+What the reference shows (Unity 6000.0.71f1): an OBJ file's meshes follow its `g` statements
+alone. `o` statements change nothing; faces before any group and under a `g` without a name are
+the mesh `default`; a name of several words is joined by underscores; a group name that returns
+later, also in another letter case, continues the same mesh (spelled as first seen); a group
+without faces gives no mesh; a vertex no face names is in no mesh. Each mesh is a child object of
+the root named like it, also when it is the only one. Siblings are ordered without regard to
+letter case and with runs of digits as numbers (`9`, `10`, `_under`, `a01`, `A1`, `a1A`, `a1b`,
+`a2`, `a10`, `Alpha`, `alpha`, `b-2`, `b.1`, `B_0`, `Beta`, `Zed`), the same for OBJ groups and FBX
+nodes. Not measured: `sortHierarchyByName` off, names with characters outside ASCII, and an OBJ
+face that gives no triangle with mesh optimization off (Unbound keeps its points, as for FBX).
+
+Unbound matches all 52 Names records in names, order, vertices and triangles; the calculated
+normals of some of these slightly bent quads differ in the last float digit (at most 1e-7).
 
 ## Imported normals
 

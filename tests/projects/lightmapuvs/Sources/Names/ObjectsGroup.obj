@@ -1,0 +1,14 @@
+# ObjectsGroup
+g Part
+o First
+v 0.0 0 0
+v 1.0 0 0
+v 1.0 1 0
+v 0.0 1 0.1
+f 1 2 3 4
+o Second
+v 1.5 0 0
+v 2.5 0 0
+v 2.5 1 0
+v 1.5 1 0.2
+f 5 6 7 8

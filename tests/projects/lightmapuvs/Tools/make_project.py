@@ -17,6 +17,9 @@ The Repair variant holds Sources/Repair and the flat and welded models of Source
 Default settings; RepairOff holds Lines (no triangle left to unwrap) with generateSecondaryUV
 off.
 
+The Names variant holds Sources/Names (hand-written OBJ files of one quad per part with `o` and
+`g` statements in different arrangements) with mesh optimization and generateSecondaryUV off.
+
 The normals variants hold the smaller models and Sources/Normals, with mesh optimization and
 generateSecondaryUV off, under each normals setting (`tangentSpace`):
 
@@ -212,6 +215,8 @@ def main():
     repair += [p for p in normal_models if p.stem in REPAIR_NORMAL_MODELS]
     variants.append(('Repair', {}, repair))
     variants.append(('RepairOff', dict(generateSecondaryUV=0), [p for p in repair if p.stem == 'Lines']))
+    names = sorted(p for p in (PROBE/'Sources/Names').iterdir() if p.suffix in ('.fbx', '.obj'))
+    variants.append(('Names', RAW, names))
     for variant, overrides, sources in variants:
         folder = resources/variant
         folder.mkdir()

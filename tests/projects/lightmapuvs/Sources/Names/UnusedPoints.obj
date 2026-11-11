@@ -1,0 +1,16 @@
+# UnusedPoints
+v 9 9 9
+g First
+v 0 0 0
+v 1 0 0
+v 1 1 0
+v 0 1 0.1
+v 7 7 7
+f 2 3 4 5
+g Second
+v 1.5 0 0
+v 2.5 0 0
+v 2.5 1 0
+v 1.5 1 0.2
+f 7 8 9 10
+v 8 8 8
