@@ -1,0 +1,8 @@
+[
+  {
+    "against": "sheriff-S19-a6f0d8af2",
+    "baseline": 599,
+    "accepted": 601,
+    "reason": "Humanoid transform key times in single precision, as the other rig types: ten last-digit fields newly differ and eight newly match, none outside tolerance; approved by the user on 2026-11-11 (docs/COMPATIBILITY_GAPS.md, known insignificant residuals)"
+  }
+]

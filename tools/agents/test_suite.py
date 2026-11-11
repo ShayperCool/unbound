@@ -86,115 +86,178 @@ class WorseTests(unittest.TestCase):
         self.assertFalse(regressed)
 
 
-    def test_an_accepted_count_covers_a_rise_from_its_baseline_only(self):
-        accepted = [{'baseline': 599, 'accepted': 601, 'reason': 'two last-digit tangents'}]
-        old = failing('cut', failures=599)
-        self.assertIsNotNone(suite.worse(old, failing('cut', failures=601)))
-        self.assertIsNone(suite.worse(old, failing('cut', failures=601), accepted))
-        self.assertIsNone(suite.worse(old, failing('cut', failures=600), accepted))
+
+class AcceptedCountTests(unittest.TestCase):
+    """A decided rise of a failing probe's counted failures (gate-accepted.json)."""
+    SUMMARY = '{{"fields":1774,"differences":{},"tolerance_failures":{},"validation_errors":0}}'
+    ENTRY = {'against': 'sheriff-1', 'baseline': 599, 'accepted': 601, 'reason': 'two last-digit tangents'}
+
+    def run_of(self, differences, outside=0):
+        summary = self.SUMMARY.format(differences, outside)
+        return dict(failing(summary, failures=differences + outside),
+                    steps=[{'status': 'pass', 'failures': 0, 'summary': ''},
+                           {'status': 'fail', 'failures': differences + outside, 'summary': summary}])
+
+    def test_an_entry_covers_a_rise_of_its_count_only(self):
+        accepted, old = [self.ENTRY], self.run_of(599)
+        self.assertIn('step 2', suite.worse(old, self.run_of(601)))
+        self.assertIsNone(suite.worse(old, self.run_of(601), accepted))
+        self.assertIsNone(suite.worse(old, self.run_of(600), accepted))
         # Past the accepted count, or from another baseline count, it is worse as before.
-        self.assertIsNotNone(suite.worse(old, failing('cut', failures=602), accepted))
-        self.assertIsNotNone(suite.worse(failing('cut', failures=598), failing('cut', failures=601), accepted))
-        self.assertIsNotNone(suite.worse(failing('cut', failures=601), failing('cut', failures=602), accepted))
-        # The per-step counts follow the same rule.
-        steps = lambda count: dict(failing('cut', failures=count),
-                                   steps=[{'status': 'pass', 'failures': 0}, {'status': 'fail', 'failures': count}])
-        self.assertIn('step 2', suite.worse(steps(599), steps(601)))
-        self.assertIsNone(suite.worse(steps(599), steps(601), accepted))
-        self.assertIn('step 2', suite.worse(steps(599), steps(602), accepted))
-        # Nothing but the count is covered: a step that passed and fails now stays worse.
-        broken = dict(failing('cut', failures=601),
-                      steps=[{'status': 'fail', 'failures': 0}, {'status': 'fail', 'failures': 601}])
-        self.assertIn('step 1', suite.worse(steps(599), broken, accepted))
+        self.assertIn('step 2', suite.worse(old, self.run_of(602), accepted))
+        self.assertIsNotNone(suite.worse(self.run_of(598), self.run_of(601), accepted))
+        self.assertIsNotNone(suite.worse(self.run_of(601), self.run_of(602), accepted))
+        # Another count of the same summary may not rise under it, whatever the total is.
+        self.assertIsNotNone(suite.worse(old, self.run_of(600, outside=1), accepted))
+        self.assertIsNotNone(suite.worse(old, self.run_of(590, outside=11), accepted))
+        self.assertIsNotNone(suite.worse(old, self.run_of(599, outside=2), accepted))
+        # Nothing but counts is covered: a step that passed and fails now stays worse.
+        broken = self.run_of(601)
+        broken['steps'][0]['status'] = 'fail'
+        self.assertIn('step 1', suite.worse(old, broken, accepted))
+        # A summary that lost a count (cut short, reworded) is not covered.
+        reworded = self.run_of(601)
+        reworded['steps'][1]['summary'] = '601 differences'
+        self.assertIsNotNone(suite.worse(old, reworded, accepted))
 
     def test_compare_runs_lists_an_accepted_rise_with_its_reason(self):
-        accepted = {'p': [{'baseline': 599, 'accepted': 601, 'reason': 'two last-digit tangents'}]}
-        old, new = failing('599 differences'), failing('601 differences')
-        lines, regressed = suite.compare_runs({'probes': {'p': new, 'q': new}}, {'probes': {'p': old, 'q': old}},
-                                              accepted)
+        other = dict(self.ENTRY, baseline=7, accepted=9, reason='unrelated')
+        accepted = {'p': [other, self.ENTRY]}
+        current = {'probes': {'p': self.run_of(601), 'q': self.run_of(601)}}
+        previous = {'label': 'sheriff-1', 'probes': {'p': self.run_of(599), 'q': self.run_of(599)}}
+        lines, regressed = suite.compare_runs(current, previous, accepted)
         self.assertTrue(regressed)  # q declares nothing
-        self.assertTrue(lines[0].startswith('accepted  p: 601 counted failures, was 599'), lines)
-        self.assertIn('two last-digit tangents', lines[0])
+        self.assertTrue(lines[0].startswith('accepted  p: step 2 counts 601 failures, was 599'), lines)
+        self.assertIn('gate-accepted.json: two last-digit tangents)', lines[0])
         self.assertTrue(lines[1].startswith('worse     q'), lines)
-        lines, regressed = suite.compare_runs({'probes': {'p': new}}, {'probes': {'p': old}}, accepted)
+        del current['probes']['q']
+        lines, regressed = suite.compare_runs(current, previous, accepted)
         self.assertFalse(regressed)
 
-    def test_accepted_counts_come_from_valid_gate_declarations(self):
+    def test_an_entry_against_another_baseline_run_is_stale_and_covers_nothing(self):
+        # The count is 599 again in a later baseline: the old decision does not come back.
+        current = {'probes': {'p': self.run_of(601)}}
+        previous = {'label': 'sheriff-2', 'probes': {'p': self.run_of(599)}}
+        lines, regressed = suite.compare_runs(current, previous, {'p': [self.ENTRY]})
+        self.assertTrue(regressed)
+        self.assertTrue(lines[0].startswith('worse     p'), lines)
+        self.assertTrue(lines[1].startswith('stale     p'), lines)
+        # Once the baseline holds the accepted count the entry is only reported.
+        previous['probes']['p'] = self.run_of(601)
+        lines, regressed = suite.compare_runs(current, previous, {'p': [self.ENTRY]})
+        self.assertFalse(regressed)
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(lines[0].startswith('stale     p: the gate-accepted.json entry against sheriff-1'), lines)
+
+    def test_an_unusable_declaration_fails_the_comparison(self):
+        current = {'probes': {'p': self.run_of(599)}}
+        previous = {'label': 'sheriff-1', 'probes': {'p': self.run_of(599)}}
+        lines, regressed = suite.compare_runs(current, previous, {'p': 'gate-accepted.json is not JSON: x'})
+        self.assertTrue(regressed)
+        self.assertTrue(lines[0].startswith('invalid   p'), lines)
+
+    def test_declarations_are_read_from_the_probe_directories(self):
         with tempfile.TemporaryDirectory() as directory:
             projects = Path(directory)
+
             def declare(name, value):
                 (projects/name).mkdir()
-                (projects/name/'gate.json').write_text(json.dumps({'engine_paths': ['crates/'], **value}))
-            entry = {'baseline': 599, 'accepted': 601, 'reason': 'decided'}
-            declare('good', {'accepted_failures': [entry]})
-            declare('none', {})
-            declare('lower', {'accepted_failures': [dict(entry, accepted=599)]})
-            declare('unexplained', {'accepted_failures': [dict(entry, reason=' ')]})
-            declare('extra', {'accepted_failures': [dict(entry, step=2)]})
-            names = ['good', 'none', 'lower', 'unexplained', 'extra', 'absent']
-            self.assertEqual(suite.accepted_counts(names, projects), {'good': [entry]})
-            for name in ('lower', 'unexplained', 'extra'):
-                self.assertIsInstance(suite.gate_spec(projects/name/'gate.json'), suite.NoRecipe)
-            # The entry is metadata beside a built-in recipe, not a recipe of its own.
-            (projects/'good'/'gate.json').write_text(json.dumps({'accepted_failures': [entry]}))
-            self.assertIsNone(suite.declared('good', '6000.0.71f1', projects))
+                (projects/name/'gate-accepted.json').write_text(value if isinstance(value, str) else json.dumps(value))
+            declare('good', [self.ENTRY])
+            declare('withdrawn', [])
+            declare('lower', [dict(self.ENTRY, accepted=599)])
+            declare('unexplained', [dict(self.ENTRY, reason=' ')])
+            declare('unbound', [{k: v for k, v in self.ENTRY.items() if k != 'against'}])
+            declare('extra', [dict(self.ENTRY, step=2)])
+            declare('object', self.ENTRY)
+            declare('broken', '[')
+            (projects/'none').mkdir()
+            names = ['good', 'withdrawn', 'lower', 'unexplained', 'unbound', 'extra', 'object', 'broken', 'none', 'absent']
+            counts = suite.accepted_counts(names, projects)
+            self.assertEqual(counts['good'], [self.ENTRY])
+            self.assertEqual(counts['withdrawn'], [])
+            for name in ('lower', 'unexplained', 'unbound', 'extra', 'object', 'broken'):
+                self.assertIsInstance(counts[name], str, name)
+            self.assertEqual(sorted(counts), sorted(names[:8]))
+
+    def test_the_committed_declarations_are_usable(self):
+        for name, entries in suite.accepted_counts(suite.discover()).items():
+            self.assertIsInstance(entries, list, f'{name}: {entries}')
 
 
 class OracleGuardTests(unittest.TestCase):
     """The guard over accepted failure counts, in a scratch repository."""
     GUARD = Path(__file__).resolve().parent/'oracle_guard.py'
-    ENTRY = {'baseline': 599, 'accepted': 601, 'reason': 'decided'}
+    ENTRY = AcceptedCountTests.ENTRY
+    FILE = 'tests/projects/p/gate-accepted.json'
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.repo = Path(self.directory.name)
         self.git('init', '-q', '-b', 'main')
-        self.commit('base', {'engine_paths': ['crates/']})
+        self.commit('base', 'x', file='README')
         self.git('checkout', '-q', '-b', 'work')
 
     def git(self, *args):
         subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', *args],
                        cwd=self.repo, check=True, capture_output=True)
 
-    def commit(self, message, declaration, name='p'):
-        path = self.repo/'tests/projects'/name/'gate.json'
+    def commit(self, message, content, file=FILE):
+        path = self.repo/file
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(declaration))
+        if path.is_symlink():
+            path.unlink()
+        path.write_text(content if isinstance(content, str) else json.dumps(content))
         self.git('add', '-A')
         self.git('commit', '-q', '-m', message)
+
+    def landed(self, content):
+        self.git('checkout', '-q', 'main')
+        self.commit('landed', content)
+        self.git('checkout', '-q', '-B', 'work')
 
     def guard(self):
         return subprocess.run([sys.executable, str(self.GUARD), 'main', 'HEAD'], cwd=self.repo,
                               capture_output=True, text=True)
 
     def test_a_new_accepted_count_needs_the_trailer(self):
-        self.commit('raise', {'engine_paths': ['crates/'], 'accepted_failures': [self.ENTRY]})
+        self.commit('raise', [self.ENTRY])
         refused = self.guard()
         self.assertEqual(refused.returncode, 4, refused.stdout)
         self.assertIn('accepted failure count declared', refused.stdout)
         self.git('commit', '-q', '--amend', '-m', 'raise\n\nOracle-Change: decided by the owner')
         self.assertEqual(self.guard().returncode, 0)
 
-    def test_a_new_declaration_file_and_a_raised_entry_need_it_too(self):
-        self.commit('new probe', {'accepted_failures': [self.ENTRY]}, name='q')
+    def test_a_changed_entry_needs_it_too(self):
+        self.landed([self.ENTRY])
+        for change in ({'accepted': 605}, {'against': 'sheriff-2'}, {'baseline': 600}):
+            self.commit('change', [dict(self.ENTRY, **change)])
+            self.assertEqual(self.guard().returncode, 4, change)
+
+    def test_what_is_not_a_list_needs_it(self):
+        self.landed([])
+        self.commit('object', self.ENTRY)
         self.assertEqual(self.guard().returncode, 4)
-        self.git('reset', '-q', '--hard', 'main')
-        self.git('checkout', '-q', 'main')
-        self.commit('landed', {'accepted_failures': [self.ENTRY]})
-        self.git('checkout', '-q', '-B', 'work')
-        self.commit('higher', {'accepted_failures': [dict(self.ENTRY, accepted=605)]})
+        # A link in the file's place: the suite would read where it points.
+        (self.repo/'elsewhere.json').write_text(json.dumps([self.ENTRY]))
+        (self.repo/self.FILE).unlink()
+        (self.repo/self.FILE).symlink_to(self.repo/'elsewhere.json')
+        self.git('add', '-A')
+        self.git('commit', '-q', '-m', 'link')
         self.assertEqual(self.guard().returncode, 4)
 
     def test_withdrawing_or_keeping_an_entry_is_free(self):
-        self.git('checkout', '-q', 'main')
-        self.commit('landed', {'accepted_failures': [self.ENTRY]})
-        self.git('checkout', '-q', '-B', 'work')
-        self.commit('paths', {'engine_paths': ['managed/'], 'accepted_failures': [self.ENTRY]})
+        other = dict(self.ENTRY, baseline=7, accepted=9)
+        self.landed([self.ENTRY, other])
+        self.commit('reorder', [other, self.ENTRY])
         self.assertEqual(self.guard().returncode, 0)
-        self.commit('withdraw', {'engine_paths': ['managed/']})
+        self.commit('withdraw one', [other])
         self.assertEqual(self.guard().returncode, 0)
-
+        (self.repo/self.FILE).unlink()
+        self.git('add', '-A')
+        self.git('commit', '-q', '-m', 'withdraw all')
+        self.assertEqual(self.guard().returncode, 0)
 
 
 class ImageTests(unittest.TestCase):
