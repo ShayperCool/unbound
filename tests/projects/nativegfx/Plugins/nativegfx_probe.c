@@ -385,12 +385,15 @@ static void on_marker(const MarkerDesc* desc, void* user)
 
 static void on_thread(const ThreadDesc* desc, void* user)
 {
+    // A thread's ID is the thread's own handle (the first heard of is the registering one, the
+    // main thread; the plugin's is heard of on itself).
+    int self = desc->threadId == (uint64_t)pthread_self();
     if (s_threads++ == 0)
-        snprintf(s_first_thread, sizeof s_first_thread, "group=%s name=%s id=%s user=%ld", desc->groupName ? desc->groupName : "(null)",
-                 desc->name ? desc->name : "(null)", desc->threadId ? "nonzero" : "zero", (long)user);
+        snprintf(s_first_thread, sizeof s_first_thread, "group=%s name=%s id=%s user=%ld self=%d", desc->groupName ? desc->groupName : "(null)",
+                 desc->name ? desc->name : "(null)", desc->threadId ? "nonzero" : "zero", (long)user, self);
     if (!own(desc->name)) return;
     s_own_threads++;
-    note("thread group=%s name=%s id=%s user=%ld thread=%s", desc->groupName, desc->name, desc->threadId ? "nonzero" : "zero", (long)user, thread_name());
+    note("thread group=%s name=%s id=%s user=%ld thread=%s self=%d", desc->groupName, desc->name, desc->threadId ? "nonzero" : "zero", (long)user, thread_name(), self);
 }
 
 static void on_frame(void* user)
@@ -437,7 +440,7 @@ static void* registered_thread(void* unused)
     uint64_t id = 0;
     int registered = s_profiler->RegisterThread(&id, "NativeGfxGroup", "NativeGfxThread");
     int unregistered = s_profiler->UnregisterThread(id);
-    note("register.thread.own=%d id=%s unregister=%d", registered, id ? "nonzero" : "zero", unregistered);
+    note("register.thread.own=%d id=%s self=%d unregister=%d", registered, id ? "nonzero" : "zero", id == (uint64_t)pthread_self(), unregistered);
     return NULL;
 }
 

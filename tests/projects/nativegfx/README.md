@@ -55,7 +55,8 @@ Recorded:
   plugin makes is heard of once (the first category ID is 39; the same name is the same category
   or marker, a built-in category's name that category); a callback registered twice is called
   twice. Four category callbacks and four marker callbacks can be registered, a fifth is refused
-  (-1); thread, frame and flow callbacks beyond four are taken. A marker event callback makes the
+  (-1); thread, frame and flow callbacks beyond four are taken. A thread's ID is the thread's own
+  handle (`self=1`). A marker event callback makes the
   marker's `callback` non-null and `EmitEvent` calls it at once, with no profiler recording; it is
   unregistered for a marker, without a marker for every marker it was registered for with the user
   data, and without user data either for all. A thread that registers is heard of on that thread.

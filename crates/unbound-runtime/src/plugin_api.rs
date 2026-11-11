@@ -294,8 +294,6 @@ pub fn provide(guid: Guid, interface: usize) {
 
 /// The `IUnityInterfaces` a plugin's `UnityPluginLoad` receives.
 pub fn interfaces() -> *const IUnityInterfaces {
-    // Plugins load on the main thread: the profiler reports it as such.
-    callbacks::on_main_thread();
     &INTERFACES
 }
 
@@ -366,15 +364,18 @@ pub fn send_device_event(event: i32) {
     }
 }
 
-/// A frame ended (the main thread): the profiler's frame callbacks. They run without the
-/// plugins' graphics context: a callback may call back into the engine.
+/// A frame ended (the main thread): the profiler's frame callbacks. The plugin context's lock
+/// is not taken for them: a callback may call back into the engine.
 pub fn frame() {
     callbacks::frame();
 }
 
 /// A frame began (the main thread): the events plugins sent through `IUnityEventQueue`, like
-/// [`frame`] without the plugins' graphics context.
+/// [`frame`] without the plugin context's lock. The first call, which the player loop's
+/// driver makes before any plugin loads, tells the profiler callbacks which thread is the
+/// main one.
 pub fn dispatch_events() {
+    callbacks::on_main_thread();
     events::dispatch();
 }
 

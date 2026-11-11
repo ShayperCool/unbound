@@ -144,7 +144,7 @@ const SCRIPTS: usize = 1;
 const MAIN_THREAD: (&CStr, &CStr) = (c"", c"Main Thread");
 /// The category and the marker callbacks that can be registered at a time.
 const MAX_CALLBACKS: usize = 4;
-/// The main thread's ID (the thread that first asked for the plugin interfaces).
+/// The main thread's ID (the thread the player loop runs on: [`on_main_thread`]).
 static MAIN_THREAD_ID: AtomicU64 = AtomicU64::new(0);
 
 unsafe extern "C" {
@@ -153,7 +153,8 @@ unsafe extern "C" {
     fn pthread_self() -> usize;
 }
 
-/// The calling thread's ID as plugins see it: the operating system's, as the header says.
+/// The calling thread's ID as plugins see it: the thread's own handle, as the header says
+/// and the Editor reports (tests/projects/nativegfx `profiler.load` `self=1`).
 fn thread_id() -> u64 {
     // SAFETY: no arguments; the calling thread's own handle.
     unsafe { pthread_self() as u64 }
@@ -229,6 +230,17 @@ fn remove(list: &mut Vec<Registered>, registered: Registered) -> i32 {
         }
         None => -1,
     }
+}
+
+/// What scripts make is not reported: said once, to whoever listens for markers or for a
+/// marker's events.
+fn script_markers_unreported() {
+    static SAID: std::sync::Once = std::sync::Once::new();
+    SAID.call_once(|| {
+        tracing::warn!(
+            "a native plugin listens for profiler markers (IUnityProfilerCallbacks): it hears of the markers plugins make and of their events, not of the ones scripts make (ProfilerMarker, Profiler.BeginSample)"
+        );
+    });
 }
 
 /// A null callback crashes the Editor; here it is refused.
@@ -396,13 +408,7 @@ extern "C" fn register_create_marker(callback: Option<MarkerCallback>, user: *mu
     }) else {
         return -1;
     };
-    // What scripts make is not reported: said once, to whoever listens for markers.
-    static SAID: std::sync::Once = std::sync::Once::new();
-    SAID.call_once(|| {
-        tracing::warn!(
-            "a native plugin listens for profiler markers (IUnityProfilerCallbacks): it hears of the markers plugins make, not of the ones scripts make (ProfilerMarker, Profiler.BeginSample)"
-        );
-    });
+    script_markers_unreported();
     for address in made {
         callback(address as *const MarkerDesc, user);
     }
@@ -438,6 +444,7 @@ extern "C" fn register_marker_event(
         // The marker says that something listens (plugins read it before they emit).
         listening(marker).store(marker as *mut c_void, Ordering::Release);
     });
+    script_markers_unreported();
     0
 }
 
@@ -466,12 +473,16 @@ extern "C" fn unregister_marker_event(
         if state.event_callbacks.len() == before {
             return -1;
         }
-        // The markers nothing listens to any more say so.
-        for &address in &state.markers {
+        // The markers nothing listens to any more say so: the named one, or any.
+        let quiet = |address: usize| {
             if !state.event_callbacks.iter().any(|(m, _)| *m == address) {
                 listening(address as *const MarkerDesc)
                     .store(std::ptr::null_mut(), Ordering::Release);
             }
+        };
+        match marker.is_null() {
+            true => state.markers.iter().copied().for_each(quiet),
+            false => quiet(marker as usize),
         }
         0
     })

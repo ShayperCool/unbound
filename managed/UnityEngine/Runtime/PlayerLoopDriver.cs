@@ -391,6 +391,7 @@ namespace Unbound.Runtime
         {
             AnimationSystem.BeginPlayMode();
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
+            Unbound.Runtime.NativePlugins.Boot();
             // The Editor loads them before entering Play mode.
             Unbound.Runtime.NativePlugins.Preload(GameDomain.PreloadedNativePlugins);
             SynchronizationContext.SetSynchronizationContext(MainThreadContext.Instance);

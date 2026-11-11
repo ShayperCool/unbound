@@ -223,6 +223,11 @@ impl RenderBackend for GpuBackend {
     }
 
     fn with_plugin_context(&self, work: &mut dyn FnMut()) {
+        // Only OpenGL Core has a context of the plugins' to make current (the other devices'
+        // plugins use the device's own interface): the work alone elsewhere.
+        if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
+            return work();
+        }
         // The renderer is not held meanwhile: the plugin may call back into the engine.
         let mut ran = false;
         let _ = crate::render::gl_interop::with(|_| {

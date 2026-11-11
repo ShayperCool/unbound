@@ -113,6 +113,13 @@ namespace Unbound.Runtime
             if (s_AnyLoaded && Native.IsReady) Native.Api.PluginFrame();
         }
 
+        /// <summary>Play mode begins, on the main thread and before any plugin loads: the first
+        /// dispatch (of nothing) tells the plugin interfaces which thread the main one is.</summary>
+        internal static void Boot()
+        {
+            if (Native.IsReady) Native.Api.PluginEvents();
+        }
+
         /// <summary>A frame began (the player loop's <c>DispatchEventQueueEvents</c>): the
         /// events plugins sent through the event queue reach their handlers
         /// (tests/projects/nativegfx <c>frames.sequence</c>: in the frame after the one they
