@@ -38,6 +38,22 @@ public partial class HumanoidProbe
         Put((s_JobKey ?? "job") + ".bones." + tag, "{" + string.Join(",", parts) + "}");
     }
 
+    /// <summary>The stance job of the stream controls (<c>stream.stance</c>: a job resets the
+    /// stream to the stance pose each update above HumanA's clip, whose state's Foot IK then
+    /// pulls the legs to the clip's foot goals) without root motion applied, so the Animator
+    /// stays at the origin: the control beside stream.stance, where it moves away from it.
+    /// The transforms' locals are recorded every fourth step.</summary>
+    static void StanceInPlace()
+    {
+        Guarded("stream.stanceInPlace", () => PlayGraph("stream.stanceInPlace", g =>
+        {
+            var playable = AnimationScriptPlayable.Create(g, new HumanStreamJob { mode = HumanStreamJob.Mode.Stance, tag = 0 }, 1);
+            g.Connect(AnimationClipPlayable.Create(g, ControllerClip("HumanA")), 0, playable, 0);
+            playable.SetInputWeight(0, 1f);
+            return playable;
+        }, false, localsEvery: 4));
+    }
+
     /// <summary>Bone handle jobs (an AnimationScriptPlayable, root motion applied) above HumanA's
     /// clip, one per <see cref="HumanBoneJob.Mode"/>, each step with what the job reads before and
     /// after its change, the human stream's body and muscles after it, and the final pose with

@@ -464,6 +464,7 @@ public partial class HumanoidProbe : MonoBehaviour
             GoalBlends();
             BodyBlends();
             BoneHandles();
+            StanceInPlace();
         }
         catch (Exception e)
         {
