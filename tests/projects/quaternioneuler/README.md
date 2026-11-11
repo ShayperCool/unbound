@@ -78,8 +78,10 @@ The Unity 6000.0 contract and limitations are recorded at:
   distinguish the equal-angle endpoint rule; other interpolation cases remain
   covered by the existing math tests.
 - [ToAngleAxis](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Quaternion.ToAngleAxis.html):
-  converts to an axis and an angle in degrees. Raw component and cutoff controls
-  retain the measured behavior for inputs outside the usual unit assumption.
+  converts to an axis and an angle in degrees, with a right-axis default at no
+  rotation. The page says to normalize first and describes an exception otherwise;
+  the recorded 6000.0.71f1 non-unit controls complete without an exception.
+  Raw component and cutoff controls retain that measured behavior.
 - [Rotation manual](https://docs.unity3d.com/6000.0/Documentation/Manual/QuaternionAndEulerRotationsInUnity.html):
   describes quaternion rotations and their limitations. The edge controls above
   are measured behavior for raw inputs, rather than promises for valid rotations.
