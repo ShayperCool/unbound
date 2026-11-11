@@ -20,7 +20,7 @@ EPSILON = 1e-5
 # Per set: models, Reference subdirectory, a key every model records, its minimum count.
 SETS = dict(Axis=(32,'','/worldVertices',32), Signed=(8,'signed','/worldVertices',8),
             Pivots=(38,'pivots','/vertices',74), Skinned=(10,'skinned','/localBounds',10),
-            Rigged=(20,'rigged','/localBounds',17), Reduced=(9,'reduced','/vertices',9))
+            Rigged=(20,'rigged','/localBounds',17), Reduced=(16,'reduced','/vertices',16))
 SET = 'Axis'
 # The Pivots, Skinned, Rigged and Reduced sets scale the bound by the largest magnitude of each innermost
 # reference vector (at least 1): their world bases reach 100 (a centimetre root's scale), where

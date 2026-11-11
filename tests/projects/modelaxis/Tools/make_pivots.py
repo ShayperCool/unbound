@@ -452,7 +452,11 @@ BEND = {'animated': ((310, 311, 311, 312),
 DRIFT = {'animated': ((310, 311), ('Lcl Translation', 'Lcl Rotation'),
                       (((0, 0.9), (1, 1.2), (0, -0.3)), ((0, 10), (0, 0), (-20, 40)))),
          'seconds': 3}
+# One second through more than half a turn about two axes.
+TURN = {'animated': ((310, 311), ('Lcl Translation', 'Lcl Rotation'),
+                     (((0, 0.9), (1, 1.2), (0, -0.3)), ((0, 40), (0, 250), (-20, 300))))}
 LEGACY_REDUCED = dict(animationType=1, animationCompression=1)
+LEGACY_PACKED = dict(animationType=1, animationCompression=2)
 GENERIC = dict(animationType=2, avatarSetup=0)
 REDUCED = {
     'Default': (BEND, LEGACY_REDUCED),
@@ -467,6 +471,19 @@ REDUCED = {
     'Drift': (DRIFT, LEGACY_REDUCED),
     'GenericReduced': (BEND, dict(GENERIC, animationCompression=1)),
     'GenericOptimal': (BEND, dict(GENERIC, animationCompression=3)),
+    # Legacy under Keyframe Reduction and Compression: the rotation curves are stored packed.
+    'Packed': (BEND, LEGACY_PACKED),
+    'PackedLoose': (BEND, dict(LEGACY_PACKED, animationRotationError=3, animationPositionError=2,
+                               animationScaleError=2)),
+    'PackedRate60': (dict(BEND, time_mode=3), LEGACY_PACKED),
+    # 120 frames a second: frames closer than the hundredth of a second key times are stored in.
+    # The scale error stays off 0.5%, where dropping the scale corner at 1/3 s is a tie (README).
+    'PackedRate120': (dict(BEND, time_mode=1), dict(LEGACY_PACKED, animationScaleError=1)),
+    'PackedDrift': (DRIFT, LEGACY_PACKED),
+    # Past half a turn: the rotation's largest component changes and turns negative.
+    'PackedTurn': (TURN, LEGACY_PACKED),
+    # Legacy with the setting the other rig types call Optimal.
+    'LegacyOptimal': (BEND, dict(LEGACY_REDUCED, animationCompression=3)),
 }
 
 
