@@ -49,11 +49,13 @@ namespace Unbound.Runtime
         /// measured by physics2dadvanced automatic modes on Unity 6000.0.71f1.</summary>
         internal static bool FixedClockTicksMeasured => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>A scene without lighting data whose RenderSettings an earlier release saved
-        /// with a new scene's environment takes the built-in lighting data, measured in
-        /// tests/projects/realtimegi (legacy*) on Unity 6000.0.71f1. Other releases keep such a
-        /// scene without lighting data until measured.</summary>
-        internal static bool EarlierDefaultSceneLightingMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>What a scene without lighting data stores and reflects: a zero ambient probe
+        /// and a black cube, or the built-in lighting data when an earlier release saved its
+        /// RenderSettings with a new scene's environment; measured in tests/projects/realtimegi
+        /// (nodata*, legacy*) on Unity 6000.0.71f1. In other releases Unbound gives such a scene
+        /// zero and black with a warning: releases before Unity 6 bake both by default (the
+        /// Unity 6 upgrade guide), and later ones are not measured.</summary>
+        internal static bool SceneWithoutLightingDataMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>The project's release's major version (2022, 6000, ...).</summary>
         internal static int Major

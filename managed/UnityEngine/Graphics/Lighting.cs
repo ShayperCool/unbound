@@ -496,7 +496,13 @@ namespace UnityEngine
             Cubemap sky = null;
             if (firstScene) LightmapSettings.Reset();
             BindBakedSkybox(file, reference, null);
-            if (reference.IsNull && owner != null && EarlierDefaultEnvironment(owner.Body, file)) reference = s_BuiltinLightingData;
+            if (reference.IsNull && owner != null)
+            {
+                if (!Compat.SceneWithoutLightingDataMeasured)
+                    Unbound.Runtime.Stubs.Ignored("A scene without lighting data",
+                        "has a zero ambient probe and a black default reflection, as measured in the Unity 6000.0.71f1 Editor; this project's release is not measured (releases before Unity 6 bake both by default, and Unity 6 gives an earlier release's default scene its built-in lighting data)");
+                else if (EarlierDefaultEnvironment(owner.Body, file)) reference = s_BuiltinLightingData;
+            }
             if (!reference.IsNull && reference.Guid != null && Native.IsReady)
             {
                 try
@@ -566,49 +572,52 @@ namespace UnityEngine
         /// <summary>RenderSettings up to this serialized version were saved by releases that
         /// generated lighting automatically.</summary>
         const int AutomaticLightingSettingsVersion = 9;
-        /// <summary>The Euler angles of a new scene's directional light.</summary>
+        /// <summary>The Euler angles of a new scene's directional light, its own (not its
+        /// parents').</summary>
         static readonly Vector3 s_DefaultSunAngles = new Vector3(50f, -30f, 0f);
-        /// <summary>How far, in degrees, a sun may be from them.</summary>
-        const float DefaultSunTolerance = 0.01f;
+        /// <summary>How far, in degrees, each of a sun's angles may be from them: what a rotation
+        /// stored as a quaternion of floats loses, and no more.</summary>
+        const float DefaultSunTolerance = 0.001f;
 
         /// <summary>Whether a scene without lighting data takes the built-in one: its
-        /// RenderSettings were saved by an earlier release and its environment is that of a new
-        /// scene of then (the skybox ambient mode, the default skybox reflected at the default
-        /// resolution, a sun at the default light's angles), in a linear project. Matches the
-        /// Unity 6000.0.71f1 Editor, tests/projects/realtimegi legacy*: with the sun turned or
-        /// missing, or with another sky, the scene has no lighting data (also when its settings
-        /// are this release's, nodata*). Not measured, and without lighting data here: other
-        /// ambient or reflection sources, a gamma-space project, several directional lights.</summary>
-        static bool EarlierDefaultEnvironment(YNode body, LoadedFile file)
+        /// RenderSettings were saved by an earlier release (whatever saved its LightmapSettings)
+        /// and its environment is that of a new scene of then (the skybox ambient mode, the
+        /// default skybox reflected at the default resolution, a sun whose own angles are the
+        /// default light's, whatever its color and intensity), in a linear project. Matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/realtimegi legacy* and `--color-space gamma`:
+        /// with the sun turned or missing, with another sky, with this release's RenderSettings
+        /// (currentdefault, legacylightmapsonly, nodata*) or in a gamma-space project the scene
+        /// has no lighting data. Not measured, and without lighting data here: other ambient or
+        /// reflection sources, another reflection resolution, several directional lights, a
+        /// render pipeline that declares it bakes neither the ambient probe nor the default
+        /// reflection.</summary>
+        internal static bool EarlierDefaultEnvironment(YNode body, LoadedFile file)
         {
-            if (!Compat.EarlierDefaultSceneLightingMeasured) return false;
             if (body.Int("serializedVersion") > AutomaticLightingSettingsVersion || QualitySettings.activeColorSpace != ColorSpace.Linear) return false;
             if ((AmbientMode)body.Int("m_AmbientMode") != AmbientMode.Skybox) return false;
             if ((DefaultReflectionMode)body.Int("m_DefaultReflectionMode") != DefaultReflectionMode.Skybox || body.Int("m_DefaultReflectionResolution", 128) != 128) return false;
             var skybox = body.Ref("m_SkyboxMaterial");
             if (skybox.FileId != DefaultSkyboxFileId || skybox.Guid != BuiltinExtra) return false;
             var sun = SceneSun(body, file);
-            return sun != null && Quaternion.Angle(sun.transform.rotation, Quaternion.Euler(s_DefaultSunAngles)) < DefaultSunTolerance;
+            if (sun == null) return false;
+            var angles = sun.transform.localEulerAngles;
+            for (int axis = 0; axis < 3; axis++)
+                if (Mathf.Abs(Mathf.DeltaAngle(angles[axis], s_DefaultSunAngles[axis])) > DefaultSunTolerance) return false;
+            return true;
         }
 
         /// <summary>The sun of a scene being loaded (its objects are built, not yet active): the
-        /// light its RenderSettings name, else its brightest enabled directional light.</summary>
+        /// light its RenderSettings name, whatever it is, else its brightest enabled directional
+        /// light.</summary>
         static Light SceneSun(YNode body, LoadedFile file)
         {
             var named = body.Ref("m_Sun");
-            if (!named.IsNull) return file.Resolve(named, typeof(Light)) as Light;
+            if (!named.IsNull && file.Resolve(named, typeof(Light)) is Light given) return given;
             Light best = null;
             float bestValue = -1f;
             foreach (var candidate in file.Objects.Values)
-            {
-                if (!(candidate is Light light) || light.type != LightType.Directional || !light.enabled || !light.gameObject.activeSelf) continue;
-                float value = light.intensity * light.color.grayscale;
-                if (value > bestValue)
-                {
-                    best = light;
-                    bestValue = value;
-                }
-            }
+                if (candidate is Light light && light.type == LightType.Directional && light.enabled && light.gameObject.activeSelf)
+                    LightingGlobals.KeepBrighter(light, ref best, ref bestValue);
             return best;
         }
 
@@ -858,14 +867,19 @@ namespace Unbound.Runtime
             {
                 if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional || l.IsFullyBaked) continue;
                 if (builtin && l.cookie != null) continue;
-                float value = l.intensity * l.color.grayscale;
-                if (value > bestValue)
-                {
-                    best = l;
-                    bestValue = value;
-                }
+                KeepBrighter(l, ref best, ref bestValue);
             }
             return best;
+        }
+
+        /// <summary>Keeps the brighter of a directional light and the brightest so far (the
+        /// first of equals): how a scene without a named sun finds its sun.</summary>
+        internal static void KeepBrighter(Light candidate, ref Light best, ref float bestValue)
+        {
+            float value = candidate.intensity * candidate.color.grayscale;
+            if (value <= bestValue) return;
+            best = candidate;
+            bestValue = value;
         }
     }
 }

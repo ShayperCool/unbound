@@ -591,6 +591,8 @@ namespace Unbound.Runtime
                 // additive one adds to it.
                 bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
                 var references = LightingReferences(doc.Body);
+                if (references.Data.IsNull && doc.Body.Int("m_BakeOnSceneLoad") != 0)
+                    Stubs.Ignored("Lightmapping.bakeOnSceneLoad", "is not honoured: a scene without lighting data is not baked when it loads, and has none");
                 RenderSettings.ReadLightingData(references.Data, resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
                 if (scene != null)
                 {

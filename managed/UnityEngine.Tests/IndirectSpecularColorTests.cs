@@ -256,6 +256,122 @@ namespace Unbound.Tests
 
         /// <summary>Saves every RenderSettings static (its per-scene records included) and the halo
         /// global its reader sets, and puts them back.</summary>
+        /// <summary>The RenderSettings of a new scene of an earlier release.</summary>
+        const string EarlierDefault = @"RenderSettings:
+  serializedVersion: 9
+  m_AmbientMode: 0
+  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_DefaultReflectionMode: 0
+  m_DefaultReflectionResolution: 128
+  m_Sun: {fileID: 0}
+";
+
+        /// <summary>A scene file holding one directional light with these angles of its own,
+        /// under a parent turned about the vertical when <paramref name="parentTurn"/> is not 0.</summary>
+        static LoadedFile FileWithSun(Vector3 angles, float parentTurn, List<GameObject> made, float intensity = 1f)
+        {
+            var file = new LoadedFile();
+            var sun = new GameObject("Sun");
+            made.Add(sun);
+            var light = sun.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = intensity;
+            if (parentTurn != 0f)
+            {
+                var parent = new GameObject("Turned");
+                made.Add(parent);
+                parent.transform.rotation = Quaternion.Euler(0f, parentTurn, 0f);
+                sun.transform.SetParent(parent.transform, false);
+            }
+            sun.transform.localRotation = Quaternion.Euler(angles);
+            file.Objects[1] = light;
+            return file;
+        }
+
+        [Fact]
+        public void AnEarlierReleasesDefaultSceneIsKnownByItsSettingsVersionAndItsSunsOwnAngles()
+        {
+            // The Unity 6000.0.71f1 Editor, tests/projects/realtimegi legacy*, currentdefault and
+            // `--color-space gamma`: a scene without lighting data takes the built-in one when
+            // its RenderSettings are an earlier release's with a new scene's environment, in a
+            // linear project. The sun's own angles count (legacychildsun: under a turned parent),
+            // not its color or intensity (legacydimsun).
+            var body = UnityEngine.Tests.TestYaml.DocumentBody(EarlierDefault);
+            var current = UnityEngine.Tests.TestYaml.DocumentBody(EarlierDefault.Replace("serializedVersion: 9", "serializedVersion: 10"));
+            var made = new List<GameObject>();
+            var colorSpace = QualitySettings.s_ColorSpace;
+            try
+            {
+                QualitySettings.s_ColorSpace = ColorSpace.Linear;
+                var defaultAngles = new Vector3(50f, -30f, 0f);
+                Assert.True(RenderSettings.EarlierDefaultEnvironment(body, FileWithSun(defaultAngles, 0f, made)));
+                Assert.True(RenderSettings.EarlierDefaultEnvironment(body, FileWithSun(defaultAngles, 90f, made)));
+                Assert.True(RenderSettings.EarlierDefaultEnvironment(body, FileWithSun(defaultAngles, 0f, made, intensity: 0.3f)));
+                Assert.False(RenderSettings.EarlierDefaultEnvironment(body, FileWithSun(new Vector3(20f, 40f, 0f), 0f, made)));
+                // The default direction reached through a parent is not the default scene's light.
+                Assert.False(RenderSettings.EarlierDefaultEnvironment(body, FileWithSun(new Vector3(50f, -120f, 0f), 90f, made)));
+                Assert.False(RenderSettings.EarlierDefaultEnvironment(body, new LoadedFile()));
+                Assert.False(RenderSettings.EarlierDefaultEnvironment(current, FileWithSun(defaultAngles, 0f, made)));
+                QualitySettings.s_ColorSpace = ColorSpace.Gamma;
+                Assert.False(RenderSettings.EarlierDefaultEnvironment(body, FileWithSun(defaultAngles, 0f, made)));
+            }
+            finally
+            {
+                QualitySettings.s_ColorSpace = colorSpace;
+                foreach (var go in made) UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void ASceneWithoutLightingDataIsNamedInAReleaseThatIsNotMeasured()
+        {
+            // Zero and black are what the Unity 6000.0.71f1 Editor gives; releases before Unity 6
+            // bake the ambient probe and the sky's reflection by default (its upgrade guide), so
+            // there Unbound says once that it gives none.
+            const string Member = "A scene without lighting data";
+            static int Hits()
+            {
+                foreach (var hit in Stubs.HitReport())
+                    if (hit.Key == Member) return hit.Value;
+                return 0;
+            }
+            using var state = new State();
+            var release = ProjectInfo.UnityVersion;
+            var logs = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new Capture(logs);
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                int before = Hits();
+                var measured = state.Scene(Version10, default, null);
+                RenderSettings.ReadLightingData(default, state.ResolverOf(measured), firstScene: false);
+                Assert.Equal(before, Hits());
+                Assert.DoesNotContain(logs, l => l.Contains(Member));
+                ProjectInfo.UnityVersion = "2022.3.62f1";
+                var earlier = state.Scene(Version10, default, null);
+                RenderSettings.ReadLightingData(default, state.ResolverOf(earlier), firstScene: false);
+                Assert.Equal(before + 1, Hits());
+                if (before == 0) Assert.Contains(logs, l => l.Contains(Member) && l.Contains("not measured"));
+                // A scene with lighting data is not named.
+                RenderSettings.ReadLightingData(ProjectBake, state.ResolverOf(earlier), firstScene: false);
+                Assert.Equal(before + 1, Hits());
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                ProjectInfo.UnityVersion = release;
+            }
+        }
+
+        sealed class Capture : ILogHandler
+        {
+            readonly List<string> m_Logs;
+            internal Capture(List<string> logs) => m_Logs = logs;
+            public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args) => m_Logs.Add(string.Format(format, args));
+            public void LogException(Exception exception, UnityEngine.Object context) => m_Logs.Add(exception.Message);
+        }
+
         sealed class State : IDisposable
         {
             const BindingFlags Statics = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
