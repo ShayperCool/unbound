@@ -160,9 +160,9 @@ lighting the room (the documented parts are in the contract above):
 - The ambient color (`room-env-*`): its linear value in every texel. A custom ambient mode
   (`room-ambient-custom`) and a skybox ambient mode without a skybox material (`room-sky-none`)
   read the ambient color too. The ambient intensity does not scale it (`room-sky-none` and
-  `room-ambient-custom` at intensity 2).
+  `room-ambient-custom` at intensity 3).
 - A gradient (`room-gradient`): the sky color on +Y, the ground color on -Y and the equator color
-  on the four other faces, linear; the same at ambient intensity 2 (`room-gradient-intensity`).
+  on the four other faces, linear; the same at ambient intensity 3 (`room-gradient-intensity`).
 - A skybox (`room-sky*`): the sky drawn into the six faces, one texel per pixel of a 90 degree
   view, as the ambient probe's capture draws it (with the sun's direction and without its color,
   so without a sun disk; without a main light, a light direction of (0, 0, -1)). The ambient
@@ -174,8 +174,11 @@ lighting the room (the documented parts are in the contract above):
   place in the sky).
 - `DynamicGI.SetEnvironmentData` (`room-envdata`): the cube's RGB as given, linear, faces and
   rows in the order above. It stands until one of those inputs changes
-  (`room-envdata-intensity`: the ambient intensity, as documented) or
-  `DynamicGI.UpdateEnvironment` is called (`room-envdata-update`). An array of another length
+  (`room-envdata-intensity`: the ambient intensity with a skybox, and `room-envdata-source`:
+  another ambient mode, both as documented) or
+  `DynamicGI.UpdateEnvironment` is called (`room-envdata-update`). Where the intensity scales
+  nothing it is not such an input: data set in the gradient mode stays when the intensity
+  changes (`room-envdata-gradient-intensity`). An array of another length
   throws ArgumentException ("Array size is wrong. It must have 1536 elements. The resolution of
   each face is 8x8 texels."), none ArgumentNullException.
 - `RenderSettings.ambientProbe` with a skybox: `DynamicGI.UpdateEnvironment` derives it from the
@@ -186,15 +189,18 @@ lighting the room (the documented parts are in the contract above):
 Observed once and not modelled: data given to `SetEnvironmentData` one frame after the sun was
 destroyed did not show (the lightmap stayed the sky's): the Editor reads the sky back over
 several frames, and an update still on its way replaced the data. Unbound draws and reads the sky
-in the frame its inputs change. Not measured: a scene whose environment lighting is baked
+in the frame its inputs change, and data set in the frame of such a change stays. Not measured:
+a scene whose environment lighting is baked
 (`LightingSettings.realtimeEnvironmentLighting` off with baked GI on; Unbound gives realtime GI
-the environment all the same), sky materials other than the procedural one (they are drawn by
-the same capture), and gamma-space projects.
+the environment all the same, with a warning), a skybox under a scriptable render pipeline (drawn
+as the pipeline draws a camera, with a warning), sky materials other than the procedural one
+(they are drawn by the same capture), and gamma-space projects.
 
 Unbound (`Graphics/RealtimeGIEnvironment.cs`) keeps the cube and what it was made from (the
 ambient mode and colors, or the skybox material and its change count, the ambient intensity and
 the sun's direction in thousandths, so that a slowly turning sun does not draw the sky again in
-every frame); a frame makes it again only when that key differs, and each native scene takes a
+every frame); a frame makes it again only when that key differs (the sky's capture sends scripts
+no camera messages or events), and each native scene takes a
 changed cube once (`gi_set_environment`), which restarts its update only when values changed.
 
 ## Material inputs
