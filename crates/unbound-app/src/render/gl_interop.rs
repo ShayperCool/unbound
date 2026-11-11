@@ -30,7 +30,7 @@ pub mod format {
     pub const COMPRESSED_RED_RGTC1: u32 = 0x8DBB;
     pub const COMPRESSED_RG_RGTC2: u32 = 0x8DBD;
     /// Unsized formats, as `glTexImage2D` takes them and the texture reports them: 8 bits a
-    /// channel.
+    /// channel on the measured NVIDIA driver (OpenGL leaves the size to the driver).
     pub const RED: u32 = 0x1903;
     pub const RG: u32 = 0x8227;
     pub const RGB: u32 = 0x1907;

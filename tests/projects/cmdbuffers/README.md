@@ -239,7 +239,8 @@ Shader settings and other ray tracing APIs outside these command-buffer members 
 this coverage. No ray tracing device or actual XR rendering behavior is inferred.
 
 The strict comparator retains every difference. The gate additionally requires the precise
-unsupported exception for SideBySide, with untouched pixels. It accepts no other new difference.
+unsupported exception for SideBySide, with untouched pixels. Apart from the differences this
+README names, it accepts no new one.
 That is an explicit unsupported mechanism, not a parity claim. The plugin entry points run their
 callbacks since native rendering plugins are supported, and their events compare exactly
 (`device.plugin.*`; `docs/COMPATIBILITY_GAPS.md`, the native rendering plugins row). The follow-up

@@ -466,6 +466,12 @@ impl UnityRenderer {
     /// and through `mips` of its levels (a texture declared without a mip chain shows its first
     /// level only). Matches tests/projects/nativegfx `external.*`, `ext.*`.
     pub fn external_texture(&mut self, handle: u64, native: u64, mips: u32) -> Result<(), String> {
+        #[cfg(target_os = "linux")]
+        if self.vulkan_plugins.is_some() {
+            return Err(
+                "external textures are not supported on the Vulkan device (unmeasured)".into(),
+            );
+        }
         let name =
             u32::try_from(native).map_err(|_| format!("{native} is not an OpenGL texture name"))?;
         // What plugins saw of the texture goes; while it showed another's storage it stays an
