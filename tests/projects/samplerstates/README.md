@@ -36,20 +36,33 @@ The programs that fill the depth targets are also drawn where there is no depth 
 cleared target after the program that writes only the depth, and `DepthOnly.depth` a depth target
 that program filled.
 
-Reference (`Reference/unity-6000.0.71f1.jsonl`, the Unity 6000.0.71f1 Editor on OpenGL Core,
-NVIDIA, two identical captures): a texture is sampled through its own sampler state whatever
-sampler the program names, an inline one or another texture's, in either stage, for every
-texture shape, and with comparisons too. A texture's own state compares when the texture is a
-`Shadowmap` (less or equal, through the texture's filter): a comparison of a `Depth` target
-reads the stored depth instead, as its other samples do. A program's depth output is the depth
-stored; without a depth buffer its colors are drawn alone, and a program without colors leaves
-the target as it was. The Vulkan Editor is not recorded here yet.
+Reference, the Unity 6000.0.71f1 Editor on NVIDIA, two identical captures for each device.
 
-Unbound: `run.py check` compares an Unbound capture (`--force-glcore`) with the reference.
-`residuals.json` lists the cases that differ with their cause: Unbound compares where the
-Editor's comparison reads the depth of a texture whose state does not compare, and stores 24
-bits where the Editor's depth buffer has 16.
+OpenGL Core (`Reference/unity-6000.0.71f1.jsonl`): a texture is sampled through its own sampler
+state whatever sampler the program names, an inline one or another texture's, in either stage,
+for every texture shape, and with comparisons too. A texture's own state compares when the
+texture is a `Shadowmap` (less or equal, through the texture's filter): a comparison of a `Depth`
+target reads the stored depth instead, as its other samples do.
+
+Vulkan (`Reference/unity-6000.0.71f1/vulkan.jsonl`, `--device vulkan`): a texture is sampled
+through the sampler the program names: an inline sampler is the state its name spells, another
+texture's sampler that texture's state, with comparisons too. An inline `...Compare` sampler
+compares (greater or equal: depth is reversed, and the far plane is stored as 0); a texture's
+own sampler compares when the texture is a `Shadowmap`, and reads the stored depth when it is a
+`Depth` target. A program with a sampler of a texture it does not use (`Shapes`: `sampler_B`
+without `_B`) is an error there ("Unrecognized sampler 'sampler_b' - does not match any texture
+and is not a recognized inline name") and draws with the error shader.
+
+On both devices a program's depth output is the depth stored; without a depth buffer its colors
+are drawn alone, and a program without colors leaves the target as it was.
+
+Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--force-vulkan` with
+`--device vulkan`) with the device's reference. `residuals.json` and `residuals-vulkan.json`
+list the cases that differ with their cause: Unbound compares where the Editor's comparison
+reads the depth of a texture whose state does not compare, and stores 24 bits where the
+Editor's depth buffer has 16.
 
     python3 tests/projects/samplerstates/run.py native --label a   # the Editor, twice (a-1, a-2)
     python3 tests/projects/samplerstates/run.py publish a-1 a-2
     python3 tests/projects/samplerstates/run.py check
+    python3 tests/projects/samplerstates/run.py check --device vulkan
