@@ -193,9 +193,12 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A state that gives no humanoid pose leaves the body to what the pose's other
-        /// values take there (unmeasured in the Editor; as before): in a transition from an empty
-        /// state on an override layer, the body moves from the layer below's to the clip's with
-        /// the transition; in a transition to a state whose clip has no humanoid curve, it moves
+        /// values take there (as before): in a transition from an empty state on an override
+        /// layer, the body moves from the layer below's to the clip's with the transition (the
+        /// Editor's body moves steadily too, but not to the same place: an Editor capture of
+        /// tests/projects/humanoid's HumanBodyEmptyLayerTransition controller, not in the
+        /// reference, open in docs/COMPATIBILITY_GAPS.md); in a transition to a state whose
+        /// clip has no humanoid curve, it moves
         /// to the identity with it. Neither jumps when the transition starts or ends.</summary>
         [Fact]
         public void TheBodyFollowsATransitionWithAStateWithoutAHumanoidPose()
@@ -269,34 +272,56 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>What a Direct blend tree's clips leave of one is the identity as it is
-        /// (measured for a foot goal in an Editor capture of tests/projects/humanoid's
-        /// HumanBodyDirectEmptyChild controller, not in the reference): a goal's
-        /// rotation with a negative w at 0.5 blends with (0, 0, 0, 1), not with the identity of
-        /// its own hemisphere; the body's follows the same rule (unmeasured: the probe's bodies
-        /// below a total of one have a positive w). Control: the two differ.</summary>
-        [Fact]
-        public void ADirectBlendTreeBelowOneCompletesRotationsWithThePlainIdentity()
+        /// <summary>What a Direct blend tree's clips leave of one is the identity (0, 0, 0, 1) as it
+        /// is, whatever hemisphere the clips' sum is in, and a sum starts with its first rotation
+        /// as it is unless all four of its components are negative, which starts it as the
+        /// positive twin (6000.0.71f1, tests/projects/humanoid body.directLowNeg and
+        /// bodyGraph.lowNeg for a body with a negative w and mixed signs, body.directHalfNegGoal
+        /// for a goal with four negative components; a body with four negative components
+        /// follows the goal's rule unmeasured). Control: the two readings differ.</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ADirectBlendTreeBelowOneCompletesRotationsWithThePlainIdentity(bool allNegative)
         {
-            var leaning = -Q(100f, 0f);
-            Assert.True(leaning.w < -0.1f);
-            var plain = M.QNormalize(leaning * 0.5f + F4.QIdentity * 0.5f);
-            var aligned = M.QNormalize(leaning * 0.5f - F4.QIdentity * 0.5f);
-            Assert.True(Fixture.Angle(plain, aligned) > 20f);
-
-            var body = Play(Fixture.TreeController(true, null, 0.5f, 0f, Clip(1f, leaning), Clip(1f, F4.QIdentity)));
-            Assert.True(Fixture.Angle(plain, BodyRotation(body)) < 0.1f);
+            // A negative w either way; one component positive, or none.
+            var rotation = M.QNormalize(allNegative ? new F4(-0.6f, -0.3f, -0.2f, -0.5f) : new F4(-0.6f, -0.3f, 0.2f, -0.5f));
+            var plain = M.QNormalize(rotation * 0.5f + F4.QIdentity * 0.5f);
+            var twin = M.QNormalize(rotation * -0.5f + F4.QIdentity * 0.5f);
+            Assert.True(Fixture.Angle(plain, twin) > 20f);
+            var expected = allNegative ? twin : plain;
 
             // The goal under an identity body, so that it is placed as its curves give it.
             var goal = Clip(null, default).Select(c => c.Item1 switch
             {
-                "LeftFootQ.x" => (c.Item1, leaning.x), "LeftFootQ.y" => (c.Item1, leaning.y),
-                "LeftFootQ.z" => (c.Item1, leaning.z), "LeftFootQ.w" => (c.Item1, leaning.w), _ => c,
+                "LeftFootQ.x" => (c.Item1, rotation.x), "LeftFootQ.y" => (c.Item1, rotation.y),
+                "LeftFootQ.z" => (c.Item1, rotation.z), "LeftFootQ.w" => (c.Item1, rotation.w), _ => c,
             }).ToArray();
             var goals = Play(Fixture.TreeController(true, null, 0.5f, 0f, goal, Clip(1f, F4.QIdentity)));
             var written = M.QNormalize(new F4(goals.Human.Value(LeftFoot + 3), goals.Human.Value(LeftFoot + 4), goals.Human.Value(LeftFoot + 5),
                 goals.Human.Value(LeftFoot + 6)));
-            Assert.True(Fixture.Angle(plain, written) < 0.1f);
+            Assert.True(Fixture.Angle(expected, written) < 0.1f);
+
+            // The body's rotation curves join the state's sum by the same rule.
+            var body = Play(Fixture.TreeController(true, null, 0.5f, 0f, Clip(1f, rotation), Clip(1f, F4.QIdentity)));
+            Assert.True(Fixture.Angle(expected, BodyRotation(body)) < 0.1f);
+        }
+
+        /// <summary>The hemisphere a rotation joins a sum in: the sum's; into an empty sum as it
+        /// is, unless its four components all have the sign bit set (a zero counts by its sign).</summary>
+        [Fact]
+        public void ARotationJoinsASumInItsHemisphereAndStartsOneByItsSigns()
+        {
+            F4 mixed = new F4(-0.6f, -0.3f, 0.2f, -0.5f), negative = new F4(-0.6f, -0.3f, -0.2f, -0.5f), sum = new F4(0.1f, 0.2f, 0.3f, 0.4f);
+            static void Same(F4 expected, F4 actual) =>
+                Assert.True(expected.x == actual.x && expected.y == actual.y && expected.z == actual.z && expected.w == actual.w);
+            Same(mixed, HumanRootMotion.InSum(F4.Zero, mixed));
+            Same(-negative, HumanRootMotion.InSum(F4.Zero, negative));
+            Same(new F4(0.6f, 0f, 0f, 0.5f), HumanRootMotion.InSum(F4.Zero, new F4(-0.6f, -0f, -0f, -0.5f)));
+            Same(new F4(-0.6f, 0f, 0f, -0.5f), HumanRootMotion.InSum(F4.Zero, new F4(-0.6f, 0f, -0f, -0.5f)));
+            Same(-mixed, HumanRootMotion.InSum(sum, mixed));
+            Same(-negative, HumanRootMotion.InSum(sum, negative));
+            Same(sum, HumanRootMotion.InSum(sum, sum));
         }
 
         /// <summary>A Direct blend tree's weights decide its blend, not how many clips carry them:

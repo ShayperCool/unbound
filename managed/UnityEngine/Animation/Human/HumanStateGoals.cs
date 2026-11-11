@@ -20,11 +20,11 @@ namespace Unbound.Runtime.Humanoid
     /// (goals.treeTransition, goals.treeSource). Where the humanoid clips do not fill the state's
     /// weight (a Direct blend tree whose weights do not sum to one, a tree with clips without
     /// humanoid curves), the state blends as an AnimationMixerPlayable's inputs do: below one,
-    /// what the clips leave is the identity goal, its rotation (0, 0, 0, 1) as it is whatever
-    /// hemisphere the clips' sum is in; above one, a goal's position is the clips' plain sum and
-    /// its rotation their normalized sum (body.directLowFootIK, body.directHighFootIK, weights of
-    /// 0.3 + 0.4 and 0.8 + 0.6; the plain identity in an Editor capture of the probe's
-    /// HumanBodyDirectEmptyChild controller, not in the reference).
+    /// what the clips leave is the identity, a rotation's (0, 0, 0, 1) as it is whatever
+    /// hemisphere the clips' sum is in (<see cref="HumanRootMotion.InSum"/> says which it starts
+    /// in); above one, a position is the clips' plain sum and a rotation their normalized sum
+    /// (body.directLowFootIK, body.directHighFootIK, weights of 0.3 + 0.4 and 0.8 + 0.6;
+    /// body.directLowNeg, body.directHalfNegGoal below one).
     /// The sampler hands a clip's body and goal curves over instead of adding them
     /// (<see cref="TakeBody"/>, <see cref="Take"/>), at the time it samples the clip's other
     /// curves at; <see cref="AddClip"/> collects the body and places and collects the goals, <see cref="EndState"/> adds the state's body and goals to the layer's
@@ -89,7 +89,7 @@ namespace Unbound.Runtime.Humanoid
             m_Clips++;
             var v = m_BodyValues;
             m_BodyPosition = m_BodyPosition + new F4(v[0], v[1], v[2], 0f) * weight;
-            m_BodyRotation = m_BodyRotation + Aligned(m_BodyRotation, M.QNormalize(new F4(v[3], v[4], v[5], v[6]))) * weight;
+            m_BodyRotation = m_BodyRotation + HumanRootMotion.InSum(m_BodyRotation, M.QNormalize(new F4(v[3], v[4], v[5], v[6]))) * weight;
             for (int g = 0; g < Goals; g++)
             {
                 int s = g * Width;
@@ -97,7 +97,7 @@ namespace Unbound.Runtime.Humanoid
                     M.QNormalize(new F4(m_Values[s + 3], m_Values[s + 4], m_Values[s + 5], m_Values[s + 6])), F4.One3);
                 var placed = M.Mul(m_Body, goal);
                 m_Positions[g] = m_Positions[g] + placed.t * weight;
-                m_Rotations[g] = m_Rotations[g] + Aligned(m_Rotations[g], placed.q) * weight;
+                m_Rotations[g] = m_Rotations[g] + HumanRootMotion.InSum(m_Rotations[g], placed.q) * weight;
             }
         }
 
@@ -132,14 +132,12 @@ namespace Unbound.Runtime.Humanoid
                 q = M.QNormalize(q) * weight;
             }
             int cx = b.HumanChannel(curve + 3), cy = b.HumanChannel(curve + 4), cz = b.HumanChannel(curve + 5), cw = b.HumanChannel(curve + 6);
-            q = Aligned(new F4(Held(pose, cx), Held(pose, cy), Held(pose, cz), Held(pose, cw)), q);
+            q = HumanRootMotion.InSum(new F4(Held(pose, cx), Held(pose, cy), Held(pose, cz), Held(pose, cw)), q);
             Add(pose, mask, cx, q.x, weight);
             Add(pose, mask, cy, q.y, weight);
             Add(pose, mask, cz, q.z, weight);
             Add(pose, mask, cw, q.w, weight);
         }
-
-        static F4 Aligned(F4 held, F4 q) => held.x * q.x + held.y * q.y + held.z * q.z + held.w * q.w < 0f ? -q : q;
 
         static float Held(AnimationPose pose, int channel) => channel >= 0 && channel < pose.Value.Length ? pose.Value[channel] : 0f;
 

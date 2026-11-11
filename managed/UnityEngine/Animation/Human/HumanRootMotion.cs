@@ -486,11 +486,9 @@ namespace Unbound.Runtime.Humanoid
         /// for generic channels (6000.0.71f1, tests/projects/animculling humanMixerShape: sums 0,
         /// 0.5 and 1.5 scale the body and step; rotations are the normalized filled sum). Unit sums
         /// give the same result either way. The identity that takes the rest of a rotation is
-        /// (0, 0, 0, 1) as it is, whatever hemisphere the inputs' sum is in (measured for a goal's
-        /// rotation in a controller's state, in an Editor capture of tests/projects/humanoid's
-        /// HumanBodyDirectEmptyChild controller that is not in the reference: a foot goal whose
-        /// rotation has a negative w, at 0.7; the body's and the feet's here
-        /// follow it unmeasured, the probe's bodies below a total of one have a positive w); with
+        /// (0, 0, 0, 1) as it is, whatever hemisphere the inputs' sum is in (tests/projects/humanoid
+        /// body.directLowNeg, bodyGraph.lowNeg: a body whose rotation has a negative w at 0.3
+        /// beside a clip at 0.4; <see cref="InSum"/> says which hemisphere a sum starts in); with
         /// <paramref name="alignRest"/> it is taken in the sum's hemisphere, as a layer's blend
         /// from the identity is (<see cref="OverNoClip"/>).</summary>
         public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights, bool sum = false,
@@ -683,12 +681,22 @@ namespace Unbound.Runtime.Humanoid
 
         static bool Near(float a, float b) => MathF.Abs(a - b) <= RootRounding * MathF.Max(1f, MathF.Abs(b));
 
+        /// <summary>A rotation as it joins a weighted sum of rotations: negated when its dot
+        /// product with the sum has the sign bit set. That is the sum's hemisphere, and for an
+        /// empty sum a rotation whose four components are all negative (a dot product of −0),
+        /// which so starts the sum as its positive twin; any other first rotation starts it as
+        /// it is. Matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
+        /// body.directHalfNegGoal (a goal rotation with four negative components alone at 0.5
+        /// in a Direct blend tree: the identity completes its positive twin) and
+        /// body.directLowNeg, bodyGraph.lowNeg (a body rotation with a negative w and mixed
+        /// signs at 0.3 beside a clip at 0.4: the identity completes it as it is).</summary>
+        internal static F4 InSum(F4 sum, F4 q) =>
+            float.IsNegative((sum.x * q.x + sum.y * q.y) + (sum.z * q.z + sum.w * q.w)) ? -q : q;
+
         static void Add(ref Trs sum, in Trs x, float w)
         {
-            var q = x.q;
-            if (sum.q.x * q.x + sum.q.y * q.y + sum.q.z * q.z + sum.q.w * q.w < 0f) q = -q;
             sum.t = sum.t + x.t * w;
-            sum.q = sum.q + q * w;
+            sum.q = sum.q + InSum(sum.q, x.q) * w;
         }
 
         /// <summary>A foot goal's move during a step, in its previous frame: prev⁻¹ · delta · cur.</summary>
