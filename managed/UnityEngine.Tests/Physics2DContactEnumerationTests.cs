@@ -204,6 +204,74 @@ namespace UnityEngine.Tests
                 Physics2D.minSubStepFPS = oldFps; Physics2D.maxSubStepCount = oldCount;
             }
         }
+        [Theory]
+        [InlineData("6000.0.71f1", true)]
+        [InlineData("6000.0.72f1", false)]
+        public void ContactPayloadSelectsTheMeasuredPolicyAndReportsItsFallback(string version, bool measured)
+        {
+            const string member = "Physics2D contact payload";
+            var hits = (System.Collections.Concurrent.ConcurrentDictionary<string, int>)typeof(Unbound.Runtime.Stubs)
+                .GetField("Hits", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).GetValue(null);
+            bool hadHit = hits.TryRemove(member, out int previousHit);
+            var logger = Debug.unityLogger;
+            var handler = logger.logHandler;
+            bool enabled = logger.logEnabled; var filter = logger.filterLogType;
+            var capture = new PayloadLogCapture(handler);
+            try
+            {
+                logger.logHandler = capture; logger.logEnabled = true; logger.filterLogType = LogType.Log;
+                ProjectInfo.UnityVersion = version;
+                var circle = Impact(false);
+                Assert.Equal(measured, circle.GetContact(0).normalImpulse > 0);
+                var box = Impact(true);
+                var pointVelocity = box.GetContact(0).relativeVelocity;
+                if (measured) Assert.Equal(pointVelocity, box.relativeVelocity);
+                else Assert.True((pointVelocity - box.relativeVelocity).magnitude > 1);
+                Assert.Equal(!measured, capture.Warnings.Exists(message => message.Contains(member)));
+            }
+            finally
+            {
+                logger.logHandler = handler; logger.logEnabled = enabled; logger.filterLogType = filter;
+                hits.TryRemove(member, out _);
+                if (hadHit) hits[member] = previousHit;
+            }
+        }
+        Collision2D Impact(bool box)
+        {
+            Unbound.Runtime.Physics2DWorld.Reset();
+            Physics2D.gravity = new Vector2(0, -9.81f);
+            var floor = new GameObject("ground"); objects.Add(floor);
+            floor.transform.position = new Vector3(0, -.5f, 0);
+            floor.AddComponent<BoxCollider2D>().size = new Vector2(20, 1);
+            var moving = new GameObject("moving"); objects.Add(moving);
+            moving.transform.position = new Vector3(0, .6f, 0);
+            moving.transform.rotation = Quaternion.Euler(0, 0, box ? 13 : 0);
+            Collider2D collider = box ? (Collider2D)moving.AddComponent<BoxCollider2D>() : moving.AddComponent<CircleCollider2D>();
+            collider.sharedMaterial = new PhysicsMaterial2D { bounciness = .8f, friction = .4f };
+            var body = moving.AddComponent<Rigidbody2D>();
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.linearVelocity = new Vector2(1, -12); body.angularVelocity = 17;
+            var observer = moving.AddComponent<ImpulseObserver>();
+            for (int i = 0; i < 20 && observer.Collision == null; i++) Step();
+            Assert.NotNull(observer.Collision);
+            var collision = observer.Collision;
+            foreach (var o in objects) if (o) Object.DestroyImmediate(o);
+            objects.Clear();
+            return collision;
+        }
+        sealed class PayloadLogCapture : ILogHandler
+        {
+            readonly ILogHandler inner;
+            internal readonly List<string> Warnings = new List<string>();
+            internal PayloadLogCapture(ILogHandler inner) => this.inner = inner;
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning)
+                    Warnings.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
+                inner.LogFormat(type, context, format, args);
+            }
+            public void LogException(Exception exception, Object context) => inner.LogException(exception, context);
+        }
         public sealed class ImpulseObserver : MonoBehaviour
         {
             public Collision2D Collision;
