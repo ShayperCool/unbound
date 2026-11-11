@@ -14,7 +14,8 @@ turns on generateSecondaryUV with the variant's unwrap settings:
 
 The Repair variant holds Sources/Repair and the flat and welded models of Sources/Normals
 (meshes the unwrap repairs: non-manifold edges and vertices, degenerate triangles) with the
-Default settings.
+Default settings; RepairOff holds Lines (no triangle left to unwrap) with generateSecondaryUV
+off.
 
 The normals variants hold the smaller models and Sources/Normals, with mesh optimization and
 generateSecondaryUV off, under each normals setting (`tangentSpace`):
@@ -210,6 +211,7 @@ def main():
     repair = sorted(p for p in (PROBE/'Sources/Repair').iterdir() if p.suffix in ('.fbx', '.obj'))
     repair += [p for p in normal_models if p.stem in REPAIR_NORMAL_MODELS]
     variants.append(('Repair', {}, repair))
+    variants.append(('RepairOff', dict(generateSecondaryUV=0), [p for p in repair if p.stem == 'Lines']))
     for variant, overrides, sources in variants:
         folder = resources/variant
         folder.mkdir()

@@ -12,7 +12,8 @@ reversed copy of its top face: two faces back to back), Folded (a strip of quads
 turns back over the one before it with its winding flipped), Slivers (a grid of quads with a
 needle triangle, a triangle of three collinear corners whose middle corner lies nearer one end,
 one nearer the other end, and a triangle with two corners closer than 1e-6 of the mesh size),
-SphereFin (a UV sphere of more than a hundred triangles with a fin quad on one of its edges).
+SphereFin (a UV sphere of more than a hundred triangles with a fin quad on one of its edges),
+Lines (nothing but two triangles of three collinear corners each: no triangle is left to unwrap).
 """
 import bpy, math, os, sys
 
@@ -86,6 +87,9 @@ grid += [
 tris = [[top[1], top[0], extra], [top[2], top[1], extra + 1], [top[3], top[2], extra + 2],
         [top[4], top[3], extra + 3]]
 model('Slivers', grid, quads + tris)
+
+# Lines: two triangles, each with its three corners on one line.
+model('Lines', [(0, 0, 0), (1, 0, 0), (2.5, 0, 0), (0, 1, 0.5), (0, 2, 1), (0, 4, 2)], [[0, 1, 2], [3, 4, 5]])
 
 # SphereFin: a UV sphere (16 segments, 10 rings) and a fin quad on one of its edges.
 bpy.ops.wm.read_factory_settings(use_empty=True)
