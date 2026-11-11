@@ -1548,7 +1548,14 @@ impl<'a> Builder<'a> {
                     (Vec::new(), Vec::new(), Vec::new());
                 for time in frame_times(start, end, fps) {
                     let t = ufbx::evaluate_transform(&stack.anim, source, time);
-                    let rotation_time = frame_key_time(time, start, fps);
+                    // Humanoid clips keep the plain difference: their transform keys only
+                    // feed the muscle conversion, whose key times are not measured against
+                    // these.
+                    let rotation_time = if self.settings.animation_type == 3 {
+                        (time - start) as f32
+                    } else {
+                        frame_key_time(time, start, fps)
+                    };
                     // Positions and scales end exactly at the range's end (measured for
                     // positions, tests/projects/modelaxis Reduced: Drift; scales unmeasured).
                     let time = if time == end {
@@ -3346,11 +3353,11 @@ fn frame_times(start: f64, end: f64, fps: f64) -> Vec<f64> {
     times
 }
 
-/// The key time of a resampled transform curve at `time` of a range starting at `start`: a whole
-/// number of frames after the start is that number times one frame's length, both in single
-/// precision (matches the Unity 6000.0.71f1 Editor's key times, tests/projects/modelaxis
-/// Reduced, at 30, 60 and 120 frames a second; three seconds at 30 give 3.0000002). Other
-/// times (a range that ends between frames) are the difference itself.
+/// The key time of a Legacy or Generic clip's resampled transform curve at `time` of a range
+/// starting at `start`: a whole number of frames after the start is that number times one
+/// frame's length, both in single precision (matches the Unity 6000.0.71f1 Editor's key times,
+/// tests/projects/modelaxis Reduced, at 30, 60 and 120 frames a second; three seconds at 30
+/// give 3.0000002). Other times (a range that ends between frames) are the difference itself.
 fn frame_key_time(time: f64, start: f64, fps: f64) -> f32 {
     const EPSILON: f64 = 1e-6;
     let frames = (time - start) * fps;
