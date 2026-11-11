@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public static class ProbeEntry
 {
@@ -60,6 +61,10 @@ public static class ProbeEntry
         foreach (bool delaunay in new[] { false, true }) PartitionDelaunay(delaunay);
         OutlineFrameControl();
         foreach (float coordinate in new[] { 800000f, 999000f, 1000000f, 8000000f, 9000000f, -9000000f }) LargeBodyLocalControl(coordinate);
+        foreach (bool body in new[] { false, true })
+        foreach (bool delaunay in new[] { false, true })
+        foreach (int cellFrame in new[] { 0, 1, 2 })
+        foreach (float extrusion in new[] { 0f, .1f }) TilemapControl(body, delaunay, cellFrame, extrusion);
         File.WriteAllText(output, ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -229,6 +234,40 @@ public static class ProbeEntry
         }
         catch (Exception error) { ProbeLog.Error(error); }
         finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void TilemapControl(bool attachedBody, bool delaunay, int cellFrame, float extrusion)
+    {
+        var grid = new GameObject("tile-grid", typeof(Grid));
+        grid.transform.position = new Vector3(.3f, -.2f, 0);
+        grid.transform.rotation = Quaternion.Euler(0, 0, 11);
+        grid.transform.localScale = new Vector3(1.4f, .7f, 1);
+        var root = new GameObject("tile-map", typeof(Tilemap)); root.transform.SetParent(grid.transform, false);
+        if (attachedBody) root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
+        var map = root.GetComponent<Tilemap>(); var collider = root.AddComponent<TilemapCollider2D>();
+        var tile = ScriptableObject.CreateInstance<Tile>();
+        try
+        {
+            foreach (var sprite in Resources.LoadAll<Sprite>("tiles")) if (sprite.name == "tile_7") tile.sprite = sprite;
+            if (tile.sprite == null) throw new Exception("Missing concave tile sprite");
+            tile.colliderType = Tile.ColliderType.Sprite; tile.flags = TileFlags.None;
+            collider.useDelaunayMesh = delaunay; collider.extrusionFactor = extrusion;
+            map.SetTile(Vector3Int.zero, tile); map.SetTile(new Vector3Int(2, 1, 0), tile);
+            var matrix = Matrix4x4.TRS(new Vector3(.125f, -.0625f, 0),
+                Quaternion.Euler(0, 0, cellFrame == 1 ? 90 : 23), new Vector3(cellFrame == 2 ? -1.25f : 1, .8f, 1));
+            map.SetTransformMatrix(Vector3Int.zero, matrix);
+            map.SetTransformMatrix(new Vector3Int(2, 1, 0), matrix);
+            collider.ProcessTilemapChanges(); Physics2D.SyncTransforms();
+            ProbeLog.Begin("tilemap/" + attachedBody + "/" + delaunay + "/" + cellFrame + "/" + extrusion.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            Shapes(collider, null);
+            var solid = matrix.MultiplyPoint3x4(new Vector3(-.25f, -.25f, 0));
+            var hole = matrix.MultiplyPoint3x4(new Vector3(.25f, .25f, 0));
+            var center = map.GetCellCenterLocal(Vector3Int.zero);
+            ProbeLog.Value("solid", collider.OverlapPoint(root.transform.TransformPoint(solid + center)));
+            ProbeLog.Value("notch", collider.OverlapPoint(root.transform.TransformPoint(hole + center)));
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(grid); UnityEngine.Object.DestroyImmediate(tile); }
     }
 
     static void LargeBodyLocalControl(float coordinate)

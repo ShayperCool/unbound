@@ -3,8 +3,8 @@
 This probe records local and world shape data, composite paths and cast contacts
 for static, body, child and rotated-child frames. It varies small displacements,
 collider offsets, reflected/nonuniform scale, large positions and nonplanar
-parents. The canonical Unity 6000.0.71f1 reference contains 333 scenarios and
-44,352 observations from two byte-identical independent Editor runs.
+parents. The canonical Unity 6000.0.71f1 reference contains 357 scenarios and
+47,376 observations from two byte-identical independent Editor runs.
 
 Run from the repository root. Each label gets a fresh project in the external
 cache; the runner wraps each Editor or engine process in `with-heavy-job`.
@@ -39,14 +39,19 @@ its reference and passing displacement tests do not establish geometry parity.
 Run artifacts and rejected experiments stay in the cache. Other Unity releases
 remain unmeasured.
 
-The thirteen appended controls cover an interior hole, a disconnected island,
+The thirteen composite controls cover an interior hole, a disconnected island,
 a repeated/zero-area source path, manual source edits, polygon edge radius and
 Delaunay refinement, plus a tilted outline with manual setting changes and cloning. Six more controls cover
 large body-local contours beside a valid island. The refinement discriminator produces four shapes with the
 option disabled and two with it enabled. The two independent GPU Editor captures
 agree byte for byte, SHA-256
-`6c5bc51d56a84f165c17eca53c606bdc29f49117b9d4a2b539c3af68f31f6e65`.
-All 320 earlier scenarios retain their original values.
+`00215a10c77ae32fda1717c9b7c74c7d8a8ccfd71e523f6a335e0768a44fe5a4`.
+All 320 original scenarios and the first thirteen added controls retain their
+original values. A further 24 tilemap controls use the existing concave sprite
+fixture from tests/projects/twod. They vary cell rotation/reflection, extrusion,
+body attachment and refinement. Both independent GPU runs agree for all 357
+scenarios. Refinement changes the per-polygon vertex counts from 4/5/6 to 4/4/7
+for each extruded cell, even though both versions produce three polygons.
 
 The [Unity 6000.0 component reference](https://docs.unity3d.com/6000.0/Documentation/Manual/2d-physics/collider/composite-collider/composite-collider-2d-reference.html)
 and [polygon geometry API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CompositeCollider2D.GeometryType.Polygons.html)
@@ -81,3 +86,17 @@ Composite shape and path values now pass in all original frames and new controls
 The remaining 138 values are cast points/normals on capsule, circle and box
 colliders in 11 displaced-frame cases. Their raw failures and tolerances remain
 unchanged for the cast-contact follow-up.
+
+The [Unity 6000.0 Tilemap Collider reference](https://docs.unity3d.com/6000.0/Documentation/Manual/tilemaps/work-with-tilemaps/tilemap-collider-2d-reference.html)
+and [useDelaunayMesh API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Tilemaps.TilemapCollider2D-useDelaunayMesh.html)
+describe refinement of generated tile geometry. The controls above distinguish
+its output. The [processing API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Tilemaps.TilemapCollider2D.ProcessTilemapChanges.html)
+processes pending tile changes explicitly; existing tests/projects/twod controls
+record pending changes before and after that call and after a physics step.
+
+For the measured release, cell contours are extruded and partitioned together in
+the cell's local frame, preserving holes. The cell matrix, cell center and
+collider offset are composed with the body matrix before transforming the convex
+pieces. This resolves the original extruded-tile shape count and ordering, as
+well as all 24 frame controls. Other releases retain the diagnosed transformed
+contour partition without refinement. No sprite importer or cache format changes.

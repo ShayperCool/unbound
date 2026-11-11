@@ -7,6 +7,7 @@
     "native/unbound_tess.c",
     "managed/UnityEngine/Physics2D/Box2D/Collision/Shapes/ChainShape.cs",
     "managed/UnityEngine/Physics2D/Box2D/Common/MathUtils.cs",
-    "managed/UnityEngine/Physics2D/Physics2DQueries.cs"
+    "managed/UnityEngine/Physics2D/Physics2DQueries.cs",
+    "managed/UnityEngine/Physics2D/TilemapCollider2D.cs"
   ]
 }

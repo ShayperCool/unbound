@@ -47,6 +47,9 @@ namespace Unbound.Runtime
             int delaunay, int polygonSize, float* vertices, int* vertexIndices, int vertexCapacity,
             int* elements, int elementCapacity, int* vertexCount, int* elementCount);
 
+        internal static bool IsValidPoint(in V point) => float.IsFinite(point.X) && float.IsFinite(point.Y) &&
+            point.LengthSquared() <= MaximumPointDistanceSquared;
+
         internal static bool TryGenerate(IReadOnlyList<IReadOnlyList<V>> paths, bool delaunay,
             out List<List<V>> result) => TryGenerate(paths, delaunay, out result, out _);
 
@@ -61,8 +64,7 @@ namespace Unbound.Runtime
             {
                 bool accepted = true;
                 foreach (var point in path)
-                    if (!float.IsFinite(point.X) || !float.IsFinite(point.Y) ||
-                        point.LengthSquared() > MaximumPointDistanceSquared) { accepted = false; break; }
+                    if (!IsValidPoint(point)) { accepted = false; break; }
                 if (!accepted) { removedPaths = true; continue; }
                 valid.Add(path);
                 pointCount = checked(pointCount + path.Count);

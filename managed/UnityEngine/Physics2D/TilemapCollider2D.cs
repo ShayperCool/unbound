@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
+using W = Unbound.Runtime.Physics2DWorld;
 using Shape = Unbound.Box2D.Collision.Shapes.Shape;
 
 namespace UnityEngine.Tilemaps
@@ -159,23 +160,26 @@ namespace UnityEngine.Tilemaps
 
         /// <summary>The cells' outlines in the tilemap's space: extruded in the cell's own space
         /// (square corners), under the cell's transform, at the cell's current center, offset.</summary>
+        IEnumerable<(List<Vector2[]> Outlines, Matrix4x4 Transform, Vector2 Center)> CellGeometry()
+        {
+            var map = Map;
+            if (map == null) yield break;
+            if (!m_Processed) ProcessTilemapChanges();
+            foreach (var cell in m_Cells)
+                yield return (m_ExtrusionFactor > 0f ? ClipperOps.Offset(cell.Outlines, m_ExtrusionFactor) : cell.Outlines,
+                    cell.Transform, (Vector2)map.TileCenterLocal(cell.Position));
+        }
+
         internal List<Vector2[]> Polygons()
         {
             var result = new List<Vector2[]>();
-            var map = Map;
-            if (map == null) return result;
-            if (!m_Processed) ProcessTilemapChanges();
-            foreach (var cell in m_Cells)
-            {
-                var center = (Vector2)map.TileCenterLocal(cell.Position) + m_Offset;
-                var outlines = m_ExtrusionFactor > 0f ? ClipperOps.Offset(cell.Outlines, m_ExtrusionFactor) : cell.Outlines;
-                foreach (var outline in outlines)
+            foreach (var cell in CellGeometry())
+                foreach (var outline in cell.Outlines)
                 {
                     var points = new Vector2[outline.Length];
-                    for (int i = 0; i < points.Length; i++) points[i] = (Vector2)cell.Transform.MultiplyPoint3x4(outline[i]) + center;
+                    for (int i = 0; i < points.Length; i++) points[i] = (Vector2)cell.Transform.MultiplyPoint3x4(outline[i]) + (cell.Center + m_Offset);
                     result.Add(points);
                 }
-            }
             return result;
         }
 
@@ -190,6 +194,45 @@ namespace UnityEngine.Tilemaps
         }
 
         internal override void BuildShapes(Matrix4x4 toBody, List<Shape> shapes)
+        {
+            if (!Compat.Physics2DGeneratedGeometryMeasured)
+            {
+                Stubs.Ignored("TilemapCollider2D generated geometry", "this release is unmeasured; using the legacy transformed-contour ear partition without refinement");
+                BuildLegacyShapes(toBody, shapes);
+                return;
+            }
+            int dropped = 0;
+            foreach (var cell in CellGeometry())
+            {
+                var contours = new List<IReadOnlyList<System.Numerics.Vector2>>(cell.Outlines.Count);
+                foreach (var outline in cell.Outlines)
+                {
+                    var points = new System.Numerics.Vector2[outline.Length];
+                    for (int i = 0; i < points.Length; i++) points[i] = W.ToB2(outline[i]);
+                    contours.Add(points);
+                }
+                if (!PolygonPartition.TryGenerate(contours, m_UseDelaunayMesh, out var pieces, out bool removed) || removed) dropped++;
+                var cellMatrix = cell.Transform;
+                cellMatrix.m03 += cell.Center.x; cellMatrix.m13 += cell.Center.y;
+                cellMatrix.m03 += m_Offset.x; cellMatrix.m13 += m_Offset.y;
+                var bodyMatrix = toBody * cellMatrix;
+                foreach (var piece in pieces)
+                {
+                    bool valid = true;
+                    for (int i = 0; i < piece.Count; i++)
+                    {
+                        piece[i] = ToBody(bodyMatrix, W.ToUnity(piece[i]));
+                        if (!PolygonPartition.IsValidPoint(piece[i])) valid = false;
+                    }
+                    var shape = valid ? ConvexShape(piece) : null;
+                    if (shape == null) { dropped++; continue; }
+                    shapes.Add(shape);
+                }
+            }
+            m_ErrorState = dropped > 0 ? ColliderErrorState2D.RemovedShapes : ColliderErrorState2D.None;
+        }
+
+        void BuildLegacyShapes(Matrix4x4 toBody, List<Shape> shapes)
         {
             int made = 0, dropped = 0;
             foreach (var polygon in Polygons())

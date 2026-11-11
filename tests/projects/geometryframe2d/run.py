@@ -36,6 +36,11 @@ if a.mode == 'prepare':
     for folder in ['Assets', 'Packages', 'ProjectSettings']:
         shutil.copytree(REPO / 'tests/projects/physics' / folder, project / folder)
     shutil.copy2(ROOT / 'Sources/ProbeEntry.cs', project / 'Assets/Scripts/ProbeEntry.cs')
+    shutil.copytree(ROOT / 'Sources/Resources', project / 'Assets/Resources')
+    manifest_path = project / 'Packages/manifest.json'
+    packages = json.loads(manifest_path.read_text())
+    packages['dependencies'].update({'com.unity.2d.tilemap': '1.0.0', 'com.unity.modules.tilemap': '1.0.0'})
+    manifest_path.write_text(json.dumps(packages, indent=2) + '\n')
     (project / 'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: ' + a.unity_version + '\n')
     manifest = {str(f.relative_to(project)): hashlib.sha256(f.read_bytes()).hexdigest()
                 for d in ['Assets', 'Packages', 'ProjectSettings']
