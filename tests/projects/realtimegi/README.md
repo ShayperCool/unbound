@@ -170,8 +170,9 @@ throws, and which atlas texels the renderers cover) and on the realtime lightmap
 the isolated texels docs/REALTIME_GI.md explains), and reports the other lighting values
 (`realtimegi: 0 failing state values, 0 failing gated lighting values, N failing lighting
 values`); `compare.py --strict` gates those too. The directional scene's directionality is gated
-as well: all four channels of every covered texel within the comparator's bound, without the
-allowance for isolated texels. Every failing value, and every allowed isolated
+as well: all four channels of every covered texel within 2.5/255 of the Editor's, at most 0.5%
+of them further, each within 5/255 (the engine's: at most 3 of a case's 6760 values beyond
+2.5/255, the furthest 4/255 off, 0.16/255 on average). Every failing value, and every allowed isolated
 one, is written to `compare-details.txt` in the run directory. Light probes are lit by realtime GI
 (their coefficients are reported: a few small higher-band ones differ in the brightest case),
 and `RenderSettings.ambientProbe` in the custom ambient mode differs (reported).

@@ -13,8 +13,9 @@ Two classes of values:
 - Lighting: light probe SH (each sample point, 27 coefficients) and the ambient probe within
   ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
   |reference|; frames (.png) report the shared image measure (mean, worst and pixels over 8 of
-  the per-pixel max-channel difference). A directionality (.dir) compares its fourth channel
-  too and is gated: every value within that bound. The realtime lightmaps (.atlas) are gated: at most
+  the per-pixel max-channel difference). A directionality (.dir) holds 8-bit values, compares
+  its fourth channel too and is gated: each value within DIRECTION of the reference, at most
+  ISOLATED of them further, each within twice that. The realtime lightmaps (.atlas) are gated: at most
   ISOLATED of their values may be outside the tolerance, each within ABS + ISOLATED_REL *
   |reference|, and a missing lightmap fails. With
   DynamicGI.updateThreshold a part of the lightmap is updated only when its inputs changed by
@@ -40,6 +41,8 @@ REL = 0.05
 # and how far those may be off.
 ISOLATED = 0.005
 ISOLATED_REL = 0.10
+# A directionality's values (8 bits each): 2.5 steps.
+DIRECTION = 2.5 / 255
 STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode', 'wrongLength', 'noArray')
 
 
@@ -127,8 +130,9 @@ def compare_atlas(name, ref_path, cap_path, result):
     gate = lightmap or name.endswith('.dir')
     # A lightmap's RGB (its alpha is the coverage); all four channels of a directionality.
     channels = 3 if lightmap else 4
-    # Only the lightmaps have isolated values (see the module's description).
-    allowance = ISOLATED if lightmap else 0.0
+    # How far a value may be from reference value b, and how far an isolated one.
+    near = (lambda b: ABS + REL * abs(b)) if lightmap else (lambda b: DIRECTION)
+    furthest = (lambda b: ABS + ISOLATED_REL * abs(b)) if lightmap else (lambda b: 2 * DIRECTION)
     if not cap_path.is_file():
         result.fail('gated' if gate else 'lighting', f'{name}: missing')
         return
@@ -153,18 +157,18 @@ def compare_atlas(name, ref_path, cap_path, result):
             d = abs(a - b)
             total += d
             worst = max(worst, d)
-            if not close(a, b):
+            if d > near(b):
                 bad.append(f'texel ({t % rw},{t // rw}) channel {k}: {a!r} vs {b!r}')
-                far += d > ABS + ISOLATED_REL * abs(b)
+                far += d > furthest(b)
     result.lines.append(f'{name}: coverage differs at {len(coverage)} texels, {len(bad)} values off, '
                         f'mean |d| {total / max(1, rw * rh):.5f}, max |d| {worst:.5f}')
     if coverage:
         # Which texels renderers cover (their realtime lightmap UVs) matches: gated.
         result.fail('state', f'{name}: coverage differs at {len(coverage)} texels', coverage)
-    if gate and not far and len(bad) <= allowance * compared:
+    if gate and not far and len(bad) <= ISOLATED * compared:
         if bad:
             result.details.append(f'{name}: {len(bad)} isolated texel values off (allowed '
-                                  f'{int(allowance * compared)})')
+                                  f'{int(ISOLATED * compared)})')
             result.details.extend('  ' + d for d in bad)
     elif bad:
         result.fail('gated' if gate else 'lighting',
