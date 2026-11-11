@@ -22,6 +22,15 @@ and resolved style of the styled elements, and the sources.
 - bindings to style properties made in code: from a float, an int, a Length, a StyleKeyword, a
   string (no conversion), a Color under the USS name, an enum, `style.width.value`, a missing style
   property, and ToSource bindings from `style.width` and `resolvedStyle.width`;
+- `nested`: property paths into the values of style properties (translate, rotate, scale, transform
+  origin, background position, repeat, size and image, cursor, text shadow, font definition,
+  transition lists by index, `resolvedStyle`): reads with the value type asked for (also a member
+  that does not exist, a list index past the end, another type than the member's), writes into
+  values never set and into lists that hold items, and bindings to such paths from a Length, a
+  float, an int, an Angle, a Rotate, vectors and a Color, with three ToSource bindings; and what
+  `resolvedStyle` answers right after inline values are set and unset on an element no style pass
+  has reached (in the panel and outside one), on a styled one and on a Button the theme styles.
+  Its logs are recorded under `nested/logs`;
 - `requests`: the order GetBindingInfos lists an element's bindings in, before and after the panel
   processes them, after one is set again, with the element removed, and added back;
 - `loglevel`: warnings of a binding failing on every update after `Binding.ResetPanelLogLevel`,

@@ -53,6 +53,23 @@ public class StyleSource
     public float resolved = -1;
 }
 
+/// <summary>A plain data source for bindings into nested style values.</summary>
+public class NestedSource
+{
+    public float number = 12;
+    public int whole = 9;
+    public Length length = new Length(40, LengthUnit.Percent);
+    public Angle angle = new Angle(0.25f, AngleUnit.Turn);
+    public Rotate rotate = new Rotate(new Angle(45, AngleUnit.Degree));
+    public Vector3 vector = new Vector3(2, 3, 1);
+    public Vector2 vector2 = new Vector2(5, 6);
+    public Color color = new Color(0.25f, 0.5f, 0.75f, 1);
+    public Length backLength = new Length(-1, LengthUnit.Pixel);
+    public float backNumber = -1;
+    public float backAngle = -1;
+    public float backResolved = -1;
+}
+
 /// <summary>
 /// Bindings declared in UXML (`<Bindings>` of DataBinding and a game [UxmlObject] binding) and
 /// bindings to style properties (`style.*`, `resolvedStyle.*`) on a runtime panel. Clones the probe
@@ -366,6 +383,364 @@ public class BindingsProbe : MonoBehaviour
         Requests();
         LogLevels();
         Logged("viewdata", () => ViewData());
+        NestedStyleValues();
+    }
+
+    // ---- paths into nested style values ----
+
+    static string L(Length l) => F(l.value) + l.unit;
+    static string V(Vector3 v) => F(v.x) + "," + F(v.y) + "," + F(v.z);
+    static string V(Vector2 v) => F(v.x) + "," + F(v.y);
+    static string A(Angle a) => F(a.value) + a.unit;
+
+    static string Fmt(object v)
+    {
+        switch (v)
+        {
+            case null: return "null";
+            case float f: return F(f);
+            case Length l: return L(l);
+            case Angle a: return A(a);
+            case Vector3 v3: return V(v3);
+            case Vector2 v2: return V(v2);
+            case Color c: return Color(c);
+            case TimeValue t: return F(t.value) + t.unit;
+            case UnityEngine.Object o: return Name(o);
+            case string str: return "'" + str + "'";
+            default: return v.ToString();
+        }
+    }
+
+    /// <summary>An element's nested style values, in one line.</summary>
+    static string Nested(VisualElement e)
+    {
+        var st = e.style;
+        var b = new StringBuilder();
+        var t = st.translate;
+        b.Append("translate ").Append(t.keyword).Append(' ').Append(L(t.value.x)).Append(' ').Append(L(t.value.y)).Append(' ').Append(F(t.value.z));
+        var r = st.rotate;
+        b.Append(" | rotate ").Append(r.keyword).Append(' ').Append(A(r.value.angle));
+        var sc = st.scale;
+        b.Append(" | scale ").Append(sc.keyword).Append(' ').Append(V(sc.value.value));
+        var o = st.transformOrigin;
+        b.Append(" | origin ").Append(o.keyword).Append(' ').Append(L(o.value.x)).Append(' ').Append(L(o.value.y)).Append(' ').Append(F(o.value.z));
+        var px = st.backgroundPositionX;
+        b.Append(" | positionX ").Append(px.keyword).Append(' ').Append(px.value.keyword).Append(' ').Append(L(px.value.offset));
+        var rp = st.backgroundRepeat;
+        b.Append(" | repeat ").Append(rp.keyword).Append(' ').Append(rp.value.x).Append(' ').Append(rp.value.y);
+        var sz = st.backgroundSize;
+        b.Append(" | size ").Append(sz.keyword).Append(' ').Append(sz.value.sizeType).Append(' ').Append(L(sz.value.x)).Append(' ').Append(L(sz.value.y));
+        var img = st.backgroundImage;
+        b.Append(" | image ").Append(img.keyword).Append(' ').Append(Name(img.value.texture));
+        var cu = st.cursor;
+        b.Append(" | cursor ").Append(cu.keyword).Append(' ').Append(Name(cu.value.texture)).Append(' ').Append(V(cu.value.hotspot));
+        var sh = st.textShadow;
+        b.Append(" | shadow ").Append(sh.keyword).Append(' ').Append(V(sh.value.offset)).Append(' ').Append(F(sh.value.blurRadius)).Append(' ').Append(Color(sh.value.color));
+        var du = st.transitionDuration;
+        b.Append(" | duration ").Append(du.keyword).Append(' ').Append(du.value == null ? "null" : string.Join(";", du.value.Select(x => F(x.value) + x.unit)));
+        var pr = st.transitionProperty;
+        b.Append(" | property ").Append(pr.keyword).Append(' ').Append(pr.value == null ? "null" : string.Join(";", pr.value.Select(x => x.ToString())));
+        var tf = st.transitionTimingFunction;
+        b.Append(" | timing ").Append(tf.keyword).Append(' ').Append(tf.value == null ? "null" : string.Join(";", tf.value.Select(x => x.mode.ToString())));
+        var rs = e.resolvedStyle;
+        b.Append(" | resolved translate ").Append(V(rs.translate)).Append(" rotate ").Append(A(rs.rotate.angle)).Append(" scale ").Append(V(rs.scale.value))
+            .Append(" origin ").Append(V(rs.transformOrigin));
+        return b.ToString();
+    }
+
+    string Read<T>(VisualElement e, string path)
+    {
+        try
+        {
+            bool ok = PropertyContainer.TryGetValue(ref e, new PropertyPath(path), out T value, out VisitReturnCode code);
+            return (ok ? "ok " : "fail ") + code + " " + Fmt(value);
+        }
+        catch (Exception x)
+        {
+            return "threw " + x.GetType().Name;
+        }
+    }
+
+    string Write<T>(VisualElement e, string path, T value)
+    {
+        try
+        {
+            bool ok = PropertyContainer.TrySetValue(ref e, new PropertyPath(path), value, out VisitReturnCode code);
+            return (ok ? "ok " : "fail ") + code;
+        }
+        catch (Exception x)
+        {
+            return "threw " + x.GetType().Name;
+        }
+    }
+
+    // Reads and writes through property paths into the values of style properties (translate,
+    // rotate, scale, transform origin, background position, repeat and size, cursor, text shadow,
+    // font definition, transition lists), and bindings to such paths. Its logs are recorded under
+    // their own key.
+    void NestedStyleValues()
+    {
+        var logs = new List<string>();
+        Application.LogCallback capture = (message, stack, type) => { if (type != LogType.Log) logs.Add(type + ": " + message); };
+        Application.logMessageReceived += capture;
+        try
+        {
+            NestedReads();
+            NestedWrites();
+            NestedBindings();
+        }
+        catch (Exception e)
+        {
+            Put("nested/error", e.GetType().Name + ": " + e.Message);
+        }
+        finally
+        {
+            Application.logMessageReceived -= capture;
+        }
+        logs.Sort(StringComparer.Ordinal);
+        Put("nested/logs", string.Join(" || ", logs));
+    }
+
+    VisualElement NestedElement(string name, VisualElement parent)
+    {
+        var e = new VisualElement { name = name };
+        e.style.height = 4;
+        e.style.width = 40;
+        e.style.flexShrink = 0;
+        parent.Add(e);
+        return e;
+    }
+
+    void NestedReads()
+    {
+        var box = new VisualElement { name = "nested-box" };
+        m_Root.Add(box);
+        var texture = new Texture2D(2, 2) { name = "probe-tex" };
+        var e = NestedElement("nested-read", box);
+        e.style.translate = new Translate(new Length(10, LengthUnit.Percent), new Length(4, LengthUnit.Pixel), 3);
+        e.style.rotate = new Rotate(new Angle(90, AngleUnit.Degree));
+        e.style.scale = new Scale(new Vector3(2, 0.5f, 1));
+        e.style.transformOrigin = new TransformOrigin(new Length(25, LengthUnit.Percent), new Length(6, LengthUnit.Pixel), 2);
+        e.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Right, new Length(8, LengthUnit.Pixel));
+        e.style.backgroundRepeat = new BackgroundRepeat(Repeat.Space, Repeat.Round);
+        e.style.backgroundSize = new BackgroundSize(new Length(30, LengthUnit.Percent), new Length(12, LengthUnit.Pixel));
+        e.style.backgroundImage = texture;
+        e.style.cursor = new UnityEngine.UIElements.Cursor { texture = texture, hotspot = new Vector2(1, 2) };
+        e.style.textShadow = new TextShadow { offset = new Vector2(3, 4), blurRadius = 1.5f, color = new Color(1, 0.5f, 0.25f, 1) };
+        e.style.transitionDuration = new List<TimeValue> { new TimeValue(2, TimeUnit.Second), new TimeValue(300, TimeUnit.Millisecond) };
+        e.style.transitionProperty = new List<StylePropertyName> { new StylePropertyName("opacity"), new StylePropertyName("width") };
+        e.style.transitionTimingFunction = new List<EasingFunction> { new EasingFunction(EasingMode.EaseInOut) };
+        // An element without transitions that the style pass below reaches (see NestedWrites).
+        NestedElement("nested-plain", box);
+        // A control the theme's rules style (see NestedWrites).
+        box.Add(new Button { name = "nested-themed", text = "themed" });
+        Frames();
+        Put("nested/read/state", Nested(e));
+        void R<T>(string path) => Put("nested/read/" + path + " as " + typeof(T).Name, Read<T>(e, path));
+        R<Length>("style.translate.value.x");
+        R<float>("style.translate.value.x.value");
+        R<LengthUnit>("style.translate.value.y.unit");
+        R<float>("style.translate.value.z");
+        R<float>("style.translate.value.w");
+        R<Length>("style.translate.x");
+        R<Angle>("style.rotate.value.angle");
+        R<float>("style.rotate.value.angle.value");
+        R<AngleUnit>("style.rotate.value.angle.unit");
+        R<Vector3>("style.rotate.value.axis");
+        R<float>("style.rotate.value.axis.z");
+        R<Vector3>("style.scale.value.value");
+        R<float>("style.scale.value.value.y");
+        R<Length>("style.transformOrigin.value.x");
+        R<Length>("style.transform-origin.value.y");
+        R<float>("style.transformOrigin.value.z");
+        R<BackgroundPositionKeyword>("style.backgroundPositionX.value.keyword");
+        R<Length>("style.backgroundPositionX.value.offset");
+        R<float>("style.backgroundPositionX.value.offset.value");
+        R<Repeat>("style.backgroundRepeat.value.x");
+        R<Repeat>("style.backgroundRepeat.value.y");
+        R<BackgroundSizeType>("style.backgroundSize.value.sizeType");
+        R<Length>("style.backgroundSize.value.x");
+        R<Texture2D>("style.backgroundImage.value.texture");
+        R<Sprite>("style.backgroundImage.value.sprite");
+        R<RenderTexture>("style.backgroundImage.value.renderTexture");
+        R<VectorImage>("style.backgroundImage.value.vectorImage");
+        R<Texture2D>("style.cursor.value.texture");
+        R<Vector2>("style.cursor.value.hotspot");
+        R<float>("style.cursor.value.hotspot.y");
+        R<int>("style.cursor.value.defaultCursorId");
+        R<Vector2>("style.textShadow.value.offset");
+        R<float>("style.text-shadow.value.blurRadius");
+        R<Color>("style.textShadow.value.color");
+        R<float>("style.textShadow.value.color.g");
+        R<Font>("style.unityFontDefinition.value.font");
+        R<UnityEngine.TextCore.Text.FontAsset>("style.unityFontDefinition.value.fontAsset");
+        R<TimeValue>("style.transitionDuration.value[0]");
+        R<float>("style.transitionDuration.value[0].value");
+        R<TimeUnit>("style.transitionDuration.value[1].unit");
+        R<float>("style.transitionDuration.value[5].value");
+        R<string>("style.transitionProperty.value[1].name");
+        R<EasingMode>("style.transitionTimingFunction.value[0].mode");
+        R<float>("resolvedStyle.translate.x");
+        R<float>("resolvedStyle.rotate.angle.value");
+        R<float>("resolvedStyle.scale.value.y");
+        R<float>("resolvedStyle.transformOrigin.x");
+        R<Color>("resolvedStyle.backgroundColor");
+        R<float>("resolvedStyle.backgroundColor.a");
+        // A wrong value type for the path's value.
+        R<string>("style.translate.value.x");
+        R<int>("style.translate.value.z");
+        R<float>("style.translate.value.x");
+    }
+
+    void NestedWrites()
+    {
+        var box = m_Root.Q("nested-box");
+        var e = NestedElement("nested-write", box);
+        void W<T>(string path, T value) => Put("nested/write/" + path + "=" + Fmt(value), Write(e, path, value) + " -> " + Nested(e));
+        // Into values that were never set.
+        W("style.translate.value.x", new Length(7, LengthUnit.Pixel));
+        W("style.translate.value.y.value", 3f);
+        W("style.translate.value.z", 5f);
+        W("style.translate.value.x", 6f);
+        W("style.translate.value.x", 8);
+        W("style.rotate.value.angle.value", 30f);
+        W("style.rotate.value.angle.unit", AngleUnit.Turn);
+        W("style.rotate.value.axis", new Vector3(0, 1, 0));
+        W("style.scale.value.value", new Vector3(2, 3, 1));
+        W("style.scale.value.value.x", 4f);
+        W("style.transformOrigin.value.z", 2f);
+        W("style.transformOrigin.value.x", new Length(20, LengthUnit.Percent));
+        W("style.backgroundPositionX.value.keyword", BackgroundPositionKeyword.Right);
+        W("style.backgroundPositionX.value.offset.value", 9f);
+        W("style.backgroundRepeat.value.y", Repeat.Space);
+        W("style.backgroundSize.value.x", new Length(15, LengthUnit.Pixel));
+        W("style.backgroundSize.value.sizeType", BackgroundSizeType.Contain);
+        W("style.cursor.value.hotspot", new Vector2(3, 4));
+        W("style.textShadow.value.blurRadius", 2f);
+        W("style.textShadow.value.color", new Color(0, 1, 0, 1));
+        W("style.textShadow.value.offset.x", 6f);
+        W("style.transitionDuration.value[0].value", 2f);
+        W("style.transitionProperty.value[0].name", "width");
+        W("resolvedStyle.translate.x", 1f);
+        W("style.translate.keyword", StyleKeyword.Initial);
+        W("style.translate.value.z", 1f);
+        // Into a list that holds values.
+        var listed = NestedElement("nested-write-list", box);
+        listed.style.transitionDuration = new List<TimeValue> { new TimeValue(1, TimeUnit.Second), new TimeValue(2, TimeUnit.Second) };
+        listed.style.transitionProperty = new List<StylePropertyName> { new StylePropertyName("opacity") };
+        void WL<T>(string path, T value) => Put("nested/write-list/" + path + "=" + Fmt(value), Write(listed, path, value) + " -> " + Nested(listed));
+        WL("style.transitionDuration.value[1].value", 5f);
+        WL("style.transitionDuration.value[0].unit", TimeUnit.Millisecond);
+        WL("style.transitionDuration.value[0]", new TimeValue(7, TimeUnit.Second));
+        WL("style.transitionDuration.value[4].value", 5f);
+        WL("style.transitionProperty.value[0].name", "width");
+        // What resolvedStyle answers right after an inline value is set on an element no style
+        // pass has reached yet (in the panel, and outside any panel), and after it is unset again.
+        string Resolved(VisualElement x) => F(x.resolvedStyle.opacity) + " " + Color(x.resolvedStyle.backgroundColor) + " " + V(x.resolvedStyle.translate)
+            + " " + x.resolvedStyle.display + " " + F(x.resolvedStyle.width) + " " + F(x.resolvedStyle.borderLeftWidth) + " " + x.resolvedStyle.unityFontStyleAndWeight;
+        void Fresh(string name, VisualElement x)
+        {
+            Put("nested/fresh/" + name + "/before", Resolved(x));
+            x.style.opacity = 0.5f;
+            x.style.backgroundColor = new Color(1, 0, 0, 1);
+            x.style.translate = new Translate(new Length(3, LengthUnit.Pixel), new Length(4, LengthUnit.Pixel), 0);
+            x.style.display = DisplayStyle.None;
+            x.style.width = 25;
+            x.style.borderLeftWidth = 2;
+            x.style.unityFontStyleAndWeight = FontStyle.Bold;
+            Put("nested/fresh/" + name + "/set", Resolved(x));
+            x.style.opacity = StyleKeyword.Null;
+            x.style.translate = StyleKeyword.Null;
+            x.style.display = StyleKeyword.Null;
+            x.style.unityFontStyleAndWeight = StyleKeyword.Null;
+            Put("nested/fresh/" + name + "/unset", Resolved(x));
+        }
+        Fresh("in-panel", NestedElement("nested-fresh", box));
+        Fresh("detached", new VisualElement());
+        var child = new VisualElement();
+        var parent = new VisualElement();
+        parent.Add(child);
+        parent.style.unityFontStyleAndWeight = FontStyle.Italic;
+        parent.style.opacity = 0.25f;
+        Put("nested/fresh/child-of-detached", Resolved(child));
+        Fresh("styled", m_Root.Q("nested-plain"));
+        Fresh("themed", m_Root.Q("nested-themed"));
+        Frames();
+        Put("nested/fresh/in-panel/after-frames", Resolved(m_Root.Q("nested-fresh")));
+        Put("nested/fresh/styled/after-frames", Resolved(m_Root.Q("nested-plain")));
+        Put("nested/fresh/themed/after-frames", Resolved(m_Root.Q("nested-themed")));
+        m_Root.Q("nested-themed").style.backgroundColor = StyleKeyword.Null;
+        m_Root.Q("nested-themed").style.borderLeftWidth = StyleKeyword.Null;
+        Put("nested/fresh/themed/unset-rest", Resolved(m_Root.Q("nested-themed")));
+        Put("nested/write/after-frames", Nested(e));
+        Put("nested/write-list/after-frames", Nested(listed));
+    }
+
+    static readonly string[] s_NestedBound =
+    {
+        "nb-x-length", "nb-x-float", "nb-x-int", "nb-x-value", "nb-angle", "nb-angle-value", "nb-rotate", "nb-scale", "nb-scale-x", "nb-shadow-color",
+        "nb-shadow-blur", "nb-origin", "nb-position", "nb-hotspot", "nb-duration", "nb-duration-unset", "nb-back-x", "nb-back-angle", "nb-back-resolved", "nb-nosuch",
+    };
+
+    void NestedBindings()
+    {
+        var source = new NestedSource();
+        var box = new VisualElement { name = "nested-bound", dataSource = source };
+        m_Root.Add(box);
+        VisualElement B(string name, string property, string path, BindingMode mode = BindingMode.ToTarget)
+        {
+            var e = NestedElement(name, box);
+            e.SetBinding(property, new DataBinding { dataSourcePath = new PropertyPath(path), bindingMode = mode });
+            return e;
+        }
+        B("nb-x-length", "style.translate.value.x", "length");
+        B("nb-x-float", "style.translate.value.x", "number");
+        B("nb-x-int", "style.translate.value.x", "whole");
+        B("nb-x-value", "style.translate.value.x.value", "number");
+        B("nb-angle", "style.rotate.value.angle", "angle");
+        B("nb-angle-value", "style.rotate.value.angle.value", "number");
+        B("nb-rotate", "style.rotate", "rotate");
+        B("nb-scale", "style.scale.value.value", "vector");
+        B("nb-scale-x", "style.scale.value.value.x", "number");
+        B("nb-shadow-color", "style.textShadow.value.color", "color");
+        B("nb-shadow-blur", "style.text-shadow.value.blurRadius", "number");
+        B("nb-origin", "style.transformOrigin.value.x", "length");
+        B("nb-position", "style.backgroundPositionX.value.offset.value", "number");
+        B("nb-hotspot", "style.cursor.value.hotspot", "vector2");
+        B("nb-duration", "style.transitionDuration.value[0].value", "number").style.transitionDuration = new List<TimeValue> { new TimeValue(1, TimeUnit.Second) };
+        B("nb-duration-unset", "style.transitionDuration.value[0].value", "number");
+        var backX = B("nb-back-x", "style.translate.value.x", "backLength", BindingMode.ToSource);
+        backX.style.translate = new Translate(new Length(11, LengthUnit.Pixel), new Length(0, LengthUnit.Pixel), 0);
+        var backAngle = B("nb-back-angle", "style.rotate.value.angle.value", "backAngle", BindingMode.ToSource);
+        backAngle.style.rotate = new Rotate(new Angle(15, AngleUnit.Degree));
+        var backResolved = B("nb-back-resolved", "resolvedStyle.translate.x", "backResolved", BindingMode.ToSource);
+        backResolved.style.translate = new Translate(new Length(13, LengthUnit.Pixel), new Length(0, LengthUnit.Pixel), 0);
+        B("nb-nosuch", "style.translate.value.w", "number");
+        void Record(string step)
+        {
+            foreach (var name in s_NestedBound)
+            {
+                var e = box.Q(name);
+                foreach (var info in e.GetBindingInfos()) Put("nested/" + step + "/" + name + "/result", Result(e, info.bindingId));
+                Put("nested/" + step + "/" + name + "/state", Nested(e));
+            }
+            Put("nested/" + step + "/source", L(source.backLength) + " " + F(source.backNumber) + " " + F(source.backAngle) + " " + F(source.backResolved));
+        }
+        Frames();
+        Record("bound");
+        source.number = 20;
+        source.whole = 4;
+        source.length = new Length(18, LengthUnit.Pixel);
+        source.angle = new Angle(2, AngleUnit.Radian);
+        source.rotate = new Rotate(new Angle(10, AngleUnit.Degree));
+        source.vector = new Vector3(1, 1, 2);
+        source.vector2 = new Vector2(7, 8);
+        source.color = new Color(1, 0, 0, 0.5f);
+        backX.style.translate = new Translate(new Length(22, LengthUnit.Percent), new Length(0, LengthUnit.Pixel), 0);
+        backAngle.style.rotate = new Rotate(new Angle(0.5f, AngleUnit.Turn));
+        backResolved.style.translate = new Translate(new Length(17, LengthUnit.Pixel), new Length(0, LengthUnit.Pixel), 0);
+        Frames();
+        Record("changed");
     }
 
     // The order GetBindingInfos lists an element's bindings in: set in a panel (before and after the
