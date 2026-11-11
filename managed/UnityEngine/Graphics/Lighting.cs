@@ -283,6 +283,11 @@ namespace UnityEngine
             /// <summary>The DC term (linear) of the ambient probe of this scene's own baked lighting
             /// data (<c>m_BakedAmbientProbeInLinear</c>, a project LightingData asset), or null.</summary>
             internal Color? BakedSkyboxDC;
+            /// <summary>The ambient probe and skybox reflection of this scene's lighting data, read
+            /// while another scene's settings were in effect: they are the ones in effect once
+            /// this scene's settings are.</summary>
+            internal SphericalHarmonicsL2? BakedProbe;
+            internal Cubemap BakedReflection;
         }
 
         /// <summary>The scene whose RenderSettings are the ones in effect (null when they were read
@@ -297,7 +302,7 @@ namespace UnityEngine
         {
             nameof(s_Fog), nameof(s_FogColor), nameof(s_FogMode), nameof(s_FogDensity), nameof(s_FogStart), nameof(s_FogEnd),
             nameof(s_AmbientSky), nameof(s_AmbientEquator), nameof(s_AmbientGround), nameof(s_AmbientIntensity), nameof(s_AmbientMode),
-            nameof(s_CustomProbe), nameof(s_AmbientSkybox), nameof(s_SubtractiveShadowColor), nameof(s_IndirectSpecular), nameof(s_IndirectSpecularSerialized), nameof(s_ReflectionIntensity),
+            nameof(s_CustomProbe), nameof(s_AmbientSkybox), nameof(s_BakedProbe), nameof(s_EnvironmentProbe), nameof(s_BakedReflection), nameof(s_SubtractiveShadowColor), nameof(s_IndirectSpecular), nameof(s_IndirectSpecularSerialized), nameof(s_ReflectionIntensity),
             nameof(s_ReflectionBounces), nameof(s_DefaultReflectionMode), nameof(s_DefaultReflectionResolution), nameof(s_CustomReflection),
             nameof(s_SerializedProbe), nameof(s_SerializedReflection), nameof(s_HaloStrength), nameof(s_FlareStrength),
             nameof(s_FlareFadeSpeed), nameof(s_HaloTexture), nameof(s_Skybox), nameof(s_Sun), nameof(s_PendingSun), nameof(s_SettingsOwner),
@@ -344,6 +349,11 @@ namespace UnityEngine
             else
             {
                 Read(next.Body, next.Resolver);
+                // With them, the environment of the scene's own lighting data (read by now for
+                // a scene loaded beside the one whose settings were in effect).
+                s_BakedProbe = next.BakedProbe;
+                s_BakedReflection = next.BakedReflection;
+                s_EnvironmentProbe = null;
             }
             s_SettingsOwner = next;
             foreach (var stale in new System.Collections.Generic.List<SceneData>(s_SceneSettings.Keys))
@@ -457,8 +467,8 @@ namespace UnityEngine
         internal static Cubemap defaultReflection => s_BakedReflection;
 
         /// <summary>The reflection objects without a probe reflect: the custom cubemap, else the
-        /// skybox's, else (lighting data made without a sky, or no lighting data, whatever the
-        /// scene's skybox) a black cube, as in the Unity 6000.0.71f1 Editor
+        /// skybox's (the active scene's lighting data's), else (lighting data made without a
+        /// sky, or no lighting data) a black cube, as in the Unity 6000.0.71f1 Editor
         /// (tests/projects/realtimegi end-reflection, nodata*-reflection).</summary>
         internal static Texture DefaultReflectionTexture =>
             s_DefaultReflectionMode == DefaultReflectionMode.Custom && s_CustomReflection != null ? s_CustomReflection
@@ -475,53 +485,131 @@ namespace UnityEngine
 
         /// <summary>Reads a scene's lighting data (LightmapSettings' m_LightingDataAsset): the
         /// ambient probe, the skybox's reflection and the baked lighting
-        /// (<see cref="BakedLighting"/>) of the objects of <paramref name="file"/>.</summary>
+        /// (<see cref="BakedLighting"/>) of the objects of <paramref name="file"/>. The probe and
+        /// the reflection are the ones in effect when the scene's RenderSettings are (the active
+        /// scene's: a scene loaded beside it keeps its own until it is the active one, as in the
+        /// Unity 6000.0.71f1 Editor, tests/projects/realtimegi *-plus-*).</summary>
         internal static void ReadLightingData(ObjectRef reference, LoadedFile file = null, bool firstScene = true, int scene = 0)
         {
-            s_BakedProbe = null;
-            s_BakedReflection = null;
-            s_EnvironmentProbe = null;
+            var owner = SettingsOf(file);
+            SphericalHarmonicsL2? ambient = null;
+            Cubemap sky = null;
             if (firstScene) LightmapSettings.Reset();
             BindBakedSkybox(file, reference, null);
-            if (reference.IsNull || reference.Guid == null || !Native.IsReady) return;
-            try
+            if (reference.IsNull && owner != null && EarlierDefaultEnvironment(owner.Body, file)) reference = s_BuiltinLightingData;
+            if (!reference.IsNull && reference.Guid != null && Native.IsReady)
             {
-                var json = Native.Call("lighting-data", System.Text.Json.JsonSerializer.Serialize(new { guid = reference.Guid, fileId = reference.FileId }));
-                var probe = System.Text.Json.JsonDocument.Parse(json).RootElement.GetProperty("ambientProbe");
-                var sh = new SphericalHarmonicsL2();
-                int k = 0;
-                foreach (var v in probe.EnumerateArray())
+                try
                 {
-                    if (k >= 27) break;
-                    sh[k / 9, k % 9] = v.GetSingle();
-                    k++;
+                    var json = Native.Call("lighting-data", System.Text.Json.JsonSerializer.Serialize(new { guid = reference.Guid, fileId = reference.FileId }));
+                    var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                    var sh = new SphericalHarmonicsL2();
+                    int k = 0;
+                    foreach (var v in root.GetProperty("ambientProbe").EnumerateArray())
+                    {
+                        if (k >= 27) break;
+                        sh[k / 9, k % 9] = v.GetSingle();
+                        k++;
+                    }
+                    ambient = sh;
+                    BindBakedSkybox(file, reference, sh);
+                    BakedLighting.Read(root, file, scene, reference);
+                    if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
+                        sky = BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
                 }
-                s_BakedProbe = sh;
-                BindBakedSkybox(file, reference, sh);
-                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
-                BakedLighting.Read(root, file, scene, reference);
-                if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
-                    s_BakedReflection = BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"Unbound: the scene's lighting data could not be read: {e.Message}");
+                }
             }
-            catch (Exception e)
+            if (owner == null || owner == s_SettingsOwner)
             {
-                Debug.LogWarning($"Unbound: the scene's lighting data could not be read: {e.Message}");
+                s_BakedProbe = ambient;
+                s_BakedReflection = sky;
+                s_EnvironmentProbe = null;
+            }
+            else
+            {
+                owner.BakedProbe = ambient;
+                owner.BakedReflection = sky;
             }
         }
 
-        /// <summary>Gives the scene whose RenderSettings were read with <paramref name="file"/> (its
-        /// own file: one scene's settings and lighting data are read with the same resolver) the DC
-        /// term of its lighting data's ambient probe, or none. Only a project's baked LightingData
-        /// counts: the built-in one of a scene without a bake is not measured as a source.</summary>
+        /// <summary>Gives the scene whose RenderSettings were read with <paramref name="file"/> the
+        /// DC term of its lighting data's ambient probe, or none. Only a project's baked
+        /// LightingData counts: the built-in one of a scene without a bake is not measured as a
+        /// source.</summary>
         internal static void BindBakedSkybox(IReferenceResolver file, ObjectRef reference, SphericalHarmonicsL2? probe)
         {
-            if (file == null) return;
+            if (SettingsOf(file) is not SceneSettings settings) return;
+            bool project = !reference.IsNull && reference.Guid != null && !reference.Guid.StartsWith("0000000000000000", StringComparison.Ordinal);
+            settings.BakedSkyboxDC = project && probe is { } sh ? new Color(sh[0, 0], sh[1, 0], sh[2, 0], 1f) : (Color?)null;
+        }
+
+        /// <summary>The settings of the scene whose RenderSettings were read with
+        /// <paramref name="file"/> (its own file: one scene's settings and lighting data are read
+        /// with the same resolver), or null (settings read without a scene).</summary>
+        static SceneSettings SettingsOf(IReferenceResolver file)
+        {
+            if (file == null) return null;
             foreach (var settings in s_SceneSettings.Values)
+                if (ReferenceEquals(settings.Resolver, file)) return settings;
+            return null;
+        }
+
+        /// <summary>The built-in lighting data (the default sky's ambient probe and reflection)
+        /// that scenes made in this release point at.</summary>
+        static readonly ObjectRef s_BuiltinLightingData = new ObjectRef(20201, BuiltinExtra, 0);
+        const string BuiltinExtra = "0000000000000000f000000000000000";
+        /// <summary>The built-in default skybox material.</summary>
+        const long DefaultSkyboxFileId = 10304;
+        /// <summary>RenderSettings up to this serialized version were saved by releases that
+        /// generated lighting automatically.</summary>
+        const int AutomaticLightingSettingsVersion = 9;
+        /// <summary>The Euler angles of a new scene's directional light.</summary>
+        static readonly Vector3 s_DefaultSunAngles = new Vector3(50f, -30f, 0f);
+        /// <summary>How far, in degrees, a sun may be from them.</summary>
+        const float DefaultSunTolerance = 0.01f;
+
+        /// <summary>Whether a scene without lighting data takes the built-in one: its
+        /// RenderSettings were saved by an earlier release and its environment is that of a new
+        /// scene of then (the skybox ambient mode, the default skybox reflected at the default
+        /// resolution, a sun at the default light's angles), in a linear project. Matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/realtimegi legacy*: with the sun turned or
+        /// missing, or with another sky, the scene has no lighting data (also when its settings
+        /// are this release's, nodata*). Not measured, and without lighting data here: other
+        /// ambient or reflection sources, a gamma-space project, several directional lights.</summary>
+        static bool EarlierDefaultEnvironment(YNode body, LoadedFile file)
+        {
+            if (!Compat.EarlierDefaultSceneLightingMeasured) return false;
+            if (body.Int("serializedVersion") > AutomaticLightingSettingsVersion || QualitySettings.activeColorSpace != ColorSpace.Linear) return false;
+            if ((AmbientMode)body.Int("m_AmbientMode") != AmbientMode.Skybox) return false;
+            if ((DefaultReflectionMode)body.Int("m_DefaultReflectionMode") != DefaultReflectionMode.Skybox || body.Int("m_DefaultReflectionResolution", 128) != 128) return false;
+            var skybox = body.Ref("m_SkyboxMaterial");
+            if (skybox.FileId != DefaultSkyboxFileId || skybox.Guid != BuiltinExtra) return false;
+            var sun = SceneSun(body, file);
+            return sun != null && Quaternion.Angle(sun.transform.rotation, Quaternion.Euler(s_DefaultSunAngles)) < DefaultSunTolerance;
+        }
+
+        /// <summary>The sun of a scene being loaded (its objects are built, not yet active): the
+        /// light its RenderSettings name, else its brightest enabled directional light.</summary>
+        static Light SceneSun(YNode body, LoadedFile file)
+        {
+            var named = body.Ref("m_Sun");
+            if (!named.IsNull) return file.Resolve(named, typeof(Light)) as Light;
+            Light best = null;
+            float bestValue = -1f;
+            foreach (var candidate in file.Objects.Values)
             {
-                if (!ReferenceEquals(settings.Resolver, file)) continue;
-                bool project = !reference.IsNull && reference.Guid != null && !reference.Guid.StartsWith("0000000000000000", StringComparison.Ordinal);
-                settings.BakedSkyboxDC = project && probe is { } sh ? new Color(sh[0, 0], sh[1, 0], sh[2, 0], 1f) : (Color?)null;
+                if (!(candidate is Light light) || light.type != LightType.Directional || !light.enabled || !light.gameObject.activeSelf) continue;
+                float value = light.intensity * light.color.grayscale;
+                if (value > bestValue)
+                {
+                    best = light;
+                    bestValue = value;
+                }
             }
+            return best;
         }
 
         /// <summary>A baked reflection a lighting data names (the skybox's, a probe's): a cubemap
@@ -547,7 +635,8 @@ namespace UnityEngine
 
         /// <summary>
         /// The ambient lighting as spherical harmonics (linear color), from the ambient mode and
-        /// one stored probe: the lighting data's (zero without lighting data), then the sky's that
+        /// one stored probe: the active scene's lighting data's (zero without lighting data),
+        /// then the sky's that
         /// DynamicGI.UpdateEnvironment derives, then one given here, the latest of them. Matches
         /// the Unity 6000.0.71f1 Editor, tests/projects/realtimegi (the end-* and nodata* cases,
         /// read in the frame of each change): a flat color in its first coefficient and a
@@ -556,8 +645,8 @@ namespace UnityEngine
         /// probe times the ambient intensity's scale, or without a skybox material the ambient
         /// color, which the intensity does not scale. Not measured: a probe given after a skybox
         /// was assigned alone, DynamicGI.UpdateEnvironment without a skybox after a probe was
-        /// given (it stays), a scene loaded beside the one whose settings are in effect (it keeps
-        /// a probe given, and takes the loaded lighting data's otherwise).
+        /// given (it stays), a probe given before another scene becomes the active one (it stays
+        /// with the scene it was given in).
         /// </summary>
         public static SphericalHarmonicsL2 ambientProbe
         {

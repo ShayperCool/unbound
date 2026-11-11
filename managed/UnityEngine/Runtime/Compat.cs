@@ -48,6 +48,12 @@ namespace Unbound.Runtime
         /// measured by physics2dadvanced automatic modes on Unity 6000.0.71f1.</summary>
         internal static bool FixedClockTicksMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>A scene without lighting data whose RenderSettings an earlier release saved
+        /// with a new scene's environment takes the built-in lighting data, measured in
+        /// tests/projects/realtimegi (legacy*) on Unity 6000.0.71f1. Other releases keep such a
+        /// scene without lighting data until measured.</summary>
+        internal static bool EarlierDefaultSceneLightingMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>The project's release's major version (2022, 6000, ...).</summary>
         internal static int Major
         {

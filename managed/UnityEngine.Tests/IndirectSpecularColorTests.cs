@@ -175,6 +175,46 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ASceneLoadedBesideTheActiveOneKeepsItsLightingEnvironmentToItself()
+        {
+            // The Unity 6000.0.71f1 Editor, tests/projects/realtimegi *-plus-*: the ambient
+            // probe and the default reflection are those of the active scene's lighting data; a
+            // scene loaded beside it (here one without lighting data) changes neither until it
+            // is the active one, and the first scene's are back with it.
+            using var state = new State();
+            var first = state.Scene(Version10, default, null);
+            state.Activate(first);
+            var probe = Probe(L0);
+            var sky = new Cubemap(4, TextureFormat.RGBA32, false);
+            try
+            {
+                RenderSettings.s_BakedProbe = probe;
+                RenderSettings.s_BakedReflection = sky;
+                RenderSettings.ambientMode = AmbientMode.Custom;
+                var added = state.Scene(Version10, default, null);
+                RenderSettings.ReadLightingData(default, state.ResolverOf(added), firstScene: false);
+                Assert.Equal(probe, RenderSettings.ambientProbe);
+                Assert.Same(sky, ReflectionProbe.defaultTexture);
+                state.Activate(added);
+                RenderSettings.ambientMode = AmbientMode.Custom;
+                Assert.Equal(new SphericalHarmonicsL2(), RenderSettings.ambientProbe);
+                Assert.Equal("UnityBlackCube", ReflectionProbe.defaultTexture.name);
+                state.Activate(first);
+                Assert.Equal(probe, RenderSettings.ambientProbe);
+                Assert.Same(sky, ReflectionProbe.defaultTexture);
+                // The first scene's lighting data read again while the other is in effect
+                // waits for its scene as well.
+                state.Activate(added);
+                RenderSettings.ReadLightingData(default, state.ResolverOf(first), firstScene: false);
+                Assert.Equal("UnityBlackCube", ReflectionProbe.defaultTexture.name);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(sky);
+            }
+        }
+
+        [Fact]
         public void SettingsReadWithoutASceneHaveNoBakedSource()
         {
             using var state = new State();
