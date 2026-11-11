@@ -81,11 +81,12 @@ value and image (`run.py extend`).
   AfterForwardAlpha) and a buffer setting a global float (BeforeImageEffects) leave them. A Halo added by
   script draws nothing until it is given a size and color (it has no scripting API).
 * Lens flares need an enabled FlareLayer. An element is a quad in view space at the flare's
-  depth, at `position` along the line from the flare's point to the view axis (on screen: from
-  the flare through the screen center), half `size * 0.01` of that depth tall, so constant on
+  depth, at `position` along the line from the flare's point to the view axis (on screen, with
+  a centred projection: from the flare through the screen center), half `size * 0.01` of that
+  depth tall, so constant on
   screen with a perspective camera, independent of the target's width, and scaled by the depth
   with an orthographic one. `Rotate` turns it into a diamond whose corners are 1.4 half sides
-  away, its top-right corner pointing away from the center. `Zoom` scales it by the flare's
+  away, its top-right corner pointing away from the view axis. `Zoom` scales it by the flare's
   brightness times its visibility (`fl.zoom.*`, `fl.light.zoom.*`: half and twice the size at
   brightness or flareStrength 0.5 and 2). A flare beyond the far plane (`fl.beyondFar`) or
   nearer than the near plane (`fl.insideNear`) is not drawn. A directional flare 50 degrees off

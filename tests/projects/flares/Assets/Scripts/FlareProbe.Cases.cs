@@ -565,8 +565,9 @@ public partial class FlareProbe
 
     /// <summary>Flares at their limits: a zooming element under other brightnesses (a LensFlare's,
     /// also while it fades in, and a light's flare under flareStrength), a flare beyond the far
-    /// plane and one nearer than the near plane, and a directional flare 50 and 70 degrees off the
-    /// view axis of a camera that sees 75 degrees to each side.</summary>
+    /// plane and one nearer than the near plane, a directional flare 50 and 70 degrees off the
+    /// view axis of a camera that sees 75 degrees to each side, and elements under a lens shift of
+    /// a quarter of the width.</summary>
     IEnumerator FlareLimits()
     {
         // Back to the first scene, whose objects the flare cases use.

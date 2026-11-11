@@ -24,8 +24,9 @@ namespace Unbound.Runtime
     /// the flare's point to the view axis at <c>position</c> along it (0 the flare, 1 the axis),
     /// half <c>size * 0.01</c> of that depth tall (so constant on screen with a perspective
     /// camera), rotated to point away from the axis (corners at 1.4 half sides) and scaled by
-    /// the brightness and visibility when asked; a directional flare sits at twice the near
-    /// plane's distance (see <see cref="BuildFlare"/>).</item>
+    /// the brightness and visibility when asked; a directional flare is placed at twice the
+    /// near plane's distance, Unbound's placement, which the captures bound (drawn 50 degrees
+    /// off the view axis, not at 70; see <see cref="BuildFlare"/>).</item>
     /// <item>A flare fades in at its fade speed per second (a LensFlare's own, a light's
     /// <c>RenderSettings.flareFadeSpeed</c>) while its point is on screen and no collider is
     /// between it and the camera (triggers too; layers the LensFlare ignores do not count), and

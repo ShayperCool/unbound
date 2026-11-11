@@ -88,12 +88,6 @@ namespace Unbound.Tests
             Assert.Equal(0.6f, corner.x / corner.magnitude, 5);
             Assert.Equal(0.8f, corner.y / corner.magnitude, 5);
 
-            // A lens shift of a quarter of the width: the element at position 1 is on the view
-            // axis, which the projection shows a quarter of the width left of the centre.
-            var shifted = Matrix4x4.Perspective(60f, 1f, 0.3f, 1000f);
-            shifted.m02 = 0.5f;
-            Assert.Equal(new Vector2(32f, 64f), Pixel(shifted, Center(1), 128f, 128f));
-
             var onAxis = Source(new Vector3(0f, 0f, 10f), false, Element(10f, 0f, rotate: true));
             Assert.True(Halos.BuildFlare(onAxis, 1f, Halos.FlarePoint(view, onAxis, 0.3f)));
             Assert.Equal(new Vector3(1.4f, 0f, -10f), Halos.BuiltVertices[0]);

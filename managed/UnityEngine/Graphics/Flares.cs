@@ -5,7 +5,7 @@ using Unbound.Runtime;
 namespace UnityEngine
 {
     /// <summary>A lens flare asset: its texture, how the texture is split into images, and the
-    /// elements drawn along the line through the screen's center.</summary>
+    /// elements drawn along the line from the flare to the view axis (the screen's center under a centred projection).</summary>
     [ClassId(121)]
     public sealed partial class Flare : Object, ISerializedAsset
     {
