@@ -12,7 +12,7 @@ vertices and sub-meshes), with the triangles either side lacks and the corners w
 differs. Exits 1 when anything differs; with --uv2, when the vertex count or `uv2Corners`
 differs. With --expect, only the named meshes (in every variant) decide the exit status, with
 --expect-variants also every mesh of the named variants on either side (so a mesh that is missing
-or extra there fails); every mesh is still listed.
+or extra there fails), judged on its vertices and triangles as well; every mesh is still listed.
 """
 import argparse
 import json
@@ -99,6 +99,9 @@ def main():
     unknown = [n for n in (args.expect or '').split(',') if n and n not in {k[1] for k in expected}]
     if unknown:
         sys.exit(f'--expect names no reference mesh: {unknown}')
+    def strict_variant(key):
+        return key[0] in (args.expect_variants or '').split(',')
+
     report, failing, failing_expected = {}, 0, 0
     for key in sorted(set(expected) | set(actual)):
         name = '/'.join(key)
@@ -113,9 +116,10 @@ def main():
             report[name] = fields or 'match'
         verdict = report[name]
         if isinstance(verdict, dict) and args.uv2:
-            verdict = {f: d for f, d in verdict.items() if f in ('vertexCount', 'uv2Corners')} or 'match'
-        expected_mesh = (not args.expect or key[1] in args.expect.split(',')
-                         or key[0] in (args.expect_variants or '').split(','))
+            # A variant named by --expect-variants is also judged on its vertices and triangles.
+            judged = ('vertexCount', 'uv2Corners') + (('subMeshes', 'vertices') if strict_variant(key) else ())
+            verdict = {f: d for f, d in verdict.items() if f in judged} or 'match'
+        expected_mesh = not args.expect or key[1] in args.expect.split(',') or strict_variant(key)
         if verdict != 'match':
             failing += 1
             if expected_mesh:

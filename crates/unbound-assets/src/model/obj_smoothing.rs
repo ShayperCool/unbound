@@ -45,7 +45,7 @@ pub(super) fn statement(rest: &str, current: u32) -> u32 {
 }
 
 /// The mesh group a `g` statement names.
-pub(super) fn group_name(rest: &str) -> String {
+fn group_name(rest: &str) -> String {
     let rest = rest.trim();
     if rest.is_empty() {
         "default".into()

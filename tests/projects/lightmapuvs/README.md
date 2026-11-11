@@ -94,8 +94,10 @@ without faces gives no mesh; a vertex no face names is in no mesh. Each mesh is 
 the root named like it, also when it is the only one. Siblings are ordered without regard to
 letter case and with runs of digits as numbers (`9`, `10`, `_under`, `a01`, `A1`, `a1A`, `a1b`,
 `a2`, `a10`, `Alpha`, `alpha`, `b-2`, `b.1`, `B_0`, `Beta`, `Zed`), the same for OBJ groups and FBX
-nodes. Not measured: `sortHierarchyByName` off, names with characters outside ASCII, and an OBJ
-face that gives no triangle with mesh optimization off (Unbound keeps its points, as for FBX).
+nodes. Not measured: `sortHierarchyByName` off; names with characters outside ASCII (Unbound
+folds only ASCII letter case when it joins groups); group names with tabs, repeated spaces or a
+trailing comment (Unbound joins single spaces and keeps the rest of the line); and an OBJ face
+that gives no triangle with mesh optimization off (Unbound keeps its points, as for FBX).
 
 Unbound matches all 52 Names records in names, order, vertices and triangles; the calculated
 normals of some of these slightly bent quads differ in the last float digit (at most 1e-7).
