@@ -895,7 +895,9 @@ namespace UnityEngine.UIElements
         /// end: last); the parent's TreeViewItemData gets it as a child too. A parent id that is not
         /// in the tree adds at the root; an id already in the tree adds a second item, and the id
         /// then names the new one (Unity 6000.0.71f1, tests/projects/uitkcollections tree-data).
-        /// The rows show the item from the next refresh, at once with rebuildTree or a child index.</summary>
+        /// A parent whose data is null does not get the child in its TreeViewItemData (nor lose it
+        /// on removal). The rows show the item from the next refresh, at once with rebuildTree or
+        /// a child index (tree-controls section).</summary>
         public void AddItem(in TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree)
         {
             bool known = hierarchy.TryGet(parentId, out var parent);

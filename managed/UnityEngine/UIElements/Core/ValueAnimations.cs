@@ -8,7 +8,7 @@ using UnityEngine.UIElements.StyleSheets;
 // on the panel clock, eased (OutQuad by default) and interpolated, and calls valueUpdated with the
 // element and the value on every panel update until it completes; then onAnimationCompleted, and
 // unless kept alive it returns to a pool (a recycled animation refuses use). Animations tick in the
-// panel update before styles, only while their element is in a panel. StyleValues animates a set of
+// panel update after styles and layout, only while their element is in a panel. StyleValues animates a set of
 // style properties of the element through its inline style. Documented (Unity 6000.0 Scripting API
 // "ValueAnimation<T0>", "ITransitionAnimations", "Easing", "StyleValues"); the flexShrink setter of
 // StyleValues sets flexGrow, as Unity's does.
@@ -580,7 +580,7 @@ namespace UnityEngine.UIElements
     }
 
     /// <summary>The value animations of a panel, ticked once per panel update (and on the update
-    /// after new ones start) before styles are resolved.</summary>
+    /// after new ones start) after styles and layout.</summary>
     internal sealed class UaValueAnimationSystem
     {
         readonly HashSet<IValueAnimationUpdate> m_Animations = new HashSet<IValueAnimationUpdate>();

@@ -477,7 +477,9 @@ namespace UnityEngine.UIElements
                 m_DropData.expandedIdsBeforeDrag = expanded.ToArray();
             }
             m_DropData.expandItemBeginTimerMs = Panel.TimeSinceStartupMs();
-            // Not the invalid id: Unity names item 0 here.
+            // The hover now names item 0, not the invalid id: while the pointer rests, a collapsed
+            // item 0 with children opens after another timeout although it was never hovered
+            // (measured, tests/projects/uitkcollections tree-controls rest-1600).
             m_DropData.lastItemId = 0;
             m_TreeView.ExpandItem(id);
         }
@@ -1145,7 +1147,9 @@ namespace UnityEngine.UIElements
 
         bool IsDragged(int id)
         {
-            foreach (int dragged in dragAndDropController.GetSortedSelectedIds())
+            var ids = dragAndDropController.GetSortedSelectedIds();
+            if (ids is List<int> list) return list.Contains(id);
+            foreach (int dragged in ids)
                 if (dragged == id) return true;
             return false;
         }
