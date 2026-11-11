@@ -86,9 +86,10 @@ pub struct TextureInfo {
     pub levels: u32,
 }
 
-/// The images of a render target that is textures: a level of its color texture, of one layer
-/// of it (`layer`: a cube's face, an array's layer, a 3D texture's slice) where it has several,
-/// and its depth texture's first level (`stencil`: with stencil), of one layer the same way.
+/// The images of a render target: a level of its color texture, of one layer of it (`layer`:
+/// a cube's face, an array's layer, a 3D texture's slice) where it has several, and its depth
+/// texture's first level (`stencil`: with stencil), of one layer the same way. A multisampled
+/// target's are its samples' textures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TargetImages {
     pub color: u32,
@@ -96,13 +97,6 @@ pub struct TargetImages {
     pub layer: Option<u32>,
     pub depth: Option<(u32, bool)>,
     pub depth_layer: Option<u32>,
-}
-
-/// What a framebuffer draws into: a texture's level, or a renderbuffer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Attachment {
-    Texture { name: u32, level: u32 },
-    Renderbuffer(u32),
 }
 
 /// The OpenGL error names and descriptions the Editor logs after a plugin callback that left an
@@ -238,12 +232,6 @@ impl Interop {
     pub fn bind_target(&mut self, _: Option<TargetImages>, _: [i32; 4]) {
         match *self {}
     }
-    pub fn bind_attachments(&mut self, _: Attachment, _: Option<(Attachment, bool)>, _: [i32; 4]) {
-        match *self {}
-    }
-    pub fn release_attachments(&mut self) {
-        match *self {}
-    }
     pub fn finish(&self) {
         match *self {}
     }
@@ -254,7 +242,7 @@ impl Interop {
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use super::{Attachment, InternalFormat, TargetImages, TextureInfo};
+    use super::{InternalFormat, TargetImages, TextureInfo};
     use std::ffi::{CStr, c_char, c_void};
 
     type EglDisplay = *mut c_void;
@@ -280,7 +268,6 @@ mod linux {
     const GL_TEXTURE_INTERNAL_FORMAT: u32 = 0x1003;
     const GL_TEXTURE_WIDTH: u32 = 0x1000;
     const GL_TEXTURE_HEIGHT: u32 = 0x1001;
-    const GL_RENDERBUFFER: u32 = 0x8D41;
     /// More levels than any texture has.
     const MAX_LEVELS: i32 = 32;
     const GL_TEXTURE_IMMUTABLE_FORMAT: u32 = 0x912F;
@@ -308,7 +295,6 @@ mod linux {
         DeleteFramebuffers: unsafe extern "C" fn(i32, *const u32),
         NamedFramebufferTexture: unsafe extern "C" fn(u32, u32, u32, i32),
         NamedFramebufferTextureLayer: unsafe extern "C" fn(u32, u32, u32, i32, i32),
-        NamedFramebufferRenderbuffer: unsafe extern "C" fn(u32, u32, u32, u32),
         NamedFramebufferParameteri: unsafe extern "C" fn(u32, u32, i32),
         BindFramebuffer: unsafe extern "C" fn(u32, u32),
         Viewport: unsafe extern "C" fn(i32, i32, i32, i32),
@@ -352,9 +338,6 @@ mod linux {
         empty_framebuffer: u32,
         /// Framebuffers of targets, by their images.
         framebuffers: Vec<(TargetImages, u32)>,
-        /// The framebuffer of attachments bound for one callback ([`Interop::bind_attachments`]):
-        /// they are detached after it, so it keeps none of them alive.
-        attachments_framebuffer: u32,
     }
 
     // SAFETY: the context is only used by the thread that makes it current (the renderer's
@@ -492,7 +475,6 @@ mod linux {
                 DeleteFramebuffers: gl_fn!(egl, "glDeleteFramebuffers"),
                 NamedFramebufferTexture: gl_fn!(egl, "glNamedFramebufferTexture"),
                 NamedFramebufferTextureLayer: gl_fn!(egl, "glNamedFramebufferTextureLayer"),
-                NamedFramebufferRenderbuffer: gl_fn!(egl, "glNamedFramebufferRenderbuffer"),
                 NamedFramebufferParameteri: gl_fn!(egl, "glNamedFramebufferParameteri"),
                 BindFramebuffer: gl_fn!(egl, "glBindFramebuffer"),
                 Viewport: gl_fn!(egl, "glViewport"),
@@ -542,12 +524,8 @@ mod linux {
                 own_display,
                 empty_framebuffer: 0,
                 framebuffers: Vec::new(),
-                attachments_framebuffer: 0,
             };
-            unsafe {
-                (interop.gl.CreateFramebuffers)(1, &mut interop.empty_framebuffer);
-                (interop.gl.CreateFramebuffers)(1, &mut interop.attachments_framebuffer);
-            }
+            unsafe { (interop.gl.CreateFramebuffers)(1, &mut interop.empty_framebuffer) };
             Ok(interop)
         }
 
@@ -788,54 +766,6 @@ mod linux {
             unsafe {
                 (gl.BindFramebuffer)(GL_FRAMEBUFFER, framebuffer);
                 (gl.Viewport)(viewport[0], viewport[1], viewport[2], viewport[3]);
-            }
-        }
-
-        /// Binds a framebuffer of these attachments (a multisampled target's), with the
-        /// viewport; [`Interop::release_attachments`] detaches them after the callback.
-        pub fn bind_attachments(
-            &mut self,
-            color: Attachment,
-            depth: Option<(Attachment, bool)>,
-            viewport: [i32; 4],
-        ) {
-            let framebuffer = self.attachments_framebuffer;
-            self.attach(GL_COLOR_ATTACHMENT0, Some(color));
-            // The depth and stencil point is both points: cleared first, then the one given.
-            self.attach(GL_DEPTH_STENCIL_ATTACHMENT, None);
-            if let Some((depth, stencil)) = depth {
-                let point = if stencil {
-                    GL_DEPTH_STENCIL_ATTACHMENT
-                } else {
-                    GL_DEPTH_ATTACHMENT
-                };
-                self.attach(point, Some(depth));
-            }
-            unsafe {
-                (self.gl.BindFramebuffer)(GL_FRAMEBUFFER, framebuffer);
-                (self.gl.Viewport)(viewport[0], viewport[1], viewport[2], viewport[3]);
-            }
-        }
-
-        /// Detaches what [`Interop::bind_attachments`] attached.
-        pub fn release_attachments(&mut self) {
-            for point in [GL_COLOR_ATTACHMENT0, GL_DEPTH_STENCIL_ATTACHMENT] {
-                self.attach(point, None);
-            }
-        }
-
-        fn attach(&self, point: u32, attachment: Option<Attachment>) {
-            let (gl, framebuffer) = (&self.gl, self.attachments_framebuffer);
-            unsafe {
-                match attachment {
-                    Some(Attachment::Texture { name, level }) => {
-                        (gl.NamedFramebufferTexture)(framebuffer, point, name, level as i32)
-                    }
-                    Some(Attachment::Renderbuffer(name)) => {
-                        (gl.NamedFramebufferRenderbuffer)(framebuffer, point, GL_RENDERBUFFER, name)
-                    }
-                    None => (gl.NamedFramebufferTexture)(framebuffer, point, 0, 0),
-                }
             }
         }
 

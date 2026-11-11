@@ -67,19 +67,27 @@ struct CustomBlitParams {
     flags: u32,
 }
 
+/// The OpenGL names of a renderer texture, as plugins see them.
+#[derive(Clone, Copy)]
+struct Names {
+    /// The color's: the texture's, or a multisampled target's resolved image's.
+    color: u32,
+    /// A single-sample depth buffer's.
+    depth: Option<u32>,
+    /// A multisampled target's samples: its color's and its depth buffer's.
+    samples: Option<(u32, Option<u32>)>,
+}
+
 /// A renderer texture native plugins were given, by its handle: the storage they saw (the
 /// texture's current one while they are the same) and its OpenGL names.
 struct Native {
     texture: wgpu::Texture,
     /// The texture the color names: the storage, or a multisampled target's resolved image.
     named: wgpu::Texture,
-    /// The color's name: `named`'s, or a view of it made here (`view`) with the target of the
-    /// texture's shape, in the format Unity's device stores the texture in.
-    color: u32,
-    view: bool,
-    /// A single-sample depth buffer's name (`depth_view`: a view made here, as the color's).
-    depth: Option<u32>,
-    depth_view: bool,
+    names: Names,
+    /// The names that are views made here, where Unity's device has the texture with another
+    /// target or in another format than the renderer's storage: they go with the texture.
+    views: [Option<u32>; 2],
 }
 
 #[derive(Default)]
@@ -92,7 +100,8 @@ pub(super) struct PluginState {
     pub aliases: HashSet<u64>,
     /// The current target's mip and slice (`SetTarget`).
     pub target: (i32, i32),
-    /// A callback found a multisampled target's samples bound: they are resolved again.
+    /// The callback running found a multisampled target's samples bound: they are resolved
+    /// again after it.
     pub drew_into_samples: bool,
 }
 
@@ -257,11 +266,11 @@ impl UnityRenderer {
         if self.vulkan_plugins.is_some() {
             return self.vulkan_native_texture(handle, depth);
         }
-        let shared = self.share(handle).and_then(|(color, depth_name)| {
+        let shared = self.share(handle).and_then(|names| {
             if depth {
-                self.depth_pointer(handle, color, depth_name)
+                self.depth_pointer(handle, names)
             } else {
-                Ok(color)
+                Ok(names.color)
             }
         });
         match shared {
@@ -280,21 +289,15 @@ impl UnityRenderer {
     /// tests/projects/nativegfx `name nodepth`, `shape.rt.cube.depth`,
     /// `shape.rt.msaa.color.depth`). The Editor gives a multisampled target with depth a
     /// single-sample depth texture, which the renderer has none of.
-    fn depth_pointer(&self, handle: u64, color: u32, depth: Option<u32>) -> Result<u32, String> {
-        let gpu = &self.textures[&handle];
-        match (&gpu.msaa, depth) {
-            (None, _) if gpu.cube => Ok(color),
-            (None, depth) => Ok(depth.unwrap_or(color)),
-            (Some(_), _) if gpu.depth_texture.is_some() => Err(
+    fn depth_pointer(&self, handle: u64, names: Names) -> Result<u32, String> {
+        match names.samples {
+            None if self.textures[&handle].cube => Ok(names.color),
+            None => Ok(names.depth.unwrap_or(names.color)),
+            Some((samples, None)) => Ok(samples),
+            Some((_, Some(_))) => Err(
                 "the depth buffer of a multisampled render texture is not shared (Unity gives a single-sample depth texture)"
                     .into(),
             ),
-            (Some((samples, _)), _) => match attachment(samples.texture())? {
-                gl_interop::Attachment::Texture { name, .. } => Ok(name),
-                gl_interop::Attachment::Renderbuffer(_) => {
-                    Err("its samples are not an OpenGL texture (a render buffer)".into())
-                }
-            },
         }
     }
 
@@ -307,8 +310,8 @@ impl UnityRenderer {
             .clone()
     }
 
-    /// The texture's OpenGL names (color, single-sample depth buffer), as plugins see them.
-    fn share(&mut self, handle: u64) -> Result<(u32, Option<u32>), String> {
+    /// The texture's OpenGL names, as plugins see them.
+    fn share(&mut self, handle: u64) -> Result<Names, String> {
         let gpu = self
             .textures
             .get(&handle)
@@ -318,7 +321,7 @@ impl UnityRenderer {
             && native.texture == gpu.texture
             && native.named == named
         {
-            return Ok((native.color, native.depth));
+            return Ok(native.names);
         }
         if let Some((texture, reason)) = self.plugins.refused.get(&handle)
             && *texture == gpu.texture
@@ -331,7 +334,7 @@ impl UnityRenderer {
         let texture = gpu.texture.clone();
         match self.native_names(handle, named) {
             Ok(native) => {
-                let names = (native.color, native.depth);
+                let names = native.names;
                 self.plugins.natives.insert(handle, native);
                 Ok(names)
             }
@@ -348,48 +351,74 @@ impl UnityRenderer {
     /// Unity's device has the texture with another target or in another format than the
     /// renderer's storage, a view of it with them: a square array of six layers is a cube map
     /// in the renderer's backend, an sRGB color texture of a Linear project `GL_SRGB8_ALPHA8`
-    /// on Unity's device (tests/projects/nativegfx `name ...`, `shape.*`).
+    /// on Unity's device, a multisampled target's samples too (tests/projects/nativegfx
+    /// `name ...`, `shape.*`, `shape.msaa.srgb.target.color`).
     fn native_names(&mut self, handle: u64, named: wgpu::Texture) -> Result<Native, String> {
         let gpu = &self.textures[&handle];
         let storage = gl_name(&named)?;
-        // A multisampled depth buffer has no name of its own (`depth_pointer`).
-        let depth = gpu.depth_texture.as_ref().filter(|_| gpu.samples == 1);
-        let depth = depth.map(gl_name).transpose()?;
+        let depth = gpu.depth_texture.as_ref().map(gl_name).transpose()?;
+        let samples = gpu.msaa.as_ref().map(|(samples, _)| samples.texture());
+        let samples = samples.map(gl_name).transpose()?;
         let (srgb, color_space) = (gpu.srgb_view.is_some(), self.color_space);
         let shape = Shape::of(gpu);
         let texture = gpu.texture.clone();
         gl_interop::with(|interop| {
-            let mut name = |name: u32, color: bool| -> Result<(u32, bool), String> {
-                let info = interop
-                    .texture_info(name)
-                    .ok_or("its OpenGL texture is not in the plugins' share group")?;
-                let (target, layers) = if color { shape } else { shape.depth() }.target();
-                let format = color
-                    .then(|| device_format(info.format, srgb, color_space))
-                    .flatten()
-                    .unwrap_or(info.format);
-                if format == info.format && target == info.target {
-                    return Ok((name, false));
-                }
-                Ok((interop.view(name, info, target, format, layers)?, true))
+            let mut views = [None; 2];
+            let names = {
+                // A texture's name with a target (None: its storage's, with one layer) and, a
+                // color's, in the device's format: a view, kept in `views`, where they differ.
+                let mut name = |slot: usize,
+                                name: u32,
+                                target: Option<(u32, u32)>,
+                                color: bool|
+                 -> Result<u32, String> {
+                    let info = interop
+                        .texture_info(name)
+                        .ok_or("its OpenGL texture is not in the plugins' share group")?;
+                    let (target, layers) = target.unwrap_or((info.target, 1));
+                    let format = color
+                        .then(|| device_format(info.format, srgb, color_space))
+                        .flatten()
+                        .unwrap_or(info.format);
+                    if format == info.format && target == info.target {
+                        return Ok(name);
+                    }
+                    let view = interop.view(name, info, target, format, layers)?;
+                    views[slot] = Some(view);
+                    Ok(view)
+                };
+                name(0, storage, Some(shape.target()), true).and_then(|color| {
+                    Ok(match samples {
+                        // A multisampled target: its samples, and their depth buffer as it is.
+                        Some(samples) => Names {
+                            color,
+                            depth: None,
+                            samples: Some((name(1, samples, None, true)?, depth)),
+                        },
+                        None => Names {
+                            color,
+                            depth: depth
+                                .map(|depth| name(1, depth, Some(shape.depth().target()), false))
+                                .transpose()?,
+                            samples: None,
+                        },
+                    })
+                })
             };
-            let (color, view) = name(storage, true)?;
-            let depth = depth.map(|depth| name(depth, false)).transpose();
-            let (depth, depth_view) = match depth {
-                Ok(depth) => (depth.map(|d| d.0), depth.is_some_and(|d| d.1)),
+            match names {
+                Ok(names) => Ok(Native {
+                    texture,
+                    named,
+                    names,
+                    views,
+                }),
                 Err(reason) => {
-                    interop.forget(color, view);
-                    return Err(reason);
+                    for view in views.into_iter().flatten() {
+                        interop.forget(view, true);
+                    }
+                    Err(reason)
                 }
-            };
-            Ok(Native {
-                texture,
-                named,
-                color,
-                view,
-                depth,
-                depth_view,
-            })
+            }
         })?
     }
 
@@ -448,11 +477,11 @@ impl UnityRenderer {
             .plugins
             .natives
             .iter()
-            .find(|(_, native)| native.color == name)
+            .find(|(_, native)| native.names.color == name)
             .map(|(&source, native)| (source, native.named.clone()));
         if let Some((source, texture)) = source {
             let shown = &self.textures[&source];
-            if shown.layers > 1 || shown.volume {
+            if Shape::of(shown).layered() {
                 return Err(format!(
                     "texture {name} is not shown: a 2D texture cannot show a cube, array or 3D texture"
                 ));
@@ -590,7 +619,6 @@ impl UnityRenderer {
             self.bind_plugin_target();
             let _ = gl_interop::with(|interop| interop.clear_errors());
         }
-        let samples_bound = self.plugins.drew_into_samples;
         match *call {
             PluginCall::Event { .. }
             | PluginCall::EventAndData { .. }
@@ -605,18 +633,15 @@ impl UnityRenderer {
             } => self.texture_update(callback, texture, user_data, v2, format, bytes_per_pixel),
         }
         if context.is_ok() {
-            self.after_plugin_callback(samples_bound);
+            self.after_plugin_callback();
         }
     }
 
     /// The plugin's OpenGL work is done before the renderer goes on; errors it left are logged
     /// as the Editor logs them.
-    fn after_plugin_callback(&mut self, samples_bound: bool) {
+    fn after_plugin_callback(&mut self) {
         let errors = gl_interop::with(|interop| {
             interop.finish();
-            if samples_bound {
-                interop.release_attachments();
-            }
             interop.clear_errors()
         })
         .unwrap_or_default();
@@ -631,69 +656,66 @@ impl UnityRenderer {
         }
     }
 
-    /// The samples a multisampled target's passes draw into, for a framebuffer: its color's and
-    /// the depth buffer's attached to it.
-    fn sample_attachments(
-        &self,
-        color: u64,
-        depth: u64,
-    ) -> Option<Result<(gl_interop::Attachment, Option<gl_interop::Attachment>), String>> {
-        let (samples, _) = self.textures.get(&color)?.msaa.as_ref()?;
-        let depth = depth_owner(color, depth)
-            .and_then(|owner| self.textures.get(&owner)?.depth_texture.as_ref())
-            .map(attachment)
-            .transpose();
-        Some(attachment(samples.texture()).and_then(|color| Ok((color, depth?))))
-    }
-
     /// Binds the current target for a callback: its color texture's level, the depth texture
-    /// attached to it and the viewport (a multisampled target's samples, as the Editor binds
-    /// them: tests/projects/nativegfx `shape.msaa.target*`); a framebuffer without attachments
-    /// when the target is the screen or cannot be shared.
+    /// attached to it and the viewport; of a cube, an array or a 3D target the image being
+    /// drawn, and of a multisampled target its samples, as the Editor binds them
+    /// (tests/projects/nativegfx `shape.cube.target*`, `shape.array.target*`,
+    /// `shape.msaa.target*`). A framebuffer without attachments when the target is the screen,
+    /// is not drawn into or cannot be shared.
     fn bind_plugin_target(&mut self) {
         let (color, depth) = self.target_handles;
         let (mip, slice) = self.plugins.target;
-        self.plugins.drew_into_samples = false;
-        if let Some(Ok((samples, depth))) = self.sample_attachments(color, depth) {
-            let gpu = &self.textures[&color];
-            let v = clamp_viewport(self.state.viewport, gpu.width, gpu.height);
-            let viewport = [v[0] as i32, v[1] as i32, v[2] as i32, v[3] as i32];
-            let bound = gl_interop::with(|interop| {
-                interop.bind_attachments(samples, depth.map(|d| (d, true)), viewport)
-            });
-            self.plugins.drew_into_samples = bound.is_ok();
-            return;
-        }
         let mut bound = None;
+        let mut samples = false;
         if color == 0 {
             self.warn_once("plugin-screen".into(), || {
                 "a native plugin callback while the screen is the target finds no target bound (the screen is not shared with plugins)".into()
             });
+        } else if self.state.target.is_none() {
+            // Nothing is drawn there either (`resolve_target` said why).
+            self.warn_once(format!("plugin-target-none{color}"), || {
+                format!("a native plugin callback finds no target bound: render texture {color} is not a target as it was set (its mip or slice is out of range)")
+            });
         } else if self.textures.contains_key(&color) {
             match self.share(color) {
-                Ok((color_name, own_depth)) => {
+                Ok(names) => {
                     let owner = depth_owner(color, depth);
-                    let attached = match owner {
-                        Some(owner) if owner == color => own_depth,
-                        Some(owner) => self.share(owner).ok().and_then(|(_, d)| d),
+                    let owner_names = match owner {
+                        Some(owner) if owner == color => Some(names),
+                        Some(owner) => self.share(owner).ok(),
                         None => None,
                     };
-                    // The image being drawn of a cube, an array or a 3D target, and of a depth
-                    // buffer with as many (tests/projects/nativegfx `shape.cube.target*`,
-                    // `shape.array.target*`).
-                    let image = |handle: u64, depth: bool| {
-                        let shape = Shape::of(&self.textures[&handle]);
-                        let shape = if depth { shape.depth() } else { shape };
-                        shape.layered().then_some(slice.max(0) as u32)
-                    };
-                    bound = Some(gl_interop::TargetImages {
-                        color: color_name,
-                        mip: mip.max(0) as u32,
-                        layer: image(color, false),
-                        depth: attached.map(|d| (d, true)),
-                        depth_layer: owner
-                            .filter(|_| attached.is_some())
-                            .and_then(|owner| image(owner, true)),
+                    bound = Some(match names.samples {
+                        Some((color, _)) => {
+                            samples = true;
+                            let depth = owner_names.and_then(|n| n.samples).and_then(|s| s.1);
+                            gl_interop::TargetImages {
+                                color,
+                                mip: 0,
+                                layer: None,
+                                depth: depth.map(|d| (d, true)),
+                                depth_layer: None,
+                            }
+                        }
+                        None => {
+                            let attached = owner_names.and_then(|n| n.depth);
+                            // The image being drawn of a cube, an array or a 3D target, and
+                            // of a depth buffer with as many.
+                            let image = |handle: u64, depth: bool| {
+                                let shape = Shape::of(&self.textures[&handle]);
+                                let shape = if depth { shape.depth() } else { shape };
+                                shape.layered().then_some(slice.max(0) as u32)
+                            };
+                            gl_interop::TargetImages {
+                                color: names.color,
+                                mip: mip.max(0) as u32,
+                                layer: image(color, false),
+                                depth: attached.map(|d| (d, true)),
+                                depth_layer: owner
+                                    .filter(|_| attached.is_some())
+                                    .and_then(|owner| image(owner, true)),
+                            }
+                        }
                     });
                 }
                 Err(reason) => self.warn_once(format!("plugin-target{color}"), || {
@@ -711,7 +733,8 @@ impl UnityRenderer {
         };
         let v = clamp_viewport(self.state.viewport, width, height);
         let viewport = [v[0] as i32, v[1] as i32, v[2] as i32, v[3] as i32];
-        let _ = gl_interop::with(|interop| interop.bind_target(bound, viewport));
+        let done = gl_interop::with(|interop| interop.bind_target(bound, viewport));
+        self.plugins.drew_into_samples = samples && done.is_ok();
     }
 
     /// `IssuePluginCustomTextureUpdateV1`/`V2`: the begin event, the upload of the data the
@@ -859,35 +882,22 @@ fn plugin_texture_id(handle: u64) -> u32 {
 /// What plugins saw of a texture goes: the framebuffers made of its names, and a view made of
 /// it.
 fn forget(native: Native) {
+    let Names {
+        color,
+        depth,
+        samples,
+    } = native.names;
+    let names = [
+        Some(color),
+        depth,
+        samples.map(|s| s.0),
+        samples.and_then(|s| s.1),
+    ];
     let _ = gl_interop::with(|interop| {
-        interop.forget(native.color, native.view);
-        if let Some(depth) = native.depth {
-            interop.forget(depth, native.depth_view);
+        for name in names.into_iter().flatten() {
+            interop.forget(name, native.views.contains(&Some(name)));
         }
     });
-}
-
-/// What a framebuffer attaches of a renderer texture: its OpenGL texture's first level, or its
-/// render buffer.
-#[cfg(target_os = "linux")]
-fn attachment(texture: &wgpu::Texture) -> Result<gl_interop::Attachment, String> {
-    use wgpu::hal::gles::TextureInner;
-    // SAFETY: the hal texture is only read, while the wgpu texture lives.
-    match unsafe { texture.as_hal::<wgpu::hal::api::Gles>() }.map(|hal| hal.inner.clone()) {
-        Some(TextureInner::Texture { raw, .. }) => Ok(gl_interop::Attachment::Texture {
-            name: raw.0.get(),
-            level: 0,
-        }),
-        Some(TextureInner::Renderbuffer { raw }) => {
-            Ok(gl_interop::Attachment::Renderbuffer(raw.0.get()))
-        }
-        _ => Err("the renderer does not draw with OpenGL".into()),
-    }
-}
-
-#[cfg(not(target_os = "linux"))]
-fn attachment(_: &wgpu::Texture) -> Result<gl_interop::Attachment, String> {
-    Err("textures are shared with native plugins on Linux only".into())
 }
 
 /// The OpenGL texture name of a renderer texture (wgpu's OpenGL backend).
