@@ -83,6 +83,18 @@ almost half of the covered texels receive less than 0.001); `roomsystems-base`, 
 writes `<case>-a<index>.atlas` for every atlas after the first. The default of
 `DynamicGI.updateThreshold` is recorded.
 
+At the end of the run, in one frame and as values only: `end-reflection`
+(`ReflectionProbe.defaultTexture`'s name, dimension and size and its decode values in a scene
+without a sky) and `RenderSettings.ambientProbe` after each of a series of changes: the custom
+ambient mode after the scene's load (`end-custom-loaded`), a probe given by the script
+(`end-custom-set`), the ambient intensity 2 (`end-custom-set-intensity`), the flat mode
+(`end-custom-set-flat`), the custom mode again (`end-custom-again`), the skybox mode without a
+skybox material (`end-custom-skybox`), a skybox material assigned (`end-skybox-material`), the
+intensity 1.5 (`end-skybox-intensity`), another probe given (`end-skybox-set`), the intensity 0.5
+(`end-skybox-set-intensity`), the flat mode with a probe given (`end-flat-set`), another ambient
+color (`end-flat-set-color`), the skybox removed (`end-flat-noskybox`), the skybox mode
+(`end-skybox-none`) and the custom mode (`end-custom-last`).
+
 ## What the Editor does (this capture)
 
 Unity updates realtime GI over several frames on worker threads; even with
@@ -141,6 +153,19 @@ Observations (not documented guarantees):
   `UpdateEnvironment`: 0.2140 times the intensity 1 probe at 0.5 and 4.5948 times at 2 (the
   intensity taken as an sRGB-encoded value). In the custom ambient mode it is the probe last
   derived from the sky, at intensity 1.
+- `RenderSettings.ambientProbe` reads as one stored probe seen through the ambient mode (the
+  `end-*` cases, each read in the frame of its change; the documentation says only that the probe
+  can be set and that the custom mode's lighting is "defined by a custom cubemap"). The stored
+  probe is zero after the load of a scene whose lighting data was made without a sky, the sky's
+  after `DynamicGI.UpdateEnvironment`, and the one a script gives. The custom mode returns it as
+  it is, whatever the ambient intensity; the flat mode returns the ambient color's whatever probe
+  is given, and the given probe is back when the custom mode is; the skybox mode returns it times
+  the intensity's scale (2.44 at 1.5, 0.214 at 0.5), also right after a probe is given, and
+  without a skybox material the ambient color's, unscaled. Assigning `RenderSettings.skybox`
+  alone changes nothing until an ambient input changes (`end-skybox-material`, as
+  `room-sky-none`, where the skybox was removed after the mode was set).
+- Without a sky a scene's default reflection is black: `ReflectionProbe.defaultTexture` is a cube
+  of one texel named `UnityBlackCube`, with decode values (1, 1, 0, 0) (`end-reflection`).
 - The directionality (`roomdirectional-*.dir`): where light arrives from one side its RGB is
   that direction times 1/2 plus 1/2 (the floor's texels (127, 211, 127): light from above, at
   about two thirds of a unit length since it comes from a spread of directions) and its alpha the
@@ -165,7 +190,9 @@ Unbound draws precomputed realtime GI for these scenes (docs/REALTIME_GI.md): it
 renderers' realtime lightmap UVs, renders their meta passes and updates the systems each frame.
 The gate fails on state values (cases, realtime lightmap indices and scale/offset, lightmaps mode,
 probe count and baked coefficients, `isConverged`, API defaults, what `SetEnvironmentData`
-throws, and which atlas texels the renderers cover) and on the realtime lightmaps of every case
+throws, the default reflection, and which atlas texels the renderers cover), on
+`RenderSettings.ambientProbe`, on the frames (a mean difference of at most 2 of 255; the
+engine's: 0.75 at most, 0.4 on average) and on the realtime lightmaps of every case
 (at most 0.5% of their values outside the tolerance, for
 the isolated texels docs/REALTIME_GI.md explains), and reports the other lighting values
 (`realtimegi: 0 failing state values, 0 failing gated lighting values, N failing lighting
@@ -174,8 +201,8 @@ as well: all four channels of every covered texel within 2.5/255 of the Editor's
 of them further, each within 5/255 (the engine's: at most 3 of a case's 6760 values beyond
 2.5/255, the furthest 4/255 off, 0.16/255 on average). Every failing value, and every allowed isolated
 one, is written to `compare-details.txt` in the run directory. Light probes are lit by realtime GI
-(their coefficients are reported: a few small higher-band ones differ in the brightest case),
-and `RenderSettings.ambientProbe` in the custom ambient mode differs (reported).
+(their coefficients are reported: 14 values in the engine's run, in the brightest case and its
+successor and one coefficient of one probe in `RoomScaled`; docs/REALTIME_GI.md, Residuals).
 
 ## Running
 

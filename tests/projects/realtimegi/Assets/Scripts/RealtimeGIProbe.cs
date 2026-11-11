@@ -299,7 +299,65 @@ public class RealtimeGIProbe : MonoBehaviour
                 Capture(label + "-dim", s);
             }
         }
+
+        // What objects outside every reflection probe reflect in a scene without a sky.
+        Record("end-reflection", DefaultReflection());
+
+        // RenderSettings.ambientProbe in the custom ambient mode, within one frame: after a scene
+        // load, then a probe set by script, the ambient intensity changed under it, the flat mode
+        // and the custom one again, and the skybox mode (the scene has no skybox material).
+        RenderSettings.ambientMode = AmbientMode.Custom;
+        Record("end-custom-loaded", "\"ambientProbe\":" + AmbientProbe());
+        var given = new SphericalHarmonicsL2();
+        given.AddAmbientLight(new Color(0.3f, 0.2f, 0.1f));
+        given.AddDirectionalLight(Vector3.up, new Color(0.1f, 0.4f, 0.2f), 1f);
+        RenderSettings.ambientProbe = given;
+        Record("end-custom-set", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientIntensity = 2f;
+        Record("end-custom-set-intensity", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        Record("end-custom-set-flat", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientMode = AmbientMode.Custom;
+        Record("end-custom-again", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        Record("end-custom-skybox", "\"ambientProbe\":" + AmbientProbe());
+
+        // The skybox mode with the probe a script gave: a skybox material assigned, then the
+        // ambient intensity changed, another probe given and the intensity changed again.
+        RenderSettings.skybox = new Material(Shader.Find("Skybox/Procedural"));
+        Record("end-skybox-material", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientIntensity = 1.5f;
+        Record("end-skybox-intensity", "\"ambientProbe\":" + AmbientProbe());
+        var other = new SphericalHarmonicsL2();
+        other.AddAmbientLight(new Color(0.05f, 0.1f, 0.4f));
+        other.AddDirectionalLight(Vector3.right, new Color(0.5f, 0.1f, 0.1f), 1f);
+        RenderSettings.ambientProbe = other;
+        Record("end-skybox-set", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientIntensity = 0.5f;
+        Record("end-skybox-set-intensity", "\"ambientProbe\":" + AmbientProbe());
+        // The flat mode with a probe given, then another ambient color; and the skybox mode
+        // entered without a skybox material.
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        RenderSettings.ambientProbe = given;
+        Record("end-flat-set", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientLight = new Color(0.4f, 0.3f, 0.6f);
+        Record("end-flat-set-color", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.skybox = null;
+        Record("end-flat-noskybox", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        Record("end-skybox-none", "\"ambientProbe\":" + AmbientProbe());
+        RenderSettings.ambientMode = AmbientMode.Custom;
+        Record("end-custom-last", "\"ambientProbe\":" + AmbientProbe());
         Finish();
+    }
+
+    /// <summary>ReflectionProbe.defaultTexture (its name, dimension and size, or "null") and its
+    /// decode values.</summary>
+    static string DefaultReflection()
+    {
+        var texture = ReflectionProbe.defaultTexture;
+        return "\"defaultTexture\":\"" + (texture == null ? "null" : texture.name) + "\",\"dimension\":" + (texture == null ? -1 : (int)texture.dimension)
+            + ",\"reflectionSize\":" + (texture == null ? 0 : texture.width) + ",\"decode\":" + V(ReflectionProbe.defaultTextureHDRDecodeValues);
     }
 
     /// <summary>An environment for DynamicGI.SetEnvironmentData: six faces of 8 x 8 RGBA texels.</summary>

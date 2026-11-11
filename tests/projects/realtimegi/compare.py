@@ -8,12 +8,14 @@ Two classes of values:
 - State, always gated (exit 1 on any difference): every reference case present, no extra case,
   each renderer's realtime lightmap index and scale/offset, the lightmaps mode, the light probe
   count and baked coefficients, DynamicGI.isConverged, the recorded API defaults, what
-  DynamicGI.SetEnvironmentData throws and which atlas texels renderers cover (their realtime
-  lightmap UVs).
-- Lighting: light probe SH (each sample point, 27 coefficients) and the ambient probe within
-  ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
+  DynamicGI.SetEnvironmentData throws, the default reflection (ReflectionProbe.defaultTexture's
+  name, dimension and size, its decode values) and which atlas texels renderers cover (their
+  realtime lightmap UVs).
+- Lighting: light probe SH (each sample point, 27 coefficients) and the ambient probe
+  (RenderSettings.ambientProbe, gated) within ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
   |reference|; frames (.png) report the shared image measure (mean, worst and pixels over 8 of
-  the per-pixel max-channel difference). A directionality (.dir) holds 8-bit values, compares
+  the per-pixel max-channel difference) and are gated on its mean (at most FRAME_MEAN; a missing
+  frame or one of another size fails). A directionality (.dir) holds 8-bit values, compares
   its fourth channel too and is gated: each value within DIRECTION of the reference, at most
   ISOLATED of them further, each within twice that. The realtime lightmaps (.atlas) are gated: at most
   ISOLATED of their values may be outside the tolerance, each within ABS + ISOLATED_REL *
@@ -43,7 +45,10 @@ ISOLATED = 0.005
 ISOLATED_REL = 0.10
 # A directionality's values (8 bits each): 2.5 steps.
 DIRECTION = 2.5 / 255
-STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode', 'wrongLength', 'noArray')
+# A frame's mean per-pixel max-channel difference (of 255), the image probes' bound.
+FRAME_MEAN = 2.0
+STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode', 'wrongLength', 'noArray',
+              'defaultTexture', 'dimension', 'reflectionSize', 'decode')
 
 
 def records(path):
@@ -113,14 +118,16 @@ def compare_values(ref, cap, result):
             rv, cv = r[key], c.get(key)
             if key == 'ambientProbe':
                 rv, cv = [rv], [cv] if cv is not None else None
+            # RenderSettings.ambientProbe is an API's answer: gated. The light probes are reported.
+            kind = 'gated' if key == 'ambientProbe' else 'lighting'
             if cv is None or len(cv) != len(rv):
-                result.fail('lighting', f'{name}: {key} missing or of another length')
+                result.fail(kind, f'{name}: {key} missing or of another length')
                 continue
             for i, (rs, cs) in enumerate(zip(rv, cv)):
                 bad = [k for k, (a, b) in enumerate(zip(cs, rs)) if not close(a, b)]
                 if bad:
                     worst = max(bad, key=lambda k: abs(cs[k] - rs[k]))
-                    result.fail('lighting', f'{name}: {key}[{i}] {len(bad)} coefficients off, worst [{worst}] '
+                    result.fail(kind, f'{name}: {key}[{i}] {len(bad)} coefficients off, worst [{worst}] '
                                             f'{cs[worst]:.5g} vs {rs[worst]:.5g}',
                                 [f'[{k}] {cs[k]!r} vs {rs[k]!r}' for k in bad])
 
@@ -192,11 +199,14 @@ def main():
             compare_atlas(path.name, path, cap/path.name, result)
         elif path.suffix == '.png':
             if not (cap/path.name).is_file():
-                result.fail('lighting', f'{path.name}: missing')
+                result.fail('gated', f'{path.name}: missing')
                 continue
             diff = image_difference(path, cap/path.name)
             result.lines.append(f'{path.name}: images mean {diff[0]:.2f} worst {diff[1]} over8 {diff[2]}'
                                 if diff is not None else f'{path.name}: size differs')
+            if diff is None or diff[0] > FRAME_MEAN:
+                result.fail('gated', f'{path.name}: ' + ('size differs' if diff is None else
+                                                         f'frame mean {diff[0]:.2f} over {FRAME_MEAN}'))
     for extra in sorted(p.name for p in cap.iterdir() if p.suffix in ('.atlas', '.dir', '.png')
                         and not (ref/p.name).exists()):
         result.fail('state', f'{extra}: extra output')
