@@ -230,8 +230,8 @@ Both complete device captures are byte-identical. The ordinary engine gate runs 
 | Ray tracing, every command-buffer overload | Valid objects are accepted with no execution effect; required shader/compute/structure/indirect-args objects throw ArgumentNullException in the measured order; other null values are ignored | Same no-device checks and behavior |
 | Ray tracing capabilities | supportsRayTracing, supportsRayTracingShaders and supportsInlineRayTracing are false; foveatedRenderingCaps is None | Same, without stub diagnostics |
 | Acceleration structure construction | Creates an object and logs Assert `Platform doesn't implement RayTracingAccelerationStructure.` | Same, with nothing to release |
-| Native plugin custom blit | Calls event 6 even without XR | Explicit NotSupportedException until graphics-device interop exists |
-| Native plugin texture updates, original/V1/V2 | Calls events 7/8 or 9/10 and updates GPU pixels; CPU pixels stay unchanged | Explicit NotSupportedException until graphics-device interop exists |
+| Native plugin custom blit | Calls event 6 even without XR | The same call (tests/projects/nativegfx has what the plugin finds bound) |
+| Native plugin texture updates, original/V1/V2 | Calls events 7/8 or 9/10 and updates GPU pixels; CPU pixels stay unchanged | The same events and pixels for `Texture2D` targets of 8-bit RGBA and RGB formats; other targets and formats throw NotSupportedException when recorded |
 
 The two `.raytrace` resources also measure the standalone main-object local identifier for
 distinct source names; the importer uses that identifier through Compat, and has no disk cache.
@@ -239,10 +239,11 @@ Shader settings and other ray tracing APIs outside these command-buffer members 
 this coverage. No ray tracing device or actual XR rendering behavior is inferred.
 
 The strict comparator retains every difference. The gate additionally requires the precise
-unsupported exceptions for SideBySide and all four plugin entry points, with untouched pixels
-and no callback execution. It accepts no other new difference. These are explicit unsupported
-mechanisms, not parity claims. Follow-ups are no-device side-by-side clipping and native rendering
-plugin graphics-device interop, including texture update callbacks. Null plugin callbacks/targets
+unsupported exception for SideBySide, with untouched pixels. It accepts no other new difference.
+That is an explicit unsupported mechanism, not a parity claim. The plugin entry points run their
+callbacks since native rendering plugins are supported, and their events compare exactly
+(`device.plugin.*`; `docs/COMPATIBILITY_GAPS.md`, the native rendering plugins row). The follow-up
+is no-device side-by-side clipping. Null plugin callbacks/targets
 and null ray tracing constant buffers terminated both additional Editor repeats; they are omitted
 from the in-process gate. Unbound reports a managed error for those unsupported/invalid calls.
 Their repeat artifacts stay in the cache.
