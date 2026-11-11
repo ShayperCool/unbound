@@ -20,6 +20,8 @@ public static class PainterProbe
     {
         public string name;
         public Action<Painter2D> draw;
+        // Recorded as a mesh only, not drawn on the panel.
+        public bool meshOnly;
     }
 
     static readonly Color Red = new Color(0.9f, 0.2f, 0.1f, 1f);
@@ -286,6 +288,11 @@ public static class PainterProbe
         new Case { name = "gradient-bezier-straight", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, () => ThreeKeys(), p => { p.MoveTo(new Vector2(8, 20)); p.BezierCurveTo(new Vector2(24, 28), new Vector2(56, 44), new Vector2(72, 52)); }) },
         new Case { name = "gradient-thick-curve", draw = GradientStroke(16, LineJoin.Round, LineCap.Butt, () => ThreeKeys(), p => { p.MoveTo(new Vector2(10, 60)); p.BezierCurveTo(new Vector2(40, -10), new Vector2(50, 70), new Vector2(20, 30)); }) },
         new Case { name = "gradient-mixed-path", draw = GradientStroke(4, LineJoin.Round, LineCap.Round, ManyKeys, p => { p.MoveTo(new Vector2(8, 60)); p.LineTo(new Vector2(20, 20)); p.BezierCurveTo(new Vector2(30, 0), new Vector2(46, 0), new Vector2(52, 20)); p.Arc(new Vector2(60, 40), 12, 180, 90, ArcDirection.CounterClockwise); p.ClosePath(); }) },
+        // Arcs whose inner side reaches or passes the centre.
+        new Case { name = "gradient-arc-width-diameter", draw = GradientStroke(20, LineJoin.Miter, LineCap.Butt, TwoKeys, p => p.Arc(new Vector2(40, 36), 10, 0, 200)) },
+        new Case { name = "gradient-arc-inner-at-centre", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.Arc(new Vector2(40, 36), 4, 0, 180); p.LineTo(new Vector2(70, 60)); }) },
+        new Case { name = "gradient-arc-inner-past-centre", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.Arc(new Vector2(40, 36), 3, 0, 180); p.LineTo(new Vector2(70, 60)); }) },
+        new Case { name = "gradient-arcto-small", draw = GradientStroke(2, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(10, 10)); p.ArcTo(new Vector2(60, 10), new Vector2(60, 60), 3); p.LineTo(new Vector2(60, 60)); p.LineTo(new Vector2(10, 60)); }) },
         // The documented rules: a gradient overrides strokeColor; null falls back on it.
         new Case { name = "gradient-then-null", draw = p => { p.lineWidth = 6; p.strokeColor = Blue; p.strokeGradient = TwoKeys(); p.strokeGradient = null; p.BeginPath(); Line(p); p.Stroke(); } },
         new Case { name = "gradient-color-set-after", draw = p => { p.lineWidth = 6; p.strokeGradient = TwoKeys(); p.strokeColor = HalfGreen; p.BeginPath(); Line(p); p.Stroke(); p.strokeGradient = null; } },
@@ -294,6 +301,11 @@ public static class PainterProbe
         new Case { name = "gradient-changed-after-set", draw = p => { p.lineWidth = 6; p.strokeColor = Red; var g = TwoKeys(); p.strokeGradient = g; g.SetKeys(new[] { new GradientColorKey(Color.green, 0f), new GradientColorKey(Color.green, 1f) }, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) }); p.BeginPath(); Line(p); p.Stroke(); p.strokeGradient = null; } },
         new Case { name = "gradient-fill-and-stroke", draw = p => { p.fillColor = Blue; p.strokeColor = Red; p.lineWidth = 3; p.strokeGradient = ThreeKeys(); p.BeginPath(); Square(p); p.Fill(); p.Stroke(); p.strokeGradient = null; } },
         new Case { name = "gradient-two-strokes", draw = p => { p.lineWidth = 4; p.strokeColor = Red; p.strokeGradient = TwoKeys(); p.BeginPath(); Line(p); p.Stroke(); p.LineTo(new Vector2(70, 12)); p.Stroke(); p.strokeGradient = null; } },
+        // Curves without length (a loop back to its start, a curve shorter than the path epsilon)
+        // followed by a line: recorded as meshes only.
+        new Case { meshOnly = true, name = "gradient-curve-loop-at-origin", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(0, 0)); p.BezierCurveTo(new Vector2(60, 0), new Vector2(0, 60), new Vector2(0, 0)); p.LineTo(new Vector2(40, 30)); }) },
+        new Case { meshOnly = true, name = "gradient-curve-tiny-at-origin", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(0, 0)); p.BezierCurveTo(new Vector2(0.0001f, 0), new Vector2(0.0002f, 0), new Vector2(0.0003f, 0)); p.LineTo(new Vector2(40, 30)); }) },
+        new Case { meshOnly = true, name = "gradient-curve-loop", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(10, 10)); p.BezierCurveTo(new Vector2(70, 10), new Vector2(10, 70), new Vector2(10, 10)); p.LineTo(new Vector2(50, 40)); }) },
     };
 
     public static void Run(UIDocument document, RenderTexture target)
@@ -463,6 +475,7 @@ public static class PainterProbe
             for (int i = 0; i < GradientCases.Length; i++)
             {
                 var c = GradientCases[i];
+                if (c.meshOnly) continue;
                 var e = new VisualElement { name = c.name };
                 e.style.position = Position.Absolute;
                 e.style.left = 8 + (i % 9) * 88 + 0.3f * (i % 2);

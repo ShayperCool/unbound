@@ -15,7 +15,9 @@ A second list holds the stroke gradient cases (`gradient-*`): two, three and eig
 (key rows, the eighth steps, Fixed and PerceptualBlend modes, linear and gamma colour space), every
 join and cap, closed and separate sub-paths, zero-length and very short segments, arcs both ways,
 a whole circle, ArcTo, curves (with keys inside their pieces, a straight curve, a stroke wider than
-the curve's radius), a mixed closed path, and the rules around the property: null after a
+the curve's radius), a mixed closed path, arcs whose inner side reaches or passes the centre,
+curves without length (meshes only; their stroke geometry is open, see `OPEN` in verify.py), and the
+rules around the property: null after a
 gradient, strokeColor set after it, a transparent strokeColor or transparent keys, the caller's
 gradient changed after it was set, Fill beside it, two strokes of one path, a gradient left set
 for the next element. Their meshes follow every other line of `painter.jsonl`, and they are
