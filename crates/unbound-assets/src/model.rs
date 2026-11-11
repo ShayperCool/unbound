@@ -164,6 +164,14 @@ pub struct ModelSettings {
     /// and removes them with `Everything`, the default).
     #[serde(default)]
     pub keep_unused_vertices: bool,
+    /// `meshes.meshOptimizationFlags` with `PolygonOrder`: each sub-mesh's triangles are reordered
+    /// for the vertex cache (`mesh_order`).
+    #[serde(default)]
+    pub optimize_polygon_order: bool,
+    /// `meshes.meshOptimizationFlags` with `VertexOrder`: vertices are renumbered in the order the
+    /// triangles first use them (`mesh_order`).
+    #[serde(default)]
+    pub optimize_vertex_order: bool,
     /// `meshes.generateSecondaryUV` with its unwrap settings; `None` when off.
     #[serde(default)]
     pub secondary_uv: Option<SecondaryUvSettings>,
@@ -285,8 +293,13 @@ impl ModelSettings {
                 .unwrap_or(false),
             file_ids_generation: int(imp, "meshes.fileIdsGeneration").unwrap_or(2),
             weld_vertices: boolean(imp, "meshes.weldVertices").unwrap_or(true),
-            keep_unused_vertices: int(imp, "meshes.meshOptimizationFlags")
-                .is_some_and(|flags| flags & MESH_OPTIMIZATION_VERTEX_ORDER == 0),
+            keep_unused_vertices: mesh_optimization_flags(imp) & MESH_OPTIMIZATION_VERTEX_ORDER
+                == 0,
+            optimize_polygon_order: mesh_optimization_flags(imp)
+                & MESH_OPTIMIZATION_POLYGON_ORDER
+                != 0,
+            optimize_vertex_order: mesh_optimization_flags(imp) & MESH_OPTIMIZATION_VERTEX_ORDER
+                != 0,
             secondary_uv: SecondaryUvSettings::read(imp),
             optimize_game_objects: boolean(imp, "animations.optimizeGameObjects").unwrap_or(false),
             extra_exposed_transform_paths: imp
@@ -749,6 +762,17 @@ impl ImportedModel {
 /// The normal of a vertex no face uses (measured: tests/projects/lightmapuvs).
 const UNUSED_VERTEX_NORMAL: [f32; 3] = [1.0, 1.0, 1.0];
 
+/// `meshes.meshOptimizationFlags`; a meta from before the flags has `optimizeMeshForGPU`, on
+/// (everything) or off (nothing); without either, everything, the importer's default
+/// (`ModelImporter.meshOptimizationFlags`; the older setting's reading is not measured).
+fn mesh_optimization_flags(imp: &Value) -> i64 {
+    int(imp, "meshes.meshOptimizationFlags")
+        .or_else(|| boolean(imp, "meshes.optimizeMeshForGPU").map(|on| if on { -1 } else { 0 }))
+        .unwrap_or(-1)
+}
+
+/// `MeshOptimizationFlags.PolygonOrder`.
+const MESH_OPTIMIZATION_POLYGON_ORDER: i64 = 1;
 /// `MeshOptimizationFlags.VertexOrder`.
 const MESH_OPTIMIZATION_VERTEX_ORDER: i64 = 2;
 
@@ -776,7 +800,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 36;
+    const VERSION: u32 = 37;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -814,7 +838,7 @@ fn hierarchy_name_order(a: &str, b: &str) -> std::cmp::Ordering {
             (Some(_), None) => break Ordering::Greater,
             (Some(c), Some(d)) if c.is_ascii_digit() && d.is_ascii_digit() => {
                 // Numbers of any length: without leading zeros, the longer is the larger.
-                let mut number = |it: &mut std::iter::Peekable<std::str::Chars>| {
+                let number = |it: &mut std::iter::Peekable<std::str::Chars>| {
                     let mut digits = String::new();
                     while let Some(c) = it.next_if(char::is_ascii_digit) {
                         if !(digits.is_empty() && c == '0') {
@@ -2650,6 +2674,14 @@ impl<'a> Builder<'a> {
                 })
                 .collect();
         }
+        // Mesh optimization orders the finished mesh (measured: lightmapuvs, every model with
+        // both flags, either and neither).
+        if settings.optimize_polygon_order {
+            mesh_order::order_polygons(&mut out.submeshes);
+        }
+        if settings.optimize_vertex_order {
+            mesh_order::order_vertices(&mut out);
+        }
         // The bounds hold every blend shape frame's positions too (measured,
         // tests/projects/modelaxis Skinned set).
         if let Some(first) = out.positions.first() {
@@ -3450,6 +3482,7 @@ pub mod curves;
 mod fbx_smoothing;
 mod lightmap_uv;
 mod materials;
+mod mesh_order;
 mod normals;
 mod obj_groups;
 mod obj_smoothing;

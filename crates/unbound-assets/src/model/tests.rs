@@ -32,6 +32,7 @@ ModelImporter:
     globalScale: 100
     importBlendShapes: 0
     swapUVChannels: 0
+    optimizeMeshForGPU: 0
     useFileUnits: 1
     useFileScale: 0
   tangentSpace:
@@ -185,6 +186,50 @@ fn siblings_sort_by_name_without_case_and_with_numbers_as_numbers() {
         names,
         ["x", "x1", "X1y", "x99999999999999999999999", "x100000000000000000000000"]
     );
+}
+
+#[test]
+fn mesh_optimization_reorders_triangles_and_vertices_by_its_flags() {
+    // Two quads sharing an edge with a separate triangle listed between them, which the polygon
+    // order draws first. Measured: tests/projects/lightmapuvs RawOff, OptPolygons, OptVertices
+    // and Off.
+    let obj = "g Strip\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 2 0 0\nv 2 1 0\nv 5 0 0\nv 6 0 0\nv 5 1 0\n\
+               f 1 2 3 4\nf 7 8 9\nf 2 5 6 3\n";
+    let with = |flags: &str| {
+        let text = format!("ModelImporter:\n  meshes:\n{flags}");
+        import_obj("Strip.obj", obj, &text)
+    };
+    let raw = with("    meshOptimizationFlags: 0\n");
+    let polygons = with("    meshOptimizationFlags: 1\n");
+    let vertices = with("    meshOptimizationFlags: 2\n");
+    let both = with("    meshOptimizationFlags: -1\n");
+    let triangles = |m: &ImportedModel| -> Vec<[[f32; 3]; 3]> {
+        let mesh = &m.meshes[0];
+        mesh.submeshes[0]
+            .chunks(3)
+            .map(|t| [0, 1, 2].map(|k| mesh.positions[t[k] as usize]))
+            .collect()
+    };
+    let first_use = |m: &ImportedModel| {
+        let mut seen = Vec::new();
+        for &v in &m.meshes[0].submeshes[0] {
+            if !seen.contains(&v) {
+                seen.push(v);
+            }
+        }
+        seen.iter().enumerate().all(|(i, &v)| i as u32 == v)
+    };
+    // Polygon order alone moves triangles, not vertices; vertex order alone the reverse.
+    assert_ne!(triangles(&raw), triangles(&polygons));
+    assert_eq!(raw.meshes[0].positions, polygons.meshes[0].positions);
+    assert_eq!(triangles(&raw), triangles(&vertices));
+    assert_ne!(raw.meshes[0].positions, vertices.meshes[0].positions);
+    assert!(first_use(&vertices) && first_use(&both) && !first_use(&raw));
+    assert_eq!(triangles(&polygons), triangles(&both));
+    // No flags in the meta is everything; the setting before the flags turns both off.
+    assert_eq!(with("    isReadable: 1\n").meshes[0], both.meshes[0]);
+    assert_eq!(with("    optimizeMeshForGPU: 0\n").meshes[0], raw.meshes[0]);
+    assert_eq!(with("    optimizeMeshForGPU: 1\n").meshes[0], both.meshes[0]);
 }
 
 #[test]
@@ -489,9 +534,7 @@ fn triangles_and_quads_split_like_unity() {
     // A kite whose short diagonal is 1-3: Unity still splits at 0-2 of the reversed corners,
     // giving (c0, c3, c2) and (c0, c2, c1) (measured: tests/projects/lightmapuvs).
     let obj = "o Kite\nv 0 0 0\nv 1 0 0\nv 3 3 0\nv 0 1 0\nv 5 0 0\nv 6 0 0\nv 5 1 0\nf 1 2 3 4\nf 5 6 7\n";
-    let model = ModelImporter::default()
-        .import(Path::new("Kite.obj"), obj.as_bytes(), &Value::Null)
-        .unwrap();
+    let model = import_obj("Kite.obj", obj, NO_OPTIMIZATION);
     let mesh = &model.meshes[0];
     // Mirrored on X; vertices in control point order (an OBJ's first-use order).
     assert_eq!(
