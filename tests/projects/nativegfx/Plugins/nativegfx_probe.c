@@ -1220,9 +1220,10 @@ static void write_shapes(void)
 }
 
 /// What is bound as the target: the framebuffer and the viewport, then its color and its depth
-/// attachment, a line each (a texture's shape label when the scripts named it); then a green 4x4
-/// square at (2, 2).
-static void describe_bound(void)
+/// attachment, a line each (a texture's shape label when the scripts named it); then a 4x4
+/// square at (2, 2): green, or (`grey`) half grey written with GL_FRAMEBUFFER_SRGB enabled, which
+/// an sRGB attachment stores encoded.
+static void describe_bound(int grey)
 {
     GLint fbo = 0, viewport[4] = {0};
     gl.GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
@@ -1261,13 +1262,21 @@ static void describe_bound(void)
     texture_note("bound framebuffer=%s viewport=%d,%d,%d,%d", fbo ? "own" : "default", viewport[0], viewport[1], viewport[2], viewport[3]);
     texture_note("color %s", parts[0]);
     texture_note("depth %s", parts[1]);
-    fill_bound(2, 2, 4, 4, 0.0f, 1.0f, 0.0f);
+    if (grey) {
+        GLboolean encoding = gl.IsEnabled(GL_FRAMEBUFFER_SRGB);
+        gl.Enable(GL_FRAMEBUFFER_SRGB);
+        fill_bound(2, 2, 4, 4, 0.5f, 0.5f, 0.5f);
+        if (!encoding) gl.Disable(GL_FRAMEBUFFER_SRGB);
+    } else {
+        fill_bound(2, 2, 4, 4, 0.0f, 1.0f, 0.0f);
+    }
     while (gl.GetError() != 0) {}
 }
 
 /// The texture callback's events: 0 describes the shapes the scripts named, 1 makes the plugin's
-/// textures, 2 writes into three shapes, 3 describes the bound target and draws into it; any
-/// other does nothing (what Unity itself reports around a callback).
+/// textures, 2 writes into three shapes, 3 describes the bound target and draws into it, 4 the
+/// same with half grey for an sRGB target; any other does nothing (what Unity itself reports
+/// around a callback).
 static void on_texture_event(int id)
 {
     if (!gl_current()) {
@@ -1285,7 +1294,8 @@ static void on_texture_event(int id)
         break;
     case 1: make_textures(); break;
     case 2: write_shapes(); break;
-    case 3: describe_bound(); break;
+    case 3: describe_bound(0); break;
+    case 4: describe_bound(1); break;
     default: break;
     }
 }

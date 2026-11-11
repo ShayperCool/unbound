@@ -50,12 +50,16 @@ Recorded:
   texture); with `bindTextureMS` both are the multisampled textures. A callback while a
   multisampled target is bound finds a multisampled color texture and a depth render buffer
   attached (`shape.msaa.target*`), and what it draws shows after the resolve
-  (`shape.msaa.pixels`). A callback while one face of a cube render texture or one layer of an
+  (`shape.msaa.pixels`); an sRGB multisampled render texture's samples are `GL_SRGB8_ALPHA8`
+  (its depth pointer and what a callback finds attached: `shape.rt.msaa.srgb.depth`,
+  `shape.msaa.srgb.target*`), so half grey written with `GL_FRAMEBUFFER_SRGB` enabled reads back
+  as half grey (`shape.msaa.srgb.pixels`). A callback while one face of a cube render texture or one layer of an
   array render texture is the target finds that image of the color texture attached (with the
   array's depth layer; the cube's depth is a render buffer) and draws into it alone
   (`shape.cube.target*`, `shape.array.target*`). After a buffer that drew into a multisampled target, with a callback
   or without, the next callback (one that does nothing) is blamed for a `GL_INVALID_OPERATION`
-  the Editor left itself (`shape.msaa.after.logs`, `shape.msaa.plain.logs`).
+  the Editor left itself (`shape.msaa.after.logs`, `shape.msaa.srgb.after.logs`,
+  `shape.msaa.plain.logs`).
 * **External textures of other formats** (`ext.*`): a plugin's 2D texture is sampled as OpenGL
   samples it, whatever format and color space the external texture declares (they are its
   `format` and `graphicsFormat`): `GL_SRGB8_ALPHA8` texels are decoded declared linear or not,

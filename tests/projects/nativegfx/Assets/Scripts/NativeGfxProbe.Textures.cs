@@ -90,6 +90,9 @@ public partial class NativeGfxProbe
         msaa.Create();
         var msaaColor = Keep(new RenderTexture(8, 8, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "rt.msaa.color", antiAliasing = 2 });
         msaaColor.Create();
+        // The default read-write mode: sRGB in this project.
+        var msaaSrgb = Keep(new RenderTexture(8, 8, 0, RenderTextureFormat.ARGB32) { name = "rt.msaa.srgb", antiAliasing = 4, filterMode = FilterMode.Point });
+        msaaSrgb.Create();
         var msaaBound = Keep(new RenderTexture(8, 8, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "rt.msaa.bound", antiAliasing = 4, bindTextureMS = true });
         msaaBound.Create();
 
@@ -114,9 +117,11 @@ public partial class NativeGfxProbe
         Shape("rt.msaa.depth", msaa.GetNativeDepthBufferPtr());
         Shape("rt.msaa.color", msaaColor.GetNativeTexturePtr());
         Shape("rt.msaa.color.depth", msaaColor.GetNativeDepthBufferPtr());
+        Shape("rt.msaa.srgb", msaaSrgb.GetNativeTexturePtr());
+        Shape("rt.msaa.srgb.depth", msaaSrgb.GetNativeDepthBufferPtr());
         Shape("rt.msaa.bound", msaaBound.GetNativeTexturePtr());
         Shape("rt.msaa.bound.depth", msaaBound.GetNativeDepthBufferPtr());
-        Value("shape.formats", L(new Texture[] { cube, cubeHalf, array, arrayLinear, arraySix, arrayOne, volume, cubeArray, mipped, rtCube, rtArray, rtVolume, msaa }
+        Value("shape.formats", L(new Texture[] { cube, cubeHalf, array, arrayLinear, arraySix, arrayOne, volume, cubeArray, mipped, rtCube, rtArray, rtVolume, msaa, msaaSrgb }
             .Select(t => t.name + "=" + t.graphicsFormat + "/" + t.mipmapCount)));
         Logged("shape", () =>
         {
@@ -155,6 +160,19 @@ public partial class NativeGfxProbe
         });
         // What the next callback, one that does nothing, is blamed for.
         Logged("shape.msaa.after", () => TextureEvent(9));
+        // An sRGB multisampled target: half grey written with sRGB encoding enabled reads back
+        // as half grey when its samples are sRGB texels.
+        Logged("shape.msaa.srgb.target", () =>
+        {
+            using var cmd = new CommandBuffer { name = "nativegfx.msaa.srgb" };
+            cmd.SetRenderTarget(msaaSrgb);
+            cmd.ClearRenderTarget(true, true, Color.black);
+            cmd.IssuePluginEvent(NativeGfx_TextureEvent(), 4);
+            Graphics.ExecuteCommandBuffer(cmd);
+            BoundTarget("shape.msaa.srgb.target");
+            Value("shape.msaa.srgb.pixels", Pixels(msaaSrgb, 8, 8));
+        });
+        Logged("shape.msaa.srgb.after", () => TextureEvent(9));
         // The same after a buffer that only cleared a multisampled target.
         Logged("shape.msaa.plain", () =>
         {
