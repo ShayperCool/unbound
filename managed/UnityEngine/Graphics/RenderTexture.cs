@@ -21,6 +21,8 @@ namespace UnityEngine
         internal int m_LastUsedFrame;
 
         static RenderTexture s_Active;
+        /// <summary>Whether a script made the texture (<see cref="descriptor"/>).</summary>
+        bool m_CreatedFromScript;
 
         protected internal RenderTexture()
         {
@@ -118,6 +120,7 @@ namespace UnityEngine
             if (desc.width <= 0 || desc.height <= 0)
                 throw new ArgumentException("RenderTextureDesc width and height must be greater than zero.");
             m_Descriptor = desc;
+            m_CreatedFromScript = true;
             m_Width = desc.width;
             m_Height = desc.height;
             ClampByDefault();
@@ -166,12 +169,27 @@ namespace UnityEngine
         public override TextureDimension dimension { get => m_Descriptor.dimension; set { Change(); m_Descriptor.dimension = value; } }
         public int volumeDepth { get => m_Descriptor.volumeDepth; set { Change(); m_Descriptor.volumeDepth = value; } }
 
+        /// <summary>
+        /// The texture as a descriptor. Its creation flags name a texture a script made
+        /// (<see cref="RenderTextureCreationFlags.CreatedFromScript"/>: made by a constructor, or
+        /// given a descriptor; not one loaded from an asset) and an sRGB color format
+        /// (Unity 6000.0.71f1, tests/projects/particletrailwitness `target.flags`:
+        /// AutoGenerateMips, SRGB, CreatedFromScript, AllowVerticalFlip for a default
+        /// `new RenderTexture`). Not measured: a temporary texture's flags (made by the engine,
+        /// so without CreatedFromScript here).
+        /// </summary>
         public RenderTextureDescriptor descriptor
         {
-            get => m_Descriptor;
+            get
+            {
+                var d = m_Descriptor;
+                d.createdFromScript = m_CreatedFromScript;
+                return d;
+            }
             set
             {
                 Change();
+                m_CreatedFromScript = true;
                 m_Descriptor = value;
                 m_Width = value.width;
                 m_Height = value.height;
@@ -298,17 +316,42 @@ namespace UnityEngine
             GfxStream.Flush();
         }
 
+        /// <summary>The Editor's assertion when the texture resolved into another is not the
+        /// render target being drawn into (its OpenGL Core device, Unity 6000.0.71f1).</summary>
+        const string ResolveOfInactiveSource = "Assertion failed on expression: 'srcAttach < m_CurrentFramebuffer.colorCount && \"We should always resolve only current RT\"'";
+
+        /// <summary>
+        /// Resolves the multisampled texture into <paramref name="target"/>. The Editor's
+        /// OpenGL Core device resolves from the render target being drawn into: for a source
+        /// that is not <see cref="active"/> it logs an assertion, and with no render target
+        /// active the destination receives the pixels of the Editor window's own framebuffer
+        /// (Unity 6000.0.71f1, tests/projects/cameramsaa `*.resolve` and
+        /// `boundary.*.resolveSentinelInactive`; NVIDIA driver). Unbound logs the assertion
+        /// and resolves the source: it has no Editor window to copy, as for the other reads of
+        /// that framebuffer. Not measured: another render target active, the Vulkan device
+        /// (no assertion here), and the resolve without a destination.
+        /// </summary>
         public void ResolveAntiAliasedSurface(RenderTexture target)
         {
             if (target == null || target == this) { ResolveAntiAliasedSurface(); return; }
+            if (WriteResolve(target)) GfxStream.Flush();
+        }
+
+        /// <summary>Writes the resolve into <paramref name="target"/> to the command stream;
+        /// false when there is nothing to send.</summary>
+        internal bool WriteResolve(RenderTexture target)
+        {
             // The Editor leaves an uncreated destination alone (resources rtmips.resolve).
-            if (!target.IsCreated()) return;
-            if (Compat.RenderingMeasured)
+            if (!target.IsCreated()) return false;
+            if (!Compat.RenderingMeasured)
             {
-                GfxStream.ResolveTexture(EnsureCreated(), target.EnsureCreated());
-                GfxStream.Flush();
+                Graphics.CopyTexture(this, 0, 0, target, 0, 0);
+                return false;
             }
-            else Graphics.CopyTexture(this, 0, 0, target, 0, 0);
+            if (s_Active != this && SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)
+                Debug.LogAssertion(ResolveOfInactiveSource);
+            GfxStream.ResolveTexture(EnsureCreated(), target.EnsureCreated());
+            return true;
         }
 
         [Unbound.EditorFaithful("the Editor has no dynamic resolution: the scale stays 1 (as ScalableBufferManager)")]
@@ -438,7 +481,7 @@ namespace UnityEngine
             }
             RenderTexture created;
             using (ObjectRegistry.AsAssets())
-                created = new RenderTexture(desc) { name = "TempBuffer " + s_Temporaries.Count, hideFlags = HideFlags.HideAndDontSave };
+                created = new RenderTexture(desc) { name = "TempBuffer " + s_Temporaries.Count, hideFlags = HideFlags.HideAndDontSave, m_CreatedFromScript = false };
             created.m_LastUsedFrame = Time.frameCount;
             created.m_PoolLease = ++s_NextPoolLease;
             s_Temporaries.Add(created);
@@ -587,9 +630,10 @@ namespace UnityEngine
             volumeDepth = 1;
             this.mipCount = mipCount;
             dimension = TextureDimension.Tex2D;
-            m_GraphicsFormat = colorFormat;
-            m_DepthStencilFormat = depthStencilFormat;
+            // Before the format, whose setter adds its own flag.
             m_Flags = RenderTextureCreationFlags.AutoGenerateMips | RenderTextureCreationFlags.AllowVerticalFlip;
+            graphicsFormat = colorFormat;
+            m_DepthStencilFormat = depthStencilFormat;
             // Measured: a new descriptor samples without comparison.
             shadowSamplingMode = ShadowSamplingMode.None;
         }
@@ -606,7 +650,25 @@ namespace UnityEngine
         public RenderTextureCreationFlags flags => m_Flags;
         public GraphicsFormat stencilFormat { get; set; }
 
-        public GraphicsFormat graphicsFormat { get => m_GraphicsFormat; set => m_GraphicsFormat = value; }
+        /// <summary>The color format; the <see cref="RenderTextureCreationFlags.SRGB"/> flag
+        /// follows it, as in Unity's own descriptor.</summary>
+        public GraphicsFormat graphicsFormat
+        {
+            get => m_GraphicsFormat;
+            set
+            {
+                m_GraphicsFormat = value;
+                SetFlag(RenderTextureCreationFlags.SRGB, GraphicsFormatUtility.IsSRGBFormat(value));
+            }
+        }
+
+        /// <summary>Whether a script made the render texture the descriptor describes
+        /// (<see cref="RenderTexture.descriptor"/> sets it; a new descriptor has it clear).</summary>
+        internal bool createdFromScript
+        {
+            get => (m_Flags & RenderTextureCreationFlags.CreatedFromScript) != 0;
+            set => SetFlag(RenderTextureCreationFlags.CreatedFromScript, value);
+        }
         public GraphicsFormat depthStencilFormat { get => m_DepthStencilFormat; set => m_DepthStencilFormat = value; }
 
         /// <summary>The color format; a depth-only target is Depth, or Shadowmap when it compares
@@ -618,7 +680,7 @@ namespace UnityEngine
                 : GraphicsFormatUtility.GetRenderTextureFormat(m_GraphicsFormat);
             set
             {
-                m_GraphicsFormat = GraphicsFormatUtility.GetGraphicsFormat(value, sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Default);
+                graphicsFormat = GraphicsFormatUtility.GetGraphicsFormat(value, sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Default);
                 if (value == RenderTextureFormat.Shadowmap) shadowSamplingMode = ShadowSamplingMode.CompareDepths;
                 else if (value == RenderTextureFormat.Depth) shadowSamplingMode = ShadowSamplingMode.None;
             }
@@ -627,7 +689,7 @@ namespace UnityEngine
         public bool sRGB
         {
             get => GraphicsFormatUtility.IsSRGBFormat(m_GraphicsFormat);
-            set => m_GraphicsFormat = value ? GraphicsFormatUtility.GetSRGBFormat(m_GraphicsFormat) : GraphicsFormatUtility.GetLinearFormat(m_GraphicsFormat);
+            set => graphicsFormat = value ? GraphicsFormatUtility.GetSRGBFormat(m_GraphicsFormat) : GraphicsFormatUtility.GetLinearFormat(m_GraphicsFormat);
         }
 
         public int depthBufferBits

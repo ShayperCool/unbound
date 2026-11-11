@@ -2019,10 +2019,6 @@ namespace UnityEngine
         [global::System.Obsolete("Use RenderTexture.dimension instead.")] public bool isVolume { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.isVolume"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.isVolume"); } }
         [global::System.Obsolete("RenderTexture.enabled is always now, no need to use it.")] public static bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.enabled"); return true; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.enabled"); } }
     }
-    unsafe partial struct RenderTextureDescriptor
-    {
-        internal bool createdFromScript { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTextureDescriptor.createdFromScript"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTextureDescriptor.createdFromScript"); } }
-    }
     unsafe partial class Renderer
     {
         [global::Unbound.Stub] internal bool Internal_HasCustomBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.Internal_HasCustomBounds"); return default; }
