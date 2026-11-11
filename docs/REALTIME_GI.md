@@ -15,8 +15,7 @@ renderer covers the same realtime lightmap texels as in the Editor and the light
 cases match within the comparator's tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
-renderers take light probes again; area lights are baked only), light probes that also have baked lighting (also given by a script: realtime
-GI then stops lighting them) or whose probe set cannot be read or placed (they light nothing; the
+renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
 systems that reference another scene's systems, gamma-space
 projects and linear light intensity.
@@ -195,7 +194,11 @@ realtimegi: within the comparator's tolerance in every point and spot light case
 brightest two, `room-bounce` and the `room-indirectscale` that follows it, where a few small
 higher-band coefficients differ by up to about 0.5% of band 0; the direct light matches, the
 cause is open). Probes interpolate as
-baked ones do; `LightProbes.bakedProbes` stays empty. Unbound updates them with every update of
+baked ones do; `LightProbes.bakedProbes` stays empty. Probes that have baked lighting too
+(`RoomBakedEnvironment`, whose baked probes hold the environment) give the baked coefficients
+plus the realtime GI's (`roombakedenvironment-*`: within the comparator's tolerance in all four
+cases; `LightProbes.bakedProbes` stays the baked part; baked coefficients a script gives are
+taken the same way, unmeasured). Unbound updates them with every update of
 the systems.
 
 Measured in the probe: the update runs over several frames on worker threads (bounces converge
@@ -279,13 +282,23 @@ lighting the room (the documented parts are in the contract above):
   gamma-space project and several directional lights (Unbound takes the brightest as the sun)
   are not measured and leave the scene without lighting data.
 
-Observed once and not modelled: data given to `SetEnvironmentData` one frame after the sun was
-destroyed did not show (the lightmap stayed the sky's): the Editor reads the sky back over
-several frames, and an update still on its way replaced the data. Unbound draws and reads the sky
-in the frame its inputs change, and data set in the frame of such a change stays. Not measured:
-a scene whose environment lighting is baked
-(`LightingSettings.realtimeEnvironmentLighting` off with baked GI on; Unbound gives realtime GI
-the environment all the same, with a warning), a skybox under a scriptable render pipeline (it
+Data set in the frame of a change of the ambient source stands when it is set after the change
+(`room-envdata-after-color`, `room-envdata-after-sky`) and is replaced by a change that follows
+it in that frame (`room-envdata-before-color`), in the Editor as in Unbound, which draws and
+reads the sky in the frame its inputs change. Observed once and not modelled: data given to
+`SetEnvironmentData` one frame after the sun was destroyed did not show (the lightmap stayed the
+sky's): the Editor reads the sky back over several frames, and an update still on its way
+replaced the data.
+
+A scene whose environment lighting is baked (`LightingSettings.realtimeEnvironmentLighting` off
+with baked GI on; tests/projects/realtimegi `roombakedenvironment-*`) gives its realtime GI no
+light from the ambient source: an ambient color change shows nothing and the environment alone
+lights nothing; a cube set with `DynamicGI.SetEnvironmentData` lights it as any scene, until the
+source's inputs change (that last part is Unbound's rule of the other scenes, not measured
+here). Unbound keeps the cube per frame and gives such a scene black faces instead of the
+ambient source's.
+
+Not measured: a skybox under a scriptable render pipeline (it
 adds no realtime GI light there, with a warning: the capture is the built-in pipeline's; colors,
 gradients and a script's cube work), sky materials other than the procedural one
 (they are drawn by the same capture), and gamma-space projects.
@@ -328,15 +341,14 @@ equals the Editor's):
 - The wireframe pass makes these textures depend on how the graphics device draws lines, in the
   Editor too: a capture of the probe on the Editor's Vulkan device differs from the OpenGL Core
   reference in one light probe's coefficients by about 13% in every scene (17 values outside the
-  comparator's tolerance; the lightmaps within the gate). Unbound draws the OpenGL Core device
-  through Vulkan for now (docs/ARCHITECTURE.md, graphics devices), whose lines leave the texel
-  an edge ends in unwritten where OpenGL's write it: in the probe's rooms the top right corner
-  texel of every chart stays black (42 of `Room`'s 2160 texels; drawn by wgpu's OpenGL backend
-  the same textures have them, and no other texel differs), and the clusters that read such a
-  texel are darker. See [Residuals](#residuals) for what that costs. On its Vulkan device
-  Unbound's textures are the same as on its OpenGL Core device, so they differ from the Editor's
-  Vulkan capture as well (27 values reported against it); which texels the Editor's Vulkan
-  device leaves out is not measured.
+  comparator's tolerance; the lightmaps within the gate). Vulkan's lines leave the texel an edge
+  ends in unwritten where OpenGL's write it: drawn through Vulkan, the top right corner texel of
+  every chart of the probe's rooms stays black (42 of `Room`'s 2160 texels; no other texel
+  differs) and the clusters that read such a texel are darker. Unbound's OpenGL Core device is
+  drawn by wgpu's OpenGL backend and has those texels, as the reference does. On its Vulkan
+  device Unbound's textures lack them, and differ from the Editor's Vulkan capture as well (27
+  values reported against it); which texels the Editor's Vulkan device leaves out is not
+  measured.
 
 ## Realtime lightmap UVs
 
@@ -401,16 +413,15 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   threshold, input differences well below it decide which update last solved a segment, and so
   move a few texels (2 to 6 values of about 5000 per case in the engine, up to about 10%). The
   comparator gates the lightmaps with at most 0.5% of their values outside the
-  tolerance, each within 0.02 + 10%. Three groups, by cause:
-  the texels of `RoomScaled` and `RoomSystems` (and (0,11), (0,12), (0,28), (8,8), (32,33) in
-  `Room`) come from the chart corner texels missing in the material textures (see
-  [Material inputs](#material-inputs)): an engine run on wgpu's OpenGL backend has none of them;
+  tolerance, each within 0.02 + 10%. What is left on the OpenGL Core device:
   texel (45,34) of `Room`, 7 to 8% low from `room-bounce` on, and the texels next to the emissive
   panel ((1,9), (1,12), (2,12), (4,12)), 1 to 4% off in `room-base`, 2 to 5% after
-  `DynamicGI.SetEmissive` and 6 to 11% in the later cases where little else lights them, are
-  there on either backend. With the panel's emission set to black (the environment cases from
-  `room-gradient` on) no value is outside the tolerance, so the emitting panel's nearest texels
-  are the open part, not the update history alone.
+  `DynamicGI.SetEmissive` and 6 to 11% in the later cases where little else lights them. With
+  the panel's emission set to black (the environment cases from `room-gradient` on) no value is
+  outside the tolerance, so the emitting panel's nearest texels are the open part, not the
+  update history alone. (Drawn through Vulkan the material textures lack each chart's last
+  corner texel, see [Material inputs](#material-inputs): `RoomScaled` and `RoomSystems` then
+  have isolated texels as well, and (0,11), (0,12), (0,28), (8,8), (32,33) in `Room`.)
 - A small bias: with every material texel written (`crates/unbound-gi`'s replay of the `Room`
   cases) the solver's texels are 0.5% below the Editor's on average in the cases lit by the point
   light (5% of them more than 2.5% below, 5% more than 1.4% above), 0.2 to 0.3% with the bright
@@ -430,14 +441,13 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   at most, where a spot or directional light's shadow edge crosses a few pixels) and are gated
   on a mean of 2. (They were 3 to 21 off while a scene without a default reflection reflected
   grey instead of the Editor's black cube, `end-reflection`.)
-- Light probes (reported, 14 values in the engine's run): a probe's coefficients are sums of
+- Light probes (reported, 5 values in the engine's run): a probe's coefficients are sums of
   large weights of both signs, so small differences of the values they read show in the small
-  higher-band ones. In `RoomScaled` one coefficient of one probe is 15% below the Editor's
-  (about 0.05), whatever the case, and in `room-indirectscale` three coefficients of two probes
-  are off: both from the chart corner texels missing in the material textures (an engine run on
-  wgpu's OpenGL backend has neither). In `room-bounce`, the brightest case, higher-band
-  coefficients of all eight outer probes differ by up to about 0.5% of band 0 (five probes on
-  the OpenGL backend): the bias above, cause open.
+  higher-band ones. In `room-bounce`, the brightest case, higher-band coefficients of five of
+  the eight outer probes differ by up to about 0.5% of band 0: the bias above, cause open.
+  (Drawn through Vulkan, one coefficient of one probe in `RoomScaled` is 15% low, three
+  coefficients are off in `room-indirectscale` and three more probes in `room-bounce`: the
+  missing corner texels of the material textures.)
 
 ## Unbound plan
 
