@@ -162,7 +162,12 @@ namespace Unbound.Tests
                 Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));
                 Assert.Equal(0.875f, sh[1, 0]);
                 Assert.Equal(0.875f, set.Snapshot().Probes[2][1, 0]);
-                Assert.Equal(0.75f, set.Snapshot().BakedAlone[2][1, 0]);
+                // Probes of several scenes combined (LightProbes.Tetrahedralize) join their
+                // baked coefficients: realtime GI's lighting stays with the set it lights.
+                var combined = ProbeTetrahedralization.Combine(new List<ProbeSet> { set, second.m_Self });
+                Assert.Equal(0.75f, combined.Probes[2][1, 0]);
+                Assert.Equal(-0.5f, combined.Probes[2][0, 3]);
+                Assert.Null(combined.BakedAlone);
                 RealtimeGI.ReleaseProbes(set, Array.Empty<ProbeSet>());
                 Assert.False(set.Realtime);
                 Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));

@@ -464,9 +464,19 @@ namespace UnityEngine
             return reason == null ? set : null;
         }
 
+        /// <summary>Whether a loaded scene's realtime GI takes the ambient source's environment
+        /// (none loaded: yes, whoever asks).</summary>
+        static bool TakesAmbientSource()
+        {
+            foreach (var scene in s_Scenes)
+                if (!scene.BakedEnvironment) return true;
+            return s_Scenes.Count == 0;
+        }
+
         /// <summary>Gives the set <paramref name="read"/> probes' realtime coefficients (27
-        /// each): its lighting, or what is added to its baked lighting (also baked coefficients a
-        /// script gave since, which is unmeasured).</summary>
+        /// each): its lighting, or what is added to its baked lighting, also to baked
+        /// coefficients a script gave since (tests/projects/realtimegi
+        /// roombakedenvironment-bakedset).</summary>
         internal static void ApplyProbes(ProbeSet set, float[] coefficients, int read)
         {
             if (set.Baked) set.BakedAlone ??= (SphericalHarmonicsL2[])set.Probes.Clone();

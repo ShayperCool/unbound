@@ -32,12 +32,13 @@ namespace UnityEngine
             foreach (var set in sets)
             {
                 positions.AddRange(set.Positions);
-                probes.AddRange(set.Probes);
+                // The baked coefficients: realtime GI's lighting stays with the set it lights.
+                probes.AddRange(set.BakedAlone ?? set.Probes);
                 for (int i = 0; i < set.Positions.Length; i++)
                     occlusion.Add(i < set.Occlusion.Length ? set.Occlusion[i] : Vector4.one);
             }
             // A combination with any baked set reports every probe, zeros for realtime-only sets
-            // (unmeasured; Unbound does not light realtime-only probes yet).
+            // (unmeasured; realtime GI lights each scene's own set, not the combination).
             if (sets.Exists(x => x.Baked) && sets.Exists(x => !x.Baked))
                 Unbound.Runtime.Stubs.Ignored("LightProbes",
                     "of scenes precomputed for realtime GI only join baked probes with zero lighting");

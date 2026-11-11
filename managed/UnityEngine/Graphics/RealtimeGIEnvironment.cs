@@ -26,18 +26,22 @@ namespace UnityEngine
         static readonly float[] s_Faces = new float[6 * FaceTexels * 3];
         /// <summary>The faces of a scene that takes no light from the ambient source.</summary>
         static readonly float[] s_NoEnvironment = new float[6 * FaceTexels * 3];
-        /// <summary>The faces hold what a script gave (<see cref="DynamicGI.SetEnvironmentData"/>),
-        /// not what the ambient source makes.</summary>
-        static bool s_EnvironmentIsData;
+        /// <summary>The cube a script gave (<see cref="DynamicGI.SetEnvironmentData"/>), as a
+        /// scene whose environment lighting is baked keeps it: until
+        /// <see cref="DynamicGI.UpdateEnvironment"/>, whatever the ambient source does.</summary>
+        static readonly float[] s_ScriptFaces = new float[6 * FaceTexels * 3];
+        static bool s_ScriptFacesSet;
         /// <summary>Counts the changes of <see cref="s_Faces"/>; each native scene takes them once.</summary>
         static int s_EnvironmentVersion;
 
         internal static ReadOnlySpan<float> EnvironmentFaces => s_Faces;
 
         /// <summary>The faces a scene's realtime GI takes: with its environment lighting baked
-        /// (<paramref name="bakedEnvironment"/>), nothing of what the ambient source makes.</summary>
+        /// (<paramref name="bakedEnvironment"/>), nothing of what the ambient source makes, only
+        /// a script's cube until DynamicGI.UpdateEnvironment (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/realtimegi roombakedenvironment-*).</summary>
         internal static float[] EnvironmentOf(bool bakedEnvironment) =>
-            bakedEnvironment && !s_EnvironmentIsData ? s_NoEnvironment : s_Faces;
+            !bakedEnvironment ? s_Faces : s_ScriptFacesSet ? s_ScriptFaces : s_NoEnvironment;
         internal static int EnvironmentVersion => s_EnvironmentVersion;
         static EnvironmentKey s_EnvironmentKey;
         /// <summary>The faces are made again whatever the key (none made yet, or
@@ -99,7 +103,13 @@ namespace UnityEngine
 
         /// <summary>DynamicGI.UpdateEnvironment: the environment is made again from the ambient
         /// source in the next update, also over data a script set.</summary>
-        internal static void EnvironmentChanged() => s_EnvironmentStale = true;
+        internal static void EnvironmentChanged()
+        {
+            s_EnvironmentStale = true;
+            if (!s_ScriptFacesSet) return;
+            s_ScriptFacesSet = false;
+            s_EnvironmentVersion++;
+        }
 
         /// <summary>DynamicGI.SetEnvironmentData: the cube's texels as given (their alpha is not
         /// read), until the ambient source's inputs change or DynamicGI.UpdateEnvironment.</summary>
@@ -114,20 +124,23 @@ namespace UnityEngine
                 s_Faces[3 * i + 1] = input[4 * i + 1];
                 s_Faces[3 * i + 2] = input[4 * i + 2];
             }
+            Array.Copy(s_Faces, s_ScriptFaces, s_Faces.Length);
+            s_ScriptFacesSet = true;
             s_EnvironmentVersion++;
             s_EnvironmentKey = EnvironmentKey.Current();
             s_EnvironmentStale = false;
-            s_EnvironmentIsData = true;
         }
 
-        /// <summary>Makes the faces again when the ambient source's inputs changed.</summary>
+        /// <summary>Makes the faces again when the ambient source's inputs changed, unless no
+        /// loaded scene takes them (every one has its environment lighting baked): they are
+        /// made once one does.</summary>
         internal static void UpdateEnvironment()
         {
+            if (!TakesAmbientSource()) return;
             var key = EnvironmentKey.Current();
             if (!s_EnvironmentStale && key.Equals(s_EnvironmentKey)) return;
             s_EnvironmentStale = false;
             s_EnvironmentKey = key;
-            s_EnvironmentIsData = false;
             if (key.Sky != null && GraphicsSettings.currentRenderPipeline != null)
             {
                 // The capture is the built-in pipeline's; a render pipeline would draw the

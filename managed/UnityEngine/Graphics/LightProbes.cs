@@ -45,14 +45,14 @@ namespace UnityEngine
 
         internal static readonly ProbeSet Empty = new ProbeSet();
 
-        /// <summary>A copy whose coefficients do not change with the original's.</summary>
+        /// <summary>A copy whose coefficients do not change with the original's: what
+        /// interpolation reads (not the baked part alone of probes realtime GI lights too).</summary>
         internal ProbeSet Snapshot() => new ProbeSet
         {
             Positions = Positions,
             Probes = (SphericalHarmonicsL2[])Probes.Clone(),
             Baked = Baked,
             Realtime = Realtime,
-            BakedAlone = (SphericalHarmonicsL2[])BakedAlone?.Clone(),
             Occlusion = Occlusion,
             Cells = Cells,
             HullRays = HullRays,
