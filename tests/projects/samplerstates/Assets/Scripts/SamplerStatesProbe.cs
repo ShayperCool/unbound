@@ -33,11 +33,14 @@ public class UitkProbe : MonoBehaviour
     };
 
     /// <summary>What an inline sampler's name spells (wrap modes of one axis, a volume's W, the
-    /// anisotropic level) and what counts as using a sampler's texture; recorded after the
-    /// other rows.</summary>
+    /// anisotropic level, which word wins) and what counts as using a sampler's texture, then
+    /// the wrongly spelt names (`Bad*`: two filters, `Clamp` with `Repeat` or `Mirror`, an
+    /// anisotropic level that is none); recorded after the other rows.</summary>
     static readonly string[] LateCases =
     {
         "InlineAxes", "InlineMirrorOnce", "InlineVolume", "InlineAniso", "UsedLoad", "UsedVertex",
+        "InlineV", "InlineWords",
+        "BadFilters", "BadClampRepeat", "BadClampMirror", "BadAniso", "BadAnisoTail", "BadBare",
     };
 
     /// <summary>The value of each mip level of `_Mips`.</summary>
@@ -104,6 +107,12 @@ public class UitkProbe : MonoBehaviour
             deep.wrapMode = TextureWrapMode.Clamp;
             deep.SetPixels(new[] { new Color(.25f, 0, 0, 1), new Color(.75f, 0, 0, 1) });
             deep.Apply(false);
+            // Four texels, bilinear and clamped: 0.2 and 0.4 below 0.6 and 0.8.
+            var quad = new Texture2D(2, 2, TextureFormat.RGBAFloat, false, true);
+            quad.filterMode = FilterMode.Bilinear;
+            quad.wrapMode = TextureWrapMode.Clamp;
+            quad.SetPixels(new[] { new Color(.2f, 0, 0, 1), new Color(.4f, 0, 0, 1), new Color(.6f, 0, 0, 1), new Color(.8f, 0, 0, 1) });
+            quad.Apply(false, false);
             var mips = new Texture2D(16, 16, TextureFormat.RGBAFloat, true, true);
             mips.filterMode = FilterMode.Trilinear;
             mips.wrapMode = TextureWrapMode.Clamp;
@@ -162,6 +171,7 @@ public class UitkProbe : MonoBehaviour
                 material.SetTexture("_Vol", volume);
                 material.SetTexture("_Deep", deep);
                 material.SetTexture("_Mips", mips);
+                material.SetTexture("_Q", quad);
                 Graphics.Blit(a, target, material);
                 if (!exact) Graphics.Blit(target, rounded, twentieths);
                 Row(rows, key, Read(exact ? target : rounded, readback));

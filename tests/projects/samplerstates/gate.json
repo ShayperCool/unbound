@@ -6,6 +6,9 @@
  "summary": "\\d+/\\d+ records match.*",
  "engine_paths": [
   "crates/unbound-shaders/src/samplers.rs",
-  "crates/unbound-shaders/src/fit.rs"
+  "crates/unbound-shaders/src/fit.rs",
+  "crates/unbound-shaders/src/lib.rs",
+  "crates/unbound-app/src/render/resources.rs",
+  "crates/unbound-app/src/render/executor.rs"
  ]
 }

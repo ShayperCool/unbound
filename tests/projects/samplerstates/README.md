@@ -27,6 +27,9 @@ every sample lies between two texels, so its value tells the state it was sample
 | InlineVolume | a volume of two slices through inline samplers, outside 0..1 along W |
 | InlineAniso | a texture of constant mip levels through `Trilinear`, `Aniso8` and `Aniso2` inline samplers, with gradients eight times longer along U |
 | UsedLoad, UsedVertex | a sampler whose texture the program only loads, or uses in the vertex stage only |
+| InlineV | a texture of four texels through `ClampU_RepeatV` outside 0..1 along V and along U, through `ClampUV`, and through `MirrorOnceU` along V |
+| InlineWords | whole-sampler words together: `MirrorOnceRepeat`, and `Mirror_RepeatU` |
+| BadFilters, BadClampRepeat, BadClampMirror, BadAniso, BadAnisoTail, BadBare | wrongly spelt inline samplers: two filters, `Clamp` with `Repeat` or with `Mirror`, the levels `Aniso3` and `Aniso8_2`, and one whose name does not start with `sampler` |
 
 `_Shadow` is a point filtered `RenderTextureFormat.Depth` target cleared to the far plane. The
 cases that sample it are drawn again with four depth targets of two texels, 0.25 and 0.75
@@ -53,7 +56,8 @@ Vulkan (`Reference/unity-6000.0.71f1/vulkan.jsonl`, `--device vulkan`): a textur
 through the sampler the program names: an inline sampler is the state its name spells, another
 texture's sampler that texture's state, with comparisons too. An inline name spells one filter,
 wrap modes for the whole sampler or for the axes their `U`, `V`, `W` letters name, along a
-volume's W too, and an anisotropic level. An inline `...Compare` sampler
+volume's W too, and an anisotropic level; a wrongly spelt one is an error ("Unrecognized inline
+sampler name ...") and the program draws with the error shader. An inline `...Compare` sampler
 compares (greater or equal: depth is reversed, and the far plane is stored as 0); a texture's
 own sampler compares when the texture is a `Shadowmap`, and reads the stored depth when it is a
 `Depth` target. A program with a sampler of a texture it does not use (`Shapes`: `sampler_B`

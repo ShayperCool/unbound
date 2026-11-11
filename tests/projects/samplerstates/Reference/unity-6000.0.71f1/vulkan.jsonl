@@ -55,4 +55,12 @@
 {"k":"InlineAniso","v":[0.7,0.1,0.5,0.1]}
 {"k":"UsedLoad","v":[0.400390625,0.5,0,1]}
 {"k":"UsedVertex","v":[0.400390625,1,0,1]}
+{"k":"InlineV","v":[0.579687536,0.6,0.579687536,0.3]}
+{"k":"InlineWords","v":[0.8496094,1,0,1]}
+{"k":"BadFilters","v":[1,0,1,1]}
+{"k":"BadClampRepeat","v":[1,0,1,1]}
+{"k":"BadClampMirror","v":[1,0,1,1]}
+{"k":"BadAniso","v":[1,0,1,1]}
+{"k":"BadAnisoTail","v":[1,0,1,1]}
+{"k":"BadBare","v":[1,0,1,1]}
 {"k":"complete","v":true}
