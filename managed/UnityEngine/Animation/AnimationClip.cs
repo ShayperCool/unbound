@@ -375,6 +375,7 @@ namespace UnityEngine
             relativePath ??= "";
             var attribute = CurveBinding.NormalizeScriptName(type, propertyName);
             RestoreImportedCurves();
+            if (curve != null) NoteHumanCurveSetByType(type, attribute);
             m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute == attribute && c.Binding.Matches(type));
             if (curve != null)
             {
@@ -627,7 +628,17 @@ namespace Unbound.Runtime
         internal static CurveBinding ForType(string path, string attribute, Type type) =>
             new CurveBinding { Path = path, Attribute = attribute, Type = type, m_ScriptResolved = true };
 
-        internal bool Matches(Type type) => Type == type;
+        /// <summary>Whether the binding names a component of this type, however it was made
+        /// (by a class id or script in an asset, or by a type through SetCurve).</summary>
+        internal bool Matches(Type type) => ResolveType() == type;
+
+        /// <summary>The same binding under another property name.</summary>
+        internal CurveBinding WithAttribute(string attribute)
+        {
+            var other = (CurveBinding)MemberwiseClone();
+            other.Attribute = attribute;
+            return other;
+        }
 
         /// <summary>The component type the binding names, or null when it cannot be resolved.</summary>
         internal Type ResolveType()

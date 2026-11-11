@@ -259,12 +259,22 @@ namespace UnityEngine
             if (j < 0) j = ~j;
             var keys = c.Curve.keys;
             for (int n = 0; n < keys.Length; n++) keys[n] = AnimationCurve.Negated(keys[n], sign);
-            var b = c.Binding;
             return new ClipCurve
             {
-                Binding = new CurveBinding { Path = b.Path, Attribute = HumanClipImport.CurveNames[j], ClassId = b.ClassId },
+                Binding = c.Binding.WithAttribute(HumanClipImport.CurveNames[j]),
                 Curve = new AnimationCurve(keys) { preWrapMode = c.Curve.preWrapMode, postWrapMode = c.Curve.postWrapMode },
             };
+        }
+
+        /// <summary>Says once that a humanoid curve set through SetCurve or SetEditorCurve is
+        /// not played as one: such a curve is bound by its type, and the clip's humanoid curves
+        /// (the ones mirrored, blended as a pose and retargeted) are the ones an asset binds by
+        /// the Animator's class.</summary>
+        internal static void NoteHumanCurveSetByType(Type type, string attribute)
+        {
+            if (type == typeof(Animator) && HumanClipImport.CurveIndex(attribute) >= 0)
+                Unbound.Runtime.Stubs.Ignored("AnimationClip humanoid curve set through SetCurve or SetEditorCurve",
+                    "a muscle, goal, body or translation DoF curve set through the API is not taken as one of the clip's humanoid curves (not mirrored, not played as a pose)");
         }
 
         /// <summary>The index of a stored curve among the humanoid curves, or -1.</summary>

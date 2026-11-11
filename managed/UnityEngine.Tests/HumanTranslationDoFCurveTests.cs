@@ -134,7 +134,14 @@ namespace UnityEngine.Tests
             QueriesShowTheImportedCurves();
         }
 
-        static AnimationClip MirroredArms(List<Object> created)
+        static float Queried(AnimationClip clip, string name)
+        {
+            foreach (var b in UnityEditor.AnimationUtility.GetCurveBindings(clip))
+                if (b.propertyName == name) return UnityEditor.AnimationUtility.GetEditorCurve(clip, b)[1].value;
+            return float.NaN;
+        }
+
+        static AnimationClip Arms(List<Object> created, bool played)
         {
             var clip = new AnimationClip { frameRate = 30f };
             created.Add(clip);
@@ -145,50 +152,51 @@ namespace UnityEngine.Tests
                     Curve = AnimationCurve.Linear(0f, 0f, 1f, value),
                 });
             clip.m_Mirror = true;
-            clip.EnsureHumanCurves();
+            if (played) clip.EnsureHumanCurves();
             return clip;
         }
 
-        static float Queried(AnimationClip clip, string name)
+        /// <summary>An edit of a clip with the Mirror setting names the curves the queries show,
+        /// whether the clip has played or not: what is set is read back, the other curve stays,
+        /// there is no second curve of the name, and the queries say the same after the next use
+        /// and after another edit. Through SetEditorCurve and through SetCurve, with and without
+        /// a query before the edit. Unmeasured in the Editor; the rule keeps a query, an edit and
+        /// the next query consistent. Control: once played the stored curves are the mirrored
+        /// ones, so a write under the stored names would replace the other arm's curve.</summary>
+        [Theory]
+        [InlineData(false, false, true)]
+        [InlineData(false, true, true)]
+        [InlineData(true, false, true)]
+        [InlineData(true, true, true)]
+        [InlineData(true, false, false)]
+        [InlineData(true, true, false)]
+        public void AnEditOfAMirroredClipIsReadBack(bool throughSetCurve, bool played, bool queriedFirst)
         {
-            foreach (var b in UnityEditor.AnimationUtility.GetCurveBindings(clip))
-                if (b.propertyName == name) return UnityEditor.AnimationUtility.GetEditorCurve(clip, b)[1].value;
-            return float.NaN;
-        }
+            var clip = Arms(m_Created, played);
+            if (played) Assert.Equal(new[] { 0.25f, 0.75f }, new[] { "Right Arm Down-Up", "Left Arm Down-Up" }.Select(n => clip.m_Curves.Single(c => c.Binding.Attribute == n).Curve[1].value));
+            if (queriedFirst) Assert.Equal(0.25f, Queried(clip, "Left Arm Down-Up"));
 
-        /// <summary>An edit of a clip that has played mirrored names the curves the queries
-        /// show: what is set is read back and the other curves stay, as when the clip is edited
-        /// before it plays. Unmeasured in the Editor; the rule keeps a query, an edit and the
-        /// next query consistent. Control: the stored curves were the mirrored ones before the
-        /// edit, so a write under the stored names would have replaced the other arm's curve.</summary>
-        [Fact]
-        public void AnEditOfAMirroredClipIsReadBack()
-        {
-            var clip = MirroredArms(m_Created);
-            Assert.Equal(new[] { "Right Arm Down-Up", "Left Arm Down-Up" }, clip.m_Curves.Select(c => c.Binding.Attribute));
-            Assert.Equal(new[] { 0.25f, 0.75f }, clip.m_Curves.Select(c => c.Curve[1].value));
+            void Set(float value)
+            {
+                var curve = AnimationCurve.Linear(0f, 0f, 1f, value);
+                if (throughSetCurve) clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", curve);
+                else UnityEditor.AnimationUtility.SetEditorCurve(clip, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Animator), "Left Arm Down-Up"), curve);
+            }
 
-            var left = UnityEditor.AnimationUtility.GetCurveBindings(clip).Single(b => b.propertyName == "Left Arm Down-Up");
-            UnityEditor.AnimationUtility.SetEditorCurve(clip, left, AnimationCurve.Linear(0f, 0f, 1f, 0.5f));
+            void QueriesShow(float left)
+            {
+                Assert.Equal(new[] { "Left Arm Down-Up", "Right Arm Down-Up" },
+                    UnityEditor.AnimationUtility.GetCurveBindings(clip).Select(b => b.propertyName).OrderBy(n => n, StringComparer.Ordinal));
+                Assert.Equal(left, Queried(clip, "Left Arm Down-Up"));
+                Assert.Equal(0.75f, Queried(clip, "Right Arm Down-Up"));
+            }
 
-            Assert.Equal(2, UnityEditor.AnimationUtility.GetCurveBindings(clip).Length);
-            Assert.Equal(0.5f, Queried(clip, "Left Arm Down-Up"));
-            Assert.Equal(0.75f, Queried(clip, "Right Arm Down-Up"));
-
-            // The same edit before the clip plays gives the same curves.
-            var unplayed = new AnimationClip { frameRate = 30f };
-            m_Created.Add(unplayed);
-            foreach (var (name, value) in new[] { ("Left Arm Down-Up", 0.25f), ("Right Arm Down-Up", 0.75f) })
-                unplayed.m_Curves.Add(new ClipCurve
-                {
-                    Binding = new CurveBinding { Path = "", Attribute = name, ClassId = 95 },
-                    Curve = AnimationCurve.Linear(0f, 0f, 1f, value),
-                });
-            unplayed.m_Mirror = true;
-            left = UnityEditor.AnimationUtility.GetCurveBindings(unplayed).Single(b => b.propertyName == "Left Arm Down-Up");
-            UnityEditor.AnimationUtility.SetEditorCurve(unplayed, left, AnimationCurve.Linear(0f, 0f, 1f, 0.5f));
-            Assert.Equal(0.5f, Queried(unplayed, "Left Arm Down-Up"));
-            Assert.Equal(0.75f, Queried(unplayed, "Right Arm Down-Up"));
+            Set(0.5f);
+            QueriesShow(0.5f);
+            clip.EnsureHumanCurves();
+            QueriesShow(0.5f);
+            Set(0.6f);
+            QueriesShow(0.6f);
         }
 
         /// <summary>Removing a curve of a played mirrored clip removes the one the queries show
@@ -196,7 +204,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void ARemovalFromAMirroredClipTakesTheQueriedCurve()
         {
-            var clip = MirroredArms(m_Created);
+            var clip = Arms(m_Created, played: true);
             var left = UnityEditor.AnimationUtility.GetCurveBindings(clip).Single(b => b.propertyName == "Left Arm Down-Up");
             UnityEditor.AnimationUtility.SetEditorCurve(clip, left, null);
             Assert.Equal(new[] { "Right Arm Down-Up" }, UnityEditor.AnimationUtility.GetCurveBindings(clip).Select(b => b.propertyName));
