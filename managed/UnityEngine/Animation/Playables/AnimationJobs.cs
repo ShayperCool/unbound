@@ -19,6 +19,8 @@ namespace Unbound.Runtime.Playables
         {
             internal Transform Transform;
             internal int Position, Rotation, Scale;
+            /// <summary>A stream has read or written the handle, or resolved it (TransformStreamHandle.IsResolved).</summary>
+            internal bool Resolved;
         }
 
         internal struct StreamProperty
@@ -30,6 +32,9 @@ namespace Unbound.Runtime.Playables
         internal readonly Animator Animator;
         internal readonly uint Id;
         internal readonly List<StreamTransform> Transforms = new List<StreamTransform>();
+        /// <summary>The transforms of <see cref="Transforms"/>: the stream's own, which an
+        /// optimized hierarchy's skeleton no longer poses (AnimatorSkeleton.Apply).</summary>
+        internal readonly HashSet<Transform> StreamBound = new HashSet<Transform>();
         internal readonly List<StreamProperty> Properties = new List<StreamProperty>();
         internal readonly List<Transform> SceneTransforms = new List<Transform>();
         internal readonly List<PropertyGroup> SceneProperties = new List<PropertyGroup>();
@@ -665,16 +670,26 @@ namespace UnityEngine.Animations
             if (m_AnimatorBindingsVersion != context.Handles.Id || handleIndex < 0 || handleIndex >= context.Handles.Transforms.Count)
                 throw new InvalidOperationException("The TransformStreamHandle is invalid. Please use proper function to create the handle.");
             data = context.Handles.Transforms[handleIndex];
+            if (!data.Resolved)
+            {
+                data.Resolved = true;
+                context.Handles.Transforms[handleIndex] = data;
+            }
             return data.Transform != null;
         }
 
         public bool IsValid(AnimationStream stream) =>
             stream.Context is StreamContext c && m_AnimatorBindingsVersion == c.Handles.Id && handleIndex >= 0 && handleIndex < c.Handles.Transforms.Count;
 
-        [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
-        public void Resolve(AnimationStream stream) { }
+        /// <summary>Resolves the handle now instead of at its first access (Scripting API:
+        /// "Handles are lazily resolved as they're accessed").</summary>
+        public void Resolve(AnimationStream stream) => Data(stream, out _, out _);
 
-        public bool IsResolved(AnimationStream stream) => IsValid(stream);
+        /// <summary>Whether a stream has accessed or resolved the handle: false in the first job
+        /// evaluation until then, true afterwards (6000.0.71f1, tests/projects/animoptimize
+        /// job.Rig.0 and job.Rig.1).</summary>
+        public bool IsResolved(AnimationStream stream) =>
+            IsValid(stream) && ((StreamContext)stream.Context).Handles.Transforms[handleIndex].Resolved;
 
         public Vector3 GetPosition(AnimationStream stream)
         {
@@ -993,6 +1008,7 @@ namespace UnityEngine.Animations
             var path = handles.PathOf(transform);
             if (path == null) throw new InvalidOperationException($"The transform '{transform.name}' is not in the hierarchy of the Animator '{animator.name}'.");
             var b = animator.StreamBindings;
+            handles.StreamBound.Add(transform);
             handles.Transforms.Add(new AnimatorHandles.StreamTransform
             {
                 Transform = transform,
@@ -1096,6 +1112,7 @@ namespace UnityEngine.Animations
         {
             if (animator?.m_StreamHandles == null) return;
             animator.m_StreamHandles.Transforms.Clear();
+            animator.m_StreamHandles.StreamBound.Clear();
             animator.m_StreamHandles.Properties.Clear();
         }
 

@@ -93,11 +93,18 @@ namespace Unbound.Runtime
             m_Dirty = true;
         }
 
-        /// <summary>After a write: the globals, then the exposed transforms' poses.</summary>
+        /// <summary>After a write: the globals, then the exposed transforms' poses. An exposed
+        /// transform bound to the animation stream (Animator.BindStreamTransform) is the stream's
+        /// own from then on: it keeps the value the stream gives it, a job's writes included,
+        /// and the skeleton's node no longer poses it (6000.0.71f1, tests/projects/animoptimize
+        /// job.RigExposed and jobRead.RigExposed: the exposed hand stays where it was bound while
+        /// the take moves the node; with a scene handle alone or no handle it follows,
+        /// jobScene.RigExposed and jobNone.RigExposed).</summary>
         internal void Apply()
         {
             if (!m_Dirty) return;
             m_Dirty = false;
+            var streamBound = Animator.m_StreamHandles?.StreamBound;
             Skel.ComputeGlobal(Avatar.AvatarSkeleton, m_Local, m_Global);
             for (int i = 0; i < m_Matrices.Length; i++)
             {
@@ -107,7 +114,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < m_ExposedCount; i++)
             {
                 var t = m_Exposed[i];
-                if (t == null) continue;
+                if (t == null || streamBound != null && streamBound.Contains(t)) continue;
                 var x = m_Global.X[m_ExposedNode[i]];
                 t.SetLocalPositionAndRotation(new Vector3(x.t.x, x.t.y, x.t.z), AnimatorHuman.Rotation(x.q));
                 t.localScale = new Vector3(x.s.x, x.s.y, x.s.z);
