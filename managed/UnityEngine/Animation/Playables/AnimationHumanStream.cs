@@ -40,6 +40,9 @@ namespace Unbound.Runtime.Playables
         Trs m_LoadedBody, m_CurveRoot;
         readonly Trs[] m_LoadedGoals = new Trs[GoalCount];
         bool m_HumanValid, m_SkeletonValid, m_Changed;
+        /// <summary>A job moved or scaled bones of the skeleton through their handles: values that
+        /// stay in the skeleton and are left out when the pose is made from it.</summary>
+        bool m_BonesMoved;
         AnimStream m_Stream;
 
         const int GoalCount = 4;
@@ -110,6 +113,7 @@ namespace Unbound.Runtime.Playables
             m_HumanValid = true;
             m_SkeletonValid = false;
             m_Changed = false;
+            m_BonesMoved = false;
             Array.Clear(m_GoalSet);
             Array.Clear(m_HintSet);
         }
@@ -223,6 +227,15 @@ namespace Unbound.Runtime.Playables
             int hips = m_Human.BoneIndex[Bone.Hips];
             var hipsX = M.Mul(m_Local.X[s.Parent[hips]], m_Local.X[hips]);
             m_Source.CopyFrom(m_Local);
+            // Positions and scales a job gave bones below the hips are the stream's only: the
+            // pose is made from the bones' rotations and the hips (bone.moveArm, bone.scale).
+            if (m_BonesMoved && !m_Human.HasTDoF)
+                for (int n = 1; n < s.Count; n++)
+                {
+                    if (n == hips) continue;
+                    m_Source.X[n].t = m_Human.SkeletonPose.X[n].t;
+                    m_Source.X[n].s = m_Human.SkeletonPose.X[n].s;
+                }
             m_Source.X[hips] = hipsX;
             m_Source.X[0] = Trs.Identity;
             if (m_Human.HasTDoF && m_TDoFBase == null) m_TDoFBase = HumanOps.TDoFBase(m_Human, m_W4);
@@ -242,6 +255,126 @@ namespace Unbound.Runtime.Playables
             m_Local.X[hips] = M.Mul(new Trs(Root.t, Root.q, F4.One3), M.InvMul(Root, hipsX));
             for (int g = 0; g < GoalCount; g++) Pose.Goals[g].X = m_Saved[g];
             TakeSetGoals();
+        }
+
+        // ---------------------------------------------------------------- bones (stream handles)
+
+        /// <summary>The human skeleton node of a transform path of the avatar, when a stream handle
+        /// of it reads and writes the stream's human pose: the hips and the nodes below them (0:
+        /// not one; node 0 of the human skeleton is the hips' parent, which the pose does not
+        /// place).</summary>
+        internal static int BoneNode(AvatarConstant constant, string path)
+        {
+            if (constant == null || !constant.IsHuman) return 0;
+            int node = constant.AvatarSkeleton.FindNode(HashedBindings.Crc32(path));
+            int human = node < 0 ? -1 : constant.HumanSkeletonReverseIndexArray[node];
+            return human > 0 ? human : 0;
+        }
+
+        internal bool IsHips(int node) => node == m_Human.BoneIndex[Bone.Hips];
+
+        /// <summary>A bone's local position, rotation and scale in the stream's skeleton (the hips:
+        /// relative to the body, see <see cref="BoneWorld"/> for what a handle reads).</summary>
+        internal void BoneLocal(int node, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            UpdateSkeletonPose();
+            var x = m_Local.X[node];
+            position = P(x.t);
+            rotation = Q(x.q);
+            scale = P(x.s);
+        }
+
+        /// <summary>A bone's world position and rotation as the stream's skeleton has them, and the
+        /// scale its children's positions take. The hips are where the pose puts them, and their
+        /// scale is the body's times the one the human skeleton has above the hips: on a rig
+        /// whose root is scaled the root's scale comes in twice, so a handle reads the hips'
+        /// own scale as the root's and the positions below the hips that much too far from them
+        /// (tests/projects/humanoid bone.read, a root scale of 100: a bone 0.1 world units above
+        /// the hips reads 10 units above them). Rotations are the pose's.</summary>
+        internal void BoneWorld(int node, out F4 position, out F4 rotation, out F4 scale)
+        {
+            UpdateSkeletonPose();
+            var s = m_Human.Skeleton;
+            if (IsHips(node))
+            {
+                var hips = M.Mul(m_Local.X[s.Parent[node]], m_Local.X[node]);
+                position = hips.t;
+                rotation = hips.q;
+                scale = hips.s;
+                return;
+            }
+            BoneWorld(s.Parent[node], out F4 pp, out F4 pr, out F4 ps);
+            var x = m_Local.X[node];
+            position = pp + M.QRotate(pr, ps * x.t);
+            rotation = M.QNormalize(M.QMul(pr, x.q));
+            scale = ps * x.s;
+        }
+
+        internal void BoneWorld(int node, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            BoneWorld(node, out F4 t, out F4 q, out F4 s);
+            position = P(t);
+            rotation = Q(q);
+            scale = P(s);
+        }
+
+        /// <summary>What a bone below the hips is placed in: its parent bone's
+        /// <see cref="BoneWorld"/>.</summary>
+        internal void BoneParentWorld(int node, out Vector3 position, out Quaternion rotation, out Vector3 scale) =>
+            BoneWorld(m_Human.Skeleton.Parent[node], out position, out rotation, out scale);
+
+        internal void SetHipsWorld(Vector3 position, Quaternion rotation) => SetHipsWorld(V(position), Q(rotation));
+
+        /// <summary>A job changed the skeleton through a bone's handle: the pose is made again from
+        /// it when next read and at the end of the job.</summary>
+        void BoneChanged()
+        {
+            m_HumanValid = false;
+            m_Changed = true;
+        }
+
+        /// <summary>A bone's local rotation (not the hips': <see cref="SetHipsWorld"/>). It reaches
+        /// the final pose through the muscles the retargeting gives it (bone.rotateLocal).</summary>
+        internal void SetBoneLocalRotation(int node, Quaternion rotation)
+        {
+            UpdateSkeletonPose();
+            m_Local.X[node].q = Q(rotation);
+            BoneChanged();
+        }
+
+        /// <summary>A bone's local position or scale (not the hips' position): they stay in the
+        /// stream's skeleton, where the handles read them and the positions below follow; the
+        /// pose is made again as after any bone change, and they do not enter it (bone.moveArm,
+        /// bone.scale). On an avatar with translation DoF the retargeting reads bone positions;
+        /// that case is unmeasured.</summary>
+        internal void SetBoneLocalPosition(int node, Vector3 position)
+        {
+            UpdateSkeletonPose();
+            m_Local.X[node].t = V(position);
+            m_BonesMoved = true;
+            BoneChanged();
+        }
+
+        internal void SetBoneLocalScale(int node, Vector3 scale)
+        {
+            UpdateSkeletonPose();
+            m_Local.X[node].s = V(scale);
+            m_BonesMoved = true;
+            BoneChanged();
+        }
+
+        /// <summary>The hips' world position and rotation (bone.moveHips): the body follows when the
+        /// pose is made again.</summary>
+        internal void SetHipsWorld(F4 position, F4 rotation)
+        {
+            UpdateSkeletonPose();
+            int hips = m_Human.BoneIndex[Bone.Hips];
+            var parent = m_Local.X[m_Human.Skeleton.Parent[hips]];
+            var x = m_Local.X[hips];
+            x.t = M.InvMulPoint(parent, position);
+            x.q = M.QNormalize(M.QMul(M.QConj(parent.q), rotation));
+            m_Local.X[hips] = x;
+            BoneChanged();
         }
 
         /// <summary>The goals the job set go into the pose, back in the pose's goal frame (a foot's

@@ -18,7 +18,7 @@ namespace UnityEngine.Tests
     [Collection("Animation")]
     public sealed class AnimationHumanStreamTests
     {
-        delegate void JobBody(AnimationStream stream, int frame);
+        internal delegate void JobBody(AnimationStream stream, int frame);
 
         struct HumanJob : IAnimationJob
         {
@@ -82,7 +82,7 @@ namespace UnityEngine.Tests
             return root;
         }
 
-        static PlayableGraph Graph(Animator animator, JobBody body)
+        internal static PlayableGraph Graph(Animator animator, JobBody body)
         {
             HumanJob.Body = body;
             HumanJob.Frame = 0;
@@ -94,7 +94,7 @@ namespace UnityEngine.Tests
             return g;
         }
 
-        static void Run(PlayableGraph g, int frames)
+        internal static void Run(PlayableGraph g, int frames)
         {
             for (int i = 0; i < frames; i++)
             {

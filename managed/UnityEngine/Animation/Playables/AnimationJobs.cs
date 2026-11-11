@@ -24,6 +24,10 @@ namespace Unbound.Runtime.Playables
             internal int Node;
             /// <summary>A stream has read or written the handle, or resolved it (TransformStreamHandle.IsResolved).</summary>
             internal bool Resolved;
+            /// <summary>The node of the avatar's human skeleton the handle reads and writes in a
+            /// humanoid's stream: the hips or a node below them (0: none, the channels are
+            /// its values).</summary>
+            internal int Human;
         }
 
         internal struct StreamProperty
@@ -67,6 +71,10 @@ namespace Unbound.Runtime.Playables
             handle.Node = owner is SkeletonGroup node ? node.Node : -1;
             if (handle.Node < 0 && owner?.Transform != null) handle.Transform = owner.Transform;
             if (handle.Node < 0 && owner != null && handle.Transform != null) StreamOwned.Add(handle.Transform);
+            // A bone of a humanoid's pose is the pose's, not a channel's (an optimized humanoid's
+            // handles are unmeasured and stay with their nodes).
+            var path = handle.Node < 0 && handle.Transform != null && Animator.IsHuman ? PathOf(handle.Transform) : null;
+            handle.Human = path == null ? 0 : Unbound.Runtime.Playables.HumanStreamPose.BoneNode(Animator.Human?.Constant, path);
             return handle;
         }
 
@@ -194,6 +202,97 @@ namespace Unbound.Runtime.Playables
             m_Human.Load(Stream, root);
             return m_Human;
         }
+
+        /// <summary>The stream's human pose when the handle is one of its bones.</summary>
+        internal bool HumanBone(in AnimatorHandles.StreamTransform handle, out Unbound.Runtime.Playables.HumanStreamPose pose)
+        {
+            pose = handle.Human > 0 && Handles.Animator != null && Handles.Animator.IsHuman ? HumanPose() : null;
+            return pose != null;
+        }
+
+        /// <summary>The world position, rotation and scale of the hips' parent in the stream: the
+        /// avatar root where the update's root motion puts it, then the transforms between it
+        /// and the hips as the stream has them.</summary>
+        void HipsParentGlobal(Transform hips, Unbound.Runtime.Playables.HumanStreamPose pose, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            using var engine = MainThreadCheck.Engine();
+            var root = Handles.Animator.transform;
+            var x = pose.Root;
+            position = new Vector3(x.t.x, x.t.y, x.t.z);
+            rotation = Unbound.Runtime.Humanoid.AnimatorHuman.Rotation(x.q);
+            scale = new Vector3(x.s.x, x.s.y, x.s.z);
+            m_Chain.Clear();
+            for (var p = hips.m_Parent; p != null && p != root; p = p.m_Parent) m_Chain.Add(p);
+            for (int i = m_Chain.Count - 1; i >= 0; i--)
+            {
+                Local(m_Chain[i], out var lp, out var lr, out var ls);
+                position = position + rotation * Vector3.Scale(scale, lp);
+                rotation = rotation * lr;
+                scale = Vector3.Scale(scale, ls);
+            }
+        }
+
+        readonly List<Transform> m_Chain = new List<Transform>();
+
+        /// <summary>What a humanoid bone's handle reads as its local values: the bone in the
+        /// stream's skeleton; the hips relative to their parent transform, their scale the
+        /// skeleton's hips scale over the parent's (tests/projects/humanoid bone.read).</summary>
+        internal void HumanLocal(in AnimatorHandles.StreamTransform d, Unbound.Runtime.Playables.HumanStreamPose pose, out Vector3 p, out Quaternion r, out Vector3 s)
+        {
+            if (!pose.IsHips(d.Human))
+            {
+                pose.BoneLocal(d.Human, out p, out r, out s);
+                return;
+            }
+            pose.BoneWorld(d.Human, out Vector3 wp, out Quaternion wr, out Vector3 ws);
+            HipsParentGlobal(d.Transform, pose, out var pp, out var pr, out var ps);
+            var local = Quaternion.Inverse(pr) * (wp - pp);
+            p = new Vector3(Div(local.x, ps.x), Div(local.y, ps.y), Div(local.z, ps.z));
+            r = Quaternion.Inverse(pr) * wr;
+            s = new Vector3(Div(ws.x, ps.x), Div(ws.y, ps.y), Div(ws.z, ps.z));
+        }
+
+        internal void HumanGlobal(in AnimatorHandles.StreamTransform d, Unbound.Runtime.Playables.HumanStreamPose pose, out Vector3 p, out Quaternion r, out Vector3 s) =>
+            pose.BoneWorld(d.Human, out p, out r, out s);
+
+        /// <summary>A write through a humanoid bone's handle, local (null: unchanged). The hips'
+        /// scale is not a value of the pose and is not taken (unmeasured).</summary>
+        internal void HumanSetLocal(in AnimatorHandles.StreamTransform d, Unbound.Runtime.Playables.HumanStreamPose pose, Vector3? p, Quaternion? r, Vector3? s)
+        {
+            if (!pose.IsHips(d.Human))
+            {
+                if (p.HasValue) pose.SetBoneLocalPosition(d.Human, p.Value);
+                if (r.HasValue) pose.SetBoneLocalRotation(d.Human, r.Value);
+                if (s.HasValue) pose.SetBoneLocalScale(d.Human, s.Value);
+                return;
+            }
+            if (s.HasValue)
+                Stubs.Ignored("TransformStreamHandle scale of a humanoid's hips", "is not taken: the hips' scale in the stream comes from the pose's body (unmeasured)");
+            if (!p.HasValue && !r.HasValue) return;
+            HumanLocal(d, pose, out var lp, out var lr, out _);
+            HipsParentGlobal(d.Transform, pose, out var pp, out var pr, out var ps);
+            pose.SetHipsWorld(pp + pr * Vector3.Scale(ps, p ?? lp), pr * (r ?? lr));
+        }
+
+        /// <summary>A write through a humanoid bone's handle, in the world (null: unchanged).</summary>
+        internal void HumanSetGlobal(in AnimatorHandles.StreamTransform d, Unbound.Runtime.Playables.HumanStreamPose pose, Vector3? p, Quaternion? r)
+        {
+            if (pose.IsHips(d.Human))
+            {
+                pose.BoneWorld(d.Human, out Vector3 wp, out Quaternion wr, out Vector3 _);
+                pose.SetHipsWorld(p ?? wp, r ?? wr);
+                return;
+            }
+            pose.BoneParentWorld(d.Human, out var pp, out var pr, out var ps);
+            if (p.HasValue)
+            {
+                var local = Quaternion.Inverse(pr) * (p.Value - pp);
+                pose.SetBoneLocalPosition(d.Human, new Vector3(Div(local.x, ps.x), Div(local.y, ps.y), Div(local.z, ps.z)));
+            }
+            if (r.HasValue) pose.SetBoneLocalRotation(d.Human, Quaternion.Inverse(pr) * r.Value);
+        }
+
+        internal static float Div(float a, float b) => Math.Abs(b) > 1e-12f ? a / b : a;
 
         /// <summary>The end of a job: a human pose it opened goes back into the stream.</summary>
         void CloseHuman()
@@ -841,6 +940,7 @@ namespace UnityEngine.Animations
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Vector3.zero;
+            if (c.HumanBone(d, out var human)) { c.HumanGlobal(d, human, out var hp, out _, out _); return hp; }
             c.GlobalTR(d, out var p, out _);
             return p;
         }
@@ -848,15 +948,17 @@ namespace UnityEngine.Animations
         public void SetPosition(AnimationStream stream, Vector3 position)
         {
             if (!Data(stream, out var c, out var d)) return;
+            if (c.HumanBone(d, out var human)) { c.HumanSetGlobal(d, human, position, null); return; }
             ParentGlobal(c, d, out var pp, out var pr, out var parentScale);
             var local = Quaternion.Inverse(pr) * (position - pp);
-            c.Write(d.Position, new Vector3(Div(local.x, parentScale.x), Div(local.y, parentScale.y), Div(local.z, parentScale.z)));
+            c.Write(d.Position, new Vector3(StreamContext.Div(local.x, parentScale.x), StreamContext.Div(local.y, parentScale.y), StreamContext.Div(local.z, parentScale.z)));
         }
 
         public Quaternion GetRotation(AnimationStream stream)
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Quaternion.identity;
+            if (c.HumanBone(d, out var human)) { c.HumanGlobal(d, human, out _, out var hr, out _); return hr; }
             c.GlobalTR(d, out _, out var r);
             return r;
         }
@@ -864,35 +966,59 @@ namespace UnityEngine.Animations
         public void SetRotation(AnimationStream stream, Quaternion rotation)
         {
             if (!Data(stream, out var c, out var d)) return;
+            if (c.HumanBone(d, out var human)) { c.HumanSetGlobal(d, human, null, rotation); return; }
             ParentGlobal(c, d, out _, out var pr, out _);
             c.Write(d.Rotation, Quaternion.Inverse(pr) * rotation);
         }
 
-        public Vector3 GetLocalPosition(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalPosition(d.Transform, d.Position) : Vector3.zero; }
+        public Vector3 GetLocalPosition(AnimationStream stream)
+        {
+            GetLocalTRS(stream, out var position, out _, out _);
+            return position;
+        }
 
         public void SetLocalPosition(AnimationStream stream, Vector3 position)
         {
-            if (Data(stream, out var c, out var d)) c.Write(d.Position, position);
+            if (!Data(stream, out var c, out var d)) return;
+            if (c.HumanBone(d, out var human)) c.HumanSetLocal(d, human, position, null, null);
+            else c.Write(d.Position, position);
         }
 
-        public Quaternion GetLocalRotation(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalRotation(d.Transform, d.Rotation) : Quaternion.identity; }
+        public Quaternion GetLocalRotation(AnimationStream stream)
+        {
+            using var engine = MainThreadCheck.Engine();
+            if (!Data(stream, out var c, out var d)) return Quaternion.identity;
+            if (c.HumanBone(d, out var human)) { c.HumanLocal(d, human, out _, out var hr, out _); return hr; }
+            return c.LocalRotation(d.Transform, d.Rotation);
+        }
 
         public void SetLocalRotation(AnimationStream stream, Quaternion rotation)
         {
-            if (Data(stream, out var c, out var d)) c.Write(d.Rotation, rotation);
+            if (!Data(stream, out var c, out var d)) return;
+            if (c.HumanBone(d, out var human)) c.HumanSetLocal(d, human, null, rotation, null);
+            else c.Write(d.Rotation, rotation);
         }
 
-        public Vector3 GetLocalScale(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalScale(d.Transform, d.Scale) : Vector3.one; }
+        public Vector3 GetLocalScale(AnimationStream stream)
+        {
+            using var engine = MainThreadCheck.Engine();
+            if (!Data(stream, out var c, out var d)) return Vector3.one;
+            if (c.HumanBone(d, out var human)) { c.HumanLocal(d, human, out _, out _, out var hs); return hs; }
+            return c.LocalScale(d.Transform, d.Scale);
+        }
 
         public void SetLocalScale(AnimationStream stream, Vector3 scale)
         {
-            if (Data(stream, out var c, out var d)) c.Write(d.Scale, scale);
+            if (!Data(stream, out var c, out var d)) return;
+            if (c.HumanBone(d, out var human)) c.HumanSetLocal(d, human, null, null, scale);
+            else c.Write(d.Scale, scale);
         }
 
         public Matrix4x4 GetLocalToParentMatrix(AnimationStream stream)
         {
             using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Matrix4x4.identity;
+            if (c.HumanBone(d, out var human)) { c.HumanLocal(d, human, out var hp, out var hr, out var hs); return Matrix4x4.TRS(hp, hr, hs); }
             return Matrix4x4.TRS(c.LocalPosition(d.Transform, d.Position), c.LocalRotation(d.Transform, d.Rotation), c.LocalScale(d.Transform, d.Scale));
         }
 
@@ -912,6 +1038,7 @@ namespace UnityEngine.Animations
                 scale = Vector3.one;
                 return;
             }
+            if (c.HumanBone(d, out var human)) { c.HumanLocal(d, human, out position, out rotation, out scale); return; }
             position = c.LocalPosition(d.Transform, d.Position);
             rotation = c.LocalRotation(d.Transform, d.Rotation);
             scale = c.LocalScale(d.Transform, d.Scale);
@@ -920,6 +1047,7 @@ namespace UnityEngine.Animations
         public void SetLocalTRS(AnimationStream stream, Vector3 position, Quaternion rotation, Vector3 scale, bool useMask)
         {
             if (!Data(stream, out var c, out var d)) return;
+            if (c.HumanBone(d, out var human)) { c.HumanSetLocal(d, human, position, rotation, scale); return; }
             if (!useMask || (d.Position >= 0)) c.Write(d.Position, position);
             if (!useMask || (d.Rotation >= 0)) c.Write(d.Rotation, rotation);
             if (!useMask || (d.Scale >= 0)) c.Write(d.Scale, scale);
@@ -934,23 +1062,30 @@ namespace UnityEngine.Animations
                 rotation = Quaternion.identity;
                 return;
             }
+            if (c.HumanBone(d, out var human)) { c.HumanGlobal(d, human, out position, out rotation, out _); return; }
             c.GlobalTR(d, out position, out rotation);
         }
 
-        public Matrix4x4 GetLocalToWorldMatrix(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalToWorld(d) : Matrix4x4.identity; }
+        public Matrix4x4 GetLocalToWorldMatrix(AnimationStream stream)
+        {
+            using var engine = MainThreadCheck.Engine();
+            if (!Data(stream, out var c, out var d)) return Matrix4x4.identity;
+            if (c.HumanBone(d, out var human)) { c.HumanGlobal(d, human, out var hp, out var hr, out var hs); return Matrix4x4.TRS(hp, hr, hs); }
+            return c.LocalToWorld(d);
+        }
 
         public void SetGlobalTR(AnimationStream stream, Vector3 position, Quaternion rotation, bool useMask)
         {
             if (!Data(stream, out var c, out var d)) return;
+            if (c.HumanBone(d, out var human)) { c.HumanSetGlobal(d, human, position, rotation); return; }
             ParentGlobal(c, d, out var pp, out var pr, out var parentScale);
             var local = Quaternion.Inverse(pr) * (position - pp);
             if (!useMask || (d.Position >= 0))
-                c.Write(d.Position, new Vector3(Div(local.x, parentScale.x), Div(local.y, parentScale.y), Div(local.z, parentScale.z)));
+                c.Write(d.Position, new Vector3(StreamContext.Div(local.x, parentScale.x), StreamContext.Div(local.y, parentScale.y), StreamContext.Div(local.z, parentScale.z)));
             if (!useMask || (d.Rotation >= 0))
                 c.Write(d.Rotation, Quaternion.Inverse(pr) * rotation);
         }
 
-        static float Div(float a, float b) => Math.Abs(b) > 1e-12f ? a / b : a;
 
         static void ParentGlobal(StreamContext c, in AnimatorHandles.StreamTransform d, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
