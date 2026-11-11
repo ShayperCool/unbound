@@ -24,10 +24,13 @@ namespace Unbound.Runtime
         internal sealed class AabbQuery : IQueryCallback
         {
             internal readonly List<Fixture> Found = new List<Fixture>();
+            readonly HashSet<Fixture> seen = new HashSet<Fixture>();
+
+            internal void Clear() { Found.Clear(); seen.Clear(); }
 
             public bool QueryCallback(Fixture fixture)
             {
-                Found.Add(fixture);
+                if (seen.Add(fixture)) Found.Add(fixture);
                 return true;
             }
         }
@@ -43,7 +46,7 @@ namespace Unbound.Runtime
 
             internal void Clear()
             {
-                Best.Clear(); Exclude.Clear(); Skipped.Clear(); Query.Found.Clear(); Hits.Clear(); Ordered.Clear();
+                Best.Clear(); Exclude.Clear(); Skipped.Clear(); Query.Clear(); Hits.Clear(); Ordered.Clear();
             }
         }
 
@@ -236,7 +239,7 @@ namespace Unbound.Runtime
             var proxyB = new DistanceProxy();
             proxyB.Set(shape, childIndex);
             query ??= new AabbQuery();
-            query.Found.Clear();
+            query.Clear();
             W.World.QueryAABB(query, swept);
             foreach (var f in query.Found)
             {

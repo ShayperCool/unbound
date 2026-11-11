@@ -51,15 +51,7 @@ namespace Unbound.Box2D.Collision.Shapes
             return DistanceSquaredToSegment(local) <= Radius * Radius;
         }
 
-        float DistanceSquaredToSegment(Vector2 p)
-        {
-            var a = Vertices[0];
-            var d = Vertices[1] - a;
-            var dd = Vector2.Dot(d, d);
-            var t = dd > 0.0f ? Math.Clamp(Vector2.Dot(p - a, d) / dd, 0.0f, 1.0f) : 0.0f;
-            var q = a + t * d;
-            return Vector2.DistanceSquared(p, q);
-        }
+        float DistanceSquaredToSegment(Vector2 p) => MathUtils.DistanceSquaredToSegment(p, Vertices[0], Vertices[1]);
 
         /// Rays that start inside do not hit, as for Box2D's solid shapes.
         public override bool RayCast(out RayCastOutput output, in RayCastInput input, in Transform transform, int childIndex)

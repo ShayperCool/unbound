@@ -3,8 +3,8 @@
 This probe records local and world shape data, composite paths and cast contacts
 for static, body, child and rotated-child frames. It varies small displacements,
 collider offsets, reflected/nonuniform scale, large positions and nonplanar
-parents. The canonical Unity 6000.0.71f1 reference contains 320 scenarios and
-43,068 observations from two byte-identical independent Editor runs.
+parents. The canonical Unity 6000.0.71f1 reference contains 327 scenarios and
+43,940 observations from two byte-identical independent Editor runs.
 
 Run from the repository root. Each label gets a fresh project in the external
 cache; the runner wraps each Editor or engine process in `with-heavy-job`.
@@ -38,3 +38,40 @@ failure returns a nonzero exit status. The probe includes unresolved behavior;
 its reference and passing displacement tests do not establish geometry parity.
 Run artifacts and rejected experiments stay in the cache. Other Unity releases
 remain unmeasured.
+
+The seven appended controls cover an interior hole, a disconnected island,
+a repeated/zero-area source path, manual source edits, polygon edge radius and
+Delaunay refinement, plus a tilted outline with manual setting changes and cloning. The refinement discriminator produces four shapes with the
+option disabled and two with it enabled. The two independent GPU Editor captures
+agree byte for byte, SHA-256
+`62dcfdb722873adfd1f11abb35d27e8add6b8a11d7978e2b86a9eb2a861f3caa`.
+All 320 earlier scenarios retain their original values.
+
+The [Unity 6000.0 component reference](https://docs.unity3d.com/6000.0/Documentation/Manual/2d-physics/collider/composite-collider/composite-collider-2d-reference.html)
+and [polygon geometry API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CompositeCollider2D.GeometryType.Polygons.html)
+describe convex shapes forming solid outlines, with holes excluded from collision.
+The [manual generation API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CompositeCollider2D.GenerationType.Manual.html)
+requires an explicit GenerateGeometry call after source or setting changes. The
+added controls move the hole and change the geometry type and radius so that the
+result differs before and after that call. In the measured outline control, a
+clone applies pending settings to the copied paths. Switching to synchronous mode
+keeps existing geometry until a source change triggers generation.
+[useDelaunayMesh](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CompositeCollider2D-useDelaunayMesh.html)
+selects an additional refinement step. These pages do not specify polygon order.
+
+For Unity 6000.0.71f1, the generated contours use the body's 2D frame, including
+baked transform scale. Coordinates enter the integer contour grid after a
+single-precision multiplication and truncation, and leave it through a
+single-precision multiplication. Convex partitioning uses odd-even contour filling,
+at most eight vertices per piece, optional refinement and near-collinear cleanup.
+The [edge-radius API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CompositeCollider2D-edgeRadius.html)
+describes rounded edges; the polygon-mode reference reports zero shape radius
+even when edgeRadius is 0.125. These numerical and ordering observations apply to
+the measured release. Other releases retain the unmeasured contour-frame,
+ear-partition, polygon-radius, immediate manual-setting and outline point-overlap
+fallback, with a diagnostic.
+
+Composite shape and path values now pass in all original frames and new controls.
+The remaining 138 values are cast points/normals on capsule, circle and box
+colliders in 11 displaced-frame cases. Their raw failures and tolerances remain
+unchanged for the cast-contact follow-up.

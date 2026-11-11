@@ -30,7 +30,10 @@ namespace UnityEngine
         float m_VertexDistance = 0.0005f;
         float m_OffsetDistance = 0.00005f;
         float m_EdgeRadius;
-        /// <summary>The generated outlines, in the composite's space.</summary>
+        GeometryType m_GeneratedGeometryType;
+        bool m_GeneratedUseDelaunayMesh;
+        float m_GeneratedEdgeRadius;
+        /// <summary>The generated outlines exposed by GetPath.</summary>
         List<Vector2[]> m_Paths = new List<Vector2[]>();
         bool m_HavePaths;
 
@@ -42,7 +45,7 @@ namespace UnityEngine
             set
             {
                 m_GeometryType = value;
-                ShapeChanged();
+                GeometrySettingChanged();
             }
         }
 
@@ -62,7 +65,7 @@ namespace UnityEngine
             set
             {
                 m_UseDelaunayMesh = value;
-                ShapeChanged();
+                GeometrySettingChanged();
             }
         }
 
@@ -82,7 +85,7 @@ namespace UnityEngine
             set
             {
                 m_EdgeRadius = Mathf.Max(0f, value);
-                ShapeChanged();
+                GeometrySettingChanged();
             }
         }
 
@@ -94,6 +97,19 @@ namespace UnityEngine
                 m_OffsetDistance = Mathf.Max(0f, value);
                 Regenerate();
             }
+        }
+
+        void GeometrySettingChanged()
+        {
+            if (Compat.Physics2DGeneratedGeometryMeasured) Regenerate();
+            else ShapeChanged();
+        }
+
+        void CaptureGeneratedSettings()
+        {
+            m_GeneratedGeometryType = m_GeometryType;
+            m_GeneratedUseDelaunayMesh = m_UseDelaunayMesh;
+            m_GeneratedEdgeRadius = m_EdgeRadius;
         }
 
         void Regenerate()
@@ -215,7 +231,9 @@ namespace UnityEngine
         {
             m_Paths = new List<Vector2[]>();
             m_HavePaths = true;
+            CaptureGeneratedSettings();
             var fromBody = toBody.inverse;
+            bool measured = Compat.Physics2DGeneratedGeometryMeasured;
             var result = new Paths();
             double scale = ClipperOps.Scale;
             var rb = m_GameObject.GetComponent<Rigidbody2D>();
@@ -226,7 +244,7 @@ namespace UnityEngine
                 // The source in the composite's body frame, grown by the offset distance.
                 var polygons = new List<Vector2[]>();
                 source.BuildCompositeSource(W.ToBodyMatrix(source.transform, bodyPosition, bodyAngle), polygons);
-                var grown = ClipperOps.OffsetInt(ClipperOps.ToInt(polygons), m_OffsetDistance * scale);
+                var grown = ClipperOps.OffsetInt(ClipperOps.ToInt(polygons, measured), m_OffsetDistance * scale);
                 switch (source.m_CompositeOperation)
                 {
                     case CompositeOperation.Merge: result = ClipperOps.Combine(result, grown, ClipType.ctUnion); break;
@@ -244,7 +262,9 @@ namespace UnityEngine
                 if (path.Count < 3) continue;
                 var points = new Vector2[path.Count];
                 for (int i = 0; i < points.Length; i++)
-                    points[i] = fromBody.MultiplyPoint3x4(new Vector2((float)(path[i].X / scale), (float)(path[i].Y / scale)));
+                    points[i] = measured
+                        ? new Vector2((float)path[i].X * ClipperOps.InverseScale, (float)path[i].Y * ClipperOps.InverseScale)
+                        : (Vector2)fromBody.MultiplyPoint3x4(new Vector2((float)(path[i].X / scale), (float)(path[i].Y / scale)));
                 m_Paths.Add(points);
             }
         }
@@ -252,17 +272,23 @@ namespace UnityEngine
         internal override void BuildShapes(Matrix4x4 toBody, List<Shape> shapes)
         {
             if (!m_HavePaths) Generate(toBody);
+            bool measured = Compat.Physics2DGeneratedGeometryMeasured;
+            var geometryType = measured ? m_GeneratedGeometryType : m_GeometryType;
+            bool delaunay = measured ? m_GeneratedUseDelaunayMesh : m_UseDelaunayMesh;
+            float radius = measured ? m_GeneratedEdgeRadius : m_EdgeRadius;
+            if (!measured)
+                Stubs.Ignored("CompositeCollider2D generated geometry", "this release is unmeasured; using the legacy contour frame, ear partition, polygon radius and outline point-overlap policy");
             int made = 0, dropped = 0;
-            if (m_GeometryType == GeometryType.Outlines)
+            if (geometryType == GeometryType.Outlines)
             {
                 foreach (var path in m_Paths)
                 {
                     var points = new System.Numerics.Vector2[path.Length];
-                    for (int i = 0; i < points.Length; i++) points[i] = ToBody(toBody, path[i]);
+                    for (int i = 0; i < points.Length; i++) points[i] = measured ? W.ToB2(path[i]) : ToBody(toBody, path[i]);
                     if (points.Length < 3) { dropped++; continue; }
                     var chain = new ChainShape();
                     chain.CreateLoop(points);
-                    chain.Radius = B2Settings.PolygonRadius + m_EdgeRadius;
+                    chain.Radius = B2Settings.PolygonRadius + radius;
                     shapes.Add(chain);
                     made++;
                 }
@@ -273,14 +299,20 @@ namespace UnityEngine
                 foreach (var path in m_Paths)
                 {
                     var points = new List<System.Numerics.Vector2>(path.Length);
-                    foreach (var p in path) points.Add(ToBody(toBody, p));
+                    foreach (var p in path) points.Add(measured ? W.ToB2(p) : ToBody(toBody, p));
                     body.Add(points);
                 }
-                foreach (var piece in PolygonDecomposition.ConvexPiecesWithHoles(body))
+                List<List<System.Numerics.Vector2>> pieces;
+                if (measured)
+                {
+                    if (!PolygonPartition.TryGenerate(body, delaunay, out pieces)) dropped++;
+                }
+                else pieces = PolygonDecomposition.ConvexPiecesWithHoles(body);
+                foreach (var piece in pieces)
                 {
                     var shape = ConvexShape(piece);
                     if (shape == null) { dropped++; continue; }
-                    if (m_EdgeRadius > 0f) shape.Radius += m_EdgeRadius;
+                    if (!measured && radius > 0f) shape.Radius += radius;
                     shapes.Add(shape);
                     made++;
                 }
@@ -311,6 +343,7 @@ namespace UnityEngine
                         m_Paths.Add(list.ToArray());
                     }
                     m_HavePaths = true;
+                    CaptureGeneratedSettings();
                 }
             }
         }
@@ -325,6 +358,7 @@ namespace UnityEngine
             m_VertexDistance = s.m_VertexDistance;
             m_OffsetDistance = s.m_OffsetDistance;
             m_EdgeRadius = s.m_EdgeRadius;
+            CaptureGeneratedSettings();
             m_Paths = new List<Vector2[]>();
             foreach (var p in s.m_Paths) m_Paths.Add((Vector2[])p.Clone());
             m_HavePaths = s.m_HavePaths && s.m_GenerationType == GenerationType.Manual;
@@ -414,14 +448,18 @@ namespace Unbound.Runtime
     internal static class ClipperOps
     {
         internal const double Scale = 1e7;
+        internal const float InverseScale = 1e-7f;
 
-        internal static Paths ToInt(List<Vector2[]> polygons)
+        internal static Paths ToInt(List<Vector2[]> polygons, bool truncate = false)
         {
             var paths = new Paths(polygons.Count);
             foreach (var polygon in polygons)
             {
                 var path = new Path(polygon.Length);
-                foreach (var p in polygon) path.Add(new IntPoint((long)Math.Round(p.x * Scale), (long)Math.Round(p.y * Scale)));
+                foreach (var p in polygon)
+                    path.Add(truncate
+                        ? new IntPoint((long)(p.x * (float)Scale), (long)(p.y * (float)Scale))
+                        : new IntPoint((long)Math.Round(p.x * Scale), (long)Math.Round(p.y * Scale)));
                 paths.Add(path);
             }
             return paths;

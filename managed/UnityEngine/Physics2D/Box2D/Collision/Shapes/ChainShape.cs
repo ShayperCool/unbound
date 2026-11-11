@@ -18,6 +18,8 @@ namespace Unbound.Box2D.Collision.Shapes
         /// The vertex count.
         public int Count;
 
+        bool pointOverlapMeasured = Unbound.Runtime.Compat.Physics2DGeneratedGeometryMeasured;
+
         public Vector2 PrevVertex;
 
         public Vector2 NextVertex;
@@ -39,6 +41,8 @@ namespace Unbound.Box2D.Collision.Shapes
             var clone = new ChainShape {Vertices = new Vector2[Vertices.Length]};
             Array.Copy(Vertices, clone.Vertices, Vertices.Length);
             clone.Count = Count;
+            clone.Radius = Radius;
+            clone.pointOverlapMeasured = pointOverlapMeasured;
             clone.PrevVertex = PrevVertex;
             clone.NextVertex = NextVertex;
             return clone;
@@ -136,10 +140,15 @@ namespace Unbound.Box2D.Collision.Shapes
             };
         }
 
-        /// This always return false.
-        /// @see b2Shape::TestPoint
+        /// <summary>Tests the exposed edge radius, excluding the solver skin.</summary>
         public override bool TestPoint(in Transform transform, in Vector2 p)
         {
+            if (!pointOverlapMeasured) return false;
+            var local = MathUtils.MulT(transform, p);
+            float radius = Radius - Settings.PolygonRadius;
+            for (int i = 0; i + 1 < Count; i++)
+                if (MathUtils.DistanceSquaredToSegment(local, Vertices[i], Vertices[i + 1]) <= radius * radius)
+                    return true;
             return false;
         }
 

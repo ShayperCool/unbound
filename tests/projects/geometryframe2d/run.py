@@ -64,7 +64,7 @@ else:
     if any(f.exists() for f in [output, log, editor_log]):
         p.error('refusing to replace capture or log')
     if a.mode == 'native':
-        command = [str(editor_path()), '-batchmode', '-nographics', '-projectPath', str(project),
+        command = [str(editor_path()), '-batchmode', '-projectPath', str(project),
                    '-executeMethod', 'ProbeRunner.Record', '-logFile', str(editor_log)]
     else:
         if not a.cli:

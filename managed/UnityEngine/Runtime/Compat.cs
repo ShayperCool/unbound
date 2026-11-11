@@ -41,6 +41,10 @@ namespace Unbound.Runtime
         /// on Unity 6000.0.71f1.</summary>
         internal static bool Physics2DSimulationMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Generated 2D collider frames, partitions, manual settings and outline point tests, measured by
+        /// geometryframe2d on Unity 6000.0.71f1.</summary>
+        internal static bool Physics2DGeneratedGeometryMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Slide contact spacing, iteration accounting and argument validation,
         /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
         internal static bool Physics2DSlideMeasured => Release == (6000, 0, 71, 'f', 1);

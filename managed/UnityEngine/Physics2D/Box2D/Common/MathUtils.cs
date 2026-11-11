@@ -7,6 +7,15 @@ namespace Unbound.Box2D.Common
 {
     internal static class MathUtils
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float DistanceSquaredToSegment(in Vector2 point, in Vector2 a, in Vector2 b)
+        {
+            var delta = b - a;
+            float lengthSquared = Vector2.Dot(delta, delta);
+            float fraction = lengthSquared > 0f ? Math.Clamp(Vector2.Dot(point - a, delta) / lengthSquared, 0f, 1f) : 0f;
+            return Vector2.DistanceSquared(point, a + fraction * delta);
+        }
+
         /// Perform the cross product on two vectors. In 2D this produces a scalar.
         /// 叉积,axb=|a||b|·sinθ 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

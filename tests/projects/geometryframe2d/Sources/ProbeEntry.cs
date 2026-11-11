@@ -54,6 +54,11 @@ public static class ProbeEntry
         foreach (string frame in new[] { "static", "body", "child", "rotated-child" })
         foreach (string kind in new[] { "circle", "box", "capsule", "polygon", "composite" })
             Record(c, frame, kind);
+        foreach (bool delaunay in new[] { false, true })
+        foreach (float radius in new[] { 0f, .125f })
+            PartitionControl(delaunay, radius);
+        foreach (bool delaunay in new[] { false, true }) PartitionDelaunay(delaunay);
+        OutlineFrameControl();
         File.WriteAllText(output, ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -116,6 +121,23 @@ public static class ProbeEntry
         ProbeLog.Value("target.position", target.transform.position);
         ProbeLog.Value("target.right", target.transform.right);
         ProbeLog.Value("target.up", target.transform.up);
+        Shapes(collider, composite);
+        var center = (Vector2)target.transform.position;
+        var axis = (Vector2)(Quaternion.Euler(0, 0, c.angle) * Vector3.up);
+        foreach (var sample in new[] { -1e-7f, 0f, 1e-7f })
+        {
+            var key = sample < 0 ? "negative" : sample > 0 ? "positive" : "center";
+            var origin = center + sample * axis;
+            ProbeLog.Value(key + ".origin", origin);
+            Hit(key + ".circle", Physics2D.CircleCast(origin, .3f, Vector2.right, 1));
+            Hit(key + ".box", Physics2D.BoxCast(origin, new Vector2(.5f, .8f), 10, Vector2.right, 1));
+            Hit(key + ".capsule", Physics2D.CapsuleCast(origin, new Vector2(1.6f, .6f), CapsuleDirection2D.Horizontal, 30, Vector2.right, 1));
+        }
+        UnityEngine.Object.DestroyImmediate(anchor);
+    }
+
+    static void Shapes(Collider2D collider, CompositeCollider2D composite)
+    {
         ProbeLog.Value("offset", collider.offset);
         var group = new PhysicsShapeGroup2D(); collider.GetShapes(group);
         var shapes = new List<PhysicsShape2D>(); var vertices = new List<Vector2>();
@@ -147,18 +169,122 @@ public static class ProbeEntry
                 }
             }
         }
-        var center = (Vector2)target.transform.position;
-        var axis = (Vector2)(Quaternion.Euler(0, 0, c.angle) * Vector3.up);
-        foreach (var sample in new[] { -1e-7f, 0f, 1e-7f })
+    }
+
+    static void PartitionControl(bool delaunay, float radius)
+    {
+        var root = new GameObject("partition");
+        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
+        var composite = root.AddComponent<CompositeCollider2D>();
+        composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+        composite.generationType = CompositeCollider2D.GenerationType.Manual;
+        composite.useDelaunayMesh = delaunay; composite.edgeRadius = radius;
+        try
         {
-            var key = sample < 0 ? "negative" : sample > 0 ? "positive" : "center";
-            var origin = center + sample * axis;
-            ProbeLog.Value(key + ".origin", origin);
-            Hit(key + ".circle", Physics2D.CircleCast(origin, .3f, Vector2.right, 1));
-            Hit(key + ".box", Physics2D.BoxCast(origin, new Vector2(.5f, .8f), 10, Vector2.right, 1));
-            Hit(key + ".capsule", Physics2D.CapsuleCast(origin, new Vector2(1.6f, .6f), CapsuleDirection2D.Horizontal, 30, Vector2.right, 1));
+            var outer = root.AddComponent<BoxCollider2D>(); outer.size = new Vector2(4, 4);
+            outer.compositeOperation = Collider2D.CompositeOperation.Merge; outer.compositeOrder = 0;
+            var hole = root.AddComponent<BoxCollider2D>(); hole.size = new Vector2(2, 2);
+            hole.compositeOperation = Collider2D.CompositeOperation.Difference; hole.compositeOrder = 1;
+            var island = root.AddComponent<BoxCollider2D>(); island.size = new Vector2(1, 1);
+            island.offset = new Vector2(4, 0);
+            island.compositeOperation = Collider2D.CompositeOperation.Merge; island.compositeOrder = 2;
+            var flat = root.AddComponent<PolygonCollider2D>();
+            flat.points = new[] { new Vector2(10, 0), new Vector2(10, 0), new Vector2(11, 0), new Vector2(12, 0) };
+            flat.compositeOperation = Collider2D.CompositeOperation.Merge; flat.compositeOrder = 3;
+            Physics2D.SyncTransforms(); composite.GenerateGeometry(); Physics2D.SyncTransforms();
+            ProbeLog.Begin($"partition/{delaunay}/{radius}");
+            Shapes(composite, composite);
+            ProbeLog.Value("overlap.hole", composite.OverlapPoint(Vector2.zero));
+            ProbeLog.Value("overlap.solid", composite.OverlapPoint(new Vector2(1.5f, 0)));
+            ProbeLog.Value("overlap.island", composite.OverlapPoint(new Vector2(4, 0)));
+            ProbeLog.Value("overlap.flat", composite.OverlapPoint(new Vector2(11, 0)));
+            var sample = new Vector2(1.2f, 0);
+            ProbeLog.Value("manual.before", composite.OverlapPoint(sample));
+            hole.offset = new Vector2(.5f, 0); Physics2D.SyncTransforms();
+            ProbeLog.Value("manual.held", composite.OverlapPoint(sample));
+            composite.GenerateGeometry(); Physics2D.SyncTransforms();
+            ProbeLog.Value("manual.generated", composite.OverlapPoint(sample));
         }
-        UnityEngine.Object.DestroyImmediate(anchor);
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void PartitionDelaunay(bool delaunay)
+    {
+        var root = new GameObject("delaunay");
+        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
+        var composite = root.AddComponent<CompositeCollider2D>();
+        composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+        composite.generationType = CompositeCollider2D.GenerationType.Manual;
+        composite.useDelaunayMesh = delaunay;
+        try
+        {
+            var wide = root.AddComponent<BoxCollider2D>(); wide.size = new Vector2(2, .8f);
+            wide.compositeOperation = Collider2D.CompositeOperation.Merge;
+            var top = root.AddComponent<BoxCollider2D>(); top.size = Vector2.one; top.offset = new Vector2(.375f, .125f);
+            top.compositeOperation = Collider2D.CompositeOperation.Merge;
+            Physics2D.SyncTransforms(); composite.GenerateGeometry(); Physics2D.SyncTransforms();
+            ProbeLog.Begin($"partition-delaunay/{delaunay}"); Shapes(composite, composite);
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void OutlineFrameControl()
+    {
+        var anchor = new GameObject("outline-anchor");
+        anchor.transform.rotation = Quaternion.Euler(17, 29, 11);
+        anchor.transform.localScale = new Vector3(1.4f, .7f, 1.2f);
+        var root = new GameObject("outline"); root.transform.SetParent(anchor.transform, false);
+        root.transform.localRotation = Quaternion.Euler(0, 0, 23);
+        var body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Static;
+        var composite = root.AddComponent<CompositeCollider2D>();
+        composite.geometryType = CompositeCollider2D.GeometryType.Outlines;
+        composite.generationType = CompositeCollider2D.GenerationType.Manual; composite.edgeRadius = .125f;
+        try
+        {
+            var box = root.AddComponent<BoxCollider2D>(); box.size = new Vector2(2, 2);
+            box.compositeOperation = Collider2D.CompositeOperation.Merge;
+            Physics2D.SyncTransforms(); composite.GenerateGeometry(); Physics2D.SyncTransforms();
+            ProbeLog.Begin("outline-frame");
+            ProbeLog.Value("pathCount", composite.pathCount);
+            var path = new Vector2[composite.GetPathPointCount(0)]; composite.GetPath(0, path);
+            ProbeLog.Value("path.count", path.Length);
+            for (int i = 0; i < path.Length; i++) ProbeLog.Value("path." + i, path[i]);
+            var point = body.position + (Vector2)(Quaternion.Euler(0, 0, body.rotation) * (Vector3)path[0]);
+            ProbeLog.Value("edge", composite.OverlapPoint(point));
+            var near = point + Vector2.right * .0625f;
+            ProbeLog.Value("edge.offset", composite.OverlapPoint(near));
+            ProbeLog.Value("edge.far", composite.OverlapPoint(point + Vector2.right));
+            composite.edgeRadius = 0; Physics2D.SyncTransforms();
+            ProbeLog.Value("radius.held", composite.OverlapPoint(near));
+            ProbeLog.Value("outline.center", composite.OverlapPoint(body.position));
+            composite.geometryType = CompositeCollider2D.GeometryType.Polygons; Physics2D.SyncTransforms();
+            ProbeLog.Value("polygon.center", composite.OverlapPoint(body.position));
+            var clone = UnityEngine.Object.Instantiate(root);
+            clone.transform.position += Vector3.right * 10; Physics2D.SyncTransforms();
+            ProbeLog.Value("clone.pending.center", clone.GetComponent<CompositeCollider2D>().OverlapPoint(clone.GetComponent<Rigidbody2D>().position));
+            UnityEngine.Object.DestroyImmediate(clone);
+            composite.geometryType = CompositeCollider2D.GeometryType.Outlines; Physics2D.SyncTransforms();
+            ProbeLog.Value("outline.again", composite.OverlapPoint(body.position));
+            ProbeLog.Value("edge.again", composite.OverlapPoint(point));
+            composite.geometryType = CompositeCollider2D.GeometryType.Polygons; Physics2D.SyncTransforms();
+            ProbeLog.Value("polygon.pending", composite.OverlapPoint(body.position));
+            composite.GenerateGeometry(); Physics2D.SyncTransforms();
+            ProbeLog.Value("polygon.generated", composite.OverlapPoint(body.position));
+            composite.geometryType = CompositeCollider2D.GeometryType.Outlines; Physics2D.SyncTransforms();
+            ProbeLog.Value("outline.pending", composite.OverlapPoint(body.position));
+            composite.GenerateGeometry(); Physics2D.SyncTransforms();
+            ProbeLog.Value("outline.generated", composite.OverlapPoint(body.position));
+            ProbeLog.Value("radius.generated", composite.OverlapPoint(near));
+            composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+            composite.generationType = CompositeCollider2D.GenerationType.Synchronous; Physics2D.SyncTransforms();
+            ProbeLog.Value("synchronous", composite.OverlapPoint(body.position));
+            box.offset = new Vector2(.25f, 0); Physics2D.SyncTransforms();
+            ProbeLog.Value("synchronous.source", composite.OverlapPoint(body.position));
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(anchor); }
     }
 
     static void Hit(string key, RaycastHit2D hit)
