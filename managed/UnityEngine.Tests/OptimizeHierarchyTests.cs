@@ -273,12 +273,15 @@ namespace UnityEngine.Tests
                 var arm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
                 string path = HierarchyOptimizer.PathBelow(arm, root.transform);
                 var posed = arm.localRotation;
+                var order = root.GetComponentsInChildren<Transform>().Select(t => t.name).ToArray();
                 AnimatorUtility.OptimizeTransformHierarchy(root, Array.Empty<string>());
                 Assert.False(animator.hasTransformHierarchy);
                 animator.Update(0.1f);
                 AnimatorUtility.DeoptimizeTransformHierarchy(root);
                 arm = root.transform.Find(path);
                 Assert.NotNull(arm);
+                // The bones come back in the order the hierarchy had, not in the human bones'.
+                Assert.Equal(order, root.GetComponentsInChildren<Transform>().Select(t => t.name).ToArray());
                 var rest = arm.localRotation;
                 Assert.True(Quaternion.Angle(rest, posed) > 1f);
                 animator.Update(0.1f);
@@ -294,16 +297,30 @@ namespace UnityEngine.Tests
         struct HandJob : IAnimationJob
         {
             public TransformStreamHandle Hand;
-            public bool Write;
-            public static bool ResolvedBefore, ResolvedAfter;
-            public static Vector3 Read;
+            public PropertyStreamHandle Property;
+            /// <summary>Write: the job turns the handle's transform; Idle: it reads nothing of
+            /// it; Resolve: it resolves the handle; ReadProperty: it reads the property.</summary>
+            public bool Write, Idle, Resolve, ReadProperty;
+            public static bool Valid, ResolvedBefore, ResolvedAfter, PropertyBefore, PropertyAfter;
+            public static Vector3 Read, World;
 
             public void ProcessRootMotion(AnimationStream stream) { }
 
             public void ProcessAnimation(AnimationStream stream)
             {
+                Valid = Hand.IsValid(stream);
+                if (!Valid) return;
                 ResolvedBefore = Hand.IsResolved(stream);
-                Read = Hand.GetLocalPosition(stream);
+                bool property = Property.IsValid(stream);
+                PropertyBefore = property && Property.IsResolved(stream);
+                if (property && ReadProperty) Property.GetFloat(stream);
+                PropertyAfter = property && Property.IsResolved(stream);
+                if (Resolve) Hand.Resolve(stream);
+                if (!Idle)
+                {
+                    Read = Hand.GetLocalPosition(stream);
+                    World = Hand.GetPosition(stream);
+                }
                 ResolvedAfter = Hand.IsResolved(stream);
                 if (Write) Hand.SetLocalRotation(stream, Quaternion.Euler(0f, 0f, 30f));
             }
@@ -341,6 +358,162 @@ namespace UnityEngine.Tests
             {
                 graph.Destroy();
                 Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>A handle the job never reads stays unresolved, also after
+        /// Animator.ResolveAllStreamHandles between two evaluations of a manual graph
+        /// (6000.0.71f1, tests/projects/animoptimize jobIdle.Rig, jobIdleResolveAll.Rig);
+        /// TransformStreamHandle.Resolve resolves it in the job (jobResolve.Rig).</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ResolveResolvesAHandleTheJobDoesNotRead(bool resolve)
+        {
+            var root = Rig(out var animator, out _);
+            var job = new HandJob { Hand = animator.BindStreamTransform(root.transform.Find("Rig/Hips/Spine/Hand")), Idle = true, Resolve = resolve };
+            var graph = PlayJob(animator, Clip(), job);
+            try
+            {
+                animator.ResolveAllStreamHandles();
+                graph.Evaluate(0f);
+                Assert.True(HandJob.Valid);
+                Assert.False(HandJob.ResolvedBefore);
+                Assert.Equal(resolve, HandJob.ResolvedAfter);
+                animator.ResolveAllStreamHandles();
+                graph.Evaluate(0.5f);
+                Assert.Equal(resolve, HandJob.ResolvedBefore);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>A stream property's handle is resolved at its first access too (6000.0.71f1,
+        /// tests/projects/animoptimize jobProp.Rig: a custom property's handle). Control: not
+        /// read, it stays unresolved (jobIdle.Rig).</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AStreamPropertysHandleIsResolvedAtItsFirstAccess(bool read)
+        {
+            var root = Rig(out var animator, out _);
+            var job = new HandJob
+            {
+                Hand = animator.BindStreamTransform(root.transform.Find("Rig/Hips/Spine/Hand")),
+                Property = animator.BindCustomStreamProperty("value", CustomStreamPropertyType.Float),
+                Idle = true,
+                ReadProperty = read,
+            };
+            var graph = PlayJob(animator, Clip(), job);
+            try
+            {
+                graph.Evaluate(0f);
+                Assert.False(HandJob.PropertyBefore);
+                Assert.Equal(read, HandJob.PropertyAfter);
+                graph.Evaluate(0.5f);
+                Assert.Equal(read, HandJob.PropertyBefore);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>A handle bound before the hierarchy is optimized goes on as its path's
+        /// skeleton node: the job reads the node's stream values and its write turns the node,
+        /// which the exposed transform of the path follows, as the bone of a whole hierarchy
+        /// does (6000.0.71f1, tests/projects/animoptimize jobEarly.Rig). Deoptimized again, the
+        /// handle is the restored bone's (unmeasured in the Editor).</summary>
+        [Fact]
+        public void AHandleBoundBeforeOptimizingAnimatesItsPathsNode()
+        {
+            var root = Rig(out var animator, out _);
+            var whole = Rig(out var wholeAnimator, out _);
+            var wholeHand = whole.transform.Find("Rig/Hips/Spine/Hand");
+            var job = new HandJob { Hand = animator.BindStreamTransform(root.transform.Find("Rig/Hips/Spine/Hand")), Write = true };
+            AnimatorUtility.OptimizeTransformHierarchy(root, new[] { "Rig/Hips/Spine/Hand" });
+            var hand = root.transform.Find("Hand");
+            var graph = PlayJob(animator, Clip(), job);
+            var wholeGraph = PlayJob(wholeAnimator, Clip(), new HandJob { Hand = wholeAnimator.BindStreamTransform(wholeHand), Write = true });
+            try
+            {
+                Vector3 first = default;
+                foreach (float step in new[] { 0f, 0.5f })
+                {
+                    wholeGraph.Evaluate(step);
+                    var read = HandJob.Read;
+                    var world = HandJob.World;
+                    HandJob.Valid = false;
+                    graph.Evaluate(step);
+                    Assert.True(HandJob.Valid);
+                    Near(read, HandJob.Read);
+                    Near(world, HandJob.World);
+                    Near(wholeHand.position, hand.localPosition);
+                    Assert.True(Quaternion.Angle(wholeHand.rotation, hand.localRotation) < 0.01f, $"{hand.localRotation} != {wholeHand.rotation}");
+                    if (step == 0f) first = hand.localPosition;
+                }
+                // The take moved the node, and the exposed transform with it.
+                Assert.True((hand.localPosition - first).magnitude > 0.1f, $"{hand.localPosition} stayed at {first}");
+
+                AnimatorUtility.DeoptimizeTransformHierarchy(root);
+                var restored = root.transform.Find("Rig/Hips/Spine/Hand");
+                HandJob.Valid = false;
+                graph.Evaluate(0.25f);
+                Assert.True(HandJob.Valid);
+                Near(restored.localPosition, HandJob.Read);
+                Assert.True(Quaternion.Angle(Quaternion.Euler(0f, 0f, 30f), restored.localRotation) < 0.01f);
+            }
+            finally
+            {
+                graph.Destroy();
+                wholeGraph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(whole);
+            }
+        }
+
+        /// <summary>An exposed top node has its node's path, so its handle animates the node: a
+        /// job's write turns the skeleton below it, and the exposed transform follows its node
+        /// (6000.0.71f1, tests/projects/animoptimize jobTop.Rig). Control: without the write
+        /// the exposed hand is where the take puts it.</summary>
+        [Fact]
+        public void AnExposedTopNodesHandleAnimatesTheNode()
+        {
+            GameObject Optimized(bool write, out PlayableGraph graph)
+            {
+                var root = Rig(out var animator, out _);
+                AnimatorUtility.OptimizeTransformHierarchy(root, new[] { "Rig", "Rig/Hips/Spine/Hand" });
+                graph = PlayJob(animator, Clip(), new HandJob { Hand = animator.BindStreamTransform(root.transform.Find("Rig")), Write = write });
+                return root;
+            }
+            var turned = Optimized(true, out var turnedGraph);
+            var plain = Optimized(false, out var plainGraph);
+            try
+            {
+                var turn = Quaternion.Euler(0f, 0f, 30f);
+                foreach (float step in new[] { 0f, 0.5f })
+                {
+                    plainGraph.Evaluate(step);
+                    turnedGraph.Evaluate(step);
+                    Near(Vector3.zero, HandJob.Read);
+                    Assert.True(Quaternion.Angle(Quaternion.identity, plain.transform.Find("Rig").localRotation) < 0.01f);
+                    Assert.True(Quaternion.Angle(turn, turned.transform.Find("Rig").localRotation) < 0.01f);
+                    var hand = plain.transform.Find("Hand");
+                    Assert.True(hand.localPosition.magnitude > 1f);
+                    Near(turn * hand.localPosition, turned.transform.Find("Hand").localPosition);
+                    Assert.True(Quaternion.Angle(turn * hand.localRotation, turned.transform.Find("Hand").localRotation) < 0.01f);
+                }
+            }
+            finally
+            {
+                turnedGraph.Destroy();
+                plainGraph.Destroy();
+                Object.DestroyImmediate(turned);
+                Object.DestroyImmediate(plain);
             }
         }
 

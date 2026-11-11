@@ -31,8 +31,12 @@ on, and a `HumanPoseHandler` on both reading the played pose and setting one wit
 and the body's height changed. Animation job controls (`job.*`, `jobRead.*`, `jobScene.*`,
 `jobNone.*` on `Rig` and `RigExposed`): a job over the take with a stream handle and a scene
 handle of the hand (the stream handle written or only read, the scene handle alone, or none),
-three evaluations of a manual graph without the controller. Every log message is recorded in
-order.
+three evaluations of a manual graph without the controller. On `Rig` also: the job calling
+`Resolve` (`jobResolve`), `Animator.ResolveAllStreamHandles` before the first evaluation
+(`jobResolveAll`) or between the first two of a job that reads nothing (`jobIdleResolveAll`,
+beside `jobIdle`), a custom stream property's handle read or not (`jobProp`, `jobIdle`), a
+handle bound before the hierarchy is optimized with the hand exposed (`jobEarly`) and the
+handle of an exposed top node (`jobTop`). Every log message is recorded in order.
 
 The assets are committed. To make them again, regenerate the rig and let a disposable Editor
 copy write the `.meta` files and controllers back (the humanoid controls use `tests/projects/humanoid`'s `HumanA.fbx`, which every project copy takes from there):
@@ -79,10 +83,17 @@ What the Editor does (measured):
 - A `TransformStreamHandle` reports `IsResolved` false in its first evaluation until the job
   accesses it (the Scripting API's
   [TransformStreamHandle.Resolve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.Resolve.html)
-  says handles are lazily resolved as they are accessed).
+  says handles are lazily resolved as they are accessed). A job's `Resolve` resolves it; one
+  the job never reads stays unresolved, and `Animator.ResolveAllStreamHandles` before or
+  between the evaluations of the manual graph does not change that. A custom stream
+  property's handle is resolved at its first read in the same way.
 - An exposed transform bound with `Animator.BindStreamTransform` no longer follows its skeleton
   node: the stream holds the pose it was bound at, the job reads that and its writes land on
   the transform. With only a scene handle, or none, the exposed transform follows the node.
+- A handle whose path is a skeleton node's animates the node: one bound before the hierarchy
+  was optimized goes on reading the node's stream values and its world position, and its
+  write turns the node, which the exposed hand follows; the handle of an exposed top node
+  (its path is the node's) turns the skeleton below it, and the exposed transforms follow.
 
 Not recorded (an exploratory capture; docs/COMPATIBILITY_GAPS.md says how the engine differs):
 the same job on the humanoid models. On the unoptimized humanoid the stream handle reads the
