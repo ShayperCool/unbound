@@ -298,7 +298,7 @@ namespace UnityEngine.Tests
             var unknown = Ref("Assets/UI/Icons/Icon.png", MissingGuid, TextureId, "Icon");
             VisualElement root = null;
             var logs = LoggedAll(() => root = Clone(
-                $"<UxmlImageProbes.TextureArrayProbe pictures=\"{texture},{sprite},{unknown},/Assets/UI/Icons/Icon.png,{texture}\" picture-list=\"{sprite},{texture}\" sprites=\"{sprite},{texture}\" />"
+                $"<UxmlImageProbes.TextureArrayProbe pictures=\"{texture},{sprite},{unknown},/Assets/UI/Icons/Icon.png,{texture}\" picture-list=\"{sprite},{texture}\" sprites=\"{sprite},{texture}\" any-textures=\"{sprite},{texture}\" />"
                 + "<UxmlImageProbes.TextureArrayProbe pictures=\"\" picture-list=\"\" />"
                 + "<UxmlImageProbes.TextureArrayProbe />"
                 + $"<UxmlImageProbes.TextureProbe picture=\"{sprite}\" />").Root);
@@ -306,12 +306,41 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { icon.Texture, null, null, null, icon.Texture }, probe.pictures);
             Assert.Equal(new List<Texture2D> { null, icon.Texture }, probe.pictureList);
             Assert.Equal(new[] { icon.Sprite, null }, probe.sprites);
+            Assert.Equal(new Texture[] { null, icon.Texture }, probe.anyTextures);
             var empty = Assert.IsType<TextureArrayProbe>(root[1]);
             Assert.Empty(empty.pictures);
             Assert.Empty(empty.pictureList);
             Assert.Null(Assert.IsType<TextureArrayProbe>(root[2]).pictures);
             Assert.Same(icon.Texture, Assert.IsType<TextureProbe>(root[3]).picture);
             Assert.Empty(logs);
+        }
+
+        // [choice] An importer whose file ids Unbound does not know (a game ScriptedImporter): the
+        // item's type picks the object among those the importer made, as for a single member.
+        [Fact]
+        public void AssetArrayItemsOfAScriptedImporterAssetAreFoundByTheirType()
+        {
+            var texture = new Texture2D(2, 2) { name = "Made", IsPersistentAsset = true };
+            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+            sheet.name = "Made";
+            sheet.IsPersistentAsset = true;
+            var file = new LoadedFile { Guid = SheetGuid, Path = "Assets/UI/Made.thing", MainObject = sheet, UnknownFileIds = true };
+            file.Objects[1] = sheet;
+            file.Objects[2] = texture;
+            AssetDatabaseRuntime.AddLoaded(file);
+            try
+            {
+                VisualElement root = null;
+                var logs = LoggedAll(() => root = Clone($"<UxmlImageProbes.TextureArrayProbe pictures=\"{Ref("Assets/UI/Made.thing", SheetGuid, 7433441132597879392, "Made")}\" />").Root);
+                Assert.Equal(new[] { texture }, Assert.IsType<TextureArrayProbe>(root[0]).pictures);
+                Assert.Empty(logs);
+            }
+            finally
+            {
+                AssetDatabaseRuntime.Invalidate(SheetGuid);
+                Object.DestroyImmediate(texture, true);
+                Object.DestroyImmediate(sheet, true);
+            }
         }
 
         // [choice] A #name without a fileID that names both the texture and the sprite of an image
@@ -478,6 +507,7 @@ namespace UxmlImageProbes
         [UxmlAttribute] public Texture2D[] pictures { get; set; }
         [UxmlAttribute] public List<Texture2D> pictureList { get; set; }
         [UxmlAttribute] public Sprite[] sprites { get; set; }
+        [UxmlAttribute] public Texture[] anyTextures { get; set; }
     }
 
     [UxmlElement]

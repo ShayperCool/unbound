@@ -858,10 +858,11 @@ namespace Unbound.UIElements
         /// <summary>An asset url as an item of an array or list of objects. Measured (Unity
         /// 6000.0.71f1, tests/projects/uxmlattributes icons document, Texture2D and Sprite arrays
         /// and a Texture2D list): the item is the object the url's guid and file id name when it
-        /// is of the item type; a path, a project url without a guid, an unknown guid, a missing
-        /// file and an object of another type (also in a file that holds one of the type) give a
-        /// null item without a message. Unmeasured: a guid without a file id (a null item here).
-        /// Unbound's choice: a file the asset database cannot load is an error.</summary>
+        /// is of the item type; a path, a project url without a guid or without a file id, an
+        /// unknown guid, a missing file and an object of another type (also in a file that holds
+        /// one of the type) give a null item without a message. Unbound's choices: a file the
+        /// asset database cannot load is an error; where an importer's file ids are not known,
+        /// the item type picks the object.</summary>
         static bool TryReadListAsset(string text, Type type, VisualTreeAsset document, out object result, out string error)
         {
             result = null;
@@ -870,7 +871,8 @@ namespace Unbound.UIElements
             if (guid == null || fileId == 0) return true;
             try
             {
-                var referenced = AssetDatabaseRuntime.Load(guid, fileId, null);
+                // The item type picks the object where the importer's file ids are not known.
+                var referenced = AssetDatabaseRuntime.Load(guid, fileId, type);
                 if (referenced != null && type.IsInstanceOfType(referenced)) result = referenced;
                 return true;
             }
@@ -883,7 +885,7 @@ namespace Unbound.UIElements
 
         /// <summary>An asset by its UXML url, resolved as a [UxmlAttribute] object member's is
         /// (<see cref="ResolveReference(string, Type, VisualTreeAsset, out Object)"/>); a url that
-        /// names no object of the type is an error here (list items, legacy descriptions).</summary>
+        /// names no object of the type is an error here (legacy descriptions).</summary>
         static bool TryReadAsset(string text, Type type, VisualTreeAsset document, out object result, out string error)
         {
             result = null;
