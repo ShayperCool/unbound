@@ -885,7 +885,7 @@ namespace Unbound.UIElements
 
         /// <summary>An asset by its UXML url, resolved as a [UxmlAttribute] object member's is
         /// (<see cref="ResolveReference(string, Type, VisualTreeAsset, out Object)"/>); a url that
-        /// names no object of the type is an error here (legacy descriptions).</summary>
+        /// names no object of the type is an error here (single values, legacy descriptions).</summary>
         static bool TryReadAsset(string text, Type type, VisualTreeAsset document, out object result, out string error)
         {
             result = null;
