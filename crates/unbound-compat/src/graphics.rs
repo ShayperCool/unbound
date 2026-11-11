@@ -129,6 +129,13 @@ impl GraphicsDevice {
         matches!(self, Self::Vulkan | Self::Metal)
     }
 
+    /// Whether the device is drawn through OpenGL itself on this OS: OpenGL Core on Linux
+    /// (macOS has no OpenGL 4.5 and draws every device with Metal). Programs for it are OpenGL
+    /// shading language in the end, with that language's limits.
+    pub fn drawn_by_opengl(self, os: HostOs) -> bool {
+        matches!((self, os), (Self::OpenGLCore, HostOs::Linux))
+    }
+
     /// Whether Unbound can draw with the device.
     pub fn drawable(self) -> bool {
         !matches!(self, Self::Metal)

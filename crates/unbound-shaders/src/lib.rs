@@ -67,6 +67,10 @@ pub struct Settings {
     pub platform_defines: Vec<String>,
     /// The graphics device programs compile for: its `SHADER_API_*` define and clip space.
     pub device: unbound_compat::GraphicsDevice,
+    /// Whether the device is drawn through OpenGL itself
+    /// (`GraphicsDevice::drawn_by_opengl`): its programs become OpenGL shading language, which
+    /// cannot read a depth texture with `Load`, so a program that does is refused.
+    pub opengl_shading_language: bool,
 }
 
 /// The scalar type of a uniform member.
@@ -748,6 +752,7 @@ impl ShaderCompiler {
             h.update(b"native-sampler-lod-bias-v1");
             // The device's clip space is fitted after compiling.
             h.update(self.settings.device.name().as_bytes());
+            h.update(&[self.settings.opengl_shading_language as u8]);
             for part in [
                 &vertex_source,
                 &fragment_source,
@@ -794,6 +799,7 @@ impl ShaderCompiler {
             &uav_registers(&fragment_source),
             fit::ClipSpace::of(self.settings.device.conventions()),
             self.settings.device.samples_through_texture_state(),
+            self.settings.opengl_shading_language,
         )?;
         compiled.keywords = selected;
         compiled.instanced_properties = instanced_properties;
@@ -2371,9 +2377,11 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
     }
 
     /// OpenGL's shading language cannot read a depth texture with `Load`: a program that
-    /// compares a texture and reads it with `Load` is refused there, and compiles elsewhere.
+    /// compares a texture and reads it with `Load` is refused where the device is drawn
+    /// through OpenGL, and compiles elsewhere, for the same device drawn by another backend
+    /// too.
     #[test]
-    fn a_compared_texture_read_with_load_is_refused_on_opengl_core() {
+    fn a_compared_texture_read_with_load_is_refused_in_opengl_shading_language() {
         let source = r#"
 #pragma vertex vert
 #pragma fragment frag
@@ -2384,20 +2392,23 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
     return _Shadow.SampleCmpLevelZero(sampler_Shadow, position.xy, 0.5) + _Shadow.Load(int3(0, 0, 0));
 }
 "#;
-        let compile = |device| {
+        let compile = |device, opengl_shading_language| {
             let mut compiler = ShaderCompiler::new(Settings {
                 device,
+                opengl_shading_language,
                 ..Settings::default()
             })
             .unwrap();
             compiler.compile(&program(source, false), &[], false)
         };
-        let refused = compile(unbound_compat::GraphicsDevice::OpenGLCore).unwrap_err();
+        let opengl = unbound_compat::GraphicsDevice::OpenGLCore;
+        let refused = compile(opengl, true).unwrap_err();
         assert!(
             format!("{refused:#}").contains("compared and read with Load"),
             "{refused:#}"
         );
-        compile(unbound_compat::GraphicsDevice::Vulkan).unwrap();
+        compile(opengl, false).unwrap();
+        compile(unbound_compat::GraphicsDevice::Vulkan, false).unwrap();
     }
 
     /// A fragment program's outputs go where their semantics say, by the DX9 names too, which
@@ -3162,6 +3173,7 @@ fixed4 frag(v2f IN) : SV_Target
             platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
             cache_dir: None,
             device: Default::default(),
+            opengl_shading_language: false,
         })
         .unwrap();
         let c = compiler
@@ -3218,6 +3230,7 @@ float4 frag() : SV_Target
                 platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
                 cache_dir: None,
                 device,
+                opengl_shading_language: false,
             })
             .unwrap();
             let c = compiler
@@ -3355,6 +3368,7 @@ float4 frag() : SV_Target
             platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
             cache_dir: None,
             device: Default::default(),
+            opengl_shading_language: false,
         })
         .unwrap();
         let mut failures = Vec::new();

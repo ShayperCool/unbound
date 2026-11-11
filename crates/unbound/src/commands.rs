@@ -100,6 +100,8 @@ fn shader_settings(
             .map(String::from)
             .collect(),
         device: unbound_runtime::graphics_device::get(),
+        opengl_shading_language: unbound_runtime::graphics_device::get()
+            .drawn_by_opengl(unbound_compat::HostOs::current()),
     }
 }
 

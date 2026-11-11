@@ -1051,13 +1051,15 @@ pub(crate) fn texture_property(name: &str, sampler: bool) -> Option<String> {
 
 /// `uav_registers`: the UAV registers the fragment source declares, by buffer name;
 /// `texture_state`: the device samples a texture through the texture's own sampler state
-/// (`GraphicsDevice::samples_through_texture_state`).
+/// (`GraphicsDevice::samples_through_texture_state`); `opengl_shading_language`: the program
+/// is drawn as OpenGL shading language (`Settings::opengl_shading_language`).
 pub(crate) fn fit(
     vertex: &[u32],
     fragment: &[u32],
     uav_registers: &HashMap<String, u32>,
     clip: ClipSpace,
     texture_state: bool,
+    opengl_shading_language: bool,
 ) -> Result<Compiled> {
     // A texture the program still samples through several samplers has a variable for each,
     // the same in both stages.
@@ -1080,7 +1082,7 @@ pub(crate) fn fit(
     let mut vertex = parse(&vertex_scan.words, clip).context("vertex program")?;
     let mut fragment = parse(&fragment_scan.words, clip).context("fragment program")?;
     pad_fragment_outputs(&mut fragment);
-    if clip == ClipSpace::OpenGl {
+    if opengl_shading_language {
         loads_no_compared_texture(&vertex)?;
         loads_no_compared_texture(&fragment)?;
     }
@@ -2239,9 +2241,6 @@ fn to_wgsl(module: &Module) -> Result<String> {
     Ok(wgsl)
 }
 
-/// Fragment outputs of fewer than four components (Unity writes them into any target, the
-/// missing channels undefined; wgpu wants the target's): the entry point becomes a function the
-/// new entry point calls, padding each such output to a vec4 with zeros.
 /// Integer varyings (vertex outputs and fragment inputs at locations) interpolate flat, as HLSL
 /// defines them (`uint primitiveID : TEXCOORD2;` in Unity's UnityCustomRenderTexture.cginc);
 /// glslang leaves them unqualified and naga requires the qualifier. A program that had such a
@@ -2552,7 +2551,7 @@ fn loads_no_compared_texture(module: &Module) -> Result<()> {
             let g = &module.global_variables[g];
             if compares(&module.types[g.ty].inner) {
                 bail!(
-                    "texture `{}` is compared and read with Load, which is not supported on OpenGL Core",
+                    "texture `{}` is compared and read with Load, which OpenGL's shading language cannot",
                     g.name.as_deref().unwrap_or("?")
                 );
             }
@@ -2561,7 +2560,8 @@ fn loads_no_compared_texture(module: &Module) -> Result<()> {
     Ok(())
 }
 
-/// Color outputs narrower than four components are widened with zeros (a target takes four).
+/// Color outputs of fewer than four components are widened with zeros (Unity writes them into
+/// any target, the missing channels undefined; wgpu wants the target's four).
 fn pad_fragment_outputs(module: &mut Module) {
     rewrap_fragment_outputs(module, "_unpadded", |module, binding, ty| {
         let short = match module.types[ty].inner {

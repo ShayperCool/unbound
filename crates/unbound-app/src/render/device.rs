@@ -12,8 +12,10 @@ pub fn backends(device: GraphicsDevice) -> wgpu::Backends {
 fn backends_on(device: GraphicsDevice, os: unbound_compat::HostOs) -> wgpu::Backends {
     match (device, os) {
         (GraphicsDevice::Metal, _) | (_, unbound_compat::HostOs::MacOs) => wgpu::Backends::METAL,
-        (GraphicsDevice::OpenGLCore, unbound_compat::HostOs::Linux) => wgpu::Backends::GL,
-        (GraphicsDevice::Vulkan, unbound_compat::HostOs::Linux) => wgpu::Backends::VULKAN,
+        (device, os) if device.drawn_by_opengl(os) => wgpu::Backends::GL,
+        (GraphicsDevice::OpenGLCore | GraphicsDevice::Vulkan, unbound_compat::HostOs::Linux) => {
+            wgpu::Backends::VULKAN
+        }
     }
 }
 
