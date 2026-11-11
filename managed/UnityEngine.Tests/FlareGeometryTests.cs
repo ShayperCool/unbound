@@ -92,13 +92,13 @@ namespace Unbound.Tests
             Assert.Equal(new Vector3(1.4f, 0f, -10f), Halos.BuiltVertices[0]);
         }
 
-        /// <summary>A zooming element scales with the brightness and visibility, the others do
-        /// not; nothing is built without a size.</summary>
+        /// <summary>A zooming element scales with the brightness and visibility (canonical
+        /// `fl.zoom.*`), the others do not; nothing is built without a positive size.</summary>
         [Fact]
         public void AZoomingElementScalesWithTheVisibility()
         {
             var view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f));
-            var source = Source(new Vector3(0f, 0f, 10f), false, Element(10f, 0f, zoom: true), Element(10f), Element(0f));
+            var source = Source(new Vector3(0f, 0f, 10f), false, Element(10f, 0f, zoom: true), Element(10f), Element(0f), Element(-10f));
             Assert.True(Halos.BuildFlare(source, 0.25f, Halos.FlarePoint(view, source, 0.3f)));
             Assert.Equal(8, Halos.BuiltVertices.Count);
             Assert.Equal(0.25f, Halos.BuiltVertices[0].x, 6);
@@ -110,7 +110,9 @@ namespace Unbound.Tests
         }
 
         /// <summary>A directional flare is its direction at twice the near plane's distance,
-        /// whatever the camera's position.</summary>
+        /// whatever the camera's position: past 60 degrees from the view axis it is nearer than
+        /// the near plane, where the projection clips it (canonical `fl.directional.off50`
+        /// drawn, `fl.directional.off70` empty).</summary>
         [Fact]
         public void ADirectionalFlareSitsAtTwiceTheNearPlane()
         {
@@ -120,6 +122,37 @@ namespace Unbound.Tests
             Assert.Equal(0.36f, point.x, 6);
             Assert.Equal(0f, point.y, 6);
             Assert.Equal(-0.48f, point.z, 6);
+            foreach (var (degrees, inView) in new[] { (50f, true), (59f, true), (61f, false), (70f, false) })
+            {
+                var off = Quaternion.Euler(0f, degrees, 0f) * Vector3.forward;
+                float depth = -Halos.FlarePoint(view, Source(off, true), 0.3f).z;
+                Assert.Equal(inView, depth > 0.3f);
+            }
+        }
+
+        /// <summary>A positioned flare keeps its own depth, so the camera's far and near planes
+        /// clip its quads (canonical `fl.beyondFar`, `fl.insideNear`: empty).</summary>
+        [Fact]
+        public void APositionedFlareIsBuiltAtItsOwnDepth()
+        {
+            var view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * Matrix4x4.Translate(new Vector3(0f, 0f, 5f));
+            foreach (float z in new[] { 195f, -4.8f, 0f })
+            {
+                var source = Source(new Vector3(0.01f, 0.005f, z), false, Element(20f));
+                Assert.True(Halos.BuildFlare(source, 1f, Halos.FlarePoint(view, source, 0.3f)));
+                Assert.All(Halos.BuiltVertices, v => Assert.Equal(-(z + 5f), v.z, 4));
+            }
+        }
+
+        /// <summary>A layout value outside the six is the whole texture.</summary>
+        [Fact]
+        public void AnUnknownLayoutIsTheWholeTexture()
+        {
+            foreach (int layout in new[] { 2, 6, -1, 40 })
+            {
+                Halos.ImageUv(layout, 0, 0.125f, 0.25f, out float uMin, out float uMax, out float vMin, out float vMax);
+                Assert.Equal((0.125f, 0.875f, 0.25f, 0.75f), (uMin, uMax, vMin, vMax));
+            }
         }
 
         /// <summary>The image cells of the layouts, half a texel in from each side; the large and

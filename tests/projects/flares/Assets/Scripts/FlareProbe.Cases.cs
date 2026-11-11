@@ -108,6 +108,7 @@ public partial class FlareProbe
         yield return HaloOrder();
         yield return HaloTexture();
         yield return HaloBuffers();
+        yield return FlareLimits();
     }
 
     IEnumerator Halos()
@@ -559,6 +560,61 @@ public partial class FlareProbe
         lens.gameObject.SetActive(false);
         yield return Shot("ho.sceneAfterFlare");
         white.SetActive(false);
+        Flush();
+    }
+
+    /// <summary>Flares at their limits: a zooming element under other brightnesses (a LensFlare's,
+    /// also while it fades in, and a light's flare under flareStrength), a flare beyond the far
+    /// plane and one nearer than the near plane, and a directional flare 50 and 70 degrees off the
+    /// view axis of a camera that sees 75 degrees to each side.</summary>
+    IEnumerator FlareLimits()
+    {
+        // Back to the first scene, whose objects the flare cases use.
+        SceneManager.LoadScene("Probe", LoadSceneMode.Single);
+        yield return null;
+        yield return null;
+        ResetCamera();
+        var zoom = Lens("Zoom20", new Vector3(0.3f, 0.2f, 0f));
+        zoom.brightness = 0.5f;
+        yield return Shot("fl.zoom.b05");
+        zoom.brightness = 2f;
+        yield return Shot("fl.zoom.b2");
+        zoom.gameObject.SetActive(false);
+        zoom = Lens("Zoom20", new Vector3(0.3f, 0.2f, 0f), 3f);
+        zoom.brightness = 2f;
+        yield return Shot("fl.zoom.b2.in", 3, 1);
+        zoom.gameObject.SetActive(false);
+
+        var lightObject = new GameObject("LimitLight");
+        lightObject.transform.position = new Vector3(-1f, 0.5f, 0f);
+        var light = lightObject.AddComponent<Light>();
+        light.type = LightType.Point;
+        light.flare = Resources.Load<Flare>("Zoom20");
+        RenderSettings.flareFadeSpeed = 1000f;
+        RenderSettings.flareStrength = 0.5f;
+        yield return Shot("fl.light.zoom.strength05");
+        RenderSettings.flareStrength = 2f;
+        yield return Shot("fl.light.zoom.strength2");
+        Destroy(lightObject);
+        ResetCamera();
+
+        // The camera is at z -5 with its planes at 0.3 and 100.
+        var lens = Lens("S20", new Vector3(10f, 5f, 195f));
+        yield return Shot("fl.beyondFar");
+        lens.transform.position = new Vector3(0.01f, 0.005f, -4.8f);
+        yield return Shot("fl.insideNear");
+        lens.gameObject.SetActive(false);
+
+        var directional = SceneObject("LensDirectional");
+        cam.fieldOfView = 150f;
+        directional.GetComponent<LensFlare>().fadeSpeed = 1000f;
+        directional.transform.SetPositionAndRotation(new Vector3(5f, 5f, 5f), Quaternion.LookRotation(-(Quaternion.Euler(0f, 50f, 0f) * Vector3.forward)));
+        directional.SetActive(true);
+        yield return Shot("fl.directional.off50");
+        directional.transform.rotation = Quaternion.LookRotation(-(Quaternion.Euler(0f, 70f, 0f) * Vector3.forward));
+        yield return Shot("fl.directional.off70");
+        directional.SetActive(false);
+        ResetCamera();
         Flush();
     }
 }

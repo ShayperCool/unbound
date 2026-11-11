@@ -45,7 +45,8 @@ namespace Unbound.Runtime
         /// <summary>A rotated element's corner distance in half sides.</summary>
         const float RotatedCorner = 1.4f;
         /// <summary>The distance from the view axis under which a flare has no direction of its
-        /// own: its rotated elements then point along +x.</summary>
+        /// own: its rotated elements then point along +x (measured on the axis itself,
+        /// tests/projects/flares `f.Rot20.3`; the threshold is Unbound's choice).</summary>
         const float AxisEpsilon = 1e-5f;
 
         static readonly List<Halo> s_Halos = new List<Halo>();
@@ -472,7 +473,9 @@ namespace Unbound.Runtime
         /// visibility), so a perspective camera shows it at one size whatever the depth and an
         /// orthographic one scales it by the depth; a rotating element is a diamond
         /// <see cref="RotatedCorner"/> half sides wide whose first corner points away from the
-        /// axis. The order of the products and sums matters to the last bit, as in
+        /// axis. Being at the flare's depth, the quads are clipped by the camera's planes as
+        /// the Editor's are: a flare beyond the far plane or nearer than the near plane is not
+        /// drawn, nor is a directional one more than 60 degrees off the view axis (`fl.*`). The order of the products and sums matters to the last bit, as in
         /// <see cref="FlarePoint"/>.
         /// </summary>
         internal static bool BuildFlare(in Source source, float visibility, Vector3 point)
@@ -497,7 +500,10 @@ namespace Unbound.Runtime
                 float depth = toPoint * point.z + point.z * toAxis;
                 float x = point.x * toPoint + toAxis * 0f, y = point.y * toPoint + toAxis * 0f;
                 float half = element.Size * point.z * (element.Zoom ? ElementScale * (source.Brightness * visibility) : ElementScale);
-                if (half == 0f) continue;
+                // In front of the camera a sized element's half side is negative. Anything else
+                // (no size, a negative one, a point behind an orthographic camera) is not
+                // measured and not drawn.
+                if (!(half < 0f)) continue;
                 float halfX = half, halfY = half;
                 if (element.Rotate)
                 {
@@ -589,7 +595,8 @@ namespace Unbound.Runtime
             }
             else
             {
-                int perRow = Math.Max(1, layout - 1);
+                // Layouts 3 to 5 are grids; 2, and any value outside the six, is the whole texture.
+                int perRow = layout >= 3 && layout <= 5 ? layout - 1 : 1;
                 float cell = 1f / perRow;
                 uMin = (image % perRow) * cell + halfTexelU;
                 uMax = (image % perRow + 1) * cell - halfTexelU;
