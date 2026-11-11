@@ -233,9 +233,12 @@ namespace Unbound.UIElements
             return c;
         }
 
-        internal void ApplyInitial(StylePropertyId id)
+        internal void ApplyInitial(StylePropertyId id) => CopyProperty(id, Initial);
+
+        /// <summary>Takes one property's value from another computed style (a shorthand only from
+        /// the initial one).</summary>
+        internal void CopyProperty(StylePropertyId id, ComputedValues i)
         {
-            var i = Initial;
             switch (id)
             {
                 case StylePropertyId.AlignContent: alignContent = i.alignContent; break;
@@ -322,7 +325,7 @@ namespace Unbound.UIElements
                 case StylePropertyId.WhiteSpace: whiteSpace = i.whiteSpace; break;
                 case StylePropertyId.Width: width = i.width; break;
                 case StylePropertyId.WordSpacing: wordSpacing = i.wordSpacing; break;
-                default: ApplyShorthandInitial(id); break;
+                default: if (ReferenceEquals(i, Initial)) ApplyShorthandInitial(id); break;
             }
         }
 

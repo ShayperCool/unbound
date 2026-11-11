@@ -880,23 +880,30 @@ namespace UnityEngine.UIElements
                 if (m_UaEverStyled) return;
                 // The computed style is still the initial one: the element gets its own, with
                 // the inline values set so far (after a removal, without the removed one).
-                if (removed || ReferenceEquals(computedValues, ComputedValues.Initial)) computedValues = ComputedValues.Initial.Clone();
+                var before = computedValues;
+                var (display, translate, rotate, scale, origin) = (before.display, before.translate, before.rotate, before.scale, before.transformOrigin);
+                if (removed || ReferenceEquals(before, ComputedValues.Initial)) computedValues = ComputedValues.Initial.Clone();
                 m_InlineStyle.ApplyTo(computedValues);
                 Unbound.UIElements.StyleResolver.FinalizeApply(computedValues, null);
+                // The first style pass will find these values already in place and report no
+                // change for them: what depends on them is told now.
+                var change = VersionChangeType.Repaint;
+                if (display != computedValues.display) change |= VersionChangeType.Size;
+                if (translate != computedValues.translate || rotate != computedValues.rotate || scale != computedValues.scale || origin != computedValues.transformOrigin)
+                    change |= VersionChangeType.Transform;
+                IncrementVersion(change);
                 OnUaStyleResolved(ComputedValues.Initial, computedValues);
                 return;
             }
-            ComputedValues applied;
+            var applied = (uaTransitions?.target ?? computedValues).Clone();
             if (removed)
             {
-                // Without the value the element has what its rules give; while those cannot be
-                // asked for (outside a panel, during a style pass) the next style pass restores it.
-                applied = elementPanel?.UaRuleValues(this);
-                if (applied == null) return;
-            }
-            else
-            {
-                applied = (uaTransitions?.target ?? computedValues).Clone();
+                // Without the value the property has what the element's rules give; while those
+                // cannot be asked for (outside a panel, during a style pass) the next style pass
+                // restores it. Only this property is taken: the others wait for their style pass.
+                var rules = elementPanel?.UaRuleValues(this);
+                if (rules == null) return;
+                applied.CopyProperty(id, rules);
             }
             m_InlineStyle.ApplyTo(applied);
             Unbound.UIElements.StyleResolver.FinalizeApply(applied, hierarchy.parent?.computedValues);

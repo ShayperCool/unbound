@@ -107,6 +107,7 @@ namespace Unbound.UIElements
                 Apply(style, m_Reader, parentStyle);
                 FinalizeApply(style, parentStyle);
             }
+            style.dpiScaling = pixelsPerPoint;
             return style;
         }
 
@@ -161,7 +162,6 @@ namespace Unbound.UIElements
             var style = ApplyRules(element, variables, dpi);
             element.uaInlineStyle?.ApplyTo(style);
             if (element.uaInlineStyle != null) FinalizeApply(style, parentStyle);
-            style.dpiScaling = dpi;
             if (element is TextElement text)
             {
                 var hash = new HashCode();

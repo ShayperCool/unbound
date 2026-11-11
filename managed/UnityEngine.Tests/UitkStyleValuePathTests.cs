@@ -134,6 +134,52 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector3(2, 2, 1), inPanel.resolvedStyle.scale.value);
         }
 
+        // A transform set before the first style pass moves the element once laid out, also when
+        // its bounds were read before (the pass itself finds the value already in place).
+        [Fact]
+        public void AnInlineTransformSetBeforeTheFirstPassReachesTheWorldBounds()
+        {
+            var panel = NewPanel();
+            var parent = new VisualElement();
+            parent.style.width = 100;
+            parent.style.height = 50;
+            var e = new VisualElement();
+            e.style.width = 10;
+            e.style.height = 10;
+            panel.visualTree.Add(parent);
+            parent.Add(e);
+            _ = e.worldBound;
+            e.style.translate = new Translate(new Length(50, LengthUnit.Pixel), new Length(0, LengthUnit.Pixel), 0);
+            Update(panel);
+            Assert.Equal(50f, e.worldBound.x);
+            // The same after a pass.
+            e.style.translate = new Translate(new Length(20, LengthUnit.Pixel), new Length(0, LengthUnit.Pixel), 0);
+            Update(panel);
+            Assert.Equal(20f, e.worldBound.x);
+        }
+
+        // Unsetting one inline value brings back that property only: a class added since the last
+        // style pass shows at the pass, not at the inline write.
+        [Fact]
+        public void AnUnsetRestoresOnlyItsOwnProperty()
+        {
+            var panel = NewPanel();
+            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+            new UssImporter("rules.uss").Import(sheet, ".big { opacity: 0.4; color: rgb(0, 255, 0); }");
+            panel.visualTree.styleSheets.Add(sheet);
+            var e = new VisualElement();
+            panel.visualTree.Add(e);
+            Update(panel);
+            e.style.color = Color.blue;
+            e.AddToClassList("big");
+            Assert.Equal(1f, e.resolvedStyle.opacity);
+            e.style.color = StyleKeyword.Null;
+            Assert.Equal(1f, e.resolvedStyle.opacity);
+            Update(panel);
+            Assert.Equal(0.4f, e.resolvedStyle.opacity);
+            Assert.Equal(Color.green, e.resolvedStyle.color);
+        }
+
         [Fact]
         public void AnUnsetInlineValueFallsBackToTheRulesAtOnce()
         {
