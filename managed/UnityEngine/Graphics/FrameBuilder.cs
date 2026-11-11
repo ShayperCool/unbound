@@ -631,7 +631,7 @@ namespace Unbound.Runtime
         {
             Dictionary<int, object> properties = null;
             if (GraphicsSettings.currentRenderPipeline == null && LightingGlobals.MainLightOf() == null)
-                properties = new Dictionary<int, object> { [Shader.PropertyToID("_WorldSpaceLightPos0")] = new Vector4(0f, 0f, -1f, 0f) };
+                properties = new Dictionary<int, object> { [Shader.PropertyToID("_WorldSpaceLightPos0")] = (Vector4)LightingGlobals.SkyWithoutSun };
             // The ambient projection leaves out the main light's colour, whatever the sky's
             // shader (Compat.SkyAmbientWithoutLightColor).
             if (camera.m_EnvironmentCapture && GraphicsSettings.currentRenderPipeline == null

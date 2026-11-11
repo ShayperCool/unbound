@@ -603,11 +603,6 @@ impl SystemSolver {
         }
     }
 
-    /// A uniform environment of linear radiance `rgb` (a flat ambient color).
-    pub fn set_uniform_environment(&mut self, rgb: [f32; 3]) {
-        self.environment.fill(rgb);
-    }
-
     /// The environment's values ([`crate::environment::environment_values`]).
     pub fn set_environment(&mut self, values: &[[f32; 3]]) -> Result<()> {
         if values.len() != self.environment.len() {

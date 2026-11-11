@@ -711,6 +711,10 @@ namespace Unbound.Runtime
 
         internal static Light MainLightOf() => MainLight();
 
+        /// <summary>The direction to the light a sky is drawn with when the scene has no main
+        /// light (built-in pipeline).</summary>
+        internal static readonly Vector3 SkyWithoutSun = new Vector3(0f, 0f, -1f);
+
         /// <summary>The scene's sun when it is an enabled directional light, else the brightest
         /// enabled directional light. A light with a cookie is never it: the base pass has no
         /// cookie variant, such a light draws in the ForwardAdd pass (measured:

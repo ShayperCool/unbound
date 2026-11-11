@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 50;
+        internal const uint CurrentVersion = 51;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -149,6 +149,11 @@ namespace Unbound.Runtime
         /// DynamicGI.SetEmissive; 0 on success.
         /// </summary>
         internal delegate* unmanaged<ulong, int, int, float*, NativeBuffer*, int> GiSetEmissive;
+        /// <summary>
+        /// (scene, environment faces: 6 x 8 x 8 linear RGB, float count, out error): the
+        /// environment precomputed realtime GI reads (`realtime_gi::set_environment`); 0 on success.
+        /// </summary>
+        internal delegate* unmanaged<ulong, float*, int, NativeBuffer*, int> GiSetEnvironment;
         /// <summary>
         /// (scene, system, renderer within the system, world positions (3 floats each), lightmap UVs
         /// (2 floats each), vertex count, triangle indices, index count, world units per texel,

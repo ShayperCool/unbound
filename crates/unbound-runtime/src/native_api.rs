@@ -56,7 +56,8 @@ use std::ffi::c_void;
 /// 48: `GiFrame.update_threshold` (DynamicGI.updateThreshold).
 /// 49: `gi_read_probes`, light probes lit by precomputed realtime GI.
 /// 50: the `ScreenStandIn` render command (opcode 35).
-pub const NATIVE_API_VERSION: u32 = 50;
+/// 51: `gi_set_environment`; `GiFrame` without its flat environment color.
+pub const NATIVE_API_VERSION: u32 = 51;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -225,6 +226,9 @@ pub struct NativeApi {
     /// (scene, system, renderer within the system, linear RGB, out error):
     /// DynamicGI.SetEmissive; 0 on success.
     pub gi_set_emissive: extern "C" fn(u64, i32, i32, *const f32, *mut NativeBuffer) -> i32,
+    /// (scene, environment faces: 6 x 8 x 8 linear RGB, float count, out error): the
+    /// environment precomputed realtime GI reads (`realtime_gi::set_environment`); 0 on success.
+    pub gi_set_environment: extern "C" fn(u64, *const f32, i32, *mut NativeBuffer) -> i32,
     /// (scene, system, renderer within the system, world positions (3 floats each), lightmap UVs
     /// (2 floats each), vertex count, triangle indices, index count, world units per texel,
     /// minimum chart size in texels, out UVs (2 floats per vertex), out error): the renderer's
@@ -294,6 +298,7 @@ pub fn api() -> NativeApi {
         gi_read_probes,
         gi_set_material,
         gi_set_emissive,
+        gi_set_environment,
         gi_realtime_uvs,
     }
 }
@@ -328,6 +333,20 @@ extern "C" fn gi_update(
             unsafe { std::slice::from_raw_parts(lights, count as usize) }
         };
         crate::realtime_gi::update(scene, frame, lights)
+    })
+}
+
+extern "C" fn gi_set_environment(
+    scene: u64,
+    faces: *const f32,
+    count: i32,
+    error: *mut NativeBuffer,
+) -> i32 {
+    reported(error, || {
+        anyhow::ensure!(!faces.is_null() && count >= 0, "no environment");
+        let faces = unsafe { std::slice::from_raw_parts(faces, count as usize) };
+        crate::realtime_gi::set_environment(scene, faces)?;
+        Ok(0)
     })
 }
 

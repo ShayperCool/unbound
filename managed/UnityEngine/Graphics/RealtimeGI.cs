@@ -27,7 +27,6 @@ namespace Unbound.Runtime
     internal struct GiFrame
     {
         internal float IndirectScale;
-        internal float EnvironmentR, EnvironmentG, EnvironmentB;
         internal int Synchronous;
         internal float BudgetMs;
         internal float UpdateThreshold;
@@ -46,7 +45,7 @@ namespace UnityEngine
     /// PostLateUpdate.EnlightenRuntimeUpdate and uploads the atlases renderers draw with
     /// (unity_DynamicLightmap, <see cref="BakedLighting.Apply"/>).
     /// </summary>
-    internal static class RealtimeGI
+    internal static partial class RealtimeGI
     {
         const int UpdateChanged = 1, UpdateConverged = 2, UpdateProbes = 4;
 
@@ -83,6 +82,8 @@ namespace UnityEngine
             /// coefficients as read back.</summary>
             internal ProbeSet Probes;
             internal float[] ProbeCoefficients = Array.Empty<float>();
+            /// <summary>The environment version the native scene has.</summary>
+            internal int EnvironmentVersion = -1;
         }
 
         static readonly List<GIScene> s_Scenes = new List<GIScene>();
@@ -333,10 +334,7 @@ namespace UnityEngine
                 BudgetMs = FrameBudgetMs,
                 UpdateThreshold = DynamicGI.updateThreshold,
             };
-            var environment = Environment();
-            frame.EnvironmentR = environment.r;
-            frame.EnvironmentG = environment.g;
-            frame.EnvironmentB = environment.b;
+            UpdateEnvironment();
             foreach (var scene in s_Scenes)
             {
                 if (scene.Failed) continue;
@@ -350,6 +348,17 @@ namespace UnityEngine
                 if (scene.Failed) continue;
                 NativeBuffer error;
                 int result;
+                if (scene.EnvironmentVersion != s_EnvironmentVersion)
+                {
+                    fixed (float* faces = s_Faces)
+                        result = Native.Api.GiSetEnvironment(scene.Handle, faces, s_Faces.Length, &error);
+                    if (result != 0)
+                    {
+                        Failed(scene, error);
+                        continue;
+                    }
+                    scene.EnvironmentVersion = s_EnvironmentVersion;
+                }
                 fixed (GiLight* lights = s_Lights)
                     result = Native.Api.GiUpdate(scene.Handle, &frame, lights, count, &error);
                 if (result < 0)
@@ -376,23 +385,6 @@ namespace UnityEngine
                 LightmapBakeType.Mixed => s_MixedAreRealtime,
                 _ => false,
             };
-        }
-
-        /// <summary>The environment's linear radiance: the flat ambient color (other ambient modes
-        /// are not supported yet: they light nothing, with a warning).</summary>
-        static AmbientMode s_WarnedAmbient = (AmbientMode)(-1);
-
-        static Color Environment()
-        {
-            var mode = RenderSettings.ambientMode;
-            if (mode == AmbientMode.Flat) return RenderSettings.ambientLight.linear;
-            if (mode != s_WarnedAmbient)
-            {
-                s_WarnedAmbient = mode;
-                Warn("environment:" + mode,
-                    $"precomputed realtime GI takes only a flat ambient color as its environment yet; with ambient mode {mode} the environment adds no realtime indirect light.");
-            }
-            return Color.black;
         }
 
         /// <summary>The scene's light probes take the realtime lighting its probe sets give them

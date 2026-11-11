@@ -1072,7 +1072,6 @@ namespace UnityEngine
     }
     unsafe partial class DynamicGI
     {
-        [global::Unbound.Stub] public static void SetEnvironmentData(float[] input) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.SetEnvironmentData"); }
         [global::System.Obsolete("DynamicGI.UpdateMaterials(Terrain) is deprecated; instead, use extension method from TerrainExtensions: 'terrain.UpdateGIMaterials()' (UnityUpgradable).")] [global::Unbound.Stub] public static void UpdateMaterials(global::UnityEngine.Object renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.UpdateMaterials"); }
         [global::System.Obsolete("DynamicGI.UpdateMaterials(Terrain, int, int, int, int) is deprecated; instead, use extension method from TerrainExtensions: 'terrain.UpdateGIMaterials(x, y, width, height)' (UnityUpgradable).")] [global::Unbound.Stub] public static void UpdateMaterials(global::UnityEngine.Object renderer, int x, int y, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.UpdateMaterials"); }
         private static int __unboundStub_materialUpdateTimeSlice = 8;

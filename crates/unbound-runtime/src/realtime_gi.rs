@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use unbound_assets::serialized::SerializedFile;
+use unbound_gi::environment::{FACE_VALUES, environment_values};
 use unbound_gi::probes::{ProbeSetSolver, ProbeSh};
 pub use unbound_gi::realtime_uv::Input as UvInput;
 use unbound_gi::solver::{Light, LightKind, SpotCone, SystemSolver, decode_rgb9e5};
@@ -36,8 +37,6 @@ pub struct GiLight {
 pub struct GiFrame {
     /// DynamicGI.indirectScale.
     pub indirect_scale: f32,
-    /// A uniform environment's linear radiance (a flat ambient color).
-    pub environment: [f32; 3],
     /// DynamicGI.synchronousMode: every system updates this frame, whatever the budget.
     pub synchronous: i32,
     /// The time this frame may spend updating systems, in milliseconds (at least one is updated).
@@ -75,8 +74,11 @@ struct Scene {
     /// probes' coefficients by LightProbes index after the last update.
     probe_sets: Vec<(ProbeSetSolver, usize)>,
     probes: Vec<ProbeSh>,
-    /// The environment's values (a uniform environment: the frame's).
+    /// The environment's values ([`set_environment`]; black until set), and scratch space for
+    /// its faces and next values.
     environment: Vec<[f32; 3]>,
+    faces: Vec<[f32; 3]>,
+    next_environment: Vec<[f32; 3]>,
     /// Systems updated in a row without a change of their drawn texels: the scene is converged
     /// once every system has had such an update (the bounce reads the drawn texels, so nothing
     /// changes after it until the inputs do).
@@ -266,6 +268,8 @@ fn register(
                 probe_sets,
                 probes: vec![[0.0; 27]; probe_count],
                 environment: vec![[0.0; 3]; unbound_gi::data::ENVIRONMENT_VALUES],
+                faces: vec![[0.0; 3]; FACE_VALUES],
+                next_environment: vec![[0.0; 3]; unbound_gi::data::ENVIRONMENT_VALUES],
             },
         );
     Ok(json!({
@@ -307,6 +311,31 @@ pub fn set_material(handle: u64, system: usize, kind: i32, bytes: &[u8]) -> Resu
             _ => bail!("material texture kind {kind}"),
         }
         scene.restart();
+        Ok(())
+    })
+}
+
+/// The environment of the scene's systems: six cube faces of linear RGB
+/// (`unbound_gi::environment`, `FACE_VALUES` values of 3 floats). Unchanged values change nothing.
+pub fn set_environment(handle: u64, faces: &[f32]) -> Result<()> {
+    ensure!(
+        faces.len() == 3 * FACE_VALUES,
+        "an environment of {} floats, not {}",
+        faces.len(),
+        3 * FACE_VALUES
+    );
+    with_scene(handle, |scene| {
+        for (face, rgb) in scene.faces.iter_mut().zip(faces.chunks_exact(3)) {
+            *face = [rgb[0], rgb[1], rgb[2]];
+        }
+        environment_values(&scene.faces, &mut scene.next_environment)?;
+        if scene.next_environment != scene.environment {
+            for system in &mut scene.systems {
+                system.set_environment(&scene.next_environment)?;
+            }
+            std::mem::swap(&mut scene.environment, &mut scene.next_environment);
+            scene.restart();
+        }
         Ok(())
     })
 }
@@ -368,13 +397,6 @@ impl Scene {
         }
         let last = self.frame.replace(*frame);
         let differs = |f: fn(&GiFrame) -> [f32; 3]| last.is_none_or(|l| f(&l) != f(frame));
-        let environment_changed = differs(|f| f.environment);
-        if environment_changed {
-            for system in &mut self.systems {
-                system.set_uniform_environment(frame.environment);
-            }
-            self.environment.fill(frame.environment);
-        }
         let scale_changed = differs(|f| [f.indirect_scale; 3]);
         if scale_changed {
             for system in &mut self.systems {
@@ -388,7 +410,7 @@ impl Scene {
                 system.set_update_threshold(frame.update_threshold);
             }
         }
-        if lights_changed || environment_changed || threshold_changed || scale_changed {
+        if lights_changed || threshold_changed || scale_changed {
             self.restart();
         }
         Ok(())
@@ -696,11 +718,12 @@ mod tests {
             ),
             (Some(52), 7)
         );
-        // White albedo everywhere.
+        // White albedo everywhere, a dim blue environment.
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
+        let sky = [0.01f32, 0.01, 0.02].repeat(FACE_VALUES);
+        set_environment(handle, &sky).unwrap();
         let frame = GiFrame {
             indirect_scale: 1.0,
-            environment: [0.01, 0.01, 0.02],
             synchronous: 1,
             budget_ms: 2.0,
             update_threshold: 1.0,
@@ -718,8 +741,20 @@ mod tests {
             assert!(frames < 500, "no convergence");
         }
         assert!(changed > 0);
-        // Converged: further frames change nothing.
+        // Converged: further frames change nothing, nor does the same environment again; another
+        // one updates again, and a malformed one fails.
         assert_eq!(update(handle, &frame, &lights).unwrap(), UPDATE_CONVERGED);
+        set_environment(handle, &sky).unwrap();
+        assert_eq!(update(handle, &frame, &lights).unwrap(), UPDATE_CONVERGED);
+        assert!(set_environment(handle, &sky[1..]).is_err());
+        let brighter = [0.1f32, 0.1, 0.2].repeat(FACE_VALUES);
+        set_environment(handle, &brighter).unwrap();
+        assert_eq!(
+            update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED,
+            0
+        );
+        set_environment(handle, &sky).unwrap();
+        while update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED == 0 {}
         let mut texels = vec![0u16; 4 * 64 * 64];
         assert_eq!(read_atlas(handle, 0, &mut texels).unwrap(), 64 * 64);
         let lit = texels
@@ -793,7 +828,6 @@ mod tests {
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
         let mut frame = GiFrame {
             indirect_scale: 1.0,
-            environment: [0.01, 0.01, 0.02],
             synchronous: 1,
             budget_ms: 2.0,
             // Every part solved until the output stops changing: the probes then scale with the
@@ -862,7 +896,6 @@ mod tests {
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
         let frame = GiFrame {
             indirect_scale: 0.0,
-            environment: [0.01, 0.01, 0.02],
             synchronous: 1,
             budget_ms: 2.0,
             update_threshold: 0.0,
