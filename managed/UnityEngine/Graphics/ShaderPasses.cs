@@ -165,14 +165,10 @@ namespace UnityEngine
 
         /// <summary>
         /// The names of the passes <see cref="passCount"/> counts, in order: those of the
-        /// SubShader the shader's queries answer from (<see cref="ActiveSubShader"/>), a surface
-        /// program's generated passes included (canonical tests/projects/shaderpasscount
-        /// case.*.mat.findPass: the generated DEFERRED and META passes are found at their
-        /// indices, and every pass of the first SubShader while none is in reach). Null
-        /// (unknown) when that SubShader is unknown or the host does not name its passes; the
-        /// caller then keeps the renderer's pass list. Under a render pipeline that is the
-        /// answer as before, without a warning: the pipeline's own code asks every frame, and
-        /// which declared SubShader it selects is not measured.
+        /// SubShader the shader's queries answer from (<see cref="ActiveSubShader"/>), as
+        /// declared. Null (unknown) when that SubShader is unknown, the host does not name its
+        /// passes, or under a render pipeline (which declared SubShader it selects is not
+        /// measured; nothing is warned about, the pipeline's own code asks every frame).
         /// </summary>
         internal List<string> ActivePassNames(string api)
         {

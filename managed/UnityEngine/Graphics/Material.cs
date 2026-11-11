@@ -612,31 +612,40 @@ namespace UnityEngine
 
         public bool GetShaderPassEnabled(string passName) => passName == null || m_DisabledPasses == null || !m_DisabledPasses.Contains(passName);
 
-        /// <summary>A pass's name: one of the passes <see cref="passCount"/> counts
-        /// (<see cref="Shader.ActivePassNames"/>), the renderer's drawn SubShader while those
-        /// are unknown. Empty out of range.</summary>
+        /// <summary>
+        /// The pass names of the shader when the renderer draws none of its SubShaders (none in
+        /// reach of the LOD limit; its pass list is then the error shader's): those of the
+        /// SubShader <see cref="passCount"/> counts
+        /// (<see cref="Shader.ActivePassNames"/>; canonical tests/projects/shaderpasscount
+        /// case.global25.*.mat.findPass: the first SubShader's passes are found). Null while the
+        /// renderer draws a SubShader: pass indices are then the renderer's, the ones draws
+        /// take, which lack the passes Unity generates for a surface program beyond the forward
+        /// ones (the Editor finds those too; see the gap table).
+        /// </summary>
+        List<string> UndrawnPassNames(Unbound.Runtime.ShaderPassInfo info, string api) =>
+            info != null && !info.Found ? m_Shader.ActivePassNames(api) : null;
+
+        /// <summary>A pass's name; empty out of range.</summary>
         public string GetPassName(int pass)
         {
-            if (m_Shader != null && m_Shader.ActivePassNames("Material.GetPassName") is { } names)
-                return pass >= 0 && pass < names.Count ? names[pass] : "";
             var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
+            if (UndrawnPassNames(info, "Material.GetPassName") is { } names)
+                return pass >= 0 && pass < names.Count ? names[pass] : "";
             return info != null && pass >= 0 && pass < info.Passes.Count ? info.Passes[pass].Name : "";
         }
 
-        /// <summary>The first pass of that name among the passes <see cref="passCount"/> counts
-        /// (<see cref="Shader.ActivePassNames"/>; the renderer's drawn SubShader while those are
-        /// unknown), compared case-insensitively as Unity does; -1 when there is none.</summary>
+        /// <summary>The first pass of that name, compared case-insensitively as Unity does; -1
+        /// when there is none.</summary>
         public int FindPass(string passName)
         {
-            if (string.IsNullOrEmpty(passName)) return -1;
-            if (m_Shader != null && m_Shader.ActivePassNames("Material.FindPass") is { } names)
+            var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
+            if (info == null || string.IsNullOrEmpty(passName)) return -1;
+            if (UndrawnPassNames(info, "Material.FindPass") is { } names)
             {
                 for (int i = 0; i < names.Count; i++)
                     if (string.Equals(names[i], passName, StringComparison.OrdinalIgnoreCase)) return i;
                 return -1;
             }
-            var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
-            if (info == null) return -1;
             for (int i = 0; i < info.Passes.Count; i++)
                 if (string.Equals(info.Passes[i].Name, passName, StringComparison.OrdinalIgnoreCase)) return i;
             return -1;

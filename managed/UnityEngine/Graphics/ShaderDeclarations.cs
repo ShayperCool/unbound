@@ -35,8 +35,8 @@ namespace Unbound.Runtime
         {
             internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>(StringComparer.Ordinal);
             internal readonly List<Dictionary<string, string>> Passes = new List<Dictionary<string, string>>();
-            /// <summary>Each pass's name as Unity stores it (upper case; empty: unnamed); null
-            /// for a pass the host sends no name for (an older host).</summary>
+            /// <summary>Each pass's name as declared (empty: unnamed; names are compared
+            /// case-insensitively); null for a pass the host sends no name for (an older host).</summary>
             internal readonly List<string> PassNames = new List<string>();
             /// <summary>Each pass's variant choices, null when the host cannot read them.</summary>
             internal readonly List<string[][]> KeywordSets = new List<string[][]>();

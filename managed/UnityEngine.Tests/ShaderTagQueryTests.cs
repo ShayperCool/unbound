@@ -13,7 +13,7 @@ namespace UnityEngine.Tests
     /// <summary>Material tag queries use the declared active SubShader, or search all declared
     /// SubShaders and fallbacks, under the measured built-in pipeline. The host is a stand-in;
     /// the Native fixture is shaderpasscount. Pass names (FindPass, GetPassName) answer from the
-    /// same SubShader as the pass count; drawing is unchanged.</summary>
+    /// same SubShader as the pass count when the renderer draws none; drawing is unchanged.</summary>
     public class ShaderTagQueryTests : IDisposable
     {
         readonly Dictionary<string, string> m_Shaders = new Dictionary<string, string>();
@@ -80,6 +80,17 @@ namespace UnityEngine.Tests
             var info = new ShaderPassInfo { Found = true, DrawnShader = shader.name };
             info.Tags["SubId"] = subId;
             foreach (var p in passes) info.Passes.Add((p, new Dictionary<string, string>()));
+            var key = (shader.DrawnName, Shader.globalRenderPipeline);
+            PassInfoCache()[key] = info;
+            m_Seeded.Add(key);
+        }
+
+        /// <summary>The renderer's answer when it draws none of the shader's SubShaders: not
+        /// found, with the error shader's one unnamed pass.</summary>
+        void SeedUndrawn(Shader shader)
+        {
+            var info = new ShaderPassInfo { Found = false, DrawnShader = "Hidden/InternalErrorShader" };
+            info.Passes.Add(("", new Dictionary<string, string>()));
             var key = (shader.DrawnName, Shader.globalRenderPipeline);
             PassInfoCache()[key] = info;
             m_Seeded.Add(key);
@@ -229,82 +240,80 @@ namespace UnityEngine.Tests
 
         /// <summary>The fixture's surface SubShader as the host declares it: both forward passes
         /// are named FORWARD.</summary>
-        Shader Surface() => Make(Sub("S0", 300, new[] { "FORWARD", "FORWARD", "DEFERRED", "META" }), Sub("S1", 200, Named("S1", 3)));
+        Shader Surface() => Make(Sub("S0", 300, new[] { "FORWARD", "FORWARD", "DEFERRED", "META", "Outline" }), Sub("S1", 200, Named("S1", 3)));
 
-        /// <summary>FindPass and GetPassName answer from the passes passCount counts, generated
-        /// ones included, while the renderer knows only the passes it draws; a name used twice
-        /// finds the first.</summary>
+        /// <summary>While the renderer draws a SubShader, a found index is one a draw takes: the
+        /// renderer's, also for a pass that follows a surface program's generated ones (the
+        /// Editor's index counts those: open, see the gap table).</summary>
         [Fact]
-        public void GeneratedPassesAreFoundAtTheirDeclaredIndices()
+        public void AFoundPassIsOneTheRendererDraws()
         {
             var surface = Surface();
-            SeedRenderer(surface, "S0", "FORWARD", "FORWARD");
+            SeedRenderer(surface, "S0", "FORWARD", "FORWARD", "Outline");
             var material = new Material(surface);
-            Assert.Equal(4, material.passCount);
-            Assert.Equal(new[] { 0, -1, 2, 3, -1 }, new[] { "FORWARD", "FORWARD_DELTA", "DEFERRED", "META", "S1P0" }.Select(material.FindPass));
-            Assert.Equal(2, material.FindPass("deferred"));
-            Assert.Equal(new[] { "FORWARD", "FORWARD", "DEFERRED", "META", "", "" }, new[] { 0, 1, 2, 3, 4, -1 }.Select(material.GetPassName));
+            Assert.Equal(5, material.passCount);
+            Assert.Equal(new[] { 0, -1, -1, 2, -1 }, new[] { "FORWARD", "DEFERRED", "META", "OUTLINE", "S1P0" }.Select(material.FindPass));
+            Assert.Equal(new[] { "FORWARD", "FORWARD", "Outline", "", "" }, new[] { 0, 1, 2, 3, -1 }.Select(material.GetPassName));
             Assert.Equal(-1, material.FindPass(""));
             Assert.Equal(-1, material.FindPass(null));
         }
 
-        /// <summary>The names follow the limit as the count does: the picked SubShader's, a
-        /// Fallback's when it is the one picked, the first SubShader's when none is in reach.</summary>
+        /// <summary>When the renderer draws none of the shader's SubShaders, the names are
+        /// those of the SubShader the pass count is read from: the first one, a surface
+        /// program's generated passes included; a name used twice finds the first.</summary>
         [Fact]
-        public void PassNamesFollowTheLimit()
+        public void WithNoSubShaderInReachTheFirstOnesPassesAreFound()
         {
             var shader = LodChain();
             var material = new Material(shader);
-            var all = Named("L0", 3).Concat(Named("L1", 1)).Concat(Named("L2", 2)).Concat(Named("F0", 4)).Concat(Named("F1", 5)).ToArray();
-            foreach (var (limit, id, count) in new[] { (-1, "L0", 3), (350, "L1", 1), (250, "L2", 2), (175, "F0", 4), (100, "F1", 5), (25, "L0", 3) })
-            {
-                shader.maximumLOD = limit;
-                Assert.Equal(count, material.passCount);
-                Assert.Equal(all.Select(n => n.StartsWith(id) ? int.Parse(n.Substring(3)) : -1), all.Select(material.FindPass));
-                Assert.Equal(id + "P0", material.GetPassName(0));
-                Assert.Equal("", material.GetPassName(count));
-            }
-            shader.maximumLOD = -1;
-            var surface = Surface();
-            var surfaceMaterial = new Material(surface);
-            Shader.globalMaximumLOD = 250;
-            Assert.Equal(new[] { -1, -1, 0, 2 }, new[] { "FORWARD", "META", "S1P0", "S1P2" }.Select(surfaceMaterial.FindPass));
             Shader.globalMaximumLOD = 25;
-            Assert.Equal(new[] { 0, 3, -1, -1 }, new[] { "FORWARD", "META", "S1P0", "S1P2" }.Select(surfaceMaterial.FindPass));
+            SeedUndrawn(shader);
+            Assert.Equal(3, material.passCount);
+            Assert.Equal(new[] { 0, 1, 2, -1, -1 }, new[] { "L0P0", "l0p1", "L0P2", "L1P0", "F0P0" }.Select(material.FindPass));
+            Assert.Equal(new[] { "L0P0", "L0P2", "", "" }, new[] { 0, 2, 3, -1 }.Select(material.GetPassName));
+
+            var surface = Surface();
+            SeedUndrawn(surface);
+            var surfaceMaterial = new Material(surface);
+            Assert.Equal(new[] { 0, -1, 2, 3, 4, -1 }, new[] { "FORWARD", "FORWARD_DELTA", "DEFERRED", "META", "Outline", "S1P0" }.Select(surfaceMaterial.FindPass));
+            Assert.Equal("FORWARD", surfaceMaterial.GetPassName(1));
         }
 
-        /// <summary>The renderer's pass list stays the answer while the declared passes are
-        /// unknown, while the host names none (an older host), and under a render pipeline,
-        /// where nothing is warned about: the pipeline asks every frame.</summary>
+        /// <summary>Without a drawn SubShader and without usable declarations (unknown, unnamed
+        /// by an older host, or under a render pipeline, where nothing is warned about) no pass
+        /// is found.</summary>
         [Fact]
         public void UnknownConditionsKeepTheRenderersPassNames()
         {
             var unknown = Make(Sub("U0", 0, Named("U", 2)));
             m_Shaders[unknown.name] = m_Shaders[unknown.name].Replace("\"subshaders_known\":true", "\"subshaders_known\":false");
+            SeedUndrawn(unknown);
+            Assert.Equal(-1, new Material(unknown).FindPass("UP0"));
+            Assert.Equal("", new Material(unknown).GetPassName(0));
             SeedRenderer(unknown, "R", "R0", "R1");
             Assert.Equal(1, new Material(unknown).FindPass("r1"));
             Assert.Equal("R1", new Material(unknown).GetPassName(1));
 
             var unnamed = Make(Sub("N0", 0, new string[] { null, null, null }));
-            SeedRenderer(unnamed, "N0", "R0", "R1");
-            var material = new Material(unnamed);
-            Assert.Equal(3, material.passCount);
-            Assert.Equal(1, material.FindPass("R1"));
-            Assert.Equal("R1", material.GetPassName(1));
-            Assert.Equal("", material.GetPassName(2));
+            SeedUndrawn(unnamed);
+            Assert.Equal(3, new Material(unnamed).passCount);
+            Assert.Equal("", new Material(unnamed).GetPassName(0));
 
             var shader = Make(Sub("P0", 0, Named("P0", 3), "UniversalPipeline"), Sub("P1", 0, Named("P1", 2)));
+            SeedUndrawn(shader);
             Assert.Equal(1, new Material(shader).FindPass("P1P1"));
             var length = typeof(GfxStream).GetField("s_Length", BindingFlags.NonPublic | BindingFlags.Static);
             var before = length.GetValue(null);
             try
             {
                 Shader.globalRenderPipeline = "UniversalPipeline";
-                SeedRenderer(shader, "R", "P0P0", "P0P1", "P0P2");
+                SeedUndrawn(shader);
                 var underPipeline = new Material(shader);
+                Assert.Equal(-1, underPipeline.FindPass("P0P2"));
+                Assert.Equal("", underPipeline.GetPassName(0));
+                SeedRenderer(shader, "R", "P0P0", "P0P1", "P0P2");
                 Assert.Equal(2, underPipeline.FindPass("P0P2"));
                 Assert.Equal(-1, underPipeline.FindPass("P1P1"));
-                Assert.Equal("P0P2", underPipeline.GetPassName(2));
                 Assert.Equal(0, Hits("Material.FindPass under a render pipeline"));
                 Assert.Equal(0, Hits("Material.GetPassName under a render pipeline"));
             }
