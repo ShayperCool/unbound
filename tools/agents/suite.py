@@ -461,8 +461,12 @@ def recipes(release):
     R['particlenoise'] = classic('PARTICLE_NOISE_OUT', 'out', ['--frames', '8', '--size', '320x180', '--no-watch'],
                                  verdict='exit')
     R['uicolors'] = color_variants('UI_COLORS_OUT', 8, ('Linear', 'Gamma'))
-    R['textcore'] = classic('TEXTCORE_PROBE_OUT', 'out.jsonl', ['--headless', '5', '--no-watch'],
-                            [single_ref('jsonl.gz'), '{work}/out.jsonl'], verdict='exit')
+    # Two of the probe's fonts are not committed: fonts.py copies them into the staged project and
+    # checks them against the reference, or the engine would skip every case of both.
+    R['textcore'] = [driver('fonts.py', '{project}', single_ref('jsonl.gz')),
+                     Step('engine', ['{cli}', 'run', '-p', '{project}', '--headless', '5', '--no-watch'],
+                          {'TEXTCORE_PROBE_OUT': '{work}/out.jsonl'}),
+                     py('compare.py', single_ref('jsonl.gz'), '{work}/out.jsonl')]
     R['physicsdefaults'] = [run('--headless', '30000', '--no-watch', env={'PHYSICS_DEFAULTS_OUT': '{work}/out.jsonl'}),
                             py('verify.py', '--candidate', '{work}/out.jsonl')]
     # `unbound test` exits like the Editor: 2 when tests fail, as some do on purpose.
