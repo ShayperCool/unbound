@@ -753,7 +753,8 @@ mod tests {
     #[test]
     fn plugins_see_srgb_color_textures_as_the_device_stores_them() {
         use crate::render::gl_interop::format as gl;
-        // sRGB color textures are sRGB on the device in a Linear project only.
+        // sRGB color textures are sRGB on the device in a Linear project (measured); a Gamma
+        // project's stay as stored (Unbound's choice, unmeasured).
         assert_eq!(device_format(gl::RGBA8, true, 1), Some(gl::SRGB8_ALPHA8));
         assert_eq!(device_format(gl::RGBA8, true, 0), None);
         assert_eq!(device_format(gl::RGBA8, false, 1), None);

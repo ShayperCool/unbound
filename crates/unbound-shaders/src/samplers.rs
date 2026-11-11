@@ -1,4 +1,4 @@
-//! Inline sampler states in graphics programs on the OpenGL Core device, the one Unbound reports
+//! Inline sampler states in graphics programs on the OpenGL Core device
 //! (`SystemInfo.graphicsDeviceType`): the Unity 6000.0 Manual (Using sampler states) says "Inline
 //! samplers don't work if you target the OpenGL ES or OpenGL Core graphics APIs", and the Editor
 //! on OpenGL Core samples a texture through its own sampler state whatever inline sampler the
