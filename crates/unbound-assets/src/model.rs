@@ -3584,8 +3584,9 @@ fn default_attribute_is_bone(node: &ufbx::Node) -> bool {
 
 /// Which of the node's local translation, rotation and scale the take animates: those with an
 /// animation curve node in one of its layers. The importer gives a clip curves for these only
-/// (measured for translation alone, tests/projects/modeltoproot; rotation or scale alone and
-/// curve nodes without curves are inferred), constant ones included (tests/projects/modelclips).
+/// (measured for translation alone, tests/projects/modeltoproot, and for rotation alone and
+/// rotation with scale on Legacy clips, tests/projects/modelaxis Reduced; scale alone and curve
+/// nodes without curves are inferred), constant ones included (tests/projects/modelclips).
 fn animated_channels(stack: &ufbx::AnimStack, node: &ufbx::Node) -> [bool; 3] {
     ["Lcl Translation", "Lcl Rotation", "Lcl Scaling"].map(|prop| {
         stack

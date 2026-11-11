@@ -9,7 +9,9 @@
 //! - **Rotations** keep three components, each cut off to 10 bits (9 for the one after the
 //!   largest) over -1..1; the largest in magnitude is rebuilt from the others with its sign.
 //! - **Slopes** are rounded to 6 bits over the range all of the curve's slope components span;
-//!   a curve whose keys all have equal incoming and outgoing slopes stores one of them.
+//!   a curve whose keys all have equal incoming and outgoing slopes stores one of them. The
+//!   importer's rotation curves always have equal sides; a curve with different ones keeps both
+//!   over one range, which no capture exercises.
 
 use super::Key;
 use super::curves::Slopes;
@@ -255,7 +257,7 @@ mod tests {
         // All slopes equal: nothing is lost.
         let flat: Slopes<4> = vec![([0.25; 4], [0.25; 4]); 3];
         assert_eq!(stored_slopes(&flat), flat);
-        // Different sides are both kept and share one range.
+        // Different sides are both kept and share one range (not exercised by a capture).
         let sided: Slopes<4> = vec![([0.0; 4], [6.3, 0.0, 0.0, 0.0])];
         let out = stored_slopes(&sided);
         assert_eq!(out[0].1[0], 6.3);

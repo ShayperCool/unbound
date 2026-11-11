@@ -253,7 +253,11 @@ more than half a turn in one second. The keys `AnimationUtility.GetEditorCurve` 
 these clips agree with the imported ones to 5e-9 in value and exactly in time (slopes to 4e-6,
 as for unpacked clips). Not measured: clips whose first key lies before zero, ranges that start
 or end between frames, curves with different incoming and outgoing slopes (the importer makes
-none for rotations).
+none for rotations), kept keys that fall into the same hundredth (above 100 fps; `PackedRate120`
+keeps none) and the hidden preview clips, which are packed like the others. The key times above
+change a result only in the 3 s Legacy clips here; Generic, Humanoid and compression Off clips
+longer than a second take the same times unmeasured, and float curves (blend shape weights)
+and root motion curves still take the plain difference of times.
 
 `PackedRate120` uses a scale error of 1%: at 0.5% dropping its scale corner at 1/3 s is a tie
 (the segment over it misses the corner by 0.5% of its value to within 4e-6), and the Editor,
