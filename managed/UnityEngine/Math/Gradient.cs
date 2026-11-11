@@ -52,7 +52,8 @@ namespace UnityEngine
         private GradientColorKey[] m_ColorKeys;
         private GradientAlphaKey[] m_AlphaKeys;
         private GradientMode m_Mode = GradientMode.Blend;
-        private ColorSpace m_ColorSpace = ColorSpace.Gamma;
+        // A new gradient's colour space is not set (Unity 6000.0.71f1, tests/projects/uitkpainter).
+        private ColorSpace m_ColorSpace = ColorSpace.Uninitialized;
 
         /// <summary>A white, opaque gradient (keys at 0 and 1).</summary>
         public Gradient()
@@ -112,8 +113,13 @@ namespace UnityEngine
                 }
                 copy[j + 1] = k;
             }
+            for (int i = 0; i < copy.Length; i++) copy[i].time = StoredTime(copy[i].time);
             return copy;
         }
+
+        /// <summary>A key's time as it is kept: in steps of 1/65535 (0.25 reads back as
+        /// 0.2500038; Unity 6000.0.71f1, tests/projects/uitkpainter).</summary>
+        static float StoredTime(float time) => KeyStep(time) / KeySteps;
 
         private static GradientAlphaKey[] SortedAlphaKeys(GradientAlphaKey[] keys)
         {
@@ -133,6 +139,7 @@ namespace UnityEngine
                 }
                 copy[j + 1] = k;
             }
+            for (int i = 0; i < copy.Length; i++) copy[i].time = StoredTime(copy[i].time);
             return copy;
         }
 
@@ -143,12 +150,22 @@ namespace UnityEngine
         /// </summary>
         public Color Evaluate(float time)
         {
-            Color rgb = EvaluateColor(time);
+            Color rgb = EvaluateColor(time, true);
             rgb.a = EvaluateAlpha(time);
             return rgb;
         }
 
-        private Color EvaluateColor(float time)
+        /// <summary>The color at <paramref name="time"/> before a PerceptualBlend result is put in
+        /// 8-bit steps: what the engine's own drawing reads (Painter2D stroke gradients; Unity
+        /// 6000.0.71f1, tests/projects/uitkpainter gradient-line-perceptual).</summary>
+        internal Color EvaluateUnrounded(float time)
+        {
+            Color rgb = EvaluateColor(time, false);
+            rgb.a = EvaluateAlpha(time);
+            return rgb;
+        }
+
+        private Color EvaluateColor(float time, bool rounded)
         {
             GradientColorKey[] keys = m_ColorKeys;
             if (keys.Length == 0)
@@ -177,7 +194,7 @@ namespace UnityEngine
             // tests/projects/particlecurves gradient/struct/perceptual); Blend and Fixed return the
             // keys' own values.
             if (m_Mode == GradientMode.PerceptualBlend)
-                return PerceptualLerp(k0.color, k1.color, t, m_ColorSpace == ColorSpace.Linear);
+                return PerceptualLerp(k0.color, k1.color, t, m_ColorSpace == ColorSpace.Linear, rounded);
             return Color.LerpUnclamped(k0.color, k1.color, t);
         }
 
@@ -227,7 +244,7 @@ namespace UnityEngine
         // single precision as the 6000.0.71f1 Editor computes it: the cube-rooted LMS values are
         // interpolated (Oklab's L, a, b are a linear map of them), and a result for sRGB keys
         // comes back in 8-bit steps (tests/projects/particlecurves gradient/struct/perceptual).
-        private static Color PerceptualLerp(Color a, Color b, float t, bool linearKeys)
+        private static Color PerceptualLerp(Color a, Color b, float t, bool linearKeys, bool rounded)
         {
             Vector3 la = CubeRootLms(a, linearKeys), lb = CubeRootLms(b, linearKeys);
             float l = la.x + (lb.x - la.x) * t, m = la.y + (lb.y - la.y) * t, s = la.z + (lb.z - la.z) * t;
@@ -238,7 +255,7 @@ namespace UnityEngine
             float g = s * -0.341319382f + m * 2.60975742f + l * -1.26843798f;
             float bl = s * 1.70761466f + m * -0.703418612f + l * -0.00419608643f;
             if (linearKeys) return new Color(r, g, bl, 1f);
-            return new Color(LinearToSrgb(r), LinearToSrgb(g), LinearToSrgb(bl), 1f);
+            return new Color(LinearToSrgb(r, rounded), LinearToSrgb(g, rounded), LinearToSrgb(bl, rounded), 1f);
         }
 
         private static Vector3 CubeRootLms(Color c, bool linear)
@@ -258,12 +275,12 @@ namespace UnityEngine
         }
 
         /// <summary>To sRGB: in 8-bit steps up to 1, by the power 1/2.2 above.</summary>
-        private static float LinearToSrgb(float x)
+        private static float LinearToSrgb(float x, bool rounded)
         {
             x = Math.Max(x, 0f);
             if (x > 1f) return MathF.Pow(x, 0.454545468f);
             float srgb = x <= 0.0031308f ? x * 12.92f : 1.055f * MathF.Pow(x, 0.416666687f) - 0.055f;
-            return MathF.Floor(srgb * 255f + 0.5f) / 255f;
+            return rounded ? MathF.Floor(srgb * 255f + 0.5f) / 255f : srgb;
         }
 
         public override bool Equals(object o)
