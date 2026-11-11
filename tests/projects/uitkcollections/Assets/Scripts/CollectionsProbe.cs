@@ -415,6 +415,26 @@ public static class CollectionsProbe
         Step("menu-api", "prepare-null", () => { menu.AppendSeparator(); menu.PrepareForDisplay(null); MenuAction(menu, "A").Execute(); }, State);
         Step("menu-api", "remove-first", () => menu.RemoveItemAt(0), State);
         Step("menu-api", "clear", () => { menu.ClearItems(); menu.PrepareForDisplay(null); }, State);
+        // Separators of another sub-menu path: after a separator, and without an action of that path.
+        Step("menu-api", "separator-after-other-path", () =>
+        {
+            menu.AppendAction("Sub/B", null);
+            menu.AppendSeparator("Sub/");
+            menu.AppendSeparator();
+            menu.AppendSeparator("Sub/");
+        }, State);
+        Step("menu-api", "separator-foreign-path", () =>
+        {
+            menu.ClearItems();
+            menu.AppendAction("Plain", a => Log.Add("exec Plain info " + (a.eventInfo == null ? "null" : a.eventInfo.modifiers + " " + V2(a.eventInfo.mousePosition) + " " + V2(a.eventInfo.localMousePosition))));
+            menu.AppendSeparator("Other/");
+            menu.AppendSeparator("Pl");
+        }, State);
+        Step("menu-api", "prepare-key-trigger", () =>
+        {
+            using (var key = KeyUpEvent.GetPooled('\0', KeyCode.Menu, EventModifiers.Control)) menu.PrepareForDisplay(key);
+            MenuAction(menu, "Plain").Execute();
+        }, State);
     }
 
     // A ContextualMenuManipulator on a runtime panel: a right click, the Menu key, and a populate
@@ -683,6 +703,26 @@ public static class CollectionsProbe
         Step("header-drag", "reorder-display-1-1", () => view.columns.ReorderDisplay(1, 1), State);
         Step("header-drag", "reorder-display-3-0", () => view.columns.ReorderDisplay(3, 0), State);
         Step("header-drag", "column-added-after-reorder", () => view.columns.Add(MakeColumn("hdrag:", "e", "Echo", 30, false, i => "e" + i)), State);
+        // A column hidden, then one removed, while its header column is pressed and dragged.
+        Step("header-drag", "hide-while-dragging-press-move", () =>
+        {
+            start = Center("d");
+            Pointer(EventType.MouseMove, start); Pointer(EventType.MouseDown, start);
+            Pointer(EventType.MouseMove, new Vector2(view.worldBound.xMin + 5, start.y));
+        }, State);
+        Step("header-drag", "hide-while-dragging", () => view.columns["d"].visible = false, State);
+        Step("header-drag", "hide-while-dragging-move", () => Pointer(EventType.MouseMove, new Vector2(view.worldBound.xMin + 40, start.y)), State);
+        Step("header-drag", "hide-while-dragging-release", () => Pointer(EventType.MouseUp, new Vector2(view.worldBound.xMin + 40, start.y)), State);
+        Step("header-drag", "hide-while-dragging-shown", () => view.columns["d"].visible = true, State);
+        Step("header-drag", "press-after-hidden-drag", () => { start = Center("a"); Pointer(EventType.MouseMove, start); Pointer(EventType.MouseDown, start); }, State);
+        Step("header-drag", "release-after-hidden-drag", () => Pointer(EventType.MouseUp, start), State);
+        Step("header-drag", "remove-while-pressed", () =>
+        {
+            start = Center("e");
+            Pointer(EventType.MouseMove, start); Pointer(EventType.MouseDown, start);
+            view.columns.Remove(view.columns["e"]);
+        }, State);
+        Step("header-drag", "remove-while-pressed-release", () => Pointer(EventType.MouseUp, start), State);
         Step("header-drag", "remove", () => view.RemoveFromHierarchy(), () => "null");
         // A tree: the toggle and indent follow the first visible column.
         MultiColumnTreeView tree = null;

@@ -202,6 +202,8 @@ namespace UnityEngine.Tests
             Assert.Single(manager.Shown);
         }
 
+        // Not measured in the Editor (the probe's runtime panel has no manager): our reading of
+        // the documented "menu key up" trigger, and a menu nothing was added to stays unshown.
         [Fact]
         public void TheMenuKeyAsksForAMenuAndAnEmptyMenuIsNotShown()
         {

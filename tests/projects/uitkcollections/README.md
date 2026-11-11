@@ -58,7 +58,8 @@ not depend on them):
   preview and drop line, either half of the target column, release), drops past the columns and
   left of the view, onto the column's own and its neighbours' halves, with sorting on (a click,
   a short move and a drag), Escape, a lost pointer capture, columns that are not reorderable, a
-  hidden column, `Columns.ReorderDisplay`, a column added afterwards, and a tree's primary column.
+  hidden column, `Columns.ReorderDisplay`, a column added afterwards, a column hidden or removed
+  while its header column is pressed, and a tree's primary column.
 
 Every step records the item callbacks it caused (makeItem/bindItem/unbindItem/destroyItem, with
 the element: elements are numbered per control), the events the controls raised, and the state:

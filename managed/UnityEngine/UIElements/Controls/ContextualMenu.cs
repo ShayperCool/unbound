@@ -136,7 +136,7 @@ namespace UnityEngine.UIElements
             if (m_Items[m_Items.Count - 1] is DropdownMenuSeparator last && last.subMenuPath == subMenuPath) return;
             foreach (var item in m_Items)
             {
-                if (item is DropdownMenuAction action && action.name.StartsWith(subMenuPath))
+                if (item is DropdownMenuAction action && action.name.StartsWith(subMenuPath, StringComparison.Ordinal))
                 {
                     m_Items.Add(new DropdownMenuSeparator(subMenuPath));
                     return;
