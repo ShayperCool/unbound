@@ -1002,8 +1002,19 @@ fn main() {
             .iter()
             .map(|resource| match &resource.kind {
                 ResourceKind::Sampler { comparison, .. } => {
-                    let key = unbound_shaders::InlineSampler::from_name(&resource.name)
-                        .map_or(super::SamplerKey::LINEAR_CLAMP, super::SamplerKey::inline);
+                    // The state its name spells, for a sampler that is no texture's; a
+                    // wrongly spelt one is logged (what the Editor does with it in a kernel
+                    // is unmeasured) and samples as the default.
+                    let key = match unbound_shaders::InlineSampler::parse(&resource.name) {
+                        Ok(Some(state)) => super::SamplerKey::inline(state),
+                        Ok(None) => super::SamplerKey::LINEAR_CLAMP,
+                        Err(wrong) => {
+                            tracing::error!(
+                                "compute kernel `{kernel}` of {file}: {wrong}; the sampler is bilinear and clamped unless a texture's state replaces it"
+                            );
+                            super::SamplerKey::LINEAR_CLAMP
+                        }
+                    };
                     Some(super::SamplerKey {
                         compare: if *comparison { 4 } else { 0 },
                         ..key

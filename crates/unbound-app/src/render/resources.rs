@@ -230,7 +230,7 @@ pub struct SamplerKey {
     pub filter: i32,
     pub wrap_u: i32,
     pub wrap_v: i32,
-    /// Along W (a Texture3D's depth); samplers that are not a texture's own repeat there.
+    /// Along W (a Texture3D's depth); the default samplers repeat there.
     pub wrap_w: i32,
     pub aniso: i32,
     /// A comparison sampler's function (Unity's CompareFunction; 0: none).

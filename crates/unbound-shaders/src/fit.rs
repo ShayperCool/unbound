@@ -1391,11 +1391,17 @@ fn named_samplers_resolve(stages: &[&Module]) -> Result<()> {
         if texture_property(name, true).is_some_and(|p| textures.contains(&p)) {
             continue;
         }
-        match InlineSampler::parse(name) {
+        // The Editor names a sampler in lower case, and one that does not start with
+        // `sampler` with that word before it.
+        let lower = name.to_ascii_lowercase();
+        let named = match lower.starts_with("sampler") {
+            true => lower,
+            false => format!("sampler{lower}"),
+        };
+        match InlineSampler::parse(&named) {
             Ok(Some(_)) => {}
             Ok(None) => bail!(
-                "Unrecognized sampler '{}' - does not match any texture and is not a recognized inline name (should contain filter and wrap modes)",
-                name.to_ascii_lowercase()
+                "Unrecognized sampler '{named}' - does not match any texture and is not a recognized inline name (should contain filter and wrap modes)"
             ),
             Err(wrong) => bail!("{wrong}"),
         }
@@ -1439,7 +1445,9 @@ fn compares(ty: &TypeInner) -> bool {
 fn slot_property(name: &str, sampler: bool) -> Option<String> {
     match texture_property(name, sampler) {
         Some(p) => Some(p),
-        None if sampler && InlineSampler::from_name(name).is_some() => Some(name.to_string()),
+        // A wrongly spelt state is a slot too: only the devices that read the name refuse it
+        // ([`named_samplers_resolve`]).
+        None if sampler && InlineSampler::parse(name) != Ok(None) => Some(name.to_string()),
         None => None,
     }
 }

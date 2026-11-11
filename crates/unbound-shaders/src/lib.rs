@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 36;
+pub const FORMAT_VERSION: u32 = 37;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -289,19 +289,14 @@ impl InlineSampler {
                 }
             }
         }
+        // The level's digits: 2, 4, 8 or 16, with no digit after it (nor one place further).
         let aniso = match n.find("aniso") {
             None => 1,
             Some(at) => {
-                let digits: String = n[at + 5..]
-                    .chars()
-                    .take(3)
-                    .take_while(char::is_ascii_digit)
-                    .collect();
-                match digits.as_str() {
-                    "2" => 2,
-                    "4" => 4,
-                    "8" => 8,
-                    "16" => 16,
+                let digit = |k: usize| n[at + 5..].chars().nth(k).and_then(|c| c.to_digit(10));
+                match (digit(0), digit(1), digit(2)) {
+                    (Some(level @ (2 | 4 | 8)), None, None) => level as i32,
+                    (Some(1), Some(6), None) => 16,
                     _ => {
                         return Err(format!(
                             "Unrecognized inline sampler name '{n}' - invalid anisotropic filter value. Only 2/4/8/16 are valid sample counts."
@@ -2392,6 +2387,11 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             state("sampler_TrilinearRepeatAniso16"),
             spelt(2, [0; 3], 16)
         );
+        assert_eq!(
+            state("sampler_TrilinearRepeatAniso16x"),
+            spelt(2, [0; 3], 16)
+        );
+        assert_eq!(state("my_linear_clamp_aniso4_sampler"), spelt(1, [1; 3], 4));
         assert_eq!(state("sampler_LinearClampCompare"), spelt(1, [1; 3], 1));
         // No filter or no wrap word: not an inline state.
         for name in [
@@ -2429,11 +2429,57 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 "sampler_LinearClampAniso160",
                 "invalid anisotropic filter value",
             ),
+            (
+                "sampler_TrilinearClamp_Aniso8_2",
+                "invalid anisotropic filter value",
+            ),
+            (
+                "my_linear_clamp_aniso3_sampler",
+                "invalid anisotropic filter value",
+            ),
         ] {
             let wrong = InlineSampler::parse(name).unwrap_err();
             assert!(wrong.contains(error), "{name}: {wrong}");
             assert!(wrong.contains(&name.to_ascii_lowercase()), "{wrong}");
             assert_eq!(InlineSampler::from_name(name), None);
+        }
+    }
+
+    /// A wrongly spelt inline sampler is the Editor's error where programs sample through the
+    /// samplers they name, whether its name starts with `sampler` or not; OpenGL Core, which
+    /// does not read the name, compiles the program and samples the texture's own state
+    /// (tests/projects/samplerstates `Bad*`).
+    #[test]
+    fn a_wrongly_spelt_inline_sampler_is_refused_where_programs_name_their_samplers() {
+        for (sampler, error) in [
+            (
+                "my_linear_clamp_aniso3_sampler",
+                "invalid anisotropic filter value",
+            ),
+            ("sampler_PointLinearClamp", "only 1 filter mode"),
+        ] {
+            let source = format!(
+                "#pragma vertex vert\n#pragma fragment frag\nTexture2D _B; SamplerState {sampler};\n\
+                 float4 vert(float4 position : POSITION) : SV_POSITION {{ return position; }}\n\
+                 float4 frag(float4 position : SV_POSITION) : SV_Target {{ return _B.Sample({sampler}, position.xy); }}\n"
+            );
+            let compile = |device| {
+                let mut compiler = ShaderCompiler::new(Settings {
+                    device,
+                    ..Settings::default()
+                })
+                .unwrap();
+                compiler.compile(&program(&source, false), &[], false)
+            };
+            let refused = compile(unbound_compat::GraphicsDevice::Vulkan).unwrap_err();
+            let refused = format!("{refused:#}");
+            assert!(
+                refused.contains("Unrecognized inline sampler name 'sampler")
+                    && refused.contains(error),
+                "{refused}"
+            );
+            let own = compile(unbound_compat::GraphicsDevice::OpenGLCore).unwrap();
+            assert!(own.textures.contains(&"_B".to_string()));
         }
     }
 
