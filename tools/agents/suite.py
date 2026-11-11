@@ -478,9 +478,9 @@ def recipes(release):
     R['lightmapuvs'] = guarded(lambda runs: [single_ref(), f'{runs}/lightmapuvs.jsonl', '--uv2', '--expect',
                                              'Cube,Multi,Pieces,Sphere,Ico,Barrel,Rock,Compound,Twins,Grid,TwoUV,Cylinder,'
                                              'BowTie,Doubled,Fin,FlatQuad,FlatTri,Flipped,Folded,Lines,Pinch,Slivers,SphereFin,WeldQuad,default',
-                                             '--recorded', 'Hard30/Organic',
+                                             '--recorded', 'Hard30/Organic,NoWeld/Organic',
                                              '--expect-variants', 'Calc,Default,Distort,Hard30,Manual,Off,Raw,RawOff,Repair,RepairOff,Names,'
-                                             'OptPolygons,OptVertices,OldOptOff,OldOptOn,NormImport,NormCalc,NormCalc30,NormCalc180,NormLegacy,NormUnweighted,'
+                                             'OptPolygons,OptVertices,OldOptOff,OldOptOn,NoWeld,NoWeldOff,NoWeldRaw,NormImport,NormCalc,NormCalc30,NormCalc180,NormLegacy,NormUnweighted,'
                                              'NormArea,NormAngle,NormGroups,NormFromAngle,NormNoSplit,NormNone'])
     R['lightmapuvs'] += [py('compare_normals.py', single_ref(), '{runs}/unbound/lightmapuvs.jsonl', '--expect',
                               'Authored,Bare,Bridge,BridgeObj,Cross,Cube,Cylinder,Edges,Faces,FlatPoly,FlatQuad,FlatTri,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Pinch,Polys,Prism,Seam,Slit,SlitGroups,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV,WeldDiag,WeldQuad,WeldTri')]
