@@ -93,7 +93,7 @@ impl Inventory {
             let (reading, contributors, detail) = match count {
                 Ok(count) if count > 0 => (
                     "Unsupported", count,
-                    "precomputed realtime GI is drawn only in part: renderers with Preserve UVs lit by point, spot and directional lights and the environment, with directional lightmaps' directionality (other light types, automatic charts and light probes with baked lighting are not; docs/REALTIME_GI.md)".into(),
+                    "precomputed realtime GI is drawn only in part: renderers with Preserve UVs lit by point, spot and directional lights and the environment, with directional lightmaps' directionality (other light types and automatic charts are not; docs/REALTIME_GI.md)".into(),
                 ),
                 Err(error) => ("Incomplete", 0, format!("cannot determine realtime GI impact: {error}")),
                 Ok(_) if settings.is_some_and(|(_, enabled)| *enabled) => (

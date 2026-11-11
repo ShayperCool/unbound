@@ -133,7 +133,7 @@ namespace Unbound.Tests
                 var set = first.m_Self;
                 var coefficients = new float[27 * 4];
                 coefficients[27 * 2 + 9] = 0.25f;
-                Assert.True(RealtimeGI.ApplyProbes(set, coefficients, 4));
+                RealtimeGI.ApplyProbes(set, coefficients, 4);
                 int cell = -1;
                 Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out var sh));
                 Assert.Equal(0.25f, sh[1, 0]);
@@ -144,14 +144,30 @@ namespace Unbound.Tests
                 RealtimeGI.ReleaseProbes(set, Array.Empty<ProbeSet>());
                 Assert.False(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out _));
 
-                // Baked coefficients a script gives the probes stay: realtime GI stops.
-                Assert.True(RealtimeGI.ApplyProbes(set, coefficients, 4));
+                // Probes with baked lighting too take the realtime lighting added to it
+                // (tests/projects/realtimegi roombakedenvironment-*), LightProbes.bakedProbes
+                // stays the baked part, and realtime GI's release leaves that part alone.
                 var assigned = new SphericalHarmonicsL2[4];
                 assigned[2][1, 0] = 0.75f;
+                assigned[2][0, 3] = -0.5f;
                 first.bakedProbes = assigned;
-                Assert.False(RealtimeGI.ApplyProbes(first.m_Self, coefficients, 4));
+                RealtimeGI.ApplyProbes(first.m_Self, coefficients, 4);
+                Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));
+                Assert.Equal(1f, sh[1, 0]);
+                Assert.Equal(-0.5f, sh[0, 3]);
                 Assert.Equal(0.75f, first.bakedProbes[2][1, 0]);
-                Assert.False(first.m_Self.Realtime);
+                // The next update's lighting replaces the last one's, not the baked part.
+                coefficients[27 * 2 + 9] = 0.125f;
+                RealtimeGI.ApplyProbes(first.m_Self, coefficients, 4);
+                Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));
+                Assert.Equal(0.875f, sh[1, 0]);
+                Assert.Equal(0.875f, set.Snapshot().Probes[2][1, 0]);
+                Assert.Equal(0.75f, set.Snapshot().BakedAlone[2][1, 0]);
+                RealtimeGI.ReleaseProbes(set, Array.Empty<ProbeSet>());
+                Assert.False(set.Realtime);
+                Assert.True(set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out sh));
+                Assert.Equal(0.75f, sh[1, 0]);
+                Assert.Equal(0.75f, first.bakedProbes[2][1, 0]);
             }
             finally
             {

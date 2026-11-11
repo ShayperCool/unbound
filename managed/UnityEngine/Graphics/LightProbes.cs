@@ -32,9 +32,12 @@ namespace UnityEngine
         /// (tests/projects/realtimegi), <see cref="Probes"/> holds zeros and interpolation gives
         /// nothing (<see cref="Evaluate"/>).</summary>
         internal bool Baked = true;
-        /// <summary>Whether <see cref="Probes"/> holds the realtime lighting precomputed realtime
-        /// GI gives probes that have no baked lighting (<see cref="RealtimeGI"/>).</summary>
+        /// <summary>Whether <see cref="Probes"/> holds the lighting precomputed realtime GI gives
+        /// the probes (<see cref="RealtimeGI"/>): alone, or added to their baked lighting.</summary>
         internal bool Realtime;
+        /// <summary>The baked coefficients alone while <see cref="Probes"/> holds them with the
+        /// realtime lighting added (LightProbes.bakedProbes reads these); else null.</summary>
+        internal SphericalHarmonicsL2[] BakedAlone;
         /// <summary>Per probe, the occlusion of the mixed lights by shadow mask channel.</summary>
         internal Vector4[] Occlusion = Array.Empty<Vector4>();
         internal Cell[] Cells = Array.Empty<Cell>();
@@ -49,6 +52,7 @@ namespace UnityEngine
             Probes = (SphericalHarmonicsL2[])Probes.Clone(),
             Baked = Baked,
             Realtime = Realtime,
+            BakedAlone = (SphericalHarmonicsL2[])BakedAlone?.Clone(),
             Occlusion = Occlusion,
             Cells = Cells,
             HullRays = HullRays,
@@ -384,7 +388,7 @@ namespace UnityEngine
 
         public SphericalHarmonicsL2[] bakedProbes
         {
-            get => m_Set.Baked ? (SphericalHarmonicsL2[])m_Set.Probes.Clone() : Array.Empty<SphericalHarmonicsL2>();
+            get => m_Set.Baked ? (SphericalHarmonicsL2[])(m_Set.BakedAlone ?? m_Set.Probes).Clone() : Array.Empty<SphericalHarmonicsL2>();
             set
             {
                 if (value == null || value.Length != m_Set.Positions.Length)
@@ -394,6 +398,7 @@ namespace UnityEngine
                 }
                 m_Set.Probes = (SphericalHarmonicsL2[])value.Clone();
                 m_Set.Baked = true;
+                m_Set.BakedAlone = null;
             }
         }
 
@@ -420,6 +425,7 @@ namespace UnityEngine
                     for (int k = 0; k < 27; k++) probes[i][k / 9, k % 9] = value[i * 27 + k];
                 m_Set.Probes = probes;
                 m_Set.Baked = true;
+                m_Set.BakedAlone = null;
             }
         }
 
