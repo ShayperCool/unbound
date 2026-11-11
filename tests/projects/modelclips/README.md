@@ -12,8 +12,9 @@ settings and animation compression Off, KeyframeReduction and Optimal, and `RigS
 animation import. Two Humanoid rigs carry one clip each under a reducing compression:
 `HumanReduced` (Keyframe Reduction, Rotation and Scale Errors 5, Position Error 0.5) and
 `HumanOptimal` (Optimal, Position Error 5); `HumanLong` is the same rig with compression Off
-and a clip of 31 frames (made by tests/projects/humanoid/make_models.py). Other Humanoid clip
-settings are not covered.
+and a clip of 31 frames (made by tests/projects/humanoid/make_models.py); `HumanTwistNone`,
+`HumanTwistAll` and `HumanTwistPart` carry animated bones that are not human bones under three
+clip masks. Other Humanoid clip settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
 `AnimationUtility.GetAnimationClipSettings`, curve bindings, the curves' values at every half
@@ -105,12 +106,34 @@ error a Humanoid clip's curves take.
   value) takes part in the last key's tangent without becoming a key. At 20 frames
   (`HumanReduced`'s clip with compression Off) the division is exact and the last tangent is
   that slope itself.
-- The Editor's clips have no transform curves (mask type None); the probe records Animator
-  curves only. Unbound keeps the transform curves of the two helper bones outside the human
-  skeleton (docs/COMPATIBILITY_GAPS.md).
+- These clips have no transform curves (mask type None); `keys.*` records Animator curves only.
 - A curve whose keys all stay below 1e-6 is recorded as `{"noise":1}`: such values are float
   noise of the muscle conversion around zero, above the reduction's own zero limit, and which
   of their keys stay follows their last bits (66 of the 130 curves of each model here).
+
+## Transform curves of Humanoid clips
+
+`HumanTwistNone`, `HumanTwistAll` and `HumanTwistPart` are one file (made by
+tests/projects/humanoid/make_models.py: the humanoid probe's small rig and clip, with its two
+twist bones, which are not human bones, animated too: the left one turns, the right one moves)
+under three clip masks: None; made from the model with every transform on; and the same with
+the left twist bone off. `curves.<model>.<clip>` records the number of Animator curves, of
+curves of other kinds and of paths with transform curves; `curves.<model>.<clip>.<path>` the
+properties of such a path, the number of keys and the first and the middle key of each
+(positions times 100, the inverse of the rig's root scale). The Manual's Animation tab
+([Mask](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AnimationClip.html)) says
+the Transform list picks which transforms are animated; it does not say what a Humanoid clip
+keeps without a mask.
+
+- With mask type None the clip has its 130 Animator curves and no transform curve.
+- With a mask made from the model the two twist bones keep their curves, all ten properties
+  each (position, rotation and scale, 21 keys), though the take turns one and moves the
+  other; the human bones, the root above the hips and the model's root have none.
+- A transform the mask turns off has no curves (`HumanTwistPart`: the right twist bone only).
+- The Animator curves are 130 under each mask.
+
+Not measured: a mask copied from another asset, an empty mask made from the model, a transform
+between two human bones, and a bone the take does not animate (the exporter keys every bone).
 
 Not in the reference (an exploratory capture of a richer rig, 130 curves over 31 frames, the
 same in each of its 20 clips): the same rule gives the Editor's keys of all 130 curves at
