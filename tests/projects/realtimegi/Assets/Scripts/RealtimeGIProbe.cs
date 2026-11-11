@@ -165,6 +165,84 @@ public class RealtimeGIProbe : MonoBehaviour
         Capture("room-directional-noshadows", s);
         Destroy(sun.gameObject);
 
+        // The environment alone (no light on, the panel's emission set to black): a gradient
+        // (Trilight) ambient, then the procedural skybox, then the skybox with ambient
+        // intensity 2.
+        DynamicGI.SetEmissive(s.panel, Color.black);
+        RenderSettings.ambientMode = AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor = new Color(0.5f, 0.6f, 0.9f);
+        RenderSettings.ambientEquatorColor = new Color(0.4f, 0.35f, 0.3f);
+        RenderSettings.ambientGroundColor = new Color(0.15f, 0.12f, 0.1f);
+        DynamicGI.UpdateEnvironment();
+        yield return Converge();
+        Capture("room-gradient", s);
+        var skyOnly = new Material(Shader.Find("Skybox/Procedural"));
+        skyOnly.SetFloat("_Exposure", 1f);
+        RenderSettings.skybox = skyOnly;
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        DynamicGI.UpdateEnvironment();
+        yield return Converge();
+        Capture("room-sky-only", s);
+        RenderSettings.ambientIntensity = 2f;
+        DynamicGI.UpdateEnvironment();
+        yield return Converge();
+        Capture("room-sky-only-intensity", s);
+
+        // RenderSettings.ambientProbe at another ambient intensity without
+        // DynamicGI.UpdateEnvironment (within the frame: realtime GI does not see it).
+        RenderSettings.ambientIntensity = 0.5f;
+        Record("room-sky-only-intensity-half", "\"ambientProbe\":" + AmbientProbe());
+
+        // The sky with a sun that adds no light of its own to realtime GI (bounce intensity 0):
+        // the ambient intensity back at 1 and a directional light, then that light turned, both
+        // without DynamicGI.UpdateEnvironment.
+        RenderSettings.ambientIntensity = 1f;
+        sun = Sun(LightShadows.None, 40f, 25f);
+        sun.bounceIntensity = 0f;
+        yield return Converge();
+        Capture("room-sky-sun", s);
+        sun.transform.rotation = Quaternion.Euler(15f, -120f, 0f);
+        yield return Converge();
+        Capture("room-sky-sun-turned", s);
+        Destroy(sun.gameObject);
+        yield return Converge();
+
+        // DynamicGI.SetEnvironmentData, once the sky without the sun has settled: every face its
+        // own colors, brighter along its columns (red) and rows (green). Then the ambient
+        // intensity changed (documented: that replaces the data), and the data set again
+        // followed by DynamicGI.UpdateEnvironment. What the call throws for an array of another
+        // length and for none.
+        var data = EnvironmentData();
+        DynamicGI.SetEnvironmentData(data);
+        yield return Converge();
+        Capture("room-envdata", s);
+        RenderSettings.ambientIntensity = 2f;
+        yield return Converge();
+        Capture("room-envdata-intensity", s);
+        DynamicGI.SetEnvironmentData(data);
+        yield return Converge();
+        DynamicGI.UpdateEnvironment();
+        yield return Converge();
+        Capture("room-envdata-update", s);
+        Record("room-envdata-errors", "\"wrongLength\":" + Thrown(new float[100], true) + ",\"noArray\":" + Thrown(null, false));
+
+        // With the ambient intensity still 2 (documented: it scales only a skybox's light): a
+        // skybox ambient mode without a skybox material, the gradient again, and a custom
+        // ambient mode with another ambient color.
+        RenderSettings.skybox = null;
+        yield return Converge();
+        Capture("room-sky-none", s);
+        RenderSettings.ambientMode = AmbientMode.Trilight;
+        yield return Converge();
+        Capture("room-gradient-intensity", s);
+        RenderSettings.ambientMode = AmbientMode.Custom;
+        RenderSettings.ambientLight = new Color(0.2f, 0.7f, 0.3f);
+        yield return Converge();
+        Capture("room-ambient-custom", s);
+        RenderSettings.ambientIntensity = 1f;
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        DynamicGI.UpdateEnvironment();
+
         foreach (var name in new[] { "RoomScaled", "RoomDirectional", "RoomSystems" })
         {
             yield return Load(name);
@@ -197,6 +275,45 @@ public class RealtimeGIProbe : MonoBehaviour
             DynamicGI.indirectScale = sceneScale;
         }
         Finish();
+    }
+
+    /// <summary>An environment for DynamicGI.SetEnvironmentData: six faces of 8 x 8 RGBA texels.</summary>
+    static float[] EnvironmentData()
+    {
+        const int Size = 8;
+        var data = new float[Size * Size * 6 * 4];
+        for (int face = 0; face < 6; face++)
+            for (int y = 0; y < Size; y++)
+                for (int x = 0; x < Size; x++)
+                {
+                    int i = ((face * Size + y) * Size + x) * 4;
+                    data[i] = (0.05f + 0.1f * face) * (x + 1) / 4f;
+                    data[i + 1] = (0.6f - 0.1f * face) * (y + 1) / 4f;
+                    data[i + 2] = 0.2f * (1 + face % 2);
+                    data[i + 3] = 1f;
+                }
+        return data;
+    }
+
+    /// <summary>What DynamicGI.SetEnvironmentData throws for <paramref name="input"/>, as a JSON
+    /// string: the exception's type, with its message or (the runtime words the message of a
+    /// missing argument itself) the argument it names; empty when it throws nothing.</summary>
+    static string Thrown(float[] input, bool message)
+    {
+        string thrown = "";
+        try
+        {
+            DynamicGI.SetEnvironmentData(input);
+        }
+        catch (ArgumentException e)
+        {
+            thrown = e.GetType().Name + ": " + (message ? e.Message : e.ParamName);
+        }
+        catch (Exception e)
+        {
+            thrown = e.GetType().Name;
+        }
+        return "\"" + thrown.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", " ") + "\"";
     }
 
     static Light Sun(LightShadows shadows, float x, float y)
@@ -249,6 +366,16 @@ public class RealtimeGIProbe : MonoBehaviour
     void Record(string kind, string body) =>
         m_Out.Append("{\"case\":\"").Append(kind).Append("\",").Append(body).Append("}\n");
 
+    static string AmbientProbe()
+    {
+        var body = new StringBuilder("[");
+        var ambient = RenderSettings.ambientProbe;
+        for (int c = 0; c < 3; c++)
+            for (int k = 0; k < 9; k++)
+                body.Append(c + k > 0 ? "," : "").Append(F(ambient[c, k]));
+        return body.Append(']').ToString();
+    }
+
     void Capture(string name, RealtimeGIScene s)
     {
         var body = new StringBuilder();
@@ -273,12 +400,7 @@ public class RealtimeGIProbe : MonoBehaviour
                     body.Append(c + k > 0 ? "," : "").Append(F(sh[c, k]));
             body.Append(']');
         }
-        body.Append("],\"ambientProbe\":[");
-        var ambient = RenderSettings.ambientProbe;
-        for (int c = 0; c < 3; c++)
-            for (int k = 0; k < 9; k++)
-                body.Append(c + k > 0 ? "," : "").Append(F(ambient[c, k]));
-        body.Append(']');
+        body.Append("],\"ambientProbe\":").Append(AmbientProbe());
         Record(name, body.ToString());
 
         // One file per realtime lightmap atlas the renderers use: <case>.atlas for the first,
