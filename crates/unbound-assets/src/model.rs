@@ -627,6 +627,15 @@ pub struct ModelClip {
     /// HumanReduced, HumanOptimal). None: the keys stay on every frame.
     #[serde(default)]
     pub human_key_reduction: Option<f32>,
+    /// A Humanoid clip: the paths of the nodes whose transform curves the clip has beside its
+    /// muscle curves, if they turn out not to be bones of the human skeleton (which only the
+    /// avatar knows): the nodes the take animates and the clip's mask leaves on. With mask type
+    /// None there are none; an asset mask is applied where the model's documents are made.
+    /// The curves of every node stay in `curves` for the conversion (matches the Unity
+    /// 6000.0.71f1 Editor, tests/projects/modelclips HumanTwistNone, HumanTwistAll,
+    /// HumanTwistPart). None for other rigs.
+    #[serde(default)]
+    pub human_transforms: Option<Vec<String>>,
 }
 
 /// A clip's transform mask. The Editor removes the curves of transforms the mask leaves out
@@ -812,7 +821,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 44;
+    const VERSION: u32 = 45;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1520,20 +1529,17 @@ impl<'a> Builder<'a> {
                         range.name
                     ));
                 }
-                if range.mask != ClipMask::None {
-                    warnings.push(format!(
-                        "humanoid clip '{}' has a transform mask: its muscle curves are not measured (not supported)",
-                        range.name
-                    ));
-                }
             }
+            let mut human_transforms = human.then(Vec::new);
             let mut curves = Vec::new();
             for node in baked.nodes.iter().filter(|_| !empty) {
                 let Some(&index) = self.node_index.get(&node.element_id) else {
                     continue;
                 };
                 let path = self.path_of(index);
-                if !range.mask.keeps(&path) {
+                // A Humanoid clip's mask does not take a node out of the conversion: it says
+                // which other transforms keep their curves.
+                if !human && !range.mask.keeps(&path) {
                     continue;
                 }
                 // Every animated translation, rotation and scale gets its curves, constant ones
@@ -1544,13 +1550,21 @@ impl<'a> Builder<'a> {
                 // every channel (their muscle curves are converted from the whole pose), and so
                 // do pivoted nodes, whose position follows their rotation and scale.
                 let source = self.sources[index as usize];
+                let animated = animated_channels(stack, source);
                 let channels = if self.settings.animation_type == 3 || self.pivoted(index) {
                     [true; 3]
                 } else {
-                    animated_channels(stack, source)
+                    animated
                 };
                 if channels == [false; 3] {
                     continue;
+                }
+                if let Some(kept) = &mut human_transforms
+                    && animated != [false; 3]
+                    && range.mask != ClipMask::None
+                    && range.mask.keeps(&path)
+                {
+                    kept.push(path.clone());
                 }
                 // Every frame of the range; a pivoted node's position follows its rotation and
                 // scale too, so it is evaluated as placed.
@@ -1740,6 +1754,7 @@ impl<'a> Builder<'a> {
                 // A Humanoid clip's transform curves keep every frame under every compression.
                 smooth: every_frame || human,
                 human_key_reduction,
+                human_transforms,
                 additive_reference,
                 settings: range.settings.clone(),
                 preview: range.preview,

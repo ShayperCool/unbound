@@ -792,8 +792,17 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
     let mut positions = Vec::new();
     let mut rotations = Vec::new();
     let mut scales = Vec::new();
+    // A Humanoid clip's nodes all stay for the conversion; its mask picks, among the paths the
+    // importer lists, the transforms whose curves the converted clip keeps.
+    let human_transforms: Option<Vec<Value>> = clip.human_transforms.as_ref().map(|paths| {
+        paths
+            .iter()
+            .filter(|path| mask.is_none_or(|m| mask_keeps(m, path)))
+            .map(|path| scalar(path.as_str()))
+            .collect()
+    });
     for node in &clip.curves {
-        if mask.is_some_and(|m| !mask_keeps(m, &node.path)) {
+        if human_transforms.is_none() && mask.is_some_and(|m| !mask_keeps(m, &node.path)) {
             continue;
         }
         if !node.positions.is_empty() {
@@ -895,6 +904,10 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
             (
                 "m_UnboundHumanKeyReduction",
                 scalar(clip.human_key_reduction.unwrap_or(0.0)),
+            ),
+            (
+                "m_UnboundHumanTransformPaths",
+                human_transforms.map_or(Value::Null, Value::Seq),
             ),
             (
                 "m_AnimationClipSettings",

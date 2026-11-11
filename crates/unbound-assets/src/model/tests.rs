@@ -1304,6 +1304,53 @@ fn a_humanoid_clips_transform_keys_take_the_shared_frame_times() {
     assert_ne!(5.0 * (1.0f32 / 24.0), (5.0f64 / 24.0) as f32);
 }
 
+/// The transforms whose curves a Humanoid clip keeps beside its muscle curves: the nodes the
+/// take animates and the clip's mask leaves on, none with mask type None (tests/projects/modelclips
+/// HumanTwistNone, HumanTwistAll, HumanTwistPart: the take also animates the two twist bones,
+/// which are not human bones). The importer lists the candidates, the human bones among them,
+/// which the avatar takes out; every node's curves stay for the conversion whatever the mask.
+/// Control: a Generic rig lists nothing and its mask removes curves.
+#[test]
+fn a_humanoid_clip_lists_the_transforms_its_mask_keeps() {
+    let import = |path: &str| {
+        let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/modelclips/Assets/Resources")
+            .join(path);
+        let meta = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+        let model = ModelImporter::default()
+            .import(&source, &std::fs::read(&source).unwrap(), &meta)
+            .unwrap();
+        assert!(
+            !model.warnings.iter().any(|w| w.contains("transform mask")),
+            "{:?}",
+            model.warnings
+        );
+        model.clips.into_iter().find(|c| !c.preview).unwrap()
+    };
+    let left = "Root/Hips/SpineHelper/Spine/LeftUpperArm/LeftUpperArmTwist";
+    let right = "Root/Hips/SpineHelper/Spine/RightUpperArm/RightUpperArmTwist";
+    let none = import("HumanTwistNone.fbx");
+    let all = import("HumanTwistAll.fbx");
+    let part = import("HumanTwistPart.fbx");
+    assert_eq!(none.human_transforms.as_deref(), Some(&[][..]));
+    let listed = all.human_transforms.clone().unwrap();
+    assert!(listed.iter().any(|p| p == left) && listed.iter().any(|p| p == right));
+    // The model's root, which the take does not animate, is not a candidate; the bones are
+    // (the exporter keys every bone), the human ones too.
+    assert!(!listed.iter().any(|p| p.is_empty()));
+    assert!(listed.iter().any(|p| p == "Root/Hips"));
+    let listed = part.human_transforms.clone().unwrap();
+    assert!(!listed.iter().any(|p| p == left) && listed.iter().any(|p| p == right));
+    // The curves themselves are the same under every mask: the conversion needs each node.
+    let paths = |clip: &ModelClip| -> Vec<String> { clip.curves.iter().map(|c| c.path.clone()).collect() };
+    assert_eq!(paths(&none), paths(&all));
+    assert_eq!(paths(&none), paths(&part));
+    assert!(paths(&part).iter().any(|p| p == left));
+
+    let generic = import("Rig.fbx");
+    assert_eq!(generic.human_transforms, None);
+}
+
 /// A Humanoid clip under a reducing compression keeps its transform keys on every frame, as
 /// with compression Off, and carries the Position Error its muscle curves are reduced with
 /// (tests/projects/modelclips HumanReduced: Keyframe Reduction with rotation and scale errors

@@ -635,6 +635,7 @@ mod tests {
             preview: false,
             smooth: false,
             human_key_reduction: None,
+            human_transforms: None,
         }
     }
 

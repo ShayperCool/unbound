@@ -339,6 +339,10 @@ namespace UnityEngine
             return i >= HumanClipImport.RootFirst && i < HumanClipImport.GoalFirst;
         }
 
+        /// <summary>Whether a Humanoid model clip keeps the curves of a transform that is not a
+        /// bone of the human skeleton (<see cref="m_HumanTransformPaths"/>).</summary>
+        bool KeepsTransformCurves(string path) => m_HumanTransformPaths == null || m_HumanTransformPaths.Contains(path);
+
         /// <summary>Converts a Humanoid model's transform curves into muscle curves (once).</summary>
         internal void ConvertHumanCurves()
         {
@@ -380,7 +384,9 @@ namespace UnityEngine
                 }
                 if (group == null || component < 0)
                 {
-                    kept.Add(c);
+                    // Curves of other kinds stay; a transform outside the avatar's skeleton
+                    // keeps its curves like any transform that is not a human bone.
+                    if (b.ClassId != EngineTypes.TransformId || KeepsTransformCurves(b.Path)) kept.Add(c);
                     continue;
                 }
                 if (!group.TryGetValue(node, out var curves)) group[node] = curves = new AnimationCurve[width];
@@ -391,8 +397,9 @@ namespace UnityEngine
                     start = Math.Min(start, c.Curve[0].time);
                     stop = Math.Max(stop, c.Curve[n - 1].time);
                 }
-                // Curves of the human skeleton's nodes become muscle curves; the others stay.
-                if (constant.HumanSkeletonReverseIndexArray[node] < 0) kept.Add(c);
+                // Curves of the human skeleton's nodes become muscle curves; of the others, the
+                // ones the take animates and the clip's mask leaves on stay.
+                if (constant.HumanSkeletonReverseIndexArray[node] < 0 && KeepsTransformCurves(b.Path)) kept.Add(c);
             }
             if (!(start < stop)) return;
             // The samples span the curves' keys, whose last one is the clip's end (the frame

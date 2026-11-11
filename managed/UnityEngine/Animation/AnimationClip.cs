@@ -77,6 +77,12 @@ namespace UnityEngine
         /// fraction) its converted curves are reduced with (<see cref="Unbound.Runtime.Humanoid.HumanClipReduction"/>);
         /// 0: the keys stay on every frame.</summary>
         internal float m_HumanKeyReduction;
+        /// <summary>A Humanoid model clip: the paths of the transforms whose curves the clip keeps
+        /// beside its muscle curves when they are not bones of the avatar's human skeleton (the
+        /// ones the take animates and the clip's mask leaves on; none with mask type None,
+        /// tests/projects/modelclips HumanTwist*). Null: every such curve stays (a clip not made
+        /// by the model importer).</summary>
+        internal HashSet<string> m_HumanTransformPaths;
         internal WrapMode m_WrapMode;
         internal Bounds m_Bounds;
         internal bool m_Legacy;
@@ -564,6 +570,7 @@ namespace UnityEngine
                 m_ObjectCurves = new List<ClipObjectCurve>(m_ObjectCurves),
                 m_SampleRate = m_SampleRate,
                 m_HumanKeyReduction = m_HumanKeyReduction,
+                m_HumanTransformPaths = m_HumanTransformPaths,
                 m_WrapMode = m_WrapMode,
                 m_Bounds = m_Bounds,
                 m_Legacy = m_Legacy,
@@ -948,6 +955,12 @@ namespace Unbound.Runtime
             clip.m_Legacy = body.Bool("m_Legacy");
             clip.m_SampleRate = body.Float("m_SampleRate", 60f);
             clip.m_HumanKeyReduction = body.Float("m_UnboundHumanKeyReduction", 0f);
+            var humanTransforms = body.Get("m_UnboundHumanTransformPaths");
+            if (humanTransforms != null && !humanTransforms.IsNull)
+            {
+                clip.m_HumanTransformPaths = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var path in humanTransforms.Seq() ?? Array.Empty<YNode>()) clip.m_HumanTransformPaths.Add(path.Scalar ?? "");
+            }
             clip.m_WrapMode = (WrapMode)body.Int("m_WrapMode");
             var bounds = body.Get("m_Bounds");
             if (bounds != null) clip.m_Bounds = new Bounds(bounds.Vector3("m_Center"), bounds.Vector3("m_Extent") * 2f);
