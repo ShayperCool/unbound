@@ -132,6 +132,19 @@ namespace Unbound.Runtime
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.EnteredEditMode);
         }
 
+        static bool s_EditModeUpdateRequested;
+
+        internal static void QueuePlayerLoopUpdate() => s_EditModeUpdateRequested = true;
+
+        internal static void RunQueuedEditModeUpdate()
+        {
+            if (!s_EditModeUpdateRequested) return;
+            s_EditModeUpdateRequested = false;
+            Lifecycle.RunPendingStarts();
+            Lifecycle.RunUpdate();
+            Lifecycle.RunLateUpdate();
+        }
+
         static readonly Dictionary<Type, bool> s_RunsInEditMode = new Dictionary<Type, bool>();
 
         /// <summary>Whether a script's messages run now: always in Play mode; in Edit mode only
@@ -144,7 +157,7 @@ namespace Unbound.Runtime
             {
                 if (!s_RunsInEditMode.TryGetValue(type, out var runs))
                 {
-                    runs = type.IsDefined(typeof(ExecuteAlways), false) || type.IsDefined(typeof(ExecuteInEditMode), false);
+                    runs = type.IsDefined(typeof(ExecuteAlways), true) || type.IsDefined(typeof(ExecuteInEditMode), true);
                     s_RunsInEditMode[type] = runs;
                 }
                 return runs;

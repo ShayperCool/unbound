@@ -1,0 +1,10 @@
+{"k":"edit.plain","v":""}
+{"k":"edit.disabled","v":""}
+{"k":"edit.inactive","v":""}
+{"k":"play.plain","v":"Awake,OnEnable,Update"}
+{"k":"play.disabled","v":"Awake"}
+{"k":"play.inactive","v":""}
+{"k":"enabled.plain","v":"Update"}
+{"k":"enabled.disabled","v":"OnEnable,Update"}
+{"k":"enabled.inactive","v":"Awake,OnEnable,Update"}
+{"k":"complete","v":"1"}

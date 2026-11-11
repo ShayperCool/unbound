@@ -393,6 +393,7 @@ namespace Unbound.Runtime
         static void Boot(string firstScene, bool unused)
         {
             AnimationSystem.BeginPlayMode();
+            var initialScene = string.IsNullOrEmpty(firstScene) ? null : SceneManagerInternal.PreparePlayModeScene(firstScene);
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
             Unbound.Runtime.NativePlugins.Boot();
             // The Editor loads them before entering Play mode.
@@ -412,7 +413,7 @@ namespace Unbound.Runtime
             {
                 try
                 {
-                    SceneManagerInternal.LoadPath(firstScene, playModeEntry: true);
+                    SceneManagerInternal.LoadPath(firstScene, playModeEntry: true, prepared: initialScene);
                 }
                 catch (Exception e)
                 {
@@ -525,6 +526,7 @@ namespace Unbound.Runtime
         {
             UpdateInput();
             MainThreadContext.Instance.RunPending();
+            EditorSession.RunQueuedEditModeUpdate();
             UnityEditor.EditorApplication.RunEditorCallbacksNow();
             Jobs.JobSystem.Flush();
             Safety.EndFrame();

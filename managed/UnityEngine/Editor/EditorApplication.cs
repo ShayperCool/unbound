@@ -132,8 +132,8 @@ namespace UnityEditor
             s_StepRequested = true;
         }
         public static void Beep() => Stubs.Ignored("EditorApplication.Beep", "plays no system sound");
-        [Unbound.EditorFaithful("Unbound updates the player loop every frame, so a queued update always comes")]
-        public static void QueuePlayerLoopUpdate() { }
+        /// <summary>Requests an Edit mode script update even without a scene modification.</summary>
+        public static void QueuePlayerLoopUpdate() => EditorSession.QueuePlayerLoopUpdate();
         [Unbound.EditorFaithful("no Hierarchy window is open (as the batch-mode Editor)")]
         public static void RepaintHierarchyWindow() { }
         [Unbound.EditorFaithful("no Project window is open (as the batch-mode Editor)")]

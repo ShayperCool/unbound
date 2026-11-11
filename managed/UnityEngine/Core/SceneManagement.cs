@@ -528,7 +528,7 @@ namespace UnityEngine.SceneManagement
                 UnloadForSingleLoad(data, sceneManagerLoad);
                 Resources.UnloadUnusedAssetsInternal();
             }
-            SceneRegistry.Loaded.Add(data);
+            if (!SceneRegistry.Loaded.Contains(data)) SceneRegistry.Loaded.Add(data);
             data.IsLoaded = true;
             data.LoadingState = Scene.LoadingState.Loading;
             var previousActive = SceneRegistry.Active;
@@ -544,8 +544,9 @@ namespace UnityEngine.SceneManagement
             data.LoadingState = Scene.LoadingState.Loaded;
             if (parameters.loadSceneMode == LoadSceneMode.Single) Time.LevelLoaded();
             // The active scene changes before sceneLoaded (measured: tests/projects/editorcallbacks).
-            if (SceneRegistry.Active == data && previousActive != data)
-                SceneManager.Internal_ActiveSceneChanged(previousActive != null ? new Scene(previousActive.Handle) : default, new Scene(data.Handle));
+            if (SceneRegistry.Active == data && (previousActive != data || reported == PlayModeEntry))
+                SceneManager.Internal_ActiveSceneChanged(reported != PlayModeEntry && previousActive != null
+                    ? new Scene(previousActive.Handle) : default, new Scene(data.Handle));
             SceneManager.Internal_SceneLoaded(new Scene(data.Handle), reported ?? parameters.loadSceneMode);
         }
 
@@ -670,12 +671,26 @@ namespace UnityEngine.SceneManagement
             return new Scene(data.Handle);
         }
 
+        /// <summary>The initial scene owns objects created while the Editor domain loads for
+        /// Play mode, before runtime initializers and the scene file's activation.</summary>
+        internal static SceneData PreparePlayModeScene(string path)
+        {
+            var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path,
+                SceneUtility.GetBuildIndexByScenePath(path));
+            data.IsLoaded = true;
+            data.LoadingState = Scene.LoadingState.Loaded;
+            SceneRegistry.Loaded.Add(data);
+            SceneRegistry.Active = data;
+            return data;
+        }
+
         /// <summary>Loads a scene by path, also one outside the build settings (as the Editor can);
         /// <paramref name="playModeEntry"/>: the scene Play mode starts with.</summary>
-        internal static Scene LoadPath(string path, bool playModeEntry = false)
+        internal static Scene LoadPath(string path, bool playModeEntry = false, SceneData prepared = null)
         {
             int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
-            var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
+            var data = prepared != null && SceneRegistry.Get(prepared.Handle) == prepared
+                ? prepared : SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
             Perform(data, new LoadSceneParameters(LoadSceneMode.Single), playModeEntry ? PlayModeEntry : null);
             return new Scene(data.Handle);
         }

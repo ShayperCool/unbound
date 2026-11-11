@@ -2,7 +2,6 @@ using System;
 
 namespace UnityEngine
 {
-    [AttributeUsage(AttributeTargets.Field)]
     public sealed partial class SerializeField : Attribute
     {
     }
@@ -12,7 +11,6 @@ namespace UnityEngine
     {
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public partial class HideInInspector : Attribute
     {
     }
@@ -45,12 +43,10 @@ namespace UnityEngine
     {
     }
 
-    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public sealed partial class ExecuteInEditMode : Attribute
     {
     }
 
-    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public sealed partial class ExecuteAlways : Attribute
     {
     }
@@ -62,7 +58,6 @@ namespace UnityEngine
         public int order { get; private set; }
     }
 
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
     public sealed partial class AddComponentMenu : Attribute
     {
         public AddComponentMenu(string menuName) { componentMenu = menuName; }
@@ -119,7 +114,7 @@ namespace UnityEngine
     {
     }
 
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface | AttributeTargets.Enum | AttributeTargets.Delegate, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public sealed partial class ExcludeFromPresetAttribute : Attribute
     {
     }
