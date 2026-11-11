@@ -199,6 +199,8 @@ namespace UnityEngine
             }
             loaded.Systems = systems.ToArray();
             s_Scenes.Add(loaded);
+            if (settings != null && !settings.realtimeEnvironmentLighting)
+                Warn("environment-baked:" + file.Path, $"{file.Path}: its environment lighting is baked (Lighting Settings); what precomputed realtime GI takes as its environment then is not measured: it takes the ambient source all the same.");
             if (LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
                 Warn("directional:" + file.Path, $"{file.Path}: directional realtime lightmaps are not supported yet: its precomputed realtime GI is drawn without directionality.");
             BindProbes(loaded, root.GetProperty("probes"), file);

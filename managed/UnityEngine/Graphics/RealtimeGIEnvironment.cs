@@ -46,11 +46,14 @@ namespace UnityEngine
             /// <summary>The direction to the sky's sun in thousandths, so that a slowly turning
             /// sun does not draw the sky again in every frame.</summary>
             internal Vector3Int Sun;
+            /// <summary>The sun's color where the sky's capture draws with it (releases without
+            /// Compat.SkyAmbientWithoutLightColor), else black.</summary>
+            internal Color SunColor;
             internal Color Color, Equator, Ground;
 
             public bool Equals(EnvironmentKey other) =>
                 Mode == other.Mode && ReferenceEquals(Sky, other.Sky) && SkyVersion == other.SkyVersion
-                && Intensity.Equals(other.Intensity) && Sun == other.Sun
+                && Intensity.Equals(other.Intensity) && Sun == other.Sun && SunColor.Equals(other.SunColor)
                 && Color.Equals(other.Color) && Equator.Equals(other.Equator) && Ground.Equals(other.Ground);
 
             public override bool Equals(object obj) => obj is EnvironmentKey other && Equals(other);
@@ -68,6 +71,7 @@ namespace UnityEngine
                     var sun = LightingGlobals.MainLightOf();
                     var toSun = sun != null ? -sun.transform.forward : LightingGlobals.SkyWithoutSun;
                     key.Sun = new Vector3Int(Thousandths(toSun.x), Thousandths(toSun.y), Thousandths(toSun.z));
+                    if (sun != null && !Compat.SkyAmbientWithoutLightColor) key.SunColor = sun.color * sun.intensity;
                     return key;
                 }
                 key.Color = RenderSettings.ambientSkyColor;
@@ -111,7 +115,14 @@ namespace UnityEngine
             if (!s_EnvironmentStale && key.Equals(s_EnvironmentKey)) return;
             s_EnvironmentStale = false;
             s_EnvironmentKey = key;
-            if (key.Sky != null) RenderSkyFaces(key.Intensity);
+            if (key.Sky != null)
+            {
+                // A render pipeline draws the capture's camera itself: what the Editor gives
+                // realtime GI there is not measured.
+                if (GraphicsSettings.currentRenderPipeline != null)
+                    Warn("environment-pipeline", "precomputed realtime GI with a skybox as its environment under a scriptable render pipeline is not measured: the sky is drawn as the pipeline draws a camera.");
+                RenderSkyFaces(key.Intensity);
+            }
             else
             {
                 var color = key.Color.linear;

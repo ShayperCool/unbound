@@ -1305,12 +1305,18 @@ namespace Unbound.Runtime
             Camera.current = camera;
             camera.UpdateVelocity();
             RenderTexture screenStandIn = null;
+            // The engine's own capture of the sky is not a camera the game renders: scripts get
+            // no messages or events for it.
+            bool messages = !camera.m_EnvironmentCapture;
             try
             {
                 // The camera's own message first, then the static event (measured:
                 // tests/projects/cullinggroup; also before and after rendering).
-                SendToCamera(camera, m => m.OnPreCull);
-                Camera.onPreCull?.Invoke(camera);
+                if (messages)
+                {
+                    SendToCamera(camera, m => m.OnPreCull);
+                    Camera.onPreCull?.Invoke(camera);
+                }
                 var context = CullCamera(camera);
                 s_Items.Clear();
                 int mask = camera.cullingMask;
@@ -1354,8 +1360,11 @@ namespace Unbound.Runtime
                 SortForCamera(s_Items);
                 ForwardLights.BeginCamera(camera);
                 s_CameraView = context.View;
-                SendToCamera(camera, m => m.OnPreRender);
-                Camera.onPreRender?.Invoke(camera);
+                if (messages)
+                {
+                    SendToCamera(camera, m => m.OnPreRender);
+                    Camera.onPreRender?.Invoke(camera);
+                }
 
                 // Image effects render the scene into a temporary, then each effect into the next;
                 // [ImageEffectOpaque] ones run on it after the opaque objects.
@@ -1596,8 +1605,11 @@ namespace Unbound.Runtime
                 // OnPostRender (the message, then Camera.onPostRender), the halos and lens flares
                 // between their events, then OnRenderObject (measured: tests/projects/builtinrp
                 // events.*.orderWithMessages, tests/projects/flares o.*).
-                SendToCamera(camera, m => m.OnPostRender);
-                Camera.onPostRender?.Invoke(camera);
+                if (messages)
+                {
+                    SendToCamera(camera, m => m.OnPostRender);
+                    Camera.onPostRender?.Invoke(camera);
+                }
                 RunEvent(camera, CameraEvent.BeforeHaloAndLensFlares, sceneTarget);
                 {
                     ulong haloTarget = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
@@ -1609,7 +1621,7 @@ namespace Unbound.Runtime
                     Halos.Render(camera, context.View, context.Projection, viewport);
                 }
                 RunEvent(camera, CameraEvent.AfterHaloAndLensFlares, sceneTarget);
-                SendToAll(m => m.OnRenderObject);
+                if (messages) SendToAll(m => m.OnRenderObject);
                 void ResolveIntermediate()
                 {
                     if (msaaTarget == null) return;

@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Xunit;
@@ -22,6 +23,7 @@ namespace Unbound.Tests
             var ground = RenderSettings.ambientGroundColor;
             float intensity = RenderSettings.ambientIntensity;
             var skybox = RenderSettings.skybox;
+            var probe = RenderSettings.s_EnvironmentProbe;
             try
             {
                 RenderSettings.skybox = null;
@@ -29,6 +31,7 @@ namespace Unbound.Tests
             }
             finally
             {
+                RenderSettings.s_EnvironmentProbe = probe;
                 RenderSettings.ambientMode = mode;
                 RenderSettings.ambientSkyColor = sky;
                 RenderSettings.ambientEquatorColor = equator;
@@ -148,6 +151,23 @@ namespace Unbound.Tests
                 DynamicGI.UpdateEnvironment();
                 RealtimeGI.UpdateEnvironment();
                 AssertFace(5, color);
+                // And another ambient source (documented; tests/projects/realtimegi
+                // room-envdata-source): the gradient's colors over the data.
+                DynamicGI.SetEnvironmentData(data);
+                var ground = new Color(0.15f, 0.12f, 0.1f);
+                RenderSettings.ambientGroundColor = ground;
+                RealtimeGI.UpdateEnvironment();
+                AssertCube(data);
+                RenderSettings.ambientMode = AmbientMode.Trilight;
+                RealtimeGI.UpdateEnvironment();
+                AssertFace(2, color);
+                AssertFace(3, ground);
+                // The ambient intensity scales nothing of a gradient, and data set there stands
+                // when it changes (room-envdata-gradient-intensity).
+                DynamicGI.SetEnvironmentData(data);
+                RenderSettings.ambientIntensity = 3f;
+                RealtimeGI.UpdateEnvironment();
+                AssertCube(data);
             });
         }
 
@@ -171,6 +191,65 @@ namespace Unbound.Tests
             });
         }
 
+        sealed class RenderObjectCounter : MonoBehaviour
+        {
+            internal static int Calls;
+            void OnRenderObject() => Calls++;
+        }
+
+        [Fact]
+        public void TheSkysCaptureSendsScriptsNothing()
+        {
+            // The engine's own draws of the sky (realtime GI's faces and the ambient probe's) are
+            // not cameras of the game: no camera events, no OnRenderObject.
+            var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
+            var owner = new GameObject("environment callbacks test");
+            int events = 0;
+            Camera.CameraCallback count = _ => events++;
+            Camera.onPreCull += count;
+            Camera.onPreRender += count;
+            Camera.onPostRender += count;
+            var active = RenderTexture.ActiveTarget;
+            var saved = GfxStream.Current;
+            try
+            {
+                owner.AddComponent<RenderObjectCounter>();
+                // A control: a camera of the game does raise them.
+                var camera = owner.AddComponent<Camera>();
+                camera.enabled = false;
+                var target = new RenderTexture(8, 8, 24);
+                camera.targetTexture = target;
+                RenderObjectCounter.Calls = 0;
+                camera.Render();
+                Assert.Equal(3, events);
+                Assert.Equal(1, RenderObjectCounter.Calls);
+                camera.targetTexture = null;
+                UnityEngine.Object.DestroyImmediate(target);
+                events = 0;
+                RenderObjectCounter.Calls = 0;
+                WithAmbient(() =>
+                {
+                    RenderSettings.skybox = sky;
+                    RenderSettings.ambientMode = AmbientMode.Skybox;
+                    RealtimeGI.EnvironmentChanged();
+                    RealtimeGI.UpdateEnvironment();
+                    DynamicGI.UpdateEnvironment();
+                });
+                Assert.Equal(0, events);
+                Assert.Equal(0, RenderObjectCounter.Calls);
+            }
+            finally
+            {
+                Camera.onPreCull -= count;
+                Camera.onPreRender -= count;
+                Camera.onPostRender -= count;
+                UnityEngine.Object.DestroyImmediate(owner);
+                UnityEngine.Object.DestroyImmediate(sky);
+                RenderTexture.SetActiveQuietly(active);
+                GfxStream.Restore(saved);
+            }
+        }
+
         [Fact]
         public void TheSkyboxProbeIsScaledByTheIntensityOfTheMoment()
         {
@@ -180,25 +259,31 @@ namespace Unbound.Tests
             var mode = RenderSettings.ambientMode;
             float intensity = RenderSettings.ambientIntensity;
             var probe = RenderSettings.s_EnvironmentProbe;
+            var colorSpace = QualitySettings.s_ColorSpace;
             try
             {
                 var sh = new SphericalHarmonicsL2();
                 sh[0, 0] = 0.0979f; sh[1, 1] = 0.0366f; sh[2, 4] = -0.02f;
                 RenderSettings.s_EnvironmentProbe = sh;
                 RenderSettings.ambientMode = AmbientMode.Skybox;
-                bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
-                foreach (var (value, scale) in new[] { (0.5f, 0.21404114f), (1f, 1f), (2f, 4.5947934f) })
+                foreach (var space in new[] { ColorSpace.Linear, ColorSpace.Gamma })
                 {
-                    RenderSettings.ambientIntensity = value;
-                    float expected = linear ? scale : value;
-                    var read = RenderSettings.ambientProbe;
-                    Assert.Equal(0.0979f * expected, read[0, 0], 6);
-                    Assert.Equal(0.0366f * expected, read[1, 1], 6);
-                    Assert.Equal(-0.02f * expected, read[2, 4], 6);
+                    QualitySettings.s_ColorSpace = space;
+                    foreach (var (value, scale) in new[] { (0.5f, 0.21404114f), (1f, 1f), (2f, 4.5947934f) })
+                    {
+                        RenderSettings.ambientIntensity = value;
+                        // A gamma project's scale is unmeasured: the plain intensity.
+                        float expected = space == ColorSpace.Linear ? scale : value;
+                        var read = RenderSettings.ambientProbe;
+                        Assert.Equal(0.0979f * expected, read[0, 0], 6);
+                        Assert.Equal(0.0366f * expected, read[1, 1], 6);
+                        Assert.Equal(-0.02f * expected, read[2, 4], 6);
+                    }
                 }
             }
             finally
             {
+                QualitySettings.s_ColorSpace = colorSpace;
                 RenderSettings.s_EnvironmentProbe = probe;
                 RenderSettings.ambientIntensity = intensity;
                 RenderSettings.ambientMode = mode;
