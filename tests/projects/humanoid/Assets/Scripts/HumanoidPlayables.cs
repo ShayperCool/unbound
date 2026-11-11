@@ -17,8 +17,10 @@ public partial class HumanoidProbe
 
     /// <summary>A PlayableGraph (manual updates) on a fresh instance of a rig, its output's source
     /// built by <paramref name="build"/>: Evaluate(0), then the steps of <see cref="Play"/>, each
-    /// with the body, the human pose and the root motion.</summary>
-    static void PlayGraph(string key, Func<PlayableGraph, Playable> build, bool rootMotion, string rig = "HumanA", Action<Animator> setup = null)
+    /// with the body, the human pose and the root motion (its velocities unless
+    /// <paramref name="velocities"/> is off).</summary>
+    static void PlayGraph(string key, Func<PlayableGraph, Playable> build, bool rootMotion, string rig = "HumanA", Action<Animator> setup = null,
+        bool velocities = true)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
@@ -35,7 +37,7 @@ public partial class HumanoidProbe
             graph.Evaluate(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
             Step(key + ".step" + step, animator, handler, false);
             Put(key + ".step" + step + ".motion", "{\"deltaPosition\":" + V(animator.deltaPosition) + ",\"deltaRotation\":" + Q(animator.deltaRotation)
-                + ",\"velocity\":" + V(animator.velocity) + ",\"angularVelocity\":" + V(animator.angularVelocity) + "}");
+                + (velocities ? ",\"velocity\":" + V(animator.velocity) + ",\"angularVelocity\":" + V(animator.angularVelocity) : "") + "}");
         }
         s_JobKey = s_IKKey = null;
         handler.Dispose();

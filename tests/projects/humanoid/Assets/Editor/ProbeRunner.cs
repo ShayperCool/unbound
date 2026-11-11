@@ -60,6 +60,7 @@ public static class ProbeRunner
             FirstSteps();
             Leftovers();
             GoalBlends();
+            BodyBlends();
             AssetDatabase.SaveAssets();
         }
         catch (System.Exception e)
@@ -1006,6 +1007,179 @@ public static class ProbeRunner
         Over("OverrideUpper", true, false, AnimatorLayerBlendingMode.Override, 0.5f, "MaskUpper");
         Over("Additive", true, false, AnimatorLayerBlendingMode.Additive, 0.6f, null);
         Over("AdditiveFootIK", false, true, AnimatorLayerBlendingMode.Additive, 0.6f, null);
+    }
+
+    /// <summary>Humanoid .anim clips of one second whose bodies differ in their rotation curves
+    /// only: BodyPos (RootT and all four RootQ curves, w positive), BodyNeg (the same rotation with
+    /// every RootQ key negated), BodyPartial (RootQ.x and RootQ.y only), BodyW (RootQ.w only, −1)
+    /// and BodyNone (no body curve); and controllers HumanBody{name} with an IK pass on the base
+    /// layer (A: HumanA's clip, B: HumanB's; trees 1D of the clip at 0 and A at 1 with blend 0.35,
+    /// transitions after an exit time of 0.3 over 0.3 s): PosTree, NegTree, PartialTree, WTree,
+    /// NoneTree; NegTransition (BodyNeg to A), NoneTransition (A to BodyNone); NegOverride (BodyNeg
+    /// under A on an override layer of weight 0.5), PartialOverride (A under BodyPartial likewise);
+    /// Direct blend trees: DirectNeg (BodyNeg 0.35, A 0.65), DirectLow (BodyPos 0.3, A 0.4),
+    /// DirectHigh (BodyPos 0.8, A 0.6), DirectNormalized (DirectHigh with normalized blend values),
+    /// DirectEmptyChild (an empty 1D tree 0.3, A 0.7), DirectLowFootIK and DirectHighFootIK (with
+    /// Foot IK) and DirectHighTransition (DirectHigh to B).</summary>
+    static void BodyBlends()
+    {
+        var a = ClipOf("HumanA");
+        var b = ClipOf("HumanB");
+        var q0 = Quaternion.Euler(8f, 25f, 4f);
+        var q1 = Quaternion.Euler(-6f, 60f, 10f);
+        AnimationClip Clip(string name, bool position, System.Action<System.Action<string, float[]>> rotation)
+        {
+            var path = Dir + name + ".anim";
+            var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+            if (existing != null) return existing;
+            var clip = new AnimationClip();
+            void Set(string attribute, params float[] keys)
+            {
+                var curve = new AnimationCurve();
+                for (int i = 0; i < keys.Length; i += 2) curve.AddKey(keys[i], keys[i + 1]);
+                clip.SetCurve("", typeof(Animator), attribute, curve);
+            }
+            if (position)
+            {
+                Set("RootT.x", 0f, 0.1f, 1f, 0.4f);
+                Set("RootT.y", 0f, 1f, 0.5f, 0.97f, 1f, 1.05f);
+                Set("RootT.z", 0f, 0.2f, 1f, 0.6f);
+            }
+            rotation?.Invoke(Set);
+            Set("Spine Front-Back", 0f, 0.1f, 1f, 0.4f);
+            Set("Left Upper Leg Front-Back", 0f, 0.3f, 1f, -0.2f);
+            Set("Right Lower Leg Stretch", 0f, 0.2f, 1f, 0.6f);
+            Set("Left Arm Down-Up", 0f, 0.2f, 1f, -0.3f);
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.loopTime = true;
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+            AssetDatabase.CreateAsset(clip, path);
+            return clip;
+        }
+        void Whole(System.Action<string, float[]> set, float sign)
+        {
+            set("RootQ.x", new[] { 0f, sign * q0.x, 1f, sign * q1.x });
+            set("RootQ.y", new[] { 0f, sign * q0.y, 1f, sign * q1.y });
+            set("RootQ.z", new[] { 0f, sign * q0.z, 1f, sign * q1.z });
+            set("RootQ.w", new[] { 0f, sign * q0.w, 1f, sign * q1.w });
+        }
+        var pos = Clip("BodyPos", true, set => Whole(set, 1f));
+        var neg = Clip("BodyNeg", true, set => Whole(set, -1f));
+        var partial = Clip("BodyPartial", true, set =>
+        {
+            set("RootQ.x", new[] { 0f, 0.1f, 1f, 0.25f });
+            set("RootQ.y", new[] { 0f, 0.2f, 1f, 0.5f });
+        });
+        var w = Clip("BodyW", true, set => set("RootQ.w", new[] { 0f, -1f, 1f, -1f }));
+        var none = Clip("BodyNone", false, null);
+
+        AnimatorController Make(string name)
+        {
+            var path = Dir + "HumanBody" + name + ".controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) return null;
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            var layers = controller.layers;
+            layers[0].iKPass = true;
+            controller.layers = layers;
+            return controller;
+        }
+        AnimatorState State(AnimatorController controller, int layer, string name, Motion motion)
+        {
+            var state = controller.layers[layer].stateMachine.AddState(name);
+            state.motion = motion;
+            return state;
+        }
+        void Tree(string name, Motion first)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            controller.AddParameter("Blend", AnimatorControllerParameterType.Float);
+            var parameters = controller.parameters;
+            parameters[0].defaultFloat = 0.35f;
+            controller.parameters = parameters;
+            controller.CreateBlendTreeInController("Tree", out var blend, 0);
+            blend.blendParameter = "Blend";
+            blend.AddChild(first, 0f);
+            blend.AddChild(a, 1f);
+            EditorUtility.SetDirty(controller);
+        }
+        void Go(AnimatorController controller, AnimatorState from, AnimatorState to)
+        {
+            controller.layers[0].stateMachine.defaultState = from;
+            var t = from.AddTransition(to);
+            t.hasExitTime = true;
+            t.exitTime = 0.3f;
+            t.hasFixedDuration = true;
+            t.duration = 0.3f;
+            EditorUtility.SetDirty(controller);
+        }
+        void Over(string name, Motion below, Motion above)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            State(controller, 0, "Below", below);
+            controller.AddLayer("Above");
+            var layers = controller.layers;
+            layers[1].blendingMode = AnimatorLayerBlendingMode.Override;
+            layers[1].defaultWeight = 0.5f;
+            controller.layers = layers;
+            State(controller, 1, "Above", above);
+            EditorUtility.SetDirty(controller);
+        }
+        // A null motion is an empty 1D blend tree child.
+        AnimatorState Direct(AnimatorController controller, bool footIK, bool normalized, params (Motion motion, float weight)[] children)
+        {
+            for (int i = 0; i < children.Length; i++) controller.AddParameter("W" + i, AnimatorControllerParameterType.Float);
+            var parameters = controller.parameters;
+            for (int i = 0; i < children.Length; i++) parameters[i].defaultFloat = children[i].weight;
+            controller.parameters = parameters;
+            var state = controller.CreateBlendTreeInController("Direct", out var blend, 0);
+            blend.blendType = BlendTreeType.Direct;
+            foreach (var (motion, _) in children)
+            {
+                if (motion != null) blend.AddChild(motion);
+                else blend.CreateBlendTreeChild(0f);
+            }
+            var kids = blend.children;
+            for (int i = 0; i < kids.Length; i++) kids[i].directBlendParameter = "W" + i;
+            blend.children = kids;
+            if (normalized)
+            {
+                var serialized = new SerializedObject(blend);
+                serialized.FindProperty("m_NormalizedBlendValues").boolValue = true;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+            state.iKOnFeet = footIK;
+            EditorUtility.SetDirty(blend);
+            EditorUtility.SetDirty(controller);
+            return state;
+        }
+        void DirectAlone(string name, bool footIK, bool normalized, params (Motion motion, float weight)[] children)
+        {
+            var controller = Make(name);
+            if (controller != null) Direct(controller, footIK, normalized, children);
+        }
+        Tree("PosTree", pos);
+        Tree("NegTree", neg);
+        Tree("PartialTree", partial);
+        Tree("WTree", w);
+        Tree("NoneTree", none);
+        var negTransition = Make("NegTransition");
+        if (negTransition != null) Go(negTransition, State(negTransition, 0, "Neg", neg), State(negTransition, 0, "A", a));
+        var noneTransition = Make("NoneTransition");
+        if (noneTransition != null) Go(noneTransition, State(noneTransition, 0, "A", a), State(noneTransition, 0, "None", none));
+        Over("NegOverride", neg, a);
+        Over("PartialOverride", a, partial);
+        DirectAlone("DirectNeg", false, false, (neg, 0.35f), (a, 0.65f));
+        DirectAlone("DirectLow", false, false, (pos, 0.3f), (a, 0.4f));
+        DirectAlone("DirectHigh", false, false, (pos, 0.8f), (a, 0.6f));
+        DirectAlone("DirectNormalized", false, true, (pos, 0.8f), (a, 0.6f));
+        DirectAlone("DirectEmptyChild", false, false, (null, 0.3f), (a, 0.7f));
+        DirectAlone("DirectLowFootIK", true, false, (pos, 0.3f), (a, 0.4f));
+        DirectAlone("DirectHighFootIK", true, false, (pos, 0.8f), (a, 0.6f));
+        var directTransition = Make("DirectHighTransition");
+        if (directTransition != null)
+            Go(directTransition, Direct(directTransition, false, false, (pos, 0.8f), (a, 0.6f)), State(directTransition, 0, "B", b));
     }
 
     public static void Record()
