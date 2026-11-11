@@ -64,10 +64,12 @@ skybox as the ambient source), `room-sky-only-intensity` (ambient intensity 2;
 `UpdateEnvironment`) and `room-sky-sun-turned` (that light at (15, -120)); once the sky without
 the light has settled, `room-envdata` (`DynamicGI.SetEnvironmentData` with a cube whose faces
 differ and grow brighter along their columns and rows), `room-envdata-intensity` (the ambient
-intensity then set to 2), `room-envdata-update` (the data set again, then `UpdateEnvironment`)
-and `room-envdata-errors` (what the call throws for an array of 100 floats and for none); with
-the intensity still 2, `room-sky-none` (the skybox material removed, the ambient mode still
-Skybox), `room-gradient-intensity` (the gradient again) and `room-ambient-custom` (a custom
+intensity then set to 2), `room-envdata-update` (the data set again, then `UpdateEnvironment`),
+`room-envdata-source` (the data set again, then the ambient mode set to the gradient),
+`room-envdata-gradient-intensity` (the data set in that mode, then the ambient intensity set to
+3) and `room-envdata-errors` (what the call throws for an array of 100 floats and for none); with
+the intensity still 3, `room-sky-none` (the ambient mode Skybox without a skybox material),
+`room-gradient-intensity` (the gradient again) and `room-ambient-custom` (a custom
 ambient mode with another ambient color); `roomscaled-base`,
 `roomscaled-moved`, then from bounce intensity 3 `roomscaled-indirectscale` (indirect scale 2,
 bounce intensity 1) and, from bounce intensity 3 again, `roomscaled-threshold0` (the same with
@@ -114,7 +116,7 @@ Observations (not documented guarantees):
   `DynamicGI.UpdateEnvironment` (the atlases and frames do not change with the call); the call is
   what updates `RenderSettings.ambientProbe` after the skybox change.
 - The ambient intensity scales the realtime GI of a skybox (`room-sky-only-intensity`) and of
-  nothing else, as documented: the gradient's lightmap at intensity 2
+  nothing else, as documented: the gradient's lightmap at intensity 3
   (`room-gradient-intensity`) equals `room-gradient` within 0.002; a skybox ambient mode
   without a skybox material (`room-sky-none`) and a custom ambient mode (`room-ambient-custom`)
   give the ambient color's light, unscaled.
@@ -124,7 +126,10 @@ Observations (not documented guarantees):
 - `DynamicGI.SetEnvironmentData` replaces the environment (`room-envdata`); the ambient intensity
   changed afterwards brings the sky back, as documented (`room-envdata-intensity` equals
   `room-sky-only-intensity` within 0.005), and so does `UpdateEnvironment`
-  (`room-envdata-update`). An array of another length throws ArgumentException with the message
+  (`room-envdata-update`). Another ambient source replaces the data too, as documented
+  (`room-envdata-source` equals `room-gradient` within 0.002). In the gradient mode, where the
+  intensity scales nothing, a change of the intensity leaves the data in place
+  (`room-envdata-gradient-intensity` equals `room-envdata` within 0.002). An array of another length throws ArgumentException with the message
   recorded in `room-envdata-errors`; none throws ArgumentNullException.
 - In an earlier capture the data was set one frame after the directional light was destroyed and
   did not show: the lightmap was the sky's. The probe therefore waits for the sky to settle
@@ -133,9 +138,10 @@ Observations (not documented guarantees):
   `UpdateEnvironment`: 0.2140 times the intensity 1 probe at 0.5 and 4.5948 times at 2 (the
   intensity taken as an sRGB-encoded value). In the custom ambient mode it is the probe last
   derived from the sky, at intensity 1.
-- Three captures were recorded for this reference: two are byte-identical in every file and are
-  published; the third differs from them in `roomsystems-base` and `roomsystems-moved` only (up
-  to 0.02 in 1505 and 221 of 5070 lightmap values).
+- The reference was recorded three times, byte-identical in every file. In an earlier round of
+  three, before the last two cases were added, one capture differed from the other two in
+  `roomsystems-base` and `roomsystems-moved` only (up to 0.02 in 1505 and 221 of 5070 lightmap
+  values).
 
 ## Unbound
 

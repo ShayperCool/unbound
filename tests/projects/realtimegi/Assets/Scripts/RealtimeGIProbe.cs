@@ -210,8 +210,11 @@ public class RealtimeGIProbe : MonoBehaviour
         // DynamicGI.SetEnvironmentData, once the sky without the sun has settled: every face its
         // own colors, brighter along its columns (red) and rows (green). Then the ambient
         // intensity changed (documented: that replaces the data), and the data set again
-        // followed by DynamicGI.UpdateEnvironment. What the call throws for an array of another
-        // length and for none.
+        // followed by DynamicGI.UpdateEnvironment. Then the ambient source changed over the data
+        // (documented: that replaces it too): the data set again and the ambient mode set to
+        // the gradient; and the data set in that mode, followed by the ambient intensity, which
+        // scales nothing there. What the call throws for an array of another length and for
+        // none.
         var data = EnvironmentData();
         DynamicGI.SetEnvironmentData(data);
         yield return Converge();
@@ -224,11 +227,22 @@ public class RealtimeGIProbe : MonoBehaviour
         DynamicGI.UpdateEnvironment();
         yield return Converge();
         Capture("room-envdata-update", s);
+        DynamicGI.SetEnvironmentData(data);
+        yield return Converge();
+        RenderSettings.ambientMode = AmbientMode.Trilight;
+        yield return Converge();
+        Capture("room-envdata-source", s);
+        DynamicGI.SetEnvironmentData(data);
+        yield return Converge();
+        RenderSettings.ambientIntensity = 3f;
+        yield return Converge();
+        Capture("room-envdata-gradient-intensity", s);
         Record("room-envdata-errors", "\"wrongLength\":" + Thrown(new float[100], true) + ",\"noArray\":" + Thrown(null, false));
 
-        // With the ambient intensity still 2 (documented: it scales only a skybox's light): a
+        // With the ambient intensity at 3 (documented: it scales only a skybox's light): a
         // skybox ambient mode without a skybox material, the gradient again, and a custom
         // ambient mode with another ambient color.
+        RenderSettings.ambientMode = AmbientMode.Skybox;
         RenderSettings.skybox = null;
         yield return Converge();
         Capture("room-sky-none", s);
