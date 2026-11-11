@@ -193,13 +193,11 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A state that gives no humanoid pose leaves the body to what the pose's other
-        /// values take there (as before): in a transition from an empty state on an override
-        /// layer, the body moves from the layer below's to the clip's with the transition (the
-        /// Editor's body moves steadily too, but not to the same place: an Editor capture of
-        /// tests/projects/humanoid's HumanBodyEmptyLayerTransition controller, not in the
-        /// reference, open in docs/COMPATIBILITY_GAPS.md); in a transition to a state whose
-        /// clip has no humanoid curve, it moves
-        /// to the identity with it. Neither jumps when the transition starts or ends.</summary>
+        /// values take there: in a transition from an empty state on an override layer, the body
+        /// moves from the layer below's to the clip's with the transition (6000.0.71f1,
+        /// tests/projects/humanoid body.emptyLayerTransition); in a transition to a state whose
+        /// clip has no humanoid curve, it moves to the identity with it (unmeasured, as before).
+        /// Neither jumps when the transition starts or ends.</summary>
         [Fact]
         public void TheBodyFollowsATransitionWithAStateWithoutAHumanoidPose()
         {
@@ -228,6 +226,64 @@ namespace UnityEngine.Tests
             p = generic.GetAnimatorTransitionInfo(0).normalizedTime;
             Assert.InRange(p, 0.2f, 0.8f);
             Near.Equal(1f - p, BodyPosition(generic).y, 1e-4f);
+        }
+
+        /// <summary>An override layer that leaves an empty state for a clip covers the layer
+        /// below by the transition's progress: the root's step is the layer below's moved
+        /// towards the clip's by it, and the clip infos report the clip whole from the start
+        /// (6000.0.71f1, tests/projects/humanoid body.emptyLayerTransition). Controls: the two
+        /// clips move the root along different axes, the clip's own step times the progress
+        /// (the layer taken as full) differs, and a transition between two clips on the base
+        /// layer reports its clips by the progress.</summary>
+        [Fact]
+        public void AnOverrideLayerLeavingAnEmptyStateMovesTheRootWithItsTransition()
+        {
+            const long empty = 1102000009, transition = 1101000009;
+            static (string, float)[] Moving(string axis, float height) =>
+                Clip(height, F4.QIdentity).Select(c => c.Item1 == "RootT." + axis ? (c.Item1 + "+", 0f) : c).ToArray();
+            var a = Moving("z", 1f);
+            var b = Moving("x", 1.3f);
+            string layered = Fixture.Header + Fixture.Layer("Base Layer", 1107000001, 0, 1f) + Fixture.Layer("Above", 1107000002, 0, 1f)
+                + Fixture.Machine(1107000001, Fixture.StateA, Fixture.StateA) + Fixture.Machine(1107000002, empty, empty, Fixture.StateB)
+                + Fixture.State(Fixture.StateA, "A", Fixture.ClipA, false) + Fixture.State(empty, "Empty", 0, false, transition)
+                + Fixture.State(Fixture.StateB, "B", Fixture.ClipB, false) + Fixture.Transition(transition, Fixture.StateB, 0.2f, 0.5f)
+                + Fixture.Clip(Fixture.ClipA, "A", a) + Fixture.Clip(Fixture.ClipB, "B", b);
+            var above = Fixture.Rig(layered, m_Created);
+            above.Update(0f);
+            above.Update(0.25f);
+            Assert.True(above.IsInTransition(1));
+            Assert.Equal(1f, Assert.Single(above.GetNextAnimatorClipInfo(1)).weight);
+            above.Update(0.2f);
+            Assert.True(above.IsInTransition(1));
+            float p = above.GetAnimatorTransitionInfo(1).normalizedTime;
+            Assert.InRange(p, 0.2f, 0.8f);
+            Assert.Equal(1f, Assert.Single(above.GetNextAnimatorClipInfo(1)).weight);
+
+            // Each clip's own step over the same update: A from 0.25 s, B from the 0.05 s it has played.
+            Vector3 Step(string yaml, float first)
+            {
+                var alone = Fixture.Rig(yaml, m_Created);
+                alone.Update(0f);
+                alone.Update(first);
+                alone.Update(0.2f);
+                return alone.deltaPosition;
+            }
+            string One((string, float)[] clip) => Fixture.Header + Fixture.Layer("Base Layer", 1107000001, 0, 1f)
+                + Fixture.Machine(1107000001, Fixture.StateA, Fixture.StateA) + Fixture.State(Fixture.StateA, "A", Fixture.ClipA, false)
+                + Fixture.Clip(Fixture.ClipA, "A", clip);
+            var below = Step(One(a), 0.25f);
+            var clip = Step(One(b), 0.05f);
+            Assert.True(below.z > 0.05f && clip.x > 0.01f);
+            var expected = Vector3.Lerp(below, clip, p);
+            Assert.True((above.deltaPosition - expected).magnitude < 1e-4f, $"{above.deltaPosition} != {expected}");
+            Assert.True((clip * p - expected).magnitude > 0.02f);
+
+            var two = Fixture.Rig(Fixture.TransitionController(Fixture.s_B, false, false), m_Created);
+            two.Update(0f);
+            two.Update(0.25f);
+            two.Update(0.2f);
+            Assert.True(two.IsInTransition(0));
+            Near.Equal(two.GetAnimatorTransitionInfo(0).normalizedTime, Assert.Single(two.GetNextAnimatorClipInfo(0)).weight, 1e-6f);
         }
 
         // ------------------------------------------------------------------ muscles at rest

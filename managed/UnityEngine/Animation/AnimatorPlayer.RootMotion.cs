@@ -610,6 +610,29 @@ namespace Unbound.Runtime
             m_StateShares.Clear();
         }
 
+        /// <summary>State weights that sum to one within their rounding fill a layer.</summary>
+        const float LayerFilled = 1f - 1e-6f;
+
+        /// <summary>The share of a layer above the first that its states with humanoid clips
+        /// fill, whose weights then become their shares of it: where a state gives the layer no
+        /// humanoid motion (a transition with a state without a motion), the others are the
+        /// layer's whole motion and the layer covers the ones below by its weight times that
+        /// share, as the rest of its pose does. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/humanoid body.emptyLayerTransition (an override layer of weight 1
+        /// leaving an empty state for a clip over a clip: the body and the root's step move from
+        /// the layer below's to the clip's with the transition; an override layer over no
+        /// humanoid clip and a state with a generic clip beside a humanoid one follow
+        /// unmeasured).</summary>
+        float FillLayer()
+        {
+            float total = 0f;
+            for (int k = 0; k < m_HumanSamples.Count; k++)
+                if (m_HumanSamples[k].HasMotion) total += m_HumanWeights[k];
+            if (!(total > 0f) || total >= LayerFilled) return 1f;
+            for (int k = 0; k < m_HumanWeights.Count; k++) m_HumanWeights[k] /= total;
+            return total;
+        }
+
         /// <summary>A layer's holding states keep its last humanoid root motion (see
         /// <see cref="HoldWeight"/>): the layer's own blended sample.</summary>
         void HoldHumanMotion(int i)
@@ -679,6 +702,7 @@ namespace Unbound.Runtime
                 AddStateMotion(stateWeight);
                 if (!additive) HoldHumanMotion(i);
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
+                if (i > 0 && !additive) layerWeight *= FillLayer();
                 var mask = Layers[i].Def.Mask;
                 Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer(ref blended, ref any,
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),
