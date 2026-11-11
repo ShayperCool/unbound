@@ -340,6 +340,9 @@ namespace UnityEngine
             Upload();
             if (makeNoLongerReadable)
             {
+                // One array, not two: the store the kept views read is the raw copy when it
+                // holds the same bytes.
+                if (rawCopy != null && m_Store != null && rawCopy.AsSpan().SequenceEqual(m_Store)) rawCopy = m_Store;
                 RetireStore();
                 m_Pixels = null;
                 m_Hdr = null;
@@ -594,7 +597,7 @@ namespace UnityEngine
             if (m_IsReadable) return;
             // A block-compressed texture keeps its blocks (GetRawTextureData answers them).
             if (!SourceBlocks) m_UnreadableRaw ??= m_Raw != null ? (byte[])m_Raw.Clone() : EncodeMipChain();
-            ReleaseStore();
+            ReleaseLiveStore();
             m_Pixels = null;
             m_Hdr = null;
             m_Raw = null;

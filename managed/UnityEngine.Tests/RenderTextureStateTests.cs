@@ -16,8 +16,37 @@ namespace Unbound.Tests
     {
         const RenderTextureCreationFlags New = RenderTextureCreationFlags.AutoGenerateMips | RenderTextureCreationFlags.AllowVerticalFlip;
 
+        /// <summary>Unity's own descriptor takes an sRGB format from <c>sRGB = true</c> only in a
+        /// Linear project; the flag follows the format.</summary>
+        [Theory]
+        [InlineData(ColorSpace.Linear, true)]
+        [InlineData(ColorSpace.Gamma, false)]
+        public void TheSrgbSwitchFollowsTheColorSpace(ColorSpace space, bool srgb)
+        {
+            var previous = QualitySettings.s_ColorSpace;
+            QualitySettings.s_ColorSpace = space;
+            try
+            {
+                var d = new RenderTextureDescriptor(4, 2, GraphicsFormat.R8G8B8A8_UNorm, 0) { sRGB = true };
+                Assert.Equal(srgb, d.sRGB);
+                Assert.Equal(srgb ? New | RenderTextureCreationFlags.SRGB : New, d.flags);
+                // A format given outright is kept in both.
+                d.graphicsFormat = GraphicsFormat.R8G8B8A8_SRGB;
+                Assert.Equal(New | RenderTextureCreationFlags.SRGB, d.flags);
+            }
+            finally { QualitySettings.s_ColorSpace = previous; }
+        }
+
         [Fact]
         public void ADescriptorsSrgbFlagFollowsItsColorFormat()
+        {
+            var previous = QualitySettings.s_ColorSpace;
+            QualitySettings.s_ColorSpace = ColorSpace.Linear;
+            try { FlagFollowsFormat(); }
+            finally { QualitySettings.s_ColorSpace = previous; }
+        }
+
+        static void FlagFollowsFormat()
         {
             var d = new RenderTextureDescriptor(4, 2, GraphicsFormat.R8G8B8A8_SRGB, 0);
             Assert.Equal(New | RenderTextureCreationFlags.SRGB, d.flags);
@@ -53,14 +82,15 @@ namespace Unbound.Tests
                 Assert.Equal(New | RenderTextureCreationFlags.CreatedFromScript, linear.descriptor.flags);
                 Assert.Equal(srgb.descriptor.flags, copy.descriptor.flags);
                 Assert.Equal(New | RenderTextureCreationFlags.CreatedFromScript, custom.descriptor.flags);
-                Assert.Equal(New, temporary.descriptor.flags);
+                // Unity's own GetTemporary marks its descriptor before asking for the texture.
+                Assert.Equal(New | RenderTextureCreationFlags.CreatedFromScript, temporary.descriptor.flags);
                 // A format change moves the sRGB flag only.
                 linear.graphicsFormat = GraphicsFormat.R8G8B8A8_SRGB;
                 Assert.Equal(srgb.descriptor.flags, linear.descriptor.flags);
-                // A descriptor given by a script marks the texture, whatever the descriptor says.
-                temporary.Release();
-                temporary.descriptor = new RenderTextureDescriptor(4, 2, GraphicsFormat.R8G8B8A8_UNorm, 0);
-                Assert.Equal(New | RenderTextureCreationFlags.CreatedFromScript, temporary.descriptor.flags);
+                // A clone is marked as its source is.
+                var clone = Object.Instantiate(linear);
+                Assert.Equal(linear.descriptor.flags, clone.descriptor.flags);
+                Object.DestroyImmediate(clone);
             }
             finally
             {
@@ -81,6 +111,12 @@ namespace Unbound.Tests
                 Assert.Equal((RenderTextureCreationFlags)0, flags & RenderTextureCreationFlags.CreatedFromScript);
                 Assert.Equal(texture.sRGB, (flags & RenderTextureCreationFlags.SRGB) != 0);
                 Assert.NotEqual((RenderTextureCreationFlags)0, flags & RenderTextureCreationFlags.MipMap);
+                var clone = Object.Instantiate(texture);
+                Assert.Equal(flags, clone.descriptor.flags);
+                Object.DestroyImmediate(clone);
+                // A descriptor given by a script marks the texture (Unity's own setter).
+                texture.descriptor = new RenderTextureDescriptor(4, 2, GraphicsFormat.R8G8B8A8_UNorm, 0);
+                Assert.Equal(New | RenderTextureCreationFlags.CreatedFromScript, texture.descriptor.flags);
             }
             finally { Object.DestroyImmediate(texture); }
         }
@@ -141,9 +177,10 @@ namespace Unbound.Tests
             }
         }
 
-        /// <summary>On the OpenGL Core device a source that is not the active render target
-        /// (none, another one, the destination) logs the Editor's assertion once per call; the
-        /// resolve is sent either way. The active source resolves silently.</summary>
+        /// <summary>On the OpenGL Core device a source resolved while no render target is active
+        /// logs the Editor's assertion once per call (measured); Unbound's choice is the same
+        /// for another render target and for the destination being active. The resolve is sent
+        /// either way. The active source resolves silently.</summary>
         [Fact]
         public void OpenGLAssertsOnAResolveOfAnInactiveSource()
         {

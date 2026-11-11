@@ -170,13 +170,14 @@ namespace UnityEngine
         public int volumeDepth { get => m_Descriptor.volumeDepth; set { Change(); m_Descriptor.volumeDepth = value; } }
 
         /// <summary>
-        /// The texture as a descriptor. Its creation flags name a texture a script made
-        /// (<see cref="RenderTextureCreationFlags.CreatedFromScript"/>: made by a constructor, or
-        /// given a descriptor; not one loaded from an asset) and an sRGB color format
-        /// (Unity 6000.0.71f1, tests/projects/particletrailwitness `target.flags`:
+        /// The texture as a descriptor. Its creation flags name an sRGB color format and a
+        /// texture a script made (<see cref="RenderTextureCreationFlags.CreatedFromScript"/>).
+        /// Measured (Unity 6000.0.71f1, tests/projects/particletrailwitness `target.flags`):
         /// AutoGenerateMips, SRGB, CreatedFromScript, AllowVerticalFlip for a default
-        /// `new RenderTexture`). Not measured: a temporary texture's flags (made by the engine,
-        /// so without CreatedFromScript here).
+        /// `new RenderTexture` in a Linear project. The other cases follow Unity's own managed
+        /// class and are not measured: every constructor and a descriptor given to the texture
+        /// mark it, as does <see cref="GetTemporary(RenderTextureDescriptor)"/>; a texture loaded
+        /// from an asset is not marked, and a clone is marked as its source is.
         /// </summary>
         public RenderTextureDescriptor descriptor
         {
@@ -322,14 +323,17 @@ namespace UnityEngine
 
         /// <summary>
         /// Resolves the multisampled texture into <paramref name="target"/>. The Editor's
-        /// OpenGL Core device resolves from the render target being drawn into: for a source
-        /// that is not <see cref="active"/> it logs an assertion, and with no render target
-        /// active the destination receives the pixels of the Editor window's own framebuffer
+        /// OpenGL Core device resolves from the render target being drawn into. Measured
         /// (Unity 6000.0.71f1, tests/projects/cameramsaa `*.resolve` and
-        /// `boundary.*.resolveSentinelInactive`; NVIDIA driver). Unbound logs the assertion
-        /// and resolves the source: it has no Editor window to copy, as for the other reads of
-        /// that framebuffer. Not measured: another render target active, the Vulkan device
-        /// (no assertion here), and the resolve without a destination.
+        /// `boundary.*.resolveSentinelInactive`; NVIDIA driver): with no render target active,
+        /// a created multisampled source logs an assertion (text, type and one per call as in
+        /// the capture's Editor log) and the destination receives the pixels of the Editor
+        /// window's own framebuffer. Unbound logs the assertion and resolves the source: it has
+        /// no Editor window to copy, as for the other reads of that framebuffer. Unbound's
+        /// choice, not measured: the same assertion whenever the source is not
+        /// <see cref="active"/> (another render target or the destination active, a source
+        /// without multisampling or not created yet). Not measured either: the Vulkan device
+        /// (no assertion here) and the resolve without a destination.
         /// </summary>
         public void ResolveAntiAliasedSurface(RenderTexture target)
         {
@@ -481,7 +485,7 @@ namespace UnityEngine
             }
             RenderTexture created;
             using (ObjectRegistry.AsAssets())
-                created = new RenderTexture(desc) { name = "TempBuffer " + s_Temporaries.Count, hideFlags = HideFlags.HideAndDontSave, m_CreatedFromScript = false };
+                created = new RenderTexture(desc) { name = "TempBuffer " + s_Temporaries.Count, hideFlags = HideFlags.HideAndDontSave };
             created.m_LastUsedFrame = Time.frameCount;
             created.m_PoolLease = ++s_NextPoolLease;
             s_Temporaries.Add(created);
@@ -689,7 +693,10 @@ namespace UnityEngine
         public bool sRGB
         {
             get => GraphicsFormatUtility.IsSRGBFormat(m_GraphicsFormat);
-            set => graphicsFormat = value ? GraphicsFormatUtility.GetSRGBFormat(m_GraphicsFormat) : GraphicsFormatUtility.GetLinearFormat(m_GraphicsFormat);
+            // As Unity's own descriptor: an sRGB format only in a Linear project.
+            set => graphicsFormat = value && QualitySettings.activeColorSpace == ColorSpace.Linear
+                ? GraphicsFormatUtility.GetSRGBFormat(m_GraphicsFormat)
+                : GraphicsFormatUtility.GetLinearFormat(m_GraphicsFormat);
         }
 
         public int depthBufferBits

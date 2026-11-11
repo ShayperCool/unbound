@@ -102,22 +102,33 @@ namespace UnityEngine
             ReleaseStore();
         }
 
+        /// <summary>Ends the store and every view of the texture, kept ones included: the
+        /// texture is recreated or destroyed.</summary>
         void ReleaseStore()
         {
-            TexturePixelStore.Release(ref m_StoreSafety, ref m_StorePin);
+            ReleaseLiveStore();
             TexturePixelStore.Release(ref m_RetiredSafety, ref m_RetiredPin);
+        }
+
+        /// <summary>Ends the store and its views; views kept by <see cref="RetireStore"/> stay.</summary>
+        void ReleaseLiveStore()
+        {
+            TexturePixelStore.Release(ref m_StoreSafety, ref m_StorePin);
             m_Store = null;
             m_StoreOffsets = null;
         }
 
         /// <summary>
         /// The store stops being the texture's pixels, while the views handed out stay valid
-        /// over its bytes until the texture is reinitialized or destroyed: the Editor keeps the
-        /// views of a texture that <c>Apply(…, makeNoLongerReadable: true)</c> made unreadable
-        /// (Unity 6000.0.71f1, tests/projects/textureraw `unreadable.old_raw`,
-        /// `unreadable.old_pixel`: readable; the same views end with `Reinitialize` and with
-        /// the texture). What the old views read afterwards is not measured: here, the bytes
-        /// they had.
+        /// over its bytes: the Editor keeps the views of a texture that
+        /// <c>Apply(…, makeNoLongerReadable: true)</c> made unreadable (Unity 6000.0.71f1,
+        /// tests/projects/textureraw `unreadable.old_raw`, `unreadable.old_pixel`: readable).
+        /// Unbound's choices, not measured: the kept views end when the texture is recreated
+        /// or destroyed (their memory goes with it), and they read the bytes they had, which
+        /// stay the unreadable texture's raw data (an uncompressed texture's
+        /// <see cref="m_UnreadableRaw"/> is the same array where it can be; a block-compressed
+        /// texture's views are its blocks), so a write through a kept view shows in
+        /// <c>GetRawTextureData()</c>.
         /// </summary>
         void RetireStore()
         {

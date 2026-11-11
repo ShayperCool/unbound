@@ -110,7 +110,15 @@ namespace TextureRaw.Tests
                 Assert.Equal((byte)77, pixel[5]);
                 Assert.Throws<UnityException>(() => texture.GetRawTextureData<byte>());
                 Assert.Throws<UnityException>(() => texture.GetRawTextureData<TextureRawProbe.ThreeBytes>());
-                Assert.Equal(16, texture.GetRawTextureData().Length);
+                // The kept views and the unreadable texture's raw data are the same bytes.
+                var data = texture.GetRawTextureData();
+                Assert.Equal(16, data.Length);
+                Assert.Equal((byte)77, data[5]);
+                raw[6] = 78;
+                Assert.Equal((byte)78, texture.GetRawTextureData()[6]);
+                // An engine upload of the unreadable texture leaves the kept views alone.
+                Graphics.CopyTexture(second, texture);
+                AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(raw));
                 // The kept views end with the texture.
                 var kept = second.GetRawTextureData<byte>();
                 second.Apply(false, true);
