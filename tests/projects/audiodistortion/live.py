@@ -25,7 +25,8 @@ def verify(root, release, rate, selected=None):
             assert record == dict(file=case+suffix+'.f32', frames=BLOCKS*1024, channels=2)
             values = samples(root, record)
             assert len(values) == BLOCKS*1024*2 and all(map(math.isfinite, values)), case+suffix
-            assert any(abs(v) > 1e-6 for v in values), case+suffix
+            if not (case.endswith('_unrouted') and suffix == '.master'):
+                assert any(abs(v) > 1e-6 for v in values), case+suffix
     print('Complete finite live capture:', root)
 
 
@@ -39,6 +40,8 @@ SECTION_ENDS = (
     ('follower', 'chorus_depth_down_source'),
     ('delay_lifecycle', 'chorus_zero_edit'),
     ('reverb_transitions', 'reverbfilter_decay_source'),
+    ('component_lifecycle', 'life_echo_enabled_mono'),
+    ('lifecycle_controls', 'life_echo_stopwait_shot'),
 )
 
 

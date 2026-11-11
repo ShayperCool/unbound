@@ -21,7 +21,7 @@ public sealed class LiveCase
             yield return new KeyValuePair<string, float>(parts[0], float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture));
         }
     }
-    public bool Component => Mode == "source" || Mode == "mono" || Mode == "listener" || Mode == "delaydepth" || Mode == "recreate";
+    public bool Component => Mode.StartsWith("life_") || Mode == "source" || Mode == "mono" || Mode == "listener" || Mode == "delaydepth" || Mode == "recreate";
 }
 
 public class LiveEffectProbe : MonoBehaviour
@@ -132,6 +132,56 @@ public class LiveEffectProbe : MonoBehaviour
         new LiveCase("sfxreverb_hfref20", "SFX Reverb", "HF Reference", 20f, 20f, "set", "Room=0;Room HF=-100"),
         new LiveCase("reverbfilter_room_source", "Reverb", "room", -1000f, 0f, "source", "reflectionsLevel=-1000"),
         new LiveCase("reverbfilter_decay_source", "Reverb", "decayTime", 1f, 3f, "source", "room=0"),
+        new LiveCase("sfxreverb_dry_set", "SFX Reverb", "Dry Level", 0f, -1200f, "set", "Room=0"),
+        new LiveCase("sfxreverb_dry_timed", "SFX Reverb", "Dry Level", -600f, 0f, "timed", "Room=0"),
+        new LiveCase("reverbfilter_dry_source", "Reverb", "dryLevel", 0f, -1200f, "source", "room=0"),
+        new LiveCase("life_echo_enabled", "Echo", "delay", 37f, 37f, "life_enabled"),
+        new LiveCase("life_echo_restart", "Echo", "delay", 37f, 37f, "life_restart"),
+        new LiveCase("life_echo_stopwait", "Echo", "delay", 37f, 37f, "life_stopwait"),
+        new LiveCase("life_echo_listener", "Echo", "delay", 37f, 37f, "life_listener"),
+        new LiveCase("life_echo_add", "Echo", "delay", 37f, 37f, "life_add"),
+        new LiveCase("life_echo_remove", "Echo", "delay", 37f, 37f, "life_remove"),
+        new LiveCase("life_lowpass_enabled", "LowPass", "cutoffFrequency", 1700f, 1700f, "life_enabled"),
+        new LiveCase("life_lowpass_restart", "LowPass", "cutoffFrequency", 1700f, 1700f, "life_restart"),
+        new LiveCase("life_lowpass_stopwait", "LowPass", "cutoffFrequency", 1700f, 1700f, "life_stopwait"),
+        new LiveCase("life_lowpass_listener", "LowPass", "cutoffFrequency", 1700f, 1700f, "life_listener"),
+        new LiveCase("life_lowpass_add", "LowPass", "cutoffFrequency", 1700f, 1700f, "life_add"),
+        new LiveCase("life_lowpass_remove", "LowPass", "cutoffFrequency", 1700f, 1700f, "life_remove"),
+        new LiveCase("life_highpass_enabled", "HighPass", "cutoffFrequency", 1700f, 1700f, "life_enabled"),
+        new LiveCase("life_highpass_restart", "HighPass", "cutoffFrequency", 1700f, 1700f, "life_restart"),
+        new LiveCase("life_highpass_stopwait", "HighPass", "cutoffFrequency", 1700f, 1700f, "life_stopwait"),
+        new LiveCase("life_highpass_listener", "HighPass", "cutoffFrequency", 1700f, 1700f, "life_listener"),
+        new LiveCase("life_highpass_add", "HighPass", "cutoffFrequency", 1700f, 1700f, "life_add"),
+        new LiveCase("life_highpass_remove", "HighPass", "cutoffFrequency", 1700f, 1700f, "life_remove"),
+        new LiveCase("life_reverb_enabled", "Reverb", "room", 0f, 0f, "life_enabled"),
+        new LiveCase("life_reverb_restart", "Reverb", "room", 0f, 0f, "life_restart"),
+        new LiveCase("life_reverb_stopwait", "Reverb", "room", 0f, 0f, "life_stopwait"),
+        new LiveCase("life_reverb_listener", "Reverb", "room", 0f, 0f, "life_listener"),
+        new LiveCase("life_reverb_add", "Reverb", "room", 0f, 0f, "life_add"),
+        new LiveCase("life_reverb_remove", "Reverb", "room", 0f, 0f, "life_remove"),
+        new LiveCase("life_chorus_enabled", "Chorus", "Rate", 5f, 5f, "life_enabled"),
+        new LiveCase("life_chorus_restart", "Chorus", "Rate", 5f, 5f, "life_restart"),
+        new LiveCase("life_chorus_stopwait", "Chorus", "Rate", 5f, 5f, "life_stopwait"),
+        new LiveCase("life_chorus_listener", "Chorus", "Rate", 5f, 5f, "life_listener"),
+        new LiveCase("life_chorus_add", "Chorus", "Rate", 5f, 5f, "life_add"),
+        new LiveCase("life_chorus_remove", "Chorus", "Rate", 5f, 5f, "life_remove"),
+        new LiveCase("life_distortion_enabled", "Distortion", "Level", .6f, .6f, "life_enabled"),
+        new LiveCase("life_distortion_restart", "Distortion", "Level", .6f, .6f, "life_restart"),
+        new LiveCase("life_distortion_stopwait", "Distortion", "Level", .6f, .6f, "life_stopwait"),
+        new LiveCase("life_distortion_listener", "Distortion", "Level", .6f, .6f, "life_listener"),
+        new LiveCase("life_distortion_add", "Distortion", "Level", .6f, .6f, "life_add"),
+        new LiveCase("life_distortion_remove", "Distortion", "Level", .6f, .6f, "life_remove"),
+        new LiveCase("life_echo_listener_unrouted", "Echo", "delay", 37f, 37f, "life_listener_unrouted"),
+        new LiveCase("life_echo_enabled_mono", "Echo", "delay", 37f, 37f, "life_enabled_mono"),
+        new LiveCase("life_output_echo_enabled", "Echo", "delay", 37f, 37f, "life_out_enabled"),
+        new LiveCase("life_output_lowpass_enabled", "LowPass", "cutoffFrequency", 1700f, 1700f, "life_out_enabled"),
+        new LiveCase("life_output_highpass_enabled", "HighPass", "cutoffFrequency", 1700f, 1700f, "life_out_enabled"),
+        new LiveCase("life_output_reverb_enabled", "Reverb", "room", 0f, 0f, "life_out_enabled"),
+        new LiveCase("life_output_chorus_enabled", "Chorus", "Rate", 5f, 5f, "life_out_enabled"),
+        new LiveCase("life_output_distortion_enabled", "Distortion", "Level", .6f, .6f, "life_out_enabled"),
+        new LiveCase("life_echo_enabled_chain", "Echo", "delay", 37f, 37f, "life_enabled_chain"),
+        new LiveCase("life_echo_restart_shot", "Echo", "delay", 37f, 37f, "life_restart_shot"),
+        new LiveCase("life_echo_stopwait_shot", "Echo", "delay", 37f, 37f, "life_stopwait_shot"),
     };
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => Environment.GetEnvironmentVariable("EFFECT_PROBE_ENGINE") == "1";
@@ -181,6 +231,7 @@ public class LiveEffectProbe : MonoBehaviour
         if (component is AudioDistortionFilter dist) { dist.distortionLevel = value; return; }
         if (component is AudioReverbFilter reverb) {
             switch (parameter) {
+                case "dryLevel": reverb.dryLevel = value; break;
                 case "room": reverb.room = value; break;
                 case "decayTime": reverb.decayTime = value; break;
                 case "reflectionsLevel": reverb.reflectionsLevel = value; break;
@@ -188,6 +239,9 @@ public class LiveEffectProbe : MonoBehaviour
             }
             return;
         }
+        if (component is AudioEchoFilter echo) { echo.delay = value; return; }
+        if (component is AudioLowPassFilter low) { low.cutoffFrequency = value; return; }
+        if (component is AudioHighPassFilter high) { high.cutoffFrequency = value; return; }
         var chorus = (AudioChorusFilter)component;
         switch (parameter) {
             case "Dry mix": chorus.dryMix = value; break;
@@ -198,6 +252,25 @@ public class LiveEffectProbe : MonoBehaviour
             case "Depth": chorus.depth = value; break;
             default: throw new Exception("Unknown component parameter " + parameter);
         }
+    }
+    static Behaviour AddLifecycleFilter(GameObject host, LiveCase c)
+    {
+        Behaviour filter;
+        switch (c.Kind) {
+            case "Echo":
+                var echo = host.AddComponent<AudioEchoFilter>();
+                echo.dryMix = .4f; echo.wetMix = .7f; echo.decayRatio = .6f; filter = echo; break;
+            case "LowPass": filter = host.AddComponent<AudioLowPassFilter>(); break;
+            case "HighPass": filter = host.AddComponent<AudioHighPassFilter>(); break;
+            case "Reverb":
+                var reverb = host.AddComponent<AudioReverbFilter>();
+                reverb.reverbPreset = AudioReverbPreset.User; filter = reverb; break;
+            case "Distortion": filter = host.AddComponent<AudioDistortionFilter>(); break;
+            case "Chorus": filter = AddChorus(host, 17.5f); break;
+            default: throw new Exception("Unknown lifecycle filter " + c.Kind);
+        }
+        SetComponent(filter, c.Parameter, c.Initial);
+        return filter;
     }
     bool captured;
     System.Collections.IEnumerator Capture()
@@ -220,10 +293,13 @@ public class LiveEffectProbe : MonoBehaviour
             Debug.Log("Live effect case " + c.Key);
             var mixer = Resources.Load<AudioMixer>(c.Key); if (!mixer) throw new Exception("Missing mixer " + c.Key);
             var go = new GameObject(c.Key); var source = go.AddComponent<AudioSource>();
-            Behaviour component = null;
+            Behaviour component = null, chainEdit = null, listenerControl = null;
+            bool lifecycle = c.Mode.StartsWith("life_");
+            var group = mixer.FindMatchingGroups("Master")[0];
             if (c.Component) {
-                var host = c.Mode == "listener" ? gameObject : go;
-                if (c.Kind == "Distortion") component = host.AddComponent<AudioDistortionFilter>();
+                var host = c.Mode == "listener" || c.Mode.StartsWith("life_out_") ? gameObject : go;
+                if (lifecycle) component = AddLifecycleFilter(host, c);
+                else if (c.Kind == "Distortion") component = host.AddComponent<AudioDistortionFilter>();
                 else if (c.Kind == "Reverb") {
                     var reverb = host.AddComponent<AudioReverbFilter>(); reverb.reverbPreset = AudioReverbPreset.User;
                     component = reverb;
@@ -234,8 +310,14 @@ public class LiveEffectProbe : MonoBehaviour
                 foreach (var setting in c.Settings()) SetComponent(component, setting.Key, setting.Value);
                 SetComponent(component, c.Parameter, c.Initial);
             }
-            source.outputAudioMixerGroup = mixer.FindMatchingGroups("Master")[0]; source.volume = 1;
-            int channels = c.Mode == "mono" ? 1 : 2;
+            if (c.Mode == "life_enabled_chain") go.AddComponent<AudioHighPassFilter>().cutoffFrequency = 800f;
+            if (c.Mode == "life_remove") chainEdit = go.AddComponent<AudioDistortionFilter>();
+            if (c.Mode.StartsWith("life_listener")) {
+                var listener = gameObject.AddComponent<AudioDistortionFilter>(); listener.distortionLevel = .75f;
+                listenerControl = listener;
+            }
+            source.outputAudioMixerGroup = c.Mode.EndsWith("unrouted") ? null : group; source.volume = 1;
+            int channels = c.Mode == "mono" || c.Mode.EndsWith("_mono") ? 1 : 2;
             var clip = AudioClip.Create(c.Key, Blocks * 1024, channels, config.sampleRate, false);
             var signal = new float[Blocks * 1024 * channels]; uint seed = 12345;
             for (int frame = 0; frame < Blocks * 1024; frame++)
@@ -243,7 +325,8 @@ public class LiveEffectProbe : MonoBehaviour
                     seed = seed * 1664525u + 1013904223u;
                     signal[frame * channels + channel] = frame < 1024 ? 0 : ((int)(seed >> 18) - 8192) / 32768f;
                 }
-            clip.SetData(signal, 0); source.clip = clip;
+            clip.SetData(signal, 0); source.clip = c.Mode.EndsWith("_shot") ? null : clip;
+            Action play = () => { if (c.Mode.EndsWith("_shot")) source.PlayOneShot(clip); else source.Play(); };
             if (c.Mode == "prime") {
                 // Start the first control early, then align its integer sample position.
                 const int leadBuffers = 4;
@@ -254,13 +337,28 @@ public class LiveEffectProbe : MonoBehaviour
                         if (!AudioRenderer.Render(prepare)) throw new Exception("Preparation render failed");
                     }
                 source.timeSamples = 0;
-            } else source.Play();
+            } else play();
             var sink = new NativeArray<float>(2048, Allocator.Persistent); sinks.Add(sink);
             using (var buffer = new NativeArray<float>(2048, Allocator.Persistent))
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, c.Key+".f32"))))
             using (var master = new BinaryWriter(File.Create(Path.Combine(output, c.Key+".master.f32")))) {
                 for (int block = 0; block < Blocks; block++) {
-                    if (c.Mode.StartsWith("dry")) {
+                    if (lifecycle) {
+                        if (block == 6 || block == 12 || block == 13 || block == 18) {
+                            bool changed = block == 6 || block == 13;
+                            if (c.Mode.StartsWith("life_enabled") || c.Mode == "life_out_enabled") component.enabled = !changed;
+                            else if (c.Mode.StartsWith("life_listener")) source.bypassListenerEffects = changed;
+                            else if (c.Mode.StartsWith("life_restart")) { source.Stop(); play(); }
+                            else if (c.Mode.StartsWith("life_stopwait")) { if (changed) source.Stop(); else play(); }
+                            else if (c.Mode == "life_add") {
+                                if (changed) chainEdit = go.AddComponent<AudioDistortionFilter>();
+                                else DestroyImmediate(chainEdit);
+                            } else if (c.Mode == "life_remove") {
+                                if (changed) DestroyImmediate(chainEdit);
+                                else chainEdit = go.AddComponent<AudioDistortionFilter>();
+                            }
+                        }
+                    } else if (c.Mode.StartsWith("dry")) {
                         if (block == 4 || block == 12) mixer.SetFloat("WetControl", block == 4 ? -80 : -6);
                         if (c.Mode == "dryedit" && (block == 6 || block == 8)) {
                             if (c.Kind == "Chorus" && block == 6) mixer.SetFloat("DelayControl", 2f);
@@ -282,7 +380,7 @@ public class LiveEffectProbe : MonoBehaviour
                     if (Engine) FlushEngine(Time.captureDeltaTime); else yield return null;
                     if (Environment.GetEnvironmentVariable("EFFECT_PROBE_TRACE") == "1" && mixer.GetFloat("Value", out float traced))
                         Debug.Log("PARAMETER " + c.Key + " " + block + " " + traced.ToString("R") + " " + Time.deltaTime.ToString("R") + " " + Time.captureDeltaTime.ToString("R"));
-                    if (!(bool)typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags).Invoke(null, new object[] { source.outputAudioMixerGroup, sink, false })) throw new Exception("Sink failed");
+                    if (!(bool)typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags).Invoke(null, new object[] { group, sink, false })) throw new Exception("Sink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed");
                     for (int i = 0; i < buffer.Length; i++) { writer.Write(buffer[i]); master.Write(sink[i]); }
                 }
@@ -291,7 +389,8 @@ public class LiveEffectProbe : MonoBehaviour
                 records.Add("\""+c.Key+suffix+"\":{\"file\":\""+c.Key+suffix+".f32\",\"frames\":"+(Blocks * 1024)+",\"channels\":2}");
             File.WriteAllText(Path.Combine(output, "capture.json"), "{"+string.Join(",", records)+"}\n");
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
-            if (c.Mode == "listener") DestroyImmediate(component);
+            if (c.Mode == "listener" || c.Mode.StartsWith("life_out_")) DestroyImmediate(component);
+            if (listenerControl) DestroyImmediate(listenerControl);
         }
         AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); Exit(0);
     }
