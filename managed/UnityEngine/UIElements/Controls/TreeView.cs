@@ -18,9 +18,10 @@ using Unbound.UIElements;
 // a collapse of a collapsed item (refreshed and reported all the same), selection by id (each
 // collapsed ancestor expanded and reported), right/left navigation (into the first child, expand,
 // collapse, back to the parent), new root items (itemsSourceChanged first), row structure and names,
-// and every callback in order. AddItem, TryRemoveItem, Move, GetAllItemIds, the custom indent and
-// dynamic height rows follow the same model without a capture. View-data persistence of the expanded
-// items and tree reordering by dragging are not implemented.
+// and every callback in order; tree-data section: Move, AddItem, TryRemoveItem and GetAllItemIds,
+// and when the rows follow them. The custom indent and dynamic height rows follow the same model
+// without a capture. View-data persistence of the expanded items and tree reordering by dragging
+// are not implemented.
 namespace UnityEngine.UIElements
 {
     public abstract partial class BaseTreeView : BaseVerticalCollectionView
@@ -516,7 +517,7 @@ namespace UnityEngine.UIElements
             var ids = new List<int>();
             if (rootIds == null)
             {
-                m_UaHierarchy.AddDescendantIds(m_UaHierarchy.root, ids);
+                m_UaHierarchy.AddAllIds(ids);
                 return ids;
             }
             foreach (int id in rootIds)
@@ -539,16 +540,35 @@ namespace UnityEngine.UIElements
             return ids;
         }
 
-        /// <summary>Moves an item under a new parent (-1: the root) at a child index (-1: last).</summary>
+        /// <summary>Moves an item under a new parent (-1: the root) at a child index (-1 or past the
+        /// end: last) and refreshes the rows it knows (the view's own refresh only with rebuildTree).
+        /// Nothing happens for an unknown item, an item moved into itself or under one of its
+        /// descendants. As measured (Unity 6000.0.71f1, tests/projects/uitkcollections tree-data): a
+        /// parent id that is not in the tree is an ArgumentNullException before anything moves; a
+        /// child index below -1 is an IndexOutOfRangeException after the item went to the end of
+        /// its new parent, and the rows do not show that until another change refreshes them. The
+        /// TreeViewItemData of the parents keep the children they were given.</summary>
         public virtual void Move(int id, int newParentId, int childIndex = -1, bool rebuildTree = true)
         {
             if (id == newParentId || IsChildOf(newParentId, id) || !m_UaHierarchy.TryGet(id, out var node)) return;
             UaTreeNode parent;
             if (newParentId == BaseTreeView.invalidId) parent = m_UaHierarchy.root;
-            else if (!m_UaHierarchy.TryGet(newParentId, out parent)) return;
+            else if (!m_UaHierarchy.TryGet(newParentId, out parent)) throw new ArgumentNullException(null, "Value cannot be null.\nParameter name: node");
             if (node.parent == parent && GetChildIndexForId(id) < childIndex) childIndex--;
+            if (childIndex < -1)
+            {
+                if (node.parent != parent) m_UaHierarchy.MoveTo(node, parent, -1, refreshRows: false);
+                throw new IndexOutOfRangeException("Index was outside the bounds of the array.");
+            }
             m_UaHierarchy.MoveTo(node, parent, childIndex);
             if (rebuildTree) RaiseItemParentChanged(id, newParentId);
+        }
+
+        /// <summary>Items added or removed since the rows were last refreshed show from here on.</summary>
+        internal override void PreRefresh()
+        {
+            base.PreRefresh();
+            m_UaHierarchy.FlushPending();
         }
 
         public abstract bool TryRemoveItem(int id, bool rebuildTree = true);
@@ -816,7 +836,7 @@ namespace UnityEngine.UIElements
 
         public virtual TreeViewItemData<T> GetTreeViewItemDataForId(int id) => m_Items.GetForId(id);
 
-        public virtual TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) => GetTreeViewItemDataForId(GetIdForIndex(index));
+        public virtual TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) => m_Items.GetForIndex(index);
 
         public override bool TryRemoveItem(int id, bool rebuildTree = true) => m_Items.TryRemoveItem(id, rebuildTree);
 
@@ -834,7 +854,8 @@ namespace UnityEngine.UIElements
     internal sealed class UaTreeItems<T>
     {
         readonly BaseTreeViewController m_Controller;
-        readonly Dictionary<int, TreeViewItemData<T>> m_ItemData = new Dictionary<int, TreeViewItemData<T>>();
+        // By node, not by id: an id given twice names two items (the id answers for the newest).
+        readonly Dictionary<UaTreeNode, TreeViewItemData<T>> m_ItemData = new Dictionary<UaTreeNode, TreeViewItemData<T>>();
 
         public UaTreeItems(BaseTreeViewController controller) => m_Controller = controller;
 
@@ -867,25 +888,22 @@ namespace UnityEngine.UIElements
         void AddRecursive(TreeViewItemData<T> item, UaTreeNode parent)
         {
             var node = hierarchy.Add(item.id, parent);
-            if (node == null) return;
-            m_ItemData[item.id] = item;
+            m_ItemData[node] = item;
             foreach (var child in item.children) AddRecursive(child, node);
         }
 
-        /// <summary>Adds an item (with its children) under a parent, -1 for the root, at a child index
-        /// (-1: last). An unknown parent or an id already in the tree is an error and adds nothing.</summary>
+        /// <summary>Adds an item (with its children) under a parent at a child index (-1 or past the
+        /// end: last); the parent's TreeViewItemData gets it as a child too. A parent id that is not
+        /// in the tree adds at the root; an id already in the tree adds a second item, and the id
+        /// then names the new one (Unity 6000.0.71f1, tests/projects/uitkcollections tree-data).
+        /// The rows show the item from the next refresh, at once with rebuildTree or a child index.</summary>
         public void AddItem(in TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree)
         {
-            UaTreeNode parent = hierarchy.root;
-            if (parentId != BaseTreeView.invalidId && !hierarchy.TryGet(parentId, out parent))
-            {
-                Debug.LogError($"Unbound: tree view item {item.id} was not added: its parent id {parentId} is not in the tree");
-                return;
-            }
+            bool known = hierarchy.TryGet(parentId, out var parent);
+            if (!known) parent = hierarchy.root;
             var node = hierarchy.Add(item.id, parent);
-            if (node == null) return;
-            if (parentId != BaseTreeView.invalidId && m_ItemData.TryGetValue(parentId, out var parentData)) parentData.InsertChild(item, childIndex);
-            m_ItemData[item.id] = item;
+            if (known && m_ItemData.TryGetValue(parent, out var parentData) && parentData.data != null) parentData.InsertChild(item, childIndex);
+            m_ItemData[node] = item;
             foreach (var child in item.children) AddRecursive(child, node);
             var view = m_Controller.uaTreeView;
             if (view.autoExpand) m_Controller.ExpandAncestorNodes(node);
@@ -893,20 +911,26 @@ namespace UnityEngine.UIElements
             if (rebuildTree) view.RefreshItems();
         }
 
-        public TreeViewItemData<T> GetForId(int id) => m_ItemData.TryGetValue(id, out var item) ? item : default;
+        public TreeViewItemData<T> GetForId(int id) => hierarchy.TryGet(id, out var node) && m_ItemData.TryGetValue(node, out var item) ? item : default;
+
+        /// <summary>The item of a row: of the row's own node, also where its id was given again.</summary>
+        public TreeViewItemData<T> GetForIndex(int index) =>
+            index >= 0 && index < hierarchy.visibleCount && m_ItemData.TryGetValue(hierarchy.VisibleAt(index), out var item) ? item : default;
 
         public bool TryRemoveItem(int id, bool rebuildTree)
         {
             if (!hierarchy.TryGet(id, out var node)) return false;
-            int parentId = m_Controller.GetParentId(id);
-            if (parentId != BaseTreeView.invalidId && m_ItemData.TryGetValue(parentId, out var parentData)) parentData.RemoveChild(id);
-            var removed = new List<int>();
-            hierarchy.AddDescendantIds(node, removed);
-            foreach (int descendant in removed) m_ItemData.Remove(descendant);
-            m_ItemData.Remove(id);
+            if (node.parent != null && node.parent != hierarchy.root && m_ItemData.TryGetValue(node.parent, out var parentData) && parentData.data != null) parentData.RemoveChild(id);
+            ForgetData(node);
             hierarchy.Remove(node);
             if (rebuildTree) m_Controller.uaTreeView.RefreshItems();
             return true;
+        }
+
+        void ForgetData(UaTreeNode node)
+        {
+            m_ItemData.Remove(node);
+            foreach (var child in node.children) ForgetData(child);
         }
     }
 
@@ -1038,16 +1062,25 @@ namespace Unbound.UIElements
         public UaTreeNode parent;
         public readonly List<UaTreeNode> children = new List<UaTreeNode>();
         public bool expanded;
+        // Taken out of the tree (rows refreshed before that may still name it).
+        public bool removed;
     }
 
-    /// <summary>A tree view's hierarchy by id and its visible rows (nodes whose ancestors are all
-    /// expanded, depth first), recomputed after a change when next read.</summary>
+    /// <summary>A tree view's hierarchy by id and its rows: the visible ones (nodes whose ancestors
+    /// are all expanded, depth first) and all of them. The rows are a view of the hierarchy as it
+    /// was when last refreshed: a move, an expansion or new root items refresh them; items added
+    /// or removed show once the tree view refreshes (or one of those changes does), until then the
+    /// rows are the old ones while parents and children already answer the new hierarchy (Unity
+    /// 6000.0.71f1, tests/projects/uitkcollections tree-data).</summary>
     internal sealed class UaTreeHierarchy
     {
         readonly Dictionary<int, UaTreeNode> m_ById = new Dictionary<int, UaTreeNode>();
         readonly List<UaTreeNode> m_Visible = new List<UaTreeNode>();
+        readonly List<UaTreeNode> m_All = new List<UaTreeNode>();
+        readonly Stack<(UaTreeNode node, bool visible)> m_Walk = new Stack<(UaTreeNode, bool)>();
+        // Items were added or removed since the rows were refreshed.
+        bool m_Pending;
         readonly Dictionary<UaTreeNode, int> m_VisibleIndex = new Dictionary<UaTreeNode, int>();
-        readonly Stack<UaTreeNode> m_Walk = new Stack<UaTreeNode>();
         readonly VisibleRows m_VisibleRows;
         bool m_Dirty = true;
 
@@ -1090,43 +1123,54 @@ namespace Unbound.UIElements
             m_Dirty = true;
         }
 
-        /// <summary>Adds an item under a parent. A repeated id is reported once and skipped with its
-        /// children.</summary>
+        /// <summary>Adds an item under a parent. An id already in the tree gets a second node; the
+        /// id then names the new one, the old one stays where it is.</summary>
         public UaTreeNode Add(int id, UaTreeNode parent)
         {
-            if (m_ById.ContainsKey(id))
-            {
-                Debug.LogError($"Unbound: tree view item id {id} is used more than once; the repeated item and its children are not shown");
-                return null;
-            }
             var node = new UaTreeNode { id = id, parent = parent };
-            m_ById.Add(id, node);
+            m_ById[id] = node;
             parent.children.Add(node);
-            m_Dirty = true;
+            m_Pending = true;
             return node;
         }
 
+        /// <summary>Takes a node and its descendants out; their ids no longer name anything.</summary>
         public void Remove(UaTreeNode node)
         {
             node.parent?.children.Remove(node);
             Forget(node);
-            m_Dirty = true;
+            m_Pending = true;
         }
 
         void Forget(UaTreeNode node)
         {
+            node.removed = true;
             m_ById.Remove(node.id);
             foreach (var child in node.children) Forget(child);
         }
 
         /// <summary>Moves a node under a parent at a child index (-1 or past the end: last).</summary>
-        public void MoveTo(UaTreeNode node, UaTreeNode parent, int childIndex)
+        public void MoveTo(UaTreeNode node, UaTreeNode parent, int childIndex, bool refreshRows = true)
         {
             node.parent.children.Remove(node);
             node.parent = parent;
             if (childIndex < 0 || childIndex > parent.children.Count) parent.children.Add(node);
             else parent.children.Insert(childIndex, node);
-            m_Dirty = true;
+            if (refreshRows) m_Dirty = true;
+        }
+
+        /// <summary>Lets the rows follow items added or removed since their last refresh.</summary>
+        public void FlushPending()
+        {
+            if (m_Pending) m_Dirty = true;
+        }
+
+        /// <summary>Every row's id, depth first, as of the last refresh, without the removed ones.</summary>
+        public void AddAllIds(List<int> ids)
+        {
+            Update();
+            foreach (var node in m_All)
+                if (!node.removed) ids.Add(node.id);
         }
 
         public void SetExpanded(UaTreeNode node, bool expanded, bool recurse)
@@ -1163,16 +1207,22 @@ namespace Unbound.UIElements
         {
             if (!m_Dirty) return;
             m_Dirty = false;
+            m_Pending = false;
             m_Visible.Clear();
             m_VisibleIndex.Clear();
-            for (int i = root.children.Count - 1; i >= 0; i--) m_Walk.Push(root.children[i]);
+            m_All.Clear();
+            for (int i = root.children.Count - 1; i >= 0; i--) m_Walk.Push((root.children[i], true));
             while (m_Walk.Count > 0)
             {
-                var node = m_Walk.Pop();
-                m_VisibleIndex[node] = m_Visible.Count;
-                m_Visible.Add(node);
-                if (!node.expanded) continue;
-                for (int i = node.children.Count - 1; i >= 0; i--) m_Walk.Push(node.children[i]);
+                var (node, visible) = m_Walk.Pop();
+                m_All.Add(node);
+                if (visible)
+                {
+                    m_VisibleIndex[node] = m_Visible.Count;
+                    m_Visible.Add(node);
+                }
+                bool childrenVisible = visible && node.expanded;
+                for (int i = node.children.Count - 1; i >= 0; i--) m_Walk.Push((node.children[i], childrenVisible));
             }
         }
 

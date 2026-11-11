@@ -783,8 +783,11 @@ namespace UnityEngine.Tests
             Assert.Equal("D", view.GetItemDataForId<string>(4));
         }
 
-        // [rule] AddItem at the root, under a parent at a child index, with autoExpand; an unknown
-        // parent or a repeated id adds nothing (logged); TryRemoveItem removes the descendants too.
+        // [rule] AddItem at the root, under a parent at a child index, with autoExpand; TryRemoveItem
+        // removes the descendants too. As measured (Unity 6000.0.71f1, tests/projects/uitkcollections
+        // tree-data): a parent id that is not in the tree adds at the root; an id already in the
+        // tree adds a second item and the id then names the new one; the parent's TreeViewItemData
+        // gets and loses the child.
         [Fact]
         public void AddAndRemoveItems()
         {
@@ -796,40 +799,46 @@ namespace UnityEngine.Tests
             view.autoExpand = true;
             view.AddItem(new TreeViewItemData<string>(311, "C1a"), 31);
             Assert.True(view.IsExpanded(3) && view.IsExpanded(31));
-            int before = view.GetTreeCount();
-            var errors = new List<string>();
-            var previous = Debug.unityLogger.logHandler;
-            Debug.unityLogger.logHandler = new ErrorCapture(errors, previous);
-            try
-            {
-                view.AddItem(new TreeViewItemData<string>(999, "orphan"), 12345);
-                view.AddItem(new TreeViewItemData<string>(2, "B again"), 1);
-            }
-            finally
-            {
-                Debug.unityLogger.logHandler = previous;
-            }
-            Assert.Equal(2, errors.Count);
-            Assert.Equal(before, view.GetTreeCount());
+            view.AddItem(new TreeViewItemData<string>(999, "orphan"), 12345);
+            Assert.Equal(-1, view.viewController.GetParentId(999));
+            Assert.Equal(new[] { 1, 2, 3, 4, 999 }, view.viewController.GetRootItemIds());
+            view.AddItem(new TreeViewItemData<string>(2, "B again"), 1);
+            Assert.Equal(1, view.viewController.GetParentId(2));
+            Assert.Equal("B again", view.GetItemDataForId<string>(2));
+            Assert.Equal(new[] { 1, 2, 3, 4, 999 }, view.viewController.GetRootItemIds());
             var controller = (DefaultTreeViewController<string>)view.viewController;
-            Assert.Equal(new[] { 13, 11, 12 }, controller.GetTreeViewItemDataForId(1).children.Select(c => c.id).ToArray());
+            Assert.Equal(new[] { 13, 11, 12, 2 }, controller.GetTreeViewItemDataForId(1).children.Select(c => c.id).ToArray());
+            Assert.True(view.TryRemoveItem(13));
+            Assert.Equal(new[] { 11, 12, 2 }, controller.GetTreeViewItemDataForId(1).children.Select(c => c.id).ToArray());
             Assert.True(view.TryRemoveItem(3));
             Assert.False(view.viewController.Exists(31));
             Assert.False(view.viewController.Exists(311));
             Assert.False(view.TryRemoveItem(3));
         }
 
-        sealed class ErrorCapture : ILogHandler
+        // As measured (same section): items added or removed without a rebuild show in the rows at
+        // the next refresh, while parents and children answer at once; a move to a parent that is
+        // not in the tree throws before anything moves, and one to a child index below -1 throws
+        // after the item went to the end of its new parent.
+        [Fact]
+        public void RowsFollowAddedAndRemovedItemsAtTheNextRefreshAndBadMovesThrow()
         {
-            readonly List<string> m_Errors;
-            readonly ILogHandler m_Inner;
-            public ErrorCapture(List<string> errors, ILogHandler inner) { m_Errors = errors; m_Inner = inner; }
-            public void LogFormat(LogType type, Object context, string format, params object[] args)
-            {
-                if (type == LogType.Error) m_Errors.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
-                m_Inner.LogFormat(type, context, format, args);
-            }
-            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
+            var view = NewTree();
+            view.ExpandAll();
+            view.AddItem(new TreeViewItemData<string>(4, "D"), 2, -1, false);
+            Assert.Equal(2, view.viewController.GetParentId(4));
+            Assert.DoesNotContain(4, VisibleIds(view));
+            view.RefreshItems();
+            Assert.Contains(4, VisibleIds(view));
+            Assert.True(view.TryRemoveItem(31, false));
+            Assert.False(view.viewController.Exists(31));
+            view.RefreshItems();
+            Assert.DoesNotContain(31, VisibleIds(view));
+
+            Assert.Throws<ArgumentNullException>(() => view.viewController.Move(11, 12345));
+            Assert.Equal(1, view.viewController.GetParentId(11));
+            Assert.Throws<IndexOutOfRangeException>(() => view.viewController.Move(11, 3, -5));
+            Assert.Equal(new[] { 11 }, view.viewController.GetChildrenIds(3));
         }
 
         // [rule] --unity-tree-view-indent sets the indent per level; a changed value rebinds the rows,

@@ -1733,7 +1733,7 @@ namespace UnityEngine.UIElements
 
         public virtual TreeViewItemData<T> GetTreeViewItemDataForId(int id) => m_Items.GetForId(id);
 
-        public virtual TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) => m_Items.GetForId(GetIdForIndex(index));
+        public virtual TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) => m_Items.GetForIndex(index);
 
         public override bool TryRemoveItem(int id, bool rebuildTree = true) => m_Items.TryRemoveItem(id, rebuildTree);
 
