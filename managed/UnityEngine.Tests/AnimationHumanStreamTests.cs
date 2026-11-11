@@ -53,7 +53,7 @@ namespace UnityEngine.Tests
 
         /// <summary>A humanoid in a T-pose: the required bones plus chest and neck, an avatar built
         /// from it with AvatarBuilder.</summary>
-        static GameObject Humanoid(out Animator animator, Vector3 position = default, float scale = 1f)
+        internal static GameObject Humanoid(out Animator animator, Vector3 position = default, float scale = 1f)
         {
             var root = new GameObject("Human");
             root.transform.position = position;
