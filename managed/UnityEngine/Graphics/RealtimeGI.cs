@@ -92,7 +92,7 @@ namespace UnityEngine
         static GiLight[] s_Lights = new GiLight[8];
         static readonly List<Renderer> s_Released = new List<Renderer>();
         static ushort[] s_Texels = Array.Empty<ushort>();
-        static readonly HashSet<string> s_Warned = new HashSet<string>(StringComparer.Ordinal);
+        internal static readonly HashSet<string> s_Warned = new HashSet<string>(StringComparer.Ordinal);
         static bool s_Registered;
         /// <summary>Mixed lights are lit as realtime ones when the first scene bakes no global
         /// illumination.</summary>

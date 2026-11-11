@@ -192,8 +192,9 @@ several frames, and an update still on its way replaced the data. Unbound draws 
 in the frame its inputs change, and data set in the frame of such a change stays. Not measured:
 a scene whose environment lighting is baked
 (`LightingSettings.realtimeEnvironmentLighting` off with baked GI on; Unbound gives realtime GI
-the environment all the same, with a warning), a skybox under a scriptable render pipeline (drawn
-as the pipeline draws a camera, with a warning), sky materials other than the procedural one
+the environment all the same, with a warning), a skybox under a scriptable render pipeline (it
+adds no realtime GI light there, with a warning: the capture is the built-in pipeline's; colors,
+gradients and a script's cube work), sky materials other than the procedural one
 (they are drawn by the same capture), and gamma-space projects.
 
 Unbound (`Graphics/RealtimeGIEnvironment.cs`) keeps the cube and what it was made from (the

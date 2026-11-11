@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -231,9 +232,14 @@ namespace Unbound.Tests
                 {
                     RenderSettings.skybox = sky;
                     RenderSettings.ambientMode = AmbientMode.Skybox;
+                    // Both captures run: the faces are made and the probe is derived.
                     RealtimeGI.EnvironmentChanged();
+                    int version = RealtimeGI.EnvironmentVersion;
                     RealtimeGI.UpdateEnvironment();
+                    Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
+                    RenderSettings.s_EnvironmentProbe = null;
                     DynamicGI.UpdateEnvironment();
+                    Assert.True(RenderSettings.s_EnvironmentProbe.HasValue);
                 });
                 Assert.Equal(0, events);
                 Assert.Equal(0, RenderObjectCounter.Calls);
@@ -243,6 +249,129 @@ namespace Unbound.Tests
                 Camera.onPreCull -= count;
                 Camera.onPreRender -= count;
                 Camera.onPostRender -= count;
+                UnityEngine.Object.DestroyImmediate(owner);
+                UnityEngine.Object.DestroyImmediate(sky);
+                RenderTexture.SetActiveQuietly(active);
+                GfxStream.Restore(saved);
+            }
+        }
+
+        sealed class CountingPipelineAsset : RenderPipelineAsset
+        {
+            protected override RenderPipeline CreatePipeline() => new CountingPipeline();
+        }
+
+        sealed class CountingPipeline : RenderPipeline
+        {
+            internal static int Renders;
+            protected override void Render(ScriptableRenderContext context, Camera[] cameras) => Renders++;
+            protected override void Render(ScriptableRenderContext context, List<Camera> cameras) => Renders++;
+        }
+
+        sealed class Warnings : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+            public void LogException(Exception exception, UnityEngine.Object context) { }
+            public void LogFormat(LogType logType, UnityEngine.Object context, string format, params object[] args)
+            {
+                if (logType == LogType.Warning) Lines.Add(string.Format(format, args));
+            }
+        }
+
+        [Fact]
+        public void ASkyboxUnderARenderPipelineAddsNoLightAndWarnsOnce()
+        {
+            // Unmeasured, and the capture is the built-in pipeline's: nothing is drawn through
+            // the pipeline (its events would reach scripts); colors and a script's cube work.
+            var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
+            var asset = ScriptableObject.CreateInstance<CountingPipelineAsset>();
+            var pipeline = GraphicsSettings.defaultRenderPipeline;
+            var log = Debug.unityLogger.logHandler;
+            var warnings = new Warnings();
+            int begun = 0;
+            Action<ScriptableRenderContext, Camera> begin = (_, _) => begun++;
+            RenderPipelineManager.beginCameraRendering += begin;
+            try
+            {
+                GraphicsSettings.defaultRenderPipeline = asset;
+                Debug.unityLogger.logHandler = warnings;
+                RealtimeGI.s_Warned.Remove("environment-pipeline");
+                CountingPipeline.Renders = 0;
+                WithAmbient(() =>
+                {
+                    RenderSettings.ambientMode = AmbientMode.Flat;
+                    var color = new Color(0.3f, 0.2f, 0.1f);
+                    RenderSettings.ambientLight = color;
+                    RealtimeGI.UpdateEnvironment();
+                    AssertFace(4, color);
+                    Assert.Empty(warnings.Lines);
+                    RenderSettings.skybox = sky;
+                    RenderSettings.ambientMode = AmbientMode.Skybox;
+                    RealtimeGI.UpdateEnvironment();
+                    for (int face = 0; face < 6; face++) AssertFace(face, Color.black);
+                    RenderSettings.ambientIntensity = 2f;
+                    RealtimeGI.UpdateEnvironment();
+                    var line = Assert.Single(warnings.Lines);
+                    Assert.Contains("scriptable render pipeline", line);
+                    var data = Cube();
+                    DynamicGI.SetEnvironmentData(data);
+                    RealtimeGI.UpdateEnvironment();
+                    AssertCube(data);
+                });
+                Assert.Equal(0, CountingPipeline.Renders);
+                Assert.Equal(0, begun);
+            }
+            finally
+            {
+                RenderPipelineManager.beginCameraRendering -= begin;
+                Debug.unityLogger.logHandler = log;
+                GraphicsSettings.defaultRenderPipeline = pipeline;
+                UnityEngine.Object.DestroyImmediate(asset);
+                UnityEngine.Object.DestroyImmediate(sky);
+            }
+        }
+
+        [Fact]
+        public void TheSunsColorCountsWhereTheCaptureDrawsWithIt()
+        {
+            // The measured release draws the capture without the sun's color, so only its
+            // direction makes the faces again; other releases draw with it.
+            string release = ProjectInfo.UnityVersion;
+            var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
+            var owner = new GameObject("environment sun test");
+            var oldSun = RenderSettings.sun;
+            var active = RenderTexture.ActiveTarget;
+            var saved = GfxStream.Current;
+            try
+            {
+                var sun = owner.AddComponent<Light>();
+                sun.type = LightType.Directional;
+                RenderSettings.sun = sun;
+                WithAmbient(() =>
+                {
+                    RenderSettings.skybox = sky;
+                    RenderSettings.ambientMode = AmbientMode.Skybox;
+                    foreach (var (version, counts) in new[] { ("6000.0.71f1", false), ("6000.0.70f1", true) })
+                    {
+                        ProjectInfo.UnityVersion = version;
+                        sun.color = Color.white;
+                        RealtimeGI.UpdateEnvironment();
+                        int made = RealtimeGI.EnvironmentVersion;
+                        sun.color = new Color(1f, 0.5f, 0.25f);
+                        RealtimeGI.UpdateEnvironment();
+                        Assert.Equal(counts, made != RealtimeGI.EnvironmentVersion);
+                        // The direction counts on both.
+                        made = RealtimeGI.EnvironmentVersion;
+                        owner.transform.rotation = Quaternion.Euler(version == release ? 30f : 50f, 20f, 0f) * owner.transform.rotation;
+                        RealtimeGI.UpdateEnvironment();
+                        Assert.NotEqual(made, RealtimeGI.EnvironmentVersion);
+                    }
+                });
+            }
+            finally
+            {
+                ProjectInfo.UnityVersion = release;
+                RenderSettings.sun = oldSun;
                 UnityEngine.Object.DestroyImmediate(owner);
                 UnityEngine.Object.DestroyImmediate(sky);
                 RenderTexture.SetActiveQuietly(active);
