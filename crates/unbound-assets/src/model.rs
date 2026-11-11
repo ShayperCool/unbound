@@ -812,7 +812,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 43;
+    const VERSION: u32 = 44;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1649,10 +1649,14 @@ impl<'a> Builder<'a> {
                 self.asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &range.name)
             });
             // In single precision, as the Editor's clip length (a range from frame 40 to 48 at
-            // 24 fps is 0.33333337 s).
+            // 24 fps is 0.33333337 s). A Humanoid clip ends at its last key, whose time is the
+            // frame count times the frame length: 31 frames at 30 a second are 1.0333334 s, one
+            // step past the range's 1.0333333 (tests/projects/modelclips HumanLong).
             // A clip without keys has the range (0, 1) of an empty AnimationClip.
             let length = if empty {
                 1.0
+            } else if human {
+                frame_key_time(end, start, fps)
             } else {
                 end as f32 - start as f32
             };

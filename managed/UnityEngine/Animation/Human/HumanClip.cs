@@ -289,7 +289,6 @@ namespace UnityEngine
             var position = new Dictionary<int, AnimationCurve[]>();
             var rotation = new Dictionary<int, AnimationCurve[]>();
             var scale = new Dictionary<int, AnimationCurve[]>();
-            float start = float.MaxValue, stop = float.MinValue;
             var kept = new List<ClipCurve>();
             foreach (var c in m_Curves)
             {
@@ -312,15 +311,14 @@ namespace UnityEngine
                 }
                 if (!group.TryGetValue(node, out var curves)) group[node] = curves = new AnimationCurve[width];
                 curves[component] = c.Curve;
-                int n = c.Curve.length;
-                if (n > 0)
-                {
-                    start = Math.Min(start, c.Curve[0].time);
-                    stop = Math.Max(stop, c.Curve[n - 1].time);
-                }
                 // Curves of the human skeleton's nodes become muscle curves; the others stay.
                 if (constant.HumanSkeletonReverseIndexArray[node] < 0) kept.Add(c);
             }
+            // The samples span the clip's range, which ends at its last key (the frame count
+            // times the frame length). For some counts that end, divided by the frame length,
+            // rounds past the count, and there is one sample more: 31 frames at 30 a second are
+            // sampled 33 times (tests/projects/modelclips HumanLong; other lengths in the test).
+            float start = StartTime, stop = m_HasRange ? m_StopTime : CurveEnd();
             if (!(start < stop)) return;
             var times = HumanClipImport.SampleTimes(start, stop, m_SampleRate, 1);
             var settings = HumanSettings();
@@ -335,6 +333,11 @@ namespace UnityEngine
                     pose.X[node].q = HumanClipImport.NormalizeCurveQ(v);
                 }
             }, settings);
+            // A sample past the clip's end shapes its neighbour's slope (the mean of the slopes
+            // on both sides, the far one flat) and gives no key: the clip keeps its range's keys.
+            int inRange = times.Length;
+            while (inRange > 0 && times[inRange - 1] > stop) inRange--;
+            curvesOut.Keep(inRange);
             m_Curves = kept;
             var keptKeys = m_HumanKeyReduction > 0f ? new List<int>() : null;
             for (int i = 0; i < HumanClipImport.CurveCount; i++)

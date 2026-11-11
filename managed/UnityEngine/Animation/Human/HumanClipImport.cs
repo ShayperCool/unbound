@@ -49,6 +49,18 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>The keys' in and out slope (they are equal); in and out weights are 1/3 and
         /// the keys are not weighted.</summary>
         public float[][] Slopes;
+
+        /// <summary>Keeps the first <paramref name="count"/> samples of every curve.</summary>
+        public void Keep(int count)
+        {
+            if (count >= Times.Length) return;
+            Array.Resize(ref Times, count);
+            for (int i = 0; i < Values.Length; i++)
+            {
+                if (Values[i] != null) Array.Resize(ref Values[i], count);
+                if (Slopes[i] != null) Array.Resize(ref Slopes[i], count);
+            }
+        }
     }
 
     /// <summary>The model importer's conversion of a Humanoid model's clip (the transform curves
