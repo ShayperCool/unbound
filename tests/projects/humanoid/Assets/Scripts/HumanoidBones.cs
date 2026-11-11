@@ -41,7 +41,8 @@ public partial class HumanoidProbe
     /// <summary>Bone handle jobs (an AnimationScriptPlayable, root motion applied) above HumanA's
     /// clip, one per <see cref="HumanBoneJob.Mode"/>, each step with what the job reads before and
     /// after its change, the human stream's body and muscles after it, and the final pose with
-    /// the transforms' locals every fourth step.</summary>
+    /// the transforms' locals every fourth step. RotateThenHuman turns the lower arm, reads the
+    /// human stream and the bones again (humanBetween, between), then turns the head.</summary>
     static void BoneHandles()
     {
         foreach (HumanBoneJob.Mode mode in System.Enum.GetValues(typeof(HumanBoneJob.Mode)))
@@ -97,8 +98,14 @@ public struct HumanBoneJob : IAnimationJob
         switch (mode)
         {
             case Mode.RotateLocal:
-            case Mode.RotateThenHuman:
                 arm.SetLocalRotation(stream, arm.GetLocalRotation(stream) * Quaternion.Euler(0f, 0f, 40f));
+                break;
+            case Mode.RotateThenHuman:
+                // A bone, then the pose read back, then the bones again and another bone.
+                arm.SetLocalRotation(stream, arm.GetLocalRotation(stream) * Quaternion.Euler(0f, 0f, 40f));
+                HumanoidProbe.JobRecord("humanBetween", stream);
+                HumanoidProbe.BoneRecord("between", stream, ref this);
+                head.SetRotation(stream, Quaternion.Euler(0f, 45f, 0f));
                 break;
             case Mode.RotateWorld:
                 head.SetRotation(stream, Quaternion.Euler(0f, 45f, 0f));
