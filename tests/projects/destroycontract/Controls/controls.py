@@ -442,7 +442,7 @@ def record_controls(normal, out):
     mutated('marker not last', lambda rows: rows.append(rows.pop(-2)), 'completion marker is not the last line')
     mutated('wrong release', setv('context.unityVersion', '6000.0.70f1'), 'context.unityVersion')
     mutated('wrong device', setv('context.graphicsDeviceType', 'Null'), 'context.graphicsDeviceType')
-    mutated('not batchmode', setv('context.isBatchMode', False), 'context.isBatchMode')
+    mutated('batchmode', setv('context.isBatchMode', True), 'context.isBatchMode')
     mutated('not the Editor', setv('context.isEditor', False), 'context.isEditor')
     mutated('another scene', setv('context.scene', 'Other'), 'context.scene')
     mutated('another capture frame rate', setv('context.captureFramerate', 60), 'context.captureFramerate')
@@ -507,8 +507,8 @@ def run_controls(normal_dir, out):
     control('launch: 300 s external progress inside the 1200 s hard deadline, shutdown 30 / kill 10',
             [300, 1200, 30, 10], [j.progress_timeout, j.timeout, j.shutdown_grace, j.kill_grace],
             [j.progress_timeout, j.timeout, j.shutdown_grace, j.kill_grace] == [300, 1200, 30, 10])
-    control('launch: batchmode GPU Record command without -quit/-nographics', [], guards.command_problems(j.command(), RELEASE),
-            not guards.command_problems(j.command(), RELEASE) and j.batch and j.graphics and j.kind == 'editor-gpu')
+    control('launch: windowed GPU Record command without -quit/-nographics', [], guards.command_problems(j.command(), RELEASE),
+            not guards.command_problems(j.command(), RELEASE) and not j.batch and j.graphics and j.kind == 'editor-gpu')
     problems = guards.capture_problems(positive, project, RELEASE, DEVICE)
     control('capture: the synthetic complete capture passes every run guard (positive)', [], problems, not problems)
 
@@ -538,7 +538,7 @@ def run_controls(normal_dir, out):
     case('launcher exit 1', edit_json('editor-run.json', lambda d, _: d.update(launcher={'exit': 1})), 'launcher exit 1')
     case('-quit passed', command(lambda c: c+['-quit']), '-quit must not be passed')
     case('-nographics passed', command(lambda c: c[:5]+['-nographics']+c[5:]), '-nographics must not be passed')
-    case('no -batchmode', command(lambda c: [a for a in c if a != '-batchmode']), '-batchmode is missing')
+    case('-batchmode passed', command(lambda c: c+['-batchmode']), '-batchmode must not be passed')
     case('no Record entry point', command(lambda c: [a for a in c if a not in ('-executeMethod', 'ProbeRunner.Record')]), 'ProbeRunner.Record is missing')
     case('Editor of another release', command(lambda c: [a.replace(RELEASE, '6000.0.70f1') for a in c]), 'is not release')
     case('no Editor result', lambda d: (d/'editor-run.json').unlink(), 'no Editor result')
@@ -570,7 +570,7 @@ def run_controls(normal_dir, out):
     case('runner sequence gap', events(lambda rows: [r for i, r in enumerate(rows) if i != 1]), 'not contiguous')
     case('runner probe finished 3', events(lambda rows: [dict(r, detail='3') if r['e'] == 'finished' else r for r in rows]), "finished with '3'")
     case('runner event after exit', events(lambda rows: renumber(rows+[{'seq': 0, 't': 9, 'e': 'state', 'detail': 'x'}])), 'not exit')
-    case('runner not batchmode', events(lambda rows: [dict(r, detail=r['detail'].replace('batchmode=true', 'batchmode=false')) if r['e'] == 'record' else r for r in rows]), 'not record in batchmode')
+    case('runner batchmode', events(lambda rows: [dict(r, detail=r['detail'].replace('batchmode=false', 'batchmode=true')) if r['e'] == 'record' else r for r in rows]), 'not record in windowed mode')
 
     def log(text):
         return lambda d: (d/'editor.log').write_text((d/'editor.log').read_text()+text+'\n')
@@ -740,7 +740,7 @@ def pair_controls(normal_dir, out):
         code = run.editor(work/'dry', 'native1', RELEASE, None, dry_run=True)
     plan = json.loads(printed.getvalue())
     control('dry run: prints the job and starts nothing, creates nothing', [0, False],
-            [code, (work/'dry').exists()], code == 0 and not (work/'dry').exists() and plan['plan']['batch'] is True)
+            [code, (work/'dry').exists()], code == 0 and not (work/'dry').exists() and plan['plan']['batch'] is False)
 
     ok = {'sources': {'Assets/Scripts/DestroyContractProbe.cs': 'x'}, 'references': {'a.dll': 'h'},
           'analyzers': {'g.dll': 'h'}, 'exit': 0, 'errors': [], 'dll_sha256': 'd'}

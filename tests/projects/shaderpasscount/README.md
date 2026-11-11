@@ -2,7 +2,7 @@
 
 Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ShaderPassCountProbe.cs`). The canonical
 `Reference/unity-6000.0.71f1.jsonl` contains 923 rows from two independent byte-identical
-batchmode GPU captures, both exit 0 without a forced stop on NVIDIA RTX 4060.
+windowed GPU captures, both exit 0 without a forced stop on NVIDIA RTX 4060.
 
 The shader keyword canonical has `Shader.passCount` equal to SubShader 0's declared count for all
 of its 37 shaders; that equality did not establish which SubShader was drawn. The builtinrp LOD
@@ -156,8 +156,9 @@ python3 tests/projects/shaderpasscount/run.py publish --release 6000.0.71f1 --la
 python3 tests/projects/shaderpasscount/analyze.py fit <cache>/<label>/native1/capture/values.jsonl --report <cache>/fit.json
 ```
 
-Batchmode with graphics through `tests/editor_runner.py` (`EditorJob(batch=True, graphics=True)`,
-`vglrun -d egl Unity -batchmode -projectPath P -executeMethod ProbeRunner.Record`, no `-quit`, no
+Windowed graphics on the existing GPU display through `tests/editor_runner.py`
+(`EditorJob(batch=False, graphics=True, private_display=False)`,
+`vglrun -d egl Unity -force-glcore -projectPath P -executeMethod ProbeRunner.Record`, no `-quit`, no
 `-nographics`), the shader keyword runner's protocol with a closed output: Record turns
 asynchronous shader compilation off, opens the scene and enters Play mode from a delayCall; only
 the update handler leaves Play mode after the probe's finished code, waits 30 Edit-mode updates,
@@ -173,7 +174,7 @@ differ from the prepared fixture, runner events other than record/enter/finished
 the Editor-side watchdog, a partial record, compile errors, shader errors or native faults in the
 Editor log (shader warnings are listed in `shader-log.json`, not refused), a changed fixture
 asset, a record that does not follow the schema case by case, authored settings that are not the
-probe's, fixture shaders not found, a failed set-up, a context that is not the release/batchmode/
+probe's, fixture shaders not found, a failed set-up, a context that is not the release/windowed/
 OpenGLCore/no SRP, unscoped error logs and missing diagnostics.
 
 `preflight.py` compiles both scripts with the Editor's own Roslyn and the shader keyword batch
@@ -186,7 +187,7 @@ drives them through the runner protocol; fake answers are not Unity's.
 
 ## Limits
 
-* Built-in pipeline only, measured context only: batchmode Linux Editor, OpenGLCore, the
+* Built-in pipeline only, measured context only: windowed Linux Editor, OpenGLCore, the
   fixture's quality and colour settings. SRP / custom pipelines and `Shader.globalRenderPipeline`
   changes are not covered.
 * No backend-excluded SubShader (`exclude_renderers`/`only_renderers` for the active device): that
@@ -197,3 +198,14 @@ drives them through the runner protocol; fake answers are not Unity's.
   vertex-lit and replacement-shader selection, CustomRenderTexture pass validity and Material
   passes of other renderers are not read.
 * Colour identification assumes the 8-bit codes survive the linear target (decode tolerance 8).
+
+## Reference mode correction
+
+Two independent windowed captures pass all strict guards, exit normally on NVIDIA
+and agree byte for byte. Exactly `context.isBatchMode` changes from true to false;
+the other 922 rows, including every rendered colour, are unchanged. The strict
+engine count decreases from 21/923 to 20/923 failing keys. Those 20 are the retained
+`Material.FindPass` answers for generated and LOD-excluded passes. Controls pass
+183/183, including a truncation control that now cuts within a line rather than
+at a midpoint that could coincide with a newline. Comparator rules are unchanged;
+the Python runner creates no X server.

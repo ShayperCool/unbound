@@ -2299,7 +2299,7 @@
    {
     "path": "tests/projects/coreapis/README.md",
     "quote": "in batch mode the Game view does not render, so the screen camera, OnGUI and WaitForEndOfFrame never run",
-    "sha256": "faf9e425e21784f5b22d1daa1a25b5eb715c6a7c2b1dd287a7e293f475f8a4e5"
+    "sha256": "acd9708f8ad315316c1781f2bf1ae6a7bf734050d5b080bc60c32343e397381e"
    }
   ]
  },

@@ -2,7 +2,7 @@
 
 This probe records manual `Object.Destroy` requests, synchronous callbacks,
 returned object state and later delivery inside brackets around the default
-PlayerLoop leaves. The reference is Unity 6000.0.71f1, LinuxEditor, batch GPU,
+PlayerLoop leaves. The reference is Unity 6000.0.71f1, LinuxEditor, windowed GPU,
 OpenGLCore on NVIDIA, with the built-in pipeline.
 
 `Reference/unity-6000.0.71f1.jsonl` contains 1115 records. Two independent captures
@@ -44,9 +44,18 @@ MULTIPLE. These results were retained without changing the hypotheses.
 
 ## Coroutine EOF and other limits
 
-Neither batch repeat resumed WaitForEndOfFrame. `go.wfeof` is therefore
-`NOT_ISSUED`, and coroutine-phase destruction is unmeasured. These captures also
-do not establish whether a coroutine stops at a manual Destroy request.
+Both windowed repeats resume WaitForEndOfFrame 23 times, at steps 1-23, after
+`PostLateUpdate.ObjectDispatcherPostLateUpdate`. The `go.wfeof` request is issued at
+step 21, relative frame 22; OnDisable occurs before it returns and OnDestroy is
+recorded in `FixedUpdate.ScriptRunDelayedFixedFrameRate` of relative frame 23.
+These are observed brackets in this fixture, not a general scheduling guarantee.
+
+The strict engine comparison is 887/1115 failing keys, previously 891/1115 against
+the batch reference. Of these, 886 differ only in `cb.wfeof`, which is one higher
+in Unbound. The `points` key contains one extra engine EOF resume at step 0,
+relative frame 1; removing that point makes the sequences equal. First Game-view
+rendering and coroutine startup need further controls; no engine behavior changes
+or tolerance changes are included here.
 
 Positive delays, DestroyImmediate, never-active objects, multiple siblings,
 deeper hierarchies, other handler types/execution orders, non-script components,
@@ -61,11 +70,24 @@ the full ordered/raw comparison. `analyze.py` evaluates the precommitted models
 separately from publication. Real-time values and raw IDs remain in hashed
 diagnostics outside the compared record.
 
-The admitted pair used label `destroycontract-native-20261103a`. Its two launches,
-publication and fit are spent. Its existing Roslyn preflight and 270 mock controls
-were reused, not rerun. Any further capture requires a separate release.
+## Windowed reference replacement
 
-Evidence lives under `validation/runs/destroy-native-witness-20261104/` and Root
-`validation/runs/destroy-native-root-admission-20261104/` in the Unbound cache.
-The accepted engine baseline remains manifest `d4078b07`, Core `fb2a7180`, suite
-1661/1661 and API 0/2319. Those are earlier matching results, not runs of this probe.
+The Python runner now uses the existing GPU display, without `-batchmode`, and
+forces OpenGLCore. It creates no X server. The C# recorder is unchanged; its sources
+still match the recorded compile preflight. Two independent Editor processes pass
+the strict guards, exit normally on NVIDIA and produce byte-identical records.
+
+Exactly 855 of 1115 reference keys change from the batch recording:
+
+- 839 state keys change only `cb.wfeof`: 819 `snap.*` states and 20 `case.*` states
+  whose newly resumed coroutine increments the counter.
+- Nine states `snap.{22,23,24}.{update,late,teofc}.go.wfeof` now describe the
+  destruction that the batch capture never requested.
+- `case.go.wfeof.issued`, `case.go.wfeof.before.go.wfeof`,
+  `case.go.wfeof.after.go.wfeof`, `trace.go.wfeof`, `order` and `points` now include
+  that request or the resumed EOF phases.
+- `context.isBatchMode` changes from true to false.
+
+The other 260 keys and all comparator rules are byte-identical. `PREDICTIONS.json`
+retains the precommitted hypotheses; only its existing core API README digest is
+refreshed to the current file. `Controls/controls.py` passes all 270 controls.

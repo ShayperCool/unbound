@@ -17,6 +17,10 @@ public class WindProbe : MonoBehaviour
 {
     readonly StringBuilder m_Out = new StringBuilder();
 
+    // A fixed scaled clock makes both scenario pulse phases and the pulse samples repeatable.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void CaptureClock() => Time.captureDeltaTime = 0.01f;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("WindProbe").AddComponent<WindProbe>();
 

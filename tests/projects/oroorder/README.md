@@ -153,3 +153,12 @@ with no tolerance, as the core API probe does, and prints every missing and extr
 compares the camera and handler list of every order-window render (o0..o16) with the
 reference's, and applies analyze.py's structural guards to the capture. Any difference exits 1.
 
+
+## Recorder repair
+
+The recorder now writes ordinary numeric payloads unchanged; instance IDs are named
+only at their explicit formatting sites. Two independent windowed NVIDIA captures
+exit normally and reproduce all 1171 canonical lines byte for byte, so no reference
+row changes. The strict engine comparison drops from 114 to 91 missing and extra
+lines; 24 of 34 order-window renders still differ. No ordering or numeric tolerance
+changes. The remaining raw differences stay in the report.

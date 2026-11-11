@@ -287,7 +287,7 @@ def record_controls(normal, out):
     full = normal.read_text()
     mutated('completion-only', lambda rows: '{"k":"complete","v":true}\n', 'missing context.unityVersion')
     mutated('truncated by lines', lambda rows: ''.join(full.splitlines(True)[:len(base)*2//3]), 'completion marker is not the last line')
-    mutated('truncated mid-line', lambda rows: full[:len(full)//2], 'truncated')
+    mutated('truncated mid-line', lambda rows: full[:full.index('\n')//2], 'truncated')
     mutated('omitted case', lambda rows: rows.__setitem__(slice(None), [r for r in rows if not r['k'].startswith('case.shader175.')]), 'missing case.shader175')
     mutated('omitted shader readback', lambda rows: rows.__setitem__(slice(None), [r for r in rows if not r['k'].startswith('case.global100.surface.')]), 'missing case.global100.surface')
     mutated('omitted read', lambda rows: rows.pop(index('case.shader25.lod.passCount')), 'missing case.shader25.lod.passCount')
@@ -310,7 +310,7 @@ def record_controls(normal, out):
     mutated('set-up step failed', lambda rows: rows.insert(index('setup.actualRenderingPath'), {'k': 'setup.step[camera].exception', 'v': 'Exception: x'}), 'could not set up')
     mutated('wrong release', setv('context.unityVersion', '6000.0.70f1'), 'context.unityVersion')
     mutated('wrong device', setv('context.graphicsDeviceType', 'Null'), 'context.graphicsDeviceType')
-    mutated('not batchmode', setv('context.isBatchMode', False), 'context.isBatchMode')
+    mutated('batchmode', setv('context.isBatchMode', True), 'context.isBatchMode')
     mutated('a scriptable render pipeline', setv('context.renderPipeline', 'UniversalRP'), 'context.renderPipeline')
     mutated('unscoped error', setv('capture.unscopedLogs', ['Error: boom']), 'unexpected errors outside the probe cases')
     mutated('not a k/v record', lambda rows: full.replace('{"k":"case.default.log"', '{"key":"case.default.log"', 1), 'not a {"k","v"} record')
@@ -370,8 +370,8 @@ def run_controls(normal_dir, out):
     control('launch: 300 s external progress inside the 1200 s hard deadline, shutdown 30 / kill 10',
             [300, 1200, 30, 10], [j.progress_timeout, j.timeout, j.shutdown_grace, j.kill_grace],
             [j.progress_timeout, j.timeout, j.shutdown_grace, j.kill_grace] == [300, 1200, 30, 10])
-    control('launch: batchmode GPU Record command without -quit/-nographics', [], guards.command_problems(j.command(), RELEASE),
-            not guards.command_problems(j.command(), RELEASE) and j.batch and j.graphics and j.kind == 'editor-gpu')
+    control('launch: windowed GPU Record command without -quit/-nographics', [], guards.command_problems(j.command(), RELEASE),
+            not guards.command_problems(j.command(), RELEASE) and not j.batch and j.graphics and j.kind == 'editor-gpu')
     problems = guards.capture_problems(positive, project, RELEASE, DEVICE)
     control('capture: the synthetic complete capture passes every run guard (positive)', [], problems, not problems)
 
@@ -401,7 +401,7 @@ def run_controls(normal_dir, out):
     case('launcher exit 1', edit_json('editor-run.json', lambda d, _: d.update(launcher={'exit': 1})), 'launcher exit 1')
     case('-quit passed', command(lambda c: c+['-quit']), '-quit must not be passed')
     case('-nographics passed', command(lambda c: c[:5]+['-nographics']+c[5:]), '-nographics must not be passed')
-    case('no -batchmode', command(lambda c: [a for a in c if a != '-batchmode']), '-batchmode is missing')
+    case('-batchmode passed', command(lambda c: c+['-batchmode']), '-batchmode must not be passed')
     case('no Record entry point', command(lambda c: [a for a in c if a not in ('-executeMethod', 'ProbeRunner.Record')]), 'ProbeRunner.Record is missing')
     case('Editor of another release', command(lambda c: [a.replace(RELEASE, '6000.0.70f1') for a in c]), 'is not release')
     case('no Editor result', lambda d: (d/'editor-run.json').unlink(), 'no Editor result')
@@ -433,7 +433,7 @@ def run_controls(normal_dir, out):
     case('runner sequence gap', events(lambda rows: [r for i, r in enumerate(rows) if i != 1]), 'not contiguous')
     case('runner probe finished 3', events(lambda rows: [dict(r, detail='3') if r['e'] == 'finished' else r for r in rows]), "finished with '3'")
     case('runner event after exit', events(lambda rows: renumber(rows+[{'seq': 0, 't': 9, 'e': 'state', 'detail': 'x'}])), 'not exit')
-    case('runner not batchmode', events(lambda rows: [dict(r, detail=r['detail'].replace('batchmode=true', 'batchmode=false')) if r['e'] == 'record' else r for r in rows]), 'not record in batchmode')
+    case('runner batchmode', events(lambda rows: [dict(r, detail=r['detail'].replace('batchmode=false', 'batchmode=true')) if r['e'] == 'record' else r for r in rows]), 'not record in windowed mode')
 
     def log(text):
         return lambda d: (d/'editor.log').write_text((d/'editor.log').read_text()+text+'\n')

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Records the activation order probe in the Unity Editor or runs it in Unbound.
 
-    run.py editor  --release R --label L --repeat native1 --preflight P   one batchmode GPU Editor capture
+    run.py editor  --release R --label L --repeat native1 --preflight P   one windowed GPU Editor capture
     run.py editor  --release R --label L --repeat native2 --preflight P   the repeat; only after native1
                                                                           passed `check` (strict gate and
                                                                           actual-rsp graph check)
@@ -14,11 +14,11 @@
 Each capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings under
 $XDG_CACHE_HOME/unbound/validation/runs/activationorder/<label>; nothing is written here
 except by publish. The Editor runs through tests/editor_runner.py (one installed GPU lease per
-launch; do not wrap this driver in with-heavy-job) as `EditorJob(batch=True, graphics=True)`:
-`vglrun -d egl Unity -batchmode -projectPath P -executeMethod ProbeRunner.Record -logFile L` on a
-private Xvfb, with no -nographics and no -quit (Play mode is asynchronous; ProbeRunner quits). The
+launch; do not wrap this driver in with-heavy-job) as `EditorJob(batch=False, graphics=True, private_display=False)`:
+`vglrun -d egl Unity -force-glcore -projectPath P -executeMethod ProbeRunner.Record -logFile L` on a
+existing GPU display, with no -nographics and no -quit (Play mode is asynchronous; ProbeRunner quits). The
 repeats run one after the other; a repeat directory is write-once, so a launch is never retried in
-a label, and there is no windowed or -nographics fallback.
+a label, and there is no batchmode or -nographics fallback.
 
 `--preflight` names the preflight.json of a passing preflight.py run whose compiled sources are
 byte-identical to this checkout's probe scripts; without it no Editor starts.
@@ -36,14 +36,14 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 from probe_paths import reference_file, run_root  # noqa: E402
-from editor_runner import EditorJob, jsonl_complete, publish as publish_reference, run, summary  # noqa: E402
+from editor_runner import vulkan_display_env, EditorJob, jsonl_complete, publish as publish_reference, run, summary  # noqa: E402
 
 sys.path.insert(0, str(PROBE))
 import guards  # noqa: E402
 
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 REPEATS = ('native1', 'native2')
-# The graphics device of the Linux GPU Editor in batchmode (OpenGL Core).
+# The graphics device of the windowed Linux GPU Editor (OpenGL Core).
 DEVICE = 'OpenGLCore'
 # The external progress deadline also covers cold import and an unresponsive Editor. Only the
 # runner's transitions and the completed record count as progress, never Editor log noise.
@@ -98,8 +98,8 @@ def job(work, repeat, release):
               'profile': str(profile_path(release))}
     inputs.update({name.split('.')[0] if name != 'PREDICTIONS.json' else 'predictions': str(PROBE/name) for name in TOOLS})
     return EditorJob(project.resolve() if project.exists() else project, out/'editor.log', out,
-                     args=['-executeMethod', 'ProbeRunner.Record'], batch=True, graphics=True,
-                     env={VARIABLE: str(capture.resolve() if capture.exists() else capture),
+                     args=['-force-glcore', '-executeMethod', 'ProbeRunner.Record'], batch=False, graphics=True, private_display=False,
+                     env={**vulkan_display_env(), VARIABLE: str(capture.resolve() if capture.exists() else capture),
                           'UNBOUND_PROBE_UNITY_VERSION': release},
                      timeout=HARD_TIMEOUT, shutdown_grace=SHUTDOWN_GRACE, kill_grace=KILL_GRACE,
                      progress_files=(capture/'runner-events.jsonl', capture/'values.jsonl'),

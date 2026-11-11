@@ -1,5 +1,5 @@
 {"k":"context.unityVersion","v":"6000.0.71f1"}
-{"k":"context.isBatchMode","v":true}
+{"k":"context.isBatchMode","v":false}
 {"k":"context.platform","v":"LinuxEditor"}
 {"k":"context.graphicsDeviceType","v":"OpenGLCore"}
 {"k":"context.log","v":[]}

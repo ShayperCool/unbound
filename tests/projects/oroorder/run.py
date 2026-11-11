@@ -26,7 +26,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import reference_file, run_root
-from editor_runner import EditorJob, jsonl_complete, publish as publish_reference, result_problem, run, summary
+from editor_runner import vulkan_display_env, EditorJob, jsonl_complete, publish as publish_reference, result_problem, run, summary
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -53,7 +53,7 @@ def copy_project(dest):
 
 def job(work, repeat):
     project, out = work/'projects'/repeat, work/repeat
-    return EditorJob(project, out/'editor.log', out, env={'CORE_APIS_OUT': str(out/'values.jsonl')},
+    return EditorJob(project, out/'editor.log', out, private_display=False, env={**vulkan_display_env(), 'CORE_APIS_OUT': str(out/'values.jsonl')},
                      timeout=HARD_TIMEOUT, label='oroorder-'+repeat,
                      launch_inputs={'release': os.environ['UNBOUND_PROBE_UNITY_VERSION'],
                                     'paths': {'assets': str(project/'Assets'),

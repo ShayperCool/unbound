@@ -1,7 +1,7 @@
 # Activation callback order of an already-awake hierarchy
 
-Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ActivationOrderProbe.cs`). The208-record
-reference is admitted from two byte-identical strict batch-GPU captures. No production
+Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ActivationOrderProbe.cs`). The 208-record
+reference is admitted from two byte-identical strict windowed GPU captures. No production
 activation correction or Unbound parity is established by that admission.
 
 Earlier Native batch references show child-first OnDisable/OnEnable for an already-awake parent
@@ -99,11 +99,8 @@ never refitted. Nothing in `run.py` or `guards.py` reads the analyzer.
 
 ## Admitted observations
 
-Both strict captures exit0 on NVIDIA/OpenGLCore, log shutdown, keep all authored files
-unchanged and match the real preflight graph. The reference hash is19084f9c. Root independently
-checks50 owner artifacts,2848 preparation artifacts,476 references/analyzers per repeat and
-both script assemblies' normalized IL/field data. Only debug identity and relocation labels
-are normalized in that read-only disassembly comparison; no compiler or analyzer fit is rerun.
+Both windowed captures exit 0 on NVIDIA/OpenGLCore, log shutdown, keep authored
+files unchanged and match the recorded compile graph. They agree byte for byte.
 
 - `plainOff`, `spanOff` and `nativeOff`: G,C1,C2,P. The stored fit is uniquely POST among
   the seven predeclared orders in this tree.
@@ -117,12 +114,7 @@ are normalized in that read-only disassembly comparison; no compiler or analyzer
   this sequential matrix. They do not prove identical native implementations, cold-start
   paths, multi-ID ordering or atomicity.
 
-Both Native launches, publication and the one precommitted fit are spent. Root admits the
-fixture/reference only. Lifecycle, SetActive, scene-load/wake, registration and Destroy paths
-are unchanged. Evidence: `validation/runs/activationorder-native-20261104/` and
-`validation/runs/activationorder-root-admission-20261104/`.
-
-## Capture protocol, requiring a separate new grant
+## Capture protocol
 
 ```
 python3 tests/projects/activationorder/preflight.py --rsp-dir <shaderpasscount native1 copy>/Library/Bee/artifacts/<hash>.dag --launch <its launch dir> --out <cache>/preflight [--identity-only]
@@ -132,9 +124,9 @@ python3 tests/projects/activationorder/run.py publish --release 6000.0.71f1 --la
 python3 tests/projects/activationorder/analyze.py fit <cache>/<label>/native1/capture/values.jsonl --report <cache>/fit.json
 ```
 
-The capture uses the proven batchmode GPU protocol of the shader pass count runner, through
-`tests/editor_runner.py` with `EditorJob(batch=True, graphics=True)` and the command
-`vglrun -d egl Unity -batchmode -projectPath P -executeMethod ProbeRunner.Record`, without
+The capture uses a windowed GPU Editor on the existing display through
+`tests/editor_runner.py` with `EditorJob(batch=False, graphics=True, private_display=False)` and
+`vglrun -d egl Unity -force-glcore -projectPath P -executeMethod ProbeRunner.Record`, without
 `-quit` or `-nographics`. The runner is that runner with the probe names changed and the shader
 compilation setting removed; it changes no Editor setting. Record opens the scene and enters Play
 mode from a delayCall. Only the update handler leaves Play mode, after the finished code; it
@@ -156,7 +148,7 @@ pass and agree byte for byte, and never overwrites.
 * a partial record, compile errors or native faults in the Editor log, or a changed fixture asset;
 * a record that does not follow the schema in order, or an operation request that is not the
   authored one;
-* a set-up that could not build its nodes, a context that is not the release/batchmode/OpenGLCore,
+* a set-up that could not build its nodes, a context that is not the release/windowed/OpenGLCore,
   unscoped error logs, or missing diagnostics.
 
 No callback order, count, state, stray call or returned value is a guard.
@@ -174,6 +166,14 @@ fake answers are not Unity's.
 
 * One shape and the default execution order only. It covers no execution-order or type effect,
   scene-file wake order, component enable/disable, reentrancy, destruction, or multi-ID batch.
-* Batchmode Linux Editor with OpenGLCore only. The hypotheses are per operation: one answer
+* Windowed Linux Editor with OpenGLCore only. The hypotheses are per operation: one answer
   says nothing about other lifecycle paths.
 * The first-wake controls cannot separate child-first wake from creation or recorder order.
+
+## Reference mode correction
+
+The re-record changes exactly `context.isBatchMode` from true to false. All other
+207 keys, including callback sequences, are byte-identical to the earlier reference.
+The strict engine count decreases from 9/208 to 8/208 failing keys; the eight raw
+cross-object callback-order differences remain. Controls pass 233/233. No callback
+order or comparator rule changes. The Python runner creates no X server.

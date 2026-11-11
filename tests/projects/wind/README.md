@@ -13,18 +13,26 @@ windMain × pulse × (1 − d²/r²), nothing past its radius; turbulence moves 
 pass the influence filter by layer only (a List filter gives no wind); the pulse is
 1 + magnitude × 0.333 × (cos(πx) + cos(3π/8 x) + cos(π/20 x)) with x = frequency × Time.time.
 
-Record Unity's reference (the Editor needs a display):
+The probe sets `Time.captureDeltaTime = 0.01f` before scene loading. As documented
+for [Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Time-captureDeltaTime.html),
+scaled time then advances by the capture interval regardless of frame duration. This
+makes the two pulsing scenarios and the three pulse sample series repeatable.
 
-    ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath tests/projects/wind \
-        -executeMethod ProbeRunner.Create -logFile ~/.cache/wind-create.log
-    WIND_PROBE_OUT=$PWD/tests/projects/wind/Reference \
-        ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -projectPath tests/projects/wind \
-        -executeMethod ProbeRunner.Record -logFile ~/.cache/wind.log
+Record and publish two independent windowed GPU Editor captures on the existing display:
 
-Run Unbound and compare:
+```
+python3 tests/projects/wind/run.py editor --release 6000.0.71f1 --label <fresh>
+python3 tests/projects/wind/run.py publish --release 6000.0.71f1 --label <fresh>
+python3 tools/agents/suite.py --only wind
+```
 
-    WIND_PROBE_OUT=/tmp/wind unbound run -p tests/projects/wind --frames 100000 --size 320x180 --no-watch
-    python3 tests/projects/wind/compare.py tests/projects/wind/Reference /tmp/wind
+`run.py` takes one launcher lease per Editor, verifies the NVIDIA renderer and normal
+exit, checks the 18-record shape and requires byte-identical repeats before publication.
+It does not create an X server. Captures and logs stay under the validation cache.
+The canonical reference is `Reference/unity-6000.0.71f1/wind.jsonl`.
 
-Every record matches except the two pulsing scenarios, which run at whatever Time.time the frames
-reached and so differ between runs (the pulse records check the pulse itself).
+The fixed-clock re-record changes exactly rows 14-18: scenarios `pulse` and `pulse fast`,
+then the three `pulse` rows at frequencies 0.25, 1 and 0.05. Their phases and sampling
+clocks previously depended on wall time. Rows 1-13 are byte-identical. The comparator
+and both tolerances are unchanged. Failing records decrease from 2/18 to 0/18 in this
+fixture; this does not establish wind parity outside these cases.

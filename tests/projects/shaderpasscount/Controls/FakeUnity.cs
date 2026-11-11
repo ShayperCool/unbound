@@ -328,7 +328,7 @@ namespace UnityEngine
         public delegate void LogCallback(string condition, string stackTrace, LogType type);
         public static event LogCallback logMessageReceived;
         public static string unityVersion => "6000.0.71f1";
-        public static bool isBatchMode => true;
+        public static bool isBatchMode => false;
         public static RuntimePlatform platform => RuntimePlatform.LinuxEditor;
         public static void Log(LogType type, string message) => logMessageReceived?.Invoke(message, "", type);
         public static void ClearLogHandlers() => logMessageReceived = null;
