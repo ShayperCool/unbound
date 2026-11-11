@@ -834,11 +834,11 @@ fn pack(masks: &[&Mask]) -> Result<(Vec<(usize, usize)>, usize, usize)> {
     let mut order: Vec<usize> = (0..masks.len()).collect();
     let usage: Vec<usize> = masks.iter().map(|m| m.usage()).collect();
     order.sort_by(|&a, &b| usage[b].cmp(&usage[a]).then(a.cmp(&b)));
-    let least = |of: &dyn Fn(usize) -> usize| (0..masks.len()).map(of).min().unwrap_or(0) as i32;
+    let least = |of: fn(&Mask) -> usize| masks.iter().map(|m| of(m)).min().unwrap_or(0) as i32;
     let smallest = Smallest {
-        usage: least(&|i| usage[i]),
-        width: least(&|i| masks[i].width),
-        height: least(&|i| masks[i].height),
+        usage: usage.iter().copied().min().unwrap_or(0) as i32,
+        width: least(|m| m.width),
+        height: least(|m| m.height),
     };
     let (mut width, mut height) = (1usize, 1usize);
     loop {
