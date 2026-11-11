@@ -90,6 +90,20 @@ pub(super) struct PluginState {
 type RenderingEvent = extern "C" fn(i32);
 type RenderingEventAndData = extern "C" fn(i32, *mut c_void);
 
+/// The format Unity's OpenGL Core device stores a texture in where that is not the renderer's
+/// storage format `stored` (None: it is): an sRGB color texture (`srgb`) of a Linear color space
+/// project (`color_space` 1) is sRGB there, `GL_SRGB8_ALPHA8` (tests/projects/nativegfx
+/// `name ...`); in a Gamma project no texture is (unmeasured: the probe's project is Linear).
+fn device_format(
+    stored: gl_interop::InternalFormat,
+    srgb: bool,
+    color_space: i32,
+) -> Option<gl_interop::InternalFormat> {
+    (srgb && color_space == 1)
+        .then(|| gl_interop::format::srgb(stored))
+        .flatten()
+}
+
 /// Calls a rendering event or custom blit's callback (`TextureUpdate`s run their own sequence).
 pub(super) fn invoke(call: &PluginCall) {
     match *call {
@@ -196,13 +210,13 @@ impl UnityRenderer {
         }
         let storage = gl_name(&gpu.texture)?;
         let depth = gpu.depth_texture.as_ref().map(gl_name).transpose()?;
-        let srgb = gpu.srgb_view.is_some() && self.color_space == 1;
+        let (srgb, color_space) = (gpu.srgb_view.is_some(), self.color_space);
         let texture = gpu.texture.clone();
         gl_interop::with(|interop| {
             let info = interop
                 .texture_info(storage)
                 .ok_or("its OpenGL texture is not in the plugins' share group")?;
-            let format = gl_interop::format::srgb(info.format).filter(|_| srgb);
+            let format = device_format(info.format, srgb, color_space);
             let (color, view) = match format {
                 Some(format) => (interop.view(storage, info, format)?, true),
                 None => (storage, false),
@@ -734,6 +748,17 @@ mod tests {
         assert!(!update_writable(F::Bc7RgbaUnorm));
         assert!(!update_writable(F::Bc7RgbaUnormSrgb));
         assert!(!update_writable(F::Rgba16Float));
+    }
+
+    #[test]
+    fn plugins_see_srgb_color_textures_as_the_device_stores_them() {
+        use crate::render::gl_interop::format as gl;
+        // sRGB color textures are sRGB on the device in a Linear project only.
+        assert_eq!(device_format(gl::RGBA8, true, 1), Some(gl::SRGB8_ALPHA8));
+        assert_eq!(device_format(gl::RGBA8, true, 0), None);
+        assert_eq!(device_format(gl::RGBA8, false, 1), None);
+        // Stored sRGB already: the storage itself.
+        assert_eq!(device_format(gl::SRGB8_ALPHA8, true, 1), None);
     }
 
     #[test]
