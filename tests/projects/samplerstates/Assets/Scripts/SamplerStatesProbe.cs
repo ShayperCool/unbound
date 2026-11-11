@@ -14,8 +14,11 @@ using UnityEngine;
 /// texels, 0.25 and 0.75, of each depth format and filter (`&lt;case&gt;.&lt;target&gt;`): there a
 /// comparison, a filter and a depth read give different values, recorded in twentieths (5 is
 /// the first texel, 8 both filtered, 6 and 14 a filtered comparison) so that the bits a depth
-/// buffer stores do not tell; `DepthChannels.split.raw` is the value as sampled. Writes
-/// `values.jsonl` into `SAMPLER_STATES_OUT` and quits.
+/// buffer stores do not tell; `DepthChannels.&lt;target&gt;.raw` is the value as sampled. Last,
+/// the programs that fill the depth targets drawn where there is no depth buffer: `Fill.color`
+/// writes a color and the depth, `DepthOnly` only the depth (`DepthOnly.color` over a cleared
+/// target, `DepthOnly.depth` into a depth target). Writes `values.jsonl` into
+/// `SAMPLER_STATES_OUT` and quits.
 /// </summary>
 public class UitkProbe : MonoBehaviour
 {
@@ -96,14 +99,21 @@ public class UitkProbe : MonoBehaviour
             var twentieths = new Material(Shader.Find("Probe/SamplerStates/Twentieths"));
             var rounded = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
             rounded.Create();
-            // The depth targets' cases in twentieths, and one of them as sampled.
+            // The depth targets' cases in twentieths, and each target as sampled.
             var draws = new List<(string name, string key, RenderTexture depth, bool exact)>();
             foreach (var name in Cases) draws.Add((name, name, shadow, true));
             foreach (var (suffix, depth) in depths)
             {
                 foreach (var name in DepthCases) draws.Add((name, name + "." + suffix, depth, false));
-                if (suffix == "split") draws.Add(("DepthChannels", "DepthChannels.split.raw", depth, true));
+                draws.Add(("DepthChannels", "DepthChannels." + suffix + ".raw", depth, true));
             }
+            // A depth target filled with the program that writes only the depth.
+            var only = new Material(Shader.Find("Probe/SamplerStates/DepthOnly"));
+            var onlyDepth = new RenderTexture(2, 1, 16, RenderTextureFormat.Depth);
+            onlyDepth.filterMode = FilterMode.Point;
+            onlyDepth.Create();
+            Graphics.Blit(a, onlyDepth, only);
+            draws.Add(("DepthChannels", "DepthOnly.depth", onlyDepth, false));
             foreach (var (name, key, depth, exact) in draws)
             {
                 var shader = Shader.Find("Probe/SamplerStates/" + name);
@@ -121,16 +131,17 @@ public class UitkProbe : MonoBehaviour
                 material.SetTexture("_Vol", volume);
                 Graphics.Blit(a, target, material);
                 if (!exact) Graphics.Blit(target, rounded, twentieths);
-                previous = RenderTexture.active;
-                RenderTexture.active = exact ? target : rounded;
-                readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0);
-                readback.Apply();
-                RenderTexture.active = previous;
-                var v = readback.GetPixel(0, 0);
-                rows.Append("{\"k\":\"").Append(key).Append("\",\"v\":[")
-                    .Append(F(v.r)).Append(',').Append(F(v.g)).Append(',').Append(F(v.b)).Append(',').Append(F(v.a))
-                    .Append("]}\n");
+                Row(rows, key, Read(exact ? target : rounded, readback));
             }
+            // The depth-writing programs where there is no depth buffer.
+            Graphics.Blit(a, target, new Material(Shader.Find("Probe/SamplerStates/Fill")));
+            Row(rows, "Fill.color", Read(target, readback));
+            previous = RenderTexture.active;
+            RenderTexture.active = target;
+            GL.Clear(true, true, new Color(0.25f, 0.5f, 0.75f, 1f));
+            RenderTexture.active = previous;
+            Graphics.Blit(a, target, only);
+            Row(rows, "DepthOnly.color", Read(target, readback));
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -144,6 +155,23 @@ public class UitkProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    static Color Read(RenderTexture texture, Texture2D readback)
+    {
+        var previous = RenderTexture.active;
+        RenderTexture.active = texture;
+        readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0);
+        readback.Apply();
+        RenderTexture.active = previous;
+        return readback.GetPixel(0, 0);
+    }
+
+    static void Row(StringBuilder rows, string key, Color v)
+    {
+        rows.Append("{\"k\":\"").Append(key).Append("\",\"v\":[")
+            .Append(F(v.r)).Append(',').Append(F(v.g)).Append(',').Append(F(v.b)).Append(',').Append(F(v.a))
+            .Append("]}\n");
     }
 
     static string F(float value) { return value.ToString("R", CultureInfo.InvariantCulture); }

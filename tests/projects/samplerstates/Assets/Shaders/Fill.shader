@@ -11,7 +11,7 @@ Shader "Probe/SamplerStates/Fill"
             #pragma target 3.5
             #include "UnityCG.cginc"
             #pragma vertex vert_img
-            float4 frag(v2f_img i, out float depth : SV_Depth) : SV_Target { depth = i.uv.x < 0.5 ? 0.25 : 0.75; return 0; }
+            float4 frag(v2f_img i, out float depth : SV_Depth) : SV_Target { depth = i.uv.x < 0.5 ? 0.25 : 0.75; return float4(0.125, 0.25, 0.5, 1); }
             ENDCG
         }
     }

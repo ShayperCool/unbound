@@ -11,7 +11,10 @@
   "CmpInline.splitLinear",
   "CmpOther.splitLinear"
  ],
- "A depth buffer of 16 bits stores 16 bits in the Editor (0.25 as 16384/65535); Unbound's stores 24": [
-  "DepthChannels.split.raw"
+ "A depth buffer of 16 bits stores 16 bits in the Editor (0.25 as 16384/65535, both texels filtered as 26240/65535); Unbound's stores 24": [
+  "DepthChannels.split.raw",
+  "DepthChannels.splitLinear.raw",
+  "DepthChannels.map.raw",
+  "DepthChannels.mapLinear.raw"
  ]
 }

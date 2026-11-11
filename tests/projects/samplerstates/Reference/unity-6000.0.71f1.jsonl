@@ -29,6 +29,7 @@
 {"k":"CmpOther.splitLinear","v":[8,8,13,20]}
 {"k":"DepthPlain.splitLinear","v":[8,8,8,13]}
 {"k":"DepthChannels.splitLinear","v":[8,0,0,20]}
+{"k":"DepthChannels.splitLinear.raw","v":[0.400396734,0,0,1]}
 {"k":"CmpOnly.map","v":[0,0,13,20]}
 {"k":"CmpTwo.map","v":[0,0,13,20]}
 {"k":"CmpOwn.map","v":[0,5,13,20]}
@@ -36,6 +37,7 @@
 {"k":"CmpOther.map","v":[0,5,13,20]}
 {"k":"DepthPlain.map","v":[5,5,5,13]}
 {"k":"DepthChannels.map","v":[5,0,0,20]}
+{"k":"DepthChannels.map.raw","v":[0.2500038,0,0,1]}
 {"k":"CmpOnly.mapLinear","v":[6,0,13,20]}
 {"k":"CmpTwo.mapLinear","v":[6,6,13,20]}
 {"k":"CmpOwn.mapLinear","v":[6,8,13,20]}
@@ -43,4 +45,8 @@
 {"k":"CmpOther.mapLinear","v":[6,8,13,20]}
 {"k":"DepthPlain.mapLinear","v":[8,8,8,13]}
 {"k":"DepthChannels.mapLinear","v":[8,0,0,20]}
+{"k":"DepthChannels.mapLinear.raw","v":[0.400396734,0,0,1]}
+{"k":"DepthOnly.depth","v":[5,0,0,20]}
+{"k":"Fill.color","v":[0.125,0.25,0.5,1]}
+{"k":"DepthOnly.color","v":[0.25,0.5,0.75,1]}
 {"k":"complete","v":true}

@@ -29,15 +29,21 @@ cases that sample it are drawn again with four depth targets of two texels, 0.25
 point and bilinear; `.map` and `.mapLinear` are `RenderTextureFormat.Shadowmap`. Their values
 are recorded in twentieths (`Twentieths` rounds them), so that the bits a depth buffer stores do
 not tell: 5 is the first texel, 8 both texels filtered, 0 and 20 a comparison with 0.5, 6 and
-14 a filtered one. `DepthChannels.split.raw` is one of them as sampled.
+14 a filtered one. `DepthChannels.<target>.raw` is each target as sampled.
+
+The programs that fill the depth targets are also drawn where there is no depth buffer:
+`Fill.color` is the color of the program that writes a color and the depth, `DepthOnly.color` a
+cleared target after the program that writes only the depth, and `DepthOnly.depth` a depth target
+that program filled.
 
 Reference (`Reference/unity-6000.0.71f1.jsonl`, the Unity 6000.0.71f1 Editor on OpenGL Core,
 NVIDIA, two identical captures): a texture is sampled through its own sampler state whatever
 sampler the program names, an inline one or another texture's, in either stage, for every
 texture shape, and with comparisons too. A texture's own state compares when the texture is a
 `Shadowmap` (less or equal, through the texture's filter): a comparison of a `Depth` target
-reads the stored depth instead, as its other samples do. The Vulkan Editor is not recorded
-here yet.
+reads the stored depth instead, as its other samples do. A program's depth output is the depth
+stored; without a depth buffer its colors are drawn alone, and a program without colors leaves
+the target as it was. The Vulkan Editor is not recorded here yet.
 
 Unbound: `run.py check` compares an Unbound capture (`--force-glcore`) with the reference.
 `residuals.json` lists the cases that differ with their cause: Unbound compares where the
