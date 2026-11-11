@@ -35,8 +35,11 @@ namespace Unbound.Runtime
 
         static bool s_WarnedUnshared;
 
-        /// <summary>The rendering extension entry points (IUnityRenderingExtensions.h).</summary>
-        static readonly string[] s_RenderingExtensions = { "UnityRenderingExtEvent", "UnityRenderingExtQuery" };
+        /// <summary><c>kUnityRenderingExtQueryOverrideVRSinglePass</c> (IUnityRenderingExtensions.h).</summary>
+        const int QueryOverrideVRSinglePass = 1 << 3;
+        /// <summary>The loaded plugins' <c>UnityRenderingExtQuery</c> exports, replaced whole when
+        /// a plugin loads (read by every camera render, without the lock).</summary>
+        static volatile IntPtr[] s_Queries = Array.Empty<IntPtr>();
 
         /// <summary>A native library was loaded (by its first call or by preloading): its
         /// <c>UnityPluginLoad</c> runs once.</summary>
@@ -49,9 +52,19 @@ namespace Unbound.Runtime
                 s_Loaded.Add(library);
                 s_AnyLoaded = true;
             }
-            foreach (var extension in s_RenderingExtensions)
-                if (NativeLibrary.TryGetExport(library, extension, out _))
-                    Native.Log(2, $"a native plugin exports {extension}, which Unbound does not call (rendering extension events are not supported)");
+            // UnityRenderingExtEvent is not called: its events of the Editor's own are stereo
+            // rendering's, and the Editor sends none without XR (tests/projects/nativegfx
+            // ext.events).
+            if (NativeLibrary.TryGetExport(library, "UnityRenderingExtQuery", out var query))
+            {
+                lock (s_Loaded)
+                {
+                    var queries = new IntPtr[s_Queries.Length + 1];
+                    s_Queries.CopyTo(queries, 0);
+                    queries[^1] = query;
+                    s_Queries = queries;
+                }
+            }
             if (!NativeLibrary.TryGetExport(library, "UnityPluginLoad", out var load)) return;
             EnsureLogSink();
             Native.Api.PluginLoad((void*)load);
@@ -65,6 +78,22 @@ namespace Unbound.Runtime
                 try { Loaded(NativeLibrary.Load(path)); }
                 catch (Exception e) { Debug.LogError($"Unbound: preloading the native plugin {path} failed: {e.Message}"); }
             }
+        }
+
+        /// <summary>While a camera renders, the Editor asks every loaded plugin that exports
+        /// <c>UnityRenderingExtQuery</c> whether it overrides single-pass stereo
+        /// (<c>kUnityRenderingExtQueryOverrideVRSinglePass</c>), on the main thread with the
+        /// plugins' context: <paramref name="times"/> times here (the built-in pipeline's camera
+        /// asks three times after OnPreRender, once before OnPostRender and once after:
+        /// tests/projects/nativegfx <c>ext.sequence</c>). The answers are not used: there is no
+        /// XR. They go with the other plugin callbacks, in stream order.</summary>
+        internal static void QueryStereoOverride(int times)
+        {
+            var queries = s_Queries;
+            if (queries.Length == 0) return;
+            for (int i = 0; i < times; i++)
+                foreach (var query in queries)
+                    GfxStream.PluginEvent(query, QueryOverrideVRSinglePass);
         }
 
         /// <summary>A frame ended (the player loop's <c>ProfilerEndFrame</c>): the plugins'

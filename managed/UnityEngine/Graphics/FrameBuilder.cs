@@ -1363,6 +1363,8 @@ namespace Unbound.Runtime
                 {
                     SendToCamera(camera, m => m.OnPreRender);
                     Camera.onPreRender?.Invoke(camera);
+                    // A camera's render, not the engine's own captures of the environment.
+                    Unbound.Runtime.NativePlugins.QueryStereoOverride(3);
                 }
 
                 // Image effects render the scene into a temporary, then each effect into the next;
@@ -1606,8 +1608,10 @@ namespace Unbound.Runtime
                 // events.*.orderWithMessages, tests/projects/flares o.*).
                 if (messages)
                 {
+                    Unbound.Runtime.NativePlugins.QueryStereoOverride(1);
                     SendToCamera(camera, m => m.OnPostRender);
                     Camera.onPostRender?.Invoke(camera);
+                    Unbound.Runtime.NativePlugins.QueryStereoOverride(1);
                 }
                 RunEvent(camera, CameraEvent.BeforeHaloAndLensFlares, sceneTarget);
                 {
