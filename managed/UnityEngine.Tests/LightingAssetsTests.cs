@@ -492,7 +492,7 @@ LightingSettings:
                 // Without a directionality of its own the renderer draws undirected; under a
                 // baked lightmap's keyword it would read a direction that changes nothing.
                 var flat = Assert.IsType<Texture2D>(properties[id]);
-                Assert.Equal(new Color32(128, 128, 128, 128), flat.GetPixels32()[0]);
+                Assert.Equal(new Color(0.5f, 0.5f, 0.5f, 0.5f), flat.GetPixel(0, 0));
 
                 renderer.m_RealtimeDirectionality = directionality;
                 keywords.Clear();

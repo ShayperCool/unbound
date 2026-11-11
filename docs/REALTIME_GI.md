@@ -171,12 +171,12 @@ drawn as a non-directional one, with a warning.
 With these rules the engine's directionality differs from the Editor's by 0.2/255 on average; at
 most 3 of a case's 6760 values differ by more than 2.5/255 (by up to 4/255), as the lightmap's
 isolated texels do. Not measured: `LightmapSettings.lightmapsMode` changed by a script (Unbound
-follows the mode of each frame: a scene that becomes directional solves every part of its
-lightmaps once more and draws an atlas with its directionality once every system of the atlas
-has, one that stops being directional draws without directionality), a directional scene of
+follows the mode of each frame: a scene that becomes directional, also once again, solves every
+part of its lightmaps once more and draws an atlas with its directionality once every system of
+the atlas has, one that stops being directional draws without directionality), a directional scene of
 several systems or atlases (the probe's has one system), a renderer with a baked and a realtime
 lightmap of which only one has a direction (the other then reads a direction that leaves its
-light as it is: (128, 128, 128, 128)), frames in which the directionality matters (none of the
+light as it is: 1/2 in every channel), frames in which the directionality matters (none of the
 probe's materials has a normal map, so its frames show the lightmap alone), directionality under
 a scriptable render pipeline, and gamma-space projects.
 

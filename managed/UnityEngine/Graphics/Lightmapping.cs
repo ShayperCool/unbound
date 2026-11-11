@@ -236,8 +236,8 @@ namespace UnityEngine
         static Texture2D s_FlatDirection;
 
         /// <summary>A directionality that leaves a lightmap's light as it is whatever the shaded
-        /// normal: no direction, and a rebalancing term of 1/2, the half Lambert term of no
-        /// direction.</summary>
+        /// normal: no direction (1/2 in each channel), and a rebalancing term of 1/2, the half
+        /// Lambert term of no direction. Half floats, which hold 1/2 exactly.</summary>
         static Texture2D FlatDirection
         {
             get
@@ -245,8 +245,8 @@ namespace UnityEngine
                 if (s_FlatDirection == null)
                 {
                     using (Unbound.Runtime.ObjectRegistry.AsAssets())
-                        s_FlatDirection = new Texture2D(1, 1, TextureFormat.RGBA32, false, true) { name = "Flat Directionality", hideFlags = HideFlags.HideAndDontSave };
-                    s_FlatDirection.SetPixelData(new byte[] { 128, 128, 128, 128 }, 0);
+                        s_FlatDirection = new Texture2D(1, 1, TextureFormat.RGBAHalf, false, true) { name = "Flat Directionality", hideFlags = HideFlags.HideAndDontSave };
+                    s_FlatDirection.SetPixelData(new[] { Mathf.FloatToHalf(0.5f), Mathf.FloatToHalf(0.5f), Mathf.FloatToHalf(0.5f), Mathf.FloatToHalf(0.5f) }, 0);
                     s_FlatDirection.Apply(false);
                 }
                 return s_FlatDirection;
