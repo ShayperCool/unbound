@@ -958,30 +958,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public ContextClickEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextClickEvent.ctor"); }
     }
-    unsafe partial class ContextualMenuManager
-    {
-        [global::Unbound.Stub] public void DisplayMenu(global::UnityEngine.UIElements.EventBase triggerEvent, global::UnityEngine.UIElements.IEventHandler target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.DisplayMenu"); }
-        [global::Unbound.Stub] internal void DisplayMenu(global::UnityEngine.UIElements.EventBase triggerEvent, global::UnityEngine.UIElements.IEventHandler target, global::UnityEngine.UIElements.DropdownMenu menu) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.DisplayMenu"); }
-        [global::Unbound.Stub] protected internal virtual void DoDisplayMenu(global::UnityEngine.UIElements.DropdownMenu menu, global::UnityEngine.UIElements.EventBase triggerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.DoDisplayMenu"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ContextualMenuManipulator : global::UnityEngine.UIElements.PointerManipulator
-    {
-        [global::Unbound.Stub] public ContextualMenuManipulator(global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent> menuBuilder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManipulator.ctor"); }
-        [global::Unbound.Stub] protected override void RegisterCallbacksOnTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManipulator.RegisterCallbacksOnTarget"); }
-        [global::Unbound.Stub] protected override void UnregisterCallbacksFromTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManipulator.UnregisterCallbacksFromTarget"); }
-        [global::Unbound.Stub] protected bool IsOSXContextualMenuPlatform() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManipulator.IsOSXContextualMenuPlatform"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ContextualMenuPopulateEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.ContextualMenuPopulateEvent>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.ContextualMenuPopulateEvent GetPooled(global::UnityEngine.UIElements.EventBase triggerEvent, global::UnityEngine.UIElements.DropdownMenu menu, global::UnityEngine.UIElements.IEventHandler target, global::UnityEngine.UIElements.ContextualMenuManager menuManager) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuPopulateEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuPopulateEvent.Init"); }
-        [global::Unbound.Stub] public ContextualMenuPopulateEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuPopulateEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuPopulateEvent.PostDispatch"); }
-        public global::UnityEngine.UIElements.DropdownMenu menu { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuPopulateEvent.menu"); return default; } }
-        public global::UnityEngine.UIElements.EventBase triggerEvent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuPopulateEvent.triggerEvent"); return default; } }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class ConverterDrawerAttribute : global::UnityEngine.PropertyAttribute
     {
@@ -1351,64 +1327,9 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class DropdownMenu
+    unsafe partial class DropdownMenuAction
     {
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEngine.UIElements.DropdownMenuItem> MenuItems() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.MenuItems"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.DropdownMenuItem>(); }
-        [global::Unbound.Stub] public void AppendAction(string actionName, global::System.Action<global::UnityEngine.UIElements.DropdownMenuAction> action, global::System.Func<global::UnityEngine.UIElements.DropdownMenuAction, global::UnityEngine.UIElements.DropdownMenuAction.Status> actionStatusCallback, object userData = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.AppendAction"); }
-        [global::Unbound.Stub] public void AppendAction(string actionName, global::System.Action<global::UnityEngine.UIElements.DropdownMenuAction> action, global::UnityEngine.UIElements.DropdownMenuAction.Status status = (global::UnityEngine.UIElements.DropdownMenuAction.Status)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.AppendAction"); }
-        [global::Unbound.Stub] public void InsertAction(int atIndex, string actionName, global::System.Action<global::UnityEngine.UIElements.DropdownMenuAction> action, global::System.Func<global::UnityEngine.UIElements.DropdownMenuAction, global::UnityEngine.UIElements.DropdownMenuAction.Status> actionStatusCallback, object userData = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.InsertAction"); }
-        [global::Unbound.Stub] public void InsertAction(int atIndex, string actionName, global::System.Action<global::UnityEngine.UIElements.DropdownMenuAction> action, global::UnityEngine.UIElements.DropdownMenuAction.Status status = (global::UnityEngine.UIElements.DropdownMenuAction.Status)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.InsertAction"); }
-        [global::Unbound.Stub] public void AppendSeparator(string subMenuPath = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.AppendSeparator"); }
-        [global::Unbound.Stub] public void InsertSeparator(string subMenuPath, int atIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.InsertSeparator"); }
-        [global::Unbound.Stub] public void RemoveItemAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.RemoveItemAt"); }
-        [global::Unbound.Stub] public void ClearItems() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.ClearItems"); }
-        [global::Unbound.Stub] public void PrepareForDisplay(global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.PrepareForDisplay"); }
-        [global::Unbound.Stub] public DropdownMenu() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.ctor"); }
-        internal int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.Count"); return default; } }
-        public bool allowDuplicateNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.allowDuplicateNames"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenu.allowDuplicateNames"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class DropdownMenuAction : global::UnityEngine.UIElements.DropdownMenuItem
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.DropdownMenuAction.Status AlwaysEnabled(global::UnityEngine.UIElements.DropdownMenuAction a) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.AlwaysEnabled"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.DropdownMenuAction.Status AlwaysDisabled(global::UnityEngine.UIElements.DropdownMenuAction a) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.AlwaysDisabled"); return default; }
-        [global::Unbound.Stub] public DropdownMenuAction(string actionName, global::System.Action<global::UnityEngine.UIElements.DropdownMenuAction> actionCallback, global::System.Func<global::UnityEngine.UIElements.DropdownMenuAction, global::UnityEngine.UIElements.DropdownMenuAction.Status> actionStatusCallback, object userData = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.ctor"); }
-        [global::Unbound.Stub] public void UpdateActionStatus(global::UnityEngine.UIElements.DropdownMenuEventInfo eventInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.UpdateActionStatus"); }
-        [global::Unbound.Stub] public void Execute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.Execute"); }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.name"); return default; } }
-        public global::UnityEngine.UIElements.DropdownMenuAction.Status status { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.status"); return default; } }
-        public global::UnityEngine.UIElements.DropdownMenuEventInfo eventInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.eventInfo"); return default; } }
-        public object userData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.userData"); return default; } }
         internal global::UnityEngine.UIElements.VisualElement content { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuAction.content"); return default; } }
-        [global::System.Flags]
-        public enum Status
-        {
-            None = 0,
-            Normal = 1,
-            Disabled = 2,
-            Checked = 4,
-            Hidden = 8,
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class DropdownMenuEventInfo
-    {
-        [global::Unbound.Stub] public DropdownMenuEventInfo(global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuEventInfo.ctor"); }
-        public global::UnityEngine.EventModifiers modifiers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuEventInfo.modifiers"); return default; } }
-        public global::UnityEngine.Vector2 mousePosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuEventInfo.mousePosition"); return default; } }
-        public global::UnityEngine.Vector2 localMousePosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuEventInfo.localMousePosition"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class DropdownMenuItem
-    {
-        [global::Unbound.Stub] protected DropdownMenuItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuItem.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class DropdownMenuSeparator : global::UnityEngine.UIElements.DropdownMenuItem
-    {
-        [global::Unbound.Stub] public DropdownMenuSeparator(string subMenuPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuSeparator.ctor"); }
-        public string subMenuPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownMenuSeparator.subMenuPath"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class DropdownUtility
@@ -3063,13 +2984,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.UIElements.PointerCancelEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }
     }
-    unsafe partial class MultiColumnController
-    {
-        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnController.headerContextMenuPopulateEvent"); } [global::Unbound.Stub] remove { } }
-    }
     unsafe partial class MultiColumnListView
     {
-        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.headerContextMenuPopulateEvent"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseListView.UxmlSerializedData
@@ -3095,7 +3011,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class MultiColumnTreeView
     {
-        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.headerContextMenuPopulateEvent"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseTreeView.UxmlSerializedData
@@ -7320,43 +7235,16 @@ namespace UnityEngine.UIElements.Internal
         public global::System.Collections.Generic.List<global::UnityEngine.UIElements.PropertyPathInfo> propertyPathList { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.AutoCompletePathVisitor.propertyPathList"); } }
         public int maxDepth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.AutoCompletePathVisitor.maxDepth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.AutoCompletePathVisitor.maxDepth"); } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ColumnMover : global::UnityEngine.UIElements.PointerManipulator
+    unsafe partial class ColumnMover
     {
-        [global::Unbound.Stub] public ColumnMover() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.ctor"); }
-        [global::Unbound.Stub] protected override void RegisterCallbacksOnTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.RegisterCallbacksOnTarget"); }
-        [global::Unbound.Stub] protected override void UnregisterCallbacksFromTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.UnregisterCallbacksFromTarget"); }
         [global::Unbound.Stub] protected void ProcessCancelEvent(global::UnityEngine.UIElements.EventBase evt, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.ProcessCancelEvent"); }
         [global::Unbound.Stub] internal void DragMove(float pos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.DragMove"); }
-        public global::UnityEngine.UIElements.ColumnLayout columnLayout { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.columnLayout"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.columnLayout"); } }
-        public bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.active"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.active"); } }
-        public bool moving { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.moving"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.moving"); } }
-        public event global::System.Action<global::UnityEngine.UIElements.Internal.ColumnMover> activeChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.activeChanged"); } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.Internal.ColumnMover> movingChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.movingChanged"); } [global::Unbound.Stub] remove { } }
     }
     unsafe partial class MultiColumnCollectionHeader
     {
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.OnViewDataReady"); }
         internal bool isApplyingViewState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.isApplyingViewState"); return default; } }
-        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> contextMenuPopulateEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.contextMenuPopulateEvent"); } [global::Unbound.Stub] remove { } }
         internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.viewDataRestored"); } [global::Unbound.Stub] remove { } }
-    }
-    unsafe partial class MultiColumnHeaderColumn
-    {
-        public global::UnityEngine.UIElements.Internal.ColumnMover mover { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnHeaderColumn.mover"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class MultiColumnHeaderColumnMoveLocationPreview : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string visualUssClassName;
-        [global::Unbound.Stub] public MultiColumnHeaderColumnMoveLocationPreview() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnHeaderColumnMoveLocationPreview.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class MultiColumnHeaderColumnMovePreview : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public MultiColumnHeaderColumnMovePreview() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnHeaderColumnMovePreview.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class MultiColumnHeaderColumnResizePreview : global::UnityEngine.UIElements.VisualElement
