@@ -10,6 +10,7 @@ Unity 6000.0.71f1, built-in render pipeline, linear color space. What precompute
 [RenderSettings.ambientIntensity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderSettings-ambientIntensity.html),
 [Renderer.UpdateGIMaterials](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.UpdateGIMaterials.html),
 [LightmapSettings](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightmapSettings.html),
+[directional lightmaps](https://docs.unity3d.com/6000.0/Documentation/Manual/LightmappingDirectional.html),
 [LightProbes](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightProbes.html).
 
 ## Content
@@ -75,7 +76,9 @@ ambient mode with another ambient color); `roomscaled-base`,
 bounce intensity 1) and, from bounce intensity 3 again, `roomscaled-threshold0` (the same with
 `DynamicGI.updateThreshold` 0; restored after it); `roomdirectional-base`,
 `roomdirectional-moved`, `roomdirectional-indirectscale`, `roomdirectional-threshold0` (as in
-RoomScaled); `roomsystems-base`, `roomsystems-moved`, `roomsystems-indirectscale`,
+RoomScaled) and `roomdirectional-dim` (the directional scene with hardly any light: the point
+light off, the panel's emission black and an ambient color of (0.02, 0.025, 0.03), so that
+almost half of the covered texels receive less than 0.001); `roomsystems-base`, `roomsystems-moved`, `roomsystems-indirectscale`,
 `roomsystems-threshold0` (the same). A scene whose renderers use several realtime lightmap atlases
 writes `<case>-a<index>.atlas` for every atlas after the first. The default of
 `DynamicGI.updateThreshold` is recorded.
@@ -138,10 +141,23 @@ Observations (not documented guarantees):
   `UpdateEnvironment`: 0.2140 times the intensity 1 probe at 0.5 and 4.5948 times at 2 (the
   intensity taken as an sRGB-encoded value). In the custom ambient mode it is the probe last
   derived from the sky, at intensity 1.
-- The reference was recorded three times, byte-identical in every file. In an earlier round of
-  three, before the last two cases were added, one capture differed from the other two in
-  `roomsystems-base` and `roomsystems-moved` only (up to 0.02 in 1505 and 221 of 5070 lightmap
-  values).
+- The directionality (`roomdirectional-*.dir`): where light arrives from one side its RGB is
+  that direction times 1/2 plus 1/2 (the floor's texels (127, 211, 127): light from above, at
+  about two thirds of a unit length since it comes from a spread of directions) and its alpha the
+  half Lambert term of the surface normal with it (211 on the floor), never below 127. With
+  hardly any light (`roomdirectional-dim`) the direction shortens, and texels that receive
+  nothing are (127, 127, 127, 127).
+- The reference was recorded four times, byte-identical in every file (the three earlier
+  captures too, in the files they share). `roomsystems-base` and `roomsystems-moved` have more
+  than one converged state, though: of six further captures of that scene alone, four gave the
+  reference's lightmaps and two another pair, 64 and 68 of 5070 values apart by at most 0.004
+  and 0.006 (1%). Each run's lightmaps stayed as they were for 1200 more frames, with
+  `DynamicGI.isConverged` true from the first of them, so this is not a capture taken too
+  early: which state the two systems settle in differs from run to run (they update on worker
+  threads; that the order of their updates decides it is a hypothesis). An earlier round of
+  three captures had one that differed more in the same two cases (up to 0.02 in 1505 and 221
+  values). A reference is published from two identical captures; one that lands in another state
+  is repeated.
 
 ## Unbound
 
@@ -153,11 +169,12 @@ throws, and which atlas texels the renderers cover) and on the realtime lightmap
 (at most 0.5% of their values outside the tolerance, for
 the isolated texels docs/REALTIME_GI.md explains), and reports the other lighting values
 (`realtimegi: 0 failing state values, 0 failing gated lighting values, N failing lighting
-values`); `compare.py --strict` gates those too. Every failing value, and every allowed isolated
+values`); `compare.py --strict` gates those too. The directional scene's directionality is gated
+as well: all four channels of every covered texel within the comparator's bound, without the
+allowance for isolated texels. Every failing value, and every allowed isolated
 one, is written to `compare-details.txt` in the run directory. Light probes are lit by realtime GI
-(their coefficients are reported: a few small higher-band ones differ in the brightest case);
-directional output is not supported yet (its values differ), and `RenderSettings.ambientProbe`
-in the custom ambient mode differs (reported).
+(their coefficients are reported: a few small higher-band ones differ in the brightest case),
+and `RenderSettings.ambientProbe` in the custom ambient mode differs (reported).
 
 ## Running
 

@@ -8,7 +8,8 @@ data holds, how the runtime update behaves (documented, then measured against th
 6000.0.71f1 Editor in [tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound
 implements it. Status: the engine draws precomputed realtime GI for scenes whose renderers have
 Preserve UVs, lit by point, spot and directional lights and the environment (an ambient color, a
-gradient, the skybox or a cube a script sets), in the built-in
+gradient, the skybox or a cube a script sets), non-directional or directional (with its
+[directionality](#directionality)), in the built-in
 pipeline (URP binds the same inputs; unmeasured there). For tests/projects/realtimegi every
 renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
 cases match within the comparator's tolerance but for a few isolated texels (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
@@ -17,7 +18,7 @@ light types other than point, spot and directional (the scene's realtime GI is t
 renderers take light probes again; area lights are baked only), light probes that also have baked lighting (also given by a script: realtime
 GI then stops lighting them) or whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
-directional realtime lightmaps, systems that reference another scene's systems, gamma-space
+systems that reference another scene's systems, gamma-space
 projects and linear light intensity.
 
 ## Documented contract (6000.0)
@@ -54,7 +55,7 @@ as its own.
 | File | Content |
 |---|---|
 | `.iws.{ref,sse,neo}` | input samples: clusters (bounding box, number of four-point groups), points quantized to 8 bits in their cluster's box with one 8-bit normal per group; the cluster tree (child count per parent, 8-bit child weights); per-cluster centroid and normal |
-| `.rsc.{ref,sse,neo}` | transport: per output segment, the referenced input values (dependency, index, 16-bit weight), an 8-bit weight per (texel, reference), the texel coordinates; the bounce resampling (per cluster, texels and weights); per-texel chart data |
+| `.rsc.{ref,sse,neo}` | transport: per output segment, the referenced input values (dependency, index, 16-bit weight), an 8-bit weight per (texel, reference), the texel coordinates, and for the directionality, per block of 2x2 texels the segment owns, a normal and an 8-bit direction per reference; per block, which neighbouring blocks belong to its chart; the bounce resampling (per cluster, texels and weights); per-texel chart data |
 | `.caw` | which albedo/emission texels form each cluster |
 | `.rgb` | an 8-bit RGBX texture at system resolution (not the albedo the update uses) |
 | `.ecm` | chart mask at system resolution: per texel, the chart it belongs to (each chart a rectangle of even width and height) |
@@ -122,6 +123,56 @@ after the brighter `room-bounce` case the Editor's texels are 2.00 to 2.07 times
 the two). The update is converged (`DynamicGI.isConverged`) once an update of every system
 leaves its drawn texels unchanged: the bounce reads them, so nothing changes until the inputs
 do.
+
+## Directionality
+
+With directional lightmaps (`LightmapSettings.lightmapsMode` CombinedDirectional; Unity 6000.0
+Manual: [directional lightmaps](https://docs.unity3d.com/6000.0/Documentation/Manual/LightmappingDirectional.html))
+each realtime lightmap comes with a directionality texture (`unity_DynamicDirectionality`, sampled
+with the lightmap's sampler under `DIRLIGHTMAP_COMBINED`): RGB is the dominant direction of the
+texel's light times 1/2 plus 1/2, and Unity's shaders light a surface with the lightmap's color
+times the half Lambert term of the shaded normal with that direction, divided by the texture's
+alpha (the "rebalancing" term). Every system's transport holds the data for it, whatever the
+scene's mode (the probe's four scenes have the same blocks). Unbound's model
+(`crates/unbound-gi/src/directionality.rs`), compared with the Editor's texture in
+tests/projects/realtimegi `roomdirectional-*`:
+
+1. **Blocks**: the directionality is solved per block of 2x2 texels. The first texels a segment
+   lists are one per block it owns (block x / 2, y / 2), each with a normal (three bytes b for
+   b * 2 / 255 - 1) and, per reference of the segment, the index of the direction that
+   reference's light arrives from.
+2. **Directions**: index 0 is no direction; indices 1 to 255 are unit vectors spread over the
+   sphere, direction i at height z = 2 r(i - 1) - 1, with r the base-2 radical inverse, and at
+   azimuth (i - 1/2) / 255 of a turn from +x toward +y.
+3. **A block's direction**: the mean of its references' directions, each weighted by the texel
+   weight of the block's first texel times the luminance (0.2126, 0.7152, 0.0722) of the
+   reference's weighted value. Light from all around gives a short direction. When the sum of
+   those weights (the luminance the texel receives, before the indirect scale) is below 0.001,
+   the sum of the weighted directions is divided by 0.001 instead: a darker block's direction is
+   shorter in proportion, and a black one has none (`roomdirectional-dim`, where 743 of 1690
+   texels receive less than that).
+4. **Stored value**: the direction times 1/2 plus 1/2 in RGB, and in alpha the half Lambert term
+   of the block's normal with it, `dot(normal, direction) / 2 + 1/2`, at least 1/2.
+5. **Texels**: each block's value belongs to the middle of its 2x2 texels, and a texel takes
+   9/16 of its own block, 3/16 of each of the two blocks beside it and 1/16 of the diagonal one,
+   but only from blocks of its chart (the transport's neighbour flags per block): a missing
+   neighbour beside it counts as the block itself, a missing diagonal one as the sum of the two
+   beside it less the block. The result is clamped to [0, 1] and truncated to 8 bits.
+6. **Update threshold**: a segment that is not solved in an update leaves its blocks' texels as
+   they are; neighbouring blocks that are solved read such a block as the mean of its four
+   texels.
+7. **Copies**: a segment's first copies, as many as its header says, copy whole blocks before
+   the texels are made; the others copy texels afterwards. None of the probe's systems has
+   copies, so this part is unmeasured.
+
+With these rules the engine's directionality differs from the Editor's by 0.2/255 on average; at
+most 2 of a case's 6760 values differ by more than 2/255 (by up to 4/255), as the lightmap's
+isolated texels do. Not measured: `LightmapSettings.lightmapsMode` changed by a script (Unbound
+follows the mode of each frame: a scene that becomes directional solves every part of its
+lightmaps once more, one that stops being directional draws without directionality), frames in
+which the directionality matters (none of the probe's materials has a normal map, so its frames
+show the lightmap alone), directionality under a scriptable render pipeline, and gamma-space
+projects.
 
 ## Light probes
 
@@ -277,7 +328,10 @@ synchronous mode, else of as many as fit in 2 ms (at least one), each system in 
 other systems' values of their last updates, without allocating; the scene
 is converged once an update of every system left its drawn texels unchanged. Changed atlases are
 uploaded as RGBA half floats; renderers draw them as `unity_DynamicLightmap` with their realtime
-scale and offset and `DYNAMICLIGHTMAP_ON`, and take no light probes. The light probes'
+scale and offset and `DYNAMICLIGHTMAP_ON`, and take no light probes. In a frame whose lightmaps
+mode is directional the systems solve their directionality too; each atlas then has a second
+texture (RGBA8, `gi_read_directionality`), which its renderers draw as
+`unity_DynamicDirectionality` with `DIRLIGHTMAP_COMBINED`. The light probes'
 coefficients are read back after each update (`gi_read_probes`) into the scene's LightProbes.
 `DynamicGI.isConverged`, `synchronousMode`, `SetEmissive`, `SetEnvironmentData`,
 `UpdateEnvironment`, `indirectScale` and `updateThreshold` act on it.
@@ -299,6 +353,12 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   the panel's emission set to black (the environment cases from `room-gradient` on) no value is
   outside the tolerance, so the emitting panel's nearest texels are the open part, not the
   update history alone.
+- Several systems: the Editor's own converged lightmaps of `RoomSystems` differ between runs
+  (two states in six captures, 64 to 68 of 5070 values apart by at most 1%, each stable once
+  reached; tests/projects/realtimegi README). The reference holds the more frequent one; both are
+  well within the comparator's tolerance of Unbound's, which updates the systems in their order.
+- Directionality: at most 2 of a case's 6760 values more than 2/255 from the Editor's (up to
+  4/255), 0.2/255 on average (see [Directionality](#directionality)).
 - Environment: with the environment as the only light the lightmaps differ from the Editor's by
   0.0004 to 0.001 on average for colors and gradients (at most 0.015), 0.001 for the sky (at
   most 0.008; 0.004 and 0.02 at ambient intensity 2, on values around 0.4) and 0.001 for a
@@ -315,8 +375,8 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
 
 ## Unbound plan
 
-- Phase 2, runtime over Unity's precomputed data (above): next, directional output;
-  unmeasured inputs fail loudly until a probe case covers them.
+- Phase 2, runtime over Unity's precomputed data (above): unmeasured inputs fail loudly until a
+  probe case covers them.
 - Phase 3, Unbound's own precompute from scene geometry (automatic charts for Preserve UVs off,
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
