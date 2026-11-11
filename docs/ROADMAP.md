@@ -41,7 +41,7 @@ assemblies. Uses are the JSON's total reported uses of those entries across the 
 the JSON lists referencing assemblies but does not split uses between them. Shared
 entries and their uses can appear in several rows, so the rows are not additive.
 
-| Package | Stubbed members / reported uses | Most referenced stubbed types |
+| Package | Stubbed members / reported uses | Types with most referenced stubbed members |
 |---|---|---|
 | Render Pipelines Core, URP/2D, Shader Graph, GPU Driven, Light Transport | 398 / 1010 | `UnityEngine.VFX.VisualEffect`, `UnityEngine.Rendering.GPUDrivenRendererGroupData`, `UnityEngine.Rendering.BatchCullingContext` |
 | Input System (+ ForUI) | 166 / 345 | `UnityEditor.EditorGUILayout`, `UnityEditor.AssetDatabase`, `UnityEditor.IMGUI.Controls.TreeView/RowGUIArgs` |
