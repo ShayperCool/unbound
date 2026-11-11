@@ -115,6 +115,43 @@ public class ClipProbe : MonoBehaviour
 #endif
     }
 
+    /// <summary>The transform curves a Humanoid model's clips keep beside their Animator curves.
+    /// HumanTwist's take also turns one twist bone and moves the other (neither is a human
+    /// bone); its clip mask is None (HumanTwistNone), made from the model with every transform
+    /// on (HumanTwistAll), or with the left twist bone off (HumanTwistPart). Recorded per clip:
+    /// the number of Animator curves and of paths with transform curves; per such path its
+    /// properties, the number of keys and the first and the middle key of each property
+    /// (positions times 100, the inverse of the rig's root scale).</summary>
+    static void TransformCurves(string model)
+    {
+#if UNITY_EDITOR
+        foreach (var clip in Clips(model))
+        {
+            var bindings = UnityEditor.AnimationUtility.GetCurveBindings(clip);
+            var paths = bindings.Where(b => b.type == typeof(Transform)).GroupBy(b => b.path).OrderBy(g => g.Key, StringComparer.Ordinal).ToArray();
+            Record("curves." + model + "." + clip.name, "{\"animator\":" + bindings.Count(b => b.type == typeof(Animator))
+                + ",\"others\":" + bindings.Count(b => b.type != typeof(Animator) && b.type != typeof(Transform)) + ",\"transformPaths\":" + paths.Length + "}");
+            foreach (var path in paths)
+            {
+                var properties = path.OrderBy(b => b.propertyName, StringComparer.Ordinal).ToArray();
+                var first = new List<string>();
+                var middle = new List<string>();
+                int keys = 0;
+                foreach (var b in properties)
+                {
+                    var curve = UnityEditor.AnimationUtility.GetEditorCurve(clip, b).keys;
+                    float scale = b.propertyName.StartsWith("m_LocalPosition") ? 100f : 1f;
+                    keys = Mathf.Max(keys, curve.Length);
+                    first.Add(curve.Length > 0 ? F(curve[0].value * scale) : "null");
+                    middle.Add(curve.Length > 0 ? F(curve[curve.Length / 2].value * scale) : "null");
+                }
+                Record("curves." + model + "." + clip.name + "." + path.Key, "{\"properties\":[" + string.Join(",", properties.Select(b => S(b.propertyName)))
+                    + "],\"keys\":" + keys + ",\"first\":[" + string.Join(",", first) + "],\"middle\":[" + string.Join(",", middle) + "]}");
+            }
+        }
+#endif
+    }
+
     static string Snapshot(Animator animator, ClipReceiver receiver)
     {
         var parts = new List<string>();
@@ -192,6 +229,7 @@ public class ClipProbe : MonoBehaviour
             Keys("HumanReduced");
             Keys("HumanOptimal");
             Keys("HumanLong");
+            foreach (var mask in new[] { "None", "All", "Part" }) TransformCurves("HumanTwist" + mask);
         }
         catch (Exception e)
         {

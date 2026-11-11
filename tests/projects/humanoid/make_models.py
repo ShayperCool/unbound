@@ -12,9 +12,12 @@ avatar with translation DoF).
 HumanLong: HumanB's rig with the same clip over 31 frames, a length whose last frame time in
 single precision lies past the clip's end; it goes to tests/projects/modelclips and is made
 only when named.
+HumanTwist: HumanB's rig and clip with its two twist bones, which are not human bones, animated
+too (the left one turns, the right one moves); it goes to tests/projects/modelclips as
+HumanTwistNone.fbx (copied there under its other clip masks) and is made only when named.
 The character faces Blender's -Y, which is Unity's +Z.
 
-Names after `--` generate only those rigs (HumanA, HumanB, HumanT, HumanLong).
+Names after `--` generate only those rigs (HumanA, HumanB, HumanT, HumanLong, HumanTwist).
 """
 import math
 import os
@@ -159,7 +162,7 @@ def a_keys():
     return keys
 
 
-def human_b(end=20, file='HumanB.fbx', probe=PROBE):
+def human_b(end=20, file='HumanB.fbx', probe=PROBE, twist=False):
     body = [
         ('Root', None, (0, 0, 0), (0, 0, 0.2), 0),
         ('Hips', 'Root', (0, 0.02, 1.12), (0, 0.02, 1.22), 90),
@@ -186,12 +189,21 @@ def human_b(end=20, file='HumanB.fbx', probe=PROBE):
             ('LeftLowerLeg', f, (30 + 20 * s, 0, 0), None),
             ('RightUpperLeg', f, (-20 * s, 0, 0), None),
         ]
+        if twist:
+            keys += [
+                ('LeftUpperArmTwist', f, (25 * s, 0, 0), None),
+                ('RightUpperArmTwist', f, None, (0, 0.03 * s, 0)),
+            ]
     animate(rig, 'Wave', end, keys)
     export(rig, file, probe)
 
 
 def human_long():
     human_b(31, 'HumanLong.fbx', os.path.join(os.path.dirname(PROBE), 'modelclips'))
+
+
+def human_twist():
+    human_b(20, 'HumanTwistNone.fbx', os.path.join(os.path.dirname(PROBE), 'modelclips'), twist=True)
 
 
 def animate(rig, name, end, keys):
@@ -227,7 +239,8 @@ def export(rig, file, probe=PROBE):
 
 
 only = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else ['HumanA', 'HumanB', 'HumanT']
-for name, make in (('HumanA', human_a), ('HumanB', human_b), ('HumanT', human_t), ('HumanLong', human_long)):
+for name, make in (('HumanA', human_a), ('HumanB', human_b), ('HumanT', human_t), ('HumanLong', human_long),
+                   ('HumanTwist', human_twist)):
     if name in only:
         reset()
         make()
