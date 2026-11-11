@@ -3,6 +3,7 @@
 //! bounce resampled from them. All buffers are allocated once per system; an update allocates
 //! nothing.
 use crate::data::{ABSENT_ID, ENVIRONMENT_ID, ENVIRONMENT_VALUES, InputSamples, System};
+use crate::directionality::Directionality;
 use crate::visibility::Visibility;
 use anyhow::{Result, bail};
 use std::sync::Arc;
@@ -245,6 +246,8 @@ pub struct SystemSolver {
     indirect_scale: f32,
     /// The scale the drawn texels were solved with.
     solved_scale: f32,
+    /// The directionality texture of a directional realtime lightmap.
+    directionality: Option<Directionality>,
 }
 
 /// The mean of the channels' absolute changes from `old` to `new`.
@@ -469,8 +472,26 @@ impl SystemSolver {
             encoded: vec![0; texels],
             indirect_scale: 1.0,
             solved_scale: 1.0,
+            directionality: None,
             system,
         })
+    }
+
+    /// Whether the system's lightmap is directional (`LightmapsMode.CombinedDirectional`):
+    /// updates then solve its directionality texture as well, from the next one on, which solves
+    /// every segment.
+    pub fn set_directional(&mut self, directional: bool) {
+        if !directional {
+            self.directionality = None;
+        } else if self.directionality.is_none() {
+            self.directionality = Some(Directionality::new(&self.system.transport));
+            self.solve_all = true;
+        }
+    }
+
+    /// The directionality texture ([`Directionality::texels`]) of a directional lightmap.
+    pub fn directionality(&self) -> Option<&[[u8; 4]]> {
+        self.directionality.as_ref().map(Directionality::texels)
     }
 
     /// The cluster, tree and constant values of the last update (what transports reference).
@@ -713,11 +734,17 @@ impl SystemSolver {
                 *pending = pending.max(0.0) + change;
                 let mean = (brightness[0] + brightness[1] + brightness[2]) / 3.0;
                 if *pending / (mean + CHANGE_EPSILON) < self.threshold {
+                    if let Some(directionality) = &mut self.directionality {
+                        directionality.keep(segment);
+                    }
                     continue;
                 }
             }
             *pending = -1.0;
             solved += 1;
+            if let Some(directionality) = &mut self.directionality {
+                directionality.solve(segment, &self.gathered);
+            }
             for (t, &(x, y)) in segment.texels.iter().enumerate() {
                 let row = &segment.weights[t * refs..(t + 1) * refs];
                 let mut sum = [0.0f32; 3];
@@ -731,6 +758,10 @@ impl SystemSolver {
                 self.encoded[dy as usize * width + dx as usize] =
                     self.encoded[sy as usize * width + sx as usize];
             }
+        }
+
+        if let Some(directionality) = &mut self.directionality {
+            directionality.finish(&system.transport);
         }
 
         // Each cluster's bounce is the drawn texel of its first resampling sample, divided by

@@ -11,7 +11,12 @@ fn probe() -> std::path::PathBuf {
 }
 
 fn room_data() -> Precomputed {
-    let file = probe().join("Assets/Scenes/Room/LightingData.asset");
+    scene_data("Room")
+}
+
+/// The precomputed realtime GI of one of the probe's scenes.
+fn scene_data(scene: &str) -> Precomputed {
+    let file = probe().join(format!("Assets/Scenes/{scene}/LightingData.asset"));
     let bytes = std::fs::read(file).unwrap();
     let serialized = unbound_assets::serialized::SerializedFile::parse(&bytes).unwrap();
     read_precomputed(&serialized.read(112000000).unwrap())
@@ -21,8 +26,12 @@ fn room_data() -> Precomputed {
 
 /// A reference atlas: width, height, RGBA half floats (alpha 0: not covered).
 fn reference(case: &str) -> (usize, Vec<[f32; 4]>) {
-    let bytes =
-        std::fs::read(probe().join(format!("Reference/unity-6000.0.71f1/{case}.atlas"))).unwrap();
+    reference_file(&format!("{case}.atlas"))
+}
+
+/// A reference atlas or directionality file.
+fn reference_file(name: &str) -> (usize, Vec<[f32; 4]>) {
+    let bytes = std::fs::read(probe().join(format!("Reference/unity-6000.0.71f1/{name}"))).unwrap();
     let width = i32::from_le_bytes(bytes[0..4].try_into().unwrap()) as usize;
     let half = |h: u16| -> f32 {
         let (sign, exp, frac) = (
@@ -213,11 +222,18 @@ struct Replay {
     solver: SystemSolver,
     probes: ProbeSetSolver,
     room: Option<Room>,
+    /// The scene's renderers (file IDs) by the names of their objects.
+    names: std::collections::HashMap<i64, String>,
 }
 
 impl Replay {
     fn new() -> Self {
-        let data = room_data();
+        Self::scene("Room")
+    }
+
+    /// One of the probe's single-system scenes (the same room in each).
+    fn scene(scene: &str) -> Self {
+        let data = scene_data(scene);
         let solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
         let probes = ProbeSetSolver::new(
             Arc::new(data.probe_sets[0].clone()),
@@ -229,6 +245,7 @@ impl Replay {
             solver,
             probes,
             room: None,
+            names: renderer_names(scene),
         }
     }
 
@@ -245,11 +262,11 @@ impl Replay {
             let colors: Vec<([f32; 3], [f32; 3])> = self.data.renderers[system.first_renderer..]
                 [..system.renderer_count]
                 .iter()
-                .map(|&(object, _)| match object {
-                    PANEL => ([0.2, 0.2, 0.2], room.panel_emission),
-                    308039783 => (room.left_rendered, [0.0; 3]), // Left
-                    1583214537 => ([0.1, 0.8, 0.1], [0.0; 3]),   // Right
-                    973394265 | 152063223 | 605051979 | 948094850 => (white, [0.0; 3]),
+                .map(|(object, _)| match self.names[object].as_str() {
+                    "Panel" => ([0.2, 0.2, 0.2], room.panel_emission),
+                    "Left" => (room.left_rendered, [0.0; 3]),
+                    "Right" => ([0.1, 0.8, 0.1], [0.0; 3]),
+                    "Floor" | "Ceiling" | "Back" | "Block" => (white, [0.0; 3]),
                     other => panic!("unknown renderer {other}"),
                 })
                 .collect();
@@ -260,7 +277,10 @@ impl Replay {
         if let Some(color) = room.panel_set_emissive
             && changed(&|o| o.panel_set_emissive == room.panel_set_emissive)
         {
-            let panel = renderer_of(&self.data, PANEL);
+            let panel = self.data.renderers[system.first_renderer..][..system.renderer_count]
+                .iter()
+                .position(|(object, _)| self.names[object] == "Panel")
+                .unwrap();
             self.solver.set_renderer_emission(panel, color).unwrap();
         }
         self.solver.set_environment(&environment(&room)).unwrap();
@@ -794,6 +814,17 @@ fn malformed_data_fails_without_panicking() {
             other[80..82].copy_from_slice(&10u16.to_le_bytes());
             let error = crate::data::read_transport(&other).unwrap_err().to_string();
             assert!(error.contains("outside 10x52"), "{error}");
+            // An odd width leaves the last column's block texels outside the grid of whole
+            // blocks; more blocks than texels cannot be either.
+            let mut other = full.clone();
+            other[80..82].copy_from_slice(&51u16.to_le_bytes());
+            let error = crate::data::read_transport(&other).unwrap_err().to_string();
+            assert!(error.contains("outside 51x52"), "{error}");
+            let mut other = full.clone();
+            let texels = u16::from_le_bytes([other[96], other[97]]);
+            other[98..100].copy_from_slice(&(texels + 1).to_le_bytes());
+            let error = crate::data::read_transport(&other).unwrap_err().to_string();
+            assert!(error.contains("blocks"), "{error}");
         }
         if f.path.ends_with(".iws.ref") {
             let mut other = full.clone();
@@ -1448,4 +1479,97 @@ fn references_to_systems_outside_the_scene_fail() {
         .unwrap()
         .to_string();
     assert!(error.contains("a transport reference to value"), "{error}");
+}
+
+#[test]
+fn a_directional_scene_solves_the_editors_directionality() {
+    // RoomDirectional: the Room with directional realtime lightmaps, through the probe's cases.
+    let mut r = Replay::scene("RoomDirectional");
+    r.solver.set_directional(true);
+    let moved = Room {
+        light: MOVED,
+        ..BASE
+    };
+    let bright = Room {
+        bounce: 3.0,
+        ..moved
+    };
+    let scaled = Room {
+        indirect_scale: 2.0,
+        ..moved
+    };
+    let cases = [
+        (None, BASE, "roomdirectional-base"),
+        (None, moved, "roomdirectional-moved"),
+        (Some(bright), scaled, "roomdirectional-indirectscale"),
+        (
+            Some(bright),
+            Room {
+                threshold: 0.0,
+                ..scaled
+            },
+            "roomdirectional-threshold0",
+        ),
+    ];
+    for (before, room, case) in cases {
+        if let Some(before) = before {
+            r.set(before);
+            r.converge();
+        }
+        r.check(room, case, ISOLATED, 0.006);
+        let (width, texels) = reference_file(&format!("{case}.dir"));
+        let t = &r.solver.system().transport;
+        let ours = r.solver.directionality().unwrap();
+        let (mut total, mut off, mut worst, mut sum) = (0, 0, 0f32, 0f32);
+        for y in 0..t.height as usize {
+            for x in 0..t.width as usize {
+                let e = texels[y * width + x];
+                if e[3] <= 0.0 {
+                    continue;
+                }
+                let got = ours[y * t.width as usize + x];
+                for k in 0..4 {
+                    let d = (got[k] as f32 - e[k] * 255.0).abs();
+                    total += 1;
+                    sum += d;
+                    worst = worst.max(d);
+                    if d > 2.5 {
+                        off += 1;
+                        eprintln!(
+                            "  {case} ({x},{y}) channel {k}: {} vs {}",
+                            got[k],
+                            e[k] * 255.0
+                        );
+                    }
+                }
+            }
+        }
+        let mean = sum / total as f32;
+        eprintln!(
+            "{case}.dir: {off} of {total} values more than 2/255 off, worst {worst}, mean {mean}"
+        );
+        // Every covered texel's four channels: but for a few values (the update's history, as in
+        // the lightmap) within 2/255 of the Editor's, 0.2/255 on average.
+        assert!(total > 6000, "{case}: {total} values");
+        assert!(off <= ISOLATED, "{case}: {off} directionality values off");
+        assert!(
+            worst < 5.0 && mean < 0.3,
+            "{case}: worst {worst}, mean {mean}"
+        );
+    }
+    // The other scenes' lightmaps have the same data: a system is directional when asked to be.
+    let mut room = Replay::new();
+    assert!(room.solver.directionality().is_none());
+    room.solver.set_directional(true);
+    room.set(BASE);
+    room.converge();
+    assert!(
+        room.solver
+            .directionality()
+            .unwrap()
+            .iter()
+            .any(|t| t[3] != 0)
+    );
+    room.solver.set_directional(false);
+    assert!(room.solver.directionality().is_none());
 }
