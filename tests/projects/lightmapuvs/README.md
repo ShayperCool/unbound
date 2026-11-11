@@ -22,6 +22,8 @@ with the variant's unwrap settings:
 | Off | generateSecondaryUV off (the file's own UV2) |
 | Raw | mesh optimization off (triangles and vertices in import order), defaults otherwise |
 | RawOff | mesh optimization and generateSecondaryUV off |
+| Repair | defaults, for the models the unwrap has to repair (below) |
+| RepairOff | generateSecondaryUV off, for Lines |
 
 `LightmapUvProbe` records every mesh of every variant (vertex count, sub-mesh triangles,
 vertices, normals, UV, UV2) as one JSON line per mesh and quits. The Editor records in Play mode
@@ -37,7 +39,8 @@ The comparison is exact (float32 values at tolerance 0) and lists every mesh wit
 is missing or differs. `--uv2` judges only the vertex count and the UV2 of every triangle corner
 (found by the corners' positions and UVs, so independent of the vertex and triangle order the
 Editor's mesh optimization gives); `--expect Cube,Multi,Pieces` lets only those meshes decide the
-exit status (the gate: `compare.py ... --uv2 --expect Cube,Multi,Pieces,Sphere,Ico,Barrel,Rock,Compound,Twins`).
+exit status (the gate, `tools/agents/suite.py`: `compare.py ... --uv2 --expect Cube,Multi,Pieces,...` with
+the models that match in every variant, the Repair models among them).
 
 After changing a generator, regenerate (`blender -b --factory-startup --python
 tests/projects/lightmapuvs/Tools/make_models.py -- tests/projects/lightmapuvs/Sources`, then
@@ -48,15 +51,32 @@ What the reference shows (Unity 6000.0.71f1): a generated UV2 splits vertices al
 on the hard angle and the distortion settings only where the mesh has charts to merge or split
 (Organic, Torus). The margin method and its inputs move and scale every chart.
 
+## Meshes the unwrap repairs
+
+`Tools/make_repair_models.py` (Blender) writes `Sources/Repair`: Fin (an edge of three faces),
+BowTie (two pyramids touching at one vertex), Doubled (a face listed twice), Flipped (two faces
+back to back), Folded (a strip folded onto itself), Slivers (needle and collinear triangles, and
+corners closer than the weld distance), SphereFin (a part of more than a hundred triangles with a
+fin) and Lines (nothing but collinear triangles). The Repair variant also holds FlatQuad, FlatTri,
+Pinch and WeldQuad of `Sources/Normals`.
+
+What the reference shows (Unity 6000.0.71f1): all of these get a UV2 except Lines. A triangle
+without area keeps its place in the mesh and its corners take the UV2 of a neighbouring triangle's
+corners. For Lines the Editor logs that no triangles are left after the cleanup and imports the
+mesh empty (no vertices, one empty sub-mesh), while RepairOff/Lines keeps its six vertices. That
+is measured for this one mesh of one sub-mesh; a mesh of several sub-meshes or with blend shapes
+or skinning is not measured.
+
 State in Unbound: the unwrap is reproduced, for connected parts of up to 100 triangles and for
 larger ones (simplified first, segmented on the simplified copy and refined back), including
-charts that touch or overlap themselves. Cube, Multi, Pieces, Sphere, Ico, Barrel, Rock, Compound
-and Twins, plus Cylinder after n-gon triangulation, match in every variant (vertex count and UV2
-per corner). Grid and TwoUV now match both UV2 and vertex counts in every unwrap variant,
-including imports without generated UV2. Their imported normals are normalized and their attributes split with the
-measured thresholds. The Torus is unwrapped as the Editor does, but its mesh is named after the OBJ
-object, not "default", so the comparison cannot pair it. Meshes Unbound does not reproduce yet
-warn and keep the file's UV2: Organic has non-manifold vertices after welding.
+charts that touch or overlap themselves, degenerate triangles and non-manifold edges and
+vertices. Cube, Multi, Pieces, Sphere, Ico, Barrel, Rock, Compound and Twins, plus Cylinder after
+n-gon triangulation, Grid and TwoUV match in every variant (vertex count and UV2 per corner), and
+so do the twelve Repair models. Organic matches in five of its six unwrap variants; in Hard30 four
+single-triangle charts of equal size are packed in each other's places (968 triangles, 12 corners
+differ by up to 0.034). Imported normals are normalized and attributes split with the measured
+thresholds. The Torus is unwrapped as the Editor does, but its mesh is named after the OBJ
+object, not "default", so the comparison cannot pair it.
 
 ## Imported normals
 
