@@ -20,11 +20,12 @@ namespace Unbound.Runtime
     /// <c>RenderSettings.haloStrength</c>), its center vertex a third of that size nearer the
     /// camera, sampling <c>_HaloFalloff</c>: the scene's halo texture, else a 64x64 alpha texture
     /// of <c>1 - r²</c>.</item>
-    /// <item>A flare's elements are quads on the line from the flare's point on screen through the
-    /// screen's center, at <c>position</c> along it (0 the flare, 1 the center), half
-    /// <c>size * 0.0100354</c> of the projection's vertical scale tall (constant on screen with a
-    /// perspective camera), rotated to face the center (corners at 1.4 half sizes) and scaled by
-    /// the visibility when asked.</item>
+    /// <item>A flare's elements are quads in view space at the flare's depth, on the line from
+    /// the flare's point to the view axis at <c>position</c> along it (0 the flare, 1 the axis),
+    /// half <c>size * 0.01</c> of that depth tall (so constant on screen with a perspective
+    /// camera), rotated to point away from the axis (corners at 1.4 half sides) and scaled by
+    /// the brightness and visibility when asked; a directional flare sits at twice the near
+    /// plane's distance (see <see cref="BuildFlare"/>).</item>
     /// <item>A flare fades in at its fade speed per second (a LensFlare's own, a light's
     /// <c>RenderSettings.flareFadeSpeed</c>) while its point is on screen and no collider is
     /// between it and the camera (triggers too; layers the LensFlare ignores do not count), and
@@ -38,10 +39,14 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Halos
     {
-        /// <summary>The element size scale (half height in projection units per size unit).</summary>
-        const float ElementScale = 0.0100354f;
-        /// <summary>A rotated element's corner distance in half sizes.</summary>
+        /// <summary>An element's half side in view units, per unit of its size and of the
+        /// flare's depth.</summary>
+        const float ElementScale = 0.01f;
+        /// <summary>A rotated element's corner distance in half sides.</summary>
         const float RotatedCorner = 1.4f;
+        /// <summary>The distance from the view axis under which a flare has no direction of its
+        /// own: its rotated elements then point along +x.</summary>
+        const float AxisEpsilon = 1e-5f;
 
         static readonly List<Halo> s_Halos = new List<Halo>();
         static readonly List<LensFlare> s_LensFlares = new List<LensFlare>();
@@ -58,6 +63,9 @@ namespace Unbound.Runtime
         static Mesh s_HaloMesh, s_FlareMesh;
         static readonly List<Vector3> s_Vertices = new List<Vector3>();
         static readonly List<Vector2> s_Uvs = new List<Vector2>();
+        /// <summary>The vertices and uvs the last build left (four per element).</summary>
+        internal static IReadOnlyList<Vector3> BuiltVertices => s_Vertices;
+        internal static IReadOnlyList<Vector2> BuiltUvs => s_Uvs;
         static readonly List<Color32> s_Colors = new List<Color32>();
         static readonly List<int> s_Indices = new List<int>();
 
@@ -288,7 +296,7 @@ namespace Unbound.Runtime
         /// <summary>One flare to draw: where it is, its asset, the sRGB color its light-colored
         /// elements take, its brightness and fade speeds, and the layers its occlusion test
         /// ignores.</summary>
-        struct Source
+        internal struct Source
         {
             internal UnityEngine.Object Key;
             internal Flare Asset;
@@ -356,9 +364,7 @@ namespace Unbound.Runtime
                 s_DrawnBy.Clear();
             }
             bool drawn = false;
-            var center = new Vector2(width * 0.5f, height * 0.5f);
             var cameraPosition = view.inverse.MultiplyPoint3x4(Vector3.zero);
-            bool orthographic = projection.m33 == 1f;
             var saved = GfxStream.Current;
             bool matrices = false;
             foreach (var source in s_Sources)
@@ -379,11 +385,7 @@ namespace Unbound.Runtime
                         : Mathf.Max(0f, fade.Visibility - Time.deltaTime * source.FadeOut);
                 }
                 if (fade.Visibility <= 0f || !front) continue;
-                var screen = new Vector2((ndc.x * 0.5f + 0.5f) * width, (ndc.y * 0.5f + 0.5f) * height);
-                // On screen the elements keep their size with a perspective camera; an orthographic
-                // camera scales them by the flare's depth.
-                float unit = ElementScale * projection.m11 * height * 0.5f * (orthographic ? (source.Directional ? camera.farClipPlane : -viewPoint.z) : 1f);
-                if (!BuildFlare(source, fade.Visibility, screen, center, unit)) continue;
+                if (!BuildFlare(source, fade.Visibility, FlarePoint(view, source, camera.nearClipPlane))) continue;
                 CheckLayer(camera, (Component)source.Key, "lens flare");
                 // Each camera fades its flares on its own; a flare drawn by a second camera in a
                 // frame was not measured.
@@ -392,7 +394,8 @@ namespace Unbound.Runtime
                 drawn = true;
                 if (!matrices)
                 {
-                    GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0f, width, 0f, height, -1f, 1f), saved.Flags);
+                    // The quads are in view space: the camera's projection alone places them.
+                    GfxStream.Camera(Matrix4x4.identity, projection, saved.Flags);
                     matrices = true;
                 }
                 s_FlareMesh ??= NewMesh("Unbound Lens Flare");
@@ -437,46 +440,84 @@ namespace Unbound.Runtime
             return Physics.Raycast(cameraPosition, direction, out _, distance, ~source.IgnoreLayers, QueryTriggerInteraction.Collide);
         }
 
-        /// <summary>The flare's element quads, in viewport pixels.</summary>
-        static bool BuildFlare(in Source source, float visibility, Vector2 screen, Vector2 center, float unit)
+        /// <summary>
+        /// The flare's place in view space: a positioned flare's point through the view matrix,
+        /// a directional one's direction at twice the near plane's distance (rotated only). The
+        /// order of the sums is part of the result: it decides the last bit of an element's
+        /// edge, and with it which pixels an edge on pixel centres covers. This order
+        /// reproduces every flare image of the Unity 6000.0.71f1 Editor (tests/projects/flares).
+        /// </summary>
+        internal static Vector3 FlarePoint(in Matrix4x4 view, in Source source, float near)
+        {
+            var q = source.Point;
+            if (!source.Directional)
+                return new Vector3(
+                    q.z * view.m02 + q.y * view.m01 + view.m00 * q.x + view.m03,
+                    q.z * view.m12 + q.y * view.m11 + view.m10 * q.x + view.m13,
+                    q.z * view.m22 + q.y * view.m21 + q.x * view.m20 + view.m23);
+            // Twice the near plane's distance: within 60 degrees of the view axis it is in view.
+            float far = near + near;
+            float x = q.x * far, y = q.y * far, z = far * q.z;
+            return new Vector3(
+                z * view.m02 + y * view.m01 + view.m00 * x,
+                z * view.m12 + y * view.m11 + view.m10 * x,
+                view.m20 * x + y * view.m21 + z * view.m22);
+        }
+
+        /// <summary>
+        /// The flare's element quads, in view space at the flare's depth (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/flares): an element sits on the line from
+        /// the flare's point to the view axis at its position; its half side is its size times
+        /// the depth times <see cref="ElementScale"/> (a zooming element's also times the
+        /// visibility), so a perspective camera shows it at one size whatever the depth and an
+        /// orthographic one scales it by the depth; a rotating element is a diamond
+        /// <see cref="RotatedCorner"/> half sides wide whose first corner points away from the
+        /// axis. The order of the products and sums matters to the last bit, as in
+        /// <see cref="FlarePoint"/>.
+        /// </summary>
+        internal static bool BuildFlare(in Source source, float visibility, Vector3 point)
         {
             s_Vertices.Clear(); s_Uvs.Clear(); s_Colors.Clear(); s_Indices.Clear();
             var flare = source.Asset;
             var texture = flare.m_FlareTexture;
             if (texture == null) return false;
-            var offset = screen - center;
-            float angle = offset.sqrMagnitude > 0f ? Mathf.Atan2(offset.y, offset.x) : 0f;
+            float distance = Mathf.Sqrt(point.y * point.y + point.x * point.x);
+            float awayX = 1f, awayY = 0f;
+            if (distance > AxisEpsilon)
+            {
+                awayX = point.x / distance;
+                awayY = point.y / distance;
+            }
+            float halfTexelU = (1f / Math.Max(1, texture.width)) * 0.5f, halfTexelV = (1f / Math.Max(1, texture.height)) * 0.5f;
             foreach (var element in flare.m_Elements)
             {
                 var color = ElementColor(element, source, visibility);
                 if (color.r == 0 && color.g == 0 && color.b == 0) continue;
-                var position = screen + (center - screen) * element.Position;
-                float half = element.Size * unit * (element.Zoom ? visibility : 1f);
-                if (half <= 0f) continue;
-                var rect = ImageRect(flare.m_TextureLayout, element.ImageIndex, texture.width, texture.height);
-                int start = s_Vertices.Count;
+                float toAxis = element.Position, toPoint = 1f - toAxis;
+                float depth = toPoint * point.z + point.z * toAxis;
+                float x = point.x * toPoint + toAxis * 0f, y = point.y * toPoint + toAxis * 0f;
+                float half = element.Size * point.z * (element.Zoom ? ElementScale * (source.Brightness * visibility) : ElementScale);
+                if (half == 0f) continue;
+                float halfX = half, halfY = half;
                 if (element.Rotate)
                 {
-                    // A diamond whose top-right corner points away from the screen's center.
-                    float r = half * RotatedCorner;
-                    for (int k = 0; k < 4; k++)
-                    {
-                        // Corners in uv order (0,0), (1,0), (1,1), (0,1): at angle + 180, 270, 0 and 90 degrees.
-                        float a = angle + Mathf.PI * (k == 0 ? 1f : k == 1 ? 1.5f : k == 2 ? 0f : 0.5f);
-                        s_Vertices.Add(new Vector3(position.x + r * Mathf.Cos(a), position.y + r * Mathf.Sin(a), 0f));
-                    }
+                    float corner = half * RotatedCorner;
+                    halfX = corner * awayX;
+                    halfY = corner * awayY;
                 }
-                else
-                {
-                    s_Vertices.Add(new Vector3(position.x - half, position.y - half, 0f));
-                    s_Vertices.Add(new Vector3(position.x + half, position.y - half, 0f));
-                    s_Vertices.Add(new Vector3(position.x + half, position.y + half, 0f));
-                    s_Vertices.Add(new Vector3(position.x - half, position.y + half, 0f));
-                }
-                s_Uvs.Add(new Vector2(rect.xMin, rect.yMin));
-                s_Uvs.Add(new Vector2(rect.xMax, rect.yMin));
-                s_Uvs.Add(new Vector2(rect.xMax, rect.yMax));
-                s_Uvs.Add(new Vector2(rect.xMin, rect.yMax));
+                ImageUv(flare.m_TextureLayout, element.ImageIndex, halfTexelU, halfTexelV, out float uMin, out float uMax, out float vMin, out float vMax);
+                int start = s_Vertices.Count;
+                // In front of the camera the depth, and with it the half side, is negative: the
+                // first corner is then the one away from the axis (the top right of an upright
+                // element) and takes the image's top right.
+                s_Vertices.Add(new Vector3(x - halfX, y - halfY, depth));
+                s_Vertices.Add(new Vector3(x + halfY, y - halfX, depth));
+                s_Vertices.Add(new Vector3(x + halfX, y + halfY, depth));
+                s_Vertices.Add(new Vector3(x - halfY, y + halfX, depth));
+                s_Uvs.Add(new Vector2(uMax, vMax));
+                s_Uvs.Add(new Vector2(uMin, vMax));
+                s_Uvs.Add(new Vector2(uMin, vMin));
+                s_Uvs.Add(new Vector2(uMax, vMin));
                 for (int k = 0; k < 4; k++) s_Colors.Add(color);
                 s_Indices.Add(start); s_Indices.Add(start + 1); s_Indices.Add(start + 2);
                 s_Indices.Add(start); s_Indices.Add(start + 2); s_Indices.Add(start + 3);
@@ -497,46 +538,66 @@ namespace Unbound.Runtime
             return VertexColor(gamma.x, gamma.y, gamma.z);
         }
 
-        /// <summary>The part of the flare texture an image of a layout covers, in uv, inset by half a
-        /// texel times the part of the texture outside it (layouts: 0 one large and four small, 1 one
-        /// large, two medium and eight small, 2 the whole texture, 3-5 grids of 2, 3 and 4 images a
-        /// row, from the top left). Images past a layout's count continue its last pattern.</summary>
-        internal static Rect ImageRect(int layout, int image, int textureWidth, int textureHeight)
+        /// <summary>
+        /// The part of the flare texture an image of a layout covers, in uv (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/flares `f.L*`): the image's cell
+        /// with half a texel taken off each side, measured from the top. Layouts: 0 one large
+        /// image over four small ones, 1 one large, two medium and eight small, 2 the whole
+        /// texture, 3 to 5 grids of 2, 3 and 4 images a row. The large and medium images of
+        /// layout 1 keep their whole left and top sides. Images past a layout's count continue
+        /// its last pattern.
+        /// </summary>
+        internal static void ImageUv(int layout, int image, float halfTexelU, float halfTexelV, out float uMin, out float uMax, out float vMin, out float vMax)
         {
-            float x, y, w, h;
-            switch (layout)
+            // The top and the bottom of the image, counted down from the top of the texture.
+            float top, bottom;
+            if (layout == 1)
             {
-                case 0:
-                    if (image == 0) { x = 0f; y = 0.5f; w = 1f; h = 0.5f; }
-                    else { int i = image - 1; x = (i % 2) * 0.5f; y = 0.5f - (i / 2 + 1) * 0.25f; w = 0.5f; h = 0.25f; }
-                    break;
-                case 1:
-                    if (image == 0) { x = 0f; y = 0.5f; w = 1f; h = 0.5f; }
-                    else if (image <= 2) { x = 0f; y = image == 1 ? 0.25f : 0f; w = 0.5f; h = 0.25f; }
-                    else { int i = image - 3; x = 0.5f + (i % 2) * 0.25f; y = 0.5f - (i / 2 + 1) * 0.125f; w = 0.25f; h = 0.125f; }
-                    break;
-                case 3:
-                case 4:
-                case 5:
+                if (image <= 2)
                 {
-                    int n = layout - 1;
-                    x = (float)(image % n) / n; y = 1f - (float)(image / n + 1) / n; w = 1f / n; h = 1f / n;
-                    break;
+                    uMin = 0f;
+                    uMax = (image == 0 ? 1f : 0.5f) - halfTexelU;
+                    top = image == 0 ? 0f : image == 1 ? 0.5f : 0.75f;
+                    bottom = (image == 0 ? 0.5f : image == 1 ? 0.75f : 1f) - halfTexelV;
                 }
-                default:
-                    x = 0f; y = 0f; w = 1f; h = 1f;
-                    break;
+                else
+                {
+                    int column = (image - 3) & 1, row = (image - 3) >> 1;
+                    uMin = column * 0.25f + 0.5f + halfTexelU;
+                    uMax = (column + 1) * 0.25f + 0.5f - halfTexelU;
+                    top = row * 0.25f * 0.5f + 0.5f + halfTexelV;
+                    bottom = (row + 1) * 0.25f * 0.5f + 0.5f - halfTexelV;
+                }
             }
-            float tw = Math.Max(1, textureWidth), th = Math.Max(1, textureHeight);
-            float insetU = 0.5f * (1f - w) / tw, insetV = 0.5f * (1f - h) / th;
-            float xMin = x + insetU, xMax = x + w - insetU, yMin = y + insetV, yMax = y + h - insetV;
-            if (layout == 1 && image <= 2)
+            else if (layout == 0)
             {
-                // The large and medium images reach 0.47 texel further left and 0.46 texel further up.
-                xMin -= 0.47f / tw;
-                yMax += 0.46f / th;
+                if (image == 0)
+                {
+                    uMin = halfTexelU + 0f;
+                    uMax = 1f - halfTexelU;
+                    top = halfTexelV + 0f;
+                    bottom = 0.5f - halfTexelV;
+                }
+                else
+                {
+                    int column = (image - 1) & 1, row = (image - 1) >> 1;
+                    uMin = column * 0.5f + halfTexelU;
+                    uMax = (column + 1) * 0.5f - halfTexelU;
+                    top = row * 0.5f * 0.5f + 0.5f + halfTexelV;
+                    bottom = (row + 1) * 0.5f * 0.5f + 0.5f - halfTexelV;
+                }
             }
-            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+            else
+            {
+                int perRow = Math.Max(1, layout - 1);
+                float cell = 1f / perRow;
+                uMin = (image % perRow) * cell + halfTexelU;
+                uMax = (image % perRow + 1) * cell - halfTexelU;
+                top = (image / perRow) * cell + halfTexelV;
+                bottom = (image / perRow + 1) * cell - halfTexelV;
+            }
+            vMax = 1f - top;
+            vMin = 1f - bottom;
         }
     }
 }

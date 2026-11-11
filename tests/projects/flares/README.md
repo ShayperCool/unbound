@@ -74,18 +74,22 @@ captures that reproduced every earlier value and image (`run.py extend`).
   hides the halos (the flares still draw over the clear); empty buffers (BeforeForwardOpaque,
   AfterForwardAlpha) and a buffer setting a global float (BeforeImageEffects) leave them. A Halo added by
   script draws nothing until it is given a size and color (it has no scripting API).
-* Lens flares need an enabled FlareLayer. An element is a quad at `position` along the line from
-  the flare's point on screen through the screen center, half `size * 0.0100354` of the
-  projection's vertical scale tall (constant on screen with a perspective camera, independent of
-  the target's width; an orthographic camera scales it by the flare's depth). `Rotate` turns it
-  into a diamond whose corners are 1.4 half sizes away, its top-right corner pointing away from
-  the center. `Zoom` scales it by the flare's visibility.
+* Lens flares need an enabled FlareLayer. An element is a quad in view space at the flare's
+  depth, at `position` along the line from the flare's point to the view axis (on screen: from
+  the flare through the screen center), half `size * 0.01` of that depth tall, so constant on
+  screen with a perspective camera, independent of the target's width, and scaled by the depth
+  with an orthographic one. `Rotate` turns it into a diamond whose corners are 1.4 half sides
+  away, its top-right corner pointing away from the center. `Zoom` scales it by the flare's
+  brightness times its visibility. A directional flare is its direction at twice the near
+  plane's distance. Every flare image matches when the quads are built this way, with the sums
+  in one order; built in viewport pixels they were right within a float step, which showed as
+  one more line of pixels wherever an element's edge fell on pixel centres.
 * Texture layouts: 1 Large 4 Small (the top half, then a 2x2 grid in the bottom half), 1 Large 2
   Medium 8 Small (the top half, two quarter images on the left of the bottom half, a 2x4 grid on
   its right), 1 Texture, 2x2, 3x3 and 4x4 grids from the top left; each image's texture rectangle
-  is inset by half a texel times the part of the texture outside it (the large and medium images
-  of the second layout reach about 0.47 texel further left and up). Images past a layout's count
-  continue its pattern (clamped by the texture).
+  is its cell less half a texel on every side (the large and medium images of the second layout
+  keep their left and top sides whole). Images past a layout's count continue its pattern
+  (clamped by the texture).
 * An element's sRGB color is its color, times the light color when `Use Light Color` is set (a
   LensFlare's color, a light's color times its intensity), times the sRGB encoding of brightness
   times visibility unless it uses the light color without fading. The brightness is the
