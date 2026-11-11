@@ -85,7 +85,9 @@ public class ClipProbe : MonoBehaviour
     /// <summary>Every Animator curve of a model's clips key by key: times, values and both
     /// tangents. For the Humanoid models, whose curves the reducing compressions reduce:
     /// HumanReduced (Keyframe Reduction; rotation and scale errors 5, position error 0.5) and
-    /// HumanOptimal (Optimal; position error 5). Transform curves are left out
+    /// HumanOptimal (Optimal; position error 5); and for HumanLong, the same rig with
+    /// compression Off and a clip of 31 frames, whose last frame time (31 frames of 1/30 s in
+    /// single precision) lies past the clip's length. Transform curves are left out
     /// (the Editor's clips have none). A curve that never leaves float noise around zero (every
     /// key below <see cref="Noise"/>) is recorded as such: which of its keys stay depends on
     /// the last bits of the conversion, not on the reduction's rule.</summary>
@@ -189,6 +191,7 @@ public class ClipProbe : MonoBehaviour
                 Play("stateoffset." + name, "Rig", "S_" + name);
             Keys("HumanReduced");
             Keys("HumanOptimal");
+            Keys("HumanLong");
         }
         catch (Exception e)
         {

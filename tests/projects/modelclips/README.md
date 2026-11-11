@@ -11,7 +11,9 @@ pose) and events (also with cycle offsets). `RigDefault`, `RigReduced` and `RigO
 settings and animation compression Off, KeyframeReduction and Optimal, and `RigStatic` without
 animation import. Two Humanoid rigs carry one clip each under a reducing compression:
 `HumanReduced` (Keyframe Reduction, Rotation and Scale Errors 5, Position Error 0.5) and
-`HumanOptimal` (Optimal, Position Error 5); other Humanoid clip settings are not covered.
+`HumanOptimal` (Optimal, Position Error 5); `HumanLong` is the same rig with compression Off
+and a clip of 31 frames (made by tests/projects/humanoid/make_models.py). Other Humanoid clip
+settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
 `AnimationUtility.GetAnimationClipSettings`, curve bindings, the curves' values at every half
@@ -95,6 +97,14 @@ error a Humanoid clip's curves take.
 - Kept keys keep the time, value and tangents they have with compression Off; a curve whose
   keys all lie within the error of its first key becomes its two end keys with zero tangents.
 - The key times are whole frames in single precision (frame times 1 / frame rate).
+- A Humanoid clip ends at its last key: `HumanLong`'s 31 frames at 30 a second have a length
+  of 1.03333342 (31 frames of 1/30 s in single precision), one step past the take's end. Its
+  curves have a key per frame and one at the end, 32, and the last key's tangent is half the
+  slope from the key before it: the length divided by the frame length rounds past 31, so
+  the clip is sampled once more after its end, and that sample (the curve held at its end
+  value) takes part in the last key's tangent without becoming a key. At 20 frames
+  (`HumanReduced`'s clip with compression Off) the division is exact and the last tangent is
+  that slope itself.
 - The Editor's clips have no transform curves (mask type None); the probe records Animator
   curves only. Unbound keeps the transform curves of the two helper bones outside the human
   skeleton (docs/COMPATIBILITY_GAPS.md).

@@ -9,9 +9,12 @@ HumanB: only the required bones under extra non-human nodes (a root, a spine hel
 and Spine, twist leaves), other proportions and other rolls; it carries a short clip too.
 HumanT: HumanA's rig and clip with translations of the spine, neck, a leg and an arm added (for an
 avatar with translation DoF).
+HumanLong: HumanB's rig with the same clip over 31 frames, a length whose last frame time in
+single precision lies past the clip's end; it goes to tests/projects/modelclips and is made
+only when named.
 The character faces Blender's -Y, which is Unity's +Z.
 
-Names after `--` generate only those rigs (HumanA, HumanB, HumanT).
+Names after `--` generate only those rigs (HumanA, HumanB, HumanT, HumanLong).
 """
 import math
 import os
@@ -156,7 +159,7 @@ def a_keys():
     return keys
 
 
-def human_b():
+def human_b(end=20, file='HumanB.fbx', probe=PROBE):
     body = [
         ('Root', None, (0, 0, 0), (0, 0, 0.2), 0),
         ('Hips', 'Root', (0, 0.02, 1.12), (0, 0.02, 1.22), 90),
@@ -175,7 +178,7 @@ def human_b():
     ])
     rig = armature('HumanB', body + limbs)
     keys = []
-    for f, s in ((0, 1), (10, -1), (20, 1)):
+    for f, s in ((0, 1), (end // 2, -1), (end, 1)):
         keys += [
             ('Hips', f, (0, 10 * s, 0), (0, 0, 0.05 * s)),
             ('Spine', f, (8 * s, 0, 0), None),
@@ -183,8 +186,12 @@ def human_b():
             ('LeftLowerLeg', f, (30 + 20 * s, 0, 0), None),
             ('RightUpperLeg', f, (-20 * s, 0, 0), None),
         ]
-    animate(rig, 'Wave', 20, keys)
-    export(rig, 'HumanB.fbx')
+    animate(rig, 'Wave', end, keys)
+    export(rig, file, probe)
+
+
+def human_long():
+    human_b(31, 'HumanLong.fbx', os.path.join(os.path.dirname(PROBE), 'modelclips'))
 
 
 def animate(rig, name, end, keys):
@@ -206,7 +213,7 @@ def animate(rig, name, end, keys):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def export(rig, file):
+def export(rig, file, probe=PROBE):
     os.makedirs(STAGE, exist_ok=True)
     path = os.path.join(STAGE, file)
     bpy.ops.object.select_all(action='DESELECT')
@@ -214,13 +221,13 @@ def export(rig, file):
     bpy.ops.export_scene.fbx(filepath=path, use_selection=True, add_leaf_bones=False,
                              bake_anim=True, bake_anim_use_all_actions=False,
                              bake_anim_use_nla_strips=False)
-    dest = os.path.join(PROBE, 'Assets', 'Resources')
+    dest = os.path.join(probe, 'Assets', 'Resources')
     os.makedirs(dest, exist_ok=True)
     shutil.copyfile(path, os.path.join(dest, file))
 
 
 only = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else ['HumanA', 'HumanB', 'HumanT']
-for name, make in (('HumanA', human_a), ('HumanB', human_b), ('HumanT', human_t)):
+for name, make in (('HumanA', human_a), ('HumanB', human_b), ('HumanT', human_t), ('HumanLong', human_long)):
     if name in only:
         reset()
         make()
