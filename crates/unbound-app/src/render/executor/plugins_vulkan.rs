@@ -219,6 +219,160 @@ pub fn provide_interfaces() {
     );
 }
 
+/// The interfaces on a device that is not Vulkan. The OpenGL Core Editor answers both there
+/// (tests/projects/nativegfx `interface.IUnityGraphicsVulkan`), and a plugin that calls into
+/// them crashes it (measured: `Instance` and `CommandRecordingState`). Here they are answered
+/// too; a call is an error in the script log and gives nothing.
+mod elsewhere {
+    use super::*;
+
+    /// `LogType.Error`.
+    const LOG_ERROR: i32 = 0;
+
+    fn refuse(function: &str) {
+        plugin_api::log(
+            LOG_ERROR,
+            &format!(
+                "IUnityGraphicsVulkan.{function} was called on a graphics device that is not Vulkan (check IUnityGraphics.GetRenderer first): nothing is done"
+            ),
+        );
+    }
+
+    unsafe extern "C" fn intercept_initialization(_: InitCallback, _: *mut c_void) -> bool {
+        refuse("InterceptInitialization");
+        false
+    }
+
+    unsafe extern "C" fn add_intercept_initialization(
+        _: InitCallback,
+        _: *mut c_void,
+        _: i32,
+    ) -> bool {
+        refuse("AddInterceptInitialization");
+        false
+    }
+
+    unsafe extern "C" fn remove_intercept_initialization(_: InitCallback) -> bool {
+        refuse("RemoveInterceptInitialization");
+        false
+    }
+
+    unsafe extern "C" fn intercept_vulkan_api(
+        _: *const c_char,
+        _: vk::PFN_vkVoidFunction,
+    ) -> vk::PFN_vkVoidFunction {
+        refuse("InterceptVulkanAPI");
+        None
+    }
+
+    unsafe extern "C" fn configure_event(_: i32, _: *const EventConfig) {
+        refuse("ConfigureEvent");
+    }
+
+    unsafe extern "C" fn instance() -> UnityVulkanInstance {
+        refuse("Instance");
+        UnityVulkanInstance::default()
+    }
+
+    unsafe extern "C" fn command_recording_state(
+        _: *mut UnityVulkanRecordingState,
+        _: i32,
+    ) -> bool {
+        refuse("CommandRecordingState");
+        false
+    }
+
+    unsafe extern "C" fn access_texture(
+        _: *mut c_void,
+        _: *const vk::ImageSubresource,
+        _: vk::ImageLayout,
+        _: vk::PipelineStageFlags,
+        _: vk::AccessFlags,
+        _: i32,
+        _: *mut UnityVulkanImage,
+    ) -> bool {
+        refuse("AccessTexture, AccessRenderBufferTexture or AccessRenderBufferResolveTexture");
+        false
+    }
+
+    unsafe extern "C" fn access_buffer(
+        _: *mut c_void,
+        _: vk::PipelineStageFlags,
+        _: vk::AccessFlags,
+        _: i32,
+        _: *mut UnityVulkanBuffer,
+    ) -> bool {
+        refuse("AccessBuffer");
+        false
+    }
+
+    unsafe extern "C" fn ensure_outside_render_pass() {
+        refuse("EnsureOutsideRenderPass");
+    }
+
+    unsafe extern "C" fn ensure_inside_render_pass() {
+        refuse("EnsureInsideRenderPass");
+    }
+
+    unsafe extern "C" fn access_queue(_: QueueCallback, _: i32, _: *mut c_void, _: bool) {
+        refuse("AccessQueue");
+    }
+
+    unsafe extern "C" fn configure_swapchain(_: *const c_void) -> bool {
+        refuse("ConfigureSwapchain");
+        false
+    }
+
+    unsafe extern "C" fn access_texture_by_id(
+        _: u32,
+        _: *const vk::ImageSubresource,
+        _: vk::ImageLayout,
+        _: vk::PipelineStageFlags,
+        _: vk::AccessFlags,
+        _: i32,
+        _: *mut UnityVulkanImage,
+    ) -> bool {
+        refuse("AccessTextureByID");
+        false
+    }
+
+    const V1_FUNCTIONS: IUnityGraphicsVulkan = IUnityGraphicsVulkan {
+        intercept_initialization,
+        intercept_vulkan_api,
+        configure_event,
+        instance,
+        command_recording_state,
+        access_texture,
+        access_render_buffer_texture: access_texture,
+        access_render_buffer_resolve_texture: access_texture,
+        access_buffer,
+        ensure_outside_render_pass,
+        ensure_inside_render_pass,
+        access_queue,
+        configure_swapchain,
+        access_texture_by_id,
+    };
+    pub(super) static V1: IUnityGraphicsVulkan = V1_FUNCTIONS;
+    pub(super) static V2: IUnityGraphicsVulkanV2 = IUnityGraphicsVulkanV2 {
+        v1: V1_FUNCTIONS,
+        add_intercept_initialization,
+        remove_intercept_initialization,
+    };
+}
+
+/// Offers both interfaces on a device that is not Vulkan: there, but of no use
+/// ([`elsewhere`]).
+pub fn provide_interfaces_elsewhere() {
+    plugin_api::provide(
+        plugin_api::guid::GRAPHICS_VULKAN,
+        &elsewhere::V1 as *const _ as usize,
+    );
+    plugin_api::provide(
+        plugin_api::guid::GRAPHICS_VULKAN_V2,
+        &elsewhere::V2 as *const _ as usize,
+    );
+}
+
 /// An image a plugin can reach: what `AccessTexture` reports and the layout it rests in.
 #[derive(Clone, Copy)]
 struct ImageEntry {

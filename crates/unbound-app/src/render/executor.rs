@@ -13,6 +13,8 @@ mod plugins;
 mod plugins_vulkan;
 #[cfg(target_os = "linux")]
 pub use plugins_vulkan::provide_interfaces as provide_vulkan_plugin_interfaces;
+#[cfg(target_os = "linux")]
+pub use plugins_vulkan::provide_interfaces_elsewhere as provide_vulkan_plugin_interfaces_elsewhere;
 mod readback;
 mod warmup;
 
