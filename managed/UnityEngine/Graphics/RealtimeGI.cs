@@ -81,6 +81,11 @@ namespace UnityEngine
             internal Texture2D[] Atlases;
             /// <summary>Per atlas, its directionality; made when the lightmaps are directional.</summary>
             internal Texture2D[] Directionality;
+            /// <summary>Per atlas, whether its renderers draw with its directionality: from the
+            /// first one read since the lightmaps became directional until they stop being so.</summary>
+            internal bool[] DirectionalityBound;
+            /// <summary>The lightmaps mode of the scene's last update.</summary>
+            internal bool Directional;
             /// <summary>What to say once when the scene is first drawn with directional
             /// lightmaps (its directionality cannot be read, or has unmeasured parts); else null.</summary>
             internal string DirectionalityNote;
@@ -169,6 +174,7 @@ namespace UnityEngine
             }
             loaded.Atlases = sizes.ToArray();
             loaded.Directionality = new Texture2D[sizes.Count];
+            loaded.DirectionalityBound = new bool[sizes.Count];
             var systems = new List<GISystem>();
             foreach (var s in root.GetProperty("systems").EnumerateArray())
             {
@@ -365,6 +371,13 @@ namespace UnityEngine
                     if (scene.Failed) break;
                 }
                 if (scene.Failed) continue;
+                // A scene entering or leaving the directional mode draws without directionality
+                // until its atlases have theirs again (an earlier period's is not the light's now).
+                if (scene.Directional != (frame.Directional != 0))
+                {
+                    scene.Directional = frame.Directional != 0;
+                    for (int a = 0; a < scene.Atlases.Length; a++) BindDirectionality(scene, a, null);
+                }
                 if (frame.Directional != 0 && scene.DirectionalityNote != null)
                 {
                     Warn("directionality:" + scene.Handle, scene.DirectionalityNote);
@@ -514,9 +527,10 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>An atlas's directionality (unity_DynamicDirectionality): made with the first
-        /// update of a directional scene and given to the renderers of the atlas's systems, which
-        /// then draw with it while the lightmaps mode is directional.</summary>
+        /// <summary>An atlas's directionality (unity_DynamicDirectionality), once every system of
+        /// the atlas has solved its own since the lightmaps became directional (nothing is read
+        /// before): the renderers of the atlas's systems draw with it from then on, while the
+        /// lightmaps mode stays directional.</summary>
         static unsafe void UploadDirectionality(GIScene scene, int index, int bytes)
         {
             if (s_Directions.Length < bytes) s_Directions = new byte[bytes];
@@ -535,15 +549,24 @@ namespace UnityEngine
                     filterMode = FilterMode.Bilinear,
                     wrapMode = TextureWrapMode.Clamp,
                 };
-                foreach (var system in scene.Systems)
-                {
-                    if (system.Atlas != index || system.Failed) continue;
-                    foreach (var renderer in system.Renderers)
-                        if (renderer != null) renderer.m_RealtimeDirectionality = texture;
-                }
             }
             texture.SetPixelData(s_Directions, 0);
             texture.Apply(false);
+            BindDirectionality(scene, index, texture);
+        }
+
+        /// <summary>Gives the renderers of an atlas's systems its directionality
+        /// (<paramref name="texture"/>), or none (null).</summary>
+        static void BindDirectionality(GIScene scene, int index, Texture2D texture)
+        {
+            if (scene.DirectionalityBound[index] == (texture != null)) return;
+            scene.DirectionalityBound[index] = texture != null;
+            foreach (var system in scene.Systems)
+            {
+                if (system.Atlas != index || system.Failed) continue;
+                foreach (var renderer in system.Renderers)
+                    if (renderer != null) renderer.m_RealtimeDirectionality = texture;
+            }
         }
 
         /// <summary>The built-in Lightmap Parameters asset scenes use by default ("Default-Medium",
