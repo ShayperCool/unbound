@@ -19,9 +19,9 @@ using Unbound.UIElements;
 // collapsed ancestor expanded and reported), right/left navigation (into the first child, expand,
 // collapse, back to the parent), new root items (itemsSourceChanged first), row structure and names,
 // and every callback in order; tree-data section: Move, AddItem, TryRemoveItem and GetAllItemIds,
-// and when the rows follow them. The custom indent and dynamic height rows follow the same model
-// without a capture. View-data persistence of the expanded items and tree reordering by dragging
-// are not implemented.
+// and when the rows follow them; tree-drag sections: reordering by dragging (the controller and
+// the dragger are in CollectionDragAndDrop.cs). The custom indent and dynamic height rows follow
+// the same model without a capture. View-data persistence of the expanded items is not implemented.
 namespace UnityEngine.UIElements
 {
     public abstract partial class BaseTreeView : BaseVerticalCollectionView
@@ -68,8 +68,7 @@ namespace UnityEngine.UIElements
 
         public event Action<TreeViewExpansionChangedArgs> itemExpandedChanged;
 
-        // Tree reordering by dragging is not implemented: asking for it says so once.
-        internal override ICollectionDragAndDropController CreateDragAndDropController() => new UaUnsupportedReorderController(this, "TreeView");
+        internal override ICollectionDragAndDropController CreateDragAndDropController() => new TreeViewReorderableDragAndDropController(this);
 
         public BaseTreeView() : this(-1) { }
 

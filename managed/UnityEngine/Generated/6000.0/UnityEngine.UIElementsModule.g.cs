@@ -4846,30 +4846,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void ReplaceChild(global::UnityEngine.UIElements.TreeViewItemData<T> newChild) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.ReplaceChild"); }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class TreeViewReorderableDragAndDropController : global::UnityEngine.UIElements.BaseReorderableDragAndDropController
-    {
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.TreeViewReorderableDragAndDropController.DropData m_DropData;
-        [global::Unbound.Stub] protected readonly global::UnityEngine.UIElements.BaseTreeView m_TreeView;
-        [global::Unbound.Stub] public TreeViewReorderableDragAndDropController(global::UnityEngine.UIElements.BaseTreeView view) : base(default(global::UnityEngine.UIElements.BaseVerticalCollectionView)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.ctor"); }
-        [global::Unbound.Stub] protected override int CompareId(int id1, int id2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.CompareId"); return default; }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.StartDragArgs SetupDragAndDrop(global::System.Collections.Generic.IEnumerable<int> itemIds, bool skipText = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.SetupDragAndDrop"); return default; }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.DragVisualMode HandleDragAndDrop(global::UnityEngine.UIElements.IListDragAndDropArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.HandleDragAndDrop"); return default; }
-        [global::Unbound.Stub] public override bool CanDrop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.CanDrop"); return default; }
-        [global::Unbound.Stub] public override void OnDrop(global::UnityEngine.UIElements.IListDragAndDropArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.OnDrop"); }
-        [global::Unbound.Stub] public override void DragCleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.DragCleanup"); }
-        [global::Unbound.Stub] public override void HandleAutoExpand(global::UnityEngine.UIElements.ReusableCollectionItem item, global::UnityEngine.Vector2 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.HandleAutoExpand"); }
-        [global::Unbound.Stub]
-        protected unsafe partial class DropData
-        {
-            [global::Unbound.Stub] public int[] expandedIdsBeforeDrag;
-            [global::Unbound.Stub] public int[] draggedIds;
-            [global::Unbound.Stub] public int lastItemId;
-            [global::Unbound.Stub] public float expandItemBeginTimerMs;
-            [global::Unbound.Stub] public global::UnityEngine.Vector2 expandItemBeginPosition;
-            [global::Unbound.Stub] public DropData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.DropData.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class TwoPaneSplitView : global::UnityEngine.UIElements.VisualElement
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fixedPaneIndexProperty;

@@ -908,16 +908,97 @@ namespace UnityEngine.Tests
             Assert.Equal(7, view.itemsSource.Count);
         }
 
-        // ------------------------------------------------------------------ out of scope stays loud
+        // ------------------------------------------------------------------ reordering by dragging
 
-        // Guard (not a red/green control): the tree's drag and drop controller refuses drags and says
-        // so when reordering is asked for.
-        [Fact]
-        public void TreeReorderingIsRefused()
+        // The drop controller on its own (the pointer path is measured by tests/projects/uitkcollections,
+        // tree-drag sections, Unity 6000.0.71f1). Sample: A (1): A1 (11), A2 (12): A2a (121); B (2);
+        // C (3): C1 (31).
+        static TreeViewReorderableDragAndDropController Reorderable(TreeView tree, List<string> log)
         {
-            var tree = new TreeView();
-            Assert.IsType<UaUnsupportedReorderController>(tree.dragger.dragAndDropController);
-            Assert.False(tree.dragger.dragAndDropController.CanStartDrag(new[] { 0 }));
+            tree.reorderable = true;
+            tree.ExpandAll();
+            tree.itemIndexChanged += (id, parent) => log.Add(id + ">" + parent);
+            return (TreeViewReorderableDragAndDropController)tree.dragger.dragAndDropController;
+        }
+
+        static DragAndDropArgs Drop(DragAndDropPosition position, int parentId, int childIndex) =>
+            new DragAndDropArgs { dragAndDropPosition = position, parentId = parentId, childIndex = childIndex };
+
+        // [doc] reorderable: "The default value is false"; "Set this value to true to allow the user
+        // to reorder items in the list."
+        [Fact]
+        public void TreesAreNotReorderableUntilAsked()
+        {
+            var tree = NewTree();
+            Assert.False(tree.reorderable);
+            var controller = (TreeViewReorderableDragAndDropController)tree.dragger.dragAndDropController;
+            Assert.Equal(DragVisualMode.Rejected, controller.SetupDragAndDrop(new[] { 11 }).visualMode);
+            controller.OnDrop(Drop(DragAndDropPosition.OverItem, 3, -1));
+            Assert.Equal(1, tree.viewController.GetParentId(11));
+            tree.reorderable = true;
+            Assert.Equal(DragVisualMode.Move, controller.SetupDragAndDrop(new[] { 11 }).visualMode);
+        }
+
+        // Dragged items move in tree order whatever order they were given in, keep that order where
+        // they land, and each one whose place changed is reported once, after the moves.
+        [Fact]
+        public void ADropBetweenRowsPlacesTheDraggedItemsInTreeOrder()
+        {
+            var tree = NewTree();
+            var log = new List<string>();
+            var controller = Reorderable(tree, log);
+            controller.SetupDragAndDrop(new[] { 31, 2, 11 });
+            Assert.Equal(new[] { 11, 2, 31 }, controller.GetSortedSelectedIds());
+            controller.OnDrop(Drop(DragAndDropPosition.BetweenItems, 12, 0));
+            Assert.Equal(new[] { 11, 2, 31, 121 }, tree.viewController.GetChildrenIds(12));
+            Assert.Equal(new[] { "11>12", "2>12", "31>12" }, log);
+            Assert.Equal(new[] { 1, 3 }, tree.viewController.GetRootItemIds());
+        }
+
+        // Within one parent: an item from before the drop index does not take a place of its own
+        // (the index counts it), one from after it does.
+        [Fact]
+        public void ADropAmongSiblingsCountsTheItemsAlreadyBeforeIt()
+        {
+            var tree = NewTree();
+            var log = new List<string>();
+            var controller = Reorderable(tree, log);
+            controller.SetupDragAndDrop(new[] { 1, 3 });
+            controller.OnDrop(Drop(DragAndDropPosition.BetweenItems, -1, 2));
+            Assert.Equal(new[] { 2, 1, 3 }, tree.viewController.GetRootItemIds());
+            Assert.Equal(new[] { "1>-1" }, log);
+        }
+
+        // Onto a row: last among its children, the row expanded; without a parent or an index, last
+        // at the root.
+        [Fact]
+        public void ADropOntoARowAddsLastAndExpandsIt()
+        {
+            var tree = NewTree();
+            var log = new List<string>();
+            var controller = Reorderable(tree, log);
+            tree.CollapseItem(3);
+            controller.SetupDragAndDrop(new[] { 2 });
+            controller.OnDrop(Drop(DragAndDropPosition.OverItem, 3, -1));
+            Assert.Equal(new[] { 31, 2 }, tree.viewController.GetChildrenIds(3));
+            Assert.True(tree.IsExpanded(3));
+            controller.SetupDragAndDrop(new[] { 11 });
+            controller.OnDrop(Drop(DragAndDropPosition.OutsideItems, -1, -1));
+            Assert.Equal(new[] { 1, 3, 11 }, tree.viewController.GetRootItemIds());
+        }
+
+        // An item dropped onto its own descendant stays where it is and nothing is reported.
+        [Fact]
+        public void ADropOntoTheItemsOwnDescendantMovesNothing()
+        {
+            var tree = NewTree();
+            var log = new List<string>();
+            var controller = Reorderable(tree, log);
+            controller.SetupDragAndDrop(new[] { 1 });
+            controller.OnDrop(Drop(DragAndDropPosition.OverItem, 121, -1));
+            Assert.Equal(new[] { 1, 2, 3 }, tree.viewController.GetRootItemIds());
+            Assert.Equal(12, tree.viewController.GetParentId(121));
+            Assert.Empty(log);
         }
     }
 }
