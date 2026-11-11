@@ -27,9 +27,11 @@ namespace Unbound.Tests
             var probe = RenderSettings.s_EnvironmentProbe;
             var baked = RenderSettings.s_BakedProbe;
             var given = RenderSettings.s_CustomProbe;
+            var serialized = RenderSettings.s_SerializedProbe;
             try
             {
                 RenderSettings.skybox = null;
+                RenderSettings.s_SerializedProbe = null;
                 test();
             }
             finally
@@ -37,6 +39,7 @@ namespace Unbound.Tests
                 RenderSettings.s_EnvironmentProbe = probe;
                 RenderSettings.s_BakedProbe = baked;
                 RenderSettings.s_CustomProbe = given;
+                RenderSettings.s_SerializedProbe = serialized;
                 RenderSettings.skybox = skybox;
                 RenderSettings.ambientMode = mode;
                 RenderSettings.ambientSkyColor = sky;
@@ -389,7 +392,9 @@ namespace Unbound.Tests
         {
             // Measured (tests/projects/realtimegi, a linear project): after
             // DynamicGI.UpdateEnvironment at intensity 2, RenderSettings.ambientProbe at 0.5 and 1
-            // without another call is the sky's probe times GammaToLinearSpace(intensity).
+            // without another call is the sky's probe times GammaToLinearSpace(intensity). A
+            // gamma project scales the lighting data's probe the same way (measured), and so
+            // the sky's.
             var mode = RenderSettings.ambientMode;
             float intensity = RenderSettings.ambientIntensity;
             var probe = RenderSettings.s_EnvironmentProbe;
@@ -412,8 +417,7 @@ namespace Unbound.Tests
                     foreach (var (value, scale) in new[] { (0.5f, 0.21404114f), (1f, 1f), (2f, 4.5947934f) })
                     {
                         RenderSettings.ambientIntensity = value;
-                        // A gamma project's scale is unmeasured: the plain intensity.
-                        float expected = space == ColorSpace.Linear ? scale : value;
+                        float expected = scale;
                         var read = RenderSettings.ambientProbe;
                         Assert.Equal(0.0979f * expected, read[0, 0], 6);
                         Assert.Equal(0.0366f * expected, read[1, 1], 6);
@@ -431,6 +435,30 @@ namespace Unbound.Tests
                 RenderSettings.ambientMode = mode;
                 UnityEngine.Object.DestroyImmediate(sky);
             }
+        }
+
+        [Fact]
+        public void AProbeGivenStandsWhenAnotherScenesLightingDataIsRead()
+        {
+            // A scene loaded beside the active one reads its lighting data without its
+            // RenderSettings taking effect: the probe a script gave is still the stored one.
+            var reflection = RenderSettings.s_BakedReflection;
+            WithAmbient(() =>
+            {
+                try
+                {
+                    RenderSettings.ambientMode = AmbientMode.Custom;
+                    var given = new SphericalHarmonicsL2();
+                    given[0, 0] = 0.25f; given[1, 3] = -0.5f;
+                    RenderSettings.ambientProbe = given;
+                    RenderSettings.ReadLightingData(default, null, firstScene: false);
+                    AssertProbe(given, 1f, "after another scene's lighting data");
+                }
+                finally
+                {
+                    RenderSettings.s_BakedReflection = reflection;
+                }
+            });
         }
 
         static void AssertProbe(SphericalHarmonicsL2 expected, float scale, string what)
@@ -530,6 +558,26 @@ namespace Unbound.Tests
                     // The next change of an ambient input finds no skybox.
                     RenderSettings.ambientIntensity = 2f;
                     AssertProbe(Flat(next), 1f, "then an ambient input changed");
+
+                    // A gradient does not read the stored probe either, nor one given in its
+                    // mode, which the custom mode then returns (end-gradient*).
+                    RenderSettings.ambientMode = AmbientMode.Trilight;
+                    var gradient = RenderSettings.ambientProbe;
+                    Assert.NotEqual(0f, gradient[0, 1]);
+                    RenderSettings.ambientProbe = other;
+                    AssertProbe(gradient, 1f, "gradient, a probe given");
+                    RenderSettings.ambientMode = AmbientMode.Custom;
+                    AssertProbe(other, 1f, "custom, the probe given in the gradient mode");
+
+                    // A scene without lighting data has no stored probe: zero in the custom mode
+                    // and in the skybox mode with a skybox material (nodata*-ambient, -custom).
+                    RenderSettings.s_BakedProbe = null;
+                    RenderSettings.s_EnvironmentProbe = null;
+                    RenderSettings.s_CustomProbe = null;
+                    AssertProbe(new SphericalHarmonicsL2(), 1f, "custom, no lighting data");
+                    RenderSettings.skybox = sky;
+                    RenderSettings.ambientMode = AmbientMode.Skybox;
+                    AssertProbe(new SphericalHarmonicsL2(), 1f, "skybox, no lighting data");
                 }
                 finally
                 {
