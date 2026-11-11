@@ -142,6 +142,11 @@ public class AnimOptimizeProbe : MonoBehaviour
                 Handles(name, mode);
             foreach (string mode in new[] { "jobResolve", "jobResolveAll", "jobEarly", "jobTop", "jobIdle", "jobIdleResolveAll", "jobProp", "jobReoptimize", "jobDestroyed" })
                 Handles("Rig", mode);
+            Handles("Rig", "jobDestroyedRead");
+            foreach (var name in new[] { "Rig", "RigOpt", "Human", "HumanOpt" }) GraphOnly(name, "graphOnly");
+            foreach (string mode in new[] { "graphJob", "graphJobHand" })
+            foreach (var name in new[] { "Human", "HumanOpt" })
+                GraphOnly(name, mode);
         }
         catch (Exception e)
         {
@@ -350,7 +355,8 @@ public class AnimOptimizeProbe : MonoBehaviour
     /// "jobReoptimize": the job reads the handle, then the hierarchy is optimized with the hand
     /// exposed between the first and the second evaluation; "jobDestroyed": the hand is
     /// destroyed there instead (the record's bone is then null), and the job reads the stream
-    /// handle only while it is unresolved.
+    /// handle only while it is unresolved; "jobDestroyedRead": the same, and the job goes on
+    /// reading the handle after the hand is gone.
     /// On the plain rig only: "jobEarly" binds the hand's stream
     /// handle, then optimizes the hierarchy exposing the hand; "jobTop" optimizes exposing the
     /// top node Rig and the hand, and binds the stream handle of the exposed Rig, which the job
@@ -402,7 +408,7 @@ public class AnimOptimizeProbe : MonoBehaviour
                 AnimatorUtility.OptimizeTransformHierarchy(go, new[] { "Rig/Hips/Spine/Hand" });
                 bone = Hand();
             }
-            if (mode == "jobDestroyed" && step == 1)
+            if ((mode == "jobDestroyed" || mode == "jobDestroyedRead") && step == 1)
             {
                 Object.DestroyImmediate(bone.gameObject);
                 bone = null;
@@ -419,6 +425,67 @@ public class AnimOptimizeProbe : MonoBehaviour
         }
         graph.Destroy();
         Object.DestroyImmediate(go);
+    }
+
+    /// <summary>The model's take in a manual graph on a rig without its controller: three
+    /// evaluations (0, 0.5 and 0.25 s), each with the pose; the plain and the optimized generic
+    /// rig and the plain and the optimized humanoid (its human pose after the last one). The
+    /// clip is the output's source ("graphOnly"), or the input of a job that does nothing
+    /// ("graphJob") or reads a stream handle of the humanoid's left hand, a bone of the plain
+    /// rig and the exposed transform of the optimized one ("graphJobHand"). The messages the
+    /// Editor logs meanwhile are in the log records.</summary>
+    static void GraphOnly(string name, string mode)
+    {
+        string key = mode + "." + name;
+        var go = Spawn(name, out var animator);
+        var clip = animator.runtimeAnimatorController.animationClips[0];
+        animator.runtimeAnimatorController = null;
+        var graph = PlayableGraph.Create(key);
+        graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+        Playable source = AnimationClipPlayable.Create(graph, clip);
+        if (mode != "graphOnly")
+        {
+            var job = new HandJob { read = mode == "graphJobHand" };
+            if (job.read)
+                job.hand = animator.BindStreamTransform(go.GetComponentsInChildren<Transform>(true).First(t => t.name == "LeftHand"));
+            var playable = AnimationScriptPlayable.Create(graph, job, 1);
+            playable.ConnectInput(0, source, 0, 1f);
+            source = playable;
+        }
+        AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(source);
+        graph.Play();
+        for (int step = 0; step < 3; step++)
+        {
+            s_Job.Clear();
+            graph.Evaluate(step == 0 ? 0f : step == 1 ? .5f : .25f);
+            Record(key + "." + step, Pose(go));
+            if (mode != "graphOnly") Record(key + "." + step + ".job", "[" + string.Join(",", s_Job) + "]");
+        }
+        if (animator.isHuman) Record(key + ".human", HumanPoseOf(animator, go));
+        graph.Destroy();
+        Object.DestroyImmediate(go);
+    }
+
+    struct HandJob : IAnimationJob
+    {
+        public TransformStreamHandle hand;
+        public bool read;
+
+        public void ProcessRootMotion(AnimationStream s) { }
+
+        public void ProcessAnimation(AnimationStream s)
+        {
+            var json = "{\"human\":" + B(s.isHumanStream);
+            if (read)
+            {
+                bool valid = hand.IsValid(s);
+                json += ",\"valid\":" + B(valid);
+                if (valid)
+                    json += ",\"p\":" + V(hand.GetLocalPosition(s)) + ",\"r\":" + Q(hand.GetLocalRotation(s)) + ",\"w\":" + V(hand.GetPosition(s)) +
+                        ",\"resolved\":" + B(hand.IsResolved(s));
+            }
+            JobRecord(json + "}");
+        }
     }
 
     struct HandleJob : IAnimationJob

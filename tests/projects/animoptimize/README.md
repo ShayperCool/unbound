@@ -38,7 +38,12 @@ beside `jobIdle`), a custom stream property's handle read or not (`jobProp`, `jo
 handle bound before the hierarchy is optimized with the hand exposed (`jobEarly`), the
 handle of an exposed top node (`jobTop`), the hierarchy optimized between the first two
 evaluations of a job that read the handle (`jobReoptimize`) and the hand destroyed there
-(`jobDestroyed`, the job reading the stream handle only while it is unresolved). Every log
+(`jobDestroyed`, the job reading the stream handle only while it is unresolved;
+`jobDestroyedRead`, the job reading it in every evaluation). Graph controls on a rig without
+its controller, three evaluations of a manual graph each with the whole pose: the take as the
+output's source on `Rig`, `RigOpt`, `Human` and `HumanOpt` (`graphOnly.*`), and on the two
+humanoids under a job that does nothing (`graphJob.*`) or reads a stream handle of the left
+hand, a bone of `Human` and the exposed transform of `HumanOpt` (`graphJobHand.*`). Every log
 message is recorded in order.
 
 The assets are committed. To make them again, regenerate the rig and let a disposable Editor
@@ -98,7 +103,16 @@ What the Editor does (measured):
   transform had been destroyed". Optimizing the hierarchy after the job read the handle
   leaves it unresolved until the next access (`jobReoptimize`), and its scene handle then
   reads the exposed hand. After the hand is destroyed the stream handle stays valid and
-  resolved and the scene handle is invalid (`jobDestroyed`).
+  resolved and the scene handle is invalid (`jobDestroyed`), and a job that goes on reading
+  the stream handle gets the stream's values of its path: the local ones of the take and the
+  world ones under the hand's parent (`jobDestroyedRead`).
+- A manual graph plays the take on a rig without its controller, optimized or not, generic
+  or humanoid, alone or under a job (`graphOnly.*`, `graphJob.*`). On the optimized humanoid
+  with its exposed hand bound by `Animator.BindStreamTransform` nothing plays: before each
+  evaluation's record the Editor logs twice the error `Transform 'Hips' for human bone
+  'Hips' not found` and the warning `Object is set to Optimize Game Object but does not have
+  an Avatar, Animation will not play.`, the job does not run and the hand stays
+  (`graphJobHand.HumanOpt`).
 - An exposed transform bound with `Animator.BindStreamTransform` no longer follows its skeleton
   node: the stream holds the pose it was bound at, the job reads that and its writes land on
   the transform. With only a scene handle, or none, the exposed transform follows the node.
@@ -108,8 +122,6 @@ What the Editor does (measured):
   (its path is the node's) turns the skeleton below it, and the exposed transforms follow.
 
 Not recorded (an exploratory capture; docs/COMPATIBILITY_GAPS.md says how the engine differs):
-a job that goes on reading the stream handle of the destroyed hand gets the stream's values of
-its path in the Editor, local and world. Also
-the same job on the humanoid models. On the unoptimized humanoid the stream handle reads the
-bone of the stream's human pose and the job's write stays in the final pose; on the optimized
-one without a controller the Editor logs two messages per evaluation and plays nothing.
+the same job on the optimized generic rig with its exposed hand bound. The Editor logs `The
+input bones do not match the skeleton of the Avatar` there and the skin's vertices differ
+between two captures.
