@@ -125,10 +125,10 @@ namespace UnityEngine
         /// tests/projects/textureraw `unreadable.old_raw`, `unreadable.old_pixel`: readable).
         /// Unbound's choices, not measured: the kept views end when the texture is recreated
         /// or destroyed (their memory goes with it), and they read the bytes they had, which
-        /// stay the unreadable texture's raw data (an uncompressed texture's
-        /// <see cref="m_UnreadableRaw"/> is the same array where it can be; a block-compressed
-        /// texture's views are its blocks), so a write through a kept view shows in
-        /// <c>GetRawTextureData()</c>.
+        /// are the unreadable texture's raw data (an uncompressed texture's
+        /// <see cref="m_UnreadableRaw"/> is the same array; a block-compressed texture's views
+        /// are its blocks), so a write through a kept view shows in <c>GetRawTextureData()</c>
+        /// until an engine copy into the texture replaces that data.
         /// </summary>
         void RetireStore()
         {

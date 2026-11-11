@@ -29,7 +29,7 @@ namespace Unbound.Runtime
         internal static void RenderCubeFaces(Camera camera, Vector3 position, RenderTexture cube, int faceMask)
         {
             int size = Math.Max(1, cube.width);
-            var descriptor = new RenderTextureDescriptor(size, size, cube.graphicsFormat, 24) { sRGB = cube.sRGB };
+            var descriptor = new RenderTextureDescriptor(size, size, cube.graphicsFormat, 24);
             var face = RenderTexture.GetTemporary(descriptor);
             var state = camera.SaveRenderState();
             bool inverted = GL.invertCulling;

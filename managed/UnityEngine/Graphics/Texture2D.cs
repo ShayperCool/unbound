@@ -335,14 +335,12 @@ namespace UnityEngine
             RequireReadable(pixels: !SourceBlocks);
             // A block-compressed texture's levels are its blocks: nothing regenerates them.
             if (updateMipmaps && !SourceBlocks) GenerateMipChain();
-            var rawCopy = makeNoLongerReadable && !SourceBlocks ? EncodeMipChain() : null;
+            // The store, when views were handed out, is the raw data itself: kept, not copied.
+            var rawCopy = makeNoLongerReadable && !SourceBlocks ? m_Store ?? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
             if (makeNoLongerReadable)
             {
-                // One array, not two: the store the kept views read is the raw copy when it
-                // holds the same bytes.
-                if (rawCopy != null && m_Store != null && rawCopy.AsSpan().SequenceEqual(m_Store)) rawCopy = m_Store;
                 RetireStore();
                 m_Pixels = null;
                 m_Hdr = null;

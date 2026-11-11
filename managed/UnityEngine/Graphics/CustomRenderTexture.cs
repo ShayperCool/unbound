@@ -179,6 +179,7 @@ namespace UnityEngine
         {
             var copy = new CustomRenderTexture();
             copy.descriptor = descriptor;
+            copy.MarkCreatedFromScript(descriptor.createdFromScript);
             copy.SetSamplerQuietly(filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel, mipMapBias);
             copy.m_Material = m_Material;
             copy.m_InitMaterial = m_InitMaterial;

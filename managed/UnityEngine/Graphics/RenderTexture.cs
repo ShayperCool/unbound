@@ -24,6 +24,9 @@ namespace UnityEngine
         /// <summary>Whether a script made the texture (<see cref="descriptor"/>).</summary>
         bool m_CreatedFromScript;
 
+        /// <summary>A clone's mark: its source's.</summary>
+        internal void MarkCreatedFromScript(bool made) => m_CreatedFromScript = made;
+
         protected internal RenderTexture()
         {
             m_Descriptor = new RenderTextureDescriptor(256, 256);
@@ -174,10 +177,11 @@ namespace UnityEngine
         /// texture a script made (<see cref="RenderTextureCreationFlags.CreatedFromScript"/>).
         /// Measured (Unity 6000.0.71f1, tests/projects/particletrailwitness `target.flags`):
         /// AutoGenerateMips, SRGB, CreatedFromScript, AllowVerticalFlip for a default
-        /// `new RenderTexture` in a Linear project. The other cases follow Unity's own managed
-        /// class and are not measured: every constructor and a descriptor given to the texture
-        /// mark it, as does <see cref="GetTemporary(RenderTextureDescriptor)"/>; a texture loaded
-        /// from an asset is not marked, and a clone is marked as its source is.
+        /// `new RenderTexture` in a Linear project. Not measured: Unity's own managed class
+        /// marks the descriptor of <see cref="GetTemporary(RenderTextureDescriptor)"/> (so the
+        /// engine's own temporaries are marked here too); Unbound's reading of the rest is that
+        /// every constructor and a descriptor given to a texture mark it, a texture loaded from
+        /// an asset is not marked, and a clone is marked as its source is.
         /// </summary>
         public RenderTextureDescriptor descriptor
         {
@@ -328,12 +332,11 @@ namespace UnityEngine
         /// `boundary.*.resolveSentinelInactive`; NVIDIA driver): with no render target active,
         /// a created multisampled source logs an assertion (text, type and one per call as in
         /// the capture's Editor log) and the destination receives the pixels of the Editor
-        /// window's own framebuffer. Unbound logs the assertion and resolves the source: it has
-        /// no Editor window to copy, as for the other reads of that framebuffer. Unbound's
-        /// choice, not measured: the same assertion whenever the source is not
-        /// <see cref="active"/> (another render target or the destination active, a source
-        /// without multisampling or not created yet). Not measured either: the Vulkan device
-        /// (no assertion here) and the resolve without a destination.
+        /// window's own framebuffer. Unbound logs the assertion in that state and resolves the
+        /// source: it has no Editor window to copy, as for the other reads of that framebuffer.
+        /// Not measured, and silent here: another render target active, a source without
+        /// multisampling or not created yet, the Vulkan device, and the resolve without a
+        /// destination.
         /// </summary>
         public void ResolveAntiAliasedSurface(RenderTexture target)
         {
@@ -352,7 +355,7 @@ namespace UnityEngine
                 Graphics.CopyTexture(this, 0, 0, target, 0, 0);
                 return false;
             }
-            if (s_Active != this && SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)
+            if (s_Active == null && antiAliasing > 1 && IsCreated() && SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)
                 Debug.LogAssertion(ResolveOfInactiveSource);
             GfxStream.ResolveTexture(EnsureCreated(), target.EnsureCreated());
             return true;

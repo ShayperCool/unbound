@@ -114,6 +114,14 @@ namespace Unbound.Tests
                 var clone = Object.Instantiate(texture);
                 Assert.Equal(flags, clone.descriptor.flags);
                 Object.DestroyImmediate(clone);
+                // A custom render texture's clone too.
+                var custom = (CustomRenderTexture)Activator.CreateInstance(typeof(CustomRenderTexture), nonPublic: true);
+                custom.ReadRenderTexture(body);
+                var customClone = Object.Instantiate(custom);
+                Assert.Equal(custom.descriptor.flags, customClone.descriptor.flags);
+                Assert.Equal((RenderTextureCreationFlags)0, customClone.descriptor.flags & RenderTextureCreationFlags.CreatedFromScript);
+                Object.DestroyImmediate(customClone);
+                Object.DestroyImmediate(custom);
                 // A descriptor given by a script marks the texture (Unity's own setter).
                 texture.descriptor = new RenderTextureDescriptor(4, 2, GraphicsFormat.R8G8B8A8_UNorm, 0);
                 Assert.Equal(New | RenderTextureCreationFlags.CreatedFromScript, texture.descriptor.flags);
@@ -177,12 +185,12 @@ namespace Unbound.Tests
             }
         }
 
-        /// <summary>On the OpenGL Core device a source resolved while no render target is active
-        /// logs the Editor's assertion once per call (measured); Unbound's choice is the same
-        /// for another render target and for the destination being active. The resolve is sent
-        /// either way. The active source resolves silently.</summary>
+        /// <summary>On the OpenGL Core device a created multisampled source resolved while no
+        /// render target is active logs the Editor's assertion once per call (measured). The
+        /// unmeasured states are silent: another render target or the destination active, a
+        /// source without multisampling. The resolve is sent in every case.</summary>
         [Fact]
-        public void OpenGLAssertsOnAResolveOfAnInactiveSource()
+        public void OpenGLAssertsOnAResolveWithNoRenderTargetActive()
         {
             using var scene = new Scene("OpenGLCore");
             RenderTexture.active = scene.Source;
@@ -190,14 +198,20 @@ namespace Unbound.Tests
             Assert.True(active.Sent);
             Assert.True(active.Bytes > 0);
             Assert.Empty(active.Logs);
-            foreach (var other in new[] { null, scene.Other, scene.Target })
+            RenderTexture.active = null;
+            var inactive = Resolve(scene.Source, scene.Target);
+            Assert.True(inactive.Sent);
+            Assert.Equal(active.Bytes, inactive.Bytes);
+            Assert.Equal(new[] { (LogType.Assert, Refusal) }, inactive.Logs);
+            foreach (var other in new[] { scene.Other, scene.Target })
             {
                 RenderTexture.active = other;
-                var inactive = Resolve(scene.Source, scene.Target);
-                Assert.True(inactive.Sent);
-                Assert.Equal(active.Bytes, inactive.Bytes);
-                Assert.Equal(new[] { (LogType.Assert, Refusal) }, inactive.Logs);
+                var unmeasured = Resolve(scene.Source, scene.Target);
+                Assert.True(unmeasured.Sent);
+                Assert.Empty(unmeasured.Logs);
             }
+            RenderTexture.active = null;
+            Assert.Empty(Resolve(scene.Other, scene.Target).Logs);
         }
 
         /// <summary>The Vulkan device is not measured: no assertion there. An uncreated

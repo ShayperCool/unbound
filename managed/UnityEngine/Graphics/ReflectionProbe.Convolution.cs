@@ -71,7 +71,6 @@ namespace UnityEngine
                 useMipMap = true,
                 autoGenerateMips = false,
                 mipCount = mips,
-                sRGB = cube.sRGB,
             };
             var chain = RenderTexture.GetTemporary(descriptor);
             chain.filterMode = FilterMode.Trilinear;
