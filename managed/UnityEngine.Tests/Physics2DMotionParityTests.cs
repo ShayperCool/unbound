@@ -7,6 +7,7 @@ namespace UnityEngine.Tests
     public class Physics2DMotionParityTests : IDisposable
     {
         readonly List<GameObject> objects = new List<GameObject>();
+        readonly Physics2DMeasuredScope release = new Physics2DMeasuredScope();
         public Physics2DMotionParityTests()
         {
             Physics2D.simulationMode = SimulationMode2D.Script;
@@ -19,6 +20,7 @@ namespace UnityEngine.Tests
             Physics2D.defaultContactOffset = .01f;
             Physics2D.gravity = new Vector2(0, -9.81f);
             Physics2D.Simulate(.02f);
+            release.Dispose();
         }
 
         // Native phase/True/0/{speed}/{continuous} has two entering points with

@@ -25,6 +25,9 @@ public static class ProbeEntry
             Case(box, 7f, -8f, continuous, dynamicGround: true);
         foreach (bool continuous in new[] { false, true })
             Case(false, 7f, -8f, continuous, dynamicGround: true, sideways: true);
+        foreach (bool continuous in new[] { false, true })
+        foreach (bool refresh in new[] { false, true })
+            Substeps(continuous, refresh);
         File.WriteAllText(output, ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -71,6 +74,38 @@ public static class ProbeEntry
         catch (Exception e) { ProbeLog.Error(e); }
         foreach (var o in Objects) if (o) UnityEngine.Object.DestroyImmediate(o);
         Objects.Clear();
+    }
+    static void Substeps(bool continuous, bool refresh)
+    {
+        ProbeLog.Begin($"substeps/{continuous}/{refresh}"); Step = Event = 0;
+        bool oldSub = Physics2D.useSubStepping, oldRefresh = Physics2D.useSubStepContacts;
+        float oldFps = Physics2D.minSubStepFPS; int oldCount = Physics2D.maxSubStepCount;
+        try
+        {
+            Physics2D.useSubStepping = true; Physics2D.useSubStepContacts = refresh;
+            Physics2D.minSubStepFPS = 200; Physics2D.maxSubStepCount = 4;
+            Physics2D.gravity = new Vector2(0, -9.81f);
+            Obj("ground", new Vector2(0, -.5f)).AddComponent<BoxCollider2D>().size = new Vector2(20, 1);
+            var moving = Obj("moving", new Vector2(0, .49f));
+            moving.AddComponent<CircleCollider2D>().sharedMaterial = new PhysicsMaterial2D { bounciness = 0, friction = 0 };
+            var body = moving.AddComponent<Rigidbody2D>();
+            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            body.collisionDetectionMode = continuous ? CollisionDetectionMode2D.Continuous : CollisionDetectionMode2D.Discrete;
+            for (Step = 1; Step <= 3; Step++)
+            {
+                Snapshot("s" + Step + "/before", body);
+                Physics2D.Simulate(.02f);
+                Snapshot("s" + Step + "/after", body);
+            }
+        }
+        catch (Exception e) { ProbeLog.Error(e); }
+        finally
+        {
+            foreach (var o in Objects) if (o) UnityEngine.Object.DestroyImmediate(o);
+            Objects.Clear();
+            Physics2D.useSubStepping = oldSub; Physics2D.useSubStepContacts = oldRefresh;
+            Physics2D.minSubStepFPS = oldFps; Physics2D.maxSubStepCount = oldCount;
+        }
     }
     public static void Snapshot(string key, Rigidbody2D b)
     {

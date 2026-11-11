@@ -8,6 +8,7 @@ namespace UnityEngine.Tests
     public class Physics2DContactEnumerationTests : IDisposable
     {
         readonly List<GameObject> objects = new List<GameObject>();
+        readonly Physics2DMeasuredScope release = new Physics2DMeasuredScope();
         public Physics2DContactEnumerationTests()
         {
             SharedPairObserver.Events.Clear();
@@ -167,6 +168,41 @@ namespace UnityEngine.Tests
             Assert.InRange(Mathf.Abs(observer.Collision.GetContact(0).tangentImpulse - tangentImpulse), 0, .001f);
             Assert.Equal(0f, sideways ? ground.linearVelocity.y : ground.linearVelocity.x);
             Assert.Equal(0f, sideways ? ground.position.y : ground.position.x);
+        }
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void PublicImpulsesAccumulateAcrossOneSimulationCall(bool continuous, bool refresh)
+        {
+            bool oldSub = Physics2D.useSubStepping, oldRefresh = Physics2D.useSubStepContacts;
+            float oldFps = Physics2D.minSubStepFPS; int oldCount = Physics2D.maxSubStepCount;
+            try
+            {
+                Physics2D.useSubStepping = true; Physics2D.useSubStepContacts = refresh;
+                Physics2D.minSubStepFPS = 200; Physics2D.maxSubStepCount = 4;
+                Physics2D.gravity = new Vector2(0, -9.81f);
+                var floor = Box("ground", 0, -.5f);
+                floor.size = new Vector2(20, 1);
+                var moving = new GameObject("moving"); objects.Add(moving);
+                moving.transform.position = new Vector3(1000, .49f, 0);
+                moving.AddComponent<CircleCollider2D>().sharedMaterial = new PhysicsMaterial2D { bounciness = 0, friction = 0 };
+                var body = moving.AddComponent<Rigidbody2D>();
+                body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+                body.collisionDetectionMode = continuous ? CollisionDetectionMode2D.Continuous : CollisionDetectionMode2D.Discrete;
+                var contacts = new List<ContactPoint2D>();
+                for (int i = 0; i < 3; i++)
+                {
+                    Step(); contacts.Clear(); body.GetContacts(contacts);
+                    Assert.InRange(Mathf.Abs(Assert.Single(contacts).normalImpulse - .1962f), 0, .00001f);
+                }
+            }
+            finally
+            {
+                Physics2D.useSubStepping = oldSub; Physics2D.useSubStepContacts = oldRefresh;
+                Physics2D.minSubStepFPS = oldFps; Physics2D.maxSubStepCount = oldCount;
+            }
         }
         public sealed class ImpulseObserver : MonoBehaviour
         {
@@ -393,6 +429,22 @@ namespace UnityEngine.Tests
             SharedPairObserver.Events.Clear();
             PairLifetimeObserver.Events.Clear();
             CallbackRemovalObserver.Events.Clear();
+            release.Dispose();
+        }
+    }
+
+    internal sealed class Physics2DMeasuredScope : IDisposable
+    {
+        readonly string previous = ProjectInfo.UnityVersion;
+        internal Physics2DMeasuredScope()
+        {
+            Unbound.Runtime.Physics2DWorld.Reset();
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+        }
+        public void Dispose()
+        {
+            Unbound.Runtime.Physics2DWorld.Reset();
+            ProjectInfo.UnityVersion = previous;
         }
     }
 }

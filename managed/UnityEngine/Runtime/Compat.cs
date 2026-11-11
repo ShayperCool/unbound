@@ -36,8 +36,9 @@ namespace Unbound.Runtime
         /// coroutine resumes, measured by destroyphases' rendering controls on 6000.0.71f1.</summary>
         internal static bool RenderingAfterPublicLoop => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>Explicit simulation mode checks and contact refresh across sub-steps,
-        /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
+        /// <summary>Simulation mode checks, contact refresh across sub-steps and contact payload
+        /// sampling/impulse accumulation, measured by physics2dadvanced and physics2ddynamics
+        /// on Unity 6000.0.71f1.</summary>
         internal static bool Physics2DSimulationMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Slide contact spacing, iteration accounting and argument validation,

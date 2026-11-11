@@ -1,15 +1,15 @@
 # 2D contact observation phases
 
 This probe retains the complete original `Probe2D.RunAll()` and `Probe3D.RunAll()`
-sequence before 30 contact controls. The controls vary circle/box geometry,
+sequence before 34 contact controls. The controls vary circle/box geometry,
 rotation, approach speed and discrete/continuous collision detection. Each records
 body state and `GetContacts` before and after each simulation, plus the collision
 payload and a separate `GetContacts` read inside callbacks. Real world history is
 preserved; the probe does not add dummy bodies or alter allocation state.
 
-The Unity 6000.0.71f1 Linux reference has 26,668 values across 59 scenarios.
+The Unity 6000.0.71f1 Linux reference has 27,676 values across 63 scenarios.
 Two independent project copies produced byte-identical Native captures, SHA-256
-`45c73048790cae98ac11e7f5284b29e90c4f1516becc203685af669b0a4f9851`.
+`61cf170339bd79a8fa463482f63fe55c4b9ed08f417101aa5479728cc071b529`.
 Only the agreed capture is retained in `Reference/unity-6000.0.71f1.json`.
 
 For example, `phase/False/0/-12/False` enters on step 2. Both its collision
@@ -75,3 +75,12 @@ The dynamic-ground controls also exercise the documented
 and [FreezePositionY](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RigidbodyConstraints2D.FreezePositionY.html)
 constraints during oblique impacts. A tangential impulse would move the supporting
 body along its locked axis unless the solve itself respects that constraint.
+
+Four sub-step controls hold a resting circle against the ground with four solves
+per simulation call, with both collision modes and contact-refresh settings.
+The public normal impulse is 0.1962 per call in every case, including subsequent
+calls, rather than the 0.04905 impulse of the last sub-step.
+The measured contact policy uses the cached Physics2D simulation compatibility
+flag. Unmeasured releases report a diagnostic, expose the discrete warm-start
+impulses and retain the first contact observation for entering collision velocity.
+Their continuous impulses and contact sampling remain an explicit gap.

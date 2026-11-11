@@ -10,6 +10,17 @@ namespace UnityEngine.Tests
 
         public void Dispose() => ProjectInfo.UnityVersion = m_Release;
 
+        [Theory]
+        [InlineData("6000.0.71f1", true)]
+        [InlineData("6000.0.72f1", false)]
+        [InlineData("6000.1.2f1", false)]
+        [InlineData("2022.3.10f1", false)]
+        public void Physics2DSimulationAndPayloadSelectOnlyTheMeasuredRelease(string release, bool measured)
+        {
+            ProjectInfo.UnityVersion = release;
+            Assert.Equal(measured, Compat.Physics2DSimulationMeasured);
+        }
+
         [Fact]
         public void PhysicsStateReleaseGatesAreCachedWithoutAllocations()
         {

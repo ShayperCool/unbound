@@ -82,6 +82,8 @@ namespace Unbound.Runtime
             if (s_World != null) return;
             Physics2D.EnsureSettings();
             s_MeasuredSimulation = Compat.Physics2DSimulationMeasured;
+            if (!s_MeasuredSimulation)
+                Stubs.Ignored("Physics2D contact payload", "this release is unmeasured; impulses use the discrete warm-start cache and entering collision velocity uses the first contact observation");
             MeasuredSlide = Compat.Physics2DSlideMeasured;
             s_World = new World(ToB2(Physics2D.s_Gravity));
             s_World.SetContactFilter(s_Filter);
@@ -677,11 +679,8 @@ namespace Unbound.Runtime
             {
                 int velocityIterations = Math.Max(1, Physics2D.s_VelocityIterations);
                 int positionIterations = Math.Max(1, Physics2D.s_PositionIterations);
-                if (!subStepping)
-                {
-                    s_Listener.BeginStep();
-                    s_World.Step(deltaTime, velocityIterations, positionIterations);
-                }
+                s_Listener.BeginStep();
+                if (!subStepping) s_World.Step(deltaTime, velocityIterations, positionIterations);
                 else StepSubSteps(subStepCount, subStepTime, velocityIterations, positionIterations);
             }
             finally
@@ -752,7 +751,6 @@ namespace Unbound.Runtime
             {
                 for (int i = 0; i < count; i++)
                 {
-                    s_Listener.BeginStep();
                     s_World.Step(stepTime, velocityIterations, positionIterations,
                         updateContacts: i == 0 || Physics2D.s_UseSubStepContacts || !s_MeasuredSimulation);
                 }
@@ -1015,6 +1013,8 @@ namespace Unbound.Runtime
             internal bool RemovalExit;
             internal bool FirstIsB;
             internal bool PublicListed;
+            internal bool VelocityCaptured;
+            internal Vector2 EnterRelativeVelocity;
         }
 
         static readonly Dictionary<PairKey, Pair> s_Pairs = new Dictionary<PairKey, Pair>();
@@ -1099,6 +1099,7 @@ namespace Unbound.Runtime
                     else
                     {
                         pair.EnterPending = true;
+                        pair.VelocityCaptured = false;
                     }
                 }
             }
@@ -1139,6 +1140,12 @@ namespace Unbound.Runtime
                     observation.Velocities[i] = ToUnity(contact.FixtureB.Body.GetLinearVelocityFromWorldPoint(point)
                         - contact.FixtureA.Body.GetLinearVelocityFromWorldPoint(point));
                 }
+                if (!s_MeasuredSimulation && contact.Manifold.PointCount > 0 &&
+                    s_Pairs.TryGetValue(new PairKey(a, b), out var pair) && pair.EnterPending && !pair.VelocityCaptured)
+                {
+                    pair.EnterRelativeVelocity = pair.A == (object)a ? observation.Velocities[0] : -observation.Velocities[0];
+                    pair.VelocityCaptured = true;
+                }
                 if (observation.ImpulseStep != step)
                 {
                     observation.NormalImpulses = observation.TangentImpulses = default;
@@ -1150,7 +1157,7 @@ namespace Unbound.Runtime
             {
                 // Accumulate every solve in this step, including time-of-impact solves.
                 // The manifold impulses remain the discrete solver's warm-start cache.
-                if (s_ContactObservations.TryGetValue(contact, out var observation))
+                if (s_MeasuredSimulation && s_ContactObservations.TryGetValue(contact, out var observation))
                     for (int i = 0; i < impulse.Count; i++)
                     {
                         observation.NormalImpulses[i] += impulse.NormalImpulses[i];
@@ -1312,7 +1319,9 @@ namespace Unbound.Runtime
             collision.m_CollisionContacts = points.ToArray();
             collision.m_CollisionContactCount = points.Count;
             collision.m_CollisionEnabled = enabled;
-            collision.m_CollisionRelativeVelocity = points.Count > 0 ? points[0].relativeVelocity : RelativeVelocity(self, other);
+            collision.m_CollisionRelativeVelocity = !s_MeasuredSimulation && phase == Phase.Enter && pair.VelocityCaptured
+                ? (flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity)
+                : points.Count > 0 ? points[0].relativeVelocity : RelativeVelocity(self, other);
             return collision;
         }
 
@@ -1395,8 +1404,8 @@ namespace Unbound.Runtime
                             : ToUnity(otherBody.GetLinearVelocityFromWorldPoint(p) - selfBody.GetLinearVelocityFromWorldPoint(p));
                         into.Add(new ContactPoint2D(observation != null ? observation.Points[i] : ToUnity(p), normal, rel, contact.Friction, contact.Restitution,
                             observation != null ? observation.Separations[i] : world.Separations[i],
-                            observation != null ? observation.NormalImpulses[i] : mp.NormalImpulse,
-                            observation != null ? observation.TangentImpulses[i] : mp.TangentImpulse, otherCollider, self, contact.IsEnabled));
+                            s_MeasuredSimulation && observation != null ? observation.NormalImpulses[i] : mp.NormalImpulse,
+                            s_MeasuredSimulation && observation != null ? observation.TangentImpulses[i] : mp.TangentImpulse, otherCollider, self, contact.IsEnabled));
                     }
                 }
             }
