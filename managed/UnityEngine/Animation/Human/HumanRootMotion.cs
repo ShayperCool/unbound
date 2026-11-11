@@ -487,8 +487,9 @@ namespace Unbound.Runtime.Humanoid
         /// 0.5 and 1.5 scale the body and step; rotations are the normalized filled sum). Unit sums
         /// give the same result either way. The identity that takes the rest of a rotation is
         /// (0, 0, 0, 1) as it is, whatever hemisphere the inputs' sum is in (measured for a goal's
-        /// rotation in a controller's state, tests/projects/humanoid body.directEmptyChild: a
-        /// foot goal whose rotation has a negative w, at 0.7; the body's and the feet's here
+        /// rotation in a controller's state, in an Editor capture of tests/projects/humanoid's
+        /// HumanBodyDirectEmptyChild controller that is not in the reference: a foot goal whose
+        /// rotation has a negative w, at 0.7; the body's and the feet's here
         /// follow it unmeasured, the probe's bodies below a total of one have a positive w); with
         /// <paramref name="alignRest"/> it is taken in the sum's hemisphere, as a layer's blend
         /// from the identity is (<see cref="OverNoClip"/>).</summary>

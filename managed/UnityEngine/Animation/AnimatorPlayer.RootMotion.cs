@@ -597,8 +597,8 @@ namespace Unbound.Runtime
         /// Editor, tests/projects/humanoid goals.treeTransition, goals.treeSource (trees in
         /// transitions) and body.direct* (Direct blend trees whose weights sum to 0.7 and 1.4:
         /// the body is 0.7 and 1.4 times as far from the root, body.directLow and
-        /// body.directHigh; an empty child tree leaves its weight to the identity,
-        /// body.directEmptyChild).</summary>
+        /// body.directHigh; an empty child tree leaves its weight to the identity, in an Editor
+        /// capture of the probe's HumanBodyDirectEmptyChild controller, not in the reference).</summary>
         void AddStateMotion(float stateWeight)
         {
             if (m_StateSamples.Count == 0) return;

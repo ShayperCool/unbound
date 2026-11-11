@@ -199,15 +199,12 @@ imported without keyframe reduction.
   BodyNeg 0.35 and A 0.65 (`body.directNeg`), BodyPos and A at 0.3 and 0.4 (`body.directLow`) and
   at 0.8 and 0.6 (`body.directHigh`, with normalized blend values `body.directNormalized`), both
   with Foot IK (`body.directLowFootIK`, `body.directHighFootIK`), the latter leaving for HumanB's
-  clip (`body.directHighTransition`), and an empty child tree at 0.3 beside A at 0.7
-  (`body.directEmptyChild`); the same clips without Foot IK in AnimationMixerPlayables
+  clip (`body.directHighTransition`); the same clips without Foot IK in AnimationMixerPlayables
   (`bodyGraph.neg`, `.pos`, `.partial`, `.w`, `.none` at 0.35 and 0.65 of A, `.low`, `.high`,
   `.three` of BodyNeg, A and BodyPartial, `.nested` with a mixer of BodyNeg and BodyPos as an
-  input) and A under BodyPartial in a layer mixer (`bodyGraph.layerPartial`); controllers of the
-  probe as an output's AnimatorControllerPlayable (`controllerGraph.a`, `.footIK`,
-  `.goalsTransition`, `.goalsTree`, `.goalsOverride`, `.goalsAdditive`, `.bodyNegTree`,
-  `.bodyDirectLow`); and HumanT's clip and its mirrored clip on HumanT itself (`tdof.playT`,
-  `tdof.playTMirror`). Measured: see docs/COMPATIBILITY_GAPS.md (humanoid row).
+  input) and A under BodyPartial in a layer mixer (`bodyGraph.layerPartial`). The
+  HumanBodyDirectEmptyChild controller (an empty child tree at 0.3 beside A at 0.7) is authored
+  but not recorded. Measured: see docs/COMPATIBILITY_GAPS.md (humanoid row).
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:

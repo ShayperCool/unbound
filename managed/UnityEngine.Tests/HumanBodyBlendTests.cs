@@ -270,7 +270,8 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>What a Direct blend tree's clips leave of one is the identity as it is
-        /// (tests/projects/humanoid body.directEmptyChild, measured for a foot goal): a goal's
+        /// (measured for a foot goal in an Editor capture of tests/projects/humanoid's
+        /// HumanBodyDirectEmptyChild controller, not in the reference): a goal's
         /// rotation with a negative w at 0.5 blends with (0, 0, 0, 1), not with the identity of
         /// its own hemisphere; the body's follows the same rule (unmeasured: the probe's bodies
         /// below a total of one have a positive w). Control: the two differ.</summary>

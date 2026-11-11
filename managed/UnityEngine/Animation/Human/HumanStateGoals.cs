@@ -23,7 +23,8 @@ namespace Unbound.Runtime.Humanoid
     /// what the clips leave is the identity goal, its rotation (0, 0, 0, 1) as it is whatever
     /// hemisphere the clips' sum is in; above one, a goal's position is the clips' plain sum and
     /// its rotation their normalized sum (body.directLowFootIK, body.directHighFootIK, weights of
-    /// 0.3 + 0.4 and 0.8 + 0.6; body.directEmptyChild).
+    /// 0.3 + 0.4 and 0.8 + 0.6; the plain identity in an Editor capture of the probe's
+    /// HumanBodyDirectEmptyChild controller, not in the reference).
     /// The sampler hands a clip's body and goal curves over instead of adding them
     /// (<see cref="TakeBody"/>, <see cref="Take"/>), at the time it samples the clip's other
     /// curves at; <see cref="AddClip"/> collects the body and places and collects the goals, <see cref="EndState"/> adds the state's body and goals to the layer's

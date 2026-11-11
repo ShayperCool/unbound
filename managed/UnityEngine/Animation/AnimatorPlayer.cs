@@ -1005,8 +1005,9 @@ namespace Unbound.Runtime
         /// one give the same either way; a Direct blend tree whose weights sum above one lasts
         /// the plain sum (matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid
         /// body.directHigh: clips of 1 s at 0.8 and 0.6 make a state of 1.4 s; at 0.3 and 0.4,
-        /// body.directLow, 1 s). A child tree without clips counts for nothing
-        /// (body.directEmptyChild); a child without a motion counts as one second by its weight,
+        /// body.directLow, 1 s). A child tree without clips counts for nothing (in an Editor
+        /// capture of the probe's HumanBodyDirectEmptyChild controller, not in the reference); a
+        /// child without a motion counts as one second by its weight,
         /// as before (unmeasured, as are clips of other lengths below a total of one).</summary>
         internal float MotionLength(LayerRun layer, Motion motion)
         {
