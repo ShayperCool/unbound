@@ -81,6 +81,26 @@ public static class RealtimeGISetup
         }
     }
 
+    /// <summary>Adds the <c>RoomAuto</c> scene alone: the room and a set of other shapes, every
+    /// lit renderer with Preserve UVs off (its realtime charts made by the precompute).</summary>
+    public static void CreateAuto()
+    {
+        try
+        {
+            CreateRoom("RoomAuto", LightmapsMode.NonDirectional, 1f, 1f, autoCharts: true);
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            scenes.Add(new EditorBuildSettingsScene($"{Scenes}/RoomAuto.unity", true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     /// <summary>Adds the <c>RoomCharts</c> scene alone: the room with the chart panels.</summary>
     public static void CreateCharts()
     {
@@ -230,7 +250,147 @@ public static class RealtimeGISetup
         return renderer;
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false)
+    /// <summary>
+    /// A mesh of flat faces: each face a polygon with vertices and a normal of its own, cut into
+    /// a fan of triangles from its first corner. A face looks away from <paramref name="inside"/>
+    /// (its corners are taken in the order that makes it so); with
+    /// <paramref name="inverted"/> its triangles are wound the other way, against its normal.
+    /// Its lightmap UVs lay the faces side by side in a row, each stretched over a square cell
+    /// (so a face that is not square has UVs that are not a scaled copy of its shape).
+    /// </summary>
+    static Renderer Solid(string scene, string name, Vector3 position, Vector3 euler, Material material, Vector3 inside, bool inverted, params Vector3[][] faces)
+    {
+        var vertices = new List<Vector3>();
+        var normals = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var triangles = new List<int>();
+        for (var f = 0; f < faces.Length; f++)
+        {
+            var face = (Vector3[])faces[f].Clone();
+            var normal = Vector3.Cross(face[1] - face[0], face[2] - face[0]).normalized;
+            if (Vector3.Dot(normal, face[0] - inside) < 0f)
+            {
+                System.Array.Reverse(face);
+                normal = -normal;
+            }
+            var across = (face[1] - face[0]).normalized;
+            var up = Vector3.Cross(normal, across);
+            var first = vertices.Count;
+            var flat = new List<Vector2>();
+            foreach (var corner in face)
+                flat.Add(new Vector2(Vector3.Dot(corner - face[0], across), Vector3.Dot(corner - face[0], up)));
+            var min = flat[0];
+            var max = flat[0];
+            foreach (var point in flat)
+            {
+                min = Vector2.Min(min, point);
+                max = Vector2.Max(max, point);
+            }
+            for (var i = 0; i < face.Length; i++)
+            {
+                vertices.Add(face[i]);
+                normals.Add(normal);
+                // A cell of 1 / faces across, with a margin of a twentieth of it.
+                var inCell = new Vector2((flat[i].x - min.x) / (max.x - min.x), (flat[i].y - min.y) / (max.y - min.y)) * 0.9f + new Vector2(0.05f, 0.05f);
+                uvs.Add(new Vector2((f + inCell.x) / faces.Length, inCell.y / faces.Length));
+            }
+            for (var i = 1; i + 1 < face.Length; i++)
+                triangles.AddRange(inverted ? new[] { first, first + i + 1, first + i } : new[] { first, first + i, first + i + 1 });
+        }
+        var mesh = new Mesh { name = name };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        mesh.SetUVs(1, uvs);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        AssetDatabase.CreateAsset(mesh, $"{Scenes}/{scene}{name}.asset");
+        return Shape(name, mesh, position, euler, Vector3.one, material);
+    }
+
+    /// <summary>A flat grid of square cells in its local XY plane, facing -z, its vertices
+    /// shared between the cells: one connected surface.</summary>
+    static Renderer Grid(string scene, string name, Vector3 position, Vector3 euler, Material material, int columns, int rows, float cell)
+    {
+        var vertices = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var triangles = new List<int>();
+        for (var r = 0; r <= rows; r++)
+            for (var c = 0; c <= columns; c++)
+            {
+                vertices.Add(new Vector3(c * cell, r * cell, 0f));
+                uvs.Add(new Vector2((c + 0.5f) / (columns + 1), (r + 0.5f) / (rows + 1)));
+            }
+        for (var r = 0; r < rows; r++)
+            for (var c = 0; c < columns; c++)
+            {
+                int a = r * (columns + 1) + c, b = a + 1, d = a + columns + 1, e = d + 1;
+                triangles.AddRange(new[] { a, d, b, b, d, e });
+            }
+        var mesh = new Mesh { name = name };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(vertices.ConvertAll(_ => Vector3.back));
+        mesh.SetUVs(0, uvs);
+        mesh.SetUVs(1, uvs);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        AssetDatabase.CreateAsset(mesh, $"{Scenes}/{scene}{name}.asset");
+        return Shape(name, mesh, position, euler, Vector3.one, material);
+    }
+
+    static Renderer Shape(string name, Mesh mesh, Vector3 position, Vector3 euler, Vector3 scale, Material material)
+    {
+        var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+        go.transform.position = position;
+        go.transform.rotation = Quaternion.Euler(euler);
+        go.transform.localScale = scale;
+        go.GetComponent<MeshFilter>().sharedMesh = mesh;
+        var renderer = go.GetComponent<MeshRenderer>();
+        renderer.sharedMaterial = material;
+        renderer.receiveGI = ReceiveGI.Lightmaps;
+        GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.ContributeGI);
+        return renderer;
+    }
+
+    /// <summary>A prism: the polygon <paramref name="section"/> (in XY) pushed
+    /// <paramref name="depth"/> along z: two caps and a side per edge.</summary>
+    static Vector3[][] Prism(Vector2[] section, float depth)
+    {
+        var faces = new List<Vector3[]>();
+        var front = new Vector3[section.Length];
+        var back = new Vector3[section.Length];
+        for (var i = 0; i < section.Length; i++)
+        {
+            front[i] = new Vector3(section[i].x, section[i].y, 0f);
+            back[section.Length - 1 - i] = new Vector3(section[i].x, section[i].y, depth);
+        }
+        faces.Add(front);
+        faces.Add(back);
+        for (var i = 0; i < section.Length; i++)
+        {
+            var a = section[i];
+            var b = section[(i + 1) % section.Length];
+            faces.Add(new[] { new Vector3(a.x, a.y, 0f), new Vector3(a.x, a.y, depth), new Vector3(b.x, b.y, depth), new Vector3(b.x, b.y, 0f) });
+        }
+        return faces.ToArray();
+    }
+
+    /// <summary>Two rectangles that meet along a ridge on the z axis, each falling away from it
+    /// by <paramref name="degrees"/>: an open roof.</summary>
+    static Vector3[][] Roof(float degrees, float width, float length)
+    {
+        var radians = degrees * Mathf.Deg2Rad;
+        var side = new Vector3(Mathf.Cos(radians) * width, -Mathf.Sin(radians) * width, 0f);
+        var other = new Vector3(-side.x, side.y, 0f);
+        var along = new Vector3(0f, 0f, length);
+        return new[]
+        {
+            new[] { Vector3.zero, along, side + along, side },
+            new[] { Vector3.zero, other, other + along, along },
+        };
+    }
+
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -286,6 +446,50 @@ public static class RealtimeGISetup
             // UVs come from Mesh.uv3 when a mesh has it (Manual, "Generate lightmap UVs").
             lit.Add(Panel(name, "Channels", new Vector3(-2.6f, 0.02f, -2.6f), new Vector3(90f, 0f, 0f), white,
                 new[] { 0f, 2f }, new[] { 0f, 1f }, new[] { "#" }, new Rect[0], new Vector2(0.5f, 1f)));
+        }
+
+        if (autoCharts)
+        {
+            // A wedge (a right-angled ramp), the same wedge with its triangles wound against
+            // its normals, a step (an L-shaped bar), two roofs (one nearly flat, one steep), a
+            // grid of shared vertices, a thin bar, and the built-in quad and plane; then four
+            // shapes whose limits decide their charts. None is turned: the precompute works
+            // with a turned instance's positions and normals as its own removal of the
+            // rotation rounds them.
+            var wedge = new[] { new Vector2(0f, 0f), new Vector2(1.2f, 0f), new Vector2(0f, 0.9f) };
+            lit.Add(Solid(name, "Wedge", new Vector3(-2.6f, 0.01f, 0.2f), Vector3.zero, white, new Vector3(0.4f, 0.3f, 0.4f), false, Prism(wedge, 0.8f)));
+            // The wedge's mesh again, taller and narrower.
+            lit.Add(Shape("WedgeTall", lit[lit.Count - 1].GetComponent<MeshFilter>().sharedMesh, new Vector3(1.2f, 0.01f, 2f), Vector3.zero, new Vector3(1f, 1.4f, 0.75f), white));
+            lit.Add(Solid(name, "WedgeInverted", new Vector3(-2.6f, 0.01f, -1.4f), Vector3.zero, white, new Vector3(0.4f, 0.3f, 0.4f), true, Prism(wedge, 0.8f)));
+            lit.Add(Solid(name, "Step", new Vector3(1.7f, 0.01f, -2.4f), Vector3.zero, white, new Vector3(0.2f, 0.15f, 0.45f), false,
+                Prism(new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0.3f), new Vector2(0.4f, 0.3f), new Vector2(0.4f, 0.7f), new Vector2(0f, 0.7f) }, 0.9f)));
+            lit.Add(Solid(name, "RoofFlat", new Vector3(-1.2f, 2.6f, 1.2f), Vector3.zero, white, new Vector3(0f, -1f, 0.65f), false, Roof(10f, 0.7f, 1.3f)));
+            lit.Add(Solid(name, "RoofSteep", new Vector3(1.6f, 2.8f, 1.2f), Vector3.zero, white, new Vector3(0f, -1f, 0.65f), false, Roof(50f, 0.7f, 1.3f)));
+            lit.Add(Grid(name, "Grid", new Vector3(-2.2f, 1.9f, 2.95f), Vector3.zero, white, 3, 2, 0.5f));
+            lit.Add(Static(PrimitiveType.Cube, "Bar", new Vector3(0f, 3.2f, 2.6f), new Vector3(2f, 0.05f, 0.3f), white));
+            lit.Add(Static(PrimitiveType.Quad, "Quad", new Vector3(2.2f, 1.4f, 2.95f), new Vector3(1.5f, 1f, 1f), white));
+            lit.Add(Static(PrimitiveType.Plane, "Plane", new Vector3(-1.6f, 0.02f, -2f), new Vector3(0.2f, 1f, 0.15f), white));
+            // Max Angle: a roof whose sides are 20 degrees from level, 40 apart. With 30 each
+            // side is within the limit of a plane through both and the two are further apart
+            // than it; with 15 neither holds.
+            var angles = new Dictionary<string, float> { { "RoofAngleWide", 30f }, { "RoofAngleTight", 15f } };
+            lit.Add(Solid(name, "RoofAngleWide", new Vector3(1.6f, 2.6f, -1.2f), Vector3.zero, white, new Vector3(0f, -1f, 0.65f), false, Roof(20f, 0.7f, 1.3f)));
+            lit.Add(Solid(name, "RoofAngleTight", new Vector3(-1.9f, 1.6f, -0.9f), Vector3.zero, white, new Vector3(0f, -1f, 0.65f), false, Roof(20f, 0.6f, 1.3f)));
+            // Max Distance: the step's mesh again (other lengths, so nothing is shared). Its
+            // two treads are 0.4 apart and their corners at most 0.2 from a plane through both,
+            // as its two risers' are: 0.3 lies between the two measures, 0.15 below both.
+            var distances = new Dictionary<string, float> { { "StepMid", 0.3f }, { "StepNear", 0.15f } };
+            var step = lit.Find(r => r.name == "Step").GetComponent<MeshFilter>().sharedMesh;
+            lit.Add(Shape("StepMid", step, new Vector3(1.7f, 0.01f, -1.2f), Vector3.zero, new Vector3(1f, 1f, 1.2f), white));
+            lit.Add(Shape("StepNear", step, new Vector3(0.2f, 0.01f, -2.6f), Vector3.zero, new Vector3(1f, 1f, 0.8f), white));
+            foreach (var r in lit)
+            {
+                var so = new SerializedObject(r);
+                so.FindProperty("m_PreserveUVs").boolValue = false;
+                if (angles.TryGetValue(r.name, out var angle)) so.FindProperty("m_AutoUVMaxAngle").floatValue = angle;
+                if (distances.TryGetValue(r.name, out var distance)) so.FindProperty("m_AutoUVMaxDistance").floatValue = distance;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         if (twoSystems)

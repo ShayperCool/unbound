@@ -5,6 +5,7 @@
     run.py setup-systems                      # Editor: add the RoomSystems scene alone
     run.py setup-baked-environment            # Editor: add the RoomBakedEnvironment scene alone
     run.py setup-charts                       # Editor: add the RoomCharts scene alone
+    run.py setup-auto                         # Editor: add the RoomAuto scene alone
     run.py record --label native1             # Editor capture (GPU, through the job pool)
     run.py publish native1 native2            # two identical captures become Reference/unity-<version>/
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
@@ -139,7 +140,8 @@ def setup(label):
 # The scenes added to the made ones one at a time: the mode's name, the scene and what makes it.
 ADDED = {'setup-systems': ('RoomSystems', 'RealtimeGISetup.CreateSystems'),
          'setup-baked-environment': ('RoomBakedEnvironment', 'RealtimeGISetup.CreateBakedEnvironment'),
-         'setup-charts': ('RoomCharts', 'RealtimeGISetup.CreateCharts')}
+         'setup-charts': ('RoomCharts', 'RealtimeGISetup.CreateCharts'),
+         'setup-auto': ('RoomAuto', 'RealtimeGISetup.CreateAuto')}
 
 
 def setup_scene(label, scene, method):
