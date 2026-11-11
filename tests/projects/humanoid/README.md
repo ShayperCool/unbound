@@ -187,6 +187,28 @@ imported without keyframe reduction.
   `MuscleHandle` list (`stream.muscleHandles`). Measured: see docs/COMPATIBILITY_GAPS.md (humanoid
   row, AnimationHumanStream).
 
+- the body where clips blend (`HumanoidBody.cs`, the Body*.anim clips and HumanBody* controllers
+  from `ProbeRunner.BodyBlends`, each with an IK pass on its base layer and `HumanoidGoals`
+  reading the body and the goals): five `.anim` clips of one second that differ in their body
+  curves only, BodyPos (RootT and all four RootQ curves), BodyNeg (the same rotation with every
+  RootQ key negated), BodyPartial (RootQ.x and RootQ.y only), BodyW (RootQ.w only, -1) and BodyNone
+  (no body curve); each in a 1D tree with HumanA's clip A at 0.35 (`body.posTree`, `body.negTree`,
+  `body.partialTree`, `body.wTree`, `body.noneTree`), BodyNeg to A and A to BodyNone in transitions
+  (`body.negTransition`, `body.noneTransition`), BodyNeg under A and A under BodyPartial on an
+  override layer of weight 0.5 (`body.negOverride`, `body.partialOverride`); Direct blend trees of
+  BodyNeg 0.35 and A 0.65 (`body.directNeg`), BodyPos and A at 0.3 and 0.4 (`body.directLow`) and
+  at 0.8 and 0.6 (`body.directHigh`, with normalized blend values `body.directNormalized`), both
+  with Foot IK (`body.directLowFootIK`, `body.directHighFootIK`), the latter leaving for HumanB's
+  clip (`body.directHighTransition`), and an empty child tree at 0.3 beside A at 0.7
+  (`body.directEmptyChild`); the same clips without Foot IK in AnimationMixerPlayables
+  (`bodyGraph.neg`, `.pos`, `.partial`, `.w`, `.none` at 0.35 and 0.65 of A, `.low`, `.high`,
+  `.three` of BodyNeg, A and BodyPartial, `.nested` with a mixer of BodyNeg and BodyPos as an
+  input) and A under BodyPartial in a layer mixer (`bodyGraph.layerPartial`); controllers of the
+  probe as an output's AnimatorControllerPlayable (`controllerGraph.a`, `.footIK`,
+  `.goalsTransition`, `.goalsTree`, `.goalsOverride`, `.goalsAdditive`, `.bodyNegTree`,
+  `.bodyDirectLow`); and HumanT's clip and its mirrored clip on HumanT itself (`tdof.playT`,
+  `tdof.playTMirror`). Measured: see docs/COMPATIBILITY_GAPS.md (humanoid row).
+
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
 
