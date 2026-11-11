@@ -62,7 +62,8 @@ namespace Unbound.Runtime.Playables
         StreamTransform Target(StreamTransform handle)
         {
             int channel = handle.Position >= 0 ? handle.Position : handle.Rotation >= 0 ? handle.Rotation : handle.Scale;
-            var owner = channel >= 0 ? Animator.StreamBindings.FloatOwner[channel] : null;
+            var bindings = Animator.StreamBindings;
+            var owner = channel >= 0 && channel < bindings.FloatCount ? bindings.FloatOwner[channel] : null;
             handle.Node = owner is SkeletonGroup node ? node.Node : -1;
             if (handle.Node < 0 && owner?.Transform != null) handle.Transform = owner.Transform;
             if (handle.Node < 0 && owner != null && handle.Transform != null) StreamOwned.Add(handle.Transform);
@@ -72,12 +73,26 @@ namespace Unbound.Runtime.Playables
         internal void Bound(StreamTransform handle) => Transforms.Add(Target(handle));
 
         /// <summary>The hierarchy was optimized or deoptimized: the handles' channels moved to
-        /// the skeleton's nodes or back to the transforms of their paths.</summary>
+        /// the skeleton's nodes or back to the transforms of their paths, and the handles are
+        /// unresolved until their next access (Scripting API, TransformStreamHandle.IsResolved:
+        /// a handle "can become unresolved if the animator bindings have changed"; 6000.0.71f1,
+        /// tests/projects/animoptimize jobReoptimize.Rig.1).</summary>
         internal void HierarchyChanged()
         {
             StreamOwned.Clear();
             m_NodeChannelsFor = -1;
-            for (int i = 0; i < Transforms.Count; i++) Transforms[i] = Target(Transforms[i]);
+            for (int i = 0; i < Transforms.Count; i++)
+            {
+                var handle = Target(Transforms[i]);
+                handle.Resolved = false;
+                Transforms[i] = handle;
+            }
+            for (int i = 0; i < Properties.Count; i++)
+            {
+                var property = Properties[i];
+                property.Resolved = false;
+                Properties[i] = property;
+            }
         }
 
         int[] m_NodeChannels = Array.Empty<int>();
@@ -96,7 +111,9 @@ namespace Unbound.Runtime.Playables
             scale = known ? m_NodeChannels[i + 2] : -1;
         }
 
-        /// <summary>Bindings only grow between hierarchy changes, so their channel count dates the index.</summary>
+        /// <summary>Bindings only grow between hierarchy changes, so their channel count dates the
+        /// index. A node's Euler curves are not in it, as a transform's are not in the whole
+        /// hierarchy's lookup: such a node is read from the skeleton's last written value.</summary>
         void IndexNodes(AnimationBindings bindings)
         {
             m_NodeChannelsOf = bindings;
@@ -804,7 +821,7 @@ namespace UnityEngine.Animations
                 data.Resolved = true;
                 context.Handles.Transforms[handleIndex] = data;
             }
-            return data.Transform != null || data.Node >= 0;
+            return data.Node >= 0 ? context.Handles.Animator.Skeleton != null : data.Transform != null;
         }
 
         public bool IsValid(AnimationStream stream) =>
@@ -1032,11 +1049,15 @@ namespace UnityEngine.Animations
             var handles = AnimatorHandles.Get(valid);
             if (handles == null || transformSceneHandleDefinitionIndex < 0 || transformSceneHandleDefinitionIndex >= handles.SceneTransforms.Count)
                 throw new InvalidOperationException("The TransformSceneHandle is invalid. Please use proper function to create the handle.");
-            return handles.SceneTransforms[transformSceneHandleDefinitionIndex];
+            var transform = handles.SceneTransforms[transformSceneHandleDefinitionIndex];
+            return transform != null ? transform : null;
         }
 
+        /// <summary>False once the transform is destroyed (6000.0.71f1, tests/projects/animoptimize
+        /// jobDestroyed.Rig.1); its values then read as a missing transform's.</summary>
         public bool IsValid(AnimationStream stream) =>
-            AnimatorHandles.Get(valid) is AnimatorHandles h && transformSceneHandleDefinitionIndex >= 0 && transformSceneHandleDefinitionIndex < h.SceneTransforms.Count;
+            AnimatorHandles.Get(valid) is AnimatorHandles h && transformSceneHandleDefinitionIndex >= 0 && transformSceneHandleDefinitionIndex < h.SceneTransforms.Count
+            && h.SceneTransforms[transformSceneHandleDefinitionIndex] != null;
 
         public Vector3 GetPosition(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.position ?? Vector3.zero; }
 
