@@ -968,6 +968,9 @@ static void on_custom_blit(int event, void* data)
 #define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT 0x83F3
 #define GL_NEAREST_MIPMAP_NEAREST 0x2700
 #define GL_TEXTURE_MAX_LEVEL 0x813D
+#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER 0x8CD4
+#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE 0x8CD3
+#define GL_FRAMEBUFFER_ATTACHMENT_LAYERED 0x8DA7
 
 /// The second record: what the texture callback found, read by the scripts line by line.
 static char s_texture_notes[8192];
@@ -1234,13 +1237,26 @@ static void describe_bound(void)
         while (gl.GetError() != 0) {}
         if (type == 0) continue;
         const char* label = "unnamed";
-        for (int s = 0; s < SHAPE_COUNT; s++)
+        // The first label the scripts gave the name (a pointer may be given twice).
+        for (int s = SHAPE_COUNT - 1; s >= 0; s--)
             if (type == GL_TEXTURE && s_shapes[s].name == (uintptr_t)name && name != 0) label = s_shapes[s].label;
         char shape[120];
         describe_shape((uintptr_t)name, shape, sizeof shape);
         // A renderbuffer and a texture may share a number: the attachment's type decides.
         if (type == GL_RENDERBUFFER && strncmp(shape, "renderbuffer", 12) != 0) snprintf(shape, sizeof shape, "renderbuffer");
-        snprintf(parts[i], sizeof parts[i], "%.31s(%.119s)", label, shape);
+        // Which image of a cube, an array or a 3D texture is attached (a cube's face counts
+        // from +X), or that all of them are.
+        char image[32] = "";
+        if (type == GL_TEXTURE && strncmp(shape, "2d", 2) != 0 && strncmp(shape, "multisample ", 12) != 0) {
+            GLint layered = 0, layer = 0, face = 0;
+            gl.GetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, kAttachments[i], GL_FRAMEBUFFER_ATTACHMENT_LAYERED, &layered);
+            gl.GetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, kAttachments[i], GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER, &layer);
+            gl.GetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, kAttachments[i], GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE, &face);
+            while (gl.GetError() != 0) {}
+            if (layered) snprintf(image, sizeof image, " every image");
+            else snprintf(image, sizeof image, " image=%d", face ? face - GL_TEXTURE_CUBE_MAP_POSITIVE_X : layer);
+        }
+        snprintf(parts[i], sizeof parts[i], "%.31s(%.119s)%s", label, shape, image);
     }
     texture_note("bound framebuffer=%s viewport=%d,%d,%d,%d", fbo ? "own" : "default", viewport[0], viewport[1], viewport[2], viewport[3]);
     texture_note("color %s", parts[0]);

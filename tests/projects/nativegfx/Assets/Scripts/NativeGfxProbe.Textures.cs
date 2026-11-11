@@ -22,6 +22,7 @@ public partial class NativeGfxProbe
     [DllImport(Plugin)] static extern int NativeGfx_TextureNotes(byte[] buffer, int capacity);
 
     int shapes;
+    RenderTexture layeredCube, layeredArray;
 
     void Shape(string label, IntPtr name) => NativeGfx_SetShape(shapes++, label, name);
 
@@ -67,6 +68,9 @@ public partial class NativeGfxProbe
         // Six square layers: an array all the same.
         var arraySix = Keep(new Texture2DArray(4, 4, 6, TextureFormat.RGBA32, false, true) { name = "array.six" });
         arraySix.Apply(false);
+        // One layer: an array all the same.
+        var arrayOne = Keep(new Texture2DArray(4, 4, 1, TextureFormat.RGBA32, false, true) { name = "array.one" });
+        arrayOne.Apply(false);
         var volume = Keep(new Texture3D(4, 4, 4, TextureFormat.RGBA32, false) { name = "volume" });
         volume.SetPixels32(Solid(64, new Color32(40, 80, 120, 255)));
         volume.Apply(false);
@@ -78,6 +82,8 @@ public partial class NativeGfxProbe
         rtCube.Create();
         var rtArray = Keep(new RenderTexture(8, 4, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "rt.array", dimension = TextureDimension.Tex2DArray, volumeDepth = 3 });
         rtArray.Create();
+        var rtArrayOne = Keep(new RenderTexture(8, 4, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "rt.array.one", dimension = TextureDimension.Tex2DArray, volumeDepth = 1 });
+        rtArrayOne.Create();
         var rtVolume = Keep(new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "rt.volume", dimension = TextureDimension.Tex3D, volumeDepth = 4 });
         rtVolume.Create();
         var msaa = Keep(new RenderTexture(8, 8, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "rt.msaa", antiAliasing = 4, filterMode = FilterMode.Point });
@@ -87,11 +93,14 @@ public partial class NativeGfxProbe
         var msaaBound = Keep(new RenderTexture(8, 8, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "rt.msaa.bound", antiAliasing = 4, bindTextureMS = true });
         msaaBound.Create();
 
+        layeredCube = rtCube;
+        layeredArray = rtArray;
         Shape("cube", cube.GetNativeTexturePtr());
         Shape("cube.half", cubeHalf.GetNativeTexturePtr());
         Shape("array", array.GetNativeTexturePtr());
         Shape("array.linear", arrayLinear.GetNativeTexturePtr());
         Shape("array.six", arraySix.GetNativeTexturePtr());
+        Shape("array.one", arrayOne.GetNativeTexturePtr());
         Shape("volume", volume.GetNativeTexturePtr());
         Shape("cubearray", cubeArray.GetNativeTexturePtr());
         Shape("mipped", mipped.GetNativeTexturePtr());
@@ -99,6 +108,7 @@ public partial class NativeGfxProbe
         Shape("rt.cube.depth", rtCube.GetNativeDepthBufferPtr());
         Shape("rt.array", rtArray.GetNativeTexturePtr());
         Shape("rt.array.depth", rtArray.GetNativeDepthBufferPtr());
+        Shape("rt.array.one", rtArrayOne.GetNativeTexturePtr());
         Shape("rt.volume", rtVolume.GetNativeTexturePtr());
         Shape("rt.msaa", msaa.GetNativeTexturePtr());
         Shape("rt.msaa.depth", msaa.GetNativeDepthBufferPtr());
@@ -106,7 +116,7 @@ public partial class NativeGfxProbe
         Shape("rt.msaa.color.depth", msaaColor.GetNativeDepthBufferPtr());
         Shape("rt.msaa.bound", msaaBound.GetNativeTexturePtr());
         Shape("rt.msaa.bound.depth", msaaBound.GetNativeDepthBufferPtr());
-        Value("shape.formats", L(new Texture[] { cube, cubeHalf, array, arrayLinear, arraySix, volume, cubeArray, mipped, rtCube, rtArray, rtVolume, msaa }
+        Value("shape.formats", L(new Texture[] { cube, cubeHalf, array, arrayLinear, arraySix, arrayOne, volume, cubeArray, mipped, rtCube, rtArray, rtVolume, msaa }
             .Select(t => t.name + "=" + t.graphicsFormat + "/" + t.mipmapCount)));
         Logged("shape", () =>
         {
@@ -140,15 +150,7 @@ public partial class NativeGfxProbe
             cmd.ClearRenderTarget(true, true, Color.black);
             cmd.IssuePluginEvent(NativeGfx_TextureEvent(), 3);
             Graphics.ExecuteCommandBuffer(cmd);
-            var buffer = new byte[1 << 14];
-            int length = NativeGfx_TextureNotes(buffer, buffer.Length);
-            foreach (var line in Encoding.UTF8.GetString(buffer, 0, Math.Min(length, buffer.Length - 1)).Split('\n').Where(s => s.Length > 0))
-            {
-                // "bound ...", "color ...", "depth ...": the framebuffer and its attachments.
-                int space = line.IndexOf(' ');
-                string kind = line.Substring(0, space);
-                Value("shape.msaa.target" + (kind == "bound" ? "" : "." + kind), Q(line.Substring(space + 1)));
-            }
+            BoundTarget("shape.msaa.target");
             Value("shape.msaa.pixels", Pixels(msaa, 8, 8));
         });
         // What the next callback, one that does nothing, is blamed for.
@@ -161,6 +163,45 @@ public partial class NativeGfxProbe
             cmd.ClearRenderTarget(true, true, Color.black);
             Graphics.ExecuteCommandBuffer(cmd);
             TextureEvent(9);
+        });
+    }
+
+    /// <summary>What the texture callback found bound (its event 3): the framebuffer and the
+    /// viewport (<paramref name="key"/>), the color and the depth attachment
+    /// (<c>.color</c>, <c>.depth</c>).</summary>
+    void BoundTarget(string key)
+    {
+        var buffer = new byte[1 << 14];
+        int length = NativeGfx_TextureNotes(buffer, buffer.Length);
+        foreach (var line in Encoding.UTF8.GetString(buffer, 0, Math.Min(length, buffer.Length - 1)).Split('\n').Where(s => s.Length > 0))
+        {
+            int space = line.IndexOf(' ');
+            string kind = line.Substring(0, space);
+            Value(key + (kind == "bound" ? "" : "." + kind), Q(line.Substring(space + 1)));
+        }
+    }
+
+    /// <summary>A callback while one image of a cube or an array render texture is the target:
+    /// what is attached, and that the plugin draws into that image alone (every image is
+    /// cleared first).</summary>
+    void LayeredTarget(string key, RenderTexture target, int images, int image)
+    {
+        bool cube = target.dimension == TextureDimension.Cube;
+        Logged("shape." + key + ".target", () =>
+        {
+            using var cmd = new CommandBuffer { name = "nativegfx." + key };
+            for (int i = 0; i <= images; i++)
+            {
+                // Every image, then the one the callback finds.
+                int at = i < images ? i : image;
+                cmd.SetRenderTarget(target, 0, cube ? (CubemapFace)at : CubemapFace.Unknown, cube ? 0 : at);
+                if (i < images) cmd.ClearRenderTarget(true, true, Color.black);
+            }
+            cmd.IssuePluginEvent(NativeGfx_TextureEvent(), 3);
+            Graphics.ExecuteCommandBuffer(cmd);
+            BoundTarget("shape." + key + ".target");
+            Value("shape." + key + ".target.drawn", ElementPixels(target, image, target.width, target.height, true));
+            Value("shape." + key + ".target.other", ElementPixels(target, image == 0 ? 1 : 0, target.width, target.height, true));
         });
     }
 
@@ -181,6 +222,8 @@ public partial class NativeGfxProbe
 
     void ExternalFormats()
     {
+        LayeredTarget("cube", layeredCube, 6, (int)CubemapFace.PositiveY);
+        LayeredTarget("array", layeredArray, 3, 1);
         Logged("ext.make", () =>
         {
             var notes = TextureEvent(1);

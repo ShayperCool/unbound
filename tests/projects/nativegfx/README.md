@@ -41,7 +41,7 @@ Recorded:
 * **Texture shapes** (`shape.*`, `Assets/Scripts/NativeGfxProbe.Textures.cs`; the plugin's
   texture callback keeps a record of its own, so the records above stay as they are): the
   native pointer of a Cubemap is a cube map (linear `GL_RGBA8` for `TextureFormat.RGBA32`:
-  `shape.formats`), of a Texture2DArray a 2D array (six square layers too), of a Texture3D a 3D
+  `shape.formats`), of a Texture2DArray a 2D array (one layer and six square layers too), of a Texture3D a 3D
   texture, of a CubemapArray a cube map array, with their levels; render textures of those
   dimensions the same, an array's depth pointer a `GL_DEPTH24_STENCIL8` array, a cube's its
   color texture. What the plugin writes through the names is read back from the textures
@@ -50,7 +50,10 @@ Recorded:
   texture); with `bindTextureMS` both are the multisampled textures. A callback while a
   multisampled target is bound finds a multisampled color texture and a depth render buffer
   attached (`shape.msaa.target*`), and what it draws shows after the resolve
-  (`shape.msaa.pixels`). After a buffer that drew into a multisampled target, with a callback
+  (`shape.msaa.pixels`). A callback while one face of a cube render texture or one layer of an
+  array render texture is the target finds that image of the color texture attached (with the
+  array's depth layer; the cube's depth is a render buffer) and draws into it alone
+  (`shape.cube.target*`, `shape.array.target*`). After a buffer that drew into a multisampled target, with a callback
   or without, the next callback (one that does nothing) is blamed for a `GL_INVALID_OPERATION`
   the Editor left itself (`shape.msaa.after.logs`, `shape.msaa.plain.logs`).
 * **External textures of other formats** (`ext.*`): a plugin's 2D texture is sampled as OpenGL

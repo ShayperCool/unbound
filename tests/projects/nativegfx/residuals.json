@@ -28,5 +28,8 @@
  "After a command buffer that drew into a multisampled target, with a callback or without, the Editor reports a GL error of its own (GL_INVALID_OPERATION) as the next plugin callback's, whatever that does: not reproduced": [
   "shape.msaa.after.logs",
   "shape.msaa.plain.logs"
+ ],
+ "A cube render texture's depth buffer is a render buffer in the Editor (its depth pointer names the color texture) and a cube of depth images in Unbound: a callback finds the face's either way": [
+  "shape.cube.target.depth"
  ]
 }
