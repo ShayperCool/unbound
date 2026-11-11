@@ -97,6 +97,9 @@ namespace UnityEngine
             internal float[] ProbeCoefficients = Array.Empty<float>();
             /// <summary>The environment version the native scene has.</summary>
             internal int EnvironmentVersion = -1;
+            /// <summary>The scene's environment lighting is baked (Lighting Settings): the
+            /// ambient source gives its realtime GI no light.</summary>
+            internal bool BakedEnvironment;
         }
 
         static readonly List<GIScene> s_Scenes = new List<GIScene>();
@@ -215,8 +218,11 @@ namespace UnityEngine
             }
             loaded.Systems = systems.ToArray();
             s_Scenes.Add(loaded);
-            if (settings != null && !settings.realtimeEnvironmentLighting)
-                Warn("environment-baked:" + file.Path, $"{file.Path}: its environment lighting is baked (Lighting Settings); what precomputed realtime GI takes as its environment then is not measured: it takes the ambient source all the same.");
+            // A scene whose environment lighting is baked: its realtime GI gets no light from
+            // the ambient source (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
+            // roombakedenvironment-*: an ambient color change shows nothing, the environment
+            // alone lights nothing), a script's cube still does.
+            loaded.BakedEnvironment = settings != null && !settings.realtimeEnvironmentLighting;
             var directionality = root.GetProperty("directionality");
             if (directionality.GetProperty("error").ValueKind == JsonValueKind.String)
                 loaded.DirectionalityNote = $"{file.Path}: the directionality of its precomputed realtime GI cannot be read, so its realtime lightmaps are drawn as non-directional ones: {directionality.GetProperty("error").GetString()}";
@@ -387,7 +393,7 @@ namespace UnityEngine
                 int result;
                 if (scene.EnvironmentVersion != s_EnvironmentVersion)
                 {
-                    fixed (float* faces = s_Faces)
+                    fixed (float* faces = EnvironmentOf(scene.BakedEnvironment))
                         result = Native.Api.GiSetEnvironment(scene.Handle, faces, s_Faces.Length, &error);
                     if (result != 0)
                     {
@@ -424,11 +430,11 @@ namespace UnityEngine
             };
         }
 
-        /// <summary>The scene's light probes take the realtime lighting its probe sets give them
-        /// (matches the Unity 6000.0.71f1 Editor's LightProbes.GetInterpolatedProbe,
-        /// tests/projects/realtimegi). Probes that also have baked lighting, and probes merged
-        /// with other scenes' (additive loads), are unmeasured: they keep what they have, with a
-        /// warning.</summary>
+        /// <summary>The scene's light probes take the realtime lighting its probe sets give them,
+        /// added to their baked lighting when they have any (matches the Unity 6000.0.71f1
+        /// Editor's LightProbes.GetInterpolatedProbe, tests/projects/realtimegi: Room, and
+        /// RoomBakedEnvironment for probes with both). Probes merged with other scenes'
+        /// (additive loads) are unmeasured: they keep what they have, with a warning.</summary>
         static void BindProbes(GIScene scene, JsonElement reply, LoadedFile file)
         {
             int count = reply.GetProperty("count").GetInt32();

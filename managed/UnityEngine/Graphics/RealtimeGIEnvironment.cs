@@ -10,7 +10,8 @@ namespace UnityEngine
     /// its top as a cube map stores it. It is the cube <see cref="DynamicGI.SetEnvironmentData"/>
     /// sets. Left to itself it follows the scene's ambient source: the ambient color everywhere; a
     /// gradient's sky color on +Y, its ground color on -Y and its equator color on the other
-    /// faces; or the skybox drawn into the faces, times the ambient intensity. It is made again
+    /// faces; or the skybox drawn into the faces, times the ambient intensity (a scene whose
+    /// environment lighting is baked takes none of it, only a script's cube). It is made again
     /// when what it was made from changes (<see cref="EnvironmentKey"/>) and when
     /// <see cref="DynamicGI.UpdateEnvironment"/> asks. Matches the Unity 6000.0.71f1 Editor,
     /// tests/projects/realtimegi (room-env*, room-gradient*, room-sky*, room-envdata*).
@@ -23,10 +24,20 @@ namespace UnityEngine
         const int EnvironmentDataLength = 6 * FaceTexels * 4;
 
         static readonly float[] s_Faces = new float[6 * FaceTexels * 3];
+        /// <summary>The faces of a scene that takes no light from the ambient source.</summary>
+        static readonly float[] s_NoEnvironment = new float[6 * FaceTexels * 3];
+        /// <summary>The faces hold what a script gave (<see cref="DynamicGI.SetEnvironmentData"/>),
+        /// not what the ambient source makes.</summary>
+        static bool s_EnvironmentIsData;
         /// <summary>Counts the changes of <see cref="s_Faces"/>; each native scene takes them once.</summary>
         static int s_EnvironmentVersion;
 
         internal static ReadOnlySpan<float> EnvironmentFaces => s_Faces;
+
+        /// <summary>The faces a scene's realtime GI takes: with its environment lighting baked
+        /// (<paramref name="bakedEnvironment"/>), nothing of what the ambient source makes.</summary>
+        internal static float[] EnvironmentOf(bool bakedEnvironment) =>
+            bakedEnvironment && !s_EnvironmentIsData ? s_NoEnvironment : s_Faces;
         internal static int EnvironmentVersion => s_EnvironmentVersion;
         static EnvironmentKey s_EnvironmentKey;
         /// <summary>The faces are made again whatever the key (none made yet, or
@@ -106,6 +117,7 @@ namespace UnityEngine
             s_EnvironmentVersion++;
             s_EnvironmentKey = EnvironmentKey.Current();
             s_EnvironmentStale = false;
+            s_EnvironmentIsData = true;
         }
 
         /// <summary>Makes the faces again when the ambient source's inputs changed.</summary>
@@ -115,6 +127,7 @@ namespace UnityEngine
             if (!s_EnvironmentStale && key.Equals(s_EnvironmentKey)) return;
             s_EnvironmentStale = false;
             s_EnvironmentKey = key;
+            s_EnvironmentIsData = false;
             if (key.Sky != null && GraphicsSettings.currentRenderPipeline != null)
             {
                 // The capture is the built-in pipeline's; a render pipeline would draw the

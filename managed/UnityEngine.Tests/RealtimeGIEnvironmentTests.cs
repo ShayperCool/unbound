@@ -107,6 +107,33 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ASceneWithBakedEnvironmentLightingTakesOnlyAScriptsCube()
+        {
+            // tests/projects/realtimegi roombakedenvironment-*: the ambient source lights
+            // nothing of such a scene's realtime GI, DynamicGI.SetEnvironmentData does, until
+            // the source's inputs change again.
+            WithAmbient(() =>
+            {
+                RenderSettings.ambientMode = AmbientMode.Flat;
+                RenderSettings.ambientLight = new Color(0.6f, 0.5f, 0.2f);
+                RealtimeGI.EnvironmentChanged();
+                RealtimeGI.UpdateEnvironment();
+                Assert.Same(RealtimeGI.EnvironmentOf(false), RealtimeGI.EnvironmentOf(false));
+                Assert.Contains(RealtimeGI.EnvironmentOf(false), v => v > 0f);
+                Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0f, v));
+                var data = new float[6 * 8 * 8 * 4];
+                for (int i = 0; i < data.Length; i++) data[i] = 0.25f;
+                DynamicGI.SetEnvironmentData(data);
+                Assert.Same(RealtimeGI.EnvironmentOf(false), RealtimeGI.EnvironmentOf(true));
+                Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0.25f, v));
+                RenderSettings.ambientLight = new Color(0.1f, 0.5f, 0.2f);
+                RealtimeGI.UpdateEnvironment();
+                Assert.All(RealtimeGI.EnvironmentOf(true), v => Assert.Equal(0f, v));
+                Assert.Contains(RealtimeGI.EnvironmentOf(false), v => v > 0f);
+            });
+        }
+
+        [Fact]
         public void AGradientGivesItsColorsToTheFaces()
         {
             WithAmbient(() =>
