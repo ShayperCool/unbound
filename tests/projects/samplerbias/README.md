@@ -25,6 +25,13 @@ cmp "$sampler_work/native-a/capture/values.jsonl" "$sampler_work/native-b/captur
 Repeat both captures with `--anisotropy Enable` and `--anisotropy Disable`, using fresh output
 paths. Bilinear controls additionally pass `--bilinear-control` to both captures and verification.
 
+`--device vulkan` (run.py and verify.py) records and compares the Vulkan device: the Editor
+with `-force-vulkan` on the GPU-backed display, Unbound with `--force-vulkan`. Its references
+are the same profile tree under `Reference/unity-<version>/vulkan/`. The Vulkan Editor differs
+from the OpenGL Core one where anisotropic filtering is on (the Force and Enable profiles, the
+live control): its transition between mip levels starts at a whole level where OpenGL Core's is
+centred on a half; with anisotropy off the two agree.
+
 Publish one agreeing Native capture under `Reference/unity-<version>/`. Both independent
 repeats and execution manifests stay in cache. The runner wraps its own heavy child; do not
 wrap it again. For engine runs use `run.py engine`, explicit `--release`, a fresh `--output`,

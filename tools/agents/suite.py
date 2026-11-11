@@ -611,6 +611,12 @@ def recipes(release):
         R[name] = [driver('run.py', 'engine', '--release', '{release}', '--output', '{work}/engine',
                           '--cli', '{cli}', '--managed', '{managed}'),
                    py('verify.py', '--release', '{release}', '--candidate', candidate, '--output', '{work}/report.json')]
+    # The sampler probe on the Vulkan device too (its own reference set).
+    R['samplerbias'] += [
+        driver('run.py', 'engine', '--device', 'vulkan', '--release', '{release}', '--output', '{work}/engine-vulkan',
+               '--cli', '{cli}', '--managed', '{managed}'),
+        py('verify.py', '--device', 'vulkan', '--release', '{release}',
+           '--candidate', '{work}/engine-vulkan/capture/values.jsonl', '--output', '{work}/report-vulkan.json')]
     R['uitransitions'] = [driver('run.py', 'engine', '--release', '{release}', '--output', '{work}/engine',
                                  '--cli', '{cli}', '--managed', '{managed}'),
                           py('compare.py', single_ref(), '{work}/engine/capture/transitions.jsonl')]

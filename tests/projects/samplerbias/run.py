@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Stage the UI fixture in cache, run sampler bias controls, and wrap the heavy child."""
+"""Stage the UI fixture in cache, run sampler bias controls, and wrap the heavy child.
+
+--device selects the graphics device of both sides: opengl (the default: the Linux Editor's own
+device on a private display through VirtualGL; Unbound with the project's device) or vulkan (the
+Editor with -force-vulkan on the GPU-backed display :0, Unbound with --force-vulkan)."""
 import argparse, hashlib, json, os, shutil, subprocess, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent
@@ -15,6 +19,7 @@ p.add_argument('--anisotropy', choices=['Force', 'Enable', 'Disable'], default='
 p.add_argument('--bilinear-control', action='store_true')
 p.add_argument('--live-control', action='store_true')
 p.add_argument('--cache-control', action='store_true')
+p.add_argument('--device', choices=['opengl', 'vulkan'], default='opengl')
 a = p.parse_args()
 if a.cache_control and (a.live_control or a.bilinear_control):
     p.error('--cache-control is a separate profile')
@@ -46,18 +51,25 @@ else:
     env.pop('SAMPLER_BIAS_BILINEAR', None)
 env.pop('WT', None)
 if a.mode == 'native':
-    command = ['xvfb-run', '-a', 'vglrun', '-d', 'egl', str(Path.home()/f'Unity/Hub/Editor/{a.release}/Editor/Unity'), '-batchmode', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(output/'editor.log')]
+    editor = [str(Path.home()/f'Unity/Hub/Editor/{a.release}/Editor/Unity'), '-batchmode', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(output/'editor.log')]
+    if a.device == 'vulkan':
+        from editor_runner import vulkan_display_env
+        env.update(vulkan_display_env())
+        command = [editor[0], '-force-vulkan', *editor[1:]]
+    else:
+        command = ['xvfb-run', '-a', 'vglrun', '-d', 'egl', *editor]
 else:
     if not a.cli or not a.managed: p.error('engine requires cli and managed')
     env['UNBOUND_MANAGED_DIR'] = str(a.managed.resolve())
     env['LD_LIBRARY_PATH'] = str(a.managed.resolve())
-    command = [str(a.cli.resolve()), 'run', '-p', str(project), '--frames', '35', '--size', '960x540', '--no-watch']
+    command = [str(a.cli.resolve()), 'run', '-p', str(project), '--frames', '35', '--size', '960x540', '--no-watch',
+               *(['--force-vulkan'] if a.device == 'vulkan' else [])]
 hashes = {str(x.resolve()): hashlib.sha256(x.read_bytes()).hexdigest() for x in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/'libunbound_physx.so']} if a.mode == 'engine' else {}
 sources = {str(x.relative_to(project)): hashlib.sha256(x.read_bytes()).hexdigest()
            for x in sorted(project.rglob('*')) if x.is_file()}
 (output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, sources=sources, release=a.release,
     anisotropy=a.anisotropy, bilinear_control=a.bilinear_control, live_control=a.live_control,
-    cache_control=a.cache_control,
+    cache_control=a.cache_control, device=a.device,
     sampler_environment={k: v for k, v in env.items() if k.startswith('SAMPLER_BIAS_')}), indent=2)+'\n')
 with (output/'process.log').open('w') as log:
     subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', *command], env=env, stdout=log, stderr=subprocess.STDOUT, check=True)

@@ -41,10 +41,14 @@ def main():
     p.add_argument('--bilinear-control', action='store_true')
     p.add_argument('--live-control', action='store_true')
     p.add_argument('--cache-control', action='store_true')
+    p.add_argument('--device', choices=['opengl', 'vulkan'], default='opengl')
     args = p.parse_args()
     if args.cache_control and (args.live_control or args.bilinear_control):
         p.error('--cache-control is a separate profile')
     folder = ROOT/'Reference'/('unity-' + args.release)
+    # The Vulkan Editor's captures are a set of their own beside the OpenGL Core ones.
+    if args.device == 'vulkan':
+        folder /= 'vulkan'
     if args.cache_control:
         folder /= 'Cache'
     if args.live_control:
