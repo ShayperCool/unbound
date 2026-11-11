@@ -13,7 +13,8 @@ Two classes of values:
 - Lighting: light probe SH (each sample point, 27 coefficients) and the ambient probe within
   ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
   |reference|; frames (.png) report the shared image measure (mean, worst and pixels over 8 of
-  the per-pixel max-channel difference). The realtime lightmaps (.atlas) are gated: at most
+  the per-pixel max-channel difference). A directionality (.dir) compares its fourth channel
+  too and is gated: every value within that bound. The realtime lightmaps (.atlas) are gated: at most
   ISOLATED of their values may be outside the tolerance, each within ABS + ISOLATED_REL *
   |reference|, and a missing lightmap fails. With
   DynamicGI.updateThreshold a part of the lightmap is updated only when its inputs changed by
@@ -122,7 +123,12 @@ def compare_values(ref, cap, result):
 
 
 def compare_atlas(name, ref_path, cap_path, result):
-    gate = name.endswith('.atlas')
+    lightmap = name.endswith('.atlas')
+    gate = lightmap or name.endswith('.dir')
+    # A lightmap's RGB (its alpha is the coverage); all four channels of a directionality.
+    channels = 3 if lightmap else 4
+    # Only the lightmaps have isolated values (see the module's description).
+    allowance = ISOLATED if lightmap else 0.0
     if not cap_path.is_file():
         result.fail('gated' if gate else 'lighting', f'{name}: missing')
         return
@@ -141,8 +147,8 @@ def compare_atlas(name, ref_path, cap_path, result):
             continue
         if not ra:
             continue
-        compared += 3
-        for k in range(3):
+        compared += channels
+        for k in range(channels):
             a, b = cv[4 * t + k], rv[4 * t + k]
             d = abs(a - b)
             total += d
@@ -155,10 +161,10 @@ def compare_atlas(name, ref_path, cap_path, result):
     if coverage:
         # Which texels renderers cover (their realtime lightmap UVs) matches: gated.
         result.fail('state', f'{name}: coverage differs at {len(coverage)} texels', coverage)
-    if gate and not far and len(bad) <= ISOLATED * compared:
+    if gate and not far and len(bad) <= allowance * compared:
         if bad:
             result.details.append(f'{name}: {len(bad)} isolated texel values off (allowed '
-                                  f'{int(ISOLATED * compared)})')
+                                  f'{int(allowance * compared)})')
             result.details.extend('  ' + d for d in bad)
     elif bad:
         result.fail('gated' if gate else 'lighting',
