@@ -80,3 +80,11 @@ B/contexts --profile layouts`. Publishing requires `--repeat` for an independent
 verified capture; the layout set additionally uses `--contexts`. The `all` stereo
 profile includes every supported case without truncation; layout reference
 metadata is checked independently when recording.
+
+## Surround effect controls
+
+The independent `surround` profile adds 106 controls for Compressor, Duck Volume,
+Chorus, Flange, SFX Reverb, source/listener filters and reverb zones in
+quad/5.0/5.1/7.1. See [the contracts, measured rules and remaining scope](SURROUND.md).
+`native.py --set surround` records it separately; `publish.py --surround` requires
+an independent repeat. `run.py` gates it alongside every prior profile.

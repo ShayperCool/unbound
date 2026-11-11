@@ -14,7 +14,7 @@ public static class ProbeRunner
     static object Call(object o, string method, params object[] args) => o.GetType().GetMethod(method, F).Invoke(o, args);
     static object Get(object o, string property) => o.GetType().GetProperty(property, F).GetValue(o);
     static void Set(object o, string property, object value) => o.GetType().GetProperty(property, F).SetValue(o, value);
-    static readonly Dictionary<string, string> Units = new Dictionary<string, string> { { "Shift", "Pitch Shifter" } };
+    static readonly Dictionary<string, string> Units = new Dictionary<string, string> { { "Shift", "Pitch Shifter" }, { "Chorus", "Chorus" }, { "Flange", "Flange" }, { "Reverb", "SFX Reverb" }, { "Comp", "Compressor" }, { "Duck", "Duck Volume" }, { "Send", "Send" } };
     public static void Record()
     {
         T("MixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
@@ -81,6 +81,9 @@ public static class ProbeRunner
             else if (path[path.Length - 1] == "bypass") continue;  // set with the chain
             else {
                 if (!units.TryGetValue(path[0] + "." + path[1], out var unit)) throw new Exception("No unit " + pair[0]);
+                if (path[2] == "Level") {
+                    Call(unit, "SetValueForMixLevel", mixer, snapshot, value); continue;
+                }
                 if (path[2] == "Wet") {
                     Set(unit, "enableWetMix", true);
                     Call(unit, "SetValueForMixLevel", mixer, snapshot, value);
@@ -93,6 +96,7 @@ public static class ProbeRunner
                 Call(unit, "SetValueForParameter", mixer, snapshot, path[2], value);
             }
         }
+        if (units.TryGetValue("Music.Send", out var send)) Set(send, "sendTarget", units["Master.Duck"]);
         if (units.TryGetValue("Music.Shift", out var shift)) {
             var names = new[] { "Pitch", "FFT size", "Overlap", "Max channels" };
             var type = T("ExposedAudioParameter"); var exposed = Array.CreateInstance(type, names.Length);

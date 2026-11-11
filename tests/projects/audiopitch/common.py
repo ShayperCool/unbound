@@ -22,7 +22,11 @@ def all_cases():
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith('device_') and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_')) and key.startswith('context_') == contexts]
+
+
+def surround_cases():
+    return [key for key in all_cases() if key.startswith('context_fx_')]
 
 
 def devices():
@@ -35,6 +39,7 @@ def profile(name, rate):
     keys = cases()
     if name == 'all': return dict.fromkeys(keys)
     if name == 'layouts': return dict.fromkeys(cases(True))
+    if name == 'surround': return dict.fromkeys(surround_cases())
     if name == 'devices': return dict.fromkeys(key for key, _ in devices())
     raise ValueError(name)
 

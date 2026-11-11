@@ -1,0 +1,125 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!243 &-7206228574907103126
+AudioMixerGroupController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Music
+  m_AudioMixer: {fileID: 24100000}
+  m_GroupID: a1266a8009c207309bcc6f4cad4c9292
+  m_Children: []
+  m_Volume: 755c4a21f3f7230948ef7d2e099ffb58
+  m_Pitch: d0a1501b5904dc2b69fa7bfe908beb59
+  m_Send: 00000000000000000000000000000000
+  m_Effects:
+  - {fileID: 1528871785585931050}
+  - {fileID: 1354914409761495852}
+  m_UserColorIndex: 0
+  m_Mute: 0
+  m_Solo: 0
+  m_BypassEffects: 0
+--- !u!241 &24100000
+AudioMixerController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: context_fx_quad_compressor_2
+  m_OutputGroup: {fileID: 0}
+  m_MasterGroup: {fileID: 24300002}
+  m_Snapshots:
+  - {fileID: 24500006}
+  m_StartSnapshot: {fileID: 24500006}
+  m_SuspendThreshold: -80
+  m_EnableSuspend: 0
+  m_UpdateMode: 0
+  m_ExposedParameters: []
+  m_AudioMixerGroupViews: []
+  m_CurrentViewIndex: 0
+  m_TargetSnapshot: {fileID: 24500006}
+--- !u!243 &24300002
+AudioMixerGroupController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Master
+  m_AudioMixer: {fileID: 24100000}
+  m_GroupID: 63befea5bdcc17c48850c13c88f87d29
+  m_Children:
+  - {fileID: -7206228574907103126}
+  m_Volume: fb07447b895619577ac1086503275087
+  m_Pitch: 704305ce0b1331211b27024473c17e71
+  m_Send: 00000000000000000000000000000000
+  m_Effects:
+  - {fileID: 24400004}
+  m_UserColorIndex: 0
+  m_Mute: 0
+  m_Solo: 0
+  m_BypassEffects: 0
+--- !u!244 &24400004
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 0c2ea7a7e82cf61f8a59b96b86122b99
+  m_EffectName: Attenuation
+  m_MixLevel: c7cb3743ec3778bb3838fd1d1714e69d
+  m_Parameters: []
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0
+--- !u!245 &24500006
+AudioMixerSnapshotController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Snapshot
+  m_AudioMixer: {fileID: 24100000}
+  m_SnapshotID: c7697507bb28ec0fab2c62dd66578e67
+  m_FloatValues:
+    b53a0fb183a80acf683425bdc3d4be1b: 8
+    12acf9f20a47697d7a3519e94ef68f57: 35
+    34a3b23308d9b5b39ab4c85461673617: -18
+  m_TransitionOverrides: {}
+--- !u!244 &1354914409761495852
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 2bfb5ae58212923d5a6a62fbec912e87
+  m_EffectName: Compressor
+  m_MixLevel: f4169cb0f7123719ab8aceb106ee8a37
+  m_Parameters:
+  - m_ParameterName: Threshold
+    m_GUID: 34a3b23308d9b5b39ab4c85461673617
+  - m_ParameterName: Attack
+    m_GUID: b53a0fb183a80acf683425bdc3d4be1b
+  - m_ParameterName: Release
+    m_GUID: 12acf9f20a47697d7a3519e94ef68f57
+  - m_ParameterName: Make up gain
+    m_GUID: 8bd67e4a0fe30b0caa148a4d41399926
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0
+--- !u!244 &1528871785585931050
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 1cd02fc022d23e4d7b7ee7681897066e
+  m_EffectName: Attenuation
+  m_MixLevel: 98cf06a7ad44727b69e4516c4eb8c532
+  m_Parameters: []
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0

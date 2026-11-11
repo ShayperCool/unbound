@@ -174,6 +174,112 @@ public class EffectProbe : MonoBehaviour
         new[] { "context_surround", "music=noise:0.25", "mode=Surround", "Music.Shift.Pitch=0.75" },
         new[] { "context_mode5point1", "music=noise:0.25", "mode=Mode5point1", "Music.Shift.Pitch=0.75" },
         new[] { "context_mode7point1", "music=noise:0.25", "mode=Mode7point1", "Music.Shift.Pitch=0.75" },
+        new[] { "context_fx_quad_chorus_imp", "mode=Quad", "music=generator", "gen=imp", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_quad_flange_imp", "mode=Quad", "music=generator", "gen=imp", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7" },
+        new[] { "context_fx_quad_reverb_imp", "mode=Quad", "music=generator", "gen=imp", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011" },
+        new[] { "context_fx_quad_chorus_burst", "mode=Quad", "music=generator", "gen=burst", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_quad_flange_burst", "mode=Quad", "music=generator", "gen=burst", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7" },
+        new[] { "context_fx_quad_reverb_burst", "mode=Quad", "music=generator", "gen=burst", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011" },
+        new[] { "context_fx_quad_compressor_0", "mode=Quad", "music=generator", "gen=link", "dominant=0", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_quad_duck_0", "mode=Quad", "music=generator", "gen=link", "dominant=0", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_quad_compressor_1", "mode=Quad", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_quad_duck_1", "mode=Quad", "music=generator", "gen=link", "dominant=1", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_quad_compressor_2", "mode=Quad", "music=generator", "gen=link", "dominant=2", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_quad_duck_2", "mode=Quad", "music=generator", "gen=link", "dominant=2", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_quad_compressor_3", "mode=Quad", "music=generator", "gen=link", "dominant=3", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_quad_duck_3", "mode=Quad", "music=generator", "gen=link", "dominant=3", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_quad_chorus_source", "mode=Quad", "music=generator", "gen=imp", "Music:Att", "component=chorus:source" },
+        new[] { "context_fx_quad_chorus_listener", "mode=Quad", "music=generator", "gen=imp", "Music:Att", "component=chorus:listener" },
+        new[] { "context_fx_quad_reverb_source", "mode=Quad", "music=generator", "gen=imp", "Music:Att", "component=reverb:source" },
+        new[] { "context_fx_quad_reverb_listener", "mode=Quad", "music=generator", "gen=imp", "Music:Att", "component=reverb:listener" },
+        new[] { "context_fx_quad_zone_rear", "mode=Quad", "music=imp", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music:Att", "zone=1" },
+        new[] { "context_fx_quad_zone_front", "mode=Quad", "music=imp", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1" },
+        new[] { "context_fx_mode5point1_chorus_imp", "mode=Mode5point1", "music=generator", "gen=imp", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_mode5point1_flange_imp", "mode=Mode5point1", "music=generator", "gen=imp", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7" },
+        new[] { "context_fx_mode5point1_reverb_imp", "mode=Mode5point1", "music=generator", "gen=imp", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011" },
+        new[] { "context_fx_mode5point1_chorus_burst", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_mode5point1_flange_burst", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7" },
+        new[] { "context_fx_mode5point1_reverb_burst", "mode=Mode5point1", "music=generator", "gen=burst", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011" },
+        new[] { "context_fx_mode5point1_compressor_0", "mode=Mode5point1", "music=generator", "gen=link", "dominant=0", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode5point1_duck_0", "mode=Mode5point1", "music=generator", "gen=link", "dominant=0", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode5point1_compressor_1", "mode=Mode5point1", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode5point1_duck_1", "mode=Mode5point1", "music=generator", "gen=link", "dominant=1", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode5point1_compressor_2", "mode=Mode5point1", "music=generator", "gen=link", "dominant=2", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode5point1_duck_2", "mode=Mode5point1", "music=generator", "gen=link", "dominant=2", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode5point1_compressor_3", "mode=Mode5point1", "music=generator", "gen=link", "dominant=3", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode5point1_duck_3", "mode=Mode5point1", "music=generator", "gen=link", "dominant=3", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode5point1_compressor_4", "mode=Mode5point1", "music=generator", "gen=link", "dominant=4", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode5point1_duck_4", "mode=Mode5point1", "music=generator", "gen=link", "dominant=4", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode5point1_compressor_5", "mode=Mode5point1", "music=generator", "gen=link", "dominant=5", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode5point1_duck_5", "mode=Mode5point1", "music=generator", "gen=link", "dominant=5", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode5point1_chorus_source", "mode=Mode5point1", "music=generator", "gen=imp", "Music:Att", "component=chorus:source" },
+        new[] { "context_fx_mode5point1_chorus_listener", "mode=Mode5point1", "music=generator", "gen=imp", "Music:Att", "component=chorus:listener" },
+        new[] { "context_fx_mode5point1_reverb_source", "mode=Mode5point1", "music=generator", "gen=imp", "Music:Att", "component=reverb:source" },
+        new[] { "context_fx_mode5point1_reverb_listener", "mode=Mode5point1", "music=generator", "gen=imp", "Music:Att", "component=reverb:listener" },
+        new[] { "context_fx_mode5point1_zone_rear", "mode=Mode5point1", "music=imp", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music:Att", "zone=1" },
+        new[] { "context_fx_mode5point1_zone_front", "mode=Mode5point1", "music=imp", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1" },
+        new[] { "context_fx_mode7point1_chorus_imp", "mode=Mode7point1", "music=generator", "gen=imp", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_mode7point1_flange_imp", "mode=Mode7point1", "music=generator", "gen=imp", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7" },
+        new[] { "context_fx_mode7point1_reverb_imp", "mode=Mode7point1", "music=generator", "gen=imp", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011" },
+        new[] { "context_fx_mode7point1_chorus_burst", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_mode7point1_flange_burst", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7" },
+        new[] { "context_fx_mode7point1_reverb_burst", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011" },
+        new[] { "context_fx_mode7point1_compressor_0", "mode=Mode7point1", "music=generator", "gen=link", "dominant=0", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode7point1_duck_0", "mode=Mode7point1", "music=generator", "gen=link", "dominant=0", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode7point1_compressor_1", "mode=Mode7point1", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode7point1_duck_1", "mode=Mode7point1", "music=generator", "gen=link", "dominant=1", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode7point1_compressor_2", "mode=Mode7point1", "music=generator", "gen=link", "dominant=2", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode7point1_duck_2", "mode=Mode7point1", "music=generator", "gen=link", "dominant=2", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode7point1_compressor_3", "mode=Mode7point1", "music=generator", "gen=link", "dominant=3", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode7point1_duck_3", "mode=Mode7point1", "music=generator", "gen=link", "dominant=3", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode7point1_compressor_4", "mode=Mode7point1", "music=generator", "gen=link", "dominant=4", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode7point1_duck_4", "mode=Mode7point1", "music=generator", "gen=link", "dominant=4", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode7point1_compressor_5", "mode=Mode7point1", "music=generator", "gen=link", "dominant=5", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode7point1_duck_5", "mode=Mode7point1", "music=generator", "gen=link", "dominant=5", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode7point1_compressor_6", "mode=Mode7point1", "music=generator", "gen=link", "dominant=6", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode7point1_duck_6", "mode=Mode7point1", "music=generator", "gen=link", "dominant=6", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode7point1_compressor_7", "mode=Mode7point1", "music=generator", "gen=link", "dominant=7", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_mode7point1_duck_7", "mode=Mode7point1", "music=generator", "gen=link", "dominant=7", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode7point1_chorus_source", "mode=Mode7point1", "music=generator", "gen=imp", "Music:Att", "component=chorus:source" },
+        new[] { "context_fx_mode7point1_chorus_listener", "mode=Mode7point1", "music=generator", "gen=imp", "Music:Att", "component=chorus:listener" },
+        new[] { "context_fx_mode7point1_reverb_source", "mode=Mode7point1", "music=generator", "gen=imp", "Music:Att", "component=reverb:source" },
+        new[] { "context_fx_mode7point1_reverb_listener", "mode=Mode7point1", "music=generator", "gen=imp", "Music:Att", "component=reverb:listener" },
+        new[] { "context_fx_mode7point1_zone_rear", "mode=Mode7point1", "music=imp", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music:Att", "zone=1" },
+        new[] { "context_fx_mode7point1_zone_front", "mode=Mode7point1", "music=imp", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1" },
+        new[] { "context_fx_surround_chorus_imp", "mode=Surround", "music=generator", "gen=imp", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_surround_flange_imp", "mode=Surround", "music=generator", "gen=imp", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7" },
+        new[] { "context_fx_surround_reverb_imp", "mode=Surround", "music=generator", "gen=imp", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011" },
+        new[] { "context_fx_surround_chorus_burst", "mode=Surround", "music=generator", "gen=burst", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_surround_flange_burst", "mode=Surround", "music=generator", "gen=burst", "Music:Att,Flange", "Music.Flange.Drymix=0.2", "Music.Flange.Wetmix=0.8", "Music.Flange.Rate=3", "Music.Flange.Depth=0.7" },
+        new[] { "context_fx_surround_reverb_burst", "mode=Surround", "music=generator", "gen=burst", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011" },
+        new[] { "context_fx_surround_compressor_0", "mode=Surround", "music=generator", "gen=link", "dominant=0", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_surround_duck_0", "mode=Surround", "music=generator", "gen=link", "dominant=0", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_surround_compressor_1", "mode=Surround", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_surround_duck_1", "mode=Surround", "music=generator", "gen=link", "dominant=1", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_surround_compressor_2", "mode=Surround", "music=generator", "gen=link", "dominant=2", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_surround_duck_2", "mode=Surround", "music=generator", "gen=link", "dominant=2", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_surround_compressor_3", "mode=Surround", "music=generator", "gen=link", "dominant=3", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_surround_duck_3", "mode=Surround", "music=generator", "gen=link", "dominant=3", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_surround_compressor_4", "mode=Surround", "music=generator", "gen=link", "dominant=4", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=35" },
+        new[] { "context_fx_surround_duck_4", "mode=Surround", "music=generator", "gen=link", "dominant=4", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_surround_chorus_source", "mode=Surround", "music=generator", "gen=imp", "Music:Att", "component=chorus:source" },
+        new[] { "context_fx_surround_chorus_listener", "mode=Surround", "music=generator", "gen=imp", "Music:Att", "component=chorus:listener" },
+        new[] { "context_fx_surround_reverb_source", "mode=Surround", "music=generator", "gen=imp", "Music:Att", "component=reverb:source" },
+        new[] { "context_fx_surround_reverb_listener", "mode=Surround", "music=generator", "gen=imp", "Music:Att", "component=reverb:listener" },
+        new[] { "context_fx_surround_zone_rear", "mode=Surround", "music=imp", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music:Att", "zone=1" },
+        new[] { "context_fx_surround_zone_front", "mode=Surround", "music=imp", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att", "zone=1" },
+        new[] { "context_fx_stereo_duck", "music=generator", "gen=link", "dominant=1", "Music:Att,Send", "Master:Att,Duck", "Music.Send.Level=0", "Master.Duck.Threshold=-18", "Master.Duck.Ratio=4", "Master.Duck.Attack Time=0.02", "Master.Duck.Release Time=0.04", "Master.Duck.Sidechain Mix=1" },
+        new[] { "context_fx_mode5point1_chorus_tap3", "mode=Mode5point1", "music=generator", "gen=imp", "Music:Att,Chorus", "Music.Chorus.Dry mix=0", "Music.Chorus.Wet mix tap 1=0", "Music.Chorus.Wet mix tap 2=0", "Music.Chorus.Wet mix tap 3=1", "Music.Chorus.Delay=11", "Music.Chorus.Depth=0.7" },
+        new[] { "context_fx_stereo_comp_attack10", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=10", "Music.Comp.Release=35" },
+        new[] { "context_fx_stereo_comp_attack500", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=500", "Music.Comp.Release=35" },
+        new[] { "context_fx_stereo_comp_release10", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=10" },
+        new[] { "context_fx_stereo_comp_release1500", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=8", "Music.Comp.Release=1500" },
+        new[] { "context_fx_stereo_comp_times0", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=0", "Music.Comp.Release=0" },
+        new[] { "context_fx_stereo_comp_times_negative", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=-2", "Music.Comp.Release=-1" },
+        new[] { "context_fx_stereo_comp_threshold_low", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Attack=10", "Music.Comp.Release=35", "Music.Comp.Threshold=-80" },
+        new[] { "context_fx_stereo_comp_threshold_high", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Attack=10", "Music.Comp.Release=35", "Music.Comp.Threshold=6" },
+        new[] { "context_fx_stereo_comp_makeup_low", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=10", "Music.Comp.Release=35", "Music.Comp.Make up gain=-6" },
+        new[] { "context_fx_stereo_comp_makeup_high", "music=generator", "gen=link", "dominant=1", "Music:Att,Comp", "Music.Comp.Threshold=-18", "Music.Comp.Attack=10", "Music.Comp.Release=35", "Music.Comp.Make up gain=40" },
         // Device controls: one Editor session per output device channel count, metadata only.
         new[] { "device_1", "device=1" }, new[] { "device_2", "device=2" }, new[] { "device_3", "device=3" },
         new[] { "device_4", "device=4" }, new[] { "device_5", "device=5" }, new[] { "device_6", "device=6" },
@@ -413,6 +519,10 @@ public class EffectProbe : MonoBehaviour
             AudioClip clip = null;
             if (Option(key, "music=", "") == "generator") {
                 ProbeGenerator.Channels = 0;
+                ProbeGenerator.Signal = Option(key, "gen=", "");
+                ProbeGenerator.Dominant = int.Parse(Option(key, "dominant=", "0"));
+                ProbeGenerator.Frame = 0;
+                ProbeGenerator.Seed = 12345;
                 ProbeGenerator.AllChannels = Option(key, "gen=", "") == "all";
                 go.AddComponent<ProbeGenerator>();
             } else {
@@ -428,6 +538,31 @@ public class EffectProbe : MonoBehaviour
                     ProbeScript.WriteValue = float.Parse(script.Split(':')[0], inv);
                     ProbeScript.WriteChannel = int.Parse(script.Split(':')[1], inv);
                     go.AddComponent<ProbeScript>();
+                }
+            }
+            GameObject zoneObject = null;
+            if (Option(key, "zone=", "0") == "1") {
+                zoneObject = new GameObject("ProbeZone");
+                var zone = zoneObject.AddComponent<AudioReverbZone>();
+                zone.reverbPreset = AudioReverbPreset.Generic;
+                zone.minDistance = 10; zone.maxDistance = 15;
+            }
+            Component component = null;
+            var filter = Option(key, "component=", "");
+            if (filter != "") {
+                var target = filter.EndsWith(":listener") ? gameObject : go;
+                if (filter.StartsWith("chorus:")) {
+                    var chorus = target.AddComponent<AudioChorusFilter>();
+                    chorus.dryMix = 0.2f; chorus.wetMix1 = 0.2f; chorus.wetMix2 = 0.5f;
+                    chorus.wetMix3 = 0.9f; chorus.delay = 11; chorus.rate = 3; chorus.depth = 0.7f;
+                    component = chorus;
+                } else {
+                    var reverb = target.AddComponent<AudioReverbFilter>();
+                    reverb.reverbPreset = AudioReverbPreset.User;
+                    reverb.dryLevel = -600; reverb.room = -500; reverb.roomHF = -300;
+                    reverb.decayTime = 0.3f; reverb.reflectionsLevel = -500;
+                    reverb.reflectionsDelay = 0.007f; reverb.reverbLevel = -500; reverb.reverbDelay = 0.011f;
+                    component = reverb;
                 }
             }
             source.Play();
@@ -459,7 +594,7 @@ public class EffectProbe : MonoBehaviour
             Save(); buffer.Dispose();
             OutputLayoutProbe.WriteChannel = -1;
             if (layoutProbe != null) DestroyImmediate(layoutProbe);
-            source.Stop(); DestroyImmediate(go); if (clip) DestroyImmediate(clip);
+            source.Stop(); if (component) DestroyImmediate(component); if (zoneObject) DestroyImmediate(zoneObject); DestroyImmediate(go); if (clip) DestroyImmediate(clip);
             var silence = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
             for (int drain = 0; drain < 8; drain++) {
                 if (!Engine) yield return null; else FlushEngine();
@@ -490,11 +625,27 @@ public class ProbeGenerator : MonoBehaviour
 {
     public static volatile int Channels;
     public static volatile bool AllChannels;
+    public static string Signal;
+    public static int Dominant, Frame;
+    public static uint Seed;
     void OnAudioFilterRead(float[] data, int channels)
     {
         Channels = channels;
         for (int i = 0; i < data.Length; i += channels)
         {
+            if (Signal == "imp" || Signal == "burst" || Signal == "link") {
+                for (int c = 0; c < channels; c++) {
+                    float value = 0;
+                    if (Signal == "imp" && Frame == 2048 + c * 37) value = (c % 2 == 0 ? 0.25f : -0.1875f);
+                    if (Signal == "burst" && Frame >= 2048 && Frame < 16384) {
+                        Seed = unchecked(Seed * 1664525 + 1013904223);
+                        value = ((int)(Seed >> 18) - 8192) / 131072f;
+                    }
+                    if (Signal == "link") value = c == Dominant && Frame >= 2048 && Frame < 12288 ? 0.75f : 0.015625f;
+                    data[i+c] += value;
+                }
+                Frame++; continue;
+            }
             if (AllChannels) { for (int c = 0; c < channels; c++) data[i + c] += 0.0625f * (c + 1); continue; }
             data[i] += 0.25f; if (channels > 1) data[i + 1] -= 0.125f;
         }

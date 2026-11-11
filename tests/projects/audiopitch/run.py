@@ -20,7 +20,7 @@ import sys
 
 fixture = Path(__file__).resolve().parent
 sys.path.insert(0, str(fixture))
-from common import cases, devices
+from common import cases, devices, surround_cases
 sys.path.insert(0, str(fixture.parents[1]))
 from probe_paths import shared_runtime
 p = argparse.ArgumentParser()
@@ -70,6 +70,10 @@ for rate in a.rate or (48000, 44100):
     if run('engine.py', '--native-project', project, '--runtime', runtime, '--cases', ','.join(cases(True)),
            '--device-channels', 8, '--work', layouts): raise SystemExit(f'engine {rate} layouts failed')
     compared = [('all', candidate, ''), ('layouts', layouts/'capture', '-layouts')]
+    surround = work/f'engine-{rate}-surround'
+    if run('engine.py', '--native-project', project, '--runtime', runtime, '--cases', ','.join(surround_cases()),
+           '--device-channels', 8, '--work', surround): raise SystemExit(f'engine {rate} surround failed')
+    compared.append(('surround', surround/'capture', '-surround'))
     if rate == 48000:
         # Each device control on a virtual device of its channel count, as the Editor recorded.
         merged = {}
