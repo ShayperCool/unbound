@@ -140,6 +140,21 @@ imported without keyframe reduction.
   hips and the body instead, which are placed from every bone. The curve queries show the clip
   with the Mirror setting as imported, after it has played mirrored.
 
+- stream handles of a humanoid's bones in a job (`HumanoidBones.cs`, `bone.*`): a job above
+  HumanA's clip with `Animator.BindStreamTransform` handles of the hips, the spine, the left lower
+  arm, the head and the left hand, one job per change: none (`bone.read`), a local rotation of
+  the lower arm (`bone.rotateLocal`, and `bone.rotateThenHuman`), a world rotation of the head
+  (`bone.rotateWorld`), the hips' local position (`bone.moveHips`), the lower arm's world position
+  (`bone.moveArm`), the spine's scale (`bone.scale`), and a muscle set before the bones are read
+  (`bone.humanThenRead`). Each step records what the handles read before and after the change
+  (`.bones.before`, `.bones.after`: local position times 100, the inverse of the rig's root
+  scale; local rotation and scale; world position and rotation), the human stream after it
+  (`.job.human`) and the final pose, with the transforms' locals every fourth step.
+  Measured: the handles read the bones of the stream's pose; rotations and the hips' position
+  written through them reach the final pose; a position or scale below the hips stays in the
+  stream; the hips read the root's scale of 100 as their own and the positions below them are
+  that much further from the hips than the transforms end up.
+
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
   at once (with an extra `Update(0)` before step 12, `noWDAlone`), over 0.2 s (`noWDFade`), at
