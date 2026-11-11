@@ -812,7 +812,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 42;
+    const VERSION: u32 = 43;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1558,19 +1558,10 @@ impl<'a> Builder<'a> {
                     (Vec::new(), Vec::new(), Vec::new());
                 for time in frame_times(start, end, fps) {
                     let t = ufbx::evaluate_transform(&stack.anim, source, time);
-                    // Humanoid clips keep the plain difference. Their transform keys feed the
-                    // muscle conversion, whose own sample times are the muscle keys' times and
-                    // match the Editor's (single-precision frames, tests/projects/humanfirstpose
-                    // and modelclips HumanReduced). The frame arithmetic here is undecided by
-                    // the references: the first-pose body curves are as close either way (41 of
-                    // 217 values exact, two more last-digit tangent bits), the humanoid probe
-                    // has five fewer differences with it. Curves of nodes outside the human
-                    // skeleton stay in the clip with these times.
-                    let rotation_time = if human {
-                        (time - start) as f32
-                    } else {
-                        frame_key_time(time, start, fps)
-                    };
+                    // One rule for every rig type. A Humanoid clip's transform keys feed the
+                    // muscle conversion, whose own sample times follow the same single-precision
+                    // frame arithmetic (tests/projects/humanfirstpose, modelclips HumanReduced).
+                    let rotation_time = frame_key_time(time, start, fps);
                     // Positions and scales end exactly at the range's end (measured for
                     // positions, tests/projects/modelaxis Reduced: Drift; scales unmeasured).
                     let time = if time == end {
@@ -3370,11 +3361,13 @@ fn frame_times(start: f64, end: f64, fps: f64) -> Vec<f64> {
     times
 }
 
-/// The key time of a Legacy or Generic clip's resampled transform curve at `time` of a range
-/// starting at `start`: a whole number of frames after the start is that number times one
+/// The key time of a clip's resampled transform curve at `time` of a range starting at `start`,
+/// for every rig type: a whole number of frames after the start is that number times one
 /// frame's length, both in single precision (matches the Unity 6000.0.71f1 Editor's key times,
 /// tests/projects/modelaxis Reduced, at 30, 60 and 120 frames a second; three seconds at 30
 /// give 3.0000002). Other times (a range that ends between frames) are the difference itself.
+/// A Humanoid clip's transform keys are measured only through its converted curves
+/// (tests/projects/humanoid, humanfirstpose).
 fn frame_key_time(time: f64, start: f64, fps: f64) -> f32 {
     const EPSILON: f64 = 1e-6;
     let frames = (time - start) * fps;

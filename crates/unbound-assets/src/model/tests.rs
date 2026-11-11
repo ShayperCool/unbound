@@ -1252,6 +1252,40 @@ fn key_times_are_frames_times_the_frame_length_in_single_precision() {
     );
 }
 
+/// A Humanoid clip's transform keys take the frame times of every other rig type: the frame
+/// count times one frame's length in single precision, positions ending at the range's end
+/// (tests/projects/humanoid HumanB: 20 frames at 30 a second; the converted curves are what the
+/// Editor shows, tests/projects/humanoid and humanfirstpose). Frames 3, 6 and 7 are among those
+/// where the plain difference of the times rounds to another value.
+#[test]
+fn a_humanoid_clips_transform_keys_take_the_shared_frame_times() {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/humanoid/Assets/Resources/HumanB.fbx");
+    let settings = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+    let model = ModelImporter::default()
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap();
+    let clip = model.clips.iter().find(|c| !c.preview).unwrap();
+    let frame = 1.0f32 / 30.0;
+    let frames: Vec<f32> = (0..=20).map(|k| k as f32 * frame).collect();
+    for k in [3, 6, 7] {
+        assert_ne!(frames[k], (k as f64 / 30.0) as f32, "frame {k}");
+    }
+    assert!(!clip.curves.is_empty());
+    for node in &clip.curves {
+        let rotations: Vec<f32> = node.rotations.iter().map(|k| k.time).collect();
+        assert_eq!(rotations, frames, "{}", node.path);
+        for keys in [&node.positions, &node.scales] {
+            let times: Vec<f32> = keys.iter().map(|k| k.time).collect();
+            assert_eq!(times[..20], frames[..20], "{}", node.path);
+            assert_eq!(times[20], (20.0f64 / 30.0) as f32, "{}", node.path);
+        }
+    }
+    // Another frame rate, where other frames differ (24 a second: frame 5).
+    assert_eq!(frame_key_time(5.0 / 24.0, 0.0, 24.0), 5.0 * (1.0f32 / 24.0));
+    assert_ne!(5.0 * (1.0f32 / 24.0), (5.0f64 / 24.0) as f32);
+}
+
 /// A Humanoid clip under a reducing compression keeps its transform keys on every frame, as
 /// with compression Off, and carries the Position Error its muscle curves are reduced with
 /// (tests/projects/modelclips HumanReduced: Keyframe Reduction with rotation and scale errors

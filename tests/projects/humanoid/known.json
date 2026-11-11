@@ -33,15 +33,7 @@
   "foot-ik-legs": {
     "reason": "The Animator's own Foot IK after a job changed the pose: leg muscles off by up to about 8e-4 (stream.ik, stream.ikPass, stream.bodyLocal); the Foot IK limit the Editor applies is not modelled.",
     "keys": [
-      "stream.bodyLocal.step13.pose muscles[23]",
-      "stream.bodyLocal.step13.pose muscles[25]",
-      "stream.bodyLocal.step17.pose muscles[23]",
-      "stream.bodyLocal.step17.pose muscles[25]",
-      "stream.bodyLocal.step28.pose muscles[31]",
-      "stream.ik.step20.pose muscles[33]",
-      "stream.ik.step20.pose muscles[35]",
-      "stream.ikPass.step20.pose muscles[33]",
-      "stream.ikPass.step20.pose muscles[35]"
+      "stream.bodyLocal.step28.pose muscles[31]"
     ]
   },
   "stance-drift": {
