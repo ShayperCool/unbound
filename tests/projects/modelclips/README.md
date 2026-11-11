@@ -102,11 +102,14 @@ error a Humanoid clip's curves take.
   noise of the muscle conversion around zero, above the reduction's own zero limit, and which
   of their keys stay follows their last bits (66 of the 130 curves of each model here).
 
-Not in the reference (an exploratory capture of a richer rig, 20 clips of 130 curves): the
-same rule gives the Editor's keys of all 2600 curves at Position Errors of 0.5 and 5 when it
-starts from the Editor's own every-frame curves (managed/UnityEngine.Tests
+Not in the reference (an exploratory capture of a richer rig, 130 curves over 31 frames, the
+same in each of its 20 clips): the same rule gives the Editor's keys of all 130 curves at
+Position Errors of 0.5 and 5 when it starts from the Editor's own every-frame curves (managed/UnityEngine.Tests
 `HumanClipReductionTests` holds four of them); starting from Unbound's converted curves, four
 muscle curves that stay below 6e-3 keep one key at a neighbouring frame at an error of 5.
+Unmeasured for Humanoid clips: clips of fifty frames and more (the limit of a reduced segment
+is the generic reduction's, tests/projects/modelaxis), other frame rates, a Position Error of
+0 (Unbound then keeps every key) and a humanoid oversampling above one.
 
 Unbound matches 3211/3211 records. The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`

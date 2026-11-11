@@ -20,7 +20,9 @@ namespace Unbound.Runtime.Humanoid
     /// consecutive ones, and spans fewer than <see cref="MaxReducedFrames"/> frames; kept keys
     /// keep their slopes.</item>
     /// </list>
-    /// A humanoid oversampling above one is unmeasured (the conversion samples once a frame).
+    /// Unmeasured: a humanoid oversampling above one (the conversion samples once a frame),
+    /// clips of fifty frames and more (the probe's have 21; the segment limit is the generic
+    /// reduction's, tests/projects/modelaxis) and other frame rates than 30.
     /// </summary>
     internal static class HumanClipReduction
     {
