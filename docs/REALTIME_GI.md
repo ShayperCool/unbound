@@ -197,11 +197,13 @@ cause is open). Probes interpolate as
 baked ones do; `LightProbes.bakedProbes` stays empty. Probes that have baked lighting too
 (`RoomBakedEnvironment`, whose baked probes hold the environment) give the baked coefficients
 plus the realtime GI's (`roombakedenvironment-*`: within the comparator's tolerance in every
-case; the baked part is small there, 0.002 to 0.007, so the sum shows in `-bakedset`, where the
-script raises the baked first coefficients by 0.5 and the interpolated ones follow).
+case; the baked part is small there, 0.002 to 0.007, so the sum shows in `-bakedset-now`, where
+the script raises the baked first coefficients by 0.5 and the interpolated ones are 0.5 higher
+in that frame, gated).
 `LightProbes.bakedProbes` returns the baked part alone (`-lightprobes`, `-bakedset-lightprobes`,
 gated). Probes of several scenes combined by `LightProbes.Tetrahedralize` join their baked
-coefficients; realtime GI lights each scene's own set (unmeasured). Unbound updates them with every update of
+coefficients, zeros for a scene without any; realtime GI lights each scene's own set
+(unmeasured). Unbound updates them with every update of
 the systems.
 
 Measured in the probe: the update runs over several frames on worker threads (bounces converge
@@ -297,10 +299,13 @@ A scene whose environment lighting is baked (`LightingSettings.realtimeEnvironme
 with baked GI on; tests/projects/realtimegi `roombakedenvironment-*`) gives its realtime GI no
 light from the ambient source: an ambient color change shows nothing and the environment alone
 lights nothing; a cube set with `DynamicGI.SetEnvironmentData` lights it as any scene and,
-unlike there, stays when the ambient color changes (`-envdata-color`), until
-`DynamicGI.UpdateEnvironment` (`-envdata-update`: black again). Unbound keeps the script's cube
-beside the ambient source's faces and gives such a scene the cube or black faces; while every
-loaded scene is such a one it does not make the ambient source's faces at all.
+unlike there, stays whatever the ambient source does (another color, a gradient or a skybox as
+the source, the skybox's ambient intensity: `-envdata-color`, `-source`, `-sky`, `-intensity`),
+until `DynamicGI.UpdateEnvironment` (`-envdata-update`: black again). Unbound keeps the script's
+cube beside the ambient source's faces and gives such a scene the cube or black faces; while
+every loaded scene is such a one it does not make the ambient source's faces at all. Not
+measured: a cube set in another scene before such a scene loads (Unbound: a scene loaded alone
+starts without it; one loaded beside others takes a cube still kept).
 
 Not measured: a skybox under a scriptable render pipeline (it
 adds no realtime GI light there, with a warning: the capture is the built-in pipeline's; colors,
