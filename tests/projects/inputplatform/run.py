@@ -55,7 +55,7 @@ def publish(work, host, context=None):
         lambda d: ['values.jsonl'], write, complete=[jsonl_complete('values.jsonl', {'k':'complete','v':True})], gpu=True)
 
 
-def engine(work, cli, work_area=False):
+def engine(work, cli, work_area=False, work_area_delay_frames=0):
     project = project_copy(work/'project')
     out = work/'unbound'
     out.mkdir(parents=True)
@@ -71,6 +71,7 @@ def engine(work, cli, work_area=False):
     if work_area:
         env['INPUTPLATFORM_WORK_AREA'] = '1'
         env['INPUTPLATFORM_DISPLAY_ONLY'] = '1'
+    env['INPUTPLATFORM_WORK_AREA_DELAY_FRAMES'] = str(work_area_delay_frames)
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, cwd=REPO)
     if result.returncode:
@@ -97,6 +98,7 @@ def main():
     parser.add_argument('--cli', default=os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI'))
     parser.add_argument('--host-display', action='store_true')
     parser.add_argument('--work-area-control', action='store_true')
+    parser.add_argument('--work-area-delay-frames', type=int, default=0)
     parser.add_argument('--display-only', action='store_true')
     parser.add_argument('--context', choices=['host', 'xvfb', 'large', 'control', 'workarea'])
     parser.add_argument('--screen', default='1280x720x24')
@@ -109,7 +111,9 @@ def main():
         return editor(work, a.host_display, a.screen, a.display_only, a.work_area_control)
     if a.command == 'publish':
         return publish(work, a.host_display, a.context)
-    return engine(work, a.cli, a.work_area_control)
+    if a.work_area_delay_frames < 0:
+        parser.error('--work-area-delay-frames must be nonnegative')
+    return engine(work, a.cli, a.work_area_control, a.work_area_delay_frames)
 
 
 if __name__ == '__main__':

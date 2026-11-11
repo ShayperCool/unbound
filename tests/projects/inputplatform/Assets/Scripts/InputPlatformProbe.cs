@@ -64,6 +64,25 @@ public class InputPlatformProbe : MonoBehaviour
             return process.StandardOutput.ReadToEnd();
         }
     }
+    IEnumerator SetWorkArea(string command, RectInt expected)
+    {
+        // The optional delay exercises notifications arriving after the old ten-frame sample.
+        int delay = int.Parse(Environment.GetEnvironmentVariable("INPUTPLATFORM_WORK_AREA_DELAY_FRAMES") ?? "0");
+        if (delay < 0) throw new ArgumentOutOfRangeException("INPUTPLATFORM_WORK_AREA_DELAY_FRAMES");
+        StartCoroutine(ChangeWorkArea(command, delay));
+        double deadline = Time.realtimeSinceStartupAsDouble + 10;
+        while (Screen.mainWindowDisplayInfo.workArea != expected)
+        {
+            if (Time.realtimeSinceStartupAsDouble >= deadline)
+                throw new TimeoutException("work area did not reach " + expected + " after " + command);
+            yield return null;
+        }
+    }
+    IEnumerator ChangeWorkArea(string command, int delay)
+    {
+        for (int i = 0; i < delay; i++) yield return null;
+        Clipboard(command);
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
     {
@@ -106,11 +125,11 @@ public class InputPlatformProbe : MonoBehaviour
         Add("screen", "[" + Screen.width + "," + Screen.height + "]");
         if (Environment.GetEnvironmentVariable("INPUTPLATFORM_WORK_AREA") == "1")
         {
-            Clipboard("workarea");
-            for (int i = 0; i < 10; i++) yield return null;
+            var originalWorkArea = Screen.mainWindowDisplayInfo.workArea;
+            // clipboard_control.py sets this rectangle on the private 1280x720 display.
+            yield return SetWorkArea("workarea", new RectInt(0, 40, 1280, 640));
             Add("workArea.changed", D(Screen.mainWindowDisplayInfo));
-            Clipboard("workarea-clear");
-            for (int i = 0; i < 10; i++) yield return null;
+            yield return SetWorkArea("workarea-clear", originalWorkArea);
             Add("workArea.restored", D(Screen.mainWindowDisplayInfo));
         }
         if (Environment.GetEnvironmentVariable("INPUTPLATFORM_DISPLAY_ONLY") == "1")

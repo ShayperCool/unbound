@@ -59,3 +59,9 @@ monitor, observes [0,40,1280,640], and then restores the full area. Its two Edit
 match. Mode-change event tests retain the same screen identity while changing geometry;
 Xvfb on this machine does not support adding another output mode. Frame pacing uses the
 actual host refresh, separately from the public Editor resolution answer.
+
+The work-area control waits up to ten seconds for each requested rectangle, including
+restoration, rather than sampling after a fixed frame count. The gate also delays each
+external change by 30 frames with `--work-area-delay-frames 30`, so it exercises a
+notification arriving after the former ten-frame sample. Both controls compare with
+the same byte-identical Editor reference.
