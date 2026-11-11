@@ -31,13 +31,13 @@
     ]
   },
   "foot-ik-legs": {
-    "reason": "The Animator's own Foot IK after a job changed the pose: leg muscles off by up to about 8e-4 (stream.ik, stream.ikPass, stream.bodyLocal); the Foot IK limit the Editor applies is not modelled.",
+    "reason": "The Animator's own Foot IK after a job changed the pose: leg muscles off by up to 2.4e-3 on single steps (stream.ik, stream.ikPass, stream.bodyLocal). Amplified rounding of a nearly straight leg: moving the foot goals by one single-precision step changes Unbound's own result by the same amount on the same value; see the residual row in docs/COMPATIBILITY_GAPS.md.",
     "keys": [
       "stream.bodyLocal.step28.pose muscles[31]"
     ]
   },
   "stance-drift": {
-    "reason": "After a job's ResetToStancePose the Animator's final pose under Foot IK drifts from the Editor's over the updates (the body up to 3.3e-3 units, a foot muscle up to 1.5e-2 by update 28); open Foot IK mechanism, see docs/COMPATIBILITY_GAPS.md humanoid row.",
+    "reason": "After a job's ResetToStancePose the hips of the Animator's final pose under Foot IK sit off the Editor's by constants over runs of updates (the read-back body up to 3.3e-3 units, 3e-5 of the character's height; a straight leg's twist muscle up to 1.5e-2 by update 28); every other transform matches. Cause open; sizes and what was ruled out are in the residual row in docs/COMPATIBILITY_GAPS.md.",
     "keys": [
       "stream.stance.step13.pose bodyPosition[2]",
       "stream.stance.step14.pose bodyPosition[2]",
