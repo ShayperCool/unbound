@@ -6,8 +6,9 @@ using Object = UnityEngine.Object;
 namespace Unbound.Runtime
 {
     /// <summary>
-    /// Every live engine object by instance id. Ids of objects loaded from asset files are positive,
-    /// those of scene and runtime objects negative, as in Unity.
+    /// Every live engine object by instance id. Loaded assets get positive IDs; the measured scene
+    /// loader uses that same allocation for file objects. Newly created objects get negative IDs.
+    /// ID allocation does not decide whether an object is a persistent asset.
     /// </summary>
     internal static class ObjectRegistry
     {
@@ -36,7 +37,7 @@ namespace Unbound.Runtime
             return id;
         }
 
-        /// <summary>Objects created inside the scope get asset (positive) ids.</summary>
+        /// <summary>Constructing loaded file objects with positive IDs; asset persistence is separate.</summary>
         internal static AssetIdScope AsAssets() => new AssetIdScope(true);
 
         internal readonly struct AssetIdScope : IDisposable

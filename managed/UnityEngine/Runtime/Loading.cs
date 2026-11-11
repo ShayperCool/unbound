@@ -112,7 +112,7 @@ namespace Unbound.Runtime
             // objects are plain objects (measured: tests/projects/editorcallbacks).
             var instances = kind == Kind.Bundle || kind == Kind.Scene && EditorSession.IsPlaying ? null : PrefabLinks.Instances(documents, isAsset);
 
-            using (isAsset ? ObjectRegistry.AsAssets() : default)
+            using (isAsset || Compat.SceneFileInstanceIdsMeasured ? ObjectRegistry.AsAssets() : default)
             {
                 // GameObjects first: components attach to them.
                 foreach (var doc in documents)

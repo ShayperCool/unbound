@@ -37,6 +37,10 @@ namespace Unbound.Runtime
         /// tests/projects/destroyphases on Unity 6000.0.71f1.</summary>
         internal static bool DestroyPhasesMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Scene objects read from files use positive instance IDs, independently of asset
+        /// persistence, measured by instanceids on 6000.0.71f1. Other releases are unmeasured.</summary>
+        internal static bool SceneFileInstanceIdsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Automatic rendering follows the public player loop and precedes end-of-frame
         /// coroutine resumes. Its first Play frame renders without end-of-frame completion. Measured
         /// by destroyphases and eofstartup on 6000.0.71f1; other releases retain their prior timing.</summary>
