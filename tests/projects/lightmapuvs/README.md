@@ -78,6 +78,18 @@ single-triangle charts of equal size are packed in each other's places (968 tria
 differ by up to 0.034). Imported normals are normalized and attributes split with the measured
 thresholds. The Torus (an OBJ file, its mesh named `default`) matches in every variant.
 
+## Mesh optimization order
+
+OptPolygons and OptVertices hold Cylinder, Grid, Multi, Organic, Torus, TwoUV and FlatPoly with
+generateSecondaryUV off and `meshOptimizationFlags` 1 (polygon order) and 2 (vertex order).
+Together with RawOff (0) and Off (everything) the reference shows (Unity 6000.0.71f1): polygon
+order alone reorders each sub-mesh's triangles and keeps the vertices, including a point no
+triangle uses; vertex order alone keeps the triangles, renumbers the vertices in the order the
+triangles first use them and drops the unused point; everything does both. Unbound reproduces the
+order: every record of every variant matches the Editor in triangles, vertices, UV and UV2 by
+index, except Hard30/Organic (the packing tie above). The gate (`tools/agents/suite.py`) judges
+all of that for every variant but Hard30; normals are compared by `compare_normals.py`.
+
 ## Mesh and object names
 
 `Sources/Names` holds hand-written OBJ files of one quad per part with `o` and `g` statements in

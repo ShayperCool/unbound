@@ -12,7 +12,8 @@ vertices and sub-meshes), with the triangles either side lacks and the corners w
 differs. Exits 1 when anything differs; with --uv2, when the vertex count or `uv2Corners`
 differs. With --expect, only the named meshes (in every variant) decide the exit status, with
 --expect-variants also every mesh of the named variants on either side (so a mesh that is missing
-or extra there fails), judged on its vertices and triangles as well; every mesh is still listed.
+or extra there fails), judged on its triangles, vertices, UV and UV2 by index as well (everything
+but the normals); every mesh is still listed.
 """
 import argparse
 import json
@@ -116,8 +117,8 @@ def main():
             report[name] = fields or 'match'
         verdict = report[name]
         if isinstance(verdict, dict) and args.uv2:
-            # A variant named by --expect-variants is also judged on its vertices and triangles.
-            judged = ('vertexCount', 'uv2Corners') + (('subMeshes', 'vertices') if strict_variant(key) else ())
+            # A variant named by --expect-variants is judged on everything but its normals.
+            judged = ('vertexCount', 'uv2Corners') + (('subMeshes', 'vertices', 'uv', 'uv2') if strict_variant(key) else ())
             verdict = {f: d for f, d in verdict.items() if f in judged} or 'match'
         expected_mesh = not args.expect or key[1] in args.expect.split(',') or strict_variant(key)
         if verdict != 'match':

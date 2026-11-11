@@ -17,6 +17,10 @@ The Repair variant holds Sources/Repair and the flat and welded models of Source
 Default settings; RepairOff holds Lines (no triangle left to unwrap) with generateSecondaryUV
 off.
 
+OptPolygons and OptVertices hold a few of the models and FlatPoly (a point no triangle uses) with
+generateSecondaryUV off and one mesh optimization flag each: `meshOptimizationFlags` 1 (polygon
+order) and 2 (vertex order).
+
 The Names variant holds Sources/Names (hand-written OBJ files of one quad per part with `o` and
 `g` statements in different arrangements) with mesh optimization and generateSecondaryUV off.
 
@@ -58,6 +62,7 @@ VARIANTS = {
     'RawOff': dict(meshOptimizationFlags=0, generateSecondaryUV=0),
 }
 NORMAL_MODELS = ('Cube', 'Cylinder', 'Grid', 'Ico', 'Multi', 'Organic', 'Pieces', 'Sphere', 'Torus', 'TwoUV')
+ORDER_MODELS = ('Cylinder', 'Grid', 'Multi', 'Organic', 'Torus', 'TwoUV')
 REPAIR_NORMAL_MODELS = ('FlatQuad', 'FlatTri', 'Pinch', 'WeldQuad')
 RAW = dict(meshOptimizationFlags=0, generateSecondaryUV=0)
 CALCULATE = dict(RAW, normalImportMode=1)
@@ -215,6 +220,9 @@ def main():
     repair += [p for p in normal_models if p.stem in REPAIR_NORMAL_MODELS]
     variants.append(('Repair', {}, repair))
     variants.append(('RepairOff', dict(generateSecondaryUV=0), [p for p in repair if p.stem == 'Lines']))
+    ordered = [p for p in models if p.stem in ORDER_MODELS] + [p for p in normal_models if p.stem == 'FlatPoly']
+    variants.append(('OptPolygons', dict(meshOptimizationFlags=1, generateSecondaryUV=0), ordered))
+    variants.append(('OptVertices', dict(meshOptimizationFlags=2, generateSecondaryUV=0), ordered))
     names = sorted(p for p in (PROBE/'Sources/Names').iterdir() if p.suffix in ('.fbx', '.obj'))
     variants.append(('Names', RAW, names))
     for variant, overrides, sources in variants:
