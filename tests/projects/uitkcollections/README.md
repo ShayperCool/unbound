@@ -59,7 +59,25 @@ not depend on them):
   left of the view, onto the column's own and its neighbours' halves, with sorting on (a click,
   a short move and a drag), Escape, a lost pointer capture, columns that are not reorderable, a
   hidden column, `Columns.ReorderDisplay`, a column added afterwards, a column hidden or removed
-  while its header column is pressed, and a tree's primary column.
+  while its header column is pressed, and a tree's primary column;
+- `tree-data`: a TreeView of 3x2x1 items changed through its controller: Move (to another parent,
+  among siblings, to the root, with indices past the end and below -1, into itself, under its own
+  descendant, with unknown ids, without rebuild, of the selected item, into a collapsed item),
+  AddItem (at the root, at a child index, with children, without rebuild, under an unknown
+  parent, with an id already in the tree) and TryRemoveItem (a leaf, an item with children, an
+  unknown id, the selected item, without rebuild), each with the hierarchy the controller answers
+  and the children each TreeViewItemData holds;
+- `tree-drag`: a reorderable TreeView dragged by pointer in one go: between rows, onto a row, to
+  the top of the first row, outside the view, onto a collapsed row, and with `reorderable` off;
+- `animated-clock` and `tree-drag-positions` run on a clock the probe moves (the panels' time
+  function is replaced for the section), so animations and timers are at a known time:
+  an animated ListView drag step by step (the gap's padding and height while it opens, a release
+  and a second drag while gaps still animate, a control after they settled); tree drags step by
+  step (the parent and child index every pointer position gives `dragAndDropUpdate` and
+  `handleDrop`, the hover bar and markers, the depth picked by the pointer's x, drops below the
+  rows, three items at once with an item's own child among them, an item onto its own
+  descendant, a collapsed row opening under a hovering drag and closing when the drag ends,
+  `canStartDrag` false and `handleDrop` Rejected).
 
 Every step records the item callbacks it caused (makeItem/bindItem/unbindItem/destroyItem, with
 the element: elements are numbered per control), the events the controls raised, and the state:
@@ -67,6 +85,10 @@ visible rows (element, text, layout, selected, shown), scroll offset, content re
 range, selection, items order, element trees. The panel is rendered after building
 (`collections-built.png`) and at the end (`collections-final.png`, with the animated list hidden:
 its rows animate in real time, so that section records no row layout).
+
+Reference history: the commit that added the binding `switch-*` steps also re-recorded the three
+steps after them (`clear`, `remove-custom`, `readd-custom`), although its `Oracle-Change` note
+says existing lines were unchanged.
 
 ```sh
 cache="${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/uitkcollections"

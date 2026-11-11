@@ -277,6 +277,10 @@ public static class CollectionsProbe
         Section("manipulator", () => MenuManipulator(stage));
         Section("header-menu", () => HeaderMenu(stage));
         Section("header-drag", () => HeaderDrag(stage));
+        Section("tree-data", () => TreeData(stage));
+        Section("tree-drag", () => TreeDrag(stage));
+        Section("animated-clock", () => WithClock(() => AnimatedClockSteps(stage)));
+        Section("tree-drag-positions", () => WithClock(() => TreeDragPositions(stage)));
         File.WriteAllText(Path.Combine(Output, "collections.jsonl"), Out.ToString());
     }
 
@@ -319,6 +323,342 @@ public static class CollectionsProbe
         Step("sibling-order", "in-front-of-itself", () => e["b"].PlaceInFront(e["b"]), State);
         Step("sibling-order", "not-a-sibling", () => e["b"].PlaceBehind(row), State);
         Step("sibling-order", "remove", () => row.RemoveFromHierarchy(), () => "null");
+    }
+
+    // ---- tree data: Move, AddItem, TryRemoveItem ----
+
+    // The hierarchy as the controller answers it (parent and children by id), and as the item data
+    // the tree was given answers it (TreeViewItemData children), for every id.
+    static string TreeHierarchy(TreeView tree)
+    {
+        var sb = new StringBuilder("{\"roots\":").Append(Ints(tree.viewController.GetRootItemIds())).Append(",\"all\":").Append(Ints(tree.viewController.GetAllItemIds())).Append(",\"items\":[");
+        var ids = new List<int>(tree.viewController.GetAllItemIds());
+        ids.Sort();
+        bool first = true;
+        foreach (int id in ids)
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            var data = ((DefaultTreeViewController<string>)tree.viewController).GetTreeViewItemDataForId(id);
+            var dataChildren = new List<int>();
+            if (data.children != null) foreach (var c in data.children) dataChildren.Add(c.id);
+            sb.Append('[').Append(id).Append(',').Append(tree.viewController.GetParentId(id)).Append(',').Append(Ints(tree.viewController.GetChildrenIds(id)))
+              .Append(',').Append(Ints(dataChildren)).Append(',').Append(data.hasChildren ? "true" : "false").Append(',').Append(Str(data.data))
+              .Append(',').Append(tree.viewController.GetIndexForId(id)).Append(']');
+        }
+        return sb.Append("]}").ToString();
+    }
+
+    static TreeView DataTree(VisualElement stage, string tag, float left)
+    {
+        var tree = new TreeView { name = tag, fixedItemHeight = 20 };
+        Place(tree, left, 20, 180, 320);
+        tree.SetRootItems(TreeItems(3, 2, 1));
+        tree.makeItem = () => MakeLabel(tag + ":");
+        tree.bindItem = (e, i) => { Log.Add(tag + ":bind " + Id(e) + " " + i); ((Label)e).text = tree.GetItemDataForIndex<string>(i); };
+        tree.unbindItem = (e, i) => Log.Add(tag + ":unbind " + Id(e) + " " + i);
+        HookEvents(tree, tag + ":");
+        tree.itemExpandedChanged += a => Log.Add(tag + ":itemExpandedChanged " + a.id + " " + (a.isExpanded ? "expanded" : "collapsed"));
+        tree.itemsSourceChanged += () => Log.Add(tag + ":itemsSourceChanged");
+        stage.Add(tree);
+        return tree;
+    }
+
+    // Items of TreeItems(3, 2, 1): roots 0, 5, 10; children 1, 3 / 6, 8 / 11, 13; leaves 2, 4, 7, 9, 12, 14.
+    static void TreeData(VisualElement stage)
+    {
+        TreeView tree = null;
+        string State() => "{\"tree\":" + TreeState(tree) + ",\"hierarchy\":" + TreeHierarchy(tree) + "}";
+        var c = (Func<BaseTreeViewController>)(() => tree.viewController);
+        Step("tree-data", "attach", () => { tree = DataTree(stage, "tdata", 20); tree.ExpandAll(); }, State);
+        Step("tree-data", "move-leaf-to-another-parent", () => c().Move(2, 3), State);
+        Step("tree-data", "move-forward-among-siblings", () => c().Move(1, 0, 2), State);
+        Step("tree-data", "move-back-among-siblings", () => c().Move(1, 0, 0), State);
+        Step("tree-data", "move-to-own-index", () => c().Move(1, 0, 0), State);
+        Step("tree-data", "move-to-root-first", () => c().Move(6, -1, 0), State);
+        Step("tree-data", "move-to-root-last", () => c().Move(8, -1), State);
+        Step("tree-data", "move-index-past-the-end", () => c().Move(12, 10, 50), State);
+        Step("tree-data", "move-index-negative", () => c().Move(14, 10, -5), State);
+        Step("tree-data", "move-into-itself", () => c().Move(5, 5), State);
+        Step("tree-data", "move-into-own-descendant", () => c().Move(0, 3), State);
+        Step("tree-data", "move-unknown-id", () => c().Move(99, 0), State);
+        Step("tree-data", "move-to-unknown-parent", () => c().Move(9, 99), State);
+        Step("tree-data", "move-without-rebuild", () => c().Move(11, 13, 0, false), State);
+        Step("tree-data", "refresh-after-move", () => tree.RefreshItems(), State);
+        Step("tree-data", "select-and-move", () => { tree.SetSelectionById(4); c().Move(4, 5, 0); }, State);
+        Step("tree-data", "move-into-collapsed", () => { tree.CollapseItem(10); c().Move(7, 10, 0); }, State);
+        Step("tree-data", "expand-after-move", () => tree.ExpandItem(10), State);
+        // AddItem and TryRemoveItem.
+        Step("tree-data", "add-root-last", () => tree.AddItem(new TreeViewItemData<string>(20, "Added 20")), State);
+        Step("tree-data", "add-child-first", () => tree.AddItem(new TreeViewItemData<string>(21, "Added 21"), 5, 0), State);
+        Step("tree-data", "add-with-children", () => tree.AddItem(new TreeViewItemData<string>(22, "Added 22", new List<TreeViewItemData<string>> { new TreeViewItemData<string>(23, "Added 23") }), 20), State);
+        Step("tree-data", "add-without-rebuild", () => tree.AddItem(new TreeViewItemData<string>(24, "Added 24"), 0, -1, false), State);
+        Step("tree-data", "rebuild-after-add", () => tree.Rebuild(), State);
+        Step("tree-data", "add-unknown-parent", () => tree.AddItem(new TreeViewItemData<string>(25, "Added 25"), 99), State);
+        Step("tree-data", "add-repeated-id", () => tree.AddItem(new TreeViewItemData<string>(21, "Again 21"), 0), State);
+        Step("tree-data", "add-index-past-the-end", () => tree.AddItem(new TreeViewItemData<string>(26, "Added 26"), 5, 40), State);
+        Step("tree-data", "remove-leaf", () => Log.Add("removed " + tree.TryRemoveItem(23)), State);
+        Step("tree-data", "remove-with-children", () => Log.Add("removed " + tree.TryRemoveItem(0)), State);
+        Step("tree-data", "remove-unknown", () => Log.Add("removed " + tree.TryRemoveItem(99)), State);
+        Step("tree-data", "remove-selected", () => { tree.SetSelectionById(21); Log.Add("removed " + tree.TryRemoveItem(21)); }, State);
+        // Until the refresh the rows still name the removed item, and reading them is an error in
+        // the Editor: the step records the answer only.
+        Step("tree-data", "remove-without-rebuild", () => Log.Add("removed " + tree.TryRemoveItem(20, false)), () => "\"unread\"");
+        Step("tree-data", "refresh-after-remove", () => tree.RefreshItems(), State);
+        Step("tree-data", "moved-item-data", () =>
+        {
+            Log.Add("data of 2: " + tree.GetItemDataForId<string>(2) + " index " + tree.viewController.GetIndexForId(2) + " parent " + tree.viewController.GetParentId(2));
+            Log.Add("exists 0: " + tree.viewController.Exists(0) + " 4: " + tree.viewController.Exists(4));
+        }, State);
+        Step("tree-data", "remove", () => tree.RemoveFromHierarchy(), () => "null");
+    }
+
+    // A reorderable TreeView dragged by pointer: between two rows, onto a row, onto a collapsed
+    // row, below the last row, and a parent onto its own child.
+    static void TreeDrag(VisualElement stage)
+    {
+        TreeView tree = null;
+        string State() => "{\"tree\":" + TreeState(tree) + ",\"hierarchy\":" + TreeHierarchy(tree) + "}";
+        void DragRow(int from, Vector2 to)
+        {
+            var a = RowCenter(tree, from);
+            Pointer(EventType.MouseMove, a);
+            Pointer(EventType.MouseDown, a);
+            Pointer(EventType.MouseMove, Vector2.Lerp(a, to, 0.5f));
+            Update();
+            Pointer(EventType.MouseMove, to);
+            Update();
+            Pointer(EventType.MouseUp, to);
+        }
+        Step("tree-drag", "attach", () => { tree = DataTree(stage, "tdrag", 220); tree.reorderable = true; tree.ExpandAll(); }, State);
+        // Rows: 0 Root 0, 1 Child 1, 2 Leaf 2, 3 Child 3, 4 Leaf 4, 5 Root 5, ...
+        Step("tree-drag", "between-rows", () => DragRow(2, new Vector2(RowCenter(tree, 4).x, tree.GetRootElementForIndex(4).worldBound.yMax - 2)), State);
+        Step("tree-drag", "onto-a-row", () => DragRow(1, RowCenter(tree, 6)), State);
+        Step("tree-drag", "top-of-first-row", () => DragRow(3, new Vector2(RowCenter(tree, 0).x, tree.GetRootElementForIndex(0).worldBound.yMin + 2)), State);
+        Step("tree-drag", "parent-onto-its-child", () => DragRow(0, RowCenter(tree, 1)), State);
+        Step("tree-drag", "below-the-last-row", () =>
+        {
+            int last = tree.viewController.itemsSource.Count - 1;
+            DragRow(1, new Vector2(RowCenter(tree, last).x, tree.GetRootElementForIndex(last).worldBound.yMax + 30));
+        }, State);
+        Step("tree-drag", "onto-a-collapsed-row", () => { tree.CollapseAll(); Update(); DragRow(0, RowCenter(tree, 1)); }, State);
+        Step("tree-drag", "not-reorderable", () => { tree.reorderable = false; tree.ExpandAll(); Update(); DragRow(1, RowCenter(tree, 3)); }, State);
+        Step("tree-drag", "remove", () => tree.RemoveFromHierarchy(), () => "null");
+    }
+
+    // ---- animated reordering on a clock the probe moves ----
+
+    static long s_Clock;
+    static long ClockNow() => s_Clock;
+
+    // The panels' clock (Panel.TimeSinceStartup) replaced by one the probe advances, so animations
+    // are at a known time at every step; null restores the one that was there.
+    static object SetClock(object function)
+    {
+        var panelType = typeof(VisualElement).Assembly.GetType("UnityEngine.UIElements.Panel");
+        var property = panelType.GetProperty("TimeSinceStartup", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        object previous = property.GetGetMethod(true).Invoke(null, null);
+        property.GetSetMethod(true).Invoke(null, new[] { function });
+        return previous;
+    }
+
+    static void WithClock(Action steps)
+    {
+        var panelType = typeof(VisualElement).Assembly.GetType("UnityEngine.UIElements.Panel");
+        s_Clock = (long)panelType.GetMethod("TimeSinceStartupMs", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Invoke(null, null);
+        var clockType = panelType.GetProperty("TimeSinceStartup", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).PropertyType;
+        object previous = SetClock(Delegate.CreateDelegate(clockType, typeof(CollectionsProbe).GetMethod(nameof(ClockNow), BindingFlags.Static | BindingFlags.NonPublic)));
+        try
+        {
+            steps();
+        }
+        finally
+        {
+            SetClock(previous);
+        }
+    }
+
+    static void AnimatedClockSteps(VisualElement stage)
+    {
+        var items = new List<string>();
+        for (int i = 0; i < 6; i++) items.Add("clock " + i);
+        ListView list = null;
+        // Rows with their layout and inline padding and height (what the gap animation changes).
+        string State()
+        {
+            var sb = new StringBuilder(Rows(list, true));
+            sb.Length--;
+            sb.Append(",\"gaps\":[");
+            bool first = true;
+            foreach (var row in list.Q<ScrollView>().contentContainer.Children())
+            {
+                if (!first) sb.Append(',');
+                first = false;
+                sb.Append('[').Append(F(row.resolvedStyle.paddingTop)).Append(',').Append(F(row.resolvedStyle.height)).Append(',').Append(row.resolvedStyle.position == Position.Absolute ? "\"absolute\"" : "\"relative\"").Append(']');
+            }
+            sb.Append("],\"items\":").Append(Objs(Cast(list.itemsSource))).Append('}');
+            return sb.ToString();
+        }
+        Vector2 Grip(int index) => list.GetRootElementForIndex(index).Q(className: BaseListView.reorderableItemHandleUssClassName).worldBound.center;
+        void Advance(int ms) { s_Clock += ms; Update(); }
+        Step("animated-clock", "attach", () =>
+        {
+            list = new ListView { name = "clock", fixedItemHeight = 20, reorderable = true, reorderMode = ListViewReorderMode.Animated, selectionType = SelectionType.Single };
+            Place(list, 420, 20, 180, 200);
+            list.makeItem = () => MakeLabel("clock:");
+            list.bindItem = (e, i) => { Log.Add("clock:bind " + Id(e) + " " + i); ((Label)e).text = items[i]; };
+            list.unbindItem = (e, i) => Log.Add("clock:unbind " + Id(e) + " " + i);
+            HookEvents(list, "clock:");
+            list.itemsSource = items;
+            stage.Add(list);
+        }, State);
+        // One drag step by step: row 1 pressed, moved below row 2, the gap opening over 500 ms.
+        Vector2 from = default, to = default;
+        Step("animated-clock", "press-1", () => { from = Grip(1); Pointer(EventType.MouseMove, from); Pointer(EventType.MouseDown, from); }, State);
+        Step("animated-clock", "move-8", () => Pointer(EventType.MouseMove, from + new Vector2(0, 8)), State);
+        Step("animated-clock", "after-100", () => Advance(100), State);
+        Step("animated-clock", "move-below-2", () => { to = from + new Vector2(0, 34); Pointer(EventType.MouseMove, to); }, State);
+        Step("animated-clock", "after-250", () => Advance(150), State);
+        Step("animated-clock", "release-while-animating", () => Pointer(EventType.MouseUp, to), State);
+        Step("animated-clock", "after-release-100", () => Advance(100), State);
+        // A second drag started while the first one's gaps are still closing.
+        Step("animated-clock", "press-4-while-animating", () => { from = Grip(4); Pointer(EventType.MouseMove, from); Pointer(EventType.MouseDown, from); }, State);
+        Step("animated-clock", "move-up-while-animating", () => { to = from + new Vector2(0, -50); Pointer(EventType.MouseMove, from + new Vector2(0, -8)); Pointer(EventType.MouseMove, to); }, State);
+        Step("animated-clock", "second-after-100", () => Advance(100), State);
+        Step("animated-clock", "second-release", () => Pointer(EventType.MouseUp, to), State);
+        Step("animated-clock", "second-after-300", () => Advance(300), State);
+        Step("animated-clock", "settled", () => Advance(600), State);
+        // A control after everything has settled: the same kind of drag, stepped the same way.
+        Step("animated-clock", "settled-press-0", () => { from = Grip(0); Pointer(EventType.MouseMove, from); Pointer(EventType.MouseDown, from); }, State);
+        Step("animated-clock", "settled-move", () => { to = from + new Vector2(0, 70); Pointer(EventType.MouseMove, from + new Vector2(0, 8)); Pointer(EventType.MouseMove, to); }, State);
+        Step("animated-clock", "settled-after-600", () => Advance(600), State);
+        Step("animated-clock", "settled-release", () => Pointer(EventType.MouseUp, to), State);
+        Step("animated-clock", "settled-after-release-600", () => Advance(600), State);
+        Step("animated-clock", "remove", () => list.RemoveFromHierarchy(), () => "null");
+    }
+
+    // The drop feedback of a tree drag: the hover bar, its markers (the one inside the bar and the
+    // sibling marker) with their inline placement, and the rows carrying the drag-hover class.
+    static string DragFeedback(BaseVerticalCollectionView view)
+    {
+        string Vis(VisualElement e) => e.style.visibility.value == Visibility.Visible ? "\"visible\"" : "\"hidden\"";
+        var sb = new StringBuilder("{\"bar\":");
+        var bar = view.Q(className: BaseVerticalCollectionView.dragHoverBarUssClassName);
+        if (bar == null) sb.Append("null");
+        else sb.Append('[').Append(Vis(bar)).Append(',').Append(F(bar.style.top.value.value)).Append(',').Append(F(bar.style.marginLeft.value.value)).Append(',').Append(F(bar.style.width.value.value)).Append(']');
+        sb.Append(",\"markers\":[");
+        bool first = true;
+        view.Query(className: BaseVerticalCollectionView.dragHoverMarkerUssClassName).ForEach(marker =>
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            sb.Append('[').Append(marker.parent == bar ? "\"in-bar\"" : "\"sibling\"").Append(',').Append(Vis(marker)).Append(',').Append(F(marker.style.top.value.value)).Append(',').Append(F(marker.style.marginLeft.value.value)).Append(']');
+        });
+        sb.Append("],\"hovered\":[");
+        first = true;
+        view.Query(className: BaseVerticalCollectionView.itemDragHoverUssClassName).ForEach(row =>
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            sb.Append(F(row.layout.y));
+        });
+        return sb.Append("]}").ToString();
+    }
+
+    // Tree drags step by step on the probe's clock: the parent and child index each pointer
+    // position asks for (dragAndDropUpdate and handleDrop see them), the drop feedback, the depth
+    // the pointer's x picks between two rows, drops below the rows, several items at once (an item
+    // with its own child among them), an item onto its own descendant, a collapsed row that opens
+    // under a hovering drag and closes again, and drags refused by canStartDrag and handleDrop.
+    static void TreeDragPositions(VisualElement stage)
+    {
+        TreeView tree = null;
+        Vector2 at = default;
+        string State() => "{\"tree\":" + TreeState(tree) + ",\"hierarchy\":" + TreeHierarchy(tree) + ",\"feedback\":" + DragFeedback(tree) + "}";
+        void Press(int row) { at = RowCenter(tree, row); Pointer(EventType.MouseMove, at); Pointer(EventType.MouseDown, at); }
+        void MoveTo(Vector2 to) { Pointer(EventType.MouseMove, Vector2.Lerp(at, to, 0.5f)); Update(); at = to; Pointer(EventType.MouseMove, to); }
+        void Release() => Pointer(EventType.MouseUp, at);
+        void Advance(int ms) { s_Clock += ms; Update(); }
+        Vector2 BottomEdge(int row, float x) => new Vector2(x, tree.GetRootElementForIndex(row).worldBound.yMax - 2);
+        float Left() => tree.worldBound.xMin;
+        Func<HandleDragAndDropArgs, DragVisualMode> refuse = a => { Log.Add("tpos:handleDrop refuses"); return DragVisualMode.Rejected; };
+        Func<CanStartDragArgs, bool> never = a => { Log.Add("tpos:canStartDrag " + a.id + " " + Ints(a.selectedIds)); return false; };
+        Step("tree-drag-positions", "attach", () =>
+        {
+            tree = DataTree(stage, "tpos", 20);
+            tree.reorderable = true;
+            tree.selectionType = SelectionType.Multiple;
+            tree.dragAndDropUpdate += a => { Log.Add("tpos:update " + a.dropPosition + " insert " + a.insertAtIndex + " parent " + a.parentId + " child " + a.childIndex); return DragVisualMode.None; };
+            tree.handleDrop += a => { Log.Add("tpos:drop " + a.dropPosition + " insert " + a.insertAtIndex + " parent " + a.parentId + " child " + a.childIndex); return DragVisualMode.None; };
+            tree.ExpandAll();
+        }, State);
+        // Rows: 0 Root 0, 1 Child 1, 2 Leaf 2, 3 Child 3, 4 Leaf 4, 5 Root 5, 6 Child 6, 7 Leaf 7, ...
+        // Below Leaf 4 (depth 2) and above Root 5 (depth 0): the pointer's x picks the depth.
+        Step("tree-drag-positions", "press-leaf-7", () => Press(7), State);
+        Step("tree-drag-positions", "below-leaf-4-deep", () => MoveTo(BottomEdge(4, Left() + 150)), State);
+        Step("tree-drag-positions", "below-leaf-4-middle", () => MoveTo(BottomEdge(4, Left() + 40)), State);
+        Step("tree-drag-positions", "below-leaf-4-shallow", () => MoveTo(BottomEdge(4, Left() + 4)), State);
+        Step("tree-drag-positions", "over-child-3", () => MoveTo(RowCenter(tree, 3)), State);
+        Step("tree-drag-positions", "top-edge-of-child-3", () => MoveTo(new Vector2(Left() + 150, tree.GetRootElementForIndex(3).worldBound.yMin + 2)), State);
+        Step("tree-drag-positions", "below-open-child-1", () => MoveTo(BottomEdge(1, Left() + 150)), State);
+        Step("tree-drag-positions", "back-below-leaf-4-shallow", () => MoveTo(BottomEdge(4, Left() + 4)), State);
+        Step("tree-drag-positions", "drop-shallow", () => Release(), State);
+        // Below the last row, inside the view.
+        Step("tree-drag-positions", "press-leaf-2", () => Press(2), State);
+        Step("tree-drag-positions", "below-the-rows-deep", () =>
+        {
+            int last = tree.viewController.itemsSource.Count - 1;
+            MoveTo(new Vector2(Left() + 150, tree.GetRootElementForIndex(last).worldBound.yMax + 8));
+        }, State);
+        Step("tree-drag-positions", "below-the-rows-shallow", () => MoveTo(new Vector2(Left() + 4, at.y)), State);
+        Step("tree-drag-positions", "drop-below-the-rows", () => Release(), State);
+        // A row dropped at its own bottom edge: no row that is not dragged comes before it.
+        Step("tree-drag-positions", "first-row-at-its-own-bottom-edge", () => { Press(0); MoveTo(BottomEdge(0, Left() + 150)); Release(); }, State);
+        // Several items: Child 11 with its own Leaf 12 and Leaf 4, given in another order.
+        Step("tree-drag-positions", "select-three", () => tree.SetSelectionById(new[] { 12, 4, 11 }), State);
+        Step("tree-drag-positions", "drag-three-between", () =>
+        {
+            Press(tree.viewController.GetIndexForId(4));
+            MoveTo(BottomEdge(tree.viewController.GetIndexForId(8), Left() + 150));
+            Release();
+        }, State);
+        Step("tree-drag-positions", "drag-three-onto-a-row", () =>
+        {
+            Press(tree.viewController.GetIndexForId(4));
+            MoveTo(RowCenter(tree, tree.viewController.GetIndexForId(13)));
+            Release();
+        }, State);
+        // An item onto its own descendant.
+        Step("tree-drag-positions", "parent-onto-its-descendant", () =>
+        {
+            tree.SetSelectionById(5);
+            Press(tree.viewController.GetIndexForId(5));
+            MoveTo(RowCenter(tree, tree.viewController.GetIndexForId(9)));
+            Release();
+        }, State);
+        // A collapsed row under a hovering drag.
+        Step("tree-drag-positions", "collapse-two", () => { tree.CollapseItem(5); tree.CollapseItem(13); tree.SetSelectionById(14); }, State);
+        Step("tree-drag-positions", "hover-collapsed-root-5", () => { Press(tree.viewController.GetIndexForId(10)); MoveTo(RowCenter(tree, tree.viewController.GetIndexForId(5))); }, State);
+        Step("tree-drag-positions", "hover-after-400", () => Advance(400), State);
+        Step("tree-drag-positions", "hover-after-800", () => Advance(400), State);
+        Step("tree-drag-positions", "hover-after-1600", () => Advance(800), State);
+        Step("tree-drag-positions", "hover-moved-12-points", () => { MoveTo(at + new Vector2(12, 0)); Advance(400); }, State);
+        Step("tree-drag-positions", "drop-after-hover", () => Release(), State);
+        Step("tree-drag-positions", "after-drop-800", () => Advance(800), State);
+        // Refusals: canStartDrag false, handleDrop Rejected.
+        Step("tree-drag-positions", "can-start-drag-false", () =>
+        {
+            tree.canStartDrag += never;
+            Press(0); MoveTo(RowCenter(tree, 2)); Release();
+            tree.canStartDrag -= never;
+        }, State);
+        Step("tree-drag-positions", "handle-drop-rejects", () =>
+        {
+            tree.handleDrop += refuse;
+            Press(0); MoveTo(RowCenter(tree, 2)); Release();
+            tree.handleDrop -= refuse;
+        }, State);
+        Step("tree-drag-positions", "remove", () => tree.RemoveFromHierarchy(), () => "null");
     }
 
     // ---- contextual menus ----
