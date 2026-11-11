@@ -233,6 +233,25 @@ namespace UnityEngine
         static readonly int s_DynamicLightmap = Shader.PropertyToID("unity_DynamicLightmap");
         static readonly int s_DynamicLightmapST = Shader.PropertyToID("unity_DynamicLightmapST");
         static readonly int s_DynamicDirectionality = Shader.PropertyToID("unity_DynamicDirectionality");
+        static Texture2D s_FlatDirection;
+
+        /// <summary>A directionality that leaves a lightmap's light as it is whatever the shaded
+        /// normal: no direction, and a rebalancing term of 1/2, the half Lambert term of no
+        /// direction.</summary>
+        static Texture2D FlatDirection
+        {
+            get
+            {
+                if (s_FlatDirection == null)
+                {
+                    using (Unbound.Runtime.ObjectRegistry.AsAssets())
+                        s_FlatDirection = new Texture2D(1, 1, TextureFormat.RGBA32, false, true) { name = "Flat Directionality", hideFlags = HideFlags.HideAndDontSave };
+                    s_FlatDirection.SetPixelData(new byte[] { 128, 128, 128, 128 }, 0);
+                    s_FlatDirection.Apply(false);
+                }
+                return s_FlatDirection;
+            }
+        }
         static readonly int[] s_ShIds =
         {
             Shader.PropertyToID("unity_SHAr"), Shader.PropertyToID("unity_SHAg"), Shader.PropertyToID("unity_SHAb"),
@@ -264,11 +283,10 @@ namespace UnityEngine
                 properties[s_DynamicLightmap] = renderer.m_RealtimeLightmap;
                 properties[s_DynamicLightmapST] = renderer.realtimeLightmapScaleOffset;
                 keywords.Add("DYNAMICLIGHTMAP_ON");
-                if (realtimeDirectional)
-                {
-                    properties[s_DynamicDirectionality] = renderer.m_RealtimeDirectionality;
-                    keywords.Add("DIRLIGHTMAP_COMBINED");
-                }
+                // The keyword is the baked lightmap's too: whichever of the two has no direction
+                // of its own under it gets one that changes nothing (unmeasured in the Editor).
+                if (directional) properties[s_DynamicDirectionality] = renderer.m_RealtimeDirectionality ?? FlatDirection;
+                if (realtimeDirectional) keywords.Add("DIRLIGHTMAP_COMBINED");
             }
             var map = lightmaps ? LightmapSettings.Of(renderer.lightmapIndex) : null;
             // Terrain selects the lightmapped variant from its index, even for a missing
@@ -287,6 +305,7 @@ namespace UnityEngine
                     properties[s_LightmapInd] = map?.m_Dir ?? DefaultTextures.Black;
                     if (!realtimeDirectional) keywords.Add("DIRLIGHTMAP_COMBINED");
                 }
+                else if (realtimeDirectional) properties[s_LightmapInd] = FlatDirection;
                 if (map?.m_ShadowMask != null)
                 {
                     properties[s_ShadowMask] = map.m_ShadowMask;

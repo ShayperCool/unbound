@@ -61,6 +61,10 @@ struct Atlas {
     /// The directionality of a directional lightmap (RGBA8, as the texels; empty until the
     /// scene is directional).
     directionality: Vec<[u8; 4]>,
+    /// Systems of the atlas whose directionality it does not hold yet since the scene became
+    /// directional: until there is none the atlas's directionality is not read (a lit texel
+    /// without one would be drawn far too bright).
+    directionality_missing: usize,
 }
 
 struct Scene {
@@ -90,6 +94,14 @@ struct Scene {
     /// changes after it until the inputs do).
     stable: usize,
     changed: bool,
+    /// Per system, whether its atlas holds its directionality (see
+    /// [`Atlas::directionality_missing`]).
+    directionality_copied: Vec<bool>,
+    /// The systems solve their directionality (the last frame's mode, when the scene has one).
+    directional: bool,
+    /// Why the scene has no directionality (a system's blocks could not be read): it is then
+    /// drawn as a non-directional one, whatever the frames' mode.
+    directionality_error: Option<String>,
 }
 
 static SCENES: Mutex<Option<HashMap<u64, Scene>>> = Mutex::new(None);
@@ -253,8 +265,19 @@ fn register(
             size,
             texels: vec![0; size as usize * size as usize],
             directionality: Vec::new(),
+            directionality_missing: 0,
         })
         .collect();
+    let directionality_error = systems
+        .iter()
+        .find_map(|s| s.system().transport.block_error.clone());
+    // Copies of blocks and texels are read as the precomputed data lists them, but no measured
+    // scene has any: the managed side says so once for a directional scene.
+    let copies = systems.iter().any(|s| {
+        let segments = &s.system().transport.segments;
+        segments.iter().any(|g| !g.copies.is_empty())
+    });
+    let system_count = systems.len();
     let handle = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     SCENES
         .lock()
@@ -272,6 +295,9 @@ fn register(
                 cursor: 0,
                 stable: 0,
                 changed: true,
+                directionality_copied: vec![false; system_count],
+                directional: false,
+                directionality_error: directionality_error.clone(),
                 probe_sets,
                 probes: vec![[0.0; 27]; probe_count],
                 environment: vec![[0.0; 3]; unbound_gi::data::ENVIRONMENT_VALUES],
@@ -284,6 +310,7 @@ fn register(
         "atlases": data.atlas_sizes,
         "systems": systems_json,
         "probes": { "count": probe_count, "error": probe_error },
+        "directionality": { "error": directionality_error, "copies": copies },
     }))
 }
 
@@ -419,15 +446,23 @@ impl Scene {
         }
         // Directional lightmaps: every system solves its directionality from its next update
         // on (and stops when the mode is left, keeping the atlases' last texels).
-        let directional = frame.directional != 0;
-        let directional_changed = last.is_none_or(|l| (l.directional != 0) != directional);
+        let directional = frame.directional != 0 && self.directionality_error.is_none();
+        let directional_changed = self.directional != directional;
         if directional_changed {
+            self.directional = directional;
             for system in &mut self.systems {
-                system.set_directional(directional);
+                system.set_directional(directional)?;
             }
             if directional {
+                // Every system solves its directionality again; an atlas's is read once it holds
+                // all of them.
+                self.directionality_copied.fill(false);
                 for atlas in &mut self.atlases {
                     atlas.directionality.resize(atlas.texels.len(), [0; 4]);
+                    atlas.directionality_missing = 0;
+                }
+                for system in &self.systems {
+                    self.atlases[system.system().atlas].directionality_missing += 1;
                 }
             }
         }
@@ -458,10 +493,19 @@ impl Scene {
             unbound_gi::solver::update_in(&mut self.systems, index);
             let system = &self.systems[index];
             let atlas = &mut self.atlases[system.system().atlas];
-            let drawn = copy_into(system, atlas);
+            let drawn = copy_rows(system, system.encoded(), atlas.size, &mut atlas.texels);
             // The directionality changes only with solved segments; convergence is the drawn
             // light's, which the bounce reads.
-            self.changed |= drawn | copy_directionality(system, atlas);
+            self.changed |= drawn;
+            if let Some(texels) = system.directionality() {
+                let copied = copy_rows(system, texels, atlas.size, &mut atlas.directionality);
+                // An atlas's first complete directionality is a change too, whatever it holds.
+                let first = !std::mem::replace(&mut self.directionality_copied[index], true);
+                if first {
+                    atlas.directionality_missing -= 1;
+                }
+                self.changed |= copied || first;
+            }
             self.stable = if drawn { 0 } else { self.stable + 1 };
             done += 1;
         }
@@ -492,37 +536,22 @@ impl Scene {
     }
 }
 
-/// Copies a system's drawn texels into its atlas; whether any changed.
-fn copy_into(system: &SystemSolver, atlas: &mut Atlas) -> bool {
+/// Copies a system's texels (`rows`, row-major at its resolution: its drawn light or its
+/// directionality) to its place in an atlas of `size` x `size` texels; whether any changed.
+fn copy_rows<T: Copy + PartialEq>(
+    system: &SystemSolver,
+    rows: &[T],
+    size: u32,
+    atlas: &mut [T],
+) -> bool {
     let s = system.system();
     let (width, height) = (s.transport.width as usize, s.transport.height as usize);
     let (ox, oy) = (s.atlas_offset.0 as usize, s.atlas_offset.1 as usize);
-    let size = atlas.size as usize;
+    let size = size as usize;
     let mut changed = false;
     for y in 0..height {
-        let row = &system.encoded()[y * width..(y + 1) * width];
-        let target = &mut atlas.texels[(oy + y) * size + ox..][..width];
-        if target != row {
-            target.copy_from_slice(row);
-            changed = true;
-        }
-    }
-    changed
-}
-
-/// Copies a directional system's directionality into its atlas; whether any texel changed.
-fn copy_directionality(system: &SystemSolver, atlas: &mut Atlas) -> bool {
-    let Some(texels) = system.directionality() else {
-        return false;
-    };
-    let s = system.system();
-    let (width, height) = (s.transport.width as usize, s.transport.height as usize);
-    let (ox, oy) = (s.atlas_offset.0 as usize, s.atlas_offset.1 as usize);
-    let size = atlas.size as usize;
-    let mut changed = false;
-    for y in 0..height {
-        let row = &texels[y * width..(y + 1) * width];
-        let target = &mut atlas.directionality[(oy + y) * size + ox..][..width];
+        let row = &rows[y * width..(y + 1) * width];
+        let target = &mut atlas[(oy + y) * size + ox..][..width];
         if target != row {
             target.copy_from_slice(row);
             changed = true;
@@ -568,13 +597,17 @@ pub fn read_atlas(handle: u64, atlas: usize, out: &mut [u16]) -> Result<usize> {
 
 /// Atlas `atlas`'s directionality as RGBA8 (`unity_DynamicDirectionality`), `size * size` texels
 /// row-major from v = 0, into `out`; returns the number of texels written: 0 while the scene is
-/// not directional.
+/// not directional, and until every system of the atlas has solved its directionality since it
+/// became directional.
 pub fn read_directionality(handle: u64, atlas: usize, out: &mut [u8]) -> Result<usize> {
     with_scene(handle, |scene| {
         let atlas = scene
             .atlases
             .get(atlas)
             .with_context(|| format!("no atlas {atlas}"))?;
+        if !scene.directional || atlas.directionality_missing > 0 {
+            return Ok(0);
+        }
         let texels = &atlas.directionality;
         ensure!(
             out.len() >= 4 * texels.len(),
@@ -1039,16 +1072,76 @@ mod tests {
             facing(|t| t[0] > 180 || t[0] < 75 || t[2] > 180 || t[2] < 75) > 400,
             "the walls"
         );
-        // A capacity below the atlas fails; back in the other mode the atlas keeps its texels.
+        // A capacity below the atlas fails; back in the other mode there is nothing to read.
         assert!(read_directionality(handle, 0, &mut texels[..16]).is_err());
         frame.directional = 0;
         update(handle, &frame, &lights).unwrap();
-        let before = texels.clone();
+        assert_eq!(read_directionality(handle, 0, &mut texels).unwrap(), 0);
+        release(handle);
+    }
+
+    #[test]
+    fn an_atlas_of_several_systems_gives_its_directionality_once_all_are_solved() {
+        // The two-system scene (one atlas), one system updated per frame: becoming directional
+        // while lit, the atlas has no directionality to read until both systems have solved
+        // theirs, and then none of its lit texels lacks one.
+        let file = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/realtimegi/Assets/Scenes/RoomSystems/LightingData.asset");
+        let bytes = std::fs::read(file).unwrap();
+        let serialized = SerializedFile::parse(&bytes).unwrap();
+        let data = unbound_gi::data::read_precomputed(&serialized.read(112000000).unwrap())
+            .unwrap()
+            .unwrap();
+        let reply = register(data, true, &[]).unwrap();
+        assert_eq!(
+            reply["directionality"],
+            json!({ "error": null, "copies": false })
+        );
+        let handle = reply["handle"].as_u64().unwrap();
+        let size = reply["atlases"][0].as_u64().unwrap() as usize;
+        for (index, system) in reply["systems"].as_array().unwrap().iter().enumerate() {
+            let texels =
+                (system["width"].as_u64().unwrap() * system["height"].as_u64().unwrap()) as usize;
+            set_material(handle, index, 0, &vec![200u8; 4 * texels]).unwrap();
+        }
+        let mut frame = GiFrame {
+            indirect_scale: 1.0,
+            synchronous: 0,
+            budget_ms: 0.0,
+            update_threshold: 1.0,
+            directional: 0,
+        };
+        let lights = [point([0.0, 2.0, 0.0])];
+        let mut converged = false;
+        for _ in 0..4000 {
+            if update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED != 0 {
+                converged = true;
+                break;
+            }
+        }
+        assert!(converged);
+        let mut light = vec![0u16; 4 * size * size];
+        read_atlas(handle, 0, &mut light).unwrap();
+        let mut texels = vec![0u8; 4 * size * size];
+        frame.directional = 1;
+        // The first frame updates one system: nothing to read yet.
+        update(handle, &frame, &lights).unwrap();
+        assert_eq!(read_directionality(handle, 0, &mut texels).unwrap(), 0);
+        // The second one completes the atlas, and says so.
+        let second = update(handle, &frame, &lights).unwrap();
+        assert_eq!(second & UPDATE_CHANGED, UPDATE_CHANGED);
         assert_eq!(
             read_directionality(handle, 0, &mut texels).unwrap(),
-            64 * 64
+            size * size
         );
-        assert_eq!(before, texels);
+        read_atlas(handle, 0, &mut light).unwrap();
+        let lit_without = light
+            .chunks_exact(4)
+            .zip(texels.chunks_exact(4))
+            .filter(|(l, d)| l[..3].iter().any(|&v| v != 0) && d[3] < 127)
+            .count();
+        assert_eq!(lit_without, 0);
+        assert!(texels.chunks_exact(4).filter(|d| d[3] >= 127).count() > 2000);
         release(handle);
     }
 

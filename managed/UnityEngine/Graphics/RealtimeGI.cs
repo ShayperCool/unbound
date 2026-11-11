@@ -81,6 +81,9 @@ namespace UnityEngine
             internal Texture2D[] Atlases;
             /// <summary>Per atlas, its directionality; made when the lightmaps are directional.</summary>
             internal Texture2D[] Directionality;
+            /// <summary>What to say once when the scene is first drawn with directional
+            /// lightmaps (its directionality cannot be read, or has unmeasured parts); else null.</summary>
+            internal string DirectionalityNote;
             internal float AlbedoBoost = 1f;
             internal bool Converged, Failed;
             /// <summary>The scene's own light probes its probe sets light, and the probes'
@@ -208,6 +211,11 @@ namespace UnityEngine
             s_Scenes.Add(loaded);
             if (settings != null && !settings.realtimeEnvironmentLighting)
                 Warn("environment-baked:" + file.Path, $"{file.Path}: its environment lighting is baked (Lighting Settings); what precomputed realtime GI takes as its environment then is not measured: it takes the ambient source all the same.");
+            var directionality = root.GetProperty("directionality");
+            if (directionality.GetProperty("error").ValueKind == JsonValueKind.String)
+                loaded.DirectionalityNote = $"{file.Path}: the directionality of its precomputed realtime GI cannot be read, so its realtime lightmaps are drawn as non-directional ones: {directionality.GetProperty("error").GetString()}";
+            else if (directionality.GetProperty("copies").GetBoolean())
+                loaded.DirectionalityNote = $"{file.Path}: its precomputed realtime GI copies lightmap texels, whose directionality is not measured against the Editor (docs/REALTIME_GI.md).";
             BindProbes(loaded, root.GetProperty("probes"), file);
             if (!s_Registered)
             {
@@ -357,6 +365,11 @@ namespace UnityEngine
                     if (scene.Failed) break;
                 }
                 if (scene.Failed) continue;
+                if (frame.Directional != 0 && scene.DirectionalityNote != null)
+                {
+                    Warn("directionality:" + scene.Handle, scene.DirectionalityNote);
+                    scene.DirectionalityNote = null;
+                }
                 NativeBuffer error;
                 int result;
                 if (scene.EnvironmentVersion != s_EnvironmentVersion)

@@ -489,7 +489,10 @@ LightingSettings:
                 LightmapSettings.lightmapsMode = LightmapsMode.CombinedDirectional;
                 var properties = BakedLighting.Apply(renderer, null, keywords);
                 Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
-                Assert.False(properties.ContainsKey(id));
+                // Without a directionality of its own the renderer draws undirected; under a
+                // baked lightmap's keyword it would read a direction that changes nothing.
+                var flat = Assert.IsType<Texture2D>(properties[id]);
+                Assert.Equal(new Color32(128, 128, 128, 128), flat.GetPixels32()[0]);
 
                 renderer.m_RealtimeDirectionality = directionality;
                 keywords.Clear();
@@ -507,6 +510,27 @@ LightingSettings:
                 properties = BakedLighting.Apply(renderer, null, keywords);
                 Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON", "DIRLIGHTMAP_COMBINED", "LIGHTMAP_ON" }, keywords);
                 Assert.Same(directionality, properties[id]);
+                Assert.Same(bakedDirection, properties[Shader.PropertyToID("unity_LightmapInd")]);
+
+                // A baked lightmap without a direction of its own, under the realtime one's
+                // keyword: the flat direction.
+                LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = new Texture2D(4, 4, TextureFormat.RGBAHalf, false) } };
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON", "DIRLIGHTMAP_COMBINED", "LIGHTMAP_ON" }, keywords);
+                Assert.Same(flat, properties[Shader.PropertyToID("unity_LightmapInd")]);
+                // And the other way round: the baked direction's keyword with a realtime
+                // lightmap that has no directionality yet.
+                LightmapSettings.lightmaps = new[] { new LightmapData
+                {
+                    lightmapColor = new Texture2D(4, 4, TextureFormat.RGBAHalf, false),
+                    lightmapDir = bakedDirection,
+                } };
+                renderer.m_RealtimeDirectionality = null;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON", "LIGHTMAP_ON", "DIRLIGHTMAP_COMBINED" }, keywords);
+                Assert.Same(flat, properties[id]);
                 Assert.Same(bakedDirection, properties[Shader.PropertyToID("unity_LightmapInd")]);
 
                 LightmapSettings.lightmapsMode = LightmapsMode.NonDirectional;
