@@ -16,7 +16,8 @@
 //! fileID tables). When the file has a single top-level node and `preserveHierarchy` is off, that
 //! node *is* the root (its transform and renderer move to the root), unless its default node
 //! attribute (`DefaultAttributeIndex`) is a skeleton: a bone stays a child of the root (measured,
-//! tests/projects/modeltoproot). Node names are made unique
+//! tests/projects/modeltoproot). An OBJ file's meshes are always children of the root, one per
+//! `g` group and named after it (`obj_groups`; tests/projects/lightmapuvs Names). Node names are made unique
 //! across the model by appending ` 1`, ` 2`, ... in depth-first order, and children are sorted by
 //! name when `sortHierarchyByName` (the default) is set.
 //!
@@ -775,7 +776,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 35;
+    const VERSION: u32 = 36;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -795,6 +796,49 @@ impl Importer for ModelImporter {
     fn options_key(&self) -> String {
         self.mtl.name.into()
     }
+}
+
+/// The order `sortHierarchyByName` gives sibling names (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/lightmapuvs Names/Order and Names/OrderFbx): letter case is ignored and runs of
+/// digits compare as numbers (`9`, `10`, `_under`, `a2`, `a10`, `alpha`, `B_0`, `Beta`); names
+/// equal that way compare as text without case (`a01` before `A1`), then exactly (`Alpha` before
+/// `alpha`).
+fn hierarchy_name_order(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    let (la, lb) = (a.to_lowercase(), b.to_lowercase());
+    let (mut x, mut y) = (la.chars().peekable(), lb.chars().peekable());
+    let natural = loop {
+        match (x.peek().copied(), y.peek().copied()) {
+            (None, None) => break Ordering::Equal,
+            (None, Some(_)) => break Ordering::Less,
+            (Some(_), None) => break Ordering::Greater,
+            (Some(c), Some(d)) if c.is_ascii_digit() && d.is_ascii_digit() => {
+                // Numbers of any length: without leading zeros, the longer is the larger.
+                let mut number = |it: &mut std::iter::Peekable<std::str::Chars>| {
+                    let mut digits = String::new();
+                    while let Some(c) = it.next_if(char::is_ascii_digit) {
+                        if !(digits.is_empty() && c == '0') {
+                            digits.push(c);
+                        }
+                    }
+                    digits
+                };
+                let (m, n) = (number(&mut x), number(&mut y));
+                let order = m.len().cmp(&n.len()).then_with(|| m.cmp(&n));
+                if order != Ordering::Equal {
+                    break order;
+                }
+            }
+            (Some(c), Some(d)) => {
+                if c != d {
+                    break c.cmp(&d);
+                }
+                x.next();
+                y.next();
+            }
+        }
+    };
+    natural.then_with(|| la.cmp(&lb)).then_with(|| a.cmp(b))
 }
 
 /// Select the same authored library for dependency hashing and ufbx loading.
@@ -831,6 +875,14 @@ pub fn import_model(
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("obj"));
     let filename = source.to_string_lossy();
+    // An OBJ file is read as the meshes its `g` statements name (see `obj_groups`).
+    let (regrouped, group_warning) = if is_obj {
+        let (text, warning) = obj_groups::regroup(bytes);
+        (Some(text), warning)
+    } else {
+        (None, None)
+    };
+    let bytes = regrouped.as_deref().unwrap_or(bytes);
     let library = is_obj
         .then(|| obj_material_library(source, bytes))
         .flatten();
@@ -908,7 +960,7 @@ pub fn import_model(
             1.0
         };
 
-    let mut warnings = Vec::new();
+    let mut warnings: Vec<String> = group_warning.into_iter().collect();
     let fbx_smoothing = if reads_fbx_smoothing
         && (settings.normals == NormalMode::Calculate
             || scene.meshes.iter().any(|m| !m.vertex_normal.exists))
@@ -978,6 +1030,7 @@ pub fn import_model(
     // The root: the single top-level node unless it is a bone, or the scene root.
     let root_node: &ufbx::Node = &scene.root_node;
     let root: &ufbx::Node = if !settings.preserve_hierarchy
+        && !is_obj
         && root_node.children.len() == 1
         && !default_attribute_is_bone(&root_node.children[0])
     {
@@ -1248,8 +1301,9 @@ impl<'a> Builder<'a> {
         let mut children: Vec<&'a ufbx::Node> = node.children.iter().map(|c| c.as_ref()).collect();
         if self.settings.sort_hierarchy_by_name {
             let names = &self.unique_names;
-            children
-                .sort_by(|a, b| names[&a.element.element_id].cmp(&names[&b.element.element_id]));
+            children.sort_by(|a, b| {
+                hierarchy_name_order(&names[&a.element.element_id], &names[&b.element.element_id])
+            });
         }
         for child in children {
             self.add_node(child, Some(index), ids);
@@ -2419,13 +2473,21 @@ impl<'a> Builder<'a> {
         // newest vertex of its control point with the same attributes, or makes one after them.
         // Points no face uses are left out, unless vertex optimization is off.
         let mut used = vec![
-            if settings.keep_unused_vertices {
+            if settings.keep_unused_vertices && !self.obj {
                 0
             } else {
                 u32::MAX
             };
             points.len()
         ];
+        // An OBJ file's points belong to no mesh: one has those its group's faces name, also the
+        // faces that give no triangle, and not those of other groups or of no face (lightmapuvs
+        // Names/RepeatGroup and Names/UnusedPoints).
+        if settings.keep_unused_vertices && self.obj {
+            for &index in mesh.vertex_indices.iter() {
+                used[welded[index as usize] as usize] = 0;
+            }
+        }
         let mut used_points = Vec::new();
         for &p in &corners {
             if used[p as usize] == u32::MAX {
@@ -3389,6 +3451,7 @@ mod fbx_smoothing;
 mod lightmap_uv;
 mod materials;
 mod normals;
+mod obj_groups;
 mod obj_smoothing;
 mod pivots;
 mod skinned_bounds;

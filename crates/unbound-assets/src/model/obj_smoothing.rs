@@ -23,7 +23,7 @@ pub struct ObjMesh {
 }
 
 /// The group a `s` statement leaves (`rest`: the text after the keyword).
-fn statement(rest: &str, current: u32) -> u32 {
+pub(super) fn statement(rest: &str, current: u32) -> u32 {
     let text = rest.trim_start();
     let (sign, digits) = match text.as_bytes().first() {
         Some(b'-') => (-1i64, &text[1..]),
@@ -45,7 +45,7 @@ fn statement(rest: &str, current: u32) -> u32 {
 }
 
 /// The mesh group a `g` statement names.
-fn group_name(rest: &str) -> String {
+pub(super) fn group_name(rest: &str) -> String {
     let rest = rest.trim();
     if rest.is_empty() {
         "default".into()

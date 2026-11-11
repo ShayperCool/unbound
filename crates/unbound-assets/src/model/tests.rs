@@ -12,15 +12,15 @@ ModelImporter:
   fileIDToRecycleName:
     100000: //RootNode
     100002: Box
-    100004: Box 1
+    100004: Lid
     400000: //RootNode
     400002: Box
-    400004: Box 1
+    400004: Lid
     2100000: red
     2300000: Box
     3300000: Box
     4300000: Box
-    4300002: Box 1
+    4300002: Lid
     9500000: //RootNode
   materials:
     importMaterials: 0
@@ -70,15 +70,18 @@ fn reads_6000_settings() {
     assert_eq!(s.animation_type, 0);
 }
 
-/// Two objects named `Box`; the first a triangle in the XY plane facing +Z.
-const OBJ: &str = "o Box
+/// Two groups, each also named as an object (which the importer does not read); the first a
+/// triangle in the XY plane facing +Z.
+const OBJ: &str = "o Shape
+g Box
 v 0 0 0
 v 1 0 0
 v 0 1 0
 vn 0 0 1
 usemtl red
 f 1//1 2//1 3//1
-o Box
+o Shape
+g Lid
 v 0 0 1
 v 1 0 1
 v 0 1 1
@@ -97,9 +100,9 @@ fn imports_an_obj_in_unity_space() {
     assert_eq!(model.name, "Shapes");
     assert_eq!(model.scale, 100.0);
 
-    // Two top-level nodes: an explicit root named after the file, children made unique.
+    // A root named after the file with one child per group.
     let names: Vec<&str> = model.nodes.iter().map(|n| n.name.as_str()).collect();
-    assert_eq!(names, ["Shapes", "Box", "Box 1"]);
+    assert_eq!(names, ["Shapes", "Box", "Lid"]);
     assert_eq!(model.nodes[0].children, [1, 2]);
     assert_eq!(model.nodes[0].game_object.id, 100000);
     assert_eq!(model.nodes[0].transform.id, 400000);
@@ -137,29 +140,51 @@ fn imports_an_obj_in_unity_space() {
 }
 
 #[test]
-fn a_single_top_level_node_becomes_the_root() {
+fn an_obj_mesh_is_a_child_named_after_its_group() {
+    // Measured: tests/projects/lightmapuvs Names. The object statement is not read, a file
+    // without groups has the mesh `default`, and the mesh never moves to the root.
     let obj = "o Only\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
     let model = ModelImporter::default()
         .import(Path::new("Single.obj"), obj.as_bytes(), &Value::Null)
         .unwrap();
-    assert_eq!(model.nodes.len(), 1);
-    assert_eq!(model.nodes[0].name, "Single");
+    let names: Vec<&str> = model.nodes.iter().map(|n| n.name.as_str()).collect();
+    assert_eq!(names, ["Single", "default"]);
     // A new-format meta without tables: the root objects get Unity's fixed IDs.
     assert_eq!(model.nodes[0].game_object.id, ROOT_GAME_OBJECT_ID);
     assert_eq!(model.nodes[0].transform.id, ROOT_TRANSFORM_ID);
-    let renderer = model.nodes[0].renderer.as_ref().unwrap();
-    assert_eq!(renderer.renderer.id, ROOT_MESH_RENDERER_ID);
-    assert_eq!(model.meshes[0].name, "Only");
+    assert!(model.nodes[0].renderer.is_none());
+    assert!(model.nodes[1].renderer.is_some());
+    assert_eq!(model.meshes[0].name, "default");
 
-    let preserved = ModelImporter::default()
-        .import(
-            Path::new("Single.obj"),
-            obj.as_bytes(),
-            &meta("ModelImporter:\n  meshes:\n    preserveHierarchy: 1\n"),
-        )
-        .unwrap();
-    assert_eq!(preserved.nodes.len(), 2);
-    assert!(preserved.nodes[0].renderer.is_none());
+    // A group that returns after another one is one mesh, in the order of its faces.
+    let obj = "v 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 1\ng First\nf 1 2 3\ng Second\nf 1 2 4\n\
+               g First\nf 2 3 4\ng two words\nf 1 3 4\n";
+    let model = import_obj("Groups.obj", obj, NO_OPTIMIZATION);
+    assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+    let names: Vec<&str> = model.meshes.iter().map(|m| m.name.as_str()).collect();
+    assert_eq!(names, ["First", "Second", "two_words"]);
+    assert_eq!(model.meshes[0].submeshes[0].len(), 6);
+    assert_eq!(model.meshes[1].submeshes[0].len(), 3);
+}
+
+#[test]
+fn siblings_sort_by_name_without_case_and_with_numbers_as_numbers() {
+    // The Editor's order of tests/projects/lightmapuvs Names/OrderFbx.
+    let expected = [
+        "9", "10", "_under", "a01", "A1", "a1A", "a1b", "a2", "a10", "Alpha", "alpha", "b-2",
+        "b.1", "B_0", "Beta", "Zed",
+    ];
+    let mut names = expected;
+    names.reverse();
+    names.sort_by(|a, b| hierarchy_name_order(a, b));
+    assert_eq!(names, expected);
+    // Outside the capture: numbers too long for an integer, and a name that is another's start.
+    let mut names = ["x100000000000000000000000", "x99999999999999999999999", "x", "X1y", "x1"];
+    names.sort_by(|a, b| hierarchy_name_order(a, b));
+    assert_eq!(
+        names,
+        ["x", "x1", "X1y", "x99999999999999999999999", "x100000000000000000000000"]
+    );
 }
 
 #[test]
