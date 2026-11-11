@@ -521,6 +521,11 @@ pub struct NormFormatCaps {
     pub rg8: Option<wgpu::TextureFormatFeatures>,
     /// The [`INTEGER_FORMATS`] kernels may read and write (bit `i` for the `i`th).
     pub integer_storage: u32,
+    /// The device samples, filters, copies, draws into and blends packed 11/11/10 floats
+    /// (`Rg11b10Ufloat`), by the format's own features: with WebGPU's
+    /// `RG11B10UFLOAT_RENDERABLE` feature, or on a backend that draws into them without it
+    /// (wgpu's OpenGL backend).
+    pub packed_float_target: bool,
 }
 
 /// The formats of the integer codes, in code order ([`texture_format::integer`]).
@@ -640,6 +645,7 @@ impl NormFormatCaps {
         r8: None,
         rg8: None,
         integer_storage: 0,
+        packed_float_target: false,
     };
 
     /// The device's, from its adapter. The device asks for the adapter's features when it is
@@ -676,6 +682,13 @@ impl NormFormatCaps {
                         )
                 })
                 .fold(0, |bits, (i, _)| bits | 1 << i),
+            packed_float_target: {
+                use wgpu::{TextureFormatFeatureFlags as Flags, TextureUsages as U};
+                let f = features(wgpu::TextureFormat::Rg11b10Ufloat);
+                f.allowed_usages
+                    .contains(U::TEXTURE_BINDING | U::COPY_SRC | U::COPY_DST | U::RENDER_ATTACHMENT)
+                    && f.flags.contains(Flags::FILTERABLE | Flags::BLENDABLE)
+            },
         }
     }
 }
@@ -784,14 +797,8 @@ pub struct TextureStorage {
     pub fallback: Option<FormatFallback>,
 }
 
-/// The storage of a packet's format code. `samples` is a render target's MSAA sample count;
-/// `packed` whether the device draws into packed 11/11/10 floats.
-pub fn texture_storage(
-    t: &owned::Texture,
-    samples: u32,
-    packed: bool,
-    caps: &NormFormatCaps,
-) -> TextureStorage {
+/// The storage of a packet's format code. `samples` is a render target's MSAA sample count.
+pub fn texture_storage(t: &owned::Texture, samples: u32, caps: &NormFormatCaps) -> TextureStorage {
     let compressed = block_format(t.format).filter(|_| !t.render_target);
     let stored = |format: wgpu::TextureFormat, bytes_per_pixel: u32| TextureStorage {
         format,
@@ -814,7 +821,9 @@ pub fn texture_storage(
         10 => stored(wgpu::TextureFormat::Rg32Float, 8),
         11 => stored(wgpu::TextureFormat::R16Float, 2),
         12 => stored(wgpu::TextureFormat::Rg16Float, 4),
-        4 if packed && !t.random_write => stored(wgpu::TextureFormat::Rg11b10Ufloat, 4),
+        4 if caps.packed_float_target && !t.random_write => {
+            stored(wgpu::TextureFormat::Rg11b10Ufloat, 4)
+        }
         4 => stored(wgpu::TextureFormat::Rgba16Float, 8),
         texture_format::RG16_UNORM..=texture_format::R16_UNORM
         | texture_format::R8_SNORM..=texture_format::RGBA8_SNORM
@@ -1109,12 +1118,9 @@ pub fn upload_texture_with(
     // 11/11/10 float targets (URP's HDR camera and bloom format) keep their own precision,
     // which shows in the rounding of every pass, where the device can draw into them (not
     // as storage textures).
-    let packed = device
-        .features()
-        .contains(wgpu::Features::RG11B10UFLOAT_RENDERABLE);
     // Imported textures may come block-compressed (see `texture_storage`).
     let compressed = block_format(t.format).filter(|_| !render_target);
-    let storage = texture_storage(t, samples, packed, &norm_format_caps());
+    let storage = texture_storage(t, samples, &norm_format_caps());
     if let Some(fallback) = &storage.fallback {
         report_fallback(t.format, fallback);
     }
@@ -1672,6 +1678,7 @@ mod tests {
             r8: full(),
             rg8: full(),
             integer_storage: (1 << 18) - 1,
+            packed_float_target: true,
         }
     }
 
@@ -1697,7 +1704,7 @@ mod tests {
         samples: u32,
         caps: &NormFormatCaps,
     ) -> TextureStorage {
-        texture_storage(&packet(code, rt, rw), samples, true, caps)
+        texture_storage(&packet(code, rt, rw), samples, caps)
     }
 
     #[test]
@@ -1740,6 +1747,14 @@ mod tests {
             let s = stored(code, true, false, 1, &caps);
             assert_eq!((s.format, s.fallback), (format, None), "code {code}");
         }
+        // Packed 11/11/10 floats where the device draws into them, by the format's features;
+        // else, and for a texture kernels write, half floats.
+        let unpacked = NormFormatCaps {
+            packed_float_target: false,
+            ..caps
+        };
+        assert_eq!(stored(4, true, false, 1, &unpacked).format, F::Rgba16Float);
+        assert_eq!(stored(4, true, true, 1, &caps).format, F::Rgba16Float);
     }
 
     /// Block-compressed imports keep their format (render targets never are), and a device
@@ -1831,6 +1846,7 @@ mod tests {
             r8: full(),
             rg8: full(),
             integer_storage: 0,
+            packed_float_target: false,
         };
         for code in [13, 14, 16] {
             let s = stored(code, true, false, 1, &caps);
@@ -1874,6 +1890,7 @@ mod tests {
             r8: full(),
             rg8: full(),
             integer_storage: 0,
+            packed_float_target: false,
         };
         for code in [13, 14, 16] {
             for rt in [false, true] {
@@ -1938,6 +1955,7 @@ mod tests {
                 r8: full(),
                 rg8: full(),
                 integer_storage: 0,
+                packed_float_target: false,
             };
             for code in [13, 14, 15, 16] {
                 let s = stored(code, true, true, 1, &caps);
@@ -1962,6 +1980,7 @@ mod tests {
             r8: full(),
             rg8: full(),
             integer_storage: 0,
+            packed_float_target: false,
         };
         for code in [13, 14, 16] {
             assert!(
@@ -1985,6 +2004,7 @@ mod tests {
             r8: full(),
             rg8: full(),
             integer_storage: 0,
+            packed_float_target: false,
         };
         for code in [13, 14, 16] {
             assert_eq!(
