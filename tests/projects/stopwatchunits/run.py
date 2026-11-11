@@ -20,7 +20,7 @@ import time
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(REPO / 'tests'))
-from editor_runner import EditorJob, run, run_parallel, summary, result_problem  # noqa: E402
+from editor_runner import EditorJob, run, run_parallel, summary, result_problem, vulkan_display_env  # noqa: E402
 from probe_paths import run_root  # noqa: E402
 
 REPEATS = ('native1', 'native2')
@@ -61,9 +61,9 @@ def capture_problem(directory):
 
 
 def job(project, out, release):
-    return EditorJob(project, out / 'editor.log', out, args=[],
+    return EditorJob(project, out / 'editor.log', out, args=['-force-glcore'], private_display=False,
                      batch=False, graphics=True, timeout=900, label='stopwatchunits-' + out.name,
-                     env={'STOPWATCH_UNITS_OUT': str(out / 'values.jsonl')},
+                     env={**vulkan_display_env(), 'STOPWATCH_UNITS_OUT': str(out / 'values.jsonl')},
                      launch_inputs={'release': release, 'paths': {
                          'assets': str(project / 'Assets'), 'settings': str(project / 'ProjectSettings'),
                          'packages': str(project / 'Packages'), 'runner': str(PROBE / 'run.py'),
@@ -90,7 +90,7 @@ def main():
             project, out = work / 'projects' / repeat, work / repeat
             prepare(project, args.release)
             jobs.append(job(project, out, args.release))
-        for result in run_parallel(jobs):
+        for result in [run(job) for job in jobs]:
             print(summary(result))
         problems = [f'{r}: {capture_problem(work / r)}' for r in REPEATS if capture_problem(work / r)]
         if problems:
