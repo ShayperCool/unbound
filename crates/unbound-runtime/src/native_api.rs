@@ -58,7 +58,7 @@ use std::ffi::c_void;
 /// 50: the `ScreenStandIn` render command (opcode 35).
 /// 51: `gi_set_environment`; `GiFrame` without its flat environment color.
 /// 52: `GiFrame.directional` and `gi_read_directionality` (directional realtime lightmaps).
-pub const NATIVE_API_VERSION: u32 = 53;
+pub const NATIVE_API_VERSION: u32 = 54;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -255,6 +255,10 @@ pub struct NativeApi {
     pub gi_read_directionality: extern "C" fn(u64, i32, *mut u8, i32) -> i32,
     // Version 53: a realtime GI light carries its falloff type (`realtime_gi::GiLight`); no new
     // entry.
+    // Version 54: native plugins' profiler callbacks and event queue.
+    /// A frame ended: the native plugins' profiler frame callbacks (`IUnityProfilerCallbacks`),
+    /// then the events they sent through `IUnityEventQueue`.
+    pub plugin_frame: extern "C" fn(),
 }
 
 pub fn api() -> NativeApi {
@@ -309,6 +313,7 @@ pub fn api() -> NativeApi {
         gi_set_environment,
         gi_realtime_uvs,
         gi_read_directionality,
+        plugin_frame,
     }
 }
 
@@ -1078,6 +1083,15 @@ extern "C" fn plugin_load(load: *const c_void) {
 
 extern "C" fn plugin_set_log(sink: Option<extern "C" fn(i32, *const u8, i32)>) {
     plugin_api::set_log_sink(sink);
+}
+
+extern "C" fn plugin_frame() {
+    // Nothing to call: no plugin context is needed (the usual frame).
+    if plugin_api::frame_pending() {
+        plugin_api::while_rendering(|| {
+            state::backend().with_plugin_context(&mut plugin_api::frame)
+        });
+    }
 }
 
 extern "C" fn plugin_shutdown() {

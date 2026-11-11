@@ -6,10 +6,14 @@
 //! `SystemInfo.graphicsDeviceType` reports; the first reserved event ID is 12; registering a null interface keeps the one
 //! registered before; `IUnityLog` messages are script log messages. `IUnityMemoryManager`
 //! allocates from the process heap; the profiler interfaces behave as with no profiler
-//! recording.
+//! recording, and plugins hear of categories, markers, threads, frames and marker events
+//! through `IUnityProfilerCallbacks` ([`callbacks`]); `IUnityEventQueue` is [`events`].
 //!
 //! The rendering callbacks themselves (`GL.IssuePluginEvent` and the command buffer's plugin
 //! commands) run in the renderer, in stream order ([`crate::render_commands::PluginCall`]).
+mod callbacks;
+mod events;
+
 use std::collections::HashMap;
 use std::ffi::{CStr, CString, c_char, c_void};
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -152,6 +156,18 @@ pub mod guid {
         high: 0xB957E0189CB6A30B,
         low: 0x83CE589AE85B9068,
     };
+    pub const PROFILER_CALLBACKS: Guid = Guid {
+        high: 0x572FDB38CE3C4B1F,
+        low: 0xA6071A9A7C4F52D8,
+    };
+    pub const PROFILER_CALLBACKS_V2: Guid = Guid {
+        high: 0x5DEB59E88F2D4571,
+        low: 0x81E8583069A5E33C,
+    };
+    pub const EVENT_QUEUE: Guid = Guid {
+        high: 0x9959C347F5AE374D,
+        low: 0x9BADE6FC8EF49E7F,
+    };
     pub const MEMORY_MANAGER: Guid = Guid {
         high: 0xBAF9E57C61A811EC,
         low: 0xC5A7CC7861A811EC,
@@ -166,44 +182,12 @@ pub mod guid {
     };
 }
 
-/// Interfaces the Editor gives on OpenGL Core that Unbound does not provide: a plugin asking for
-/// one gets null and the engine log names it (once).
-const NOT_PROVIDED: [(Guid, &str); 5] = [
-    (
-        Guid {
-            high: 0x572FDB38CE3C4B1F,
-            low: 0xA6071A9A7C4F52D8,
-        },
-        "IUnityProfilerCallbacks",
-    ),
-    (
-        Guid {
-            high: 0x5DEB59E88F2D4571,
-            low: 0x81E8583069A5E33C,
-        },
-        "IUnityProfilerCallbacksV2",
-    ),
-    (
-        Guid {
-            high: 0x9959C347F5AE374D,
-            low: 0x9BADE6FC8EF49E7F,
-        },
-        "IUnityEventQueue",
-    ),
-    (
-        Guid {
-            high: 0x95355348D4EF4E11,
-            low: 0x9789313DFCFFCC87,
-        },
-        "IUnityGraphicsVulkan",
-    ),
-    (
-        Guid {
-            high: 0x329334C09DCA4787,
-            low: 0xB347DD92A0097FFC,
-        },
-        "IUnityGraphicsVulkanV2",
-    ),
+/// Interfaces the renderer offers on the devices that have them ([`provide`]): where it has
+/// not (a device without plugin support), a plugin asking for one gets null and the engine
+/// log names it (once).
+const NOT_PROVIDED: [(Guid, &str); 2] = [
+    (guid::GRAPHICS_VULKAN, "IUnityGraphicsVulkan"),
+    (guid::GRAPHICS_VULKAN_V2, "IUnityGraphicsVulkanV2"),
 ];
 
 /// Where `IUnityLog` and the renderer's plugin messages go: the managed engine's log, as script
@@ -224,7 +208,6 @@ struct Registry {
     /// Markers made by name (their leaked `MarkerDesc`s, as addresses).
     markers: HashMap<String, usize>,
     next_marker: u32,
-    next_category: u16,
 }
 
 static REGISTRY: OnceLock<Mutex<Registry>> = OnceLock::new();
@@ -281,6 +264,15 @@ fn registry() -> std::sync::MutexGuard<'static, Registry> {
             interfaces.insert(guid::PROFILER, &PROFILER as *const _ as usize);
             interfaces.insert(guid::PROFILER_V2, &PROFILER_V2 as *const _ as usize);
             interfaces.insert(guid::MEMORY_MANAGER, &MEMORY_MANAGER as *const _ as usize);
+            interfaces.insert(
+                guid::PROFILER_CALLBACKS,
+                &callbacks::CALLBACKS as *const _ as usize,
+            );
+            interfaces.insert(
+                guid::PROFILER_CALLBACKS_V2,
+                &callbacks::CALLBACKS_V2 as *const _ as usize,
+            );
+            interfaces.insert(guid::EVENT_QUEUE, &events::QUEUE as *const _ as usize);
             Mutex::new(Registry {
                 interfaces,
                 device_callbacks: Vec::new(),
@@ -288,8 +280,6 @@ fn registry() -> std::sync::MutexGuard<'static, Registry> {
                 reported: Vec::new(),
                 markers: HashMap::new(),
                 next_marker: 1,
-                // After the built-in categories (`kUnityProfilerCategoryText` is 38).
-                next_category: 39,
             })
         })
         .lock()
@@ -372,6 +362,18 @@ pub fn send_device_event(event: i32) {
     for callback in callbacks {
         callback(event);
     }
+}
+
+/// A frame ended (the main thread, between the scripts of two frames): the profiler's frame
+/// callbacks, then the events plugins sent through `IUnityEventQueue`.
+pub fn frame() {
+    callbacks::frame();
+    events::dispatch();
+}
+
+/// Whether [`frame`] has anything to call: a frame callback, or an event that waits.
+pub fn frame_pending() -> bool {
+    callbacks::hears_frames() || events::waiting()
 }
 
 /// What the application's end sends plugins: the device's Shutdown event twice, as the Unity
@@ -469,9 +471,12 @@ extern "C" fn plugin_log(kind: i32, message: *const c_char, _file: *const c_char
 }
 
 // The profiler: none is attached, as in an Editor that is not recording. Markers and categories
-// are made (and kept for the run) so that plugins can emit them; events go nowhere.
+// are made (and kept for the run) so that plugins can emit them; events go to the callbacks
+// plugins registered for the marker (`IUnityProfilerCallbacks`), nowhere else.
 
-extern "C" fn emit_event(_: *const MarkerDesc, _: u16, _: u16, _: *const c_void) {}
+extern "C" fn emit_event(marker: *const MarkerDesc, kind: u16, count: u16, data: *const c_void) {
+    callbacks::marker_event(marker, kind, count, data);
+}
 
 extern "C" fn profiler_enabled() -> i32 {
     0
@@ -510,6 +515,9 @@ extern "C" fn create_marker(
             registry
                 .markers
                 .insert(name, marker as *const MarkerDesc as usize);
+            // The marker callbacks may make markers: they run without the registry.
+            drop(registry);
+            callbacks::marker_created(marker);
             marker as *const MarkerDesc
         }
     };
@@ -527,19 +535,23 @@ extern "C" fn set_marker_metadata_name(
     0
 }
 
-extern "C" fn create_category(category: *mut u16, _name: *const c_char, _: u32) -> i32 {
+/// A category of a name: a built-in one, the one made under it before, else a new one after
+/// the built-in ones (tests/projects/nativegfx `profiler.load`: the first is 39).
+extern "C" fn create_category(category: *mut u16, name: *const c_char, _: u32) -> i32 {
     if category.is_null() {
         return 1;
     }
-    let mut registry = registry();
-    unsafe { *category = registry.next_category };
-    registry.next_category = registry.next_category.wrapping_add(1);
+    let name = CString::new(c_text(name)).unwrap_or_default();
+    let id = callbacks::category_named(&name).unwrap_or_else(|| callbacks::category_created(&name));
+    unsafe { *category = id };
     0
 }
 
-extern "C" fn register_thread(thread: *mut u64, _: *const c_char, _: *const c_char) -> i32 {
+extern "C" fn register_thread(thread: *mut u64, group: *const c_char, name: *const c_char) -> i32 {
+    let text = |text: *const c_char| CString::new(c_text(text)).unwrap_or_default();
+    let id = callbacks::thread_registered(&text(group), &text(name));
     if !thread.is_null() {
-        unsafe { *thread = 0 };
+        unsafe { *thread = id };
     }
     0
 }
@@ -694,10 +706,206 @@ mod tests {
         assert_eq!(by_reference as *const IUnityGraphics, &GRAPHICS as *const _);
         let graphics = unsafe { &*(by_reference as *const IUnityGraphics) };
         assert_eq!((graphics.get_renderer)(), RENDERER_OPENGL_CORE);
-        // Interfaces Unbound does not provide, and unknown ones, are null.
-        let vulkan = NOT_PROVIDED[3].0;
+        // A device's own interface the renderer has not offered, and unknown ones, are null.
+        let vulkan = NOT_PROVIDED[0].0;
         assert!((table.get_interface_split)(vulkan.high, vulkan.low).is_null());
         assert!((table.get_interface_split)(1, 2).is_null());
+        // The profiler callbacks and the event queue are there, each version its own object.
+        let found = |guid: Guid| (table.get_interface_split)(guid.high, guid.low);
+        assert!(!found(guid::PROFILER_CALLBACKS).is_null());
+        assert!(!found(guid::EVENT_QUEUE).is_null());
+        assert_ne!(
+            found(guid::PROFILER_CALLBACKS),
+            found(guid::PROFILER_CALLBACKS_V2)
+        );
+    }
+
+    /// What the profiler callbacks of this test heard, by user data.
+    static HEARD: Mutex<Vec<(usize, String)>> = Mutex::new(Vec::new());
+    fn heard(user: usize) -> Vec<String> {
+        let heard = HEARD.lock().unwrap();
+        heard
+            .iter()
+            .filter(|(u, _)| *u == user)
+            .map(|(_, text)| text.clone())
+            .collect()
+    }
+    extern "C" fn on_category(desc: *const callbacks::CategoryDesc, user: *mut c_void) {
+        let desc = unsafe { &*desc };
+        let name = unsafe { CStr::from_ptr(desc.name) }.to_string_lossy();
+        HEARD
+            .lock()
+            .unwrap()
+            .push((user as usize, format!("{} {name}", desc.id)));
+    }
+    extern "C" fn on_marker(desc: *const MarkerDesc, user: *mut c_void) {
+        let name = unsafe { CStr::from_ptr((*desc).name) }.to_string_lossy();
+        HEARD
+            .lock()
+            .unwrap()
+            .push((user as usize, name.into_owned()));
+    }
+    extern "C" fn on_event(
+        desc: *const MarkerDesc,
+        kind: u16,
+        count: u16,
+        _: *const c_void,
+        user: *mut c_void,
+    ) {
+        let name = unsafe { CStr::from_ptr((*desc).name) }.to_string_lossy();
+        HEARD
+            .lock()
+            .unwrap()
+            .push((user as usize, format!("{name} {kind} {count}")));
+    }
+    extern "C" fn on_frame(user: *mut c_void) {
+        HEARD.lock().unwrap().push((user as usize, "frame".into()));
+    }
+    extern "C" fn on_thread(desc: *const callbacks::ThreadDesc, user: *mut c_void) {
+        let desc = unsafe { &*desc };
+        let text = |t: *const c_char| unsafe { CStr::from_ptr(t) }.to_string_lossy().into_owned();
+        assert_ne!(desc.thread_id, 0);
+        HEARD.lock().unwrap().push((
+            user as usize,
+            format!("{}/{}", text(desc.group_name), text(desc.name)),
+        ));
+    }
+
+    /// The profiler callbacks as tests/projects/nativegfx records them in the Editor.
+    #[test]
+    fn profiler_callbacks_hear_what_exists_and_what_plugins_make() {
+        let table = unsafe { &*interfaces() };
+        let callbacks = unsafe {
+            &*((table.get_interface_split)(
+                guid::PROFILER_CALLBACKS_V2.high,
+                guid::PROFILER_CALLBACKS_V2.low,
+            ) as *const callbacks::IUnityProfilerCallbacksV2)
+        };
+        let v1 = unsafe { &*(callbacks as *const _ as *const callbacks::IUnityProfilerCallbacks) };
+        let user = |n: usize| n as *mut c_void;
+        // Every category that exists at once, the built-in ones first in ID order.
+        assert_eq!(
+            (v1.register_create_category)(Some(on_category), user(101)),
+            0
+        );
+        let categories = heard(101);
+        assert!(categories.len() >= 39);
+        assert_eq!(categories[0], "0 Render");
+        assert_eq!(categories[13], "13 Lighting");
+        assert_eq!(categories[38], "38 Text");
+        // A new category is heard of once; its name again is the same category, silently.
+        let mut category = 0u16;
+        assert_eq!(
+            (PROFILER_V2.create_category)(&mut category, c"Tested Category".as_ptr(), 0),
+            0
+        );
+        assert!(category >= 39);
+        let mut again = 0u16;
+        (PROFILER_V2.create_category)(&mut again, c"Tested Category".as_ptr(), 0);
+        assert_eq!(again, category);
+        assert_eq!(heard(101).len(), categories.len() + 1);
+        assert_eq!(
+            heard(101).last().unwrap(),
+            &format!("{category} Tested Category")
+        );
+        // Registered twice it is called twice, and unregistered once per registration.
+        assert_eq!(
+            (v1.register_create_category)(Some(on_category), user(101)),
+            0
+        );
+        (PROFILER_V2.create_category)(&mut again, c"Tested Category 2".as_ptr(), 0);
+        let twice = heard(101);
+        assert_eq!(twice[twice.len() - 1], twice[twice.len() - 2]);
+        assert_eq!(
+            (v1.unregister_create_category)(Some(on_category), user(101)),
+            0
+        );
+        assert_eq!(
+            (v1.unregister_create_category)(Some(on_category), user(101)),
+            0
+        );
+        assert_eq!(
+            (v1.unregister_create_category)(Some(on_category), user(101)),
+            -1
+        );
+        // Markers: the existing ones at once, a new one when it is made.
+        let mut marker = std::ptr::null();
+        (PROFILER.create_marker)(&mut marker, c"Tested.Before".as_ptr(), category, 0, 0);
+        assert_eq!((v1.register_create_marker)(Some(on_marker), user(102)), 0);
+        assert!(heard(102).contains(&"Tested.Before".to_string()));
+        (PROFILER.create_marker)(&mut marker, c"Tested.After".as_ptr(), category, 0, 0);
+        (PROFILER.create_marker)(&mut marker, c"Tested.After".as_ptr(), category, 0, 0);
+        let after = heard(102);
+        assert_eq!(after.iter().filter(|m| *m == "Tested.After").count(), 1);
+        // Unregistering a marker (or thread, or frame) callback answers 0 whatever was
+        // registered.
+        assert_eq!((v1.unregister_create_marker)(Some(on_marker), user(102)), 0);
+        assert_eq!((v1.unregister_create_marker)(Some(on_marker), user(102)), 0);
+        (PROFILER.create_marker)(&mut marker, c"Tested.Unheard".as_ptr(), category, 0, 0);
+        assert!(!heard(102).contains(&"Tested.Unheard".to_string()));
+        // A built-in category's name is that category.
+        let mut render = 99u16;
+        (PROFILER_V2.create_category)(&mut render, c"Render".as_ptr(), 0);
+        assert_eq!(render, 0);
+        (PROFILER.create_marker)(&mut marker, c"Tested.After".as_ptr(), category, 0, 0);
+        // Marker events reach a registered callback only, at once; the marker says whether
+        // one is registered.
+        (PROFILER.emit_event)(marker, 0, 0, std::ptr::null());
+        assert!(heard(103).is_empty());
+        assert!(unsafe { (*marker).callback.is_null() });
+        assert_eq!(
+            (v1.register_marker_event)(marker, Some(on_event), user(103)),
+            0
+        );
+        assert!(!unsafe { (*marker).callback.is_null() });
+        (PROFILER.emit_event)(marker, 0, 0, std::ptr::null());
+        (PROFILER.emit_event)(marker, 1, 0, std::ptr::null());
+        (PROFILER.emit_event)(marker, 2, 3, std::ptr::null());
+        assert_eq!(
+            heard(103),
+            ["Tested.After 0 0", "Tested.After 1 0", "Tested.After 2 3"]
+        );
+        assert_eq!(
+            (v1.unregister_marker_event)(marker, Some(on_event), user(103)),
+            0
+        );
+        assert!(unsafe { (*marker).callback.is_null() });
+        (PROFILER.emit_event)(marker, 0, 0, std::ptr::null());
+        assert_eq!(heard(103).len(), 3);
+        assert_eq!(
+            (v1.unregister_marker_event)(marker, Some(on_event), user(103)),
+            -1
+        );
+        // Threads: the main thread at once, a registered one when it registers.
+        assert_eq!((v1.register_create_thread)(Some(on_thread), user(104)), 0);
+        assert_eq!(heard(104)[0], "/Main Thread");
+        let mut thread = 0u64;
+        (PROFILER.register_thread)(&mut thread, c"Tested".as_ptr(), c"Worker".as_ptr());
+        assert_ne!(thread, 0);
+        assert_eq!(heard(104).last().unwrap(), "Tested/Worker");
+        assert_eq!((v1.unregister_create_thread)(Some(on_thread), user(104)), 0);
+        // Frames: once for each frame; unregistering answers 0 whatever was registered.
+        assert_eq!((v1.register_frame)(Some(on_frame), user(105)), 0);
+        frame();
+        frame();
+        assert_eq!(heard(105).len(), 2);
+        assert_eq!((v1.unregister_frame)(Some(on_frame), user(105)), 0);
+        assert_eq!((v1.unregister_frame)(Some(on_frame), user(105)), 0);
+        frame();
+        assert_eq!(heard(105).len(), 2);
+        // Flow events register; a null callback is refused.
+        extern "C" fn on_flow(_: u8, _: u32, _: *mut c_void) {}
+        assert_eq!((callbacks.register_flow_event)(Some(on_flow), user(106)), 0);
+        assert_eq!(
+            (callbacks.unregister_flow_event)(Some(on_flow), user(106)),
+            0
+        );
+        assert_eq!(
+            (callbacks.unregister_flow_event)(Some(on_flow), user(106)),
+            -1
+        );
+        assert_eq!((v1.unregister_create_thread)(Some(on_thread), user(104)), 0);
+        assert_eq!((v1.register_frame)(None, user(107)), -1);
     }
 
     #[test]

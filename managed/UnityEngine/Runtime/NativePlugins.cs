@@ -17,6 +17,8 @@ namespace Unbound.Runtime
     internal static unsafe class NativePlugins
     {
         static readonly List<IntPtr> s_Loaded = new List<IntPtr>();
+        /// <summary>Whether a library was loaded (read every frame, without the lock).</summary>
+        static volatile bool s_AnyLoaded;
         static bool s_LogSink;
 
         /// <summary>Native pointers without a shared OpenGL texture (no plugin interop on this
@@ -45,6 +47,7 @@ namespace Unbound.Runtime
             {
                 if (s_Loaded.Contains(library)) return;
                 s_Loaded.Add(library);
+                s_AnyLoaded = true;
             }
             foreach (var extension in s_RenderingExtensions)
                 if (NativeLibrary.TryGetExport(library, extension, out _))
@@ -62,6 +65,15 @@ namespace Unbound.Runtime
                 try { Loaded(NativeLibrary.Load(path)); }
                 catch (Exception e) { Debug.LogError($"Unbound: preloading the native plugin {path} failed: {e.Message}"); }
             }
+        }
+
+        /// <summary>A frame ended (the player loop's <c>ProfilerEndFrame</c>): the plugins'
+        /// profiler frame callbacks, then the events they sent through the event queue, as the
+        /// Editor calls them between the scripts of two frames (tests/projects/nativegfx
+        /// <c>profiler.frames</c>, <c>events.*</c>).</summary>
+        internal static void EndFrame()
+        {
+            if (s_AnyLoaded && Native.IsReady) Native.Api.PluginFrame();
         }
 
         /// <summary>The application ends: the plugins' device Shutdown events.</summary>

@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 53;
+        internal const uint CurrentVersion = 54;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -167,5 +167,10 @@ namespace Unbound.Runtime
         /// the atlas has solved its directionality since they became so), or -1.
         /// </summary>
         internal delegate* unmanaged<ulong, int, byte*, int, int> GiReadDirectionality;
+        /// <summary>
+        /// A frame ended: the native plugins' profiler frame callbacks (`IUnityProfilerCallbacks`),
+        /// then the events they sent through `IUnityEventQueue`.
+        /// </summary>
+        internal delegate* unmanaged<void> PluginFrame;
     }
 }
