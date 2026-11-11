@@ -447,7 +447,7 @@ namespace Unbound.Runtime
             {
                 foreach (var c in go.m_Components)
                 {
-                    if (!(c is MonoBehaviour mb) || !mb.isActiveAndEnabled) continue;
+                    if (!(c is MonoBehaviour mb) || !mb.isActiveAndEnabled || !mb.m_EnabledState || !EditorSession.Runs(mb)) continue;
                     var m = ScriptMessages.For(mb.GetType());
                     var seq = ++s_Sequence;
                     if (m.Update != null) s_Update.Add(mb, m.ExecutionOrder, seq, m.Update);

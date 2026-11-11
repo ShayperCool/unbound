@@ -78,5 +78,39 @@ namespace UnityEngine.Tests
                 EditorSession.IsPlaying = playing;
             }
         }
+
+        [Fact]
+        public void RegistrationRefreshKeepsDormantStartupScriptsAsleep()
+        {
+            bool playing = EditorSession.IsPlaying;
+            EditorSession.IsPlaying = false;
+            var go = new GameObject("dormant startup");
+            try
+            {
+                var counter = go.AddComponent<PlainEditCounter>();
+                EditorSession.IsPlaying = true;
+                Object.DontDestroyOnLoad(go);
+                Lifecycle.RefreshRegistrations();
+                Lifecycle.RunPendingStarts();
+                Lifecycle.RunUpdate();
+                Assert.Empty(counter.Calls);
+                Assert.False(counter.didAwake);
+                Assert.False(counter.didStart);
+
+                // A real enable transition still awakens and registers the script.
+                counter.enabled = false;
+                counter.enabled = true;
+                Lifecycle.RefreshRegistrations();
+                Lifecycle.RunUpdate();
+                Assert.Equal(new[] { "Awake", "OnEnable", "Update" }, counter.Calls);
+                Assert.True(counter.didAwake);
+                Assert.True(counter.didStart);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                EditorSession.IsPlaying = playing;
+            }
+        }
     }
 }
