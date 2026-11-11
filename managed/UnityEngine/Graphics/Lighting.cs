@@ -434,8 +434,8 @@ namespace UnityEngine
         /// <summary>The scene's lighting data's ambient probe (baked, or the built-in data's for
         /// the default skybox).</summary>
         internal static SphericalHarmonicsL2? s_BakedProbe;
-        /// <summary>The ambient probe DynamicGI.UpdateEnvironment derived from the skybox (until
-        /// the next scene's lighting data).</summary>
+        /// <summary>The ambient probe DynamicGI.UpdateEnvironment derived from the skybox, at
+        /// ambient intensity 1 (until the next scene's lighting data).</summary>
         internal static SphericalHarmonicsL2? s_EnvironmentProbe;
         /// <summary>A built scene's own ambient probe and skybox reflection (an AssetBundle's scene).</summary>
         static SphericalHarmonicsL2? s_SerializedProbe;
@@ -546,7 +546,13 @@ namespace UnityEngine
                         break;
                     }
                     case AmbientMode.Skybox when s_EnvironmentProbe.HasValue:
-                        return s_EnvironmentProbe.Value;
+                        // Kept at intensity 1 and scaled by the intensity of the moment, in a
+                        // linear project taken as a gamma value (measured:
+                        // tests/projects/realtimegi room-sky-only-intensity, then 0.5 and 1
+                        // without DynamicGI.UpdateEnvironment); a gamma project's scale is
+                        // unmeasured and stays the plain intensity.
+                        return s_EnvironmentProbe.Value
+                            * (QualitySettings.activeColorSpace == ColorSpace.Linear ? Mathf.GammaToLinearSpace(s_AmbientIntensity) : s_AmbientIntensity);
                     case AmbientMode.Skybox when s_BakedProbe.HasValue:
                         // The lighting data's probe is at intensity 1; the Editor scales it by the
                         // intensity taken as a gamma value (measured: 0.18, 0.36 and 2).

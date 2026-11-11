@@ -10,8 +10,8 @@ namespace UnityEngine
     /// tests/projects/ambient): the sky drawn into a cube (its shader, with the scene's sun) and
     /// projected onto spherical harmonics, stored as Unity keeps its ambient probe: each band's
     /// projection times the cosine lobe's (1, 2/3, 1/4) and the basis function's constant, so that
-    /// a uniform sky of radiance L gives L in the first coefficient. The ambient intensity scales
-    /// it by intensity^2.2 in a linear project.
+    /// a uniform sky of radiance L gives L in the first coefficient. The probe is kept at ambient
+    /// intensity 1; RenderSettings.ambientProbe scales it by the intensity of the moment.
     /// </summary>
     public sealed partial class DynamicGI
     {
@@ -118,12 +118,10 @@ namespace UnityEngine
             {
                 Object.DestroyImmediate(readback);
             }
-            float scale = RenderSettings.ambientIntensity;
-            if (QualitySettings.activeColorSpace == ColorSpace.Linear) scale = Mathf.Pow(scale, 2.2f);
             var sh = new SphericalHarmonicsL2();
             for (int c = 0; c < 3; c++)
                 for (int k = 0; k < 9; k++)
-                    sh[c, k] = (float)coefficients[c, k] * scale;
+                    sh[c, k] = (float)coefficients[c, k];
             return sh;
         }
 

@@ -170,5 +170,39 @@ namespace Unbound.Tests
                 AssertFace(0, color);
             });
         }
+
+        [Fact]
+        public void TheSkyboxProbeIsScaledByTheIntensityOfTheMoment()
+        {
+            // Measured (tests/projects/realtimegi, a linear project): after
+            // DynamicGI.UpdateEnvironment at intensity 2, RenderSettings.ambientProbe at 0.5 and 1
+            // without another call is the sky's probe times GammaToLinearSpace(intensity).
+            var mode = RenderSettings.ambientMode;
+            float intensity = RenderSettings.ambientIntensity;
+            var probe = RenderSettings.s_EnvironmentProbe;
+            try
+            {
+                var sh = new SphericalHarmonicsL2();
+                sh[0, 0] = 0.0979f; sh[1, 1] = 0.0366f; sh[2, 4] = -0.02f;
+                RenderSettings.s_EnvironmentProbe = sh;
+                RenderSettings.ambientMode = AmbientMode.Skybox;
+                bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+                foreach (var (value, scale) in new[] { (0.5f, 0.21404114f), (1f, 1f), (2f, 4.5947934f) })
+                {
+                    RenderSettings.ambientIntensity = value;
+                    float expected = linear ? scale : value;
+                    var read = RenderSettings.ambientProbe;
+                    Assert.Equal(0.0979f * expected, read[0, 0], 6);
+                    Assert.Equal(0.0366f * expected, read[1, 1], 6);
+                    Assert.Equal(-0.02f * expected, read[2, 4], 6);
+                }
+            }
+            finally
+            {
+                RenderSettings.s_EnvironmentProbe = probe;
+                RenderSettings.ambientIntensity = intensity;
+                RenderSettings.ambientMode = mode;
+            }
+        }
     }
 }
