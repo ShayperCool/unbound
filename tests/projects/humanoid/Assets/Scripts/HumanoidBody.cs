@@ -16,7 +16,7 @@ public partial class HumanoidProbe
     {
         foreach (var name in new[] { "PosTree", "NegTree", "PartialTree", "WTree", "NoneTree", "NegTransition", "NoneTransition", "NegOverride",
                      "PartialOverride", "DirectNeg", "DirectLow", "DirectHigh", "DirectNormalized", "DirectLowFootIK",
-                     "DirectHighFootIK", "DirectHighTransition" })
+                     "DirectHighFootIK", "DirectHighTransition", "DirectLowNeg", "DirectHalfNegGoal", "DirectZeroB", "RotTree", "TTree" })
         {
             string key = "body." + char.ToLowerInvariant(name[0]) + name.Substring(1);
             Guarded(key, () => Play(key, "HumanA", "HumanBody" + name, GoalSetup, motion: true, locals: false, detail: name.Contains("Transition"),
@@ -29,6 +29,7 @@ public partial class HumanoidProbe
         BodyGraph("none", ("BodyNone", 0.35f), ("A", 0.65f));
         BodyGraph("low", ("BodyPos", 0.3f), ("A", 0.4f));
         BodyGraph("high", ("BodyPos", 0.8f), ("A", 0.6f));
+        BodyGraph("lowNeg", ("BodyNeg", 0.3f), ("A", 0.4f));
         BodyGraph("three", ("BodyNeg", 0.25f), ("A", 0.45f), ("BodyPartial", 0.3f));
         Guarded("bodyGraph.nested", () => PlayGraph("bodyGraph.nested", g =>
         {

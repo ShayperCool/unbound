@@ -199,12 +199,19 @@ imported without keyframe reduction.
   BodyNeg 0.35 and A 0.65 (`body.directNeg`), BodyPos and A at 0.3 and 0.4 (`body.directLow`) and
   at 0.8 and 0.6 (`body.directHigh`, with normalized blend values `body.directNormalized`), both
   with Foot IK (`body.directLowFootIK`, `body.directHighFootIK`), the latter leaving for HumanB's
-  clip (`body.directHighTransition`); the same clips without Foot IK in AnimationMixerPlayables
-  (`bodyGraph.neg`, `.pos`, `.partial`, `.w`, `.none` at 0.35 and 0.65 of A, `.low`, `.high`,
+  clip (`body.directHighTransition`), BodyNeg and A at 0.3 and 0.4 (`body.directLowNeg`), BodyNegGoal
+  (BodyPos with a left foot goal rotation of four negative components) alone at 0.5
+  (`body.directHalfNegGoal`) and HumanB's clip at 0 (`body.directZeroB`); BodyRot (RootQ curves
+  only) and BodyT (RootT curves only) in 1D trees with A (`body.rotTree`, `body.tTree`); the same clips without Foot IK in AnimationMixerPlayables
+  (`bodyGraph.neg`, `.pos`, `.partial`, `.w`, `.none` at 0.35 and 0.65 of A, `.low`, `.high`, `.lowNeg`,
   `.three` of BodyNeg, A and BodyPartial, `.nested` with a mixer of BodyNeg and BodyPos as an
-  input) and A under BodyPartial in a layer mixer (`bodyGraph.layerPartial`). The
-  HumanBodyDirectEmptyChild controller (an empty child tree at 0.3 beside A at 0.7) is authored
-  but not recorded. Measured: see docs/COMPATIBILITY_GAPS.md (humanoid row).
+  input) and A under BodyPartial in a layer mixer (`bodyGraph.layerPartial`). Authored but not
+  recorded, because the engine does not match them yet (docs/COMPATIBILITY_GAPS.md says how they
+  differ): the controllers HumanBodyDirectEmptyChild (an empty child tree at 0.3 beside A at 0.7),
+  HumanBodyDirectLowB (HumanB's clip alone at 0.5), HumanBodyEmptyLayerTransition (A under an
+  override layer that leaves an empty state for HumanB's clip), HumanBodyGenericTransition (A to
+  GenericMove) and HumanBodyOnlyOverride (A under BodyOnly, body curves and no muscle curve, on an
+  override layer of weight 0.5). Measured: see docs/COMPATIBILITY_GAPS.md (humanoid row).
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:

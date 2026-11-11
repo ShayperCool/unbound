@@ -1020,14 +1020,20 @@ public static class ProbeRunner
     /// Direct blend trees: DirectNeg (BodyNeg 0.35, A 0.65), DirectLow (BodyPos 0.3, A 0.4),
     /// DirectHigh (BodyPos 0.8, A 0.6), DirectNormalized (DirectHigh with normalized blend values),
     /// DirectEmptyChild (an empty 1D tree 0.3, A 0.7), DirectLowFootIK and DirectHighFootIK (with
-    /// Foot IK) and DirectHighTransition (DirectHigh to B).</summary>
+    /// Foot IK), DirectHighTransition (DirectHigh to B), DirectLowNeg (BodyNeg 0.3, A 0.4),
+    /// DirectHalfNegGoal (BodyNegGoal, BodyPos with a left foot goal whose rotation has a negative
+    /// w, alone at 0.5), DirectLowB (B alone at 0.5) and DirectZeroB (B at 0); RotTree and TTree
+    /// (trees of BodyRot, RootQ curves only, and BodyT, RootT curves only, with A), OnlyOverride (A
+    /// under BodyOnly, body curves and no muscle, on an override layer of weight 0.5),
+    /// GenericTransition (A to GenericMove) and EmptyLayerTransition (A under an override layer of
+    /// weight 1 whose empty state leaves for B).</summary>
     static void BodyBlends()
     {
         var a = ClipOf("HumanA");
         var b = ClipOf("HumanB");
         var q0 = Quaternion.Euler(8f, 25f, 4f);
         var q1 = Quaternion.Euler(-6f, 60f, 10f);
-        AnimationClip Clip(string name, bool position, System.Action<System.Action<string, float[]>> rotation)
+        AnimationClip Clip(string name, bool position, System.Action<System.Action<string, float[]>> rotation, bool muscles = true)
         {
             var path = Dir + name + ".anim";
             var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
@@ -1046,10 +1052,13 @@ public static class ProbeRunner
                 Set("RootT.z", 0f, 0.2f, 1f, 0.6f);
             }
             rotation?.Invoke(Set);
-            Set("Spine Front-Back", 0f, 0.1f, 1f, 0.4f);
-            Set("Left Upper Leg Front-Back", 0f, 0.3f, 1f, -0.2f);
-            Set("Right Lower Leg Stretch", 0f, 0.2f, 1f, 0.6f);
-            Set("Left Arm Down-Up", 0f, 0.2f, 1f, -0.3f);
+            if (muscles)
+            {
+                Set("Spine Front-Back", 0f, 0.1f, 1f, 0.4f);
+                Set("Left Upper Leg Front-Back", 0f, 0.3f, 1f, -0.2f);
+                Set("Right Lower Leg Stretch", 0f, 0.2f, 1f, 0.6f);
+                Set("Left Arm Down-Up", 0f, 0.2f, 1f, -0.3f);
+            }
             var settings = AnimationUtility.GetAnimationClipSettings(clip);
             settings.loopTime = true;
             AnimationUtility.SetAnimationClipSettings(clip, settings);
@@ -1072,6 +1081,23 @@ public static class ProbeRunner
         });
         var w = Clip("BodyW", true, set => set("RootQ.w", new[] { 0f, -1f, 1f, -1f }));
         var none = Clip("BodyNone", false, null);
+        var rot = Clip("BodyRot", false, set => Whole(set, 1f));
+        var onlyT = Clip("BodyT", true, null);
+        var only = Clip("BodyOnly", true, set => Whole(set, 1f), muscles: false);
+        // BodyPos with a left foot goal whose rotation has a negative w.
+        var g0 = Quaternion.Euler(20f, 30f, 10f);
+        var g1 = Quaternion.Euler(10f, 50f, -5f);
+        var negGoal = Clip("BodyNegGoal", true, set =>
+        {
+            Whole(set, 1f);
+            set("LeftFootT.x", new[] { 0f, -0.1f, 1f, -0.12f });
+            set("LeftFootT.y", new[] { 0f, -0.75f, 1f, -0.8f });
+            set("LeftFootT.z", new[] { 0f, 0.05f, 1f, 0f });
+            set("LeftFootQ.x", new[] { 0f, -g0.x, 1f, -g1.x });
+            set("LeftFootQ.y", new[] { 0f, -g0.y, 1f, -g1.y });
+            set("LeftFootQ.z", new[] { 0f, -g0.z, 1f, -g1.z });
+            set("LeftFootQ.w", new[] { 0f, -g0.w, 1f, -g1.w });
+        });
 
         AnimatorController Make(string name)
         {
@@ -1180,6 +1206,38 @@ public static class ProbeRunner
         var directTransition = Make("DirectHighTransition");
         if (directTransition != null)
             Go(directTransition, Direct(directTransition, false, false, (pos, 0.8f), (a, 0.6f)), State(directTransition, 0, "B", b));
+        DirectAlone("DirectLowNeg", false, false, (neg, 0.3f), (a, 0.4f));
+        DirectAlone("DirectHalfNegGoal", false, false, (negGoal, 0.5f));
+        DirectAlone("DirectLowB", false, false, (b, 0.5f));
+        DirectAlone("DirectZeroB", false, false, (b, 0f));
+        Tree("RotTree", rot);
+        Tree("TTree", onlyT);
+        Over("OnlyOverride", a, only);
+        var genericTransition = Make("GenericTransition");
+        if (genericTransition != null)
+            Go(genericTransition, State(genericTransition, 0, "A", a),
+                State(genericTransition, 0, "Generic", AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "GenericMove.anim")));
+        var emptyLayer = Make("EmptyLayerTransition");
+        if (emptyLayer != null)
+        {
+            State(emptyLayer, 0, "A", a);
+            emptyLayer.AddLayer("Above");
+            var layers = emptyLayer.layers;
+            layers[1].blendingMode = AnimatorLayerBlendingMode.Override;
+            layers[1].defaultWeight = 1f;
+            emptyLayer.layers = layers;
+            var machine = emptyLayer.layers[1].stateMachine;
+            var empty = machine.AddState("Empty");
+            var to = machine.AddState("B");
+            to.motion = b;
+            machine.defaultState = empty;
+            var t = empty.AddTransition(to);
+            t.hasExitTime = true;
+            t.exitTime = 0.3f;
+            t.hasFixedDuration = true;
+            t.duration = 0.3f;
+            EditorUtility.SetDirty(emptyLayer);
+        }
     }
 
     public static void Record()
