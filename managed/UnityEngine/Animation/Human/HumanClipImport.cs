@@ -244,6 +244,28 @@ namespace Unbound.Runtime.Humanoid
                 s1 <= Eps ? 1f : q.w / MathF.Sqrt(s1));
         }
 
+        /// <summary>Whether a rotation has the sign the Editor's model importer gives a node's
+        /// rotation and the first key of its rotation curve (the later keys follow in its
+        /// hemisphere): the sign a rotation matrix gives its quaternion, w positive while the
+        /// matrix's trace is positive (|w| above 1/2), else the component of the largest
+        /// diagonal element positive. The muscles do not depend on it; the goal curves keep it,
+        /// and a blend with the identity below a total weight of one shows it. Matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/humanoid body.directLowB and
+        /// body.directEmptyChild (model clips' goals completed by the identity), and a capture
+        /// outside the reference of the probe's three models imported as Generic: all 105
+        /// rotation curves and 108 node rotations follow it, eight of each with a negative w.
+        /// Ties between diagonal elements and a trace of exactly zero are unmeasured (x before
+        /// y before z here).</summary>
+        internal static bool ImporterSign(F4 q)
+        {
+            float xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z;
+            // The diagonal of the rotation's matrix, for a unit rotation.
+            float m00 = 1f - 2f * (yy + zz), m11 = 1f - 2f * (xx + zz), m22 = 1f - 2f * (xx + yy);
+            if (m00 + m11 + m22 > 0f) return q.w > 0f;
+            if (m00 >= m11 && m00 >= m22) return q.x > 0f;
+            return m11 >= m22 ? q.y > 0f : q.z > 0f;
+        }
+
         /// <summary>Converts a clip into muscle curves.</summary>
         /// <param name="avatar">The model's humanoid avatar.</param>
         /// <param name="times">The sample times (<see cref="SampleTimes"/>).</param>
@@ -251,7 +273,9 @@ namespace Unbound.Runtime.Humanoid
         /// pose it gets holds the avatar's default pose (the hierarchy as imported,
         /// <see cref="AvatarConstant.DefaultPose"/>); it must replace the position, rotation and scale
         /// of every transform the clip animates with the clip's values at that time (rotations through
-        /// <see cref="NormalizeCurveQ"/>) and leave the others.</param>
+        /// <see cref="NormalizeCurveQ"/>) and leave the others. Every node's rotations then take
+        /// the sign of <see cref="ImporterSign"/> at the first sample, whatever sign the curves
+        /// and the default pose hold them with.</param>
         /// <param name="settings">The clip's import settings.</param>
         public static HumanClipCurves Convert(AvatarConstant avatar, float[] times, Action<int, float, SkeletonPose> sampleFrame,
             in HumanClipSettings settings)
@@ -279,11 +303,18 @@ namespace Unbound.Runtime.Humanoid
             var values = new float[CurveCount][];
             for (int c = first; c < end; c++) values[c] = new float[frames];
             int hipsParent = avatar.HumanSkeletonIndexArray[0];
+            // Per node, whether its rotations take the other sign (see ImporterSign).
+            var negated = new bool[n];
 
             for (int i = 0; i < frames; i++)
             {
                 local.CopyFrom(avatar.DefaultPose);
                 sampleFrame(i, times[i], local);
+                for (int k = 0; k < n; k++)
+                {
+                    if (i == 0) negated[k] = !ImporterSign(local.X[k].q);
+                    if (negated[k]) local.X[k].q = -local.X[k].q;
+                }
                 Skel.ComputeGlobal(skel, local, global, hipsParent, 0);
                 Skel.CopyById(skel, local, h.Skeleton, humanLocal);
                 humanLocal.X[0] = global.X[hipsParent];
