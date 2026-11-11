@@ -413,25 +413,143 @@ fn unwraps_a_grid_with_interior_vertices_like_unity() {
     assert_unwraps(&GRID_POSITIONS, &GRID_TRIANGLES, &GRID_UVS, &GRID_EXPECTED);
 }
 
-#[test]
-fn refuses_components_it_does_not_reproduce() {
-    // Degenerate triangles are not supported.
-    let positions = [
-        [0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [2.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-    ];
-    let triangles = [[0, 1, 2], [0, 1, 3]];
-    let polygons = [0, 1];
+fn unwrap_default(
+    positions: &[[f32; 3]],
+    triangles: &[[u32; 3]],
+) -> Result<Vec<[[f32; 2]; 3]>, String> {
+    let polygons: Vec<u32> = (0..triangles.len() as u32).collect();
     let input = UnwrapInput {
-        positions: &positions,
-        triangles: &triangles,
+        positions,
+        triangles,
         polygons: &polygons,
         uvs: None,
     };
-    let params = UnwrapParams::new(&default_settings(), &input).unwrap();
-    assert!(unwrap(&input, &params).is_err());
+    let params = UnwrapParams::new(&default_settings(), &input)?;
+    unwrap(&input, &params)
+}
+
+#[test]
+fn a_degenerate_triangle_takes_the_uv2_of_a_neighbour_along_a_shared_edge() {
+    // Triangles 0, 2 and 3 have their three corners on one line; triangle 3 shares no edge with
+    // a kept triangle. The third corner takes the UV2 of the shared edge's nearer end: vertex 2
+    // lies nearer vertex 1, vertex 4 nearer vertex 0.
+    let positions = [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [3.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.2, 0.0, 0.0],
+        [5.0, 5.0, 0.0],
+        [6.0, 5.0, 0.0],
+        [7.0, 5.0, 0.0],
+    ];
+    let triangles = [[0, 1, 2], [0, 1, 3], [0, 1, 4], [5, 6, 7]];
+    let out = unwrap_default(&positions, &triangles).unwrap();
+    let kept = out[1];
+    assert_eq!(out[0], [kept[0], kept[1], kept[1]]);
+    assert_eq!(out[2], [kept[0], kept[1], kept[0]]);
+    assert_eq!(out[3], [[0.0; 2]; 3]);
+    assert_ne!(kept[0], kept[1]);
+}
+
+#[test]
+fn a_mesh_of_degenerate_triangles_only_is_refused() {
+    let positions = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0]];
+    assert!(unwrap_default(&positions, &[[0, 1, 2], [0, 0, 1]]).is_err());
+}
+
+#[test]
+fn the_cleanup_moves_removed_triangles_after_the_kept_ones() {
+    // Walking from the last triangle, a removed one is replaced by the last kept one.
+    let positions = [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [2.0, 0.0, 0.0],
+    ];
+    let triangles = [[0, 1, 2], [0, 1, 4], [1, 3, 2], [2, 2, 3]];
+    let g = cleanup::prepare(&positions, &triangles).unwrap();
+    assert_eq!(g.sources, [0, 2]);
+    assert_eq!(g.removed, [1, 3]);
+    assert_eq!(g.triangles, [[0, 1, 2], [1, 3, 2]]);
+    // Vertex 4 is no longer used and is dropped.
+    assert_eq!(g.positions.len(), 4);
+}
+
+/// Whether every edge has at most two triangles running opposite ways, and the triangles
+/// around every vertex form one fan.
+fn manifold(vertex_count: usize, triangles: &[[u32; 3]]) -> bool {
+    let mut directed = std::collections::HashSet::new();
+    let mut undirected: std::collections::HashMap<(u32, u32), u32> = Default::default();
+    for t in triangles {
+        for k in 0..3 {
+            let (a, b) = (t[k], t[(k + 1) % 3]);
+            if !directed.insert((a, b)) {
+                return false;
+            }
+            *undirected.entry((a.min(b), a.max(b))).or_default() += 1;
+        }
+    }
+    if undirected.values().any(|&n| n > 2) {
+        return false;
+    }
+    (0..vertex_count as u32).all(|v| {
+        let tris: Vec<usize> = (0..triangles.len())
+            .filter(|&i| triangles[i].contains(&v))
+            .collect();
+        let mut reached = vec![*tris.first().unwrap_or(&0)];
+        let mut i = 0;
+        while i < reached.len() && !tris.is_empty() {
+            let t = triangles[reached[i]];
+            for &u in &tris {
+                let shared = t
+                    .iter()
+                    .filter(|&&c| c != v && triangles[u].contains(&c))
+                    .count();
+                if shared > 0 && !reached.contains(&u) {
+                    reached.push(u);
+                }
+            }
+            i += 1;
+        }
+        tris.is_empty() || reached.len() == tris.len()
+    })
+}
+
+#[test]
+fn the_cleanup_splits_non_manifold_edges_and_vertices() {
+    // A fin (an edge of three triangles) and a bow tie (two fans at one vertex).
+    let fin_positions = [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.5, 1.0, 0.0],
+        [0.5, -1.0, 0.3],
+        [0.5, -0.8, -0.6],
+    ];
+    let fin = [[0, 1, 2], [1, 0, 3], [0, 1, 4]];
+    let g = cleanup::prepare(&fin_positions, &fin).unwrap();
+    assert!(!manifold(5, &fin));
+    assert!(manifold(g.positions.len(), &g.triangles));
+    // Both ends of the shared edge get a copy for each of their two extra fans.
+    assert_eq!(g.positions.len(), 5 + 4);
+    let bow_positions = [
+        [0.0, 0.0, 0.0],
+        [-1.0, -1.0, 0.0],
+        [-1.0, 1.0, 0.0],
+        [1.0, -1.0, 0.0],
+        [1.0, 1.0, 0.0],
+    ];
+    let bow = [[0, 1, 2], [0, 4, 3]];
+    let g = cleanup::prepare(&bow_positions, &bow).unwrap();
+    assert!(!manifold(5, &bow));
+    assert!(manifold(g.positions.len(), &g.triangles));
+    // The apex keeps the fan of the last triangle; the first triangle gets the copy.
+    assert_eq!(g.triangles, [[5, 1, 2], [0, 3, 4]]);
+    assert_eq!(g.positions[5], g.positions[0]);
+    // Both unwrap.
+    assert!(unwrap_default(&fin_positions, &fin).is_ok());
+    assert!(unwrap_default(&bow_positions, &bow).is_ok());
 }
 
 #[test]

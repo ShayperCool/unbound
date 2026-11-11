@@ -10,8 +10,8 @@
 //! ([`mesh`]), segments each connected part into charts ([`segment`]; a part of more than 100
 //! triangles first on a simplified copy, [`simplify`]), lays each chart flat from corrected
 //! angles by least squares and checks it ([`param`]), cuts a chart that overlaps itself, and
-//! packs the charts ([`pack`]). Not reproduced yet (the mesh warns and keeps the file's UV2): degenerate
-//! and non-manifold triangles.
+//! packs the charts ([`pack`]). A triangle the cleanup removed as degenerate takes its UV2 from a
+//! kept neighbour ([`removed_triangle_uvs`]).
 
 use super::SecondaryUvSettings;
 
@@ -91,11 +91,16 @@ impl UnwrapParams {
 /// packed into the unit square.
 pub fn unwrap(input: &UnwrapInput, params: &UnwrapParams) -> Result<Vec<[[f32; 2]; 3]>, String> {
     let geometry = cleanup::prepare(input.positions, input.triangles)?;
+    let uvs: Option<Vec<[[f32; 2]; 3]>> = input
+        .uvs
+        .map(|uvs| geometry.sources.iter().map(|&s| uvs[s as usize]).collect());
+    // The polygons stay indexed by the cleaned triangles' positions, not by their sources: the
+    // Editor's UV2 comes out that way when the cleanup reorders triangles.
     let desc = mesh::Triangles {
         positions: &geometry.positions,
         triangles: &geometry.triangles,
         sources: Some(input.polygons),
-        uvs: input.uvs,
+        uvs: uvs.as_deref(),
     };
     let map = mesh::HalfEdgeMesh::create(&desc, params.hard_angle)?;
     let mut charts = Vec::new();
@@ -109,10 +114,91 @@ pub fn unwrap(input: &UnwrapInput, params: &UnwrapParams) -> Result<Vec<[[f32; 2
     let mut out = vec![[[0f32; 2]; 3]; input.triangles.len()];
     for chart in &charts {
         for (i, &facet) in chart.component.facets.iter().enumerate() {
-            out[facet as usize] = [0, 1, 2].map(|k| chart.uvs[3 * i + k].map(|c| c as f32));
+            let source = geometry.sources[facet as usize];
+            out[source as usize] = [0, 1, 2].map(|k| chart.uvs[3 * i + k].map(|c| c as f32));
+        }
+    }
+    if !geometry.removed.is_empty() {
+        let edges = KeptEdges::new(input, &geometry.sources);
+        for &removed in &geometry.removed {
+            out[removed as usize] =
+                removed_triangle_uvs(input, &geometry.sources, &edges, removed, &out);
         }
     }
     Ok(out)
+}
+
+/// The kept triangles along each edge of the input (by the input's vertex numbers): per edge,
+/// the first kept triangle in the cleanup's order that has it.
+struct KeptEdges {
+    /// Per undirected edge, the index into the cleanup's `sources` of the first triangle with it.
+    first: std::collections::HashMap<(u32, u32), u32>,
+}
+
+impl KeptEdges {
+    fn new(input: &UnwrapInput, sources: &[u32]) -> Self {
+        let mut first = std::collections::HashMap::with_capacity(sources.len() * 3 / 2);
+        for (order, &kept) in sources.iter().enumerate() {
+            let s = input.triangles[kept as usize];
+            for k in 0..3 {
+                let (a, b) = (s[k], s[(k + 1) % 3]);
+                first.entry((a.min(b), a.max(b))).or_insert(order as u32);
+            }
+        }
+        Self { first }
+    }
+
+    fn first(&self, a: u32, b: u32) -> Option<u32> {
+        self.first.get(&(a.min(b), a.max(b))).copied()
+    }
+}
+
+/// The UV2 of a triangle the cleanup removed: that of the first kept triangle sharing one of its
+/// edges (by the input's vertex numbers; of several edges of that triangle, the removed
+/// triangle's first), the third corner taking the UV2 of the edge's end it lies nearer to; zero
+/// when no kept triangle shares an edge.
+fn removed_triangle_uvs(
+    input: &UnwrapInput,
+    sources: &[u32],
+    edges: &KeptEdges,
+    removed: u32,
+    out: &[[[f32; 2]; 3]],
+) -> [[f32; 2]; 3] {
+    const EDGES: [(usize, usize, usize); 3] = [(0, 1, 2), (1, 2, 0), (2, 0, 1)];
+    let r = input.triangles[removed as usize];
+    let Some((order, e)) = EDGES
+        .iter()
+        .enumerate()
+        .filter(|(_, &(a, b, _))| r[a] != r[b])
+        .filter_map(|(e, &(a, b, _))| Some((edges.first(r[a], r[b])?, e)))
+        .min()
+    else {
+        return [[0.0; 2]; 3];
+    };
+    let kept = sources[order as usize];
+    let s = input.triangles[kept as usize];
+    let (a, b, opposite) = EDGES[e];
+    let corner_of = |v: u32| {
+        s.iter()
+            .position(|&c| c == v)
+            .expect("the edge is the triangle's")
+    };
+    let (ca, cb) = (corner_of(r[a]), corner_of(r[b]));
+    let p = r.map(|v| input.positions[v as usize]);
+    let length2 = |i: usize, j: usize| {
+        let d = [0, 1, 2].map(|c| p[i][c] - p[j][c]);
+        d[2] * d[2] + d[1] * d[1] + d[0] * d[0]
+    };
+    let lengths = [length2(0, 1), length2(1, 2), length2(2, 0)];
+    let mut corner = [0usize; 3];
+    corner[a] = ca;
+    corner[b] = cb;
+    corner[opposite] = if lengths[(e + 2) % 3] < lengths[(e + 1) % 3] {
+        ca
+    } else {
+        cb
+    };
+    corner.map(|c| out[kept as usize][c])
 }
 
 /// The charts of one connected component: its segments laid flat, those too distorted

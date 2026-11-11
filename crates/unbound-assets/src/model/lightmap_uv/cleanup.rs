@@ -1,14 +1,19 @@
-//! The unwrap's preparation of the input: the mesh is fitted into a unit cube, then vertices
-//! closer than 1e-6 weld unless their triangles face opposite ways, renumbering them in the
-//! order the triangles' corners first use them. Degenerate triangles (repeated or coincident
-//! corners, an edge shorter than 1e-6, an angle under 0.001) and non-manifold edges and vertices
-//! are not supported.
+//! The unwrap's preparation of the input (matches the Unity 6000.0.71f1 Editor,
+//! tests/projects/lightmapuvs): the mesh is fitted into a unit cube, then vertices closer than
+//! 1e-6 weld unless their triangles face opposite ways, renumbering them in the order the
+//! triangles' corners first use them. Degenerate triangles are removed ([`remove_degenerate`]),
+//! vertices where the mesh is not a single fan are split ([`split_non_manifold`]), and triangles
+//! that split made degenerate are removed again.
 
 use super::math;
 
 pub struct Geometry {
     pub positions: Vec<[f32; 3]>,
     pub triangles: Vec<[u32; 3]>,
+    /// The input triangle each triangle comes from.
+    pub sources: Vec<u32>,
+    /// The input triangles the cleanup removed.
+    pub removed: Vec<u32>,
 }
 
 const RADIUS: f64 = 1e-6;
@@ -200,79 +205,209 @@ fn degenerate(p: [[f64; 3]; 3]) -> bool {
     angles.iter().any(|&a| a < 0.001)
 }
 
-/// Whether an edge has more than two triangles or two running the same way, or a vertex's
-/// triangles form more than one fan.
-fn non_manifold(vertex_count: usize, triangles: &[[u32; 3]]) -> bool {
-    use std::collections::HashMap;
-    let mut directed: HashMap<(u32, u32), u32> = HashMap::new();
-    for t in triangles {
-        for k in 0..3 {
-            let count = directed.entry((t[k], t[(k + 1) % 3])).or_insert(0);
-            *count += 1;
-            if *count > 1 {
-                return true;
+/// Removes the triangles with a repeated corner or [`degenerate`] ones, walking from the last
+/// triangle to the first: a removed triangle's place is taken by the last kept one, and their
+/// entries in `sources` swap, so the removed sources end up after the kept ones. Then the vertices
+/// no triangle uses are dropped, keeping the others in order.
+fn remove_degenerate(
+    positions: &mut Vec<[f64; 3]>,
+    triangles: &mut Vec<[u32; 3]>,
+    sources: &mut [u32],
+) {
+    let mut live = triangles.len();
+    for i in (0..triangles.len()).rev() {
+        let t = triangles[i];
+        let repeated = t[0] == t[1] || t[1] == t[2] || t[2] == t[0];
+        if repeated || degenerate(t.map(|v| positions[v as usize])) {
+            live -= 1;
+            triangles[i] = triangles[live];
+            sources.swap(i, live);
+        }
+    }
+    triangles.truncate(live);
+    let mut used = vec![false; positions.len()];
+    for t in triangles.iter() {
+        for &v in t {
+            used[v as usize] = true;
+        }
+    }
+    let mut remap: Vec<u32> = (0..positions.len() as u32).collect();
+    let mut kept = used.iter().position(|&u| !u).unwrap_or(positions.len());
+    for v in kept..positions.len() {
+        if used[v] {
+            positions[kept] = positions[v];
+            remap[v] = kept as u32;
+            kept += 1;
+        }
+    }
+    positions.truncate(kept);
+    for t in triangles.iter_mut() {
+        *t = t.map(|v| remap[v as usize]);
+    }
+}
+
+/// The edges of the triangles: for each, the triangles along it with the corner it starts at.
+struct EdgeTriangles {
+    edges: std::collections::HashMap<(u32, u32), Vec<(u32, u8)>>,
+}
+
+impl EdgeTriangles {
+    fn new(triangles: &[[u32; 3]]) -> Self {
+        let mut edges: std::collections::HashMap<(u32, u32), Vec<(u32, u8)>> =
+            std::collections::HashMap::with_capacity(triangles.len() * 3 / 2);
+        for (i, t) in triangles.iter().enumerate() {
+            for k in 0..3 {
+                let (a, b) = (t[k], t[(k + 1) % 3]);
+                edges
+                    .entry((a.min(b), a.max(b)))
+                    .or_default()
+                    .push((i as u32, k as u8));
             }
         }
+        Self { edges }
     }
-    // Around each vertex, the triangles must be one fan: walk from a triangle across the edges
-    // through the vertex and count the triangles reached.
-    let mut around: Vec<Vec<usize>> = vec![Vec::new(); vertex_count];
-    for (i, t) in triangles.iter().enumerate() {
+
+    fn get(&self, a: u32, b: u32) -> &[(u32, u8)] {
+        self.edges
+            .get(&(a.min(b), a.max(b)))
+            .map_or(&[], |v| v.as_slice())
+    }
+}
+
+/// Whether the edge's triangles keep the mesh a surface there: more than two triangles, or two
+/// that run the same way along it or share their third corner, do not.
+fn manifold_edge(triangles: &[[u32; 3]], along: &[(u32, u8)]) -> bool {
+    match along {
+        [_] => true,
+        [(a, ka), (b, kb)] => {
+            let (ta, tb) = (triangles[*a as usize], triangles[*b as usize]);
+            let (ka, kb) = (*ka as usize, *kb as usize);
+            ta[ka] != tb[kb] && ta[(ka + 2) % 3] != tb[(kb + 2) % 3]
+        }
+        _ => false,
+    }
+}
+
+/// Splits the vertices around which the triangles do not form one fan: the triangles at a
+/// vertex are grouped by crossing the manifold edges between them, the group of the triangle
+/// listed first (the vertex's triangles from the last to the first) keeps the vertex, and every
+/// other group gets a new copy of it, appended in vertex order. Returns the vertex each copy is
+/// made from.
+fn split_non_manifold(vertex_count: usize, triangles: &mut [[u32; 3]]) -> Vec<u32> {
+    let edges = EdgeTriangles::new(triangles);
+    let mut around: Vec<Vec<u32>> = vec![Vec::new(); vertex_count];
+    for (i, t) in triangles.iter().enumerate().rev() {
         for &v in t {
-            around[v as usize].push(i);
+            around[v as usize].push(i as u32);
         }
     }
-    for (v, tris) in around.iter().enumerate() {
-        if tris.len() < 2 {
-            continue;
-        }
-        let v = v as u32;
-        let mut reached = vec![tris[0]];
-        let mut i = 0;
-        while i < reached.len() {
-            let t = triangles[reached[i]];
-            let k = t.iter().position(|&c| c == v).unwrap();
-            for other in [t[(k + 1) % 3], t[(k + 2) % 3]] {
-                for &u in tris {
-                    if !reached.contains(&u) && triangles[u].contains(&other) {
-                        reached.push(u);
+    // Per vertex, the group of each of its triangles (in `around` order) and the group count.
+    let mut groups: Vec<(Vec<u32>, u32)> = Vec::with_capacity(vertex_count);
+    let mut stack = Vec::new();
+    for tris in &around {
+        let mut labels = vec![u32::MAX; tris.len()];
+        let mut count = 0;
+        for seed in 0..tris.len() {
+            if labels[seed] != u32::MAX {
+                continue;
+            }
+            labels[seed] = count;
+            stack.push(seed);
+            while let Some(i) = stack.pop() {
+                let t = triangles[tris[i] as usize];
+                for k in 0..3 {
+                    let along = edges.get(t[k], t[(k + 1) % 3]);
+                    if along.len() < 2 || !manifold_edge(triangles, along) {
+                        continue;
+                    }
+                    let other = if along[0].0 == tris[i] {
+                        along[1].0
+                    } else {
+                        along[0].0
+                    };
+                    // `tris` runs from the last triangle to the first.
+                    if let Ok(j) = tris.binary_search_by(|x| other.cmp(x))
+                        && labels[j] == u32::MAX
+                    {
+                        labels[j] = count;
+                        stack.push(j);
                     }
                 }
             }
-            i += 1;
+            count += 1;
         }
-        if reached.len() != tris.len() {
-            return true;
+        groups.push((labels, count));
+    }
+    let mut copies = Vec::new();
+    for v in 0..vertex_count {
+        let (labels, count) = &groups[v];
+        if *count <= 1 {
+            continue;
+        }
+        let first = (vertex_count + copies.len()) as u32;
+        for _ in 1..*count {
+            copies.push(v as u32);
+        }
+        for (&t, &label) in around[v].iter().zip(labels) {
+            if label != 0 {
+                for c in triangles[t as usize].iter_mut() {
+                    if *c == v as u32 {
+                        *c = first + label - 1;
+                    }
+                }
+            }
         }
     }
-    false
+    copies
 }
 
-/// The geometry the unwrap parametrizes, its triangles in their input order.
+/// The cleanup of a mesh: welding, then the removal of degenerate triangles, the split of
+/// non-manifold vertices and a second removal.
+pub struct Cleaned {
+    pub positions: Vec<[f64; 3]>,
+    pub triangles: Vec<[u32; 3]>,
+    /// The input triangle each triangle comes from.
+    pub sources: Vec<u32>,
+    /// The input triangles the cleanup removed.
+    pub removed: Vec<u32>,
+}
+
+pub fn clean(positions: &[[f64; 3]], triangles: &[[u32; 3]]) -> Cleaned {
+    let (mut positions, mut triangles) = weld(positions, triangles);
+    let mut sources: Vec<u32> = (0..triangles.len() as u32).collect();
+    remove_degenerate(&mut positions, &mut triangles, &mut sources);
+    let copies = split_non_manifold(positions.len(), &mut triangles);
+    for v in copies {
+        positions.push(positions[v as usize]);
+    }
+    let live = triangles.len();
+    remove_degenerate(&mut positions, &mut triangles, &mut sources[..live]);
+    let removed = sources.split_off(triangles.len());
+    Cleaned {
+        positions,
+        triangles,
+        sources,
+        removed,
+    }
+}
+
+/// The geometry the unwrap parametrizes: the mesh fitted into a unit cube and cleaned.
 pub fn prepare(positions: &[[f32; 3]], triangles: &[[u32; 3]]) -> Result<Geometry, String> {
     let mut fitted = positions.to_vec();
     center_and_scale(&mut fitted);
     let doubles: Vec<[f64; 3]> = fitted.iter().map(|p| p.map(f64::from)).collect();
-    for t in triangles {
-        if t[0] == t[1] || t[1] == t[2] || t[2] == t[0] {
-            return Err("the mesh has degenerate triangles".into());
-        }
-    }
-    let (positions, welded) = weld(&doubles, triangles);
-    for t in &welded {
-        if t[0] == t[1]
-            || t[1] == t[2]
-            || t[2] == t[0]
-            || degenerate(t.map(|v| positions[v as usize]))
-        {
-            return Err("the mesh has degenerate triangles".into());
-        }
-    }
-    if non_manifold(positions.len(), &welded) {
-        return Err("after welding, the mesh has non-manifold edges or vertices".into());
+    let cleaned = clean(&doubles, triangles);
+    if cleaned.triangles.is_empty() {
+        return Err("no triangles are left after the cleanup of degenerate geometry".into());
     }
     Ok(Geometry {
-        positions: positions.iter().map(|p| p.map(|c| c as f32)).collect(),
-        triangles: welded,
+        positions: cleaned
+            .positions
+            .iter()
+            .map(|p| p.map(|c| c as f32))
+            .collect(),
+        triangles: cleaned.triangles,
+        sources: cleaned.sources,
+        removed: cleaned.removed,
     })
 }

@@ -238,9 +238,12 @@ impl Simplification {
         uvs: &[[[f32; 2]; 3]],
     ) -> Result<Self, String> {
         let doubles: Vec<[f64; 3]> = positions.iter().map(|p| p.map(f64::from)).collect();
-        let (positions, triangles) = cleanup::weld(&doubles, triangles);
-        let mut m = Self::build(positions, &triangles)?;
-        m.attributes(uvs);
+        // The part is cleaned like the whole mesh; its facets are numbered as the cleanup
+        // leaves them, and their UV0 is that of the triangles they come from.
+        let cleaned = cleanup::clean(&doubles, triangles);
+        let mut m = Self::build(cleaned.positions, &cleaned.triangles)?;
+        let uvs: Vec<[[f32; 2]; 3]> = cleaned.sources.iter().map(|&s| uvs[s as usize]).collect();
+        m.attributes(&uvs);
         m.simplify();
         Ok(m)
     }
@@ -996,6 +999,7 @@ impl Simplification {
         let (a, b) = (self.facet_normal(n1), self.facet_normal(n2));
         let d1 = n[2] * a[2] + n[1] * a[1] + n[0] * a[0];
         let d2 = n[2] * b[2] + n[1] * b[1] + n[0] * b[0];
-        if d1 <= d2 { labels[n2 as usize] } else { l1 }
+        // A degenerate neighbour (NaN normal) gives way to the second one.
+        if d1 > d2 { l1 } else { labels[n2 as usize] }
     }
 }
