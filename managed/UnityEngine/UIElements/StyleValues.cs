@@ -546,7 +546,9 @@ namespace UnityEngine.UIElements
         Rotate m_Value;
         StyleKeyword m_Keyword;
 
-        public Rotate value { get => m_Keyword == StyleKeyword.Undefined ? m_Value : m_Keyword == StyleKeyword.None ? Rotate.None() : default; set { m_Value = value; m_Keyword = StyleKeyword.Undefined; } }
+        // Without a value of its own: none (also when unset), the initial rotation for Initial
+        // (Unity 6000.0.71f1, tests/projects/uitkbindings nested section; other keywords unmeasured).
+        public Rotate value { get => m_Keyword == StyleKeyword.Undefined ? m_Value : m_Keyword == StyleKeyword.Null || m_Keyword == StyleKeyword.None ? Rotate.None() : m_Keyword == StyleKeyword.Initial ? Rotate.Initial() : default; set { m_Value = value; m_Keyword = StyleKeyword.Undefined; } }
         public StyleKeyword keyword { get => m_Keyword; set => m_Keyword = value; }
 
         public StyleRotate(Rotate v) : this(v, StyleKeyword.Undefined) { }
@@ -591,7 +593,9 @@ namespace UnityEngine.UIElements
         Scale m_Value;
         StyleKeyword m_Keyword;
 
-        public Scale value { get => m_Keyword == StyleKeyword.Undefined ? m_Value : m_Keyword == StyleKeyword.None ? Scale.None() : default; set { m_Value = value; m_Keyword = StyleKeyword.Undefined; } }
+        // Without a value of its own: none, a scale of one (also when unset), the initial scale for
+        // Initial (Unity 6000.0.71f1, tests/projects/uitkbindings nested section).
+        public Scale value { get => m_Keyword == StyleKeyword.Undefined ? m_Value : m_Keyword == StyleKeyword.Null || m_Keyword == StyleKeyword.None ? Scale.None() : m_Keyword == StyleKeyword.Initial ? Scale.Initial() : default; set { m_Value = value; m_Keyword = StyleKeyword.Undefined; } }
         public StyleKeyword keyword { get => m_Keyword; set => m_Keyword = value; }
 
         public StyleScale(Scale v) : this(v, StyleKeyword.Undefined) { }
@@ -639,7 +643,7 @@ namespace UnityEngine.UIElements
         Translate m_Value;
         StyleKeyword m_Keyword;
 
-        public Translate value { get => m_Keyword == StyleKeyword.Undefined ? m_Value : m_Keyword == StyleKeyword.None ? Translate.None() : default; set { m_Value = value; m_Keyword = StyleKeyword.Undefined; } }
+        public Translate value { get => m_Keyword == StyleKeyword.Undefined ? m_Value : m_Keyword == StyleKeyword.Null || m_Keyword == StyleKeyword.None || m_Keyword == StyleKeyword.Initial ? Translate.None() : default; set { m_Value = value; m_Keyword = StyleKeyword.Undefined; } }
         public StyleKeyword keyword { get => m_Keyword; set => m_Keyword = value; }
 
         public StyleTranslate(Translate v) : this(v, StyleKeyword.Undefined) { }
@@ -685,7 +689,9 @@ namespace UnityEngine.UIElements
         TransformOrigin m_Value;
         StyleKeyword m_Keyword;
 
-        public TransformOrigin value { get => m_Keyword == StyleKeyword.Undefined ? m_Value : m_Keyword == StyleKeyword.Initial ? TransformOrigin.Initial() : default; set { m_Value = value; m_Keyword = StyleKeyword.Undefined; } }
+        // Without a value of its own: the initial origin, the centre (also when unset; Unity
+        // 6000.0.71f1, tests/projects/uitkbindings nested section).
+        public TransformOrigin value { get => m_Keyword == StyleKeyword.Undefined ? m_Value : m_Keyword == StyleKeyword.Null || m_Keyword == StyleKeyword.None || m_Keyword == StyleKeyword.Initial ? TransformOrigin.Initial() : default; set { m_Value = value; m_Keyword = StyleKeyword.Undefined; } }
         public StyleKeyword keyword { get => m_Keyword; set => m_Keyword = value; }
 
         public StyleTransformOrigin(TransformOrigin v) : this(v, StyleKeyword.Undefined) { }
