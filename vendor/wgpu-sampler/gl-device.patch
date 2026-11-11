@@ -1,3 +1,47 @@
+--- a/wgpu/src/api/queue.rs
++++ b/wgpu/src/api/queue.rs
+@@ -11,6 +11,13 @@
+ /// It can be created along with a [`Device`] by calling [`Adapter::request_device`].
+ ///
+ /// Corresponds to [WebGPU `GPUQueue`](https://gpuweb.github.io/gpuweb/#gpu-queue).
++/// Unbound: held by a submission and by a surface configuration, so that the two never overlap
++/// on different threads. Configuring waits for the GPU to finish what was submitted and fails
++/// when another thread submits meanwhile; on Vulkan it also waits for the device to idle, which
++/// no submission may overlap. A callback fired by a configuration must not submit.
++#[cfg(any(feature = "parking_lot", std))]
++pub(crate) static SUBMISSION: crate::util::Mutex<()> = crate::util::Mutex::new(());
++
+ #[derive(Debug, Clone)]
+ pub struct Queue {
+     pub(crate) inner: dispatch::DispatchQueue,
+@@ -285,7 +292,12 @@
+             actions.append(&mut comb.actions.lock());
+             comb.buffer
+         });
++        // Unbound: not while another thread configures a surface (`Surface::configure`).
++        #[cfg(any(feature = "parking_lot", std))]
++        let submission = SUBMISSION.lock();
+         let index = self.inner.submit(&mut command_buffers);
++        #[cfg(any(feature = "parking_lot", std))]
++        drop(submission);
+ 
+         // Execute all deferred actions after submit.
+         actions.execute(&self.inner);
+--- a/wgpu/src/api/surface.rs
++++ b/wgpu/src/api/surface.rs
+@@ -117,7 +117,12 @@
+     ///   (see [`SurfaceCapabilities::format_capabilities`]).
+     /// - `config.width` or `config.height` is zero.
+     pub fn configure(&self, device: &Device, config: &SurfaceConfiguration) {
++        // Unbound: submissions of other threads wait meanwhile, and this waits for one under way.
++        #[cfg(any(feature = "parking_lot", std))]
++        let submission = crate::api::queue::SUBMISSION.lock();
+         self.inner.configure(&device.inner, config);
++        #[cfg(any(feature = "parking_lot", std))]
++        drop(submission);
+ 
+         let mut conf = self.config.lock();
+         *conf = Some(config.clone());
 --- a/wgpu-core/src/device/resource.rs
 +++ b/wgpu-core/src/device/resource.rs
 @@ -2250,17 +2250,18 @@
@@ -29,7 +73,64 @@
      pub fn create_sampler(
 --- a/wgpu-hal/src/gles/adapter.rs
 +++ b/wgpu-hal/src/gles/adapter.rs
-@@ -684,6 +684,22 @@
+@@ -193,6 +193,38 @@
+         }
+     }
+ 
++    /// Unbound: whether the driver draws into a texture of an internal format (a framebuffer of
++    /// one is complete).
++    unsafe fn renders_into(gl: &glow::Context, internal_format: u32) -> bool {
++        let (Ok(texture), Ok(framebuffer)) = (unsafe { gl.create_texture() }, unsafe {
++            gl.create_framebuffer()
++        }) else {
++            return false;
++        };
++        let complete = unsafe {
++            gl.bind_texture(glow::TEXTURE_2D, Some(texture));
++            gl.tex_storage_2d(glow::TEXTURE_2D, 1, internal_format, 4, 4);
++            gl.bind_framebuffer(glow::FRAMEBUFFER, Some(framebuffer));
++            gl.framebuffer_texture_2d(
++                glow::FRAMEBUFFER,
++                glow::COLOR_ATTACHMENT0,
++                glow::TEXTURE_2D,
++                Some(texture),
++                0,
++            );
++            let complete =
++                gl.check_framebuffer_status(glow::FRAMEBUFFER) == glow::FRAMEBUFFER_COMPLETE;
++            gl.bind_framebuffer(glow::FRAMEBUFFER, None);
++            gl.bind_texture(glow::TEXTURE_2D, None);
++            gl.delete_framebuffer(framebuffer);
++            gl.delete_texture(texture);
++            // A refusal leaves an error behind.
++            while gl.get_error() != glow::NO_ERROR {}
++            complete
++        };
++        complete
++    }
++
+     pub(super) unsafe fn expose(
+         context: super::AdapterContext,
+         backend_options: wgt::GlBackendOptions,
+@@ -461,6 +493,17 @@
+         let supports_16bit_snorm_renderable = supports_16bit_norm
+             && (extensions.contains("GL_EXT_render_snorm")
+                 || extensions.contains("EXT_render_snorm"));
++        // Unbound: desktop OpenGL draws into signed normalized formats where the driver makes a
++        // framebuffer of one complete (they are color-renderable, but no driver has to
++        // support them): asked of the driver.
++        let (snorm8_renderable, supports_16bit_snorm_renderable) = if full_ver.is_some() {
++            (
++                unsafe { Self::renders_into(&gl, glow::RGBA8_SNORM) },
++                unsafe { Self::renders_into(&gl, glow::RGBA16_SNORM) },
++            )
++        } else {
++            (false, supports_16bit_snorm_renderable)
++        };
+         // Storage on norm16. ARB_shader_image_load_store / GL 4.2 Table X.2 and
+         // NV_image_formats Table 8.27 both list `r16/rg16/rgba16` and the SNORM
+         // variants as image-unit formats, so one gate covers UNORM and SNORM.
+@@ -684,6 +727,30 @@
              super::PrivateCapabilities::TEXTURE_STORAGE,
              supported((3, 0), (4, 2)),
          );
@@ -45,6 +146,14 @@
 +        #[cfg(any(windows, webgl))]
 +        let texture_view: Option<super::TextureViewFn> = None;
 +        downlevel_flags.set(wgt::DownlevelFlags::VIEW_FORMATS, texture_view.is_some());
++        // Unbound: desktop OpenGL's image formats (4.2 or `GL_ARB_shader_image_load_store`): more
++        // than OpenGL ES 3.1's.
++        let desktop_image_formats = full_ver.is_some_and(|v| v >= (4, 2))
++            || (full_ver.is_some() && extensions.contains("GL_ARB_shader_image_load_store"));
++        // Unbound: copies between textures as image copies (`glCopyImageSubData`, desktop OpenGL
++        // 4.3).
++        let copy_image =
++            full_ver.is_some_and(|v| v >= (4, 3)) || extensions.contains("GL_ARB_copy_image");
 +        // Unbound: sampler LOD bias, desktop OpenGL only (`GL_TEXTURE_LOD_BIAS`).
 +        let max_lod_bias = full_ver
 +            .is_some()
@@ -52,15 +161,98 @@
          let is_mali = renderer.to_lowercase().contains("mali");
          let debug_fns_enabled = match backend_options.debug_fns {
              wgt::GlDebugFns::Auto => gl.supports_debug() && !is_mali,
-@@ -958,6 +974,8 @@
+@@ -958,6 +1025,11 @@
                      program_cache: Default::default(),
                      es: es_ver.is_some(),
                      max_msaa_samples: max_samples,
 +                    texture_view,
++                    copy_image,
++                    desktop_image_formats,
++                    snorm8_renderable,
 +                    max_lod_bias,
                  }),
              },
              info: Self::make_info(vendor, renderer, version),
+@@ -1243,41 +1315,58 @@
+             storage,
+         );
+ 
++        // Unbound: desktop OpenGL loads and stores images of every format of its table (OpenGL
++        // 4.5, table 8.26), not only OpenGL ES 3.1's.
++        let desktop_storage = if self.shared.desktop_image_formats {
++            storage
++        } else {
++            empty
++        };
++
++        // Unbound: the 8-bit signed normalized formats where the driver draws into them.
++        let snorm8 = if self.shared.snorm8_renderable {
++            filterable_renderable
++        } else {
++            filterable
++        };
++
+         match format {
+-            Tf::R8Unorm => filterable_renderable,
+-            Tf::R8Snorm => filterable,
+-            Tf::R8Uint => renderable,
+-            Tf::R8Sint => renderable,
+-            Tf::R16Uint => renderable,
+-            Tf::R16Sint => renderable,
++            Tf::R8Unorm => filterable_renderable | desktop_storage,
++            Tf::R8Snorm => snorm8 | desktop_storage,
++            Tf::R8Uint => renderable | desktop_storage,
++            Tf::R8Sint => renderable | desktop_storage,
++            Tf::R16Uint => renderable | desktop_storage,
++            Tf::R16Sint => renderable | desktop_storage,
+             Tf::R16Unorm => norm16_unorm | norm16_storage,
+             Tf::R16Snorm => norm16_snorm | norm16_storage,
+-            Tf::R16Float => filterable | half_float_renderable,
+-            Tf::Rg8Unorm => filterable_renderable,
+-            Tf::Rg8Snorm => filterable,
+-            Tf::Rg8Uint => renderable,
+-            Tf::Rg8Sint => renderable,
++            Tf::R16Float => filterable | half_float_renderable | desktop_storage,
++            Tf::Rg8Unorm => filterable_renderable | desktop_storage,
++            Tf::Rg8Snorm => snorm8 | desktop_storage,
++            Tf::Rg8Uint => renderable | desktop_storage,
++            Tf::Rg8Sint => renderable | desktop_storage,
+             Tf::R32Uint => renderable | storage | image_atomic,
+             Tf::R32Sint => renderable | storage | image_atomic,
+             Tf::R32Float => unfilterable | storage | float_renderable | texture_float_linear,
+-            Tf::Rg16Uint => renderable,
+-            Tf::Rg16Sint => renderable,
++            Tf::Rg16Uint => renderable | desktop_storage,
++            Tf::Rg16Sint => renderable | desktop_storage,
+             Tf::Rg16Unorm => norm16_unorm | norm16_storage,
+             Tf::Rg16Snorm => norm16_snorm | norm16_storage,
+-            Tf::Rg16Float => filterable | half_float_renderable,
++            Tf::Rg16Float => filterable | half_float_renderable | desktop_storage,
+             Tf::Rgba8Unorm => filterable_renderable | storage,
+             Tf::Rgba8UnormSrgb => filterable_renderable,
+             Tf::Bgra8Unorm | Tf::Bgra8UnormSrgb => filterable_renderable,
+-            Tf::Rgba8Snorm => filterable | storage,
++            Tf::Rgba8Snorm => snorm8 | storage,
+             Tf::Rgba8Uint => renderable | storage,
+             Tf::Rgba8Sint => renderable | storage,
+-            Tf::Rgb10a2Uint => renderable,
+-            Tf::Rgb10a2Unorm => filterable_renderable,
+-            Tf::Rg11b10Ufloat => filterable | float_renderable,
++            Tf::Rgb10a2Uint => renderable | desktop_storage,
++            Tf::Rgb10a2Unorm => filterable_renderable | desktop_storage,
++            Tf::Rg11b10Ufloat => filterable | float_renderable | desktop_storage,
+             Tf::R64Uint => image_64_atomic,
+-            Tf::Rg32Uint => renderable,
+-            Tf::Rg32Sint => renderable,
+-            Tf::Rg32Float => unfilterable | float_renderable | texture_float_linear,
++            Tf::Rg32Uint => renderable | desktop_storage,
++            Tf::Rg32Sint => renderable | desktop_storage,
++            Tf::Rg32Float => {
++                unfilterable | float_renderable | texture_float_linear | desktop_storage
++            }
+             Tf::Rgba16Uint => renderable | storage,
+             Tf::Rgba16Sint => renderable | storage,
+             Tf::Rgba16Unorm => norm16_unorm | norm16_storage,
 --- a/wgpu-hal/src/gles/conv.rs
 +++ b/wgpu-hal/src/gles/conv.rs
 @@ -423,7 +423,8 @@
@@ -247,7 +439,31 @@
                          raw,
 --- a/wgpu-hal/src/gles/egl.rs
 +++ b/wgpu-hal/src/gles/egl.rs
-@@ -264,6 +264,15 @@
+@@ -145,12 +145,17 @@
+                     log::info!("EGL says it can present to the window but not natively",);
+                 }
+                 // Android emulator can't natively present either.
+-                let tier_threshold =
+-                    if cfg!(target_os = "android") || cfg!(windows) || cfg!(target_env = "ohos") {
+-                        1
+-                    } else {
+-                        2
+-                    };
++                // Unbound: Linux too (the measured NVIDIA driver has no natively renderable
++                // configs, yet presents to X11 windows).
++                let tier_threshold = if cfg!(target_os = "android")
++                    || cfg!(windows)
++                    || cfg!(target_env = "ohos")
++                    || cfg!(target_os = "linux")
++                {
++                    1
++                } else {
++                    2
++                };
+                 return Ok((config, tier_max >= tier_threshold));
+             }
+             Ok(None) => {
+@@ -264,6 +269,15 @@
  struct EglContextLock<'a> {
      instance: &'a Arc<EglInstance>,
      display: khronos_egl::Display,
@@ -263,7 +479,7 @@
  }
  
  /// A guard containing a lock to an [`AdapterContext`], while the GL context is kept current.
-@@ -284,7 +293,14 @@
+@@ -284,7 +298,14 @@
  impl<'a> Drop for AdapterContextLock<'a> {
      fn drop(&mut self) {
          if let Some(egl) = self.egl.take() {
@@ -279,7 +495,7 @@
                  log::error!("Failed to make EGL context current: {err:?}");
              }
          }
-@@ -323,10 +339,23 @@
+@@ -323,10 +344,23 @@
              .expect("Could not lock adapter context. This is most-likely a deadlock.");
  
          let egl = self.egl.as_ref().map(|egl| {
@@ -303,7 +519,7 @@
              }
          });
  
-@@ -469,6 +498,14 @@
+@@ -469,6 +503,14 @@
          let mut context_attributes = vec![];
          let mut gl_context_attributes = vec![];
          let mut gles_context_attributes = vec![];
@@ -318,7 +534,7 @@
          gl_context_attributes.push(khronos_egl::CONTEXT_MAJOR_VERSION);
          gl_context_attributes.push(3);
          gl_context_attributes.push(khronos_egl::CONTEXT_MINOR_VERSION);
-@@ -506,6 +543,7 @@
+@@ -506,6 +548,7 @@
          }
  
          gl_context_attributes.extend(&context_attributes);
@@ -326,7 +542,7 @@
          gles_context_attributes.extend(&context_attributes);
  
          let context = {
-@@ -590,8 +628,9 @@
+@@ -590,8 +633,9 @@
              };
  
              let result = if supports_opengl {
@@ -338,37 +554,84 @@
                          log::debug!("Failed to create desktop OpenGL context: {gl_error}, falling back to OpenGL ES");
                          create_context(khronos_egl::OPENGL_ES_API, &gles_context_attributes)
                      },
+@@ -843,6 +887,24 @@
+                 .map_err(instance_err("failed to get XCB display"))?;
+                 (display, WindowKind::X11)
+             }
++            // Unbound: without a display handle, the X11 display of `$DISPLAY` where there is
++            // one (its windows are presented to whichever connection made them), so that a
++            // device made before its window can present to it; else surfaceless, as before.
++            (None, Some(egl))
++                if client_ext_str.contains("EGL_EXT_platform_x11")
++                    && std::env::var_os("DISPLAY").is_some_and(|d| !d.is_empty()) =>
++            {
++                log::debug!("Using X11 platform of $DISPLAY");
++                let display = unsafe {
++                    egl.get_platform_display(
++                        EGL_PLATFORM_X11_KHR,
++                        khronos_egl::DEFAULT_DISPLAY,
++                        &[khronos_egl::ATTRIB_NONE],
++                    )
++                }
++                .map_err(instance_err("failed to get X11 display"))?;
++                (display, WindowKind::X11)
++            }
+             x if client_ext_str.contains("EGL_MESA_platform_surfaceless") => {
+                 log::debug!(
+                     "No (or unknown) windowing system ({x:?}) present. Using surfaceless platform"
+@@ -1009,6 +1071,12 @@
+             unsafe { gl.enable(glow::FRAMEBUFFER_SRGB) };
+         }
+ 
++        // Unbound: desktop OpenGL filters a cube map across the edges of its faces only when
++        // asked to (OpenGL ES and the other backends always do).
++        if !gl.version().is_embedded {
++            unsafe { gl.enable(glow::TEXTURE_CUBE_MAP_SEAMLESS) };
++        }
++
+         if self.flags.contains(wgt::InstanceFlags::DEBUG) && gl.supports_debug() {
+             log::debug!("Max label length: {}", unsafe {
+                 gl.get_parameter_i32(glow::MAX_LABEL_LENGTH)
 --- a/wgpu-hal/src/gles/mod.rs
 +++ b/wgpu-hal/src/gles/mod.rs
-@@ -301,8 +301,18 @@
+@@ -301,7 +301,23 @@
      /// Cached here so it doesn't need to be queried every time texture format capabilities are requested.
      /// (this has been shown to be a significant enough overhead)
      max_msaa_samples: i32,
+-}
 +
 +    /// Unbound: `glTextureView` (OpenGL 4.3), when the context has it: views of another format,
 +    /// dimension, level or layer range are textures of their own.
 +    texture_view: Option<TextureViewFn>,
++    /// Unbound: the context copies between textures with `glCopyImageSubData` (OpenGL 4.3).
++    copy_image: bool,
++    /// Unbound: desktop OpenGL's image load and store formats (OpenGL 4.2).
++    desktop_image_formats: bool,
++    /// Unbound: the driver draws into 8-bit signed normalized formats (desktop OpenGL).
++    snorm8_renderable: bool,
 +    /// Unbound: `GL_MAX_TEXTURE_LOD_BIAS` on desktop OpenGL (sampler LOD bias), else `None`.
 +    max_lod_bias: Option<f32>,
- }
- 
++}
++
 +/// Unbound: `glTextureView(texture, target, origtexture, internalformat, minlevel, numlevels,
 +/// minlayer, numlayers)`.
 +type TextureViewFn = unsafe extern "system" fn(u32, u32, u32, u32, u32, u32, u32, u32);
-+
+ 
  impl fmt::Debug for AdapterShared {
      fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-         let Self {
-@@ -316,6 +326,8 @@
+@@ -316,6 +332,11 @@
              next_shader_id,
              program_cache: _,
              es,
 +            texture_view: _,
++            copy_image: _,
++            desktop_image_formats: _,
++            snorm8_renderable: _,
 +            max_lod_bias: _,
              max_msaa_samples,
          } = self;
          f.debug_struct("AdapterShared")
-@@ -519,6 +531,8 @@
+@@ -519,6 +540,8 @@
              wgt::TextureDimension::D2 => {
                  // HACK: detect a cube map; forces cube compatible textures to be cube textures
                  match (desc.is_cube_compatible(), desc.size.depth_or_array_layers) {
@@ -377,7 +640,7 @@
                      (false, 1) => glow::TEXTURE_2D,
                      (false, _) => glow::TEXTURE_2D_ARRAY,
                      (true, 6) => glow::TEXTURE_CUBE_MAP,
-@@ -530,8 +544,14 @@
+@@ -530,8 +553,14 @@
      }
  
      /// More information can be found in issues #1614 and #1574
@@ -393,7 +656,7 @@
              wgt::TextureViewDimension::D1 => glow::TEXTURE_2D,
              wgt::TextureViewDimension::D2 => glow::TEXTURE_2D,
              wgt::TextureViewDimension::D2Array => glow::TEXTURE_2D_ARRAY,
-@@ -587,6 +607,9 @@
+@@ -587,6 +616,9 @@
      mip_levels: Range<u32>,
      array_layers: Range<u32>,
      format: wgt::TextureFormat,
@@ -426,3 +689,108 @@
                              gl.framebuffer_texture_2d_multisample(
                                  fbo_target,
                                  attachment,
+@@ -696,6 +699,35 @@
+                 dst_target,
+                 ref copy,
+             } => {
++                // Unbound: an image copy where the context has them: every format (depth,
++                // blocks), every layer or slice of the region, and a cube's faces as its layers.
++                if self.shared.copy_image {
++                    let z = |target: u32, base: &crate::TextureCopyBase| match target {
++                        glow::TEXTURE_3D => base.origin.z,
++                        glow::TEXTURE_2D | glow::TEXTURE_2D_MULTISAMPLE => 0,
++                        _ => base.array_layer,
++                    };
++                    unsafe {
++                        gl.copy_image_sub_data(
++                            src,
++                            src_target,
++                            copy.src_base.mip_level as i32,
++                            copy.src_base.origin.x as i32,
++                            copy.src_base.origin.y as i32,
++                            z(src_target, &copy.src_base) as i32,
++                            dst,
++                            dst_target,
++                            copy.dst_base.mip_level as i32,
++                            copy.dst_base.origin.x as i32,
++                            copy.dst_base.origin.y as i32,
++                            z(dst_target, &copy.dst_base) as i32,
++                            copy.size.width as i32,
++                            copy.size.height as i32,
++                            copy.size.depth as i32,
++                        )
++                    };
++                    return;
++                }
+                 //TODO: handle 3D copies
+                 unsafe { gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Some(self.copy_fbo)) };
+                 if is_layered_target(src_target) {
+@@ -902,12 +934,6 @@
+                     log::error!("Not implemented yet: compressed texture copy to buffer");
+                     return;
+                 }
+-                if src_target == glow::TEXTURE_CUBE_MAP
+-                    || src_target == glow::TEXTURE_CUBE_MAP_ARRAY
+-                {
+-                    log::error!("Not implemented yet: cubemap texture copy to buffer");
+-                    return;
+-                }
+                 let format_desc = self.shared.describe_texture_format(src_format);
+                 let row_texels = copy
+                     .buffer_layout
+@@ -961,7 +987,8 @@
+                         };
+                         read_pixels(copy.buffer_layout.offset);
+                     }
+-                    glow::TEXTURE_2D_ARRAY => {
++                    // Unbound: a cube array's faces are its layers.
++                    glow::TEXTURE_2D_ARRAY | glow::TEXTURE_CUBE_MAP_ARRAY => {
+                         unsafe {
+                             gl.framebuffer_texture_layer(
+                                 glow::READ_FRAMEBUFFER,
+@@ -973,23 +1000,41 @@
+                         };
+                         read_pixels(copy.buffer_layout.offset);
+                     }
++                    // Unbound: a cube's face is attached by its face target.
++                    glow::TEXTURE_CUBE_MAP => {
++                        unsafe {
++                            gl.framebuffer_texture_2d(
++                                glow::READ_FRAMEBUFFER,
++                                glow::COLOR_ATTACHMENT0,
++                                get_2d_target(src_target, copy.texture_base.array_layer),
++                                Some(src),
++                                copy.texture_base.mip_level as i32,
++                            )
++                        };
++                        read_pixels(copy.buffer_layout.offset);
++                    }
+                     glow::TEXTURE_3D => {
+-                        for z in copy.texture_base.origin.z..copy.size.depth {
++                        // Unbound: the region's slices from its first one, each after the last in
++                        // the buffer (before: the slices from the first up to the count, each at
++                        // its own index).
++                        for slice in 0..copy.size.depth {
+                             unsafe {
+                                 gl.framebuffer_texture_layer(
+                                     glow::READ_FRAMEBUFFER,
+                                     glow::COLOR_ATTACHMENT0,
+                                     Some(src),
+                                     copy.texture_base.mip_level as i32,
+-                                    z as i32,
++                                    (copy.texture_base.origin.z + slice) as i32,
+                                 )
+                             };
+                             let offset = copy.buffer_layout.offset
+-                                + (z * block_size * row_texels * column_texels) as u64;
++                                + u64::from(slice)
++                                    * u64::from(block_size)
++                                    * u64::from(row_texels)
++                                    * u64::from(column_texels);
+                             read_pixels(offset);
+                         }
+                     }
+-                    glow::TEXTURE_CUBE_MAP | glow::TEXTURE_CUBE_MAP_ARRAY => unimplemented!(),
+                     _ => unreachable!(),
+                 }
+             }
