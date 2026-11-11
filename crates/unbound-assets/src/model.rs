@@ -1548,9 +1548,9 @@ impl<'a> Builder<'a> {
                     (Vec::new(), Vec::new(), Vec::new());
                 for time in frame_times(start, end, fps) {
                     let t = ufbx::evaluate_transform(&stack.anim, source, time);
-                    // Humanoid clips keep the plain difference: their transform keys only
-                    // feed the muscle conversion, whose key times are not measured against
-                    // these.
+                    // Humanoid clips keep the plain difference (unmeasured): their transform
+                    // keys feed the muscle conversion, and the curves of nodes outside the
+                    // human skeleton stay in the clip with these times.
                     let rotation_time = if self.settings.animation_type == 3 {
                         (time - start) as f32
                     } else {
