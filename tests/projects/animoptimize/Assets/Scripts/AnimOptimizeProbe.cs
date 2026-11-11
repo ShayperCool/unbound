@@ -140,7 +140,7 @@ public class AnimOptimizeProbe : MonoBehaviour
             foreach (var name in new[] { "Rig", "RigExposed" })
             foreach (string mode in new[] { "job", "jobRead", "jobScene", "jobNone" })
                 Handles(name, mode);
-            foreach (string mode in new[] { "jobResolve", "jobResolveAll", "jobEarly", "jobTop", "jobIdle", "jobIdleResolveAll", "jobProp" })
+            foreach (string mode in new[] { "jobResolve", "jobResolveAll", "jobEarly", "jobTop", "jobIdle", "jobIdleResolveAll", "jobProp", "jobReoptimize", "jobDestroyed" })
                 Handles("Rig", mode);
         }
         catch (Exception e)
@@ -347,6 +347,10 @@ public class AnimOptimizeProbe : MonoBehaviour
     /// state and that of a custom stream property's handle (a float no clip animates);
     /// "jobIdleResolveAll": the same, with Animator.ResolveAllStreamHandles between the first
     /// and the second evaluation; "jobProp": the idle job reads the property after its report.
+    /// "jobReoptimize": the job reads the handle, then the hierarchy is optimized with the hand
+    /// exposed between the first and the second evaluation; "jobDestroyed": the hand is
+    /// destroyed there instead (the record's bone is then null), and the job reads the stream
+    /// handle only while it is unresolved.
     /// On the plain rig only: "jobEarly" binds the hand's stream
     /// handle, then optimizes the hierarchy exposing the hand; "jobTop" optimizes exposing the
     /// top node Rig and the hand, and binds the stream handle of the exposed Rig, which the job
@@ -361,7 +365,7 @@ public class AnimOptimizeProbe : MonoBehaviour
         Transform Hand() => go.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Hand");
         bool idle = mode == "jobIdle" || mode == "jobIdleResolveAll" || mode == "jobProp";
         var job = new HandleJob { write = mode == "job" || mode == "jobEarly" || mode == "jobTop", resolve = mode == "jobResolve",
-            idle = idle, readProperty = mode == "jobProp" };
+            idle = idle, readProperty = mode == "jobProp", readUnresolved = mode == "jobDestroyed" };
         var bone = Hand();
         if (idle) job.property = animator.BindCustomStreamProperty("probeValue", CustomStreamPropertyType.Float);
         if (mode == "jobEarly")
@@ -393,9 +397,19 @@ public class AnimOptimizeProbe : MonoBehaviour
         {
             s_Job.Clear();
             if (mode == "jobIdleResolveAll" && step == 1) animator.ResolveAllStreamHandles();
+            if (mode == "jobReoptimize" && step == 1)
+            {
+                AnimatorUtility.OptimizeTransformHierarchy(go, new[] { "Rig/Hips/Spine/Hand" });
+                bone = Hand();
+            }
+            if (mode == "jobDestroyed" && step == 1)
+            {
+                Object.DestroyImmediate(bone.gameObject);
+                bone = null;
+            }
             graph.Evaluate(step == 0 ? 0f : step == 1 ? .5f : .25f);
-            string record = "{\"job\":[" + string.Join(",", s_Job) + "],\"bone\":{\"p\":" + V(bone.localPosition) +
-                ",\"r\":" + Q(bone.localRotation) + ",\"w\":" + V(bone.position) + "}";
+            string record = "{\"job\":[" + string.Join(",", s_Job) + "],\"bone\":" + (bone == null ? "null" : "{\"p\":" + V(bone.localPosition) +
+                ",\"r\":" + Q(bone.localRotation) + ",\"w\":" + V(bone.position) + "}");
             if (mode == "jobTop")
             {
                 var hand = go.transform.Find("Hand");
@@ -412,7 +426,7 @@ public class AnimOptimizeProbe : MonoBehaviour
         public TransformStreamHandle stream;
         public TransformSceneHandle scene;
         public PropertyStreamHandle property;
-        public bool write, resolve, idle, readProperty;
+        public bool write, resolve, idle, readProperty, readUnresolved;
 
         public void ProcessRootMotion(AnimationStream s) { }
 
@@ -433,7 +447,7 @@ public class AnimOptimizeProbe : MonoBehaviour
                 JobRecord(json + "}");
                 return;
             }
-            if (valid)
+            if (valid && !(readUnresolved && resolved))
                 json += ",\"p\":" + V(stream.GetLocalPosition(s)) + ",\"r\":" + Q(stream.GetLocalRotation(s)) + ",\"w\":" + V(stream.GetPosition(s));
             if (sceneValid) json += ",\"sp\":" + V(scene.GetLocalPosition(s)) + ",\"sw\":" + V(scene.GetPosition(s));
             JobRecord(json + "}");

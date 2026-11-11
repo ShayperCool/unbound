@@ -144,4 +144,13 @@
 {"k":"jobProp.Rig.0","v":{"job":[{"valid":true,"resolved":false,"scene":true,"property":true,"propertyResolved":false,"x":0,"propertyAfter":true}],"bone":{"p":[0,2,0],"r":[0.342020154,0,0,0.9396926],"w":[-0.3367439,4.849001,0]}}}
 {"k":"jobProp.Rig.1","v":{"job":[{"valid":true,"resolved":false,"scene":true,"property":true,"propertyResolved":true,"x":0,"propertyAfter":true}],"bone":{"p":[0,2.5,0.249999985],"r":[0.342020154,0,0,0.9396926],"w":[0.197210759,5.44648266,0.234923139]}}}
 {"k":"jobProp.Rig.2","v":{"job":[{"valid":true,"resolved":false,"scene":true,"property":true,"propertyResolved":true,"x":0,"propertyAfter":true}],"bone":{"p":[0,2.75,0.375],"r":[0.342020154,0,0,0.9396926],"w":[0.6432557,5.51616573,0.352384746]}}}
+{"k":"jobReoptimize.Rig.bone","v":"Rig/Hips/Spine/Hand"}
+{"k":"jobReoptimize.Rig.0","v":{"job":[{"valid":true,"resolved":false,"scene":true,"p":[0,2,0],"r":[0.342020154,0,0,0.9396926],"w":[-0.3367439,4.849001,0],"sp":[0,2,0],"sw":[-0.3367439,4.849001,0]}],"bone":{"p":[0,2,0],"r":[0.342020154,0,0,0.9396926],"w":[-0.3367439,4.849001,0]}}}
+{"k":"log.007","v":{"type":"Warning","message":"Transform 'Rig' has the same name (Rig) as transform . This could lead to undefined behavior if DeoptimizeHierarchy is used on this model."}}
+{"k":"jobReoptimize.Rig.1","v":{"job":[{"valid":true,"resolved":false,"scene":true,"p":[0,2.5,0.249999985],"r":[0.342020154,0,0,0.9396926],"w":[0.197210759,5.44648266,0.234923139],"sp":[-0.336744,4.849001,7.450581E-09],"sw":[-0.336744,4.849001,7.450581E-09]}],"bone":{"p":[0.197210819,5.44648266,0.234923139],"r":[0.321320653,-0.191911116,-0.0214901883,0.927071333],"w":[0.197210819,5.44648266,0.234923139]}}}
+{"k":"jobReoptimize.Rig.2","v":{"job":[{"valid":true,"resolved":true,"scene":true,"p":[0,2.75,0.375],"r":[0.342020154,0,0,0.9396926],"w":[0.6432557,5.51616573,0.352384746],"sp":[0.197210819,5.44648266,0.234923139],"sw":[0.197210819,5.44648266,0.234923139]}],"bone":{"p":[0.6432557,5.51616573,0.352384746],"r":[0.2935223,-0.23221004,-0.142313436,0.916335166],"w":[0.6432557,5.51616573,0.352384746]}}}
+{"k":"jobDestroyed.Rig.bone","v":"Rig/Hips/Spine/Hand"}
+{"k":"jobDestroyed.Rig.0","v":{"job":[{"valid":true,"resolved":false,"scene":true,"p":[0,2,0],"r":[0.342020154,0,0,0.9396926],"w":[-0.3367439,4.849001,0],"sp":[0,2,0],"sw":[-0.3367439,4.849001,0]}],"bone":{"p":[0,2,0],"r":[0.342020154,0,0,0.9396926],"w":[-0.3367439,4.849001,0]}}}
+{"k":"jobDestroyed.Rig.1","v":{"job":[{"valid":true,"resolved":true,"scene":false}],"bone":null}}
+{"k":"jobDestroyed.Rig.2","v":{"job":[{"valid":true,"resolved":true,"scene":false}],"bone":null}}
 {"k":"complete","v":true}
