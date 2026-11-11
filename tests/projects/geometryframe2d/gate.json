@@ -17,6 +17,8 @@
     "managed/UnityEngine/Physics2D/Box2D/Dynamics/Contacts/ChainAndPolygonContact.cs",
     "managed/UnityEngine/Physics2D/Box2D/Dynamics/Contacts/EdgeAndPolygonContact.cs",
     "managed/UnityEngine/Physics2D/Box2D/Dynamics/Callbacks.cs",
-    "managed/UnityEngine/Physics2D/Box2D/Dynamics/World.cs"
+    "managed/UnityEngine/Physics2D/Box2D/Dynamics/World.cs",
+    "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
+    "managed/UnityEngine/Physics2D/Box2D/Collision/ColliderPolygon.cs"
   ]
 }

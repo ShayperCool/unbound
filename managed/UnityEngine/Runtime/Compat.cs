@@ -55,6 +55,10 @@ namespace Unbound.Runtime
         /// geometryframe2d on Unity 6000.0.71f1.</summary>
         internal static bool Physics2DGeneratedGeometryMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Cast polygon contact clipping and witness selection, measured by
+        /// query2dparity on Unity 6000.0.71f1.</summary>
+        internal static bool Physics2DCastContactsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Slide contact spacing, iteration accounting and argument validation,
         /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
         internal static bool Physics2DSlideMeasured => Release == (6000, 0, 71, 'f', 1);

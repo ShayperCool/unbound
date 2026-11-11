@@ -50,6 +50,7 @@ namespace Unbound.Runtime
         static bool s_Dispatching;
         static bool s_MeasuredSimulation;
         internal static bool MeasuredSlide { get; private set; }
+        internal static bool MeasuredCastContacts { get; private set; }
         internal static int SubStepCount { get; private set; }
         internal static float SubStepLostTime { get; private set; }
         internal static bool MeasuredSimulation => s_MeasuredSimulation;
@@ -85,6 +86,9 @@ namespace Unbound.Runtime
             if (!s_MeasuredSimulation)
                 Stubs.Ignored("Physics2D contact payload", "this release is unmeasured; impulses use the discrete warm-start cache and entering collision velocity uses the first contact observation");
             MeasuredSlide = Compat.Physics2DSlideMeasured;
+            MeasuredCastContacts = Compat.Physics2DCastContactsMeasured;
+            if (!MeasuredCastContacts)
+                Stubs.Ignored("Physics2D cast contact features", "this release is unmeasured; using legacy polygon clipping and core-spread witness selection");
             s_World = new World(ToB2(Physics2D.s_Gravity));
             s_World.SetContactFilter(s_Filter);
             s_World.SetContactListener(s_Listener);
@@ -124,7 +128,7 @@ namespace Unbound.Runtime
             s_Removing = s_SilentRemoval = s_Dispatching = s_Stepping = false;
             s_ContactLayers = Physics2D.AllLayers;
             s_Held.Clear();
-            s_MeasuredSimulation = MeasuredSlide = false;
+            s_MeasuredSimulation = MeasuredSlide = MeasuredCastContacts = false;
             SubStepCount = 0;
             SubStepLostTime = 0f;
         }
@@ -538,7 +542,7 @@ namespace Unbound.Runtime
                 if (t.m_Version == rb.m_TransformVersion) continue;
                 rb.m_TransformVersion = t.m_Version;
                 PoseOf(t, out var position, out var angle);
-                if (position == rb.m_SyncPosition && Mathf.Approximately(angle, rb.m_SyncAngle)) continue;
+                if (position.Equals(rb.m_SyncPosition) && angle == rb.m_SyncAngle) continue;
                 body.SetTransform(ToB2(position), angle);
                 if (body.BodyType != BodyType.StaticBody) body.IsAwake = true;
                 rb.m_SyncPosition = position;
@@ -840,7 +844,7 @@ namespace Unbound.Runtime
             rb.m_CurrentPosition = position;
             rb.m_CurrentAngle = angle;
             if (body.BodyType == BodyType.StaticBody) return;
-            if (position == rb.m_SyncPosition && angle == rb.m_SyncAngle) return;
+            if (position.Equals(rb.m_SyncPosition) && angle == rb.m_SyncAngle) return;
             SetTransformPose(rb, position, angle);
         }
 
@@ -848,7 +852,7 @@ namespace Unbound.Runtime
         {
             var t = rb.m_GameObject.m_Transform;
             var p = t.position;
-            if (position != rb.m_SyncPosition) t.position = new Vector3(position.x, position.y, p.z);
+            if (!position.Equals(rb.m_SyncPosition)) t.position = new Vector3(position.x, position.y, p.z);
             float delta = angle - rb.m_SyncAngle;
             if (delta != 0f) t.rotation = Quaternion.AngleAxis(delta * Mathf.Rad2Deg, Vector3.forward) * t.rotation;
             rb.m_SyncPosition = position;

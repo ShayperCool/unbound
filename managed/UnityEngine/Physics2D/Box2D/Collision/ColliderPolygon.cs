@@ -146,7 +146,8 @@ namespace Unbound.Box2D.Collision
             in Transform xfB,
             float referenceEdgeTolerance,
             bool extendSegmentSides,
-            out float coreSeparationSpread)
+            out float coreSeparationSpread,
+            bool rounded = false)
         {
             coreSeparationSpread = float.MaxValue;
             manifold.PointCount = 0;
@@ -255,7 +256,7 @@ namespace Unbound.Box2D.Collision
             var frontOffset = Vector2.Dot(normal, v11);
 
             // Side offsets, extended by polytope skin thickness.
-            float sideRadius = extendSegmentSides || poly1.Count > 2 && poly2.Count > 2 ? totalRadius : 0f;
+            float sideRadius = extendSegmentSides || !rounded && poly1.Count > 2 && poly2.Count > 2 ? totalRadius : 0f;
             var sideOffset1 = -Vector2.Dot(tangent, v11) + sideRadius;
             var sideOffset2 = Vector2.Dot(tangent, v12) + sideRadius;
 

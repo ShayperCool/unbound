@@ -235,6 +235,10 @@ namespace Unbound.Runtime
             return scratch.Hits;
         }
 
+        // The cast reference-face bias stays fixed when contact offset changes;
+        // contact-selection controls: tests/projects/query2dparity.
+        const float CastReferenceEdgeTolerance = .0005f;
+
         static void CastShape(B2Shape shape, B2Transform pose, Vector2 direction, float distance, ContactFilter2D filter,
             Dictionary<Collider2D, RaycastHit2D> best, HashSet<Collider2D> exclude, Rigidbody2D ignoreBody, HashSet<Collider2D> skipped, int childIndex = 0, AabbQuery query = null)
         {
@@ -304,19 +308,23 @@ namespace Unbound.Runtime
                 var hitPose = new B2Transform(pose.Position + output.Lambda * translation, pose.Rotation);
                 var (b2Point, b2Normal) = DistanceAlgorithm.SurfaceContact(proxyA, xfA, proxyB, hitPose, output.Point, output.Normal, B2Settings.PolygonRadius);
                 if (f.Shape is PolygonShape polygonA && shape is PolygonShape polygonB
-                    && (polygonA.Count == 2 || polygonA.Radius <= B2Settings.PolygonRadius
+                    && (W.MeasuredCastContacts || (polygonA.Count == 2 || polygonA.Radius <= B2Settings.PolygonRadius
                         || c is BoxCollider2D box && box.edgeRadius == 0f)
-                    && (polygonB.Count == 2 || polygonB.Radius <= B2Settings.PolygonRadius))
+                        && (polygonB.Count == 2 || polygonB.Radius <= B2Settings.PolygonRadius)))
                 {
                     var manifold = new Manifold();
+                    bool rounded = W.MeasuredCastContacts &&
+                        (polygonA.Radius > B2Settings.PolygonRadius || polygonB.Radius > B2Settings.PolygonRadius);
                     CollisionUtils.CollidePolygons(ref manifold, polygonB, hitPose, polygonA, xfA,
-                        0.0005f, false, out float coreSpread);
+                        CastReferenceEdgeTolerance, false, out float coreSpread, rounded);
                     if (manifold.PointCount > 0)
                     {
                         var world = new WorldManifold();
                         world.Initialize(manifold, hitPose, shape.Radius, xfA, f.Shape.Radius);
                         b2Normal = -world.Normal;
-                        b2Point = world.GetRepresentativePoint(manifold.PointCount, coreSpread,
+                        float spread = W.MeasuredCastContacts
+                            ? Math.Abs(world.Separations[0] - world.Separations[1]) : coreSpread;
+                        b2Point = world.GetRepresentativePoint(manifold.PointCount, spread,
                             B2Settings.CastContactSeparationTolerance);
                     }
                 }

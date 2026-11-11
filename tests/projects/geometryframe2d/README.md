@@ -3,8 +3,8 @@
 This probe records local and world shape data, composite paths and cast contacts
 for static, body, child and rotated-child frames. It varies small displacements,
 collider offsets, reflected/nonuniform scale, large positions and nonplanar
-parents. The canonical Unity 6000.0.71f1 reference contains 414 scenarios and
-50,513 observations from two byte-identical independent Editor runs.
+parents. The canonical Unity 6000.0.71f1 reference contains 430 scenarios and
+50,863 observations from two byte-identical independent Editor runs.
 
 Run from the repository root. Each label gets a fresh project in the external
 cache; the runner wraps each Editor or engine process in `with-heavy-job`.
@@ -39,13 +39,13 @@ its reference and passing displacement tests do not establish geometry parity.
 Run artifacts and rejected experiments stay in the cache. Other Unity releases
 remain unmeasured.
 
-The thirteen composite controls cover an interior hole, a disconnected island,
+Seven composite controls cover an interior hole, a disconnected island,
 a repeated/zero-area source path, manual source edits, polygon edge radius and
 Delaunay refinement, plus a tilted outline with manual setting changes and cloning. Six more controls cover
 large body-local contours beside a valid island. The refinement discriminator produces four shapes with the
 option disabled and two with it enabled. The two independent GPU Editor captures
 agree byte for byte, SHA-256
-`a77a7d583d6ead85acd5056bfa7898cfdcdfb18fe829fc6fe2b37a8fdea0ef71`.
+`0145ef426ca4b6d2c2ac3ee719129b26ba50a3ee190eee98c897ecaad9038d05`.
 All 320 original scenarios and the first thirteen added controls retain their
 original values. A further 24 tilemap controls use the existing concave sprite
 fixture from tests/projects/twod. They vary cell rotation/reflection, extrusion,
@@ -82,9 +82,10 @@ ear-partition, polygon-radius, immediate manual-setting and outline point-overla
 fallback, with a diagnostic.
 
 Composite shape and path values now pass in all original frames and new controls.
-The remaining 138 values are cast points/normals on capsule, circle and box
-colliders in 11 displaced-frame cases. Their raw failures and tolerances remain
-unchanged for the cast-contact follow-up.
+The 138 displaced-frame cast values on capsule, circle and box colliders also
+pass after applying each changed body pose exactly. An approximate vector
+comparison previously skipped representable movements of 1e-7 units. The shape
+matrix comparison remains unchanged, so body motion does not rebuild fixtures.
 
 The [Unity 6000.0 Tilemap Collider reference](https://docs.unity3d.com/6000.0/Documentation/Manual/tilemaps/work-with-tilemaps/tilemap-collider-2d-reference.html)
 and [useDelaunayMesh API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Tilemaps.TilemapCollider2D-useDelaunayMesh.html)
@@ -139,4 +140,33 @@ warmed overlapping casts and distance queries without temporary edge allocation.
 The same compatibility selector as other generated geometry selects this rule;
 unmeasured releases retain separate connected segments and their legacy weld
 threshold with a diagnostic. Query2dparity's 20 edge geometry differences are
-resolved; its seven nearly parallel cast witnesses remain for the cast follow-up.
+resolved. The cast controls below cover its seven nearly parallel witnesses.
+
+
+The final 16 controls add six explicit synchronization cases, two small-motion
+cases and eight contact-offset cases. All 414 previous scenario dictionaries
+remain unchanged. The [Unity 6000.0 SyncTransforms API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics2D.SyncTransforms.html)
+describes applying Transform changes to bodies and colliders. With automatic
+synchronization disabled, the controls first leave the physics pose unchanged,
+then explicitly synchronize positive/negative translation and rotation edits.
+The physics pose changes only after that call. Both dynamic and kinematic
+small-motion controls record matching body and Transform positions after a step.
+
+The [BoxCast API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics2D.BoxCast.html)
+and [CircleCast API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics2D.CircleCast.html)
+describe returned contact points, normals and centroids. They do not prescribe
+how to choose between two clipped contacts. The measured polygon cast rule uses
+core side bounds when either shape's radius exceeds the current collision skin,
+and extended side bounds otherwise. It chooses the deeper world contact unless
+the two actual world separations differ by at most 0.000025, when it averages
+them. The reference-face bias stays 0.0005 when contact offset changes. The new
+controls compare box and polygon targets with the same contour, stored skin 0.01,
+current skin 0.001/0.1 and two nearly parallel angles. Moving casts and casts
+starting in overlap remain recorded separately.
+
+A cached compatibility policy selects measured cast clipping and witness
+selection on 6000.0.71f1. Other releases retain diagnosed legacy clipping and
+core-spread selection, with their near-parallel witness behavior still unmeasured.
+Exact body-pose synchronization fixes a generic change-detection error and applies
+to every profile. This reference establishes the recorded contexts, not universal
+cast or geometry parity.

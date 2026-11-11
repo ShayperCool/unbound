@@ -72,6 +72,13 @@ public static class ProbeEntry
         EdgeSpecial(false); EdgeSpecial(true); EdgeMassControl(); CompositeOutlineAdjacency(); ShapeRangeControl();
         foreach (bool first in new[] { false, true })
         foreach (float radius in new[] { 0f, .125f }) EdgeNonfinite(first, radius);
+        foreach (int axis in new[] { 0, 1 })
+        foreach (float displacement in new[] { -1e-7f, 1e-7f }) TinySyncControl(axis, displacement);
+        foreach (float displacement in new[] { -.00001f, .00001f }) TinySyncControl(2, displacement);
+        TinyMotionControl(RigidbodyType2D.Dynamic); TinyMotionControl(RigidbodyType2D.Kinematic);
+        foreach (bool polygon in new[] { false, true })
+        foreach (float margin in new[] { .001f, .1f })
+        foreach (float angle in new[] { .01f, .0013f }) CastSkinControl(polygon, margin, angle);
         File.WriteAllText(output, ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -525,6 +532,79 @@ public static class ProbeEntry
         }
         catch (Exception error) { ProbeLog.Error(error); }
         finally { UnityEngine.Object.DestroyImmediate(anchor); }
+    }
+
+    static void TinySyncControl(int axis, float displacement)
+    {
+        var root = new GameObject("tiny-sync");
+        bool oldAuto = Physics2D.autoSyncTransforms;
+        try
+        {
+            Physics2D.autoSyncTransforms = false;
+            root.transform.position = new Vector3(.3f, -.2f, 0);
+            root.transform.rotation = Quaternion.Euler(0, 0, 23);
+            var body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Kinematic;
+            var collider = root.AddComponent<BoxCollider2D>(); collider.size = new Vector2(1, 2);
+            Physics2D.SyncTransforms();
+            var before = body.position; float beforeAngle = body.rotation;
+            ProbeLog.Begin($"sync/{axis}/{displacement}");
+            if (axis == 2) root.transform.rotation = Quaternion.Euler(0, 0, 23 + displacement);
+            else root.transform.position += axis == 0 ? new Vector3(displacement, 0, 0) : new Vector3(0, displacement, 0);
+            var held = body.position; float heldAngle = body.rotation;
+            ProbeLog.Value("before.position", before); ProbeLog.Value("before.angle", beforeAngle);
+            ProbeLog.Value("held.position", held); ProbeLog.Value("held.angle", heldAngle);
+            ProbeLog.Value("held.same", held.x == before.x && held.y == before.y && heldAngle == beforeAngle);
+            Hit("cast.before", Physics2D.BoxCast(new Vector2(.3f, 3), new Vector2(.2f, .2f), 0, Vector2.down, 5));
+            Physics2D.SyncTransforms();
+            var after = body.position;
+            ProbeLog.Value("after.position", after); ProbeLog.Value("after.angle", body.rotation);
+            ProbeLog.Value("position.changed", after.x != before.x || after.y != before.y);
+            ProbeLog.Value("rotation.changed", body.rotation != beforeAngle);
+            var group = new PhysicsShapeGroup2D(); collider.GetShapes(group);
+            ProbeLog.Value("shape.position", (Vector2)group.localToWorldMatrix.MultiplyPoint3x4(Vector3.zero));
+            Hit("cast.after", Physics2D.BoxCast(new Vector2(.3f, 3), new Vector2(.2f, .2f), 0, Vector2.down, 5));
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); Physics2D.autoSyncTransforms = oldAuto; }
+    }
+
+    static void TinyMotionControl(RigidbodyType2D kind)
+    {
+        var root = new GameObject("tiny-motion");
+        try
+        {
+            root.transform.position = new Vector3(.3f, -.2f, 0);
+            var body = root.AddComponent<Rigidbody2D>(); body.bodyType = kind; body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            root.AddComponent<CircleCollider2D>(); Physics2D.SyncTransforms();
+            var before = body.position;
+            body.linearVelocity = new Vector2(5e-6f, 0);
+            Physics2D.Simulate(.02f);
+            ProbeLog.Begin($"motion/tiny/{kind}");
+            ProbeLog.Value("body", body.position); ProbeLog.Value("transform", (Vector2)root.transform.position);
+            ProbeLog.Value("body.changed", body.position.x != before.x);
+            ProbeLog.Value("transform.changed", root.transform.position.x != before.x);
+            ProbeLog.Value("equal", root.transform.position.x == body.position.x);
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void CastSkinControl(bool polygon, float margin, float angle)
+    {
+        var root = new GameObject("skin-contact"); float old = Physics2D.defaultContactOffset;
+        try
+        {
+            Physics2D.defaultContactOffset = .01f;
+            if (polygon) root.AddComponent<PolygonCollider2D>().points = new[] {
+                new Vector2(-1, -.25f), new Vector2(1, -.25f), new Vector2(1, .25f), new Vector2(-1, .25f) };
+            else root.AddComponent<BoxCollider2D>().size = new Vector2(2, .5f);
+            Physics2D.SyncTransforms(); Physics2D.defaultContactOffset = margin;
+            ProbeLog.Begin($"cast-skin/{polygon}/{margin}/{angle}");
+            Hit("moving", Physics2D.BoxCast(new Vector2(0, 2), new Vector2(1, .4f), angle, Vector2.down, 2.5f));
+            Hit("inside", Physics2D.BoxCast(new Vector2(.2f, .2f), new Vector2(.5f, .2f), angle, Vector2.down, 1));
+        }
+        catch (Exception error) { ProbeLog.Error(error); }
+        finally { UnityEngine.Object.DestroyImmediate(root); Physics2D.defaultContactOffset = old; }
     }
 
     static void Hit(string key, RaycastHit2D hit)
