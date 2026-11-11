@@ -322,15 +322,20 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void ASkyboxUnderARenderPipelineAddsNoLightAndWarnsOnce()
+        public void ASkyboxUnderARenderPipelineIsDrawnByTheEngineNotThePipeline()
         {
-            // Unmeasured, and the capture is the built-in pipeline's: nothing is drawn through
-            // the pipeline (its events would reach scripts); colors and a script's cube work.
+            // The sky's faces are the engine's own draw under a render pipeline too (the
+            // Editor's realtime GI gets the sky there: tests/projects/realtimegi `--pipeline
+            // urp` pipeline-sky*): the pipeline renders nothing for it, scripts get no camera
+            // events, and nothing warns. The faces themselves need the renderer: the probe
+            // covers them.
             var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
             var asset = ScriptableObject.CreateInstance<CountingPipelineAsset>();
             var pipeline = GraphicsSettings.defaultRenderPipeline;
             var log = Debug.unityLogger.logHandler;
             var warnings = new Warnings();
+            var active = RenderTexture.ActiveTarget;
+            var saved = GfxStream.Current;
             int begun = 0;
             Action<ScriptableRenderContext, Camera> begin = (_, _) => begun++;
             RenderPipelineManager.beginCameraRendering += begin;
@@ -338,7 +343,6 @@ namespace Unbound.Tests
             {
                 GraphicsSettings.defaultRenderPipeline = asset;
                 Debug.unityLogger.logHandler = warnings;
-                RealtimeGI.s_Warned.Remove("environment-pipeline");
                 CountingPipeline.Renders = 0;
                 WithAmbient(() =>
                 {
@@ -347,20 +351,23 @@ namespace Unbound.Tests
                     RenderSettings.ambientLight = color;
                     RealtimeGI.UpdateEnvironment();
                     AssertFace(4, color);
-                    Assert.Empty(warnings.Lines);
                     RenderSettings.skybox = sky;
                     RenderSettings.ambientMode = AmbientMode.Skybox;
+                    int version = RealtimeGI.EnvironmentVersion;
                     RealtimeGI.UpdateEnvironment();
-                    for (int face = 0; face < 6; face++) AssertFace(face, Color.black);
+                    Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
+                    // The intensity is an input of the sky's faces under a pipeline as well.
+                    version = RealtimeGI.EnvironmentVersion;
                     RenderSettings.ambientIntensity = 2f;
                     RealtimeGI.UpdateEnvironment();
-                    var line = Assert.Single(warnings.Lines);
-                    Assert.Contains("scriptable render pipeline", line);
+                    Assert.NotEqual(version, RealtimeGI.EnvironmentVersion);
                     var data = Cube();
                     DynamicGI.SetEnvironmentData(data);
                     RealtimeGI.UpdateEnvironment();
                     AssertCube(data);
                 });
+                // (Without a renderer the readback of the faces says it has nothing to read.)
+                Assert.DoesNotContain(warnings.Lines, line => line.Contains("render pipeline"));
                 Assert.Equal(0, CountingPipeline.Renders);
                 Assert.Equal(0, begun);
             }
@@ -369,6 +376,8 @@ namespace Unbound.Tests
                 RenderPipelineManager.beginCameraRendering -= begin;
                 Debug.unityLogger.logHandler = log;
                 GraphicsSettings.defaultRenderPipeline = pipeline;
+                RenderTexture.SetActiveQuietly(active);
+                GfxStream.Restore(saved);
                 UnityEngine.Object.DestroyImmediate(asset);
                 UnityEngine.Object.DestroyImmediate(sky);
             }

@@ -150,15 +150,7 @@ namespace UnityEngine
             if (!s_EnvironmentStale && key.Equals(s_EnvironmentKey)) return;
             s_EnvironmentStale = false;
             s_EnvironmentKey = key;
-            if (key.Sky != null && GraphicsSettings.currentRenderPipeline != null)
-            {
-                // The capture is the built-in pipeline's; a render pipeline would draw the
-                // camera itself, with its events. What the Editor gives realtime GI there is
-                // not measured: no light, as before a skybox was read at all.
-                Warn("environment-pipeline", "precomputed realtime GI with a skybox as its environment under a scriptable render pipeline is not supported yet: the sky adds no realtime indirect light.");
-                for (int face = 0; face < 6; face++) FillFace(face, Color.black);
-            }
-            else if (key.Sky != null) RenderSkyFaces(key.Intensity);
+            if (key.Sky != null) RenderSkyFaces(key.Intensity);
             else
             {
                 var color = key.Color.linear;

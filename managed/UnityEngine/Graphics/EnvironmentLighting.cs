@@ -142,7 +142,12 @@ namespace UnityEngine
                     { hideFlags = HideFlags.HideAndDontSave };
             camera.targetTexture = target;
             camera.transform.SetPositionAndRotation(Vector3.zero, Quaternion.LookRotation(forward, up));
-            camera.Render();
+            // The engine's own draw of the sky, whatever the render pipeline: a pipeline's
+            // camera would send its events and draw the sky its way (the Editor's ambient probe
+            // and realtime GI environment under the Universal Render Pipeline are the built-in
+            // pipeline's: tests/projects/realtimegi `--pipeline urp` pipeline-sky*).
+            FrameBuilder.EmitLightingGlobals();
+            FrameBuilder.RenderCamera(camera);
             var previous = RenderTexture.active;
             RenderTexture.active = target;
             readback.ReadPixels(new Rect(0, 0, n, n), 0, 0, false);

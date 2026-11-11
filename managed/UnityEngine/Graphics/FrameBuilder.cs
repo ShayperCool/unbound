@@ -627,12 +627,14 @@ namespace Unbound.Runtime
         internal static Dictionary<int, object> SkyboxLightProperties(Camera camera, Material material)
         {
             Dictionary<int, object> properties = null;
-            if (GraphicsSettings.currentRenderPipeline == null && LightingGlobals.MainLightOf() == null)
+            // The environment's capture is drawn as the built-in pipeline draws a sky, whatever
+            // the pipeline.
+            bool builtin = GraphicsSettings.currentRenderPipeline == null || camera.m_EnvironmentCapture;
+            if (builtin && LightingGlobals.MainLightOf() == null)
                 properties = new Dictionary<int, object> { [Shader.PropertyToID("_WorldSpaceLightPos0")] = (Vector4)LightingGlobals.SkyWithoutSun };
             // The ambient projection leaves out the main light's colour, whatever the sky's
             // shader (Compat.SkyAmbientWithoutLightColor).
-            if (camera.m_EnvironmentCapture && GraphicsSettings.currentRenderPipeline == null
-                && Compat.SkyAmbientWithoutLightColor)
+            if (camera.m_EnvironmentCapture && Compat.SkyAmbientWithoutLightColor)
             {
                 properties ??= new Dictionary<int, object>();
                 properties[Shader.PropertyToID("_LightColor0")] = Vector4.zero;
