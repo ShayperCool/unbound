@@ -844,5 +844,38 @@ namespace UnityEngine.Tests
             }
             finally { graph.Destroy(); }
         }
+
+        /// <summary>A clip's events fire whatever its output's weight: the weight blends the pose
+        /// only (6000.0.71f1, tests/projects/animculling weight/0 and weight/0.5). Control: at
+        /// weight 0 in a mixer the clip fires none, as before.</summary>
+        [Theory]
+        [InlineData(0f, false)]
+        [InlineData(0.5f, false)]
+        [InlineData(1f, true)]
+        public void AClipFiresItsEventsWhateverItsOutputsWeight(float outputWeight, bool mixerAtZero)
+        {
+            var (animator, _, _) = Rig(AnimatorCullingMode.AlwaysAnimate);
+            animator.runtimeAnimatorController = null;
+            var counter = animator.gameObject.AddComponent<ClipEventCounter>();
+            var graph = PlayableRig(animator, out var playable);
+            try
+            {
+                playable.GetAnimationClip().AddEvent(new AnimationEvent { time = 0.05f, functionName = "OnClipEvent" });
+                var output = (AnimationPlayableOutput)graph.GetOutputByType<AnimationPlayableOutput>(0);
+                output.SetWeight(outputWeight);
+                if (mixerAtZero)
+                {
+                    var mixer = AnimationMixerPlayable.Create(graph, 1);
+                    mixer.ConnectInput(0, playable, 0, 0f);
+                    output.SetSourcePlayable(mixer);
+                }
+                PlayableStep(graph, animator, 0.1f);
+                PlayableStep(graph, animator, 0.1f);
+                Assert.Equal(mixerAtZero ? 0 : 1, counter.Events);
+                if (outputWeight == 0f) Assert.Equal(0f, animator.transform.localPosition.y);
+                else if (!mixerAtZero) Near.Equal(outputWeight * 0.2f, animator.transform.localPosition.y, 1e-5f);
+            }
+            finally { graph.Destroy(); }
+        }
     }
 }

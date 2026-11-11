@@ -838,6 +838,11 @@ namespace Unbound.Runtime.Playables
                     && o.Graph.UpdateMode == DirectorUpdateMode.GameTime;
                 var source = (o.Engine as AnimationOutputState)?.StreamSource ?? AnimationStreamSource.DefaultValues;
                 AnimStream s;
+                // The tree's own weights decide which clips fire events; the output's weight blends
+                // the pose only (6000.0.71f1, animculling weight/0: a clip under an output at
+                // weight 0 fires its events; a PreviousInputs output follows unmeasured). An
+                // output at weight 0 asks for no IK pass, as before (unmeasured).
+                bool ik = e.PlayableIK;
                 if (source == AnimationStreamSource.PreviousInputs)
                 {
                     // Rigging layers: the stream starts as the result of the outputs before.
@@ -846,10 +851,11 @@ namespace Unbound.Runtime.Playables
                     s.CopyFrom(result);
                     s.Owner = o.Source.Kind as AnimationKind;
                     e.PreviousInputs = result;
-                    e.EvaluateInto(o.Source, o.SourcePort, o.Weight, s);
+                    e.EvaluateInto(o.Source, o.SourcePort, 1f, s);
                     e.PreviousInputs = null;
                 }
-                else s = e.Evaluate(o.Source, o.SourcePort, o.Weight);
+                else s = e.Evaluate(o.Source, o.SourcePort, 1f);
+                if (o.Weight <= 0f) e.PlayableIK = ik;
                 if (e.MotionMode == RootMotionMode.Compute)
                 {
                     // Outputs blend their motion as their pose: over the motion so far by weight. A
