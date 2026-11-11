@@ -1080,6 +1080,10 @@ pub(crate) fn fit(
     let mut vertex = parse(&vertex_scan.words, clip).context("vertex program")?;
     let mut fragment = parse(&fragment_scan.words, clip).context("fragment program")?;
     pad_fragment_outputs(&mut fragment);
+    if clip == ClipSpace::OpenGl {
+        loads_no_compared_texture(&vertex)?;
+        loads_no_compared_texture(&fragment)?;
+    }
     flat_integer_varyings(&mut vertex, naga::ShaderStage::Vertex);
     flat_integer_varyings(&mut fragment, naga::ShaderStage::Fragment);
 
@@ -2527,6 +2531,34 @@ fn rewrap_fragment_outputs(
         f.body.push(Statement::Return { value }, Span::UNDEFINED);
         module.entry_points[e].function = f;
     }
+}
+
+/// Refuses a program that reads a texture it also compares with `Load`: glslang reads it from
+/// the depth texture, which OpenGL's shading language cannot (the other devices read it).
+fn loads_no_compared_texture(module: &Module) -> Result<()> {
+    let functions = module
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter().map(|e| &e.function));
+    for f in functions {
+        for (_, e) in f.expressions.iter() {
+            let Expression::ImageLoad { image, .. } = e else {
+                continue;
+            };
+            let Expression::GlobalVariable(g) = f.expressions[*image] else {
+                continue;
+            };
+            let g = &module.global_variables[g];
+            if compares(&module.types[g.ty].inner) {
+                bail!(
+                    "texture `{}` is compared and read with Load, which is not supported on OpenGL Core",
+                    g.name.as_deref().unwrap_or("?")
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Color outputs narrower than four components are widened with zeros (a target takes four).

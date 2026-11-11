@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 33;
+pub const FORMAT_VERSION: u32 = 34;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2368,6 +2368,36 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         assert!(outputs(&wgsl, &entry).is_empty());
         let color = compile("float4 frag() : SV_Target { return 1; }");
         assert_eq!(without_depth_output(&color.fragment).unwrap(), None);
+    }
+
+    /// OpenGL's shading language cannot read a depth texture with `Load`: a program that
+    /// compares a texture and reads it with `Load` is refused there, and compiles elsewhere.
+    #[test]
+    fn a_compared_texture_read_with_load_is_refused_on_opengl_core() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2D _Shadow;
+SamplerComparisonState sampler_Shadow;
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+float4 frag(float4 position : SV_POSITION) : SV_Target {
+    return _Shadow.SampleCmpLevelZero(sampler_Shadow, position.xy, 0.5) + _Shadow.Load(int3(0, 0, 0));
+}
+"#;
+        let compile = |device| {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            compiler.compile(&program(source, false), &[], false)
+        };
+        let refused = compile(unbound_compat::GraphicsDevice::OpenGLCore).unwrap_err();
+        assert!(
+            format!("{refused:#}").contains("compared and read with Load"),
+            "{refused:#}"
+        );
+        compile(unbound_compat::GraphicsDevice::Vulkan).unwrap();
     }
 
     /// A fragment program's outputs go where their semantics say, by the DX9 names too, which
