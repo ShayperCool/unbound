@@ -18,6 +18,9 @@ EditorBuildSettings:
     path: Assets/Scenes/RoomSystems.unity
     guid: a1742f214703ffe83997d4fd3cd2e860
   - enabled: 1
+    path: Assets/Scenes/RoomBakedEnvironment.unity
+    guid: 306db98e80d909654824e8850ff37654
+  - enabled: 1
     path: Assets/NoData/NoDataAuto.unity
     guid: caaa810e48c7f0a656199bd678009fba
   - enabled: 1

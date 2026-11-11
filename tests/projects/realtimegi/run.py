@@ -3,6 +3,7 @@
 
     run.py setup                              # Editor: (re)make the scenes and precompute them in a copy, copy them back
     run.py setup-systems                      # Editor: add the RoomSystems scene alone
+    run.py setup-baked-environment            # Editor: add the RoomBakedEnvironment scene alone
     run.py record --label native1             # Editor capture (GPU, through the job pool)
     run.py publish native1 native2            # two identical captures become Reference/unity-<version>/
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
@@ -87,13 +88,18 @@ def setup(label):
     return 0
 
 
-def setup_systems(label):
-    """Runs RealtimeGISetup.CreateSystems in a copy, then copies the RoomSystems scene, its settings
-    and the build settings back (the other scenes stay as they are)."""
+# The scenes added to the made ones one at a time: the mode's name, the scene and what makes it.
+ADDED = {'setup-systems': ('RoomSystems', 'RealtimeGISetup.CreateSystems'),
+         'setup-baked-environment': ('RoomBakedEnvironment', 'RealtimeGISetup.CreateBakedEnvironment')}
+
+
+def setup_scene(label, scene, method):
+    """Runs `method` in a copy, then copies the scene it adds, its settings and the build settings
+    back (the other scenes stay as they are)."""
     out = work(label)
     project = out/'project'
     copy_project(project)
-    job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', 'RealtimeGISetup.CreateSystems'],
+    job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method],
                                   batch=True, graphics=True, timeout=3600, label='realtimegi-'+label)
     result = editor_runner.run(job)
     print(editor_runner.summary(result))
@@ -101,7 +107,7 @@ def setup_systems(label):
         return 1
     for made in MADE:
         for path in (project/'Assets'/made).iterdir():
-            if path.name.startswith('RoomSystems'):
+            if path.name.startswith(scene):
                 target = PROBE/'Assets'/made/path.name
                 if path.is_dir():
                     shutil.rmtree(target, ignore_errors=True)
@@ -156,15 +162,16 @@ def gate(label, frames):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=['setup', 'setup-systems', 'record', 'publish', 'gate'])
+    parser.add_argument('mode', choices=['setup', *ADDED, 'record', 'publish', 'gate'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default='current')
-    parser.add_argument('--frames', type=int, default=24000)
+    # Enough frames for every case to converge (each waits at least 360) and the run to end itself.
+    parser.add_argument('--frames', type=int, default=40000)
     args = parser.parse_args()
     if args.mode == 'setup':
         return setup(args.label)
-    if args.mode == 'setup-systems':
-        return setup_systems(args.label)
+    if args.mode in ADDED:
+        return setup_scene(args.label, *ADDED[args.mode])
     if args.mode == 'record':
         return record(args.label)
     if args.mode == 'publish':

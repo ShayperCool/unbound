@@ -71,7 +71,11 @@ intensity then set to 2), `room-envdata-update` (the data set again, then `Updat
 3) and `room-envdata-errors` (what the call throws for an array of 100 floats and for none); with
 the intensity still 3, `room-sky-none` (the ambient mode Skybox without a skybox material),
 `room-gradient-intensity` (the gradient again) and `room-ambient-custom` (a custom
-ambient mode with another ambient color); `roomscaled-base`,
+ambient mode with another ambient color); then `DynamicGI.SetEnvironmentData` in the frame of
+a change of the ambient source: `room-envdata-after-color` (the flat ambient color changed and
+the data set after it), `room-envdata-before-color` (the data set and the color changed after
+it) and `room-envdata-after-sky` (the skybox as the source, its exposure changed and the data
+set after it); `roomscaled-base`,
 `roomscaled-moved`, then from bounce intensity 3 `roomscaled-indirectscale` (indirect scale 2,
 bounce intensity 1) and, from bounce intensity 3 again, `roomscaled-threshold0` (the same with
 `DynamicGI.updateThreshold` 0; restored after it); `roomdirectional-base`,
@@ -113,6 +117,13 @@ mode). Then two pairs, the first scene loaded and the second added to it:
 reflection and the ambient probe two frames after the additive load, right after
 `SceneManager.SetActiveScene` with the added scene (`-active`) and a frame later
 (`-active-next-frame`).
+
+Last, `RoomBakedEnvironment` (`run.py setup-baked-environment`: the room with baked global
+illumination on as well and its environment lighting baked, Lighting Settings' Realtime
+Environment Lighting off; its lights are realtime, so its baked lightmap holds the environment
+alone): `roombakedenvironment-base`, `-color` (a brighter ambient color), `-alone` (the point
+light off and the panel's emission black: the environment as the only light) and `-envdata`
+(`DynamicGI.SetEnvironmentData` then).
 
 ## What the Editor does (this capture)
 
@@ -168,6 +179,16 @@ Observations (not documented guarantees):
 - In an earlier capture the data was set one frame after the directional light was destroyed and
   did not show: the lightmap was the sky's. The probe therefore waits for the sky to settle
   before the call.
+- Data set in the frame of a change of the ambient source, after the change, stands
+  (`room-envdata-after-color` and `room-envdata-after-sky` equal `room-envdata` within 0.004);
+  a change after the data, in its frame, replaces it (`room-envdata-before-color` is the
+  color's light). Three captures agree.
+- A scene whose environment lighting is baked gives its realtime GI no light from the ambient
+  source: the brighter ambient color changes no texel (`roombakedenvironment-color` is
+  `-base`, byte for byte) and the environment alone leaves every texel at zero (`-alone`);
+  `RenderSettings.ambientProbe` follows the color all the same. `DynamicGI.SetEnvironmentData`
+  lights it as it lights `Room` (`-envdata`). The scene's light probes have baked coefficients
+  too (the environment's).
 - `RenderSettings.ambientProbe` with a skybox follows the ambient intensity without
   `UpdateEnvironment`: 0.2140 times the intensity 1 probe at 0.5 and 4.5948 times at 2 (the
   intensity taken as an sRGB-encoded value). In the custom ambient mode it is the probe last
@@ -239,8 +260,8 @@ as well: all four channels of every covered texel within 2.5/255 of the Editor's
 of them further, each within 5/255 (the engine's: at most 3 of a case's 6760 values beyond
 2.5/255, the furthest 4/255 off, 0.16/255 on average). Every failing value, and every allowed isolated
 one, is written to `compare-details.txt` in the run directory. Light probes are lit by realtime GI
-(their coefficients are reported: 14 values in the engine's run, in the brightest case and its
-successor and one coefficient of one probe in `RoomScaled`; docs/REALTIME_GI.md, Residuals).
+(their coefficients are reported: 5 values in the engine's run, higher-band coefficients of
+five probes in the brightest case; docs/REALTIME_GI.md, Residuals).
 
 ## Running
 

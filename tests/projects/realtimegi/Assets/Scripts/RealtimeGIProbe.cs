@@ -253,6 +253,30 @@ public class RealtimeGIProbe : MonoBehaviour
         RenderSettings.ambientLight = new Color(0.2f, 0.7f, 0.3f);
         yield return Converge();
         Capture("room-ambient-custom", s);
+
+        // DynamicGI.SetEnvironmentData in the frame of a change of the ambient source: the
+        // ambient color changed and the data set after it, then the data set and the color
+        // changed after it; then, with the skybox as the source, its exposure changed and the
+        // data set after it.
+        RenderSettings.ambientIntensity = 1f;
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        yield return Converge();
+        RenderSettings.ambientLight = new Color(0.7f, 0.2f, 0.2f);
+        DynamicGI.SetEnvironmentData(data);
+        yield return Converge();
+        Capture("room-envdata-after-color", s);
+        DynamicGI.SetEnvironmentData(data);
+        RenderSettings.ambientLight = new Color(0.2f, 0.2f, 0.7f);
+        yield return Converge();
+        Capture("room-envdata-before-color", s);
+        RenderSettings.skybox = skyOnly;
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        yield return Converge();
+        skyOnly.SetFloat("_Exposure", 2f);
+        DynamicGI.SetEnvironmentData(data);
+        yield return Converge();
+        Capture("room-envdata-after-sky", s);
+        RenderSettings.skybox = null;
         RenderSettings.ambientIntensity = 1f;
         RenderSettings.ambientMode = AmbientMode.Flat;
         DynamicGI.UpdateEnvironment();
@@ -389,6 +413,25 @@ public class RealtimeGIProbe : MonoBehaviour
             yield return null;
             RecordEnvironment(label + "-active-next-frame");
         }
+
+        // The room with baked global illumination on as well and its environment lighting
+        // baked: as it loads, with a brighter ambient color, with the environment as its only
+        // light (the point light off, the panel's emission black), and with
+        // DynamicGI.SetEnvironmentData.
+        yield return Load("RoomBakedEnvironment");
+        s = Scene();
+        yield return Converge();
+        Capture("roombakedenvironment-base", s);
+        RenderSettings.ambientLight = new Color(0.6f, 0.5f, 0.2f);
+        yield return Converge();
+        Capture("roombakedenvironment-color", s);
+        s.point.enabled = false;
+        DynamicGI.SetEmissive(s.panel, Color.black);
+        yield return Converge();
+        Capture("roombakedenvironment-alone", s);
+        DynamicGI.SetEnvironmentData(EnvironmentData());
+        yield return Converge();
+        Capture("roombakedenvironment-envdata", s);
         Finish();
     }
 

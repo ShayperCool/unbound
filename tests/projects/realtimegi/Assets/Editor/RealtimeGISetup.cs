@@ -16,6 +16,9 @@ using UnityEngine.Rendering;
 /// <item><c>RoomSystems</c>: as <c>Room</c> with the left and right walls and the panel in a
 /// second system: their Lightmap Parameters are the defaults with System Tag 1
 /// (<c>-executeMethod RealtimeGISetup.CreateSystems</c> adds it alone).</item>
+/// <item><c>RoomBakedEnvironment</c>: as <c>Room</c> with baked global illumination on too and
+/// the environment lighting baked (<c>-executeMethod RealtimeGISetup.CreateBakedEnvironment</c>
+/// adds it alone).</item>
 /// </list>
 /// </summary>
 public static class RealtimeGISetup
@@ -42,6 +45,26 @@ public static class RealtimeGISetup
             CreateRoom("RoomSystems", LightmapsMode.NonDirectional, 1f, 1f, true);
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             scenes.Add(new EditorBuildSettingsScene($"{Scenes}/RoomSystems.unity", true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
+    /// <summary>Adds the <c>RoomBakedEnvironment</c> scene alone: the room with baked global
+    /// illumination on as well and its environment lighting baked.</summary>
+    public static void CreateBakedEnvironment()
+    {
+        try
+        {
+            CreateRoom("RoomBakedEnvironment", LightmapsMode.NonDirectional, 1f, 1f, bakedEnvironment: true);
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            scenes.Insert(4, new EditorBuildSettingsScene($"{Scenes}/RoomBakedEnvironment.unity", true));
             EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets();
             EditorApplication.Exit(0);
@@ -101,7 +124,7 @@ public static class RealtimeGISetup
         return renderer;
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false)
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -189,9 +212,18 @@ public static class RealtimeGISetup
         var settings = new LightingSettings
         {
             name = name,
-            bakedGI = false,
+            bakedGI = bakedEnvironment,
             realtimeGI = true,
-            realtimeEnvironmentLighting = true,
+            realtimeEnvironmentLighting = !bakedEnvironment,
+            // The baked lightmaps hold the environment alone (the lights are realtime): small.
+            lightmapper = LightingSettings.Lightmapper.ProgressiveCPU,
+            lightmapResolution = 4f,
+            lightmapMaxSize = 256,
+            lightmapPadding = 2,
+            directSampleCount = 16,
+            indirectSampleCount = 64,
+            environmentSampleCount = 64,
+            maxBounces = 1,
             indirectResolution = 2f,
             directionalityMode = mode,
             albedoBoost = albedoBoost,
