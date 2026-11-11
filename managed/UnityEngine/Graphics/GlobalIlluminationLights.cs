@@ -85,7 +85,8 @@ namespace UnityEngine.Experimental.GlobalIllumination
             return new LinearColor { m_red = linear.r * scale, m_green = linear.g * scale, m_blue = linear.b * scale, m_intensity = largest };
         }
 
-        public static LinearColor Black() => default;
+        /// <summary>No light: components and intensity 0.</summary>
+        public static LinearColor Black() => new LinearColor { m_red = 0f, m_green = 0f, m_blue = 0f, m_intensity = 0f };
     }
 
     public partial struct Cookie
