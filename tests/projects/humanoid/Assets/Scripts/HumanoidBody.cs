@@ -52,12 +52,24 @@ public partial class HumanoidProbe
             return mixer;
         }, true, setup: GoalReader, velocities: false));
         foreach (var controller in new[] { "HumanA", "HumanFootIK", "HumanGoalsTransition", "HumanGoalsTree", "HumanGoalsOverride", "HumanGoalsAdditive",
-                     "HumanBodyNegTree", "HumanBodyDirectLow" })
+                     "HumanBodyNegTree", "HumanBodyDirectLow", "HumanMaskOverrideNoRoot", "HumanMaskOverrideUpper", "HumanMaskAdditiveNoRoot" })
         {
             string key = "controllerGraph." + char.ToLowerInvariant(controller[5]) + controller.Substring(6);
             Guarded(key, () => PlayGraph(key, g => AnimatorControllerPlayable.Create(g, Resources.Load<RuntimeAnimatorController>(controller)), true,
                 setup: GoalReader, velocities: false));
         }
+        // The playable paused before its transition starts (steps 6 to 13), then playing again.
+        Guarded("controllerGraph.paused", () =>
+        {
+            Playable played = default;
+            PlayGraph("controllerGraph.paused",
+                g => played = AnimatorControllerPlayable.Create(g, Resources.Load<RuntimeAnimatorController>("HumanGoalsTransition")), true,
+                setup: GoalReader, velocities: false, before: step =>
+                {
+                    if (step == 6) played.Pause();
+                    else if (step == 14) played.Play();
+                });
+        });
     }
 
     static void GoalReader(Animator animator) => animator.gameObject.AddComponent<HumanoidGoals>();

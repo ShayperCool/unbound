@@ -209,7 +209,9 @@ imported without keyframe reduction.
   input) and A under BodyPartial in a layer mixer (`bodyGraph.layerPartial`); controllers of the
   probe as the source of the Animator's only output through an AnimatorControllerPlayable
   (`controllerGraph.a`, `.footIK`, `.goalsTransition`, `.goalsTree`, `.goalsOverride`,
-  `.goalsAdditive`, `.bodyNegTree`, `.bodyDirectLow`). Authored but not
+  `.goalsAdditive`, `.bodyNegTree`, `.bodyDirectLow`, `.maskOverrideNoRoot`, `.maskOverrideUpper`,
+  `.maskAdditiveNoRoot`), and HumanGoalsTransition with the playable paused from the 6th to the
+  13th update (`controllerGraph.paused`). Authored but not
   recorded, because the engine does not match them yet (docs/COMPATIBILITY_GAPS.md says how they
   differ): the controllers HumanBodyDirectEmptyChild (an empty child tree at 0.3 beside A at 0.7),
   HumanBodyDirectLowB (HumanB's clip alone at 0.5), HumanBodyGenericTransition (A to
