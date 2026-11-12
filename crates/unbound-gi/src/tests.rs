@@ -1364,12 +1364,7 @@ fn renderer_names(scene: &str) -> std::collections::HashMap<i64, String> {
 fn a_scene_of_two_systems_converges_as_the_editors() {
     // RoomSystems: the Room with the left and right walls and the panel in a second system
     // (System Tag 1), each system's transport referencing the other's values.
-    let file = probe().join("Assets/Scenes/RoomSystems/LightingData.asset");
-    let bytes = std::fs::read(file).unwrap();
-    let serialized = unbound_assets::serialized::SerializedFile::parse(&bytes).unwrap();
-    let data = read_precomputed(&serialized.read(112000000).unwrap())
-        .unwrap()
-        .unwrap();
+    let data = scene_data("RoomSystems");
     assert_eq!(data.systems.len(), 2);
     for (k, s) in data.systems.iter().enumerate() {
         let other = data.systems[1 - k].input_hash;
@@ -1378,14 +1373,22 @@ fn a_scene_of_two_systems_converges_as_the_editors() {
             "system {k} does not reference the other"
         );
     }
-    let names = renderer_names("RoomSystems");
     let scene: Vec<Arc<System>> = data.systems.iter().cloned().map(Arc::new).collect();
+    let (fails, total) = roomsystems_base(&data, &scene);
+    assert!(total > 4000, "{total} values");
+    assert!(fails <= ISOLATED, "{fails} values outside the tolerance");
+}
+
+/// The systems of RoomSystems lit as in `roomsystems-base` and converged, against the Editor's:
+/// (values outside the probe comparator's tolerance, values compared).
+fn roomsystems_base(data: &Precomputed, scene: &[Arc<System>]) -> (usize, usize) {
+    let names = renderer_names("RoomSystems");
     let mut solvers: Vec<SystemSolver> = scene
         .iter()
-        .map(|s| SystemSolver::new_in_scene(s.clone(), &scene).unwrap())
+        .map(|s| SystemSolver::new_in_scene(s.clone(), scene).unwrap())
         .collect();
     let white = [0.8, 0.8, 0.8];
-    for (solver, system) in solvers.iter_mut().zip(&scene) {
+    for (solver, system) in solvers.iter_mut().zip(scene) {
         let colors: Vec<([f32; 3], [f32; 3])> = data.renderers[system.first_renderer..]
             [..system.renderer_count]
             .iter()
@@ -1427,7 +1430,7 @@ fn a_scene_of_two_systems_converges_as_the_editors() {
     assert!(converged);
     let (width, texels) = reference("roomsystems-base");
     let (mut fails, mut total) = (0, 0);
-    for (solver, system) in solvers.iter().zip(&scene) {
+    for (solver, system) in solvers.iter().zip(scene) {
         let t = &system.transport;
         let (ox, oy) = (
             system.atlas_offset.0 as usize,
@@ -1444,21 +1447,114 @@ fn a_scene_of_two_systems_converges_as_the_editors() {
                     total += 1;
                     if (got[k] - r[k]).abs() > 0.02 + 0.05 * r[k].abs() {
                         fails += 1;
-                        eprintln!(
-                            "  ({},{}) channel {k}: {} vs {}",
-                            ox + x,
-                            oy + y,
-                            got[k],
-                            r[k]
-                        );
                     }
                 }
             }
         }
     }
     eprintln!("roomsystems-base: {fails} of {total} values outside the tolerance");
-    assert!(total > 4000, "{total} values");
-    assert!(fails <= ISOLATED, "{fails} values outside the tolerance");
+    (fails, total)
+}
+
+#[test]
+fn own_systems_of_a_scene_reference_each_other() {
+    // RoomSystems made by Unbound's precompute (the Editor's layout of its two systems): each
+    // system's rays meet the other's surfaces and its transport references the other's values,
+    // and the light probes read both.
+    use crate::precompute::{clusters, probes as own_probes, scene::Scene, transport, visibility};
+    let data = scene_data("RoomSystems");
+    let own: Vec<Vec<OwnInstance>> = (0..2)
+        .map(|s| room_instances_in(&data, "RoomSystems", s))
+        .collect();
+    let instances: Vec<Vec<clusters::Instance>> = own
+        .iter()
+        .map(|system| {
+            system
+                .iter()
+                .map(|i| clusters::Instance {
+                    positions: &i.positions,
+                    normals: &i.normals,
+                    texels: &i.texels,
+                    triangles: &CUBE_TRIANGLES,
+                    cluster_size: 1.0,
+                    modelling_tolerance: 0.01,
+                })
+                .collect()
+        })
+        .collect();
+    let clusterings: Vec<clusters::Clustering> = (0..2)
+        .map(|s| {
+            let t = &data.systems[s].transport;
+            clusters::cluster(&instances[s], t.width, t.height).unwrap()
+        })
+        .collect();
+    let scene = Scene::new(
+        clusterings.iter().collect(),
+        data.systems.iter().map(|s| s.input_hash).collect(),
+    )
+    .unwrap();
+    let mut systems = Vec::new();
+    for s in 0..2 {
+        let mut system = data.systems[s].clone();
+        let (w, h) = (system.transport.width, system.transport.height);
+        system.transport = transport::transport(
+            &instances[s],
+            &scene,
+            s,
+            w,
+            h,
+            &system.chart_mask,
+            transport::DEFAULT_SETTINGS,
+        )
+        .unwrap();
+        system.visibility = Ok(visibility::visibility(&clusterings[s].input, &scene).unwrap());
+        assert_eq!(
+            system.transport.dependencies,
+            vec![
+                crate::data::ENVIRONMENT_ID,
+                data.systems[s].input_hash,
+                data.systems[1 - s].input_hash
+            ]
+        );
+        // References to the other system's values (dependency 2).
+        let other = system
+            .transport
+            .segments
+            .iter()
+            .flat_map(|g| &g.references)
+            .filter(|r| r.0 == 2)
+            .count();
+        assert!(
+            other > 0,
+            "system {s} references none of the other's values"
+        );
+        system.input = clusterings[s].input.clone();
+        system.materials = clusterings[s].materials.clone();
+        systems.push(Arc::new(system));
+    }
+    let set =
+        own_probes::probe_set(&ROOM_PROBES, &scene, data.probe_sets[0].hash, 4096, 512).unwrap();
+    assert_eq!(set.dependencies.len(), 3);
+    for (d, p) in set.probes.iter().enumerate() {
+        for dep in [1u8, 2] {
+            assert!(
+                p.references.iter().any(|r| r.0 == dep),
+                "probe {d} reads nothing of dependency {dep}"
+            );
+        }
+    }
+    let solvers: Vec<SystemSolver> = systems
+        .iter()
+        .map(|s| SystemSolver::new_in_scene(s.clone(), &systems).unwrap())
+        .collect();
+    ProbeSetSolver::new(Arc::new(set), &solvers).unwrap();
+    let (fails, total) = roomsystems_base(&data, &systems);
+    // Measured: 24 of 5070 (the Editor's own data: none; the Room's base case with Unbound's
+    // precompute: 83).
+    assert!(
+        total > 4000 && fails * 100 <= 24 * 115,
+        "{fails} of {total}"
+    );
 }
 
 #[test]
@@ -2564,7 +2660,12 @@ struct OwnInstance {
 
 /// The renderers of a scene made of the Room's (`scene`'s names for them).
 fn room_instances_of(data: &Precomputed, scene: &str) -> Vec<OwnInstance> {
-    let system = &data.systems[0];
+    room_instances_in(data, scene, 0)
+}
+
+/// The renderers of system `index` of a scene made of the Room's.
+fn room_instances_in(data: &Precomputed, scene: &str, index: usize) -> Vec<OwnInstance> {
+    let system = &data.systems[index];
     let names = renderer_names(scene);
     let (w, h) = (
         system.transport.width as f32,
@@ -3066,29 +3167,31 @@ fn own_room_precompute(
     let mut system = data.systems[0].clone();
     let (w, h) = (system.transport.width, system.transport.height);
     let clustering = clusters::cluster(&instances, w, h).unwrap();
+    let scene =
+        crate::precompute::scene::Scene::new(vec![&clustering], vec![system.input_hash]).unwrap();
     system.transport = transport::transport(
         &instances,
-        &clustering,
+        &scene,
+        0,
         w,
         h,
         &system.chart_mask,
-        system.input_hash,
         transport::DEFAULT_SETTINGS,
     )
     .unwrap();
     system.visibility =
-        Ok(crate::precompute::visibility::visibility(&clustering.input, &clustering).unwrap());
+        Ok(crate::precompute::visibility::visibility(&clustering.input, &scene).unwrap());
     let set = probes.map(|positions| {
         own_probes::probe_set(
             positions,
-            &clustering,
-            system.input_hash,
+            &scene,
             data.probe_sets[0].hash,
             own_probes::DEFAULT_PROBE_RAYS,
             own_probes::PROBE_BUDGET,
         )
         .unwrap()
     });
+    drop(scene);
     system.input = clustering.input;
     system.materials = clustering.materials;
     (system, set)
@@ -3417,7 +3520,8 @@ fn own_visibility_of_the_editors_points_matches_its_precompute() {
         })
         .collect();
     let surfaces = clusters::cluster(&instances, 52, 52).unwrap();
-    let ours = crate::precompute::visibility::visibility(&editor.input, &surfaces).unwrap();
+    let scene = crate::precompute::scene::Scene::new(vec![&surfaces], vec![[7; 16]]).unwrap();
+    let ours = crate::precompute::visibility::visibility(&editor.input, &scene).unwrap();
     assert_eq!(ours.rings(), stored.rings());
     let n = editor.input.clusters();
     let directions: u32 = stored.rings().iter().map(|r| r.1).sum();

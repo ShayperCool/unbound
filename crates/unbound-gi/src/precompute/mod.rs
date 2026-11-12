@@ -2,12 +2,13 @@
 //! which renderers form a system and where they lie ([`systems`]),
 //! the clusters of a system's surfaces ([`clusters`]) and the transport into its realtime
 //! lightmap texels ([`transport`]) and the visibility of directional lights ([`visibility`]),
-//! traced through [`geometry`].
+//! traced through [`geometry`], every system of a scene through all of them ([`scene`]).
 //! See docs/REALTIME_GI.md.
 pub mod clusters;
 pub mod geometry;
 mod math;
 pub mod probes;
+pub mod scene;
 pub mod systems;
 pub mod transport;
 pub mod visibility;

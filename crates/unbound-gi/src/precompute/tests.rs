@@ -4,6 +4,11 @@ use super::clusters::{GROUP, Instance, SAMPLES_PER_CLUSTER, cluster};
 use super::geometry::Bvh;
 use super::math::V3;
 
+/// A scene of the one system `c` (its dependency id 7s).
+fn scene(c: &super::clusters::Clustering) -> super::scene::Scene<'_> {
+    super::scene::Scene::new(vec![c], vec![[7; 16]]).unwrap()
+}
+
 /// Lightmap Parameters' default Modelling Tolerance.
 const TOLERANCE: f32 = 0.01;
 
@@ -539,7 +544,7 @@ fn transport_of(meshes: &[&Mesh], size: u32, budget: usize) -> crate::data::Tran
         budget,
         ..DEFAULT_SETTINGS
     };
-    transport(&instances, &c, size, size, &mask, [7; 16], settings).unwrap()
+    transport(&instances, &scene(&c), 0, size, size, &mask, settings).unwrap()
 }
 
 /// Per texel: its weights by reference (dependency, index), decoded.
@@ -658,11 +663,11 @@ fn a_texel_inside_other_geometry_takes_a_neighbours_light() {
         .collect();
     let t = super::transport::transport(
         &instances,
-        &c,
+        &scene(&c),
+        0,
         64,
         64,
         &mask,
-        [7; 16],
         super::transport::DEFAULT_SETTINGS,
     )
     .unwrap();
@@ -683,7 +688,20 @@ fn transports_that_cannot_be_made_fail() {
     let instances = [m.instance(1.0)];
     let c = cluster(&instances, 8, 8).unwrap();
     let mask: Vec<u32> = (0..64).collect();
-    assert!(transport(&instances, &c, 8, 8, &mask[..63], [0; 16], DEFAULT_SETTINGS).is_err());
+    assert!(
+        transport(
+            &instances,
+            &scene(&c),
+            0,
+            8,
+            8,
+            &mask[..63],
+            DEFAULT_SETTINGS
+        )
+        .is_err()
+    );
+    // A system the scene does not have.
+    assert!(transport(&instances, &scene(&c), 1, 8, 8, &mask, DEFAULT_SETTINGS).is_err());
     for settings in [
         Settings {
             rays: 0,
@@ -694,7 +712,7 @@ fn transports_that_cannot_be_made_fail() {
             ..DEFAULT_SETTINGS
         },
     ] {
-        assert!(transport(&instances, &c, 8, 8, &mask, [0; 16], settings).is_err());
+        assert!(transport(&instances, &scene(&c), 0, 8, 8, &mask, settings).is_err());
     }
 }
 
@@ -726,11 +744,11 @@ fn an_odd_output_solves_its_directionality_on_whole_blocks() {
     let mask = vec![0u32; 81];
     let t = super::transport::transport(
         &instances,
-        &c,
+        &scene(&c),
+        0,
         9,
         9,
         &mask,
-        [7; 16],
         super::transport::DEFAULT_SETTINGS,
     )
     .unwrap();
@@ -789,7 +807,7 @@ fn a_cluster_sees_the_sky_above_its_horizon() {
     for (meshes, covered) in [(vec![&open], false), (vec![&open, &lid], true)] {
         let instances: Vec<Instance> = meshes.iter().map(|m| m.instance(1.0)).collect();
         let c = cluster(&instances, 32, 32).unwrap();
-        let v = super::visibility::visibility(&c.input, &c).unwrap();
+        let v = super::visibility::visibility(&c.input, &scene(&c)).unwrap();
         let rings = ring_layout(super::visibility::RINGS);
         // The floor's clusters only (the lid's face down).
         let floor_clusters: Vec<usize> = (0..c.input.clusters())
@@ -825,8 +843,7 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
     let c = cluster(&instances, 64, 64).unwrap();
     let set = super::probes::probe_set(
         &[[200.0, 1.0, 200.0]],
-        &c,
-        [7; 16],
+        &scene(&c),
         [8; 16],
         DEFAULT_PROBE_RAYS,
         1000,
@@ -851,8 +868,7 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
     // With a budget of 8 its references are joined to at most eight, keeping their sum.
     let set = super::probes::probe_set(
         &[[200.0, 1.0, 200.0]],
-        &c,
-        [7; 16],
+        &scene(&c),
         [8; 16],
         DEFAULT_PROBE_RAYS,
         8,
@@ -868,8 +884,7 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
     // Down to the coarsest values: the tree's root and the five environment faces the sky covers.
     let set = super::probes::probe_set(
         &[[200.0, 1.0, 200.0]],
-        &c,
-        [7; 16],
+        &scene(&c),
         [8; 16],
         DEFAULT_PROBE_RAYS,
         1,
@@ -881,13 +896,12 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
         "{:?}",
         set.probes[0].references
     );
-    assert!(super::probes::probe_set(&[[0.0; 3]], &c, [7; 16], [8; 16], 0, 4).is_err());
+    assert!(super::probes::probe_set(&[[0.0; 3]], &scene(&c), [8; 16], 0, 4).is_err());
     // Under the floor its rays up meet the floor's back and take nothing; those down leave the
     // scene.
     let set = super::probes::probe_set(
         &[[200.0, -1.0, 200.0]],
-        &c,
-        [7; 16],
+        &scene(&c),
         [8; 16],
         DEFAULT_PROBE_RAYS,
         1000,

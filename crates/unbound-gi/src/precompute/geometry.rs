@@ -178,6 +178,11 @@ impl Bvh {
         self.triangles[t as usize]
     }
 
+    /// A direction on triangle `t`'s front side.
+    pub fn facing(&self, t: u32) -> V3 {
+        self.facing[t as usize]
+    }
+
     /// The nearest hit of the ray from `origin` along `direction` (not necessarily unit) closer
     /// than `max_distance` (in units of `direction`'s length).
     pub fn intersect(&self, origin: V3, direction: V3, max_distance: f32) -> Option<Hit> {

@@ -793,9 +793,16 @@ is how the Editor's products are made in the measured release, as follows.
   lightest groups first (five times the values outside it of no budget at all; joining where it
   changes least is about as good as none). With directional lightmaps (`RoomDirectional`) the
   directionality is 4.9/255 from the Editor's on average (0.2/255 from the Editor's transport),
-  the half Lambert term 2.4/255 above it. Open: a system's transport traces only its own
-  surfaces and references only its own values and the environment; scenes of several systems
-  (the probe's `RoomSystems`) need the others' surfaces and values.
+  the half Lambert term 2.4/255 above it. In a scene of several systems (`scene.rs`) every
+  system's rays (and the hidden-origin tests, the visibility's and the light probes') meet
+  every system's surfaces, and a texel references the clusters of whichever system its rays
+  meet: the transport's dependencies are the environment, its own system and the others in
+  order (the Editor's `RoomSystems` reference each other too). With Unbound's precompute of
+  `RoomSystems`' two systems (the Editor's layout of them) `roomsystems-base` puts 24 of its
+  5070 values outside the comparator's tolerance (the Editor's own data: none). Each system's
+  clusters still leave out only the points its own surfaces hide. Not measured: whether the
+  Editor's systems see only the systems near them (its parameters have a distance for which
+  systems are included), and scenes of more than two systems.
 - **Visibility** (`visibility.rs`): for directional lights, per direction of 27 rings of
   latitude around +y (ring r of `floor(52 sin(r / 26 of a half turn)) + 1` directions, 875 in
   all, as the Editor's) and per cluster, the share of its points from which a ray toward that
@@ -824,9 +831,9 @@ is how the Editor's products are made in the measured release, as follows.
   (`room-gradient`, `-envdata`, `-sky-none`, the environment and its bounce off the clusters);
   how much of the rest comes from the clusters' values and how much from the probes' references
   is not separated. Not measured: probes inside geometry (whose rays all meet back faces and
-  take nothing) and outside the system's bounds. Open: probes lit by several systems (the
-  transport references one system's clusters and the environment) and the Editor's own choice
-  of 64 references.
+  take nothing) and outside the system's bounds. A probe reads every system's clusters its
+  rays meet (its dependencies: the environment, then the systems in order). Open: the
+  Editor's own choice of 64 references.
 
 ### When the engine would use it
 
@@ -844,8 +851,7 @@ today gets a warning once that the setting is not honoured (`Runtime/Loading.cs`
 data is invalid. It is not wired up because its lighting does not match the Editor's yet (over
 the Room 1.6 to 11% of the lightmap values outside the comparator's tolerance, most of it from
 the clusters, [Unbound's precompute](#unbounds-precompute)) and what it needs is not made: the
-automatic charts still open ([Open](#open)), several systems referencing each other's
-clusters, the light probes' positions from the scene, the cache under
+automatic charts still open ([Open](#open)), the light probes' positions from the scene, the cache under
 `Library/Unbound/` keyed by a content hash of the inputs and a format version, and a refusal
 of Lightmap Parameters other than the probe's. Such a bake also makes the baked lightmaps, the
 light probes' baked lighting, the reflection probes and the environment lighting of the
@@ -976,6 +982,6 @@ measure):
   to 11% of their values outside the comparator's tolerance (most of it from the clusters). Not
   made: the engine's use for a scene that asks for a bake on load without lighting data
   (`Lightmapping.bakeOnSceneLoad`), and what it needs: lighting that matches the Editor's, the
-  automatic charts still open, several systems referencing each other, the light probes' positions
+  automatic charts still open, the light probes' positions
   from the scene and the cache by content hash and format version
   ([When the engine would use it](#when-the-engine-would-use-it)).

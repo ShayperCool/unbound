@@ -4,11 +4,10 @@
 //! weight, one that leaves the scene to the environment texel it leaves through. The texels are
 //! solved in segments of a block of 2x2 texels each, their weights quantized as the runtime
 //! reads them, with each reference's direction for the directionality.
-use super::clusters::{
-    CULL_RAYS, Clustering, Instance, NO_CLUSTER, around, hemisphere, hidden, push_off,
-};
+use super::clusters::{CULL_RAYS, Instance, around, hemisphere, hidden, push_off};
 use super::math::{V3, add, dot, normalized, scale};
-use crate::data::{ENVIRONMENT_ID, ENVIRONMENT_VALUES, Segment, Transport};
+use super::scene::Scene;
+use crate::data::{ENVIRONMENT_VALUES, Segment, Transport};
 use crate::directionality::{
     DIRECTIONS, NEIGHBOUR_ABOVE, NEIGHBOUR_ABOVE_LEFT, NEIGHBOUR_ABOVE_RIGHT, NEIGHBOUR_BELOW,
     NEIGHBOUR_BELOW_LEFT, NEIGHBOUR_BELOW_RIGHT, NEIGHBOUR_LEFT, NEIGHBOUR_RIGHT,
@@ -194,21 +193,21 @@ pub fn footprints(instances: &[Instance], width: u32, height: u32) -> Vec<Option
 }
 
 /// What one texel receives: per reference its weight and the sum of the directions its rays
-/// arrive from. References are the system's values (clusters, then the tree's parents), then
-/// the environment's values from [`Refs::environment`].
+/// arrive from. References are the scene's values ([`Scene`]: each system's clusters, then its
+/// tree's parents), then the environment's values from [`Refs::environment`].
 #[derive(Default, Clone)]
 struct Gathered {
     refs: Vec<(u32, (f32, V3))>,
 }
 
-/// How the references of a texel are numbered: the system's values first.
+/// How the references of a texel are numbered: the systems' values first.
 #[derive(Clone, Copy)]
 pub(super) struct Refs {
     /// The first environment reference.
     pub(super) environment: u32,
 }
 
-fn gather(origins: &[Origin], clustering: &Clustering, rays: &[V3], refs: Refs) -> Gathered {
+fn gather(origins: &[Origin], scene: &Scene, rays: &[V3]) -> Gathered {
     let mut acc: std::collections::HashMap<u32, (f32, V3)> = std::collections::HashMap::new();
     let share = 1.0 / rays.len() as f32;
     for (k, &d) in rays.iter().enumerate() {
@@ -220,16 +219,13 @@ fn gather(origins: &[Origin], clustering: &Clustering, rays: &[V3], refs: Refs) 
             scale(origin.n, push_off(origin.p, origin.texel_size)),
         );
         let dir = around(origin.n, d);
-        let reference = match clustering.bvh.intersect(start, dir, f32::INFINITY) {
-            Some(hit) => {
-                let cluster = clustering.triangle_cluster[hit.triangle as usize];
-                // A back face (inside other geometry) or a part no cluster holds: no light.
-                if !hit.front || cluster == NO_CLUSTER {
-                    continue;
-                }
-                cluster
-            }
-            None => refs.environment + environment_texel(dir),
+        let reference = match scene.bvh.intersect(start, dir, f32::INFINITY) {
+            // A back face (inside other geometry) or a part no cluster holds: no light.
+            Some(hit) => match scene.reference(&hit) {
+                Some(r) => r,
+                None => continue,
+            },
+            None => scene.refs.environment + environment_texel(dir),
         };
         let e = acc.entry(reference).or_default();
         e.0 += share;
@@ -272,6 +268,7 @@ fn coarser(r: u32, refs: Refs, tree_parent: &[u32]) -> Option<u32> {
 
 /// The values one coarser value stands for, and the share of it each child has: a tree parent's
 /// children (their weights), a coarser environment value's 2x2 finer ones (a quarter each).
+/// Over the values of a scene's systems, each numbered from its base.
 pub(super) struct Hierarchy {
     refs: Refs,
     tree_parent: Vec<u32>,
@@ -279,17 +276,23 @@ pub(super) struct Hierarchy {
 }
 
 impl Hierarchy {
-    pub(super) fn new(input: &crate::data::InputSamples, refs: Refs) -> Self {
-        let clusters = input.clusters();
-        let mut tree_parent = vec![u32::MAX; input.values()];
-        let mut tree_children = vec![Vec::new(); input.tree_children.len()];
-        let mut child = 0usize;
-        for (p, &count) in input.tree_children.iter().enumerate() {
-            for c in child..child + count as usize {
-                tree_parent[c] = (clusters + p) as u32;
-                tree_children[p].push((c as u32, input.tree_weights[c] as f32 / 255.0));
+    /// `inputs`: each system's input samples, its values numbered from `bases`.
+    pub(super) fn new(inputs: &[&crate::data::InputSamples], bases: &[u32], refs: Refs) -> Self {
+        let total = refs.environment as usize;
+        let mut tree_parent = vec![u32::MAX; total];
+        let mut tree_children = vec![Vec::new(); total];
+        for (input, &base) in inputs.iter().zip(bases) {
+            let clusters = input.clusters();
+            let mut child = 0usize;
+            for (p, &count) in input.tree_children.iter().enumerate() {
+                let parent = base + (clusters + p) as u32;
+                for c in child..child + count as usize {
+                    tree_parent[base as usize + c] = parent;
+                    tree_children[parent as usize]
+                        .push((base + c as u32, input.tree_weights[c] as f32 / 255.0));
+                }
+                child += count as usize;
             }
-            child += count as usize;
         }
         Hierarchy {
             refs,
@@ -299,13 +302,10 @@ impl Hierarchy {
     }
 
     /// The children of `p` (a reference one coarser) and their shares.
-    fn children(&self, p: u32, clusters: usize, out: &mut Vec<(u32, f32)>) {
+    fn children(&self, p: u32, out: &mut Vec<(u32, f32)>) {
         out.clear();
         if p < self.refs.environment {
-            if let Some(list) = (p as usize)
-                .checked_sub(clusters)
-                .and_then(|k| self.tree_children.get(k))
-            {
+            if let Some(list) = self.tree_children.get(p as usize) {
                 out.extend_from_slice(list);
             }
             return;
@@ -353,12 +353,7 @@ impl Weight for (f32, V3) {
 /// coarser value's own shares of its children (where the replacement changes least); when no
 /// two share one, the cheapest are raised to their coarser values. Until few enough are left or
 /// all are the coarsest (the tree's roots, the environment's six faces).
-pub(super) fn reduce<W: Weight>(
-    refs: &mut Vec<(u32, W)>,
-    budget: usize,
-    h: &Hierarchy,
-    clusters: usize,
-) {
+pub(super) fn reduce<W: Weight>(refs: &mut Vec<(u32, W)>, budget: usize, h: &Hierarchy) {
     let mut children = Vec::new();
     while refs.len() > budget {
         let mut groups: std::collections::BTreeMap<u32, usize> = Default::default();
@@ -376,7 +371,7 @@ pub(super) fn reduce<W: Weight>(
         };
         let mut joinable: Vec<(f32, u32, usize)> = Vec::new();
         for (&p, &n) in &groups {
-            h.children(p, clusters, &mut children);
+            h.children(p, &mut children);
             let mut change = 0.0;
             for k in 0..parts {
                 let total: f32 = children.iter().map(|&(c, _)| weight(c, k)).sum();
@@ -449,17 +444,20 @@ pub const DEFAULT_SETTINGS: Settings = Settings {
     budget: 128,
 };
 
-/// The system's transport. `hash`: the system's own dependency id; `chart_mask`: per output
-/// texel its chart (the directionality is interpolated within charts).
+/// The transport of system `own` of `scene` (its renderers `instances`): its texels' light from
+/// every system's clusters and the environment. `chart_mask`: per output texel its chart (the
+/// directionality is interpolated within charts).
 pub fn transport(
     instances: &[Instance],
-    clustering: &Clustering,
+    scene: &Scene,
+    own: usize,
     width: u32,
     height: u32,
     chart_mask: &[u32],
-    hash: [u8; 16],
     settings: Settings,
 ) -> Result<Transport> {
+    ensure!(own < scene.systems.len(), "no system {own} in the scene");
+    let clustering = scene.systems[own];
     ensure!(
         chart_mask.len() == (width * height) as usize,
         "a chart mask of {} texels for {width}x{height}",
@@ -471,11 +469,6 @@ pub fn transport(
         settings.rays,
         settings.budget
     );
-    let input = &clustering.input;
-    let numbering = Refs {
-        environment: input.values() as u32,
-    };
-    let hierarchy = Hierarchy::new(input, numbering);
     let footprints = footprints(instances, width, height);
     let rays = hemisphere(settings.rays);
     let test = hemisphere(CULL_RAYS);
@@ -490,7 +483,7 @@ pub fn transport(
                     .filter(|o| {
                         let push = push_off(o.p, o.texel_size);
                         let gap = instances[o.instance].modelling_tolerance;
-                        !hidden(&clustering.bvh, &test, o.p, o.n, push, gap)
+                        !hidden(&scene.bvh, &test, o.p, o.n, push, gap)
                     })
                     .cloned()
                     .collect()
@@ -501,8 +494,8 @@ pub fn transport(
         .par_iter()
         .map(|o| match o {
             Some(list) if !list.is_empty() => {
-                let mut g = gather(list, clustering, &rays, numbering);
-                reduce(&mut g.refs, settings.budget, &hierarchy, input.clusters());
+                let mut g = gather(list, scene, &rays);
+                reduce(&mut g.refs, settings.budget, &scene.hierarchy);
                 Some(g)
             }
             Some(_) => Some(Gathered::default()),
@@ -588,13 +581,7 @@ pub fn transport(
                 .collect();
             let references: Vec<(u16, u32)> = refs
                 .iter()
-                .map(|&r| {
-                    if r < numbering.environment {
-                        (1, r)
-                    } else {
-                        (0, r - numbering.environment)
-                    }
-                })
+                .map(|&r| scene.reference_of(r, Some(own)))
                 .collect();
             // The block's normal and each reference's direction, at its first texel.
             let first = of(texels[0]);
@@ -671,7 +658,7 @@ pub fn transport(
     Ok(Transport {
         width,
         height,
-        dependencies: vec![ENVIRONMENT_ID, hash],
+        dependencies: scene.dependencies(Some(own)),
         segments,
         block_neighbours,
         block_error: None,
@@ -698,7 +685,7 @@ mod tests {
             let r = refs.environment + e;
             match coarser(r, refs, &h.tree_parent) {
                 Some(p) => {
-                    h.children(p, 0, &mut children);
+                    h.children(p, &mut children);
                     assert_eq!(children.len(), 4);
                     assert!(
                         children.iter().any(|&(c, share)| c == r && share == 0.25),

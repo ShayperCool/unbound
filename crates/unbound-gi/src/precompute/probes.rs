@@ -3,10 +3,10 @@
 //! cluster's front adds them to that cluster's weights, one that leaves the scene to its
 //! environment texel's, one that meets a back face (inside geometry) nothing. The weights are
 //! the probe's `SphericalHarmonicsL2` coefficients per unit of each reference's value.
-use super::clusters::{Clustering, NO_CLUSTER};
 use super::math::V3;
-use super::transport::{Hierarchy, Refs, Weight, environment_texel, reduce};
-use crate::data::{ENVIRONMENT_ID, Probe, ProbeSet, SH_COEFFICIENTS};
+use super::scene::Scene;
+use super::transport::{Weight, environment_texel, reduce};
+use crate::data::{Probe, ProbeSet, SH_COEFFICIENTS};
 use anyhow::{Result, ensure};
 use rayon::prelude::*;
 
@@ -90,12 +90,11 @@ fn sphere(count: usize) -> Vec<V3> {
         .collect()
 }
 
-/// The transport of probes at `positions` from the system `clustering` makes (`hash`: its
-/// dependency id).
+/// The transport of probes at `positions` from the systems of `scene` and the environment
+/// (`set_hash`: the probe set's id).
 pub fn probe_set(
     positions: &[V3],
-    clustering: &Clustering,
-    hash: [u8; 16],
+    scene: &Scene,
     set_hash: [u8; 16],
     rays: usize,
     budget: usize,
@@ -104,26 +103,24 @@ pub fn probe_set(
         rays > 0 && budget > 0,
         "{rays} rays and {budget} references per probe"
     );
+    ensure!(
+        scene.systems.len() < u8::MAX as usize,
+        "light probes lit by {} systems",
+        scene.systems.len()
+    );
     let directions = sphere(rays);
     let share = 4.0 * std::f32::consts::PI / rays as f32;
-    let numbering = Refs {
-        environment: clustering.input.values() as u32,
-    };
-    let hierarchy = Hierarchy::new(&clustering.input, numbering);
     let probes = positions
         .par_iter()
         .map(|&p| {
             let mut refs: std::collections::BTreeMap<u32, Sh> = Default::default();
             for &d in &directions {
-                let key = match clustering.bvh.intersect(p, d, f32::INFINITY) {
-                    Some(hit) => {
-                        let c = clustering.triangle_cluster[hit.triangle as usize];
-                        if !hit.front || c == NO_CLUSTER {
-                            continue;
-                        }
-                        c
-                    }
-                    None => numbering.environment + environment_texel(d),
+                let key = match scene.bvh.intersect(p, d, f32::INFINITY) {
+                    Some(hit) => match scene.reference(&hit) {
+                        Some(r) => r,
+                        None => continue,
+                    },
+                    None => scene.refs.environment + environment_texel(d),
                 };
                 let b = basis(d);
                 let w = refs.entry(key).or_default();
@@ -132,16 +129,13 @@ pub fn probe_set(
                 }
             }
             let mut refs: Vec<(u32, Sh)> = refs.into_iter().collect();
-            reduce(&mut refs, budget, &hierarchy, clustering.input.clusters());
+            reduce(&mut refs, budget, &scene.hierarchy);
             Probe {
                 references: refs
                     .iter()
                     .map(|&(r, _)| {
-                        if r < numbering.environment {
-                            (1, r)
-                        } else {
-                            (0, r - numbering.environment)
-                        }
+                        let (dependency, index) = scene.reference_of(r, None);
+                        (dependency as u8, index)
                     })
                     .collect(),
                 weights: refs.into_iter().map(|(_, w)| w.0).collect(),
@@ -150,7 +144,7 @@ pub fn probe_set(
         .collect();
     Ok(ProbeSet {
         hash: set_hash,
-        dependencies: vec![ENVIRONMENT_ID, hash],
+        dependencies: scene.dependencies(None),
         probes,
     })
 }

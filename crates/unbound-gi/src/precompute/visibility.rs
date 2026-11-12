@@ -1,7 +1,8 @@
 //! The visibility of directional lights: per stored direction, per cluster the share of its
 //! points from which a ray toward that direction leaves the scene, rounded to 2 bits. The
 //! directions lie on 27 rings of latitude around +y (`crate::visibility`).
-use super::clusters::{Clustering, push_off};
+use super::clusters::push_off;
+use super::scene::Scene;
 use crate::data::InputSamples;
 use crate::visibility::{Visibility, ring_direction, ring_layout};
 use anyhow::Result;
@@ -19,9 +20,9 @@ pub const DIRECTIONS_PER_STREAM: usize = 4;
 /// farther behind (as the Editor's precompute, tests/projects/realtimegi).
 const BEHIND: f32 = -0.25;
 
-/// The visibility of `input`'s clusters (their points, in order) through the surfaces traced by
-/// `clustering`.
-pub fn visibility(input: &InputSamples, clustering: &Clustering) -> Result<Visibility> {
+/// The visibility of `input`'s clusters (their points, in order) through the surfaces of
+/// `scene` (every system's).
+pub fn visibility(input: &InputSamples, scene: &Scene) -> Result<Visibility> {
     let rings = ring_layout(RINGS);
     let directions: Vec<[f32; 3]> = rings
         .iter()
@@ -53,10 +54,7 @@ pub fn visibility(input: &InputSamples, clustering: &Clustering) -> Result<Visib
                             };
                             let push = push_off(q, 1.0);
                             let origin = std::array::from_fn(|k| q[k] + n[k] * push);
-                            clustering
-                                .bvh
-                                .intersect(origin, ray, f32::INFINITY)
-                                .is_none()
+                            scene.bvh.intersect(origin, ray, f32::INFINITY).is_none()
                         })
                         .count();
                     (open as f32 / count * top as f32).round() as u8
