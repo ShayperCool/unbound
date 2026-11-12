@@ -118,8 +118,8 @@ public class ClipProbe : MonoBehaviour
     /// <summary>Every curve of a Generic model's clips key by key: times, values and both
     /// tangents. RigLoose is Rig under Keyframe Reduction with loose errors (rotation 15
     /// degrees, position and scale 40%), where several curves stay within the error of their
-    /// first value but end elsewhere (Head's z position 0.004 to 0.003, Spine's turn of ten
-    /// degrees, Hips' x scale 100 to 150). A curve that never leaves float noise around zero is
+    /// first value but end elsewhere (Head's z position 0.004 to 0.003, Hips' x scale 100 to
+    /// 150). A curve that never leaves float noise around zero is
     /// recorded as such (see <see cref="Keys"/>).</summary>
     static void CurveKeys(string model)
     {

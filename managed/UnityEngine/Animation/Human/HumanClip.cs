@@ -432,22 +432,8 @@ namespace UnityEngine
                 var values = curvesOut.Values[i];
                 if (values == null) continue;
                 if (i >= HumanClipImport.TDoFFirst && !HumanClipImport.KeepsTDoFCurve(values)) continue;
-                var slopes = curvesOut.Slopes[i];
-                // A reducing animation compression drops the keys the curve does without.
-                bool flat = keptKeys != null
-                    && HumanClipReduction.Reduce(curvesOut.Times, values, slopes, 1f / m_SampleRate, m_HumanKeyReduction, keptKeys);
-                var keys = new Keyframe[keptKeys?.Count ?? values.Length];
-                // Unweighted keys with the default 1/3 weights, as imported muscle keys report them
-                // (tests/projects/humanfirstpose); they evaluate as plain Hermite segments.
-                for (int k = 0; k < keys.Length; k++)
-                {
-                    int source = keptKeys != null ? keptKeys[k] : k;
-                    float slope = flat ? 0f : slopes[source];
-                    // A flat curve's keys both take its first value.
-                    float value = flat ? values[0] : values[source];
-                    keys[k] = new Keyframe(curvesOut.Times[source], value, slope, slope, 1f / 3f, 1f / 3f);
-                    keys[k].weightedMode = WeightedMode.None;
-                }
+                var keys = HumanClipReduction.Keys(curvesOut.Times, values, curvesOut.Slopes[i], 1f / m_SampleRate,
+                    m_HumanKeyReduction, keptKeys);
                 m_Curves.Add(new ClipCurve
                 {
                     Binding = new CurveBinding { Path = "", Attribute = HumanClipImport.CurveNames[i], ClassId = AnimatorClassId },

@@ -150,6 +150,16 @@ namespace UnityEngine.Tests
             var reduced = Reduce(drift, Slopes(Times(21), drift), 0.005f);
             Assert.True(reduced.Flat);
             Assert.Equal(new[] { 0, 20 }, reduced.Kept);
+            // Both keys take the first value with zero slopes (the Editor's two-key curves
+            // have equal ends), not the drift's end.
+            var keys = HumanClipReduction.Keys(Times(21), drift, Slopes(Times(21), drift), Frame, 0.005f, new List<int>());
+            Assert.Equal(2, keys.Length);
+            Assert.Equal((Times(21)[0], 2f, 0f, 0f), (keys[0].time, keys[0].value, keys[0].inTangent, keys[0].outTangent));
+            Assert.Equal((Times(21)[20], 2f, 0f, 0f), (keys[1].time, keys[1].value, keys[1].inTangent, keys[1].outTangent));
+            // Without a reducing compression every key stays with its own value and slope.
+            var all = HumanClipReduction.Keys(Times(21), drift, Slopes(Times(21), drift), Frame, 0f, null);
+            Assert.Equal(21, all.Length);
+            Assert.Equal(drift[20], all[20].value);
 
             var level = new float[21];
             var steep = new float[21];

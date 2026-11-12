@@ -182,6 +182,10 @@ elsewhere: Head's z position (0.004, 0.006 at 1.5 s, 0.003 at the end), Hips' x 
 - The curves that leave the error of their first value are reduced from the start as in the
   `Reduced` set of tests/projects/modelaxis.
 
+Not measured: a rotation curve that stays within the Rotation Error of its first value and ends
+elsewhere (Spine's turn leaves it; the rule is applied to rotations as to the other curves), and
+such Humanoid curves (the two-key curves of `HumanReduced` have equal ends either way).
+
 Unbound matches 3611/3611 records. The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
 set).

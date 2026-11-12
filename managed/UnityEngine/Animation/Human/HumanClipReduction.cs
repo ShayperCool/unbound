@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Unbound.Runtime.Humanoid
 {
@@ -95,6 +96,29 @@ namespace Unbound.Runtime.Humanoid
                 previous = time;
             }
             return Check((previous + times[b]) * 0.5f);
+        }
+
+        /// <summary>The keys of a converted curve keyed at <paramref name="times"/> (one key a
+        /// frame of <paramref name="step"/> seconds) with one slope a key: every key without a
+        /// reducing compression (<paramref name="kept"/> null), else the keys
+        /// <see cref="Reduce"/> keeps with <paramref name="error"/> (<paramref name="kept"/> is
+        /// the scratch list of their indices); a flat curve's two keys both take its first value
+        /// with zero slopes. Unweighted keys with the default 1/3 weights, as imported muscle keys
+        /// report them (tests/projects/humanfirstpose); they evaluate as plain Hermite
+        /// segments.</summary>
+        internal static Keyframe[] Keys(float[] times, float[] values, float[] slopes, float step, float error, List<int> kept)
+        {
+            bool flat = kept != null && Reduce(times, values, slopes, step, error, kept);
+            var keys = new Keyframe[kept?.Count ?? values.Length];
+            for (int k = 0; k < keys.Length; k++)
+            {
+                int source = kept != null ? kept[k] : k;
+                float slope = flat ? 0f : slopes[source];
+                float value = flat ? values[0] : values[source];
+                keys[k] = new Keyframe(times[source], value, slope, slope, 1f / 3f, 1f / 3f);
+                keys[k].weightedMode = WeightedMode.None;
+            }
+            return keys;
         }
 
         /// <summary>Reduces a curve keyed at <paramref name="times"/> (one key a frame of
