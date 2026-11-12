@@ -453,8 +453,9 @@ the Manual (*Audio Reverb Filter*, *Audio Reverb Zone*):
   These rules reuse `Compat.AudioZoneStartupMeasured` and `Compat.MixerEffectTransitionsMeasured`.
   Other releases retain the previous low-frequency arithmetic and component placement.
 - Still unmeasured: listener script processing of zone returns, disable/re-enable within
-  one frame, parameter changes while only a tail runs, Mono and output settings outside
-  the measured profiles.
+  one frame, parameter changes while only a tail runs, live/overlapping Mono zones
+  and output settings outside the measured profiles. Static Mono returns are
+  measured separately in [MONO.md](../tests/projects/audiopitch/MONO.md).
 
 # AudioMixer: Send, Receive and Duck Volume
 
@@ -841,7 +842,10 @@ Q373 adds all-speaker Normalize in Quad/5.0/5.1/7.1 at these same rates and
 buffer size. One envelope decays once per frame and takes the maximum over
 every active speaker, including LFE. The unused storage slot of 5.0 is excluded.
 See [the wet profiles](../tests/projects/audiopitch/WET.md) for front/rear/LFE
-controls. Other rates, buffers and layouts fail explicitly. Static slot Wet follows the shared
+controls. The additional [settings](../tests/projects/audiopitch/SETTINGS.md),
+[Prologic fallback](../tests/projects/audiopitch/PROLOGIC.md) and
+[Mono](../tests/projects/audiopitch/MONO.md) profiles extend admission only to
+their listed settings. Other contexts fail explicitly. Static slot Wet follows the shared
 rule below. Live Normalize parameters and timed snapshots are covered below; bypass and placement changes remain unmeasured and fail clearly. Existing audio
 residuals are retained unchanged.
 
@@ -1062,3 +1066,6 @@ All 4,456,925 values per rate pass the existing gate. Strict device-only one-ste
 differences remain 329/401; every Master float passes the original float bounds.
 Other Mono setting pairs for Normalize/static wet, live Mono zones and additional
 effect kinds remain outside this measurement.
+
+The [Q373 scope table and queue work](../tests/projects/audiopitch/CLOSURE.md)
+collect the landed profiles and the remaining measurement limits.

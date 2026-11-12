@@ -47,10 +47,11 @@ sample limit is added.
 This measures static effects at the listed rates, buffer and layouts. The separate
 [transitions profile](TRANSITIONS.md) adds live parameter, filter enabled and zone
 activation/preset controls. Reset PCM is not repeatable in the recorded diagnostic
-sessions and remains open. Mixer topology changes, other rates/buffers, Prologic,
-other wet-effect kinds and topology changes, scripted zone send placement and overlapping surround
-zones remain unmeasured. General layout
-reconfiguration updates component channel counts and offsets; a Rust control
+sessions and remains open. Mixer topology edits and other wet-effect kinds remain
+unmeasured. Separate [settings](SETTINGS.md), [Prologic](PROLOGIC.md),
+[zones](ZONES.md) and [Mono](MONO.md) profiles cover their listed contexts.
+Listener scripts on zone returns and settings outside those profiles remain open.
+General layout reconfiguration updates component channel counts and offsets; a Rust control
 checks a retained listener reverb after quad-to-7.1 reconfiguration without
 claiming an Editor history-reset contract.
 

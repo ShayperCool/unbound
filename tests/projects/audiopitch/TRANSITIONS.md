@@ -40,8 +40,8 @@ its active layout and does not attach that observer. This does not measure liste
 scripts interleaved with component filters.
 
 Two independent GPU Editor repeats agree exactly on 16,712,055 values per rate.
-The engine gate passes all of them. Strict reports retain 1,745 and 1,956
-one-step device PCM differences at 48000 and 44100 Hz respectively; every Master
+The engine gate passes all of them. After the shared reverb startup correction,
+strict reports retain 494 and 841 one-step device PCM differences at 48000 and 44100 Hz respectively; every Master
 float passes the unchanged bounds.
 
 The engine-only `context_run.py` gate compares every recorded sample using the
@@ -86,6 +86,9 @@ PlayScheduled do not establish a universal rescheduling rule. Scheduling admissi
 whole-frame boundaries after reset, callback recovery PCM and real-device queue
 timing remain open. Raw captures and their complete reports stay outside Git.
 
-Further unmeasured contexts include mixer-slot insertion/retargeting/bypass,
-component membership changes in surround, other parameter combinations, other
-rates/buffers, Prologic, scripted zone sends and overlapping surround zones.
+Mixer-slot insertion/retargeting/bypass, component membership changes in surround
+and additional parameter combinations remain unmeasured. Separate profiles cover
+[wet slots](WET.md), [additional rate/buffer pairs](SETTINGS.md), the measured
+[Prologic fallback](PROLOGIC.md), [live and overlapping zones](ZONES.md) and
+[Mono effects](MONO.md). Contexts outside those profiles remain open. See the
+[Q373 scope and follow-ups](CLOSURE.md).

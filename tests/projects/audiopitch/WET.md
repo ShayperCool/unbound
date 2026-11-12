@@ -58,6 +58,8 @@ regression suite also exercises late-created sources in stereo through
 `mixerduck`; their silent groups keep Send and parameter histories from the
 active graph rather than restarting when the source arrives.
 
-Other wet effect kinds, arbitrary slot topology changes, Mono, Prologic and other
-rates/buffers are outside this profile. A requested wide mode on a narrower
+Other wet effect kinds and arbitrary slot topology changes remain unmeasured.
+Separate [Mono](MONO.md), [Prologic fallback](PROLOGIC.md) and
+[output-settings](SETTINGS.md) profiles cover only their listed contexts.
+A requested wide mode on a narrower
 device uses that device's actual output layout when validating the effect.
