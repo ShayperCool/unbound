@@ -141,6 +141,17 @@ pub fn bake(all: &[BakeRenderer], probes: &[V3]) -> Result<Baked> {
             .map(|((object, _), why)| format!("; renderer {object}: {why}"))
             .collect::<String>()
     );
+    // A group's renderers share their Lightmap Parameters ([`BakeRenderer::group`]).
+    let mut first = std::collections::HashMap::new();
+    for r in &renderers {
+        let f: &&BakeRenderer = first.entry(r.group).or_insert(r);
+        ensure!(
+            r.settings == f.settings,
+            "renderers {:?} and {:?} of one group with other irradiance settings",
+            f.id,
+            r.id
+        );
+    }
     let members: Vec<Member> = renderers
         .iter()
         .map(|r| Member::new(r.bounds.0, r.bounds.1, r.uvs))
@@ -154,14 +165,6 @@ pub fn bake(all: &[BakeRenderer], probes: &[V3]) -> Result<Baked> {
         .iter()
         .map(|g| pack_system(&g.iter().map(|&k| renderers[k].uvs).collect::<Vec<_>>()))
         .collect::<Result<_>>()?;
-    // A system's renderers share their Lightmap Parameters ([`BakeRenderer::group`]).
-    for (s, g) in groups.iter().enumerate() {
-        let settings = renderers[g[0]].settings;
-        ensure!(
-            g.iter().all(|&k| renderers[k].settings == settings),
-            "system {s}: renderers of one group with other irradiance settings"
-        );
-    }
     // Each renderer's positions in its system's texels.
     let texels: Vec<Vec<Vec<[f32; 2]>>> = groups
         .iter()

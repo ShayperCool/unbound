@@ -1112,7 +1112,13 @@ fn bake_fresh(
             settings: input.settings,
         })
         .collect();
-    let mut baked = unbound_gi::precompute::bake::bake(&renderers, probes)?;
+    let mut baked = unbound_gi::precompute::bake::bake(&renderers, probes).with_context(|| {
+        refused
+            .iter()
+            .map(|((object, _), why)| format!("renderer {object}: {why}"))
+            .collect::<Vec<_>>()
+            .join("; ")
+    })?;
     refused.append(&mut baked.refused);
     // In the order of the inputs.
     let order: HashMap<(i64, i64), usize> = inputs

@@ -1109,10 +1109,20 @@ fn a_bake_leaves_out_the_renderers_it_cannot_take() {
     sized.cluster_size = 0.0;
     let mut quality = renderer(4, &[[0, 1, 2]]);
     quality.settings.rays = 0;
-    let baked = bake(&[good, past, sized, quality], &[]).unwrap();
+    let mut budget = renderer(5, &[[0, 1, 2]]);
+    budget.settings.budget = 0;
+    let mut tolerance = renderer(6, &[[0, 1, 2]]);
+    tolerance.modelling_tolerance = -1.0;
+    let mut endless = renderer(7, &[[0, 1, 2]]);
+    endless.cluster_size = f32::INFINITY;
+    let baked = bake(
+        &[good, past, sized, quality, budget, tolerance, endless],
+        &[],
+    )
+    .unwrap();
     assert_eq!(baked.data.renderers, vec![(1, 0)]);
     let ids: Vec<i64> = baked.refused.iter().map(|r| r.0.0).collect();
-    assert_eq!(ids, vec![2, 3, 4]);
+    assert_eq!(ids, vec![2, 3, 4, 5, 6, 7]);
     // When none is left the error names every refusal.
     let error = bake(&[renderer(5, &[])], &[]).err().unwrap().to_string();
     assert!(error.contains("renderer 5: no triangles"), "{error}");
