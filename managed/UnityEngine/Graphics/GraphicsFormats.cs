@@ -263,8 +263,6 @@ namespace UnityEngine.Experimental.Rendering
             (TextureFormat.ASTC_HDR_8x8, GraphicsFormat.RGBA_ASTC8X8_UFloat, GraphicsFormat.RGBA_ASTC8X8_UFloat),
             (TextureFormat.ASTC_HDR_10x10, GraphicsFormat.RGBA_ASTC10X10_UFloat, GraphicsFormat.RGBA_ASTC10X10_UFloat),
             (TextureFormat.ASTC_HDR_12x12, GraphicsFormat.RGBA_ASTC12X12_UFloat, GraphicsFormat.RGBA_ASTC12X12_UFloat),
-            (TextureFormat.ASTC_10x10, GraphicsFormat.RGBA_ASTC10X10_UNorm, GraphicsFormat.RGBA_ASTC10X10_SRGB),
-            (TextureFormat.ASTC_12x12, GraphicsFormat.RGBA_ASTC12X12_UNorm, GraphicsFormat.RGBA_ASTC12X12_SRGB),
             (TextureFormat.R8, GraphicsFormat.R8_UNorm, GraphicsFormat.R8_UNorm),
             (TextureFormat.RG16, GraphicsFormat.R8G8_UNorm, GraphicsFormat.R8G8_UNorm),
             (TextureFormat.RG32, GraphicsFormat.R16G16_UNorm, GraphicsFormat.R16G16_UNorm),
