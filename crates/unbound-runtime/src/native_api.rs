@@ -576,9 +576,7 @@ extern "C" fn gi_automatic_uvs(
         };
         let (positions, normals) = unbound_gi::instance::apply(&matrix, positions, normals)
             .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "the instance's matrix {matrix:?} is singular or turns a normal to no length (not measured)"
-                )
+                anyhow::anyhow!("the instance's matrix {matrix:?} is singular (not measured)")
             })?;
         let input = crate::realtime_gi::UvInput {
             positions: &positions,

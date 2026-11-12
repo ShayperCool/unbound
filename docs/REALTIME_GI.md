@@ -557,11 +557,14 @@ measured beyond them.
   are 0.12 from the plane through both sides, whose bounds meet, and it has two charts.
 - With Max Distance or Max Angle of zero the precompute keeps the mesh's own charts, as with
   Preserve UVs (`StepNoDistance` and `StepNoAngle`: each face its own lightmap UVs).
-- Renderers share one geometry when they have the same mesh and their instance matrices round
-  to the same thousandths (the Manual's "same mesh with the same scale", which a turned one's
-  matrix has but for its last digits): in a scratch bake an unturned cube of 0.7 x 0.5 x 0.6
-  took the four charts of one turned (20, 40, 10) beside it. Which of their matrices the
-  geometry is made of, one of an earlier bake's among them, is not known.
+- Renderers share one geometry when they have the same mesh and chart settings and their
+  instance matrices agree to thousandths (the Manual's "same mesh with the same scale", which a
+  turned one's matrix has but for its last digits): in a scratch bake an unturned cube of
+  0.7 x 0.5 x 0.6 took the four charts of one turned (20, 40, 10) beside it, their matrices
+  1e-7 apart. (Matrices further apart than that are not measured.) Which of their matrices
+  the geometry is made of, one of an earlier bake's among them, is not known; where the
+  layouts made from each agree (matrices a few units in their last place apart, as scales
+  multiplied up a hierarchy give) the renderers are made.
 - Leftovers (parts that are not flat, then the flat parts no round took) are folded into the
   nearest joined set whose bounds they meet, when they have less than a tenth of its area and
   all their vertices are closer to its plane than Max Distance. Their normal is not asked: the
@@ -603,9 +606,9 @@ face lies in them: two charts of one size taken in the other order would pass it
 lighting exchanged. So what Unbound cannot make as the Editor does is refused, not left to the
 check. Each refusal is a warning that names the renderer, and its system is then not drawn:
 
-- Renderers that share their mesh and rounded instance matrix with one whose matrix is not the
-  same to the last bit (an unturned twin of a turned renderer, say): which matrix the shared
-  geometry was made of is not known.
+- Renderers that share their mesh, chart settings and instance matrix to thousandths with one
+  whose matrix is another and lays the charts out otherwise (an unturned twin of a turned
+  renderer, say): which matrix the shared geometry was made of is not known.
 
 - Choices that rounding decides, the last digits of a normalisation here and in the
   precompute being apart: two neighbouring flat parts whose normals' cosine could have the
@@ -637,8 +640,8 @@ check. Each refusal is a warning that names the renderer, and its system is then
   part alone in its mesh, two quads 40 degrees apart, was laid out as its projection and its
   own UVs both would be; that does not tell the choice.)
 
-Not measured, and implemented as written above: scale under parents that skew it (the
-transform's `lossyScale` is used), meshes that mix triangles wound with and against their
+Not measured, and implemented as written above: scale under turned parents that skews it (the
+instance matrix carries the skew), meshes that mix triangles wound with and against their
 normals, and a small part that is not flat folded into a set it lies by (projected onto that
 set's plane, as the flat leftovers measured are). Not guarded: a part's distance within the
 last digits of Max Distance, and what the Editor's own cache of earlier bakes may share with a

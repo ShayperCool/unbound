@@ -103,8 +103,9 @@ fn inverse_transpose(m: &Matrix) -> Option<Matrix> {
 
 /// The mesh's positions and normals under the matrix: positions and normals (turned by the
 /// inverse transpose) summed as ((x + y) + z) terms, normals divided by their length (its
-/// square summed as (y + x) + z). `None` when the matrix is singular or a normal has no
-/// length (not measured).
+/// square summed as (y + x) + z). A normal of no length stays zero, which the charts handle as
+/// they did before (a vertex no triangle with area uses, say). `None` when the matrix is
+/// singular.
 pub fn apply(
     m: &Matrix,
     positions: &[[f32; 3]],
@@ -119,10 +120,11 @@ pub fn apply(
     for &[x, y, z] in normals {
         let n = [0, 1, 2].map(|r| (t[r] * x + t[3 + r] * y) + t[6 + r] * z);
         let length = ((n[1] * n[1] + n[0] * n[0]) + n[2] * n[2]).sqrt();
-        if !(length > 0.0) {
-            return None;
-        }
-        turned.push(n.map(|c| c / length));
+        turned.push(if length > 0.0 {
+            n.map(|c| c / length)
+        } else {
+            [0.0; 3]
+        });
     }
     Some((placed, turned))
 }
@@ -218,8 +220,8 @@ mod tests {
         let n = [0.6f32 * 0.5, 0.8 * (1.0 / 3.0), 0.0];
         let length = (n[1] * n[1] + n[0] * n[0]).sqrt();
         assert_eq!(turned, [[n[0] / length, n[1] / length, 0.0]]);
-        // A singular matrix and a normal of no length are not made.
+        // A singular matrix is not made; a normal of no length stays zero.
         assert!(apply(&[0.0; 9], &[[0.0; 3]], &[[0.0, 1.0, 0.0]]).is_none());
-        assert!(apply(&m, &[[0.0; 3]], &[[0.0; 3]]).is_none());
+        assert_eq!(apply(&m, &[[0.0; 3]], &[[0.0; 3]]).unwrap().1, [[0.0; 3]]);
     }
 }

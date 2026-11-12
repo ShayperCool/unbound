@@ -92,14 +92,14 @@ namespace Unbound.Tests
             }
         }
 
-        /// <summary>Renderers of one mesh whose instance matrices round to the same thousandths
-        /// share one geometry in the precompute, from one of their matrices: they are refused
-        /// unless the matrices are the same to the last bit.</summary>
+        /// <summary>Renderers of one mesh and chart settings whose instance matrices agree to
+        /// thousandths share one geometry in the precompute, made from one of their matrices:
+        /// such groups are found when the matrices are not the same to the last bit, and their
+        /// renderers are refused only when the layouts made from the matrices differ.</summary>
         [Fact]
-        public void RenderersSharingARoundedMatrixWithAnotherAreRefused()
+        public void RenderersSharingARoundedMatrixAreGrouped()
         {
             var made = new List<Object>();
-            var none = new HashSet<Renderer>();
             try
             {
                 var plate = Plate();
@@ -113,20 +113,30 @@ namespace Unbound.Tests
                 var small = V(0x3eb33333, 0x3eb33333, 0x3eb33333);
                 var sharedTurned = Make("SharedTurned", plate, Q(0, 0x3e5da259, 0, 0x3f79ee89), small, made);
                 var sharedFlat = Make("SharedFlat", plate, Quaternion.identity, small, made);
-                // Another mesh, and a renderer that keeps its mesh's charts.
-                var apart = Make("Apart", other, Quaternion.identity, boxScale, made);
+                // A scale of 2.1, and one of 0.3 under a parent of 7: a unit in the last place apart.
+                var root = Make("Root", other, Quaternion.identity, new Vector3(2.1f, 2.1f, 2.1f), made);
+                var holder = Node("Holder", Quaternion.identity, new Vector3(7f, 7f, 7f), made);
+                var nested = Make("Nested", other, Quaternion.identity, new Vector3(0.3f, 0.3f, 0.3f), made);
+                nested.transform.SetParent(holder.transform, false);
+                // Other settings make another geometry, and a renderer that keeps its mesh's charts none.
+                var finer = Make("Finer", plate, Quaternion.identity, boxScale, made);
+                finer.m_AutoUVMaxDistance = 0.25f;
                 var kept = Make("Kept", plate, Quaternion.identity, boxScale, made);
                 kept.m_PreserveUVs = true;
 
-                var unshared = RealtimeGI.UnsharedRenderers(new Renderer[] { boxTurned, boxFlat, sharedTurned, sharedFlat, apart, kept, null });
-                Assert.Equal(2, unshared.Count);
-                Assert.Contains(boxTurned, unshared);
-                Assert.Contains(boxFlat, unshared);
-                Assert.Contains("turned otherwise", RealtimeGI.AutomaticChartsRefusal(boxFlat, plate, unshared));
-                Assert.Null(RealtimeGI.AutomaticChartsRefusal(sharedTurned, plate, unshared));
-                Assert.Null(RealtimeGI.AutomaticChartsRefusal(apart, other, unshared));
-                // Alone in its scene the turned box is made.
-                Assert.Empty(RealtimeGI.UnsharedRenderers(new Renderer[] { boxTurned, apart }));
+                var groups = RealtimeGI.SharedGroups(new Renderer[] { boxTurned, boxFlat, sharedTurned, sharedFlat, root, nested, finer, kept, null });
+                Assert.Equal(2, groups.Count);
+                Assert.Contains(groups, g => g.Count == 2 && g.Contains(boxTurned) && g.Contains(boxFlat));
+                Assert.Contains(groups, g => g.Count == 2 && g.Contains(root) && g.Contains(nested));
+                Assert.Empty(RealtimeGI.SharedGroups(new Renderer[] { boxTurned, finer }));
+
+                // Layouts a few units in their last place apart agree; others do not.
+                var a = new[] { 0.25f, 0.5f, 0.75f, 0.125f };
+                var b = new[] { 0.25000003f, 0.5f, 0.75f, 0.12500001f };
+                var c = new[] { 0.25f, 0.5f, 0.5f, 0.125f };
+                Assert.True(RealtimeGI.LayoutsAgree(new[] { a, b }));
+                Assert.False(RealtimeGI.LayoutsAgree(new[] { a, b, c }));
+                Assert.False(RealtimeGI.LayoutsAgree(new[] { a, new[] { 0.25f } }));
             }
             finally
             {

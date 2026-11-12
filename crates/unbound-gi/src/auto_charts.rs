@@ -267,20 +267,27 @@ fn triangle_area(p: [V3; 3]) -> f32 {
 }
 
 impl Geometry<'_> {
-    /// Whether the plane faces as `normal` does, within the cosine. A cosine closer to the
-    /// limit than the rounding of the precompute's normals (and of its cosine of Max Angle)
-    /// could fall on the other side of it there: such a test marks the geometry ambiguous.
-    /// (A cosine all of whose terms are zero is zero in any arithmetic.)
-    fn faces(&self, plane: &Plane, normal: V3, cosine: f32) -> bool {
+    /// Whether the plane faces as `normal` does, within the cosine, and whether the cosine is
+    /// closer to the limit than the rounding of the precompute's normals (and of its cosine of
+    /// Max Angle), so that it could fall on the other side of it there. (A cosine all of whose
+    /// terms are zero is zero in any arithmetic.) The callers mark the geometry ambiguous where
+    /// such a test decides what is made.
+    fn facing(&self, plane: &Plane, normal: V3, cosine: f32) -> (bool, bool) {
         let n = plane.normal();
         let d = dot(n, normal);
         let terms = (n[0] * normal[0]).abs() + (n[1] * normal[1]).abs() + (n[2] * normal[2]).abs();
-        if terms > 0.0
-            && (d - cosine).abs() <= COSINE_ROUNDING * terms + 2.0 * f32::EPSILON * cosine.abs()
-        {
+        let near = terms > 0.0
+            && (d - cosine).abs() <= COSINE_ROUNDING * terms + 2.0 * f32::EPSILON * cosine.abs();
+        (d >= cosine, near)
+    }
+    /// `facing` where it decides alone: the geometry is marked ambiguous when the test is
+    /// near its limit.
+    fn faces(&self, plane: &Plane, normal: V3, cosine: f32) -> bool {
+        let (passes, near) = self.facing(plane, normal, cosine);
+        if near {
             self.ambiguous.set(true);
         }
-        d >= cosine
+        passes
     }
     /// The plane turned to face as `normal` does. A plane nearly across the normal fails the
     /// Max Angle test on either side, unless Max Angle is near or past a right angle: only then
@@ -534,9 +541,9 @@ fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
         if dot(plane.normal(), normal) < 0.0 {
             plane = plane.flipped();
         }
-        let flat = has_normal
-            && geometry.faces(&plane, normal, geometry.cosine)
-            && geometry.reach(index, &plane) <= geometry.max_distance;
+        let (facing, near) = geometry.facing(&plane, normal, geometry.cosine);
+        let within = geometry.reach(index, &plane) <= geometry.max_distance;
+        let flat = has_normal && facing && within;
         // The share of its area that faces away from its normal.
         let away: f32 = areas
             .iter()
@@ -545,6 +552,10 @@ fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
             .map(|(a, _)| *a)
             .sum();
         let two_sided = degenerate || (away as f64 / area) > SMALL_SHARE as f64;
+        // Whether the part is flat is the rounding's only where facing alone decides it.
+        if has_normal && within && !two_sided && near {
+            geometry.ambiguous.set(true);
+        }
         let group = &mut geometry.groups[index];
         group.plane = plane;
         group.candidate = flat && !two_sided;
@@ -645,8 +656,15 @@ fn on_plane(
         .copied()
         .filter(|g| !seeds.contains(g))
         .filter(|&g| {
-            geometry.faces(&plane, geometry.groups[g].normal, geometry.cosine)
-                && geometry.reach(g, plane) <= geometry.max_distance
+            let (facing, near) = geometry.facing(plane, geometry.groups[g].normal, geometry.cosine);
+            if !facing && !near {
+                return false;
+            }
+            let within = geometry.reach(g, plane) <= geometry.max_distance;
+            if within && near {
+                geometry.ambiguous.set(true);
+            }
+            facing && within
         })
         .collect()
 }
@@ -832,14 +850,21 @@ fn join(geometry: &Geometry) -> Result<Joined> {
                 continue;
             }
             let plane = geometry.oriented(geometry.fit(&[a, b]), na);
-            if !geometry.faces(&plane, na, geometry.cosine)
-                || !geometry.faces(&plane, nb, geometry.cosine)
-            {
+            let (fa, near_a) = geometry.facing(&plane, na, geometry.cosine);
+            let (fb, near_b) = geometry.facing(&plane, nb, geometry.cosine);
+            if !(fa || near_a) || !(fb || near_b) {
                 continue;
             }
             if geometry.reach(a, &plane) > geometry.max_distance
                 || geometry.reach(b, &plane) > geometry.max_distance
             {
+                continue;
+            }
+            // Within reach, a test near its limit decides whether the pair is tried.
+            if near_a || near_b {
+                geometry.ambiguous.set(true);
+            }
+            if !(fa && fb) {
                 continue;
             }
             let mut rest = on_plane(geometry, &candidates, &[a, b], &plane);
@@ -1223,9 +1248,14 @@ fn cosine_settled(a: V3, b: V3) -> bool {
 fn joins_at_right_angle(geometry: &Geometry, a: usize, b: usize) -> bool {
     let (na, nb) = (geometry.groups[a].normal, geometry.groups[b].normal);
     let fitted = geometry.fit(&[a, b]);
+    // (Whether a plane could face as each does: a test near its limit counts as passing.)
+    let could_face = |plane: &Plane, n: V3| {
+        let (passes, near) = geometry.facing(plane, n, geometry.cosine);
+        passes || near
+    };
     [fitted, fitted.flipped()].iter().any(|plane| {
-        geometry.faces(&plane, na, geometry.cosine)
-            && geometry.faces(&plane, nb, geometry.cosine)
+        could_face(plane, na)
+            && could_face(plane, nb)
             && geometry.reach(a, plane) <= geometry.max_distance
             && geometry.reach(b, plane) <= geometry.max_distance
     })
@@ -1833,6 +1863,49 @@ mod tests {
             auto_charts(&shelf.mesh(), &LIMITS).unwrap().triangles.len(),
             1
         );
+    }
+
+    /// A roof whose two sides lean exactly Max Angle from the plane between them, out of reach
+    /// of it: the facing tests at the limit decide nothing, and the sides are two charts.
+    #[test]
+    fn a_test_at_the_angle_limit_out_of_reach_decides_nothing() {
+        let (sin, cos) = 30.0f32.to_radians().sin_cos();
+        let mut roof = Shape::default();
+        roof.quad(
+            [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 2.0],
+                [cos, -sin, 2.0],
+                [cos, -sin, 0.0],
+            ],
+            [sin, cos, 0.0],
+        );
+        roof.quad(
+            [
+                [0.0, 0.0, 0.0],
+                [-cos, -sin, 0.0],
+                [-cos, -sin, 2.0],
+                [0.0, 0.0, 2.0],
+            ],
+            [-sin, cos, 0.0],
+        );
+        let limits = |max_distance: f32| Params {
+            max_distance,
+            max_angle: 30.0,
+            ..LIMITS
+        };
+        // The eaves are sin(30) / 2 = 0.25 from the plane between the sides.
+        assert_eq!(
+            auto_charts(&roof.mesh(), &limits(0.2))
+                .unwrap()
+                .triangles
+                .len(),
+            2
+        );
+        let error = auto_charts(&roof.mesh(), &limits(0.3))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("Max Angle limit"), "{error}");
     }
 
     /// A cosine of normals far from zero against its terms has the precompute's sign; one of

@@ -207,7 +207,7 @@ namespace UnityEngine
             }
             var all = new List<Renderer>();
             foreach (var system in systems) all.AddRange(system.Renderers);
-            var unshared = UnsharedRenderers(all);
+            var unshared = UnsharedRenderers(loaded, all, settings != null ? settings.indirectResolution : 2f);
             for (int index = 0; index < systems.Count; index++)
             {
                 var system = systems[index];
@@ -687,8 +687,8 @@ namespace UnityEngine
         /// resolution, fail that check). A renderer with Preserve UVs keeps its mesh's lightmap
         /// UV charts; one without (Optimize Realtime UVs in the Inspector) gets the charts the
         /// precompute makes within its Max Distance and Max Angle, unless it is one of
-        /// <paramref name="unshared"/> (<see cref="UnsharedRenderers"/>). Returns why they could
-        /// not be made, or null.</summary>
+        /// <paramref name="unshared"/> (renderers sharing a geometry whose layouts depend on which
+        /// of their matrices it is made of). Returns why they could not be made, or null.</summary>
         static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings, HashSet<Renderer> unshared)
         {
             float resolution = settings != null ? settings.indirectResolution : 2f;
@@ -699,73 +699,8 @@ namespace UnityEngine
                 var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
                 if (mesh == null) return $"'{renderer.name}' has no mesh";
                 if (automatic && AutomaticChartsRefusal(renderer, mesh, unshared) is string refusal) return refusal;
-                for (int sub = 0; sub < mesh.subMeshCount; sub++)
-                    if (mesh.GetTopology(sub) != MeshTopology.Triangles) return $"'{renderer.name}' has a submesh of {mesh.GetTopology(sub)}";
-                float scale = renderer.scaleInLightmap * resolution;
-                if (!(scale > 0f)) return $"'{renderer.name}' has no realtime lightmap resolution";
+                if (MakeUVs(scene, index, r, renderer, mesh, resolution, out var output) is string failure) return failure;
                 var vertices = mesh.vertices;
-                // The input of realtime lightmap UVs is Mesh.uv3 when the mesh has it, else the
-                // baked lightmap UVs (Mesh.uv2), else Mesh.uv (Unity 6000.0 Manual, "Generate
-                // lightmap UVs"; tests/projects/realtimegi RoomCharts, Channels).
-                var source = mesh.uv3;
-                if (source.Length != vertices.Length) source = mesh.uv2;
-                if (source.Length != vertices.Length) source = mesh.uv;
-                if (source.Length != vertices.Length) return $"'{renderer.name}' has no lightmap UVs";
-                var matrix = renderer.transform.localToWorldMatrix;
-                var positions = new float[3 * vertices.Length];
-                var uvs = new float[2 * vertices.Length];
-                float[] shading = null;
-                float[] instance = null;
-                if (automatic)
-                {
-                    // The precompute's charts are made of the mesh under the instance's
-                    // rotation and scale without its world rotation (WorldScale), which the
-                    // native side applies as the precompute does.
-                    instance = WorldScale(renderer.transform);
-                    var normals = mesh.normals;
-                    shading = new float[3 * vertices.Length];
-                    for (int v = 0; v < vertices.Length; v++)
-                    {
-                        positions[3 * v] = vertices[v].x; positions[3 * v + 1] = vertices[v].y; positions[3 * v + 2] = vertices[v].z;
-                        shading[3 * v] = normals[v].x; shading[3 * v + 1] = normals[v].y; shading[3 * v + 2] = normals[v].z;
-                        uvs[2 * v] = source[v].x; uvs[2 * v + 1] = source[v].y;
-                    }
-                }
-                else
-                {
-                    for (int v = 0; v < vertices.Length; v++)
-                    {
-                        var p = matrix.MultiplyPoint3x4(vertices[v]);
-                        positions[3 * v] = p.x; positions[3 * v + 1] = p.y; positions[3 * v + 2] = p.z;
-                        uvs[2 * v] = source[v].x; uvs[2 * v + 1] = source[v].y;
-                    }
-                }
-                var triangles = mesh.triangles;
-                var output = new float[2 * vertices.Length];
-                NativeBuffer error;
-                int status;
-                fixed (float* pp = positions)
-                fixed (float* np = shading)
-                fixed (float* mp = instance)
-                fixed (float* up = uvs)
-                fixed (int* tp = triangles)
-                fixed (float* op = output)
-                    status = automatic
-                        ? Native.Api.GiAutomaticUvs(scene.Handle, index, r, pp, np, up, vertices.Length, (uint*)tp, triangles.Length,
-                            1f / scale, renderer.m_MinimumChartSize, renderer.m_AutoUVMaxDistance, renderer.m_AutoUVMaxAngle,
-                            renderer.m_IgnoreNormalsForChartDetection ? 1 : 0, mp, op, &error)
-                        : Native.Api.GiRealtimeUvs(scene.Handle, index, r, pp, up, vertices.Length, (uint*)tp, triangles.Length,
-                            1f / scale, renderer.m_MinimumChartSize, op, &error);
-                if (status != 0)
-                {
-                    string message;
-                    try { message = error.Length > 0 ? System.Text.Encoding.UTF8.GetString(error.Data, (int)error.Length) : "unknown error"; }
-                    finally { Native.Free(error); }
-                    // Lightmap Parameters of its own may change its charts (their resolution, say).
-                    if (OwnParameters(renderer.m_LightmapParameters))
-                        message += " (the renderer has Lightmap Parameters of its own)";
-                    return $"'{renderer.name}': {message}";
-                }
                 var realtime = new List<Vector2>(vertices.Length);
                 for (int v = 0; v < vertices.Length; v++) realtime.Add(new Vector2(output[2 * v], output[2 * v + 1]));
                 Mesh stream;
@@ -775,6 +710,83 @@ namespace UnityEngine
                 stream.SetUVs(2, realtime);
                 renderer.enlightenVertexStream = stream;
                 system.Streams.Add(stream);
+            }
+            return null;
+        }
+
+        /// <summary>Renderer <paramref name="r"/> of system <paramref name="index"/>'s realtime
+        /// lightmap UVs (2 floats a vertex) into <paramref name="output"/>; why they could not be
+        /// made, or null.</summary>
+        static unsafe string MakeUVs(GIScene scene, int index, int r, MeshRenderer renderer, Mesh mesh, float resolution, out float[] output)
+        {
+            output = null;
+            bool automatic = MakesAutomaticCharts(renderer);
+            for (int sub = 0; sub < mesh.subMeshCount; sub++)
+                if (mesh.GetTopology(sub) != MeshTopology.Triangles) return $"'{renderer.name}' has a submesh of {mesh.GetTopology(sub)}";
+            float scale = renderer.scaleInLightmap * resolution;
+            if (!(scale > 0f)) return $"'{renderer.name}' has no realtime lightmap resolution";
+            var vertices = mesh.vertices;
+            // The input of realtime lightmap UVs is Mesh.uv3 when the mesh has it, else the
+            // baked lightmap UVs (Mesh.uv2), else Mesh.uv (Unity 6000.0 Manual, "Generate
+            // lightmap UVs"; tests/projects/realtimegi RoomCharts, Channels).
+            var source = mesh.uv3;
+            if (source.Length != vertices.Length) source = mesh.uv2;
+            if (source.Length != vertices.Length) source = mesh.uv;
+            if (source.Length != vertices.Length) return $"'{renderer.name}' has no lightmap UVs";
+            var matrix = renderer.transform.localToWorldMatrix;
+            var positions = new float[3 * vertices.Length];
+            var uvs = new float[2 * vertices.Length];
+            float[] shading = null;
+            float[] instance = null;
+            if (automatic)
+            {
+                // The precompute's charts are made of the mesh under the instance's
+                // rotation and scale without its world rotation (WorldScale), which the
+                // native side applies as the precompute does.
+                instance = WorldScale(renderer.transform);
+                var normals = mesh.normals;
+                shading = new float[3 * vertices.Length];
+                for (int v = 0; v < vertices.Length; v++)
+                {
+                    positions[3 * v] = vertices[v].x; positions[3 * v + 1] = vertices[v].y; positions[3 * v + 2] = vertices[v].z;
+                    shading[3 * v] = normals[v].x; shading[3 * v + 1] = normals[v].y; shading[3 * v + 2] = normals[v].z;
+                    uvs[2 * v] = source[v].x; uvs[2 * v + 1] = source[v].y;
+                }
+            }
+            else
+            {
+                for (int v = 0; v < vertices.Length; v++)
+                {
+                    var p = matrix.MultiplyPoint3x4(vertices[v]);
+                    positions[3 * v] = p.x; positions[3 * v + 1] = p.y; positions[3 * v + 2] = p.z;
+                    uvs[2 * v] = source[v].x; uvs[2 * v + 1] = source[v].y;
+                }
+            }
+            var triangles = mesh.triangles;
+            output = new float[2 * vertices.Length];
+            NativeBuffer error;
+            int status;
+            fixed (float* pp = positions)
+            fixed (float* np = shading)
+            fixed (float* mp = instance)
+            fixed (float* up = uvs)
+            fixed (int* tp = triangles)
+            fixed (float* op = output)
+                status = automatic
+                    ? Native.Api.GiAutomaticUvs(scene.Handle, index, r, pp, np, up, vertices.Length, (uint*)tp, triangles.Length,
+                        1f / scale, renderer.m_MinimumChartSize, renderer.m_AutoUVMaxDistance, renderer.m_AutoUVMaxAngle,
+                        renderer.m_IgnoreNormalsForChartDetection ? 1 : 0, mp, op, &error)
+                    : Native.Api.GiRealtimeUvs(scene.Handle, index, r, pp, up, vertices.Length, (uint*)tp, triangles.Length,
+                        1f / scale, renderer.m_MinimumChartSize, op, &error);
+            if (status != 0)
+            {
+                string message;
+                try { message = error.Length > 0 ? System.Text.Encoding.UTF8.GetString(error.Data, (int)error.Length) : "unknown error"; }
+                finally { Native.Free(error); }
+                // Lightmap Parameters of its own may change its charts (their resolution, say).
+                if (OwnParameters(renderer.m_LightmapParameters))
+                    message += " (the renderer has Lightmap Parameters of its own)";
+                return $"'{renderer.name}': {message}";
             }
             return null;
         }
@@ -845,48 +857,100 @@ namespace UnityEngine
             return Product(RotationScaled(new Quaternion(-x, -y, -z, w), Vector3.one), scaled);
         }
 
-        /// <summary>The renderers with Optimize Realtime UVs among <paramref name="renderers"/>
-        /// that share their mesh and their instance matrix rounded to thousandths
-        /// (<see cref="WorldScale"/>) with one whose matrix is not the same to the last bit. The
-        /// precompute makes one geometry for such renderers (Unity 6000.0 Manual, "Introduction
-        /// to lightmap UVs": "Mesh Renderers that use the same mesh with the same scale and
-        /// lightmap resolution share the same UVs"; in a scratch bake an unturned cube took the
-        /// charts of one with its scale turned (20, 40, 10)), from the matrix of one of them,
-        /// which may be one cached by an earlier bake: which one is not known.</summary>
-        internal static HashSet<Renderer> UnsharedRenderers(IEnumerable<Renderer> renderers)
+        /// <summary>The groups of renderers with Optimize Realtime UVs among
+        /// <paramref name="renderers"/> that the precompute makes one geometry for, from the
+        /// matrix of one of them, and whose instance matrices (<see cref="WorldScale"/>) are not
+        /// all the same to the last bit. Renderers of one mesh and chart settings share a
+        /// geometry when their matrices agree once each entry is taken to thousandths as the
+        /// precompute does (adding half and dropping the fraction); the Manual says as much of
+        /// renderers of "the same mesh with the same scale" ("Introduction to lightmap UVs"),
+        /// and in a scratch bake an unturned cube took the charts of one of its scale turned
+        /// (20, 40, 10). Which of the matrices it is made of, one cached by an earlier bake among
+        /// them, is not known.</summary>
+        internal static List<List<MeshRenderer>> SharedGroups(IEnumerable<Renderer> renderers)
         {
-            var groups = new Dictionary<(Mesh, string), List<(MeshRenderer, float[])>>();
+            var groups = new Dictionary<string, List<(MeshRenderer, float[])>>();
             foreach (var r in renderers)
             {
                 if (!(r is MeshRenderer renderer) || !MakesAutomaticCharts(renderer)) continue;
                 var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
                 if (mesh == null) continue;
                 var matrix = WorldScale(renderer.transform);
-                var rounded = new int[9];
-                for (int k = 0; k < 9; k++) rounded[k] = (int)(matrix[k] * 1000f + 0.5f);
-                var key = (mesh, string.Join(",", rounded));
-                if (!groups.TryGetValue(key, out var list)) groups[key] = list = new List<(MeshRenderer, float[])>();
+                var key = new System.Text.StringBuilder();
+                key.Append(mesh.GetInstanceID()).Append('|').Append(renderer.scaleInLightmap).Append('|')
+                    .Append(renderer.m_MinimumChartSize).Append('|').Append(renderer.m_AutoUVMaxDistance).Append('|')
+                    .Append(renderer.m_AutoUVMaxAngle).Append('|').Append(renderer.m_IgnoreNormalsForChartDetection);
+                foreach (var m in matrix) key.Append('|').Append((int)(m * 1000f + 0.5f));
+                var id = key.ToString();
+                if (!groups.TryGetValue(id, out var list)) groups[id] = list = new List<(MeshRenderer, float[])>();
                 list.Add((renderer, matrix));
             }
-            var unshared = new HashSet<Renderer>();
+            var shared = new List<List<MeshRenderer>>();
             foreach (var list in groups.Values)
             {
                 bool same = true;
                 for (int i = 1; i < list.Count; i++) same &= list[i].Item2.AsSpan().SequenceEqual(list[0].Item2);
-                if (!same) foreach (var (renderer, _) in list) unshared.Add(renderer);
+                if (same) continue;
+                var members = new List<MeshRenderer>();
+                foreach (var (renderer, _) in list) members.Add(renderer);
+                shared.Add(members);
+            }
+            return shared;
+        }
+
+        /// <summary>Whether realtime lightmap UVs made from the matrices of renderers that share
+        /// a geometry lay it out alike, whichever of them the precompute made it of: the same to
+        /// a hundred-thousandth of the renderers' UV space (matrices a few units in their last
+        /// place apart do).</summary>
+        internal static bool LayoutsAgree(IReadOnlyList<float[]> layouts)
+        {
+            for (int i = 1; i < layouts.Count; i++)
+            {
+                if (layouts[i].Length != layouts[0].Length) return false;
+                for (int k = 0; k < layouts[0].Length; k++)
+                    if (!(MathF.Abs(layouts[i][k] - layouts[0][k]) <= SharedLayoutTolerance)) return false;
+            }
+            return true;
+        }
+
+        const float SharedLayoutTolerance = 1e-5f;
+
+        /// <summary>The renderers of <see cref="SharedGroups"/> whose layouts differ by the
+        /// matrix they are made of (<see cref="LayoutsAgree"/>): which one the precompute used is
+        /// not known, so none of them is made.</summary>
+        static HashSet<Renderer> UnsharedRenderers(GIScene scene, IEnumerable<Renderer> renderers, float resolution)
+        {
+            var unshared = new HashSet<Renderer>();
+            foreach (var group in SharedGroups(renderers))
+            {
+                var layouts = new List<float[]>();
+                foreach (var renderer in group)
+                {
+                    var mesh = renderer.GetComponent<MeshFilter>().sharedMesh;
+                    // A renderer that cannot be made says why in its own system.
+                    if (!s_Renderers.TryGetValue(renderer, out var at) || at.Scene != scene
+                        || MakeUVs(scene, at.System, at.Index, renderer, mesh, resolution, out var output) != null)
+                    {
+                        layouts = null;
+                        break;
+                    }
+                    layouts.Add(output);
+                }
+                if (layouts != null && !LayoutsAgree(layouts)) unshared.UnionWith(group);
             }
             return unshared;
         }
 
         /// <summary>Why the charts of a renderer with Optimize Realtime UVs are not made, or
         /// null: what is not measured (a zero or mirrored scale up the hierarchy, no normals),
-        /// and a renderer of <paramref name="unshared"/> (<see cref="UnsharedRenderers"/>).
+        /// and a renderer of <paramref name="unshared"/> (renderers sharing a geometry whose
+        /// layouts depend on which of their matrices it is made of).
         /// (Renderers with the same mesh and instance matrix share their charts:
         /// tests/projects/realtimegi RoomTurned, SharedTurned and SharedFlat.)</summary>
         internal static string AutomaticChartsRefusal(MeshRenderer renderer, Mesh mesh, HashSet<Renderer> unshared)
         {
             if (unshared.Contains(renderer))
-                return $"'{renderer.name}' has Optimize Realtime UVs and shares its mesh and its rounded instance matrix with a renderer turned otherwise (the precompute makes one set of charts for both, from the geometry of one of them: which is not known)";
+                return $"'{renderer.name}' has Optimize Realtime UVs and shares its mesh and its rounded instance matrix with a renderer turned otherwise whose charts would be laid out otherwise (the precompute makes one set of charts for both, from the geometry of one of them: which is not known)";
             var size = renderer.transform.lossyScale;
             if (!(size.x > 0f && size.y > 0f && size.z > 0f))
                 return $"'{renderer.name}' has Optimize Realtime UVs and a scale of {size} (a zero or mirrored scale is not measured)";
