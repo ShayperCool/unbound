@@ -395,10 +395,12 @@ namespace Unbound.Runtime
             float half = cs * 0.5f;
             foreach (var (min, max, area) in g.Modifiers)
                 RcAreas.MarkBoxArea(ctx, new[] { min.x + half, min.y, min.z + half }, new[] { max.x - half, max.y, max.z - half }, new RcAreaModification(area), chf);
-            // Monotone regions left unmerged and Recast's 1.3-voxel contour error give the Editor's
-            // polygons (measured against a baked level: its strips keep their vertices on the borders).
+            // Keep monotone strips, but allow a one-cell region to join a compatible neighbour
+            // (Unity 6000.0.71f1, tests/projects/navmesh build.bounds.translated).
+            // Larger regions keep their boundaries where they meet a tile border.
             int minRegion = (int)(settings.minRegionArea / (cs * cs));
-            RcRegions.BuildRegionsMonotone(ctx, chf, minRegion, 0);
+            int mergeRegionCells = Compat.NavMeshRegionMergingMeasured ? 1 : 0;
+            RcRegions.BuildRegionsMonotone(ctx, chf, minRegion, mergeRegionCells);
             var cset = RcContours.BuildContours(ctx, chf, 1.3f, 0, RcBuildContoursFlags.RC_CONTOUR_TESS_WALL_EDGES);
             if (cset.conts.Count == 0) return null;
             var pmesh = RcMeshs.BuildPolyMesh(ctx, cset, DtDetour.DT_VERTS_PER_POLYGON);

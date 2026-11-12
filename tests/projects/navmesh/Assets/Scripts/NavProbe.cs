@@ -214,7 +214,7 @@ public class NavProbe : MonoBehaviour
 
     static void BuildBoundsControls()
     {
-        foreach (string kind in new[] { "padded", "tight", "clipped", "translated", "modifier", "degenerate" })
+        foreach (string kind in new[] { "padded", "tight", "clipped", "translated", "modifier", "degenerate", "translated.negative", "translated.swap", "translated.elevated" })
             Scenario("build.bounds." + kind, () => BuildBoundsControl(kind));
     }
 
@@ -222,7 +222,11 @@ public class NavProbe : MonoBehaviour
     {
         var surface = FindFirstObjectByType<NavMeshSurface>();
         surface.RemoveData();
-        var offset = kind == "translated" ? new Vector3(1.37f, 0f, -2.19f) : Vector3.zero;
+        var offset = kind == "translated" ? new Vector3(1.37f, 0f, -2.19f)
+            : kind == "translated.negative" ? new Vector3(-1.37f, 0f, 2.19f)
+            : kind == "translated.swap" ? new Vector3(-2.19f, 0f, 1.37f)
+            : kind == "translated.elevated" ? new Vector3(1.37f, 2.4f, -2.19f)
+            : Vector3.zero;
         var sources = new List<NavMeshBuildSource>
         {
             new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(12f, 0.4f, 10f), transform = Matrix4x4.Translate(offset + new Vector3(-2f, -0.2f, -1f)), area = 0 },

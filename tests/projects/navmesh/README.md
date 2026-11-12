@@ -49,19 +49,21 @@ type, vertices, then the links as `neighbour:edge`) to `<path>.<agent type>.txt`
 target and next position in full precision for the first frames (in both engines, for working on
 the agents; the reference does not have them).
 
-Q375 runtime-build correction, Unity 6000.0.71f1:
+Q376 and Q385 runtime-build corrections, Unity 6000.0.71f1:
 
 - Clip the horizontal build footprint to the source geometry before rounding to
   voxels. Padding beyond the sources previously allocated an extra voxel around
   `build.surface`, shifting its contour vertices and triangles. All 110 values
   now match, including the 241 vertices and 321 indices. `build.sources` remains
   101/101, including 193 vertices and 249 indices.
-- `build.bounds.*` adds padded, tight, clipped and translated source controls,
-  an oversized modifier and a zero-area mesh. Five controls match. The translated
-  control retains 36 differing values, including 70 versus 73 vertices and
-  96 versus 99 indices. It already differs with the previous implementation;
-  the footprint correction does not resolve its geometry. This discrepancy stays
-  visible in the full comparator.
+- `build.bounds.*` covers padded, tight, clipped and translated sources, an
+  oversized modifier and a zero-area mesh. Q385 allows a one-cell monotone region
+  to merge into a compatible neighbour, including at a tile border. This removes
+  the translated floor's extra triangle: all 35 values now match, with 70 vertices
+  and 96 indices. All nine bounds controls match, including negative, swapped-axis
+  and elevated translations. The merge threshold is selected through Compat for
+  6000.0.71f1; other releases retain the previous zero-cell threshold, unmeasured
+  there. Runtime height-mesh generation remains a separate unsupported feature.
 - `BuildSurface` restores the committed baked data before creating the agents.
   All existing agent records are unchanged by the correction. The 238 differing
   frame scenarios have distinct first divergences: climber at 13, right at 17,
@@ -71,9 +73,17 @@ Q375 runtime-build correction, Unity 6000.0.71f1:
   Path status agrees; corner counts differ in seven records: blocked on frames
   191 through 195, climber on 208, and right on 241.
 
-Two new GPU Editor captures are byte-identical, including six added controls;
-every pre-existing reference record is unchanged. The full comparator reports
-239 differing scenarios: 238 baked-agent frames and the new translated build
-control. No comparator or tolerance changed.
+Two new GPU Editor captures are byte-identical, including the three additional
+translation controls. Removing only those new scenario blocks restores the
+previous reference bytes exactly. The full comparator reports 238 differing
+scenarios, all restored-baked-mesh agent frames. No comparator or tolerance changed.
 [BuildNavMeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshBuilder.BuildNavMeshData.html)
 documents sources and local build bounds; it does not specify polygon layout.
+
+The full-precision agent trace keeps distinct causes visible. Climber's planned
+velocity has a vertical component where the Editor's is horizontal before frame
+13. Right's plan differs before its first rounded position difference at 17.
+Walker changes its planned avoidance velocity one frame earlier, at 32 instead of 33. Blocked
+advances its steering target later despite matching positions at 191. These are
+observations in this capture, not a general timing or projection rule; the rounded
+records and their original tolerances stay unchanged.

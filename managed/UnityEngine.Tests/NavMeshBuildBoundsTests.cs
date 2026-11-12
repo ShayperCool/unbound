@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.AI;
+using Unbound.Runtime;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -45,6 +46,42 @@ namespace UnityEngine.Tests
                 Assert.Equal(requested, data.sourceBounds);
             }
             finally { Object.DestroyImmediate(data); }
+        }
+
+        [Theory]
+        [InlineData("6000.0.71f1", 0f, 70)]
+        [InlineData("6000.0.71f1", 2.4f, 70)]
+        [InlineData("6000.0.72f1", 0f, 73)]
+        public void OneCellBorderRegionsJoinTheirNeighbourInMeasuredRelease(string release, float height, int vertices)
+        {
+            string previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = release;
+            var offset = new Vector3(1.37f, height, -2.19f);
+            var sources = new List<NavMeshBuildSource>
+            {
+                Floor(offset),
+                new NavMeshBuildSource
+                {
+                    shape = NavMeshBuildSourceShape.Box,
+                    size = new Vector3(2f, 3f, 4f),
+                    transform = Matrix4x4.TRS(offset + new Vector3(-2f, 1.5f, -1f), Quaternion.Euler(0f, 23f, 0f), Vector3.one),
+                },
+            };
+            NavMeshData data = null;
+            try
+            {
+                data = Build(sources, new Bounds(offset + new Vector3(-2f, 0f, -1f), new Vector3(24f, 8f, 20f)));
+                // The extra region adds a triangle to the floor at the rotated box's corner.
+                // Unity 6000.0.71f1, navmesh build.bounds.translated and translated.elevated.
+                Assert.Equal(vertices, data.m_Tiles.Sum(t => t.polys.Take(t.header.polyCount).Sum(poly => poly.vertCount)));
+                Assert.All(data.m_Tiles, tile => Assert.All(tile.polys.Take(tile.header.polyCount),
+                    poly => Assert.InRange(poly.vertCount, 3, 6)));
+            }
+            finally
+            {
+                if (data != null) Object.DestroyImmediate(data);
+                ProjectInfo.UnityVersion = previous;
+            }
         }
 
         [Fact]
