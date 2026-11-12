@@ -216,3 +216,44 @@ field at the existing tolerances; all remaining raw discrepancies stay visible.
 | `turn` | 3 | 1 | 114 | hp |
 | `warpauto` | 1 | 1 | 85 | stale |
 | `warpwait` | 1 | 1 | 92 | stale |
+
+Q401 reports `hasPath` and `steeringTarget` from the corners found again after each
+walking step. Leading corners within a centimetre of the agent in the ground plane are
+dropped, the path's end included, unless they start a link. `hasPath` is true while
+such corners remain, while the corridor holds more than one polygon, or while the
+agent is on a link. An agent reaching a link finds no corners until it walks through
+an update again. On the update it lands, automatically or by `CompleteOffMeshLink`, a
+corridor of one polygon therefore reports no path, and `steeringTarget` is the
+corridor's end. A step ending within a centimetre of a corner moves `steeringTarget`
+to the next corner in that update. Movement still steers by the corners found before
+the step; only these reports change.
+
+[hasPath](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-hasPath.html)
+documents only whether a path to the destination exists.
+[steeringTarget](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-steeringTarget.html)
+documents the next corner or the path's end, and the link's entry and exit positions.
+The landing update and the one-centimetre corner change are observations for
+6000.0.71f1, selected through `Compat.NavMeshCorridorReportingMeasured`. Other releases
+keep their previous reports, unmeasured there.
+
+The previous 374 failing values fall to 325 (Mac engine run against the unchanged
+reference). The single `hp` value at the landing frame of 29 lanes now matches; `crosstile`, `endatlink`, `completeauto` and `redirectmid` also lose values.
+`costhigh` (7) and `areamask` (61 -> 54) no longer differ in `st` at frame 75. No
+previously passing value fails. The same report rule takes the avoidance probe from 34
+differing configurations to 3. Its records include `steeringTarget`. Remaining cases
+and their first differing frames:
+
+| Case | After Q401 | First differing frame | First field |
+| --- | ---: | ---: | --- |
+| `crosstile` | 118 | 103 | c[0][0], n[0], p[0], rd, v[0], v[2] |
+| `endatlink` | 81 | 1 | c |
+| `areamask` | 54 | 102 | dv[0], dv[2] |
+| `waitrebuild.alreadywait.disabled` | 31 | 20 | c, dst[0], nxt.e[0], nxt.e[2], nxt.owner, nxt.s[0], nxt.s[2], nxt.valid, pe[0], ps, rd |
+| `waitrebuild.disabled` | 28 | 8 | c, dst[0], nxt.e[0], nxt.e[2], nxt.owner, nxt.s[0], nxt.s[2], nxt.valid, pe[0], ps, rd |
+| `redirectmid` | 4 | 85 | c, hp, pe[0], rd |
+| `completeauto` | 3 | 85 | dv[0], n[1] |
+| `disableagent` | 2 | 102 | v[0] |
+| `resetmid` | 1 | 85 | dv[0] |
+| `targets` | 1 | 130 | stale |
+| `warpauto` | 1 | 85 | stale |
+| `warpwait` | 1 | 92 | stale |

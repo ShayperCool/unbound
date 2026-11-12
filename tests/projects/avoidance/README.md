@@ -57,3 +57,11 @@ in navpath remains at 17 values. The new prediction and finite-input controls ar
 recorded after the original agents in navmesh; its two GPU Editor repeats agree
 and preserve every earlier reference row. Other releases retain point insertion
 and previous input handling through Compat, unmeasured there.
+
+Q401, Unity 6000.0.71f1: the recorded steering target is the first corner found
+after the step; a corner within a centimetre of where the step ends is dropped.
+Moving, overlap and 16 of 17 speed configurations now match, and near falls from
+10 to 2. Three configurations remain, two near and one speeds. Each differs only in
+the steering target of its second frame: Unity reports an intermediate corner at
+x = 42.67, Unbound the destination at x = 50. No newly failing record is
+introduced (Mac engine run against the unchanged references).
