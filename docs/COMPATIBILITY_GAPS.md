@@ -219,11 +219,12 @@ The Q349 UI Toolkit work adds uitkvector (new: 69 of 69 values; both panel image
 the limits of its `image_limits.json`): SVG files imported by the `com.unity.vectorgraphics`
 2.0.0-preview.25 package's own ScriptedImporter and drawn as backgrounds, `Image` elements
 and through `MeshGenerationContext.DrawVectorImage`, where Unbound warned once and drew
-nothing before. Uitkpainter compares all 140 meshes with no open case (the three curve cases
-without length were open before, and seven such meshes are added). Uxmlattributes matches
-1099 of 1099 values (1074 before): a list item whose file id names no object of a project
-ScriptedImporter's asset is empty without a message, as in the Editor. The image limits
-keep two residuals visible (a gradient stroke the package computes as NaN, and seam pixels
+nothing before. Uitkpainter matches all 140 of its checks (118 meshes, 19 API and state
+lines, 3 images; 133 before) with no open case: the three curve cases without length were
+open before, and seven such meshes are added. Uxmlattributes matches 1099 of 1099 values
+(1074 before): a list item whose file id names no object of a project ScriptedImporter's
+asset is null without a message, as in the Editor. The image limits keep two residuals
+visible (a gradient-stroked line whose gradient coordinates the package computes as NaN, and seam pixels
 the Editor samples from its UI Toolkit dynamic atlas). Open, in the rows `UI Toolkit
 VectorImage drawing and SVG import` and `UI Toolkit runtime stubs`: the importer's sprite and
 texture outputs (the import fails with a warning), the 2D Sprite package's Editor hooks, the
