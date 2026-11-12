@@ -495,6 +495,9 @@ class Gate:
                     elif token.startswith('--only='):
                         selection = token.split('=', 1)[1]
                 names.update(selection.split(',') if selection and re.fullmatch(r'[A-Za-z0-9_.-]+(?:,[A-Za-z0-9_.-]+)*', selection) else specs)
+            elif 'tools/agents/suite.py' in probe:
+                # Shell-wrapped suites may select any declared exclusive recipe.
+                names.update(specs)
             exclusive = any(specs.get(name, {}).get('exclusive', False) for name in names)
             command = probe
             owners = self.probe_owners[index-1] if self.probe_owners else []

@@ -200,7 +200,8 @@ and finishes before later drivers start. A suite selecting an exclusive probe is
 within a suite, exclusive probes run alone between concurrent groups. These barriers apply to
 commands in that gate or suite, not unrelated jobs already admitted by the heavy-job pool.
 Commands must name their `tests/projects/<probe>` path, match a declared command verbatim, or use
-a direct `suite.py` invocation so the gate can identify this metadata.
+a direct `suite.py` invocation so the gate can identify this metadata. Shell-wrapped suite
+commands conservatively form a barrier whenever an exclusive recipe could be selected.
 
 The initial resource audit marked the following recipes:
 

@@ -305,10 +305,11 @@ raise SystemExit(int(code))
         (project/'gate.json').write_text('{"exclusive":true,"commands":["custom-driver"]}')
         self.gate.probes = ['custom-driver', 'python3 tools/agents/suite.py --only private,ordinary',
                             'python3 tools/agents/suite.py --only private # --only ordinary',
-                            'python3 tools/agents/suite.py --only=`printf private`', 'ordinary']
+                            'python3 tools/agents/suite.py --only=`printf private`',
+                            'python3 tools/agents/suite.py --only private && true', 'ordinary']
         with mock.patch.object(self.gate, 'step', return_value=0):
             self.gate.run_probes()
-        self.assertEqual(self.gate.log.read_text().count('(exclusive)'), 4)
+        self.assertEqual(self.gate.log.read_text().count('(exclusive)'), 5)
         import suite
         (project/'gate.json').write_text('{"exclusive":true}')
         self.assertNotIsInstance(suite.declared('private', land.default_release(), self.root/'tests/projects'), suite.NoRecipe)
