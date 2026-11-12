@@ -115,11 +115,18 @@ def verify(candidate, safe_append_skip=False):
                 'NotSupportedException: Unbound: side-by-side stereo clipping without an XR device is not supported.'
                 or act.get(stereo + '.pixels') != ref.get('device.stereo.0.pixels')):
             return code or 1
+    # The instances a multiplier adds read zero in Unbound, the Editor's what an earlier call
+    # left in its instance buffer: the call's own two colors must still match.
+    stale = 'device.multiplier.stale.colors.2.pixels'
+    if stale in ref:
+        expected.add(stale)
+        if act.get(stale) != ref.get('device.multiplier.placed.colors.2.pixels'):
+            return code or 1
     if (differences == expected
             and act.get('uav.append.nocounter') == [0xAAAA0000] * 48
             and 'uav.append.nocounter.log' not in act
             and warning in (candidate.parent/'engine.log').read_text()):
-        print('gate: safe Append skip and explicit unsupported stereo clipping verified; raw differences remain above')
+        print('gate: safe Append skip, explicit unsupported stereo clipping and zero added mesh instance data verified; raw differences remain above')
         return 0
     return code or 1
 

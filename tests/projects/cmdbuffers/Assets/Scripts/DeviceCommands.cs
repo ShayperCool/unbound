@@ -89,8 +89,27 @@ public partial class CmdBuffersProbe
             camera.Render();
             Value("device.multiplier.camera.colors." + multiplier + ".pixels", Read(image));
         }
+        using (var set = new CommandBuffer()) { set.SetInstanceMultiplier(2); Graphics.ExecuteCommandBuffer(set); }
+        Graphics.DrawMeshInstanced(quad, 0, byId, matrices, 2, null, ShadowCastingMode.Off, false, 0, camera);
+        camera.Render();
+        Value("device.multiplier.camera.drawIds.2.pixels", Read(image));
         using (var set = new CommandBuffer()) { set.SetInstanceMultiplier(1); Graphics.ExecuteCommandBuffer(set); }
         UnityEngine.Object.DestroyImmediate(go);
+        // Last: a call of four instances first writes the elements the multiplied call of two
+        // after it reads past its own.
+        var four = new MaterialPropertyBlock();
+        four.SetVectorArray("_Color", new[] { Rgb(200, 20, 40), Rgb(30, 180, 50), Rgb(40, 60, 210), Rgb(220, 200, 70) });
+        using (var stale = new CommandBuffer())
+        {
+            stale.SetRenderTarget(image);
+            stale.DrawMeshInstanced(quad, 0, byColor, 0, matrices, 4, four);
+            stale.ClearRenderTarget(false, true, Color.clear);
+            stale.SetInstanceMultiplier(2);
+            stale.DrawMeshInstanced(quad, 0, byColor, 0, matrices, 2, two);
+            stale.SetInstanceMultiplier(1);
+            Graphics.ExecuteCommandBuffer(stale);
+        }
+        Value("device.multiplier.stale.colors.2.pixels", Read(image));
     }
 
     void DeviceCommands()
