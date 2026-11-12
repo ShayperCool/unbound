@@ -1,10 +1,10 @@
 {
   "vector-1.png": {
-    "mean": 0.17, "worst": 84, "over8": 1744,
-    "reason": "1508 pixels: the gradient-stroked line of gradients.svg has NaN gradient coordinates (the package tessellates a gradient over a zero-height bounding box); the Editor's GL shader on the NVIDIA driver samples a quarter row into the next gradient, the engine the gradient's first texel. 236 single pixels at radial row ends and wrap/mirror seams, where the Editor samples its dynamic-atlas copy of the gradients (the engine samples the image's own atlas)."
+    "mean": 0.167, "worst": 84, "over8": 1803,
+    "reason": "About 1500 pixels: the gradient-stroked line of gradients.svg (and its 60 small copies) has NaN gradient coordinates (the package tessellates a gradient over a zero-height bounding box); the Editor's GL shader on the NVIDIA driver samples a quarter row into the next gradient, the engine the gradient's first texel. About 300 single pixels at radial row ends and wrap/mirror seams, where the Editor samples its dynamic-atlas copy of the gradients (the engine samples the image's own atlas)."
   },
   "vector-1.25.png": {
-    "mean": 0.25, "worst": 84, "over8": 2618,
-    "reason": "2208 pixels: the NaN gradient coordinates of the gradient-stroked line (see vector-1.png); 410 single pixels at radial row ends and wrap/mirror seams sampled from the Editor's dynamic atlas."
+    "mean": 0.292, "worst": 124, "over8": 3138,
+    "reason": "About 2500 pixels: the NaN gradient coordinates of the gradient-stroked line (see vector-1.png); about 600 single pixels at radial row ends and wrap/mirror seams sampled from the Editor's dynamic atlas (the 60 small copies have many seams)."
   }
 }

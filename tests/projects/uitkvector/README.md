@@ -26,7 +26,9 @@ Play mode, where `VectorProbe` (from the first frame's `Start`) records:
   smaller than the slices, with scale-to-fit), a rotated and scaled element, a USS `url()`, an
   element with `overflow: hidden` whose vector background masks its child; `Image` elements with
   each scale mode, a uv part, a tint and padding; `MeshGenerationContext.DrawVectorImage` with a
-  rotation and negative scales; and the logs of the whole run.
+  rotation and negative scales; 60 copies of `gradients` on one panel (more than 255 gradient
+  settings rows: Unity packs a row as two bytes its shader reads back as high * 255 + low, so the
+  copies from row 256 on sample the neighbouring row's settings); and the logs of the whole run.
 
 Documented (Unity 6000.0 Scripting API: [VectorImage](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.VectorImage.html),
 [Background](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.Background.html),

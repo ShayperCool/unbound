@@ -190,6 +190,24 @@ public class VectorProbe : MonoBehaviour
         Img("img-gradients-uv-fit", vi["gradients"], ScaleMode.ScaleToFit, e => e.uv = new UnityEngine.Rect(0.1f, 0.5f, 0.8f, 0.4f));
         Img("img-strokes-tint", vi["strokes"], ScaleMode.ScaleToFit, e => e.tintColor = new Color(0.5f, 1f, 1f, 0.5f));
         Img("img-frame-padding", vi["frame"], ScaleMode.StretchToFill, e => { e.style.paddingLeft = 10; e.style.paddingTop = 4; e.style.backgroundColor = new Color(0.3f, 0.3f, 0.6f, 1f); });
+        // More than 255 gradient settings rows on one panel: 60 copies of gradients.svg (5 rows
+        // each) after the images above.
+        list.Add(new Case { name = "gradient-rows", make = () =>
+        {
+            var e = new VisualElement();
+            for (int k = 0; k < 60; k++)
+            {
+                var copy = new VisualElement();
+                copy.style.position = Position.Absolute;
+                copy.style.left = (k % 10) * 9;
+                copy.style.top = (k / 10) * 10;
+                copy.style.width = 9;
+                copy.style.height = 10;
+                copy.style.backgroundImage = new StyleBackground(UnityEngine.Object.Instantiate(vi["gradients"]));
+                e.Add(copy);
+            }
+            return e;
+        } });
         // Content generation at a fractional position and size: the aligned content rect.
         list.Add(new Case { name = "align-content", make = () =>
         {

@@ -63,7 +63,8 @@
 {"k":"layout/img-gradients-uv-fit","v":[694.4,296,89.5999756,60]}
 {"k":"layout/img-strokes-tint","v":[8.8,368,89.6,60]}
 {"k":"layout/img-frame-padding","v":[106.4,368,89.6,60]}
-{"k":"layout/align-content","v":[204,368,50.3999939,30.3999939]}
-{"k":"layout/draw-vector-image","v":[302.4,368,90.3999939,60]}
+{"k":"layout/gradient-rows","v":[204,368,90.3999939,60]}
+{"k":"layout/align-content","v":[302.4,368,50.3999939,30.3999939]}
+{"k":"layout/draw-vector-image","v":[400,368,90.3999939,60]}
 {"k":"logs","v":["Warning: No Theme Style Sheet set to PanelSettings , UI will not render properly"]}
 {"k":"complete","v":true}
