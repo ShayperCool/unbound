@@ -1,5 +1,5 @@
 {
- "The Editor's own profiler markers, its worker threads and its job flows are not modelled: a plugin's marker and thread callbacks hear of the markers and threads plugins make (and the main thread), and its flow callback is never called": [
+ "The Editor's own profiler markers, its worker threads and its job flows are not modelled: a plugin's marker and thread callbacks hear of the markers plugins and scripts make (and the main thread), and its flow callback is never called": [
   "profiler.editor"
  ],
  "Vulkan: a DontCare event from a script outside rendering gets the Editor's command buffer only while it has one recording (after resource access it has none); Unbound gives its own: unspecified by the interface (DontCare), accepted": [
