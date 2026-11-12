@@ -91,8 +91,8 @@ fn mode(render_mode: i32) -> Option<(ft::FT_Int32, Raster)> {
 
 impl FreeTypeFace {
     /// Sizes the face to `pixels` per em: a scalable face directly, a bitmap-only face to the
-    /// strike nearest that size (scanning the strikes in order while they get closer). Unmeasured
-    /// for bitmap-only faces: no probe font has only fixed sizes.
+    /// strike nearest that size (scanning the strikes in order while they get closer). Measured
+    /// for a face of one strike (tests/projects/textcolor); the choice among several is not.
     fn set_pixel_size(&mut self, pixels: i32) -> bool {
         if pixels <= 0 {
             return false;

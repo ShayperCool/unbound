@@ -133,6 +133,10 @@ namespace UnityEngine.TextCore.LowLevel
 
         /// <summary>The loaded face's strike at the current size; null for a scalable face.</summary>
         static StrikeJson s_Strike;
+
+        /// <summary>The size the face is loaded at: the requested size (<see cref="s_PointSize"/>, which
+        /// later loads without a size reuse), or a bitmap-only face's strike size.</summary>
+        static int FaceSize => s_Strike != null ? s_Strike.PointSize : s_PointSize;
         static readonly Dictionary<(ulong, int), StrikeJson> s_Strikes = new Dictionary<(ulong, int), StrikeJson>();
 
         public static FontEngineError InitializeFontEngine() => FontEngineError.Success;
@@ -242,7 +246,6 @@ namespace UnityEngine.TextCore.LowLevel
             if (pointSize <= 0) return FontEngineError.Invalid_Pixel_Size;
             s_PointSize = pointSize;
             s_Strike = s_Face != null ? Strike(s_Face.Handle, pointSize) : null;
-            if (s_Strike != null) s_PointSize = s_Strike.PointSize;
             return s_Face != null ? FontEngineError.Success : FontEngineError.Invalid_Face;
         }
 
@@ -328,7 +331,7 @@ namespace UnityEngine.TextCore.LowLevel
             var face = new FaceInfo();
             if (s_Face == null) return face;
             var info = s_Face.Info;
-            float size = s_PointSize;
+            float size = FaceSize;
             // Font units per pixel; each face value in font units is divided by it.
             float unitsPerPixel = (float)Math.Max(1, info.UnitsPerEm) / size;
             float ascent = info.Ascender / unitsPerPixel;
@@ -377,7 +380,7 @@ namespace UnityEngine.TextCore.LowLevel
         static TextCoreGlyphInfo HintedMetrics(char c)
         {
             uint index = Native.FontGlyphIndex(s_Face.Handle, c);
-            return index != 0 && Native.FontRenderGlyph(s_Face.Handle, index, s_PointSize, (int)GlyphLoadFlags.LOAD_COMPUTE_METRICS, 0, 0, out var metrics, out _)
+            return index != 0 && Native.FontRenderGlyph(s_Face.Handle, index, FaceSize, (int)GlyphLoadFlags.LOAD_COMPUTE_METRICS, 0, 0, out var metrics, out _)
                 ? metrics
                 : default;
         }
@@ -410,7 +413,7 @@ namespace UnityEngine.TextCore.LowLevel
         {
             glyph = null;
             if (s_Face == null || glyphIndex >= (uint)Math.Max(0, s_Face.Info.GlyphCount)) return false;
-            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, s_PointSize, (int)flags, 0, 0, out var info, out _)) return false;
+            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, FaceSize, (int)flags, 0, 0, out var info, out _)) return false;
             glyph = MakeGlyph(glyphIndex, info);
             return true;
         }
@@ -510,7 +513,7 @@ namespace UnityEngine.TextCore.LowLevel
             // The glyph's metrics and rect are those of the render mode's load.
             glyph = null;
             if (s_Face == null || texture == null) return false;
-            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, s_PointSize, 0, (int)renderMode, padding, out var info, out var pixels))
+            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, FaceSize, 0, (int)renderMode, padding, out var info, out var pixels))
             {
                 WarnUnknownMode(renderMode);
                 return false;
@@ -595,7 +598,7 @@ namespace UnityEngine.TextCore.LowLevel
             if (glyph == null) return FontEngineError.Invalid_Glyph_Index;
             var rect = glyph.glyphRect;
             if (rect.width <= 0 || rect.height <= 0) return FontEngineError.Success;
-            if (!Native.FontRenderGlyph(s_Face.Handle, glyph.index, s_PointSize, 0, (int)renderMode, padding, out var info, out var pixels))
+            if (!Native.FontRenderGlyph(s_Face.Handle, glyph.index, FaceSize, 0, (int)renderMode, padding, out var info, out var pixels))
             {
                 WarnUnknownMode(renderMode);
                 return FontEngineError.Invalid_Glyph_Index;
@@ -661,7 +664,7 @@ namespace UnityEngine.TextCore.LowLevel
         }
 
         /// <summary>Scales font units to the current size (the older, pixel-valued queries).</summary>
-        static float PixelScale => s_Face != null ? (float)s_PointSize / Math.Max(1, s_Face.Info.UnitsPerEm) : 1f;
+        static float PixelScale => s_Face != null ? (float)FaceSize / Math.Max(1, s_Face.Info.UnitsPerEm) : 1f;
 
         internal static GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentTable(uint[] glyphIndexes) =>
             glyphIndexes == null ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, glyphIndexes), PixelScale);

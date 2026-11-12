@@ -178,7 +178,8 @@ pub struct NativeApi {
     /// info, out pixels): 1 when the face loads the glyph. Render mode 0 loads its metrics only,
     /// with the load flags; a `GlyphRenderMode` renders it for an atlas as that mode loads it
     /// (`FontFace::textcore_render`): the pixels are `(rect width + 2 padding) x (rect height + 2
-    /// padding)` bytes, top row first.
+    /// padding)`, top row first, one coverage byte each, or four (premultiplied RGBA) for a colour
+    /// bitmap in a colour mode.
     pub font_render_glyph: extern "C" fn(
         u64,
         u32,
