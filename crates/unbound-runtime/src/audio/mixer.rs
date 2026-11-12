@@ -1198,6 +1198,15 @@ fn source_spatial(
 }
 
 impl Mixer {
+    fn listener_return_capacity(config: &MixerConfig) -> usize {
+        // Offline output cannot render a DSP period larger than the capture resource limit.
+        // Invalid periods must not reserve storage before the control path checks their size.
+        (config.buffer_size.max(1) as usize)
+            .checked_mul(config.output_channels())
+            .filter(|&samples| samples <= capture::MAX_SAMPLES)
+            .unwrap_or(0)
+    }
+
     fn input_fade_curve(buffer: u32) -> Vec<f32> {
         let frames = buffer.max(1);
         let mut gain = ParameterRamp::new(0.0);
@@ -1247,11 +1256,7 @@ impl Mixer {
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
-            capture_listener_return: vec![
-                0.0;
-                config.buffer_size.max(1) as usize
-                    * config.output_channels()
-            ],
+            capture_listener_return: vec![0.0; Self::listener_return_capacity(&config)],
             capture_listener_return_used: false,
             discard_output: false,
             listener_output_wanted: false,
@@ -1293,10 +1298,8 @@ impl Mixer {
         if self.config.buffer_size != config.buffer_size {
             self.input_fade_curve = Self::input_fade_curve(config.buffer_size);
         }
-        self.capture_listener_return.resize(
-            config.buffer_size.max(1) as usize * config.output_channels(),
-            0.0,
-        );
+        self.capture_listener_return
+            .resize(Self::listener_return_capacity(&config), 0.0);
         self.config = config;
         self.speakers = SpeakerLayout::of(config.output_channels());
         // Channels of the previous layout must not reach the new one.
@@ -7229,6 +7232,33 @@ mod tests {
         let measured = first(true);
         assert!(legacy[0] > measured[0] + 0.01);
         assert!(measured.iter().all(|value| value.abs() < 1e-5));
+    }
+
+    #[test]
+    fn uncapturable_periods_do_not_prepare_listener_return_storage() {
+        for mode in [speaker_mode::MONO, speaker_mode::MODE_7POINT1] {
+            let mut mixer = Mixer::new(MixerConfig {
+                buffer_size: u32::MAX,
+                speaker_mode: mode,
+                ..Default::default()
+            });
+            assert_eq!(mixer.capture_listener_return.capacity(), 0);
+            let output = mixer.capture(2048, Vec::new()).unwrap();
+            assert!(output.samples.is_empty());
+            assert_eq!(mixer.frames(), 0);
+            mixer
+                .reconfigure(MixerConfig {
+                    buffer_size: 97,
+                    speaker_mode: mode,
+                    ..Default::default()
+                })
+                .unwrap();
+            let output = mixer
+                .capture(97 * mixer.config.output_channels(), Vec::new())
+                .unwrap();
+            assert_eq!(output.samples.len(), 97 * mixer.config.output_channels());
+            assert_eq!(mixer.frames(), 97);
+        }
     }
 
     #[test]
