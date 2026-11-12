@@ -124,11 +124,16 @@ namespace UnityEngine
 
         static readonly Dictionary<(string, long), BakeParameters?> s_Parameters = new Dictionary<(string, long), BakeParameters?>();
 
-        /// <summary>The Lightmap Parameters a reference names (none: the scene's, else
-        /// Default-Medium), or null when they cannot be read.</summary>
+        /// <summary>The Lightmap Parameters asset a renderer's reference stands for: its own, else
+        /// the scene's (none at all: Default-Medium).</summary>
+        static ObjectRef EffectiveParameters(ObjectRef reference, LightingSettings settings) =>
+            reference.IsNull && settings != null ? settings.DefaultLightmapParameters : reference;
+
+        /// <summary>The Lightmap Parameters a reference names (<see cref="EffectiveParameters"/>),
+        /// or null when they cannot be read.</summary>
         static BakeParameters? ParametersOf(ObjectRef reference, LightingSettings settings)
         {
-            if (reference.IsNull && settings != null) reference = settings.DefaultLightmapParameters;
+            reference = EffectiveParameters(reference, settings);
             if (!OwnParameters(reference)) return BakeParameters.DefaultMedium;
             // The other built-in assets (Default-HighResolution and the lower ones) are not measured.
             if (reference.Guid == BuiltinExtraGuid) return null;
@@ -246,8 +251,7 @@ namespace UnityEngine
             if (!(scale > 0f)) { why = "it has no realtime lightmap resolution"; return null; }
             if (!(ParametersOf(renderer.m_LightmapParameters, settings) is BakeParameters parameters))
             {
-                var named = renderer.m_LightmapParameters.IsNull && settings != null ? settings.DefaultLightmapParameters : renderer.m_LightmapParameters;
-                why = named.Guid == BuiltinExtraGuid
+                why = EffectiveParameters(renderer.m_LightmapParameters, settings).Guid == BuiltinExtraGuid
                     ? "its built-in Lightmap Parameters are not Default-Medium (not measured)"
                     : "its Lightmap Parameters cannot be read";
                 return null;
