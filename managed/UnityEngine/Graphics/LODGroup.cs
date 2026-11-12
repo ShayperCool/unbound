@@ -167,8 +167,8 @@ namespace UnityEngine
             float bias = QualitySettings.lodBias;
             if (camera.orthographic) return (camera.orthographicSize + camera.orthographicSize) / bias;
             float fieldOfView = camera.fieldOfView;
-            // Half the field of view in radians, its sums and products in this float order (the
-            // order decides the ties of the probe's sweeps).
+            // Half the field of view in radians (this float order is our choice; the probe's
+            // sweeps give the same levels with the plain product).
             float tangent = Mathf.Tan((fieldOfView / 360f + fieldOfView / 360f) * Mathf.PI * 0.5f);
             float scale = (tangent + tangent) / bias;
             var to = reference - cameraPosition;

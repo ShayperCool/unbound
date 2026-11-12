@@ -17,7 +17,9 @@ runtime gives the same float. Each render waits until 2 ms of real time have pas
 camera's previous render: in the Editor a render that comes sooner can draw the levels chosen for
 the camera's previous place (measured with `run.py editor --hold`, which adds `hold` rows and is
 not published: on that machine a wait of 0.5 ms still drew the old level, 0.75 ms and more the new
-one). Unbound chooses the level at every render and does not model that hold.
+one). Unbound chooses the level at every render and does not model that hold. The previous
+reference was a batch-mode capture, whose renders came sooner than that; windowed captures give
+the same records with or without the wait, and with the former sample sums.
 
 Run Unbound and compare (sweeps up to a distance of 15: farther the cube covers less than a pixel):
 

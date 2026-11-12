@@ -98,7 +98,8 @@ namespace Unbound.Tests
             Assert.Equal(0, Level(0.5f));
         }
 
-        /// <summary>A level of height 0 reaches any distance; a group without size is not drawn.</summary>
+        /// <summary>A level of height 0 reaches any distance; a group without size is not drawn
+        /// (Unbound's choice, not measured: its reach is 0 / 0).</summary>
         [Fact]
         public void AZeroHeightReachesEverywhereAndNoSizeNowhere()
         {
