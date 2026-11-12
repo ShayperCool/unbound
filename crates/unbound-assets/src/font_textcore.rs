@@ -79,7 +79,8 @@ fn mode(render_mode: i32) -> Option<(ft::FT_Int32, Raster)> {
 
 impl FreeTypeFace {
     /// Sizes the face to `pixels` per em: a scalable face directly, a bitmap-only face to the
-    /// strike nearest that size (scanning the strikes in order while they get closer).
+    /// strike nearest that size (scanning the strikes in order while they get closer). Unmeasured
+    /// for bitmap-only faces: no probe font has only fixed sizes.
     fn set_pixel_size(&mut self, pixels: i32) -> bool {
         if pixels <= 0 {
             return false;
@@ -426,8 +427,14 @@ fn anti_aliased_distance_field(coverage: &[u8], width: i32, height: i32, padding
 
 /// SDF, SDF8..SDF32: each pixel of the `out_width` x `out_height` glyph grown by `padding` takes
 /// the distance from its center to the nearest sample center of the other kind (set or clear)
-/// in the monochrome bitmap rendered `up` times larger, searched within `padding + 1` pixels;
-/// samples outside the bitmap are clear, and a pixel is inside when its nearest sample is set.
+/// in the monochrome bitmap rendered `up` times larger, searched in the square of samples within
+/// `padding + 1` pixels; samples outside the bitmap are clear, and a pixel is inside when its
+/// nearest sample is set.
+///
+/// The square search is split by axis: per sample column and output row the squared row distance
+/// to the nearest set and clear sample of the window (`nearest_rows`), then per pixel the minimum
+/// over the window's columns of the squared column distance plus that. The squares are exact in
+/// `f32` and rounding a sum is monotonic, so the minimum is the one of the full search.
 fn sampled_distance_field(
     mono: &[u8],
     width: i32,
@@ -437,33 +444,34 @@ fn sampled_distance_field(
     up: i32,
     padding: i32,
 ) -> Vec<u8> {
+    /// No sample of the kind within reach.
     const FAR: f32 = 1e22;
     let per_pixel = 255.0 / ((padding * 2 + 2) * up) as f32;
     let (upf, reach) = (up as f32, padding + 1);
-    let set = |x: i32, y: i32| {
-        x >= 0 && y >= 0 && x < width && y < height && mono[(y * width + x) as usize] != 0
-    };
-    let mut field =
-        Vec::with_capacity(((out_width + 2 * padding) * (out_height + 2 * padding)) as usize);
-    for y in -padding..out_height + padding {
-        let center_y = (y as f32 + 0.5) * upf;
+    let (columns, rows) = (out_width + 2 * padding, out_height + 2 * padding);
+    let first_sample = (-padding - reach) * up;
+    let samples = ((columns + 2 * reach) * up - up + 1) as usize;
+    let (set_rows, clear_rows) = nearest_rows(
+        mono,
+        width,
+        height,
+        first_sample,
+        samples,
+        rows,
+        up,
+        padding,
+    );
+    let mut field = Vec::with_capacity((columns * rows) as usize);
+    for row in 0..rows as usize {
         for x in -padding..out_width + padding {
             let center_x = (x as f32 + 0.5) * upf;
             let (mut nearest_set, mut nearest_clear) = (FAR, FAR);
-            for sy in (y - reach) * up..=(y + reach) * up {
-                let dy = center_y - (sy as f32 + 0.5);
-                for sx in (x - reach) * up..=(x + reach) * up {
-                    let dx = center_x - (sx as f32 + 0.5);
-                    let d2 = dx * dx + dy * dy;
-                    let nearest = if set(sx, sy) {
-                        &mut nearest_set
-                    } else {
-                        &mut nearest_clear
-                    };
-                    if d2 < *nearest {
-                        *nearest = d2;
-                    }
-                }
+            for sx in (x - reach) * up..=(x + reach) * up {
+                let dx = center_x - (sx as f32 + 0.5);
+                let at = row * samples + (sx - first_sample) as usize;
+                let dx2 = dx * dx;
+                nearest_set = nearest_set.min(dx2 + set_rows[at]);
+                nearest_clear = nearest_clear.min(dx2 + clear_rows[at]);
             }
             let inside = nearest_set <= nearest_clear;
             let distance = if inside { nearest_clear } else { nearest_set }.sqrt();
@@ -471,6 +479,110 @@ fn sampled_distance_field(
         }
     }
     field
+}
+
+/// For [`sampled_distance_field`]: per output row (rows first) and sample column from
+/// `first_sample`, the squared distance from the row's center to the nearest set and the nearest
+/// clear sample row of the column within the row's window (infinite without one). Rows and
+/// columns outside the bitmap are clear.
+#[allow(clippy::too_many_arguments)]
+fn nearest_rows(
+    mono: &[u8],
+    width: i32,
+    height: i32,
+    first_sample: i32,
+    samples: usize,
+    rows: i32,
+    up: i32,
+    padding: i32,
+) -> (Vec<f32>, Vec<f32>) {
+    let reach = padding + 1;
+    let mut set_rows = vec![f32::INFINITY; rows as usize * samples];
+    let mut clear_rows = vec![f32::INFINITY; rows as usize * samples];
+    // Per column of the bitmap: the last set/clear row at or before each row and the first at or
+    // after it (-1 / height when there is none).
+    let h = height.max(0) as usize;
+    let (mut set_before, mut set_after) = (vec![-1i32; h], vec![height; h]);
+    let (mut clear_before, mut clear_after) = (vec![-1i32; h], vec![height; h]);
+    for column in 0..samples {
+        let sx = first_sample + column as i32;
+        let inside = (0..width).contains(&sx);
+        if inside {
+            let is_set = |r: usize| mono[r * width as usize + sx as usize] != 0;
+            let (mut last_set, mut last_clear) = (-1, -1);
+            for r in 0..h {
+                if is_set(r) {
+                    last_set = r as i32
+                } else {
+                    last_clear = r as i32
+                }
+                set_before[r] = last_set;
+                clear_before[r] = last_clear;
+            }
+            let (mut next_set, mut next_clear) = (height, height);
+            for r in (0..h).rev() {
+                if is_set(r) {
+                    next_set = r as i32
+                } else {
+                    next_clear = r as i32
+                }
+                set_after[r] = next_set;
+                clear_after[r] = next_clear;
+            }
+        }
+        for row in 0..rows {
+            let y = row - padding;
+            let (low, high) = ((y - reach) * up, (y + reach) * up);
+            let center = (y as f32 + 0.5) * up as f32;
+            // The sample rows on either side of the center.
+            let below = y * up + (up - 1) / 2;
+            let above = below + 1;
+            let squared = |sample: i32| {
+                if sample < low || sample > high {
+                    return f32::INFINITY;
+                }
+                let dy = center - (sample as f32 + 0.5);
+                dy * dy
+            };
+            let pick = |before: &[i32], after: &[i32], outside_counts: bool| {
+                // The nearest row of the kind at or before `below` and at or after `above`.
+                let earlier = if below < 0 {
+                    if outside_counts { below } else { -1 }
+                } else if below >= height {
+                    if outside_counts { below } else { before[h - 1] }
+                } else {
+                    let r = before[below as usize];
+                    if r < 0 && outside_counts { -1 } else { r }
+                };
+                let later = if above >= height {
+                    if outside_counts { above } else { height }
+                } else if above < 0 {
+                    if outside_counts { above } else { after[0] }
+                } else {
+                    after[above as usize]
+                };
+                let earlier = if earlier < 0 && !outside_counts {
+                    f32::INFINITY
+                } else {
+                    squared(earlier)
+                };
+                let later = if later >= height && !outside_counts {
+                    f32::INFINITY
+                } else {
+                    squared(later)
+                };
+                earlier.min(later)
+            };
+            let at = row as usize * samples + column;
+            if inside && h > 0 {
+                set_rows[at] = pick(&set_before, &set_after, false);
+                clear_rows[at] = pick(&clear_before, &clear_after, true);
+            } else {
+                clear_rows[at] = squared(below).min(squared(above));
+            }
+        }
+    }
+    (set_rows, clear_rows)
 }
 
 #[cfg(test)]
@@ -482,6 +594,56 @@ mod tests {
         include_bytes!("../../../tests/projects/glyphraster/Assets/Resources/Synthetic.ttf");
     /// FreeType's `FT_LOAD_NO_HINTING`.
     const NO_HINTING: i32 = 2;
+
+    /// The definition of [`super::sampled_distance_field`], searching the whole square: each pixel of the `out_width` x `out_height` glyph grown by `padding` takes
+    /// the distance from its center to the nearest sample center of the other kind (set or clear)
+    /// in the monochrome bitmap rendered `up` times larger, searched within `padding + 1` pixels;
+    /// samples outside the bitmap are clear, and a pixel is inside when its nearest sample is set.
+    fn sampled_distance_field_by_definition(
+        mono: &[u8],
+        width: i32,
+        height: i32,
+        out_width: i32,
+        out_height: i32,
+        up: i32,
+        padding: i32,
+    ) -> Vec<u8> {
+        const FAR: f32 = 1e22;
+        let per_pixel = 255.0 / ((padding * 2 + 2) * up) as f32;
+        let (upf, reach) = (up as f32, padding + 1);
+        let set = |x: i32, y: i32| {
+            x >= 0 && y >= 0 && x < width && y < height && mono[(y * width + x) as usize] != 0
+        };
+        let mut field =
+            Vec::with_capacity(((out_width + 2 * padding) * (out_height + 2 * padding)) as usize);
+        for y in -padding..out_height + padding {
+            let center_y = (y as f32 + 0.5) * upf;
+            for x in -padding..out_width + padding {
+                let center_x = (x as f32 + 0.5) * upf;
+                let (mut nearest_set, mut nearest_clear) = (FAR, FAR);
+                for sy in (y - reach) * up..=(y + reach) * up {
+                    let dy = center_y - (sy as f32 + 0.5);
+                    for sx in (x - reach) * up..=(x + reach) * up {
+                        let dx = center_x - (sx as f32 + 0.5);
+                        let d2 = dx * dx + dy * dy;
+                        let nearest = if set(sx, sy) {
+                            &mut nearest_set
+                        } else {
+                            &mut nearest_clear
+                        };
+                        if d2 < *nearest {
+                            *nearest = d2;
+                        }
+                    }
+                }
+                let inside = nearest_set <= nearest_clear;
+                let distance = if inside { nearest_clear } else { nearest_set }.sqrt();
+                field.push(encode_distance(distance, inside, per_pixel));
+            }
+        }
+        field
+    }
+
     /// FreeType's `FT_LOAD_MONOCHROME | FT_LOAD_NO_HINTING | FT_LOAD_RENDER`.
     const MONOCHROME_RENDER: i32 = 0x1006;
     /// FreeType's `FT_LOAD_COMPUTE_METRICS` (hinting on).
@@ -564,6 +726,43 @@ mod tests {
         // bitmap's outside, a pixel beyond the reach of set samples is fully outside.
         let far = sampled_distance_field(&[0; 64], 8, 8, 2, 2, up, padding);
         assert!(far.iter().all(|&v| v == 0));
+    }
+
+    #[test]
+    fn sampled_field_search_by_axis_is_the_square_search() {
+        // Noisy, solid, empty and one-pixel bitmaps, several upsamplings and paddings, sizes that
+        // do and do not divide by the upsampling.
+        let mut state = 0x2545_f491u32;
+        let mut noise = |n: usize, density: u32| {
+            (0..n)
+                .map(|_| {
+                    state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                    if (state >> 24) % 100 < density {
+                        255
+                    } else {
+                        0
+                    }
+                })
+                .collect::<Vec<u8>>()
+        };
+        for (width, height, up, padding, density) in [
+            (13, 9, 1, 3, 50),
+            (16, 24, 8, 1, 30),
+            (17, 31, 8, 2, 70),
+            (40, 33, 16, 1, 50),
+            (5, 7, 4, 0, 100),
+            (6, 6, 2, 4, 0),
+            (1, 1, 1, 2, 100),
+        ] {
+            let mono = noise((width * height) as usize, density);
+            let (out_width, out_height) = ((width + up - 1) / up, (height + up - 1) / up);
+            let fast =
+                sampled_distance_field(&mono, width, height, out_width, out_height, up, padding);
+            let slow = sampled_distance_field_by_definition(
+                &mono, width, height, out_width, out_height, up, padding,
+            );
+            assert_eq!(fast, slow, "{width}x{height} up {up} padding {padding}");
+        }
     }
 
     #[test]
