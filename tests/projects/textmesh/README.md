@@ -15,6 +15,8 @@ already has a material) and records:
 - the renderer's bounds and materials, the font property, and the warnings and errors logged;
 - `GetCharacterInfo` of a few requested characters, the custom font's properties, and whether
   the mesh object is kept when the text changes;
+- where a fresh dynamic font's texture packs characters asked for over several frames, its size
+  and its `textureRebuilt` events;
 - two 256x128 images of a rich-text TextMesh: with the built-in "Font Material" and with an
   unlit colour material (every glyph quad a filled box).
 
@@ -38,4 +40,11 @@ Numbers compare with an absolute tolerance of 1e-4; every value matches. A glyph
 (`W`) is stored a quarter turn round in the font texture (`CharacterInfo.flipped`), which its UV
 sizes and obsolete `CharacterInfo.uv` rectangle show. `tests/projects/glyphraster` separately
 compares oriented alpha bytes across fonts, sizes and styles. The images are printed as
-measurements. Where in the texture glyphs are packed, and when it grows, is not recorded.
+measurements.
+
+The `atlas/*` controls (after the images) record the dynamic font texture itself: a fresh
+`Font.CreateDynamicFontFromOSFont("Liberation Sans", 16)` asked for characters at 16, 40, 64 and
+90 points over three frames, then for a few again; after each request the texture size, how often
+`Font.textureRebuilt` fired and every character's uv corners in texels and `flipped`. They were
+recorded twice in the Editor (identical) and appended to the reference, whose other rows stayed
+as they were.

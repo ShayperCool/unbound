@@ -145,9 +145,53 @@ public sealed class TextMeshProbe : MonoBehaviour
         Changes();
         Application.logMessageReceived -= OnLog;
         yield return Images();
+        yield return AtlasControls();
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Out.ToString());
         Exit();
+    }
+
+    /// <summary>The dynamic font texture outside the cases: a fresh OS font (its own texture) asked
+    /// for characters at growing sizes over three frames, then for a few again. After each request:
+    /// the texture size, how often textureRebuilt fired for the font, and for every character asked
+    /// so far whether it is in the texture, its uv corners in texels (bottom left, top right) and
+    /// whether it is stored flipped.</summary>
+    IEnumerator AtlasControls()
+    {
+        var font = Font.CreateDynamicFontFromOSFont("Liberation Sans", 16);
+        int rebuilt = 0;
+        Action<Font> count = f => { if (f == font) rebuilt++; };
+        Font.textureRebuilt += count;
+        var asked = new List<(char c, int size)>();
+        var steps = new (string name, string text, int size, bool nextFrame)[]
+        {
+            ("first", "Hello World", 16, false),
+            ("larger", "ABCDEFGHIJKLM", 40, false),
+            ("frame2", "abcdefghijklmnopqrstuvwxyz", 64, true),
+            ("frame3", "0123456789 W", 90, true),
+            ("again", "Hello", 16, false),
+        };
+        foreach (var step in steps)
+        {
+            if (step.nextFrame) yield return null;
+            font.RequestCharactersInTexture(step.text, step.size, FontStyle.Normal);
+            foreach (var c in step.text)
+                if (!asked.Contains((c, step.size))) asked.Add((c, step.size));
+            var texture = font.material.mainTexture;
+            Put("atlas/" + step.name + "/texture", $"[{texture.width},{texture.height}]");
+            Put("atlas/" + step.name + "/rebuilt", rebuilt.ToString(Inv));
+            var cells = new List<string>();
+            foreach (var (c, size) in asked)
+            {
+                if (!font.GetCharacterInfo(c, out var info, size, FontStyle.Normal)) { cells.Add($"[{(int)c},{size},0]"); continue; }
+#pragma warning disable 618
+                bool flipped = info.flipped;
+#pragma warning restore 618
+                cells.Add($"[{(int)c},{size},1,{F(info.uvBottomLeft.x * texture.width)},{F(info.uvBottomLeft.y * texture.height)},{F(info.uvTopRight.x * texture.width)},{F(info.uvTopRight.y * texture.height)},{(flipped ? 1 : 0)}]");
+            }
+            Put("atlas/" + step.name + "/characters", "[" + string.Join(",", cells) + "]");
+        }
+        Font.textureRebuilt -= count;
     }
 
     /// <summary>A script-made custom (non-dynamic) font: 'A' and 'B' as rectangles of a 32x16
