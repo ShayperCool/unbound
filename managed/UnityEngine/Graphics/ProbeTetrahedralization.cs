@@ -29,6 +29,7 @@ namespace UnityEngine
             var positions = new List<Vector3>();
             var probes = new List<SphericalHarmonicsL2>();
             var occlusion = new List<Vector4>();
+            var occlusionChannels = new List<byte>();
             foreach (var set in sets)
             {
                 positions.AddRange(set.Positions);
@@ -37,14 +38,17 @@ namespace UnityEngine
                 if (set.Baked) probes.AddRange(set.BakedAlone ?? set.Probes);
                 else probes.AddRange(new SphericalHarmonicsL2[set.Positions.Length]);
                 for (int i = 0; i < set.Positions.Length; i++)
+                {
                     occlusion.Add(i < set.Occlusion.Length ? set.Occlusion[i] : Vector4.one);
+                    occlusionChannels.Add(set.OcclusionChannels == null ? (byte)15 : set.OcclusionChannels[i]);
+                }
             }
             // A combination with any baked set reports every probe, zeros for realtime-only sets
             // (unmeasured; realtime GI lights each scene's own set, not the combination).
             if (sets.Exists(x => x.Baked) && sets.Exists(x => !x.Baked))
                 Unbound.Runtime.Stubs.Ignored("LightProbes",
                     "of scenes precomputed for realtime GI only join baked probes with zero lighting");
-            var result = new ProbeSet { Positions = positions.ToArray(), Probes = probes.ToArray(), Occlusion = occlusion.ToArray(), Baked = sets.Exists(x => x.Baked) };
+            var result = new ProbeSet { Positions = positions.ToArray(), Probes = probes.ToArray(), Occlusion = occlusion.ToArray(), OcclusionChannels = occlusionChannels.ToArray(), Baked = sets.Exists(x => x.Baked) };
             Build(result);
             return result;
         }
@@ -64,6 +68,7 @@ namespace UnityEngine
         internal static void Build(ProbeSet set)
         {
             var p = set.Positions;
+            set.UpdateBounds();
             int n = p.Length;
             set.Cells = Array.Empty<ProbeSet.Cell>();
             set.HullRays = new Vector3[n];

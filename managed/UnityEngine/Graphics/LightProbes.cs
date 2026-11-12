@@ -40,8 +40,29 @@ namespace UnityEngine
         internal SphericalHarmonicsL2[] BakedAlone;
         /// <summary>Per probe, the occlusion of the mixed lights by shadow mask channel.</summary>
         internal Vector4[] Occlusion = Array.Empty<Vector4>();
+        /// <summary>Channels present in each baked probe. A missing channel contributes zero
+        /// when another vertex supplies it; a channel absent from the whole cell returns one.
+        /// Null means every channel is present, for sets supplied directly by the runtime.</summary>
+        internal byte[] OcclusionChannels;
         internal Cell[] Cells = Array.Empty<Cell>();
         internal Vector3[] HullRays = Array.Empty<Vector3>();
+        Vector3 m_Min, m_Max;
+        bool m_HasBounds;
+
+        internal void UpdateBounds()
+        {
+            m_HasBounds = Positions.Length > 0;
+            if (!m_HasBounds) return;
+            m_Min = m_Max = Positions[0];
+            for (int i = 1; i < Positions.Length; i++)
+            {
+                m_Min = Vector3.Min(m_Min, Positions[i]);
+                m_Max = Vector3.Max(m_Max, Positions[i]);
+            }
+        }
+
+        bool OutsideBounds(Vector3 p) => m_HasBounds &&
+            !(p.x >= m_Min.x && p.x <= m_Max.x && p.y >= m_Min.y && p.y <= m_Max.y && p.z >= m_Min.z && p.z <= m_Max.z);
 
         internal static readonly ProbeSet Empty = new ProbeSet();
 
@@ -87,19 +108,22 @@ namespace UnityEngine
             Baked = Baked,
             Realtime = Realtime,
             Occlusion = Occlusion,
+            OcclusionChannels = OcclusionChannels,
             Cells = Cells,
             HullRays = HullRays,
+            m_Min = m_Min,
+            m_Max = m_Max,
+            m_HasBounds = m_HasBounds,
         };
-
-        const float Epsilon = -1e-4f;
 
         /// <summary>
         /// The probes' lighting and occlusion at <paramref name="p"/> as LightProbes'
         /// interpolation queries give it: the cell containing it is walked to from
         /// <paramref name="cell"/> (any index out of range starts at the first) and becomes the
-        /// new hint. Outside the probes' hull, or without probes, there is none: the hint
+        /// new hint. Outside the probes' axis-aligned bounds, or without probes, there is none: the hint
         /// becomes -1 and false is returned (measured: tests/projects/lightprobes, queries outside
-        /// the hull give the ambient probe, occlusion 1 and index -1). Probes without baked
+        /// the bounds give the ambient probe, occlusion 1 and index -1). Inside the bounds,
+        /// an open hull cell can supply the probe. Probes without baked
         /// lighting (precomputed for realtime GI only) give none either until realtime GI has lit
         /// them (<see cref="Realtime"/>): callers keep the ambient probe.
         /// </summary>
@@ -107,7 +131,7 @@ namespace UnityEngine
         {
             sh = default;
             occlusion = Vector4.one;
-            if (Probes.Length == 0 || !(Baked || Realtime))
+            if (Probes.Length == 0 || !(Baked || Realtime) || OutsideBounds(p))
             {
                 cell = -1;
                 return false;
@@ -122,7 +146,7 @@ namespace UnityEngine
             }
             Span<float> w = stackalloc float[4];
             int found = Locate(p, cell, w);
-            if (found < 0 || Cells[found].I3 < 0)
+            if (found < 0)
             {
                 cell = -1;
                 return false;
@@ -166,11 +190,16 @@ namespace UnityEngine
         int Locate(Vector3 p, int start, Span<float> w)
         {
             int cell = start < 0 || start >= Cells.Length ? 0 : start;
-            for (int steps = 0; steps < Cells.Length + 4; steps++)
+            int previous = -1, beforePrevious = -1;
+            for (int steps = 0; steps < Cells.Length; steps++)
             {
                 int next = Step(p, cell, w);
-                if (next == cell) return cell;
+                // Face rounding can send the walk back across the same face. Keep the current
+                // cell and its weights instead of starting an unrelated search.
+                if (next == cell || cell == beforePrevious) return cell;
                 if (next < 0) break;
+                beforePrevious = previous;
+                previous = cell;
                 cell = next;
             }
             // The walk cycled (degenerate cells): try each cell.
@@ -203,7 +232,21 @@ namespace UnityEngine
         Vector4 BlendOcclusion(int cell, ReadOnlySpan<float> w)
         {
             var c = Cells[cell];
-            return OcclusionOf(c.I0) * w[0] + OcclusionOf(c.I1) * w[1] + OcclusionOf(c.I2) * w[2] + OcclusionOf(c.I3) * w[3];
+            Vector4 result = Vector4.zero;
+            int present = 0;
+            for (int k = 0; k < 4; k++)
+            {
+                int probe = k switch { 0 => c.I0, 1 => c.I1, 2 => c.I2, _ => c.I3 };
+                if (probe < 0 || probe >= Occlusion.Length) continue;
+                int channels = OcclusionChannels == null ? 15 : OcclusionChannels[probe];
+                Vector4 value = Occlusion[probe];
+                for (int channel = 0; channel < 4; channel++)
+                    if ((channels & (1 << channel)) != 0) result[channel] += value[channel] * w[k];
+                present |= channels;
+            }
+            for (int channel = 0; channel < 4; channel++)
+                if ((present & (1 << channel)) == 0) result[channel] = 1f;
+            return result;
         }
 
         /// <summary>The weights of <paramref name="p"/> in a cell: the cell itself when they are
@@ -218,9 +261,9 @@ namespace UnityEngine
                 w[1] = Vector3.Dot(c.R1, d);
                 w[2] = Vector3.Dot(c.R2, d);
                 w[3] = 1f - w[0] - w[1] - w[2];
-                int worst = 0;
-                for (int k = 1; k < 4; k++) if (w[k] < w[worst]) worst = k;
-                if (w[worst] >= Epsilon) return index;
+                if (w[0] >= 0f && w[1] >= 0f && w[2] >= 0f && w[3] >= 0f) return index;
+                int worst = w[0] < w[1] && w[0] < w[2] && w[0] < w[3] ? 0
+                    : w[1] < w[2] && w[1] < w[3] ? 1 : w[2] < w[3] ? 2 : 3;
                 return worst switch { 0 => c.N0, 1 => c.N1, 2 => c.N2, _ => c.N3 };
             }
             // An outer cell: the hull triangle, its probes moved along their rays.
@@ -234,9 +277,8 @@ namespace UnityEngine
             Vector3 ta = a + ra * t, tb = b + rb * t, te = e + re * t;
             Barycentric(p, ta, tb, te, out w[0], out w[1], out w[2]);
             w[3] = 0f;
-            int least = 0;
-            for (int k = 1; k < 3; k++) if (w[k] < w[least]) least = k;
-            if (w[least] >= Epsilon) return index;
+            int least = w[0] < w[1] && w[0] < w[2] ? 0 : w[1] < w[2] ? 1 : 2;
+            if (w[least] >= 0f) return index;
             return least switch { 0 => c.N0, 1 => c.N1, _ => c.N2 };
         }
 
@@ -256,28 +298,31 @@ namespace UnityEngine
             double k2 = Vector3.Dot(u0, x2) + Vector3.Dot(u1, x1);
             double k3 = Vector3.Dot(u1, x2);
             double best = double.MaxValue;
-            foreach (var root in CubicRoots(k3, k2, k1, k0))
-                if (root >= -1e-6 && root < best) best = root;
+            Span<double> roots = stackalloc double[3];
+            int count = CubicRoots(k3, k2, k1, k0, roots);
+            for (int i = 0; i < count; i++)
+                if (roots[i] >= -1e-6 && roots[i] < best) best = roots[i];
             return best == double.MaxValue ? 0f : (float)Math.Max(best, 0.0);
         }
 
-        static IEnumerable<double> CubicRoots(double a, double b, double c, double d)
+        static int CubicRoots(double a, double b, double c, double d, Span<double> roots)
         {
             double scale = Math.Max(Math.Max(Math.Abs(a), Math.Abs(b)), Math.Max(Math.Abs(c), Math.Abs(d)));
-            if (scale == 0) yield break;
+            if (scale == 0) return 0;
             if (Math.Abs(a) < 1e-9 * scale)
             {
                 if (Math.Abs(b) < 1e-9 * scale)
                 {
-                    if (Math.Abs(c) > 1e-12 * scale) yield return -d / c;
-                    yield break;
+                    if (Math.Abs(c) <= 1e-12 * scale) return 0;
+                    roots[0] = -d / c;
+                    return 1;
                 }
                 double disc = c * c - 4 * b * d;
-                if (disc < 0) yield break;
+                if (disc < 0) return 0;
                 double s = Math.Sqrt(disc);
-                yield return (-c - s) / (2 * b);
-                yield return (-c + s) / (2 * b);
-                yield break;
+                roots[0] = (-c - s) / (2 * b);
+                roots[1] = (-c + s) / (2 * b);
+                return 2;
             }
             // Depressed cubic t³ + pt + q by t = x − b/3a.
             double bn = b / a, cn = c / a, dn = d / a;
@@ -287,17 +332,20 @@ namespace UnityEngine
             if (disc3 > 0)
             {
                 double s = Math.Sqrt(disc3);
-                yield return Math.Cbrt(-q / 2 + s) + Math.Cbrt(-q / 2 - s) + shift;
+                roots[0] = Math.Cbrt(-q / 2 + s) + Math.Cbrt(-q / 2 - s) + shift;
+                return 1;
             }
             else if (p == 0)
             {
-                yield return shift;
+                roots[0] = shift;
+                return 1;
             }
             else
             {
                 double r = 2 * Math.Sqrt(-p / 3);
                 double phi = Math.Acos(Math.Clamp(3 * q / (p * r), -1, 1)) / 3;
-                for (int k = 0; k < 3; k++) yield return r * Math.Cos(phi - 2 * Math.PI * k / 3) + shift;
+                for (int k = 0; k < 3; k++) roots[k] = r * Math.Cos(phi - 2 * Math.PI * k / 3) + shift;
+                return 3;
             }
         }
 
@@ -327,6 +375,7 @@ namespace UnityEngine
             set.Positions = new Vector3[count];
             set.Probes = new SphericalHarmonicsL2[count];
             set.Occlusion = new Vector4[count];
+            set.OcclusionChannels = new byte[count];
             set.Baked = coefficients.Length > 0;
             for (int i = 0; i < count; i++)
             {
@@ -341,7 +390,11 @@ namespace UnityEngine
                 foreach (var o in occlusion.EnumerateArray())
                 {
                     if (i >= count) break;
-                    set.Occlusion[i++] = ProbeOcclusion(Ints(o.GetProperty("lights")), Floats(o.GetProperty("values")), Ints(o.GetProperty("channels")));
+                    var channels = Ints(o.GetProperty("channels"));
+                    set.Occlusion[i] = ProbeOcclusion(Ints(o.GetProperty("lights")), Floats(o.GetProperty("values")), channels);
+                    foreach (int channel in channels)
+                        if (channel >= 0 && channel < 4) set.OcclusionChannels[i] |= (byte)(1 << channel);
+                    i++;
                 }
             }
             var rays = Floats(json.GetProperty("hullRays"));
@@ -364,6 +417,7 @@ namespace UnityEngine
                 });
             }
             set.Cells = cells.ToArray();
+            set.UpdateBounds();
             return set;
         }
 
@@ -371,9 +425,16 @@ namespace UnityEngine
         /// light baked into it; channels no light uses are 1.</summary>
         internal static Vector4 ProbeOcclusion(int[] lights, float[] values, int[] channels)
         {
-            var v = Vector4.one;
-            for (int k = 0; k < 4 && k < lights.Length; k++)
-                if (lights[k] >= 0 && channels[k] >= 0 && channels[k] < 4) v[channels[k]] = values[k];
+            var v = Vector4.zero;
+            int present = 0;
+            for (int k = 0; k < 4 && k < channels.Length && k < values.Length; k++)
+                if (channels[k] >= 0 && channels[k] < 4)
+                {
+                    v[channels[k]] += values[k];
+                    present |= 1 << channels[k];
+                }
+            for (int channel = 0; channel < 4; channel++)
+                if ((present & (1 << channel)) == 0) v[channel] = 1f;
             return v;
         }
 
@@ -719,11 +780,12 @@ namespace UnityEngine
         static ProbeSet Current => LightmapSettings.lightProbes?.m_Set ?? ProbeSet.Empty;
 
         /// <summary>The lighting at a point: the current probes interpolated, or the ambient probe
-        /// outside their hull (also for a renderer: measured).</summary>
+        /// outside their bounds (also for a renderer: measured).</summary>
         public static void GetInterpolatedProbe(Vector3 position, Renderer renderer, out SphericalHarmonicsL2 probe)
         {
             int hint = renderer != null ? renderer.m_ProbeCell : -1;
             if (!Current.Evaluate(position, ref hint, out probe, out _)) probe = RenderSettings.ambientProbe;
+            if (renderer != null) renderer.m_ProbeCell = hint;
         }
 
         public static void CalculateInterpolatedLightAndOcclusionProbes(Vector3[] positions, SphericalHarmonicsL2[] lightProbes, Vector4[] occlusionProbes)

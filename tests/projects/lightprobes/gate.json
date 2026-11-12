@@ -1,0 +1,7 @@
+{
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/LightProbes.cs",
+    "managed/UnityEngine/Graphics/LightProbesQuery.cs",
+    "managed/UnityEngine/Graphics/ProbeTetrahedralization.cs"
+  ]
+}

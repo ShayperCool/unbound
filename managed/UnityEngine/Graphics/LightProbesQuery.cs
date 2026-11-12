@@ -12,7 +12,7 @@ namespace UnityEngine
     /// was created (a later change of LightProbes.bakedProbes or a new tetrahedralization does not
     /// reach it: measured, tests/projects/lightprobes). A tetrahedron index is the hint the walk
     /// starts from and the cell found: any index out of range starts at the first cell, and a
-    /// position outside the probes' hull gets the ambient probe (as at creation), occlusion 1 and
+    /// position outside the probes' axis-aligned bounds gets the ambient probe (as at creation), occlusion 1 and
     /// index -1.
     /// </summary>
     public partial struct LightProbesQuery : IDisposable

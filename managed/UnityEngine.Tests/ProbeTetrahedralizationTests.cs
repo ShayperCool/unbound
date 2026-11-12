@@ -50,6 +50,19 @@ namespace Unbound.Tests
         static string Key(IEnumerable<int> cell) => string.Join(",", cell.OrderBy(i => i));
 
         [Fact]
+        public void DuplicateAndCoplanarPositionsDoNotRejectTheSet()
+        {
+            var duplicate = new ProbeSet { Positions = new[] { Vector3.zero, new Vector3(2, 0, 0),
+                new Vector3(0, 2, 0), new Vector3(0, 0, 2), Vector3.zero } };
+            ProbeTetrahedralization.Build(duplicate);
+            Assert.Single(duplicate.Cells.Where(c => c.I3 >= 0));
+            var planar = new ProbeSet { Positions = new[] { Vector3.zero, new Vector3(2, 0, 0),
+                new Vector3(0, 0, 2), new Vector3(2, 0, 2), new Vector3(1, 0, 1) } };
+            ProbeTetrahedralization.Build(planar);
+            Assert.Empty(planar.Cells);
+        }
+
+        [Fact]
         public void CellMatricesAreRoundedAsTheEditors()
         {
             // Each baked cell's matrix from its own vertex order, to the bit (a double-precision

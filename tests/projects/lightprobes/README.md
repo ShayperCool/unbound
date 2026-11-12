@@ -49,10 +49,14 @@ completion and the call raised no event).
 
 Two independent captures agree byte for byte (Renderer: NVIDIA GeForce RTX 4060).
 
-* Outside the probes' hull every interpolation query, with or without a renderer, gives the
-  ambient probe, occlusion (1, 1, 1, 1) and tetrahedron index -1.
+* The original outside points are outside the probe positions' axis-aligned bounds. Queries
+  there, with or without a renderer, give the ambient probe, occlusion (1, 1, 1, 1) and index -1.
+  This does not establish an ambient fallback everywhere outside the convex hull. The geometry
+  controls below record an open hull cell supplying lighting inside those bounds.
 * A probe's occlusion is a vector by shadow mask channel: the occlusion of the mixed light baked
-  into each channel, 1 where no light is; it is blended with the SH weights.
+  into each channel. Only channels present at a vertex contribute its weighted value. A channel
+  absent from every vertex of the selected cell returns 1. Channel presence includes vertices
+  with zero weight, so a boundary cell choice can change occlusion even when SH agrees.
 * `CopySHCoefficientArraysFrom` stores ShadeSH9's seven constants per probe; a block without the
   arrays gets arrays of `count` elements, existing arrays keep their length. Instanced draws take
   element i for instance i; a renderer's block of one element lights the renderer.
@@ -155,7 +159,7 @@ keeps the global probe set at the recorded outgoing OnDestroy snapshot, with the
 reset after outgoing object destruction and before sceneUnloaded. This is partial Unity
 parity. The comparators retain their strict failures and original tolerances.
 
-The main probe matches 367/625 values and its image matches all 57600 pixels exactly.
+At that admission the main probe matched 367/625 values and its image matches all 57600 pixels exactly.
 The lifecycle comparison now matches 14/31 rows. Creation ownership satisfies all three
 predeclared contract rules; its full canonical comparison matches 65/84 rows. The
 unrelaxed main comparison against each raw Native repeat matches 57/83. The
@@ -225,3 +229,77 @@ Validation: `validation/runs/lp-identity-matching-validation-20261104/`, 1694/16
 managed tests, source-only reuse-disabled red control 6 assertion failures/3 guards,
 and six engine captures. API 0/2319 is reused through 65228 equal external metadata
 rows. Root checks and admission: `validation/runs/lp-identity-root-admission-20261104/`.
+
+### Q381 lookup and occlusion scope
+
+The current main comparison is 375/625, previously 367/625, with no lost matches and an
+unchanged PNG. The six single-scene query-index keys now match. The combined-scene queries
+at point 6 now return occlusion channel 1 as zero, previously about 0.655. The 250 remaining
+strict differences split into 228 numeric-only keys, at most 1.1920928955078125e-7 per component
+with mixed signs, and 22 functional keys:
+
+* Twelve query-index keys in `additive tetrahedralized` and `unloaded`, at points 0, 1, 2, 3, 6
+  and 8. The combined mesh's topology and order remain open.
+* Four combined counts/shared-Main keys, 120 cells versus the reference's 121.
+* Six `occlusion at probes` rows. Probe 8's channel 0 remains zero versus one in all six
+  snapshots; combined probe 22's channel 1 also remains zero versus one. Boundary-cell choice
+  changes which channels are present, even where a contributing vertex's weight is zero.
+
+The walk accepts nonnegative weights exactly, chooses a later slot when minimum weights tie,
+and stops a two-step cycle with the current weights. A renderer remembers its last found cell.
+Public queries outside the positions' bounds return ambient; inside them they can use open hull
+cells. The renderer's interpolation path continues to extrapolate through its hull cells.
+The occlusion rule and bounds survive query snapshots and scene combinations. The importer
+already carries the per-slot channels, so no cache output or cache format changes.
+
+`Geometry/ProbeGeometry.cs` and `geometry.py` record independent diagnostic controls in
+`Reference/unity-6000.0.71f1/geometry.jsonl`. Two normal GPU Editor exits must agree byte for byte
+before publication. Extending this reference also checks every old row byte for byte.
+The public `Lightmapping.Tetrahedralize` helper returns one cell for a tetrahedron, one after
+removing its exact duplicate, no cells for the five coplanar points, two for the thin layout and
+three for the exterior-point layout. The engine's builder produces those cell counts but retains
+the duplicate position and has different index order. The diagnostic engine replay calls its
+builder directly, independently of imported cells; it does not implement the public Editor
+helper or `SetPositionsSelf`.
+
+The face controls use 18 integer/dyadic positions with affine coefficients. At `(0.5,0.5,0)` the
+reference returns 1.5; just inside at z=1e-6 it returns 1.500004; just outside at z=-1e-6 it returns
+the ambient probe. Moving to `(0.5,0.5,0.25)` returns 2.5. Several starting hints exercise shared
+faces, and renderer hints agree with unhinted results after the lighting changes. Complete index
+answers remain in the strict comparison. Open-cell extrapolation and the outer bounds have
+additional controls at `(1,1,1)` and `(2.01,1,1)`.
+
+Run the diagnostics separately from the admitted baked-lighting gate while mesh construction
+and order remain open. The comparator reports every discrepancy and exits nonzero on any one:
+
+```sh
+python3 tests/projects/lightprobes/geometry.py editor --release 6000.0.71f1 --work <cache-run>
+python3 tests/projects/lightprobes/geometry.py publish --release 6000.0.71f1 --work <cache-run>
+UNBOUND_CLI=<snapshot>/unbound UNBOUND_MANAGED_DIR=<snapshot>/managed \
+  python3 tests/projects/lightprobes/geometry.py unbound --release 6000.0.71f1 --work <cache-run>
+python3 tests/projects/lightprobes/compare.py \
+  tests/projects/lightprobes/Reference/unity-6000.0.71f1/geometry.jsonl \
+  <cache-run>/unbound/geometry.jsonl --report <cache-run>/comparison.json
+```
+
+No index renumbering or layout-specific hull patch was admitted. A finite enclosing tetrahedron,
+probe insertion order, cell vertex rotation, search-start choice and open-cell arithmetic all
+remain relevant to a general replacement for the combined mesh builder. The diagnostic layouts
+bound the current investigation; they do not establish general topology or degeneracy parity.
+
+Unity 6000.0 contracts checked for this work:
+
+* [LightProbes](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightProbes.html)
+  and [GetInterpolatedProbe](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightProbes.GetInterpolatedProbe.html):
+  interpolation combines baked and realtime lighting; the renderer caches a search hint.
+  The moving face controls and managed renderer test exercise a changed lighting value and cell.
+* [CalculateInterpolatedLightAndOcclusionProbes](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightProbes.CalculateInterpolatedLightAndOcclusionProbes.html):
+  no baked probes gives ambient and occlusion one; output arrays may be omitted individually,
+  and supplied arrays must fit. The existing main recorder and managed tests retain those controls.
+* [Light Probes manual](https://docs.unity3d.com/6000.0/Documentation/Manual/LightProbes.html)
+  and [moving GameObjects](https://docs.unity.com/en-us/engine/6000.0/manual/lighting-overview/direct-and-indirect-lighting/light-probes/moving-objects):
+  probes provide spatially interpolated lighting. The exact cell order and tie rules here are
+  measured observations, not documented ordering guarantees.
+* [LightProbeProxyVolume](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightProbeProxyVolume.html):
+  a spatial grid supplies lighting gradients across large objects. Grid sampling is outside this
+  change; it is not established by the single-position renderer controls.
