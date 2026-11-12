@@ -158,8 +158,14 @@ impl Bvh {
                 }
                 start + i
             }
-            // All centroids coincide, or the tree is deep: halve the list.
-            None => start + (end - start) / 2,
+            None => start,
+        };
+        // All centroids coincide, the tree is deep, or the split's rounding put everything on
+        // one side: halve the list.
+        let mid = if mid == start || mid == end {
+            start + (end - start) / 2
+        } else {
+            mid
         };
         self.build(centroids, start, mid, depth + 1);
         let second = self.build(centroids, mid, end, depth + 1);

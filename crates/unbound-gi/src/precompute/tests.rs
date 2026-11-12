@@ -493,3 +493,37 @@ fn a_mesh_without_normals_faces_its_winding() {
         "{floor_points}"
     );
 }
+
+#[test]
+fn a_dense_tilted_mesh_is_cut_in_time() {
+    // A grid of 160 000 triangles turned 30 degrees, of slightly different normals, in a few
+    // voxels: its parts gather without comparing every pair of normals.
+    let mut m = Mesh::default();
+    let n = 200u32;
+    let (c, s) = (30f32.to_radians().cos(), 30f32.to_radians().sin());
+    for z in 0..=n {
+        for x in 0..=n {
+            let (u, v) = (1.5 * x as f32 / n as f32, 1.5 * z as f32 / n as f32);
+            // A gentle bump: no two normals alike.
+            let h = 0.01 * (u * 7.0).sin() * (v * 5.0).cos();
+            m.positions.push([u * c, u * s + h, v]);
+            m.normals.push(super::math::normalized([-s, c, 0.0]));
+            m.texels.push([0.0, 0.0]);
+        }
+    }
+    for z in 0..n {
+        for x in 0..n {
+            let a = z * (n + 1) + x;
+            m.triangles.push([a, a + n + 1, a + n + 2]);
+            m.triangles.push([a, a + n + 2, a + 1]);
+        }
+    }
+    let start = std::time::Instant::now();
+    let c = cluster(&[m.instance(1.0)], 32, 32).unwrap();
+    assert!(
+        start.elapsed().as_secs_f32() < 10.0,
+        "{:?}",
+        start.elapsed()
+    );
+    assert!(c.input.clusters() >= 2);
+}

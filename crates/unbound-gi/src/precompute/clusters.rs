@@ -143,8 +143,8 @@ fn dice(t: [Vertex; 3], origin: V3, size: f32, instance: u32, out: &mut Vec<Piec
 }
 
 /// How many voxel parts the triangle `p` is cut into at most by the grid from `origin` of
-/// cluster size `s`: no more than the voxels its bounds span, nor than its area and its
-/// perimeter cross.
+/// cluster size `s`: no more than the voxels its bounds span, nor than its projected areas and
+/// its perimeter cross.
 fn parts_bound(p: [V3; 3], origin: V3, s: f32) -> f64 {
     let span: f64 = (0..3)
         .map(|k| {
@@ -154,11 +154,15 @@ fn parts_bound(p: [V3; 3], origin: V3, s: f32) -> f64 {
             cell(hi) - cell(lo) + 1.0
         })
         .product();
-    let area = 0.5 * super::math::length(cross(sub(p[1], p[0]), sub(p[2], p[0])));
+    // The voxels a plane crosses grow with its areas projected on the three axis planes.
+    let projected: f32 = cross(sub(p[1], p[0]), sub(p[2], p[0]))
+        .iter()
+        .map(|v| 0.5 * v.abs())
+        .sum();
     let edges: f32 = (0..3)
         .map(|e| super::math::length(sub(p[(e + 1) % 3], p[e])))
         .sum();
-    span.min((area / (s * s) + 3.0 * edges / s + 8.0) as f64)
+    span.min((projected / (s * s) + 3.0 * edges / s + 8.0) as f64)
 }
 
 /// The part of `polygon` on the side `sign * (x[axis] - plane) >= 0`.
@@ -363,7 +367,7 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
                 uv: inst.texels[v as usize],
             });
             dice(v, origin, inst.cluster_size, i as u32, &mut pieces);
-            // The estimate bounds the parts but for slivers; this bounds them all.
+            // A second bound, should the estimate's rounding fall short.
             ensure!(
                 pieces.len() <= 2 * MAX_PIECES,
                 "realtime GI: renderer {i} cuts the system into more than {} parts",
@@ -385,53 +389,62 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
             .push(k as u32);
     }
     let mut parts = UnionFind::new(pieces.len());
-    /// A part of a voxel being gathered: its pieces, their corners and their distinct normals.
+    /// A part of a voxel being gathered: its pieces, their corners and normals, and a cone
+    /// round its first normal that holds them all (the cosine of its half angle).
     struct Clump {
         members: Vec<u32>,
         corners: std::collections::HashSet<[i32; 3]>,
         normals: Vec<V3>,
+        axis: V3,
+        radius: f32,
     }
-    let faces_all = |normals: &[V3], n: V3| normals.iter().all(|&m| dot(m, n) > 0.0);
+    impl Clump {
+        /// Whether `n` faces the half-space of every normal: at once when the cone and `n` are
+        /// less than a right angle apart, else normal by normal.
+        fn faces(&self, n: V3) -> bool {
+            let quick = self.radius.acos() + dot(self.axis, n).clamp(-1.0, 1.0).acos();
+            quick < std::f32::consts::FRAC_PI_2 - 1e-4
+                || self.normals.iter().all(|&m| dot(m, n) > 0.0)
+        }
+        fn add(&mut self, n: V3) {
+            self.normals.push(n);
+            self.radius = self.radius.min(dot(self.axis, n));
+        }
+    }
     for list in by_voxel.values() {
         let mut clumps: Vec<Clump> = Vec::new();
         for &k in list {
             let piece = &pieces[k as usize];
             let corners: std::collections::HashSet<[i32; 3]> =
                 piece.polygon.iter().map(|v| key(v.p)).collect();
-            let joins =
-                |c: &Clump| !c.corners.is_disjoint(&corners) && faces_all(&c.normals, piece.normal);
+            let joins = |c: &Clump| !c.corners.is_disjoint(&corners) && c.faces(piece.normal);
             let Some(first) = clumps.iter().position(joins) else {
                 clumps.push(Clump {
                     members: vec![k],
                     corners,
                     normals: vec![piece.normal],
+                    axis: piece.normal,
+                    radius: 1.0,
                 });
                 continue;
             };
             let target = &mut clumps[first];
             target.members.push(k);
             target.corners.extend(corners.iter().copied());
-            if !target.normals.contains(&piece.normal) {
-                target.normals.push(piece.normal);
-            }
+            target.add(piece.normal);
             // The later parts this piece touches merge in when all their normals and the
             // part's face one half-space.
             let mut i = first + 1;
             while i < clumps.len() {
                 let fits = !clumps[i].corners.is_disjoint(&corners)
-                    && clumps[i]
-                        .normals
-                        .iter()
-                        .all(|&n| faces_all(&clumps[first].normals, n));
+                    && clumps[i].normals.iter().all(|&n| clumps[first].faces(n));
                 if fits {
                     let other = clumps.remove(i);
                     let target = &mut clumps[first];
                     target.members.extend(other.members);
                     target.corners.extend(other.corners);
                     for n in other.normals {
-                        if !target.normals.contains(&n) {
-                            target.normals.push(n);
-                        }
+                        target.add(n);
                     }
                 } else {
                     i += 1;
@@ -911,4 +924,27 @@ fn samples(
         bounce_samples.push(bounce.len() as u32);
     }
     (materials, bounce_samples, bounce)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_part_bound_covers_a_tilted_triangle() {
+        // A large triangle across the grid's diagonal crosses about the sum of its projected
+        // areas in voxels, more than its own area.
+        let n = 60.0;
+        let p = [[0.0, 0.0, n], [n, 0.0, 0.0], [0.0, n, 0.0]];
+        let v = p.map(|p| Vertex {
+            p,
+            n: [1.0, 1.0, 1.0],
+            uv: [0.0; 2],
+        });
+        let mut pieces = Vec::new();
+        dice(v, [-0.37; 3], 1.0, 0, &mut pieces);
+        let bound = parts_bound(p, [-0.37; 3], 1.0);
+        assert!(bound >= pieces.len() as f64, "{bound} < {}", pieces.len());
+        assert!((pieces.len() as f64) > 0.5 * 1800.0 * 3f64.sqrt());
+    }
 }
