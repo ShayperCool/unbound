@@ -77,6 +77,10 @@ namespace UnityEngine
                 shadowSamplingMode = (ShadowSamplingMode)body.Int("m_ShadowSamplingMode", (int)ShadowSamplingMode.None),
             };
             m_Descriptor = d;
+            // An asset falls back to the compatible format unless it says not to (Scripting API
+            // RenderTexture.depthStencilFormat, 6000.0: m_EnableCompatibleFormat).
+            if (body.Bool("m_EnableCompatibleFormat", true))
+                m_Descriptor.depthStencilFormat = RenderableDepthFormat(d.depthStencilFormat);
             m_Width = w;
             m_Height = h;
             var settings = body.Get("m_TextureSettings");
@@ -197,6 +201,7 @@ namespace UnityEngine
                 Change();
                 m_CreatedFromScript = true;
                 m_Descriptor = value;
+                m_Descriptor.depthStencilFormat = RenderableDepthFormat(value.depthStencilFormat);
                 m_Width = value.width;
                 m_Height = value.height;
                 if (!m_Created) m_AllocatedMipCount = null;
@@ -608,7 +613,8 @@ namespace UnityEngine
 
         /// <summary>The depth bits of the buffer the renderer stores for a depth-stencil format;
         /// a 16-bit format with stencil gets 24 bits, as the renderer has no 16-bit buffer with
-        /// stencil (16 bits alone are stored as 16, without stencil).</summary>
+        /// stencil (16 bits alone are stored as 16, without stencil: the renderer's depth format
+        /// by bits, crates/unbound-app/src/render/resources.rs depth_format).</summary>
         internal static int StoredDepthBits(GraphicsFormat format)
         {
             int bits = GraphicsFormatUtility.GetDepthBits(format);

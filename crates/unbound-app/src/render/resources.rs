@@ -374,7 +374,8 @@ pub const TEX2D_ARRAY: i32 = 5;
 
 /// The depth buffer of a render texture of `bits` depth bits: 16 bits without stencil, any
 /// other depth with 24 bits and stencil (`RenderTexture.depth`; Unity 6000.0.71f1 stores a 16-bit
-/// buffer as D16, tests/projects/samplerstates and nativegfx).
+/// buffer as D16, tests/projects/samplerstates and nativegfx). A 16-bit format with stencil
+/// arrives with 24 bits (managed RenderTexture.StoredDepthBits).
 pub fn depth_format(bits: i32) -> wgpu::TextureFormat {
     if bits == 16 {
         wgpu::TextureFormat::Depth16Unorm
