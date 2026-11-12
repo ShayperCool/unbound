@@ -18,8 +18,9 @@ namespace Unbound.ApiTools;
 /// implementation has the release's complete API surface. Game code then loads and binds; calling a
 /// stub logs a warning once (<c>Unbound.Runtime.Stubs.NotImplemented</c>) and returns a default.
 ///
-/// Inputs are the release's module assemblies (signatures and constants only: no Unity code is
-/// read) and the implementation compiled without stubs. The output is one source file per module,
+/// Inputs are the release's module assemblies (declarations, constants and fixed removed-getter
+/// exceptions, read without executing the assemblies) and the implementation compiled without stubs.
+/// The output is one source file per module,
 /// <c>&lt;Module&gt;.g.cs</c>: new types in full, and <c>partial</c> declarations adding the missing
 /// members to hand-written types. Generated types and members carry <c>[Unbound.Stub]</c> so the API
 /// gap report can tell them from real implementations. Output is deterministic and files are only
@@ -28,7 +29,7 @@ namespace Unbound.ApiTools;
 public static class StubGenerator
 {
     /// <summary>Bump when the output for the same inputs would differ.</summary>
-    public const string FormatVersion = "unbound-stubs-2";
+    public const string FormatVersion = "unbound-stubs-3";
 
     /// <param name="implSourceDir">The implementation's sources (<c>managed/UnityEngine</c>): the
     /// generator reads which hand-written types are partial and declare constructors.</param>
@@ -118,6 +119,7 @@ sealed partial class StubBuilder
     /// UnityEngine.dll/UnityEditor.dll, whose own types are only legacy leftovers.</summary>
     readonly List<(string Name, IAssemblySymbol Assembly, MetadataReader Reader)> _modules = new();
     readonly HashSet<IAssemblySymbol> _unityModules = new(SymbolEqualityComparer.Default);
+    readonly Dictionary<IAssemblySymbol, PEReader> _moduleImages = new(SymbolEqualityComparer.Default);
     /// <summary>Each top-level Unity type by metadata name, and the module that owns it.</summary>
     readonly Dictionary<string, (string Module, INamedTypeSymbol Type)> _owners = new(StringComparer.Ordinal);
 
@@ -157,6 +159,7 @@ sealed partial class StubBuilder
             var assembly = (IAssemblySymbol)_unity.GetAssemblyOrModuleSymbol(moduleReferences[i])!;
             var pe = new PEReader(File.ReadAllBytes(moduleFiles[i]).ToImmutableArrayUnsafe());
             _modules.Add((assembly.Name, assembly, pe.GetMetadataReader()));
+            _moduleImages.Add(assembly, pe);
             _unityModules.Add(assembly);
         }
 

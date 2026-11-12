@@ -807,10 +807,11 @@ sealed partial class StubBuilder
             string body;
             if (keyword == "get")
             {
+                var fixedThrow = FixedGetterThrow(accessor);
                 var ret = property.ReturnsByRef || property.ReturnsByRefReadonly
                     ? $"return ref global::Unbound.Runtime.Stubs.Ref<{Render(property.Type)}>();"
                     : stored ? $"return {backing};" : ReturnDefault(property.Type, id);
-                body = $"{{ {NotImplemented}({Quote(id)}); {ret} }}";
+                body = fixedThrow != null ? $"{{ {fixedThrow} }}" : $"{{ {NotImplemented}({Quote(id)}); {ret} }}";
             }
             else
             {

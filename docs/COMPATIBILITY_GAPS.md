@@ -308,8 +308,10 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 
 - [x] Q403 default-state capture and comparison: [defaultstate](../tests/projects/defaultstate/README.md)
       covers 1,032 constructible matching types and records 11,421 rows in two GPU Editor repeats.
-      The comparison retains 2,278 differing reference rows, 541 extra implementation rows and
-      50 variable observations inside 2,821 exact, reasoned migration entries. Module row counts
+      Q411 resolves the shared removed-getter mechanism, with 54 added message/context controls
+      and all original reference rows preserved. The comparison retains 1,082 differing reference
+      rows, 541 extra implementation rows and 50 variable observations inside 1,625 exact,
+      reasoned migration entries. Module row counts
       and context/depth/cycle limitations remain explicit. Static constructor stores have 296
       equal pairs, one queued rendering default, 924 undecided pairs and unmatched coverage counts.
       These are open repairs, not a claim of complete default parity.

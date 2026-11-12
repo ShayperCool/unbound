@@ -87,7 +87,7 @@ exception statuses, empty/duplicate reasons and stale entries fail the gate.
 The variable entries are unresolved comparisons, not parity passes. They need
 relational or initialized-context controls before a default contract can be claimed.
 
-## Initial coverage and queue
+## Coverage and migration queue
 
 The initial inventory has 1,032 candidates: 111 components, 31 ScriptableObjects,
 362 classes and 528 structs. Another 409 types carry an explicit exclusion reason.
@@ -99,45 +99,55 @@ update, and the Terrain resource-retention flag before TerrainData is assigned. 
 Another 29 rows contain depth-limit markers and 78 contain cycle markers; their
 nested coverage remains open.
 
-The first comparison has 9,143 exact rows, 2,278 differing reference rows,
-zero missing rows and 541 extra implementation rows. The 2,821 queue entries
-include 50 variable-reference rows, two of which happen to equal the engine
-snapshot. All variable rows remain unresolved comparisons. Of the differing rows, 1,196 concern
-removed Component/GameObject getters that throw in the release but return a
-generated fallback value in Unbound; fix that shared mechanism before individual
-component defaults. The module counts below are rows, not independent root causes.
+Q411 adds 54 controls after the original capture: all thirteen removed getters on
+GameObject and Component, on both empty objects and objects with a Rigidbody.
+The controls record exception type and message; GetComponent distinguishes the two
+contexts. Both independent GPU repeats and Unbound match all 54 controls. The original
+11,421 reference rows remain byte-identical, giving 11,475 total rows.
+
+The comparison now has 10,393 exact rows, 1,082 differing reference rows,
+zero missing rows and 541 extra implementation rows. The 1,625 queue entries
+include the same 50 variable-reference rows, two of which happen to equal the engine
+snapshot. All variable rows remain unresolved comparisons. The shared generator now
+preserves unconditional fixed NotSupportedException getters from the selected release
+assembly, including their exact messages. It does not infer behavior from obsolete
+annotations or apply this rule to conditional or computed exceptions. The generator
+format version was bumped. Of the extra rows, 247 now throw but remain extra because
+their root factory should return null. No factory or module default was fitted by this slice.
+
+The [6000.0 Component](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Component.html)
+and [GameObject](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GameObject.html)
+API pages describe supported component lookup through GetComponent. The exact removed
+getter exceptions are observations of 6000.0.71f1 in this probe, not a documented
+release-independent exception contract.
 
 | Release module | Queued rows |
 | --- | ---: |
-| UnityEngine.CoreModule | 570 |
-| UnityEngine.Physics2DModule | 448 |
-| UnityEngine.ParticleSystemModule | 386 |
-| UnityEngine.PhysicsModule | 248 |
-| UnityEngine.AudioModule | 228 |
+| UnityEngine.ParticleSystemModule | 347 |
+| UnityEngine.CoreModule | 271 |
 | UnityEditor.CoreModule | 219 |
-| UnityEngine.UIElementsModule | 172 |
-| UnityEngine.AnimationModule | 124 |
-| UnityEngine.TilemapModule | 49 |
-| UnityEngine.AIModule | 44 |
-| UnityEngine.UIModule | 43 |
-| UnityEngine.GridModule | 39 |
+| UnityEngine.AudioModule | 189 |
+| UnityEngine.Physics2DModule | 162 |
+| UnityEngine.UIElementsModule | 159 |
+| UnityEngine.PhysicsModule | 92 |
 | UnityEngine.IMGUIModule | 29 |
-| UnityEngine.TerrainModule | 26 |
+| UnityEngine.GridModule | 26 |
 | UnityEngine.AssetBundleModule | 24 |
-| UnityEngine.VideoModule | 22 |
-| UnityEngine.SpriteShapeModule | 20 |
-| UnityEngine.SpriteMaskModule | 18 |
-| UnityEngine.TerrainPhysicsModule | 16 |
-| UnityEngine.VehiclesModule | 15 |
-| UnityEngine.ClothModule | 13 |
-| UnityEngine.DirectorModule | 13 |
-| UnityEngine.TextRenderingModule | 13 |
-| UnityEngine.WindModule | 13 |
+| UnityEngine.AnimationModule | 20 |
+| UnityEngine.TerrainModule | 13 |
 | UnityEngine.TextCoreTextEngineModule | 10 |
+| UnityEngine.TilemapModule | 10 |
+| UnityEngine.VideoModule | 9 |
 | UnityEngine.GameCenterModule | 7 |
+| UnityEngine.SpriteShapeModule | 7 |
 | UnityEngine.UnityWebRequestModule | 6 |
+| UnityEngine.AIModule | 5 |
+| UnityEngine.SpriteMaskModule | 5 |
+| UnityEngine.UIModule | 4 |
 | UnityEngine.UnityWebRequestTextureModule | 3 |
+| UnityEngine.TerrainPhysicsModule | 3 |
 | UnityEngine.TextCoreFontEngineModule | 2 |
+| UnityEngine.VehiclesModule | 2 |
 | UnityEngine.AndroidJNIModule | 1 |
 
 The separate static scan compares direct literal field stores in straight-line

@@ -11418,4 +11418,58 @@
 {"key":"FreshStateControl/Property/FreshStateControl/AChanges","status":"value","value":"1"}
 {"key":"FreshStateControl/Property/FreshStateControl/ZNested","status":"value","value":"NestedStateDerived{Answer=7;field=2}"}
 {"key":"FreshStateControl/Property/FreshStateControl/ZReads","status":"value","value":"0"}
+{"key":"RemovedGetterControl/empty/GetComponent","status":"value","value":"False"}
+{"key":"RemovedGetterControl/empty/GameObject/animation","status":"getter-threw","value":"System.NotSupportedException:animation property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/audio","status":"getter-threw","value":"System.NotSupportedException:audio property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/camera","status":"getter-threw","value":"System.NotSupportedException:camera property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/collider","status":"getter-threw","value":"System.NotSupportedException:collider property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/collider2D","status":"getter-threw","value":"System.NotSupportedException:collider2D property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/constantForce","status":"getter-threw","value":"System.NotSupportedException:constantForce property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/hingeJoint","status":"getter-threw","value":"System.NotSupportedException:hingeJoint property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/light","status":"getter-threw","value":"System.NotSupportedException:light property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/networkView","status":"getter-threw","value":"System.NotSupportedException:networkView property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/particleSystem","status":"getter-threw","value":"System.NotSupportedException:particleSystem property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/renderer","status":"getter-threw","value":"System.NotSupportedException:renderer property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/rigidbody","status":"getter-threw","value":"System.NotSupportedException:rigidbody property has been deprecated"}
+{"key":"RemovedGetterControl/empty/GameObject/rigidbody2D","status":"getter-threw","value":"System.NotSupportedException:rigidbody2D property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/animation","status":"getter-threw","value":"System.NotSupportedException:animation property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/audio","status":"getter-threw","value":"System.NotSupportedException:audio property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/camera","status":"getter-threw","value":"System.NotSupportedException:camera property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/collider","status":"getter-threw","value":"System.NotSupportedException:collider property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/collider2D","status":"getter-threw","value":"System.NotSupportedException:collider2D property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/constantForce","status":"getter-threw","value":"System.NotSupportedException:constantForce property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/hingeJoint","status":"getter-threw","value":"System.NotSupportedException:hingeJoint property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/light","status":"getter-threw","value":"System.NotSupportedException:light property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/networkView","status":"getter-threw","value":"System.NotSupportedException:networkView property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/particleSystem","status":"getter-threw","value":"System.NotSupportedException:particleSystem property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/renderer","status":"getter-threw","value":"System.NotSupportedException:renderer property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/rigidbody","status":"getter-threw","value":"System.NotSupportedException:rigidbody property has been deprecated"}
+{"key":"RemovedGetterControl/empty/Component/rigidbody2D","status":"getter-threw","value":"System.NotSupportedException:rigidbody2D property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GetComponent","status":"value","value":"True"}
+{"key":"RemovedGetterControl/populated/GameObject/animation","status":"getter-threw","value":"System.NotSupportedException:animation property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/audio","status":"getter-threw","value":"System.NotSupportedException:audio property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/camera","status":"getter-threw","value":"System.NotSupportedException:camera property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/collider","status":"getter-threw","value":"System.NotSupportedException:collider property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/collider2D","status":"getter-threw","value":"System.NotSupportedException:collider2D property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/constantForce","status":"getter-threw","value":"System.NotSupportedException:constantForce property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/hingeJoint","status":"getter-threw","value":"System.NotSupportedException:hingeJoint property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/light","status":"getter-threw","value":"System.NotSupportedException:light property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/networkView","status":"getter-threw","value":"System.NotSupportedException:networkView property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/particleSystem","status":"getter-threw","value":"System.NotSupportedException:particleSystem property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/renderer","status":"getter-threw","value":"System.NotSupportedException:renderer property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/rigidbody","status":"getter-threw","value":"System.NotSupportedException:rigidbody property has been deprecated"}
+{"key":"RemovedGetterControl/populated/GameObject/rigidbody2D","status":"getter-threw","value":"System.NotSupportedException:rigidbody2D property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/animation","status":"getter-threw","value":"System.NotSupportedException:animation property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/audio","status":"getter-threw","value":"System.NotSupportedException:audio property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/camera","status":"getter-threw","value":"System.NotSupportedException:camera property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/collider","status":"getter-threw","value":"System.NotSupportedException:collider property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/collider2D","status":"getter-threw","value":"System.NotSupportedException:collider2D property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/constantForce","status":"getter-threw","value":"System.NotSupportedException:constantForce property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/hingeJoint","status":"getter-threw","value":"System.NotSupportedException:hingeJoint property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/light","status":"getter-threw","value":"System.NotSupportedException:light property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/networkView","status":"getter-threw","value":"System.NotSupportedException:networkView property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/particleSystem","status":"getter-threw","value":"System.NotSupportedException:particleSystem property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/renderer","status":"getter-threw","value":"System.NotSupportedException:renderer property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/rigidbody","status":"getter-threw","value":"System.NotSupportedException:rigidbody property has been deprecated"}
+{"key":"RemovedGetterControl/populated/Component/rigidbody2D","status":"getter-threw","value":"System.NotSupportedException:rigidbody2D property has been deprecated"}
 {"key":"complete","status":"value","value":"1"}

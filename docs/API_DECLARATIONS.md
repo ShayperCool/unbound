@@ -86,3 +86,12 @@ keeps every queued discrepancy visible, requires reasons and rejects new or stal
 Factory/context failures, variable observations and truncated nested values remain explicit
 coverage gaps. New declarations come from the selected release through the stub generator; new
 defaults need release evidence and a control that can distinguish the behavior being implemented.
+
+Q411's shared removed-getter migration resolves 1,196 rows. The default-state probe now
+has 10,393 exact rows and 1,625 queued rows, including the unchanged 50 variable rows.
+Fifty-four added Editor controls check exception messages on empty and populated objects;
+all prior canonical rows are byte-identical. Fixed removed-getter exceptions come from
+the selected release assembly during stub generation, so a different release supplies
+its own exception text without a runtime version constant. Conditional and computed
+getters retain their existing fallback. The remaining queue is broken down by module
+in the probe README, including 247 extra member rows under rejected root factories.

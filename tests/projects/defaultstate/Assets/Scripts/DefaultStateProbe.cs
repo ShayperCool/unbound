@@ -41,6 +41,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
         if (index<candidates.Length) return;
         Capture(new Candidate { type=typeof(FreshStateControl).FullName, module=typeof(FreshStateControl).Assembly.GetName().Name,
             category="class", status="candidate" });
+        RemovedGetterControls();
         Emit("complete","value","1"); output.Dispose(); output=null;
         EditorApplication.Exit(0);
     }
@@ -48,6 +49,37 @@ public sealed class DefaultStateProbe : MonoBehaviour
     {
         output.WriteLine(JsonUtility.ToJson(new Record { key=key,status=status,value=value }));
         output.Flush();
+    }
+    static void RemovedGetterControls()
+    {
+        foreach (var populated in new[] { false, true })
+        {
+            var owner = new GameObject("RemovedGetterControl");
+            try
+            {
+                if (populated) owner.AddComponent<Rigidbody>();
+                var prefix = "RemovedGetterControl/" + (populated ? "populated" : "empty");
+                Emit(prefix + "/GetComponent", "value", (owner.GetComponent<Rigidbody>() != null).ToString());
+                foreach (var target in new object[] { owner, owner.transform })
+                {
+                    var type = target is GameObject ? typeof(GameObject) : typeof(Component);
+                    foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                        .OrderBy(p => p.Name, StringComparer.Ordinal))
+                    {
+                        var obsolete = (ObsoleteAttribute)Attribute.GetCustomAttribute(property, typeof(ObsoleteAttribute));
+                        if (obsolete == null || property.PropertyType != typeof(Component)) continue;
+                        var key = prefix + "/" + type.Name + "/" + property.Name;
+                        try { property.GetValue(target, null); Emit(key, "value", "returned"); }
+                        catch (Exception error)
+                        {
+                            while (error is TargetInvocationException && error.InnerException != null) error = error.InnerException;
+                            Emit(key, "getter-threw", error.GetType().FullName + ":" + error.Message);
+                        }
+                    }
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(owner); }
+        }
     }
     static void Progress(string key)
     { if (!string.IsNullOrEmpty(progress)) File.WriteAllText(progress,key); }

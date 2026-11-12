@@ -415,6 +415,54 @@ public class StubGeneratorTests
     }
 
     [Fact]
+    public void FixedRemovedGetterExceptionsFollowTheSelectedRelease()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "UnityEngine");
+            var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule",
+                Compile("UnityEngine.CoreModule", new[] { StubSupport }).Image);
+            var output = Path.Combine(root, "output");
+            foreach (var message in new[] { "removed\n\"getter\"", "replacement release message" })
+            {
+                var source = """
+                    namespace UnityEngine { public class Removed {
+                        public object old => throw new System.NotSupportedException(MESSAGE);
+                        public object ordinary => null;
+                        public object conditional => System.DateTime.Now.Ticks > 0 ? null : throw new System.NotSupportedException("conditional");
+                        public object computed => throw new System.NotSupportedException(System.DateTime.Now.ToString());
+                    } }
+                    """.Replace("MESSAGE", SymbolDisplay.FormatLiteral(message, true));
+                var (reference, errors) = Compile("UnityEngine.CoreModule", new[] { source });
+                Assert.Empty(errors);
+                Write(unity, "UnityEngine.CoreModule", reference);
+                var report = StubGenerator.Generate(unity, impl, output, returns: NoReturns);
+                Assert.Empty(report.Errors);
+                var (image, generatedErrors) = Compile("UnityEngine.CoreModule",
+                    Directory.GetFiles(output, "*.g.cs").Select(File.ReadAllText).Append(StubSupport));
+                Assert.Empty(generatedErrors);
+                var context = new AssemblyLoadContext("removed-getters", isCollectible: true);
+                try
+                {
+                    var assembly = context.LoadFromStream(new MemoryStream(image));
+                    var type = assembly.GetType("UnityEngine.Removed")!;
+                    var instance = Activator.CreateInstance(type);
+                    var calls = assembly.GetType("Unbound.Runtime.Stubs")!.GetField("Calls")!;
+                    var before = calls.GetValue(null);
+                    var error = Assert.Throws<TargetInvocationException>(() => type.GetProperty("old")!.GetValue(instance));
+                    Assert.Equal(message, Assert.IsType<NotSupportedException>(error.InnerException).Message);
+                    Assert.Equal(before, calls.GetValue(null));
+                    foreach (var name in new[] { "ordinary", "conditional", "computed" })
+                        Assert.Null(type.GetProperty(name)!.GetValue(instance));
+                }
+                finally { context.Unload(); }
+            }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void EveryReleaseTableEntryIsAnExpression()
     {
         foreach (var (id, value) in StubDefaults.For("6000.0"))
