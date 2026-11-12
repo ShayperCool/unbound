@@ -13,7 +13,9 @@ UI Toolkit's setting, for Liberation Sans: a font asset per `GlyphRenderMode` (s
 SDF, SDF8 to SDF32, SDFAA, color; hinted and not; 24 points, padding 4) with its glyphs' metrics,
 atlas rects and the atlas pixels around them; the face info at 13, 24, 24.5 and 37 points; and
 glyph loads with each `GlyphLoadFlags` (default, no hinting, no scale, compute metrics, render,
-no bitmap).
+no bitmap). Last, a face without 'H', 'x', 'X' or a space (`Assets/SubsetFonts/TextCoreNoCaps.ttf`,
+Liberation Sans' "Aaog" renamed; `FONT-LICENSE.txt`): its face info from the font engine and from
+a font asset made from it.
 
 Fonts: Liberation Sans (from the OS) and Inter (from the Editor's resources), copied into
 `Assets/Fonts` by the setup (they are not committed), and UI Toolkit's default runtime font, the
@@ -42,7 +44,7 @@ reference's. Without them the engine skips both fonts and no case is compared.
     python3 tests/projects/textcore/compare.py tests/projects/textcore/Reference/unity-6000.0.71f1.jsonl.gz /tmp/textcore-unbound.jsonl
 
 `tools/agents/suite.py --only textcore` does the same on a copy of the project. With the fonts,
-all 372 cases and the font engine controls match (616847 values; the atlas pixels of the controls
+all 372 cases and the font engine controls match (616859 values; the atlas pixels of the controls
 exactly). On macOS set
 `UNBOUND_PROBE_UNITY` to the Editor's executable (or `TEXTCORE_INTER`) and
 `TEXTCORE_LIBERATION_SANS`: neither default path exists there.

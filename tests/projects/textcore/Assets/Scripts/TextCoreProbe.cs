@@ -111,6 +111,24 @@ public class TextCoreProbe : MonoBehaviour
         }
 
         if (fonts.Length > 0 && fonts[0] != null) EngineControls(0, fonts[0]);
+        FaceWithoutLines();
+    }
+
+    /// <summary>A face without 'H', 'x', 'X' or a space (Liberation Sans' "Aaog", renamed): the
+    /// font engine's face info and the face info of a font asset made from it.</summary>
+    void FaceWithoutLines()
+    {
+        var path = Path.Combine(Application.dataPath, "SubsetFonts/TextCoreNoCaps.ttf");
+        var error = FontEngine.LoadFontFace(path, 24f, 0);
+        var face = FontEngine.GetFaceInfo();
+        var asset = FontAsset.CreateFontAsset(path, 0, 24, 4, GlyphRenderMode.SDFAA, 256, 256);
+        bool added = asset != null && asset.TryAddCharacters("Ao");
+        var assetFace = asset != null ? asset.faceInfo : default;
+        Line("nolines", "\"error\":" + Str(error.ToString()) + ",\"family\":" + Str(face.familyName) + ",\"capLine\":" + F(face.capLine) +
+            ",\"meanLine\":" + F(face.meanLine) + ",\"strikethroughOffset\":" + F(face.strikethroughOffset) + ",\"tabWidth\":" + F(face.tabWidth) +
+            ",\"asset\":" + (asset != null ? "true" : "false") + ",\"added\":" + (added ? "true" : "false") +
+            ",\"assetCapLine\":" + F(assetFace.capLine) + ",\"assetMeanLine\":" + F(assetFace.meanLine) +
+            ",\"assetStrikethroughOffset\":" + F(assetFace.strikethroughOffset) + ",\"assetTabWidth\":" + F(assetFace.tabWidth));
     }
 
     // ---- Font engine controls ----

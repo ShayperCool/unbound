@@ -161,6 +161,10 @@ def main():
             for field in want:
                 if field != 'type':
                     compare_values(report, 'engine', f'{where} {field}', want[field], have.get(field))
+    for want, have in zip(by_type(reference, 'nolines'), by_type(unbound, 'nolines') or [{}]):
+        for field in want:
+            if field != 'type':
+                compare_values(report, 'engine', f'face without lines {field}', want[field], have.get(field))
     for want, have in zip(by_type(reference, 'cold'), by_type(unbound, 'cold')):
         for key in ('first', 'second', 'pairsBefore', 'pairsAfter', 'glyphs'):
             compare_values(report, 'cold', f'cold {key}', want.get(key), have.get(key))
