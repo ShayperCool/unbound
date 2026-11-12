@@ -187,6 +187,22 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1 }, rows);
         }
 
+        // Editor: gradient-rows (60 copies of a five-gradient image on one panel). Rows are packed
+        // as (row >> 8, row & 0xFF); the shader reads high * 255 + low, so row 300 is read as 299.
+        [Fact]
+        public void GradientRowsPastTheFirst256KeepUnitysPacking()
+        {
+            var many = Quad(10, 10, Color.white, settings: 300);
+            var next = Quad(10, 10, Color.white, settings: 1, setting: 0);
+            var p = Paint(1f,
+                Element(10, 10, s => s.backgroundImage = new StyleBackground(many)),
+                Element(10, 10, s => { s.left = 20; s.backgroundImage = new StyleBackground(next); }));
+            Assert.Equal(301, p.GradientRowCount);
+            var packed = p.Uvs[5][4];
+            Assert.Equal(1, Mathf.RoundToInt(packed.x * 255f));
+            Assert.Equal(44, Mathf.RoundToInt(packed.y * 255f));
+        }
+
         [Fact]
         public void TheTintMultipliesVertexColours()
         {
@@ -226,6 +242,39 @@ namespace UnityEngine.Tests
             Assert.Equal(0f, GUIUtility.uaContentPixelsPerPoint);
             // Outside a panel's content generation the grid is the GUI's (one pixel per point here).
             Assert.Equal(new Rect(0, 0, 50, 31), GUIUtility.AlignRectToDevice(new Rect(0, 0, 50.3f, 30.7f)));
+        }
+
+        sealed class Logs : ILogHandler
+        {
+            public readonly List<string> Lines = new List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Lines.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+            public void LogException(Exception exception, Object context) => Lines.Add(exception.Message);
+        }
+
+        // Editor: the probe's logs (a PanelSettings made in Play mode without a theme). Unity only
+        // warns in or entering Play mode.
+        [Fact]
+        public void PanelSettingsWithoutAThemeWarnInPlayModeOnly()
+        {
+            var handler = Debug.unityLogger.logHandler;
+            bool playing = EditorSession.IsPlaying;
+            var logs = new Logs();
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                EditorSession.IsPlaying = false;
+                ScriptableObject.CreateInstance<PanelSettings>();
+                Assert.Empty(logs.Lines);
+                EditorSession.IsPlaying = true;
+                ScriptableObject.CreateInstance<PanelSettings>();
+                Assert.Equal(new[] { "No Theme Style Sheet set to PanelSettings , UI will not render properly" }, logs.Lines);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = handler;
+                EditorSession.IsPlaying = playing;
+            }
         }
 
         [Serializable]
