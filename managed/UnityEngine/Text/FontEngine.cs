@@ -467,7 +467,11 @@ namespace UnityEngine.TextCore.LowLevel
             // The glyph's metrics and rect are those of the render mode's load.
             glyph = null;
             if (s_Face == null || texture == null) return false;
-            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, s_PointSize, 0, (int)renderMode, padding, out var info, out var pixels)) return false;
+            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, s_PointSize, 0, (int)renderMode, padding, out var info, out var pixels))
+            {
+                WarnUnknownMode(renderMode);
+                return false;
+            }
             var loaded = MakeGlyph(glyphIndex, info);
             if (!TryPackGlyphInAtlas(loaded, padding, packingMode, renderMode, texture.width, texture.height, freeGlyphRects, usedGlyphRects)) return false;
             if (loaded.glyphRect.width > 0)
@@ -524,6 +528,16 @@ namespace UnityEngine.TextCore.LowLevel
             return texture.m_Pixels;
         }
 
+        static readonly HashSet<GlyphRenderMode> s_WarnedModes = new HashSet<GlyphRenderMode>();
+
+        /// <summary>Glyphs in a render mode the font engine does not know are not rendered: said
+        /// once per mode.</summary>
+        static void WarnUnknownMode(GlyphRenderMode renderMode)
+        {
+            if (Enum.IsDefined(typeof(GlyphRenderMode), renderMode) || !s_WarnedModes.Add(renderMode)) return;
+            Debug.LogWarning($"Unbound: TextCore render mode {(int)renderMode} is not supported; its glyphs are not rendered.");
+        }
+
         /// <summary>Renders a glyph at its glyph rect's position (rows bottom first, as the rect
         /// counts them): the render mode's tile, the distance fields with the padding around them.</summary>
         static FontEngineError Render(Glyph glyph, int padding, GlyphRenderMode renderMode, int width, int height, Action<int, byte> write)
@@ -532,7 +546,10 @@ namespace UnityEngine.TextCore.LowLevel
             var rect = glyph.glyphRect;
             if (rect.width <= 0 || rect.height <= 0) return FontEngineError.Success;
             if (!Native.FontRenderGlyph(s_Face.Handle, glyph.index, s_PointSize, 0, (int)renderMode, padding, out var info, out var pixels))
+            {
+                WarnUnknownMode(renderMode);
                 return FontEngineError.Invalid_Glyph_Index;
+            }
             Place(rect, info, pixels, width, height, write);
             return FontEngineError.Success;
         }
