@@ -136,6 +136,29 @@ pub const ALL_PASSES: i32 = -2;
 /// [`Draw::pass`]: the passes whose `LightMode` is one of the [`Command::PassTags`].
 pub const TAGGED_PASSES: i32 = -3;
 
+/// A BatchRendererGroup draw's DOTS instancing state ([`Command::DotsDraw`]).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct DotsDraw {
+    /// What the shader library reads of the draw from the `z` and `w` of the first four visible
+    /// instance elements, in that order: the rendering layer mask, the DOTS instancing flags
+    /// ([`DOTS_FLAG_FLIP_WINDING`], ...), the mesh's bounds centre and extent (float bits).
+    pub header: [u32; DOTS_HEADER_WORDS],
+    pub window_offset: u32,
+    pub window_size: u32,
+    /// The visible instances' indices in the batch, one per instance drawn.
+    pub visible: Vec<u32>,
+}
+
+/// The instances one draw takes: the length of the visible instance array DOTS instancing
+/// shaders declare (`unity_DOTSVisibleInstances[256]`); larger commands are split.
+pub const MAX_DOTS_INSTANCES: usize = 256;
+/// The words of [`DotsDraw::header`].
+pub const DOTS_HEADER_WORDS: usize = 8;
+/// [`DotsDraw::header`]'s flags word.
+pub const DOTS_HEADER_FLAGS: usize = 1;
+/// The DOTS instancing flag of mirrored instances (`kDOTSInstancingFlagFlipWinding`).
+pub const DOTS_FLAG_FLIP_WINDING: u32 = 1;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     /// Publish a multisampled target for later readback and compute reads.
@@ -178,6 +201,11 @@ pub enum Command {
     /// The render texture that stands for the screen while a screen camera draws into it (0:
     /// none): it is stored as the screen is (NativeApi 50).
     ScreenStandIn(u64),
+    /// The next draw is a BatchRendererGroup draw command's (NativeApi 60): its material's DOTS
+    /// instancing variant, one instance per visible instance index, with the draw's header and
+    /// the window of its batch's buffer a constant buffer reads (offset and size in bytes; size 0:
+    /// the whole buffer).
+    DotsDraw(DotsDraw),
     DrawSetup {
         instances: u32,
         args: u64,
@@ -383,6 +411,8 @@ mod op {
     pub const PLUGIN: u8 = 34;
     // NativeApi 50.
     pub const SCREEN_STAND_IN: u8 = 35;
+    // NativeApi 60.
+    pub const DOTS_DRAW: u8 = 36;
     pub const MESH_BUFFERS: u8 = 31;
 }
 
@@ -600,6 +630,25 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
             op::MESH_INSTANCE => Command::MeshInstance(r.u32()?),
             op::INSTANCE_MULTIPLIER => Command::InstanceMultiplier(r.u32()?),
             op::SCREEN_STAND_IN => Command::ScreenStandIn(r.u64()?),
+            op::DOTS_DRAW => {
+                let mut header = [0u32; DOTS_HEADER_WORDS];
+                for word in &mut header {
+                    *word = r.u32()?;
+                }
+                let window_offset = r.u32()?;
+                let window_size = r.u32()?;
+                let count = r.u32()? as usize;
+                let mut visible = Vec::with_capacity(count.min(MAX_DOTS_INSTANCES));
+                for _ in 0..count {
+                    visible.push(r.u32()?);
+                }
+                Command::DotsDraw(DotsDraw {
+                    header,
+                    window_offset,
+                    window_size,
+                    visible,
+                })
+            }
             op::DRAW_SETUP => Command::DrawSetup {
                 instances: r.u32()?,
                 args: r.u64()?,
@@ -1002,6 +1051,18 @@ impl Writer {
             Command::ScreenStandIn(texture) => {
                 self.bytes.push(op::SCREEN_STAND_IN);
                 self.u64(*texture);
+            }
+            Command::DotsDraw(d) => {
+                self.bytes.push(op::DOTS_DRAW);
+                for word in d.header {
+                    self.u32(word);
+                }
+                self.u32(d.window_offset);
+                self.u32(d.window_size);
+                self.u32(d.visible.len() as u32);
+                for v in &d.visible {
+                    self.u32(*v);
+                }
             }
             Command::MeshInstance(first) => {
                 self.bytes.push(op::MESH_INSTANCE);
@@ -1409,6 +1470,21 @@ mod tests {
             Command::InstanceMultiplier(3),
             Command::ScreenStandIn(42),
             Command::ScreenStandIn(0),
+            Command::DotsDraw(DotsDraw {
+                header: [
+                    1,
+                    17,
+                    0x3f80_0000,
+                    0,
+                    0,
+                    0x3f00_0000,
+                    0x3f00_0000,
+                    0x3f00_0000,
+                ],
+                window_offset: 256,
+                window_size: 16384,
+                visible: vec![3, 1, 2],
+            }),
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
             Command::DepthBias {
@@ -1759,10 +1835,10 @@ mod tests {
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
-    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff.
+    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 59);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 60);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

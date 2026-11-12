@@ -3,6 +3,7 @@
 //! (`UnityFrameGraph`) only shows the latest complete frame.
 pub mod compiled;
 pub mod device;
+pub mod dots;
 pub mod executor;
 #[cfg(all(test, target_os = "linux"))]
 mod gl_backend_tests;

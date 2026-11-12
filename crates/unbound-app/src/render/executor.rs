@@ -74,7 +74,8 @@ struct GpuMaterial {
     pass_textures: Vec<Option<ProgramTextures>>,
     /// The program variant (and whether it is the error shader's) per (pass, global keyword
     /// set, linear colour space, standalone mesh replay).
-    variants: rustc_hash::FxHashMap<(usize, u32, bool, bool), (Option<u32>, bool)>,
+    /// By pass, keyword set, color space and instancing mode ([`InstancingMode`]).
+    variants: rustc_hash::FxHashMap<(usize, u32, bool, InstancingMode), (Option<u32>, bool)>,
     /// Its uniform block per program variant (see `CompiledPrograms::material_block`).
     blocks: rustc_hash::FxHashMap<u32, Arc<compiled::MaterialBlock>>,
 }
@@ -437,9 +438,25 @@ struct State {
     instance_multiplier: u32,
     /// The next draw is this instance of a mesh-instancing call (`MeshInstance`).
     mesh_instance: Option<u32>,
+    /// The next draw is a BatchRendererGroup draw command's (`DotsDraw`).
+    dots: Option<commands::DotsDraw>,
     /// The next draw's indices from a buffer (`DrawIndices`): buffer, index size, first, count.
     draw_indices: Option<(u64, u8, u32, u32)>,
 }
+
+/// How a draw's instances get their data, which selects its variant: none of their own, a
+/// replayed mesh-instancing call's arrays, or a BatchRendererGroup draw's DOTS instancing data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum InstancingMode {
+    None,
+    MeshReplay,
+    Dots,
+}
+
+/// The keyword a BatchRendererGroup draw compiles its material's variant with.
+const DOTS_INSTANCING_KEYWORD: &str = "DOTS_INSTANCING_ON";
+/// The draw property (and byte address buffer) of a BatchRendererGroup batch's instance data.
+const DOTS_INSTANCE_DATA: &str = "unity_DOTSInstanceData";
 
 pub struct UnityRenderer {
     /// The adapter the device was opened on (its formats as the backend stores them).
@@ -661,6 +678,7 @@ impl UnityRenderer {
                 draw_setup: None,
                 instance_multiplier: 1,
                 mesh_instance: None,
+                dots: None,
                 draw_indices: None,
             },
             presented,
@@ -2723,6 +2741,7 @@ impl UnityRenderer {
                     self.state.instance_multiplier = multiplier.max(1)
                 }
                 Command::ScreenStandIn(texture) => self.screen_stand_in = texture,
+                Command::DotsDraw(dots) => self.state.dots = Some(dots),
                 Command::DrawSetup {
                     instances,
                     args,
@@ -2923,6 +2942,7 @@ impl UnityRenderer {
                     }
                     let mesh_instance = self.state.mesh_instance.take();
                     let first_instance = mesh_instance.unwrap_or(0);
+                    let dots = self.state.dots.take();
                     // Taken first: a draw's indices never pass to a later draw.
                     let indices = self.state.draw_indices.take();
                     let Some(target) = self.state.target.clone() else {
@@ -2942,7 +2962,19 @@ impl UnityRenderer {
                     self.depth_reads.clear();
                     self.pre_draw.clear();
                     self.pre_copies.clear();
-                    let mut planned = self.plan_draw(&draw, &target, time, mesh_instance);
+                    let mut planned =
+                        self.plan_draw(&draw, &target, time, mesh_instance, dots.as_ref());
+                    if let Some(dots) = &dots {
+                        // One instance per visible instance (an empty command draws nothing).
+                        if dots.visible.is_empty() {
+                            continue;
+                        }
+                        for p in &mut planned {
+                            if let Planned::Draw(p) = p {
+                                p.instances = dots.visible.len() as u32;
+                            }
+                        }
+                    }
                     // Depth elements the draw samples whose copies lag (made just now, or the
                     // current target's): copied here, between what was drawn and this draw.
                     let reads = std::mem::take(&mut self.depth_reads);
@@ -3322,6 +3354,7 @@ impl UnityRenderer {
         target: &Target,
         time: f32,
         mesh_instance: Option<u32>,
+        dots: Option<&commands::DotsDraw>,
     ) -> Vec<Planned> {
         let mut planned = Vec::new();
         let device = self.device.clone();
@@ -3499,7 +3532,14 @@ impl UnityRenderer {
             let layout = self.pipelines.texture_layout.clone();
             // The pass's variant for the material's and the global keywords, chosen once per
             // keyword set (the material's cache goes with it when it changes).
-            let key = (pass_index, self.keyword_set, linear, mesh_replay);
+            let mode = if dots.is_some() {
+                InstancingMode::Dots
+            } else if mesh_replay {
+                InstancingMode::MeshReplay
+            } else {
+                InstancingMode::None
+            };
+            let key = (pass_index, self.keyword_set, linear, mode);
             let cached = self
                 .materials
                 .get(&draw.material)
@@ -3509,9 +3549,13 @@ impl UnityRenderer {
                 None => {
                     let mut keywords = resolved.material.keywords.clone();
                     keywords.extend(self.keywords.iter().cloned());
-                    if mesh_replay {
-                        keywords.push("INSTANCING_ON".into());
-                        keywords.push(unbound_shaders::MESH_INSTANCE_REPLAY.into());
+                    match mode {
+                        InstancingMode::MeshReplay => {
+                            keywords.push("INSTANCING_ON".into());
+                            keywords.push(unbound_shaders::MESH_INSTANCE_REPLAY.into());
+                        }
+                        InstancingMode::Dots => keywords.push(DOTS_INSTANCING_KEYWORD.into()),
+                        InstancingMode::None => {}
                     }
                     let (id, errored) = self.variant_or_error(
                         &resolved.shader,
@@ -3547,10 +3591,15 @@ impl UnityRenderer {
             } else {
                 (pass.state, pass.stencil_ref)
             };
+            // A draw command with FlipWinding draws mirrored instances (its matrices are in the
+            // batch's buffer, not the draw's).
+            let flip = dots.is_some_and(|d| {
+                d.header[commands::DOTS_HEADER_FLAGS] & commands::DOTS_FLAG_FLIP_WINDING != 0
+            });
             (state, stencil_ref) = self.draw_state(
                 state,
                 stencil_ref,
-                (determinant3(&draw.model) < 0.0) != top_down,
+                ((determinant3(&draw.model) < 0.0) != top_down) != flip,
             );
             let key = PipelineKey {
                 state,
@@ -3716,6 +3765,17 @@ impl UnityRenderer {
                 }
             };
             let program_offset = self.compiled.push(id, &values, Some(&block));
+            if let Some(dots) = dots {
+                let data = draw.properties.iter().rev().find_map(|(n, v)| match v {
+                    owned::PropertyValue::Buffer(h) if n == DOTS_INSTANCE_DATA => Some(*h),
+                    _ => None,
+                });
+                let data = data
+                    .and_then(|h| self.buffers.get(&h))
+                    .and_then(|b| b.shadow.as_deref());
+                self.compiled
+                    .write_dots(id, program_offset, dots, &draw.properties, data);
+            }
             planned.push(Planned::Draw(PlannedDraw {
                 pipeline,
                 vertex: vertex.clone(),

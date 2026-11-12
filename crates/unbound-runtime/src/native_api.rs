@@ -66,7 +66,8 @@ use std::ffi::c_void;
 /// explicit Stop history flag.
 /// 58: `gi_automatic_uvs` (realtime lightmap UVs of renderers with Optimize Realtime UVs).
 /// 59: `gi_automatic_uvs` takes the mesh as it is and the instance's matrix.
-pub const NATIVE_API_VERSION: u32 = 59;
+/// 60: the `DotsDraw` render command (opcode 36, BatchRendererGroup draws).
+pub const NATIVE_API_VERSION: u32 = 60;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

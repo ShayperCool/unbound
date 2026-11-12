@@ -16,6 +16,21 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### BatchRendererGroup draws (NativeApi 60)
+
+`DotsDraw` (opcode 36: `u32 header[8]`, `u32 window_offset`, `u32 window_size`, `u32 count`,
+`u32 visible[count]`) makes the next `Draw` a BatchRendererGroup draw command's: its material's
+`DOTS_INSTANCING_ON` variant, `count` instances (at most 256, the length of the
+`unity_DOTSVisibleInstances` array DOTS instancing shaders declare), instance `i` reading batch
+index `visible[i]`. The renderer writes the program's DOTS instancing data
+(`render/dots.rs`): each `unity_DOTSInstancing<type><bytes>_Metadata<name>` uniform from the
+draw's `Int` property `<DOTS><name>` (zero without one), the visible instances' `x`, the header
+in the `z` and `w` of the first four elements (rendering layer mask, flags, the mesh's bounds
+centre and extent), and in uniform buffer mode the cbuffer `unity_DOTSInstanceData` from
+`window_offset` of the buffer the draw's `unity_DOTSInstanceData` property names, `window_size`
+bytes of it (0: as much as the cbuffer holds). On the other devices that property binds the
+byte address buffer of the name. Header flag 1 (flip winding) mirrors the draw's culling.
+
 ### Screen stand-in (NativeApi 50)
 
 `ScreenStandIn` (opcode 35: `u64 texture`, 0 for none) names the render texture that stands for
@@ -320,6 +335,8 @@ before and after it, as on Unity's render thread) and a read back.
 30 MeshInstance u32 index                         // next Draw is this instance of a mesh-instancing call (protocols 11, 12)
 34 Plugin       u8 kind, u64 callback, fields    // a native plugin's callback (protocol 15)
 35 ScreenStandIn u64 texture                     // the screen's stand-in, 0 none (NativeApi 50)
+36 DotsDraw     u32 header[8], u32 window_offset, u32 window_size, u32 count, u32 visible[count]
+                                                // next Draw is a BatchRendererGroup command's (NativeApi 60)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip,

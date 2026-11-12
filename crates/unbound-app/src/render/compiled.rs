@@ -37,6 +37,8 @@ struct ProgramGpu {
     /// Whether the vertex program reads vertex inputs: one that reads none (built from its
     /// vertex and instance ids) draws without vertex buffers.
     vertex_inputs: bool,
+    /// Where it takes a BatchRendererGroup draw's DOTS instancing data.
+    dots: super::dots::DotsLayout,
 }
 
 /// A fragment program without its depth output: its module, entry point and WGSL.
@@ -374,6 +376,7 @@ impl CompiledPrograms {
                 .map(|(i, u)| (u.name.clone(), i as u32))
                 .collect(),
             vertex_inputs: program.vertex_inputs,
+            dots: super::dots::DotsLayout::of(&program),
             vertex: module(&format!("{shader} (vertex)"), &program.vertex),
             fragment: module(&format!("{shader} (fragment)"), &program.fragment),
             depthless: None,
@@ -525,6 +528,24 @@ impl CompiledPrograms {
             None => fill(program, plan, values, out),
         }
         offset as u32
+    }
+
+    /// Writes a BatchRendererGroup draw's DOTS instancing data into the uniform block pushed at
+    /// `offset` ([`super::dots::write`]).
+    pub fn write_dots(
+        &mut self,
+        id: u32,
+        offset: u32,
+        draw: &unbound_runtime::render_commands::DotsDraw,
+        overrides: &[(String, PropertyValue)],
+        instance_data: Option<&[u8]>,
+    ) {
+        let gpu = &self.programs[id as usize];
+        let start = offset as usize;
+        let end = start + gpu.program.uniform_size as usize;
+        if let Some(out) = self.data.get_mut(start..end) {
+            super::dots::write(&gpu.dots, draw, overrides, instance_data, out);
+        }
     }
 
     /// The part of a program's uniform block a material decides, made once per material: the
