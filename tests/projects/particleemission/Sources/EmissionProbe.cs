@@ -413,6 +413,51 @@ public class EmissionProbe : MonoBehaviour
         ps.Simulate(.7f, false, false, false); ParticleState(key + "/nextLoop", ps);
         UnityEngine.Object.DestroyImmediate(go);
     }
+    // Fixed-step and variable-step calls in either order: what the first leaves unstepped.
+    static void MixedRemainder(bool fixedFirst, float first, float second, bool fresh)
+    {
+        string key = "mixedRemainder/" + B(fixedFirst) + "/" + F(first) + "/" + F(second) + "/" + B(fresh);
+        var go = new GameObject("emission-mixed"); go.SetActive(false);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main; main.playOnAwake = false; main.duration = 1; main.loop = true;
+        main.startDelay = fresh ? .1f : 0; main.startLifetime = 5; main.startSpeed = 0;
+        var shape = ps.shape; shape.enabled = false;
+        var emission = ps.emission; emission.rateOverTime = 10;
+        ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
+        go.SetActive(true);
+        if (fresh) {
+            // A fresh playback whose births fall in the step that ends its start delay.
+            float saved = Time.maximumParticleDeltaTime;
+            Time.maximumParticleDeltaTime = .5f;
+            ps.Play(false);
+            ps.Simulate(first, false, false, false); ParticleState(key + "/first", ps);
+            Time.maximumParticleDeltaTime = saved;
+        } else {
+            ps.Play(false);
+            ps.Simulate(first, false, false, fixedFirst); ParticleState(key + "/first", ps);
+            ps.Simulate(second, false, false, !fixedFirst); ParticleState(key + "/second", ps);
+            ps.Play(false);
+            ps.Simulate(second, false, false, fixedFirst); ParticleState(key + "/third", ps);
+        }
+        UnityEngine.Object.DestroyImmediate(go);
+    }
+    // A never-played Birth sub-emitter stopped with its parent, then a non-restarting Simulate.
+    static void StoppedChild(bool withChildren, bool stopClear)
+    {
+        string key = "stoppedChild/" + B(withChildren) + "/" + B(stopClear);
+        var parent = Make(true, 1, true, 0, false);
+        var child = Make(true, 1, true, 0, false); child.transform.SetParent(parent.transform, false);
+        var sub = parent.subEmitters; sub.enabled = true;
+        sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+        var childMain = child.main; childMain.startDelay = .1f;
+        parent.Stop(true, stopClear ? ParticleSystemStopBehavior.StopEmittingAndClear : ParticleSystemStopBehavior.StopEmitting);
+        parent.Simulate(.3f, withChildren, false, false);
+        ParticleState(key + "/parent", parent); ParticleState(key + "/child", child);
+        parent.Play(true);
+        parent.Simulate(.3f, withChildren, false, false);
+        ParticleState(key + "/playParent", parent); ParticleState(key + "/playChild", child);
+        UnityEngine.Object.DestroyImmediate(parent.gameObject);
+    }
     static void StoppedSimulations()
     {
         for (int mode = 0; mode < 8; mode++) {
@@ -429,6 +474,15 @@ public class EmissionProbe : MonoBehaviour
             StoppedLongSteps(maximum, delay);
         DisabledBurst(false);
         DisabledBurst(true);
+        foreach (bool fixedFirst in new[] { false, true })
+        foreach (float first in new[] { .25f, .05f, .3f })
+        foreach (float second in new[] { .3f, .016f })
+            MixedRemainder(fixedFirst, first, second, false);
+        foreach (float first in new[] { .3f, .25f, .5f })
+            MixedRemainder(false, first, 0, true);
+        foreach (bool withChildren in new[] { false, true })
+        foreach (bool stopClear in new[] { false, true })
+            StoppedChild(withChildren, stopClear);
     }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()

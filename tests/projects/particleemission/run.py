@@ -53,8 +53,10 @@ else:
                                       ['-executeMethod', 'ProbeRunner.Record'], batch=True, graphics=True,
                                       env={'PARTICLE_EMISSION_OUT': str(out)}, timeout=1200, editor=editor,
                                       label='particleemission-'+a.label)
-        print(editor_runner.summary(editor_runner.run(job)))
-        if not out.exists(): raise SystemExit('Capture failed: ' + str(job.log))
+        result = editor_runner.run(job)
+        print(editor_runner.summary(result))
+        if result.get('exit_code') or result.get('forced_exit') or not out.exists():
+            raise SystemExit('Capture failed: ' + str(job.log))
         raise SystemExit(0)
     else:
         if not a.cli or not a.runtime: p.error('engine requires --cli and --runtime')
