@@ -433,10 +433,15 @@ namespace UnityEngine.Tests
         [Fact]
         public void ACurveWithoutLengthIsAnArcOfRadiusZeroAroundItsPoint()
         {
-            Saved Loop(Vector2 at) => Save(Stroke(10, LineJoin.Miter, LineCap.Butt, p =>
+            // With a stroke gradient (pieces are cut at its keys by their lengths).
+            Saved Loop(Vector2 at) => Save(p =>
             {
-                p.MoveTo(at); p.BezierCurveTo(at + new Vector2(60, 0), at + new Vector2(0, 60), at); p.LineTo(at + new Vector2(40, 30));
-            }));
+                p.lineWidth = 10; p.strokeColor = Red;
+                var g = new Gradient();
+                g.SetKeys(new[] { new GradientColorKey(Color.red, 0f), new GradientColorKey(Color.blue, 1f) }, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+                p.strokeGradient = g;
+                p.BeginPath(); p.MoveTo(at); p.BezierCurveTo(at + new Vector2(60, 0), at + new Vector2(0, 60), at); p.LineTo(at + new Vector2(40, 30)); p.Stroke();
+            });
             var near = Loop(new Vector2(0, 0));
             var far = Loop(new Vector2(100, 60));
             Assert.Equal(near.Indices, far.Indices);

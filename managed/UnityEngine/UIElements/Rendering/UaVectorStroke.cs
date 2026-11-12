@@ -534,8 +534,10 @@ namespace Unbound.UIElements
                     if (UaVector.Dot(t0, t1) < 0f)
                     {
                         // Ends whose tangents oppose: the piece shrinks to its middle point (its quad
-                        // keeps its corners), where a dot is drawn.
-                        flags = PieceSkipped;
+                        // keeps its corners), where a dot is drawn. Measured for pieces of radius 0;
+                        // an arc of radius > 0 (rare: subdivision splits such pieces) follows the same
+                        // rule unmeasured.
+                        flags = PieceShrunk;
                         piece.P0 = piece.P1 = piece.Center = piece.Pm;
                         piece.Radius = 0f;
                         piece.IsPoint = true;
@@ -587,7 +589,7 @@ namespace Unbound.UIElements
                 m_Mesh.TriangleCW(first, first + 1, first + 2);
                 m_Mesh.TriangleCW(first, first + 2, first + 3);
                 if (m_PieceFlags[k] == PieceCollapsed) OuterMargin(piece, q, half, tint, endTint);
-                else if (m_PieceFlags[k] == PieceSkipped) Dot(piece.Pm, half, extent, tint);
+                else if (m_PieceFlags[k] == PieceShrunk) Dot(piece.Pm, half, extent, tint);
             }
             UaCurvePiece f = m_Pieces[0], l = m_Pieces[n - 1];
             var ds = f.DrawsAsArc ? UaCurveSubdivision.PieceTangent(f, curve, true) : curve.Tangent(0f);
@@ -643,7 +645,7 @@ namespace Unbound.UIElements
             for (int i = 0; i < 4; i++) m_Mesh.Triangle(c, c + 1 + i, c + 1 + (i + 1) % 4);
         }
 
-        const byte PieceSkipped = 1, PieceCollapsed = 2;
+        const byte PieceShrunk = 1, PieceCollapsed = 2;
         readonly List<byte> m_PieceFlags = new List<byte>();
 
         void AddNormalBounds(Vector2 p, Vector2 dir)
