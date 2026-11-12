@@ -193,7 +193,7 @@ namespace UnityEngine
         /// `--color-space gamma`, `room-sky`).</summary>
         static void RenderSkyFaces(float intensity)
         {
-            bool gamma = QualitySettings.activeColorSpace == ColorSpace.Gamma;
+            bool gamma = DynamicGI.SkyIsGammaEncoded;
             if (s_SkyReadback == null)
                 s_SkyReadback = new Texture2D(FaceSize, FaceSize, TextureFormat.RGBAFloat, false, true) { hideFlags = HideFlags.HideAndDontSave };
             for (int face = 0; face < 6; face++)

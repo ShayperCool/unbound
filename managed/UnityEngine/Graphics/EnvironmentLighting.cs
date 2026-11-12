@@ -89,9 +89,7 @@ namespace UnityEngine
             var sky = RenderSettings.skybox;
             if (sky == null) return null;
             int n = EnvironmentSize;
-            // A gamma-space project's sky draws gamma-encoded colors (tests/projects/realtimegi
-            // `--color-space gamma`, `room-sky`).
-            bool gamma = QualitySettings.activeColorSpace == ColorSpace.Gamma;
+            bool gamma = SkyIsGammaEncoded;
             var readback = new Texture2D(n, n, TextureFormat.RGBAFloat, false, true);
             var coefficients = new double[3, 9];
             var faces = new (Vector3 forward, Vector3 up)[]
@@ -131,6 +129,11 @@ namespace UnityEngine
                     sh[c, k] = (float)coefficients[c, k];
             return sh;
         }
+
+        /// <summary>Whether <see cref="RenderSky"/> reads back gamma-encoded colors: in a
+        /// gamma-space project the sky draws them (tests/projects/realtimegi
+        /// `--color-space gamma`, `room-sky`).</summary>
+        internal static bool SkyIsGammaEncoded => QualitySettings.activeColorSpace == ColorSpace.Gamma;
 
         internal static Camera s_SkyCamera;
         /// <summary>The capture's targets by size: the ambient probe's and realtime GI's.</summary>
