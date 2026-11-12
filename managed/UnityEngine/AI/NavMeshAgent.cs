@@ -71,7 +71,7 @@ namespace UnityEngine.AI
         // ------------------------------------------------------------------ settings
 
         public int agentTypeID { get => m_AgentTypeID; set { m_AgentTypeID = value; AgentSystem.Reattach(this); } }
-        public float radius { get => m_Radius; set { m_Radius = value; ApplyParams(); } }
+        public float radius { get => m_Radius; set { if (!AcceptFinite(value, nameof(radius))) return; m_Radius = value; ApplyParams(); } }
         public float height { get => m_Height; set { m_Height = value; ApplyParams(); } }
         /// <summary>Setting it moves the transform to the new height at once (measured right after
         /// AddComponent; for an agent whose transform waits for its early update, unmeasured).</summary>
@@ -277,11 +277,20 @@ namespace UnityEngine.AI
             set
             {
                 if (m_Crowd == null) return;
+                if (!AcceptFinite(value.x, nameof(velocity)) || !AcceptFinite(value.y, nameof(velocity))
+                    || !AcceptFinite(value.z, nameof(velocity))) return;
                 // The next update steps at this velocity; until then the agent reports its last
                 // step and plan (measured: tests/projects/navcost loop.*).
                 m_Crowd.vel = NavMesh.V(value);
                 m_Crowd.pvel = m_Crowd.vel;
             }
+        }
+
+        static bool AcceptFinite(float value, string property)
+        {
+            if (!Compat.NavMeshPredictionBoundsMeasured || float.IsFinite(value)) return true;
+            Debug.LogError("NavMeshAgent." + property + " must contain only finite values.");
+            return false;
         }
 
         public Vector3 desiredVelocity => m_Crowd != null ? NavMesh.V(m_Crowd.nvel) : Vector3.zero;
@@ -984,7 +993,11 @@ namespace Unbound.Runtime
             if (!s_Crowds.TryGetValue(surface, out var crowd))
             {
                 // Unity's topology search: 8 iterations (DtPathCorridor.OptimizePathTopology).
-                var config = new DtCrowdConfig(4f) { maxTopologyOptimizationIterations = 8 };
+                var config = new DtCrowdConfig(4f)
+                {
+                    maxTopologyOptimizationIterations = 8,
+                    predictNeighbourBounds = Compat.NavMeshPredictionBoundsMeasured,
+                };
                 crowd = new DtCrowd(config, surface.Mesh, i => AreaFilter.Of(-1));
                 crowd.tryEnterConnection = polyRef => TryEnterLink(surface, polyRef);
                 ConfigureAvoidance(crowd);

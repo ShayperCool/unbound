@@ -75,15 +75,41 @@ Q376 and Q385 runtime-build corrections, Unity 6000.0.71f1:
 
 Two new GPU Editor captures are byte-identical, including the three additional
 translation controls. Removing only those new scenario blocks restores the
-previous reference bytes exactly. The full comparator reports 238 differing
-scenarios, all restored-baked-mesh agent frames. No comparator or tolerance changed.
+previous reference bytes exactly. The polygon correction alone leaves 238 restored-baked-mesh frame differences;
+Q385 neighbour prediction reduces that count to 212. No comparator or tolerance changed.
 [BuildNavMeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshBuilder.BuildNavMeshData.html)
 documents sources and local build bounds; it does not specify polygon layout.
 
-The full-precision agent trace keeps distinct causes visible. Climber's planned
-velocity has a vertical component where the Editor's is horizontal before frame
-13. Right's plan differs before its first rounded position difference at 17.
-Walker changes its planned avoidance velocity one frame earlier, at 32 instead of 33. Blocked
+Q385 neighbour prediction, measured on Unity 6000.0.71f1, inserts each agent over
+its radius and the travel of its current velocity within the prediction time.
+Climber's failing records fall from 196 to 3, right's from 225 to 1. This resolves
+their initial divergences at 13 and 17. The 212 remaining frame scenarios include
+walker from 33, blocked from 191, left's hasPath at 222 and right's arrival at 241.
+Climber retains three three-decimal velocity-string differences at 21, 85 and 88;
+raw vertical velocity differs by at most 0.0000254 m/s, height by 0.00000018 m.
+They stay in the strict report and the insignificant-residual table.
+
+`agents.predict.*` runs after the original 250 agent frames on a separate clear
+floor: an approaching neighbour whose predicted bounds enter the query, the same
+neighbour moving away, a stationary control and a stationary neighbour with a large
+radius. Four more scenarios assign nonfinite velocity components or radius while
+the agent is already moving; the Editor logs an error and retains its previous
+motion and radius. All 552 values in these 36 scenarios match. Two GPU repeats
+agree byte for byte; removing just the new blocks restores the previous reference
+bytes. Other releases retain point insertion and previous input handling through
+Compat. Invalid or overflowing stored predictions also keep point insertion to
+avoid an unbounded cell traversal.
+
+The remaining full-precision trace keeps distinct causes visible. Walker changes
+its planned avoidance velocity one frame earlier, at 32 instead of 33. Blocked
 advances its steering target later despite matching positions at 191. These are
-observations in this capture, not a general timing or projection rule; the rounded
-records and their original tolerances stay unchanged.
+observations in this capture, not a general timing rule; neither is hidden by a
+new tolerance or a fixture-specific correction. Runtime height-mesh generation
+remains unsupported.
+
+[velocity, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-velocity.html)
+documents manual velocity control and that its effect appears on the next update;
+[radius](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-radius.html)
+defines the agent's avoidance space. Neither specifies proximity-grid insertion
+or nonfinite-input handling; those rules above are observations for the measured
+release, with controls where the agent is moving before the invalid assignment.

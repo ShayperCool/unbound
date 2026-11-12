@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -20,6 +21,7 @@ public class NavProbe : MonoBehaviour
     static string Only => Environment.GetEnvironmentVariable("NAVMESH_PROBE_ONLY") ?? "";
     readonly List<(string Name, NavMeshAgent Agent)> m_Agents = new List<(string, NavMeshAgent)>();
     int m_Frame;
+    bool m_Done;
     NavMeshObstacle m_Carver;
     NavMeshObstacle m_Parked;
     string m_UpdateHoles;
@@ -338,7 +340,7 @@ public class NavProbe : MonoBehaviour
 
     void LateUpdate()
     {
-        if (m_Agents.Count == 0) return;
+        if (m_Done || m_Agents.Count == 0) return;
         m_Frame++;
         if (m_Frame == 60)
         {
@@ -389,7 +391,80 @@ public class NavProbe : MonoBehaviour
                 ProbeLog.Value(name + ".steer", "p" + P(agent.transform.position) + " v" + P(agent.velocity) + " dv" + P(agent.desiredVelocity)
                     + " st" + P(agent.steeringTarget) + " n" + P(agent.nextPosition) + " r" + agent.remainingDistance.ToString("R", CultureInfo.InvariantCulture));
         }
-        if (m_Frame >= Frames) Finish();
+        if (m_Frame >= Frames)
+        {
+            m_Done = true;
+            StartCoroutine(PredictionControls());
+        }
+    }
+
+    IEnumerator PredictionControls()
+    {
+        // Independent controls after the original records, on one clear floor.
+        foreach (var (_, agent) in m_Agents) DestroyImmediate(agent.gameObject);
+        m_Agents.Clear();
+        if (m_Carver != null) DestroyImmediate(m_Carver.gameObject);
+        if (m_Parked != null) DestroyImmediate(m_Parked.gameObject);
+        NavMesh.RemoveAllNavMeshData();
+        var settings = NavMesh.GetSettingsByID(0);
+        var data = NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource>
+        {
+            new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(60f, 1f, 40f),
+                transform = Matrix4x4.Translate(new Vector3(0f, -0.5f, 0f)) },
+        }, new Bounds(Vector3.zero, new Vector3(64f, 8f, 44f)), Vector3.zero, Quaternion.identity);
+        var instance = NavMesh.AddNavMeshData(data);
+        foreach (string kind in new[] { "approaching", "away", "stationary", "radius" })
+        {
+            var a = Agent("predict.a", Vector3.zero, new Vector3(10f, 0f, 0f), 1f);
+            float neighbourZ = kind == "approaching" || kind == "away" ? 0.5f : 2f;
+            var b = Agent("predict.b", kind == "radius" ? new Vector3(4.8f, 0f, 0f) : new Vector3(8f, 0f, neighbourZ),
+                kind == "approaching" ? new Vector3(-10f, 0f, neighbourZ) : new Vector3(20f, 0f, neighbourZ), 5f, 40);
+            b.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            b.acceleration = 0f;
+            b.radius = kind == "radius" ? 3f : 0.5f;
+            b.velocity = kind == "approaching" ? new Vector3(-5f, 0f, 0f)
+                : kind == "away" ? new Vector3(5f, 0f, 0f) : Vector3.zero;
+            for (int frame = 1; frame <= 8; frame++)
+            {
+                yield return null;
+                ProbeLog.Begin("agents.predict." + kind + ".f" + frame);
+                ProbeLog.Value("a.position", a.nextPosition);
+                ProbeLog.Value("a.velocity", a.velocity);
+                ProbeLog.Value("a.desired", a.desiredVelocity);
+                ProbeLog.Value("b.position", b.nextPosition);
+                ProbeLog.Value("b.velocity", b.velocity);
+            }
+            foreach (var (_, agent) in m_Agents) DestroyImmediate(agent.gameObject);
+            m_Agents.Clear();
+        }
+        foreach (string kind in new[] { "nan.x", "infinity.y", "negativeInfinity.z", "nan.radius" })
+        {
+            var a = Agent("finite", Vector3.zero, new Vector3(10f, 0f, 0f));
+            a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            a.acceleration = 0f;
+            a.radius = 0.75f;
+            a.velocity = new Vector3(1.2f, 0f, 0.3f);
+            yield return null;
+            ProbeLog.Begin("agents.predict.invalid." + kind);
+            ProbeLog.Value("before.velocity", a.velocity);
+            ProbeLog.Value("before.position", a.nextPosition);
+            ProbeLog.Value("before.radius", a.radius);
+            if (kind == "nan.radius") a.radius = float.NaN;
+            else a.velocity = kind == "nan.x" ? new Vector3(float.NaN, 0f, 0f)
+                : kind == "infinity.y" ? new Vector3(0f, float.PositiveInfinity, 0f)
+                : new Vector3(0f, 0f, float.NegativeInfinity);
+            ProbeLog.Value("immediate.velocity", a.velocity);
+            ProbeLog.Value("immediate.radius", a.radius);
+            yield return null;
+            ProbeLog.Value("after.velocity", a.velocity);
+            ProbeLog.Value("after.position", a.nextPosition);
+            ProbeLog.Value("after.radius", a.radius);
+            DestroyImmediate(a.gameObject);
+            m_Agents.Clear();
+        }
+        NavMesh.RemoveNavMeshData(instance);
+        DestroyImmediate(data);
+        Finish();
     }
 
     static string P(Vector3 v) => v.x.ToString("R", CultureInfo.InvariantCulture) + "," + v.y.ToString("R", CultureInfo.InvariantCulture)

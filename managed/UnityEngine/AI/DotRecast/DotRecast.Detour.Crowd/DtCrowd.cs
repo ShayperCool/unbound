@@ -876,8 +876,8 @@ namespace DotRecast.Detour.Crowd
 
             _grid.Clear();
 
-            // Unbound: Unity's grid holds the agents' positions in cells sized by GridCell (over
-            // every crowd's agents when the caller gives the sizes, else over this crowd's).
+            // Cells are sized over every crowd's agents when the caller supplies the sizes,
+            // otherwise over this crowd's agents.
             if (_gridCellX > 0f)
             {
                 _grid.SetCellSize(_gridCellX, _gridCellY);
@@ -894,8 +894,33 @@ namespace DotRecast.Detour.Crowd
             {
                 var ag = agents[i];
                 RcVec3f p = ag.npos;
-                _grid.AddItem(ag, p.X, p.Z, p.X, p.Z);
+                if (_config.predictNeighbourBounds)
+                {
+                    PredictionBounds(p, ag.vel, ag.option.radius, _obstacleQueryParams[0].horizTime, out var min, out var max);
+                    _grid.AddItem(ag, min.X, min.Z, max.X, max.Z);
+                }
+                else _grid.AddItem(ag, p.X, p.Z, p.X, p.Z);
             }
+        }
+
+        /// The horizontal bounds swept by a neighbour over the prediction time, expanded by
+        /// its radius (Unity 6000.0.71f1, tests/projects/navmesh and avoidance).
+        public static void PredictionBounds(RcVec3f position, RcVec3f velocity, float radius, float horizon,
+            out RcVec3f min, out RcVec3f max)
+        {
+            float x = position.X + velocity.X * horizon;
+            float z = position.Z + velocity.Z * horizon;
+            // Keep the previous point insertion for invalid or overflowing stored inputs.
+            // They must not turn the cell walk into an unbounded traversal.
+            if (!float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(radius))
+            {
+                min = max = position;
+                return;
+            }
+            min = new RcVec3f(MathF.Min(position.X, x) - radius, 0f, MathF.Min(position.Z, z) - radius);
+            max = new RcVec3f(MathF.Max(position.X, x) + radius, 0f, MathF.Max(position.Z, z) + radius);
+            if (!float.IsFinite(min.X) || !float.IsFinite(min.Z) || !float.IsFinite(max.X) || !float.IsFinite(max.Z))
+                min = max = position;
         }
 
         /// Unbound: the smallest proximity grid cell (Unity's), in metres.

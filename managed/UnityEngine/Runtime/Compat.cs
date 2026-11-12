@@ -13,6 +13,12 @@ namespace Unbound.Runtime
         /// on 6000.0.71f1. Other releases retain the previous, unmeasured zero-cell threshold.</summary>
         internal static bool NavMeshRegionMergingMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Neighbour candidates cover the radius and predicted travel; nonfinite
+        /// radius and velocity assignments are rejected. Measured by tests/projects/navmesh
+        /// and avoidance on 6000.0.71f1. Other releases retain the previous, unmeasured
+        /// point insertion and input handling.</summary>
+        internal static bool NavMeshPredictionBoundsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by
         /// tests/projects/quaternioneuler on 6000.0.71f1. Other releases retain their unmeasured
         /// single-precision arithmetic.</summary>

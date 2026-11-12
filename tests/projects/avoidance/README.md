@@ -18,7 +18,7 @@ isolate one thing each:
 | `walls-along`, `walls-towards` (`Walls.unity`) | walking along a wall, towards it, round its end |
 
 Measured (see `managed/UnityEngine/AI/DotRecast/UNBOUND.md`): the neighbours Unity's agents
-avoid (a proximity grid sized from all agents, as or more important, not behind, the soonest
+avoid (a proximity grid sized from all agents, covering each neighbour's radius and predicted travel; as or more important, not behind, the soonest
 reachable 8), their NavMesh edges (the nearest 8, none while the corner they steer by is the end
 of their path within reach), and the sampling: the desired velocity kept with nothing to avoid,
 else weighed first, then Detour's adaptive rings around 0.7 of it offset right by 0.04 of it,
@@ -48,3 +48,12 @@ Run Unbound and compare (`--scene Assets/Scenes/Walls.unity` for the walls sets)
 
 Left (the remaining differences): the side some agents choose once they move, and the long runs,
 where any difference carries on.
+
+Q385, Unity 6000.0.71f1: the swept neighbour bounds remove all three failing
+long-run configurations, three of five moving configurations, and one speed
+configuration. Four groups retain 34 configurations: moving 2, near 10, overlap 5,
+speeds 17. No newly failing record is introduced in these sets. The post control
+in navpath remains at 17 values. The new prediction and finite-input controls are
+recorded after the original agents in navmesh; its two GPU Editor repeats agree
+and preserve every earlier reference row. Other releases retain point insertion
+and previous input handling through Compat, unmeasured there.

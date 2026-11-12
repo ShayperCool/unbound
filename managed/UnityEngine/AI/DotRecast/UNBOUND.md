@@ -54,7 +54,7 @@ Altered (marked `Unbound:` in the sources):
   without taking it (the agents turn towards it);
 - crowd avoidance as Unity's (`tests/projects/avoidance`, navcost `loop.redirect*`, navlinks):
   the agents' velocities step towards the last plan before anything else; an agent that avoids
-  gathers its neighbours from a proximity grid of the agents' positions whose cells, along x and
+  gathers its neighbours from a proximity grid whose cells, along x and
   z, are the mean over every agent (all agent types) of its diameter plus how far it goes within
   the prediction time along that axis, at least 1 m; it queries the cells around the square of its
   radius plus how far it goes at full speed within the prediction time (64 candidates) and keeps,
@@ -75,6 +75,11 @@ Altered (marked `Unbound:` in the sources):
   between equals that avoid each other), an overlapping one at -2·tmin/tmax; an edge the agent is
   behind does not count, one nearer than 5 cm counts 2.5 cm in front of it, and an edge's time
   to impact counts double; an agent about to take a link keeps its desired velocity;
+  Q385, Unity 6000.0.71f1: each neighbour occupies the horizontal bounds swept by
+  its current velocity over the prediction time, expanded by its radius. The
+  compatibility profile selects this insertion and finite radius/velocity input
+  validation; other releases retain point insertion, unmeasured there.
+
 - crowd separation and collisions as Unity's: a push of 1.4·(1 − (d/2.5r)²) from more important
   neighbours (half from equals), overlaps resolved by the less important agent alone (half each
   between equals);

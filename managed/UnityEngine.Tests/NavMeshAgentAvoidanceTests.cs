@@ -177,6 +177,83 @@ namespace UnityEngine.Tests
             Assert.Contains(near.m_Crowd, Neighbours(stopped));
         }
 
+        [Theory]
+        [InlineData("6000.0.71f1", -5f, 1f, true)]
+        [InlineData("6000.0.71f1", 5f, 1f, false)]
+        [InlineData("6000.0.71f1", -5f, -1f, true)]
+        [InlineData("6000.0.72f1", -5f, 1f, false)]
+        public void PredictedNeighbourTravelCanEnterTheQueryBeforeItsPosition(string release, float velocity, float direction, bool expected)
+        {
+            string previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = release;
+            try
+            {
+                var observer = Agent(Vector3.zero, new Vector3(8f * direction, 0f, 0f));
+                observer.speed = 1f;
+                var neighbour = Agent(new Vector3(8f * direction, 0f, 2f), null);
+                neighbour.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+                neighbour.avoidancePriority = 40;
+                neighbour.acceleration = 0f;
+                neighbour.velocity = new Vector3(velocity * direction, 0f, 0f);
+                AgentSystem.Step();
+                Assert.Equal(expected, Neighbours(observer).Contains(neighbour.m_Crowd));
+            }
+            finally { ProjectInfo.UnityVersion = previous; }
+        }
+
+        [Theory]
+        [InlineData(float.NaN, 0)]
+        [InlineData(float.PositiveInfinity, 1)]
+        [InlineData(float.NegativeInfinity, 2)]
+        public void NonfiniteAssignmentsKeepThePreviousVelocityAndRadius(float invalid, int axis)
+        {
+            string previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                var agent = Agent(Vector3.zero, new Vector3(8f, 0f, 0f));
+                agent.radius = 0.75f;
+                var velocity = new Vector3(1.2f, 0f, 0.3f);
+                agent.velocity = velocity;
+                var invalidVelocity = velocity;
+                invalidVelocity[axis] = invalid;
+                agent.velocity = invalidVelocity;
+                agent.radius = invalid;
+                Assert.Equal(NavMesh.V(velocity), agent.m_Crowd.vel);
+                Assert.Equal(NavMesh.V(velocity), agent.m_Crowd.pvel);
+                Assert.Equal(0.75f, agent.radius);
+                Assert.Equal(0.75f, agent.m_Crowd.option.radius);
+            }
+            finally { ProjectInfo.UnityVersion = previous; }
+        }
+
+        [Theory]
+        [InlineData(float.NaN)]
+        [InlineData(float.PositiveInfinity)]
+        [InlineData(float.NegativeInfinity)]
+        [InlineData(float.MaxValue)]
+        public void InvalidOrOverflowingStoredPredictionsKeepPointInsertion(float speed)
+        {
+            var position = new RcVec3f(3.25f, 0f, 2.25f);
+            DtCrowd.PredictionBounds(position, new RcVec3f(speed, 0f, 0f), 0.5f, 2f, out var min, out var max);
+            var grid = new DtProximityGrid(1f);
+            var neighbour = new DtCrowdAgent(42);
+            grid.AddItem(neighbour, min.X, min.Z, max.X, max.Z);
+            Span<int> found = stackalloc int[2];
+            int count = grid.QueryItems(3f, 2f, 3.5f, 2.5f, found, found.Length);
+            Assert.Equal(1, count);
+            Assert.Equal(neighbour.idx, found[0]);
+        }
+
+        [Fact]
+        public void AnOverflowingStoredRadiusKeepsPointInsertion()
+        {
+            var position = new RcVec3f(float.MaxValue, 0f, 2.25f);
+            DtCrowd.PredictionBounds(position, RcVec3f.Zero, float.MaxValue, 2f, out var min, out var max);
+            Assert.Equal(position, min);
+            Assert.Equal(position, max);
+        }
+
         static List<DtCrowdAgent> Neighbours(NavMeshAgent agent)
         {
             var list = new List<DtCrowdAgent>();

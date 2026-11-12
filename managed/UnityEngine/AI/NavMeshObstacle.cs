@@ -758,7 +758,9 @@ namespace Unbound.Runtime
         static void CheckCandidates(DtCrowd crowd, IList<DtCrowdAgent> agents, int fedBefore)
         {
             if (agents.Count - fedBefore + s_Near.Count <= NeighbourCandidates) return;
-            // The cells the crowd last sized (the grid holds positions).
+            // The cells the crowd last sized; include the same predicted bounds as its grid.
+            bool prediction = crowd.Config().predictNeighbourBounds;
+            float horizon = NavMesh.avoidancePredictionTime;
             float invX = 1.0f / crowd.GetGrid().GetCellSizeX(), invZ = 1.0f / crowd.GetGrid().GetCellSizeY();
             for (int i = 0; i < agents.Count; i++)
             {
@@ -773,10 +775,14 @@ namespace Unbound.Runtime
                     var other = agents[j];
                     // Last update's circles are replaced by this update's below.
                     if (other.option.userData is NavMeshObstacle) continue;
-                    if (InCells(other.npos.X, other.npos.Z, x0, x1, z0, z1, invX, invZ)) candidates++;
+                    var velocity = prediction && other.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING
+                        ? other.NextVelocity(Time.deltaTime) : other.vel;
+                    if (InCells(other.npos, velocity, other.option.radius, horizon, prediction,
+                        x0, x1, z0, z1, invX, invZ)) candidates++;
                 }
                 for (int j = 0; j < s_Near.Count; j++)
-                    if (InCells(s_NearPositions[j].X, s_NearPositions[j].Z, x0, x1, z0, z1, invX, invZ)) circles++;
+                    if (InCells(s_NearPositions[j], NavMesh.V(s_Near[j].Velocity), s_Near[j].Radius, horizon, prediction,
+                        x0, x1, z0, z1, invX, invZ)) circles++;
                 if (circles == 0 || candidates + circles <= NeighbourCandidates) continue;
                 s_WarnedCandidates = true;
                 Debug.LogWarning("Unbound: " + (candidates + circles) + " NavMesh agents and NavMeshObstacle circles ("
@@ -790,10 +796,14 @@ namespace Unbound.Runtime
         /// <summary>The proximity grid's cell of a coordinate, as the crowd's grid computes it.</summary>
         static int Cell(float v, float inv) => (int)MathF.Floor(v * inv);
 
-        static bool InCells(float x, float z, int x0, int x1, int z0, int z1, float invX, float invZ)
+        static bool InCells(RcVec3f position, RcVec3f velocity, float radius, float horizon, bool prediction,
+            int x0, int x1, int z0, int z1, float invX, float invZ)
         {
-            int cx = Cell(x, invX), cz = Cell(z, invZ);
-            return cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1;
+            var min = position;
+            var max = position;
+            if (prediction) DtCrowd.PredictionBounds(position, velocity, radius, horizon, out min, out max);
+            return Cell(max.X, invX) >= x0 && Cell(min.X, invX) <= x1
+                && Cell(max.Z, invZ) >= z0 && Cell(min.Z, invZ) <= z1;
         }
 
         /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
