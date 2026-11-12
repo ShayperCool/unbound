@@ -93,16 +93,23 @@ Q369/Q296/Q363/Q248 and Q372/Q368/Q353. One probe can hold several causes; each 
 Corrected references are identified below. Comparators and tolerances are unchanged, and raw
 engine differences still fail. The shared sheriff baseline has not been promoted by this work.
 
-The 2026-11-12 Q372/Q368/Q353 follow-ups close inherited Edit-mode execution and startup ownership
+The 2026-11-12 lifecycle and scripting follow-ups close inherited Edit-mode execution and startup ownership
 (`editinheritance`, 171/171 values), imported texture flags (`assetclones`, 14340/14340),
 Editor/Play exit controls (`editorcallbacks`, 114/114 values across four quit profiles),
 internal reflection/particle-light root ownership (`hiddenroots`, 15/15),
 public flag transitions (`hiddenflags`, 549/549), and material reload identity
 (`droppedparams`, 252/252; `materialalias`, 62/62), and captured exception output
 (`stackcapture`, 15/15; `testrunner`, all 11 PlayMode nodes).
-The retained callback order, queued-load timing, stack, input,
+CRT scheduling now matches all 448 customrt values and 228 images, with 229
+additional load-cycle controls in crtload. Created-clip memory matches 81 controls
+and closes five appfacts values.
+The retained callback order, queued-load timing, stack-utility text, input,
 importer and numerical differences below remain visible in the strict comparisons.
 Each gap row gives the measured context and the remaining follow-up scope.
+The implementation follow-ups are shared serialized engine-property bindings,
+host keyboard configuration delivery and layout refresh, general game float
+evaluation, and the remaining memory and stack-utility coverage. Exact async
+completion frames and cross-object callback order retain their scoped records.
 
 | Probe | Failing | What fails | Class and record |
 |---|---|---|---|
@@ -114,7 +121,7 @@ Each gap row gives the measured context and the remaining follow-up scope.
 | customrt | 0 of 448 values, 0 of 228 images, previously 2 values | Startup textures wait for the first eligible rendered cycle. The API section destroys them before that point; kept-alive controls load normally. Crtload adds 229 exact scheduling, initialization and callback-fault controls | closed for measured Play/render cycles, row `CustomRenderTexture` |
 | destroycontract | 0 of 1115 keys after Q374, previously 887 | The first Play frame renders its cameras but has no EOF completion; both coroutine and Awaitable waiters first resume in the next frame. The measured startup phase now follows that rule. Existing Q363 reference rows and comparator are unchanged | closed, row `First rendered frame and EOF coroutine startup`; `eofstartup` adds 78 values from two identical windowed GPU Editor captures |
 | droppedparams | 0 of 252 values, previously 1 | Reloaded materials have a new wrapper with the same instance ID and shared state; materialalias adds 62 exact controls for aliases, saved restoration, copies and destruction | closed for material files with one object, row `Resources.UnloadAsset` |
-| editorcallbacks | 24 missing and 24 extra events and 21 prefab fields of the main record; 0 of 9 scene-queue streams | All 24 event pairs are Awake, OnEnable or Start receiver order, not missing scene-unload delivery; the Editor-exit unload matches. The initial scene is active during early runtime initialization. The 21 field differences are incomplete SerializedObject engine-property bindings, separate from lifecycle delivery. The strict two-load timing discrepancy remains | order (24); gaps `SerializedObject engine-property bindings` and `Queued LoadSceneAsync staging`; teardown closed by quit-play, throwing-unload and leave-play controls; inherited Edit execution and startup ownership by tests/projects/editinheritance; internal root ownership by tests/projects/hiddenroots |
+| editorcallbacks | 24 missing and 24 extra events and 21 prefab fields of the main record; 0 of 9 scene-queue streams | All 24 event pairs are Awake, OnEnable or Start receiver order, not missing scene-unload delivery; the Editor-exit unload matches. The 21 field differences are incomplete SerializedObject engine-property bindings, separate from lifecycle delivery. The strict two-load timing discrepancy remains | order (24); gaps `SerializedObject engine-property bindings` and `Queued LoadSceneAsync staging`; teardown closed by quit-play, throwing-unload and leave-play controls; inherited Edit execution and startup ownership by tests/projects/editinheritance; internal root ownership by tests/projects/hiddenroots |
 | flares | 20 of 231 images (77 of 217 before the flare elements were built in view space; 14 `fl.*` images added since) | Halo falloff below 1/255 (20 `h.*` and `ho.*` images) | residual (one entry). Closed: row `Lens flare element edge line` (41 images, and the 16 of the former texel residual with them) |
 | geometryframe2d | 0 of 50863 values after Q360 | All 6121 original failures are resolved: 5983 composite geometry values and 138 capsule/circle/box cast values. The 430-scenario reference adds divergent frame, generation, edge and synchronization controls while preserving all prior scenario values | done for measured 6000.0.71f1, row `CompositeCollider2D geometry and cast contact features` |
 | inputframes | 1 of 3786 records | One keyboard DCFG event remains missing. A Linux Editor control records zero events from layout/name queries and one per process-local GDK keymap notification; the host lacks that notification source | gap, row `Press and release within one frame lost`; initial first-key trigger remains unmeasured |
