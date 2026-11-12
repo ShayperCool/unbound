@@ -925,8 +925,9 @@ impl BakeInput {
         }
         key.update(&self.min_chart_texels.to_le_bytes());
         key.update(&self.group.to_le_bytes());
-        key.update(&(self.settings.rays as u64).to_le_bytes());
-        key.update(&(self.settings.budget as u64).to_le_bytes());
+        let unbound_gi::precompute::transport::Settings { rays, budget } = self.settings;
+        key.update(&(rays as u64).to_le_bytes());
+        key.update(&(budget as u64).to_le_bytes());
     }
 }
 
@@ -1083,7 +1084,7 @@ fn place(input: &BakeInput) -> Result<Placed> {
 }
 
 /// The bake of `inputs`: a renderer that cannot be placed (its realtime lightmap UVs cannot be
-/// made, say) is left out and listed, as is one of no triangles.
+/// made, say) is left out and listed, as are those the bake refuses.
 fn bake_fresh(
     inputs: &[BakeInput],
     probes: &[[f32; 3]],
@@ -1091,10 +1092,6 @@ fn bake_fresh(
     let mut refused = Vec::new();
     let mut taken = Vec::with_capacity(inputs.len());
     for input in inputs {
-        if input.triangles.is_empty() || input.positions.is_empty() {
-            refused.push(((input.object, input.prefab), "no triangles".to_string()));
-            continue;
-        }
         match place(input) {
             Ok(placed) => taken.push((input, placed)),
             Err(e) => refused.push(((input.object, input.prefab), format!("{e:#}"))),
@@ -1117,6 +1114,13 @@ fn bake_fresh(
         .collect();
     let mut baked = unbound_gi::precompute::bake::bake(&renderers, probes)?;
     refused.append(&mut baked.refused);
+    // In the order of the inputs.
+    let order: HashMap<(i64, i64), usize> = inputs
+        .iter()
+        .enumerate()
+        .map(|(k, i)| ((i.object, i.prefab), k))
+        .collect();
+    refused.sort_by_key(|(id, _)| order.get(id).copied());
     baked.refused = refused;
     Ok(baked)
 }
@@ -1750,6 +1754,42 @@ mod tests {
             "{}",
             baked.refused[1].1
         );
+        // A smaller Irradiance Budget bounds every texel's references; one group of renderers
+        // with two settings is an error.
+        let small = |b: &mut BakeInput| b.settings.budget = 8;
+        let mut few: Vec<BakeInput> = (0..4)
+            .map(|k| {
+                let mut b = box_input(k + 1, [4.0, 0.2, 4.0], [0.0, -0.1 + 3.0 * k as f32, 0.0]);
+                small(&mut b);
+                b
+            })
+            .collect();
+        // The most references any texel reads (those of nonzero weight).
+        let most = |baked: &unbound_gi::precompute::bake::Baked| {
+            let t = &baked.data.systems[0].transport;
+            t.segments
+                .iter()
+                .flat_map(|g| {
+                    let n = g.references.len();
+                    (0..g.texels.len())
+                        .map(move |k| (0..n).filter(|&r| g.weights[k * n + r] > 0).count())
+                })
+                .max()
+                .unwrap()
+        };
+        assert!(most(&bake_fresh(&few, &[]).unwrap()) <= 8);
+        let defaults: Vec<BakeInput> = (0..4)
+            .map(|k| box_input(k + 1, [4.0, 0.2, 4.0], [0.0, -0.1 + 3.0 * k as f32, 0.0]))
+            .collect();
+        assert!(most(&bake_fresh(&defaults, &[]).unwrap()) > 8);
+        few[3].settings.budget = 128;
+        let error = bake_fresh(&few, &[]).err().map(|e| format!("{e:#}"));
+        assert!(
+            error
+                .as_deref()
+                .is_some_and(|e| e.contains("other irradiance settings")),
+            "{error:?}"
+        );
         // Other irradiance settings change the key (and the transport they make).
         let mut fewer = box_input(1, [4.0, 0.2, 4.0], [0.0, -0.1, 0.0]);
         fewer.settings.budget = 32;
@@ -1793,6 +1833,15 @@ mod tests {
             ),
             [0.0; 3]
         );
+        // A slanted normal under a scale of (2, 1, 1) leans away from the stretched axis, as
+        // the inverse transpose turns it: (1, 1, 0) / sqrt 2 to (1, 2, 0) / sqrt 5 (the matrix
+        // itself would give (2, 1, 0) / sqrt 5).
+        let mut stretched = box_input(5, [2.0, 1.0, 1.0], [0.0; 3]);
+        let s = 0.5f32.sqrt();
+        stretched.normals = vec![[s, s, 0.0]; stretched.positions.len()];
+        let n = place(&stretched).unwrap().normals[0];
+        let e = [1.0 / 5f32.sqrt(), 2.0 / 5f32.sqrt(), 0.0];
+        assert!((0..3).all(|k| (n[k] - e[k]).abs() < 1e-6), "{n:?}");
     }
 
     #[test]

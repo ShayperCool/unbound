@@ -94,6 +94,20 @@ fn refusal(r: &BakeRenderer) -> Option<String> {
     if !r.bounds.0.iter().chain(&r.bounds.1).all(|v| v.is_finite()) {
         return Some("bounds that are not finite".to_string());
     }
+    if !(r.cluster_size > 0.0 && r.cluster_size.is_finite())
+        || !(r.modelling_tolerance >= 0.0 && r.modelling_tolerance.is_finite())
+    {
+        return Some(format!(
+            "a cluster size of {} and a Modelling Tolerance of {}",
+            r.cluster_size, r.modelling_tolerance
+        ));
+    }
+    if r.settings.rays == 0 || r.settings.budget == 0 {
+        return Some(format!(
+            "an Irradiance Quality of {} and an Irradiance Budget of {}",
+            r.settings.rays, r.settings.budget
+        ));
+    }
     None
 }
 
@@ -121,7 +135,11 @@ pub fn bake(all: &[BakeRenderer], probes: &[V3]) -> Result<Baked> {
     }
     ensure!(
         !renderers.is_empty(),
-        "a scene without realtime GI renderers"
+        "a scene without realtime GI renderers{}",
+        refused
+            .iter()
+            .map(|((object, _), why)| format!("; renderer {object}: {why}"))
+            .collect::<String>()
     );
     let members: Vec<Member> = renderers
         .iter()
@@ -136,6 +154,14 @@ pub fn bake(all: &[BakeRenderer], probes: &[V3]) -> Result<Baked> {
         .iter()
         .map(|g| pack_system(&g.iter().map(|&k| renderers[k].uvs).collect::<Vec<_>>()))
         .collect::<Result<_>>()?;
+    // A system's renderers share their Lightmap Parameters ([`BakeRenderer::group`]).
+    for (s, g) in groups.iter().enumerate() {
+        let settings = renderers[g[0]].settings;
+        ensure!(
+            g.iter().all(|&k| renderers[k].settings == settings),
+            "system {s}: renderers of one group with other irradiance settings"
+        );
+    }
     // Each renderer's positions in its system's texels.
     let texels: Vec<Vec<Vec<[f32; 2]>>> = groups
         .iter()
@@ -200,12 +226,7 @@ pub fn bake(all: &[BakeRenderer], probes: &[V3]) -> Result<Baked> {
         let layout = &layouts[s];
         let outputs: Vec<&Output> = g.iter().map(|&k| renderers[k].uvs).collect();
         let mask = chart_mask(layout, &outputs);
-        // A system's renderers share their Lightmap Parameters ([`BakeRenderer::group`]).
         let settings = renderers[g[0]].settings;
-        ensure!(
-            g.iter().all(|&k| renderers[k].settings == settings),
-            "system {s}: renderers of one group with other irradiance settings"
-        );
         let transport = transport(
             &instances[s],
             &scene,

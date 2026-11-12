@@ -1075,3 +1075,45 @@ fn atlases_take_the_largest_systems_first_and_shrink_the_last() {
     assert!(pack_atlases(&[[1025, 4]]).is_err());
     assert_eq!(pack_atlases(&[]).unwrap().sizes, Vec::<u32>::new());
 }
+
+#[test]
+fn a_bake_leaves_out_the_renderers_it_cannot_take() {
+    use super::bake::{BakeRenderer, bake};
+    use super::transport::DEFAULT_SETTINGS;
+    let ground = floor(4.0, 4.0);
+    let uvs = |m: &Mesh| crate::realtime_uv::Output {
+        width: 8,
+        height: 8,
+        uvs: m.texels.iter().map(|t| [t[0] / 8.0, t[1] / 8.0]).collect(),
+        charts: vec![crate::realtime_uv::PlacedChart {
+            rect: [0, 0, 8, 8],
+            blocks: vec![true; 16],
+        }],
+    };
+    let out = uvs(&ground);
+    let renderer = |id: i64, triangles: &'static [[u32; 3]]| BakeRenderer {
+        id: (id, 0),
+        positions: &ground.positions,
+        normals: &ground.normals,
+        triangles,
+        uvs: &out,
+        bounds: ([0.0; 3], [4.0, 0.0, 4.0]),
+        cluster_size: 1.0,
+        modelling_tolerance: TOLERANCE,
+        group: 0,
+        settings: DEFAULT_SETTINGS,
+    };
+    let good = renderer(1, &[[0, 1, 2], [0, 2, 3]]);
+    let past = renderer(2, &[[0, 1, 7]]);
+    let mut sized = renderer(3, &[[0, 1, 2]]);
+    sized.cluster_size = 0.0;
+    let mut quality = renderer(4, &[[0, 1, 2]]);
+    quality.settings.rays = 0;
+    let baked = bake(&[good, past, sized, quality], &[]).unwrap();
+    assert_eq!(baked.data.renderers, vec![(1, 0)]);
+    let ids: Vec<i64> = baked.refused.iter().map(|r| r.0.0).collect();
+    assert_eq!(ids, vec![2, 3, 4]);
+    // When none is left the error names every refusal.
+    let error = bake(&[renderer(5, &[])], &[]).err().unwrap().to_string();
+    assert!(error.contains("renderer 5: no triangles"), "{error}");
+}
