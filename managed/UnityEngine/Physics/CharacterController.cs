@@ -325,9 +325,9 @@ namespace UnityEngine
 
         public CharacterController controller => m_Controller;
         public Collider collider => m_Collider;
-        public Rigidbody rigidbody => m_Collider != null ? m_Collider.attachedRigidbody : null;
-        public GameObject gameObject => m_Collider != null ? m_Collider.gameObject : null;
-        public Transform transform => m_Collider != null ? m_Collider.transform : null;
+        public Rigidbody rigidbody => (Compat.PhysicsCallbackPayloadsMeasured || m_Collider != null) ? m_Collider.attachedRigidbody : null;
+        public GameObject gameObject => (Compat.PhysicsCallbackPayloadsMeasured || m_Collider != null) ? m_Collider.gameObject : null;
+        public Transform transform => (Compat.PhysicsCallbackPayloadsMeasured || m_Collider != null) ? m_Collider.transform : null;
         public Vector3 point => m_Point;
         public Vector3 normal => m_Normal;
         public Vector3 moveDirection => m_MoveDirection;

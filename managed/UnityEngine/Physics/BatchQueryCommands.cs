@@ -194,12 +194,12 @@ namespace UnityEngine
             this.direction = direction;
             this.queryParameters = queryParameters;
             this.distance = distance;
-            // Unbound's choice (unmeasured): the obsolete per-command maxHits reads 1 unless set.
+            // Retained storage is used only by the unmeasured profiles.
             m_MaxHits = 1;
         }
 
-        // Unbound's choice (unmeasured) for the obsolete signatures: the layer mask goes into
-        // QueryParameters, every other parameter keeps its constructor default.
+        // Legacy overloads pass the layer mask through QueryParameters. The measured profile
+        // ignores per-command maxHits storage; other profiles retain their unmeasured behavior.
         [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
         public RaycastCommand(Vector3 from, Vector3 direction, float distance = float.MaxValue, int layerMask = -5, int maxHits = 1)
             : this(Physics.defaultPhysicsScene, from, direction, new QueryParameters(layerMask), distance)
@@ -227,8 +227,8 @@ namespace UnityEngine
         [Obsolete("maxHits property was moved to be a part of RaycastCommand.ScheduleBatch.")]
         public int maxHits
         {
-            get => m_MaxHits;
-            set => m_MaxHits = value;
+            get => Compat.RemovedPhysicsSettingsMeasured ? 1 : m_MaxHits;
+            set { if (!Compat.RemovedPhysicsSettingsMeasured) m_MaxHits = value; }
         }
 
         [Obsolete("Layer Mask is now a part of QueryParameters struct")]

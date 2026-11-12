@@ -187,12 +187,15 @@ namespace UnityEngine
         {
             get
             {
-                if (m_Material == null || !m_Material.m_IsInstance)
+                if (m_Material == null || (Compat.PhysicsMaterialInstancesMeasured
+                    ? m_Material.m_InstanceOwnerId != m_InstanceID : m_Material.m_InstanceOwnerId == 0))
                 {
                     var source = m_Material;
-                    var copy = new PhysicsMaterial((source != null ? source.name : "Default") + " (Instance)");
+                    var instanceName = source != null ? source.name + " (Instance)"
+                        : Compat.PhysicsMaterialInstancesMeasured ? "" : "Default (Instance)";
+                    var copy = new PhysicsMaterial(instanceName);
                     if (source != null) copy.CopyValues(source);
-                    copy.m_IsInstance = true;
+                    copy.m_InstanceOwnerId = m_InstanceID;
                     m_Material = copy;
                     W.MaterialChanged(this);
                 }

@@ -61,7 +61,18 @@ namespace UnityEngine
         public float maximumForce { get => m_MaximumForce; set => m_MaximumForce = value; }
         public bool useAcceleration { get => m_UseAcceleration != 0; set => m_UseAcceleration = value ? 1 : 0; }
 
-        internal static JointDrive Default => new JointDrive { m_MaximumForce = float.MaxValue };
+        // The 6000.0.71f1 defaultstate reference accepts one float step below float.MaxValue.
+        internal const float MaximumSetting = 3.40282326e38f;
+        internal static JointDrive Default => Normalize(new JointDrive { m_MaximumForce = float.MaxValue });
+        static float NormalizeSetting(float value) => value < 0f ? 0f : value > MaximumSetting ? MaximumSetting : value;
+        internal static JointDrive Normalize(JointDrive value)
+        {
+            if (!Compat.PhysicsJointDrivesMeasured) return value;
+            value.m_PositionSpring = NormalizeSetting(value.m_PositionSpring);
+            value.m_PositionDamper = NormalizeSetting(value.m_PositionDamper);
+            value.m_MaximumForce = NormalizeSetting(value.m_MaximumForce);
+            return value;
+        }
     }
 
     /// <summary>
@@ -363,13 +374,13 @@ namespace UnityEngine
 
         internal static SoftJointLimitSpring ReadSoftSpring(YNode n) => new SoftJointLimitSpring { spring = n?.Float("spring") ?? 0f, damper = n?.Float("damper") ?? 0f };
 
-        internal static JointDrive ReadDrive(YNode n) => new JointDrive
+        internal static JointDrive ReadDrive(YNode n) => JointDrive.Normalize(new JointDrive
         {
             positionSpring = n?.Float("positionSpring") ?? 0f,
             positionDamper = n?.Float("positionDamper") ?? 0f,
             maximumForce = n?.Float("maximumForce", float.MaxValue) ?? float.MaxValue,
             useAcceleration = n?.Bool("useAcceleration") ?? false,
-        };
+        });
     }
 
     [ClassId(138)]
@@ -656,15 +667,15 @@ namespace UnityEngine
         public SoftJointLimit angularZLimit { get => m_AngularZLimit; set { m_AngularZLimit = value; Changed(); } }
         public Vector3 targetPosition { get => m_TargetPosition; set { m_TargetPosition = value; Changed(); } }
         public Vector3 targetVelocity { get => m_TargetVelocity; set { m_TargetVelocity = value; Changed(); } }
-        public JointDrive xDrive { get => m_XDrive; set { m_XDrive = value; Changed(); } }
-        public JointDrive yDrive { get => m_YDrive; set { m_YDrive = value; Changed(); } }
-        public JointDrive zDrive { get => m_ZDrive; set { m_ZDrive = value; Changed(); } }
+        public JointDrive xDrive { get => m_XDrive; set { m_XDrive = JointDrive.Normalize(value); Changed(); } }
+        public JointDrive yDrive { get => m_YDrive; set { m_YDrive = JointDrive.Normalize(value); Changed(); } }
+        public JointDrive zDrive { get => m_ZDrive; set { m_ZDrive = JointDrive.Normalize(value); Changed(); } }
         public Quaternion targetRotation { get => m_TargetRotation; set { m_TargetRotation = value; Changed(); } }
         public Vector3 targetAngularVelocity { get => m_TargetAngularVelocity; set { m_TargetAngularVelocity = value; Changed(); } }
         public RotationDriveMode rotationDriveMode { get => m_RotationDriveMode; set { m_RotationDriveMode = value; Changed(); } }
-        public JointDrive angularXDrive { get => m_AngularXDrive; set { m_AngularXDrive = value; Changed(); } }
-        public JointDrive angularYZDrive { get => m_AngularYZDrive; set { m_AngularYZDrive = value; Changed(); } }
-        public JointDrive slerpDrive { get => m_SlerpDrive; set { m_SlerpDrive = value; Changed(); } }
+        public JointDrive angularXDrive { get => m_AngularXDrive; set { m_AngularXDrive = JointDrive.Normalize(value); Changed(); } }
+        public JointDrive angularYZDrive { get => m_AngularYZDrive; set { m_AngularYZDrive = JointDrive.Normalize(value); Changed(); } }
+        public JointDrive slerpDrive { get => m_SlerpDrive; set { m_SlerpDrive = JointDrive.Normalize(value); Changed(); } }
         public JointProjectionMode projectionMode { get => m_ProjectionMode; set { m_ProjectionMode = value; Changed(); } }
         public float projectionDistance { get => m_ProjectionDistance; set { m_ProjectionDistance = value; Changed(); } }
         public float projectionAngle { get => m_ProjectionAngle; set { m_ProjectionAngle = value; Changed(); } }

@@ -16,10 +16,10 @@ namespace UnityEngine
         PhysicsMaterialCombine m_BounceCombine = PhysicsMaterialCombine.Average;
         /// <summary>Bumped on every change, so colliders using the material update their shapes.</summary>
         internal int m_ChangeVersion;
-        /// <summary>A collider's own copy (Collider.material).</summary>
-        internal bool m_IsInstance;
+        /// <summary>The collider that owns this copy, or zero for a shared material.</summary>
+        internal int m_InstanceOwnerId;
 
-        public PhysicsMaterial() { }
+        public PhysicsMaterial() : this(Compat.DefaultConstructorStateMeasured ? "DynamicMaterial" : "") { }
 
         public PhysicsMaterial(string name)
         {
@@ -285,9 +285,9 @@ namespace UnityEngine
 
         public Collider collider => m_Collider;
 
-        public Transform transform => m_Rigidbody != null ? m_Rigidbody.transform : m_Collider != null ? m_Collider.transform : null;
+        public Transform transform => m_Rigidbody != null ? m_Rigidbody.transform : (Compat.PhysicsCallbackPayloadsMeasured || m_Collider != null) ? m_Collider.transform : null;
 
-        public GameObject gameObject => m_Rigidbody != null ? m_Rigidbody.gameObject : m_Collider != null ? m_Collider.gameObject : null;
+        public GameObject gameObject => m_Rigidbody != null ? m_Rigidbody.gameObject : (Compat.PhysicsCallbackPayloadsMeasured || m_Collider != null) ? m_Collider.gameObject : null;
 
         public int contactCount => m_ContactCount;
 

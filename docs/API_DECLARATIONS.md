@@ -89,8 +89,9 @@ defaults need release evidence and a control that can distinguish the behavior b
 
 Q411's shared removed-getter migration resolves 1,196 rows. The Core slice resolves
 another 156 rows, including one Canvas viewport observation; Physics2D resolves 157
-more. The default-state probe now has 10,495 exact rows and 1,312 queued rows, including
-the unchanged 50 variable rows. Its 11,534 canonical rows preserve every original line. Added controls
+and Physics resolves 89. The default-state probe now has 10,551 exact rows and 1,223
+queued rows, including the unchanged 50 variable rows. Its 11,565 canonical rows
+preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases and refresh-rate arithmetic.
 
@@ -98,7 +99,7 @@ Fixed removed-getter exceptions come from the selected release assembly during s
 generation. Conditional and computed getters retain their existing fallback. Core
 constructor, factory and refresh-rate mechanisms select exactly 6000.0.71f1; other
 profiles keep their previous unmeasured paths, recorded in the compatibility gaps.
-The generator format is version 4. API declarations and lookup checks still retain
+The generator format is version 5. API declarations and lookup checks still retain
 1,332 exact release exceptions with zero errors; this slice adds no exceptions.
 
 The probe README lists remaining module counts and unresolved contexts. In particular,

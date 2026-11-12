@@ -45,6 +45,8 @@ public sealed class DefaultStateProbe : MonoBehaviour
         CoreControls();
         Physics2DControls();
         Physics2DPayloadControls();
+        PhysicsControls();
+        PhysicsPayloadControls();
         Emit("complete","value","1"); output.Dispose(); output=null;
         EditorApplication.Exit(0);
     }
@@ -244,6 +246,143 @@ public sealed class DefaultStateProbe : MonoBehaviour
         }
         finally
         { UnityEngine.Object.DestroyImmediate(first); UnityEngine.Object.DestroyImmediate(second); Physics2D.simulationMode = previousMode; }
+    }
+    static void PhysicsControls()
+    {
+        var owner = new GameObject("PhysicsFactoryControl");
+        try
+        {
+            owner.SetActive(false); var body = owner.AddComponent<Rigidbody>();
+            foreach (var name in new[] { "Collider", "Joint" })
+                CoreValue("Physics/base/" + name, owner.AddComponent(ProbeType(name)) == null);
+            CoreValue("Physics/concrete", new[] { owner.AddComponent<BoxCollider>() != null, owner.AddComponent<FixedJoint>() != null });
+            var iterations = typeof(Rigidbody).GetProperty("solverIterationCount");
+            var velocity = typeof(Rigidbody).GetProperty("solverVelocityIterationCount");
+            body.solverIterations = 13; body.solverVelocityIterations = 7;
+            CoreValue("Physics/solver/readAliases", new[] { (int)iterations.GetValue(body, null), (int)velocity.GetValue(body, null) });
+            iterations.SetValue(body, 9, null); velocity.SetValue(body, 3, null);
+            CoreValue("Physics/solver/writeAliases", new[] { body.solverIterations, body.solverVelocityIterations });
+            var collider = owner.AddComponent<MeshCollider>();
+            var smooth = typeof(MeshCollider).GetProperty("smoothSphereCollisions");
+            smooth.SetValue(collider, false, null);
+            CoreValue("Physics/smoothFalse", smooth.GetValue(collider, null));
+            smooth.SetValue(collider, true, null);
+            CoreValue("Physics/smoothTrue", smooth.GetValue(collider, null));
+        }
+        finally { UnityEngine.Object.DestroyImmediate(owner); }
+        foreach (bool populated in new[] { false, true })
+        {
+            var requiredOwner = new GameObject("RequiredColliderControl");
+            var previous = Debug.unityLogger.logHandler; var handler = new FactoryControlLogHandler(previous);
+            try
+            {
+                requiredOwner.SetActive(false);
+                if (populated) requiredOwner.AddComponent<BoxCollider>();
+                Debug.unityLogger.logHandler = handler;
+                var component = requiredOwner.AddComponent<ColliderRequiredControlBehaviour>();
+                CoreValue("Physics/required/" + populated, new object[] { component == null,
+                    requiredOwner.GetComponents<Component>().Select(c => c.GetType().Name).OrderBy(n => n, StringComparer.Ordinal).ToArray(), handler.errors });
+            }
+            finally { Debug.unityLogger.logHandler = previous; UnityEngine.Object.DestroyImmediate(requiredOwner); }
+        }
+        object command = default(RaycastCommand); var hits = typeof(RaycastCommand).GetProperty("maxHits");
+        hits.SetValue(command, 27, null);
+        CoreValue("Physics/maxHitsWritten", hits.GetValue(command, null));
+        command = new RaycastCommand(Vector3.one, Vector3.up, new QueryParameters(), 41);
+        hits.SetValue(command, -1, null);
+        CoreValue("Physics/maxHitsConstructed", new object[] { hits.GetValue(command, null), ((RaycastCommand)command).distance });
+        foreach (var name in new string[] { "", "changed" })
+        {
+            var material = new PhysicsMaterial(name);
+            try { CoreValue("Physics/material/name/" + (name ?? "null"), material.name); }
+            finally { UnityEngine.Object.DestroyImmediate(material); }
+        }
+        var defaultMaterial = new PhysicsMaterial();
+        try { CoreValue("Physics/material/defaultName", defaultMaterial.name); }
+        finally { UnityEngine.Object.DestroyImmediate(defaultMaterial); }
+        var firstOwner = new GameObject("FirstMaterialControl"); var secondOwner = new GameObject("SecondMaterialControl");
+        var source = new PhysicsMaterial("custom");
+        try
+        {
+            firstOwner.SetActive(false); secondOwner.SetActive(false);
+            var first = firstOwner.AddComponent<BoxCollider>(); var second = secondOwner.AddComponent<SphereCollider>();
+            var initial = first.material;
+            CoreValue("Physics/material/fresh", new object[] { initial.name, ReferenceEquals(initial, first.material), ReferenceEquals(initial, first.sharedMaterial) });
+            first.sharedMaterial = source; second.sharedMaterial = source;
+            source.dynamicFriction = 0.2f; source.staticFriction = 0.3f; source.bounciness = 0.4f;
+            source.frictionCombine = PhysicsMaterialCombine.Maximum; source.bounceCombine = PhysicsMaterialCombine.Minimum;
+            var own = first.material;
+            CoreValue("Physics/material/copied", new object[] { own.name, ReferenceEquals(own, source), ReferenceEquals(own, first.material),
+                own.dynamicFriction, own.staticFriction, own.bounciness, own.frictionCombine, own.bounceCombine });
+            own.dynamicFriction = 0.8f;
+            CoreValue("Physics/material/isolation", new[] { source.dynamicFriction, second.sharedMaterial.dynamicFriction, first.material.dynamicFriction });
+            second.sharedMaterial = own; var transferred = second.material;
+            CoreValue("Physics/material/transferred", new object[] { transferred.name, ReferenceEquals(own, transferred),
+                ReferenceEquals(transferred, second.material), transferred.dynamicFriction });
+            transferred.dynamicFriction = 0.9f;
+            CoreValue("Physics/material/transferIsolation", new[] { first.material.dynamicFriction, second.material.dynamicFriction });
+            UnityEngine.Object.DestroyImmediate(initial); UnityEngine.Object.DestroyImmediate(own); UnityEngine.Object.DestroyImmediate(transferred);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(firstOwner); UnityEngine.Object.DestroyImmediate(secondOwner); UnityEngine.Object.DestroyImmediate(source); }
+    }
+    static void PhysicsPayloadControls()
+    {
+        var errors = new List<string>();
+        foreach (var pair in new[] { new object[] { new Collision(), "gameObject" }, new object[] { new Collision(), "transform" },
+            new object[] { new ControllerColliderHit(), "gameObject" }, new object[] { new ControllerColliderHit(), "transform" },
+            new object[] { new ControllerColliderHit(), "rigidbody" } })
+        {
+            try { pair[0].GetType().GetProperty((string)pair[1]).GetValue(pair[0], null); errors.Add("returned"); }
+            catch (Exception error) { errors.Add(Error(error)); }
+        }
+        CoreValue("Physics/payload/defaultErrors", errors.ToArray());
+        var first = new GameObject("CollisionControl3D"); var second = new GameObject("CollisionTarget3D");
+        var previousMode = Physics.simulationMode;
+        try
+        {
+            Physics.simulationMode = SimulationMode.Script;
+            first.AddComponent<Rigidbody>().useGravity = false; first.AddComponent<BoxCollider>();
+            var observer = first.AddComponent<PhysicsPayloadControl>();
+            second.transform.position = new Vector3(.5f,0,0); second.AddComponent<BoxCollider>();
+            Physics.SyncTransforms(); Physics.Simulate(.02f);
+            CoreValue("Physics/payload/collision", observer.collision ?? new object[] { "missing" });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(first); UnityEngine.Object.DestroyImmediate(second); Physics.simulationMode = previousMode; }
+        var mover = new GameObject("ControllerPayloadControl"); var target = new GameObject("ControllerPayloadTarget");
+        try
+        {
+            mover.transform.position = new Vector3(100,0,0); target.transform.position = new Vector3(102,0,0);
+            target.AddComponent<BoxCollider>();
+            var observer = mover.AddComponent<PhysicsPayloadControl>(); var controller = mover.AddComponent<CharacterController>();
+            Physics.SyncTransforms(); controller.Move(new Vector3(3,0,0));
+            CoreValue("Physics/payload/controller", observer.controller ?? new object[] { "missing" });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(mover); UnityEngine.Object.DestroyImmediate(target); }
+        var jointOwner = new GameObject("DrivePrecisionControl");
+        try
+        {
+            jointOwner.SetActive(false); var joint = jointOwner.AddComponent<ConfigurableJoint>();
+            var drive = joint.xDrive; float value = drive.maximumForce;
+            CoreValue("Physics/drive/precision", new object[] { BitConverter.ToInt32(BitConverter.GetBytes(value),0),
+                BitConverter.ToInt32(BitConverter.GetBytes(float.MaxValue),0), value == float.MaxValue });
+            drive.maximumForce = float.MaxValue; joint.xDrive = drive;
+            CoreValue("Physics/drive/maximumWrite", BitConverter.ToInt32(BitConverter.GetBytes(joint.xDrive.maximumForce),0));
+            drive.maximumForce = 27.5f; joint.xDrive = drive;
+            CoreValue("Physics/drive/finiteWrite", joint.xDrive.maximumForce);
+            foreach (var name in new[] { "xDrive", "yDrive", "zDrive", "angularXDrive", "angularYZDrive", "slerpDrive" })
+            {
+                var property = typeof(ConfigurableJoint).GetProperty(name); var values = new List<object>();
+                foreach (var input in new[] { -3f, 27.5f, float.MaxValue, float.PositiveInfinity, float.NaN })
+                {
+                    var setting = new JointDrive { positionSpring = input, positionDamper = input, maximumForce = input, useAcceleration = true };
+                    property.SetValue(joint, setting, null); var result = (JointDrive)property.GetValue(joint, null);
+                    values.Add(new object[] { result.positionSpring, result.positionDamper, result.maximumForce, result.useAcceleration });
+                }
+                CoreValue("Physics/drive/range/" + name, values.ToArray());
+            }
+
+        }
+        finally { UnityEngine.Object.DestroyImmediate(jointOwner); }
     }
     static void RemovedGetterControls()
     {

@@ -329,16 +329,20 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 
 - [x] Q403 default-state capture and comparison: [defaultstate](../tests/projects/defaultstate/README.md)
       covers 1,032 constructible matching types. Q411's shared mechanism resolves 1,196 rows;
-      its Core slice resolves another 156 and Physics2D resolves 157. The 11,534-row reference preserves all original
+      its Core slice resolves another 156, Physics2D resolves 157 and Physics resolves 89. The 11,565-row reference preserves all original
       rows and adds independently repeated message, constructor, requirement, collision and arithmetic
-      controls. The comparison has 10,495 exact rows, 1,039 differing reference rows, 271 extra
-      implementation rows and the unchanged 50 variable observations inside 1,312 exact,
-      reasoned migration entries. CoreModule retains 116 rows and Physics2D five; the README lists every module
+      controls. The comparison has 10,551 exact rows, 1,014 differing reference rows, 207 extra
+      implementation rows and the unchanged 50 variable observations inside 1,223 exact,
+      reasoned migration entries. CoreModule retains 116 rows, Physics2D five and Physics five; the README lists every module
       and the unresolved payload, rendering and import contexts. Static constructor comparison
       remains separate, including its queued rendering split-index default.
 - [ ] Q411 other-release initialization: constructor, factory eligibility and refresh-rate
       mechanisms are measured only on 6000.0.71f1. Other releases retain their previous
       unmeasured defaults, factory rules and invalid-rate conversion; their parity remains open.
+      Physics material ownership, empty callback access, removed query settings and drive input
+      ranges also select exactly 6000.0.71f1. Other releases retain their previous material reuse,
+      null fallbacks, maxHits storage and drive values. Typed GeometryHolder payloads, destroyed
+      callback targets, articulation bodies and serialized drive edge controls remain open.
 
 - [x] `Stubs.Ignored(member)` (warn once, like `NotImplemented`) for knowingly ignored members,
       and an `[EditorFaithful("why")]` marker for real no-ops; every hand-written empty body,

@@ -5596,7 +5596,7 @@
     {
       "key": "UnityEngine.BoxCollider/Property/UnityEngine.Collider/GeometryHolder",
       "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "Q411 typed collider geometry remains unimplemented. Correct factory and material state do not supply its dimensions and shape payload; returning only the fresh type enum would conceal the missing mechanism. Keep this exact discrepancy for typed geometry and assignment controls.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:3}"
@@ -5604,19 +5604,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.BoxCollider/Property/UnityEngine.Collider/material",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:Default (Instance)"
       }
     },
     {
@@ -5804,7 +5791,7 @@
     {
       "key": "UnityEngine.CapsuleCollider/Property/UnityEngine.Collider/GeometryHolder",
       "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "Q411 typed collider geometry remains unimplemented. Correct factory and material state do not supply its dimensions and shape payload; returning only the fresh type enum would conceal the missing mechanism. Keep this exact discrepancy for typed geometry and assignment controls.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:2}"
@@ -5812,25 +5799,12 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.CapsuleCollider/Property/UnityEngine.Collider/material",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:Default (Instance)"
       }
     },
     {
       "key": "UnityEngine.CharacterController/Property/UnityEngine.Collider/GeometryHolder",
       "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "Q411 typed collider geometry remains unimplemented. Correct factory and material state do not supply its dimensions and shape payload; returning only the fresh type enum would conceal the missing mechanism. Keep this exact discrepancy for typed geometry and assignment controls.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:2}"
@@ -5838,495 +5812,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.CharacterController/Property/UnityEngine.Collider/material",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:Default (Instance)"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/@factory",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule factory migration: the release rejects generic creation while the implementation constructs this type; match its supported creation context.",
-      "expected": {
-        "status": "factory-null",
-        "value": ""
-      },
-      "actual": {
-        "status": "value",
-        "value": "component"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/GeometryHolder",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/attachedArticulationBody",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/attachedRigidbody",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/bounds",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/contactOffset",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "0.00999999978"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/enabled",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/excludeLayers",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.LayerMask{value=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/hasModifiableContacts",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "false"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/includeLayers",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.LayerMask{value=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/isTrigger",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "false"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/layerOverridePriority",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/material",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:Default (Instance)"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/providesContacts",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "false"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Collider/sharedMaterial",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/animation",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/audio",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/camera",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/collider",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/collider2D",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/constantForce",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/gameObject",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.GameObject:default-UnityEngine.Collider"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/hingeJoint",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/light",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/networkView",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/particleSystem",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/renderer",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/rigidbody",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/rigidbody2D",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/tag",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "string:Untagged"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Component/transform",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.Transform:default-UnityEngine.Collider"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Object/hideFlags",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.Collider/Property/UnityEngine.Object/name",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "string:default-UnityEngine.Collider"
-      }
-    },
-    {
-      "key": "UnityEngine.Collision/Property/UnityEngine.Collision/gameObject",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.Collision/Property/UnityEngine.Collision/transform",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.ConfigurableJoint/Property/UnityEngine.ConfigurableJoint/angularXDrive",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282326E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282347E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.ConfigurableJoint/Property/UnityEngine.ConfigurableJoint/angularYZDrive",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282326E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282347E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.ConfigurableJoint/Property/UnityEngine.ConfigurableJoint/slerpDrive",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282326E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282347E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.ConfigurableJoint/Property/UnityEngine.ConfigurableJoint/xDrive",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282326E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282347E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.ConfigurableJoint/Property/UnityEngine.ConfigurableJoint/yDrive",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282326E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282347E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.ConfigurableJoint/Property/UnityEngine.ConfigurableJoint/zDrive",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282326E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.JointDrive{maximumForce=3.40282347E+38;mode=enum:0;positionDamper=0;positionSpring=0;useAcceleration=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.ControllerColliderHit/Property/UnityEngine.ControllerColliderHit/gameObject",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.ControllerColliderHit/Property/UnityEngine.ControllerColliderHit/rigidbody",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.ControllerColliderHit/Property/UnityEngine.ControllerColliderHit/transform",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
       }
     },
     {
@@ -7032,339 +6517,6 @@
       }
     },
     {
-      "key": "UnityEngine.Joint/@factory",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule factory migration: the release rejects generic creation while the implementation constructs this type; match its supported creation context.",
-      "expected": {
-        "status": "factory-null",
-        "value": ""
-      },
-      "actual": {
-        "status": "value",
-        "value": "component"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/animation",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/audio",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/camera",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/collider",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/collider2D",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/constantForce",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/gameObject",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.GameObject:default-UnityEngine.Joint"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/hingeJoint",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/light",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/networkView",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/particleSystem",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/renderer",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/rigidbody",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/rigidbody2D",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q411 UnityEngine.PhysicsModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/tag",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "string:Untagged"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Component/transform",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.Transform:default-UnityEngine.Joint"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/anchor",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=0;y=0;z=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/autoConfigureConnectedAnchor",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/axis",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=1;y=0;z=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/breakForce",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "Infinity"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/breakTorque",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "Infinity"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/connectedAnchor",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=0;y=0;z=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/connectedArticulationBody",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/connectedBody",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/connectedMassScale",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "1"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/currentForce",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=0;y=0;z=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/currentTorque",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=0;y=0;z=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/enableCollision",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "false"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/enablePreprocessing",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Joint/massScale",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "1"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Object/hideFlags",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.Joint/Property/UnityEngine.Object/name",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "string:default-UnityEngine.Joint"
-      }
-    },
-    {
       "key": "UnityEngine.LODGroup/Property/UnityEngine.LODGroup/lodCount",
       "module": "UnityEngine.CoreModule",
       "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
@@ -7702,7 +6854,7 @@
     {
       "key": "UnityEngine.MeshCollider/Property/UnityEngine.Collider/GeometryHolder",
       "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "Q411 typed collider geometry remains unimplemented. Correct factory and material state do not supply its dimensions and shape payload; returning only the fresh type enum would conceal the missing mechanism. Keep this exact discrepancy for typed geometry and assignment controls.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:-1}"
@@ -7710,32 +6862,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.MeshCollider/Property/UnityEngine.Collider/material",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:Default (Instance)"
-      }
-    },
-    {
-      "key": "UnityEngine.MeshCollider/Property/UnityEngine.MeshCollider/smoothSphereCollisions",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "true"
-      },
-      "actual": {
-        "status": "value",
-        "value": "false"
       }
     },
     {
@@ -12491,19 +11617,6 @@
       }
     },
     {
-      "key": "UnityEngine.PhysicsMaterial/Property/UnityEngine.Object/name",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "string:DynamicMaterial"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:"
-      }
-    },
-    {
       "key": "UnityEngine.PhysicsScene2D/Property/UnityEngine.PhysicsScene2D/subStepCount",
       "module": "UnityEngine.Physics2DModule",
       "reason": "Q411 unresolved initial simulation context: the Editor reports zero in the fresh inventory but one after a real Script simulation; both scene values are valid and equal. Invalid-scene and constant-counter hypotheses are ruled out; preserve the exact initial discrepancy until world initialization/automatic stepping is measured.",
@@ -12553,19 +11666,6 @@
       "actual": {
         "status": "value",
         "value": "10"
-      }
-    },
-    {
-      "key": "UnityEngine.RaycastCommand/Property/UnityEngine.RaycastCommand/maxHits",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
       }
     },
     {
@@ -12852,32 +11952,6 @@
       }
     },
     {
-      "key": "UnityEngine.Rigidbody/Property/UnityEngine.Rigidbody/solverIterationCount",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "6"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Rigidbody/Property/UnityEngine.Rigidbody/solverVelocityIterationCount",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
       "key": "UnityEngine.SceneManagement.Scene/Property/UnityEngine.SceneManagement.Scene/dirtyID",
       "module": "UnityEngine.CoreModule",
       "reason": "Q403 UnityEngine.CoreModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
@@ -13065,19 +12139,6 @@
       "actual": {
         "status": "value",
         "value": "string:0"
-      }
-    },
-    {
-      "key": "UnityEngine.SphereCollider/Property/UnityEngine.Collider/material",
-      "module": "UnityEngine.PhysicsModule",
-      "reason": "Q403 UnityEngine.PhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:Default (Instance)"
       }
     },
     {
@@ -13283,19 +12344,6 @@
       }
     },
     {
-      "key": "UnityEngine.TerrainCollider/Property/UnityEngine.Collider/material",
-      "module": "UnityEngine.TerrainPhysicsModule",
-      "reason": "Q403 UnityEngine.TerrainPhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:Default (Instance)"
-      }
-    },
-    {
       "key": "UnityEngine.TerrainCollider/Property/UnityEngine.TerrainCollider/enableTreeColliders",
       "module": "UnityEngine.TerrainPhysicsModule",
       "reason": "Q403 UnityEngine.TerrainPhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
@@ -13491,7 +12539,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "-24538"
+        "value": "-24096"
       }
     },
     {
@@ -13543,7 +12591,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "-24564"
+        "value": "-24122"
       }
     },
     {
@@ -15918,19 +14966,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.WheelCollider/Property/UnityEngine.Collider/material",
-      "module": "UnityEngine.VehiclesModule",
-      "reason": "Q403 UnityEngine.VehiclesModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.PhysicsMaterial:Default (Instance)"
       }
     },
     {

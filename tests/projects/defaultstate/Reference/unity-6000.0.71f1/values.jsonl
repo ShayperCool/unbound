@@ -11531,4 +11531,35 @@
 {"key":"CoreControl/Physics2D/collision/enter","status":"value","value":"[true,2,true,true,true,true,true]"}
 {"key":"CoreControl/Physics2D/collision/exit","status":"value","value":"[true,0,0,0,true]"}
 {"key":"CoreControl/Physics2D/sceneContext","status":"value","value":"[true,1,true,1,0,0]"}
+{"key":"CoreControl/Physics/base/Collider","status":"value","value":"true"}
+{"key":"CoreControl/Physics/base/Joint","status":"value","value":"true"}
+{"key":"CoreControl/Physics/concrete","status":"value","value":"[true,true]"}
+{"key":"CoreControl/Physics/solver/readAliases","status":"value","value":"[13,7]"}
+{"key":"CoreControl/Physics/solver/writeAliases","status":"value","value":"[9,3]"}
+{"key":"CoreControl/Physics/smoothFalse","status":"value","value":"true"}
+{"key":"CoreControl/Physics/smoothTrue","status":"value","value":"true"}
+{"key":"CoreControl/Physics/required/False","status":"value","value":"[true,[string:Transform],0]"}
+{"key":"CoreControl/Physics/required/True","status":"value","value":"[false,[string:BoxCollider,string:ColliderRequiredControlBehaviour,string:Transform],0]"}
+{"key":"CoreControl/Physics/maxHitsWritten","status":"value","value":"1"}
+{"key":"CoreControl/Physics/maxHitsConstructed","status":"value","value":"[1,41]"}
+{"key":"CoreControl/Physics/material/name/","status":"value","value":"string:"}
+{"key":"CoreControl/Physics/material/name/changed","status":"value","value":"string:changed"}
+{"key":"CoreControl/Physics/material/defaultName","status":"value","value":"string:DynamicMaterial"}
+{"key":"CoreControl/Physics/material/fresh","status":"value","value":"[string:,true,true]"}
+{"key":"CoreControl/Physics/material/copied","status":"value","value":"[string:custom (Instance),false,true,0.200000003,0.300000012,0.400000006,enum:3,enum:2]"}
+{"key":"CoreControl/Physics/material/isolation","status":"value","value":"[0.200000003,0.200000003,0.800000012]"}
+{"key":"CoreControl/Physics/material/transferred","status":"value","value":"[string:custom (Instance) (Instance),false,true,0.800000012]"}
+{"key":"CoreControl/Physics/material/transferIsolation","status":"value","value":"[0.800000012,0.899999976]"}
+{"key":"CoreControl/Physics/payload/defaultErrors","status":"value","value":"[string:System.NullReferenceException,string:System.NullReferenceException,string:System.NullReferenceException,string:System.NullReferenceException,string:System.NullReferenceException]"}
+{"key":"CoreControl/Physics/payload/collision","status":"value","value":"[true,true,true,true]"}
+{"key":"CoreControl/Physics/payload/controller","status":"value","value":"[true,true,true,true]"}
+{"key":"CoreControl/Physics/drive/precision","status":"value","value":"[2139095038,2139095039,false]"}
+{"key":"CoreControl/Physics/drive/maximumWrite","status":"value","value":"2139095038"}
+{"key":"CoreControl/Physics/drive/finiteWrite","status":"value","value":"27.5"}
+{"key":"CoreControl/Physics/drive/range/xDrive","status":"value","value":"[[0,0,0,true],[27.5,27.5,27.5,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[NaN,NaN,NaN,true]]"}
+{"key":"CoreControl/Physics/drive/range/yDrive","status":"value","value":"[[0,0,0,true],[27.5,27.5,27.5,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[NaN,NaN,NaN,true]]"}
+{"key":"CoreControl/Physics/drive/range/zDrive","status":"value","value":"[[0,0,0,true],[27.5,27.5,27.5,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[NaN,NaN,NaN,true]]"}
+{"key":"CoreControl/Physics/drive/range/angularXDrive","status":"value","value":"[[0,0,0,true],[27.5,27.5,27.5,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[NaN,NaN,NaN,true]]"}
+{"key":"CoreControl/Physics/drive/range/angularYZDrive","status":"value","value":"[[0,0,0,true],[27.5,27.5,27.5,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[NaN,NaN,NaN,true]]"}
+{"key":"CoreControl/Physics/drive/range/slerpDrive","status":"value","value":"[[0,0,0,true],[27.5,27.5,27.5,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[3.40282326E+38,3.40282326E+38,3.40282326E+38,true],[NaN,NaN,NaN,true]]"}
 {"key":"complete","status":"value","value":"1"}

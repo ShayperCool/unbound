@@ -47,6 +47,8 @@ public static class StubDefaults
         ["UnityEngine.SystemInfo.supportsVertexPrograms"] = "true",
         ["UnityEngine.SystemInfo.graphicsPixelFillrate"] = "-1",
         ["UnityEngine.RenderTexture.enabled"] = "true",
+        // Removed settings ignore writes, including values outside their old defaults (defaultstate).
+        ["UnityEngine.MeshCollider.smoothSphereCollisions"] = "true",
         // Legacy UV channel alias remains null even after writes (defaultstate).
         ["UnityEngine.Mesh.uv1"] = "(global::UnityEngine.Vector2[])null",
     };

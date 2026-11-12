@@ -106,9 +106,9 @@ contexts. Both independent GPU repeats and Unbound match all 54 controls. The or
 11,421 reference rows remain byte-identical, giving 11,475 total rows.
 
 The Core slice adds another 42 independent controls while preserving all prior rows,
-for 11,517 rows at that stage. Physics2D adds 17 more controls, for 11,534 current
-rows. The comparison now has 10,495 exact rows, 1,039 differing reference rows, zero
-missing rows and 271 extra implementation rows. Its 1,312 queue
+for 11,517 rows at that stage. Physics2D adds 17 controls and Physics adds 31,
+for 11,565 current rows. The comparison now has 10,551 exact rows, 1,014 differing
+reference rows, zero missing rows and 207 extra implementation rows. Its 1,223 queue
 entries retain the same 50 variable rows; two happen to equal the implementation
 snapshot. Variable rows remain unresolved comparisons.
 
@@ -178,6 +178,42 @@ arithmetic still need one reconstructed initializer plus import/runtime controls
 No cache writer, cache schema or serialized output changes in this slice; the runtime
 reader applies the same capability rule to already parsed input.
 
+The Physics slice resolves 89 rows (87 in PhysicsModule and two inherited collider
+material rows in TerrainPhysicsModule/VehiclesModule) and preserves all 11,534 earlier reference rows.
+Both independent GPU captures and Unbound match its 31 new controls.
+
+| Physics cause | Resolved rows | Rule and controls |
+| --- | ---: | --- |
+| Base factories | 66 | Collider and Joint reject direct creation, including on a populated inactive object. BoxCollider and FixedJoint remain valid. A missing abstract Collider requirement blocks its script; an existing box satisfies it. |
+| Materials | 8 | The parameterless PhysicsMaterial constructor uses DynamicMaterial; named constructors retain empty and explicit names. A collider without a material creates an unnamed reusable copy. A named shared material is copied with its physical values and an Instance suffix. A copy belongs to its collider: transferring it to a second collider creates a separate copy, and subsequent writes stay isolated. |
+| Solver aliases | 2 | Both obsolete Rigidbody iteration aliases forward reads and writes to the corresponding current properties after their values change. Declarations follow the selected release's stub generator. |
+| Removed settings | 2 | RaycastCommand.maxHits reads one and ignores writes, for both zero construction and a command with explicit query parameters. MeshCollider.smoothSphereCollisions reads true after false and true assignments. |
+| Empty callback payloads | 5 | Object-dependent reads on a manually constructed Collision or ControllerColliderHit throw NullReferenceException. Real collision and controller-hit callbacks retain valid object/transform access; a static collider hit has no Rigidbody. |
+| Joint drives | 6 | All six ConfigurableJoint drives normalize spring, damper and maximum force to the measured nonnegative finite range. Negative inputs become zero, positive infinity and float.MaxValue reach one float step below float.MaxValue, ordinary finite values survive, and NaN remains NaN. The standalone JointDrive value keeps its input. Raw-bit controls distinguish the upper bound from a formatting difference. |
+
+The Unity 6000.0 [material](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider-material.html)
+documentation describes copying a shared material for a collider, while
+[sharedMaterial](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider-sharedMaterial.html)
+writes affect every user of that material. The controls change friction before and
+after copying, then transfer the copy between colliders to distinguish ownership.
+[Solver iterations](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-solverIterations.html)
+are positive per-body settings; both alias controls use positive nondefault values.
+The callback pages describe the hit objects, and [ControllerColliderHit.rigidbody](https://docs.unity3d.com/ja/6000.0/ScriptReference/ControllerColliderHit-rigidbody.html)
+explicitly permits null for a static collider. The live controls exercise that case.
+The empty-payload exceptions and exact [drive](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/JointDrive-maximumForce.html)
+range are release observations, not documented universal initialization contracts.
+Destroyed callback targets, articulation bodies and serialized drive edge cases
+remain outside these controls.
+
+Physics retains four GeometryHolder rows and its unchanged variable HingeJoint row. Its typed geometry representation remains
+unimplemented: the descriptor must carry dimensions and shape state, so returning
+only a matching type enum would conceal the missing payload. Correct factory and
+material state do not resolve that mechanism. Material ownership, invalid callback
+access, removed command settings and drive normalization use exact-release Compat
+mechanisms. Other releases retain the previous unmeasured behavior. Runtime drive
+reads share normalization with assignments; no importer/cache writer, schema or
+serialized output changes. Stub table output changes bump the generator format to 5.
+
 | Release module | Queued rows |
 | --- | ---: |
 | UnityEngine.ParticleSystemModule | 347 |
@@ -185,7 +221,6 @@ reader applies the same capability rule to already parsed input.
 | UnityEngine.AudioModule | 189 |
 | UnityEngine.UIElementsModule | 159 |
 | UnityEngine.CoreModule | 116 |
-| UnityEngine.PhysicsModule | 92 |
 | UnityEngine.IMGUIModule | 29 |
 | UnityEngine.GridModule | 26 |
 | UnityEngine.AssetBundleModule | 24 |
@@ -199,13 +234,14 @@ reader applies the same capability rule to already parsed input.
 | UnityEngine.UnityWebRequestModule | 6 |
 | UnityEngine.AIModule | 5 |
 | UnityEngine.Physics2DModule | 5 |
+| UnityEngine.PhysicsModule | 5 |
 | UnityEngine.SpriteMaskModule | 5 |
 | UnityEngine.UIModule | 3 |
 | UnityEngine.UnityWebRequestTextureModule | 3 |
-| UnityEngine.TerrainPhysicsModule | 3 |
+| UnityEngine.TerrainPhysicsModule | 2 |
 | UnityEngine.TextCoreFontEngineModule | 2 |
-| UnityEngine.VehiclesModule | 2 |
 | UnityEngine.AndroidJNIModule | 1 |
+| UnityEngine.VehiclesModule | 1 |
 
 The separate static scan compares direct literal field stores in straight-line
 constructors, including field initializers and later overwrites. Matching includes
