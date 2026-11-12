@@ -1,4 +1,5 @@
 {
+  "exclusive": true,
  "commands": ["python3 tests/projects/navpath/run.py unbound"],
  "summary": "gated: \\d+ scenario\\(s\\) differ"
 }

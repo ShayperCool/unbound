@@ -209,6 +209,13 @@ The initial resource audit marked the following recipes:
 | `destroyphases`, `inputplatform` | Private X display and focus, clipboard or work-area controls |
 | `cameramsaa`, `materialcolortransfer`, `terrainlightmaps` | Fixed project staging directories under `Library/Unbound` |
 | `canvaslifecycle`, `uirectclipping` | Legacy shell runners with fixed output and managed paths |
+| `navpath`, `navmesh`, `trigger2dtiming` | Default capture paths reused by distinct explicit commands |
+| `physics2dmotion`, `physics2ddynamics`, `inactive3dloading`, `colliderskin2d`, `trigger2dlifecycle`, `query2dties`, `query2dcontinuation`, `query2dparity`, `querycontactfeatures` | Explicit setup and capture commands share default project and output roots |
+
+Suite recipes that give these helpers private work roots retain the conservative marker, so
+direct explicit setup and capture commands keep their order too. A shared parent directory is
+not enough to require exclusivity when labels distinguish every output and existing paths are
+refused, as in `contactevents3d`.
 
 Other private X display helpers and the audio reference recorder's named PulseAudio sink belong
 to reference recording. Gate commands cannot run those paths because the Editor guard refuses

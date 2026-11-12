@@ -233,6 +233,18 @@ raise SystemExit(int(code))
         self.assertTrue((self.root/'later.start').is_file())
         self.assertIn('(exclusive)', self.gate.log.read_text())
 
+    def test_exclusive_legacy_helpers_order_setup_and_distinct_default_path_captures(self):
+        project = self.root/'tests/projects/legacy'
+        project.mkdir(parents=True)
+        (project/'gate.json').write_text('{"exclusive":true}')
+        (project/'run.py').write_text("import sys, time\nfrom pathlib import Path\nif sys.argv[1]=='prepare':\n    Path('shared-project').mkdir()\n    time.sleep(.1)\n    Path('shared-project/ready').touch()\nelse:\n    assert Path('shared-project/ready').exists()\n    lock=Path('shared-project/capturing')\n    with lock.open('x'): pass\n    result=Path('shared-project/result')\n    result.write_text(sys.argv[2])\n    time.sleep(.05)\n    assert result.read_text()==sys.argv[2]\n    Path(sys.argv[2]+'.finish').touch()\n    lock.unlink()\n")
+        self.gate.probes = [f'{shlex.quote(sys.executable)} tests/projects/legacy/run.py {args}'
+                            for args in ('prepare', 'capture left', 'capture right')]
+        self.gate.run_probes()
+        self.assertTrue((self.root/'left.finish').exists())
+        self.assertTrue((self.root/'right.finish').exists())
+        self.assertEqual((self.root/'shared-project/result').read_text(), 'right')
+
     def test_driver_pool_is_bounded(self):
         import threading
         lock = threading.Lock()
