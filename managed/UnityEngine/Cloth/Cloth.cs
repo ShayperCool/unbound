@@ -779,6 +779,8 @@ namespace UnityEngine
                 {
                     m_Rendered = (Mesh)((Instantiation.ICloneable)m_Source).CloneObject();
                     m_Rendered.ClearBlendShapes();
+                    // Its buffer is the renderer's skin output (SkinnedMeshRenderer.GetVertexBuffer).
+                    m_Rendered.SetSkinOutputLayout();
                     m_Rendered.name = m_Source.name + " (Cloth)";
                 }
                 var vertices = new Vector3[m_ParticleOf.Length];

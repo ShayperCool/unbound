@@ -18,7 +18,6 @@ use unbound_project::Project;
 
 const RENDERING_LIMITATIONS: &[&str] = &[
     "Editor asynchronous shader-compilation startup delays are not reproduced; the FlareLayer probe controls compilation synchronously.",
-    "SkinnedMeshRenderer GPU buffer access with active Cloth and previous-frame motion-vector buffers is not supported.",
     "Game-view Gizmos.DrawIcon, DrawGUITexture and DrawFrustum are not supported; Scene-view rendering is not available.",
 ];
 

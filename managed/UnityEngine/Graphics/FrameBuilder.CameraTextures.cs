@@ -238,6 +238,8 @@ namespace Unbound.Runtime
             {
                 var cloth = skin.GetComponent<Cloth>();
                 if (cloth != null && cloth.enabled && cloth.m_Active) return false;
+                // Its motion vectors are drawn in this skinning pass: its buffers alternate.
+                skin.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
             }
             else if (renderer is not MeshRenderer) return false;
             var mode = renderer.motionVectorGenerationMode;

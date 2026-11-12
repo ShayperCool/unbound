@@ -42,9 +42,37 @@ namespace UnityEngine
         Bounds m_RigidBoneBounds;
         bool m_Rigid;
 
-        Mesh m_Skinned;
-        int m_SkinnedFrame = -1;
+        internal Mesh m_Skinned;
+        /// <summary>The skinning pass <see cref="m_Skinned"/> holds (<see cref="SkinPass"/>; -1:
+        /// none, or to be redone).</summary>
+        int m_SkinnedEpoch = -1;
         Mesh m_SkinnedSource;
+        /// <summary>The skinning before <see cref="m_Skinned"/>'s while its buffers alternate
+        /// (<see cref="GetPreviousVertexBuffer"/>), with its own arrays; valid in
+        /// <see cref="m_PreviousEpoch"/>'s pass only.</summary>
+        internal Mesh m_SkinnedPrevious;
+        Vector3[] m_PreviousPositions, m_PreviousNormals;
+        Vector4[] m_PreviousTangents;
+        int m_PreviousEpoch = -1;
+        /// <summary>The skinning pass in which a camera drew this renderer's motion vectors.</summary>
+        internal int m_MotionEpoch = -1;
+        /// <summary>The skinning pass the renderer was created in: none has skinned it yet.</summary>
+        readonly int m_BornEpoch = SkinPass;
+
+        /// <summary>Unity skins once a frame, at PostLateUpdate.UpdateAllSkinnedMeshes: each pass
+        /// there starts a skinning pass, and a renderer skins once per pass, when it is first drawn or
+        /// its buffer is first asked for after it. Draws before it in a frame (a camera rendered from
+        /// a script) and <see cref="GetVertexBuffer"/> read the last pass's skin, as the Unity
+        /// 6000.0.71f1 Editor's do (tests/projects/renderapi <c>followup.skin.*</c>,
+        /// <c>prevskin.*</c>). A pass is named by its frame: before the frame's
+        /// UpdateAllSkinnedMeshes the last frame's pass goes on.</summary>
+        internal static int SkinPass => s_SkinPassFrame == Time.s_FrameCount ? Time.s_FrameCount : Time.s_FrameCount - 1;
+
+        /// <summary>The frame whose UpdateAllSkinnedMeshes ran last.</summary>
+        static int s_SkinPassFrame = -1;
+
+        static SkinnedMeshRenderer() =>
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.UpdateAllSkinnedMeshes), () => s_SkinPassFrame = Time.s_FrameCount);
         Matrix4x4[] m_Matrices = Array.Empty<Matrix4x4>();
 
         public SkinnedMeshRenderer() { }
@@ -111,17 +139,36 @@ namespace UnityEngine
             }
         }
 
-        public GraphicsBuffer GetPreviousVertexBuffer() =>
-            throw new NotSupportedException("Unbound: previous-frame skinned GPU vertex buffers are not supported.");
+        /// <summary>The skin of the pass before the current one while the renderer's buffers
+        /// alternate: with <see cref="skinnedMotionVectors"/> and a camera that drew its motion
+        /// vectors in the last pass. Otherwise the current buffer itself (Unity 6000.0.71f1 Editor,
+        /// tests/projects/renderapi <c>prevskin.*</c>; the Scripting API: "skinned meshes that have
+        /// skinnedMotionVectors on alternate between two GPU vertex buffers").</summary>
+        public GraphicsBuffer GetPreviousVertexBuffer() => SkinBuffer(true);
 
-        public GraphicsBuffer GetVertexBuffer()
+        public GraphicsBuffer GetVertexBuffer() => SkinBuffer(false);
+
+        /// <summary>The skin output buffer: null until a skinning pass has run since the renderer
+        /// was created; a simulating cloth's is its particles' mesh, in the cloth's frame, and has no
+        /// previous one of its own (measured: tests/projects/renderapi <c>prevskin.cloth.*</c>; the
+        /// particles' positions and normals are the cloth's <c>vertices</c> and <c>normals</c>).</summary>
+        GraphicsBuffer SkinBuffer(bool previous)
         {
             if (m_Mesh == null) return null;
+            Mesh output = null;
             var cloth = GetComponent<Cloth>();
-            if (cloth != null && cloth.enabled && cloth.m_Active)
-                throw new NotSupportedException("Unbound: SkinnedMeshRenderer.GetVertexBuffer with active Cloth is not supported.");
-            if (!m_GraphicsOutputRequested) { m_GraphicsOutputRequested = true; m_SkinnedFrame = -1; }
-            var output = Deform();
+            // Before its first simulation step a cloth draws, and reads, the skin it targets.
+            if (cloth != null && cloth.enabled && cloth.m_Active) output = cloth.RenderMesh();
+            if (output == null)
+            {
+                if (m_SkinnedEpoch < 0 && SkinPass == m_BornEpoch) return null;
+                if (!m_GraphicsOutputRequested) { m_GraphicsOutputRequested = true; m_SkinnedEpoch = -1; }
+                // The skinning pass skins enabled renderers that are visible or update offscreen;
+                // another keeps its last skin (measured: prevskin.*.disabled).
+                bool skinning = enabled && m_GameObject != null && m_GameObject.ActiveInHierarchyNoThrow && (m_UpdateWhenOffscreen || isVisible);
+                output = skinning || m_Skinned == null || m_SkinnedEpoch < 0 ? Deform() : m_Skinned;
+                if (previous && m_SkinnedPrevious != null && m_PreviousEpoch == m_SkinnedEpoch) output = m_SkinnedPrevious;
+            }
             output.vertexBufferTarget = m_VertexBufferTarget;
             var buffer = output.GetVertexBuffer(0);
             output.Sync();
@@ -208,16 +255,22 @@ namespace UnityEngine
             },
         };
 
-        /// <summary>The deformed mesh, computed once a frame (or now): the shapes added in the
-        /// mesh's space, then skinned into world space when the mesh has bones.</summary>
+        /// <summary>The deformed mesh, computed once a skinning pass (<see cref="SkinPass"/>; or
+        /// now): the shapes added in the mesh's space, then skinned into world space when the mesh
+        /// has bones (the renderer's space once its buffer is asked for).</summary>
         Mesh Deform(bool now = false)
         {
-            int frame = Time.frameCount;
-            if (!now && m_Skinned != null && m_SkinnedFrame == frame && m_SkinnedSource == m_Mesh) return m_Skinned;
-            m_SkinnedFrame = now ? -1 : frame;
+            int pass = SkinPass;
+            if (!now && m_Skinned != null && m_SkinnedEpoch == pass && m_SkinnedSource == m_Mesh) return m_Skinned;
             var mesh = m_Mesh;
+            // The buffers alternate: the last pass's skin becomes the previous one.
+            if (!now && m_Skinned != null && m_SkinnedSource == mesh && m_GraphicsOutputRequested && m_SkinnedMotionVectors
+                && m_SkinnedEpoch >= 0 && m_MotionEpoch == m_SkinnedEpoch)
+                AlternateSkin();
+            m_SkinnedEpoch = now ? -1 : pass;
             if (m_Skinned == null || m_SkinnedSource != mesh)
             {
+                DropPreviousSkin();
                 // The deformed copy shares everything but positions, normals and tangents with its source.
                 if (m_Skinned != null) DestroyImmediate(m_Skinned);
                 m_Skinned = (Mesh)((Instantiation.ICloneable)mesh).CloneObject();
@@ -261,6 +314,31 @@ namespace UnityEngine
             if (tangents != null) m_Skinned.AdoptTangents(tangents);
             m_Skinned.RecalculateBounds();
             return m_Skinned;
+        }
+
+        /// <summary>The current skin becomes the previous one, with its arrays; the other mesh (a
+        /// copy of the current one the first time) takes the next skin.</summary>
+        void AlternateSkin()
+        {
+            if (m_SkinnedPrevious == null)
+            {
+                m_SkinnedPrevious = (Mesh)((Instantiation.ICloneable)m_Skinned).CloneObject();
+                m_SkinnedPrevious.name = m_Skinned.name;
+            }
+            (m_Skinned, m_SkinnedPrevious) = (m_SkinnedPrevious, m_Skinned);
+            (m_DeformedPositions, m_PreviousPositions) = (m_PreviousPositions, m_DeformedPositions);
+            (m_DeformedNormals, m_PreviousNormals) = (m_PreviousNormals, m_DeformedNormals);
+            (m_DeformedTangents, m_PreviousTangents) = (m_PreviousTangents, m_DeformedTangents);
+            m_PreviousEpoch = SkinPass;
+        }
+
+        void DropPreviousSkin()
+        {
+            if (m_SkinnedPrevious != null) DestroyImmediate(m_SkinnedPrevious);
+            m_SkinnedPrevious = null;
+            m_PreviousPositions = m_PreviousNormals = null;
+            m_PreviousTangents = null;
+            m_PreviousEpoch = -1;
         }
 
         Vector3[] m_DeformedPositions, m_DeformedNormals;
@@ -594,6 +672,7 @@ namespace UnityEngine
             base.OnEngineDestroy();
             if (m_Skinned != null) DestroyImmediate(m_Skinned);
             m_Skinned = null;
+            DropPreviousSkin();
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)

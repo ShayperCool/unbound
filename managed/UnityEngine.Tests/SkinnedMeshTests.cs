@@ -104,5 +104,95 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(mesh);
             }
         }
-    }
+            /// <summary>A renderer skins once a skinning pass (before a frame's UpdateAllSkinnedMeshes
+        /// the last frame's goes on, so a bone moved since is drawn from the next pass); its previous
+        /// buffer is the current one unless a camera drew its motion vectors in the last pass, then
+        /// the last pass's skin (tests/projects/renderapi prevskin.*).</summary>
+        [Fact]
+        public void SkinBuffersAlternateOnlyAfterMotionVectorsWereDrawn()
+        {
+            var root = new GameObject("root");
+            var bone = new GameObject("bone").transform;
+            bone.SetParent(root.transform, false);
+            var mesh = new Mesh
+            {
+                vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f) },
+                triangles = new[] { 0, 1, 2 },
+                boneWeights = new[] { new BoneWeight { weight0 = 1f }, new BoneWeight { weight0 = 1f }, new BoneWeight { weight0 = 1f } },
+                bindposes = new[] { Matrix4x4.identity },
+            };
+            var renderer = root.AddComponent<SkinnedMeshRenderer>();
+            renderer.sharedMesh = mesh;
+            renderer.bones = new[] { bone };
+            renderer.updateWhenOffscreen = true;
+            try
+            {
+                Assert.Null(renderer.GetVertexBuffer());
+                Assert.Null(renderer.GetPreviousVertexBuffer());
+                Time.s_FrameCount++;
+                float Current() => renderer.m_Skinned.vertices[0].x;
+                using (var current = renderer.GetVertexBuffer())
+                using (var previous = renderer.GetPreviousVertexBuffer())
+                {
+                    Assert.Equal(current.Handle, previous.Handle);
+                    Assert.Equal(0f, Current());
+                }
+                // Moved within the pass: its skin waits for the next one.
+                bone.localPosition = new Vector3(1f, 0f, 0f);
+                renderer.DrawGeometry(out _);
+                using (renderer.GetVertexBuffer()) Assert.Equal(0f, Current());
+                // No motion vectors drawn: the previous buffer is the current one.
+                Time.s_FrameCount++;
+                using (var current = renderer.GetVertexBuffer())
+                using (var previous = renderer.GetPreviousVertexBuffer())
+                {
+                    Assert.Equal(1f, Current());
+                    Assert.Equal(current.Handle, previous.Handle);
+                }
+                // Motion vectors drawn in this pass: the next pass keeps this skin as the previous.
+                renderer.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
+                bone.localPosition = new Vector3(2f, 0f, 0f);
+                Time.s_FrameCount++;
+                using (var current = renderer.GetVertexBuffer())
+                using (var previous = renderer.GetPreviousVertexBuffer())
+                {
+                    Assert.Equal(2f, Current());
+                    Assert.NotEqual(current.Handle, previous.Handle);
+                    Assert.Equal(1f, renderer.m_SkinnedPrevious.vertices[0].x);
+                }
+                // Then the two buffers swap again: the last pass's skin is the previous one.
+                renderer.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
+                bone.localPosition = new Vector3(3f, 0f, 0f);
+                Time.s_FrameCount++;
+                using (var current = renderer.GetVertexBuffer())
+                using (var previous = renderer.GetPreviousVertexBuffer())
+                {
+                    Assert.Equal(3f, Current());
+                    Assert.Equal(2f, renderer.m_SkinnedPrevious.vertices[0].x);
+                    Assert.NotEqual(current.Handle, previous.Handle);
+                }
+                // Without skinnedMotionVectors the buffers do not alternate.
+                renderer.skinnedMotionVectors = false;
+                renderer.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
+                bone.localPosition = new Vector3(4f, 0f, 0f);
+                Time.s_FrameCount++;
+                using (var current = renderer.GetVertexBuffer())
+                using (var previous = renderer.GetPreviousVertexBuffer())
+                {
+                    Assert.Equal(4f, Current());
+                    Assert.Equal(current.Handle, previous.Handle);
+                }
+                // A disabled renderer keeps its last skin.
+                renderer.enabled = false;
+                bone.localPosition = new Vector3(5f, 0f, 0f);
+                Time.s_FrameCount++;
+                using (renderer.GetVertexBuffer()) Assert.Equal(4f, Current());
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(mesh);
+            }
+        }
+}
 }

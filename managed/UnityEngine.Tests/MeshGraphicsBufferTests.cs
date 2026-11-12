@@ -220,6 +220,11 @@ namespace UnityEngine.Tests
                 mesh.bindposes = new[] {Matrix4x4.identity};
                 skin.sharedMesh = mesh; skin.bones = new[] {go.transform};
                 skin.BakeMesh(before);
+                // No skinning pass has run since the renderer was created: no buffer yet (the
+                // Editor's, tests/projects/renderapi prevskin.*.created).
+                Assert.Null(skin.GetVertexBuffer());
+                Assert.Null(skin.GetPreviousVertexBuffer());
+                Time.s_FrameCount++;
                 using var buffer = skin.GetVertexBuffer();
                 Assert.Equal(12, buffer.stride);
                 skin.BakeMesh(after);
