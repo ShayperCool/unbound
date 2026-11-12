@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/scriptedfileids/run.py gate"],
+  "summary": "scriptedfileids: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "managed/UnityEngine/Runtime/Loading.cs"
+  ]
+}
