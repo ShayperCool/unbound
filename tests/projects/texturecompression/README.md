@@ -115,16 +115,43 @@ Measured import block totals, Gamma / Linear, including every mip:
 
 | Format | Exact / total, Gamma | Exact / total, Linear |
 |---|---:|---:|
-| BC4 | 1677 / 2058 | 1677 / 2058 |
-| BC5 | 1047 / 1133 | 1047 / 1133 |
+| BC4 | 2417 / 2417 | 2417 / 2417 |
+| BC5 | 1149 / 1149 | 1149 / 1149 |
 | BC6H | 2371 / 2401 | 2387 / 2401 |
 | BC7 | 6218 / 6278 | 6218 / 6278 |
 
 BC7 residuals are in CutoutBC7, FlatBC7 and SoftHigh. The largest level-0 channel difference
 is 195/255 in CutoutBC7, and a lower FlatBC7 level reaches 109/255. These remain unresolved.
-BC4/BC5 retain differences in endpoint fitting and six-/eight-step selection; BC6H retains
+BC4/BC5 match every current import block. BC6H retains
 encoding differences and its existing CPU float-read limitation. The comparator lists every
 raw discrepancy; residual declarations for these imports name exact keys rather than globs.
+
+
+The channel fitter compares six- and eight-step continuous fits before assigning indices to
+rounded ramps. It uses nearest-even lattice quantization, four independent error sums and
+reciprocal byte normalization. At most two distinct values use their endpoints directly;
+other equal-error fits prefer six steps with fixed extremes. ChannelFitsBC4/BC5 cover narrow
+fields, fixed extremes and repeated values. Independent channels, flat inputs, rectangular
+levels and all mip levels remain covered. Two ordinary UI/effect textures add 2734/2734 exact
+blocks for each of BC4 and BC5 outside the synthetic corpus; their private source images stay
+outside the repository. BC7 on those same textures is 2732/2734 exact and remains unresolved.
+
+[Single Channel import settings](https://docs.unity3d.com/6000.0/Documentation/Manual/texture-type-singlechannel.html)
+describe red/alpha selection and mip generation. The source filtering rule is a measured
+6000.0.71f1 observation: compressed automatic red textures filter mips using the authored
+sRGB flag, then store a linear channel. HeightRed and explicit HeightBC4 have identical raw
+blocks, while HeightRedLinear differs below mip zero. Uncompressed HeightSingleSrgb and
+HeightSingleLinear are identical R8 data and filter linearly. These controls separate filtering
+from GPU sampling. The existing measured import profile selects the rule for 2D textures;
+other releases retain their prior behavior. Texture cache v30 records the two output changes.
+
+
+The part's 4397-texture clean-cache import had zero failures throughout. Its first pass was
+15.95 s before; final after-runs took 23.07 s and 19.68 s on the shared machine. Alternating
+same-build-setting runs then took 15.97/20.34 s before and 19.40/25.46 s after. Total process CPU
+time, including the cached second pass, was 92.07/92.91 s before and 90.37/91.60 s after.
+The wall times overlap the concurrent-work variation; these runs show no increase in process
+CPU cost and do not isolate encoder time. Earlier after-runs were 21.04 s and 14.88 s.
 
 
 ## Runtime encoder and Alpha8 storage
@@ -156,9 +183,9 @@ Runtime edge blocks repeat their remaining rows and columns. The 3x2 RGB mip sti
 unresolved colour/padding difference, reaching 35/255 in a decoded channel. Other residuals
 are small-mip colour fitting and the flat-RGB fast case (GPU difference at most 2/255).
 They remain exact-key residuals; no tolerance has changed. The full comparator records
-4925/5181 exact values in each Standalone profile, with 256 listed residuals, and
-4256, 4243, 4247 and 4225/5181 in AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC,
-with 925, 938, 934 and 956 residuals.
+5129/5331 exact values in each Standalone profile, with 202 listed residuals, and
+4394, 4381, 4385 and 4368/5331 in AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC,
+with 937, 950, 946 and 963 residuals.
 Android runtime ETC encoding is unchanged by these encoder changes; direct R8/RG16 runtime
 EAC storage remains unresolved. The runtime encoder profile is part of the compression key.
 
@@ -190,7 +217,7 @@ other releases retain the previous path. GPU storage uses decoded RGBA8 pixels, 
 
 The normal-map control also records a Standalone RGB24 override becoming DXT5, while Default
 RGB24 imports stay RGB24. The measured import profile applies that fallback before processing.
-Texture cache v28 includes these output changes and malformed-block validation.
+Texture cache v30 includes these output changes, malformed-block validation and the channel-fit updates.
 
 Crunch controls cover DXT1 and DXT5 at qualities 0, 50 and 100, with ETC_RGB4Crunched and
 ETC2_RGBA8Crunched Android counterparts, gradients, noisy alpha and flat colour. Crunch encoding
@@ -217,7 +244,7 @@ Measured ASTC import blocks, including every mip:
 | 6x6 Fast | 716 / 717 | 1201 / 1409 |
 | 8x8 Fast | 113 / 114 | 201 / 202 |
 | 4x4 Normal / Best | no cases | 0 / 1029 at each quality |
-| 6x6 Normal | 0 / 173 | 0 / 2771 |
+| 6x6 Normal | 0 / 173 | 0 / 2944 |
 | 6x6 Best | no cases | 0 / 346 |
 | 8x8 Normal | no cases | 0 / 176 |
 | 8x8 Best | 0 / 88 | 0 / 88 |
