@@ -66,6 +66,20 @@ public class RealtimeGIProbe : MonoBehaviour
             lit.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
             yield return Converge();
             Capture("room-moved", lit);
+            // Emission as the linear sequence changes it: the material's, then
+            // DynamicGI.SetEmissive's (a color in the project's color space), then the material's
+            // again.
+            lit.panel.sharedMaterial.SetColor("_EmissionColor", new Color(0.2f, 1f, 0.2f) * 2f);
+            lit.panel.UpdateGIMaterials();
+            yield return Converge();
+            Capture("room-emission-call", lit);
+            DynamicGI.SetEmissive(lit.panel, new Color(0f, 1f, 1f) * 3f);
+            yield return Converge();
+            Capture("room-setemissive", lit);
+            lit.panel.sharedMaterial.SetColor("_EmissionColor", new Color(1f, 0f, 1f) * 3f);
+            lit.panel.UpdateGIMaterials();
+            yield return Converge();
+            Capture("room-setemissive-then-call", lit);
             Finish();
             yield break;
         }
