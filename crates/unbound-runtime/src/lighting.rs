@@ -153,7 +153,10 @@ pub fn load_texture_object(
                 .flat_map(|c| [c[0], c[1], c[2], 255])
                 .collect(),
         ),
-        unity_format::ALPHA8 => (crate::render_protocol::texture_format::ALPHA8, t.data.clone()),
+        unity_format::ALPHA8 => (
+            crate::render_protocol::texture_format::ALPHA8,
+            t.data.clone(),
+        ),
         _ => anyhow::bail!(
             "texture `{}` has TextureFormat {}, which Unbound does not read from serialized files yet",
             t.name,

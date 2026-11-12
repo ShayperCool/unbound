@@ -240,6 +240,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         },
         "executionOrders": execution_orders(&graph),
         "builtins": builtins(project),
+        "builtinRemovedPaths": builtin_removed_paths(project),
         "sortingLayers": sorting_layers(project),
         "scriptingDefines": settings.defines_for(&options.target),
         "targetGroup": options.target,
@@ -404,14 +405,24 @@ fn level_settings(level: &Value) -> Json {
     Json::Object(out)
 }
 
-/// The built-in resource tables of the profile, without their description.
+/// The built-in resource tables of the profile (file id → class, name, path), without their
+/// description and removed paths.
 fn builtins(project: &Project) -> Json {
     let mut table: Json =
         serde_json::from_str(project.profile.builtin_resources()).unwrap_or(Json::Null);
     if let Some(map) = table.as_object_mut() {
         map.remove("source");
+        map.remove("removed");
     }
     table
+}
+
+/// The paths the release no longer registers and looks up under another one, with the message the
+/// lookup throws (`Arial.ttf` in 6000.0): path → `{ replacement, message }`.
+fn builtin_removed_paths(project: &Project) -> Json {
+    let table: Json =
+        serde_json::from_str(project.profile.builtin_resources()).unwrap_or(Json::Null);
+    table.get("removed").cloned().unwrap_or_else(|| json!({}))
 }
 
 /// `m_SortingLayers` of TagManager.asset: names and unique ids, in order.

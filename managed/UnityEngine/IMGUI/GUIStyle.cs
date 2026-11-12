@@ -850,10 +850,15 @@ namespace Unbound.Runtime
         {
             if (!Native.IsReady) throw new InvalidOperationException("the host, which reads the install's resources, is not connected");
             foreach (var pair in BuiltinShaders.DefaultNames)
-                if (pair.Value == "GameSkin" && BuiltinObjects.DefaultClasses.TryGetValue(pair.Key, out var classId) && classId == MonoBehaviourClassId)
-                    return pair.Key;
+                if (IsSkin(pair.Key)) return pair.Key;
             throw new InvalidOperationException("the release profile names no GameSkin");
         }
+
+        /// <summary>Whether the object `fileId` of `unity default resources` is the GameSkin the
+        /// release profile names (a MonoBehaviour named "GameSkin").</summary>
+        internal static bool IsSkin(long fileId) =>
+            BuiltinShaders.DefaultNames.TryGetValue(fileId, out var name) && name == "GameSkin"
+            && BuiltinObjects.DefaultClasses.TryGetValue(fileId, out var classId) && classId == MonoBehaviourClassId;
 
         /// <summary>The skin's references: its background textures read from the install with their
         /// sampler, other built-in objects (the font) as every reference resolves them.</summary>

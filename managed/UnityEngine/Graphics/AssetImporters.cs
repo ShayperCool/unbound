@@ -449,9 +449,8 @@ namespace Unbound.Runtime
                         obj = BuiltinSpriteData.LoadSprite(guid, fileId, name);
                         if (obj == null) return null;
                         break;
-                    case 114 when guid == BuiltinShaders.DefaultGuid:
-                        // The one MonoBehaviour of `unity default resources`: the GameSkin, which
-                        // GUI.skin starts as.
+                    case 114 when guid == BuiltinShaders.DefaultGuid && BuiltinGuiSkin.IsSkin(fileId):
+                        // The GameSkin of `unity default resources`, which GUI.skin starts as.
                         obj = BuiltinGuiSkin.Skin;
                         break;
                     default:

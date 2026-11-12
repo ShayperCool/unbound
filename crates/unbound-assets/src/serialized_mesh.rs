@@ -249,7 +249,10 @@ mod tests {
         let pyramid = SerializedMeshImporter { path_id: 10213 }
             .import(&file, &bytes, &Value::Null)
             .unwrap();
-        assert_eq!((pyramid.name.as_str(), pyramid.readable), ("pyramid", false));
+        assert_eq!(
+            (pyramid.name.as_str(), pyramid.readable),
+            ("pyramid", false)
+        );
         assert!(
             cube.positions
                 .iter()

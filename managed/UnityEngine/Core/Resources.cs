@@ -208,8 +208,9 @@ namespace Unbound.Runtime
     /// requested type's engine class: a base class such as Object finds nothing, a script class
     /// finds its MonoBehaviour object when that object is an instance of it); a path that is not
     /// registered with that class logs an assertion and an error and answers null; a null or empty
-    /// path throws; "Arial.ttf" is looked up as "LegacyRuntime.ttf" and then throws. Every call
-    /// answers the same object.
+    /// path throws; a path the release removed (the profile's `removed`: "Arial.ttf", replaced by
+    /// "LegacyRuntime.ttf") is looked up as its replacement and then throws. Every call answers the
+    /// same object.
     /// </summary>
     internal static class BuiltinResources
     {
@@ -218,8 +219,10 @@ namespace Unbound.Runtime
         /// <summary>(path, class id) → file id in `unity_builtin_extra`.</summary>
         internal static readonly Dictionary<(string, int), long> ExtraPaths = new Dictionary<(string, int), long>();
 
-        const string RemovedFont = "Arial.ttf";
-        const string RemovedFontReplacement = "LegacyRuntime.ttf";
+        /// <summary>Paths the release no longer registers → the path looked up instead and the
+        /// message the lookup then throws (the release profile's `removed`: `Arial.ttf` in 6000.0).</summary>
+        internal static readonly Dictionary<string, (string Replacement, string Message)> RemovedPaths =
+            new Dictionary<string, (string, string)>();
 
         internal static UnityEngine.Object Get(Type type, string path) => Lookup(type, path, extra: false);
 
@@ -228,12 +231,10 @@ namespace Unbound.Runtime
         static UnityEngine.Object Lookup(Type type, string path, bool extra)
         {
             if (string.IsNullOrEmpty(path)) throw new ArgumentException("Invalid path");
-            bool removedFont = path == RemovedFont;
-            if (removedFont) path = RemovedFontReplacement;
-            var found = Find(type, path, extra);
-            if (removedFont)
-                throw new ArgumentException($"{RemovedFont} is no longer a valid built in font. Please use {RemovedFontReplacement}");
-            return found;
+            if (!RemovedPaths.TryGetValue(path, out var removed)) return Find(type, path, extra);
+            // The replacement is searched (with its messages) before the call throws.
+            Find(type, removed.Replacement, extra);
+            throw new ArgumentException(removed.Message);
         }
 
         static UnityEngine.Object Find(Type type, string path, bool extra)

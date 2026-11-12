@@ -52,6 +52,8 @@ public sealed class GameConfig
     public Dictionary<string, int> ExecutionOrders { get; set; } = new();
     /// <summary>The release's built-in resources: "extra"/"default" → file id → class and name.</summary>
     public Dictionary<string, Dictionary<string, BuiltinConfig>> Builtins { get; set; } = new();
+    /// <summary>The release's removed built-in paths: path → its replacement and the message the lookup throws.</summary>
+    public Dictionary<string, RemovedBuiltinPathConfig> BuiltinRemovedPaths { get; set; } = new();
     public List<SortingLayerConfig> SortingLayers { get; set; } = new();
     /// <summary>0 gamma, 1 linear.</summary>
     public int ColorSpace { get; set; }
@@ -144,6 +146,12 @@ public sealed class BuiltinConfig
     /// <summary>The path the object is registered under (Resources.GetBuiltinResource,
     /// AssetDatabase.GetBuiltinExtraResource).</summary>
     public string Path { get; set; } = "";
+}
+
+public sealed class RemovedBuiltinPathConfig
+{
+    public string Replacement { get; set; } = "";
+    public string Message { get; set; } = "";
 }
 
 public sealed class SortingLayerConfig
@@ -356,6 +364,11 @@ public static unsafe class Game
                 classes[fileId] = entry.Class;
                 if (entry.Path.Length > 0) paths[(entry.Path, entry.Class)] = fileId;
             }
+        }
+        BuiltinResources.RemovedPaths.Clear();
+        foreach (var (path, removed) in c.BuiltinRemovedPaths)
+        {
+            if (removed.Replacement.Length > 0) BuiltinResources.RemovedPaths[path] = (removed.Replacement, removed.Message);
         }
         if (c.SortingLayers.Count > 0)
         {

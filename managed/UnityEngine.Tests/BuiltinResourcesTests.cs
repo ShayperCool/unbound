@@ -18,6 +18,16 @@ namespace UnityEngine.Tests
 
         internal BuiltinPathTable Extra(long fileId, string path, string name, int classId) => Add(true, fileId, path, name, classId);
 
+        readonly List<string> m_Removed = new List<string>();
+
+        /// <summary>A path the release removed, looked up as <paramref name="replacement"/>.</summary>
+        internal BuiltinPathTable Removed(string path, string replacement, string message)
+        {
+            BuiltinResources.RemovedPaths[path] = (replacement, message);
+            m_Removed.Add(path);
+            return this;
+        }
+
         BuiltinPathTable Add(bool extra, long fileId, string path, string name, int classId)
         {
             (extra ? BuiltinResources.ExtraPaths : BuiltinResources.DefaultPaths)[(path, classId)] = fileId;
@@ -29,6 +39,7 @@ namespace UnityEngine.Tests
 
         public void Dispose()
         {
+            foreach (var path in m_Removed) BuiltinResources.RemovedPaths.Remove(path);
             foreach (var (extra, path, classId, fileId) in m_Rows)
             {
                 (extra ? BuiltinResources.ExtraPaths : BuiltinResources.DefaultPaths).Remove((path, classId));
@@ -146,14 +157,32 @@ namespace UnityEngine.Tests
             Assert.Empty(m_Logs);
         }
 
+        const string ArialMessage = "Arial.ttf is no longer a valid built in font. Please use LegacyRuntime.ttf";
+
         [Fact]
-        public void ArialIsLookedUpAsLegacyRuntimeThenThrows()
+        public void ARemovedPathIsLookedUpAsItsReplacementThenThrows()
         {
+            using var removed = new BuiltinPathTable().Removed("Arial.ttf", "LegacyRuntime.ttf", ArialMessage);
             // No LegacyRuntime.ttf Mesh is registered: the replacement path is searched (and not
             // found) before the call throws.
             var e = Assert.Throws<ArgumentException>(() => Resources.GetBuiltinResource<Mesh>("Arial.ttf"));
-            Assert.Equal("Arial.ttf is no longer a valid built in font. Please use LegacyRuntime.ttf", e.Message);
+            Assert.Equal(ArialMessage, e.Message);
             Assert.Equal(NotFound("LegacyRuntime.ttf"), m_Logs);
+            // A found replacement throws as well (6000.0: the LegacyRuntime font is searched, then
+            // the call throws).
+            m_Logs.Clear();
+            using var replacement = new BuiltinPathTable().Default(10202, "LegacyRuntime.ttf", "Cube", MeshClass);
+            e = Assert.Throws<ArgumentException>(() => Resources.GetBuiltinResource<Mesh>("Arial.ttf"));
+            Assert.Equal(ArialMessage, e.Message);
+            Assert.Empty(m_Logs);
+        }
+
+        [Fact]
+        public void APathTheProfileDoesNotRemoveIsAnOrdinaryPath()
+        {
+            // Releases whose profile removes no path: Arial.ttf is looked up as itself.
+            Assert.Null(Resources.GetBuiltinResource<Font>("Arial.ttf"));
+            Assert.Equal(NotFound("Arial.ttf"), m_Logs);
         }
 
         [Fact]

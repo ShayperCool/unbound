@@ -1618,5 +1618,11 @@
 "path": "Internal/UIElements/Internal-UIE-ColorConversionBlit.shader"
 }
 },
+"removed": {
+"Arial.ttf": {
+"message": "Arial.ttf is no longer a valid built in font. Please use LegacyRuntime.ttf",
+"replacement": "LegacyRuntime.ttf"
+}
+},
 "source": "Unity 6000.0.71f1 Editor/Data/Resources: unity_builtin_extra and unity default resources (object names by file id, the path each is registered under for Resources.GetBuiltinResource and AssetDatabase.GetBuiltinExtraResource)"
 }
