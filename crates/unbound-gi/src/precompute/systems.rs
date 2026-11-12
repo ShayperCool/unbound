@@ -273,27 +273,39 @@ fn split(members: &[Member], group: &[usize]) -> [Vec<usize>; 2] {
         .copied()
         .take_while(|&a| a == axes[0] || longest < extent(a) + extent(a))
         .collect();
+    // Per candidate axis the centres in order with the texels below each: the texels below a
+    // position are those of the centres before it.
+    let sorted: Vec<(Vec<f32>, Vec<u64>)> = candidates
+        .iter()
+        .map(|&a| {
+            let mut centres: Vec<(f32, u64)> = group
+                .iter()
+                .map(|&i| (members[i].centre(a), members[i].texels))
+                .collect();
+            centres.sort_by(|x, y| x.0.total_cmp(&y.0));
+            let mut below = Vec::with_capacity(centres.len() + 1);
+            below.push(0u64);
+            for &(_, t) in &centres {
+                below.push(below.last().unwrap() + t);
+            }
+            (centres.into_iter().map(|c| c.0).collect(), below)
+        })
+        .collect();
+    let total: u64 = group.iter().map(|&i| members[i].texels).sum();
     let mut best: Option<(f32, usize, f32)> = None;
+    let candidates = &candidates;
     let positions = group.iter().flat_map(|&i| {
         let m = members[i];
-        candidates
-            .iter()
-            .map(move |&a| (a, m.min[a]))
-            .chain(candidates.iter().map(move |&a| (a, m.max[a])))
+        (0..candidates.len())
+            .map(move |c| (c, m.min[candidates[c]]))
+            .chain((0..candidates.len()).map(move |c| (c, m.max[candidates[c]])))
     });
-    for (axis, at) in positions {
-        let (mut below, mut above) = (0u64, 0u64);
-        for &i in group {
-            if at <= members[i].centre(axis) {
-                above += members[i].texels;
-            } else {
-                below += members[i].texels;
-            }
-        }
-        let total = (below + above) as f32;
-        let score = 2.0 * (below as f32 / total - 0.5).abs();
+    for (c, at) in positions {
+        let (centres, below) = &sorted[c];
+        let below = below[centres.partition_point(|&centre| centre < at)];
+        let score = 2.0 * (below as f32 / total as f32 - 0.5).abs();
         if best.is_none_or(|(s, _, _)| score < s) {
-            best = Some((score, axis, at));
+            best = Some((score, candidates[c], at));
         }
     }
     let (_, axis, at) = best.expect("a group to split");
@@ -358,6 +370,7 @@ pub fn chart_mask(layout: &SystemLayout, outputs: &[&Output]) -> Vec<u32> {
                 let by = origin[1] + bottom + (b / across) as u32 * BLOCK_TEXELS;
                 for y in by..by + BLOCK_TEXELS {
                     for x in bx..bx + BLOCK_TEXELS {
+                        debug_assert!((x as usize) < w && (y as usize) < h);
                         if (x as usize) < w && (y as usize) < h {
                             mask[y as usize * w + x as usize] = id;
                         }

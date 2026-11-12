@@ -973,7 +973,8 @@ fn systems_split_by_place_until_each_holds_its_budget() {
     let row: Vec<Member> = (0..4).map(|i| at(i as f32 * 10.0, 0.0, 40)).collect();
     let systems = scene_systems(&row, &[0; 4], fits);
     assert_eq!(systems, vec![vec![0, 1], vec![2, 3]]);
-    // Eight: each half is split again, the last one made first.
+    // Eight: each half is split again, the last one made first (Unbound's order: the Editor's
+    // order of a group's parts is not measured).
     let long: Vec<Member> = (0..8).map(|i| at(i as f32 * 10.0, 0.0, 40)).collect();
     assert_eq!(
         scene_systems(&long, &[0; 8], fits),
