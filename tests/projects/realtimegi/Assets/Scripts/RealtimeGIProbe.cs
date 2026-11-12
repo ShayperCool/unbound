@@ -49,6 +49,12 @@ public class RealtimeGIProbe : MonoBehaviour
         Directory.CreateDirectory(m_Dir);
         m_Dump = new Material(Shader.Find("Hidden/RealtimeGIDump"));
         DynamicGI.synchronousMode = true;
+        if (Environment.GetEnvironmentVariable("REALTIME_GI_BAKE") == "1")
+        {
+            yield return BakeOnLoad();
+            Finish();
+            yield break;
+        }
         if (GraphicsSettings.currentRenderPipeline != null)
         {
             yield return Pipeline();
@@ -626,6 +632,50 @@ public class RealtimeGIProbe : MonoBehaviour
 
     /// <summary>Each scene without lighting data: what it reflects by default, its ambient
     /// probe as loaded and in the custom mode.</summary>
+    /// <summary>`RoomBake`, opened by the Editor and baked when it opened (no lighting data, a
+    /// bake on load asked for): its realtime GI as loaded and with the point light moved, each
+    /// renderer's realtime lightmap also in its own UV space (`.rlm`: where the renderers lie in
+    /// the atlas is the bake's own choice); then `RoomBakeLoaded`, the same scene loaded at
+    /// runtime, which no bake made lighting data for.</summary>
+    IEnumerator BakeOnLoad()
+    {
+        var s = Scene();
+        yield return Converge();
+        Capture("roombake-base", s, false);
+        DumpRenderers("roombake-base", s);
+        RecordBakedProbes("roombake-lightprobes");
+        s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+        yield return Converge();
+        Capture("roombake-moved", s, false);
+        DumpRenderers("roombake-moved", s);
+        yield return Load("RoomBakeLoaded");
+        var loaded = Scene();
+        yield return Converge();
+        Capture("roombakeloaded-base", loaded, false);
+    }
+
+    /// <summary>Each lit renderer's realtime lightmap texels in its own realtime lightmap UV
+    /// space (<c>&lt;case&gt;-&lt;renderer&gt;.rlm</c>, as an atlas file): what it draws, whatever
+    /// its place in the atlas.</summary>
+    void DumpRenderers(string name, RealtimeGIScene s)
+    {
+        foreach (var r in s.lit)
+        {
+            if (r.realtimeLightmapIndex < 0) continue;
+            int atlas = AtlasSize(s, r.realtimeLightmapIndex);
+            var st = r.realtimeLightmapScaleOffset;
+            int w = Mathf.RoundToInt(st.x * atlas), h = Mathf.RoundToInt(st.y * atlas);
+            var texture = RenderDump(s, w, h, 3, TextureFormat.RGBAHalf, RenderTextureFormat.ARGBHalf, r.realtimeLightmapIndex, r);
+            using (var stream = new BinaryWriter(File.Create(Path.Combine(m_Dir, $"{name}-{r.name}.rlm"))))
+            {
+                stream.Write(w);
+                stream.Write(h);
+                stream.Write(texture.GetRawTextureData());
+            }
+            Destroy(texture);
+        }
+    }
+
     IEnumerator WithoutLightingData()
     {
         foreach (var name in NoData)
@@ -887,7 +937,7 @@ public class RealtimeGIProbe : MonoBehaviour
     int AtlasSize(RealtimeGIScene s, int atlas)
     {
         const int Probe = 16;
-        var texture = RenderDump(s, Probe, 2, TextureFormat.RGBAFloat, RenderTextureFormat.ARGBFloat, atlas);
+        var texture = RenderDump(s, Probe, Probe, 2, TextureFormat.RGBAFloat, RenderTextureFormat.ARGBFloat, atlas);
         var pixels = texture.GetPixels();
         Destroy(texture);
         float size = 0f;
@@ -898,7 +948,7 @@ public class RealtimeGIProbe : MonoBehaviour
 
     void DumpAtlas(string file, RealtimeGIScene s, int size, int channel, int atlas)
     {
-        var texture = RenderDump(s, size, channel, TextureFormat.RGBAHalf, RenderTextureFormat.ARGBHalf, atlas);
+        var texture = RenderDump(s, size, size, channel, TextureFormat.RGBAHalf, RenderTextureFormat.ARGBHalf, atlas);
         var raw = texture.GetRawTextureData();
         using (var stream = new BinaryWriter(File.Create(Path.Combine(m_Dir, file))))
         {
@@ -909,11 +959,12 @@ public class RealtimeGIProbe : MonoBehaviour
         Destroy(texture);
     }
 
-    /// <summary>Draws every lit renderer of atlas <paramref name="atlas"/> with the dump shader into a size*size target through a
-    /// camera that sees the whole room, and reads it back.</summary>
-    Texture2D RenderDump(RealtimeGIScene s, int size, int channel, TextureFormat format, RenderTextureFormat targetFormat, int atlas)
+    /// <summary>Draws every lit renderer of atlas <paramref name="atlas"/> (or <paramref name="only"/>)
+    /// with the dump shader into a width*height target through a camera that sees the whole room,
+    /// and reads it back.</summary>
+    Texture2D RenderDump(RealtimeGIScene s, int width, int height, int channel, TextureFormat format, RenderTextureFormat targetFormat, int atlas, Renderer only = null)
     {
-        var target = new RenderTexture(size, size, 0, targetFormat);
+        var target = new RenderTexture(width, height, 0, targetFormat);
         target.filterMode = FilterMode.Point;
         var go = new GameObject("Dump Camera", typeof(Camera));
         var camera = go.GetComponent<Camera>();
@@ -935,7 +986,8 @@ public class RealtimeGIProbe : MonoBehaviour
         for (int i = 0; i < others.Length; i++)
         {
             visible[i] = others[i].enabled;
-            if (Array.IndexOf(s.lit, others[i]) < 0 || others[i].realtimeLightmapIndex != atlas) others[i].enabled = false;
+            if (Array.IndexOf(s.lit, others[i]) < 0 || others[i].realtimeLightmapIndex != atlas
+                || (only != null && others[i] != only)) others[i].enabled = false;
         }
         for (int i = 0; i < s.lit.Length; i++)
         {
@@ -947,8 +999,8 @@ public class RealtimeGIProbe : MonoBehaviour
         for (int i = 0; i < others.Length; i++) others[i].enabled = visible[i];
 
         RenderTexture.active = target;
-        var texture = new Texture2D(size, size, format, false, true);
-        texture.ReadPixels(new Rect(0, 0, size, size), 0, 0);
+        var texture = new Texture2D(width, height, format, false, true);
+        texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         texture.Apply();
         RenderTexture.active = null;
         camera.targetTexture = null;

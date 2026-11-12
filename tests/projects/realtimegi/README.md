@@ -215,6 +215,16 @@ environment alone: `pipeline-color` (an ambient
 color), `pipeline-sky` (a procedural skybox) and `pipeline-sky-intensity` (its ambient intensity
 2). That set is its own reference, `Reference/unity-<version>/urp`.
 
+With `--bake` the capture opens `RoomBake` instead (`run.py setup-bake` adds it and
+`RoomBakeLoaded`: the Room saved without lighting data, its LightmapSettings asking for a bake
+when the Editor opens it, `Lightmapping.bakeOnSceneLoad` IfMissingLightingData), waits in Edit
+mode until the bake that opening it starts is done, and enters Play mode
+(`RealtimeGIRunner.RecordBake`, `REALTIME_GI_BAKE`): `roombake-base` and `roombake-moved` (the
+point light moved) record the realtime GI the bake made, each renderer's realtime lightmap also
+in its own realtime lightmap UV space (`<case>-<renderer>.rlm`), `roombake-lightprobes` the
+light probes; then `RoomBakeLoaded`, loaded at runtime, records `roombakeloaded-base`. Its own
+reference set is `Reference/unity-<release>/bake`.
+
 ## What the Editor does (this capture)
 
 Unity updates realtime GI over several frames on worker threads; even with
@@ -405,6 +415,16 @@ Observations (not documented guarantees):
   docs/REALTIME_GI.md (Automatic charts) has the rule Unbound makes them by and what it does
   not make.
 
+- A scene without lighting data that asks for a bake when it opens (`--bake`): the Editor bakes
+  it when it opens it (Lightmapping.isRunning at once; one capture each, not part of the
+  reference: in batch mode too); entering Play mode before the bake is done stops the bake
+  and the scene plays without realtime GI, as a scene set to bake never; once the bake is done
+  the Editor writes `LightingData.asset` beside the scene and assigns it, and Play mode draws
+  its realtime GI (`roombake-*`), which is the Room's (the lightmap values within 0.7% of
+  `room-base`'s on average). A scene loaded at runtime is not baked, whatever it asks for:
+  `RoomBakeLoaded` has no realtime GI (realtime lightmap index -1) and its lightmaps mode is 1
+  (`roombakeloaded-base`).
+
 ## Unbound
 
 Unbound draws precomputed realtime GI for these scenes (docs/REALTIME_GI.md): it makes the
@@ -437,6 +457,7 @@ python3 tests/projects/realtimegi/run.py publish native1 native2
 python3 tests/projects/realtimegi/run.py gate --label gate1       # the land gate (gate.json)
 python3 tests/projects/realtimegi/run.py gate --pipeline urp --label gate-urp1   # and its URP part
 python3 tests/projects/realtimegi/run.py gate --color-space gamma --label gate-gamma1   # and its gamma part
+python3 tests/projects/realtimegi/run.py gate --bake --label gate-bake1   # and its bake-on-load part
 ```
 
 `gate` runs `$UNBOUND_CLI` (else `$UNBOUND`, else `target/release/unbound`) on a copy of the
@@ -444,5 +465,12 @@ project and compares with `Reference/unity-<release>/`; `gate --pipeline urp` (a
 `publish` with it) does the same with the Universal Render Pipeline and
 `Reference/unity-<release>/urp`, and `--color-space gamma` with the project in the gamma color
 space and `Reference/unity-<release>/gamma`. The engine's result in both: no state or gated
-value failing and no value reported. Run output goes to
+value failing and no value reported. `gate --bake` starts the engine in `RoomBake`, which
+Unbound bakes with its own precompute as the Editor opens it, and compares with `--own-layout`
+(the renderers lie where each precompute put them, so their places are not compared; each
+renderer's own lightmap is): no state or gated value failing (the opened scene's renderers draw
+realtime GI, the scene loaded at runtime's do not, every renderer covers the Editor's texels of
+its own UV space, the light probes' count), the lighting reported (81 of the 5070 values of
+`roombake-base` and 139 of `roombake-moved` outside the comparator's tolerance, and the light
+probes, from Unbound's precompute: docs/REALTIME_GI.md). Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/realtimegi/<label>/`.

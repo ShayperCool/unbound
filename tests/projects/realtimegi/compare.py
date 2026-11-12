@@ -26,6 +26,11 @@ Two classes of values:
   differences well below the threshold move a few isolated texels by up to about 10%. The rest
   of the lighting values are reported (gated with --strict).
 
+With --own-layout (a capture whose realtime GI the engine precomputed itself, `run.py --bake`) the
+renderers' places in the atlas (their scale/offset, the atlas files) are the engine's own and not
+compared; each renderer's lightmap in its own realtime lightmap UV space (`.rlm`) is: which of its
+texels it covers is state (its realtime lightmap UVs), their values are reported.
+
 Every failing value is written to CAPTURE/compare-details.txt; the output lists one line per
 failing case, atlas or frame.
 """
@@ -83,7 +88,7 @@ class Result:
         self.details.extend('  ' + d for d in details)
 
 
-def compare_values(ref, cap, result):
+def compare_values(ref, cap, result, own_layout=False):
     for name in sorted(set(cap) - set(ref)):
         # `<case>-noatlas`: the capture found no realtime lightmap to read (a lighting difference,
         # gated as the case's lightmap is).
@@ -100,7 +105,7 @@ def compare_values(ref, cap, result):
         if 'renderers' in r:
             if [(x['name'], x['index']) for x in r['renderers']] != [(x['name'], x['index']) for x in c.get('renderers', [])]:
                 result.fail('state', f'{name}: renderers/indices {c.get("renderers")} != {r["renderers"]}')
-            else:
+            elif not own_layout:
                 for x, y in zip(r['renderers'], c['renderers']):
                     if any(abs(a - b) > 1e-6 for a, b in zip(x['st'], y['st'])):
                         result.fail('state', f'{name}: {x["name"]} st {y["st"]} != {x["st"]}')
@@ -136,8 +141,9 @@ def compare_values(ref, cap, result):
 
 
 def compare_atlas(name, ref_path, cap_path, result):
-    lightmap = name.endswith('.atlas')
-    gate = lightmap or name.endswith('.dir')
+    # A renderer's own lightmap (`.rlm`) is a lightmap, reported.
+    lightmap = name.endswith('.atlas') or name.endswith('.rlm')
+    gate = name.endswith('.atlas') or name.endswith('.dir')
     # A lightmap's RGB (its alpha is the coverage); all four channels of a directionality.
     channels = 3 if lightmap else 4
     # How far a value may be from reference value b, and how far an isolated one.
@@ -190,15 +196,20 @@ def main():
     parser.add_argument('reference')
     parser.add_argument('capture')
     parser.add_argument('--strict', action='store_true')
+    parser.add_argument('--own-layout', action='store_true',
+                        help="the capture's renderers lie where its own precompute put them")
     args = parser.parse_args()
     ref, cap = Path(args.reference), Path(args.capture)
     result = Result()
     if not (cap/'values.jsonl').is_file():
         print(f'realtimegi: no values.jsonl in {cap}')
         return 1
-    compare_values(records(ref/'values.jsonl'), records(cap/'values.jsonl'), result)
+    compare_values(records(ref/'values.jsonl'), records(cap/'values.jsonl'), result, args.own_layout)
+    laid_out = ('.atlas', '.dir')
     for path in sorted(ref.iterdir()):
-        if path.suffix in ('.atlas', '.dir'):
+        if path.suffix in laid_out and args.own_layout:
+            result.lines.append(f'{path.name}: not compared (the renderers lie where each precompute put them)')
+        elif path.suffix in laid_out or path.suffix == '.rlm':
             compare_atlas(path.name, path, cap/path.name, result)
         elif path.suffix == '.png':
             if not (cap/path.name).is_file():
@@ -210,8 +221,8 @@ def main():
             if diff is None or diff[0] > FRAME_MEAN:
                 result.fail('gated', f'{path.name}: ' + ('size differs' if diff is None else
                                                          f'frame mean {diff[0]:.2f} over {FRAME_MEAN}'))
-    for extra in sorted(p.name for p in cap.iterdir() if p.suffix in ('.atlas', '.dir', '.png')
-                        and not (ref/p.name).exists()):
+    for extra in sorted(p.name for p in cap.iterdir() if p.suffix in ('.atlas', '.dir', '.png', '.rlm')
+                        and not (ref/p.name).exists() and not (args.own_layout and p.suffix in laid_out)):
         result.fail('state', f'{extra}: extra output')
     (cap/'compare-details.txt').write_text('\n'.join(result.details) + '\n')
     for line in result.lines:

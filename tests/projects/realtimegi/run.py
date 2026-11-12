@@ -13,6 +13,8 @@
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
     run.py record|publish|gate --pipeline urp # the same project drawn by URP: its own reference set, Reference/unity-<version>/urp
     run.py record|publish|gate --color-space gamma # the same project in the gamma color space: Reference/unity-<version>/gamma
+    run.py setup-bake                         # Editor: add the RoomBake and RoomBakeLoaded scenes (no lighting data, bake on load)
+    run.py record|publish|gate --bake         # RoomBake opened (baked when it opens), then RoomBakeLoaded loaded: Reference/unity-<version>/bake
 
 The release is $UNBOUND_PROBE_UNITY_VERSION (default 6000.0.71f1). Run output stays under
 $XDG_CACHE_HOME/unbound/validation/runs/realtimegi/<label>/.
@@ -49,12 +51,18 @@ PIPELINES = {'urp': {'package': ('com.unity.render-pipelines.universal', '17.0.4
 # The color space a run can give the project (`--color-space`): PlayerSettings' m_ActiveColorSpace.
 COLOR_SPACES = {'gamma': 0}
 
+# The run that opens RoomBake, which has no lighting data and asks for a bake when the Editor opens
+# it (`--bake`): the Editor's bake of it, Unbound's own precompute of it. Where the renderers lie
+# in the atlas is each one's choice, so their places are not compared; each renderer's lightmap
+# is, in its own realtime lightmap UV space (`.rlm`).
+BAKE = 'bake'
 
-def variant(pipeline=None, color_space=None):
-    """The one way a run's project differs from the committed one, if any."""
-    if pipeline and color_space:
-        raise SystemExit('--pipeline and --color-space together are not recorded')
-    return pipeline or color_space
+
+def variant(pipeline=None, color_space=None, bake=False):
+    """The one way a run's project or sequence differs from the committed one, if any."""
+    if sum(bool(v) for v in (pipeline, color_space, bake)) > 1:
+        raise SystemExit('--pipeline, --color-space and --bake together are not recorded')
+    return pipeline or color_space or (BAKE if bake else None)
 
 
 def copy_project(target, variant=None):
@@ -98,7 +106,7 @@ def work(label):
 def outputs(directory):
     """The capture's files: values.jsonl, then every atlas, directionality and frame it wrote."""
     directory = Path(directory)
-    names = sorted(p.name for p in directory.iterdir() if p.suffix in ('.atlas', '.dir', '.png'))
+    names = sorted(p.name for p in directory.iterdir() if p.suffix in ('.atlas', '.dir', '.png', '.rlm'))
     return [OUT, *names]
 
 
@@ -145,7 +153,8 @@ ADDED = {'setup-systems': ('RoomSystems', 'RealtimeGISetup.CreateSystems'),
          'setup-charts': ('RoomCharts', 'RealtimeGISetup.CreateCharts'),
          'setup-auto': ('RoomAuto', 'RealtimeGISetup.CreateAuto'),
          'setup-turned': ('RoomTurned', 'RealtimeGISetup.CreateTurned'),
-         'setup-holes': ('RoomHoles', 'RealtimeGISetup.CreateHoles')}
+         'setup-holes': ('RoomHoles', 'RealtimeGISetup.CreateHoles'),
+         'setup-bake': ('RoomBake', 'RealtimeGISetup.CreateBake')}
 
 
 def setup_scene(label, scene, method):
@@ -176,8 +185,9 @@ def setup_scene(label, scene, method):
 def record(label, variant=None):
     out = work(label)
     project = copy_project(out/'project', variant)
-    job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', 'RealtimeGIRunner.Record'],
-                                  batch=True, graphics=True, env={'REALTIME_GI_OUT': str(out)},
+    method, env = ('RealtimeGIRunner.RecordBake', {'REALTIME_GI_BAKE': '1'}) if variant == BAKE else ('RealtimeGIRunner.Record', {})
+    job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method],
+                                  batch=True, graphics=True, env={'REALTIME_GI_OUT': str(out), **env},
                                   timeout=1800, label='realtimegi-'+label)
     print(editor_runner.summary(editor_runner.run(job)))
     problem = editor_runner.result_problem(out, gpu=True) or complete(out, variant)
@@ -208,11 +218,17 @@ def gate(label, frames, variant=None):
     env = {**os.environ, 'REALTIME_GI_OUT': str(out/'engine')}
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '1500', cli, 'run', '-p', str(project),
                '--no-watch', '--frames', str(frames), '--size', '320x180']
+    compare = []
+    if variant == BAKE:
+        # Unbound opens RoomBake as the Editor did.
+        env['REALTIME_GI_BAKE'] = '1'
+        command += ['--scene', 'Assets/Scenes/RoomBake.unity']
+        compare = ['--own-layout']
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(f'engine exit {code}; log {out}/engine.log')
     return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference(variant)),
-                           str(out/'engine')]).returncode
+                           str(out/'engine'), *compare]).returncode
 
 
 def main():
@@ -226,8 +242,10 @@ def main():
                         help='record, publish or gate the project drawn by this render pipeline (its own reference set)')
     parser.add_argument('--color-space', choices=sorted(COLOR_SPACES),
                         help='record, publish or gate the project in this color space (its own reference set)')
+    parser.add_argument('--bake', action='store_true',
+                        help='record, publish or gate RoomBake opened and baked when it opens (its own reference set)')
     args = parser.parse_args()
-    made = variant(args.pipeline, args.color_space)
+    made = variant(args.pipeline, args.color_space, args.bake)
     if args.mode == 'setup':
         return setup(args.label)
     if args.mode in ADDED:

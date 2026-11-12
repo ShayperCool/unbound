@@ -141,6 +141,30 @@ public static class RealtimeGISetup
         }
     }
 
+    /// <summary>Adds the <c>RoomBake</c> and <c>RoomBakeLoaded</c> scenes alone: the room
+    /// without lighting data whose LightmapSettings ask for a bake when the Editor opens it
+    /// (Lightmapping.bakeOnSceneLoad IfMissingLightingData), not precomputed.</summary>
+    public static void CreateBake()
+    {
+        try
+        {
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            foreach (var name in new[] { "RoomBake", "RoomBakeLoaded" })
+            {
+                CreateRoom(name, LightmapsMode.NonDirectional, 1f, 1f, bakeOnLoad: true);
+                scenes.Add(new EditorBuildSettingsScene($"{Scenes}/{name}.unity", true));
+            }
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     /// <summary>Adds the <c>RoomCharts</c> scene alone: the room with the chart panels.</summary>
     public static void CreateCharts()
     {
@@ -458,7 +482,7 @@ public static class RealtimeGISetup
         triangles.AddRange(new[] { first, first + 1, first + 2, first, first + 2, first + 3 });
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false, bool holes = false)
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false, bool holes = false, bool bakeOnLoad = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -776,6 +800,19 @@ public static class RealtimeGISetup
         var queries = new List<Vector3>(samples) { new Vector3(-1.8f, 1f, -1f), new Vector3(1f, 2.5f, -1.5f) };
         holder.samples = queries.ToArray();
 
+        if (bakeOnLoad)
+        {
+            // Saved without lighting data, asking for a bake when opened.
+            Lightmapping.lightingDataAsset = null;
+            Lightmapping.bakeOnSceneLoad = Lightmapping.BakeOnSceneLoadMode.IfMissingLightingData;
+            EditorSceneManager.SaveScene(scene, $"{Scenes}/{name}.unity");
+            // The emissive material with its keyword, as a precomputed scene's is saved (no
+            // bake here writes it again).
+            emissive.EnableKeyword("_EMISSION");
+            EditorUtility.SetDirty(emissive);
+            AssetDatabase.SaveAssetIfDirty(emissive);
+            return;
+        }
         EditorSceneManager.SaveScene(scene, $"{Scenes}/{name}.unity");
         if (!Lightmapping.Bake()) Debug.LogError("precomputing " + name + " failed");
         EditorSceneManager.SaveScene(scene);

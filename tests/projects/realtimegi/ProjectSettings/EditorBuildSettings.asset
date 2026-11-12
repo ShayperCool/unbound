@@ -83,5 +83,11 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/RoomHoles.unity
     guid: 7229714b49cdfe7219f6cbab856ee3fa
+  - enabled: 1
+    path: Assets/Scenes/RoomBake.unity
+    guid: 856817fc0ef2ad46782f1b2051f09966
+  - enabled: 1
+    path: Assets/Scenes/RoomBakeLoaded.unity
+    guid: f986b904636498b5db8f7dc46bf0dd86
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0
