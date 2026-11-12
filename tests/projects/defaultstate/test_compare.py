@@ -2,6 +2,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
+
+import run as capture_runner
 
 from compare import rows, entries, compare, check_constructor_stores, validate_controls, CONTROL_VALUES
 
@@ -11,6 +14,16 @@ def value(text):
 
 
 class ComparisonTests(unittest.TestCase):
+    def test_publication_rejects_duplicate_or_aliased_captures(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root/'first').mkdir()
+            (root/'alias').symlink_to(root/'first', target_is_directory=True)
+            with mock.patch.object(capture_runner, 'WORK', root):
+                for labels in [['first', 'first'], ['first', 'alias'], ['first', 'first', 'other']]:
+                    with self.subTest(labels=labels), self.assertRaisesRegex(ValueError, 'distinct resolved'):
+                        capture_runner.publish(labels)
+
     def test_recording_controls_enforce_isolation_and_inherited_state(self):
         capture = {key: value(text) for key, text in CONTROL_VALUES.items()}
         validate_controls(capture)

@@ -81,6 +81,9 @@ def engine(label):
 def publish(labels):
     if len(labels) < 2:
         raise ValueError('publishing requires at least two independent GPU Editor captures')
+    directories = [(WORK/label).resolve() for label in labels]
+    if len(set(directories)) != len(directories):
+        raise ValueError('publishing requires distinct resolved capture directories')
     target = reference_root(ROOT)
     if target.exists():
         raise ValueError(f'refusing to overwrite {target}')
