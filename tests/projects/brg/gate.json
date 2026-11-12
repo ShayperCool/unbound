@@ -9,6 +9,8 @@
   "managed/UnityEngine/Graphics/Srp/BatchCulling.cs",
   "crates/unbound-app/src/render/dots.rs",
   "crates/unbound-shaders/src/scopes.rs",
-  "crates/unbound-shaders/src/preprocess.rs"
+  "crates/unbound-shaders/src/preprocess.rs",
+  "crates/unbound-shaders/src/fit.rs",
+  "crates/unbound-app/src/render/compiled.rs"
  ]
 }

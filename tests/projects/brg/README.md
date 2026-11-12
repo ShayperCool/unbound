@@ -30,7 +30,14 @@ view type how many callbacks ran. Scenarios:
   which differ by device), then two more commands, of an unknown mesh and of `Probe/NoDots`
   (`Assets/Shaders`, SRP Batcher compatible, without DOTS instancing): neither is drawn. The Editor
   logs an error for each once per run, delivered after the frame that drew them, so the probe,
-  which records within that frame, does not record them.
+  which records within that frame, does not record them;
+- `forward_plus`: the renderer switched to Forward+ at run time (`UniversalRendererData.renderingMode`)
+  under six point and two spot lights: URP's clustered light data (tile and z-bin buffers, the
+  additional lights and reflection probes) are constant buffers the Lit program reads beside the
+  group's DOTS instancing data and the scene's ordinary Lit sphere; `forward_plus_plain`: the same
+  with the group drawing nothing and eight ordinary Lit cubes in its cubes' places. URP's shader
+  library (`Input.hlsl`) sizes those buffers for 256 lights on Vulkan (the tile buffer alone 64 KB)
+  and for 32 on OpenGL Core.
 
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
@@ -41,7 +48,7 @@ Light contexts record their receiver planes again as `receiver<i>`, compared exa
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: 585/709 values (OpenGL Core), 582/706 (Vulkan)
+the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: 727/851 values (OpenGL Core), 724/848 (Vulkan)
 match, the others are listed in `residuals-<device>.json` (the cascades' caster
-culling planes, culling matrix and spheres of the light contexts); `basic` and `cameras` match
-exactly, `shadows` has 31 isolated shadow-edge pixels over 8 (mean 0.02).
+culling planes, culling matrix and spheres of the light contexts); `basic`, `cameras`, `forward_plus` and
+`forward_plus_plain` match exactly, `shadows` has 31 isolated shadow-edge pixels over 8 (mean 0.02).

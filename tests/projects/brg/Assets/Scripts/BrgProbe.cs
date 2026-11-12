@@ -63,6 +63,8 @@ public unsafe class BrgProbe : MonoBehaviour
     bool m_Shadows;
     /// <summary>A second group that takes light views alone and draws nothing.</summary>
     BatchRendererGroup m_LightOnly;
+    /// <summary>The forward_plus_plain scenario: the group draws nothing.</summary>
+    bool m_NoCommands;
     readonly SortedDictionary<string, int> m_Views = new SortedDictionary<string, int>(StringComparer.Ordinal);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -84,6 +86,7 @@ public unsafe class BrgProbe : MonoBehaviour
             Cameras();
             Lifetime();
             Errors();
+            ForwardPlus();
         }
         catch (Exception e)
         {
@@ -375,6 +378,63 @@ public unsafe class BrgProbe : MonoBehaviour
         DestroyImmediate(second.gameObject);
     }
 
+    /// <summary>The renderer's Forward+ path, whose clustered light data (tiles, z-bins, the
+    /// additional lights and reflection probes) URP binds as constant buffers, under six point
+    /// and two spot lights: the group's commands beside the scene's ordinary Lit sphere
+    /// (`forward_plus`), then the group drawing nothing and ordinary Lit cubes where its cubes
+    /// were (`forward_plus_plain`).</summary>
+    void ForwardPlus()
+    {
+        var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+        var renderer = (UniversalRendererData)urp.rendererDataList[0];
+        var mode = renderer.renderingMode;
+        renderer.renderingMode = RenderingMode.ForwardPlus;
+        var added = new List<GameObject>();
+        for (int i = 0; i < 8; i++)
+        {
+            var go = new GameObject("Forward+ Light " + i);
+            var light = go.AddComponent<Light>();
+            float t = i / 7f;
+            light.color = Color.HSVToRGB(t, 0.8f, 1f);
+            if (i < 6)
+            {
+                light.type = LightType.Point;
+                go.transform.position = new Vector3(-3f + 1.2f * i, 0.9f - 0.3f * (i % 2), 0.6f);
+                light.range = 2.2f;
+                light.intensity = 1.5f;
+            }
+            else
+            {
+                light.type = LightType.Spot;
+                go.transform.SetPositionAndRotation(new Vector3(i == 6 ? -1.5f : 1.5f, 2.5f, 0.8f), Quaternion.Euler(80f, 0f, 0f));
+                light.range = 5f;
+                light.spotAngle = 45f;
+                light.intensity = 3f;
+            }
+            added.Add(go);
+        }
+        Scenario("forward_plus");
+        RecordViews();
+        m_NoCommands = true;
+        var lit = Shader.Find("Universal Render Pipeline/Lit");
+        for (int i = 0; i < Cubes; i++)
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var m = InstanceMatrix(i);
+            cube.transform.SetPositionAndRotation(m.GetPosition(), m.rotation);
+            cube.transform.localScale = m.lossyScale;
+            var material = new Material(lit);
+            material.SetColor("_BaseColor", InstanceColor(i));
+            cube.GetComponent<MeshRenderer>().sharedMaterial = material;
+            added.Add(cube);
+        }
+        Scenario("forward_plus_plain");
+        RecordViews();
+        m_NoCommands = false;
+        foreach (var go in added) DestroyImmediate(go);
+        renderer.renderingMode = mode;
+    }
+
     void RecordViews()
     {
         foreach (var pair in m_Views) Row(pair.Key, pair.Value);
@@ -427,7 +487,7 @@ public unsafe class BrgProbe : MonoBehaviour
             string view = m_Scenario + ".views." + (group == m_Brg ? "drawing" : "lightOnly") + "." + context.viewType;
             m_Views[view] = m_Views.TryGetValue(view, out int n) ? n + 1 : 1;
         }
-        if (group != m_Brg) return new JobHandle();
+        if (group != m_Brg || m_NoCommands) return new JobHandle();
         // The pillar's range (the shadows and cameras scenarios).
         bool masked = m_Scenario != "basic";
         bool errors = m_Scenario == "errors";
