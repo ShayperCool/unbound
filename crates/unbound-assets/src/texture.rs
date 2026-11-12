@@ -1503,7 +1503,7 @@ pub fn import_texture(
         if rgba.is_none() {
             tracing::warn!(
                 "{}: the alpha of a floating-point texture is not traced: its sprites get no \
-                 Tight mesh or default physics shape from it (Unbound traces 8-bit alpha only)",
+                 traced Tight mesh or physics shape from it (Unbound traces 8-bit alpha only)",
                 source.display()
             );
         }

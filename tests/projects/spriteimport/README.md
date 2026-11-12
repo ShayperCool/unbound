@@ -32,12 +32,13 @@ from alpha above 200 (extrude does not matter); `textureRect` is the traced outl
 The combined texture/sprite importer matches all 650 fields of 65 sprites exactly as f32 (519 of
 the first 520 before Polygon-mode physics shapes). A Polygon-mode sprite's mesh is always Tight,
 whatever its mesh type and rect size, and its default physics shape is one path through its mesh's
-boundary edges (`mesh_boundary` in `sprite_mesh.rs`); a zero-area outline renders the quad and
-takes the quad's boundary (a texture without traceable alpha and a rect outside the texture take
-the same quad, unmeasured). Thirteen Polygon controls cover a concave path with an off-centre
-pivot, islands, a hole, a 60-vertex path, two loops of 160 edges that pin the edge table's order, custom and disabled physics shapes, Full Rect, rects under 32
-pixels, no outline and a zero-area outline. Runtime `Sprite.Create` Tight meshes remain outside
-this import probe.
+boundary edges, in the order of an edge hash table whose shape reproduces every control
+(`mesh_boundary` in `sprite_mesh.rs`); a zero-area outline renders the quad and takes the quad's
+boundary (a texture without traceable alpha and a rect outside the texture take the same quad,
+unmeasured). Thirteen Polygon controls cover a concave path with an off-centre pivot, islands, a
+hole, a 60-vertex path, two loops of 160 edges that pin the table's shape, custom and disabled
+physics shapes, Full Rect, rects under 32 pixels, no outline and a zero-area outline. Runtime
+`Sprite.Create` Tight meshes remain outside this import probe.
 
 Add `--report <cache-path.json>` to the comparator to retain every field and nested value,
 including missing and extra values. Reports do not overwrite earlier files.
