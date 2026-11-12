@@ -878,6 +878,15 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::fonts::describe(r.handle)?.to_string())
         }
+        "font-strike" => {
+            #[derive(Deserialize)]
+            struct Request {
+                handle: u64,
+                pixels: i32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(crate::fonts::strike(r.handle, r.pixels)?.to_string())
+        }
         "font-kerning" => {
             #[derive(Deserialize)]
             struct Request {

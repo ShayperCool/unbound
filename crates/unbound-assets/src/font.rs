@@ -16,7 +16,7 @@ use std::{
 };
 use ttf_parser::Face;
 
-pub use crate::font_textcore::{TextCoreGlyph, TextCoreTile, render_mode};
+pub use crate::font_textcore::{TextCoreGlyph, TextCoreStrike, TextCoreTile, render_mode};
 use unbound_yaml::{Guid, Value};
 
 /// File extensions Unity's TrueTypeFontImporter handles.
@@ -152,6 +152,16 @@ impl FontFace {
         padding: i32,
     ) -> Option<TextCoreTile> {
         self.with_freetype(|face| face.textcore_render(glyph, pixels, render_mode, padding))?
+    }
+
+    /// Whether the face has colour glyphs (TextCore draws it in a colour atlas by default).
+    pub fn has_color(&self) -> bool {
+        self.with_freetype(|face| face.has_color()).unwrap_or(false)
+    }
+
+    /// TextCore: the strike a bitmap-only face uses for `pixels` per em; `None` for a scalable face.
+    pub fn textcore_strike(&self, pixels: i32) -> Option<TextCoreStrike> {
+        self.with_freetype(|face| face.textcore_strike(pixels))?
     }
 
     fn with_freetype<T>(

@@ -72,6 +72,11 @@ impl FreeTypeFace {
         }
     }
 
+    /// Whether the face has colour glyphs (FreeType's colour face flag: colour bitmaps or layers).
+    pub(crate) fn has_color(&self) -> bool {
+        unsafe { (*self.face).face_flags & ft::FT_FACE_FLAG_COLOR as ft::FT_Long != 0 }
+    }
+
     /// The face's own style as a Unity `FontStyle`: 1 bold, 2 italic.
     pub(crate) fn style(&self) -> i32 {
         let flags = unsafe { (*self.face).style_flags };
@@ -107,6 +112,38 @@ pub(crate) unsafe fn coverage(library: ft::FT_Library, bitmap: &ft::FT_Bitmap) -
         FT_Bitmap_Done(library, &mut converted);
         result
     }
+}
+
+/// A colour (BGRA) bitmap as RGBA bytes, top row first, its colours premultiplied by alpha as
+/// FreeType gives them (`None` for other layouts).
+pub(crate) unsafe fn color_rgba(bitmap: &ft::FT_Bitmap) -> Option<Vec<u8>> {
+    if bitmap.pixel_mode as u32 != ft::FT_PIXEL_MODE_BGRA {
+        return None;
+    }
+    let width = usize::try_from(bitmap.width).ok()?;
+    let height = usize::try_from(bitmap.rows).ok()?;
+    let mut rgba = Vec::new();
+    rgba.try_reserve_exact(width.checked_mul(height)?.checked_mul(4)?)
+        .ok()?;
+    if width == 0 || height == 0 {
+        return Some(rgba);
+    }
+    if bitmap.buffer.is_null() {
+        return None;
+    }
+    let stride = bitmap.pitch.unsigned_abs() as usize;
+    if stride < width * 4 {
+        return None;
+    }
+    for y in 0..height {
+        let row = if bitmap.pitch >= 0 { y } else { height - 1 - y };
+        let source =
+            unsafe { std::slice::from_raw_parts(bitmap.buffer.add(row * stride), width * 4) };
+        for bgra in source.chunks_exact(4) {
+            rgba.extend_from_slice(&[bgra[2], bgra[1], bgra[0], bgra[3]]);
+        }
+    }
+    Some(rgba)
 }
 
 /// The rows of an 8-bit bitmap, each value multiplied by `scale` (1 keeps it).

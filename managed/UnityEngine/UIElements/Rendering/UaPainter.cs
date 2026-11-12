@@ -532,13 +532,17 @@ namespace Unbound.UIElements
             }
             float id = Begin(atlas, sdfScale, sharpness);
             var unused = new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc);
+            // A colour (non-Alpha8) atlas is drawn as a textured mesh: the glyphs' own colours times
+            // the tint (UIR's raster text of several channels).
+            bool textured = atlas.format != TextureFormat.Alpha8;
             for (int q = 0; q + 3 < vertices.Length; q += 4)
             {
                 int first = VertexCount;
                 for (int k = 0; k < 4; k++)
                 {
                     var v = vertices[q + k];
-                    Vertex(new Vector2(v.position.x, v.position.y), v.tint, v.uv, VertText, id, unused, false, v.flags.g, textSettings);
+                    if (textured) Vertex(new Vector2(v.position.x, v.position.y), v.tint, v.uv, VertTexture, id, unused, false);
+                    else Vertex(new Vector2(v.position.x, v.position.y), v.tint, v.uv, VertText, id, unused, false, v.flags.g, textSettings);
                 }
                 Triangle(first, first + 1, first + 2);
                 Triangle(first + 2, first + 3, first);

@@ -101,6 +101,8 @@ namespace UnityEngine.TextCore.LowLevel
             public int[] Underline { get; set; }
             public int GlyphCount { get; set; }
             public int FaceCount { get; set; } = 1;
+            /// <summary>Whether the face has colour glyphs.</summary>
+            public bool Color { get; set; }
         }
 
         /// <summary>A loaded face: the native handle, where it came from (to open its other faces)
@@ -119,6 +121,19 @@ namespace UnityEngine.TextCore.LowLevel
         static LoadedFace s_Face;
         /// <summary>The face size in whole pixels per em, as FreeType sizes it.</summary>
         static int s_PointSize = k_DefaultPointSize;
+
+        /// <summary>A bitmap-only face's strike: its size and lines in pixels.</summary>
+        sealed class StrikeJson
+        {
+            public int PointSize { get; set; }
+            public float Ascender { get; set; }
+            public float Descender { get; set; }
+            public float LineHeight { get; set; }
+        }
+
+        /// <summary>The loaded face's strike at the current size; null for a scalable face.</summary>
+        static StrikeJson s_Strike;
+        static readonly Dictionary<(ulong, int), StrikeJson> s_Strikes = new Dictionary<(ulong, int), StrikeJson>();
 
         public static FontEngineError InitializeFontEngine() => FontEngineError.Success;
 
@@ -219,11 +234,30 @@ namespace UnityEngine.TextCore.LowLevel
             return FontEngineError.Success;
         }
 
+        /// <summary>Sizes the face. A bitmap-only face takes the size of the strike the request
+        /// selects, whatever was asked (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/textcolor: a face with one 109 ppem strike reports 109 at 12 to 150).</summary>
         public static FontEngineError SetFaceSize(int pointSize)
         {
             if (pointSize <= 0) return FontEngineError.Invalid_Pixel_Size;
             s_PointSize = pointSize;
+            s_Strike = s_Face != null ? Strike(s_Face.Handle, pointSize) : null;
+            if (s_Strike != null) s_PointSize = s_Strike.PointSize;
             return s_Face != null ? FontEngineError.Success : FontEngineError.Invalid_Face;
+        }
+
+        static StrikeJson Strike(ulong handle, int pixels)
+        {
+            if (s_Strikes.TryGetValue((handle, pixels), out var strike)) return strike;
+            try
+            {
+                strike = JsonSerializer.Deserialize<StrikeJson>(Native.Call("font-strike", JsonSerializer.Serialize(new { handle, pixels })), s_Json);
+            }
+            catch (Exception)
+            {
+                strike = null;
+            }
+            return s_Strikes[(handle, pixels)] = strike;
         }
 
         internal static int GetFaceCount() => s_Face?.Info.FaceCount ?? 0;
@@ -282,8 +316,8 @@ namespace UnityEngine.TextCore.LowLevel
             return false;
         }
 
-        /// <summary>Color (emoji) faces are not rendered in color yet.</summary>
-        internal static bool IsColorFontFace() => false;
+        /// <summary>Whether the loaded face has colour glyphs (FreeType's colour face flag).</summary>
+        internal static bool IsColorFontFace() => s_Face?.Info.Color == true;
 
         /// <summary>The loaded face at the current size. Lines come from the face's ascender,
         /// descender and gap; the cap and mean lines are the bearings of 'H' and 'x' and the tab width
@@ -299,8 +333,17 @@ namespace UnityEngine.TextCore.LowLevel
             float unitsPerPixel = (float)Math.Max(1, info.UnitsPerEm) / size;
             float ascent = info.Ascender / unitsPerPixel;
             float descent = info.Descender / unitsPerPixel;
+            float lineHeight = (info.Ascender - info.Descender + info.LineGap) / unitsPerPixel;
             float underlinePosition = info.Underline != null && info.Underline.Length == 2 ? info.Underline[0] : 0;
             float underlineThickness = info.Underline != null && info.Underline.Length == 2 ? info.Underline[1] : 0;
+            if (s_Strike != null)
+            {
+                // A bitmap-only face: the strike's lines, no underline (as measured).
+                ascent = s_Strike.Ascender;
+                descent = s_Strike.Descender;
+                lineHeight = s_Strike.LineHeight;
+                underlinePosition = underlineThickness = 0f;
+            }
             float capLine = HintedMetrics('H').BearingY;
             float meanLine = HintedMetrics('x').BearingY;
             face.faceIndex = s_Face.FaceIndex;
@@ -309,7 +352,7 @@ namespace UnityEngine.TextCore.LowLevel
             face.pointSize = size;
             face.scale = 1f;
             face.unitsPerEM = info.UnitsPerEm;
-            face.lineHeight = (info.Ascender - info.Descender + info.LineGap) / unitsPerPixel;
+            face.lineHeight = lineHeight;
             face.ascentLine = ascent;
             face.capLine = capLine;
             face.meanLine = meanLine;
@@ -449,14 +492,14 @@ namespace UnityEngine.TextCore.LowLevel
             return FontEngineError.Success;
         }
 
-        /// <summary>Into an alpha buffer, rows bottom first.</summary>
+        /// <summary>Into an alpha buffer, rows bottom first (a colour tile gives its alpha).</summary>
         internal static FontEngineError RenderGlyphsToTexture(List<Glyph> glyphs, int padding, GlyphRenderMode renderMode, byte[] texBuffer, int texWidth, int texHeight)
         {
             if (s_Face == null) return FontEngineError.Invalid_Face;
             if (texBuffer == null || texBuffer.Length < texWidth * texHeight) return FontEngineError.Invalid_File;
             foreach (var glyph in glyphs)
             {
-                var error = Render(glyph, padding, renderMode, texWidth, texHeight, (i, v) => texBuffer[i] = v);
+                var error = Render(glyph, padding, renderMode, texWidth, texHeight, (i, tile, at, bytes) => texBuffer[i] = tile[at + bytes - 1]);
                 if (error != FontEngineError.Success) return error;
             }
             return FontEngineError.Success;
@@ -511,13 +554,20 @@ namespace UnityEngine.TextCore.LowLevel
             return added == glyphIndexes.Count;
         }
 
-        /// <summary>Writes a glyph's bytes into atlas pixels: an Alpha8 atlas reads back white with the
-        /// value as alpha; a color mode's atlas takes the gray coverage in every channel (color faces
-        /// are rendered in coverage only).</summary>
-        static Action<int, byte> AtlasWriter(Color32[] pixels, GlyphRenderMode renderMode)
+        /// <summary>Writes one texel of a tile (<paramref name="bytes"/> per pixel at
+        /// <paramref name="at"/>) to texel <paramref name="index"/> of an atlas.</summary>
+        delegate void TexelWriter(int index, byte[] tile, int at, int bytes);
+
+        /// <summary>Writes a glyph's texels into atlas pixels: an Alpha8 atlas reads back white with
+        /// the coverage as alpha; a color mode's atlas takes a colour bitmap's premultiplied RGBA as
+        /// it is and gray coverage in every channel.</summary>
+        static TexelWriter AtlasWriter(Color32[] pixels, GlyphRenderMode renderMode)
         {
-            if (((int)renderMode & k_RasterModeColor) != 0) return (i, v) => pixels[i] = new Color32(v, v, v, v);
-            return (i, v) => pixels[i] = new Color32(255, 255, 255, v);
+            if (((int)renderMode & k_RasterModeColor) != 0)
+                return (i, tile, at, bytes) => pixels[i] = bytes == 4
+                    ? new Color32(tile[at], tile[at + 1], tile[at + 2], tile[at + 3])
+                    : new Color32(tile[at], tile[at], tile[at], tile[at]);
+            return (i, tile, at, bytes) => pixels[i] = new Color32(255, 255, 255, tile[at + bytes - 1]);
         }
 
         static Color32[] AtlasPixels(Texture2D texture)
@@ -540,7 +590,7 @@ namespace UnityEngine.TextCore.LowLevel
 
         /// <summary>Renders a glyph at its glyph rect's position (rows bottom first, as the rect
         /// counts them): the render mode's tile, the distance fields with the padding around them.</summary>
-        static FontEngineError Render(Glyph glyph, int padding, GlyphRenderMode renderMode, int width, int height, Action<int, byte> write)
+        static FontEngineError Render(Glyph glyph, int padding, GlyphRenderMode renderMode, int width, int height, TexelWriter write)
         {
             if (glyph == null) return FontEngineError.Invalid_Glyph_Index;
             var rect = glyph.glyphRect;
@@ -554,15 +604,17 @@ namespace UnityEngine.TextCore.LowLevel
             return FontEngineError.Success;
         }
 
-        /// <summary>Writes a rendered tile (rows top first) with its bitmap's bottom-left corner at
-        /// the rect's position: the tile's own size places it, not the rect's.</summary>
-        static void Place(GlyphRect rect, in TextCoreGlyphInfo info, byte[] pixels, int width, int height, Action<int, byte> write)
+        /// <summary>Writes a rendered tile (rows top first; one coverage byte per pixel, or four for
+        /// a colour bitmap) with its bitmap's bottom-left corner at the rect's position: the tile's own
+        /// size places it, not the rect's.</summary>
+        static void Place(GlyphRect rect, in TextCoreGlyphInfo info, byte[] pixels, int width, int height, TexelWriter write)
         {
             if (pixels == null) return;
             int grow = info.Padding;
             int w = info.RectWidth + grow * 2;
             int h = info.RectHeight + grow * 2;
             if (w <= 0 || h <= 0 || pixels.Length < w * h) return;
+            int bytes = pixels.Length == w * h * 4 ? 4 : 1;
             int left = rect.x - grow;
             int bottom = rect.y - grow;
             for (int row = 0; row < h; row++)
@@ -573,7 +625,7 @@ namespace UnityEngine.TextCore.LowLevel
                 {
                     int x = left + column;
                     if (x < 0 || x >= width) continue;
-                    write(y * width + x, pixels[row * w + column]);
+                    write(y * width + x, pixels, (row * w + column) * bytes, bytes);
                 }
             }
         }

@@ -2,7 +2,7 @@
 //! FreeType library, as the Unity 6000.0.71f1 Editor loads and rasterizes them
 //! (tests/projects/textcore): faces sized in whole pixels, glyph metrics read from FreeType with
 //! the caller's load flags, and atlas tiles per `GlyphRenderMode`, with its distance fields.
-use crate::font_freetype::{FreeTypeFace, coverage};
+use crate::font_freetype::{FreeTypeFace, color_rgba, coverage};
 use freetype_sys as ft;
 
 /// `GlyphRenderMode` values of the TextCore API.
@@ -34,13 +34,25 @@ pub struct TextCoreGlyph {
 }
 
 /// A glyph rendered for an atlas: its metrics and rect as the render mode loads it, and
-/// `(rect_width + 2 padding) x (rect_height + 2 padding)` bytes, top row first. Only the distance
+/// `(rect_width + 2 padding) x (rect_height + 2 padding)` pixels, top row first: one coverage
+/// byte each, or for a colour bitmap in a colour mode four (RGBA, premultiplied by alpha, as the
+/// Unity 6000.0.71f1 Editor fills a colour atlas, tests/projects/textcolor). Only the distance
 /// field modes fill a padding; the others have none.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TextCoreTile {
     pub glyph: TextCoreGlyph,
     pub padding: i32,
     pub pixels: Vec<u8>,
+}
+
+/// A bitmap-only face's strike, as a request for a size selects it: its pixels per em and its
+/// lines in pixels.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextCoreStrike {
+    pub ppem: i32,
+    pub ascender: f32,
+    pub descender: f32,
+    pub height: f32,
 }
 
 /// How a render mode makes its tile.
@@ -141,6 +153,32 @@ impl FreeTypeFace {
         }
     }
 
+    /// The strike a bitmap-only face uses for `pixels` per em (`None` for a scalable face, or one
+    /// without strikes): the face's size metrics there.
+    pub(crate) fn textcore_strike(&mut self, pixels: i32) -> Option<TextCoreStrike> {
+        unsafe {
+            if (*self.face).face_flags & ft::FT_FACE_FLAG_SCALABLE as ft::FT_Long != 0 {
+                return None;
+            }
+        }
+        if !self.set_pixel_size(pixels) {
+            return None;
+        }
+        unsafe {
+            let size = (*self.face).size;
+            if size.is_null() {
+                return None;
+            }
+            let m = &(*size).metrics;
+            Some(TextCoreStrike {
+                ppem: i32::from(m.y_ppem),
+                ascender: m.ascender as f32 / 64.0,
+                descender: m.descender as f32 / 64.0,
+                height: m.height as f32 / 64.0,
+            })
+        }
+    }
+
     /// The metrics of glyph `glyph` at `pixels` per em loaded with TextCore's `GlyphLoadFlags`
     /// (FreeType's load flags). With `LOAD_NO_SCALE` FreeType reports font units, which are
     /// divided by 64 like pixels.
@@ -168,7 +206,17 @@ impl FreeTypeFace {
             _ => 1,
         };
         let mut loaded = self.load_textcore(glyph, pixels, flags, upsampling)?;
-        let bitmap = unsafe { coverage(self.library, &(*(*self.face).glyph).bitmap)? };
+        let slot_bitmap = unsafe { &(*(*self.face).glyph).bitmap };
+        if flags & ft::FT_LOAD_COLOR != 0
+            && let Some(rgba) = unsafe { color_rgba(slot_bitmap) }
+        {
+            return Some(TextCoreTile {
+                glyph: loaded,
+                padding: 0,
+                pixels: rgba,
+            });
+        }
+        let bitmap = unsafe { coverage(self.library, slot_bitmap)? };
         let (width, height) = (loaded.rect_width, loaded.rect_height);
         let padding = padding.max(0);
         let (padding, pixels) = match raster {
@@ -592,8 +640,53 @@ mod tests {
 
     const SANS: &[u8] =
         include_bytes!("../../../tests/projects/glyphraster/Assets/Resources/Synthetic.ttf");
+    /// Three colour emoji with one 109 ppem strike (tests/projects/textcolor).
+    const EMOJI: &[u8] =
+        include_bytes!("../../../tests/projects/textcolor/Assets/Resources/Fonts/EmojiProbe.ttf");
     /// FreeType's `FT_LOAD_NO_HINTING`.
     const NO_HINTING: i32 = 2;
+
+    // Editor: textcolor face/* (the strike at 12 to 150) and asset/* (COLOR atlases hold the
+    // premultiplied colours; SMOOTH the coverage).
+    #[test]
+    fn bitmap_only_faces_take_their_strike_and_colour_modes_keep_colour() {
+        let emoji = FontFace::from_bytes(EMOJI.to_vec(), 0).unwrap();
+        assert!(emoji.has_color());
+        for size in [12, 24, 150] {
+            let strike = emoji.textcore_strike(size).unwrap();
+            assert_eq!(strike.ppem, 109);
+            assert_eq!(
+                (strike.ascender, strike.descender, strike.height),
+                (101.0, -27.0, 128.0)
+            );
+        }
+        let sans = FontFace::from_bytes(SANS.to_vec(), 0).unwrap();
+        assert!(sans.textcore_strike(24).is_none());
+        assert!(!sans.has_color());
+
+        let smile = u32::from(emoji.glyph_index('\u{1F600}'));
+        let color = emoji
+            .textcore_render(smile, 24, render_mode::COLOR, 4)
+            .unwrap();
+        let (w, h) = (
+            color.glyph.rect_width as usize,
+            color.glyph.rect_height as usize,
+        );
+        assert_eq!((w, h), (136, 128));
+        assert_eq!(color.pixels.len(), w * h * 4);
+        // Premultiplied: no channel above its alpha, and some partly covered pixels.
+        assert!(
+            color
+                .pixels
+                .chunks_exact(4)
+                .all(|p| p[0] <= p[3] && p[1] <= p[3] && p[2] <= p[3])
+        );
+        assert!(color.pixels.chunks_exact(4).any(|p| p[3] > 0 && p[3] < 255));
+        let smooth = emoji
+            .textcore_render(smile, 24, render_mode::SMOOTH, 4)
+            .unwrap();
+        assert_eq!(smooth.pixels.len(), w * h);
+    }
 
     /// The definition of [`super::sampled_distance_field`], searching the whole square: each pixel of the `out_width` x `out_height` glyph grown by `padding` takes
     /// the distance from its center to the nearest sample center of the other kind (set or clear)

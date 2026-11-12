@@ -74,6 +74,21 @@ pub fn textcore_glyph(
     face.textcore_render(glyph, pixels, render_mode, padding)
 }
 
+/// TextCore: the strike a bitmap-only face uses for `pixels` per em, `{pointSize, ascender,
+/// descender, lineHeight}` in pixels; null for a scalable face.
+pub fn strike(handle: u64, pixels: i32) -> Result<Json> {
+    let face = face(handle).context("no such face")?;
+    Ok(match face.textcore_strike(pixels) {
+        Some(s) => json!({
+            "pointSize": s.ppem,
+            "ascender": s.ascender,
+            "descender": s.descender,
+            "lineHeight": s.height,
+        }),
+        None => Json::Null,
+    })
+}
+
 /// The glyph index of a code point in a face (0 when the face lacks it).
 pub fn glyph_index(handle: u64, codepoint: u32) -> u32 {
     match (face(handle), char::from_u32(codepoint)) {
@@ -100,6 +115,7 @@ pub fn describe(handle: u64) -> Result<Json> {
         "subscript": [d.subscript.0, d.subscript.1],
         "glyphCount": face.glyph_count(),
         "faceCount": face.face_count(),
+        "color": face.has_color(),
     }))
 }
 
