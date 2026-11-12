@@ -20,15 +20,34 @@ independent 96000 Hz / 2048-frame 5.0, 5.1 and 7.1 captures without assertions.
 This is a capture setup observation, not a guarantee about runtime Reset recovery.
 Authored project settings and the original references remain unchanged.
 
+The full `wide` profile is diagnostic. Its two original independent captures
+compare 1,010,860,222 metadata/sample values and disagree at eight values:
+wrapped Flange at 32000 Hz / 340 frames in Surround and 5.1, and device-only
+source Chorus output at 48000 Hz / 256 frames in 5.1 and 7.1. Current-case Master
+floats in the latter controls agree. These failures remain in the complete raw
+repeat and engine reports; no original reference or tolerance is changed.
+
+`wide-pcm` declares a different startup context: reset the output before each
+case, then run its normal preflight. It retains the same signals and relative
+control order. Paired 48000 Hz / 256-frame 5.1 and 7.1 captures then agree exactly
+and the engine passes the existing gate. The 32000 Hz / 340-frame configuration
+still has repeat differences after per-case resets, including device output in
+later controls. The entire pair, across all five layouts, stays diagnostic and
+is excluded from additional effect admission. The PCM profile therefore has
+3010 controls in 215 cells. It does not certify retained mixer histories across
+cases or recovery timing following Reset.
+
 Record two independent projects with `native.py --release 6000.0.71f1 --rate
-48000 --set wide --work FRESH_CACHE_DIRECTORY`. Verify every GPU renderer and
-reject every Editor assertion. Compare with `compare.py --profile wide --exact`
-before publishing with `publish.py --wide --repeat REPEAT`. Replay with
-`context_run.py --release 6000.0.71f1 --profile wide`. The 48000 session header
-is independent of each case's recorded output rate. Original float tolerances
-and the one-step device PCM allowance remain unchanged; Master floats receive
-no additional allowance. Mono and Prologic outside their existing profiles,
-other rates and other buffer lengths remain outside this grid.
+48000 --set wide-pcm --work FRESH_CACHE_DIRECTORY`. Verify every GPU renderer
+and reject every Editor assertion. Compare with `compare.py --profile wide-pcm
+--exact` before publishing with `publish.py --wide-pcm --repeat REPEAT`.
+Replay with `context_run.py --release 6000.0.71f1 --profile wide-pcm`.
+The 48000 session header is independent of each case's recorded output rate.
+Original float tolerances and the one-step device PCM allowance remain unchanged;
+Master floats receive no additional allowance. Mono and Prologic outside their
+existing profiles, other rates and other buffer lengths remain outside this grid.
+Full `wide` captures, including the excluded pair, remain available with and
+without `--reset-cases` for diagnosis.
 
 The separate `configurations` capture records buffer-selection metadata at
 48000 Hz, including requests outside the PCM grid. Two independent GPU captures
@@ -48,3 +67,10 @@ gains each DSP period; an unfinished transition therefore settles over several
 short periods. Unity connections at unity pass directly. The shared connection
 implementation handles startup and live edits across all measured layouts;
 processing chunks do not define new DSP-period boundaries.
+
+Startup input gain is accumulated once per frame with a single-precision
+`1 / bufferFrames` step. At non-power-of-two buffer lengths, dividing the age
+by the buffer length gives a different rounded value and can change a later
+Q14 delay sample. One precomputed gain curve supplies every group in a mixer;
+render chunk boundaries do not restart it. Other releases retain their previous,
+unmeasured startup arithmetic until measured separately.

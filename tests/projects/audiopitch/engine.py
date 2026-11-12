@@ -15,6 +15,7 @@ p.add_argument('--runtime', type=Path, required=True, help='Directory containing
 p.add_argument('--work', type=Path, required=True)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--cases', help='Selected controls for independent output-context sessions')
+p.add_argument('--reset-cases', action='store_true', help='Reset output before each case, matching its Native capture')
 p.add_argument('--buffer', type=int, default=1024, help='Initial session DSP buffer before per-case configuration')
 p.add_argument('--device-channels', type=int, default=2,
                help='Output channels of the engine virtual device, as the Editor capture device had')
@@ -34,6 +35,7 @@ hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdiges
 (a.work/'runtime-hashes.json').write_text(json.dumps(hashes, indent=2)+'\n')
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
 env = dict(os.environ, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate), EFFECT_PROBE_ENGINE='1',
+           EFFECT_PROBE_RESET_CASES='1' if a.reset_cases else '0',
            EFFECT_PROBE_BUFFER=str(a.buffer),
            UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
 if a.cases: env['EFFECT_PROBE_CASES'] = a.cases

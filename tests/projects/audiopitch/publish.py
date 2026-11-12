@@ -25,13 +25,15 @@ p.add_argument('--prologic', action='store_true', help='Publish independent Prol
 p.add_argument('--zones', action='store_true', help='Publish live and overlapping zone controls')
 p.add_argument('--mono', action='store_true', help='Publish Mono output and Stereo control captures')
 p.add_argument('--wide', action='store_true', help='Publish the independent wide output-settings controls')
+p.add_argument('--wide-pcm', action='store_true', help='Publish the certified reset-isolated wide settings')
 a = p.parse_args()
 if a.settings and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
 selected = mono_cases() if a.mono else zone_cases() if a.zones else prologic_cases() if a.prologic else settings_cases() if a.settings else wet_edge_cases() if a.wet_edges else wet_cases() if a.wet else transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
-if a.wide:
-    from common import wide_rows
+if a.wide or a.wide_pcm:
+    from common import profile
     assert a.rate == 48000
-    selected = list(wide_rows())
+    selected = list(profile('wide-pcm' if a.wide_pcm else 'wide', a.rate))
+    assert not a.wide_pcm or header(a.capture).get('reset_cases') is True
 verify(a.capture, a.release, a.rate, contexts=a.contexts, selected=selected)
 verify(a.repeat, a.release, a.rate, contexts=a.contexts, selected=selected)
 assert header(a.capture) == header(a.repeat), 'independent capture metadata differs'
@@ -50,6 +52,7 @@ if a.prologic: target = target/'prologic'
 if a.zones: target = target/'zones'
 if a.mono: target = target/'mono'
 if a.wide: target = target/'wide'
+if a.wide_pcm: target = target/'wide-pcm'
 target = target/('rate-'+str(a.rate))
 if target.exists():
     assert a.extend, 'reference already exists; --extend may only add identical controls'

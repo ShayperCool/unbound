@@ -25,6 +25,12 @@ def wide_rows():
     return {row[0]: row for line in path.read_text().splitlines() if (row := line.split('\t'))}
 
 
+def wide_pcm_rows():
+    """Certified settings; the full wide diagnostic retains the unrepeatable pair."""
+    return {key: row for key, row in wide_rows().items()
+            if not key.startswith('context_wide_32000_340_')}
+
+
 def all_cases():
     source = (FIXTURE/'Assets/Scripts/EffectProbe.cs').read_text()
     body = source.split('Cases = {', 1)[1].split('};', 1)[0]
@@ -58,9 +64,9 @@ def prologic_cases():
 def context_sessions(name):
     """Cases whose output configurations need separate processes on both backends."""
     if name == 'settings': return settings_sessions()
-    if name == 'wide':
+    if name in ('wide', 'wide-pcm'):
         sessions = {}
-        for key in wide_rows():
+        for key in (wide_pcm_rows() if name == 'wide-pcm' else wide_rows()):
             sessions.setdefault('_'.join(key.split('_')[2:5]), []).append(key)
         return sessions
     if name == 'prologic':
@@ -114,6 +120,7 @@ def profile(name, rate):
     if name == 'surround': return dict.fromkeys(surround_cases())
     if name == 'settings': return dict.fromkeys(settings_cases())
     if name == 'wide': return dict.fromkeys(wide_rows())
+    if name == 'wide-pcm': return dict.fromkeys(wide_pcm_rows())
     if name == 'prologic': return dict.fromkeys(prologic_cases())
     if name == 'zones': return dict.fromkeys(zone_cases())
     if name == 'mono': return dict.fromkeys(mono_cases())

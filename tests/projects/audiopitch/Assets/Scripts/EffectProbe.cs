@@ -1191,6 +1191,8 @@ public partial class EffectProbe : MonoBehaviour
         if (!AudioRenderer.Start()) throw new Exception("AudioRenderer.Start failed");
         var sinks = new List<NativeArray<float>>();
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
+        bool resetCases = Environment.GetEnvironmentVariable("EFFECT_PROBE_RESET_CASES") == "1";
+        if (resetCases) records.Add("\"reset_cases\":true");
         void Save() => File.WriteAllText(Path.Combine(output, "capture.json"), "{" + string.Join(",", records) + "}\n");
         Save();
         foreach (string key in Selected()) {
@@ -1227,7 +1229,7 @@ public partial class EffectProbe : MonoBehaviour
             int requestedBuffer = int.Parse(Option(key, "buffer=", "1024"));
             int requestedRate = int.Parse(Option(key, "rate=", rate.ToString()));
             var requestedMode = (AudioSpeakerMode)Enum.Parse(typeof(AudioSpeakerMode), Option(key, "mode=", "Stereo"));
-            if (config.sampleRate != requestedRate || config.dspBufferSize != requestedBuffer || config.speakerMode != requestedMode) {
+            if (resetCases || config.sampleRate != requestedRate || config.dspBufferSize != requestedBuffer || config.speakerMode != requestedMode) {
                 AudioRenderer.Stop();
                 config.sampleRate = requestedRate; config.dspBufferSize = requestedBuffer; config.speakerMode = requestedMode;
                 if (!AudioSettings.Reset(config)) throw new Exception("context reset failed");

@@ -14,20 +14,22 @@ p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'configurations'), default='all',
+p.add_argument('--reset-cases', action='store_true', help='Reset output before each case, then run its normal preflight')
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
+if a.set == 'wide-pcm': a.reset_cases = True
 fixture = Path(__file__).resolve().parent
 if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] != 'm_EditorVersion: '+a.release:
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-if a.set in ('recovery', 'wide', 'configurations'):
+if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations'):
     import sys
     sys.path.insert(0, str(fixture.parents[1]))
     from authored_project import assemble
     assemble(fixture.name, a.release, 'default', project)
-    if a.set in ('wide', 'configurations'):
+    if a.set in ('wide', 'wide-pcm', 'configurations'):
         from wide_boot import prepare
         prepare(project)
     if a.set == 'configurations':
@@ -49,6 +51,7 @@ def capture(work, cases, env=None, prepared=False, buffer=None):
     job = EditorJob(project, work/'editor.log', work/'editor-run',
                     args=['-executeMethod', 'ProbeRunner.RecordPrepared' if prepared else 'ProbeRunner.Record'], batch=True, graphics=True,
                     editor=editor, env=dict(EFFECT_PROBE_OUT=str(work/'capture'), EFFECT_PROBE_RATE=str(a.rate),
+                        EFFECT_PROBE_RESET_CASES='1' if a.reset_cases else '0',
                         EFFECT_PROBE_CASES=','.join(cases), EFFECT_PROBE_BUFFER=str(buffer or a.buffer), **(env or {})),
                     timeout=900)
     result = run(job)
@@ -133,10 +136,10 @@ if a.set == 'configurations':
     from configuration_controls import verify as verify_configuration
     verify_configuration(output/'settings.json', a.rate, a.release)
     raise SystemExit
-if a.set == 'wide':
+if a.set in ('wide', 'wide-pcm'):
     if a.rate != 48000: p.error('wide controls use a 48000 Hz session with per-case configurations')
     merged = {}
-    for session, selected in context_sessions('wide').items():
+    for session, selected in context_sessions(a.set).items():
         if a.cases:
             selected = [key for key in selected if key in a.cases.split(',')]
             if not selected: continue
@@ -146,13 +149,13 @@ if a.set == 'wide':
         assert 'Assertion failed on expression:' not in (work/'editor.log').read_text(), 'Editor assertion'
         verify(work/'capture', a.release, a.rate, contexts=True, selected=selected)
         for key, value in header(work/'capture').items():
-            if key in ('release', 'rate'): assert merged.get(key, value) == value, key
+            if key in ('release', 'rate', 'reset_cases'): assert merged.get(key, value) == value, key
             else: assert key not in merged, key
             merged[key] = value
         output.mkdir(exist_ok=True)
         for file in (work/'capture').glob('*.f32'): os.link(file, output/file.name)
         (output/'capture.json').write_text(json.dumps(merged, indent=2)+'\n')
-    verify(output, a.release, a.rate, contexts=True, selected=a.cases.split(',') if a.cases else list(__import__('common').wide_rows()))
+    verify(output, a.release, a.rate, contexts=True, selected=a.cases.split(',') if a.cases else list(__import__('common').profile(a.set, a.rate)))
     raise SystemExit
 if a.cases:
     selected = a.cases.split(',')
