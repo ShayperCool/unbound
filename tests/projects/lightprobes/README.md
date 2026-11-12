@@ -267,7 +267,12 @@ reference returns 1.5; just inside at z=1e-6 it returns 1.500004; just outside a
 the ambient probe. Moving to `(0.5,0.5,0.25)` returns 2.5. Several starting hints exercise shared
 faces, and renderer hints agree with unhinted results after the lighting changes. Complete index
 answers remain in the strict comparison. Open-cell extrapolation and the outer bounds have
-additional controls at `(1,1,1)` and `(2.01,1,1)`.
+additional controls at `(1,1,1)` and `(2.01,1,1)`: the first returns 4.66666651 through an open
+cell, the second returns ambient. The current diagnostic comparison is 15/46. Its 31 strict
+failures are 16 query-index answers, four mesh index orders, the retained duplicate position,
+and ten ambient-component values at most 3.725290298461914e-9 off. Every cell count and every
+non-ambient lighting result matches. The ten ambient differences are numeric residuals in these
+controls; the 21 index/position differences remain open, with no tolerance changes.
 
 Run the diagnostics separately from the admitted baked-lighting gate while mesh construction
 and order remain open. The comparator reports every discrepancy and exits nonzero on any one:
