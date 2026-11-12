@@ -105,6 +105,16 @@ OnDrawGizmosSelected and draws its magenta cube. Camera.Render excludes gizmos. 
 with the camera using either LDR or HDR. Sphere geometry is an 80-triangle icosphere. The runtime
 uses the same Game-view toggle and Selection state as Editor scripts.
 
+The `gizmoops.*` frames draw one gizmo operation each with Gizmos on (the probe's own cube off,
+as the order of two components' gizmo callbacks varies between runs): DrawIcon draws nothing in
+the Game view (an icon from `Assets/Gizmos`), DrawFrustum without and with a gizmo matrix draws
+its near and far rectangles and the four edges between them, DrawMesh draws front faces lit and
+culls back faces, and DrawWireMesh, a looped DrawLineStrip, DrawLineList and DrawRay draw their
+lines. Measured once and not recorded: DrawGUITexture draws the texture on a quad in the world's
+XY plane, its V running down, without the gizmo color or matrix, with a rect whose fractional
+corners are rounded in a way Unbound does not reproduce (it refuses the call); DrawWireSphere
+differs by two pixels of line rasterization.
+
 Game-view drawing reuses the release's published `Hidden/Editor Gizmo` and `Hidden/Editor Gizmo Lit`
 shader sources. Icon, GUI texture and frustum drawing remain explicit unsupported operations in
 callbacks; doctor lists them. No Scene-view renderer is provided.

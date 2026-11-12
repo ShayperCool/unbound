@@ -595,6 +595,67 @@ public sealed partial class RenderApiProbe
     }
 }
 
+public sealed partial class RenderApiProbe
+{
+    /// <summary>Gizmo operations in the Game view (Gizmos on), one frame each: the screen and
+    /// whether the callback ran or threw.</summary>
+    IEnumerator GizmoOperationCases()
+    {
+        var front = Make(); front.triangles = new[] { 0, 2, 1 }; front.normals = new[] { Vector3.back, Vector3.back, Vector3.back };
+        var back = Make(); back.normals = new[] { Vector3.back, Vector3.back, Vector3.back };
+        var go = new GameObject("gizmo operations");
+        var ops = go.AddComponent<RenderApiGizmoOperations>();
+        ops.front = front; ops.back = back;
+        // The probe's own cube stays out: the order of two components' gizmo callbacks varies.
+        drawGizmos = false;
+        setGameGizmos?.Invoke(true);
+        for (int mode = 0; mode < RenderApiGizmoOperations.Modes; mode++)
+        {
+            ops.mode = mode; ops.drew = false; ops.error = null;
+            yield return null; yield return new WaitForEndOfFrame();
+            string key = "gizmoops." + mode;
+            var screen = ScreenCapture.CaptureScreenshotAsTexture(); SaveImage(key, screen); DestroyImmediate(screen);
+            Bool(key + ".callback", ops.drew); Value(key + ".error", Q(ops.error));
+        }
+        setGameGizmos?.Invoke(false);
+        DestroyImmediate(go); DestroyImmediate(front); DestroyImmediate(back);
+    }
+}
+
+public sealed class RenderApiGizmoOperations : MonoBehaviour
+{
+    public const int Modes = 9;
+    public int mode = -1;
+    public bool drew;
+    public string error;
+    public Mesh front, back;
+    void OnDrawGizmos()
+    {
+        if (mode < 0) return;
+        drew = true;
+        try
+        {
+            Gizmos.color = Color.green;
+            switch (mode)
+            {
+                case 0: Gizmos.DrawIcon(Vector3.zero, "ProbeIcon.png", true); break;
+                case 1: Gizmos.DrawFrustum(new Vector3(0, 0, -1), 40, 3, .5f, 1.5f); break;
+                case 2:
+                    Gizmos.matrix = Matrix4x4.TRS(new Vector3(.5f, 0, 0), Quaternion.Euler(0, 0, 30), new Vector3(2, 1, 1));
+                    Gizmos.DrawFrustum(Vector3.zero, 60, 2, .3f, 1);
+                    break;
+                case 3: Gizmos.DrawMesh(back, new Vector3(.2f, 0, 0)); break;
+                case 4: Gizmos.DrawMesh(front, Vector3.zero); break;
+                case 5: Gizmos.DrawWireMesh(back, new Vector3(-.2f, 0, 0)); break;
+                case 6: Gizmos.DrawLineStrip(new[] { new Vector3(-1.5f, -1, 0), new Vector3(0, 1, 0), new Vector3(1.5f, -1, 0) }, true); break;
+                case 7: Gizmos.DrawLineList(new[] { new Vector3(-1.5f, -1, 0), new Vector3(1.5f, 1, 0), new Vector3(-1.5f, 1, 0), new Vector3(1.5f, -1, 0) }); break;
+                case 8: Gizmos.DrawRay(new Vector3(-1, -.5f, 0), new Vector3(2, 1.2f, 0)); break;
+            }
+        }
+        catch (System.Exception e) { error = e.GetType().Name + ": " + e.Message; }
+    }
+}
+
 public sealed class RenderApiGizmoControls : MonoBehaviour
 {
     public bool drew, drewSelected;
