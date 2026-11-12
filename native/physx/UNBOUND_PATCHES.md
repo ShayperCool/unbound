@@ -287,8 +287,8 @@ Intel platforms" once. On arm64 rays, sweeps, overlaps and contact generation th
 missed every mesh collider. The BV4 query code is written with SSE2 intrinsics on
 `__m128`/`__m128i`.
 
-The added `GuBV4_Simd.h` defines `GU_BV4_SIMD` as `(PX_INTEL_FAMILY || PX_NEON) &&
-!defined(PX_SIMD_DISABLED)` and, on NEON, gives the SSE2 types and every intrinsic the BV4
+The added `GuBV4_Simd.h` defines `GU_BV4_SIMD` as `(PX_INTEL_FAMILY || (PX_A64 && PX_NEON))
+&& !defined(PX_SIMD_DISABLED)` and, on arm64 NEON, gives the SSE2 types and every intrinsic the BV4
 sources use (`_mm_castps_si128`, `_mm_castsi128_ps`, `_mm_shuffle_epi32`, `_mm_and_ps`,
 `_mm_or_ps`, `_mm_cmpgt_ps`, `_mm_movemask_ps`, `_mm_load1_ps`, `_mm_store_ps`,
 `_mm_load_si128`, `_mm_set_ps`, `_mm_set_epi32`, `_mm_set1_epi32`, `_mm_and_si128`,

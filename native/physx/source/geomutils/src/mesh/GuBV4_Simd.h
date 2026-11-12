@@ -1,8 +1,8 @@
 // Unbound addition to the vendored PhysX 4.1.2 tree (see native/physx/UNBOUND_PATCHES.md).
 //
 // The BV4 midphase is written with SSE2 intrinsics and upstream compiles it on Intel CPUs only.
-// GU_BV4_SIMD enables it wherever those intrinsics are available: on Intel natively and on NEON
-// (arm64) through the definitions below. Each definition gives the same bits as the SSE2
+// GU_BV4_SIMD enables it wherever those intrinsics are available: on Intel natively and on arm64
+// NEON through the definitions below (some use AArch64-only instructions). Each definition gives the same bits as the SSE2
 // instruction of the same name, so arm64 runs the same BV4 traversal as Intel. The vector math
 // layer BV4 also calls (Ps::aos) has its own NEON implementation and may round differently.
 
@@ -11,13 +11,13 @@
 
 #include "foundation/PxPreprocessor.h"
 
-#if (PX_INTEL_FAMILY || PX_NEON) && !defined(PX_SIMD_DISABLED)
+#if (PX_INTEL_FAMILY || (PX_A64 && PX_NEON)) && !defined(PX_SIMD_DISABLED)
 	#define GU_BV4_SIMD 1
 #else
 	#define GU_BV4_SIMD 0
 #endif
 
-#if PX_NEON && GU_BV4_SIMD
+#if PX_A64 && PX_NEON && GU_BV4_SIMD
 #include <arm_neon.h>
 
 typedef float32x4_t	__m128;
@@ -79,6 +79,6 @@ static PX_FORCE_INLINE __m128	_mm_cvtepi32_ps(__m128i a)					{ return vcvtq_f32_
 static PX_FORCE_INLINE __m128i _mm_srai_epi32(__m128i a, int count)	{ return vshlq_s32(a, vdupq_n_s32(-count));	}
 static PX_FORCE_INLINE __m128i _mm_slli_epi32(__m128i a, int count)	{ return vshlq_s32(a, vdupq_n_s32(count));	}
 
-#endif	// PX_NEON && GU_BV4_SIMD
+#endif	// PX_A64 && PX_NEON && GU_BV4_SIMD
 
 #endif	// GU_BV4_SIMD_H
