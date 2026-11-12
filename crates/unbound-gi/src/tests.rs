@@ -2544,15 +2544,15 @@ fn of_two_holes_of_one_size_a_chart_takes_the_one_the_precompute_does() {
     );
 }
 
-/// The Room scene's renderers (file IDs) and their positions.
-const ROOM_POSITIONS: [(i64, [f32; 3]); 7] = [
-    (152063223, [0.0, -0.1, 0.0]),
-    (973394265, [0.8, 0.75, 0.8]),
-    (308039783, [-3.1, 2.0, 0.0]),
-    (1583214537, [3.1, 2.0, 0.0]),
-    (605051979, [0.0, 2.0, 3.1]),
-    (948094850, [0.0, 4.1, 0.0]),
-    (PANEL, [-1.2, 0.6, 1.6]),
+/// The Room's renderers by name: scale and position (`RealtimeGISetup`).
+const ROOM_SHAPES: [(&str, [f32; 3], [f32; 3]); 7] = [
+    ("Floor", [6.0, 0.2, 6.0], [0.0, -0.1, 0.0]),
+    ("Block", [1.2, 1.5, 1.2], [0.8, 0.75, 0.8]),
+    ("Left", [0.2, 4.0, 6.0], [-3.1, 2.0, 0.0]),
+    ("Right", [0.2, 4.0, 6.0], [3.1, 2.0, 0.0]),
+    ("Back", [6.0, 4.0, 0.2], [0.0, 2.0, 3.1]),
+    ("Ceiling", [6.0, 0.2, 6.0], [0.0, 4.1, 0.0]),
+    ("Panel", [1.0, 1.2, 0.1], [-1.2, 0.6, 1.6]),
 ];
 
 /// A renderer of the Room system as Unbound's precompute takes it: world positions and normals
@@ -2564,17 +2564,18 @@ struct OwnInstance {
     texels: Vec<[f32; 2]>,
 }
 
-fn room_instances(data: &Precomputed) -> Vec<OwnInstance> {
+/// The renderers of a scene made of the Room's (`scene`'s names for them).
+fn room_instances_of(data: &Precomputed, scene: &str) -> Vec<OwnInstance> {
     let system = &data.systems[0];
+    let names = renderer_names(scene);
     let (w, h) = (
         system.transport.width as f32,
         system.transport.height as f32,
     );
     (0..system.renderer_count)
         .map(|k| {
-            let object = data.renderers[system.first_renderer + k].0;
-            let scale = ROOM_SCALES.iter().find(|r| r.0 == object).unwrap().1;
-            let at = ROOM_POSITIONS.iter().find(|r| r.0 == object).unwrap().1;
+            let name = &names[&data.renderers[system.first_renderer + k].0];
+            let &(_, scale, at) = ROOM_SHAPES.iter().find(|r| r.0 == name).unwrap();
             let st = data.renderer_st[system.first_renderer + k];
             OwnInstance {
                 positions: CUBE_POSITIONS
@@ -2590,6 +2591,10 @@ fn room_instances(data: &Precomputed) -> Vec<OwnInstance> {
             }
         })
         .collect()
+}
+
+fn room_instances(data: &Precomputed) -> Vec<OwnInstance> {
+    room_instances_of(data, "Room")
 }
 
 /// Per plane of the Room's faces (normal rounded to an axis, offset in decimetres) with more than
@@ -3032,4 +3037,263 @@ fn cluster_containing(triangles: &[(usize, [[f32; 3]; 3])], p: [f32; 3]) -> Opti
         }
     }
     best.map(|b| b.1)
+}
+
+/// The system of a scene made of the Room's renderers with Unbound's own clusters and transport
+/// in place of the Editor's (its layout, chart mask and visibility stay the Editor's).
+fn own_room_system(data: &Precomputed, scene: &str) -> System {
+    use crate::precompute::{clusters, transport};
+    let own = room_instances_of(data, scene);
+    let instances: Vec<clusters::Instance> = own
+        .iter()
+        .map(|i| clusters::Instance {
+            positions: &i.positions,
+            normals: &i.normals,
+            texels: &i.texels,
+            triangles: &CUBE_TRIANGLES,
+            cluster_size: 1.0,
+            modelling_tolerance: 0.01,
+        })
+        .collect();
+    let mut system = data.systems[0].clone();
+    let (w, h) = (system.transport.width, system.transport.height);
+    let clustering = clusters::cluster(&instances, w, h).unwrap();
+    system.transport = transport::transport(
+        &instances,
+        &clustering,
+        w,
+        h,
+        &system.chart_mask,
+        system.input_hash,
+        transport::DEFAULT_SETTINGS,
+    )
+    .unwrap();
+    system.input = clustering.input;
+    system.materials = clustering.materials;
+    system
+}
+
+#[test]
+fn own_transport_lights_the_room_as_the_editors_precompute() {
+    let data = room_data();
+    let own = own_room_system(&data, "Room");
+    let editor = &data.systems[0];
+    // As many texels as the Editor's transport.
+    let texels = |s: &System| {
+        s.transport
+            .segments
+            .iter()
+            .map(|g| g.texels.len())
+            .sum::<usize>()
+    };
+    assert_eq!(texels(&own), texels(editor));
+    // The environment's share of each texel's light, against the Editor's.
+    let environment = |s: &System| {
+        let mut out = std::collections::HashMap::new();
+        for g in &s.transport.segments {
+            let n = g.references.len();
+            for (k, &texel) in g.texels.iter().enumerate() {
+                let share: f32 = (0..n)
+                    .filter(|&r| {
+                        s.transport.dependencies[g.references[r].0 as usize]
+                            == crate::data::ENVIRONMENT_ID
+                    })
+                    .map(|r| {
+                        g.reference_weights[r] as f32 * g.weights[k * n + r] as f32
+                            / (65535.0 * 255.0)
+                    })
+                    .sum();
+                out.insert(texel, share);
+            }
+        }
+        out
+    };
+    let (a, b) = (environment(&own), environment(editor));
+    let mut differences: Vec<f32> = b.iter().map(|(t, e)| (a[t] - e).abs()).collect();
+    differences.sort_by(f32::total_cmp);
+    let (median, far) = (
+        differences[differences.len() / 2],
+        differences.iter().filter(|&&d| d > 0.05).count(),
+    );
+    eprintln!(
+        "environment share: median difference {median}, {far} of {} texels more than 0.05 apart",
+        differences.len()
+    );
+    // Measured: 185 of 2160 texels, the edge texels of thin faces and those under the block
+    // and the panel.
+    assert!(
+        median < 0.005 && far * 100 <= differences.len() * 10,
+        "{median} {far}"
+    );
+    let mut r = Replay::new();
+    r.solver = SystemSolver::new(Arc::new(own)).unwrap();
+    r.data.systems[0] = r.solver.system().clone();
+    // The probe's Room cases in their order, but the directional light's (they read the
+    // precomputed visibility); converged from each other as in the Editor.
+    let moved = Room {
+        light: MOVED,
+        ..BASE
+    };
+    let lit = Room {
+        intensity: 4.0,
+        ..moved
+    };
+    let call = Room {
+        panel_emission: [0.4, 2.0, 0.4],
+        ..lit
+    };
+    let set = Room {
+        panel_set_emissive: Some([0.0, 3.0, 3.0].map(gamma_to_linear)),
+        ..call
+    };
+    let then = Room {
+        panel_emission: [3.0, 0.0, 3.0],
+        ..set
+    };
+    let blue = Room {
+        left: [0.1, 0.1, 0.8],
+        ..then
+    };
+    let blue_called = Room {
+        left_rendered: blue.left,
+        ..blue
+    };
+    let ambient = Room {
+        ambient: [0.6, 0.5, 0.2],
+        ..blue_called
+    };
+    let spot = Room {
+        point_light: false,
+        spot: Some((SPOT_AT, forward(SPOT_ROTATION), 50.0)),
+        ..ambient
+    };
+    let behind = Room {
+        point_light: false,
+        spot: Some(([-1.5, 1.0, 0.8], [1.0, 0.0, 0.0], 60.0)),
+        ..ambient
+    };
+    let gradient = Room {
+        spot: None,
+        panel_set_emissive: Some([0.0; 3]),
+        gradient: Some([[0.5, 0.6, 0.9], [0.4, 0.35, 0.3], [0.15, 0.12, 0.1]]),
+        ..behind
+    };
+    let cube = Room {
+        cube: true,
+        ..gradient
+    };
+    let flat = Room {
+        ambient: [0.5, 0.6, 0.9],
+        gradient: None,
+        cube: false,
+        ..cube
+    };
+    // With the values outside the probe comparator's tolerance (of 5070) measured with Unbound's
+    // clusters and transport; with the Editor's clusters and Unbound's transport the first four
+    // are 31, 34, 83 and 212 (docs/REALTIME_GI.md, Unbound's precompute).
+    let cases = [
+        (BASE, "room-base", 89),
+        (moved, "room-moved", 145),
+        (lit, "room-intensity", 354),
+        (Room { bounce: 3.0, ..lit }, "room-bounce", 584),
+        (
+            Room {
+                indirect_scale: 2.0,
+                ..lit
+            },
+            "room-indirectscale",
+            443,
+        ),
+        (call, "room-emission-call", 375),
+        (set, "room-setemissive", 455),
+        (then, "room-setemissive-then-call", 455),
+        (blue_called, "room-albedo-call", 427),
+        (ambient, "room-env-call", 506),
+        (
+            Room {
+                point_light: false,
+                ..ambient
+            },
+            "room-pointoff",
+            559,
+        ),
+        (spot, "room-spot", 522),
+        (behind, "room-spot-behind", 551),
+        (gradient, "room-gradient", 90),
+        (cube, "room-envdata", 158),
+        (flat, "room-sky-none", 153),
+    ];
+    for (room, case, measured) in cases {
+        if case == "room-emission-call" {
+            r.set(lit);
+            r.converge();
+        }
+        let (fails, total, median) = r.case(room, case);
+        eprintln!(
+            "{case}: {fails} of {total} values outside the tolerance, median relative error {median}"
+        );
+        assert!(
+            fails * 100 <= measured * 115,
+            "{case}: {fails} values outside the tolerance"
+        );
+        assert!(median < 0.01, "{case}: median relative error {median}");
+    }
+}
+
+#[test]
+fn own_transport_gives_the_directionality_of_the_editors() {
+    // RoomDirectional with Unbound's clusters and transport: the directionality the transport's
+    // per-reference directions give, against the Editor's.
+    let data = scene_data("RoomDirectional");
+    let own = own_room_system(&data, "RoomDirectional");
+    let mut r = Replay::scene("RoomDirectional");
+    r.solver = SystemSolver::new(Arc::new(own)).unwrap();
+    r.data.systems[0] = r.solver.system().clone();
+    r.solver.set_directional(true).unwrap();
+    let moved = Room {
+        light: MOVED,
+        ..BASE
+    };
+    for (room, case) in [
+        (BASE, "roomdirectional-base"),
+        (moved, "roomdirectional-moved"),
+    ] {
+        let (fails, total, median) = r.case(room, case);
+        let (width, texels) = reference_file(&format!("{case}.dir"));
+        let t = &r.solver.system().transport;
+        let ours = r.solver.directionality().unwrap();
+        let (mut count, mut off, mut sum) = (0, 0, 0f32);
+        let mut channel = [0f32; 4];
+        let mut signed = [0f32; 4];
+        for y in 0..t.height as usize {
+            for x in 0..t.width as usize {
+                let e = texels[y * width + x];
+                if e[3] <= 0.0 {
+                    continue;
+                }
+                for k in 0..4 {
+                    let d = (ours[y * t.width as usize + x][k] as f32 - e[k] * 255.0).abs();
+                    channel[k] += d;
+                    signed[k] += ours[y * t.width as usize + x][k] as f32 - e[k] * 255.0;
+                    count += 1;
+                    sum += d;
+                    off += (d > 2.5) as usize;
+                }
+            }
+        }
+        let mean = sum / count as f32;
+        eprintln!(
+            "{case}: lightmap {fails} of {total} outside, median {median}; directionality {off} of {count} more than 2.5/255 off, mean {mean}, per channel {:?} signed {:?}",
+            channel.map(|c| c / (count / 4) as f32),
+            signed.map(|c| c / (count / 4) as f32)
+        );
+        // Measured: 68 and 136 lightmap values outside the tolerance; the directionality 4.9/255
+        // off on average (0.2/255 from the Editor's transport), a third of its values more than
+        // 2.5/255 (docs/REALTIME_GI.md).
+        assert!(
+            fails * 100 <= [68, 136][(case != "roomdirectional-base") as usize] * 115,
+            "{case}"
+        );
+        assert!(count > 6000 && mean < 5.5, "{case}: {mean}");
+    }
 }
