@@ -2615,54 +2615,180 @@ fn light_per_face(
     out
 }
 
-#[test]
-fn own_clusters_of_the_room_compare_with_the_editors() {
+/// The world placement of each renderer (scene file ID) of a scene without parents: position,
+/// rotation (x, y, z, w) and scale.
+fn renderer_transforms(
+    scene: &str,
+) -> std::collections::HashMap<i64, ([f32; 3], [f32; 4], [f32; 3])> {
+    let text =
+        std::fs::read_to_string(probe().join(format!("Assets/Scenes/{scene}.unity"))).unwrap();
+    let (mut owners, mut transforms) = (
+        std::collections::HashMap::new(),
+        std::collections::HashMap::new(),
+    );
+    let numbers = |line: &str| -> Vec<f32> {
+        line.split(|c| c == '{' || c == '}' || c == ',')
+            .filter_map(|part| part.split(':').nth(1).and_then(|v| v.trim().parse().ok()))
+            .collect()
+    };
+    for doc in text.split("--- !u!").skip(1) {
+        let class = doc.split(' ').next().unwrap();
+        let field = |key: &str| {
+            doc.lines()
+                .find_map(|l| l.trim().strip_prefix(key))
+                .map(str::trim)
+        };
+        let id_of = |key: &str| {
+            field(key)
+                .unwrap()
+                .trim_start_matches("{fileID:")
+                .trim_end_matches('}')
+                .trim()
+                .parse::<i64>()
+                .unwrap()
+        };
+        match class {
+            "23" => {
+                let id: i64 = doc
+                    .split(" &")
+                    .nth(1)
+                    .unwrap()
+                    .split_whitespace()
+                    .next()
+                    .unwrap()
+                    .parse()
+                    .unwrap();
+                owners.insert(id, id_of("m_GameObject:"));
+            }
+            "4" => {
+                assert_eq!(id_of("m_Father:"), 0, "{scene}: a transform with a parent");
+                let v = |key: &str| numbers(field(key).unwrap());
+                let (p, q, k) = (
+                    v("m_LocalPosition:"),
+                    v("m_LocalRotation:"),
+                    v("m_LocalScale:"),
+                );
+                transforms.insert(
+                    id_of("m_GameObject:"),
+                    (
+                        [p[0], p[1], p[2]],
+                        [q[0], q[1], q[2], q[3]],
+                        [k[0], k[1], k[2]],
+                    ),
+                );
+            }
+            _ => {}
+        }
+    }
+    owners
+        .into_iter()
+        .map(|(r, go)| (r, transforms[&go]))
+        .collect()
+}
+
+/// `p` turned by the rotation `q` (x, y, z, w).
+fn rotated(q: [f32; 4], p: [f32; 3]) -> [f32; 3] {
+    let [x, y, z, w] = q;
+    let t = [
+        2.0 * (y * p[2] - z * p[1]),
+        2.0 * (z * p[0] - x * p[2]),
+        2.0 * (x * p[1] - y * p[0]),
+    ];
+    [
+        p[0] + w * t[0] + (y * t[2] - z * t[1]),
+        p[1] + w * t[1] + (z * t[0] - x * t[2]),
+        p[2] + w * t[2] + (x * t[1] - y * t[0]),
+    ]
+}
+
+/// What Unbound's clusters of a system and the Editor's share, over the Editor's clusters of
+/// the renderers Unbound clusters (`own[k]`, `None` for a renderer left out).
+struct ClusterComparison {
+    clusters: (usize, usize),
+    points: (usize, usize),
+    /// Per face plane: points and mean light per point, Unbound's and the Editor's.
+    faces: Vec<(([i32; 3], i32), (usize, f64), (usize, f64))>,
+    /// Editor clusters with 90% of their points in one of Unbound's, of those compared.
+    within: (usize, usize),
+    /// Of those, how many have the same renderer, and how many read their bounce from a texel
+    /// of the Editor's cluster's points.
+    same_renderer: usize,
+    same_bounce: usize,
+}
+
+fn compare_clusters(
+    data: &Precomputed,
+    own: &[Option<(OwnInstance, Vec<[u32; 3]>)>],
+) -> ClusterComparison {
     use crate::precompute::clusters::{Instance, cluster};
-    let data = room_data();
     let editor = &data.systems[0];
-    let own = room_instances(&data);
     let instances: Vec<Instance> = own
         .iter()
-        .map(|i| Instance {
+        .flatten()
+        .map(|(i, triangles)| Instance {
             positions: &i.positions,
             normals: &i.normals,
             texels: &i.texels,
-            triangles: &CUBE_TRIANGLES,
+            triangles,
             cluster_size: 1.0,
+            // The probe's Lightmap Parameters' Modelling Tolerance.
+            modelling_tolerance: 0.01,
+        })
+        .collect();
+    // Our instance index per system renderer, and back.
+    let ours_of: Vec<Option<usize>> = own
+        .iter()
+        .scan(0, |n, o| {
+            Some(o.as_ref().map(|_| {
+                *n += 1;
+                *n - 1
+            }))
         })
         .collect();
     let (w, h) = (editor.transport.width, editor.transport.height);
     let ours = cluster(&instances, w, h).unwrap();
-    let (n_ours, n_editor) = (ours.input.clusters(), editor.input.clusters());
-    let (p_ours, p_editor) = (ours.input.positions.len(), editor.input.positions.len());
-    eprintln!("clusters {n_ours} (Editor {n_editor}), points {p_ours} (Editor {p_editor})");
-    // The same density of points; a few more clusters (where the Editor joins a small part to
-    // a neighbour of another plane, Unbound prefers small parts of the same plane).
-    assert!((p_ours as f32 / p_editor as f32 - 1.0).abs() < 0.02);
-    assert!(n_ours >= n_editor && n_ours as f32 <= 1.15 * n_editor as f32);
-    // On each face plane the mean direct light of its points as the Editor's, within 2%.
+    // A cluster's renderer: its largest material group's.
+    let renderer = |m: &crate::data::ClusterMaterials, c: usize| {
+        let g = (m.cluster_groups[c] as usize..m.cluster_groups[c + 1] as usize)
+            .max_by_key(|&g| m.groups[g].1)
+            .unwrap();
+        m.instance_renderers[m.groups[g].0 as usize] as usize
+    };
+    let compared: Vec<usize> = (0..editor.input.clusters())
+        .filter(|&c| ours_of[renderer(&editor.materials, c)].is_some())
+        .collect();
+    let editor_points = crate::data::InputSamples {
+        positions: compared
+            .iter()
+            .flat_map(|&c| {
+                editor.input.positions[editor.input.cluster_points[c] as usize
+                    ..editor.input.cluster_points[c + 1] as usize]
+                    .iter()
+                    .copied()
+            })
+            .collect(),
+        normals: compared
+            .iter()
+            .flat_map(|&c| {
+                editor.input.normals[editor.input.cluster_points[c] as usize
+                    ..editor.input.cluster_points[c + 1] as usize]
+                    .iter()
+                    .copied()
+            })
+            .collect(),
+        cluster_points: vec![0],
+        tree_children: vec![],
+        tree_weights: vec![],
+    };
+    let light = BASE.light;
     let (a, b) = (
-        light_per_face(&ours.input, BASE.light),
-        light_per_face(&editor.input, BASE.light),
+        light_per_face(&ours.input, light),
+        light_per_face(&editor_points, light),
     );
-    assert_eq!(a.keys().collect::<Vec<_>>(), b.keys().collect::<Vec<_>>());
-    for (face, &(count, sum)) in &a {
-        let (theirs, their_sum) = b[face];
-        let (mine, theirs_mean) = (sum / count as f64, their_sum / theirs as f64);
-        eprintln!(
-            "{face:?}: {count} points (Editor {theirs}), light per point {mine:.4} (Editor {theirs_mean:.4})"
-        );
-        assert!(
-            (count as f32 / theirs as f32 - 1.0).abs() < 0.25,
-            "{face:?}"
-        );
-        assert!(
-            (mine - theirs_mean).abs() <= 0.02 * theirs_mean.max(1e-3),
-            "{face:?}"
-        );
-    }
-    // Most of the Editor's clusters lie within one of Unbound's: of each, the share of its
-    // points on the surface of the cluster of Unbound's that holds most of them.
+    let faces = a
+        .iter()
+        .filter_map(|(k, &x)| b.get(k).map(|&y| (*k, x, y)))
+        .collect();
     let triangles: Vec<(usize, [[f32; 3]; 3])> = (0..ours.triangle_cluster.len())
         .map(|t| {
             (
@@ -2671,8 +2797,8 @@ fn own_clusters_of_the_room_compare_with_the_editors() {
             )
         })
         .collect();
-    let mut within = 0;
-    for c in 0..n_editor {
+    let (mut within, mut same_renderer, mut same_bounce) = (0, 0, 0);
+    for &c in &compared {
         let range =
             editor.input.cluster_points[c] as usize..editor.input.cluster_points[c + 1] as usize;
         let mut count: std::collections::HashMap<usize, usize> = Default::default();
@@ -2681,17 +2807,118 @@ fn own_clusters_of_the_room_compare_with_the_editors() {
                 *count.entry(o).or_default() += 1;
             }
         }
-        let most = count.values().copied().max().unwrap_or(0);
-        within += (most * 10 >= range.len() * 9) as usize;
+        let Some((&o, &most)) = count.iter().max_by_key(|x| (*x.1, std::cmp::Reverse(*x.0))) else {
+            continue;
+        };
+        if most * 10 < range.len() * 9 {
+            continue;
+        }
+        within += 1;
+        let theirs = renderer(&editor.materials, c);
+        same_renderer += (ours_of[theirs] == Some(renderer(&ours.materials, o))) as usize;
+        // The texel the runtime reads for our cluster's bounce lies on the Editor's cluster: it
+        // is one of the texels of its points.
+        let ours_first = ours.bounce[ours.bounce_samples[o] as usize].0;
+        let t = &editor.transport;
+        same_bounce += t.bounce[t.bounce_samples[c] as usize..t.bounce_samples[c + 1] as usize]
+            .iter()
+            .any(|s| s.0 == ours_first) as usize;
     }
+    ClusterComparison {
+        clusters: (ours.input.clusters(), compared.len()),
+        points: (ours.input.positions.len(), editor_points.positions.len()),
+        faces,
+        within: (within, compared.len()),
+        same_renderer,
+        same_bounce,
+    }
+}
+
+/// The checks both scenes' comparisons pass, and what they print: `points`, the share by which
+/// the number of points may differ; `light`, the share by which a large face's mean light may.
+fn check_cluster_comparison(label: &str, c: &ClusterComparison, points: f32, light: f64) {
+    eprintln!(
+        "{label}: clusters {} (Editor {}), points {} (Editor {}); {} of {} Editor clusters with 90% of their points in one of Unbound's, {} of them of the same renderer, {} reading their bounce from a texel of the Editor's cluster",
+        c.clusters.0,
+        c.clusters.1,
+        c.points.0,
+        c.points.1,
+        c.within.0,
+        c.within.1,
+        c.same_renderer,
+        c.same_bounce
+    );
+    for &(face, (count, sum), (theirs, their_sum)) in &c.faces {
+        let (mine, their_mean) = (sum / count as f64, their_sum / theirs as f64);
+        eprintln!(
+            "  {face:?}: {count} points (Editor {theirs}), light per point {mine:.4} (Editor {their_mean:.4})"
+        );
+    }
+    // About the Editor's number of points and of clusters.
+    assert!(
+        (c.points.0 as f32 / c.points.1 as f32 - 1.0).abs() < points,
+        "{label}"
+    );
+    assert!(
+        (c.clusters.0 as f32 / c.clusters.1 as f32 - 1.0).abs() < 0.1,
+        "{label}"
+    );
+    let large_light = light;
+    for &(face, (count, sum), (theirs, their_sum)) in &c.faces {
+        let (mine, their_mean) = (sum / count as f64, their_sum / theirs as f64);
+        // The large faces within a tenth of the Editor's points and `light` of its mean direct
+        // light. The small ones are the edge faces of slabs, where the two precomputes join
+        // small parts to other planes (the Editor's groups of four points of two faces have a
+        // normal between them), and sloped faces of few points: their mean light within 6%.
+        let light = if theirs > 500 {
+            assert!(
+                (count as f32 / theirs as f32 - 1.0).abs() < 0.1,
+                "{label} {face:?}"
+            );
+            large_light
+        } else {
+            0.06
+        };
+        assert!(
+            (mine - their_mean).abs() <= light * their_mean.max(1e-3),
+            "{label} {face:?}"
+        );
+    }
+    // A matched cluster is of the Editor's cluster's renderer, and nearly always reads its
+    // bounce from a texel of the Editor's cluster's points (the texel of most points differs
+    // between two sets of points; 187 of 194 in the Room, 207 of 225 in RoomAuto).
+    assert_eq!(c.same_renderer, c.within.0, "{label}");
+    assert!(c.same_bounce * 10 >= c.within.0 * 9, "{label}");
+}
+
+#[test]
+fn own_clusters_of_the_room_compare_with_the_editors() {
+    let data = room_data();
+    let own: Vec<Option<(OwnInstance, Vec<[u32; 3]>)>> = room_instances(&data)
+        .into_iter()
+        .map(|i| Some((i, CUBE_TRIANGLES.to_vec())))
+        .collect();
+    let c = compare_clusters(&data, &own);
+    // Measured: 0.7% fewer points, the largest difference of a large face's light 1.4%.
+    check_cluster_comparison("Room", &c, 0.02, 0.02);
     // 194 of 312: the others are the Editor's clusters of a large part and small parts of
     // other planes beside it, which Unbound joins otherwise (docs/REALTIME_GI.md).
-    eprintln!(
-        "{within} of {n_editor} Editor clusters have 90% of their points in one of Unbound's"
-    );
-    assert!(within * 10 >= n_editor * 6);
+    assert!(c.within.0 * 10 >= c.within.1 * 6);
     // No point lies where the block and the panel stand on the floor (the Editor's
     // precompute leaves those parts out).
+    let own = room_instances(&data);
+    let instances: Vec<crate::precompute::clusters::Instance> = own
+        .iter()
+        .map(|i| crate::precompute::clusters::Instance {
+            positions: &i.positions,
+            normals: &i.normals,
+            texels: &i.texels,
+            triangles: &CUBE_TRIANGLES,
+            cluster_size: 1.0,
+            modelling_tolerance: 0.01,
+        })
+        .collect();
+    let ours = crate::precompute::clusters::cluster(&instances, 52, 52).unwrap();
     for p in &ours.input.positions {
         let under = |lo: [f32; 2], hi: [f32; 2]| {
             p[1].abs() < 1e-4
@@ -2705,6 +2932,74 @@ fn own_clusters_of_the_room_compare_with_the_editors() {
             "{p:?}"
         );
     }
+}
+
+#[test]
+fn own_clusters_of_sloped_shapes_compare_with_the_editors() {
+    // RoomAuto: the room and wedges, steps and roofs of sloped faces, each placed by its
+    // scene transform (the grid, quad and plane, made otherwise, are left out, with the
+    // Editor's clusters on them).
+    let data = scene_data("RoomAuto");
+    let system = &data.systems[0];
+    let names = renderer_names("RoomAuto");
+    let transforms = renderer_transforms("RoomAuto");
+    let (w, h) = (
+        system.transport.width as f32,
+        system.transport.height as f32,
+    );
+    let own: Vec<Option<(OwnInstance, Vec<[u32; 3]>)>> = (0..system.renderer_count)
+        .map(|k| {
+            let object = data.renderers[system.first_renderer + k].0;
+            let name = names[&object].as_str();
+            let &(_, asset, ..) = AUTO_SHAPES.iter().find(|s| s.0 == name)?;
+            let (positions, normals, triangles) = match asset {
+                None => (
+                    CUBE_POSITIONS.to_vec(),
+                    CUBE_NORMALS.to_vec(),
+                    CUBE_TRIANGLES.to_vec(),
+                ),
+                Some(asset) => {
+                    let (p, n, _, t) = auto_mesh(asset);
+                    (p, n, t)
+                }
+            };
+            let (at, q, scale) = transforms[&object];
+            let uvs = auto_shape_uvs(name);
+            let st = data.renderer_st[system.first_renderer + k];
+            Some((
+                OwnInstance {
+                    positions: positions
+                        .iter()
+                        .map(|p| {
+                            let r = rotated(q, std::array::from_fn(|i| p[i] * scale[i]));
+                            std::array::from_fn(|i| r[i] + at[i])
+                        })
+                        .collect(),
+                    normals: normals
+                        .iter()
+                        .map(|n| {
+                            let v = rotated(q, std::array::from_fn(|i| n[i] / scale[i]));
+                            let l = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+                            v.map(|x| x / l)
+                        })
+                        .collect(),
+                    texels: uvs
+                        .uvs
+                        .iter()
+                        .map(|uv| [(uv[0] * st[0] + st[2]) * w, (uv[1] * st[1] + st[3]) * h])
+                        .collect(),
+                },
+                triangles,
+            ))
+        })
+        .collect();
+    assert!(own.iter().filter(|o| o.is_some()).count() >= 18);
+    let c = compare_clusters(&data, &own);
+    // Measured: 5.4% fewer points (the Editor's walls here have 5-7% more than in the Room and
+    // than Unbound's, the floor round the shapes 6% more), the floor's light 3.7% above the
+    // Editor's (docs/REALTIME_GI.md).
+    check_cluster_comparison("RoomAuto", &c, 0.06, 0.04);
+    assert!(c.within.0 * 10 >= c.within.1 * 6);
 }
 
 /// The cluster of `triangles` whose triangle holds `p` (within 2 mm of its plane).

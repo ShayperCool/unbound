@@ -669,36 +669,54 @@ less than that rounding since may keep its earlier one).
 For scenes without the Editor's precomputed data Unbound makes the data itself
 (`crates/unbound-gi/src/precompute`; phase 3, not used by the engine yet). Its stages follow
 what the Editor's precompute products hold and are compared stage by stage with the Editor's
-precompute of tests/projects/realtimegi `Room`. The documented input is the Lightmap
-Parameters' Cluster Resolution, "the ratio of the cluster resolution (the resolution at which
-the light bounces are calculated internally) to the final lightmap resolution"
-([Lightmap Parameters](https://docs.unity3d.com/6000.0/Documentation/Manual/class-LightmapParameters.html));
-the rest is how the Editor's products are made in the measured release, as follows.
+precompute of tests/projects/realtimegi `Room` and `RoomAuto` (the room with wedges, steps and
+roofs of sloped faces standing a centimetre above the floor). The documented inputs are two
+Lightmap Parameters
+([Lightmap Parameters](https://docs.unity3d.com/6000.0/Documentation/Manual/class-LightmapParameters.html)):
+Cluster Resolution, "the ratio of the cluster resolution (the resolution at which the light
+bounces are calculated internally) to the final lightmap resolution", and Modelling Tolerance,
+"the maximum size of gaps that can be ignored for GI" (0.01 in the probe's parameters); the rest
+is how the Editor's products are made in the measured release, as follows.
 
 - **Clusters** (`clusters.rs`): a system's surfaces are cut by a grid of cubic voxels from the
   corner of the system's bounds, of the cluster size (one over the realtime resolution times
-  the renderer's Scale In Lightmap times the Cluster Resolution: 1 m in the Room). Within a
-  voxel the touching pieces of one renderer whose normals are all within a right angle of each
-  other form a part. A part larger than 0.4 of a face of the smallest voxels is a cluster; a
-  smaller one first joins touching small parts of its plane until they are larger, else the
-  touching group whose normal is closest to its own. A cluster has 32 points per voxel face of
-  its surface, in groups of four, spread evenly over it (each the farthest from those taken,
-  of eight candidates per point), and none inside other geometry: a candidate more than 4 of
-  whose 16 rays over its hemisphere meet back faces is left out, and a part all of which is
-  hidden is no cluster. A point's renderer and the texel its realtime lightmap UV lies in give
-  the cluster material samples (per renderer, its texels and their points) and the bounce
-  resampling (the texels by their share of the points, most first, the first being the one
-  the runtime reads). The clusters, in the order of their voxels along a Morton curve, form a
-  tree of runs of neighbours, each child weighted by its share of its parent's area.
-- Compared with the Editor's clusters of the Room: 336 clusters (312) and 10124 points
-  (10192), the same density on each face, and on each face plane the mean direct light of an
-  unshadowed point light over the points (what a cluster's direct input is the mean of)
-  within 1.4% of the Editor's. 194 of the Editor's 312 clusters have 90% of their points in
-  one of Unbound's: the others join small parts of other planes to a large part beside them
-  (the edge faces of the room's slabs), where Unbound joins small parts of one plane first. The Editor cuts a surface that other
-  geometry covers exactly along the covering geometry's outline (the floor under the block);
-  Unbound leaves out the covered points instead. The Editor's own precompute places other
-  points in each bake of a scene (10192, 10196 and 10208 points in three bakes of the Room).
+  the renderer's Scale In Lightmap times the Cluster Resolution: 1 m in the probe's scenes).
+  Within a voxel the touching pieces of one renderer whose normals are all within a right
+  angle of each other form a part. A part larger than 0.4 of a face of the smallest voxels is
+  a cluster; a smaller one first joins touching small parts of its plane until they are
+  larger, else the touching group whose normal is closest to its own. A cluster has 32 points
+  per voxel face of its surface, in groups of four neighbours, spread evenly over it (each the
+  farthest from those taken, of eight candidates per point), and none where it is hidden: a
+  candidate more than 4 of whose 16 rays over its hemisphere meet back faces lies inside
+  other geometry, and one all of whose rays meet geometry no higher above its surface than the
+  Modelling Tolerance lies in a gap the tolerance ignores; a part all of which is hidden is no
+  cluster. A point's renderer and the texel its realtime lightmap UV lies in give the cluster
+  material samples (per renderer, its texels and their points) and the bounce resampling (the
+  texels by their share of the points, most first: the runtime reads the first). The clusters,
+  in the order of their voxels along a Morton curve, form a tree of runs of neighbours, each
+  child weighted by its share of its parent's area (Unbound's own grouping, not compared: the
+  transport decides which parents it reads).
+- Compared with the Editor's clusters: `Room` 336 clusters (312) and 10124 points (10192),
+  `RoomAuto` 378 (355) and 10836 points of its renderers but the grid, quad and plane (11456).
+  On each large face plane the number of points within a tenth of the Editor's and the mean
+  direct light of an unshadowed point light over them (what a cluster's direct input is the
+  mean of) within 1.4% (`Room`) and 3.7% (`RoomAuto`, the floor among the shapes) of the
+  Editor's. 194 of the Editor's 312 clusters (`RoomAuto`: 225 of 355) have 90% of their points
+  in one of Unbound's, every one of them of the same renderer, and 187 (211) of those read
+  their bounce from a texel of the Editor's cluster's points (the texel of most points differs
+  between two sets of points). The others join small parts of other planes to a large part
+  beside them (the edge faces of the room's slabs) where Unbound joins small parts of one plane
+  first; grouping small parts over pairs of neighbouring voxels along each axis and then over
+  blocks of 2x2x2 voxels, each with what touches it and faces its half-space, and the rest
+  with a touching cluster of its voxel, matched fewer of the Editor's clusters (172 of 312) and
+  was ruled out. Open, recorded in the tests: the Editor's walls in `RoomAuto` have 5 to 7%
+  more points than in `Room` (where they match Unbound's), the floor among the shapes 6% more
+  than Unbound's, and where the Editor leaves out a surface that other geometry covers, it cuts
+  it exactly along the covering geometry's outline (the floor under the block), where Unbound
+  leaves out the covered points. Systems of renderers of several cluster sizes keep each
+  renderer's grid and density and take the smallest voxels' limit; they are not measured. The
+  Editor's own precompute places other points in each bake of a scene (10192, 10196 and 10208
+  points in three bakes of the Room).
 
 ## Engine
 
@@ -812,5 +830,5 @@ measure):
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
   precompute through the same probe: the clusters, their material samples and bounce
-  resampling are made ([Unbound's precompute](#unbounds-precompute)); the transport, the
-  visibility, the probe transport and their use are open.
+  resampling are made and compared ([Unbound's precompute](#unbounds-precompute)); the
+  transport, the visibility, the probe transport and their use are open.
