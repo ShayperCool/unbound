@@ -134,6 +134,16 @@ namespace UnityEngine.UIElements
             uaPainter.QueueUserMesh(vertices, indices, texture);
         }
 
+        /// <summary>Draws a VectorImage's triangles moved by <paramref name="offset"/>, rotated by
+        /// <paramref name="rotationAngle"/> and scaled, in call order with the callback's other
+        /// meshes.</summary>
+        public void DrawVectorImage(VectorImage vectorImage, Vector2 offset, Angle rotationAngle, Vector2 scale)
+        {
+            if (vectorImage == null || vectorImage.vertices == null || vectorImage.indices == null
+                || vectorImage.vertices.Length == 0 || vectorImage.indices.Length == 0) return;
+            uaPainter.QueueVectorImage(vectorImage, offset, rotationAngle.ToDegrees(), scale);
+        }
+
         /// <summary>A textured rectangle as Unity's renderer draws one (MeshGenerator's MakeTextured
         /// then DrawRectangle): <paramref name="texture"/> fitted into <paramref name="rect"/> by
         /// <paramref name="scaleMode"/>, showing its <paramref name="uv"/> part, tinted.</summary>

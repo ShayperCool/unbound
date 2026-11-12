@@ -35,6 +35,8 @@ namespace Unbound.UIElements
             public Vector4 circle;
             public byte type, dilate;
             public bool arc;
+            /// <summary>An SVG gradient vertex's setting index in its image.</summary>
+            public int setting;
         }
 
         internal struct Segment
@@ -45,6 +47,8 @@ namespace Unbound.UIElements
             public float sdfScale, sharpness;
             public bool hasSettings;
             public UaTextCoreSettings settings;
+            /// <summary>The VectorImage whose gradient settings the segment's vertices index.</summary>
+            public VectorImage gradients;
             public int vertexStart, vertexEnd, indexStart, indexEnd;
         }
 
@@ -88,7 +92,7 @@ namespace Unbound.UIElements
         }
 
         /// <summary>A recorded primitive's start: a segment per texture (and text settings).</summary>
-        float BeginRecorded(Texture texture, float sdfScale, float sharpness)
+        float BeginRecorded(Texture texture, float sdfScale, float sharpness, VectorImage gradients = null)
         {
             var r = m_Recording;
             bool settings = m_HasPendingSettings;
@@ -97,7 +101,7 @@ namespace Unbound.UIElements
             if (n > 0 && !settings)
             {
                 var last = r.Segments[n - 1];
-                if (!last.hasSettings && last.texture == texture && last.sdfScale == sdfScale && last.sharpness == sharpness) return 0f;
+                if (!last.hasSettings && last.texture == texture && last.sdfScale == sdfScale && last.sharpness == sharpness && last.gradients == gradients) return 0f;
             }
             CloseSegment();
             r.Segments.Add(new UaRetainedMesh.Segment
@@ -110,6 +114,7 @@ namespace Unbound.UIElements
                 sharpness = sharpness,
                 hasSettings = settings,
                 settings = settings ? m_PendingSettings : default,
+                gradients = gradients,
                 vertexStart = r.Vertices.Count,
                 vertexEnd = r.Vertices.Count,
                 indexStart = r.Indices.Count,
@@ -129,11 +134,11 @@ namespace Unbound.UIElements
             r.Segments[n - 1] = s;
         }
 
-        int RecordVertex(Vector2 local, Color32 color, Vector2 uv, byte type, Vector4 circle, bool arc, byte dilate)
+        int RecordVertex(Vector2 local, Color32 color, Vector2 uv, byte type, Vector4 circle, bool arc, byte dilate, int setting)
         {
             var r = m_Recording;
             if (r.Segments.Count == 0) BeginRecorded(null, 0f, 0f);
-            r.Vertices.Add(new UaRetainedMesh.V { position = local, color = color, uv = uv, circle = circle, type = type, dilate = dilate, arc = arc });
+            r.Vertices.Add(new UaRetainedMesh.V { position = local, color = color, uv = uv, circle = circle, type = type, dilate = dilate, arc = arc, setting = setting });
             return r.Vertices.Count - 1;
         }
 
@@ -189,11 +194,13 @@ namespace Unbound.UIElements
                     TextSettings.Add(s.settings);
                     textSettings = TextSettings.Count - 1;
                 }
+                m_SettingOffset = s.gradients != null ? GradientOffset(s.gradients) : 0;
                 for (int i = s.vertexStart; i < s.vertexEnd; i++)
                 {
                     var v = mesh.Vertices[i];
-                    Vertex(v.position, v.color, v.uv, v.type, id, v.circle, v.arc, v.dilate, textSettings);
+                    Vertex(v.position, v.color, v.uv, v.type, id, v.circle, v.arc, v.dilate, textSettings, v.setting);
                 }
+                m_SettingOffset = 0;
                 for (int i = s.indexStart; i < s.indexEnd; i++) Indices.Add(first + mesh.Indices[i]);
             }
         }

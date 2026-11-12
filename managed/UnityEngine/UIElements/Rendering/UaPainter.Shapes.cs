@@ -49,6 +49,9 @@ namespace Unbound.UIElements
             public BackgroundRepeat repeat;
             public BackgroundSize size;
             public bool isSprite;
+            /// <summary>A VectorImage shown instead of a texture, placed by <see cref="scaleMode"/>.</summary>
+            public VectorImage vectorImage;
+            public ScaleMode scaleMode;
 
             internal bool HasSlices => leftSlice > 0 || topSlice > 0 || rightSlice > 0 || bottomSlice > 0;
         }
@@ -133,8 +136,11 @@ namespace Unbound.UIElements
             }
             else
             {
-                WarnOnce($"VectorImage backgrounds (element '{ve.name}') are not drawn yet");
-                return;
+                // Scale-and-crop (or a scale mode the background properties cannot express)
+                // stretches a vector image.
+                bool crop = !valid || scaleMode == ScaleMode.ScaleAndCrop;
+                bg = VectorParams(rect, new Rect(0, 0, 1, 1), image.vectorImage, crop ? ScaleMode.StretchToFill : scaleMode);
+                bg.rect = new Rect(0f, 0f, image.vectorImage.width, image.vectorImage.height);
             }
             bg.radii = radii;
             if (slices != Vector4.zero)
@@ -318,6 +324,18 @@ namespace Unbound.UIElements
             DrawRectangle(p);
         }
 
+        /// <summary>A VectorImage rectangle (MeshGenerator.RectangleParams.MakeVectorTextured).</summary>
+        static RectParams VectorParams(Rect rect, Rect uv, VectorImage image, ScaleMode scaleMode) =>
+            new RectParams { rect = rect, subRect = new Rect(0, 0, 1, 1), uv = uv, color = Color.white, vectorImage = image, scaleMode = scaleMode };
+
+        internal void DrawVectorImage(Rect rect, Rect uv, VectorImage image, ScaleMode scaleMode, Color tint)
+        {
+            if (image == null) return;
+            var p = VectorParams(rect, uv, image, scaleMode);
+            p.color = tint;
+            DrawRectangle(p);
+        }
+
         internal void DrawSolidRect(Rect rect, Color color) =>
             DrawRectangle(new RectParams { rect = rect, color = color, uv = new Rect(0, 0, 1, 1) });
 
@@ -327,6 +345,11 @@ namespace Unbound.UIElements
         void DrawRectangle(RectParams p)
         {
             if (p.rect.width < 1e-30f || p.rect.height < 1e-30f) return;
+            if (p.vectorImage != null)
+            {
+                DrawVectorRectangle(p);
+                return;
+            }
             Color32 color = p.color;
             if (color.a == 0) return;
             var radii = p.radii.Fit(p.rect);

@@ -20,7 +20,7 @@ namespace Unbound.UIElements
         const float UnusedArc = -10000f;
 
         // UIR's vertex types (UnityUIE.cginc k_VertType*).
-        internal const byte VertSolid = 0, VertText = 1, VertTexture = 2;
+        internal const byte VertSolid = 0, VertText = 1, VertTexture = 2, VertSvgGradient = 4;
 
         internal enum StencilKind : byte { Draw, PushMask, PopMask }
 
@@ -77,6 +77,10 @@ namespace Unbound.UIElements
             public Texture Texture;
             public UaVectorMesh Vector;
             public MeshCopy Copy;
+            /// <summary>A DrawVectorImage call: the image and its placement.</summary>
+            public VectorImage Image;
+            public Vector2 Offset, Scale;
+            public float Degrees;
         }
 
         /// <summary>A copy of a DrawMesh call's vertices and indices (pooled buffers).</summary>
@@ -146,6 +150,7 @@ namespace Unbound.UIElements
             m_StencilRef = 0;
             m_StencilKind = StencilKind.Draw;
             UsesStencil = false;
+            ClearGradients();
         }
 
         void PaintElement(VisualElement ve, float parentOpacity, Rect? parentClip)
@@ -164,7 +169,8 @@ namespace Unbound.UIElements
             Replay(geometry.Visuals);
 
             // Overflow clipping (UIR's worldClip: the padding box, or the content box, inside the
-            // parent's clip): rounded rectangles by a stencil mask, others by scissor.
+            // parent's clip): rounded rectangles and vector image backgrounds by a stencil mask,
+            // others by scissor.
             Rect? clip = parentClip;
             bool masked = false;
             var savedStencil = m_StencilRef;
@@ -172,7 +178,7 @@ namespace Unbound.UIElements
             {
                 var r = SubtractBorderPadding(ve, style, ve.worldBound);
                 clip = parentClip.HasValue ? Intersect(r, parentClip.Value) : r;
-                if (HasRadius(ve, style) && m_StencilRef < MaxMaskDepth)
+                if ((HasRadius(ve, style) || style.backgroundImage.vectorImage != null) && m_StencilRef < MaxMaskDepth)
                 {
                     masked = true;
                     UsesStencil = true;
@@ -209,10 +215,19 @@ namespace Unbound.UIElements
             m_Scissor = savedScissor;
         }
 
-        /// <summary>The shape an element clips its content to: its padding box (or content box)
-        /// with the corner radii less the borders (DefaultElementBuilder's stencil mask).</summary>
+        /// <summary>The shape an element clips its content to (DefaultElementBuilder's stencil
+        /// mask): its background as drawn when that is a vector image, else its padding box (or
+        /// content box) with the corner radii less the borders.</summary>
         void DrawStencilMask(VisualElement ve, ComputedValues s)
         {
+            if (s.backgroundImage.vectorImage != null)
+            {
+                int saved = m_OpacityId;
+                m_OpacityId = 0;
+                DrawBackground(ve, s);
+                m_OpacityId = saved;
+                return;
+            }
             var layout = ve.layout;
             if (layout.width <= 1e-30f || layout.height <= 1e-30f) return;
             var radii = RadiiOf(ve, s);
@@ -260,14 +275,12 @@ namespace Unbound.UIElements
         {
             var texture = image.image;
             var sprite = image.sprite;
-            if (texture == null && sprite == null)
-            {
-                if (image.vectorImage != null) WarnOnce($"VectorImage images (element '{image.name}') are not drawn yet");
-                return;
-            }
+            var vector = image.vectorImage;
+            if (texture == null && sprite == null && vector == null) return;
             var rect = GUIUtility.AlignRectToDevice(image.contentRect);
             if (texture != null) DrawTexturedRect(rect, image.uv, texture, image.scaleMode, image.tintColor);
-            else DrawSprite(rect, image.uv, sprite, image.scaleMode, image.tintColor);
+            else if (sprite != null) DrawSprite(rect, image.uv, sprite, image.scaleMode, image.tintColor);
+            else DrawVectorImage(rect, image.uv, vector, image.scaleMode, image.tintColor);
         }
 
         static Rect SubtractBorderPadding(VisualElement ve, ComputedValues s, Rect world)
@@ -355,10 +368,12 @@ namespace Unbound.UIElements
 
         const float Byte = 1f / 255f;
 
-        /// <summary>Adds a vertex given in the element's local space; returns its index.</summary>
-        int Vertex(Vector2 local, Color32 color, Vector2 uv, byte type, float textureId, Vector4 circle, bool arc, byte dilate = 0, int textSettings = 0)
+        /// <summary>Adds a vertex given in the element's local space; returns its index.
+        /// <paramref name="setting"/> is an SVG gradient vertex's setting index in its image (the
+        /// image's first row in the panel's gradient settings is added).</summary>
+        int Vertex(Vector2 local, Color32 color, Vector2 uv, byte type, float textureId, Vector4 circle, bool arc, byte dilate = 0, int textSettings = 0, int setting = 0)
         {
-            if (m_Recording != null) return RecordVertex(local, color, uv, type, circle, arc, dilate);
+            if (m_Recording != null) return RecordVertex(local, color, uv, type, circle, arc, dilate, setting);
             var p = m_Identity ? new Vector3(local.x, local.y, 0f) : m_Matrix.MultiplyPoint3x4(new Vector3(local.x, local.y, 0f));
             p.z = UnityEngine.UIElements.Vertex.nearZ;
             Positions.Add(p);
@@ -374,7 +389,16 @@ namespace Unbound.UIElements
             Uvs[3].Add(new Vector4(type * Byte, dilate * Byte, arc ? Byte : 0f, 0f));
             // opacityColorPages: the opacity page, the text settings page.
             Uvs[4].Add(new Vector4(opacityPage * Byte, 0f, textPage * Byte, 0f));
-            Uvs[5].Add(Vector4.zero);
+            if (type == VertSvgGradient)
+            {
+                // settingIndex: the row as two bytes (high, low), as UIR packs it.
+                int row = (setting + m_SettingOffset) & 0xFFFF;
+                Uvs[5].Add(new Vector4((row >> 8) * Byte, (row & 0xFF) * Byte, 0f, 0f));
+            }
+            else
+            {
+                Uvs[5].Add(Vector4.zero);
+            }
             Uvs[6].Add(circle);
             Uvs[7].Add(new Vector4(textureId, 0f, 0f, 0f));
             return Positions.Count - 1;
@@ -423,6 +447,10 @@ namespace Unbound.UIElements
             m_PendingUserMeshes.Add(new PendingMesh { Copy = copy, Texture = texture });
         }
 
+        /// <summary>Queues a MeshGenerationContext.DrawVectorImage call behind the callback's earlier meshes.</summary>
+        internal void QueueVectorImage(VectorImage image, Vector2 offset, float degrees, Vector2 scale) =>
+            m_PendingUserMeshes.Add(new PendingMesh { Image = image, Offset = offset, Degrees = degrees, Scale = scale });
+
         void FlushUserMeshes()
         {
             for (int i = 0; i < m_PendingUserMeshes.Count; i++)
@@ -431,6 +459,11 @@ namespace Unbound.UIElements
                 if (pending.Vector != null)
                 {
                     AddVectorMesh(pending.Vector);
+                    continue;
+                }
+                if (pending.Image != null)
+                {
+                    DrawVectorImageTransformed(pending.Image, pending.Offset, pending.Degrees, pending.Scale);
                     continue;
                 }
                 float id = Begin(pending.Texture);

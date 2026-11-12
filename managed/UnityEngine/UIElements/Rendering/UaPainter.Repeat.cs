@@ -190,8 +190,8 @@ namespace Unbound.UIElements
                     if (position.keyword == BackgroundPositionKeyword.Right || position.keyword == BackgroundPositionKeyword.Bottom)
                         offset = extent - covered - offset;
                 }
-                // Images of a whole number of pixels start on a pixel.
-                if (aligned && !p.isSprite)
+                // Images of a whole number of pixels start on a pixel (not sprites or vector images).
+                if (aligned && !p.isSprite && p.vectorImage == null)
                 {
                     float pixels = step * pixelsPerPoint;
                     if (Mathf.Abs(Mathf.Round(pixels) - pixels) < 0.001f) offset = UaLayout.CeilToPixelGrid(offset, pixelsPerPoint);
@@ -232,9 +232,12 @@ namespace Unbound.UIElements
                     uv.height = uv.height * kept / whole;
                     target.height = kept;
                 }
-                // Top-down rows to the texture's bottom-up v.
-                float above = uv.y - full.y, below = full.yMax - uv.yMax;
-                uv.y += below - above;
+                // Top-down rows to the texture's bottom-up v (a vector image's uv is top-down).
+                if (p.vectorImage == null)
+                {
+                    float above = uv.y - full.y, below = full.yMax - uv.yMax;
+                    uv.y += below - above;
+                }
                 foreach (var column in m_Tiles[0])
                 {
                     target.x = column.rect.x;
@@ -290,8 +293,18 @@ namespace Unbound.UIElements
                 if (shown.yMax < sub.yMax) p.uv.y += removed.y - (shown.y - sub.y) / sub.height * p.uv.height;
                 p.uv.size = kept;
             }
-            p.backgroundRepeatRect = total == shown ? Rect.zero : shown;
-            p.rect = total;
+            // A vector image copy is drawn over its part inside the element; a texture's over the
+            // whole element, showing only that part.
+            if (p.vectorImage != null)
+            {
+                p.backgroundRepeatRect = Rect.zero;
+                p.rect = shown;
+            }
+            else
+            {
+                p.backgroundRepeatRect = total == shown ? Rect.zero : shown;
+                p.rect = total;
+            }
             DrawRectangle(p);
         }
     }

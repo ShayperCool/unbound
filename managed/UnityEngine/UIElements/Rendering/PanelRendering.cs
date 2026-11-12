@@ -29,6 +29,9 @@ namespace Unbound.UIElements
         {
             internal Mesh Mesh;
             internal Texture2D ShaderInfo;
+            /// <summary>UIR's gradient settings atlas (three texels per row), made on first use.</summary>
+            internal Texture2D GradientSettings;
+            internal Color32[] GradientPixels;
         }
 
         static PanelRendering()
@@ -152,6 +155,7 @@ namespace Unbound.UIElements
             }
             UploadMesh(gpu);
             UploadShaderInfo(gpu);
+            UploadGradientSettings(gpu);
 
             if (rt != null || !s_IntoCurrentTarget) GfxStream.SetTarget(target);
             GfxStream.Viewport(new Rect(0, 0, width, height));
@@ -172,7 +176,7 @@ namespace Unbound.UIElements
                 {
                     var batch = s_Painter.Batches[i];
                     if (batch.IndexCount == 0) continue;
-                    BatchProperties(batch, gpu.ShaderInfo);
+                    BatchProperties(batch, gpu.ShaderInfo, gpu.GradientSettings);
                     Rect? scissor = batch.Scissor.HasValue
                         ? new Rect(batch.Scissor.Value.x, batch.Scissor.Value.y, batch.Scissor.Value.width, batch.Scissor.Value.height)
                         : (Rect?)null;
@@ -202,6 +206,7 @@ namespace Unbound.UIElements
                 s_Gpu.Remove(p);
                 if (gpu.Mesh != null) UnityEngine.Object.Destroy(gpu.Mesh);
                 if (gpu.ShaderInfo != null) UnityEngine.Object.Destroy(gpu.ShaderInfo);
+                if (gpu.GradientSettings != null) UnityEngine.Object.Destroy(gpu.GradientSettings);
             }
         }
 
@@ -266,9 +271,61 @@ namespace Unbound.UIElements
             gpu.ShaderInfo.Apply(false, false);
         }
 
+        /// <summary>Writes the gradient settings rows of this frame's vector images (UIR's
+        /// GradientSettingsAtlas.Write, without the dynamic atlas: each image samples its own atlas
+        /// texture): texel 0 the type, address mode and radial focus, texels 1 and 2 the gradient's
+        /// position and size less one in its atlas, as base-255 pairs.</summary>
+        static void UploadGradientSettings(PanelGpu gpu)
+        {
+            var p = s_Painter;
+            if (p.GradientRowCount == 0) return;
+            const int width = 3, height = UaPainter.GradientSettingsRows;
+            if (gpu.GradientSettings == null)
+            {
+                using (ObjectRegistry.AsAssets())
+                    gpu.GradientSettings = new Texture2D(width, height, TextureFormat.ARGB32, false, true) { name = "GradientSettings", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                gpu.GradientPixels = new Color32[width * height];
+                for (int i = 0; i < gpu.GradientPixels.Length; i++) gpu.GradientPixels[i] = new Color32(0, 0, 0, 255);
+            }
+            var pixels = gpu.GradientPixels;
+            bool changed = false;
+            void Set(int x, int y, Color32 c)
+            {
+                ref var texel = ref pixels[y * width + x];
+                if (texel.r == c.r && texel.g == c.g && texel.b == c.b && texel.a == c.a) return;
+                texel = c;
+                changed = true;
+            }
+            static byte Unit(float f) => (byte)(f * 255f + 0.5f);
+            static Color32 Pair(int a, int b) => new Color32((byte)(a / 255), (byte)(a - a / 255 * 255), (byte)(b / 255), (byte)(b - b / 255 * 255));
+            int row = 0;
+            foreach (var image in p.GradientImages)
+            {
+                foreach (var setting in image.settings)
+                {
+                    if (setting.gradientType == GradientType.Radial)
+                    {
+                        var focus = (setting.radialFocus + Vector2.one) / 2f;
+                        Set(0, row, new Color32(1, Unit((float)setting.addressMode / 255f), Unit(focus.x), Unit(1f - focus.y)));
+                    }
+                    else
+                    {
+                        Set(0, row, new Color32(0, Unit((float)setting.addressMode / 255f), 0, 0));
+                    }
+                    var location = setting.location;
+                    Set(1, row, Pair(location.x, location.y));
+                    Set(2, row, Pair(location.width - 1, location.height - 1));
+                    row++;
+                }
+            }
+            if (!changed) return;
+            gpu.GradientSettings.SetPixels32(pixels);
+            gpu.GradientSettings.Apply(false, false);
+        }
+
         static readonly Vector4[] s_TextureInfo = new Vector4[UaPainter.TextureSlots * 2];
 
-        static void BatchProperties(UaPainter.Batch batch, Texture2D shaderInfo)
+        static void BatchProperties(UaPainter.Batch batch, Texture2D shaderInfo, Texture2D gradientSettings)
         {
             s_Properties.Clear();
             for (int i = 0; i < UaPainter.TextureSlots; i++)
@@ -289,7 +346,7 @@ namespace Unbound.UIElements
             }
             s_Properties[s_TextureInfoId] = s_TextureInfo;
             s_Properties[s_ShaderInfoId] = shaderInfo;
-            s_Properties[s_GradientSettingsId] = Texture2D.blackTexture;
+            s_Properties[s_GradientSettingsId] = gradientSettings != null ? gradientSettings : Texture2D.blackTexture;
         }
 
         /// <summary>Screen panels among the overlay canvases (Unity's Canvas.externRenderOverlaysBefore):
