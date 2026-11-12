@@ -24,8 +24,9 @@ using UnityEngine;
 /// types, and the decoded image; called in Update with a marker drawn at the end of that frame,
 /// at the end of a frame before the marker, with superSize 2, stereo modes, twice in one frame,
 /// with a .jpg name, without an extension, and to a relative path (the working directory).
-/// <c>mip.*</c> (last): a mipmapped texture's level of detail and anisotropic filtering in
-/// supersized captures.
+/// <c>mip.*</c> and <c>proj.*</c> (last): a mipmapped texture's level of detail and anisotropic
+/// filtering in supersized captures, and supersized captures of a perspective camera and of a
+/// camera with an orthographic matrix set.
 /// Every case records its log messages and exceptions. In Gamma color space the Editor crashes
 /// in CaptureScreenshotAsTexture called in Update or with a superSize below one: those calls,
 /// and the render texture capture in Update, are skipped there (<c>.skipped</c>).
@@ -446,9 +447,10 @@ public class ScreenCaptureProbe : MonoBehaviour
         // only from here on, over the right half). Each mip level is one solid colour, red
         // level / 8, so with trilinear filtering red tells the level of detail sampled. iso: a
         // square footprint of 16 texels per pixel; anisoMax: a texture of aniso level 16 under
-        // global limits (1, 2); anisoForced: aniso level 1 forced to the limits (2, 16), both
-        // with a footprint of 64 by 4 texels. Each is captured at superSize 1, then larger, then
-        // at 1 again.
+        // global limits (1, 2); anisoForced: aniso level 1 forced to the limits (2, 16); anisoOne:
+        // aniso level 1 per texture (Enable); anisoOff: aniso level 16 with anisotropic filtering
+        // disabled; all but iso with a footprint of 64 by 4 texels. Each is captured at superSize
+        // 1, then larger, then at 1 again.
         var mipped = new Texture2D(64, 64, TextureFormat.RGBA32, true, true)
         {
             filterMode = FilterMode.Trilinear,
@@ -482,6 +484,8 @@ public class ScreenCaptureProbe : MonoBehaviour
             ("mip.iso", 8f, 8f, startFiltering, 1, -1, -1, new[] { 1, 2, 3, 1 }),
             ("mip.anisoMax", 32f, 2f, AnisotropicFiltering.Enable, 16, 1, 2, new[] { 1, 3, 1 }),
             ("mip.anisoForced", 32f, 2f, AnisotropicFiltering.ForceEnable, 1, 2, 16, new[] { 1, 3, 1 }),
+            ("mip.anisoOne", 32f, 2f, AnisotropicFiltering.Enable, 1, -1, -1, new[] { 1, 3, 1 }),
+            ("mip.anisoOff", 32f, 2f, AnisotropicFiltering.Disable, 16, -1, -1, new[] { 1, 3, 1 }),
         };
         foreach (var (key, u, v, filtering, aniso, forcedMin, globalMax, sizes) in mipCases)
         {
@@ -501,6 +505,31 @@ public class ScreenCaptureProbe : MonoBehaviour
         QualitySettings.anisotropicFiltering = startFiltering;
         Texture.SetGlobalAnisotropicFilteringLimits(-1, -1);
         Destroy(quad);
+        Flush();
+
+        // Supersized captures through other projections (after the mip cases): a perspective
+        // camera framing the same view at the quad's distance, and a camera that is not
+        // orthographic but has the orthographic projection set as its matrix (and whether it
+        // still has that matrix after the capture).
+        cam.orthographic = false;
+        cam.fieldOfView = 2f * Mathf.Atan(0.1f) * Mathf.Rad2Deg;
+        foreach (int size in new[] { 2, 3 })
+        {
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            AsTexture("proj.perspective.superSize" + size, () => ScreenCapture.CaptureScreenshotAsTexture(size));
+        }
+        var custom = Matrix4x4.Ortho(-2f, 2f, -1f, 1f, 1f, 20f);
+        cam.projectionMatrix = custom;
+        foreach (int size in new[] { 1, 3 })
+        {
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            AsTexture("proj.customOrtho.superSize" + size, () => ScreenCapture.CaptureScreenshotAsTexture(size));
+            Value("proj.customOrtho.superSize" + size + ".kept", B(cam.projectionMatrix == custom));
+        }
+        cam.ResetProjectionMatrix();
+        cam.orthographic = true;
         Flush();
     }
 }
