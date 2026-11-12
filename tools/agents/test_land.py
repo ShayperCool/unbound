@@ -254,7 +254,7 @@ raise SystemExit(int(code))
     def test_driver_exception_stops_other_running_process_trees(self):
         marker = self.root/'sleeping.pid'
         source = f'import os,time; from pathlib import Path; Path({str(marker)!r}).write_text(str(os.getpid())); time.sleep(30)'
-        self.gate.probes = ['interrupt-control', shlex.join([sys.executable, '-c', source])]
+        self.gate.probes = [shlex.join([sys.executable, '-c', source]), 'interrupt-control']
         original_step = self.gate.step
         def step(name, command, **kwargs):
             if command == 'interrupt-control':
@@ -324,6 +324,29 @@ raise SystemExit(int(code))
              mock.patch.object(suite.signal, 'signal'):
             self.assertEqual(suite.main(), 0)
         self.assertTrue((self.root/'d.start').is_file())
+
+    def test_explicit_suites_have_unique_labels_and_preserve_shell_expansions(self):
+        source = self.root/'tools/agents/suite.py'
+        source.parent.mkdir(parents=True)
+        actual = Path(__file__).resolve().parent
+        for name in ('a', 'b', 'c'):
+            (self.root/'tests/projects'/name/'Reference').mkdir(parents=True)
+        # Real suite.main in independent interpreters, using compare-only recipes and a
+        # frozen default-label clock so the original collision is deterministic.
+        source.write_text(f"import sys\nsys.path.insert(0, {str(actual)!r})\n" + 'import datetime, os\nfrom pathlib import Path\nimport suite\nclass FixedTime(datetime.datetime):\n    @classmethod\n    def now(cls, tz=None): return cls(2026, 11, 12, 12)\nsuite.datetime.datetime=FixedTime\nroot=Path.cwd()\nsuite.REPO=root\nsuite.PROJECTS=root/\'tests/projects\'\nsuite.CACHE=root/\'cache\'\nsuite.AGENTS=root/\'agents\'\nsuite.default_cli=lambda: Path(sys.executable)\nsuite.managed_for=lambda cli: root\nsuite.make_runtime=lambda *args: root\nsuite.recipes=lambda release: {name:[suite.Step(\'compare\',[sys.executable,\'-c\',\'import os; print(os.environ["UNBOUND_PROBE_UNITY_VERSION"])\'])] for name in (\'a\',\'b\',\'c\')}\nraise SystemExit(suite.main())\n')
+        self.gate.probes = [
+            'python3 tools/agents/suite.py --only a --release "$UNBOUND_PROBE_UNITY_VERSION" > first.log',
+            'python3 tools/agents/suite.py --only=b --jobs "$CONTROL_JOBS" > second.log',
+            'python3 tools/agents/suite.py --only c --label requested > third.log']
+        self.gate.env['CONTROL_JOBS'] = '3'
+        self.gate.run_probes()
+        summaries = [json.loads(path.read_text()) for path in (self.root/'agents/suite').glob('*/summary.json')]
+        self.assertEqual(len(summaries), 3)
+        self.assertEqual(len({row['label'] for row in summaries}), 3)
+        self.assertIn('requested', {row['label'] for row in summaries})
+        for row in summaries:
+            self.assertEqual(row['release'], land.default_release())
+        self.assertIn('3 at a time', (self.root/'second.log').read_text())
 
     def test_invalid_exclusive_metadata_fails_before_any_command(self):
         project = self.root/'tests/projects/private'

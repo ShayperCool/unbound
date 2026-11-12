@@ -486,12 +486,21 @@ class Gate:
             names.update(name for name, spec in specs.items() if probe in spec.get('commands', []))
             argv = suite_arguments(probe)
             if argv is not None:
-                # A suite without --only may select any declared exclusive recipe.
-                from suite import argument_parser
-                args = argument_parser().parse_args(argv)
-                names.update(args.only.split(',') if args.only else specs)
+                # Inspect only selection flags, leaving shell redirection, expansions and
+                # unrelated options to the command itself. Unknown selections are conservative.
+                selection = None
+                for position, token in enumerate(argv):
+                    if token == '--only':
+                        selection = argv[position+1] if position+1 < len(argv) else None
+                    elif token.startswith('--only='):
+                        selection = token.split('=', 1)[1]
+                names.update(selection.split(',') if selection and '$' not in selection else specs)
             exclusive = any(specs.get(name, {}).get('exclusive', False) for name in names)
-            command = probe
+            # Preserve shell expansions, redirections and explicitly requested output labels.
+            # Unlabeled suites otherwise share a second-resolution default output directory.
+            labeled = argv is not None and any(token == '--label' or token.startswith('--label=') for token in argv)
+            command = (probe.rstrip() + f' --label land-{os.getpid()}-{time.time_ns()}-{index}'
+                       if argv is not None and not labeled else probe)
             owners = self.probe_owners[index-1] if self.probe_owners else []
             name = f'probe {index} ({release})' + (f' [{", ".join(owners)}]' if owners else '')
             log = logs/f'{index:03d}.log'
@@ -511,10 +520,13 @@ class Gate:
         with concurrent.futures.ThreadPoolExecutor(max_workers=EXPLICIT_PROBE_WORKERS) as pool:
             try:
                 for group in parallel_groups(commands, lambda row: row[4]):
-                    futures = [pool.submit(execute, row) for row in group]
-                    # Finish every command, including later batches. Report failures in
-                    # request order so completion order cannot change train isolation.
-                    results.extend((row, future.result()) for row, future in zip(group, futures))
+                    futures = {pool.submit(execute, row): row for row in group}
+                    completed = {}
+                    # Notice driver exceptions immediately; ordinary exit codes still finish
+                    # every command. Report their failures in request order for train isolation.
+                    for future in concurrent.futures.as_completed(futures):
+                        completed[future] = future.result()
+                    results.extend((row, completed[future]) for future, row in futures.items())
             except BaseException:
                 with self.process_lock:
                     self.cancelled = True
