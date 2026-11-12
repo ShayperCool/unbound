@@ -6,6 +6,7 @@ import re
 import select
 import shlex
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -130,8 +131,61 @@ class Tree:
         self.fds = {}
 
 
+def stop_groups(process, grace):
+    """Portable cleanup for a private session, including descendants in other groups."""
+    tracked, groups = {process.pid}, {process.pid}
+
+    def collect():
+        rows = subprocess.check_output(['ps', '-A', '-o', 'pid=', '-o', 'ppid=',
+                                        '-o', 'pgid=', '-o', 'stat='], text=True)
+        records = [line.split() for line in rows.splitlines() if line.strip()]
+        parents = {}
+        for pid, parent, group, state in records:
+            parents.setdefault(int(parent), []).append(int(pid))
+        pending = list(tracked)
+        seen = set()
+        while pending:
+            pid = pending.pop()
+            if pid in seen:
+                continue
+            seen.add(pid)
+            pending += parents.get(pid, [])
+        tracked.update(seen)
+        live = False
+        for pid, parent, group, state in records:
+            if int(pid) in tracked:
+                groups.add(int(group))
+                live |= not state.startswith('Z')
+        return live
+
+    def signal_groups(number):
+        for group in groups:
+            if group == os.getpgrp():
+                continue
+            try:
+                os.killpg(group, number)
+            except ProcessLookupError:
+                pass
+
+    collect()
+    signal_groups(signal.SIGTERM)
+    deadline = time.monotonic()+grace
+    while time.monotonic() < deadline:
+        live = collect()
+        if process.poll() is not None and not live:
+            break
+        signal_groups(signal.SIGTERM)
+        time.sleep(0.05)
+    signal_groups(signal.SIGKILL)
+    process.wait()
+
+
 def stop_tree(process, grace=30):
-    """SIGTERM to the step's whole tree; SIGKILL to whatever of it is left after the grace period."""
+    """SIGTERM to the step's whole tree; SIGKILL to whatever is left after the grace period."""
+    if (sys.platform != 'linux' or not Path('/proc/self').is_dir()
+            or not callable(getattr(os, 'pidfd_open', None))
+            or not callable(getattr(signal, 'pidfd_send_signal', None))):
+        return stop_groups(process, grace)
     tree = Tree(process.pid)
     try:
         tree.signal(signal.SIGTERM)

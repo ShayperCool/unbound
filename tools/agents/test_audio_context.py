@@ -4,6 +4,9 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
+import signal
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -23,6 +26,12 @@ class CapturePoolTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+
+    def assert_exited(self, pid):
+        result = subprocess.run(['ps', '-p', str(pid), '-o', 'stat='],
+                                capture_output=True, text=True)
+        self.assertTrue(result.returncode == 1 or result.stdout.strip().startswith('Z'),
+                        f'process {pid} is still running: {result.stdout}')
 
     def capture(self, name, source):
         return ([sys.executable, '-c', source, str(self.root), name], self.root/(name+'.log'))
@@ -99,9 +108,7 @@ raise SystemExit(7)
         self.assertFalse((self.root/'unwanted').exists())
         for name in ('driver', 'child'):
             pid = int((self.root/(name+'.pid')).read_text())
-            status = Path(f'/proc/{pid}/stat')
-            if status.exists():
-                self.assertEqual(status.read_text().rsplit(')', 1)[1].split()[0], 'Z')
+            self.assert_exited(pid)
 
     def test_launch_exception_cancels_an_already_running_driver(self):
         process = None
@@ -131,6 +138,32 @@ raise SystemExit(7)
             with self.assertRaises(KeyboardInterrupt):
                 self.run_captures([self.capture('sleep', 'import time; time.sleep(60)')], 1)
         self.assertTrue(all(process.poll() is not None for process in processes))
+
+    def test_missing_linux_apis_still_stops_detached_descendants(self):
+        source = """
+from pathlib import Path
+import os, subprocess, sys, time
+root = Path(sys.argv[1])
+child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], start_new_session=True)
+(root/'child.pid').write_text(str(child.pid))
+(root/'driver.pid').write_text(str(os.getpid()))
+time.sleep(60)
+"""
+        def interrupt(_):
+            deadline = time.monotonic()+5
+            while not (self.root/'child.pid').exists():
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(.01)
+            raise KeyboardInterrupt
+        with mock.patch.object(os, 'pidfd_open', None), \
+             mock.patch.object(signal, 'pidfd_send_signal', None), \
+             mock.patch.object(context, 'time') as clock:
+            clock.sleep.side_effect = interrupt
+            with self.assertRaises(KeyboardInterrupt):
+                self.run_captures([self.capture('sleep', source)], 2)
+        for name in ('driver', 'child'):
+            pid = int((self.root/(name+'.pid')).read_text())
+            self.assert_exited(pid)
 
     def test_invalid_worker_count_starts_nothing(self):
         with self.assertRaises(ValueError):
