@@ -102,12 +102,7 @@ fn scaled(a: V3, s: f32) -> V3 {
 
 /// A vector of unit length, or itself when it has none.
 fn normalized(a: V3) -> V3 {
-    let length2 = dot(a, a);
-    if length2 > f32::MIN_POSITIVE {
-        scaled(a, 1.0 / length2.sqrt())
-    } else {
-        a
-    }
+    normalized_by(a, 0)
 }
 
 /// A plane: `n . p + d = 0`.
@@ -148,10 +143,39 @@ struct Frame {
     origin: V3,
     u: V3,
     v: V3,
+    /// The squared lengths the two axes were normalised from.
+    squares: [f32; 2],
+}
+
+/// Off the coordinate axes the last digits of a unit vector here need not be the
+/// precompute's. A choice between two sets that rests on their projections is trusted only
+/// when it holds for every scale of their axes within this many units in the last place of the
+/// one here.
+const NORMALISATION_ULPS: i32 = 2;
+
+/// `1 / sqrt(length2)` moved by `steps` units in the last place.
+fn unit_scale(length2: f32, steps: i32) -> f32 {
+    let scale = 1.0 / length2.sqrt();
+    f32::from_bits(scale.to_bits().wrapping_add_signed(steps))
+}
+
+/// The vector scaled to unit length with its scale moved by `steps` units in the last place,
+/// or itself when it has no length.
+fn normalized_by(a: V3, steps: i32) -> V3 {
+    let length2 = dot(a, a);
+    if length2 > f32::MIN_POSITIVE {
+        scaled(a, unit_scale(length2, steps))
+    } else {
+        a
+    }
 }
 
 impl Frame {
     fn of(plane: &Plane) -> Frame {
+        Frame::rounded(plane, 0, 0)
+    }
+    /// The frame with the scales of its axes moved by these many units in the last place.
+    fn rounded(plane: &Plane, u_steps: i32, v_steps: i32) -> Frame {
         let n = plane.normal();
         let (d, length2) = (plane.d as f32, dot(n, n));
         let origin = n.map(|x| (-d * x) / length2);
@@ -160,9 +184,16 @@ impl Frame {
         } else {
             [0.0, -n[2], n[1]]
         };
-        let u = normalized(first);
-        let v = normalized(cross(n, u));
-        Frame { n, origin, u, v }
+        let u = normalized_by(first, u_steps);
+        let second = cross(n, u);
+        let v = normalized_by(second, v_steps);
+        Frame {
+            n,
+            origin,
+            u,
+            v,
+            squares: [dot(first, first), dot(second, second)],
+        }
     }
     fn project(&self, p: V3) -> [f32; 2] {
         let q = sub(p, self.origin);
@@ -291,7 +322,11 @@ impl Geometry<'_> {
 
     /// The area the groups' triangles cover seen along the plane's normal.
     fn projected_area(&self, groups: &[usize], plane: &Plane) -> f32 {
-        let frame = Frame::of(plane);
+        self.area_in(groups, &Frame::of(plane))
+    }
+
+    /// The area the groups' triangles cover in the frame.
+    fn area_in(&self, groups: &[usize], frame: &Frame) -> f32 {
         let mut area = 0.0f32;
         for &g in groups {
             for &t in &self.groups[g].triangles {
@@ -663,40 +698,44 @@ fn tied(a: f32, b: f32) -> bool {
     a != b && (a - b).abs() <= TIE * a.abs().max(b.abs())
 }
 
-/// Turns a point's coordinates by a choice of signs: bit k flips coordinate k.
-fn flip(p: V3, signs: u8) -> V3 {
-    // (Adding zero makes a negative zero a zero, so that equal points sort alike.)
-    std::array::from_fn(|k| if signs >> k & 1 == 1 { -p[k] } else { p[k] } + 0.0)
-}
-
-/// The groups' vertices with their coordinates' signs chosen, in one order.
-fn flipped_points(geometry: &Geometry, groups: &[usize], signs: u8) -> Vec<V3> {
-    let mut points: Vec<V3> = groups
-        .iter()
-        .flat_map(|&g| &geometry.groups[g].vertices)
-        .map(|&v| flip(geometry.mesh.positions[v], signs))
-        .collect();
-    points.sort_unstable_by(|a, b| {
-        (0..3)
-            .map(|k| a[k].total_cmp(&b[k]))
-            .find(|o| o.is_ne())
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    points
-}
-
-/// A choice of signs of the coordinates that takes the vertices of the groups `from` onto those
-/// of `onto` exactly, and those of `fixed` onto themselves. A measure of two such sets is the
-/// same in any arithmetic that rounds as IEEE does: flipping a sign changes no magnitude and no
-/// sum's order. (A shape turned or moved off the coordinate origin in its mesh has no such
-/// image; congruent parts of it may tie here and not in the precompute.)
-fn mirrored(geometry: &Geometry, from: &[usize], onto: &[usize], fixed: &[usize]) -> bool {
-    let target = flipped_points(geometry, onto, 0);
-    let still = flipped_points(geometry, fixed, 0);
-    (0..8u8).any(|signs| {
-        flipped_points(geometry, from, signs) == target
-            && flipped_points(geometry, fixed, signs) == still
-    })
+/// Whether the set `first` keeps the larger area than `second` for every scale of the two
+/// frames' axes within `NORMALISATION_ULPS` (axes normalised from the same squared length are
+/// scaled alike): strictly larger when `second` was tried first, else at least as large.
+fn settled(
+    geometry: &Geometry,
+    first: (&[usize], &Plane),
+    second: (&[usize], &Plane),
+    second_tried_first: bool,
+) -> bool {
+    let steps = -NORMALISATION_ULPS..=NORMALISATION_ULPS;
+    for (ua, va) in steps
+        .clone()
+        .flat_map(|u| steps.clone().map(move |v| (u, v)))
+    {
+        let frame_a = Frame::rounded(first.1, ua, va);
+        let area_a = geometry.area_in(first.0, &frame_a);
+        for (ub, vb) in steps
+            .clone()
+            .flat_map(|u| steps.clone().map(move |v| (u, v)))
+        {
+            let frame_b = Frame::rounded(second.1, ub, vb);
+            if (frame_a.squares[0] == frame_b.squares[0] && ua != ub)
+                || (frame_a.squares[1] == frame_b.squares[1] && va != vb)
+            {
+                continue;
+            }
+            let area_b = geometry.area_in(second.0, &frame_b);
+            let keeps = if second_tried_first {
+                area_a > area_b
+            } else {
+                area_a >= area_b
+            };
+            if !keeps {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 /// A set of groups as one number, whatever their order.
@@ -820,30 +859,33 @@ fn join(geometry: &Geometry) -> Result<Joined> {
         let set = gather(a, b, &plane, &mut place);
         // Another set whose area is the winner's or is so but for rounding: along the
         // coordinate axes the arithmetic here is the precompute's, and the first tried is
-        // taken; off them the very same area is the precompute's too only for a mirror image
-        // (the opposite faces of a box about the mesh's origin), else its own rounding decides.
+        // taken; off them the winner must stay the winner for every rounding of the two
+        // frames' axes (`settled`), else the precompute's own rounding decides.
         let along = plane.along_axes();
-        let mut checked = Vec::new();
-        for other in &tries {
-            if other.key == key || checked.contains(&other.key) {
+        let won = tries
+            .iter()
+            .position(|t| t.key == key && t.area == most)
+            .unwrap_or(0);
+        let mut checked: Vec<(u64, Plane)> = Vec::new();
+        for (at, other) in tries.iter().enumerate() {
+            if other.key == key || (other.area != most && !tied(other.area, most)) {
                 continue;
             }
-            if other.area != most && !tied(other.area, most) {
-                continue;
-            }
-            checked.push(other.key);
             if along && other.plane.along_axes() {
                 continue;
             }
-            let image = other.area == most
-                && mirrored(
-                    geometry,
-                    &set,
-                    &gather(other.a, other.b, &other.plane, &mut place),
-                    &[],
-                );
+            if checked.contains(&(other.key, other.plane)) {
+                continue;
+            }
+            checked.push((other.key, other.plane));
+            let other_set = gather(other.a, other.b, &other.plane, &mut place);
             ensure!(
-                image,
+                settled(
+                    geometry,
+                    (&set, &plane),
+                    (&other_set, &other.plane),
+                    at < won
+                ),
                 "two sets of faces are the largest of a round but for rounding (areas {most} and {}): which the precompute takes hangs on that rounding",
                 other.area
             );
@@ -891,12 +933,9 @@ fn fold(
     boxes: &[(V3, V3)],
 ) -> Result<()> {
     let mut areas = vec![0.0f32; joined.planes.len()];
-    // The groups the sets were fitted to, before any is folded into them.
-    let mut members = vec![Vec::new(); joined.planes.len()];
     for (g, &set) in joined.of_group.iter().enumerate() {
         if set != NONE {
             areas[set] += geometry.groups[g].area as f32;
-            members[set].push(g);
         }
     }
     let mut reaches = Vec::new();
@@ -919,22 +958,15 @@ fn fold(
         if into == NONE {
             continue;
         }
-        // Sets as near or so but for rounding: as for the largest set of a round, the first is
-        // taken along the axes, and off them when the other is the first's mirror image that
-        // leaves the part where it is (a slab's end face between its two large faces).
+        // Sets as near or so but for rounding: the first is taken along the axes (a slab's
+        // end face between its two large faces); off them the choice is not made.
         let along = joined.planes[into].along_axes();
-        for &(reach, set) in &reaches {
-            if set == into || (reach != nearest && !tied(reach, nearest)) {
-                continue;
-            }
-            if along && joined.planes[set].along_axes() {
-                continue;
-            }
-            ensure!(
-                reach == nearest && mirrored(geometry, &members[into], &members[set], &[g]),
-                "a small part is as near to two sets of faces but for rounding: which of them the precompute folds it into hangs on that rounding"
-            );
-        }
+        ensure!(
+            reaches.iter().all(|&(reach, set)| set == into
+                || (reach != nearest && !tied(reach, nearest))
+                || (along && joined.planes[set].along_axes())),
+            "a small part is as near to two sets of faces but for rounding: which of them the precompute folds it into hangs on that rounding"
+        );
         joined.of_group[g] = into;
     }
     Ok(())
@@ -1773,12 +1805,14 @@ mod tests {
         assert!(error.contains("right angle but for rounding"), "{error}");
     }
 
-    /// Off the coordinate axes, sets of the very same area are taken in the order tried only
-    /// when one is the other's mirror image in the mesh's coordinates.
+    /// Off the coordinate axes a set of the very same area as the winner's is refused unless
+    /// the winner stays the winner for every rounding of the frames' axes.
     #[test]
-    fn congruent_sets_off_the_axes_are_taken_in_order_only_as_mirror_images() {
+    fn congruent_sets_off_the_axes_are_refused_unless_every_rounding_settles_them() {
         let mut centred = solid([4.0, 3.0, 5.0]);
         turn_in_mesh(&mut centred, 45.0, 0.0);
+        // Opposite faces about the mesh's origin are normalised from the same squared lengths,
+        // and their areas stay equal for every rounding.
         assert_eq!(
             auto_charts(&centred.mesh(), &LIMITS)
                 .unwrap()
@@ -1796,24 +1830,20 @@ mod tests {
             error.contains("largest of a round but for rounding"),
             "{error}"
         );
-        // Mirror images: the opposite face by the signs of all three coordinates; a face is
-        // its own with none.
-        let opposite = |geometry: &Geometry, g: usize| {
-            let n = geometry.groups[g].normal;
-            (0..6)
-                .find(|&o| dot(geometry.groups[o].normal, n) < -0.999)
-                .unwrap()
+        let opposite_faces_settle = |shape: &Shape| {
+            let mesh = shape.mesh();
+            let geometry = geometry(&mesh, &LIMITS);
+            (0..6).all(|a| {
+                let n = geometry.groups[a].normal;
+                let b = (0..6)
+                    .find(|&o| dot(geometry.groups[o].normal, n) < -0.999)
+                    .unwrap();
+                let (pa, pb) = (&geometry.groups[a].plane, &geometry.groups[b].plane);
+                pa.along_axes() || settled(&geometry, (&[a], pa), (&[b], pb), false)
+            })
         };
-        let mesh = centred.mesh();
-        let about_origin = geometry(&mesh, &LIMITS);
-        for g in 0..6 {
-            let o = opposite(&about_origin, g);
-            assert!(mirrored(&about_origin, &[g], &[o], &[]));
-            assert!(mirrored(&about_origin, &[g], &[g], &[]));
-        }
-        let mesh = moved.mesh();
-        let off_origin = geometry(&mesh, &LIMITS);
-        assert!((0..6).all(|g| !mirrored(&off_origin, &[g], &[opposite(&off_origin, g)], &[])));
+        assert!(opposite_faces_settle(&centred));
+        assert!(!opposite_faces_settle(&moved));
     }
 
     /// Two rectangles of the same size that lie differently: their areas along their planes
