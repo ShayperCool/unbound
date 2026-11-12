@@ -3036,7 +3036,17 @@ fn cluster_containing(triangles: &[(usize, [[f32; 3]; 3])], p: [f32; 3]) -> Opti
 /// The system of a scene made of the Room's renderers with Unbound's own clusters, transport and
 /// visibility in place of the Editor's (its layout and chart mask stay the Editor's).
 fn own_room_system(data: &Precomputed, scene: &str) -> System {
-    use crate::precompute::{clusters, transport};
+    own_room_precompute(data, scene, None).0
+}
+
+/// The Room system of `scene` made by Unbound's precompute (clusters, transport, visibility),
+/// and with `probes` the transport of light probes at those positions over the same clusters.
+fn own_room_precompute(
+    data: &Precomputed,
+    scene: &str,
+    probes: Option<&[[f32; 3]]>,
+) -> (System, Option<crate::data::ProbeSet>) {
+    use crate::precompute::{clusters, probes as own_probes, transport};
     let own = room_instances_of(data, scene);
     let instances: Vec<clusters::Instance> = own
         .iter()
@@ -3064,15 +3074,26 @@ fn own_room_system(data: &Precomputed, scene: &str) -> System {
     .unwrap();
     system.visibility =
         Ok(crate::precompute::visibility::visibility(&clustering.input, &clustering).unwrap());
+    let set = probes.map(|positions| {
+        own_probes::probe_set(
+            positions,
+            &clustering,
+            system.input_hash,
+            data.probe_sets[0].hash,
+            own_probes::DEFAULT_PROBE_RAYS,
+            own_probes::PROBE_BUDGET,
+        )
+        .unwrap()
+    });
     system.input = clustering.input;
     system.materials = clustering.materials;
-    system
+    (system, set)
 }
 
 #[test]
 fn own_transport_lights_the_room_as_the_editors_precompute() {
     let data = room_data();
-    let own = own_room_system(&data, "Room");
+    let (own, set) = own_room_precompute(&data, "Room", Some(&ROOM_PROBES));
     let editor = &data.systems[0];
     // As many texels as the Editor's transport.
     let texels = |s: &System| {
@@ -3169,8 +3190,8 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
     r.solver = SystemSolver::new(Arc::new(own)).unwrap();
     r.data.systems[0] = r.solver.system().clone();
     // And Unbound's own light probe transport.
-    let set = own_room_probes(&r.data);
-    r.probes = ProbeSetSolver::new(Arc::new(set), std::slice::from_ref(&r.solver)).unwrap();
+    r.probes =
+        ProbeSetSolver::new(Arc::new(set.unwrap()), std::slice::from_ref(&r.solver)).unwrap();
     // The probe's Room cases in their order, converged from each other as in the Editor.
     let moved = Room {
         light: MOVED,
@@ -3425,30 +3446,3 @@ const ROOM_PROBES: [[f32; 3]; 9] = [
     [2.0, 3.5, 2.0],
     [0.0, 2.0, 0.0],
 ];
-
-/// The Room's probe set made by Unbound's precompute for the system of `data` (its own clusters).
-fn own_room_probes(data: &Precomputed) -> crate::data::ProbeSet {
-    use crate::precompute::clusters;
-    let own = room_instances(data);
-    let instances: Vec<clusters::Instance> = own
-        .iter()
-        .map(|i| clusters::Instance {
-            positions: &i.positions,
-            normals: &i.normals,
-            texels: &i.texels,
-            triangles: &CUBE_TRIANGLES,
-            cluster_size: 1.0,
-            modelling_tolerance: 0.01,
-        })
-        .collect();
-    let c = clusters::cluster(&instances, 52, 52).unwrap();
-    crate::precompute::probes::probe_set(
-        &ROOM_PROBES,
-        &c,
-        data.systems[0].input_hash,
-        data.probe_sets[0].hash,
-        8192,
-        crate::precompute::probes::PROBE_BUDGET,
-    )
-    .unwrap()
-}

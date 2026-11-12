@@ -782,12 +782,14 @@ is how the Editor's products are made in the measured release, as follows.
   the environment texel they leave through, nothing for a back face. A probe's references are
   cut as a texel's are, through the cluster tree and the environment's levels, comparing all
   nine coefficients, to 512 (the Editor's probe sets of the probe hold at most 64 per probe;
-  Unbound's tree, which groups clusters by position alone, loses detail at fewer: 23 of the 243
-  coefficients of `room-base` off at 128, 14 at 512). With Unbound's clusters and transport the
+  with Unbound's tree, which groups clusters by position alone, fewer give more coefficients
+  off: 23 of the 243 of `room-base` at 128, 14 at 512). With Unbound's clusters and transport the
   Room's nine probes have 14, 23, 56 and 97 of their 243 coefficients beyond the probe
   comparator's tolerance (plus 1% of their band 0) in `room-base`, `-moved`, `-intensity` and
   `-bounce`, 50 to 78 in the later light cases, and none in the environment-only ones
-  (`room-gradient`, `-envdata`, `-sky-none`): what is left follows the clusters' values. Not
+  (`room-gradient`, `-envdata`, `-sky-none`), so the environment's part is the Editor's; how
+  much of the rest comes from the clusters' values and how much from the probes' references is
+  not separated. Not
   measured: probes inside geometry (whose rays all meet back faces and take nothing) and
   outside the system's bounds. Open: probes lit by several systems (the transport references
   one system's clusters and the environment) and the Editor's own choice of 64 references.

@@ -10,13 +10,15 @@ use crate::data::{ENVIRONMENT_ID, Probe, ProbeSet, SH_COEFFICIENTS};
 use anyhow::{Result, ensure};
 use rayon::prelude::*;
 
-/// Rays per probe.
+/// Rays per probe: Unbound's choice, as many as a texel's at the default Irradiance Quality (the
+/// Editor's own number for probes is not measured).
 pub const DEFAULT_PROBE_RAYS: usize = 8192;
 /// References per probe at most, joined through the cluster tree and the environment's levels
 /// as a texel's are; it bounds a probe's data in large systems. (The probe sets of the Unity
 /// 6000.0.71f1 Editor's precompute in tests/projects/realtimegi hold at most 64 references per
-/// probe. Unbound's tree joins clusters by position alone, so fewer join clusters that face
-/// different ways: the Room's base case has 23 of its 243 coefficients off at 128, 14 at 512.)
+/// probe. With Unbound's tree, which groups clusters by position alone, fewer give more of the
+/// Room's coefficients off: 23 of the base case's 243 at 128, 14 at 512; a likely cause, not
+/// isolated, is that its parents join clusters that face different ways.)
 pub const PROBE_BUDGET: usize = 512;
 
 /// A probe's coefficients per unit of a reference's value.
