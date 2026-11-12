@@ -140,29 +140,45 @@ namespace UnityEngine
 
         /// <summary>The scene loaded with handle <paramref name="scene"/>: its lighting data's
         /// precomputed realtime GI, if any (a first scene replaces the others').</summary>
-        internal static void SceneLoaded(int scene, ObjectRef lightingData, LoadedFile file, LightingSettings settings, bool first)
+        /// <para><paramref name="bake"/>: the Editor would bake the scene now (it opened it, its
+        /// LightmapSettings ask for a bake on load and it has no lighting data): its realtime GI
+        /// is then Unbound's own precompute of it (<see cref="Bake"/>).</para>
+        internal static void SceneLoaded(int scene, ObjectRef lightingData, LoadedFile file, LightingSettings settings, bool first, bool bake = false)
         {
             if (first)
             {
                 Reset();
                 s_MixedAreRealtime = settings == null || !settings.bakedGI;
             }
-            if (lightingData.IsNull || lightingData.Guid == null || !Native.IsReady || file == null) return;
-            if (settings != null && !settings.realtimeGI) return;
+            if (!Native.IsReady || file == null) return;
             JsonElement root;
-            try
+            bool baked = lightingData.IsNull || lightingData.Guid == null;
+            if (baked)
             {
-                var json = Native.Call("realtime-gi-load", JsonSerializer.Serialize(new
-                {
-                    guid = lightingData.Guid,
-                    fileId = lightingData.FileId,
-                }));
-                root = JsonDocument.Parse(json).RootElement;
+                // A scene without Lighting Settings has the defaults', which leave realtime GI off.
+                if (!bake || settings == null || !settings.realtimeGI) return;
+                if (!(Bake(scene, file, settings) is JsonElement made)) return;
+                root = made;
+                // As the bake's lighting data would give it.
+                LightmapSettings.lightmapsMode = settings.directionalityMode;
             }
-            catch (Exception e)
+            else
             {
-                Warn("load:" + file.Path, $"{file.Path}: its precomputed realtime GI could not be read, so it is not drawn: {e.Message}");
-                return;
+                if (settings != null && !settings.realtimeGI) return;
+                try
+                {
+                    var json = Native.Call("realtime-gi-load", JsonSerializer.Serialize(new
+                    {
+                        guid = lightingData.Guid,
+                        fileId = lightingData.FileId,
+                    }));
+                    root = JsonDocument.Parse(json).RootElement;
+                }
+                catch (Exception e)
+                {
+                    Warn("load:" + file.Path, $"{file.Path}: its precomputed realtime GI could not be read, so it is not drawn: {e.Message}");
+                    return;
+                }
             }
             if (root.ValueKind != JsonValueKind.Object) return;
             var loaded = new GIScene { Scene = scene, Handle = root.GetProperty("handle").GetUInt64(), AlbedoBoost = settings != null ? settings.albedoBoost : 1f };
@@ -197,7 +213,20 @@ namespace UnityEngine
                     var renderer = BakedLighting.Find(file, r) as Renderer;
                     var st = r.GetProperty("st");
                     renderers.Add(renderer);
-                    offsets.Add(new Vector4(st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle()));
+                    var inSystem = new Vector4(st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle());
+                    offsets.Add(inSystem);
+                    // Unbound's own bake has no lighting data to give the renderer its place in
+                    // the atlas: it is its place in its system, moved to the system's.
+                    if (baked && renderer != null)
+                    {
+                        var offset = s.GetProperty("offset");
+                        float atlas = loaded.Atlases[system.Atlas].width;
+                        renderer.realtimeLightmapIndex = system.Atlas;
+                        renderer.realtimeLightmapScaleOffset = new Vector4(
+                            inSystem.x * system.Width / atlas, inSystem.y * system.Height / atlas,
+                            (inSystem.z * system.Width + offset[0].GetInt32()) / atlas,
+                            (inSystem.w * system.Height + offset[1].GetInt32()) / atlas);
+                    }
                     if (renderer != null) s_Renderers[renderer] = (loaded, systems.Count, renderers.Count - 1);
                 }
                 system.Renderers = renderers.ToArray();

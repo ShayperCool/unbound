@@ -691,6 +691,7 @@ namespace UnityEngine.SceneManagement
         {
             var (path, _) = ProjectInfo.BuildScenes[buildIndex];
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
+            data.OpenedInEditor = true;
             Perform(data, new LoadSceneParameters(LoadSceneMode.Single));
             return new Scene(data.Handle);
         }
@@ -715,6 +716,7 @@ namespace UnityEngine.SceneManagement
             int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
             var data = prepared != null && SceneRegistry.Get(prepared.Handle) == prepared
                 ? prepared : SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
+            data.OpenedInEditor = true;
             Perform(data, new LoadSceneParameters(LoadSceneMode.Single), playModeEntry ? PlayModeEntry : null);
             return new Scene(data.Handle);
         }
@@ -724,6 +726,7 @@ namespace UnityEngine.SceneManagement
         {
             int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
+            data.OpenedInEditor = true;
             Perform(data, new LoadSceneParameters(additive ? LoadSceneMode.Additive : LoadSceneMode.Single));
             return new Scene(data.Handle);
         }

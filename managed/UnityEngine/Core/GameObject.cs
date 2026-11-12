@@ -15,6 +15,9 @@ namespace UnityEngine
         internal int m_Layer;
         internal string m_Tag = "Untagged";
         internal bool m_IsActive = true;
+        /// <summary>The serialized StaticEditorFlags (m_StaticEditorFlags): ContributeGI (1)
+        /// places a renderer in the realtime GI precompute.</summary>
+        internal uint m_StaticEditorFlags;
         [NonSerialized] internal int m_ActivationTransitionDepth;
         // Scene-authored objects are loaded but inactive during BeforeSceneLoad.
         internal bool m_AwaitingSceneAwake;

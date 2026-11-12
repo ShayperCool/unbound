@@ -380,33 +380,20 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void ASceneThatAsksForABakeAtItsLoadIsNamedOnce()
+        public void ASceneAsksForABakeWhenItHasNoLightingDataAndItsSettingSaysSo()
         {
-            // Lightmapping.bakeOnSceneLoad: Unbound does not bake at a scene's load.
-            const string Member = "Lightmapping.bakeOnSceneLoad";
+            // Lightmapping.bakeOnSceneLoad IfMissingLightingData: the Editor bakes a scene it opens
+            // without lighting data (Unbound with its own precompute of the realtime GI); one with
+            // lighting data, or set to Never, is not baked.
             const string Settings = "LightmapSettings:\n  serializedVersion: 13\n  m_BakeOnSceneLoad: {0}\n  m_LightingDataAsset: {1}\n  m_LightingSettings: {{fileID: 0}}\n";
-            var logs = new List<string>();
-            var previous = Debug.unityLogger.logHandler;
-            Debug.unityLogger.logHandler = new Capture(logs);
-            try
+            static bool Asks(int bake, string data)
             {
-                int before = StubHits(Member);
-                static void Load(int bake, string data)
-                {
-                    var body = UnityEngine.Tests.TestYaml.DocumentBody(string.Format(Settings, bake, data));
-                    SceneSettings.NoteBakeOnLoad(body, SceneSettings.LightingReferences(body).Data);
-                }
-                Load(0, "{fileID: 0}");
-                Load(1, "{fileID: 112000000, guid: cd1e7cf349cac13319b42bd6b2033b3d, type: 2}");
-                Assert.Equal(before, StubHits(Member));
-                Load(1, "{fileID: 0}");
-                Assert.Equal(before + 1, StubHits(Member));
-                if (before == 0) Assert.Contains(logs, l => l.Contains(Member) && l.Contains("not baked"));
+                var body = UnityEngine.Tests.TestYaml.DocumentBody(string.Format(Settings, bake, data));
+                return SceneSettings.AsksForBake(body, SceneSettings.LightingReferences(body).Data);
             }
-            finally
-            {
-                Debug.unityLogger.logHandler = previous;
-            }
+            Assert.False(Asks(0, "{fileID: 0}"));
+            Assert.False(Asks(1, "{fileID: 112000000, guid: cd1e7cf349cac13319b42bd6b2033b3d, type: 2}"));
+            Assert.True(Asks(1, "{fileID: 0}"));
         }
 
         static int StubHits(string member)

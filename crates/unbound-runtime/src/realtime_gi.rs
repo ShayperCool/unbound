@@ -968,6 +968,102 @@ pub fn bake(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<Json> {
     Ok(answer)
 }
 
+/// A renderer of a bake request from the managed side (`realtime-gi-bake`): its mesh as flat
+/// lists (positions and normals 3 floats a vertex, UVs 2, triangles 3 indices).
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BakeRequestRenderer {
+    object: i64,
+    #[serde(default)]
+    prefab: i64,
+    positions: Vec<f32>,
+    #[serde(default)]
+    normals: Vec<f32>,
+    uvs: Vec<f32>,
+    triangles: Vec<u32>,
+    local_to_world: [f32; 16],
+    pixel_size: f32,
+    min_chart_texels: u32,
+    automatic: Option<BakeRequestCharts>,
+    cluster_size: f32,
+    modelling_tolerance: f32,
+    group: u64,
+    rays: usize,
+    budget: usize,
+}
+
+/// Automatic charts' instance matrix (3 x 3, column by column) and limits.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BakeRequestCharts {
+    matrix: [f32; 9],
+    max_distance: f32,
+    max_angle: f32,
+    ignore_normals: bool,
+}
+
+/// `realtime-gi-bake`'s request: the scene's renderers and its light probes' world positions
+/// (3 floats each).
+#[derive(serde::Deserialize)]
+pub struct BakeRequest {
+    renderers: Vec<BakeRequestRenderer>,
+    #[serde(default)]
+    probes: Vec<f32>,
+}
+
+fn triples<T: Copy>(values: &[T], what: &str) -> Result<Vec<[T; 3]>> {
+    ensure!(
+        values.len() % 3 == 0,
+        "{} {what} values: not whole triples",
+        values.len()
+    );
+    Ok(values.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect())
+}
+
+/// [`bake`] of a request from the managed side.
+pub fn bake_request(request: BakeRequest) -> Result<Json> {
+    let inputs = request
+        .renderers
+        .into_iter()
+        .map(|r| -> Result<BakeInput> {
+            ensure!(
+                r.uvs.len() % 2 == 0,
+                "{} UV values: not whole pairs",
+                r.uvs.len()
+            );
+            Ok(BakeInput {
+                object: r.object,
+                prefab: r.prefab,
+                positions: triples(&r.positions, "position")?,
+                normals: triples(&r.normals, "normal")?,
+                uvs: r.uvs.chunks_exact(2).map(|c| [c[0], c[1]]).collect(),
+                triangles: triples(&r.triangles, "index")?,
+                local_to_world: r.local_to_world,
+                pixel_size: r.pixel_size,
+                min_chart_texels: r.min_chart_texels,
+                automatic: r.automatic.map(|a| {
+                    (
+                        a.matrix,
+                        unbound_gi::auto_charts::Params {
+                            max_distance: a.max_distance,
+                            max_angle: a.max_angle,
+                            ignore_normals: a.ignore_normals,
+                        },
+                    )
+                }),
+                cluster_size: r.cluster_size,
+                modelling_tolerance: r.modelling_tolerance,
+                group: r.group,
+                settings: unbound_gi::precompute::transport::Settings {
+                    rays: r.rays,
+                    budget: r.budget,
+                },
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    bake(&inputs, &triples(&request.probes, "probe")?)
+}
+
 /// The cache key of a bake: every input, the probes, and the versions of everything that makes
 /// its output.
 fn bake_key(inputs: &[BakeInput], probes: &[[f32; 3]]) -> String {

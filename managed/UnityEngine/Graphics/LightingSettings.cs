@@ -122,6 +122,9 @@ namespace UnityEngine
 
         State m_State = State.Defaults;
 
+        /// <summary>The scene's default Lightmap Parameters (none: the built-in Default-Medium).</summary>
+        internal Unbound.Runtime.ObjectRef DefaultLightmapParameters => m_State.LightmapParameters;
+
         // The limits Unity 6000.0.71f1's setters apply (tests/projects/lightingassets).
         const int k_MinLightmapSize = 32, k_MaxLightmapSize = 4096;
         const int k_MinPadding = 2, k_MaxPadding = 100;

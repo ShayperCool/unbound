@@ -35,6 +35,10 @@ namespace Unbound.Runtime
         /// <summary>The scene's Lighting Settings (its LightmapSettings' m_LightingSettings, or
         /// what UnityEditor.Lightmapping assigned since); null: none.</summary>
         internal LightingSettings LightingSettings;
+        /// <summary>The Editor opened the scene (the first scene, the one Play mode starts with,
+        /// EditorSceneManager.OpenScene), as opposed to loading it at runtime (SceneManager):
+        /// the Editor bakes an opened scene that asks for it (Lightmapping.bakeOnSceneLoad).</summary>
+        internal bool OpenedInEditor;
     }
 
     /// <summary>The loaded scenes and their root GameObjects, in hierarchy order.</summary>

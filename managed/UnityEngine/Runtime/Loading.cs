@@ -295,7 +295,8 @@ namespace Unbound.Runtime
                 m_IsPrefabAsset = kind == Kind.PrefabAsset || kind == Kind.Bundle,
                 IsPersistentAsset = kind != Kind.Scene,
             };
-            go.isStatic = body.Long("m_StaticEditorFlags") != 0;
+            go.m_StaticEditorFlags = (uint)body.Long("m_StaticEditorFlags");
+            go.isStatic = go.m_StaticEditorFlags != 0;
             if (scene != null) go.m_Scene = scene.Handle;
             if (instances != null) PrefabLinks.Link(go, body, instances);
             return go;
@@ -581,13 +582,12 @@ namespace Unbound.Runtime
         internal static (ObjectRef Data, ObjectRef Settings) LightingReferences(YNode body) =>
             (body.Ref("m_LightingDataAsset"), body.Ref("m_LightingSettings"));
 
-        /// <summary>Says, once, that a scene which asks for a bake at its load
-        /// (Lightmapping.bakeOnSceneLoad, for a scene without lighting data) gets none.</summary>
-        internal static void NoteBakeOnLoad(YNode lightmapSettings, ObjectRef data)
-        {
-            if (data.IsNull && lightmapSettings.Int("m_BakeOnSceneLoad") != 0)
-                Stubs.Ignored("Lightmapping.bakeOnSceneLoad", "is not honoured: a scene without lighting data is not baked when it loads");
-        }
+        /// <summary>Whether a scene asks the Editor to bake it when it opens
+        /// (Lightmapping.bakeOnSceneLoad IfMissingLightingData) and has no lighting data: the
+        /// Editor then bakes it (tests/projects/realtimegi, the bake cases; a scene loaded at
+        /// runtime is not baked).</summary>
+        internal static bool AsksForBake(YNode lightmapSettings, ObjectRef data) =>
+            data.IsNull && lightmapSettings.Int("m_BakeOnSceneLoad") != 0;
 
         internal static void Apply(YDocument doc, IReferenceResolver resolver, SceneData scene = null)
         {
@@ -600,7 +600,7 @@ namespace Unbound.Runtime
                 // additive one adds to it.
                 bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
                 var references = LightingReferences(doc.Body);
-                NoteBakeOnLoad(doc.Body, references.Data);
+                bool bake = scene != null && scene.OpenedInEditor && AsksForBake(doc.Body, references.Data);
                 RenderSettings.ReadLightingData(references.Data, resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
                 if (scene != null)
                 {
@@ -608,7 +608,7 @@ namespace Unbound.Runtime
                     scene.LightingSettings = settings.IsNull || resolver == null ? null : resolver.Resolve(settings, typeof(LightingSettings)) as LightingSettings;
                     if (first) DynamicGI.SceneLoaded(scene.LightingSettings);
                 }
-                RealtimeGI.SceneLoaded(scene?.Handle.Value ?? 0, references.Data, resolver as LoadedFile, scene?.LightingSettings, first);
+                RealtimeGI.SceneLoaded(scene?.Handle.Value ?? 0, references.Data, resolver as LoadedFile, scene?.LightingSettings, first, bake);
             }
             Loaded?.Invoke(doc);
         }

@@ -853,10 +853,9 @@ namespace UnityEngine
 
         internal bool IsOuterCell(int cell) => m_Set.IsOuterCell(cell);
 
-        internal static LightProbes FromJson(JsonElement json)
-        {
-            var set = ProbeSet.FromJson(json);
-            return new LightProbes { name = "LightProbes", m_Self = set, m_Set = set };
-        }
+        internal static LightProbes FromJson(JsonElement json) => FromSet(ProbeSet.FromJson(json));
+
+        /// <summary>Probes of a set made at runtime (Unbound's realtime GI bake).</summary>
+        internal static LightProbes FromSet(ProbeSet set) => new LightProbes { name = "LightProbes", m_Self = set, m_Set = set };
     }
 }

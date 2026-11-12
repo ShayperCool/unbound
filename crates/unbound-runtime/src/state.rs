@@ -311,6 +311,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::realtime_gi::load(&s.db, &s.unity_data, &r.guid, r.file_id)?.to_string())
         }
+        "realtime-gi-bake" => {
+            let r: crate::realtime_gi::BakeRequest = serde_json::from_str(request)?;
+            Ok(crate::realtime_gi::bake_request(r)?.to_string())
+        }
         "realtime-gi-release" => {
             #[derive(serde::Deserialize)]
             struct Request {
