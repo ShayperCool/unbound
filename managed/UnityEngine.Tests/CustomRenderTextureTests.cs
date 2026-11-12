@@ -108,6 +108,77 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>A loaded texture is queued again by a change of its material, initialization
+        /// material or color, modes or face mask (its OnLoad initialization and update, by the
+        /// modes it has then), not by the same value again, nor by the shader pass, the
+        /// initialization texture or source; a texture not loaded yet is not queued.</summary>
+        [Fact]
+        public void ChangesQueueTheOnLoadWorkOfALoadedTextureAgain()
+        {
+            var crt = new CustomRenderTexture(4, 4) { initializationMode = CustomRenderTextureUpdateMode.OnLoad, updateMode = CustomRenderTextureUpdateMode.OnDemand };
+            var material = new Material(Shader.Find("Hidden/BlitCopy"));
+            var other = new Material(material);
+            try
+            {
+                crt.material = material;
+                Assert.False(crt.m_ReloadInit || crt.m_ReloadUpdate);
+                crt.m_Loaded = true;
+                (bool, bool) After(Action change)
+                {
+                    crt.m_ReloadInit = crt.m_ReloadUpdate = false;
+                    change();
+                    return (crt.m_ReloadInit, crt.m_ReloadUpdate);
+                }
+                Assert.Equal((false, false), After(() => crt.material = material));
+                Assert.Equal((true, false), After(() => crt.material = other));
+                Assert.Equal((false, false), After(() => crt.shaderPass = 2));
+                Assert.Equal((false, false), After(() => crt.initializationTexture = Texture2D.whiteTexture));
+                Assert.Equal((false, false), After(() => crt.initializationSource = CustomRenderTextureInitializationSource.Material));
+                Assert.Equal((false, false), After(() => crt.initializationColor = crt.initializationColor));
+                Assert.Equal((true, false), After(() => crt.initializationColor = new Color(0, 1, 0, 1)));
+                Assert.Equal((true, false), After(() => crt.cubemapFaceMask = 5));
+                Assert.Equal((true, true), After(() => crt.updateMode = CustomRenderTextureUpdateMode.OnLoad));
+                // By the modes after the change.
+                Assert.Equal((false, true), After(() => crt.initializationMode = CustomRenderTextureUpdateMode.OnDemand));
+                Assert.Equal((false, false), After(() => crt.updateMode = CustomRenderTextureUpdateMode.Realtime));
+                // A NaN is always a change.
+                Assert.Equal((false, false), After(() => crt.initializationColor = new Color(float.NaN, 0, 0, 0)));
+                crt.initializationMode = CustomRenderTextureUpdateMode.OnLoad;
+                Assert.Equal((true, false), After(() => crt.initializationColor = crt.initializationColor));
+            }
+            finally
+            {
+                Object.DestroyImmediate(crt);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(other);
+            }
+        }
+
+        /// <summary>Setting an initialization material clears the initialization texture and
+        /// makes the color white; setting none keeps both.</summary>
+        [Fact]
+        public void AnInitializationMaterialClearsTheTextureAndWhitensTheColor()
+        {
+            var crt = new CustomRenderTexture(4, 4) { initializationTexture = Texture2D.whiteTexture, initializationColor = new Color(1, 0, 0, 0.5f) };
+            var material = new Material(Shader.Find("Hidden/BlitCopy"));
+            try
+            {
+                crt.initializationMaterial = material;
+                Assert.Null(crt.initializationTexture);
+                Assert.Equal(Color.white, crt.initializationColor);
+                crt.initializationTexture = Texture2D.whiteTexture;
+                crt.initializationColor = Color.red;
+                crt.initializationMaterial = null;
+                Assert.NotNull(crt.initializationTexture);
+                Assert.Equal(Color.red, crt.initializationColor);
+            }
+            finally
+            {
+                Object.DestroyImmediate(crt);
+                Object.DestroyImmediate(material);
+            }
+        }
+
         [Fact]
         public void DoubleBufferWithoutMipsCopiesOneLevel()
         {

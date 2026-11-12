@@ -125,7 +125,7 @@ maximum volume extent is 16384 on this device, matching the earlier URP capabili
 Volumes use GPU 3D textures, including single-slice volumes. Their attachment views and mip
 filter bindings are prepared with the resource and reused. Replacement and release discard
 the cached mip bindings. Mip generation shares the 2D/array filter path and filters all three
-axes for volumes. CustomRenderTexture's volume update zones remain separately unsupported.
+axes for volumes. CustomRenderTexture volumes draw into these targets slice by slice (tests/projects/customrt).
 
 `volumeAuto.*` measures automatic mip visibility with both a 2D target and a volume.
 Changing the desired target alone leaves the previous mips visible. A subsequent draw or

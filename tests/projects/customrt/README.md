@@ -30,6 +30,12 @@ end of PostLateUpdate. `ev.<section>` lists the manager's events as `frame:point
 * **cube**: face masks, the direction and face variables, initialization materials with and
   without a face mask, the self cube.
 * **volume**: a 3D texture's slices: texcoords, parameters, zones, the self volume.
+* **volumeSelf** (after the other sections, added later): a double-buffered volume updated with
+  the parameters pass, then with a material reading `_SelfTexture3D`; both buffers read.
+* **changed** (last, added later): one property set on each loaded texture after an update
+  (material, initialization material, color, texture, source and mode, update mode, face mask,
+  shader pass, and the same material or color again), read before and in the next two frames;
+  what an initialization material does to the initialization texture and color.
 * **variables**: the custom render texture variables a blit sees before and after an update.
 * **loading**: default textures made late in the run (untouched, created, a mode set, a
   material set): when they load and what the manager lists.
@@ -91,10 +97,16 @@ and image manifest, with the rtdepth probe's float tolerance (absolute and relat
   "3D textures with depth are not supported"): every slice is initialized and updated, with the
   slice in `_CustomRenderTextureInfo.w` and slice / depth as the third texcoord; a zone's z
   (scaled by the depth in normalized space) selects the slices it updates.
+* A change of the material, the initialization material or color, the initialization or
+  update mode or the face mask of a loaded texture queues it again as on its load: its OnLoad
+  initialization and OnLoad update run at the next update point (`changed.*`; in `volumeSelf` the
+  second material re-initializes the volume, so its update reads the initialization color). The
+  same value again, the shader pass, the initialization texture and source do not. Setting an
+  initialization material clears the initialization texture and makes the color white.
 
 ## Unbound (2026-11-12)
 
-350 of 352 values and 140 of 140 images match. The two values left: the api section's
+408 of 410 values and 192 of 192 images match. The two values left: the api section's
 textures, made in the first frame of Play mode, load in that frame in Unbound (`ev.api`,
 `api.all.next`); the Editor never loads them (it lists none of them in the next frame and sends
 them no events), while textures made in later frames load in their first frame in both.

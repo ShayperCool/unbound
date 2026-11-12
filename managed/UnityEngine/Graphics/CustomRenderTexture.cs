@@ -26,6 +26,8 @@ namespace UnityEngine
     /// the first after an initialization, and before each zone that asks for it. A single
     /// buffer binds no self texture.</item>
     /// <item>Textures update after the ones their materials read.</item>
+    /// <item>Changing the material, the initialization material or color, a mode or the face mask
+    /// of a loaded texture runs its OnLoad initialization and update again (see Changed).</item>
     /// </list>
     /// </summary>
     [ClassId(86)]
@@ -50,6 +52,8 @@ namespace UnityEngine
         // Scheduling state (CustomRenderTextureManager).
         internal bool m_Loaded;
         internal bool m_InitPending;
+        // Queued again by a change (see Changed).
+        internal bool m_ReloadInit, m_ReloadUpdate;
         internal int m_UpdatesPending;
         internal float m_SinceUpdate;
         internal bool m_UpdatedSinceInit;
@@ -75,16 +79,101 @@ namespace UnityEngine
         /// <summary>A `.asset` custom render texture (registered when it is read).</summary>
         CustomRenderTexture() => CustomRenderTextureManager.Register(this);
 
-        public Material material { get => m_Material; set => m_Material = value; }
-        public Material initializationMaterial { get => m_InitMaterial; set => m_InitMaterial = value; }
+        public Material material
+        {
+            get => m_Material;
+            set
+            {
+                if (ReferenceEquals(m_Material, value)) return;
+                m_Material = value;
+                Changed();
+            }
+        }
+
+        /// <summary>A material set here (not null) also clears <see cref="initializationTexture"/>
+        /// and sets <see cref="initializationColor"/> to white (tests/projects/customrt
+        /// <c>changed.reset</c>).</summary>
+        public Material initializationMaterial
+        {
+            get => m_InitMaterial;
+            set
+            {
+                if (ReferenceEquals(m_InitMaterial, value)) return;
+                m_InitMaterial = value;
+                if (value != null)
+                {
+                    m_InitTexture = null;
+                    m_InitColor = Color.white;
+                }
+                Changed();
+            }
+        }
+
         public Texture initializationTexture { get => m_InitTexture; set => m_InitTexture = value; }
         public CustomRenderTextureInitializationSource initializationSource { get => m_InitSource; set => m_InitSource = value; }
-        public Color initializationColor { get => m_InitColor; set => m_InitColor = value; }
-        public CustomRenderTextureUpdateMode updateMode { get => m_UpdateMode; set => m_UpdateMode = value; }
-        public CustomRenderTextureUpdateMode initializationMode { get => m_InitMode; set => m_InitMode = value; }
+
+        public Color initializationColor
+        {
+            get => m_InitColor;
+            set
+            {
+                // Component by component; a NaN is always a change.
+                if (m_InitColor.r == value.r && m_InitColor.g == value.g && m_InitColor.b == value.b && m_InitColor.a == value.a) return;
+                m_InitColor = value;
+                Changed();
+            }
+        }
+
+        public CustomRenderTextureUpdateMode updateMode
+        {
+            get => m_UpdateMode;
+            set
+            {
+                if (m_UpdateMode == value) return;
+                m_UpdateMode = value;
+                Changed();
+            }
+        }
+
+        public CustomRenderTextureUpdateMode initializationMode
+        {
+            get => m_InitMode;
+            set
+            {
+                if (m_InitMode == value) return;
+                m_InitMode = value;
+                Changed();
+            }
+        }
+
         public CustomRenderTextureUpdateZoneSpace updateZoneSpace { get => m_ZoneSpace; set => m_ZoneSpace = value; }
         public int shaderPass { get => m_ShaderPass; set => m_ShaderPass = value; }
-        public uint cubemapFaceMask { get => m_CubemapFaceMask; set => m_CubemapFaceMask = value; }
+
+        public uint cubemapFaceMask
+        {
+            get => m_CubemapFaceMask;
+            set
+            {
+                if (m_CubemapFaceMask == value) return;
+                m_CubemapFaceMask = value;
+                Changed();
+            }
+        }
+
+        /// <summary>
+        /// A change of the material, the initialization material or color, either mode or the
+        /// face mask of a loaded texture queues it again as on its load: its OnLoad initialization
+        /// and its OnLoad update run at the next update point, once however many changes come
+        /// before it, by the modes the texture has then (Unity 6000.0.71f1 Editor,
+        /// tests/projects/customrt <c>changed.*</c> and <c>volumeSelf</c>). The other properties
+        /// (shader pass, initialization texture and source, zones, double buffering) do not.
+        /// </summary>
+        void Changed()
+        {
+            if (!m_Loaded) return;
+            m_ReloadInit = m_InitMode == CustomRenderTextureUpdateMode.OnLoad;
+            m_ReloadUpdate = m_UpdateMode == CustomRenderTextureUpdateMode.OnLoad;
+        }
         public bool doubleBuffered { get => m_DoubleBuffered; set => m_DoubleBuffered = value; }
         public bool wrapUpdateZones { get => m_WrapZones; set => m_WrapZones = value; }
         public float updatePeriod { get => m_UpdatePeriod; set => m_UpdatePeriod = value; }
@@ -234,6 +323,10 @@ namespace UnityEngine
         const int VerticesPerZone = 6;
 
         static Material s_InitBlit;
+        static readonly Dictionary<int, object> s_DrawProperties = new Dictionary<int, object>();
+        static readonly Vector4[] s_BatchCenters = new Vector4[BatchSize];
+        static readonly Vector4[] s_BatchSizes = new Vector4[BatchSize];
+        static readonly float[] s_BatchIds = new float[BatchSize];
         bool m_ReportedInitTexture, m_ReportedPass;
 
         /// <summary>The faces of a cubemap, the slices of a volume at a mip level, else one.</summary>
@@ -330,22 +423,23 @@ namespace UnityEngine
         /// <summary>The variables Unity's include reads, for a face or slice: _CustomRenderTextureInfo
         /// (width, height, depth, face or slice; depth 1 but for volumes) and
         /// CustomRenderTextureParameters (pixel space, the face for cubemaps or slice / depth for
-        /// volumes, 1 for volumes, 0) (measured for 2D textures, cubemaps and volumes).</summary>
+        /// volumes, 1 for volumes, 0) (measured for 2D textures, cubemaps and volumes). Fills
+        /// the one property set of the draws (each draw writes its values out at once).</summary>
         Dictionary<int, object> Variables(int element, float space)
         {
+            var properties = s_DrawProperties;
+            properties.Clear();
             if (dimension == TextureDimension.Tex3D)
             {
-                return new Dictionary<int, object>
-                {
-                    [s_Info] = new Vector4(width, height, volumeDepth, element),
-                    [s_Parameters] = new Vector4(space, (float)element / volumeDepth, 1, 0),
-                };
+                properties[s_Info] = new Vector4(width, height, volumeDepth, element);
+                properties[s_Parameters] = new Vector4(space, (float)element / volumeDepth, 1, 0);
             }
-            return new Dictionary<int, object>
+            else
             {
-                [s_Info] = new Vector4(width, height, 1, element),
-                [s_Parameters] = new Vector4(space, element, 0, 0),
-            };
+                properties[s_Info] = new Vector4(width, height, 1, element);
+                properties[s_Parameters] = new Vector4(space, element, 0, 0);
+            }
+            return properties;
         }
 
         /// <summary>Runs <paramref name="count"/> updates.</summary>
@@ -454,9 +548,12 @@ namespace UnityEngine
                 return;
             }
             int n = end - start;
-            var centers = new Vector4[BatchSize];
-            var sizes = new Vector4[BatchSize];
-            var ids = new float[BatchSize];
+            var centers = s_BatchCenters;
+            var sizes = s_BatchSizes;
+            var ids = s_BatchIds;
+            Array.Clear(centers, n, BatchSize - n);
+            Array.Clear(sizes, n, BatchSize - n);
+            Array.Clear(ids, n, BatchSize - n);
             for (int i = 0; i < n; i++)
             {
                 centers[i] = zones[start + i].Center;
@@ -626,12 +723,14 @@ namespace UnityEngine
                 bool first = fresh.Contains(t);
                 if (first) t.Load();
                 bool init = t.m_InitPending || t.initializationMode == CustomRenderTextureUpdateMode.Realtime
-                    || (first && t.initializationMode == CustomRenderTextureUpdateMode.OnLoad);
+                    || (first && t.initializationMode == CustomRenderTextureUpdateMode.OnLoad) || t.m_ReloadInit;
                 t.m_InitPending = false;
+                t.m_ReloadInit = false;
                 if (init) t.RunInitialization();
                 int updates = t.m_UpdatesPending;
                 t.m_UpdatesPending = 0;
-                if (first && t.updateMode == CustomRenderTextureUpdateMode.OnLoad) updates++;
+                if ((first && t.updateMode == CustomRenderTextureUpdateMode.OnLoad) || t.m_ReloadUpdate) updates++;
+                t.m_ReloadUpdate = false;
                 if (t.updateMode == CustomRenderTextureUpdateMode.Realtime)
                 {
                     t.m_SinceUpdate += delta;
