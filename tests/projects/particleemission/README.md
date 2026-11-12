@@ -67,7 +67,19 @@ same count controls with and without particle writes separate emission timing
 from buffer compaction. Snapshot controls retain the accumulator through the
 existing opaque playback-state API.
 
+Stopped-simulation controls (`stoppedSimulate/<mode>/<source>/<delay>`) start from a
+fresh system, `Stop` with either behaviour before or after it played (with the
+GameObject inactive or active), or a paused one, then make two non-restarting
+`Simulate` calls, `Play` and one more call; rate, delayed rate and burst emission
+each. `stoppedResume/*` resumes emission after one stopped call of 0.3 to 1.3 s
+with 0.1 to 0.7 s calls, crossing the loop end or not. `stoppedLongStep/*`
+raises `Time.maximumParticleDeltaTime` above the start delay left, and
+`disabledBurst/*` turns the emission module off across a single and a repeating
+burst. The Editor runs in batch mode on the GPU (`run.py native` uses
+`tests/editor_runner.py`); two captures were identical and the earlier 16573
+records are byte-identical.
+
 Only this Editor release is measured. The expanded observations also retain
-independent random-seed and stopped-simulation emission gaps. The verifier
+independent random-seed gaps. The verifier
 reports every discrepancy; passing the original lifetime control does not
 establish full particle parity.

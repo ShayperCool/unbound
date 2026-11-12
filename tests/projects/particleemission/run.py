@@ -12,6 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1]))
 from probe_paths import cache_artifact_path
+import editor_runner  # noqa: E402
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine'])
 p.add_argument('--unity-version', required=True)
@@ -46,8 +47,15 @@ else:
     if out.exists() or log.exists(): raise SystemExit('Refusing to overwrite ' + a.label)
     env = dict(os.environ, PARTICLE_EMISSION_OUT=str(out))
     if a.mode == 'native':
+        # A batchmode Editor on the GPU (tests/editor_runner.py takes its own launcher lease).
         editor = os.environ.get('UNBOUND_PROBE_UNITY', str(Path.home()/'Unity/Hub/Editor'/a.unity_version/'Editor/Unity'))
-        cmd = [editor, '-batchmode', '-nographics', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(work/(a.label+'-editor.log'))]
+        job = editor_runner.EditorJob(project, work/(a.label+'-editor.log'), work/(a.label+'-editor'),
+                                      ['-executeMethod', 'ProbeRunner.Record'], batch=True, graphics=True,
+                                      env={'PARTICLE_EMISSION_OUT': str(out)}, timeout=1200, editor=editor,
+                                      label='particleemission-'+a.label)
+        print(editor_runner.summary(editor_runner.run(job)))
+        if not out.exists(): raise SystemExit('Capture failed: ' + str(job.log))
+        raise SystemExit(0)
     else:
         if not a.cli or not a.runtime: p.error('engine requires --cli and --runtime')
         env.update(UNBOUND_MANAGED_DIR=str(a.runtime.resolve()), LD_LIBRARY_PATH=str(a.runtime.resolve()))

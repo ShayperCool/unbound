@@ -318,6 +318,118 @@ public class EmissionProbe : MonoBehaviour
         }
         Time.maximumParticleDeltaTime = saved;
     }
+    // Which earlier state makes a non-restarting Simulate advance without emitting: a fresh
+    // system, Stop with either behaviour before or after it ever played, and Stop while the
+    // GameObject is inactive or active. Play then shows what the stopped state kept.
+    static void StoppedSimulation(int mode, int source, float delay)
+    {
+        string key = "stoppedSimulate/" + mode + "/" + source + "/" + F(delay);
+        var go = new GameObject("emission-stopped"); go.SetActive(false);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main; main.playOnAwake = false; main.duration = 1; main.loop = true;
+        main.startDelay = delay; main.startLifetime = 2; main.startSpeed = 0;
+        var shape = ps.shape; shape.enabled = false;
+        var emission = ps.emission; emission.enabled = true;
+        emission.rateOverTime = source == 1 ? 10 : 0;
+        if (source == 3) emission.SetBursts(new[] { new ParticleSystem.Burst(.25f, (short)2) });
+        ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
+        if (mode == 1) ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+        go.SetActive(true);
+        if (mode == 2) ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+        if (mode == 3) ps.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+        if (mode == 4) { ps.Play(false); ps.Simulate(.1f, false, false, false); ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear); }
+        if (mode == 5) { ps.Play(false); ps.Stop(false, ParticleSystemStopBehavior.StopEmitting); }
+        if (mode == 6) { ps.Play(false); ps.Simulate(.6f, false, false, false); ps.Play(false); ps.Stop(false, ParticleSystemStopBehavior.StopEmitting); }
+        if (mode == 7) { ps.Play(false); ps.Pause(false); ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear); }
+        ParticleState(key + "/before", ps);
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/first", ps);
+        ps.Simulate(.7f, false, false, false); ParticleState(key + "/second", ps);
+        ps.Play(false); ParticleState(key + "/play", ps);
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/afterPlay", ps);
+        UnityEngine.Object.DestroyImmediate(go);
+    }
+    // Emission resumed by Play after a stopped clock, with and without crossing the loop end.
+    static void StoppedResume(bool played, float stopped, float resume)
+    {
+        string key = "stoppedResume/" + B(played) + "/" + F(stopped) + "/" + F(resume);
+        var go = new GameObject("emission-resume"); go.SetActive(false);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main; main.playOnAwake = false; main.duration = 1; main.loop = true;
+        main.startLifetime = 5; main.startSpeed = 0;
+        var shape = ps.shape; shape.enabled = false;
+        var emission = ps.emission; emission.rateOverTime = 10;
+        ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
+        go.SetActive(true);
+        if (played) ps.Play(false);
+        ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ps.Simulate(stopped, false, false, false);
+        ps.Play(false);
+        ps.Simulate(resume, false, false, false); ParticleState(key, ps);
+        ps.Simulate(resume, false, false, false); ParticleState(key + "/again", ps);
+        UnityEngine.Object.DestroyImmediate(go);
+    }
+    // A stopped step longer than the start delay left; a burst passed while the module is off.
+    static void StoppedLongSteps(float maximum, float delay)
+    {
+        float saved = Time.maximumParticleDeltaTime;
+        Time.maximumParticleDeltaTime = maximum;
+        string key = "stoppedLongStep/" + F(maximum) + "/" + F(delay);
+        var go = new GameObject("emission-long"); go.SetActive(false);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main; main.playOnAwake = false; main.duration = 1; main.loop = true;
+        main.startDelay = delay; main.startLifetime = 5; main.startSpeed = 0;
+        var shape = ps.shape; shape.enabled = false;
+        var emission = ps.emission; emission.rateOverTime = 10;
+        ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
+        go.SetActive(true);
+        ps.Play(false); ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/first", ps);
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/second", ps);
+        ps.Play(false);
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/afterPlay", ps);
+        UnityEngine.Object.DestroyImmediate(go);
+        Time.maximumParticleDeltaTime = saved;
+    }
+    static void DisabledBurst(bool repeat)
+    {
+        string key = "disabledBurst/" + B(repeat);
+        var go = new GameObject("emission-burst"); go.SetActive(false);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main; main.playOnAwake = false; main.duration = 1; main.loop = true;
+        main.startLifetime = 5; main.startSpeed = 0;
+        var shape = ps.shape; shape.enabled = false;
+        var emission = ps.emission; emission.rateOverTime = 0;
+        var burst = new ParticleSystem.Burst(.25f, (short)2);
+        if (repeat) { burst.cycleCount = 3; burst.repeatInterval = .2f; }
+        emission.SetBursts(new[] { burst });
+        ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
+        go.SetActive(true);
+        ps.Play(false);
+        ps.Simulate(.1f, false, false, false); ParticleState(key + "/before", ps);
+        emission.enabled = false;
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/disabled", ps);
+        emission.enabled = true;
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/enabled", ps);
+        ps.Simulate(.7f, false, false, false); ParticleState(key + "/nextLoop", ps);
+        UnityEngine.Object.DestroyImmediate(go);
+    }
+    static void StoppedSimulations()
+    {
+        for (int mode = 0; mode < 8; mode++) {
+            StoppedSimulation(mode, 1, 0);
+            StoppedSimulation(mode, 1, .25f);
+            StoppedSimulation(mode, 3, 0);
+        }
+        foreach (bool played in new[] { false, true })
+        foreach (float stopped in new[] { .3f, .6f, .95f, 1f, 1.3f })
+        foreach (float resume in new[] { .1f, .3f, .5f, .7f })
+            StoppedResume(played, stopped, resume);
+        foreach (float maximum in new[] { .03f, .5f })
+        foreach (float delay in new[] { .1f, .25f, .4f })
+            StoppedLongSteps(maximum, delay);
+        DisabledBurst(false);
+        DisabledBurst(true);
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -340,6 +452,7 @@ public class EmissionProbe : MonoBehaviour
         SubdivisionControls();
         RateBoundaries();
         RateAccumulation();
+        StoppedSimulations();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_EMISSION_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
