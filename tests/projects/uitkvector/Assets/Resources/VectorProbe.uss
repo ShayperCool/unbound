@@ -1,0 +1,4 @@
+.uss-shapes {
+    background-image: url("Vector/shapes.svg");
+    -unity-background-scale-mode: scale-to-fit;
+}

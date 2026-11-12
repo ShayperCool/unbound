@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="lin" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff0000"/>
+      <stop offset="0.5" stop-color="#00ff00"/>
+      <stop offset="1" stop-color="#0000ff"/>
+    </linearGradient>
+    <radialGradient id="rad" cx="0.5" cy="0.5" r="0.5" fx="0.3" fy="0.3">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#000080"/>
+    </radialGradient>
+    <linearGradient id="refl" x1="0" y1="0" x2="0.25" y2="0.25" spreadMethod="reflect">
+      <stop offset="0" stop-color="#ffff00"/>
+      <stop offset="1" stop-color="#ff00ff"/>
+    </linearGradient>
+    <linearGradient id="rep" x1="0" y1="0" x2="0.25" y2="0" spreadMethod="repeat">
+      <stop offset="0" stop-color="#00ffff"/>
+      <stop offset="1" stop-color="#800000" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="64" height="14" fill="url(#lin)"/>
+  <circle cx="16" cy="36" r="14" fill="url(#rad)"/>
+  <rect x="34" y="22" width="28" height="28" fill="url(#refl)"/>
+  <path d="M34 18 L62 18" fill="none" stroke="url(#lin)" stroke-width="4"/>
+  <rect x="0" y="54" width="64" height="10" fill="url(#rep)"/>
+</svg>
