@@ -19,8 +19,8 @@ namespace Unbound.Runtime
         internal IReadOnlyList<GameObject> SceneRoots;
         internal Object MainObject;
         /// <summary>A ScriptedImporter's objects: their file ids are derived from their identifiers
-        /// (ScriptedImports.FileId); a reference no object answers to resolves by the objects
-        /// themselves (<see cref="AssetDatabaseRuntime.Load"/>).</summary>
+        /// (ScriptedImports.FileId); a reference no object answers to is empty, unless it may name a
+        /// component or child of an added GameObject (<see cref="AssetDatabaseRuntime.ByProducedObjects"/>).</summary>
         internal bool UnknownFileIds;
         /// <summary>The identifiers a ScriptedImporter gave its objects.</summary>
         internal readonly Dictionary<Object, string> Identifiers = new Dictionary<Object, string>();

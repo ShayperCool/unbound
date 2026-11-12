@@ -146,8 +146,9 @@ namespace Unbound.Runtime
     /// <summary>
     /// Imports assets whose .meta names a ScriptedImporter by running the project's importer, as the
     /// Editor does. Each object's file id is Unity's: xxHash64 of <c>"Type:" + class + "->" +
-    /// identifier + "0"</c> (measured in tests/projects/input); a reference no object answers to
-    /// still resolves by the objects the import produced.
+    /// identifier + "0"</c> (measured in tests/projects/input, tests/projects/uxmlattributes); a
+    /// reference no object answers to is empty, unless it may name a component or child of an added
+    /// GameObject (AssetDatabaseRuntime.ByProducedObjects).
     /// </summary>
     internal static class ScriptedImports
     {
