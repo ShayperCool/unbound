@@ -234,8 +234,10 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   fitted to the renderer (vertex inputs by HLSL semantic, resources by name, the draw's color on
   the vertex color, the device's clip space turned into the renderer's, array elements padded to their HLSL
   stride), and WGSL out. Variants follow the material's and the global keywords; compiled
-  programs are cached in the global cache by a hash of their preprocessed sources. Each draw's
-  uniform block is filled by name: Unity's built-in variables, then material properties (colors
+  programs are cached in the global cache by a hash of their preprocessed sources. A program's
+  cbuffers are packed in declaration order into uniform bindings of at most 64 KB each (one for
+  most programs; URP's Forward+ buffers take several), ranges of one uniform data block per draw,
+  which is filled by name: Unity's built-in variables, then material properties (colors
   linearized in linear space, texture `_ST`/`_TexelSize`), then global shader properties
   (`Shader.SetGlobal*`, sent with each frame). Fixed-function passes (`SetTexture` combiners,
   `Lighting`/`Material`, `AlphaTest`) compile as the program their commands stand for. Surface
