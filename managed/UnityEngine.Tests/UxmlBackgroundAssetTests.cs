@@ -315,10 +315,11 @@ namespace UnityEngine.Tests
             Assert.Empty(logs);
         }
 
-        // [choice] An importer whose file ids Unbound does not know (a game ScriptedImporter): the
-        // item's type picks the object among those the importer made, as for a single member.
+        // [measured] An item pointing into a game ScriptedImporter's asset is the object its file id
+        // names; a file id naming none of them gives a null item, silently, even when an object of the
+        // item type exists (uxmlattributes arrayScripted*).
         [Fact]
-        public void AssetArrayItemsOfAScriptedImporterAssetAreFoundByTheirType()
+        public void AssetArrayItemsOfAScriptedImporterAssetAreFoundByTheirFileId()
         {
             var texture = new Texture2D(2, 2) { name = "Made", IsPersistentAsset = true };
             var sheet = ScriptableObject.CreateInstance<StyleSheet>();
@@ -331,8 +332,8 @@ namespace UnityEngine.Tests
             try
             {
                 VisualElement root = null;
-                var logs = LoggedAll(() => root = Clone($"<UxmlImageProbes.TextureArrayProbe pictures=\"{Ref("Assets/UI/Made.thing", SheetGuid, 7433441132597879392, "Made")}\" />").Root);
-                Assert.Equal(new[] { texture }, Assert.IsType<TextureArrayProbe>(root[0]).pictures);
+                var logs = LoggedAll(() => root = Clone($"<UxmlImageProbes.TextureArrayProbe pictures=\"{Ref("Assets/UI/Made.thing", SheetGuid, 2, "Made")},{Ref("Assets/UI/Made.thing", SheetGuid, 7433441132597879392, "Made")}\" />").Root);
+                Assert.Equal(new[] { texture, null }, Assert.IsType<TextureArrayProbe>(root[0]).pictures);
                 Assert.Empty(logs);
             }
             finally

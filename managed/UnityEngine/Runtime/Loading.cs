@@ -683,12 +683,13 @@ namespace Unbound.Runtime
         /// file id. Unity resolves such references by file id alone: one naming no object of the
         /// asset is empty, silently, also when several objects (or none) of the expected type exist
         /// (matches the Unity 6000.0.71f1 Editor, tests/projects/uxmlattributes arrayScripted*).
-        /// Unbound's choice, unmeasured: when exactly one object fits (the asset's only object, or its
-        /// only object of the expected type) the reference takes it, since Unbound derives file ids
-        /// only for the objects the importer added (not, for example, for the components under an
-        /// imported GameObject).</summary>
+        /// Unbound derives file ids only for the objects the importer added, not for the components
+        /// and children of an added GameObject: a reference that may name one of those (a GameObject,
+        /// Component or untyped reference into an asset holding a GameObject) takes the one object
+        /// fitting its type, and reports when it cannot tell which.</summary>
         internal static Object ByProducedObjects(LoadedFile file, Type expected)
         {
+            if (!MayNameUnderivedObject(file, expected)) return null;
             Object match = null;
             int count = 0;
             foreach (var o in file.Objects.Values)
@@ -700,7 +701,21 @@ namespace Unbound.Runtime
             if (count == 1) return match;
             if (file.Objects.Count == 1)
                 foreach (var o in file.Objects.Values) return o;
+            Debug.LogError($"Unbound: a reference into {file.Path} matches {count} of the objects its importer made " +
+                $"({string.Join(", ", file.Identifiers.Values)}); Unbound cannot tell which one Unity's file id names.");
             return null;
+        }
+
+        /// <summary>Whether a reference of type <paramref name="expected"/> may name an object Unbound
+        /// gives no file id: a component or child of a GameObject the importer added.</summary>
+        static bool MayNameUnderivedObject(LoadedFile file, Type expected)
+        {
+            bool gameObjectOrComponent = expected == null || expected == typeof(Object) || expected == typeof(GameObject)
+                || typeof(Component).IsAssignableFrom(expected);
+            if (!gameObjectOrComponent) return false;
+            foreach (var o in file.Objects.Values)
+                if (o is GameObject) return true;
+            return false;
         }
 
         /// <summary>The main object of an asset (Resources.Load, AssetDatabase.LoadAssetAtPath).</summary>
