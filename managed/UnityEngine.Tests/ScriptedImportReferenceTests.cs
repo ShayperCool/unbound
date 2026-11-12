@@ -60,6 +60,33 @@ namespace UnityEngine.Tests
             }
         }
 
+        // The .meta's name tables give an added object its file id when the entry names its identifier
+        // and its class (measured with a Shader Graph's shader in the Unity 6000.0.71f1 Editor,
+        // tests/projects/shadergraph); here the same rule for a texture and a script object.
+        [Theory]
+        [InlineData("  fileIDToRecycleName:\n    2800000: MainAsset\n", 2800000L, false)]
+        [InlineData("  fileIDToRecycleName:\n    11400000: MainAsset\n", 0L, false)]
+        [InlineData("  internalIDToNameTable:\n  - first:\n      28: 1234567\n    second: MainAsset\n", 1234567L, false)]
+        [InlineData("  internalIDToNameTable:\n  - first:\n      114: 7654321\n    second: MainAsset\n", 0L, false)]
+        [InlineData("  internalIDToNameTable: []\n", 0L, false)]
+        [InlineData("  fileIDToRecycleName:\n    2800000: Other\n", 0L, false)]
+        [InlineData("  fileIDToRecycleName:\n    2800000: MainAsset\n    11400000: MainAsset\n", 11400000L, true)]
+        [InlineData("  internalIDToNameTable:\n  - first:\n      114: 7654321\n    second: MainAsset\n", 7654321L, true)]
+        public void TheMetaNameTableGivesFileIdsByIdentifierAndClass(string table, long expected, bool scriptObject)
+        {
+            var settings = TestYaml.DocumentBody("ScriptedImporter:\n" + table + "  externalObjects: {}\n  userData: \n");
+            Object obj = scriptObject ? ScriptableObject.CreateInstance<Data>() : new Texture2D(1, 1);
+            var derived = ScriptedImports.FileId("MainAsset", obj);
+            Assert.Equal(expected == 0 ? derived : expected, ScriptedImports.FileId("MainAsset", obj, ScriptedImports.NameTable(settings)));
+        }
+
+        [Fact]
+        public void TheDerivedFileIdIsXxHashOfClassAndIdentifier()
+        {
+            // The id newer Shader Graph assets are referenced by (no name table in their .meta).
+            Assert.Equal(-6465566751694194690L, (long)ScriptedImports.XxHash64(System.Text.Encoding.UTF8.GetBytes("Type:Shader->MainAsset0")));
+        }
+
         // A reference that may name a component of an added GameObject (no derived file id): the one
         // fitting object, else a report.
         [Fact]

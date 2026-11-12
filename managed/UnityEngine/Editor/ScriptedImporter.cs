@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Unbound.Runtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -145,8 +146,9 @@ namespace Unbound.Runtime
 
     /// <summary>
     /// Imports assets whose .meta names a ScriptedImporter by running the project's importer, as the
-    /// Editor does. Each object's file id is Unity's: xxHash64 of <c>"Type:" + class + "->" +
-    /// identifier + "0"</c> (measured in tests/projects/input, tests/projects/uxmlattributes); a
+    /// Editor does. Each object's file id is Unity's: the one the .meta's name table lists for its
+    /// identifier and class (tests/projects/shadergraph), else xxHash64 of <c>"Type:" + class +
+    /// "->" + identifier + "0"</c> (measured in tests/projects/input, tests/projects/uxmlattributes); a
     /// reference no object answers to is empty, unless it may name a component or child of an added
     /// GameObject (AssetDatabaseRuntime.ByProducedObjects).
     /// </summary>
@@ -193,10 +195,11 @@ namespace Unbound.Runtime
                 s_Importing--;
             }
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };
+            var table = settings.Count > 0 ? NameTable(settings[0].Body) : null;
             foreach (var (identifier, obj) in ctx.m_Objects)
             {
                 if (string.IsNullOrEmpty(obj.m_Name) && obj != ctx.mainObject) obj.m_Name = identifier;
-                file.Objects[FileId(identifier, obj)] = obj;
+                file.Objects[FileId(identifier, obj, table)] = obj;
                 file.Identifiers[obj] = identifier;
             }
             return file;
@@ -206,8 +209,58 @@ namespace Unbound.Runtime
         internal static long FileId(string identifier, Object obj)
         {
             // The native class name: scripts' objects are MonoBehaviours to the serializer.
-            var type = obj is MonoBehaviour || obj is ScriptableObject ? "MonoBehaviour" : obj.GetType().Name;
+            var type = IsScriptObject(obj) ? "MonoBehaviour" : obj.GetType().Name;
             return (long)XxHash64(System.Text.Encoding.UTF8.GetBytes("Type:" + type + "->" + identifier + "0"));
+        }
+
+        /// <summary>
+        /// The file id of an object added under <paramref name="identifier"/> when the asset's .meta
+        /// lists names: an entry for the identifier and the object's class gives its file id, which
+        /// replaces the derived one (a reference by the derived id is then empty); an entry for
+        /// another class is ignored. Matches the Unity 6000.0.71f1 Editor (tests/projects/shadergraph:
+        /// a graph whose .meta maps <c>4800000: MainAsset</c>, as older Shader Graph assets do).
+        /// </summary>
+        internal static long FileId(string identifier, Object obj, List<(int ClassId, long FileId, string Name)> table)
+        {
+            if (table != null)
+                foreach (var (classId, fileId, name) in table)
+                    if (name == identifier && IsOfClass(obj, classId)) return fileId;
+            return FileId(identifier, obj);
+        }
+
+        /// <summary>The .meta's names of an importer's objects: <c>fileIDToRecycleName</c>
+        /// (<c>fileID: name</c>, the class being <c>fileID / 100000</c>) and
+        /// <c>internalIDToNameTable</c> (<c>- first: {classID: fileID}, second: name</c>).</summary>
+        internal static List<(int ClassId, long FileId, string Name)> NameTable(YNode settings)
+        {
+            List<(int, long, string)> table = null;
+            var legacy = settings?.Get("fileIDToRecycleName");
+            if (legacy != null && legacy.Kind == YKind.Map)
+                for (int i = 0; i < legacy.Keys.Length; i++)
+                    if (long.TryParse(legacy.Keys[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+                        (table ??= new List<(int, long, string)>()).Add(((int)(id / LegacyClassStride), id, legacy.Values[i].AsString()));
+            var named = settings?.Get("internalIDToNameTable");
+            if (named != null && named.Kind == YKind.Seq)
+                foreach (var entry in named.Items)
+                {
+                    var first = entry.Get("first");
+                    if (first == null || first.Kind != YKind.Map || first.Keys.Length != 1) continue;
+                    if (!int.TryParse(first.Keys[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var classId)) continue;
+                    (table ??= new List<(int, long, string)>()).Add((classId, first.Values[0].AsLong(), entry.Get("second")?.AsString() ?? ""));
+                }
+            return table;
+        }
+
+        /// <summary>Legacy file ids are <c>classID * 100000</c> (+2 for each further object of the class).</summary>
+        const long LegacyClassStride = 100000;
+
+        static bool IsScriptObject(Object obj) => obj is MonoBehaviour || obj is ScriptableObject;
+
+        static bool IsOfClass(Object obj, int classId)
+        {
+            if (IsScriptObject(obj)) return classId == EngineTypes.MonoBehaviourId;
+            var type = EngineTypes.ForClassId(classId, "", warn: false);
+            return type != null && obj.GetType() == type;
         }
 
         /// <summary>xxHash64 with seed 0.</summary>
