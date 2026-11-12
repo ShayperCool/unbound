@@ -67,8 +67,7 @@ public class RealtimeGIProbe : MonoBehaviour
             yield return Converge();
             Capture("room-moved", lit);
             // Emission as the linear sequence changes it: the material's, then
-            // DynamicGI.SetEmissive's (a color in the project's color space), then the material's
-            // again.
+            // DynamicGI.SetEmissive's, then the material's again.
             lit.panel.sharedMaterial.SetColor("_EmissionColor", new Color(0.2f, 1f, 0.2f) * 2f);
             lit.panel.UpdateGIMaterials();
             yield return Converge();
@@ -80,6 +79,27 @@ public class RealtimeGIProbe : MonoBehaviour
             lit.panel.UpdateGIMaterials();
             yield return Converge();
             Capture("room-setemissive-then-call", lit);
+            // The environment with the panel dark: the ambient color, a procedural skybox and a
+            // gradient as the ambient source.
+            DynamicGI.SetEmissive(lit.panel, Color.black);
+            RenderSettings.ambientLight = new Color(0.6f, 0.5f, 0.2f);
+            DynamicGI.UpdateEnvironment();
+            yield return Converge();
+            Capture("room-env-call", lit);
+            var gammaSky = new Material(Shader.Find("Skybox/Procedural"));
+            gammaSky.SetFloat("_Exposure", 1f);
+            RenderSettings.skybox = gammaSky;
+            RenderSettings.ambientMode = AmbientMode.Skybox;
+            DynamicGI.UpdateEnvironment();
+            yield return Converge();
+            Capture("room-sky", lit);
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.5f, 0.6f, 0.9f);
+            RenderSettings.ambientEquatorColor = new Color(0.4f, 0.35f, 0.3f);
+            RenderSettings.ambientGroundColor = new Color(0.15f, 0.12f, 0.1f);
+            DynamicGI.UpdateEnvironment();
+            yield return Converge();
+            Capture("room-gradient", lit);
             Finish();
             yield break;
         }
