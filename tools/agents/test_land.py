@@ -167,6 +167,175 @@ class GatePriorityTests(unittest.TestCase):
                 self.assertEqual(gate.env.get('UNBOUND_LAND_GATE'), '1' if priority else None)
 
 
+class ParallelProbeTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.gate = land.Gate(self.root, 'HEAD', [], False, self.root/'gate.log', priority=True)
+        self.script = self.root/'driver.py'
+        self.script.write_text('''import json, os, sys, time
+from pathlib import Path
+name, peers, code = sys.argv[1:]
+Path(name+'.start').touch()
+deadline = time.monotonic()+8
+while not all(Path(peer+'.start').exists() for peer in peers.split(',') if peer):
+    if time.monotonic()>deadline: raise SystemExit(99)
+    time.sleep(.01)
+print(json.dumps({key:os.environ.get(key) for key in
+ ('UNBOUND_PROBE_UNITY_VERSION', 'UNBOUND_SUITE_NO_EDITOR', 'UNBOUND_LAND_GATE')}),flush=True)
+Path(name+'.finish').touch()
+raise SystemExit(int(code))
+''')
+
+    def command(self, name, peers='', code=0):
+        return shlex.join([sys.executable, str(self.script), name, peers, str(code)])
+
+    def test_concurrent_success_has_separate_complete_logs_and_release_environments(self):
+        self.gate.probes = [self.command(name, 'a,b,c') for name in ('a', 'b', 'c')]
+        self.gate.releases = ['2022.3.10f1', '6000.0.71f1', '6000.0.62f1']
+        self.gate.run_probes()
+        self.assertEqual(len(list(self.root.glob('*.finish'))), 3)
+        for index, release in enumerate(self.gate.releases, 1):
+            log = self.root/f'gate.probes/{index:03d}.log'
+            self.assertTrue(log.is_file())
+            self.assertIn(release, log.read_text())
+            self.assertIn('"UNBOUND_SUITE_NO_EDITOR": "1"', log.read_text())
+            self.assertIn('"UNBOUND_LAND_GATE": "1"', log.read_text())
+            self.assertIn(str(log), self.gate.log.read_text())
+
+    def test_failure_retains_exit_code_and_owner_and_finishes_other_commands(self):
+        self.gate.probes = [self.command('a', 'a,b,c'), self.command('b', 'a,b,c', 17),
+                            self.command('c', 'a,b,c')]
+        self.gate.probe_owners = [['first'], ['broken'], ['last']]
+        with self.assertRaises(SystemExit) as error:
+            self.gate.run_probes()
+        self.assertEqual(error.exception.code, 5)
+        self.assertEqual(len(list(self.root.glob('*.finish'))), 3)
+        text = self.gate.log.read_text()
+        self.assertIn('[broken]: exit 17', text)
+        self.assertIn('[last]: exit 0', text)
+        self.assertIn('UNBOUND_SUITE_NO_EDITOR', text)  # failing command's tail
+        self.assertNotIn('UNBOUND_SUITE_NO_EDITOR', text.split('exit 17')[0])
+
+    def test_exclusive_recipe_drains_both_sides_and_preserves_command_order(self):
+        project = self.root/'tests/projects/private'
+        project.mkdir(parents=True)
+        script = project/'run.py'
+        script.write_text("from pathlib import Path\nassert Path('a.finish').exists()\nassert Path('b.finish').exists()\nassert not Path('later.start').exists()\nPath('private.finish').touch()\n")
+        (project/'gate.json').write_text('{"exclusive":true}')
+        later = self.root/'later.py'
+        later.write_text("from pathlib import Path\nassert Path('private.finish').exists()\nPath('later.start').touch()\n")
+        self.gate.probes = [self.command('a', 'a,b'), self.command('b', 'a,b'),
+                            f'{shlex.quote(sys.executable)} tests/projects/private/run.py',
+                            shlex.join([sys.executable, str(later)])]
+        self.gate.run_probes()
+        self.assertTrue((self.root/'later.start').is_file())
+        self.assertIn('(exclusive)', self.gate.log.read_text())
+
+    def test_driver_pool_is_bounded(self):
+        import threading
+        lock = threading.Lock()
+        active = peak = 0
+        self.gate.probes = ['control']*9
+        def step(*args, **kwargs):
+            nonlocal active, peak
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(.03)
+            with lock:
+                active -= 1
+            return 0
+        with mock.patch.object(land, 'EXPLICIT_PROBE_WORKERS', 2), mock.patch.object(self.gate, 'step', side_effect=step):
+            self.gate.run_probes()
+        self.assertEqual(peak, 2)
+
+    def test_driver_exception_stops_other_running_process_trees(self):
+        marker = self.root/'sleeping.pid'
+        source = f'import os,time; from pathlib import Path; Path({str(marker)!r}).write_text(str(os.getpid())); time.sleep(30)'
+        self.gate.probes = ['interrupt-control', shlex.join([sys.executable, '-c', source])]
+        original_step = self.gate.step
+        def step(name, command, **kwargs):
+            if command == 'interrupt-control':
+                deadline = time.monotonic()+5
+                while not marker.exists():
+                    if time.monotonic() >= deadline:
+                        raise AssertionError('peer never started')
+                    time.sleep(.01)
+                raise RuntimeError('interrupted control')
+            return original_step(name, command, **kwargs)
+        started = time.monotonic()
+        with mock.patch.object(self.gate, 'step', side_effect=step), self.assertRaisesRegex(RuntimeError, 'interrupted control'):
+            self.gate.run_probes()
+        self.assertLess(time.monotonic()-started, 5)
+        process = Path('/proc')/marker.read_text()/'stat'
+        self.assertTrue(not process.exists() or process.read_text().rsplit(')', 1)[1].split()[0] == 'Z')
+        self.assertFalse(self.gate.processes)
+
+    def test_editor_guard_failure_is_local_to_its_command(self):
+        self.gate.probes = [self.command('a', 'a,b'), self.command('b', 'a,b')]
+        # Exercise the guard verdict without launching an Editor or a fake launcher.
+        original_remove = land.EDITOR_WATCH.remove
+        def verdict(pid):
+            original_remove(pid)
+            return 'guard control'
+        with mock.patch.object(land.EDITOR_WATCH, 'remove', side_effect=verdict):
+            with self.assertRaises(SystemExit) as error:
+                self.gate.run_probes()
+        self.assertEqual(error.exception.code, 5)
+        self.assertEqual(len(list(self.root.glob('*.finish'))), 2)
+        self.assertIn(f'exit {land.EDITOR_EXIT}', self.gate.log.read_text())
+
+    def test_exclusive_suite_selection_and_declaration_lookup(self):
+        project = self.root/'tests/projects/private'
+        project.mkdir(parents=True)
+        (project/'gate.json').write_text('{"exclusive":true,"commands":["custom-driver"]}')
+        self.gate.probes = ['custom-driver', 'python3 tools/agents/suite.py --only private,ordinary', 'ordinary']
+        with mock.patch.object(self.gate, 'step', return_value=0):
+            self.gate.run_probes()
+        self.assertEqual(self.gate.log.read_text().count('(exclusive)'), 2)
+        import suite
+        (project/'gate.json').write_text('{"exclusive":true}')
+        self.assertNotIsInstance(suite.declared('private', land.default_release(), self.root/'tests/projects'), suite.NoRecipe)
+
+    def test_suite_also_runs_exclusive_probe_between_parallel_groups(self):
+        import suite
+        for name in ('a', 'b', 'c', 'd'):
+            project = self.root/'tests/projects'/name
+            (project/'Reference').mkdir(parents=True)
+            if name == 'c':
+                (project/'gate.json').write_text('{"exclusive":true}')
+        private = self.root/'private.py'
+        private.write_text("from pathlib import Path\nassert Path('a.finish').exists()\nassert Path('b.finish').exists()\nassert not Path('d.start').exists()\nPath('c.finish').touch()\n")
+        later = self.root/'later.py'
+        later.write_text("from pathlib import Path\nassert Path('c.finish').exists()\nPath('d.start').touch()\n")
+        commands = {'a': shlex.split(self.command('a', 'a,b')), 'b': shlex.split(self.command('b', 'a,b')),
+                    'c': [sys.executable, str(private)], 'd': [sys.executable, str(later)]}
+        table = {name: [suite.Step('compare', command)] for name, command in commands.items()}
+        cli = self.root/'cli'
+        cli.symlink_to(sys.executable)
+        argv = ['suite.py', '--cli', str(cli), '--label', 'exclusive', '--against', 'none', '--jobs', '4']
+        with mock.patch.multiple(suite, REPO=self.root, PROJECTS=self.root/'tests/projects',
+                                 CACHE=self.root/'cache', AGENTS=self.root/'agents'), \
+             mock.patch.object(sys, 'argv', argv), mock.patch.object(suite, 'recipes', return_value=table), \
+             mock.patch.object(suite, 'managed_for', return_value=self.root), \
+             mock.patch.object(suite, 'make_runtime', return_value=self.root), \
+             mock.patch.object(suite.signal, 'signal'):
+            self.assertEqual(suite.main(), 0)
+        self.assertTrue((self.root/'d.start').is_file())
+
+    def test_invalid_exclusive_metadata_fails_before_any_command(self):
+        project = self.root/'tests/projects/private'
+        project.mkdir(parents=True)
+        (project/'gate.json').write_text('{"exclusive":"yes"}')
+        self.gate.probes = ['control']
+        with mock.patch.object(self.gate, 'step') as step, self.assertRaises(SystemExit) as error:
+            self.gate.run_probes()
+        self.assertEqual(error.exception.code, 2)
+        step.assert_not_called()
+
+
 class GateCacheTests(unittest.TestCase):
     def test_base_and_union_coverage_change_the_pass_key(self):
         root = Path('/tmp/train-key-control')
@@ -195,9 +364,13 @@ def gate(root, base, probes, full, branch, **options):
     values = {path.name: path.read_text().strip() for path in root.glob('*.txt')}
     event({'gate': values, 'probes': probes, 'crates': options['crates'],
            'changed': options['changed'], 'priority': options['priority'],
-           'automatic': options.get('automatic', [])})
+           'automatic': options.get('automatic', []), 'probe_owners': options.get('probe_owners', [])})
     log = options['log']
     log.write_text('fixture gate: '+json.dumps(values)+'\n')
+    if probes and all(command.startswith('python3 -c ') for command in probes):
+        real = land.Gate(root, base, probes, full, log, releases=options['releases'],
+                         probe_owners=options.get('probe_owners'))
+        real.run_probes()
     marker = land.STATE/'gate-running'
     marker.write_text('running')
     if (land.STATE/'pause-gate').exists():
@@ -655,6 +828,7 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual(len(gates), 1)
         self.assertEqual(gates[0]['crates'], ['alpha', 'beta', 'gamma'])
         self.assertEqual(gates[0]['probes'], ['probe-a', 'probe-common'])
+        self.assertEqual(gates[0]['probe_owners'], [['first', 'second'], ['second', 'third']])
         self.assertTrue(gates[0]['priority'])
         rows = self.rows()
         self.assertEqual([row['branch'] for row in rows], ['first', 'second', 'third'])
@@ -758,6 +932,29 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual([code for code, _ in results], [0, 4], results)
         self.assertEqual([row['branch'] for row in self.rows()], ['first'])
         self.assertEqual(len(self.gates()), 1)
+
+    def test_parallel_probe_failure_returns_only_its_requesting_branch(self):
+        first = self.branch('first', {'a.txt': 'ok'})
+        second = self.branch('broken', {'b.txt': 'ok'})
+        third = self.branch('last', {'c.txt': 'ok'})
+        commands = [shlex.join(['python3', '-c', source]) for source in
+                    ('print("first finished")', 'import sys; print("failure detail"); sys.exit(23)',
+                     'import time; time.sleep(.1); print("last finished")')]
+        with self.hold():
+            workers = []
+            for count, (path, command) in enumerate(zip((first, second, third), commands), 1):
+                workers.append(self.start(path, [command]))
+                self.registered(count)
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [0, 5, 0], results)
+        self.assertEqual([row['branch'] for row in self.rows()], ['first', 'last'])
+        gates = self.gates()
+        self.assertEqual(gates[0]['probe_owners'], [['first'], ['broken'], ['last']])
+        failed_logs = [path.read_text() for path in (self.state/'logs').glob('*.log')]
+        self.assertTrue(any('[broken]: exit 23' in log for log in failed_logs))
+        # The original combined gate finishes the successful peer as well.
+        combined_logs = list((self.state/'logs').glob('*.probes/003.log'))
+        self.assertTrue(any('last finished' in path.read_text() for path in combined_logs))
 
     def test_rejected_ancestor_checks_follow_its_commits_in_a_stacked_branch(self):
         first = self.branch('first', {'a.txt': 'ok'})
@@ -1027,6 +1224,23 @@ class AutomaticProbeTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as error:
             self.select(['tests/projects/missingrecipe/run.py'])
         self.assertEqual(error.exception.code, 2)
+
+    def test_touched_recipe_keeps_300_second_limit_until_every_command_is_explicit(self):
+        self.assertEqual(land.AUTO_PROBE_TIMEOUT_SECONDS, 300)
+        self.probe('bounded', {'commands': ['prepare-control', 'compare-control']})
+        changed = ['tests/projects/bounded/run.py']
+        self.assertEqual(self.select(changed, ['prepare-control', 'compare-control']), [])
+        partial = self.select(changed, ['prepare-control'])
+        self.assertEqual([row[0] for row in partial], ['bounded'])
+        # Run the selected suite command under a short version of the same deadline.
+        source = self.root/'tools/agents/suite.py'
+        source.parent.mkdir(parents=True)
+        source.write_text('import time; time.sleep(30)\n')
+        self.gate.automatic = partial
+        with mock.patch.object(land, 'AUTO_PROBE_TIMEOUT_SECONDS', .1), self.assertRaises(SystemExit) as error:
+            self.gate.run_automatic_probes()
+        self.assertEqual(error.exception.code, 5)
+        self.assertIn('exceeded its 0.1s time budget', self.gate.log.read_text())
 
     def test_a_failed_automatic_check_fails_the_gate(self):
         self.gate.automatic = [('a', 'exit 1', 'fast check')]

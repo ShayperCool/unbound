@@ -365,7 +365,7 @@ class LandTrain:
 
     @staticmethod
     def context(entry):
-        return {key: entry[key] for key in ('id', 'tip', 'probes', 'releases', 'changed', 'crates', 'full', 'automatic')}
+        return {key: entry[key] for key in ('id', 'branch', 'tip', 'probes', 'releases', 'changed', 'crates', 'full', 'automatic')}
 
     def gate(self, entries, base, workspace, context):
         selected = [*context, *entries]
@@ -392,7 +392,10 @@ class LandTrain:
             runtime = self.api.run_gate(workspace.path, base, [item[0] for item in probes],
                                         any(item['full'] for item in selected), 'train-'+self.id[:12],
                                         priority=True, log=log, changed=changed, crates=crates,
-                                        releases=[item[1] for item in probes], environment=environment, automatic=automatic)
+                                        releases=[item[1] for item in probes], environment=environment, automatic=automatic,
+                                        probe_owners=[[item.get('branch', item['id']) for item in selected
+                                                       if pair in zip(item['probes'], item['releases'])]
+                                                      for pair in probes])
             self.api.require_clean(workspace.path, 'gated worktree')
             if self.git('rev-parse', 'HEAD', cwd=workspace.path) != target:
                 raise ValueError('gated checkout acquired a different commit')

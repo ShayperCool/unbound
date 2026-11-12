@@ -130,7 +130,7 @@ tools/validation/README.md for why that is unsafe).
      run through the suite against the current sheriff baseline when present, preserving its
      existing failures and regression rules. Without a baseline every check must pass.
      Recipe lookup uses the candidate checkout in a guarded process with a printed 10 s budget.
-     Automatic checks share a printed 600 s wall-clock budget, at most 300 s each. A timeout or
+     Automatic checks stay sequential and share a printed 600 s wall-clock budget, at most 300 s each. A timeout or
      exhausted budget fails the gate. Supply a complete declared recipe as explicit `--probe`
      commands, or a suite `--only` command, for longer checks. Exact explicit commands are not
      repeated. A train selects checks for each branch, then unites them by command and release
@@ -181,7 +181,39 @@ branch's changes.
 
 The combined tree gets one release build, one managed test run, Rust tests for the union of
 touched crates, and the union of probe commands and their requested releases. Any `--full`
-request makes the train run the full gate. These jobs retain landing priority in the shared
+request makes the train run the full gate. Explicit probe commands run with at most 16 concurrent
+drivers. Each driver still sends its own engine and build jobs through the heavy-job pool; do
+not wrap a whole driver in another heavy-job lease. No worker command changes are needed.
+
+Each command gets a separate `<gate-log>.probes/NNN.log`. The gate log lists the full command,
+release, requesting branches and log path, then its exit code and the tail of any failed command.
+All explicit commands finish even after a command exits unsuccessfully. An interruption or
+driver-launch exception stops the other running process trees. Failures are reported in request order and
+still fail with exit 5, so a train isolates the requesting branch by gating prefixes as before.
+A stacked branch's inherited checks stay attributed to the branches carrying them too.
+
+A probe that needs the machine alone declares `"exclusive": true` in its `gate.json`, including
+metadata-only declarations for built-in suite recipes. Such a command waits for preceding drivers
+and finishes before later drivers start. A suite selecting an exclusive probe is also a barrier;
+within a suite, exclusive probes run alone between concurrent groups. These barriers apply to
+commands in that gate or suite, not unrelated jobs already admitted by the heavy-job pool.
+Commands must name their `tests/projects/<probe>` path, match a declared command verbatim, or use
+a direct `suite.py` invocation so the gate can identify this metadata.
+
+The initial resource audit marked the following recipes:
+
+| Probes | Shared resource in their runners |
+|---|---|
+| `destroyphases`, `inputplatform` | Private X display and focus, clipboard or work-area controls |
+| `cameramsaa`, `materialcolortransfer`, `terrainlightmaps` | Fixed project staging directories under `Library/Unbound` |
+| `canvaslifecycle`, `uirectclipping` | Legacy shell runners with fixed output and managed paths |
+
+Other private X display helpers and the audio reference recorder's named PulseAudio sink belong
+to reference recording. Gate commands cannot run those paths because the Editor guard refuses
+them. Audio gate captures use private run directories and virtual engine device layouts.
+Automatic checks remain sequential, with the same total 600 s wall-clock budget and 300 s limit
+per check. A touched recipe exceeding 300 s still fails with exit 5 unless every declared command
+is supplied explicitly, or an explicit suite invocation covers it. These jobs retain landing priority in the shared
 job pool. A passing train fast-forwards main through each branch, records one `landed.jsonl`
 line per branch and pushes once. Each caller then refreshes its own branch to its rebased tip.
 A single queued branch uses its original worktree and warm target, as before. `--check` remains

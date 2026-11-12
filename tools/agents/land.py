@@ -25,7 +25,8 @@ Gate:
   - API declarations, attribute lookups and API tooling tests in that managed step;
   - managed unit tests, where only failures not listed in known-test-failures.txt count;
   - Rust tests of the touched crates;
-  - each --probe command, which must exit 0. $UNBOUND names the built CLI and
+  - each --probe command, in a bounded parallel driver pool with exclusive recipe barriers,
+    which must exit 0. $UNBOUND names the built CLI and
     $UNBOUND_PROBE_UNITY_VERSION the release: the exported value, else the release of the probe
     projects the command names (their ProjectSettings/ProjectVersion.txt), else the default of
     tests/probe_paths.py (6000.0.71f1). Probe steps share the suite's Editor launch guard.
@@ -46,6 +47,7 @@ Exit codes:
 """
 import argparse
 import contextlib
+import concurrent.futures
 import datetime
 import fcntl
 import fnmatch
@@ -60,10 +62,13 @@ import shlex
 import subprocess
 import sys
 import time
+import threading
 import tomllib
 import xml.etree.ElementTree as ET
 
-GATE_VERSION = '6'
+GATE_VERSION = '7'
+# Driver concurrency only; each driver still admits its heavy jobs through the shared pool.
+EXPLICIT_PROBE_WORKERS = 16
 AUTO_PROBE_BUDGET_SECONDS = 600
 AUTO_PROBE_TIMEOUT_SECONDS = 300
 AUTO_SELECTION_TIMEOUT_SECONDS = 10
@@ -78,7 +83,8 @@ STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
 CATALOG_SOURCE = (HERE/'probe_catalog.py').read_text()
 from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR,
-                           EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, require_process_watch, stop_tree)
+                           EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, PROBE_DIR, require_process_watch, stop_tree)
+from probe_schedule import parallel_groups
 from runtime_snapshot import snapshot_runtime, pin_main, atomic_json
 from slot import hidden_index_paths, slot_root
 
@@ -343,28 +349,36 @@ def freeze_automatic_baseline(checks):
 
 class Gate:
     def __init__(self, worktree, base, probes, full, log, priority=False, *,
-                 changed=None, crates=None, releases=None, environment=None, automatic=None):
+                 changed=None, crates=None, releases=None, environment=None, automatic=None, probe_owners=None):
         self.worktree, self.base, self.probes, self.full, self.log = worktree, base, probes, full, log
         self.env = dict(os.environ if environment is None else environment)
         self.changed, self.crates, self.releases = changed, crates, releases
         self.automatic = automatic
+        self.probe_owners = probe_owners
         self.env.pop('UNBOUND_LAND_GATE', None)
         if priority:
             self.env['UNBOUND_LAND_GATE'] = '1'
         self.probe_runtime = None
+        self.process_lock = threading.Lock()
+        self.processes = set()
+        self.cancelled = False
 
-    def step(self, name, command, shell=False, env=None, guard_editor=False, timeout=None):
+    def step(self, name, command, shell=False, env=None, guard_editor=False, timeout=None, log=None):
         if guard_editor:
             require_process_watch()
         print(f'land: {name} ...', flush=True)
         started = time.time()
-        with self.log.open('a') as out:
+        with (log or self.log).open('a') as out:
             shown = command if shell else shlex.join(command)
             out.write(f'\n=== {name}: {shown}\n')
             out.flush()
-            process = subprocess.Popen(command, cwd=self.worktree, env=env or self.env, shell=shell,
-                                       stdout=out, stderr=subprocess.STDOUT,
-                                       start_new_session=guard_editor)
+            with self.process_lock:
+                if self.cancelled:
+                    return 130
+                process = subprocess.Popen(command, cwd=self.worktree, env=env or self.env, shell=shell,
+                                           stdout=out, stderr=subprocess.STDOUT,
+                                           start_new_session=guard_editor)
+                self.processes.add(process)
             if guard_editor:
                 EDITOR_WATCH.add(process.pid)
             try:
@@ -380,6 +394,8 @@ class Gate:
                 raise
             finally:
                 editor = EDITOR_WATCH.remove(process.pid) if guard_editor else None
+                with self.process_lock:
+                    self.processes.discard(process)
             if editor:
                 out.write(f'\nland: {EDITOR_MARK}: {editor}\n')
                 code = EDITOR_EXIT
@@ -446,15 +462,76 @@ class Gate:
         self.env.update(UNBOUND=str(runtime/'unbound'), UNBOUND_CLI=str(runtime/'unbound'), UNBOUND_RUNTIME=str(runtime),
                         UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries)
     def run_probes(self):
-        """Each --probe command, with the release it runs for in $UNBOUND_PROBE_UNITY_VERSION."""
+        """Bounded parallel drivers; exclusive recipes drain the batch on either side."""
+        if not self.probes:
+            return
+        require_process_watch()
+        from suite import gate_spec, NoRecipe
+        projects = self.worktree/'tests/projects'
+        specs = {}
+        for path in sorted(projects.glob('*/gate.json')):
+            spec = gate_spec(path)
+            if isinstance(spec, NoRecipe):
+                die(2, f'{path}: {spec.reason}')
+            specs[path.parent.name] = spec
+        commands = []
+        logs = self.log.with_suffix('.probes')
+        logs.mkdir(parents=True, exist_ok=True)
         for index, probe in enumerate(self.probes, 1):
             try:
-                release = self.releases[index-1] if self.releases is not None else probe_release(probe, self.worktree)
+                release = self.releases[index-1] if self.releases is not None else probe_release(probe, self.worktree, self.env)
             except ValueError as error:
                 die(2, str(error))
-            if self.step(f'probe {index} ({release}): {probe[:80]}', probe, shell=True,
-                         env=dict(self.env, **{RELEASE_VARIABLE: release, NO_EDITOR: '1'}), guard_editor=True):
-                self.fail(f'probe {index}')
+            names = set(PROBE_DIR.findall(probe))
+            names.update(name for name, spec in specs.items() if probe in spec.get('commands', []))
+            argv = suite_arguments(probe)
+            if argv is not None:
+                # A suite without --only may select any declared exclusive recipe.
+                from suite import argument_parser
+                args = argument_parser().parse_args(argv)
+                names.update(args.only.split(',') if args.only else specs)
+            exclusive = any(specs.get(name, {}).get('exclusive', False) for name in names)
+            command = probe
+            owners = self.probe_owners[index-1] if self.probe_owners else []
+            name = f'probe {index} ({release})' + (f' [{", ".join(owners)}]' if owners else '')
+            log = logs/f'{index:03d}.log'
+            commands.append((name, command, release, log, exclusive))
+            with self.log.open('a') as out:
+                out.write(f'\n=== {name}: {probe}\nlog: {log}'
+                          + (' (exclusive)' if exclusive else '') + '\n')
+            print(f'land: {name}: {probe}; log {log}' + (' (exclusive)' if exclusive else ''), flush=True)
+
+        def execute(row):
+            name, command, release, log, _ = row
+            return self.step(name, command, shell=True,
+                             env=dict(self.env, **{RELEASE_VARIABLE: release, NO_EDITOR: '1'}),
+                             guard_editor=True, log=log)
+
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=EXPLICIT_PROBE_WORKERS) as pool:
+            try:
+                for group in parallel_groups(commands, lambda row: row[4]):
+                    futures = [pool.submit(execute, row) for row in group]
+                    # Finish every command, including later batches. Report failures in
+                    # request order so completion order cannot change train isolation.
+                    results.extend((row, future.result()) for row, future in zip(group, futures))
+            except BaseException:
+                with self.process_lock:
+                    self.cancelled = True
+                    running = list(self.processes)
+                for process in running:
+                    stop_tree(process)
+                raise
+        failed = []
+        with self.log.open('a') as out:
+            for row, code in results:
+                name, _, _, log, _ = row
+                out.write(f'\nland: {name}: exit {code}; log {log}\n')
+                if code:
+                    failed.append(name)
+                    out.write(tail(log)+'\n')
+        if failed:
+            self.fail('; '.join(failed))
 
     def run_automatic_probes(self):
         """Short checks and affected recipes share one enforced wall-clock budget."""
@@ -644,7 +721,7 @@ def stamp_path(tree, probes, full, root, *, base=None, changed=(), crates=(), re
 
 
 def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, changed=None,
-             crates=None, releases=None, environment=None, automatic=None):
+             crates=None, releases=None, environment=None, automatic=None, probe_owners=None):
     tree = git('rev-parse', 'HEAD^{tree}', cwd=worktree)
     base = git('rev-parse', base, cwd=worktree)
     if changed is None:
@@ -674,7 +751,7 @@ def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, 
     log = log or logs/f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{safe}.log'
     print(f'land: gate for tree {tree[:12]}, log {log}', flush=True)
     gate = Gate(worktree, base, probes, full, log, priority=priority, changed=changed, crates=crates,
-                releases=releases, environment=environment, automatic=automatic)
+                releases=releases, environment=environment, automatic=automatic, probe_owners=probe_owners)
     gate.run()
     atomic_json(runtime_record, {'runtime': str(gate.probe_runtime) if gate.probe_runtime else None, 'log': str(log)})
     stamp.parent.mkdir(parents=True, exist_ok=True)

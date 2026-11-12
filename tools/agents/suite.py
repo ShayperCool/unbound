@@ -17,7 +17,8 @@ a command names no other) set for it to use; each must exit 0 and admits its own
 summary (optional) is a regex: the step's summary is every match in its output, else its last
 line. Optional engine_paths lists repository-relative files, directories or globs whose edits
 select this probe in land.py. fast_commands lists static/short checks to run on every code landing,
-without Editor captures or long engine runs. Metadata-only declarations may accompany a recipe
+without Editor captures or long engine runs. exclusive (optional boolean) runs the probe alone
+between concurrent groups, and makes a landing command selecting it a barrier. Metadata-only declarations may accompany a recipe
 already defined in this file. Automatic checks share land.py's printed time budget; explicit
 --probe commands retain their existing behavior. A probe that declares
 nothing, or declares it wrongly, is listed as "no recipe" with the reason; none is skipped
@@ -245,9 +246,11 @@ def gate_spec(path):
         return NoRecipe(f'{GATE_FILE} is not JSON: {error}')
     if not isinstance(spec, dict):
         return NoRecipe(f'{GATE_FILE} is not a JSON object')
-    unknown = sorted(set(spec) - {'commands', 'summary', 'engine_paths', 'fast_commands'})
+    unknown = sorted(set(spec) - {'commands', 'summary', 'engine_paths', 'fast_commands', 'exclusive'})
     if unknown:
         return NoRecipe(f'{GATE_FILE} has unknown keys: {", ".join(unknown)}')
+    if type(spec.get('exclusive', False)) is not bool:
+        return NoRecipe(f'{GATE_FILE} "exclusive" must be a boolean')
     commands, summary = spec.get('commands'), spec.get('summary')
     if commands is not None and not (isinstance(commands, list) and commands and all(isinstance(c, str) and c.strip() for c in commands)):
         return NoRecipe(f'{GATE_FILE} needs "commands": a non-empty list of shell commands')
@@ -305,7 +308,7 @@ def declared(name, release, projects=None):
     if spec is None or isinstance(spec, NoRecipe):
         return spec
     commands, summary = spec.get('commands'), spec.get('summary')
-    if commands is None and ('engine_paths' in spec or 'fast_commands' in spec):
+    if commands is None and any(key in spec for key in ('engine_paths', 'fast_commands', 'exclusive')):
         return None  # selection metadata for a built-in recipe, not a second recipe
     if not commands:
         return NoRecipe(f'{GATE_FILE} needs "commands": a non-empty list of shell commands')
@@ -1440,21 +1443,27 @@ def main():
     started = time.time()
     results = {}
     lock = threading.Lock()
+    from probe_schedule import parallel_groups
+    def exclusive(name):
+        spec = gate_spec(PROJECTS/name/GATE_FILE)
+        return isinstance(spec, dict) and spec.get('exclusive', False)
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        futures = {pool.submit(run_probe, name, table[name], dict(context,
-                    env=dict(env, UNBOUND_PROBE_UNITY_VERSION=releases[name]),
-                    values=dict(context['values'], release=releases[name]))): name for name in probes}
-        for future in concurrent.futures.as_completed(futures):
-            name = futures[future]
-            try:
-                result = future.result()
-            except Exception as error:  # a broken recipe must not stop the other probes
-                result = {'probe': name, 'status': 'fail', 'failed_step': 0, 'seconds': 0,
-                          'summary': f'suite error: {error!r}'}
-            with lock:
-                results[name] = result
-                print(f'{result["status"]:9} {name:26} {result["seconds"]:6.0f}s  {result["summary"][:220]}',
-                      flush=True)
+        for group in parallel_groups(probes, exclusive):
+            futures = {pool.submit(run_probe, name, table[name], dict(context,
+                        env=dict(env, UNBOUND_PROBE_UNITY_VERSION=releases[name]),
+                        values=dict(context['values'], release=releases[name]))): name for name in group}
+            for future in concurrent.futures.as_completed(futures):
+                name = futures[future]
+                try:
+                    result = future.result()
+                except Exception as error:  # a broken recipe must not stop the other probes
+                    result = {'probe': name, 'status': 'fail', 'failed_step': 0, 'seconds': 0,
+                              'summary': f'suite error: {error!r}'}
+                with lock:
+                    results[name] = result
+                    print(f'{result["status"]:9} {name:26} {result["seconds"]:6.0f}s  {result["summary"][:220]}',
+                          flush=True)
 
     counts = {status: sum(r['status'] == status for r in results.values())
               for status in ('pass', 'fail', 'report', 'no recipe')}
