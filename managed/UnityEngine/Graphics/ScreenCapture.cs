@@ -12,7 +12,8 @@ namespace UnityEngine
     /// The texture and render texture forms read the screen when they are called: its stored 8-bit
     /// bytes (sRGB-encoded in Linear color space) with their alpha. <c>CaptureScreenshotAsTexture</c>
     /// returns a readable RGBA32 texture with the linear flag and one mip; superSize N renders the
-    /// screen cameras again at N times the size, pixel j sampling the screen at j / N.
+    /// screen cameras again N * N times at the screen's size, tile (i, j) sampling the screen at
+    /// (x + i / N, y + j / N), and interleaves the tiles: pixel x * N + i is tile i's pixel x.
     /// <c>CaptureScreenshotIntoRenderTexture</c> draws the screen into the target at one texel per
     /// pixel from its corner (cropped to the smaller size, the rest kept; decoded into linear and float
     /// targets). <c>CaptureScreenshot</c> writes the frame's final image, after the end-of-frame
@@ -158,63 +159,96 @@ namespace UnityEngine
         /// <summary>The screen's bytes (RGBA rows, bottom first) at superSize times its size.</summary>
         static byte[] ReadScreen(int superSize, out int width, out int height)
         {
-            width = Screen.width * superSize;
-            height = Screen.height * superSize;
+            int screenWidth = Screen.width, screenHeight = Screen.height;
+            width = screenWidth * superSize;
+            height = screenHeight * superSize;
             if (superSize == 1) return Native.ReadPixels(ScreenHandle, 0, 0, width, height, false);
             if (Camera.current != null)
                 throw new NotSupportedException("Unbound: supersized screen capture inside a camera callback is not supported; capture after the camera finishes rendering.");
-            var target = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+            WarnOverlays();
+            var tile = RenderTexture.GetTemporary(screenWidth, screenHeight, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
             var savedActive = RenderTexture.ActiveTarget;
             var saved = GfxStream.Current;
             bool srgbWrite = GL.sRGBWrite;
+            var settings = SupersampleSettings.Apply(superSize);
             try
             {
                 GfxStream.Scissor(null);
                 GL.sRGBWrite = true;
-                RenderTexture.active = target;
-                GL.Clear(true, true, Color.black);
-                RenderSupersized(target, superSize);
-                return Native.ReadPixels(target.EnsureCreated(), 0, 0, width, height, false);
+                var cameras = Camera.CollectActive();
+                cameras.RemoveAll(c => c.RendersOffscreen || c.targetDisplay != 0);
+                var output = new byte[width * height * 4];
+                int rowBytes = screenWidth * 4;
+                for (int j = 0; j < superSize; j++)
+                {
+                    for (int i = 0; i < superSize; i++)
+                    {
+                        RenderTexture.active = tile;
+                        GL.Clear(true, true, Color.black);
+                        RenderTile(tile, cameras, (float)i / superSize - 0.5f, (float)j / superSize - 0.5f);
+                        var bytes = Native.ReadPixels(tile.EnsureCreated(), 0, 0, screenWidth, screenHeight, false);
+                        if (bytes == null || bytes.Length != rowBytes * screenHeight) return null;
+                        Interleave(bytes, screenWidth, screenHeight, output, superSize, i, j);
+                    }
+                }
+                return output;
             }
             finally
             {
                 try
                 {
+                    settings.Restore();
                     GL.sRGBWrite = srgbWrite;
                     RenderTexture.SetActiveQuietly(savedActive);
                     GfxStream.Restore(saved);
                 }
-                finally { RenderTexture.ReleaseTemporary(target); }
+                finally { RenderTexture.ReleaseTemporary(tile); }
             }
         }
 
-        /// <summary>The screen cameras, in their order, into a target superSize times the screen's
-        /// size, shifted half a target pixel so that pixel j samples the screen at j / superSize.</summary>
-        static void RenderSupersized(RenderTexture target, int superSize)
+        /// <summary>Copies tile (i, j) of an N * N supersized capture into the output: its pixel
+        /// (x, y) is the output's pixel (x * N + i, y * N + j) (RGBA bytes, rows bottom first).</summary>
+        internal static void Interleave(byte[] tile, int tileWidth, int tileHeight, byte[] output, int superSize, int i, int j)
         {
-            if (!s_WarnedOverlay)
+            int width = tileWidth * superSize, step = superSize * 4;
+            for (int y = 0; y < tileHeight; y++)
             {
-                foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+                int from = y * tileWidth * 4, to = ((y * superSize + j) * width + i) * 4;
+                for (int x = 0; x < tileWidth; x++, from += 4, to += step)
+                    Buffer.BlockCopy(tile, from, output, to, 4);
+            }
+        }
+
+        static void WarnOverlays()
+        {
+            if (s_WarnedOverlay) return;
+            foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            {
+                if (canvas.isActiveAndEnabled && canvas.isRootCanvas && canvas.renderMode == RenderMode.ScreenSpaceOverlay)
                 {
-                    if (canvas.isActiveAndEnabled && canvas.isRootCanvas && canvas.renderMode == RenderMode.ScreenSpaceOverlay)
-                    {
-                        s_WarnedOverlay = true;
-                        Debug.LogWarning("Unbound: ScreenCapture with superSize > 1 renders the cameras only; screen-space overlay canvases and OnGUI are not in the image.");
-                        break;
-                    }
+                    s_WarnedOverlay = true;
+                    Debug.LogWarning("Unbound: ScreenCapture with superSize > 1 renders the cameras only; screen-space overlay canvases and OnGUI are not in the image.");
+                    break;
                 }
             }
-            var cameras = Camera.CollectActive();
-            cameras.RemoveAll(c => c.RendersOffscreen || c.targetDisplay != 0);
-            var shift = Matrix4x4.Translate(new Vector3(1f / target.width, 1f / target.height, 0));
+        }
+
+        /// <summary>
+        /// One tile of a supersized capture: the screen cameras, in their order, at the screen's
+        /// size into the tile, each projection moved by (offsetX, offsetY) of the camera's pixels,
+        /// so that the tile's pixel x samples the screen at x + 0.5 + offsetX (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/screencapture).
+        /// </summary>
+        static void RenderTile(RenderTexture tile, List<Camera> cameras, float offsetX, float offsetY)
+        {
             foreach (var camera in cameras)
             {
                 var projection = camera.projectionMatrix;
                 bool custom = camera.HasCustomProjection;
                 try
                 {
-                    camera.targetTexture = target;
-                    camera.projectionMatrix = shift * (custom ? projection : camera.projectionMatrix);
+                    camera.targetTexture = tile;
+                    camera.projectionMatrix = TileProjection(projection, camera.orthographic, camera.pixelRect, offsetX, offsetY);
                     camera.Render();
                 }
                 finally
@@ -223,6 +257,74 @@ namespace UnityEngine
                     if (custom) camera.projectionMatrix = projection;
                     else camera.ResetProjectionMatrix();
                 }
+            }
+        }
+
+        /// <summary>A camera's projection moved by (offsetX, offsetY) of the pixels of its pixel
+        /// rect: added to the third column of a perspective projection, taken from the fourth of
+        /// an orthographic one.</summary>
+        internal static Matrix4x4 TileProjection(Matrix4x4 projection, bool orthographic, Rect pixelRect, float offsetX, float offsetY)
+        {
+            float x = offsetX / (pixelRect.width * 0.5f), y = offsetY / (pixelRect.height * 0.5f);
+            if (orthographic)
+            {
+                projection.m03 -= x;
+                projection.m13 -= y;
+            }
+            else
+            {
+                projection.m02 += x;
+                projection.m12 += y;
+            }
+            return projection;
+        }
+
+        /// <summary>
+        /// The texture settings of a supersized capture (Unity 6000.0.71f1 Editor,
+        /// tests/projects/screencapture <c>mip.*</c>): for its duration the global anisotropic
+        /// limits are 16 and 16, and every 2D texture with mipmaps samples with its mip bias
+        /// lowered by 1 + log2(superSize); both are put back afterwards.
+        /// </summary>
+        internal readonly struct SupersampleSettings
+        {
+            /// <summary>The forced minimum and maximum anisotropic level during the capture.</summary>
+            const int CaptureAnisotropy = 16;
+
+            readonly int m_ForcedMin, m_GlobalMax;
+            readonly Texture[] m_Textures;
+            readonly float[] m_Biases;
+
+            SupersampleSettings(int forcedMin, int globalMax, Texture[] textures, float[] biases)
+            {
+                m_ForcedMin = forcedMin;
+                m_GlobalMax = globalMax;
+                m_Textures = textures;
+                m_Biases = biases;
+            }
+
+            internal static SupersampleSettings Apply(int superSize)
+            {
+                Texture.GetGlobalAnisotropicFilteringLimits(out int forcedMin, out int globalMax);
+                Texture.SetGlobalAnisotropicFilteringLimits(CaptureAnisotropy, CaptureAnisotropy);
+                float shift = -1f - MathF.Log2(superSize);
+                var all = Resources.FindObjectsOfTypeAll<Texture>();
+                var textures = new List<Texture>();
+                var biases = new List<float>();
+                foreach (var texture in all)
+                {
+                    if (texture.dimension != TextureDimension.Tex2D || texture.mipmapCount <= 1) continue;
+                    textures.Add(texture);
+                    biases.Add(texture.mipMapBias);
+                    texture.mipMapBias += shift;
+                }
+                return new SupersampleSettings(forcedMin, globalMax, textures.ToArray(), biases.ToArray());
+            }
+
+            internal void Restore()
+            {
+                for (int k = 0; k < m_Textures.Length; k++)
+                    if (m_Textures[k] != null) m_Textures[k].mipMapBias = m_Biases[k];
+                Texture.SetGlobalAnisotropicFilteringLimits(m_ForcedMin, m_GlobalMax);
             }
         }
 
