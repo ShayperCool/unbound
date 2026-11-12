@@ -84,4 +84,8 @@
 {"k":"Compute.Compare.mapLinear","v":[0,1,0,1]}
 {"k":"Compute.CompareLoad.mapLinear","v":[0,0.2500038,0.7499962,1]}
 {"k":"Compute.LoadOnly.mapLinear","v":[0.2500038,0.7499962,0,1]}
+{"k":"StencilFaces.plain.normal","v":[1,0,0,1]}
+{"k":"StencilFaces.plain.mirrored","v":[0,1,0,1]}
+{"k":"StencilFaces.invertCulling.normal","v":[0,1,0,1]}
+{"k":"StencilFaces.invertCulling.mirrored","v":[1,0,0,1]}
 {"k":"complete","v":true}

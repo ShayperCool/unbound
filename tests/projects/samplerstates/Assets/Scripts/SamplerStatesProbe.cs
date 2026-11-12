@@ -190,6 +190,7 @@ public class UitkProbe : MonoBehaviour
             foreach (var name in LateCases) Draw(name, name, shadow, true);
             Stencils(rows);
             Computes(rows, depths);
+            StencilFaces(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -246,6 +247,54 @@ public class UitkProbe : MonoBehaviour
             Row(rows, "Stencil." + name + ".left", readback.GetPixel(0, 0));
             Row(rows, "Stencil." + name + ".right", readback.GetPixel(1, 0));
             rows.Append("{\"k\":\"Stencil.").Append(name).Append(".format\",\"v\":\"").Append(target.depthStencilFormat).Append("\"}\n");
+        }
+    }
+
+    /// <summary>Recorded last: which stencil face state a mirrored draw takes.
+    /// A two-texel target with a stencil buffer gets a quad over its left texel and the same quad
+    /// mirrored (a matrix of negative determinant) over its right one, through a two-sided stencil
+    /// state that writes 1 for front faces and 255 for back faces; then red where the stencil is 1,
+    /// green where it is 255. The same with GL.invertCulling set.</summary>
+    static void StencilFaces(StringBuilder rows)
+    {
+#if UNITY_EDITOR
+        var faces = new Material(UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/StencilFaces.shader"));
+        var equal = new Material(UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/StencilEqual.shader"));
+#else
+        var faces = new Material(Shader.Find("Probe/SamplerStates/StencilFaces"));
+        var equal = new Material(Shader.Find("Probe/SamplerStates/StencilEqual"));
+#endif
+        var quad = new Mesh { vertices = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(.5f, 1, 0), new Vector3(.5f, 0, 0) } };
+        quad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        var full = new Mesh { vertices = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 0, 0) } };
+        full.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        var readback = new Texture2D(2, 1, TextureFormat.RGBAFloat, false, true);
+        var target = new RenderTexture(2, 1, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear) { filterMode = FilterMode.Point };
+        target.Create();
+        var mirrored = Matrix4x4.TRS(new Vector3(1, 0, 0), Quaternion.identity, new Vector3(-1, 1, 1));
+        foreach (bool invert in new[] { false, true })
+        {
+            var previous = RenderTexture.active;
+            RenderTexture.active = target;
+            GL.Clear(true, true, new Color(0, 0, 0, 1));
+            GL.PushMatrix();
+            GL.LoadOrtho();
+            GL.invertCulling = invert;
+            faces.SetPass(0);
+            Graphics.DrawMeshNow(quad, Matrix4x4.identity);
+            Graphics.DrawMeshNow(quad, mirrored);
+            GL.invertCulling = false;
+            equal.SetInt("_Ref", 1); equal.SetColor("_Color", Color.red); equal.SetPass(0);
+            Graphics.DrawMeshNow(full, Matrix4x4.identity);
+            equal.SetInt("_Ref", 255); equal.SetColor("_Color", Color.green); equal.SetPass(0);
+            Graphics.DrawMeshNow(full, Matrix4x4.identity);
+            GL.PopMatrix();
+            readback.ReadPixels(new Rect(0, 0, 2, 1), 0, 0);
+            readback.Apply();
+            RenderTexture.active = previous;
+            string name = "StencilFaces." + (invert ? "invertCulling" : "plain");
+            Row(rows, name + ".normal", readback.GetPixel(0, 0));
+            Row(rows, name + ".mirrored", readback.GetPixel(1, 0));
         }
     }
 
