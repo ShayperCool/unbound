@@ -456,10 +456,12 @@ namespace Unbound.Runtime
             bool reset = false;
             while (!PlaceAll(asked, frame))
             {
-                // A texture at its largest size is neither grown nor reset: what did not fit is left
+                // A texture at its largest size that a reset cannot free (every glyph in it was asked
+                // for in this frame, or it was just reset) stays as it is: what did not fit is left
                 // out, with Unity's error, and no rebuild is announced (matches the Unity 6000.0.71f1
-                // Editor, tests/projects/textcolor legacy/full).
-                if (Texture.m_Width >= MaxSize && Texture.m_Height >= MaxSize)
+                // Editor, tests/projects/textcolor legacy/full). Glyphs of older frames are still
+                // evicted by the reset below (unmeasured at the largest size).
+                if (Texture.m_Width >= MaxSize && Texture.m_Height >= MaxSize && (reset || OnlyAskedIn(frame)))
                 {
                     Debug.LogError($"Failed to update dynamic font ({m_Font.m_Name}) texture; all the needed characters do not fit onto a single texture (max size {MaxSize}). Try using less text or a smaller font size.");
                     break;
@@ -508,6 +510,14 @@ namespace Unbound.Runtime
             if (!reset) return false;
             RebuildCount++;
             Font.InvokeTextureRebuilt_Internal(m_Font);
+            return true;
+        }
+
+        /// <summary>Whether every glyph in the texture was asked for in <paramref name="frame"/>.</summary>
+        bool OnlyAskedIn(int frame)
+        {
+            foreach (var g in m_Placed)
+                if (g.Frame != frame) return false;
             return true;
         }
 
