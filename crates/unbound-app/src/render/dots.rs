@@ -38,6 +38,12 @@ pub struct DotsLayout {
 }
 
 impl DotsLayout {
+    /// Whether the program draws DOTS instanced instances: it reads the visible instance array
+    /// (a variant without DOTS instancing would draw every instance at the draw's own place).
+    pub fn instanced(&self) -> bool {
+        self.visibility.is_some()
+    }
+
     pub fn of(program: &Compiled) -> DotsLayout {
         let metadata = program
             .uniforms
@@ -251,9 +257,11 @@ mod tests {
 
     #[test]
     fn ordinary_programs_take_nothing() {
-        let layout = DotsLayout::default();
+        let plain = DotsLayout::default();
+        assert!(!plain.instanced());
+        assert!(layout().instanced());
         let mut out = vec![0xAAu8; 16];
-        write(&layout, &DotsDraw::default(), &[], None, &mut out);
+        write(&plain, &DotsDraw::default(), &[], None, &mut out);
         assert!(out.iter().all(|b| *b == 0xAA));
     }
 }

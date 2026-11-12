@@ -3586,6 +3586,17 @@ impl UnityRenderer {
                 );
             }
             let Some(id) = id else { continue };
+            // A BatchRendererGroup draw of a pass without DOTS instancing (or that does not
+            // compile) is skipped: its instances would all draw at the draw's own place.
+            if mode == InstancingMode::Dots && (errored || !self.compiled.dots_instanced(id)) {
+                let shader = resolved.shader.clone();
+                self.warn_once(format!("dots{shader}#{pass_index}"), || {
+                    format!(
+                        "shader `{shader}` pass {pass_index} has no DOTS instancing variant: its BatchRendererGroup draws are skipped"
+                    )
+                });
+                continue;
+            }
             let (mut state, mut stencil_ref) = if errored {
                 (Default::default(), 0)
             } else {

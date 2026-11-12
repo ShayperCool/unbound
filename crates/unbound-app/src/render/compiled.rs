@@ -530,6 +530,11 @@ impl CompiledPrograms {
         offset as u32
     }
 
+    /// Whether a program reads DOTS instancing data ([`super::dots::DotsLayout::instanced`]).
+    pub fn dots_instanced(&self, id: u32) -> bool {
+        self.programs[id as usize].dots.instanced()
+    }
+
     /// Writes a BatchRendererGroup draw's DOTS instancing data into the uniform block pushed at
     /// `offset` ([`super::dots::write`]).
     pub fn write_dots(
