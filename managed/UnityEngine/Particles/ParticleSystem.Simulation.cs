@@ -2114,7 +2114,7 @@ namespace UnityEngine
                     child = child, parentSystem = this, parent = parent, properties = sub.properties, count = count,
                 });
             else child.EmitFromParent(this, ref parent, sub.properties, count, 0f, eventEmission: true, keepSpent: fromScript,
-                eventCatchup: fromScript ? -1f : EventCatchup);
+                eventCatchup: fromScript ? -1f : EventCatchup, scriptTriggered: fromScript);
         }
 
         /// <summary>The catch-up of a Death, Collision or Trigger child a Simulate step emits: the
@@ -2351,8 +2351,12 @@ namespace UnityEngine
         /// emissions after the frame's update: particlerender inherit/death/lifetime). Emissions
         /// inside a Simulate meet that removal at once, so their spent children never show
         /// (subemitters probe).</param>
-        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null, bool keepSpent = false, float eventCatchup = -1f)
+        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null, bool keepSpent = false, float eventCatchup = -1f, bool scriptTriggered = false)
         {
+            // A script's TriggerSubEmitter emits into the child's storage as it is (measured,
+            // particleseedaxis inherit_*); a parent's event emission is taken in the child's
+            // update with the storage its modules ask for (Unbound's choice, unmeasured).
+            if (!scriptTriggered) RefreshParticleStorage();
             // A Simulate Birth emission whose remaining call time reaches the child's own
             // start-lifetime bound is skipped before it consumes start samples (measured
             // for constant child lifetimes, with and without inheritance: the bound is the

@@ -536,9 +536,9 @@ namespace UnityEngine.Tests
             using var f = new Fixture(enter: Overlap.Callback);
             // Seed 1 (first in the buffer) enters now and gets the counter's last serial; seed 2
             // enters in the next frame, when the counter is back at that serial, as after
-            // 2^24 - 1 further stamps. Seed 1 stays inside and is not listed again.
+            // TriggerSerialCount - 1 further stamps. Seed 1 stays inside and is not listed again.
             f.ps.SetParticles(new[] { At(1, Center), At(2, Away) });
-            SerialNext.SetValue(f.ps, 0xFFFFFFu);
+            SerialNext.SetValue(f.ps, ParticleSystem.TriggerSerialCount);
             uint[] first = null;
             f.writer.handler = ps => first = Seeds(Entries(ps, TriggerEvent.Enter));
             TriggerFrame(f);
@@ -548,7 +548,7 @@ namespace UnityEngine.Tests
             for (int i = 0; i < all.Length; i++)
                 if (all[i].randomSeed == 2) all[i].position = Center + new Vector3(.2f, 0f, 0f);
             f.ps.SetParticles(all);
-            SerialNext.SetValue(f.ps, 0xFFFFFFu);
+            SerialNext.SetValue(f.ps, ParticleSystem.TriggerSerialCount);
             uint[] second = null;
             f.writer.handler = ps =>
             {

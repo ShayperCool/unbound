@@ -645,16 +645,16 @@ namespace UnityEngine
         // Trigger entry identity, for SetTriggerParticles. Each entry is a copy of a live
         // particle; the write-back goes to that particle wherever it is by then (removals move
         // particles, emission and SetParticles add or replace them). Act stamps the live
-        // particle with a per-system serial in bits 8-31 of its flags (the Particle.Flag*
-        // constants use bits 0-6), so the stamp moves with it through swap-back removal and
+        // particle with a per-system serial in bits 10-31 of its flags (the Particle.Flag*
+        // constants use bits 0-9), so the stamp moves with it through swap-back removal and
         // SetParticles round trips, a reused slot loses it (InitParticle starts from default),
         // and the entry's copy carries it. Serials run 1..TriggerSerialCount, wrapping, and
         // only those handed out since the lists were last cleared are current. A new collection
         // first strips every live particle's serial, so a particle not listed in it carries
         // none, even once the counter has wrapped back to the serial it was given earlier.
-        const int TriggerSerialShift = 8;
-        const uint TriggerSerialMask = 0xFFFFFF00u;
-        const uint TriggerSerialCount = 0xFFFFFFu;
+        const int TriggerSerialShift = 10;
+        internal const uint TriggerSerialMask = 0xFFFFFC00u;
+        internal const uint TriggerSerialCount = 0x3FFFFFu;
         uint m_TriggerSerialNext = 1;
         /// <summary>The first serial of the entries now in <see cref="m_TriggerParticles"/>.</summary>
         uint m_TriggerSerialStart = 1;

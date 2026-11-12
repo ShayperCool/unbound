@@ -569,7 +569,11 @@ namespace UnityEngine
             ParticleSystemManager.Sync();
             if (count == 0) return;
             RefreshParticleStorage();
-            if (hasOverrides) KeepSupplied3D(emitParams.m_Particle.m_Flags);
+            // Only the 3D values the parameters still apply count (a Reset* call drops them).
+            if (hasOverrides)
+                KeepSupplied3D(emitParams.m_Particle.m_Flags
+                    & ((emitParams.m_RotationSet || emitParams.m_AngularVelocitySet ? Particle.FlagRotation3DSet : 0u)
+                       | (emitParams.m_StartSizeSet ? Particle.FlagSize3DSet : 0u)));
             if (!m_IsPlaying || m_IsPaused)
             {
                 m_IsPlaying = true;

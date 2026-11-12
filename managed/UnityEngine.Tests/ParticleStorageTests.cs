@@ -128,6 +128,42 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TriggerSerialsAndThe3DSetterMarksUseSeparateBits()
+        {
+            Assert.Equal(0u, (ParticleSystem.Particle.FlagRotation3DSet | ParticleSystem.Particle.FlagSize3DSet) & ParticleSystem.TriggerSerialMask);
+            var ps = Make("serial");
+            try
+            {
+                // A particle read back carrying a trigger serial does not ask for 3D storage.
+                var particle = new ParticleSystem.Particle { startLifetime = 2, remainingLifetime = 2 };
+                particle.m_Flags = 0x3FFFFFu << 10;
+                ps.SetParticles(new[] { particle }, 1);
+                Assert.False(ps.has3DParticleRotations);
+                Assert.False(ps.hasNonUniformParticleSizes);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void EmitParamsAsk3DStorageOnlyForTheValuesTheyApply()
+        {
+            var ps = Make("params");
+            try
+            {
+                var emit = new ParticleSystem.EmitParams { rotation3D = new Vector3(1f, 2f, 3f), startSize3D = new Vector3(1f, 2f, 3f) };
+                emit.ResetRotation(); emit.ResetStartSize();
+                ps.Emit(emit, 1);
+                Assert.False(ps.has3DParticleRotations);
+                Assert.False(ps.hasNonUniformParticleSizes);
+                emit.rotation3D = new Vector3(1f, 2f, 3f);
+                ps.Emit(emit, 1);
+                Assert.True(ps.has3DParticleRotations);
+                Assert.False(ps.hasNonUniformParticleSizes);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
         public void AnEmittedParticleHasItsRotationModuleSpeedAtBirth()
         {
             var ps = Make("emit");
@@ -163,6 +199,70 @@ namespace UnityEngine.Tests
                 Assert.Equal(new Vector3(1f, 1f, 1f), particles[0].startSize3D);
             }
             finally { Object.DestroyImmediate(parent.gameObject); }
+        }
+    }
+
+    /// <summary>A parent's event emission in a frame update takes the child's storage as its
+    /// modules ask, unlike a script's TriggerSubEmitter.</summary>
+    [Collection("Particle culling frames")]
+    public sealed class ParticleStorageFrameTests : System.IDisposable
+    {
+        readonly float m_DeltaTime = Time.s_DeltaTime;
+        readonly float m_UnscaledDeltaTime = Time.s_UnscaledDeltaTime;
+        readonly bool m_InFixedTimeStep = Time.s_InFixedTimeStep;
+        readonly float m_MaximumParticleDeltaTime = Time.s_MaximumParticleDeltaTime;
+
+        public ParticleStorageFrameTests()
+        {
+            Time.s_DeltaTime = .02f;
+            Time.s_UnscaledDeltaTime = .02f;
+            Time.s_InFixedTimeStep = false;
+            Time.s_MaximumParticleDeltaTime = .03f;
+        }
+
+        public void Dispose()
+        {
+            Time.s_DeltaTime = m_DeltaTime;
+            Time.s_UnscaledDeltaTime = m_UnscaledDeltaTime;
+            Time.s_InFixedTimeStep = m_InFixedTimeStep;
+            Time.s_MaximumParticleDeltaTime = m_MaximumParticleDeltaTime;
+        }
+
+        [Fact]
+        public void ADeathChildKeepsItsOwn3DStartRotation()
+        {
+            var parentGo = new GameObject("parent"); parentGo.SetActive(false);
+            var parent = parentGo.AddComponent<ParticleSystem>();
+            var childGo = new GameObject("child"); childGo.SetActive(false);
+            childGo.transform.SetParent(parentGo.transform, false);
+            var child = childGo.AddComponent<ParticleSystem>();
+            try
+            {
+                foreach (var ps in new[] { parent, child })
+                {
+                    var main = ps.main; main.playOnAwake = false; main.startSpeed = 0; main.startLifetime = .05f;
+                    var shape = ps.shape; shape.enabled = false;
+                    var emission = ps.emission; emission.rateOverTime = 0;
+                    emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                }
+                var childMain = child.main; childMain.startLifetime = 5;
+                var subs = parent.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+                parentGo.SetActive(true); childGo.SetActive(true);
+                childMain.startRotation3D = true; childMain.startRotationX = .1f; childMain.startRotationY = .2f; childMain.startRotationZ = .3f;
+                parent.Play(false);
+                for (int i = 0; i < 6 && child.particleCount == 0; i++)
+                {
+                    Unbound.Runtime.ParticleSystemManager.UpdateAll();
+                    Unbound.Runtime.ParticleSystemManager.CompleteUpdate();
+                    Time.s_FrameCount++;
+                }
+                var particles = new ParticleSystem.Particle[4];
+                Assert.Equal(1, child.GetParticles(particles));
+                Assert.Equal(5.729578f, particles[0].rotation3D.x, 1e-3f);
+                Assert.Equal(11.459156f, particles[0].rotation3D.y, 1e-3f);
+            }
+            finally { Object.DestroyImmediate(parentGo); }
         }
     }
 }
