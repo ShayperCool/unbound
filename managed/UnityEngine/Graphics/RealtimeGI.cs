@@ -927,12 +927,13 @@ namespace UnityEngine
             foreach (var group in SharedGroups(renderers))
             {
                 var layouts = new List<float[]>();
+                var reasons = new Dictionary<Renderer, string>();
                 MeshRenderer failed = null;
-                string reason = null;
                 foreach (var renderer in group)
                 {
                     var mesh = renderer.GetComponent<MeshFilter>().sharedMesh;
                     float[] output = null;
+                    string reason;
                     if (!s_Renderers.TryGetValue(renderer, out var at) || at.Scene != scene)
                         reason = $"'{renderer.name}' is not in the scene's systems";
                     else
@@ -940,17 +941,17 @@ namespace UnityEngine
                             ?? MakeUVs(scene, at.System, at.Index, renderer, mesh, resolution, out output);
                     if (reason != null)
                     {
-                        failed = renderer;
-                        break;
+                        reasons[renderer] = reason;
+                        failed ??= renderer;
                     }
-                    layouts.Add(output);
+                    else layouts.Add(output);
                 }
                 if (failed != null)
                 {
                     foreach (var renderer in group)
-                        unshared[renderer] = renderer == failed
-                            ? reason
-                            : $"'{renderer.name}' has Optimize Realtime UVs and shares one geometry of the precompute with '{failed.name}', which is not made: {reason}";
+                        unshared[renderer] = reasons.TryGetValue(renderer, out var own)
+                            ? own
+                            : $"'{renderer.name}' has Optimize Realtime UVs and shares one geometry of the precompute with '{failed.name}', which is not made: {reasons[failed]}";
                 }
                 else if (!LayoutsAgree(layouts))
                 {
@@ -962,7 +963,8 @@ namespace UnityEngine
         }
 
         /// <summary>Why the charts of a renderer with Optimize Realtime UVs are not made, or
-        /// null: what is not measured (a zero or mirrored scale up the hierarchy, no normals),
+        /// null: what is not measured (a zero or mirrored scale up the hierarchy, a Max Angle of a
+        /// right angle or more, no normals),
         /// and a renderer of <paramref name="unshared"/> (renderers sharing a geometry whose
         /// layouts depend on which of their matrices it is made of).
         /// (Renderers with the same mesh and instance matrix share their charts:
