@@ -168,6 +168,27 @@ CASES = {
     'HdrBC6HQ100': ('Hdr', 'format=BC6H quality=100'),
     'HdrBC6HQ49': ('Hdr', 'format=BC6H quality=49'),
 
+    'SmoothASTC4Q0': ('Smooth', 'format=RGBA32 quality=0 android=ASTC_4x4'),
+    'NoiseASTC5Q0': ('Noise', 'format=RGBA32 quality=0 android=ASTC_5x5'),
+    'NoiseASTC6Q0': ('Noise', 'format=RGBA32 quality=0 android=ASTC_6x6'),
+    'NoiseASTC8Q0': ('Noise', 'format=RGBA32 quality=0 android=ASTC_8x8'),
+    'FlatASTC6Q0': ('Flat', 'format=RGBA32 quality=0 android=ASTC_6x6'),
+    'CutoutASTC6Q0': ('Cutout', 'format=RGBA32 quality=0 android=ASTC_6x6'),
+    'NormalsASTC6Q0': ('Normals', 'type=normal format=RGB24 quality=0 android=ASTC_6x6'),
+    'OddASTC6Q0': ('Odd', 'format=RGBA32 quality=0 npot=none android=ASTC_6x6'),
+    'OddASTC6NoMips': ('Odd', 'format=RGBA32 quality=0 npot=none mips=0 android=ASTC_6x6'),
+    'NpotASTC6Q0': ('Npot', 'format=RGBA32 quality=0 npot=none mips=0 android=ASTC_6x6'),
+    'TinyASTC6Q0': ('Tiny', 'format=RGBA32 quality=0 npot=none android=ASTC_6x6'),
+    'WideASTC8Q0': ('Wide', 'format=RGBA32 quality=0 android=ASTC_8x8'),
+    'SmoothAutoFast': ('Smooth', 'compression=normal quality=0'),
+    'SmoothAutoHighFast': ('Smooth', 'compression=high quality=0'),
+    'SmoothAutoLowFast': ('Smooth', 'compression=low quality=0'),
+    'NoiseDXT5Crunched': ('Noise', 'format=DXT5Crunched android=ETC2_RGBA8Crunched'),
+    'NoiseDXT5CrunchedQ0': ('Noise', 'format=DXT5Crunched quality=0 android=ETC2_RGBA8Crunched'),
+    'NoiseDXT5CrunchedQ100': ('Noise', 'format=DXT5Crunched quality=100 android=ETC2_RGBA8Crunched'),
+    'SmoothDXT1CrunchedQ0': ('Smooth', 'format=DXT1Crunched quality=0 android=ETC_RGB4Crunched'),
+    'SmoothDXT1CrunchedQ100': ('Smooth', 'format=DXT1Crunched quality=100 android=ETC_RGB4Crunched'),
+    'FlatDXT5Crunched': ('Flat', 'format=DXT5Crunched android=ETC2_RGBA8Crunched'),
 }
 
 

@@ -34,6 +34,14 @@ pub enum BlockFormat {
     Etc2Rgb,
     /// ETC2 RGBA8: an EAC alpha block and an ETC2 colour block, 16 bytes.
     Etc2Rgba8,
+    /// LDR RGBA, 4x4 texels in 16 bytes.
+    Astc4x4,
+    /// LDR RGBA, 5x5 texels in 16 bytes.
+    Astc5x5,
+    /// LDR RGBA, 6x6 texels in 16 bytes.
+    Astc6x6,
+    /// LDR RGBA, 8x8 texels in 16 bytes.
+    Astc8x8,
 }
 
 impl BlockFormat {
@@ -49,6 +57,10 @@ impl BlockFormat {
             34 => Self::Etc1,
             45 => Self::Etc2Rgb,
             47 => Self::Etc2Rgba8,
+            48 => Self::Astc4x4,
+            49 => Self::Astc5x5,
+            50 => Self::Astc6x6,
+            51 => Self::Astc8x8,
             _ => return None,
         })
     }
@@ -65,6 +77,10 @@ impl BlockFormat {
             Self::Etc1 => 34,
             Self::Etc2Rgb => 45,
             Self::Etc2Rgba8 => 47,
+            Self::Astc4x4 => 48,
+            Self::Astc5x5 => 49,
+            Self::Astc6x6 => 50,
+            Self::Astc8x8 => 51,
         }
     }
 
@@ -75,9 +91,28 @@ impl BlockFormat {
         }
     }
 
-    /// Bytes of a `width` x `height` level: whole 4x4 blocks, at least one.
+    /// Square block footprint in texels.
+    pub fn footprint(self) -> u32 {
+        match self {
+            Self::Astc5x5 => 5,
+            Self::Astc6x6 => 6,
+            Self::Astc8x8 => 8,
+            _ => 4,
+        }
+    }
+
+    pub fn is_astc(self) -> bool {
+        matches!(
+            self,
+            Self::Astc4x4 | Self::Astc5x5 | Self::Astc6x6 | Self::Astc8x8
+        )
+    }
+
+    /// Bytes of a `width` x `height` level: whole blocks, at least one.
     pub fn level_size(self, width: u32, height: u32) -> usize {
-        (width.max(1).div_ceil(4) * height.max(1).div_ceil(4)) as usize * self.block_bytes()
+        (width.max(1).div_ceil(self.footprint()) * height.max(1).div_ceil(self.footprint()))
+            as usize
+            * self.block_bytes()
     }
 
     /// Whether the blocks are this crate's own encoding rather than the Editor's.
@@ -88,7 +123,7 @@ impl BlockFormat {
     /// Whether GPUs with BC formats sample the blocks; Unbound's renderer samples no ETC, so ETC
     /// blocks go up as BC7 blocks or pixels of what they decode to.
     pub fn is_bc(self) -> bool {
-        !self.is_etc()
+        !self.is_etc() && !self.is_astc()
     }
 
     /// ETC1 or ETC2.
@@ -136,6 +171,10 @@ pub fn compress_level(format: BlockFormat, rgba: &[u8], width: u32, height: u32)
     let (w, h) = (width.max(1) as usize, height.max(1) as usize);
     let (bw, bh) = (w.div_ceil(4), h.div_ceil(4));
     match format {
+        BlockFormat::Astc4x4
+        | BlockFormat::Astc5x5
+        | BlockFormat::Astc6x6
+        | BlockFormat::Astc8x8 => super::astc::compress(rgba, width, height, format),
         BlockFormat::Etc1 | BlockFormat::Etc2Rgb | BlockFormat::Etc2Rgba8 => {
             super::etc::compress_level(rgba, width, height, format == BlockFormat::Etc2Rgba8)
         }
@@ -494,6 +533,9 @@ pub fn decode_level_as_gpu(format: BlockFormat, blocks: &[u8], width: u32, heigh
 }
 
 fn decode(format: BlockFormat, blocks: &[u8], width: u32, height: u32, gpu: bool) -> Vec<u8> {
+    if format.is_astc() {
+        return super::astc::decode(blocks, width, height, format);
+    }
     let (w, h) = (width.max(1) as usize, height.max(1) as usize);
     let bw = w.div_ceil(4);
     let size = format.block_bytes();
@@ -502,6 +544,10 @@ fn decode(format: BlockFormat, blocks: &[u8], width: u32, height: u32, gpu: bool
     for (i, block) in blocks.chunks_exact(size).enumerate() {
         let (bx, by) = (i % bw, i / bw);
         match format {
+            BlockFormat::Astc4x4
+            | BlockFormat::Astc5x5
+            | BlockFormat::Astc6x6
+            | BlockFormat::Astc8x8 => unreachable!(),
             BlockFormat::Bc1 => decode_colour(block, &mut texels, false),
             BlockFormat::Bc3 => {
                 decode_colour(&block[8..], &mut texels, gpu);

@@ -73,18 +73,18 @@ namespace UnityEngine
         Color BlockTexel(int mip, int i)
         {
             var format = m_SourceFormat.Value;
-            int size = BlockFormats.BlockBytes(format);
+            int size = BlockFormats.BlockBytes(format), side = BlockFormats.Footprint(format);
             int w = MipWidth(mip), x = i % w, y = i / w;
             int at = 0;
             for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
-            at += ((y / 4) * ((w + 3) / 4) + x / 4) * size;
+            at += ((y / side) * ((w + side - 1) / side) + x / side) * size;
             var block = new ReadOnlySpan<byte>(m_Store, at, size);
-            int k = (y % 4) * 4 + x % 4;
+            int k = (y % side) * side + x % side;
             Color32 texel;
             if (BlockFormats.NativeDecoded(format))
             {
-                // One block decoded as a 4x4 level.
-                var rgba = DecodeBlockRgba(block, 4, 4);
+                // One block decoded at its footprint.
+                var rgba = DecodeBlockRgba(block, side, side);
                 texel = new Color32(rgba[k * 4], rgba[k * 4 + 1], rgba[k * 4 + 2], rgba[k * 4 + 3]);
             }
             else texel = BlockFormats.DecodeTexel(format, block, k);
@@ -255,7 +255,7 @@ namespace UnityEngine
         /// <summary>A whole level's pixels as GetPixels and GetPixels32 answer them: a side of a
         /// compressed texture's level shorter than a block reads the whole block, 4 texels (the
         /// Unity 6000.0.71f1 Editor, tests/projects/texturecompression: 2x2 and 1x1 levels read 4x4,
-        /// a 5x3 level 5x4; an import's padding is the level repeated as tiles, new.* bytes of 205
+        /// a 5x3 level 5x4; ASTC keeps the actual dimensions. An import's BC padding is tiled; new.* bytes of 205
         /// decode to whatever they hold).</summary>
         Color32[] BlockPadded(Color32[] level, int mip) =>
             BlockPadded(level, mip, c => c);
@@ -268,7 +268,7 @@ namespace UnityEngine
         T[] BlockPadded<T>(T[] level, int mip, Func<Color32, T> read)
         {
             int w = MipWidth(mip), h = MipHeight(mip);
-            if (!SourceBlocks || (w >= 4 && h >= 4)) return level;
+            if (!SourceBlocks || BlockFormats.IsAstc(m_SourceFormat.Value) || (w >= 4 && h >= 4)) return level;
             var blocks = CurrentBlocks();
             if (blocks == null) return level;
             // The decoded blocks, then the read size: sides below 4 grow to 4.
@@ -392,7 +392,7 @@ namespace UnityEngine
         }
 
         /// <summary>Graphics.CopyTexture where either texture is block-compressed (tests/projects/
-        /// texturecompression copy.*): the formats must have the same block size (DXT5 and BC7 do,
+        /// texturecompression copy.*): the formats must have the same block footprint and byte size (DXT5 and BC7 do,
         /// DXT1 and DXT5 or a compressed and an uncompressed one do not: nothing is copied). A whole
         /// texture or level copies the blocks, also to the CPU when both keep blocks (from an
         /// unreadable import too); a region copies on the GPU alone and must lie on block
@@ -401,7 +401,8 @@ namespace UnityEngine
             Texture2D dst, int dstMip, int dstX, int dstY, Action gpuCopy, bool allLevels = false)
         {
             int size = src.SourceBlocks ? BlockFormats.BlockBytes(src.m_SourceFormat.Value) : 0;
-            if (size == 0 || !dst.SourceBlocks || BlockFormats.BlockBytes(dst.m_SourceFormat.Value) != size)
+            if (size == 0 || !dst.SourceBlocks || BlockFormats.BlockBytes(dst.m_SourceFormat.Value) != size
+                || BlockFormats.Footprint(src.m_SourceFormat.Value) != BlockFormats.Footprint(dst.m_SourceFormat.Value))
             {
                 Stubs.Ignored("Graphics.CopyTexture between block sizes", "copies nothing between formats whose blocks differ (as the Editor)");
                 return;
@@ -410,7 +411,8 @@ namespace UnityEngine
             if (srcWidth >= 0)
             {
                 // A region: block-aligned, GPU only (same formats only on Unbound's renderer).
-                bool aligned = srcX % 4 == 0 && srcY % 4 == 0 && srcWidth % 4 == 0 && srcHeight % 4 == 0 && dstX % 4 == 0 && dstY % 4 == 0;
+                int side = BlockFormats.Footprint(src.m_SourceFormat.Value);
+                bool aligned = srcX % side == 0 && srcY % side == 0 && srcWidth % side == 0 && srcHeight % side == 0 && dstX % side == 0 && dstY % side == 0;
                 if (!aligned) return;
                 if (src.m_SourceFormat == dst.m_SourceFormat) gpuCopy();
                 else Stubs.Ignored("Graphics.CopyTexture region between block formats", "does not copy a region between different block formats on Unbound's renderer (unmeasured)");
@@ -460,9 +462,9 @@ namespace UnityEngine
         }
 
         /// <summary>Whether a texture of `format` may have these sides: a block format's must be
-        /// multiples of 4 (tests/projects/texturecompression new.DXT1Odd, new.DXT5Npot).</summary>
+        /// multiples of 4 for BC/ETC; ASTC accepts odd sides (texturecompression new.ASTC*Odd).</summary>
         static bool BlockSized(TextureFormat format, int width, int height) =>
-            BlockFormats.BlockBytes(format) == 0 || (width % 4 == 0 && height % 4 == 0);
+            BlockFormats.BlockBytes(format) == 0 || BlockFormats.IsAstc(format) || (width % 4 == 0 && height % 4 == 0);
 
         /// <summary>Bytes of a source level of a block-compressed texture.</summary>
         int SourceLevelSize(int mip) =>
@@ -472,17 +474,31 @@ namespace UnityEngine
 
 namespace Unbound.Runtime
 {
-    /// <summary>Block-compressed texture formats: 4x4 texel blocks, a level at least one block.</summary>
+    /// <summary>Block-compressed texture formats, a level at least one block.</summary>
     internal static class BlockFormats
     {
+        internal static bool IsAstc(UnityEngine.TextureFormat format) => format is
+            UnityEngine.TextureFormat.ASTC_4x4 or UnityEngine.TextureFormat.ASTC_5x5
+            or UnityEngine.TextureFormat.ASTC_6x6 or UnityEngine.TextureFormat.ASTC_8x8;
+
+        internal static int Footprint(UnityEngine.TextureFormat format) => format switch
+        {
+            UnityEngine.TextureFormat.ASTC_5x5 => 5,
+            UnityEngine.TextureFormat.ASTC_6x6 => 6,
+            UnityEngine.TextureFormat.ASTC_8x8 => 8,
+            _ => 4,
+        };
+
         /// <summary>Bytes of one block, or 0 for formats that are not BC1-BC7, ETC_RGB4, ETC2_RGB
-        /// or ETC2_RGBA8.</summary>
+        /// or ETC2_RGBA8, and supported LDR ASTC footprints.</summary>
         internal static int BlockBytes(UnityEngine.TextureFormat format) => format switch
         {
             UnityEngine.TextureFormat.DXT1 or UnityEngine.TextureFormat.BC4 or UnityEngine.TextureFormat.ETC_RGB4
                 or UnityEngine.TextureFormat.ETC2_RGB => 8,
             UnityEngine.TextureFormat.DXT5 or UnityEngine.TextureFormat.BC5 or UnityEngine.TextureFormat.BC6H
-                or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC2_RGBA8 => 16,
+                or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC2_RGBA8
+                or UnityEngine.TextureFormat.ASTC_4x4 or UnityEngine.TextureFormat.ASTC_5x5
+                or UnityEngine.TextureFormat.ASTC_6x6 or UnityEngine.TextureFormat.ASTC_8x8 => 16,
             _ => 0,
         };
 
@@ -506,11 +522,11 @@ namespace Unbound.Runtime
         /// here).</summary>
         internal static bool NativeDecoded(UnityEngine.TextureFormat format) => format is UnityEngine.TextureFormat.BC6H
             or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
-            or UnityEngine.TextureFormat.ETC2_RGBA8;
+            or UnityEngine.TextureFormat.ETC2_RGBA8 || IsAstc(format);
 
         /// <summary>The renderer's packet code of a block format: BC1, BC3 and BC7 colour (sampled
         /// through an sRGB view in linear projects) or linear data; BC4, BC5 and BC6H; -1 for ETC
-        /// (uploaded decoded).</summary>
+        /// and ASTC (uploaded decoded).</summary>
         internal static int GpuCode(UnityEngine.TextureFormat format, bool linear) => format switch
         {
             UnityEngine.TextureFormat.DXT1 => linear ? 39 : 38,
@@ -520,7 +536,9 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.BC5 => 43,
             UnityEngine.TextureFormat.BC6H => 44,
             UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
-                or UnityEngine.TextureFormat.ETC2_RGBA8 => -1,
+                or UnityEngine.TextureFormat.ETC2_RGBA8
+                or UnityEngine.TextureFormat.ASTC_4x4 or UnityEngine.TextureFormat.ASTC_5x5
+                or UnityEngine.TextureFormat.ASTC_6x6 or UnityEngine.TextureFormat.ASTC_8x8 => -1,
             _ => throw new ArgumentException($"{format} is not a block format"),
         };
 
@@ -595,6 +613,7 @@ namespace Unbound.Runtime
 
         /// <summary>Bytes of a `width` x `height` level.</summary>
         internal static int LevelSize(UnityEngine.TextureFormat format, int width, int height) =>
-            ((width + 3) / 4) * ((height + 3) / 4) * BlockBytes(format);
+            ((width + Footprint(format) - 1) / Footprint(format))
+                * ((height + Footprint(format) - 1) / Footprint(format)) * BlockBytes(format);
     }
 }

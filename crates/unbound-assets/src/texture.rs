@@ -11,7 +11,7 @@
 //!
 //! Block compression ([`bcn`]): on the Standalone target a 2D texture of power-of-two size is
 //! stored in the format the Editor picks ([`ImportedTexture::blocks`]), and its pixels are what
-//! those blocks decode to. Other targets' formats (ETC, ASTC), crunch and unmeasured cases keep
+//! those blocks decode to. Unmeasured ASTC profiles, crunch and other unmeasured cases keep
 //! their pixels uncompressed. Cubemaps are imported as their six faces ([`ImportedTexture::layers`]);
 //! Texture2DArray and Texture3D shapes as the cells of their flipbook (`flipbookColumns` x
 //! `flipbookRows`), each slice processed like a 2D texture of the cell's size.
@@ -542,7 +542,7 @@ pub struct ImportedTexture {
     #[serde(default)]
     pub approximation: Option<String>,
     /// The mips block-compressed to BC7 for the GPU alone (4x smaller than RGBA8), where the
-    /// build target compresses in a format Unbound does not produce (ETC, ASTC, crunch,
+    /// build target compresses in a format Unbound does not produce (slow/HDR ASTC, crunch,
     /// unmeasured cases) and the GPU samples BC7; a 2D RGBA8 texture of a size divisible by 4.
     /// Scripts see the uncompressed [`ImportedTexture::mips`].
     pub bc7: Option<Vec<serde_bytes::ByteBuf>>,
@@ -585,6 +585,8 @@ pub struct ProjectCompression {
 const COMPRESSION_ETC: i32 = 1;
 /// `TextureCompressionFormat.ETC2`.
 const COMPRESSION_ETC2: i32 = 2;
+/// `TextureCompressionFormat.ASTC`.
+const COMPRESSION_ASTC: i32 = 3;
 
 impl ProjectCompression {
     /// Reads `ProjectSettings/ProjectSettings.asset` of a project (no entries when missing).
@@ -685,7 +687,10 @@ impl ProjectCompression {
 /// uncompressed unless both sides are powers of two (20x12 without mips: RGB24 in Gamma,
 /// ETC2_RGB in Linear). Other targets and default formats, automatic ETC_RGB4 at sizes that are
 /// not powers of two, Split Alpha Channel, crunch, HDR on Android, EAC, ASTC, cubemaps, arrays,
-/// volumes and the other texture types are unmeasured.
+/// volumes and the other texture types are unmeasured. Fast LDR ASTC at quality 0 supports
+/// 4x4, 5x5, 6x6 and 8x8 footprints; Android ASTC defaults use 4x4 at High, 8x8 at Low
+/// and 6x6 at Normal. ASTC sub-block mips clamp their edges. Other ASTC profiles remain
+/// explicit approximations, with uncompressed storage.
 pub fn storage(
     texture: &ImportedTexture,
     build_target: &str,
@@ -695,6 +700,11 @@ pub fn storage(
     let s = &texture.settings;
     let unsupported = |why: &str| Storage::Unsupported(why.to_string());
     let hdr = texture.format == TextureFormat::Rgba32F;
+    let automatic_astc = || match s.compression {
+        2 => BlockFormat::Astc4x4,
+        3 => BlockFormat::Astc8x8,
+        _ => BlockFormat::Astc6x6,
+    };
     if s.uncompressed && s.explicit_format.is_none() {
         return Storage::Uncompressed;
     }
@@ -709,6 +719,10 @@ pub fn storage(
         Some(34) => BlockFormat::Etc1,
         Some(45) => BlockFormat::Etc2Rgb,
         Some(47) => BlockFormat::Etc2Rgba8,
+        Some(48) => BlockFormat::Astc4x4,
+        Some(49) => BlockFormat::Astc5x5,
+        Some(50) => BlockFormat::Astc6x6,
+        Some(51) => BlockFormat::Astc8x8,
         Some(28 | 29 | 64 | 65) => return unsupported("crunched formats"),
         Some(_) if s.uncompressed => return Storage::Uncompressed,
         Some(f) => return unsupported(&format!("TextureImporterFormat {f}")),
@@ -718,6 +732,11 @@ pub fn storage(
         None => match s.texture_type {
             TextureType::SingleChannel if s.single_channel_component == 0 => {
                 return Storage::Uncompressed;
+            }
+            TextureType::SingleChannel
+                if android && project.default_format(build_target) == Some(COMPRESSION_ASTC) =>
+            {
+                automatic_astc()
             }
             TextureType::SingleChannel if android => {
                 return unsupported("EAC textures of the Android target");
@@ -735,6 +754,7 @@ pub fn storage(
                     Some(COMPRESSION_ETC) => BlockFormat::Etc1,
                     Some(COMPRESSION_ETC2) if alpha => BlockFormat::Etc2Rgba8,
                     Some(COMPRESSION_ETC2) => BlockFormat::Etc2Rgb,
+                    Some(COMPRESSION_ASTC) => automatic_astc(),
                     f => {
                         return unsupported(&format!(
                             "the Android target's default compression format {f:?}"
@@ -758,8 +778,8 @@ pub fn storage(
         },
     };
     let measured = match build_target {
-        "Standalone" => !format.is_etc(),
-        "Android" => format.is_etc(),
+        "Standalone" => format.is_bc(),
+        "Android" => format.is_etc() || format.is_astc(),
         _ => false,
     };
     if !measured {
@@ -781,6 +801,22 @@ pub fn storage(
         format
     };
 
+    if format.is_astc() {
+        if s.texture_type == TextureType::SingleChannel {
+            return unsupported("Single Channel ASTC encoder settings");
+        }
+        if !project.encoders.measured_astc_fast || s.compression_quality != 0 {
+            return unsupported("ASTC qualities other than the measured Fast profile");
+        }
+        // ASTC accepts sub-block levels, but an odd source with mips stays uncompressed.
+        // texturecompression: TinyASTC6Q0, NpotASTC6Q0 and OddASTC6Q0.
+        if texture.mip_count() > 1
+            && (!texture.width.is_power_of_two() || !texture.height.is_power_of_two())
+        {
+            return Storage::Uncompressed;
+        }
+        return Storage::Blocks(format);
+    }
     let mipmapped = texture.mip_count() > 1;
     let pot = format == BlockFormat::Etc1 || mipmapped;
     let compressible = |side: u32| side % 4 == 0 && (side.is_power_of_two() || !pot);
@@ -924,6 +960,9 @@ impl ImportedTexture {
     /// unmeasured and keep their alpha in every channel); explicit Alpha8, R8, RG16 and RGB24
     /// imports their channels (RGB24 opaque). None for other textures and explicit formats.
     pub fn gpu_channel(&self) -> Option<GpuChannel> {
+        if self.blocks.as_ref().is_some_and(|b| b.format.is_astc()) {
+            return None;
+        }
         match self.explicit_byte_format() {
             Some(unity_format::ALPHA8) => return Some(GpuChannel::Alpha),
             Some(unity_format::R8) => return Some(GpuChannel::Red),
@@ -1065,10 +1104,22 @@ impl Importer for TextureImporter {
     // 23: Android imports are ETC1/ETC2-compressed in the Editor's formats (`blocks`).
     // 25: measured BC import encoders and per-platform compressor quality.
     // 26: the compression cache key also records the runtime encoder profile.
-    const VERSION: u32 = 26;
+    // 27: Fast LDR ASTC storage, clamped edges and the normal-map RGB24 fallback.
+    const VERSION: u32 = 27;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
+        // A Standalone RGB24 override of a normal map falls back to DXT5 in the measured
+        // profile (texturecompression NormalsASTC6Q0); Default textures keep RGB24.
+        if self.project.encoders.measured_import_encoders
+            && self.build_target == "Standalone"
+            && settings.texture_type == TextureType::NormalMap
+            && settings.explicit_format == Some(3)
+        {
+            settings.explicit_format = Some(12);
+            settings.uncompressed = false;
+            settings.format_alpha = Some(true);
+        }
         settings.gamma_hdr = self.gamma;
         settings.normal_maps_xyz = self.normal_maps_xyz;
         let mut texture = import_texture(source, bytes, meta, settings)?;
@@ -1089,8 +1140,8 @@ impl Importer for TextureImporter {
             }
             Storage::Blocks(format) => {
                 compress_blocks(&mut texture, format, &self.project);
-                // Unbound's renderer samples no ETC: a GPU with BC formats gets BC7 blocks of
-                // what the ETC blocks decode to (4x smaller than RGBA8).
+                // ETC uses the existing BC7 fallback. ASTC uploads decoded RGBA8 pixels,
+                // preserving their values without a second lossy encoding.
                 if format.is_etc() && self.compress {
                     texture.bc7 = compress_bc7(&texture);
                 }
@@ -2308,6 +2359,7 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
     })
 }
 
+mod astc;
 mod bcn;
 pub mod etc;
 pub use bcn::{

@@ -13,7 +13,7 @@ Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSetting
 validation cache, with ProjectSettings switched to the profile's color space and Android default
 texture compression format. Profiles: Gamma and Linear on the Standalone target; AndroidGamma and
 AndroidLinear on the Android target (default compression format unset: ETC), AndroidETC2 (Gamma,
-ETC2). Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb and
+ETC2), AndroidASTC (Gamma, ASTC). Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb and
 VirtualGL).
 """
 import argparse
@@ -37,6 +37,7 @@ PROFILES = {
     'AndroidGamma': (0, 'Android', None),
     'AndroidLinear': (1, 'Android', None),
     'AndroidETC2': (0, 'Android', 2),
+    'AndroidASTC': (0, 'Android', 3),
 }
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 

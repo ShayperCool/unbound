@@ -81,3 +81,24 @@ WideBC5 format=BC5 srgb=0
 NpotBC5 format=BC5 srgb=0 npot=none mips=0
 HdrBC6HQ100 format=BC6H quality=100
 HdrBC6HQ49 format=BC6H quality=49
+SmoothASTC4Q0 format=RGBA32 quality=0 android=ASTC_4x4
+NoiseASTC5Q0 format=RGBA32 quality=0 android=ASTC_5x5
+NoiseASTC6Q0 format=RGBA32 quality=0 android=ASTC_6x6
+NoiseASTC8Q0 format=RGBA32 quality=0 android=ASTC_8x8
+FlatASTC6Q0 format=RGBA32 quality=0 android=ASTC_6x6
+CutoutASTC6Q0 format=RGBA32 quality=0 android=ASTC_6x6
+NormalsASTC6Q0 type=normal format=RGB24 quality=0 android=ASTC_6x6
+OddASTC6Q0 format=RGBA32 quality=0 npot=none android=ASTC_6x6
+OddASTC6NoMips format=RGBA32 quality=0 npot=none mips=0 android=ASTC_6x6
+NpotASTC6Q0 format=RGBA32 quality=0 npot=none mips=0 android=ASTC_6x6
+TinyASTC6Q0 format=RGBA32 quality=0 npot=none android=ASTC_6x6
+WideASTC8Q0 format=RGBA32 quality=0 android=ASTC_8x8
+SmoothAutoFast compression=normal quality=0
+SmoothAutoHighFast compression=high quality=0
+SmoothAutoLowFast compression=low quality=0
+NoiseDXT5Crunched format=DXT5Crunched android=ETC2_RGBA8Crunched
+NoiseDXT5CrunchedQ0 format=DXT5Crunched quality=0 android=ETC2_RGBA8Crunched
+NoiseDXT5CrunchedQ100 format=DXT5Crunched quality=100 android=ETC2_RGBA8Crunched
+SmoothDXT1CrunchedQ0 format=DXT1Crunched quality=0 android=ETC_RGB4Crunched
+SmoothDXT1CrunchedQ100 format=DXT1Crunched quality=100 android=ETC_RGB4Crunched
+FlatDXT5Crunched format=DXT5Crunched android=ETC2_RGBA8Crunched

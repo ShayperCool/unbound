@@ -2,7 +2,7 @@
 
 What block-compressed textures give a game on the Standalone target (Gamma and Linear projects)
 and the Android target (Gamma and Linear projects with the default compression format unset, and
-a Gamma project whose Android default is ETC2).
+Gamma projects whose Android defaults are ETC2 and ASTC).
 `make_textures.py` writes the sources and the importer cases (one setting per case, the
 textureimport probe's images); `ProbeRunner.Create` applies them in the Editor.
 `Assets/Scripts/TextureCompressionProbe.cs` records:
@@ -41,7 +41,7 @@ the known differences (`{profile: {key or glob: why}}`).
 
 Observations of this release, its Standalone target and the Editor's OpenGL Core device:
 
-- Only 2D textures whose sides are powers of two and multiples of 4 are compressed: 20x12,
+- For BC imports with mipmaps, only 2D textures whose sides are powers of two and multiples of 4 are compressed: 20x12,
   30x18 and 2x2 stay RGBA32 (RGB24 when opaque), automatic or an explicit DXT5; 64x16 compresses.
 - Automatic formats: Normal and Low Quality give DXT1, or DXT5 when a texel is not opaque (alpha
   source None: DXT1); High Quality BC7; normal maps DXT5 (Normal, Low) and BC7 (High), DXT5nm
@@ -165,3 +165,37 @@ For this runtime change, the ordinary-project clean-cache import processed 4397 
 zero failures: 16.65 s before and 18.36 s after. Two subsequent runs took 21.44 s and 26.69 s
 on the shared machine while other validation jobs were active. Import encoder selection and
 quality are unchanged in this part; these wall times do not isolate encoder cost.
+
+## Fast ASTC and Crunch controls
+
+The AndroidASTC profile names ASTC as the default compression format. Automatic selection is
+4x4 at High Quality, 8x8 at Low Quality, and 6x6 at Normal; Single Channel red follows those
+footprints and alpha stays Alpha8. Normal maps keep XYZ channels with opaque alpha. These are
+6000.0.71f1 measurements, including Fast controls outside the explicit-format cases.
+The public [TextureImporterCompression](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureImporterCompression.html)
+API describes platform-dependent quality formats; it does not promise compressed-block identity.
+[ASTC_6x6](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureFormat.ASTC_6x6.html)
+uses 128 bits for each 6x6 footprint. Raw sizes in the probe distinguish that from 4x4 BC blocks.
+
+The measured Fast LDR profile (quality 0, footprints 4x4, 5x5, 6x6 and 8x8) uses the complete
+C interface packaged with intel_tex_2. Its [ISPCTextureCompressor source](https://github.com/GameTechDev/ISPCTextureCompressor)
+is MIT licensed. Padding clamps the edge texel, including sub-block mips; ASTC GetPixels32
+returns actual mip dimensions. Tiny 2x2 imports, 20x12 and 30x18 mipless imports compress; the
+30x18 mip chain stays uncompressed. ASTC constructors accept 7x5 sides. Copy controls use distinct source/destination bytes:
+matching 5x5 footprints copy the CPU blocks; a 5x5-to-6x6 copy keeps the destination unchanged. Qualities other than
+Fast, HDR ASTC, and 10x10/12x12 remain uncompressed approximations with explicit diagnostics;
+Single Channel ASTC encoder settings remain unresolved and retain uncompressed storage with a diagnostic;
+other releases retain the previous path. GPU storage uses decoded RGBA8 pixels, without a second lossy encoding. Native ASTC upload needs a separate renderer capability path.
+
+The normal-map control also records a Standalone RGB24 override becoming DXT5, while Default
+RGB24 imports stay RGB24. The measured import profile applies that fallback before processing.
+Texture cache v27 includes these output changes.
+
+Crunch controls cover DXT1 and DXT5 at qualities 0, 50 and 100, with ETC_RGB4Crunched and
+ETC2_RGBA8Crunched Android counterparts, gradients, noisy alpha and flat colour. Crunch encoding
+and archive storage remain unresolved. The [public Crunch fork's ZLIB licence](https://github.com/Unity-Technologies/crunch/blob/unity/license.txt)
+permits redistribution; this is an implementation follow-up. The importer keeps uncompressed
+pixels and diagnoses that difference. block_report.py counts the missing logical GPU blocks
+from dimensions and mip levels, rather than treating archive bytes as blocks. If two archives
+of the same format differ, their per-block exactness needs a transcoded comparison; the report
+labels its zero verified lower bound instead of asserting every decoded block differs.

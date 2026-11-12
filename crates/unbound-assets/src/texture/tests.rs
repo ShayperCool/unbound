@@ -493,7 +493,7 @@ fn a_baked_reflection_imports_as_a_convolved_cubemap() {
     }
 }
 
-/// A target format Unbound does not produce (Android's ASTC) keeps the pixels and gives the GPU
+/// An unmeasured ASTC profile keeps the pixels and gives the GPU
 /// BC7 blocks.
 #[test]
 fn compressed_mips_decode_close_to_the_pixels() {
@@ -1448,4 +1448,54 @@ fn compression_cache_key_includes_encoder_selection() {
     alternative = project.clone();
     alternative.encoders = unbound_compat::TextureCompressionRules::default();
     assert_ne!(project.key("Standalone"), alternative.key("Standalone"));
+}
+
+#[test]
+fn astc_fast_storage_and_normal_override_are_scoped() {
+    let bytes = png(8, 8, |x, y| [(x * 18) as u8, (y * 19) as u8, 190, 255]);
+    let measured = unbound_compat::TextureCompressionRules::for_version(
+        unbound_compat::UnityVersion::new(6000, 0, 71),
+    );
+    let import = |target: &str, kind: i32, format: i32, quality: i32, encoders| {
+        TextureImporter {
+            build_target: target.into(),
+            compress: true,
+            normal_maps_xyz: target == "Android",
+            project: ProjectCompression { encoders, ..ProjectCompression::default() },
+            ..TextureImporter::default()
+        }.import(Path::new("Assets/t.png"), &bytes, &unbound_yaml::parse_value(&format!(
+            "TextureImporter:\n  textureType: {kind}\n  platformSettings:\n  - buildTarget: {target}\n    overridden: 1\n    textureFormat: {format}\n    compressionQuality: {quality}\n"
+        )).unwrap()).unwrap()
+    };
+    let astc = import("Android", 0, 50, 0, measured);
+    assert_eq!(
+        astc.blocks.as_ref().map(|b| b.format),
+        Some(BlockFormat::Astc6x6)
+    );
+    assert_eq!(astc.blocks.as_ref().unwrap().mips[0].len(), 64);
+    let mut tagged = astc.clone();
+    tagged.settings.texture_type = TextureType::SingleChannel;
+    tagged.settings.format_alpha = None;
+    assert_eq!(
+        tagged.gpu_channel(),
+        None,
+        "ASTC colour blocks are not remapped as R8"
+    );
+    assert!(
+        astc.bc7.is_none(),
+        "ASTC upload keeps decoded pixels without recompression"
+    );
+    let normal = import("Standalone", 1, 3, 0, measured);
+    assert_eq!(
+        normal.blocks.as_ref().map(|b| b.format),
+        Some(BlockFormat::Bc3)
+    );
+    let rgb = import("Standalone", 0, 3, 0, measured);
+    assert!(rgb.blocks.is_none());
+    assert_eq!(rgb.reported_format(), Some(unity_format::RGB24));
+    let slow = import("Android", 0, 50, 50, measured);
+    assert!(slow.blocks.is_none());
+    assert!(slow.approximation.as_ref().unwrap().contains("ASTC"));
+    let unmeasured = import("Android", 0, 50, 0, Default::default());
+    assert!(unmeasured.blocks.is_none());
 }

@@ -195,6 +195,14 @@ public class TextureCompressionProbe : MonoBehaviour
             ("new.BC4", TextureFormat.BC4, 64, 64, true), ("new.BC5", TextureFormat.BC5, 64, 64, true),
             ("new.BC6H", TextureFormat.BC6H, 64, 64, true), ("new.BC7", TextureFormat.BC7, 64, 64, true),
             ("new.DXT1Odd", TextureFormat.DXT1, 30, 18, false), ("new.DXT5Npot", TextureFormat.DXT5, 20, 12, true),
+            ("new.ASTC4", TextureFormat.ASTC_4x4, 12, 12, true),
+            ("new.ASTC5", TextureFormat.ASTC_5x5, 12, 12, true),
+            ("new.ASTC6", TextureFormat.ASTC_6x6, 12, 12, true),
+            ("new.ASTC8", TextureFormat.ASTC_8x8, 12, 12, true),
+            ("new.ASTC4Odd", TextureFormat.ASTC_4x4, 7, 5, false),
+            ("new.ASTC5Odd", TextureFormat.ASTC_5x5, 7, 5, false),
+            ("new.ASTC6Odd", TextureFormat.ASTC_6x6, 7, 5, false),
+            ("new.ASTC8Odd", TextureFormat.ASTC_8x8, 7, 5, false),
         })
         Section(key, () =>
         {
@@ -431,6 +439,7 @@ public class TextureCompressionProbe : MonoBehaviour
             });
         }
         AdditionalCompressControls();
+        AdditionalAstcCopies();
     }
 
     void AdditionalCompressControls()
@@ -492,4 +501,29 @@ public class TextureCompressionProbe : MonoBehaviour
             });
         }
     }
+    void AdditionalAstcCopies()
+    {
+        foreach (var format in new[] { TextureFormat.ASTC_5x5, TextureFormat.ASTC_6x6 })
+        {
+            string key = "copy.astc." + format;
+            Section(key, () =>
+            {
+                var src = new Texture2D(12, 12, TextureFormat.ASTC_5x5, false, true);
+                var dst = new Texture2D(12, 12, format, false, true);
+                try
+                {
+                    Run(key + ".setup", () => {
+                        src.LoadRawTextureData(Enumerable.Repeat((byte)167, src.GetRawTextureData().Length).ToArray());
+                        src.Apply(false);
+                    });
+                    Add(key + ".source", Bytes(src.GetRawTextureData()));
+                    Add(key + ".before", Bytes(dst.GetRawTextureData()));
+                    Run(key, () => Graphics.CopyTexture(src, dst));
+                    Add(key + ".after", Bytes(dst.GetRawTextureData()));
+                }
+                finally { Destroy(src); Destroy(dst); }
+            });
+        }
+    }
+
 }
