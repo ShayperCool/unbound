@@ -270,14 +270,28 @@ impl Geometry<'_> {
     /// Whether the plane faces as `normal` does, within the cosine. A cosine closer to the
     /// limit than the rounding of the precompute's normals (and of its cosine of Max Angle)
     /// could fall on the other side of it there: such a test marks the geometry ambiguous.
+    /// (A cosine all of whose terms are zero is zero in any arithmetic.)
     fn faces(&self, plane: &Plane, normal: V3, cosine: f32) -> bool {
         let n = plane.normal();
         let d = dot(n, normal);
         let terms = (n[0] * normal[0]).abs() + (n[1] * normal[1]).abs() + (n[2] * normal[2]).abs();
-        if (d - cosine).abs() <= COSINE_ROUNDING * terms + 2.0 * f32::EPSILON * cosine.abs() {
+        if terms > 0.0
+            && (d - cosine).abs() <= COSINE_ROUNDING * terms + 2.0 * f32::EPSILON * cosine.abs()
+        {
             self.ambiguous.set(true);
         }
         d >= cosine
+    }
+    /// The plane turned to face as `normal` does. A plane nearly across the normal fails the
+    /// Max Angle test on either side, unless Max Angle is near or past a right angle: only then
+    /// is a side that rounding could choose ambiguous.
+    fn oriented(&self, plane: Plane, normal: V3) -> Plane {
+        let flipped = if self.cosine > COSINE_ROUNDING {
+            dot(plane.normal(), normal) < 0.0
+        } else {
+            !self.faces(&plane, normal, 0.0)
+        };
+        if flipped { plane.flipped() } else { plane }
     }
     fn corners(&self, triangle: usize) -> [V3; 3] {
         self.triangles[triangle].map(|v| self.mesh.positions[v as usize])
@@ -817,10 +831,7 @@ fn join(geometry: &Geometry) -> Result<Joined> {
             if dot(na, nb) <= 0.0 {
                 continue;
             }
-            let mut plane = geometry.fit(&[a, b]);
-            if !geometry.faces(&plane, na, 0.0) {
-                plane = plane.flipped();
-            }
+            let plane = geometry.oriented(geometry.fit(&[a, b]), na);
             if !geometry.faces(&plane, na, geometry.cosine)
                 || !geometry.faces(&plane, nb, geometry.cosine)
             {
@@ -1805,6 +1816,23 @@ mod tests {
                 "{error}"
             );
         }
+    }
+
+    /// Two level quads one above the other: the plane through both stands across their normal,
+    /// exactly, and neither its side nor the Max Angle test is the rounding's.
+    #[test]
+    fn a_plane_across_a_pair_is_no_limit_case() {
+        let mut shelf = Shape::default();
+        for y in [0.0, 0.3] {
+            shelf.quad(
+                [[0.0, y, 0.0], [0.1, y, 0.0], [0.1, y, 0.1], [0.0, y, 0.1]],
+                [0.0, 1.0, 0.0],
+            );
+        }
+        assert_eq!(
+            auto_charts(&shelf.mesh(), &LIMITS).unwrap().triangles.len(),
+            1
+        );
     }
 
     /// A cosine of normals far from zero against its terms has the precompute's sign; one of

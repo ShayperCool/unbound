@@ -92,10 +92,53 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>Renderers of one mesh whose instance matrices round to the same thousandths
+        /// share one geometry in the precompute, from one of their matrices: they are refused
+        /// unless the matrices are the same to the last bit.</summary>
+        [Fact]
+        public void RenderersSharingARoundedMatrixWithAnotherAreRefused()
+        {
+            var made = new List<Object>();
+            var none = new HashSet<Renderer>();
+            try
+            {
+                var plate = Plate();
+                var other = Plate();
+                made.Add(plate);
+                made.Add(other);
+                var boxScale = V(0x3f333333, 0x3f000000, 0x3f19999a);
+                var boxTurned = Make("BoxTurned", plate, Q(0x3e44845a, 0x3ea48423, 0x3cb00c30, 0x3f6d548d), boxScale, made);
+                var boxFlat = Make("BoxFlat", plate, Quaternion.identity, boxScale, made);
+                // Turned 25 degrees with a scale of 0.35: the very matrix of an unturned one.
+                var small = V(0x3eb33333, 0x3eb33333, 0x3eb33333);
+                var sharedTurned = Make("SharedTurned", plate, Q(0, 0x3e5da259, 0, 0x3f79ee89), small, made);
+                var sharedFlat = Make("SharedFlat", plate, Quaternion.identity, small, made);
+                // Another mesh, and a renderer that keeps its mesh's charts.
+                var apart = Make("Apart", other, Quaternion.identity, boxScale, made);
+                var kept = Make("Kept", plate, Quaternion.identity, boxScale, made);
+                kept.m_PreserveUVs = true;
+
+                var unshared = RealtimeGI.UnsharedRenderers(new Renderer[] { boxTurned, boxFlat, sharedTurned, sharedFlat, apart, kept, null });
+                Assert.Equal(2, unshared.Count);
+                Assert.Contains(boxTurned, unshared);
+                Assert.Contains(boxFlat, unshared);
+                Assert.Contains("turned otherwise", RealtimeGI.AutomaticChartsRefusal(boxFlat, plate, unshared));
+                Assert.Null(RealtimeGI.AutomaticChartsRefusal(sharedTurned, plate, unshared));
+                Assert.Null(RealtimeGI.AutomaticChartsRefusal(apart, other, unshared));
+                // Alone in its scene the turned box is made.
+                Assert.Empty(RealtimeGI.UnsharedRenderers(new Renderer[] { boxTurned, apart }));
+            }
+            finally
+            {
+                foreach (var o in made) Object.DestroyImmediate(o);
+            }
+        }
+
         [Fact]
         public void WhatIsNotMeasuredIsRefused()
         {
             var made = new List<Object>();
+            var none = new HashSet<Renderer>();
             try
             {
                 var plate = Plate();
@@ -104,16 +147,23 @@ namespace Unbound.Tests
                 made.Add(bare);
 
                 var mirrored = Make("Mirrored", plate, Quaternion.identity, new Vector3(-1f, 1f, 1f), made);
-                Assert.Contains("a zero or mirrored scale", RealtimeGI.AutomaticChartsRefusal(mirrored, plate));
+                Assert.Contains("a zero or mirrored scale", RealtimeGI.AutomaticChartsRefusal(mirrored, plate, none));
                 var flat = Make("Flat", plate, Quaternion.identity, new Vector3(1f, 0f, 1f), made);
-                Assert.Contains("a zero or mirrored scale", RealtimeGI.AutomaticChartsRefusal(flat, plate));
+                Assert.Contains("a zero or mirrored scale", RealtimeGI.AutomaticChartsRefusal(flat, plate, none));
+
+                // Mirrored twice up the hierarchy: a positive lossy scale, and not measured.
+                var mirror = Node("Mirror", Quaternion.identity, new Vector3(-1f, 1f, 1f), made);
+                var twice = Make("Twice", plate, Quaternion.identity, new Vector3(-1f, 1f, 1f), made);
+                twice.transform.SetParent(mirror.transform, false);
+                Assert.True(twice.transform.lossyScale.x > 0f);
+                Assert.Contains("a zero or mirrored scale", RealtimeGI.AutomaticChartsRefusal(twice, plate, none));
 
                 var unlit = Make("Unlit", bare, Quaternion.identity, Vector3.one, made);
-                Assert.Contains("no normals", RealtimeGI.AutomaticChartsRefusal(unlit, bare));
+                Assert.Contains("no normals", RealtimeGI.AutomaticChartsRefusal(unlit, bare, none));
 
                 // A turned renderer is made.
                 var turned = Make("Turned", plate, Quaternion.Euler(20f, 40f, 10f), new Vector3(2f, 3f, 0.5f), made);
-                Assert.Null(RealtimeGI.AutomaticChartsRefusal(turned, plate));
+                Assert.Null(RealtimeGI.AutomaticChartsRefusal(turned, plate, none));
                 Assert.True(RealtimeGI.MakesAutomaticCharts(turned));
                 // With a limit of zero the precompute keeps the mesh's charts, as with Preserve
                 // UVs (RoomTurned, StepNoDistance).

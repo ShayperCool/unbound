@@ -2231,6 +2231,7 @@ fn turned_mesh(name: &str) -> AutoMesh {
         "WedgeTurned" => solid([0.4, 0.3, 0.4], false, &prism(&WEDGE, 0.8)),
         "RoofDistance" => solid([0.0, -1.0, 0.65], false, &roof(20.0, 0.7, 1.3)),
         "StepNoDistance" => solid([0.2, 0.15, 0.45], false, &prism(&STEP, 0.9)),
+        "StepNoAngle" => solid([0.2, 0.15, 0.45], false, &prism(&STEP, 0.8)),
         "FoldKept" | "FoldIgnored" => {
             // A floor and a wall that share their edge's positions and UVs, not its normals,
             // unfolded side by side in UV, and a loose quad.
@@ -2365,7 +2366,8 @@ fn turned_shape(name: &str) -> Option<(Option<&str>, [u32; 9], f32)> {
         "SharedTurned" | "SharedFlat" => (None, diagonal(0x3eb33333, 0x3eb33333, 0x3eb33333), 0.5),
         "RoofDistance" | "Many" => (Some(name), ONE, 0.1),
         "FoldKept" | "FoldIgnored" | "BoxSliver" | "BoxPoint" => (Some(name), ONE, 0.5),
-        "StepNoDistance" => (Some(name), ONE, 0.0),
+        // Limits of zero (Max Distance 0, and Max Angle 0) keep the mesh's charts.
+        "StepNoDistance" | "StepNoAngle" => (Some(name), ONE, 0.0),
         _ => return None,
     })
 }
@@ -2438,11 +2440,11 @@ fn automatic_charts_of_turned_renderers_lie_where_the_precompute_put_them() {
         "RoofDistance" => Some(2),
         "FoldKept" => Some(3),
         "FoldIgnored" => Some(2),
-        "StepNoDistance" => Some(8),
+        "StepNoDistance" | "StepNoAngle" => Some(8),
         "BoxSliver" | "BoxPoint" => Some(7),
         "Many" => Some(110),
         _ => None,
     };
     let checked = check_automatic_layouts("RoomTurned", &uvs_of, &expected);
-    assert_eq!(checked, 7 + 13);
+    assert_eq!(checked, 7 + 14);
 }

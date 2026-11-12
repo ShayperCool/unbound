@@ -205,11 +205,14 @@ namespace UnityEngine
                 system.ScaleOffsets = offsets.ToArray();
                 systems.Add(system);
             }
+            var all = new List<Renderer>();
+            foreach (var system in systems) all.AddRange(system.Renderers);
+            var unshared = UnsharedRenderers(all);
             for (int index = 0; index < systems.Count; index++)
             {
                 var system = systems[index];
                 // A system is drawn when every renderer of it has its realtime lightmap UVs.
-                var failure = RealtimeUVs(loaded, index, system, settings);
+                var failure = RealtimeUVs(loaded, index, system, settings, unshared);
                 if (failure != null)
                 {
                     Warn("uvs:" + failure, $"{file.Path}: a system of its precomputed realtime GI is not drawn: {failure}");
@@ -683,9 +686,10 @@ namespace UnityEngine
         /// system's precomputed layout: Lightmap Parameters that change the charts, such as their
         /// resolution, fail that check). A renderer with Preserve UVs keeps its mesh's lightmap
         /// UV charts; one without (Optimize Realtime UVs in the Inspector) gets the charts the
-        /// precompute makes within its Max Distance and Max Angle. Returns why they could not be
-        /// made, or null.</summary>
-        static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings)
+        /// precompute makes within its Max Distance and Max Angle, unless it is one of
+        /// <paramref name="unshared"/> (<see cref="UnsharedRenderers"/>). Returns why they could
+        /// not be made, or null.</summary>
+        static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings, HashSet<Renderer> unshared)
         {
             float resolution = settings != null ? settings.indirectResolution : 2f;
             for (int r = 0; r < system.Renderers.Length; r++)
@@ -694,7 +698,7 @@ namespace UnityEngine
                 bool automatic = MakesAutomaticCharts(renderer);
                 var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
                 if (mesh == null) return $"'{renderer.name}' has no mesh";
-                if (automatic && AutomaticChartsRefusal(renderer, mesh) is string refusal) return refusal;
+                if (automatic && AutomaticChartsRefusal(renderer, mesh, unshared) is string refusal) return refusal;
                 for (int sub = 0; sub < mesh.subMeshCount; sub++)
                     if (mesh.GetTopology(sub) != MeshTopology.Triangles) return $"'{renderer.name}' has a submesh of {mesh.GetTopology(sub)}";
                 float scale = renderer.scaleInLightmap * resolution;
@@ -819,7 +823,7 @@ namespace UnityEngine
         /// and scales), a 3 x 3 matrix column by column. Single precision, in the order that
         /// gives the Editor's values to the last bit (tests/projects/realtimegi RoomTurned); a
         /// level whose scale is negative along an axis turns the rotations below it as a mirror
-        /// does.</summary>
+        /// does (not measured: such renderers are refused).</summary>
         internal static float[] WorldScale(Transform transform)
         {
             var rotation = transform.localRotation;
@@ -841,16 +845,57 @@ namespace UnityEngine
             return Product(RotationScaled(new Quaternion(-x, -y, -z, w), Vector3.one), scaled);
         }
 
-        /// <summary>Why the charts of a renderer with Optimize Realtime UVs are not made, or
-        /// null: what is not measured (a zero or mirrored scale, no normals). (The precompute
-        /// keys the geometry it makes the charts of by the mesh and the instance matrix, so
-        /// renderers share charts when both are the same: tests/projects/realtimegi RoomTurned,
-        /// SharedTurned and SharedFlat.)</summary>
-        internal static string AutomaticChartsRefusal(MeshRenderer renderer, Mesh mesh)
+        /// <summary>The renderers with Optimize Realtime UVs among <paramref name="renderers"/>
+        /// that share their mesh and their instance matrix rounded to thousandths
+        /// (<see cref="WorldScale"/>) with one whose matrix is not the same to the last bit. The
+        /// precompute makes one geometry for such renderers (Unity 6000.0 Manual, "Introduction
+        /// to lightmap UVs": "Mesh Renderers that use the same mesh with the same scale and
+        /// lightmap resolution share the same UVs"; in a scratch bake an unturned cube took the
+        /// charts of one with its scale turned (20, 40, 10)), from the matrix of one of them,
+        /// which may be one cached by an earlier bake: which one is not known.</summary>
+        internal static HashSet<Renderer> UnsharedRenderers(IEnumerable<Renderer> renderers)
         {
+            var groups = new Dictionary<(Mesh, string), List<(MeshRenderer, float[])>>();
+            foreach (var r in renderers)
+            {
+                if (!(r is MeshRenderer renderer) || !MakesAutomaticCharts(renderer)) continue;
+                var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
+                if (mesh == null) continue;
+                var matrix = WorldScale(renderer.transform);
+                var rounded = new int[9];
+                for (int k = 0; k < 9; k++) rounded[k] = (int)(matrix[k] * 1000f + 0.5f);
+                var key = (mesh, string.Join(",", rounded));
+                if (!groups.TryGetValue(key, out var list)) groups[key] = list = new List<(MeshRenderer, float[])>();
+                list.Add((renderer, matrix));
+            }
+            var unshared = new HashSet<Renderer>();
+            foreach (var list in groups.Values)
+            {
+                bool same = true;
+                for (int i = 1; i < list.Count; i++) same &= list[i].Item2.AsSpan().SequenceEqual(list[0].Item2);
+                if (!same) foreach (var (renderer, _) in list) unshared.Add(renderer);
+            }
+            return unshared;
+        }
+
+        /// <summary>Why the charts of a renderer with Optimize Realtime UVs are not made, or
+        /// null: what is not measured (a zero or mirrored scale up the hierarchy, no normals),
+        /// and a renderer of <paramref name="unshared"/> (<see cref="UnsharedRenderers"/>).
+        /// (Renderers with the same mesh and instance matrix share their charts:
+        /// tests/projects/realtimegi RoomTurned, SharedTurned and SharedFlat.)</summary>
+        internal static string AutomaticChartsRefusal(MeshRenderer renderer, Mesh mesh, HashSet<Renderer> unshared)
+        {
+            if (unshared.Contains(renderer))
+                return $"'{renderer.name}' has Optimize Realtime UVs and shares its mesh and its rounded instance matrix with a renderer turned otherwise (the precompute makes one set of charts for both, from the geometry of one of them: which is not known)";
             var size = renderer.transform.lossyScale;
             if (!(size.x > 0f && size.y > 0f && size.z > 0f))
                 return $"'{renderer.name}' has Optimize Realtime UVs and a scale of {size} (a zero or mirrored scale is not measured)";
+            for (var t = renderer.transform; t != null; t = t.parent)
+            {
+                var s = t.localScale;
+                if (!(s.x > 0f && s.y > 0f && s.z > 0f))
+                    return $"'{renderer.name}' has Optimize Realtime UVs and '{t.name}' a scale of {s} (a zero or mirrored scale is not measured)";
+            }
             if (mesh.normals.Length != mesh.vertexCount)
                 return $"'{renderer.name}' has Optimize Realtime UVs and no normals";
             return null;
