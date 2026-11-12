@@ -59,13 +59,12 @@ namespace UnityEngine
         /// <summary>The skinning pass the renderer was created in: none has skinned it yet.</summary>
         readonly int m_BornEpoch = SkinPass;
 
-        /// <summary>Unity skins once a frame, at PostLateUpdate.UpdateAllSkinnedMeshes: each pass
-        /// there starts a skinning pass, and a renderer skins once per pass, when it is first drawn or
-        /// its buffer is first asked for after it. Draws before it in a frame (a camera rendered from
-        /// a script) and <see cref="GetVertexBuffer"/> read the last pass's skin, as the Unity
-        /// 6000.0.71f1 Editor's do (tests/projects/renderapi <c>followup.skin.*</c>,
-        /// <c>prevskin.*</c>). A pass is named by its frame: before the frame's
-        /// UpdateAllSkinnedMeshes the last frame's pass goes on.</summary>
+        /// <summary>Unity skins once a frame, at PostLateUpdate.UpdateAllSkinnedMeshes, and a skin
+        /// buffer read before it in a frame holds the last pass's skin (the Unity 6000.0.71f1
+        /// Editor's, tests/projects/renderapi <c>prevskin.*</c>). A renderer whose buffer was asked
+        /// for skins at each pass and draws that skin; another skins once a frame when it is first
+        /// drawn (draws before the pass are unmeasured). A pass is named by its frame: before the
+        /// frame's UpdateAllSkinnedMeshes the last frame's pass goes on.</summary>
         internal static int SkinPass => s_SkinPassFrame == Time.s_FrameCount ? Time.s_FrameCount : Time.s_FrameCount - 1;
 
         /// <summary>The frame whose UpdateAllSkinnedMeshes ran last.</summary>
@@ -74,22 +73,43 @@ namespace UnityEngine
         static SkinnedMeshRenderer() =>
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.UpdateAllSkinnedMeshes), SkinningPass);
 
-        /// <summary>The renderers whose buffers were asked for: they skin at the pass itself
-        /// (others when they are drawn, which comes after it).</summary>
+        /// <summary>The renderers whose buffers were asked for (each at <see cref="m_BufferUser"/>):
+        /// they skin at the pass itself.</summary>
         static readonly List<SkinnedMeshRenderer> s_BufferUsers = new List<SkinnedMeshRenderer>();
+        int m_BufferUser = -1;
 
-        static void SkinningPass()
+        internal static void SkinningPass()
         {
             s_SkinPassFrame = Time.s_FrameCount;
             for (int i = 0; i < s_BufferUsers.Count; i++)
             {
                 var r = s_BufferUsers[i];
-                if (r.Skinning) r.Deform();
+                if (r.Skinning && !r.ClothSimulating) r.Deform();
             }
         }
 
-        /// <summary>The pass skins enabled renderers that are visible or update offscreen.</summary>
-        bool Skinning => enabled && m_GameObject != null && m_GameObject.ActiveInHierarchyNoThrow && (m_UpdateWhenOffscreen || isVisible);
+        static void RemoveBufferUser(SkinnedMeshRenderer r)
+        {
+            int i = r.m_BufferUser;
+            if (i < 0) return;
+            var last = s_BufferUsers[s_BufferUsers.Count - 1];
+            s_BufferUsers[i] = last;
+            last.m_BufferUser = i;
+            s_BufferUsers.RemoveAt(s_BufferUsers.Count - 1);
+            r.m_BufferUser = -1;
+        }
+
+        /// <summary>The pass skins enabled renderers with a mesh that are visible or update offscreen.</summary>
+        bool Skinning => m_Mesh != null && enabled && m_GameObject != null && m_GameObject.ActiveInHierarchyNoThrow && (m_UpdateWhenOffscreen || isVisible);
+
+        bool ClothSimulating
+        {
+            get
+            {
+                var cloth = GetComponent<Cloth>();
+                return cloth != null && cloth.enabled && cloth.m_Active && cloth.RenderMesh() != null;
+            }
+        }
         Matrix4x4[] m_Matrices = Array.Empty<Matrix4x4>();
 
         public SkinnedMeshRenderer() { }
@@ -183,6 +203,7 @@ namespace UnityEngine
                 {
                     m_GraphicsOutputRequested = true;
                     m_SkinnedEpoch = -1;
+                    m_BufferUser = s_BufferUsers.Count;
                     s_BufferUsers.Add(this);
                 }
                 // A renderer the pass does not skin keeps its last skin (measured: prevskin.*.disabled).
@@ -287,7 +308,8 @@ namespace UnityEngine
                 try { return Skin(); }
                 finally { SwapNowSkin(); }
             }
-            int pass = SkinPass;
+            // A renderer whose buffer was asked for skins once a pass; another once a frame.
+            int pass = m_GraphicsOutputRequested ? SkinPass : Time.s_FrameCount;
             if (m_Skinned != null && m_SkinnedEpoch == pass && m_SkinnedSource == m_Mesh) return m_Skinned;
             if (m_Skinned != null && m_SkinnedSource != m_Mesh) DropPreviousSkin();
             // The buffers alternate: the last pass's skin becomes the previous one.
@@ -672,7 +694,9 @@ namespace UnityEngine
                 return HasShapes || m_GraphicsOutputRequested ? Deform() : m_Mesh;
             }
             model = m_GraphicsOutputRequested ? transform.localToWorldMatrix : Matrix4x4.identity;
-            return Deform();
+            // "Must be set ... to manually render a skinned mesh multiple times within a single
+            // update" (the Scripting API): each draw skins now, apart from the pass's skin.
+            return Deform(now: forceMatrixRecalculationPerRender);
         }
 
         public void BakeMesh(Mesh mesh) => BakeMesh(mesh, false);
@@ -723,7 +747,7 @@ namespace UnityEngine
             if (m_SkinnedNow != null) DestroyImmediate(m_SkinnedNow);
             m_Skinned = m_SkinnedNow = null;
             DropPreviousSkin();
-            s_BufferUsers.Remove(this);
+            RemoveBufferUser(this);
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)

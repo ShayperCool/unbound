@@ -211,5 +211,78 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(mesh);
             }
         }
+
+        static (GameObject root, Transform bone, Mesh mesh, SkinnedMeshRenderer renderer) OneBoneSkin()
+        {
+            var root = new GameObject("root");
+            var bone = new GameObject("bone").transform;
+            bone.SetParent(root.transform, false);
+            var mesh = new Mesh
+            {
+                vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f) },
+                triangles = new[] { 0, 1, 2 },
+                boneWeights = new[] { new BoneWeight { weight0 = 1f }, new BoneWeight { weight0 = 1f }, new BoneWeight { weight0 = 1f } },
+                bindposes = new[] { Matrix4x4.identity },
+            };
+            var renderer = root.AddComponent<SkinnedMeshRenderer>();
+            renderer.sharedMesh = mesh;
+            renderer.bones = new[] { bone };
+            renderer.updateWhenOffscreen = true;
+            return (root, bone, mesh, renderer);
+        }
+
+        /// <summary>The skinning pass skips a renderer whose buffer was asked for once its mesh is
+        /// removed or destroyed, and the renderers after it still skin.</summary>
+        [Fact]
+        public void TheSkinningPassSkipsRenderersWithoutAMesh()
+        {
+            var a = OneBoneSkin();
+            var b = OneBoneSkin();
+            try
+            {
+                Time.s_FrameCount++;
+                using (a.renderer.GetVertexBuffer()) { }
+                using (b.renderer.GetVertexBuffer()) { }
+                a.renderer.sharedMesh = null;
+                b.bone.localPosition = new Vector3(1f, 0f, 0f);
+                Time.s_FrameCount++;
+                SkinnedMeshRenderer.SkinningPass();
+                Assert.Equal(1f, b.renderer.m_Skinned.vertices[0].x);
+                Assert.Null(a.renderer.GetVertexBuffer());
+                Object.DestroyImmediate(b.mesh);
+                Time.s_FrameCount++;
+                SkinnedMeshRenderer.SkinningPass();
+            }
+            finally
+            {
+                Object.DestroyImmediate(a.root); Object.DestroyImmediate(a.mesh);
+                Object.DestroyImmediate(b.root); Object.DestroyImmediate(b.mesh);
+            }
+        }
+
+        /// <summary>A renderer draws one skin a frame, its first draw's; with
+        /// forceMatrixRecalculationPerRender each draw skins the bones as they are then (the
+        /// Scripting API: set it "to manually render a skinned mesh multiple times within a
+        /// single update").</summary>
+        [Fact]
+        public void ForcedRecalculationSkinsEachDraw()
+        {
+            var s = OneBoneSkin();
+            try
+            {
+                Time.s_FrameCount++;
+                Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
+                s.bone.localPosition = new Vector3(1f, 0f, 0f);
+                Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
+                s.renderer.forceMatrixRecalculationPerRender = true;
+                Assert.Equal(1f, s.renderer.DrawGeometry(out _).vertices[0].x);
+                s.bone.localPosition = new Vector3(2f, 0f, 0f);
+                Assert.Equal(2f, s.renderer.DrawGeometry(out _).vertices[0].x);
+            }
+            finally
+            {
+                Object.DestroyImmediate(s.root); Object.DestroyImmediate(s.mesh);
+            }
+        }
     }
 }
