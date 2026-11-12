@@ -5,7 +5,7 @@ import gzip
 import json
 from pathlib import Path
 import shutil
-from common import FIXTURE, devices, header, samples, surround_cases, transition_cases, wet_cases, wet_edge_cases, settings_cases
+from common import FIXTURE, devices, header, samples, surround_cases, transition_cases, wet_cases, wet_edge_cases, settings_cases, prologic_cases
 from verify import verify
 
 p = argparse.ArgumentParser()
@@ -21,9 +21,10 @@ p.add_argument('--transitions', action='store_true', help='Publish the independe
 p.add_argument('--wet', action='store_true', help='Publish the independent surround wet profile')
 p.add_argument('--wet-edges', action='store_true', help='Publish independent wet placement boundary controls')
 p.add_argument('--settings', action='store_true', help='Publish independent sample-rate and DSP-buffer controls')
+p.add_argument('--prologic', action='store_true', help='Publish independent Prologic and Stereo controls')
 a = p.parse_args()
 if a.settings and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
-selected = settings_cases() if a.settings else wet_edge_cases() if a.wet_edges else wet_cases() if a.wet else transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
+selected = prologic_cases() if a.prologic else settings_cases() if a.settings else wet_edge_cases() if a.wet_edges else wet_cases() if a.wet else transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
 verify(a.capture, a.release, a.rate, contexts=a.contexts, selected=selected)
 verify(a.repeat, a.release, a.rate, contexts=a.contexts, selected=selected)
 assert header(a.capture) == header(a.repeat), 'independent capture metadata differs'
@@ -38,6 +39,7 @@ if a.transitions: target = target/'transitions'
 if a.wet: target = target/'wet'
 if a.wet_edges: target = target/'wet-edges'
 if a.settings: target = target/'settings'
+if a.prologic: target = target/'prologic'
 target = target/('rate-'+str(a.rate))
 if target.exists():
     assert a.extend, 'reference already exists; --extend may only add identical controls'

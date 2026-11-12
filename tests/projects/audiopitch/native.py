@@ -14,7 +14,7 @@ p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
@@ -29,7 +29,7 @@ import sys
 sys.path.insert(0, str(fixture.parents[1]))
 from editor_runner import EditorJob, run
 import time
-from common import cases, devices, header, surround_cases, transition_cases, reset_cases, scheduled_reset_cases, wet_cases, wet_edge_cases, settings_cases, settings_sessions
+from common import cases, devices, header, surround_cases, transition_cases, reset_cases, scheduled_reset_cases, wet_cases, wet_edge_cases, settings_cases, settings_sessions, context_sessions, prologic_cases
 
 
 def capture(work, cases, env=None, prepared=False, buffer=None):
@@ -119,7 +119,7 @@ if a.cases:
     if len({kind(key) for key in selected}) != 1 or (kind(selected[0]) == 'device' and len(selected) != 1):
         p.error('select controls of one set (one device control per session)')
     part(a.work, selected)
-    if any(key.startswith('context_settings_') for key in selected):
+    if any(key.startswith(('context_settings_', 'context_prologic_')) for key in selected):
         assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion; see '+str(a.work/'editor.log')
     verify(a.work/'capture', a.release, a.rate, contexts=kind(selected[0]) == 'layout', selected=selected)
     raise SystemExit
@@ -132,13 +132,13 @@ if a.set == 'layouts':
     part(a.work, cases(True))
     verify(a.work/'capture', a.release, a.rate, contexts=True)
     raise SystemExit
-if a.set == 'settings':
-    if a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
+if a.set in ('settings', 'prologic'):
+    if a.set == 'settings' and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
     merged = {}
-    for index, (session, selected) in enumerate(settings_sessions().items()):
+    for index, (session, selected) in enumerate(context_sessions(a.set).items()):
         work = a.work/session
         work.mkdir()
-        buffer = int(session.split('_')[1])
+        buffer = int(session.split('_')[1]) if a.set == 'settings' else 1024
         part(work, selected, prepared=index > 0, buffer=buffer)
         assert 'Assertion failed on expression:' not in (work/'editor.log').read_text(), 'Editor assertion; see '+str(work/'editor.log')
         verify(work/'capture', a.release, a.rate, contexts=True, selected=selected)
@@ -151,7 +151,10 @@ if a.set == 'settings':
         (a.work/'capture').mkdir(exist_ok=True)
         for f in (work/'capture').glob('*.f32'): shutil.copy2(f, a.work/'capture'/f.name)
     (a.work/'capture/capture.json').write_text(json.dumps(merged, indent=2)+'\n')
-    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=settings_cases())
+    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=settings_cases() if a.set == 'settings' else prologic_cases())
+    if a.set == 'prologic':
+        from prologic_pairs import compare_pairs
+        assert compare_pairs(a.work/'capture', a.work/'paired-modes.jsonl.gz', a.release, a.rate) == 0
     raise SystemExit
 if a.set == 'wet-edges':
     part(a.work, wet_edge_cases())

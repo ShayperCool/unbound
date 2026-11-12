@@ -12,11 +12,11 @@ import sys
 fixture = Path(__file__).resolve().parent
 sys.path.insert(0, str(fixture.parents[1]))
 from probe_paths import shared_runtime
-from common import profile, settings_sessions
+from common import profile, context_sessions
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
-p.add_argument('--profile', choices=('transitions', 'wet', 'wet-edges', 'settings'), default='transitions')
+p.add_argument('--profile', choices=('transitions', 'wet', 'wet-edges', 'settings', 'prologic'), default='transitions')
 p.add_argument('--unbound', type=Path, default=os.environ.get('UNBOUND'))
 p.add_argument('--rate', type=int, choices=(48000, 44100), action='append')
 p.add_argument('--work', type=Path)
@@ -33,8 +33,13 @@ subprocess.run([sys.executable, str(fixture.parents[1]/'authored_project.py'), '
                 'default', '--release', a.release, '--out', str(work/'project')], check=True)
 failed = False
 for rate in a.rate or ((48000,) if a.profile == 'settings' else (48000, 44100)):
+    if a.profile == 'prologic':
+        from prologic_pairs import compare_pairs
+        reference = fixture/'Reference'/('unity-'+a.release)/'prologic'/('rate-'+str(rate))
+        if compare_pairs(reference, work/('native-pairs-'+str(rate)+'.jsonl.gz'), a.release, rate):
+            raise SystemExit('the recorded mode-pair relationship differs')
     part = work/('engine-'+str(rate))
-    sessions = settings_sessions() if a.profile == 'settings' else {'': list(profile(a.profile, rate))}
+    sessions = context_sessions(a.profile)
     merged = {}
     for session, selected in sessions.items():
         target = part/session if session else part
@@ -50,7 +55,7 @@ for rate in a.rate or ((48000,) if a.profile == 'settings' else (48000, 44100)):
                 merged[key] = value
             (part/'capture').mkdir(exist_ok=True)
             for f in (target/'capture').glob('*.f32'): shutil.copy2(f, part/'capture'/f.name)
-    if a.profile == 'settings':
+    if any(sessions):
         (part/'capture/capture.json').write_text(json.dumps(merged, indent=2)+'\n')
     for name, extra in [('strict', []), ('gate', ['--pcm-steps', '1'])]:
         result = subprocess.run([sys.executable, str(fixture/'compare.py'), '--release', a.release,

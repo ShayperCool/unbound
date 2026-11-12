@@ -28,6 +28,11 @@ def verify(root, release, rate, contexts=False, selected=None):
             assert not meta[case+'.callback_device'] and not meta[case+'.callback_playing']
             assert meta[case+'.before_clip_bits'] == 1048576000 and meta[case+'.callback_clip_bits'] == 0
             continue
+        if case.startswith('context_prologic_'):
+            requested_mode = int(case.split('_')[2])
+            assert meta[case+'.mode'] == requested_mode, case
+            assert meta[case+'.render_channels'] == 2, case
+            assert meta[case+'.rate'] == rate and meta[case+'.buffer'] == 1024, case
         if case.startswith('context_settings_'):
             _, _, requested_rate, requested_buffer, _ = case.split('_', 4)
             assert meta[case+'.rate'] == int(requested_rate), (case, 'unsupported requested sample rate')

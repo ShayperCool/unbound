@@ -1,0 +1,682 @@
+{
+  "release": "6000.0.71f1",
+  "rate": 48000,
+  "context_prologic_2_dry.preflight_blocks": 4,
+  "context_prologic_2_dry.buffer": 1024,
+  "context_prologic_2_dry.mode": 2,
+  "context_prologic_2_dry.rate": 48000,
+  "context_prologic_2_dry.render_channels": 2,
+  "context_prologic_2_dry.generator_channels": 2,
+  "context_prologic_2_dry": {
+    "file": "context_prologic_2_dry.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_dry.master": {
+    "file": "context_prologic_2_dry.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_dist.preflight_blocks": 4,
+  "context_prologic_2_dist.buffer": 1024,
+  "context_prologic_2_dist.mode": 2,
+  "context_prologic_2_dist.rate": 48000,
+  "context_prologic_2_dist.render_channels": 2,
+  "context_prologic_2_dist.live_set": true,
+  "context_prologic_2_dist.generator_channels": 2,
+  "context_prologic_2_dist": {
+    "file": "context_prologic_2_dist.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_dist.master": {
+    "file": "context_prologic_2_dist.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_chorus.preflight_blocks": 4,
+  "context_prologic_2_chorus.buffer": 1024,
+  "context_prologic_2_chorus.mode": 2,
+  "context_prologic_2_chorus.rate": 48000,
+  "context_prologic_2_chorus.render_channels": 2,
+  "context_prologic_2_chorus.live_set": true,
+  "context_prologic_2_chorus.generator_channels": 2,
+  "context_prologic_2_chorus": {
+    "file": "context_prologic_2_chorus.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_chorus.master": {
+    "file": "context_prologic_2_chorus.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_flange.preflight_blocks": 4,
+  "context_prologic_2_flange.buffer": 1024,
+  "context_prologic_2_flange.mode": 2,
+  "context_prologic_2_flange.rate": 48000,
+  "context_prologic_2_flange.render_channels": 2,
+  "context_prologic_2_flange.live_set": true,
+  "context_prologic_2_flange.generator_channels": 2,
+  "context_prologic_2_flange": {
+    "file": "context_prologic_2_flange.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_flange.master": {
+    "file": "context_prologic_2_flange.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_norm.preflight_blocks": 4,
+  "context_prologic_2_norm.buffer": 1024,
+  "context_prologic_2_norm.mode": 2,
+  "context_prologic_2_norm.rate": 48000,
+  "context_prologic_2_norm.render_channels": 2,
+  "context_prologic_2_norm.live_set": true,
+  "context_prologic_2_norm.generator_channels": 2,
+  "context_prologic_2_norm": {
+    "file": "context_prologic_2_norm.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_norm.master": {
+    "file": "context_prologic_2_norm.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_shift.preflight_blocks": 4,
+  "context_prologic_2_shift.buffer": 1024,
+  "context_prologic_2_shift.mode": 2,
+  "context_prologic_2_shift.rate": 48000,
+  "context_prologic_2_shift.render_channels": 2,
+  "context_prologic_2_shift.mixer_Pitch": 0.75,
+  "context_prologic_2_shift.mixer_FFT size": 1024,
+  "context_prologic_2_shift.mixer_Overlap": 4,
+  "context_prologic_2_shift.mixer_Max channels": 0,
+  "context_prologic_2_shift.live_set": true,
+  "context_prologic_2_shift.generator_channels": 2,
+  "context_prologic_2_shift": {
+    "file": "context_prologic_2_shift.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_shift.master": {
+    "file": "context_prologic_2_shift.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_reverb.preflight_blocks": 4,
+  "context_prologic_2_reverb.buffer": 1024,
+  "context_prologic_2_reverb.mode": 2,
+  "context_prologic_2_reverb.rate": 48000,
+  "context_prologic_2_reverb.render_channels": 2,
+  "context_prologic_2_reverb.live_set": true,
+  "context_prologic_2_reverb.generator_channels": 2,
+  "context_prologic_2_reverb": {
+    "file": "context_prologic_2_reverb.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_reverb.master": {
+    "file": "context_prologic_2_reverb.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_reverb_startup.preflight_blocks": 4,
+  "context_prologic_2_reverb_startup.buffer": 1024,
+  "context_prologic_2_reverb_startup.mode": 2,
+  "context_prologic_2_reverb_startup.rate": 48000,
+  "context_prologic_2_reverb_startup.render_channels": 2,
+  "context_prologic_2_reverb_startup.generator_channels": 2,
+  "context_prologic_2_reverb_startup": {
+    "file": "context_prologic_2_reverb_startup.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_reverb_startup.master": {
+    "file": "context_prologic_2_reverb_startup.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_receive.preflight_blocks": 4,
+  "context_prologic_2_receive.buffer": 1024,
+  "context_prologic_2_receive.mode": 2,
+  "context_prologic_2_receive.rate": 48000,
+  "context_prologic_2_receive.render_channels": 2,
+  "context_prologic_2_receive.live_set": true,
+  "context_prologic_2_receive.generator_channels": 2,
+  "context_prologic_2_receive": {
+    "file": "context_prologic_2_receive.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_receive.master": {
+    "file": "context_prologic_2_receive.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_duck.preflight_blocks": 4,
+  "context_prologic_2_duck.buffer": 1024,
+  "context_prologic_2_duck.mode": 2,
+  "context_prologic_2_duck.rate": 48000,
+  "context_prologic_2_duck.render_channels": 2,
+  "context_prologic_2_duck.generator_channels": 2,
+  "context_prologic_2_duck": {
+    "file": "context_prologic_2_duck.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_duck.master": {
+    "file": "context_prologic_2_duck.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_compressor.preflight_blocks": 4,
+  "context_prologic_2_compressor.buffer": 1024,
+  "context_prologic_2_compressor.mode": 2,
+  "context_prologic_2_compressor.rate": 48000,
+  "context_prologic_2_compressor.render_channels": 2,
+  "context_prologic_2_compressor.generator_channels": 2,
+  "context_prologic_2_compressor": {
+    "file": "context_prologic_2_compressor.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_compressor.master": {
+    "file": "context_prologic_2_compressor.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_source_chorus.preflight_blocks": 4,
+  "context_prologic_2_source_chorus.buffer": 1024,
+  "context_prologic_2_source_chorus.mode": 2,
+  "context_prologic_2_source_chorus.rate": 48000,
+  "context_prologic_2_source_chorus.render_channels": 2,
+  "context_prologic_2_source_chorus": {
+    "file": "context_prologic_2_source_chorus.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_source_chorus.master": {
+    "file": "context_prologic_2_source_chorus.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_listener_reverb.preflight_blocks": 4,
+  "context_prologic_2_listener_reverb.buffer": 1024,
+  "context_prologic_2_listener_reverb.mode": 2,
+  "context_prologic_2_listener_reverb.rate": 48000,
+  "context_prologic_2_listener_reverb.render_channels": 2,
+  "context_prologic_2_listener_reverb.generator_channels": 2,
+  "context_prologic_2_listener_reverb": {
+    "file": "context_prologic_2_listener_reverb.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_listener_reverb.master": {
+    "file": "context_prologic_2_listener_reverb.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_zone.preflight_blocks": 4,
+  "context_prologic_2_zone.buffer": 1024,
+  "context_prologic_2_zone.mode": 2,
+  "context_prologic_2_zone.rate": 48000,
+  "context_prologic_2_zone.render_channels": 2,
+  "context_prologic_2_zone": {
+    "file": "context_prologic_2_zone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_zone.master": {
+    "file": "context_prologic_2_zone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_front.preflight_blocks": 4,
+  "context_prologic_2_spatial_front.buffer": 1024,
+  "context_prologic_2_spatial_front.mode": 2,
+  "context_prologic_2_spatial_front.rate": 48000,
+  "context_prologic_2_spatial_front.render_channels": 2,
+  "context_prologic_2_spatial_front": {
+    "file": "context_prologic_2_spatial_front.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_front.master": {
+    "file": "context_prologic_2_spatial_front.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_rear.preflight_blocks": 4,
+  "context_prologic_2_spatial_rear.buffer": 1024,
+  "context_prologic_2_spatial_rear.mode": 2,
+  "context_prologic_2_spatial_rear.rate": 48000,
+  "context_prologic_2_spatial_rear.render_channels": 2,
+  "context_prologic_2_spatial_rear": {
+    "file": "context_prologic_2_spatial_rear.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_rear.master": {
+    "file": "context_prologic_2_spatial_rear.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_left.preflight_blocks": 4,
+  "context_prologic_2_spatial_left.buffer": 1024,
+  "context_prologic_2_spatial_left.mode": 2,
+  "context_prologic_2_spatial_left.rate": 48000,
+  "context_prologic_2_spatial_left.render_channels": 2,
+  "context_prologic_2_spatial_left": {
+    "file": "context_prologic_2_spatial_left.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_left.master": {
+    "file": "context_prologic_2_spatial_left.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_right.preflight_blocks": 4,
+  "context_prologic_2_spatial_right.buffer": 1024,
+  "context_prologic_2_spatial_right.mode": 2,
+  "context_prologic_2_spatial_right.rate": 48000,
+  "context_prologic_2_spatial_right.render_channels": 2,
+  "context_prologic_2_spatial_right": {
+    "file": "context_prologic_2_spatial_right.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_right.master": {
+    "file": "context_prologic_2_spatial_right.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_rear_rotated.preflight_blocks": 4,
+  "context_prologic_2_spatial_rear_rotated.buffer": 1024,
+  "context_prologic_2_spatial_rear_rotated.mode": 2,
+  "context_prologic_2_spatial_rear_rotated.rate": 48000,
+  "context_prologic_2_spatial_rear_rotated.render_channels": 2,
+  "context_prologic_2_spatial_rear_rotated": {
+    "file": "context_prologic_2_spatial_rear_rotated.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_spatial_rear_rotated.master": {
+    "file": "context_prologic_2_spatial_rear_rotated.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_stereo_clip.preflight_blocks": 4,
+  "context_prologic_2_stereo_clip.buffer": 1024,
+  "context_prologic_2_stereo_clip.mode": 2,
+  "context_prologic_2_stereo_clip.rate": 48000,
+  "context_prologic_2_stereo_clip.render_channels": 2,
+  "context_prologic_2_stereo_clip": {
+    "file": "context_prologic_2_stereo_clip.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_stereo_clip.master": {
+    "file": "context_prologic_2_stereo_clip.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_reverb_boost.preflight_blocks": 4,
+  "context_prologic_2_reverb_boost.buffer": 1024,
+  "context_prologic_2_reverb_boost.mode": 2,
+  "context_prologic_2_reverb_boost.rate": 48000,
+  "context_prologic_2_reverb_boost.render_channels": 2,
+  "context_prologic_2_reverb_boost.generator_channels": 2,
+  "context_prologic_2_reverb_boost": {
+    "file": "context_prologic_2_reverb_boost.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_2_reverb_boost.master": {
+    "file": "context_prologic_2_reverb_boost.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_dry.preflight_blocks": 4,
+  "context_prologic_7_dry.buffer": 1024,
+  "context_prologic_7_dry.mode": 7,
+  "context_prologic_7_dry.rate": 48000,
+  "context_prologic_7_dry.render_channels": 2,
+  "context_prologic_7_dry.generator_channels": 2,
+  "context_prologic_7_dry": {
+    "file": "context_prologic_7_dry.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_dry.master": {
+    "file": "context_prologic_7_dry.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_dist.preflight_blocks": 4,
+  "context_prologic_7_dist.buffer": 1024,
+  "context_prologic_7_dist.mode": 7,
+  "context_prologic_7_dist.rate": 48000,
+  "context_prologic_7_dist.render_channels": 2,
+  "context_prologic_7_dist.live_set": true,
+  "context_prologic_7_dist.generator_channels": 2,
+  "context_prologic_7_dist": {
+    "file": "context_prologic_7_dist.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_dist.master": {
+    "file": "context_prologic_7_dist.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_chorus.preflight_blocks": 4,
+  "context_prologic_7_chorus.buffer": 1024,
+  "context_prologic_7_chorus.mode": 7,
+  "context_prologic_7_chorus.rate": 48000,
+  "context_prologic_7_chorus.render_channels": 2,
+  "context_prologic_7_chorus.live_set": true,
+  "context_prologic_7_chorus.generator_channels": 2,
+  "context_prologic_7_chorus": {
+    "file": "context_prologic_7_chorus.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_chorus.master": {
+    "file": "context_prologic_7_chorus.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_flange.preflight_blocks": 4,
+  "context_prologic_7_flange.buffer": 1024,
+  "context_prologic_7_flange.mode": 7,
+  "context_prologic_7_flange.rate": 48000,
+  "context_prologic_7_flange.render_channels": 2,
+  "context_prologic_7_flange.live_set": true,
+  "context_prologic_7_flange.generator_channels": 2,
+  "context_prologic_7_flange": {
+    "file": "context_prologic_7_flange.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_flange.master": {
+    "file": "context_prologic_7_flange.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_norm.preflight_blocks": 4,
+  "context_prologic_7_norm.buffer": 1024,
+  "context_prologic_7_norm.mode": 7,
+  "context_prologic_7_norm.rate": 48000,
+  "context_prologic_7_norm.render_channels": 2,
+  "context_prologic_7_norm.live_set": true,
+  "context_prologic_7_norm.generator_channels": 2,
+  "context_prologic_7_norm": {
+    "file": "context_prologic_7_norm.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_norm.master": {
+    "file": "context_prologic_7_norm.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_shift.preflight_blocks": 4,
+  "context_prologic_7_shift.buffer": 1024,
+  "context_prologic_7_shift.mode": 7,
+  "context_prologic_7_shift.rate": 48000,
+  "context_prologic_7_shift.render_channels": 2,
+  "context_prologic_7_shift.mixer_Pitch": 0.75,
+  "context_prologic_7_shift.mixer_FFT size": 1024,
+  "context_prologic_7_shift.mixer_Overlap": 4,
+  "context_prologic_7_shift.mixer_Max channels": 0,
+  "context_prologic_7_shift.live_set": true,
+  "context_prologic_7_shift.generator_channels": 2,
+  "context_prologic_7_shift": {
+    "file": "context_prologic_7_shift.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_shift.master": {
+    "file": "context_prologic_7_shift.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_reverb.preflight_blocks": 4,
+  "context_prologic_7_reverb.buffer": 1024,
+  "context_prologic_7_reverb.mode": 7,
+  "context_prologic_7_reverb.rate": 48000,
+  "context_prologic_7_reverb.render_channels": 2,
+  "context_prologic_7_reverb.live_set": true,
+  "context_prologic_7_reverb.generator_channels": 2,
+  "context_prologic_7_reverb": {
+    "file": "context_prologic_7_reverb.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_reverb.master": {
+    "file": "context_prologic_7_reverb.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_reverb_startup.preflight_blocks": 4,
+  "context_prologic_7_reverb_startup.buffer": 1024,
+  "context_prologic_7_reverb_startup.mode": 7,
+  "context_prologic_7_reverb_startup.rate": 48000,
+  "context_prologic_7_reverb_startup.render_channels": 2,
+  "context_prologic_7_reverb_startup.generator_channels": 2,
+  "context_prologic_7_reverb_startup": {
+    "file": "context_prologic_7_reverb_startup.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_reverb_startup.master": {
+    "file": "context_prologic_7_reverb_startup.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_receive.preflight_blocks": 4,
+  "context_prologic_7_receive.buffer": 1024,
+  "context_prologic_7_receive.mode": 7,
+  "context_prologic_7_receive.rate": 48000,
+  "context_prologic_7_receive.render_channels": 2,
+  "context_prologic_7_receive.live_set": true,
+  "context_prologic_7_receive.generator_channels": 2,
+  "context_prologic_7_receive": {
+    "file": "context_prologic_7_receive.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_receive.master": {
+    "file": "context_prologic_7_receive.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_duck.preflight_blocks": 4,
+  "context_prologic_7_duck.buffer": 1024,
+  "context_prologic_7_duck.mode": 7,
+  "context_prologic_7_duck.rate": 48000,
+  "context_prologic_7_duck.render_channels": 2,
+  "context_prologic_7_duck.generator_channels": 2,
+  "context_prologic_7_duck": {
+    "file": "context_prologic_7_duck.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_duck.master": {
+    "file": "context_prologic_7_duck.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_compressor.preflight_blocks": 4,
+  "context_prologic_7_compressor.buffer": 1024,
+  "context_prologic_7_compressor.mode": 7,
+  "context_prologic_7_compressor.rate": 48000,
+  "context_prologic_7_compressor.render_channels": 2,
+  "context_prologic_7_compressor.generator_channels": 2,
+  "context_prologic_7_compressor": {
+    "file": "context_prologic_7_compressor.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_compressor.master": {
+    "file": "context_prologic_7_compressor.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_source_chorus.preflight_blocks": 4,
+  "context_prologic_7_source_chorus.buffer": 1024,
+  "context_prologic_7_source_chorus.mode": 7,
+  "context_prologic_7_source_chorus.rate": 48000,
+  "context_prologic_7_source_chorus.render_channels": 2,
+  "context_prologic_7_source_chorus": {
+    "file": "context_prologic_7_source_chorus.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_source_chorus.master": {
+    "file": "context_prologic_7_source_chorus.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_listener_reverb.preflight_blocks": 4,
+  "context_prologic_7_listener_reverb.buffer": 1024,
+  "context_prologic_7_listener_reverb.mode": 7,
+  "context_prologic_7_listener_reverb.rate": 48000,
+  "context_prologic_7_listener_reverb.render_channels": 2,
+  "context_prologic_7_listener_reverb.generator_channels": 2,
+  "context_prologic_7_listener_reverb": {
+    "file": "context_prologic_7_listener_reverb.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_listener_reverb.master": {
+    "file": "context_prologic_7_listener_reverb.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_zone.preflight_blocks": 4,
+  "context_prologic_7_zone.buffer": 1024,
+  "context_prologic_7_zone.mode": 7,
+  "context_prologic_7_zone.rate": 48000,
+  "context_prologic_7_zone.render_channels": 2,
+  "context_prologic_7_zone": {
+    "file": "context_prologic_7_zone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_zone.master": {
+    "file": "context_prologic_7_zone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_front.preflight_blocks": 4,
+  "context_prologic_7_spatial_front.buffer": 1024,
+  "context_prologic_7_spatial_front.mode": 7,
+  "context_prologic_7_spatial_front.rate": 48000,
+  "context_prologic_7_spatial_front.render_channels": 2,
+  "context_prologic_7_spatial_front": {
+    "file": "context_prologic_7_spatial_front.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_front.master": {
+    "file": "context_prologic_7_spatial_front.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_rear.preflight_blocks": 4,
+  "context_prologic_7_spatial_rear.buffer": 1024,
+  "context_prologic_7_spatial_rear.mode": 7,
+  "context_prologic_7_spatial_rear.rate": 48000,
+  "context_prologic_7_spatial_rear.render_channels": 2,
+  "context_prologic_7_spatial_rear": {
+    "file": "context_prologic_7_spatial_rear.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_rear.master": {
+    "file": "context_prologic_7_spatial_rear.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_left.preflight_blocks": 4,
+  "context_prologic_7_spatial_left.buffer": 1024,
+  "context_prologic_7_spatial_left.mode": 7,
+  "context_prologic_7_spatial_left.rate": 48000,
+  "context_prologic_7_spatial_left.render_channels": 2,
+  "context_prologic_7_spatial_left": {
+    "file": "context_prologic_7_spatial_left.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_left.master": {
+    "file": "context_prologic_7_spatial_left.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_right.preflight_blocks": 4,
+  "context_prologic_7_spatial_right.buffer": 1024,
+  "context_prologic_7_spatial_right.mode": 7,
+  "context_prologic_7_spatial_right.rate": 48000,
+  "context_prologic_7_spatial_right.render_channels": 2,
+  "context_prologic_7_spatial_right": {
+    "file": "context_prologic_7_spatial_right.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_right.master": {
+    "file": "context_prologic_7_spatial_right.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_rear_rotated.preflight_blocks": 4,
+  "context_prologic_7_spatial_rear_rotated.buffer": 1024,
+  "context_prologic_7_spatial_rear_rotated.mode": 7,
+  "context_prologic_7_spatial_rear_rotated.rate": 48000,
+  "context_prologic_7_spatial_rear_rotated.render_channels": 2,
+  "context_prologic_7_spatial_rear_rotated": {
+    "file": "context_prologic_7_spatial_rear_rotated.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_spatial_rear_rotated.master": {
+    "file": "context_prologic_7_spatial_rear_rotated.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_stereo_clip.preflight_blocks": 4,
+  "context_prologic_7_stereo_clip.buffer": 1024,
+  "context_prologic_7_stereo_clip.mode": 7,
+  "context_prologic_7_stereo_clip.rate": 48000,
+  "context_prologic_7_stereo_clip.render_channels": 2,
+  "context_prologic_7_stereo_clip": {
+    "file": "context_prologic_7_stereo_clip.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_stereo_clip.master": {
+    "file": "context_prologic_7_stereo_clip.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_reverb_boost.preflight_blocks": 4,
+  "context_prologic_7_reverb_boost.buffer": 1024,
+  "context_prologic_7_reverb_boost.mode": 7,
+  "context_prologic_7_reverb_boost.rate": 48000,
+  "context_prologic_7_reverb_boost.render_channels": 2,
+  "context_prologic_7_reverb_boost.generator_channels": 2,
+  "context_prologic_7_reverb_boost": {
+    "file": "context_prologic_7_reverb_boost.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_prologic_7_reverb_boost.master": {
+    "file": "context_prologic_7_reverb_boost.master.f32",
+    "frames": 32768,
+    "channels": 2
+  }
+}
