@@ -87,16 +87,16 @@ namespace UnityEngine.Tests
         public void AddBatchRefusesWindowsTheDeviceDoesNotTake(string device)
         {
             var previousDevice = GraphicsDeviceProfile.Current;
-            GraphicsDeviceProfile.Select(device);
-            var group = Group(Nothing);
-            var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 64, 4);
-            m_Buffers.Add(buffer);
             var values = new NativeArray<MetadataValue>(0, Allocator.Temp);
             var logged = new List<string>();
             var previous = Debug.unityLogger.logHandler;
-            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
             try
             {
+                GraphicsDeviceProfile.Select(device);
+                var group = Group(Nothing);
+                var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 64, 4);
+                m_Buffers.Add(buffer);
+                Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
                 if (device == "OpenGLCore")
                 {
                     Assert.Equal(BatchBufferTarget.ConstantBuffer, BatchRendererGroup.BufferTarget);
