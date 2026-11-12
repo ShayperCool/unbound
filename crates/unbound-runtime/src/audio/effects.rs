@@ -210,11 +210,13 @@ impl MeasuredLayout {
     ) -> anyhow::Result<()> {
         anyhow::ensure!(
             (config.speaker_mode == speaker_mode::STEREO
-                || (surround && measured_speaker_output(config.speaker_mode)))
+                || (surround
+                    && (config.speaker_mode == speaker_mode::MONO
+                        || measured_speaker_output(config.speaker_mode))))
                 && ((self.rates.contains(&config.sample_rate)
                     && config.buffer_size == self.buffer)
                     || additional_measured_output(config, surround)),
-            "AudioMixer {effect} is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output, or the additional measured output settings"
+            "AudioMixer {effect} is measured only at 48000/44100 Hz with 1024-frame stereo output or measured mono/surround output, or the additional measured output settings"
         );
         Ok(())
     }
@@ -794,7 +796,10 @@ impl SlotMix<'_> {
             output.copy_from_slice(input);
             return;
         }
-        let wet = if self.audible { level } else { 0.0 };
+        let audible = self.audible
+            && (self.channels != Some(1)
+                || ParameterRamp::gain_change_audible(0.0, level, SLOT_TRANSITION_FRAMES, 1));
+        let wet = if audible { level } else { 0.0 };
         let dry = (1.0 - level).max(-1.0);
         let (wet, dry) = if self.live {
             match self.channels {
@@ -992,9 +997,21 @@ impl Effect {
     /// a layout change (`AudioSettings.Reset`) recreates every group effect.
     pub(crate) fn set_layout(&mut self, channels: usize) {
         self.layout = channels;
+        if self.measured_mono()
+            && self.frames == 0
+            && self.spec.mix_level.is_some_and(|level| {
+                !ParameterRamp::gain_change_audible(0.0, level, SLOT_TRANSITION_FRAMES, 1)
+            })
+        {
+            self.wet_ramp = ParameterRamp::new(0.0);
+        }
         if let (Some(pitch), Some(parameters)) = (&mut self.pitch, &self.spec.pitch_shifter) {
             pitch.set_channel_limit(channels, parameters.max_channels);
         }
+    }
+
+    fn measured_mono(&self) -> bool {
+        self.layout == 1 && self.spec.surround_effects_measured
     }
 
     pub(crate) fn set_channel_offset(&mut self, offset: usize) {
@@ -1048,11 +1065,17 @@ impl Effect {
         self.send_ramp = ParameterRamp::new(0.0);
         self.send_frames = 0;
         self.gain_ramp = ParameterRamp::new(self.spec.gain);
-        self.wet_ramp = ParameterRamp::new(if self.spec.mix_audible {
-            self.spec.mix_level.unwrap_or(1.0)
-        } else {
-            0.0
-        });
+        let level = self.spec.mix_level.unwrap_or(1.0);
+        self.wet_ramp = ParameterRamp::new(
+            if self.spec.mix_audible
+                && (!self.measured_mono()
+                    || ParameterRamp::gain_change_audible(0.0, level, SLOT_TRANSITION_FRAMES, 1))
+            {
+                level
+            } else {
+                0.0
+            },
+        );
         self.dry_ramp = ParameterRamp::new((1.0 - self.spec.mix_level.unwrap_or(1.0)).max(-1.0));
         if !restart {
             self.cutoff = 5000.0;
@@ -1207,6 +1230,11 @@ impl Effect {
                                 side[frame * 2 + channel % 2] += input * gain;
                             }
                         }
+                        if self.layout == 1
+                            && let Some(side) = &mut front_side
+                        {
+                            side[frame * 2 + 1] = side[frame * 2];
+                        }
                     }
                     self.gain = self.send_ramp.value;
                 }
@@ -1266,7 +1294,7 @@ impl Effect {
                     channels: self
                         .spec
                         .surround_effects_measured
-                        .then_some(self.layout.max(2)),
+                        .then_some(self.layout.max(1)),
                     wet: &mut self.wet_ramp,
                     dry: &mut self.dry_ramp,
                 };
@@ -1317,7 +1345,7 @@ impl Effect {
                 channels: self
                     .spec
                     .surround_effects_measured
-                    .then_some(self.layout.max(2)),
+                    .then_some(self.layout.max(1)),
                 wet: &mut self.wet_ramp,
                 dry: &mut self.dry_ramp,
             };
@@ -1350,6 +1378,11 @@ impl Effect {
             })
     }
     pub fn process(&mut self, samples: &mut [f32], bypass: bool) {
+        let mono = self.measured_mono();
+        if mono && self.kind == Some(EffectKind::SfxReverb) {
+            self.process_shared_reverb(samples, &mut [], bypass);
+            return;
+        }
         let wet = self.spec.mix_level.filter(|_| !bypass && !self.spec.bypass);
         if wet.is_some() {
             self.scratch[..samples.len()].copy_from_slice(samples);
@@ -1358,6 +1391,9 @@ impl Effect {
         // A fully dry live slot skips the kernel while its gains can still be finishing.
         if !(live && wet == Some(0.0)) {
             self.process_effect(samples, bypass);
+        }
+        if mono && self.kind == Some(EffectKind::Chorus) {
+            super::channels::retain_mono(samples);
         }
         if wet.is_some() {
             let mut mix = SlotMix {
@@ -1369,7 +1405,7 @@ impl Effect {
                 channels: self
                     .spec
                     .surround_effects_measured
-                    .then_some(self.layout.max(2)),
+                    .then_some(self.layout.max(1)),
                 wet: &mut self.wet_ramp,
                 dry: &mut self.dry_ramp,
             };
@@ -1598,7 +1634,7 @@ impl GroupNode {
         let pairs = lanes.len().min(MAX_EXTRA_PAIRS);
         for (index, effect) in effects.iter_mut().enumerate() {
             let front = &mut buffer[..n * 2];
-            if effect.layout >= 2 && effect.links_channels() {
+            if (effect.layout >= 2 || effect.measured_mono()) && effect.links_channels() {
                 let mut lane_buffers = lanes.iter_mut();
                 let mut extra: [&mut [f32]; MAX_EXTRA_PAIRS] = std::array::from_fn(|_| {
                     lane_buffers
@@ -1659,6 +1695,106 @@ fn sync_effects(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mono_chorus_matches_the_recorded_first_tap_across_partial_blocks() {
+        use std::io::Read;
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/audiopitch/Reference/unity-6000.0.71f1/mono");
+        for rate in [48000, 44100] {
+            let read = |name: &str| -> Vec<f32> {
+                let file = std::fs::File::open(
+                    root.join(format!("rate-{rate}/context_monofx_1_{name}.master.f32.gz")),
+                )
+                .unwrap();
+                let mut bytes = Vec::new();
+                flate2::read::GzDecoder::new(file)
+                    .read_to_end(&mut bytes)
+                    .unwrap();
+                bytes
+                    .chunks_exact(4)
+                    .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+                    .collect()
+            };
+            let input = read("dry_mono_clip");
+            let reference = read("chorus_full");
+            let spec: EffectSpec = serde_json::from_value(serde_json::json!({
+                "id": "mono", "kind": "Chorus", "surroundEffectsMeasured": true,
+                "slotWetMeasured": true, "slotWetTransitionsMeasured": true,
+                "effectTransitionsMeasured": true, "mixLevel": 1.0,
+                "chorus": { "dry": 0.2, "wet1": 0.2, "wet2": 0.5, "wet3": 0.9, "delay": 11.0, "rate": 3.0, "depth": 0.7 }
+            })).unwrap();
+            let mut effect = Effect::new(spec.clone(), rate, 1024).unwrap();
+            effect.set_layout(1);
+            let scratch = effect.scratch.as_ptr();
+            for (block, samples) in input.chunks(97).enumerate() {
+                let mut pair: Vec<f32> = samples.iter().flat_map(|&x| [x, x]).collect();
+                effect.process(&mut pair, false);
+                for (frame, values) in pair.chunks_exact(2).enumerate() {
+                    let expected = reference[block * 97 + frame];
+                    assert_eq!(values[0], values[1]);
+                    assert!(
+                        (values[0] - expected).abs() <= 0.00002 + expected.abs() * 0.0002,
+                        "{rate}/{}: {} != {expected}",
+                        block * 97 + frame,
+                        values[0]
+                    );
+                }
+                assert_eq!(scratch, effect.scratch.as_ptr());
+            }
+            // Other releases retain their existing two-lane processing until measured.
+            let mut legacy = spec;
+            legacy.surround_effects_measured = false;
+            let mut legacy = Effect::new(legacy, rate, 1024).unwrap();
+            legacy.set_layout(1);
+            let mut pair: Vec<f32> = input.iter().take(4096).flat_map(|&x| [x, x]).collect();
+            for block in pair.chunks_mut(1024 * 2) {
+                legacy.process(block, false);
+            }
+            assert!(pair.chunks_exact(2).any(|v| v[0] != v[1]));
+        }
+    }
+
+    #[test]
+    fn mono_static_wet_admission_is_limited_to_the_measured_profile() {
+        for kind in [
+            "Normalize",
+            "Pitch Shifter",
+            "Distortion",
+            "Chorus",
+            "Flange",
+        ] {
+            let mut spec: EffectSpec = serde_json::from_value(serde_json::json!({
+                "id": "mono", "kind": kind, "surroundEffectsMeasured": true,
+                "slotWetMeasured": true, "mixLevel": 0.5, "distortion": 0.7,
+                "normalize": { "fade": 50.0, "lowest": 0.01, "maximum": 10.0 },
+                "pitchShifter": { "pitch": 0.75 },
+                "chorus": { "dry": 0.2, "wet1": 0.2, "wet2": 0.5, "wet3": 0.9, "delay": 11.0, "rate": 3.0, "depth": 0.7 },
+                "flange": { "dry": 0.45, "wet": 0.55, "depth": 1.0, "rate": 0.1 }
+            })).unwrap();
+            for rate in [48000, 44100] {
+                let config = MixerConfig {
+                    sample_rate: rate,
+                    speaker_mode: speaker_mode::MONO,
+                    ..Default::default()
+                };
+                spec.validate_in_group(&config, false).unwrap();
+                spec.surround_effects_measured = false;
+                assert!(spec.validate_in_group(&config, false).is_err());
+                spec.surround_effects_measured = true;
+                assert!(
+                    spec.validate_in_group(
+                        &MixerConfig {
+                            buffer_size: 512,
+                            ..config
+                        },
+                        false
+                    )
+                    .is_err()
+                );
+            }
+        }
+    }
 
     #[test]
     fn prologic_fallback_admission_is_limited_to_the_measured_profile() {
@@ -1752,7 +1888,7 @@ mod tests {
 
     #[test]
     fn send_slope_visits_active_speakers_in_order_across_partial_blocks() {
-        for channels in [2, 5, 8] {
+        for channels in [1, 2, 5, 8] {
             let spec: EffectSpec = serde_json::from_value(serde_json::json!({
                 "id": "send", "kind": "Send", "sendTarget": "return", "sendLevel": 1.0,
                 "surroundEffectsMeasured": true,
@@ -1803,7 +1939,10 @@ mod tests {
                         assert_eq!(values[frame * 2 + channel % 2], expected);
                         expected += step;
                     }
-                    if channels % 2 != 0 {
+                    if channels == 1 {
+                        assert_eq!(side["return"][frame * 2], side["return"][frame * 2 + 1]);
+                    }
+                    if channels > 2 && channels % 2 != 0 {
                         assert_eq!(lanes.last().unwrap()["return"][frame * 2 + 1], 0.0);
                     }
                 }

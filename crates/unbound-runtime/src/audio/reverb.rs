@@ -462,6 +462,14 @@ impl SfxReverb {
     }
 
     pub(crate) fn process_frame(&mut self, speakers: &mut [f32]) {
+        // Mono retains both reflection paths and folds their common network output.
+        // Unity 6000.0.71f1, tests/projects/audiopitch mono controls.
+        if speakers.len() == 1 {
+            let mut pair = [speakers[0]; 2];
+            self.process_frame(&mut pair);
+            speakers[0] = (pair[0] + pair[1]) * 0.5;
+            return;
+        }
         let channels = speakers.len();
         if self.buffer_position == 0 {
             self.previous = self.c;

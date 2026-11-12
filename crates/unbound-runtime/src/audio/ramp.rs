@@ -24,19 +24,30 @@ impl ParameterRamp {
         self.gain_channels(target, frames, 2)
     }
 
-    /// The connection deadband sums the absolute gain step over the active speakers.
-    pub(crate) fn gain_channels(&mut self, target: f32, frames: u32, channels: usize) -> f32 {
-        // Stereo boundary controls: audiodistortion; wider layouts: audiopitch wet profile.
+    pub(crate) fn gain_change_audible(
+        from: f32,
+        target: f32,
+        frames: u32,
+        channels: usize,
+    ) -> bool {
         const MIN_SUM_STEP: f32 = 0.00001;
-        let step = ((target - self.value) / frames as f32).abs();
+        let step = ((target - from) / frames as f32).abs();
         let mut sum = 0.0;
         for _ in 0..channels {
             sum += step;
         }
+        sum >= MIN_SUM_STEP
+    }
+
+    /// The connection deadband sums the absolute gain step over the active speakers.
+    pub(crate) fn gain_channels(&mut self, target: f32, frames: u32, channels: usize) -> f32 {
+        // Stereo boundary controls: audiodistortion; wider layouts: audiopitch wet profile.
         if target == 1.0 {
             *self = Self::new(1.0);
             1.0
-        } else if self.position == 0 && sum < MIN_SUM_STEP {
+        } else if self.position == 0
+            && !Self::gain_change_audible(self.value, target, frames, channels)
+        {
             self.value
         } else {
             let value = self.next(target, frames);
@@ -86,7 +97,7 @@ mod tests {
 
     #[test]
     fn wider_connections_apply_a_small_change_that_stereo_retains() {
-        for channels in [2, 4, 5, 6, 8] {
+        for channels in [1, 2, 4, 5, 6, 8] {
             let boundary = 0.00064 / channels as f32;
             let mut below = ParameterRamp::new(0.0);
             for _ in 0..128 {

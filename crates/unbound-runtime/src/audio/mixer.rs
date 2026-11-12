@@ -2292,12 +2292,12 @@ impl Mixer {
     fn add_zone_return(&mut self, n: usize, pairs: usize) {
         if let Some(zone) = &mut self.zone {
             let input = &mut self.zone_input[..n * 2];
-            if self.surround_effects && pairs > 0 {
+            if self.surround_effects && (pairs > 0 || self.config.output_channels() == 1) {
                 let mut lanes = Lanes {
                     samples: &mut self.zone_extra,
                     stride: BLOCK * 2,
                     offset: 0,
-                    channels: self.config.output_channels() - 2,
+                    channels: self.config.output_channels().saturating_sub(2),
                 };
                 let mut blocks = lanes.pairs(n);
                 zone.reverb.process_linked(

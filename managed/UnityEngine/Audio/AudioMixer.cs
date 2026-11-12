@@ -822,10 +822,11 @@ namespace Unbound.Runtime
             // The layout the mixer runs, which a narrower device lowers below the request.
             var config = AudioSettings.GetConfiguration();
             var mode = MeasuredOutputMode(config);
-            bool layout = mode == AudioSpeakerMode.Stereo || (Compat.AudioSurroundEffectsMeasured && MeasuredSpeakerOutput(mode));
+            bool layout = mode == AudioSpeakerMode.Stereo || (Compat.AudioSurroundEffectsMeasured
+                && (mode == AudioSpeakerMode.Mono || MeasuredSpeakerOutput(mode)));
             bool standard = (config.sampleRate == 48000 || config.sampleRate == 44100) && config.dspBufferSize == 1024;
             if (!layout || !(standard || AdditionalMeasuredOutput(config, mode)))
-                throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output, or the additional measured output settings");
+                throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output or measured mono/surround output, or the additional measured output settings");
         }
 
         // The Prologic profile observes a two-channel fallback at these original settings.

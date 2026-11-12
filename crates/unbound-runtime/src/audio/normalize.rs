@@ -71,6 +71,25 @@ impl Normalize {
 mod tests {
     use super::*;
     #[test]
+    fn mono_ignores_the_unused_storage_lane_and_duplicates_its_output() {
+        let spec = NormalizeSpec {
+            fade: 0.0,
+            lowest: 0.01,
+            maximum: 10.0,
+        };
+        let mut front = [0.125, 100.0, 0.5, -100.0, 0.0, 100.0];
+        Normalize::default().process_linked_with(
+            &mut front,
+            &mut [],
+            1,
+            &spec,
+            32000,
+            |_, _, _| {},
+        );
+        assert_eq!(front, [1.0, 1.0, 1.0, 1.0, 0.0, 0.0]);
+    }
+
+    #[test]
     fn one_envelope_includes_rear_speakers_but_excludes_an_unused_pair_slot() {
         let spec = NormalizeSpec {
             fade: 0.0,
