@@ -1641,14 +1641,14 @@ namespace UnityEngine
 
         /// <summary>The normalized playback time where a step of <paramref name="dt"/> seconds ends,
         /// at which system-time curves are read (the gravity modifier, the noise scroll speed). A
-        /// start delay still running takes its part of the step first, the playback time staying
-        /// at its start meanwhile; a system whose emission ended during the delay never leaves it
-        /// (6000.0.71f1, tests/projects/particlegravity delay/*).</summary>
+        /// start delay still left takes its part of the step first, the playback time staying
+        /// where it is meanwhile, as in AdvanceEmissionStep (6000.0.71f1, tests/projects/particlegravity
+        /// delay/*).</summary>
         float StepEndNt(float dt)
         {
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
             float advance = dt;
-            if (m_DelayRemaining > 0f && m_IsPlaying && !m_BirthDelayClock)
+            if (m_DelayRemaining > 0f && (m_IsPlaying || m_StopEmitting) && !m_BirthDelayClock)
                 advance = Mathf.Max(0f, dt - m_DelayRemaining);
             float endTime = m_Time + advance;
             if (m_Main.loop) endTime %= duration;

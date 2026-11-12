@@ -476,11 +476,13 @@ namespace UnityEngine.Tests
         // particleemission stoppedSimulate/{1,4}/1/0.25 and stoppedLongStep/*: a stopped system keeps
         // the start delay it has left; a step longer than that advances by the excess.
         [Theory]
-        [InlineData(1, .03f, .25f, 0f, 0f, .05f)]
-        [InlineData(3, .5f, .1f, .2f, .4f, .6f)]
-        [InlineData(3, .5f, .25f, .05f, .1f, .15f)]
-        [InlineData(3, .5f, .4f, 0f, 0f, 0f)]
-        public void StoppedClockKeepsTheStartDelayLeft(int mode, float maximum, float delay, float first, float second, float resumed)
+        // A system resumed at a later time keeps its delay for good: a short step never moves it
+        // (stoppedLongStep/0.5/*/afterPlay3); one resumed at time zero counts the delay down.
+        [InlineData(1, .03f, .25f, 0f, 0f, .05f, .066f)]
+        [InlineData(3, .5f, .1f, .2f, .4f, .6f, .6f)]
+        [InlineData(3, .5f, .25f, .05f, .1f, .15f, .15f)]
+        [InlineData(3, .5f, .4f, 0f, 0f, 0f, 0f)]
+        public void StoppedClockKeepsTheStartDelayLeft(int mode, float maximum, float delay, float first, float second, float resumed, float afterShort)
         {
             float saved = Time.maximumParticleDeltaTime;
             Time.maximumParticleDeltaTime = maximum;
@@ -495,6 +497,8 @@ namespace UnityEngine.Tests
                 ps.Play(false);
                 ps.Simulate(.3f, false, false, false);
                 Assert.Equal(resumed, ps.time, 1e-6f);
+                ps.Simulate(.016f, false, false, false);
+                Assert.Equal(afterShort, ps.time, 1e-6f);
             }
             finally
             {
