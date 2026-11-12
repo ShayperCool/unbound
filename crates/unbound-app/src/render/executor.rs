@@ -451,10 +451,11 @@ struct MeshInstanceSlot {
     index: u32,
     /// The call's instance count.
     count: u32,
-    /// One of the instances an instance multiplier adds past the call's count
-    /// ([`UnityRenderer::multiplied_instances`]): it has no instance data.
-    added: bool,
-    /// An added instance's winding: the call's last instance's (its own matrix is zero).
+    /// The instances an instance multiplier adds past the call's count, IDs `index` to
+    /// `index + added - 1`, drawn as one draw without instance data
+    /// ([`UnityRenderer::multiplied_instances`]); 0: one of the call's own instances.
+    added: u32,
+    /// The added instances' winding: the call's last instance's (their matrix is zero).
     mirrored: bool,
 }
 
@@ -2589,26 +2590,16 @@ impl UnityRenderer {
         // Where the passes into the depth-only target being drawn start (this submission's).
         let mut depth_mark = 0usize;
         // The instances an instance multiplier adds to a mesh-instancing call, drawn after its
-        // last one before the next command (`multiplied_instances`): the next one and the end
-        // of their IDs, and the call's last draw, handed back after each of them is drawn (a
-        // draw that is skipped skips the rest).
-        let mut added: Option<(MeshInstanceSlot, u32)> = None;
-        let mut added_draw: Option<Box<commands::Draw>> = None;
+        // last instance, from its draw, before the next command (`multiplied_instances`).
+        let mut added: Option<(MeshInstanceSlot, Box<commands::Draw>)> = None;
         let mut commands = commands.into_iter();
         loop {
-            let command = match (added.take(), added_draw.take()) {
-                (Some((slot, end)), Some(draw)) => {
-                    if slot.index + 1 < end {
-                        let next = MeshInstanceSlot {
-                            index: slot.index + 1,
-                            ..slot
-                        };
-                        added = Some((next, end));
-                    }
+            let command = match added.take() {
+                Some((slot, draw)) => {
                     self.state.mesh_instance = Some(slot);
                     Command::Draw(draw)
                 }
-                _ => match commands.next() {
+                None => match commands.next() {
                     Some(command) => command,
                     None => break,
                 },
@@ -2786,7 +2777,7 @@ impl UnityRenderer {
                     self.state.mesh_instance = Some(MeshInstanceSlot {
                         index,
                         count,
-                        added: false,
+                        added: 0,
                         mirrored: false,
                     })
                 }
@@ -3115,6 +3106,11 @@ impl UnityRenderer {
                         match item {
                             Planned::Draw(mut d) => {
                                 d.first_instance = first_instance;
+                                if let Some(slot) = mesh_instance
+                                    && slot.added > 0
+                                {
+                                    d.instances = slot.added;
+                                }
                                 // A mesh-instancing call's instances are drawn one by one, the
                                 // multiplier's are added after them (`multiplied_instances`).
                                 if d.indirect.is_none() && mesh_instance.is_none() {
@@ -3189,14 +3185,14 @@ impl UnityRenderer {
                             }
                         }
                     }
-                    if let Some(slot) = mesh_instance {
-                        if slot.added {
-                            added_draw = Some(draw);
-                        } else if slot.index + 1 == slot.count && self.state.instance_multiplier > 1
-                        {
-                            added = self.multiplied_instances(&mut draw, slot, past_batch);
-                            added_draw = added.is_some().then_some(draw);
-                        }
+                    if let Some(slot) = mesh_instance
+                        && slot.added == 0
+                        && slot.index + 1 == slot.count
+                        && self.state.instance_multiplier > 1
+                    {
+                        added = self
+                            .multiplied_instances(&mut draw, slot, past_batch)
+                            .map(|slot| (slot, draw));
                     }
                 }
                 Command::MeshBuffers(binding) => self.bind_mesh_buffers(*binding),
@@ -3415,8 +3411,8 @@ impl UnityRenderer {
 
     /// The instances an instance multiplier adds to a mesh-instancing call of `slot.count`
     /// instances drawn one by one: IDs `count..count * multiplier` (as `SetInstanceMultiplier`
-    /// multiplies a draw's instance count), drawn after its last instance from that instance's
-    /// draw (`draw`, its matrix zeroed): the first added slot and the end of their IDs. They
+    /// multiplies a draw's instance count), drawn after its last instance as one draw of that
+    /// instance's (`draw`, its matrix zeroed), whose slot this returns. They
     /// have no instance data: their matrices and instanced properties read zero, what the Unity
     /// 6000.0.71f1 Editor's added instances read where no earlier instanced draw wrote
     /// (tests/projects/cmdbuffers `device.multiplier.*`). Where earlier draws wrote more
@@ -3428,7 +3424,7 @@ impl UnityRenderer {
         draw: &mut commands::Draw,
         slot: MeshInstanceSlot,
         past_batch: bool,
-    ) -> Option<(MeshInstanceSlot, u32)> {
+    ) -> Option<MeshInstanceSlot> {
         if past_batch {
             if !self.multiplied_past_batch_warned {
                 self.multiplied_past_batch_warned = true;
@@ -3446,16 +3442,14 @@ impl UnityRenderer {
         }
         let mirrored = determinant3(&draw.model) < 0.0;
         draw.model = [0.0; 16];
-        let first = MeshInstanceSlot {
+        Some(MeshInstanceSlot {
             index: slot.count,
             count: slot.count,
-            added: true,
+            added: slot
+                .count
+                .saturating_mul(self.state.instance_multiplier - 1),
             mirrored,
-        };
-        Some((
-            first,
-            slot.count.saturating_mul(self.state.instance_multiplier),
-        ))
+        })
     }
 
     /// The pipelines, bind groups and uniforms of a draw: one per pass it draws.
@@ -3727,7 +3721,7 @@ impl UnityRenderer {
             });
             // An added mesh instance keeps its call's winding (`multiplied_instances`).
             let mirrored = match mesh_instance {
-                Some(slot) if slot.added => slot.mirrored,
+                Some(slot) if slot.added > 0 => slot.mirrored,
                 _ => determinant3(&draw.model) < 0.0,
             };
             (state, stencil_ref) =
@@ -3862,7 +3856,7 @@ impl UnityRenderer {
                 texture_size: &size,
                 constant_buffer: &constant_buffer,
                 instance: mesh_instance.map(|m| m.index),
-                instance_empty: mesh_instance.is_some_and(|m| m.added),
+                instance_empty: mesh_instance.is_some_and(|m| m.added > 0),
                 element: None,
             };
             if let Some(filter) = trace_uniforms()

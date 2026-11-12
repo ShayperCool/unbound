@@ -20,13 +20,13 @@ knows the asset pipeline and its cache.
 
 Opcode 30 `MeshInstance` carries `u32 index, u32 count`: the call's instance count follows the
 index. A mesh instance's draw keeps one instance at its index whatever the multiplier; after
-the draw of instance `count - 1` the renderer adds, under a multiplier m above one, the draws
+the draw of instance `count - 1` the renderer adds, under a multiplier m above one, one draw
 of IDs `count` to `count · m − 1` with zero matrices and zero instanced properties (scalar
 uniforms the variant declares instanced and those the draw gives as arrays), as the Unity
 6000.0.71f1 Editor draws a mesh-instancing call's multiplied instances where no earlier
 draw wrote their instance data (tests/projects/cmdbuffers `device.multiplier.placed.*`,
 `device.multiplier.camera.*`); where earlier draws wrote it, the Editor's read what they left
-(`device.multiplier.stale.*`, warned of, not reproduced). The added draws keep the call's last
+(`device.multiplier.stale.*`, warned of, not reproduced). The added draw keeps the call's last
 instance's winding. Standalone instancing whose multiplied IDs pass a native batch does not
 add them (warned, unmeasured).
 
