@@ -3724,8 +3724,7 @@ impl UnityRenderer {
                 Some(slot) if slot.added > 0 => slot.mirrored,
                 _ => determinant3(&draw.model) < 0.0,
             };
-            (state, stencil_ref) =
-                self.draw_state(state, stencil_ref, (mirrored != top_down) != flip);
+            (state, stencil_ref) = self.draw_state(state, stencil_ref, mirrored != flip, top_down);
             let key = PipelineKey {
                 state,
                 topology: sub.topology,
