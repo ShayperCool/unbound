@@ -59,6 +59,9 @@ namespace UnityEngine
                 m_Min = Vector3.Min(m_Min, Positions[i]);
                 m_Max = Vector3.Max(m_Max, Positions[i]);
             }
+            // Invalid bounds cannot rule out the finite cells or nearest probes still present.
+            m_HasBounds = float.IsFinite(m_Min.x) && float.IsFinite(m_Min.y) && float.IsFinite(m_Min.z)
+                && float.IsFinite(m_Max.x) && float.IsFinite(m_Max.y) && float.IsFinite(m_Max.z);
         }
 
         bool OutsideBounds(Vector3 p) => m_HasBounds &&
@@ -194,8 +197,8 @@ namespace UnityEngine
             for (int steps = 0; steps < Cells.Length; steps++)
             {
                 int next = Step(p, cell, w);
-                // Face rounding can send the walk back across the same face. Keep the current
-                // cell and its weights instead of starting an unrelated search.
+                // Every step writes its own weight state, including an open-cell plane rejection,
+                // so a two-step cycle cannot blend weights belonging to another cell.
                 if (next == cell || cell == beforePrevious) return cell;
                 if (next < 0) break;
                 beforePrevious = previous;
@@ -272,7 +275,12 @@ namespace UnityEngine
             var normal = Vector3.Cross(b - a, e - a);
             if (Vector3.Dot(normal, ra + rb + re) < 0f) normal = -normal;
             // Inside the hull: the inner cell across the triangle.
-            if (Vector3.Dot(normal, p - a) < 0f) return c.N3;
+            if (Vector3.Dot(normal, p - a) < 0f)
+            {
+                w[0] = w[1] = w[2] = 0f;
+                w[3] = -1f;
+                return c.N3;
+            }
             float t = RayParameter(p, a, b, e, ra, rb, re);
             Vector3 ta = a + ra * t, tb = b + rb * t, te = e + re * t;
             Barycentric(p, ta, tb, te, out w[0], out w[1], out w[2]);

@@ -50,6 +50,42 @@ namespace Unbound.Tests
         static string Key(IEnumerable<int> cell) => string.Join(",", cell.OrderBy(i => i));
 
         [Fact]
+        public void AFaceRoundingCycleKeepsWeightsWithTheirOwnVertices()
+        {
+            var vertices = BakedCells[1];
+            var matrix = BakedMatrices[1];
+            var set = new ProbeSet
+            {
+                Positions = Positions,
+                Probes = new UnityEngine.Rendering.SphericalHarmonicsL2[Positions.Length],
+                HullRays = BakedRays,
+                Cells = new[]
+                {
+                    new ProbeSet.Cell { I0 = vertices[0], I1 = vertices[1], I2 = vertices[2], I3 = vertices[3],
+                        N0 = 1, N1 = -1, N2 = -1, N3 = -1,
+                        R0 = new Vector3(matrix[0], matrix[1], matrix[2]),
+                        R1 = new Vector3(matrix[3], matrix[4], matrix[5]), R2 = new Vector3(matrix[6], matrix[7], matrix[8]) },
+                    new ProbeSet.Cell { I0 = vertices[1], I1 = vertices[2], I2 = vertices[3], I3 = -1,
+                        N0 = -1, N1 = -1, N2 = -1, N3 = 0 },
+                },
+            };
+            // The canonical Extra mesh has 22 cells. Only this adjacent pair is reachable
+            // here; retain the full walk limit when isolating its face-rounding cycle.
+            const int BakedCellCount = 22;
+            Array.Resize(ref set.Cells, BakedCellCount);
+            for (int i = 0; i < Positions.Length; i++) set.Probes[i][0, 0] = Positions[i].x + 2f * Positions[i].y - Positions[i].z;
+            var point = new Vector3(5.498985290527344f, 2.438500165939331f, -0.5086919069290161f);
+            for (int start = 0; start < 2; start++)
+            {
+                int hint = start;
+                Assert.True(set.Evaluate(point, ref hint, out var sh, out _));
+                Assert.Equal(start, hint);
+                float expected = start == 0 ? point.x + 2f * point.y - point.z : 0f;
+                Assert.InRange(MathF.Abs(sh[0, 0] - expected), 0f, 0.000002f);
+            }
+        }
+
+        [Fact]
         public void DuplicateAndCoplanarPositionsDoNotRejectTheSet()
         {
             var duplicate = new ProbeSet { Positions = new[] { Vector3.zero, new Vector3(2, 0, 0),

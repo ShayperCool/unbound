@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -13,6 +14,7 @@ using Unity.Collections;
 public static class ProbeGeometry
 {
     static readonly StringBuilder Output = new StringBuilder();
+    static bool s_Recording;
     static bool IsEngine => typeof(LightProbes).Assembly.GetType("UnityEngine.ProbeSet") != null;
     static string F(float value) => value.ToString("R", CultureInfo.InvariantCulture);
     static string Positions(Vector3[] points) => string.Join(" ", points.Select(p => F(p.x) + " " + F(p.y) + " " + F(p.z)));
@@ -57,6 +59,30 @@ public static class ProbeGeometry
         }
         indices = result.ToArray();
         positions = points;
+    }
+
+    static void Cycle()
+    {
+        if (!IsEngine) UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Extra.unity");
+        var probes = LightmapSettings.lightProbes;
+        var original = probes.bakedProbes;
+        var points = probes.positions;
+        var affine = points.Select(p =>
+        {
+            SphericalHarmonicsL2 sh = default;
+            sh[0, 0] = p.x + 2f * p.y - p.z;
+            return sh;
+        }).ToArray();
+        probes.bakedProbes = affine;
+        var point = new Vector3(5.498985290527344f, 2.438500165939331f, -0.5086919069290161f);
+        using (var query = new LightProbesQuery(Allocator.TempJob))
+            for (int seed = 0; seed < probes.cellCount; seed++)
+            {
+                int index = seed;
+                query.CalculateInterpolatedLightAndOcclusionProbe(point, ref index, out var sh, out _);
+                Put("cycle seed " + seed, index + " " + F(sh[0, 0]));
+            }
+        probes.bakedProbes = original;
     }
 
     static void Faces()
@@ -115,7 +141,7 @@ public static class ProbeGeometry
         UnityEngine.Object.DestroyImmediate(renderer.gameObject);
     }
 
-    public static void Record()
+    static void Meshes()
     {
         foreach (var layout in Layouts())
         {
@@ -124,13 +150,53 @@ public static class ProbeGeometry
             Put(layout.Key + " indices", string.Join(" ", indices));
             Put(layout.Key + " cells", (indices.Length / 4).ToString(CultureInfo.InvariantCulture));
         }
-        Faces();
+    }
+
+    static void Complete()
+    {
         Put("complete", "true");
         File.WriteAllText(Environment.GetEnvironmentVariable("LIGHT_PROBES_GEOMETRY_OUT"), Output.ToString());
         if (IsEngine) Application.Quit();
         else UnityEditor.EditorApplication.Exit(0);
     }
 
+    public static void Record()
+    {
+        if (s_Recording) return;
+        s_Recording = true;
+        Meshes();
+        Cycle();
+        Faces();
+        Complete();
+    }
+
+    public static IEnumerator Replay()
+    {
+        if (s_Recording) yield break;
+        s_Recording = true;
+        Meshes();
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Extra");
+        yield return null;
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Extra")
+            throw new Exception("Extra scene did not finish loading");
+        Cycle();
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Main");
+        yield return null;
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Main")
+            throw new Exception("Main scene did not finish loading");
+        Faces();
+        Complete();
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Run() { if (IsEngine) Record(); }
+    static void Run()
+    {
+        if (IsEngine && !s_Recording) new GameObject("Probe geometry").AddComponent<ProbeGeometryRunner>();
+    }
+}
+
+public sealed class ProbeGeometryRunner : MonoBehaviour
+{
+    void Awake() => UnityEngine.Object.DontDestroyOnLoad(gameObject);
+    IEnumerator Start() => ProbeGeometry.Replay();
 }

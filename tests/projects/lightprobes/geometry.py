@@ -66,11 +66,14 @@ def main():
         else:
             cli = os.environ['UNBOUND_CLI']
             command = [str(Path.home() / '.cache/compat/with-heavy-job'), 'timeout', '180', cli,
-                       'run', '-p', str(project), '--target', 'Standalone', '--no-watch', '--frames', '5']
+                       'run', '-p', str(project), '--target', 'Standalone', '--no-watch', '--frames', '120']
             with (out / 'engine.log').open('w') as log:
                 result = subprocess.run(command, env={**os.environ, **env}, stdout=log, stderr=subprocess.STDOUT)
             if result.returncode:
                 return result.returncode
+            problem = editor_runner.jsonl_complete('geometry.jsonl', {'key': 'complete', 'value': 'true'})(out)
+            if problem:
+                raise SystemExit(problem)
     return 0
 
 

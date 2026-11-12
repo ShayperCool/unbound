@@ -268,11 +268,24 @@ the ambient probe. Moving to `(0.5,0.5,0.25)` returns 2.5. Several starting hint
 faces, and renderer hints agree with unhinted results after the lighting changes. Complete index
 answers remain in the strict comparison. Open-cell extrapolation and the outer bounds have
 additional controls at `(1,1,1)` and `(2.01,1,1)`: the first returns 4.66666651 through an open
-cell, the second returns ambient. The current diagnostic comparison is 15/46. Its 31 strict
+cell, the second returns ambient. The current diagnostic comparison is 37/68. Its 31 strict
 failures are 16 query-index answers, four mesh index orders, the retained duplicate position,
 and ten ambient-component values at most 3.725290298461914e-9 off. Every cell count and every
 non-ambient lighting result matches. The ten ambient differences are numeric residuals in these
 controls; the 21 index/position differences remain open, with no tolerance changes.
+
+The Extra bake also records the rounding-cycle position
+(5.498985290527344,2.438500165939331,-0.5086919069290161) with affine coefficients and all 22
+starting cells. Twenty-one hints return inner cell 1 with coefficient 10.8846769. Hint 10 returns
+open cell 10 with coefficient zero. All 22 answers now match. An open-cell plane rejection writes
+its own weight state (0,0,0,-1) before moving inward, so a two-step cycle never reuses weights
+from the inner cell with different vertices. The earlier implementation returned 2.09406352 at
+hint 10. This is a measured rounding corner case in 6000.0.71f1, not a claim that arbitrary hints
+always produce identical lighting.
+
+The managed controls also keep finite nearest-probe lighting available if a set contains a NaN
+position and no cells. Nonfinite cached bounds do not reject the whole set. This preserves the
+existing fallback; the Editor's treatment of invalid probe coordinates is not measured here.
 
 Run the diagnostics separately from the admitted baked-lighting gate while mesh construction
 and order remain open. The comparator reports every discrepancy and exits nonzero on any one:

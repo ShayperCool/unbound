@@ -8,6 +8,22 @@ namespace Unbound.Tests
     public partial class LightProbesTests
     {
         [Fact]
+        public void InvalidBoundsDoNotHideFiniteNearestProbeLighting()
+        {
+            var set = new ProbeSet
+            {
+                Positions = new[] { Vector3.zero, Vector3.right, new Vector3(float.NaN, 0, 0) },
+                Probes = new SphericalHarmonicsL2[3],
+            };
+            set.Probes[0][0, 0] = 2f;
+            set.Probes[1][0, 0] = 7f;
+            ProbeTetrahedralization.Build(set);
+            int hint = -1;
+            Assert.True(set.Evaluate(Vector3.right, ref hint, out var sh, out _));
+            Assert.Equal(7f, sh[0, 0]);
+        }
+
+        [Fact]
         public void AnOpenCellInsideTheBoundsSuppliesLighting()
         {
             var positions = new[] { Vector3.zero, new Vector3(2, 0, 0), new Vector3(0, 2, 0), new Vector3(0, 0, 2) };
