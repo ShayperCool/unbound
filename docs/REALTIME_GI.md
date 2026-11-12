@@ -666,8 +666,9 @@ less than that rounding since may keep its earlier one).
 
 ## Unbound's precompute
 
-For scenes without the Editor's precomputed data Unbound makes the data itself
-(`crates/unbound-gi/src/precompute`; phase 3, not used by the engine yet). Its stages follow
+Unbound can make the precomputed data itself (`crates/unbound-gi/src/precompute`, phase 3);
+the engine does not use it yet (see [When the engine would use it](#when-the-engine-would-use-it)).
+Its stages follow
 what the Editor's precompute products hold and are compared stage by stage with the Editor's
 precompute of tests/projects/realtimegi `Room` and `RoomAuto` (the room with wedges, steps and
 roofs of sloped faces standing a centimetre above the floor). The documented inputs are two
@@ -794,6 +795,40 @@ is how the Editor's products are made in the measured release, as follows.
   transport references one system's clusters and the environment) and the Editor's own choice
   of 64 references.
 
+### When the engine would use it
+
+In Unity 6000.0 the Editor makes realtime GI data when it is asked to bake (Generate Lighting,
+`Lightmapping.Bake`/`BakeAsync`;
+[`LightingSettings.autoGenerate`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightingSettings-autoGenerate.html)
+is "Deprecated as Auto Generate lighting is no longer supported") and, for a scene whose
+settings ask for it, when the scene is opened without lighting data:
+[`Lightmapping.BakeOnSceneLoadMode.IfMissingLightingData`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Lightmapping.BakeOnSceneLoadMode.html),
+"When opening a scene, generate lighting data for the scene, if there is none already
+available" (the Lighting window reference adds data that is invalid, and makes it the default
+of projects created in Unity 2023.2 or earlier). That is where Unbound's precompute would stand
+in for the Editor's: a scene that asks for a bake on load and has no lighting data, which
+today gets a warning once that the setting is not honoured (`Runtime/Loading.cs`), or whose
+data is invalid. It is not wired up because its lighting does not match the Editor's yet (over
+the Room 1.6 to 11% of the lightmap values outside the comparator's tolerance, most of it from
+the clusters, [Unbound's precompute](#unbounds-precompute)) and what it needs is not made: the
+automatic charts still open ([Open](#open)), which renderers form a system and where each
+renderer's charts go in its system's atlas (the system packing; this release's packing within
+a renderer is under [Realtime lightmap UVs](#realtime-lightmap-uvs)), several systems
+referencing each other's clusters, the light probes' positions from the scene, the cache under
+`Library/Unbound/` keyed by a content hash of the inputs and a format version, and a refusal
+of Lightmap Parameters other than the probe's. Such a bake also makes the baked lightmaps, the
+light probes' baked lighting, the reflection probes and the environment lighting of the
+lighting data (the ambient probe and the default reflection, zero and black without data),
+which Unbound does not make (to be refused loudly). Not measured: a scene with realtime GI
+renderers and no lighting data in the Editor (with or without the bake on load), when the bake
+completes against entering Play mode, a scene opened in the Editor against one loaded at
+runtime, what makes lighting data invalid (moved geometry, changed settings), a scene that
+references the built-in default lighting data, and a scene saved by an earlier release with
+Auto Generate on, which has no bake-on-load setting of its own (neither gets the warning). A
+scene that does not ask for the bake keeps the realtime GI of its lighting data as measured
+for settings changed after the bake: enabling realtime GI then changes nothing drawn
+(tests/projects/lightingassets `Lit`); moved geometry is not measured.
+
 ## Engine
 
 `Graphics/RealtimeGI.cs` loads a scene's systems (`realtime-gi-load`), makes the renderers'
@@ -902,9 +937,13 @@ measure):
 
 - Phase 2, runtime over Unity's precomputed data (above): unmeasured inputs fail loudly until a
   probe case covers them; the main open items are under [Open](#open).
-- Phase 3, Unbound's own precompute from scene geometry (the rest of the automatic charts,
-  system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
-  changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
+- Phase 3, Unbound's own precompute from scene geometry, compared with the Editor's
   precompute through the same probe: the clusters, their material samples and bounce
   resampling, the transport, the visibility and the light probes' transport are made and
-  compared ([Unbound's precompute](#unbounds-precompute)); their use by the engine is open.
+  compared ([Unbound's precompute](#unbounds-precompute)); over the Room its lightmaps have 1.6
+  to 11% of their values outside the comparator's tolerance (most of it from the clusters). Not
+  made: the engine's use for a scene that asks for a bake on load without lighting data
+  (`Lightmapping.bakeOnSceneLoad`), and what it needs: lighting that matches the Editor's, the
+  automatic charts still open, the system packing, several systems, the light probes' positions
+  from the scene and the cache by content hash and format version
+  ([When the engine would use it](#when-the-engine-would-use-it)).
