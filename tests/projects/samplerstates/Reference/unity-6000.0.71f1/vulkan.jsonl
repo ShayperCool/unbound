@@ -72,4 +72,16 @@
 {"k":"Stencil.d16s8.left","v":[1,0,0,1]}
 {"k":"Stencil.d16s8.right","v":[0,0,0,1]}
 {"k":"Stencil.d16s8.format","v":"D24_UNorm_S8_UInt"}
+{"k":"Compute.Compare.split","v":[0.2500038,0.7499962,0,1]}
+{"k":"Compute.CompareLoad.split","v":[0.2500038,0.2500038,0.7499962,1]}
+{"k":"Compute.LoadOnly.split","v":[0.2500038,0.7499962,0,1]}
+{"k":"Compute.Compare.splitLinear","v":[0.2500038,0.7499962,0,1]}
+{"k":"Compute.CompareLoad.splitLinear","v":[0.2500038,0.2500038,0.7499962,1]}
+{"k":"Compute.LoadOnly.splitLinear","v":[0.2500038,0.7499962,0,1]}
+{"k":"Compute.Compare.map","v":[1,0,0,1]}
+{"k":"Compute.CompareLoad.map","v":[1,0.2500038,0.7499962,1]}
+{"k":"Compute.LoadOnly.map","v":[0.2500038,0.7499962,0,1]}
+{"k":"Compute.Compare.mapLinear","v":[1,0,0,1]}
+{"k":"Compute.CompareLoad.mapLinear","v":[1,0.2500038,0.7499962,1]}
+{"k":"Compute.LoadOnly.mapLinear","v":[0.2500038,0.7499962,0,1]}
 {"k":"complete","v":true}

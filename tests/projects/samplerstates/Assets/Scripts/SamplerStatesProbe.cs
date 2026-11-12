@@ -17,7 +17,8 @@ using UnityEngine;
 /// buffer stores do not tell; `DepthChannels.&lt;target&gt;.raw` is the value as sampled. Last,
 /// the programs that fill the depth targets drawn where there is no depth buffer: `Fill.color`
 /// writes a color and the depth, `DepthOnly` only the depth (`DepthOnly.color` over a cleared
-/// target, `DepthOnly.depth` into a depth target). Writes `values.jsonl` into
+/// target, `DepthOnly.depth` into a depth target). After those, stencil tests (`Stencil.*`) and
+/// compute kernels reading the depth targets (`Compute.*`). Writes `values.jsonl` into
 /// `SAMPLER_STATES_OUT` and quits.
 /// </summary>
 public class UitkProbe : MonoBehaviour
@@ -188,6 +189,7 @@ public class UitkProbe : MonoBehaviour
             Row(rows, "DepthOnly.color", Read(target, readback));
             foreach (var name in LateCases) Draw(name, name, shadow, true);
             Stencils(rows);
+            Computes(rows, depths);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -245,6 +247,41 @@ public class UitkProbe : MonoBehaviour
             Row(rows, "Stencil." + name + ".right", readback.GetPixel(1, 0));
             rows.Append("{\"k\":\"Stencil.").Append(name).Append(".format\",\"v\":\"").Append(target.depthStencilFormat).Append("\"}\n");
         }
+    }
+
+    /// <summary>Recorded after the stencil rows: compute kernels reading each depth target (a
+    /// comparison against 0.5 through the texture's own comparison sampler at both texels, a
+    /// comparison and Loads of the same texture, Loads alone), one float4 each; a kernel that
+    /// does not run leaves -1.</summary>
+    static void Computes(StringBuilder rows, (string, RenderTexture)[] depths)
+    {
+#if UNITY_EDITOR
+        var shader = UnityEditor.AssetDatabase.LoadAssetAtPath<ComputeShader>("Assets/Shaders/DepthCompute.compute");
+#else
+        ComputeShader shader = null;
+#endif
+        if (shader == null)
+        {
+            rows.Append("{\"k\":\"Compute\",\"v\":\"missing\"}\n");
+            return;
+        }
+        var output = new ComputeBuffer(3, 16);
+        var unset = new[] { -Vector4.one, -Vector4.one, -Vector4.one };
+        var data = new Vector4[3];
+        var kernels = new[] { "Compare", "CompareLoad", "LoadOnly" };
+        foreach (var (suffix, depth) in depths)
+            for (int index = 0; index < kernels.Length; index++)
+            {
+                output.SetData(unset);
+                int kernel = shader.FindKernel(kernels[index]);
+                shader.SetTexture(kernel, "_Depth", depth);
+                shader.SetBuffer(kernel, "_Out", output);
+                shader.Dispatch(kernel, 1, 1, 1);
+                output.GetData(data);
+                var v = data[index];
+                Row(rows, "Compute." + kernels[index] + "." + suffix, new Color(v.x, v.y, v.z, v.w));
+            }
+        output.Release();
     }
 
     static Color Read(RenderTexture texture, Texture2D readback)

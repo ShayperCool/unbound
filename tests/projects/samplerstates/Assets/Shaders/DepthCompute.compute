@@ -1,0 +1,30 @@
+// Compute kernels reading a depth target of two texels (0.25 and 0.75): a comparison through the
+// texture's own comparison sampler, a comparison and a Load of the same texture, a Load alone.
+// Each writes one float4 per kernel into _Out.
+#pragma kernel Compare
+#pragma kernel CompareLoad
+#pragma kernel LoadOnly
+
+Texture2D<float> _Depth;
+SamplerComparisonState sampler_Depth;
+RWStructuredBuffer<float4> _Out;
+
+[numthreads(1, 1, 1)]
+void Compare(uint3 id : SV_DispatchThreadID)
+{
+    _Out[0] = float4(_Depth.SampleCmpLevelZero(sampler_Depth, float2(0.25, 0.5), 0.5),
+                     _Depth.SampleCmpLevelZero(sampler_Depth, float2(0.75, 0.5), 0.5), 0, 1);
+}
+
+[numthreads(1, 1, 1)]
+void CompareLoad(uint3 id : SV_DispatchThreadID)
+{
+    _Out[1] = float4(_Depth.SampleCmpLevelZero(sampler_Depth, float2(0.25, 0.5), 0.5),
+                     _Depth.Load(int3(0, 0, 0)), _Depth.Load(int3(1, 0, 0)), 1);
+}
+
+[numthreads(1, 1, 1)]
+void LoadOnly(uint3 id : SV_DispatchThreadID)
+{
+    _Out[2] = float4(_Depth.Load(int3(0, 0, 0)), _Depth.Load(int3(1, 0, 0)), 0, 1);
+}
