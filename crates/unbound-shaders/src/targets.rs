@@ -18,7 +18,12 @@
 //! - `SHADER_TARGET` is the highest target whose features the requirements hold, raised by some
 //!   features alone ([`shader_target`]);
 //! - the `SHADER_AVAILABLE_*` defines are the requirements' features and the device's own
-//!   ([`device_floor`]), without the stage features, and `SHADER_TARGET_AVAILABLE` their target.
+//!   ([`device_floor`]), without the stage features, and `SHADER_TARGET_AVAILABLE` their target;
+//! - a variant requiring a feature the device does not have draws with the error shader
+//!   ([`device_lacks`]).
+//!
+//! Where this differs from the Manual's pragma target reference: 4.6 and 5.0 bring no cube
+//! arrays, and the `es3.0`, `es3.1` and `gl4.1` targets apply nothing on these devices.
 
 use unbound_compat::GraphicsDevice;
 
@@ -118,6 +123,9 @@ const TARGETS: [(u32, &[&str], u64); 8] = [
     (50, &["5.0"], T50),
 ];
 
+/// `#pragma target` values of particular platforms, which apply nothing on the measured devices.
+const PLATFORM_TARGETS: [&str; 3] = ["es3.0", "es3.1", "gl4.1"];
+
 /// Features that raise `SHADER_TARGET` on their own to a target, whatever else the
 /// requirements hold (`#pragma require compute` over 2.5 is 4.5; `integers` or `cubearray`
 /// raise nothing).
@@ -131,22 +139,27 @@ const RAISES: [(u64, u32); 6] = [
 ];
 
 /// Built-in keywords that bring requirements of their own to the variants that have them
-/// (measured: `SHADOWS_SCREEN`, `DYNAMICLIGHTMAP_ON`, `PROCEDURAL_INSTANCING_ON`; the others are
-/// unmeasured, `INSTANCING_ON`'s variant being one the probe's draws do not select).
-/// `MESH_INSTANCE_REPLAY` is Unbound's (a draw replaying mesh instances), drawn as instancing.
-const KEYWORD_REQUIREMENTS: [(&str, u64); 11] = [
+/// (measured but `INSTANCING_ON`, whose variant the probe's draws do not select: it is taken as
+/// the instancing feature, which `#pragma require instancing` measures). The stereo and device
+/// capability keywords (`STEREO_INSTANCING_ON`, `UNITY_DEVICE_SUPPORTS_NATIVE_16BIT`, ...) are not
+/// listed: Unbound enables none of them. `MESH_INSTANCE_REPLAY` is Unbound's (a draw replaying
+/// mesh instances), drawn as instancing.
+const KEYWORD_REQUIREMENTS: [(&str, u64); 7] = [
     ("SHADOWS_SCREEN", T30),
     ("SHADOWS_SOFT", T30),
     ("DIRLIGHTMAP_COMBINED", T30),
     ("DYNAMICLIGHTMAP_ON", T30),
     ("INSTANCING_ON", INSTANCING),
     ("PROCEDURAL_INSTANCING_ON", COMPUTE),
-    ("STEREO_INSTANCING_ON", T35),
-    ("STEREO_MULTIVIEW_ON", T35),
-    ("UNITY_DEVICE_SUPPORTS_NATIVE_16BIT", bit(27)),
-    ("UNITY_DEVICE_SUPPORTS_INLINE_RAY_TRACING", bit(32)),
     (crate::MESH_INSTANCE_REPLAY, INSTANCING),
 ];
+
+/// The features a device does not have: a variant requiring one draws with the error shader
+/// (measured: sparse textures on OpenGL Core and Vulkan; the wave, 64-bit, 16-bit, barycentric
+/// and ray tracing features are unmeasured and taken as present).
+fn device_lacks(_device: GraphicsDevice) -> u64 {
+    SPARSETEX
+}
 
 impl Features {
     /// A `#pragma target` value's features (none for a value Unity does not name).
@@ -245,6 +258,8 @@ pub struct Requirements {
 pub struct Variant {
     pub target: u32,
     pub available: Features,
+    /// A required feature the device does not have ([`device_lacks`]).
+    pub missing: Option<&'static str>,
 }
 
 impl Variant {
@@ -252,6 +267,7 @@ impl Variant {
     pub const COMPUTE: Variant = Variant {
         target: 50,
         available: Features(T50 & !STAGES),
+        missing: None,
     };
 
     /// The defines, `(name, value)`.
@@ -274,13 +290,16 @@ impl Variant {
 }
 
 impl Requirements {
-    /// Reads `#pragma target <value> [keywords]` (its words after `target`); a value Unity does
-    /// not name is left out.
+    /// Reads `#pragma target <value> [keywords]` (its words after `target`); another value is
+    /// left out, with a warning unless it is a platform's ([`PLATFORM_TARGETS`]).
     pub fn target(&mut self, words: &[String]) {
         let Some((value, keywords)) = words.split_first() else {
             return;
         };
         let Some(features) = Features::of_target(value) else {
+            if !PLATFORM_TARGETS.contains(&value.as_str()) {
+                tracing::warn!("`#pragma target {value}` names no shader target: left out");
+            }
             return;
         };
         self.targeted |= keywords.is_empty();
@@ -309,6 +328,8 @@ impl Requirements {
                     keywords.push(part.to_string());
                 } else if let Some(f) = Features::of_name(part) {
                     features |= f;
+                } else {
+                    tracing::warn!("`#pragma require {part}` names no GPU feature: left out");
                 }
             }
         }
@@ -339,6 +360,7 @@ impl Requirements {
         Variant {
             target: shader_target(required),
             available: Features((required | device_floor(device)).0 & !STAGES),
+            missing: Features(required.0 & device_lacks(device)).names().next(),
         }
     }
 
@@ -426,12 +448,46 @@ mod tests {
         assert_eq!(target(&attached, &["KW_B"]), 45);
     }
 
+    /// Each feature's raise, keyed (stage features too), and the features a device lacks.
+    #[test]
+    fn keyed_requirements_raise_by_feature() {
+        let r = lines(&[
+            "target 2.0",
+            "require mrt4 : A",
+            "require 2darray : B",
+            "require instancing : C",
+            "require geometry : D",
+            "require tessellation : E",
+            "require compute : F",
+            "require sparsetex : G",
+        ]);
+        assert_eq!(target(&r, &["A"]), 30);
+        assert_eq!(target(&r, &["B"]), 35);
+        assert_eq!(target(&r, &["C"]), 35);
+        assert_eq!(target(&r, &["D"]), 40);
+        assert_eq!(target(&r, &["E"]), 46);
+        assert_eq!(target(&r, &["E", "F"]), 50);
+        let keywords = |k: &[&str]| k.iter().map(|k| k.to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            r.variant(&keywords(&["G"]), GraphicsDevice::Vulkan).missing,
+            Some("sparsetex")
+        );
+        assert_eq!(
+            r.variant(&keywords(&["E", "F"]), GraphicsDevice::Vulkan)
+                .missing,
+            None
+        );
+    }
+
     /// The built-in keywords' requirements.
     #[test]
     fn built_in_keywords_bring_requirements() {
         let r = lines(&["target 2.0"]);
         assert_eq!(target(&r, &["INSTANCING_ON"]), 35);
         assert_eq!(target(&r, &["SHADOWS_SCREEN"]), 30);
+        assert_eq!(target(&r, &["SHADOWS_SOFT", "DIRLIGHTMAP_COMBINED"]), 30);
+        // Not a requirement of Unbound's: Unbound enables no stereo keyword.
+        assert_eq!(target(&r, &["STEREO_INSTANCING_ON"]), 20);
         assert_eq!(target(&lines(&[]), &["PROCEDURAL_INSTANCING_ON"]), 45);
         assert_eq!(target(&r, &[crate::MESH_INSTANCE_REPLAY]), 35);
     }

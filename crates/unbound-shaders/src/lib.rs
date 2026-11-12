@@ -740,6 +740,11 @@ impl ShaderCompiler {
         let variant = pragmas
             .requirements
             .variant(&selected, self.settings.device);
+        if let Some(feature) = variant.missing {
+            bail!(
+                "the variant requires `{feature}`, which the device does not support (Unity draws it with the error shader)"
+            );
+        }
         let generated;
         let program = match &pragmas.surface {
             Some(words) => {
