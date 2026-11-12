@@ -14,7 +14,7 @@ p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'configurations'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
@@ -22,13 +22,16 @@ if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] !=
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-if a.set in ('recovery', 'wide'):
+if a.set in ('recovery', 'wide', 'configurations'):
     import sys
     sys.path.insert(0, str(fixture.parents[1]))
     from authored_project import assemble
     assemble(fixture.name, a.release, 'default', project)
-    if a.set == 'wide':
+    if a.set in ('wide', 'configurations'):
         from wide_boot import prepare
+        prepare(project)
+    if a.set == 'configurations':
+        from configuration_controls import prepare
         prepare(project)
 else:
     shutil.copytree(fixture, project, ignore=shutil.ignore_patterns('Reference', 'Library', 'Logs', '__pycache__', '*.py', '*.md'))
@@ -123,6 +126,13 @@ def record_devices(work):
 
 
 from verify import verify
+if a.set == 'configurations':
+    if a.cases: p.error('configuration metadata controls do not select PCM cases')
+    part(a.work, ['context_configuration'], prepared=True, buffer=8192)
+    assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion'
+    from configuration_controls import verify as verify_configuration
+    verify_configuration(output/'settings.json', a.rate, a.release)
+    raise SystemExit
 if a.set == 'wide':
     if a.rate != 48000: p.error('wide controls use a 48000 Hz session with per-case configurations')
     merged = {}

@@ -1,0 +1,132 @@
+[
+  {
+    "rate": 48000,
+    "buffer": 0,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 1024,
+    "frames": 1024,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 1,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 1,
+    "frames": 1,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 2,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 2,
+    "frames": 2,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 3,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 3,
+    "frames": 3,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 7,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 7,
+    "frames": 7,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 16,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 16,
+    "frames": 16,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 31,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 31,
+    "frames": 31,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 33,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 33,
+    "frames": 33,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 63,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 63,
+    "frames": 63,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 65,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 65,
+    "frames": 65,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 97,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 97,
+    "frames": 97,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 384,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 384,
+    "frames": 384,
+    "count": 4,
+    "mode": 6
+  },
+  {
+    "rate": 48000,
+    "buffer": 16384,
+    "ok": true,
+    "actual_rate": 48000,
+    "actual_buffer": 8192,
+    "frames": 8192,
+    "count": 4,
+    "mode": 6
+  }
+]

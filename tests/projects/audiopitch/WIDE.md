@@ -29,3 +29,22 @@ is independent of each case's recorded output rate. Original float tolerances
 and the one-step device PCM allowance remain unchanged; Master floats receive
 no additional allowance. Mono and Prologic outside their existing profiles,
 other rates and other buffer lengths remain outside this grid.
+
+The separate `configurations` capture records buffer-selection metadata at
+48000 Hz, including requests outside the PCM grid. Two independent GPU captures
+agree exactly: positive requests from 1 through 384 are retained, zero chooses
+1024, and a 16384-frame request chooses 8192. The canonical observations are
+[configurations.json](Reference/unity-6000.0.71f1/wide/configurations.json).
+Reproduce them with `native.py --release 6000.0.71f1 --rate 48000 --set
+configurations --work FRESH_CACHE_DIRECTORY`; compare the two `settings.json`
+files exactly. These API observations do not admit effect PCM at the other
+buffer lengths. The compatibility profile selects buffer selection before
+initial device creation as well as during Reset. Other releases retain their
+previous, unmeasured 64-frame minimum in the native backend.
+
+The 32-frame controls distinguish a short DSP period from the 64-frame
+connection transition. Wet and dry slopes are recalculated from their current
+gains each DSP period; an unfinished transition therefore settles over several
+short periods. Unity connections at unity pass directly. The shared connection
+implementation handles startup and live edits across all measured layouts;
+processing chunks do not define new DSP-period boundaries.

@@ -1957,7 +1957,7 @@
   "Assets/StreamingAssets/WideCases.tsv": "dd06b9f2baeb25013f3eeea71ab341949bd782e813881307a7f0e2f4c855c60e",
   "Packages/manifest.json": "86577de3e8b3b1d8925d7d77df7880352ee16a5ed0d4e06447d1a54c19b9e76d",
   "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
-  "tests/projects/audiopitch/native.py": "39d30c4d3cd9070ebe41e2c7659388bd93557e9cfc338abbf0345e7cbab19f41"
+  "tests/projects/audiopitch/native.py": "5a1d6f034f1b2003e5fa9518433ececda8bf3029e036394e3929d6bb74982548"
  },
  "format": 1,
  "probe": "audiopitch",
