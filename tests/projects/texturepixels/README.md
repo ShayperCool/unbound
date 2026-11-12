@@ -86,3 +86,18 @@ Gamma and Linear read the same floats.
   copies in both directions; it does not establish quantization of arbitrary R16 target draws.
 * Changing a bound Texture3D's `wrapModeW` takes effect on the next draw: Clamp repeats the edge
   slice beyond the depth, Repeat wraps again, with or without an `Apply` in between.
+
+## Remaining game arithmetic difference
+
+The three VolumeRGFloat rows per color space retain 366 differing bytes. The
+[ArithmeticControl](ArithmeticControl/README.md) isolates values before texture
+storage: both compilers emit the same four Single method bodies in Release mode,
+but the measured runtimes round intermediate arithmetic differently. Its 62-value
+reference includes cast, storage, call, optimized-local and large-input controls.
+Unbound currently matches 55/62; its manual check prints every difference and exits
+nonzero. The parent reference, zero tolerance and strict comparisons stay unchanged.
+
+[C# floating-point types](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/types#837-floating-point-types)
+allows extra intermediate precision and describes explicit casts as a rounding
+boundary. The captured behavior is specific to this runtime and optimization
+context. A general runtime compatibility implementation remains open.
