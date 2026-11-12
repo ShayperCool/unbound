@@ -2495,13 +2495,14 @@ struct OverlapCollector : PxOverlapCallback
 };
 
 // The query shapes: kind 0 sphere (a = center, radius), 1 capsule (a, b = centers, radius),
-// 2 box (a = center, b = half extents, rotation).
+// 2 box (a = center, b = half extents, rotation). Query dimensions, including zero,
+// are exact; the positive-size requirement for collider construction is separate.
 PxGeometryHolder query_geometry( int kind, PxVec3 a, PxVec3 b, PxQuat rotation, float radius, PxTransform& pose )
 {
 	PxGeometryHolder holder;
 	if ( kind == 0 )
 	{
-		holder.storeAny( PxSphereGeometry( PxMax( radius, 1e-5f ) ) );
+		holder.storeAny( PxSphereGeometry( radius ) );
 		pose = PxTransform( a );
 	}
 	else if ( kind == 1 )
@@ -2510,18 +2511,18 @@ PxGeometryHolder query_geometry( int kind, PxVec3 a, PxVec3 b, PxQuat rotation, 
 		float half = axis.magnitude() * 0.5f;
 		if ( half < 1e-6f )
 		{
-			holder.storeAny( PxSphereGeometry( PxMax( radius, 1e-5f ) ) );
+			holder.storeAny( PxSphereGeometry( radius ) );
 			pose = PxTransform( ( a + b ) * 0.5f );
 		}
 		else
 		{
-			holder.storeAny( PxCapsuleGeometry( PxMax( radius, 1e-5f ), half ) );
+			holder.storeAny( PxCapsuleGeometry( radius, half ) );
 			pose = PxTransform( ( a + b ) * 0.5f, axis_rotation( axis, false ) );
 		}
 	}
 	else
 	{
-		holder.storeAny( PxBoxGeometry( PxMax( b.x, 1e-5f ), PxMax( b.y, 1e-5f ), PxMax( b.z, 1e-5f ) ) );
+		holder.storeAny( PxBoxGeometry( b.x, b.y, b.z ) );
 		pose = PxTransform( a, rotation.getNormalized() );
 	}
 	return holder;
