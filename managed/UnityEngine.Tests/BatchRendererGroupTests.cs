@@ -1,0 +1,348 @@
+using System;
+using System.Collections.Generic;
+using Unbound.Runtime;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Jobs;
+using UnityEditor;
+using UnityEngine.Rendering;
+using Xunit;
+
+namespace UnityEngine.Tests
+{
+    /// <summary>BatchRendererGroup: registration and batches as the Scripting API describes them,
+    /// the culling callback a scriptable culling invokes (its context as the Editor gives it for a
+    /// camera, tests/projects/brg), the draw items its commands become and the release of the
+    /// arrays it allocated.</summary>
+    public sealed unsafe class BatchRendererGroupTests : IDisposable
+    {
+        readonly GameObject m_CameraObject = new GameObject("brg camera");
+        readonly Camera m_Camera;
+        readonly Mesh m_Mesh = new Mesh();
+        readonly Shader m_Shader = ShaderUtil.CreateShaderAsset("Shader \"Tests/Brg\" { SubShader { Pass { } } }");
+        readonly Material m_Material;
+        readonly List<BatchRendererGroup> m_Groups = new List<BatchRendererGroup>();
+        readonly List<GraphicsBuffer> m_Buffers = new List<GraphicsBuffer>();
+        readonly List<GameObject> m_Objects = new List<GameObject>();
+
+        public BatchRendererGroupTests()
+        {
+            m_Camera = m_CameraObject.AddComponent<Camera>();
+            m_Camera.transform.position = new Vector3(0f, 1.5f, -6f);
+            m_Camera.transform.rotation = Quaternion.Euler(10f, 0f, 0f);
+            m_Mesh.vertices = new[] { new Vector3(-0.5f, -0.5f, 0f), new Vector3(0.5f, -0.5f, 0f), new Vector3(0f, 2f, 0f) };
+            m_Mesh.triangles = new[] { 0, 1, 2 };
+            m_Material = new Material(m_Shader);
+        }
+
+        public void Dispose()
+        {
+            Culling.EndFrame();
+            foreach (var group in m_Groups) group.Dispose();
+            foreach (var buffer in m_Buffers) buffer.Dispose();
+            foreach (var o in m_Objects) Object.DestroyImmediate(o);
+            Object.DestroyImmediate(m_CameraObject);
+            Object.DestroyImmediate(m_Material);
+            Object.DestroyImmediate(m_Shader);
+            Object.DestroyImmediate(m_Mesh);
+        }
+
+        BatchRendererGroup Group(BatchRendererGroup.OnPerformCulling culling, IntPtr user = default)
+        {
+            var group = new BatchRendererGroup(culling, user);
+            m_Groups.Add(group);
+            return group;
+        }
+
+        static JobHandle Nothing(BatchRendererGroup g, BatchCullingContext c, BatchCullingOutput o, IntPtr u) => default;
+
+        CullingData Cull()
+        {
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            return Culling.Get(Culling.Cull(ref parameters));
+        }
+
+        BatchID AddBatch(BatchRendererGroup group, params (string Name, uint Value)[] metadata)
+        {
+            var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 64, 4);
+            m_Buffers.Add(buffer);
+            var values = new NativeArray<MetadataValue>(metadata.Length, Allocator.Temp);
+            for (int i = 0; i < metadata.Length; i++) values[i] = new MetadataValue { NameID = Shader.PropertyToID(metadata[i].Name), Value = metadata[i].Value };
+            var id = group.AddBatch(values, buffer.bufferHandle);
+            values.Dispose();
+            return id;
+        }
+
+        [Fact]
+        public void RegistrationsAreOneBasedAndCountTheirOwners()
+        {
+            var group = Group(Nothing);
+            var other = new Mesh();
+            try
+            {
+                var mesh = group.RegisterMesh(m_Mesh);
+                Assert.Equal(1u, mesh.value);
+                Assert.Equal(2u, group.RegisterMesh(other).value);
+                // The same mesh again: its ID, one more owner.
+                Assert.Equal(mesh, group.RegisterMesh(m_Mesh));
+                group.UnregisterMesh(mesh);
+                Assert.Same(m_Mesh, group.GetRegisteredMesh(mesh));
+                group.UnregisterMesh(mesh);
+                Assert.Null(group.GetRegisteredMesh(mesh));
+                Assert.Equal(1u, group.RegisterMaterial(m_Material).value);
+                Assert.Same(m_Material, group.GetRegisteredMaterial(new BatchMaterialID { value = 1 }));
+                Assert.Equal(BatchMeshID.Null, group.RegisterMesh(null));
+            }
+            finally
+            {
+                Object.DestroyImmediate(other);
+            }
+        }
+
+        [Fact]
+        public void BatchesCarryTheirMetadataExactlyUntilRemoved()
+        {
+            var group = Group(Nothing);
+            var batch = AddBatch(group, ("unity_ObjectToWorld", 0x80000060u), ("_BaseColor", 0x8000ffffu));
+            Assert.Equal(1u, batch.value);
+            var properties = group.GetBatch(batch).Properties;
+            // Above 2^24: a float would round it.
+            Assert.Equal(unchecked((int)0x80000060u), properties[Shader.PropertyToID("<DOTS>unity_ObjectToWorld")]);
+            Assert.Equal(unchecked((int)0x8000ffffu), properties[Shader.PropertyToID("<DOTS>_BaseColor")]);
+            Assert.Equal(m_Buffers[0].bufferHandle, properties[BatchCulling.InstanceDataId]);
+            var larger = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 128, 4);
+            m_Buffers.Add(larger);
+            group.SetBatchBuffer(batch, larger.bufferHandle);
+            Assert.Equal(larger.bufferHandle, group.GetBatch(batch).Properties[BatchCulling.InstanceDataId]);
+            group.RemoveBatch(batch);
+            Assert.Null(group.GetBatch(batch));
+            Assert.Equal(2u, AddBatch(group).value);
+        }
+
+        [Fact]
+        public void PackedViewIdsHoldTheInstanceAndSlice()
+        {
+            var id = new BatchPackedCullingViewID(-42, 3);
+            Assert.Equal(-42, id.GetInstanceID());
+            Assert.Equal(3, id.GetSliceIndex());
+            Assert.Equal(id, new BatchPackedCullingViewID(-42, 3));
+            Assert.NotEqual(id, new BatchPackedCullingViewID(-42, 2));
+        }
+
+        [Fact]
+        public void FilterSettingsKeepTheirFieldsAndEverySceneUntilSet()
+        {
+            var filter = new BatchFilterSettings { layer = 5, shadowCastingMode = ShadowCastingMode.ShadowsOnly, motionMode = MotionVectorGenerationMode.ForceNoMotion, receiveShadows = true };
+            Assert.Equal(ulong.MaxValue, filter.sceneCullingMask);
+            filter.sceneCullingMask = 0;
+            Assert.Equal(0ul, filter.sceneCullingMask);
+            Assert.Equal(ShadowCastingMode.ShadowsOnly, filter.shadowCastingMode);
+            Assert.Equal(MotionVectorGenerationMode.ForceNoMotion, filter.motionMode);
+            Assert.True(filter.receiveShadows);
+            Assert.False(filter.staticShadowCaster);
+        }
+
+        [Fact]
+        public void ACameraCullingInvokesTheCallbackWithItsContext()
+        {
+            var contexts = new List<(BatchCullingViewType View, int Planes, CullingSplit Split, ulong Scene, uint Layers, int View0, bool Zeroed, IntPtr User)>();
+            BatchRendererGroup seen = null;
+            var group = Group((g, c, o, u) =>
+            {
+                seen = g;
+                var d = (BatchCullingOutputDrawCommands*)o.drawCommands.GetUnsafePtr();
+                contexts.Add((c.viewType, c.cullingPlanes.Length, c.cullingSplits[0], c.sceneCullingMask, c.cullingLayerMask, c.viewID.GetInstanceID(),
+                    o.drawCommands.Length == 1 && d->drawCommandCount == 0 && d->drawCommands == null, u));
+                return default;
+            }, (IntPtr)7);
+            Cull();
+            var (view, planes, split, scene, layers, camera, zeroed, user) = Assert.Single(contexts);
+            Assert.Same(group, seen);
+            Assert.Equal(BatchCullingViewType.Camera, view);
+            Assert.Equal(6, planes);
+            Assert.Equal(6, split.cullingPlaneCount);
+            Assert.Equal(1f, split.cascadeBlendCullingFactor);
+            Assert.Equal(m_Camera.nearClipPlane, split.nearPlane);
+            Assert.Equal(1UL << 63, scene);
+            Assert.Equal((uint)m_Camera.cullingMask, layers);
+            Assert.Equal(m_Camera.GetInstanceID(), camera);
+            Assert.True(zeroed);
+            Assert.Equal((IntPtr)7, user);
+        }
+
+        [Fact]
+        public void EnabledViewTypesAndDisposalDecideWhichGroupsAreInvoked()
+        {
+            int calls = 0;
+            var lightOnly = Group((g, c, o, u) => { calls++; return default; });
+            lightOnly.SetEnabledViewTypes(new[] { BatchCullingViewType.Light });
+            var disposed = Group((g, c, o, u) => { calls++; return default; });
+            disposed.Dispose();
+            Cull();
+            Assert.Equal(0, calls);
+            lightOnly.SetEnabledViewTypes(new[] { BatchCullingViewType.Camera });
+            Cull();
+            Assert.Equal(1, calls);
+        }
+
+        [Fact]
+        public void ACallbacksExceptionIsLoggedAndTheNextGroupStillRuns()
+        {
+            bool second = false;
+            Group((g, c, o, u) => throw new InvalidOperationException("brg test"));
+            Group((g, c, o, u) => { second = true; return default; });
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            try { Cull(); }
+            finally { Debug.unityLogger.logHandler = previous; }
+            Assert.True(second);
+            Assert.Contains(logged, m => m.Contains("brg test"));
+        }
+
+        sealed class CapturingHandler : ILogHandler
+        {
+            readonly List<string> m_Into;
+            readonly ILogHandler m_Next;
+            internal CapturingHandler(List<string> into, ILogHandler next) { m_Into = into; m_Next = next; }
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => m_Into.Add(string.Format(format, args));
+            public void LogException(Exception exception, Object context) => m_Into.Add(exception.Message);
+        }
+
+        /// <summary>A callback emitting one draw range of the given commands over instances 0..n.</summary>
+        static BatchRendererGroup.OnPerformCulling Emit(BatchFilterSettings filter, int instances, params BatchDrawCommand[] commands) => (g, c, o, u) =>
+        {
+            var d = (BatchCullingOutputDrawCommands*)o.drawCommands.GetUnsafePtr();
+            int alignment = UnsafeUtility.AlignOf<long>();
+            d->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>() * commands.Length, alignment, Allocator.TempJob);
+            d->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+            d->visibleInstances = (int*)UnsafeUtility.Malloc(instances * sizeof(int), alignment, Allocator.TempJob);
+            for (int i = 0; i < commands.Length; i++) d->drawCommands[i] = commands[i];
+            for (int i = 0; i < instances; i++) d->visibleInstances[i] = i;
+            d->drawCommandCount = commands.Length;
+            d->visibleInstanceCount = instances;
+            d->drawRangeCount = 1;
+            d->drawRanges[0] = new BatchDrawRange { drawCommandsType = BatchDrawCommandType.Direct, drawCommandsBegin = 0, drawCommandsCount = (uint)commands.Length, filterSettings = filter };
+            return default;
+        };
+
+        List<FrameBuilder.DrawItem> Collect(CullingData data, FilteringSettings filtering, int mainLight = -1)
+        {
+            var items = new List<FrameBuilder.DrawItem>();
+            long sequence = 0;
+            BatchCulling.Collect(data, filtering, mainLight, items, ref sequence);
+            return items;
+        }
+
+        [Fact]
+        public void DrawCommandsBecomeItemsOfTheirMeshAndMaterialThroughTheListsFilters()
+        {
+            BatchRendererGroup group = null;
+            BatchID batch = default;
+            BatchMeshID mesh = default;
+            BatchMaterialID material = default;
+            var filter = new BatchFilterSettings { renderingLayerMask = 2, layer = 4, motionMode = MotionVectorGenerationMode.Camera };
+            group = Group((g, c, o, u) => Emit(filter, 3,
+                new BatchDrawCommand { batchID = batch, meshID = mesh, materialID = material, visibleOffset = 0, visibleCount = 2, flags = BatchDrawCommandFlags.FlipWinding | BatchDrawCommandFlags.LODCrossFadeValuePacked | BatchDrawCommandFlags.HasMotion },
+                // An unregistered mesh, and an empty command: skipped.
+                new BatchDrawCommand { batchID = batch, meshID = new BatchMeshID { value = 9 }, materialID = material, visibleOffset = 2, visibleCount = 1 },
+                new BatchDrawCommand { batchID = batch, meshID = mesh, materialID = material, visibleOffset = 2, visibleCount = 0 })(g, c, o, u));
+            mesh = group.RegisterMesh(m_Mesh);
+            material = group.RegisterMaterial(m_Material);
+            batch = AddBatch(group, ("_BaseColor", 0x80000040u));
+            var data = Cull();
+            var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+            var item = Assert.Single(Collect(data, all));
+            Assert.Same(m_Material, item.Material);
+            Assert.Equal(m_Mesh.Sync(), item.Mesh);
+            Assert.Same(group.GetBatch(batch).Properties, item.Properties);
+            var header = item.Dots.Value.Header;
+            Assert.Equal(2u, header.RenderingLayer);
+            // FlipWinding and the cross-fade flag pass through, camera motion from the range; no
+            // main light without one.
+            Assert.Equal(1u | 32u | 4u, header.Flags);
+            Assert.Equal(m_Mesh.bounds.center, header.Center);
+            Assert.Equal(m_Mesh.bounds.extents, header.Extent);
+            // The list's layer and rendering layer masks.
+            Assert.Empty(Collect(data, new FilteringSettings(RenderQueueRange.all, 1 << 3) { renderingLayerMask = uint.MaxValue }));
+            Assert.Empty(Collect(data, new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = 1 }));
+            // A removed batch draws nothing.
+            group.RemoveBatch(batch);
+            Assert.Empty(Collect(data, all));
+        }
+
+        [Fact]
+        public void ShadowOnlyRangesAreLeftOutOfCameraLists()
+        {
+            BatchRendererGroup group = null;
+            var filter = new BatchFilterSettings { renderingLayerMask = uint.MaxValue, shadowCastingMode = ShadowCastingMode.ShadowsOnly };
+            group = Group((g, c, o, u) => Emit(filter, 1, new BatchDrawCommand { batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1 })(g, c, o, u));
+            group.RegisterMesh(m_Mesh);
+            group.RegisterMaterial(m_Material);
+            AddBatch(group);
+            Assert.Empty(Collect(Cull(), new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue }));
+        }
+
+        /// <summary>The main light flag follows unity_LightData.z's rule: the light's culling mask
+        /// has the range's layer and, for a lightmapped command, its direct light is not baked.</summary>
+        [Fact]
+        public void TheMainLightFlagFollowsTheLightsCullingMask()
+        {
+            var lightObject = new GameObject("brg sun");
+            m_Objects.Add(lightObject);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            BatchRendererGroup group = null;
+            var filter = new BatchFilterSettings { renderingLayerMask = uint.MaxValue, layer = 6, motionMode = MotionVectorGenerationMode.Object };
+            group = Group((g, c, o, u) => Emit(filter, 1, new BatchDrawCommand { batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1 })(g, c, o, u));
+            group.RegisterMesh(m_Mesh);
+            group.RegisterMaterial(m_Material);
+            AddBatch(group);
+            var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+            var data = Cull();
+            int sun = Array.FindIndex(data.Lights.ToArray(), l => l.light == light);
+            Assert.True(sun >= 0);
+            Assert.Equal(16u, Assert.Single(Collect(data, all, sun)).Dots.Value.Header.Flags);
+            Assert.Equal(0u, Assert.Single(Collect(data, all, -1)).Dots.Value.Header.Flags);
+            light.cullingMask = ~(1 << 6);
+            Assert.Equal(0u, Assert.Single(Collect(Cull(), all, sun)).Dots.Value.Header.Flags);
+        }
+
+        [Fact]
+        public void TheFramesEndFreesTheArraysTheCallbackAllocated()
+        {
+            BatchCulling.Output kept = null;
+            var group = Group((g, c, o, u) => Emit(new BatchFilterSettings(), 4, new BatchDrawCommand { visibleCount = 4 })(g, c, o, u));
+            var data = Cull();
+            kept = Assert.Single(data.Batches);
+            Assert.True(kept.Drawn.drawCommands != null);
+            Culling.EndFrame();
+            Assert.True(kept.Drawn.drawCommands == null && kept.Drawn.visibleInstances == null && kept.Drawn.drawRanges == null);
+            Assert.Null(kept.Group);
+            Assert.Empty(data.Batches);
+        }
+
+        /// <summary>A camera's near and far culling planes lie at its clip distances along its
+        /// forward axis (the Editor's far plane is exact: tests/projects/brg plane5), the side planes
+        /// from its matrix.</summary>
+        [Fact]
+        public void TheCamerasNearAndFarPlanesAreExact()
+        {
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            var forward = m_Camera.transform.forward;
+            var far = parameters.GetCullingPlane(5);
+            var near = parameters.GetCullingPlane(4);
+            var farPoint = m_Camera.transform.position + forward * m_Camera.farClipPlane;
+            var nearPoint = m_Camera.transform.position + forward * m_Camera.nearClipPlane;
+            Assert.Equal(0f, far.GetDistanceToPoint(farPoint), 3);
+            Assert.Equal(0f, near.GetDistanceToPoint(nearPoint), 4);
+            Assert.True(far.GetDistanceToPoint(m_Camera.transform.position) > 0f);
+            Assert.True(near.GetDistanceToPoint(farPoint) > 0f);
+            // A custom culling matrix keeps the planes it gives.
+            m_Camera.cullingMatrix = Matrix4x4.Ortho(-1, 1, -1, 1, 0.5f, 20f) * m_Camera.worldToCameraMatrix;
+            Assert.True(m_Camera.TryGetCullingParameters(out parameters));
+            var ortho = parameters.GetCullingPlane(5);
+            Assert.Equal(0f, ortho.GetDistanceToPoint(m_Camera.transform.position + forward * 20f), 2);
+        }
+    }
+}

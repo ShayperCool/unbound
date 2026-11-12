@@ -832,6 +832,21 @@ namespace Unbound.Runtime
             into.Add(("unity_SHBg", shBg));
             into.Add(("unity_SHBb", shBb));
             into.Add(("unity_SHC", shC));
+            // The defaults of BatchRendererGroup draws (the unity_DOTSInstanceGlobalValues cbuffer
+            // of DOTS instancing shaders), which Unity sets itself: the ambient probe, unoccluded,
+            // the default reflection's decode values (com.unity.render-pipelines.core's
+            // obsolete BatchRendererGroupGlobals.Default gives the same values).
+            into.Add(("unity_DOTS_SHAr", shAr));
+            into.Add(("unity_DOTS_SHAg", shAg));
+            into.Add(("unity_DOTS_SHAb", shAb));
+            into.Add(("unity_DOTS_SHBr", shBr));
+            into.Add(("unity_DOTS_SHBg", shBg));
+            into.Add(("unity_DOTS_SHBb", shBb));
+            into.Add(("unity_DOTS_SHC", shC));
+            into.Add(("unity_DOTS_ProbesOcclusion", Vector4.one));
+            var reflectionDecode = UnityEngine.ReflectionProbe.defaultTextureHDRDecodeValues;
+            into.Add(("unity_DOTS_SpecCube0_HDR", reflectionDecode));
+            into.Add(("unity_DOTS_SpecCube1_HDR", reflectionDecode));
             into.Add(("unity_AmbientSky", (Vector4)sky));
             into.Add(("unity_AmbientEquator", (Vector4)equator));
             into.Add(("unity_AmbientGround", (Vector4)ground));

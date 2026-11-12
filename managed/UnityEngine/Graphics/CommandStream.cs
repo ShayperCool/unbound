@@ -32,7 +32,9 @@ namespace Unbound.Runtime
             // NativeApi 40.
             PluginOp = 34,
             // NativeApi 50.
-            ScreenStandInOp = 35;
+            ScreenStandInOp = 35,
+            // NativeApi 59.
+            DotsDrawOp = 36;
 
         /// <summary>The kinds of <see cref="PluginOp"/> (render_commands.rs's PluginCall).</summary>
         const byte PluginEventKind = 0, PluginEventAndDataKind = 1, PluginTextureUpdateV1Kind = 2,
@@ -340,6 +342,30 @@ namespace Unbound.Runtime
                 throw new NotSupportedException("Unbound: instance multipliers on CPU-expanded mesh instances are not supported.");
             U8(MeshInstanceOp);
             U32(index);
+        }
+
+        /// <summary>The next draw is a BatchRendererGroup draw command's: its material's DOTS
+        /// instancing variant, one instance per index of <paramref name="visible"/> (at most
+        /// <see cref="Unbound.Runtime.BatchCulling.MaxInstancesPerDraw"/>), the draw's header
+        /// (<see cref="Unbound.Runtime.BatchCulling.Header"/>), and the window of the batch's
+        /// buffer a constant buffer reads (size 0: all of it).</summary>
+        internal static void DotsDraw(in Unbound.Runtime.BatchCulling.Header header, uint windowOffset, uint windowSize, int* visible, int count)
+        {
+            U8(DotsDrawOp);
+            U32(header.RenderingLayer);
+            U32(header.Flags);
+            F32(header.Center.x);
+            F32(header.Center.y);
+            F32(header.Center.z);
+            F32(header.Extent.x);
+            F32(header.Extent.y);
+            F32(header.Extent.z);
+            U32(windowOffset);
+            U32(windowSize);
+            U32((uint)count);
+            Reserve(count * 4);
+            new ReadOnlySpan<byte>(visible, count * 4).CopyTo(new Span<byte>(s_Buffer, s_Length, count * 4));
+            s_Length += count * 4;
         }
 
         /// <summary>The next draw's <c>unity_BaseCommandID</c> (<see cref="Unbound.Runtime.DrawSetup.Command"/>).</summary>
@@ -701,6 +727,7 @@ namespace Unbound.Runtime
                     case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
                     case Texture t: value.Kind = TextureKind; value.Texture = TextureHandles.Of(t); break;
                     case ComputeBuffer or GraphicsBuffer: value.Kind = BufferKind; value.Texture = Material.BufferHandle(p.Value); break;
+                    case GraphicsBufferHandle h: value.Kind = BufferKind; value.Texture = h.value; break;
                     case SharedArray shared: value.Kind = SharedArrayKind; value.Shared = shared; break;
                     default:
                         if (!ArrayData(p.Value, out value.Components, out value.Array)) continue;

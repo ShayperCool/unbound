@@ -1,7 +1,7 @@
 // Generated from the metadata of Unity 6000.0's reference assemblies (the rendering enums the
 // hand-written graphics code uses): names and values must match exactly. Do not edit by hand;
 // regenerate with the enum dumper:
-//   dotnet run --project managed/Unbound.EnumDumper -- <Editor>/Data/Managed/UnityEngine UnityEngine.RenderTextureMemoryless UnityEngine.VRTextureUsage UnityEngine.RenderTextureCreationFlags UnityEngine.Rendering.RenderBufferLoadAction UnityEngine.Rendering.RenderBufferStoreAction UnityEngine.Rendering.RTClearFlags UnityEngine.Rendering.CommandBufferExecutionFlags UnityEngine.Rendering.FormatSwizzle UnityEngine.Rendering.LightEvent UnityEngine.Rendering.SinglePassStereoMode UnityEngine.Rendering.FoveatedRenderingMode UnityEngine.Rendering.ShadowMapPass UnityEngine.Rendering.RenderTargetFlags UnityEngine.Rendering.ComputeQueueType UnityEngine.Rendering.SynchronisationStageFlags UnityEngine.Rendering.GraphicsFenceType UnityEngine.Rendering.DistanceMetric UnityEngine.Rendering.PerObjectData UnityEngine.Rendering.CullingOptions UnityEngine.Rendering.ReflectionProbeSortingCriteria UnityEngine.Rendering.RenderStateMask UnityEngine.Rendering.SubPassFlags UnityEngine.Rendering.GizmoSubset UnityEngine.Rendering.UISubset UnityEngine.ShadowObjectsFilter UnityEngine.Rendering.BatchCullingProjectionType UnityEngine.Rendering.RendererListStatus UnityEngine.Rendering.RenderingThreadingMode UnityEngine.MixedLightingMode UnityEngine.LODFadeMode UnityEngine.LightmapsMode UnityEngine.Rendering.ShaderKeywordType UnityEngine.ColorGamut UnityEngine.Experimental.Rendering.GraphicsFormatUsage UnityEngine.HDRDisplaySupportFlags UnityEngine.Rendering.BuiltinShaderDefine UnityEngine.Rendering.GraphicsTier UnityEngine.Rendering.ReflectionProbeClearFlags UnityEngine.Rendering.ReflectionProbeMode UnityEngine.Rendering.ReflectionProbeRefreshMode UnityEngine.Rendering.ReflectionProbeTimeSlicingMode UnityEngine.Rendering.ReflectionProbeType
+//   dotnet run --project managed/Unbound.EnumDumper -- <Editor>/Data/Managed/UnityEngine UnityEngine.RenderTextureMemoryless UnityEngine.VRTextureUsage UnityEngine.RenderTextureCreationFlags UnityEngine.Rendering.RenderBufferLoadAction UnityEngine.Rendering.RenderBufferStoreAction UnityEngine.Rendering.RTClearFlags UnityEngine.Rendering.CommandBufferExecutionFlags UnityEngine.Rendering.FormatSwizzle UnityEngine.Rendering.LightEvent UnityEngine.Rendering.SinglePassStereoMode UnityEngine.Rendering.FoveatedRenderingMode UnityEngine.Rendering.ShadowMapPass UnityEngine.Rendering.RenderTargetFlags UnityEngine.Rendering.ComputeQueueType UnityEngine.Rendering.SynchronisationStageFlags UnityEngine.Rendering.GraphicsFenceType UnityEngine.Rendering.DistanceMetric UnityEngine.Rendering.PerObjectData UnityEngine.Rendering.CullingOptions UnityEngine.Rendering.ReflectionProbeSortingCriteria UnityEngine.Rendering.RenderStateMask UnityEngine.Rendering.SubPassFlags UnityEngine.Rendering.GizmoSubset UnityEngine.Rendering.UISubset UnityEngine.ShadowObjectsFilter UnityEngine.Rendering.BatchCullingProjectionType UnityEngine.Rendering.RendererListStatus UnityEngine.Rendering.RenderingThreadingMode UnityEngine.MixedLightingMode UnityEngine.LODFadeMode UnityEngine.LightmapsMode UnityEngine.Rendering.ShaderKeywordType UnityEngine.ColorGamut UnityEngine.Experimental.Rendering.GraphicsFormatUsage UnityEngine.HDRDisplaySupportFlags UnityEngine.Rendering.BuiltinShaderDefine UnityEngine.Rendering.GraphicsTier UnityEngine.Rendering.ReflectionProbeClearFlags UnityEngine.Rendering.ReflectionProbeMode UnityEngine.Rendering.ReflectionProbeRefreshMode UnityEngine.Rendering.ReflectionProbeTimeSlicingMode UnityEngine.Rendering.ReflectionProbeType UnityEngine.Rendering.BatchCullingViewType UnityEngine.Rendering.BatchCullingFlags UnityEngine.Rendering.BatchDrawCommandFlags UnityEngine.Rendering.BatchDrawCommandType
 using System;
 
 namespace UnityEngine
@@ -119,11 +119,50 @@ namespace UnityEngine.Experimental.Rendering
 
 namespace UnityEngine.Rendering
 {
+    [Flags]
+    public enum BatchCullingFlags
+    {
+        None = 0,
+        CullLightmappedShadowCasters = 1,
+    }
+
     public enum BatchCullingProjectionType
     {
         Unknown = 0,
         Perspective = 1,
         Orthographic = 2,
+    }
+
+    public enum BatchCullingViewType
+    {
+        Unknown = 0,
+        Camera = 1,
+        Light = 2,
+        Picking = 3,
+        SelectionOutline = 4,
+        Filtering = 5,
+    }
+
+    [Flags]
+    public enum BatchDrawCommandFlags
+    {
+        None = 0,
+        FlipWinding = 1,
+        HasMotion = 2,
+        IsLightMapped = 4,
+        HasSortingPosition = 8,
+        LODCrossFadeKeyword = 16,
+        LODCrossFadeValuePacked = 32,
+        LODCrossFade = 48,
+        UseLegacyLightmapsKeyword = 64,
+    }
+
+    public enum BatchDrawCommandType
+    {
+        Direct = 0,
+        Indirect = 1,
+        Procedural = 2,
+        ProceduralIndirect = 3,
     }
 
     public enum BuiltinShaderDefine

@@ -89,6 +89,8 @@ namespace Unbound.Runtime
             /// <summary>A Graphics.RenderMesh / DrawMesh draw's rendering layer mask (a renderer's
             /// draws read their renderer's; null for engine-made draws).</summary>
             internal uint? RenderingLayerMask;
+            /// <summary>A BatchRendererGroup draw command's draw; null for others.</summary>
+            internal BatchCulling.DrawRef? Dots;
         }
 
         /// <summary>Whether a draw is lit as a mesh: a mesh-like renderer's, or a Graphics.DrawMesh
@@ -789,6 +791,9 @@ namespace Unbound.Runtime
                 if (!defaultSortingLayer) continue;
                 s_Items.Add(QueuedItem(context, q));
             }
+            // BatchRendererGroup draw commands (default sorting layer). Shadow caster lists take
+            // none yet: light cullings do not invoke the callbacks.
+            if (!shadows.HasValue && defaultSortingLayer) BatchCulling.Collect(data, filtering, drawing.mainLightIndex, s_Items, ref s_Sequence);
             foreach (var source in Sources)
             {
                 try { source.CollectCameraDraws(context, s_Items); }
@@ -1030,7 +1035,8 @@ namespace Unbound.Runtime
             var beforeOpaque = item.OpaqueImgui ? BeginOpaqueImgui() : null;
             try
             {
-                GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
+                if (item.Dots is BatchCulling.DrawRef dots) BatchCulling.Draw(item, dots, material, pass, properties);
+                else GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                     item.ClipEnabled ? item.Clip : (Rect?)null, properties);
             }
             finally
@@ -1095,8 +1101,9 @@ namespace Unbound.Runtime
                     }
                     item.Properties = merged;
                 }
-                else if (item.Lighting != null)
+                else if (item.Lighting != null && item.Dots == null)
                 {
+                    // (A BatchRendererGroup draw's lights are in its header.)
                     var key = (item.Properties, item.CullBounds);
                     if (!s_QueuedLights.TryGetValue(key, out var merged))
                     {

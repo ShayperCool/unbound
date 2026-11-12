@@ -4464,224 +4464,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public static global::UnityEngine.Rendering.AsyncRequestNativeArrayData CreateAndCheckAccess<T>(global::Unity.Collections.NativeSlice<T> array) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.AsyncRequestNativeArrayData.CreateAndCheckAccess"); return default; }
     }
     [global::Unbound.Stub]
-    public unsafe partial struct BatchCullingContext
-    {
-        [global::Unbound.Stub] public readonly global::Unity.Collections.NativeArray<global::UnityEngine.Plane> cullingPlanes;
-        [global::Unbound.Stub] public readonly global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.CullingSplit> cullingSplits;
-        [global::Unbound.Stub] public readonly global::UnityEngine.Rendering.LODParameters lodParameters;
-        [global::Unbound.Stub] public readonly global::UnityEngine.Matrix4x4 localToWorldMatrix;
-        [global::Unbound.Stub] public readonly global::UnityEngine.Rendering.BatchCullingViewType viewType;
-        [global::Unbound.Stub] public readonly global::UnityEngine.Rendering.BatchCullingProjectionType projectionType;
-        [global::Unbound.Stub] public readonly global::UnityEngine.Rendering.BatchCullingFlags cullingFlags;
-        [global::Unbound.Stub] public readonly global::UnityEngine.Rendering.BatchPackedCullingViewID viewID;
-        [global::Unbound.Stub] public readonly uint cullingLayerMask;
-        [global::Unbound.Stub] public readonly ulong sceneCullingMask;
-        [global::Unbound.Stub] public readonly ushort splitExclusionMask;
-        [global::System.Obsolete("BatchCullingContext.isOrthographic is deprecated. Use BatchCullingContext.projectionType instead.")] [global::Unbound.Stub] public readonly byte isOrthographic;
-        [global::Unbound.Stub] public readonly int receiverPlaneOffset;
-        [global::Unbound.Stub] public readonly int receiverPlaneCount;
-        [global::Unbound.Stub] internal readonly global::System.IntPtr occlusionBuffer;
-        [global::Unbound.Stub] internal BatchCullingContext(global::Unity.Collections.NativeArray<global::UnityEngine.Plane> inCullingPlanes, global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.CullingSplit> inCullingSplits, global::UnityEngine.Rendering.LODParameters inLodParameters, global::UnityEngine.Matrix4x4 inLocalToWorldMatrix, global::UnityEngine.Rendering.BatchCullingViewType inViewType, global::UnityEngine.Rendering.BatchCullingProjectionType inProjectionType, global::UnityEngine.Rendering.BatchCullingFlags inBatchCullingFlags, ulong inViewID, uint inCullingLayerMask, ulong inSceneCullingMask, byte inExclusionSplitMask, int inReceiverPlaneOffset, int inReceiverPlaneCount, global::System.IntPtr inOcclusionBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchCullingContext.ctor"); }
-    }
-    [global::System.Flags]
-    public enum BatchCullingFlags
-    {
-        None = 0,
-        CullLightmappedShadowCasters = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchCullingOutput
-    {
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.BatchCullingOutputDrawCommands> drawCommands;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::System.IntPtr> customCullingResult;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchCullingOutputDrawCommands
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommand* drawCommands;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommandIndirect* indirectDrawCommands;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommandProcedural* proceduralDrawCommands;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommandProceduralIndirect* proceduralIndirectDrawCommands;
-        [global::Unbound.Stub] public int* visibleInstances;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawRange* drawRanges;
-        [global::Unbound.Stub] public float* instanceSortingPositions;
-        [global::Unbound.Stub] public int* drawCommandPickingInstanceIDs;
-        [global::Unbound.Stub] public int drawCommandCount;
-        [global::Unbound.Stub] public int indirectDrawCommandCount;
-        [global::Unbound.Stub] public int proceduralDrawCommandCount;
-        [global::Unbound.Stub] public int proceduralIndirectDrawCommandCount;
-        [global::Unbound.Stub] public int visibleInstanceCount;
-        [global::Unbound.Stub] public int drawRangeCount;
-        [global::Unbound.Stub] public int instanceSortingPositionFloatCount;
-    }
-    public enum BatchCullingViewType
-    {
-        Unknown = 0,
-        Camera = 1,
-        Light = 2,
-        Picking = 3,
-        SelectionOutline = 4,
-        Filtering = 5,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchDrawCommand
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommandFlags flags;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchID batchID;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchMaterialID materialID;
-        [global::Unbound.Stub] public ushort splitVisibilityMask;
-        [global::Unbound.Stub] public ushort lightmapIndex;
-        [global::Unbound.Stub] public int sortingPosition;
-        [global::Unbound.Stub] public uint visibleOffset;
-        [global::Unbound.Stub] public uint visibleCount;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchMeshID meshID;
-        [global::Unbound.Stub] public ushort submeshIndex;
-    }
-    [global::System.Flags]
-    public enum BatchDrawCommandFlags
-    {
-        None = 0,
-        FlipWinding = 1,
-        HasMotion = 2,
-        IsLightMapped = 4,
-        HasSortingPosition = 8,
-        LODCrossFadeKeyword = 16,
-        LODCrossFadeValuePacked = 32,
-        LODCrossFade = 48,
-        UseLegacyLightmapsKeyword = 64,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchDrawCommandIndirect
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommandFlags flags;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchID batchID;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchMaterialID materialID;
-        [global::Unbound.Stub] public ushort splitVisibilityMask;
-        [global::Unbound.Stub] public ushort lightmapIndex;
-        [global::Unbound.Stub] public int sortingPosition;
-        [global::Unbound.Stub] public uint visibleOffset;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchMeshID meshID;
-        [global::Unbound.Stub] public global::UnityEngine.MeshTopology topology;
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBufferHandle visibleInstancesBufferHandle;
-        [global::Unbound.Stub] public uint visibleInstancesBufferWindowOffset;
-        [global::Unbound.Stub] public uint visibleInstancesBufferWindowSizeBytes;
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBufferHandle indirectArgsBufferHandle;
-        [global::Unbound.Stub] public uint indirectArgsBufferOffset;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchDrawCommandProcedural
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommandFlags flags;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchID batchID;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchMaterialID materialID;
-        [global::Unbound.Stub] public ushort splitVisibilityMask;
-        [global::Unbound.Stub] public ushort lightmapIndex;
-        [global::Unbound.Stub] public int sortingPosition;
-        [global::Unbound.Stub] public uint visibleOffset;
-        [global::Unbound.Stub] public uint visibleCount;
-        [global::Unbound.Stub] public global::UnityEngine.MeshTopology topology;
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBufferHandle indexBufferHandle;
-        [global::Unbound.Stub] public uint baseVertex;
-        [global::Unbound.Stub] public uint indexOffsetBytes;
-        [global::Unbound.Stub] public uint elementCount;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchDrawCommandProceduralIndirect
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommandFlags flags;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchID batchID;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchMaterialID materialID;
-        [global::Unbound.Stub] public ushort splitVisibilityMask;
-        [global::Unbound.Stub] public ushort lightmapIndex;
-        [global::Unbound.Stub] public int sortingPosition;
-        [global::Unbound.Stub] public uint visibleOffset;
-        [global::Unbound.Stub] public global::UnityEngine.MeshTopology topology;
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBufferHandle indexBufferHandle;
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBufferHandle visibleInstancesBufferHandle;
-        [global::Unbound.Stub] public uint visibleInstancesBufferWindowOffset;
-        [global::Unbound.Stub] public uint visibleInstancesBufferWindowSizeBytes;
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBufferHandle indirectArgsBufferHandle;
-        [global::Unbound.Stub] public uint indirectArgsBufferOffset;
-    }
-    public enum BatchDrawCommandType
-    {
-        Direct = 0,
-        Indirect = 1,
-        Procedural = 2,
-        ProceduralIndirect = 3,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchDrawRange
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchDrawCommandType drawCommandsType;
-        [global::Unbound.Stub] public uint drawCommandsBegin;
-        [global::Unbound.Stub] public uint drawCommandsCount;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchFilterSettings filterSettings;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchFilterSettings
-    {
-        [global::Unbound.Stub] public uint renderingLayerMask;
-        [global::Unbound.Stub] public int rendererPriority;
-        [global::Unbound.Stub] public byte layer;
-        public byte batchLayer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.batchLayer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.batchLayer"); } }
-        public global::UnityEngine.MotionVectorGenerationMode motionMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.motionMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.motionMode"); } }
-        public global::UnityEngine.Rendering.ShadowCastingMode shadowCastingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.shadowCastingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.shadowCastingMode"); } }
-        public bool receiveShadows { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.receiveShadows"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.receiveShadows"); } }
-        public bool staticShadowCaster { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.staticShadowCaster"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.staticShadowCaster"); } }
-        public bool allDepthSorted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.allDepthSorted"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.allDepthSorted"); } }
-        public ulong sceneCullingMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.sceneCullingMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchFilterSettings.sceneCullingMask"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchID : global::System.IEquatable<global::UnityEngine.Rendering.BatchID>
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEngine.Rendering.BatchID Null;
-        [global::Unbound.Stub] public uint value;
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchID.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchID.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Rendering.BatchID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchID.Equals"); return default; }
-        [global::Unbound.Stub] public int CompareTo(global::UnityEngine.Rendering.BatchID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchID.CompareTo"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.Rendering.BatchID a, global::UnityEngine.Rendering.BatchID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchID.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.Rendering.BatchID a, global::UnityEngine.Rendering.BatchID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchID.op_Inequality"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchMaterialID : global::System.IEquatable<global::UnityEngine.Rendering.BatchMaterialID>
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEngine.Rendering.BatchMaterialID Null;
-        [global::Unbound.Stub] public uint value;
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMaterialID.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMaterialID.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Rendering.BatchMaterialID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMaterialID.Equals"); return default; }
-        [global::Unbound.Stub] public int CompareTo(global::UnityEngine.Rendering.BatchMaterialID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMaterialID.CompareTo"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.Rendering.BatchMaterialID a, global::UnityEngine.Rendering.BatchMaterialID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMaterialID.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.Rendering.BatchMaterialID a, global::UnityEngine.Rendering.BatchMaterialID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMaterialID.op_Inequality"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchMeshID : global::System.IEquatable<global::UnityEngine.Rendering.BatchMeshID>
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEngine.Rendering.BatchMeshID Null;
-        [global::Unbound.Stub] public uint value;
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMeshID.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMeshID.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Rendering.BatchMeshID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMeshID.Equals"); return default; }
-        [global::Unbound.Stub] public int CompareTo(global::UnityEngine.Rendering.BatchMeshID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMeshID.CompareTo"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.Rendering.BatchMeshID a, global::UnityEngine.Rendering.BatchMeshID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMeshID.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.Rendering.BatchMeshID a, global::UnityEngine.Rendering.BatchMeshID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchMeshID.op_Inequality"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchPackedCullingViewID : global::System.IEquatable<global::UnityEngine.Rendering.BatchPackedCullingViewID>
-    {
-        [global::Unbound.Stub] internal ulong handle;
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchPackedCullingViewID.GetHashCode"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Rendering.BatchPackedCullingViewID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchPackedCullingViewID.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchPackedCullingViewID.Equals"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.Rendering.BatchPackedCullingViewID lhs, global::UnityEngine.Rendering.BatchPackedCullingViewID rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchPackedCullingViewID.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.Rendering.BatchPackedCullingViewID lhs, global::UnityEngine.Rendering.BatchPackedCullingViewID rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchPackedCullingViewID.op_Inequality"); return default; }
-        [global::Unbound.Stub] public BatchPackedCullingViewID(int instanceID, int sliceIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchPackedCullingViewID.ctor"); }
-        [global::Unbound.Stub] public int GetInstanceID() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchPackedCullingViewID.GetInstanceID"); return default; }
-        [global::Unbound.Stub] public int GetSliceIndex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchPackedCullingViewID.GetSliceIndex"); return default; }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial struct BatchRendererCullingOutput
     {
         [global::Unbound.Stub] public global::Unity.Jobs.JobHandle cullingJobsFence;
@@ -4704,44 +4486,13 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public global::System.IntPtr occlusionBuffer;
         [global::Unbound.Stub] public global::System.IntPtr customCullingResult;
     }
-    unsafe partial class BatchRendererGroup : global::System.IDisposable
+    unsafe partial class BatchRendererGroup
     {
-        [global::Unbound.Stub] public BatchRendererGroup(global::UnityEngine.Rendering.BatchRendererGroup.OnPerformCulling cullingCallback, global::System.IntPtr userContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.ctor"); }
-        [global::Unbound.Stub] public BatchRendererGroup(global::UnityEngine.Rendering.BatchRendererGroupCreateInfo info) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.Dispose"); }
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.ThreadedBatchContext GetThreadedBatchContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.GetThreadedBatchContext"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchID AddBatch(global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.MetadataValue> batchMetadata, global::UnityEngine.GraphicsBufferHandle buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.AddBatch"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchID AddBatch(global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.MetadataValue> batchMetadata, global::UnityEngine.GraphicsBufferHandle buffer, uint bufferOffset, uint windowSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.AddBatch"); return default; }
-        [global::Unbound.Stub] public void RemoveBatch(global::UnityEngine.Rendering.BatchID batchID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.RemoveBatch"); }
-        [global::Unbound.Stub] public void SetBatchBuffer(global::UnityEngine.Rendering.BatchID batchID, global::UnityEngine.GraphicsBufferHandle buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.SetBatchBuffer"); }
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchMaterialID RegisterMaterial(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.RegisterMaterial"); return default; }
-        [global::Unbound.Stub] internal void RegisterMaterials(global::System.ReadOnlySpan<int> materialID, global::System.Span<global::UnityEngine.Rendering.BatchMaterialID> batchMaterialID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.RegisterMaterials"); }
-        [global::Unbound.Stub] public void UnregisterMaterial(global::UnityEngine.Rendering.BatchMaterialID material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.UnregisterMaterial"); }
-        [global::Unbound.Stub] public global::UnityEngine.Material GetRegisteredMaterial(global::UnityEngine.Rendering.BatchMaterialID material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.GetRegisteredMaterial"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchMeshID RegisterMesh(global::UnityEngine.Mesh mesh) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.RegisterMesh"); return default; }
-        [global::Unbound.Stub] internal void RegisterMeshes(global::System.ReadOnlySpan<int> meshID, global::System.Span<global::UnityEngine.Rendering.BatchMeshID> batchMeshID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.RegisterMeshes"); }
-        [global::Unbound.Stub] public void UnregisterMesh(global::UnityEngine.Rendering.BatchMeshID mesh) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.UnregisterMesh"); }
-        [global::Unbound.Stub] public global::UnityEngine.Mesh GetRegisteredMesh(global::UnityEngine.Rendering.BatchMeshID mesh) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.GetRegisteredMesh"); return default; }
-        [global::Unbound.Stub] public void SetGlobalBounds(global::UnityEngine.Bounds bounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.SetGlobalBounds"); }
-        [global::Unbound.Stub] public void SetPickingMaterial(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.SetPickingMaterial"); }
-        [global::Unbound.Stub] public void SetErrorMaterial(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.SetErrorMaterial"); }
-        [global::Unbound.Stub] public void SetLoadingMaterial(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.SetLoadingMaterial"); }
-        [global::Unbound.Stub] public void SetEnabledViewTypes(global::UnityEngine.Rendering.BatchCullingViewType[] viewTypes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.SetEnabledViewTypes"); }
-        [global::Unbound.Stub] internal static bool OcclusionTestAABB(global::System.IntPtr occlusionBuffer, global::UnityEngine.Bounds aabb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.OcclusionTestAABB"); return default; }
-        public unsafe delegate global::Unity.Jobs.JobHandle OnPerformCulling(global::UnityEngine.Rendering.BatchRendererGroup rendererGroup, global::UnityEngine.Rendering.BatchCullingContext cullingContext, global::UnityEngine.Rendering.BatchCullingOutput cullingOutput, global::System.IntPtr userContext);
-        public unsafe delegate void OnFinishedCulling(global::System.IntPtr customCullingResult);
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Rendering.BatchRendererGroup batchRendererGroup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.BatchRendererGroup.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BatchRendererGroupCreateInfo
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchRendererGroup.OnPerformCulling cullingCallback;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchRendererGroup.OnFinishedCulling finishedCullingCallback;
-        [global::Unbound.Stub] public global::System.IntPtr userContext;
     }
     public enum BlendShapeBufferLayout
     {
@@ -4841,17 +4592,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public int visibleLightCount;
         [global::Unbound.Stub] public int visibleOffscreenVertexLightCount;
         [global::Unbound.Stub] public int visibleReflectionProbeCount;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct CullingSplit
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 sphereCenter;
-        [global::Unbound.Stub] public float sphereRadius;
-        [global::Unbound.Stub] public int cullingPlaneOffset;
-        [global::Unbound.Stub] public int cullingPlaneCount;
-        [global::Unbound.Stub] public float cascadeBlendCullingFactor;
-        [global::Unbound.Stub] public float nearPlane;
-        [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 cullingMatrix;
     }
     internal enum DefaultMaterialType
     {
@@ -5182,12 +4922,6 @@ namespace UnityEngine.Rendering
     public unsafe static partial class LoadStoreActionDebugModeSettings
     {
         public static bool LoadStoreDebugModeEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.LoadStoreActionDebugModeSettings.LoadStoreDebugModeEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.LoadStoreActionDebugModeSettings.LoadStoreDebugModeEnabled"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct MetadataValue
-    {
-        [global::Unbound.Stub] public int NameID;
-        [global::Unbound.Stub] public uint Value;
     }
     [global::Unbound.Stub]
     public unsafe partial class ObjectIdRequest
@@ -5720,15 +5454,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] internal static void OverridesLightProbeSystem(global::System.IntPtr overridesPtr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SupportedRenderingFeatures.OverridesLightProbeSystem"); }
         [global::Unbound.Stub] internal static int FallbackLightmapper() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SupportedRenderingFeatures.FallbackLightmapper"); return default; }
         [global::Unbound.Stub] internal static void FallbackLightmapperByRef(global::System.IntPtr lightmapperPtr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SupportedRenderingFeatures.FallbackLightmapperByRef"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ThreadedBatchContext
-    {
-        [global::Unbound.Stub] public global::System.IntPtr batchRendererGroup;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchID AddBatch(global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.MetadataValue> batchMetadata, global::UnityEngine.GraphicsBufferHandle buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ThreadedBatchContext.AddBatch"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.BatchID AddBatch(global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.MetadataValue> batchMetadata, global::UnityEngine.GraphicsBufferHandle buffer, uint bufferOffset, uint windowSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ThreadedBatchContext.AddBatch"); return default; }
-        [global::Unbound.Stub] public void SetBatchBuffer(global::UnityEngine.Rendering.BatchID batchID, global::UnityEngine.GraphicsBufferHandle buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ThreadedBatchContext.SetBatchBuffer"); }
-        [global::Unbound.Stub] public void RemoveBatch(global::UnityEngine.Rendering.BatchID batchID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ThreadedBatchContext.RemoveBatch"); }
     }
     public enum VideoShadersIncludeMode
     {

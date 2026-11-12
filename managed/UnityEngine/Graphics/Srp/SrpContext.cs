@@ -855,6 +855,8 @@ namespace Unbound.Runtime
         internal NativeArray<VisibleReflectionProbe> Probes;
         internal int[] LightIndexMap;
         internal int[] ProbeIndexMap;
+        /// <summary>The BatchRendererGroup callbacks' outputs for this culling.</summary>
+        internal readonly List<Unbound.Runtime.BatchCulling.Output> Batches = new List<Unbound.Runtime.BatchCulling.Output>();
 
         internal void Dispose()
         {
@@ -879,6 +881,7 @@ namespace Unbound.Runtime
             Probes = default;
             LightIndexMap = null;
             ProbeIndexMap = null;
+            Unbound.Runtime.BatchCulling.Release(Batches);
         }
     }
 
@@ -934,6 +937,7 @@ namespace Unbound.Runtime
                 if (InsidePlanes(ref parameters, q.WorldBounds ?? FrameBuilder.WorldBounds(q.Mesh.bounds, q.Matrix))) data.QueuedVisible.Add(q);
             }
             Unbound.Runtime.Immediate.TakeCameraDraws(camera);
+            Unbound.Runtime.BatchCulling.CullCamera(data, ref parameters, camera);
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             var lights = s_VisibleLights;
             CollectVisibleLights(ref parameters, lights);
@@ -1165,7 +1169,7 @@ namespace Unbound.Runtime
             if (e.Kind == Kind.Renderers)
             {
                 var data = e.Params.cullingResults.Data;
-                if (data == null || data.Visible.Count == 0 && data.QueuedVisible.Count == 0) return RendererListStatus.kRendererListEmpty;
+                if (data == null || data.Visible.Count == 0 && data.QueuedVisible.Count == 0 && data.Batches.Count == 0) return RendererListStatus.kRendererListEmpty;
             }
             return RendererListStatus.kRendererListPopulated;
         }
