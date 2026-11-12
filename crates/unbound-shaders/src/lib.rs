@@ -29,7 +29,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 40;
+pub const FORMAT_VERSION: u32 = 41;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2191,7 +2191,8 @@ float4 frag() : SV_Target { return 1; }
 
     /// `Texture2DArray.Load` with a coordinate built from scalars (the layer from a material
     /// float) compiles: the integer coordinate types the SPIR-V reader needs to split the layer
-    /// off are declared (it panicked before); the layer and mip reach `textureLoad`.
+    /// off are declared (it panicked before). The probe's `rt.arrayLoad.*` rows check the values
+    /// read (tests/projects/textureformats).
     #[test]
     fn array_loads_with_coordinates_built_from_scalars_compile() {
         let source = r#"

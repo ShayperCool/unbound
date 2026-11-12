@@ -761,19 +761,19 @@ fn front_facing(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
-/// Declares the integer vectors that naga's SPIR-V reader looks up for the texel coordinates of
-/// arrayed images (`vec2<i32>` for a `Texture2DArray`, `vec3` for a cube array) when it splits
-/// the array layer off an integer coordinate: it declares only the float ones itself and panics
-/// when a program builds its `Load` coordinate from scalars, so that no integer vector of that
-/// size exists (`_Array.Load(int4(x, 0, (int)_Layer, 0))`). Unused type declarations change no
-/// emitted code; a module without arrayed images is returned as it is.
+/// Declares the integer `vec2`s that naga's SPIR-V reader looks up for the texel coordinate of a
+/// 2D array image when it splits the array layer off an integer coordinate (`Load`, `RW` reads
+/// and writes): it declares only the float one itself and panics when a program builds that
+/// coordinate from scalars, so that no integer `vec2` of the coordinate's sign exists
+/// (`_Array.Load(int4(x, 0, (int)_Layer, 0))`). Other arrayed images split a scalar off (1D) or
+/// take float coordinates only (cube). A module without 2D arrays is returned as it is; in one
+/// with them, the new types can renumber naga's names of the unnamed types after them.
 fn image_coordinate_vectors(words: &[u32]) -> Result<Vec<u32>> {
     const OP_TYPE_INT: u32 = 21;
     const OP_TYPE_VECTOR: u32 = 23;
     const OP_TYPE_IMAGE: u32 = 25;
     const DIM_2D: u32 = 1;
-    const DIM_CUBE: u32 = 3;
-    let mut sizes = Vec::new();
+    let mut array_2d = false;
     let mut integers = Vec::new();
     let mut vectors = std::collections::HashSet::new();
     let mut at = 5;
@@ -785,45 +785,29 @@ fn image_coordinate_vectors(words: &[u32]) -> Result<Vec<u32>> {
         let i = &words[at..at + count];
         match i[0] & 0xffff {
             OP_TYPE_INT if count == 4 && i[2] == 32 => integers.push(i[1]),
-            OP_TYPE_VECTOR if count == 4 => {
-                vectors.insert((i[2], i[3]));
+            OP_TYPE_VECTOR if count == 4 && i[3] == 2 => {
+                vectors.insert(i[2]);
             }
-            OP_TYPE_IMAGE if count >= 9 && i[5] != 0 => {
-                // 1D arrays split a scalar off; 3D images are never arrayed.
-                let size = match i[3] {
-                    DIM_2D => 2,
-                    DIM_CUBE => 3,
-                    _ => 0,
-                };
-                if size != 0 && !sizes.contains(&size) {
-                    sizes.push(size);
-                }
-            }
+            OP_TYPE_IMAGE if count >= 9 && i[3] == DIM_2D && i[5] != 0 => array_2d = true,
             _ => {}
         }
         at += count;
     }
-    let missing: Vec<(u32, u32)> = integers
-        .iter()
-        .flat_map(|&int| sizes.iter().map(move |&size| (int, size)))
-        .filter(|pair| !vectors.contains(pair))
-        .collect();
-    if missing.is_empty() {
+    integers.retain(|int| !vectors.contains(int));
+    if !array_2d || integers.is_empty() {
         return Ok(words.to_vec());
     }
     let mut bound = words[3];
-    let mut out = Vec::with_capacity(words.len() + 4 * missing.len());
+    let mut out = Vec::with_capacity(words.len() + 4 * integers.len());
     out.extend_from_slice(&words[..5]);
     let mut at = 5;
     while at < words.len() {
         let count = (words[at] >> 16) as usize;
         let i = &words[at..at + count];
         out.extend_from_slice(i);
-        if i[0] & 0xffff == OP_TYPE_INT {
-            for &(_, size) in missing.iter().filter(|(int, _)| *int == i[1]) {
-                out.extend([(4 << 16) | OP_TYPE_VECTOR, bound, i[1], size]);
-                bound += 1;
-            }
+        if i[0] & 0xffff == OP_TYPE_INT && integers.contains(&i[1]) {
+            out.extend([(4 << 16) | OP_TYPE_VECTOR, bound, i[1], 2]);
+            bound += 1;
         }
         at += count;
     }
@@ -2880,17 +2864,23 @@ mod tests {
             }
             n
         };
-        // The layer of a cube array and of a 2D array, from scalars only.
+        // The layer of a 2D array from scalars only, by a signed and an unsigned coordinate.
         let arrays = fragment_spirv(
-            "Texture2DArray<int4> A; TextureCubeArray C; SamplerState s; int L;\n\
-             float4 frag() : SV_Target { return float4(A.Load(int4(1, 2, L, 0))) + C.SampleLevel(s, float4(1, 0, 0, L), 0); }",
+            "Texture2DArray<int4> A; int L; uint U;\n\
+             float4 frag() : SV_Target { return float4(A.Load(int4(1, 2, L, 0)) + A.Load(uint4(1, 2, U, 0))); }",
         );
         let declared = image_coordinate_vectors(&arrays).unwrap();
         assert!(declared.len() > arrays.len());
         // Declared once: a second pass adds nothing.
         assert_eq!(image_coordinate_vectors(&declared).unwrap(), declared);
-        assert!(count(&declared, 2) > count(&arrays, 2));
+        assert_eq!(count(&declared, 2), count(&arrays, 2) + 2);
         parse(&arrays, ClipSpace::Renderer).unwrap();
+        // A cube array samples with float coordinates: unchanged.
+        let cube = fragment_spirv(
+            "TextureCubeArray C; SamplerState s; int L;\n\
+             float4 frag() : SV_Target { return C.SampleLevel(s, float4(1, 0, 0, L), 0); }",
+        );
+        assert_eq!(image_coordinate_vectors(&cube).unwrap(), cube);
         // Without an arrayed image the module is unchanged.
         let plain = fragment_spirv(
             "Texture2D<int4> T; int L;\nfloat4 frag() : SV_Target { return float4(T.Load(int3(1, L, 0))); }",
