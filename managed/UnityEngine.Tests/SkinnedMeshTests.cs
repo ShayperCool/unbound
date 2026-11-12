@@ -312,5 +312,27 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(s.root); Object.DestroyImmediate(s.mesh);
             }
         }
+
+        /// <summary>Asking for the buffer moves skins into the renderer's space: the current pose
+        /// made before it in the frame (in world space) is not reused after it.</summary>
+        [Fact]
+        public void TheCurrentPoseFollowsTheSkinSpaceAfterABufferRequest()
+        {
+            var s = OneBoneSkin();
+            try
+            {
+                s.root.transform.position = new Vector3(10f, 0f, 0f);
+                NextSkinningFrame();
+                Assert.Equal(new Vector3(11f, 0f, 0f), s.renderer.CurrentGeometry(out var world).vertices[1]);
+                Assert.Equal(Matrix4x4.identity, world);
+                using (s.renderer.GetVertexBuffer()) { }
+                Assert.Equal(new Vector3(1f, 0f, 0f), s.renderer.CurrentGeometry(out var local).vertices[1]);
+                Assert.Equal(s.root.transform.localToWorldMatrix, local);
+            }
+            finally
+            {
+                Object.DestroyImmediate(s.root); Object.DestroyImmediate(s.mesh);
+            }
+        }
     }
 }
