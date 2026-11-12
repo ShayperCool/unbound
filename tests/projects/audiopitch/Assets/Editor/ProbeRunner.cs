@@ -14,7 +14,7 @@ public static class ProbeRunner
     static object Call(object o, string method, params object[] args) => o.GetType().GetMethod(method, F).Invoke(o, args);
     static object Get(object o, string property) => o.GetType().GetProperty(property, F).GetValue(o);
     static void Set(object o, string property, object value) => o.GetType().GetProperty(property, F).SetValue(o, value);
-    static readonly Dictionary<string, string> Units = new Dictionary<string, string> { { "Shift", "Pitch Shifter" }, { "Chorus", "Chorus" }, { "Flange", "Flange" }, { "Reverb", "SFX Reverb" }, { "Comp", "Compressor" }, { "Duck", "Duck Volume" }, { "Send", "Send" } };
+    static readonly Dictionary<string, string> Units = new Dictionary<string, string> { { "Shift", "Pitch Shifter" }, { "Chorus", "Chorus" }, { "Flange", "Flange" }, { "Reverb", "SFX Reverb" }, { "Comp", "Compressor" }, { "Duck", "Duck Volume" }, { "Send", "Send" }, { "Receive", "Receive" }, { "Dist", "Distortion" }, { "Norm", "Normalize" } };
     public static void Record()
     {
         T("MixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
@@ -81,7 +81,7 @@ public static class ProbeRunner
             else if (path[path.Length - 1] == "bypass") continue;  // set with the chain
             else {
                 if (!units.TryGetValue(path[0] + "." + path[1], out var unit)) throw new Exception("No unit " + pair[0]);
-                if (path[2] == "Level") {
+                if (path[1] == "Send" && path[2] == "Level") {
                     Call(unit, "SetValueForMixLevel", mixer, snapshot, value); continue;
                 }
                 if (path[2] == "Wet") {
@@ -96,7 +96,8 @@ public static class ProbeRunner
                 Call(unit, "SetValueForParameter", mixer, snapshot, path[2], value);
             }
         }
-        if (units.TryGetValue("Music.Send", out var send)) Set(send, "sendTarget", units["Master.Duck"]);
+        if (units.TryGetValue("Music.Send", out var send))
+            Set(send, "sendTarget", units.TryGetValue("Master.Receive", out var receive) ? receive : units["Master.Duck"]);
         if (units.TryGetValue("Music.Shift", out var shift)) {
             var names = new[] { "Pitch", "FFT size", "Overlap", "Max channels" };
             var type = T("ExposedAudioParameter"); var exposed = Array.CreateInstance(type, names.Length);
@@ -125,7 +126,8 @@ public static class ProbeRunner
             if (!units.TryGetValue("Music." + pair[0], out var unit)) unit = units["Master." + pair[0]];
             var type = T("ExposedAudioParameter"); var item = Activator.CreateInstance(type);
             type.GetField("name", F).SetValue(item, name);
-            type.GetField("guid", F).SetValue(item, Call(unit, "GetGUIDForParameter", pair[1]));
+            type.GetField("guid", F).SetValue(item, pair[1] == "Wet" || (pair[0] == "Send" && pair[1] == "Level")
+                ? Call(unit, "GetGUIDForMixLevel") : Call(unit, "GetGUIDForParameter", pair[1]));
             var previous = (Array)Get(mixer, "exposedParameters");
             var exposed = Array.CreateInstance(type, previous.Length + 1);
             Array.Copy(previous, exposed, previous.Length); exposed.SetValue(item, previous.Length);

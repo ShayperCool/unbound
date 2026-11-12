@@ -22,11 +22,19 @@ def all_cases():
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_')) and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_')) and key.startswith('context_') == contexts]
 
 
 def surround_cases():
     return [key for key in all_cases() if key.startswith('context_fx_')]
+
+
+def wet_edge_cases():
+    return [key for key in all_cases() if key.startswith('context_wetedge_')]
+
+
+def wet_cases():
+    return [key for key in all_cases() if key.startswith('context_wet_')]
 
 
 def transition_cases():
@@ -52,6 +60,8 @@ def profile(name, rate):
     if name == 'all': return dict.fromkeys(keys)
     if name == 'layouts': return dict.fromkeys(cases(True))
     if name == 'surround': return dict.fromkeys(surround_cases())
+    if name == 'wet-edges': return dict.fromkeys(wet_edge_cases())
+    if name == 'wet': return dict.fromkeys(wet_cases())
     if name == 'transitions': return dict.fromkeys(transition_cases())
     if name == 'scheduled-resets': return dict.fromkeys(scheduled_reset_cases())
     if name == 'resets': return dict.fromkeys(reset_cases())

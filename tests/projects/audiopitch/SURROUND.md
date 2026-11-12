@@ -48,8 +48,12 @@ This measures static effects at the listed rates, buffer and layouts. The separa
 [transitions profile](TRANSITIONS.md) adds live parameter, filter enabled and zone
 activation/preset controls. Reset PCM is not repeatable in the recorded diagnostic
 sessions and remains open. Mixer topology changes, other rates/buffers, Prologic,
-surround wet-slot controls, scripted zone send placement and overlapping surround
+other wet-effect kinds and topology changes, scripted zone send placement and overlapping surround
 zones remain unmeasured. General layout
 reconfiguration updates component channel counts and offsets; a Rust control
 checks a retained listener reverb after quad-to-7.1 reconfiguration without
 claiming an Editor history-reset contract.
+
+The additional [wet profiles](WET.md) measure six surround wet-effect kinds,
+Send/Receive placement and live levels, all-speaker Normalize linking and
+SFX Reverb first-period state at these same rates and buffer size.

@@ -1,7 +1,9 @@
 {
  "commands": [
   "python3 tests/projects/audiopitch/run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\"",
-  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\"",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile wet",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile wet-edges"
  ],
  "summary": "\"tested\": \\d+, \"failed\": \\d+(?=.*\"pcm_steps\": 1\\b)"
 }

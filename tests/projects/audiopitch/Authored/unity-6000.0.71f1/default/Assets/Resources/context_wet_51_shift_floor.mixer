@@ -1,0 +1,135 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!244 &-8767688811825460788
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 7b040b9744ce4a2e98315ce9d6f1adfd
+  m_EffectName: Pitch Shifter
+  m_MixLevel: 9d9449423c74791e3a9587756d506585
+  m_Parameters:
+  - m_ParameterName: Pitch
+    m_GUID: 4855a0ed9d8b8f584885cd01c779c48f
+  - m_ParameterName: FFT size
+    m_GUID: 48b566471ab18143e9976f6cb81ed9a5
+  - m_ParameterName: Overlap
+    m_GUID: 72b216c191ef058e486591d955d6d382
+  - m_ParameterName: Max channels
+    m_GUID: 663401d3be2dfd252810725063393b6c
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 1
+  m_Bypass: 0
+--- !u!241 &24100000
+AudioMixerController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: context_wet_51_shift_floor
+  m_OutputGroup: {fileID: 0}
+  m_MasterGroup: {fileID: 24300002}
+  m_Snapshots:
+  - {fileID: 24500006}
+  m_StartSnapshot: {fileID: 24500006}
+  m_SuspendThreshold: -80
+  m_EnableSuspend: 0
+  m_UpdateMode: 0
+  m_ExposedParameters:
+  - guid: 4855a0ed9d8b8f584885cd01c779c48f
+    name: Pitch
+  - guid: 48b566471ab18143e9976f6cb81ed9a5
+    name: FFT size
+  - guid: 72b216c191ef058e486591d955d6d382
+    name: Overlap
+  - guid: 663401d3be2dfd252810725063393b6c
+    name: Max channels
+  m_AudioMixerGroupViews: []
+  m_CurrentViewIndex: 0
+  m_TargetSnapshot: {fileID: 24500006}
+--- !u!243 &24300002
+AudioMixerGroupController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Master
+  m_AudioMixer: {fileID: 24100000}
+  m_GroupID: 0577cf817ba4610809976fd3dc0f92ec
+  m_Children:
+  - {fileID: 633769387722336017}
+  m_Volume: fa85495385fe5e70d8e235982f80d780
+  m_Pitch: 2787bbf92fbdc07b89cab37a55a11e74
+  m_Send: 00000000000000000000000000000000
+  m_Effects:
+  - {fileID: 24400004}
+  m_UserColorIndex: 0
+  m_Mute: 0
+  m_Solo: 0
+  m_BypassEffects: 0
+--- !u!244 &24400004
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 3328dd301fa1fd2de9138f8a6e5a487e
+  m_EffectName: Attenuation
+  m_MixLevel: f3f67a80844f58227814c9b47c675f98
+  m_Parameters: []
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0
+--- !u!245 &24500006
+AudioMixerSnapshotController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Snapshot
+  m_AudioMixer: {fileID: 24100000}
+  m_SnapshotID: 15e281abeeaa237b6b7590e1ef9586c3
+  m_FloatValues:
+    72b216c191ef058e486591d955d6d382: 4
+    9d9449423c74791e3a9587756d506585: -70
+    663401d3be2dfd252810725063393b6c: 0
+    48b566471ab18143e9976f6cb81ed9a5: 1024
+    4855a0ed9d8b8f584885cd01c779c48f: 0.75
+  m_TransitionOverrides: {}
+--- !u!243 &633769387722336017
+AudioMixerGroupController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Music
+  m_AudioMixer: {fileID: 24100000}
+  m_GroupID: 10ed1ff1dd643eaca9e227c972128b7f
+  m_Children: []
+  m_Volume: 708e82661bf9d26b091762bba4ec1ad8
+  m_Pitch: 92768eca215b2e67fa4e4cef326b49d7
+  m_Send: 00000000000000000000000000000000
+  m_Effects:
+  - {fileID: 4449004973290726246}
+  - {fileID: -8767688811825460788}
+  m_UserColorIndex: 0
+  m_Mute: 0
+  m_Solo: 0
+  m_BypassEffects: 0
+--- !u!244 &4449004973290726246
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 7974aa295fa3381f6bd5fb82ce3d240f
+  m_EffectName: Attenuation
+  m_MixLevel: c84a41039e468a8d7a6ce2a0d79a51ce
+  m_Parameters: []
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0

@@ -14,7 +14,7 @@ p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
@@ -29,7 +29,7 @@ import sys
 sys.path.insert(0, str(fixture.parents[1]))
 from editor_runner import EditorJob, run
 import time
-from common import cases, devices, header, surround_cases, transition_cases, reset_cases, scheduled_reset_cases
+from common import cases, devices, header, surround_cases, transition_cases, reset_cases, scheduled_reset_cases, wet_cases, wet_edge_cases
 
 
 def capture(work, cases, env=None):
@@ -129,6 +129,14 @@ if a.set == 'devices':
 if a.set == 'layouts':
     part(a.work, cases(True))
     verify(a.work/'capture', a.release, a.rate, contexts=True)
+    raise SystemExit
+if a.set == 'wet-edges':
+    part(a.work, wet_edge_cases())
+    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=wet_edge_cases())
+    raise SystemExit
+if a.set == 'wet':
+    part(a.work, wet_cases())
+    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=wet_cases())
     raise SystemExit
 if a.set == 'scheduled-resets':
     part(a.work, scheduled_reset_cases())

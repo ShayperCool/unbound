@@ -88,3 +88,8 @@ Chorus, Flange, SFX Reverb, source/listener filters and reverb zones in
 quad/5.0/5.1/7.1. See [the contracts, measured rules and remaining scope](SURROUND.md).
 `native.py --set surround` records it separately; `publish.py --surround` requires
 an independent repeat. `run.py` gates it alongside every prior profile.
+
+The independent `wet` and `wet-edges` profiles add 256 controls for surround
+wet slots, Send/Receive routing, all-speaker Normalize and SFX Reverb startup.
+See [WET.md](WET.md) for the contracts, exact-repeat checks and measured limits.
+Their engine-only commands are declared separately in `gate.json`.
