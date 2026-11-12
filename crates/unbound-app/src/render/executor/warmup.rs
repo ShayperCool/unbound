@@ -116,7 +116,6 @@ impl UnityRenderer {
                                     },
                                     pass.stencil_ref,
                                     mirrored,
-                                    self.conventions.top_down(target.screen_like),
                                 );
                                 self.compiled.pipeline(
                                     &self.device,
@@ -140,19 +139,11 @@ impl UnityRenderer {
         Ok("{}".into())
     }
 
-    /// A pass's state as a draw uses it: `mirrored` (a matrix of negative determinant, a
-    /// mirrored instance flag), `GL.invertCulling` and a target stored the other way up
-    /// (`target_flipped`) each flip which faces are culled. The stencil's front and back states
-    /// follow the faces as the device sees them: a mirrored draw's turned faces take the back
-    /// state, while inverted culling turns which faces count as front, as the target's flip does
-    /// (the Unity 6000.0.71f1 Editor on OpenGL Core and Vulkan, tests/projects/samplerstates
-    /// `StencilFaces.*`: plain and inverted culling, each with and without a mirrored matrix).
     pub(super) fn draw_state(
         &self,
         mut state: crate::materials::RenderState,
         mut stencil_ref: u32,
         mirrored: bool,
-        target_flipped: bool,
     ) -> (crate::materials::RenderState, u32) {
         if state.gui_ztest {
             state.ztest = if self.state.overlay { 8 } else { 4 };
@@ -166,15 +157,13 @@ impl UnityRenderer {
             state.ztest = super::mirror_compare(state.ztest);
             state.offset = state.offset.map(|o| -o);
         }
-        if self.state.invert_culling != (mirrored != target_flipped) {
+        if self.state.invert_culling != mirrored {
             state.cull = match state.cull {
                 1 => 2,
                 2 => 1,
                 c => c,
             };
-        }
-        if self.state.invert_culling != target_flipped {
-            // The faces count the other way round: so do their stencil settings.
+            // The faces as drawn are the other way round: so are their stencil settings.
             state.stencil = state.stencil.map(crate::materials::StencilState::swapped);
         }
         (state, stencil_ref)
