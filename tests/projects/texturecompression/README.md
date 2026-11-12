@@ -91,3 +91,37 @@ The same images with an Android override where a case names `android=` (its qual
   the data must fill the whole mip chain in the texture's format, else it fails.
 - [Texture2D.GetPixels](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.GetPixels.html):
   needs `isReadable`; compressed textures are decompressed.
+
+## Import encoder controls
+
+The additional BC controls cover flat colour/channels, alpha edges, linear colour, normals,
+rectangular levels, 20x12 without mips, 30x18 with mips, and qualities 0, 49, 50, 99 and 100.
+`block_report.py` prints exact blocks / total for every compressed texture and format, alongside
+all raw differences from `compare.py`. A different format, size, mip count or raw-data length
+counts as zero matching blocks and is identified explicitly.
+
+| Source, Unity 6000.0 | Contract or observation |
+|---|---|
+| [TextureImporterPlatformSettings](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureImporterPlatformSettings.html) | An enabled platform override replaces the default platform parameters. The quality override controls use different default and target values. |
+| [SetPlatformTextureSettings](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureImporter.SetPlatformTextureSettings.html) | Quality 0, 50 and 100 name Fast, Normal and Best. No compressed-block identity is promised. |
+| Editor reference, added BC controls | BC7 changes at qualities 50 and 100; BC6H uses its Fast setting at 0, Best at 100 and Normal for intermediate values. These encoder choices are measured for 6000.0.71f1 only. |
+
+The measured encoder mechanism is selected through unbound-compat. Other releases retain the
+previous ISPC approximation; they have no exact-block claim. The default BC7 encoder is bc7e;
+the alternate ISPC setting remains an approximation. Both encoders' upstream licences allow
+source redistribution. No proprietary encoder library is required by an Unbound build.
+
+Measured import block totals, Gamma / Linear, including every mip:
+
+| Format | Exact / total, Gamma | Exact / total, Linear |
+|---|---:|---:|
+| BC4 | 1677 / 2058 | 1677 / 2058 |
+| BC5 | 1047 / 1133 | 1047 / 1133 |
+| BC6H | 2371 / 2401 | 2387 / 2401 |
+| BC7 | 5532 / 5592 | 5532 / 5592 |
+
+BC7 residuals are in CutoutBC7, FlatBC7 and SoftHigh. The largest level-0 channel difference
+is 195/255 in CutoutBC7, and a lower FlatBC7 level reaches 109/255. These remain unresolved.
+BC4/BC5 retain differences in endpoint fitting and six-/eight-step selection; BC6H retains
+encoding differences and its existing CPU float-read limitation. The comparator lists every
+raw discrepancy; residual declarations for these imports name exact keys rather than globs.

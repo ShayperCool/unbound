@@ -6,6 +6,27 @@
 use std::path::{Path, PathBuf};
 
 fn main() {
+    let native = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../native");
+    println!(
+        "cargo:rerun-if-changed={}",
+        native.join("amd_bc4").display()
+    );
+    println!("cargo:rerun-if-changed={}", native.join("bc7e").display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        native.join("unbound_bc7e.cpp").display()
+    );
+    cc::Build::new()
+        .cpp(true)
+        .std("c++17")
+        .file(native.join("bc7e/basisu_bc7e_scalar.cpp"))
+        .file(native.join("unbound_bc7e.cpp"))
+        .file(native.join("amd_bc4/encode.cpp"))
+        .define("NDEBUG", None)
+        .opt_level(2)
+        .flag_if_supported("-ffp-contract=off")
+        .warnings(false)
+        .compile("unbound_bc7e");
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../native/vorbis");
     let mut sources: Vec<PathBuf> = Vec::new();
     for dir in ["lib", "ogg/src"] {

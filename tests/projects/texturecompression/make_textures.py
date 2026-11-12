@@ -148,6 +148,25 @@ CASES = {
     'HeightR8': ('Height', 'format=R8 srgb=0'),
     'NormalsRG16': ('Normals', 'format=RG16 srgb=0'),
     'OddRGBA32': ('Odd', 'format=RGBA32 npot=none mips=0'),
+    # Additional import-encoder controls: flat channels, alpha edges, linear colour,
+    # rectangular levels and mipless non-power-of-two sizes.
+    'FlatBC7': ('Flat', 'format=BC7'),
+    'CutoutBC7': ('Cutout', 'format=BC7 quality=100'),
+    'NoiseLinearBC7': ('Noise', 'format=BC7 srgb=0'),
+    'NoiseBC7Q49': ('Noise', 'format=BC7 quality=49'),
+    'NoiseBC7Q99': ('Noise', 'format=BC7 quality=99'),
+    'NpotBC7': ('Npot', 'format=BC7 npot=none mips=0'),
+    'OddBC7': ('Odd', 'format=BC7 npot=none'),
+    'WideBC7': ('Wide', 'format=BC7'),
+    'FlatBC4': ('Flat', 'format=BC4 srgb=0'),
+    'FlatBC5': ('Flat', 'format=BC5 srgb=0'),
+    'NoiseBC4': ('Noise', 'format=BC4 srgb=0'),
+    'NoiseBC5': ('Noise', 'format=BC5 srgb=0'),
+    'WideBC5': ('Wide', 'format=BC5 srgb=0'),
+    'NpotBC5': ('Npot', 'format=BC5 srgb=0 npot=none mips=0'),
+    'HdrBC6HQ100': ('Hdr', 'format=BC6H quality=100'),
+    'HdrBC6HQ49': ('Hdr', 'format=BC6H quality=49'),
+
 }
 
 

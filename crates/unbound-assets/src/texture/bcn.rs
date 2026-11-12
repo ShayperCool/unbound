@@ -6,10 +6,10 @@
 //! of the block's colours (a power iteration of the covariance), refined once by least squares,
 //! and texels take the nearest of the four colours; a block of one colour takes the endpoint pair
 //! whose interpolated colour is nearest ([`solid_tables`]); BC3's alpha spans the block's alpha
-//! range in eight steps. BC4, BC5, BC6H and BC7 are compressed by the ISPC texture compressor
-//! (`intel_tex_2`): the format, sizes and layout are the Editor's, the blocks are not (the Editor
-//! encodes BC7 with bc7e and BC4/BC5 with another encoder), so their texels differ slightly; the
-//! importer warns once per format.
+//! range in eight steps. The measured import profile uses bc7e for BC7, scalar endpoint fitting
+//! for BC4/BC5 and quality-dependent ISPC BC6H settings. Other profiles and runtime compression
+//! use the ISPC approximations. Exact block counts and remaining differences are recorded by
+//! tests/projects/texturecompression.
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
@@ -202,8 +202,116 @@ pub fn compress_level(format: BlockFormat, rgba: &[u8], width: u32, height: u32)
     }
 }
 
+/// Import settings measured in Unity 6000.0.71f1, tests/projects/texturecompression. Runtime
+/// compression and GPU-only conversions keep their separate encoder selection.
+pub(super) fn compress_import_level(
+    format: BlockFormat,
+    data: &[u8],
+    width: u32,
+    height: u32,
+    quality: i32,
+    srgb: bool,
+    bc7_compressor: i32,
+) -> Vec<u8> {
+    if matches!(format, BlockFormat::Bc4 | BlockFormat::Bc5) {
+        use rayon::prelude::*;
+        unsafe extern "C" {
+            fn unbound_bc4_block(pixels: *const u8, block: *mut u8);
+        }
+        let (w, h) = (width.max(1) as usize, height.max(1) as usize);
+        let size = format.block_bytes();
+        let bw = w.div_ceil(4);
+        let mut blocks = vec![0u8; bw * h.div_ceil(4) * size];
+        blocks
+            .par_chunks_mut(bw * size)
+            .enumerate()
+            .for_each(|(by, row)| {
+                for bx in 0..bw {
+                    let pixels = gather(data, w, h, bx, by);
+                    for channel in 0..size / 8 {
+                        let values = pixels.map(|p| p[channel]);
+                        // The native call reads 16 bytes and writes 8, within this block's slice.
+                        unsafe {
+                            unbound_bc4_block(
+                                values.as_ptr(),
+                                row[bx * size + channel * 8..].as_mut_ptr(),
+                            );
+                        }
+                    }
+                }
+            });
+        return blocks;
+    }
+    if format == BlockFormat::Bc6h {
+        let settings = match quality {
+            0 => intel_tex_2::bc6h::very_fast_settings(),
+            100 => intel_tex_2::bc6h::very_slow_settings(),
+            _ => intel_tex_2::bc6h::slow_settings(),
+        };
+        return compress_f32_with_settings(data, width, height, &settings);
+    }
+    if format != BlockFormat::Bc7 || bc7_compressor == 1 {
+        return compress_level(format, data, width, height);
+    }
+    use rayon::prelude::*;
+    unsafe extern "C" {
+        fn unbound_bc7e_init();
+        fn unbound_bc7e_blocks(
+            pixels: *const u32,
+            blocks: *mut u64,
+            count: u32,
+            quality: i32,
+            perceptual: bool,
+        );
+    }
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(|| unsafe { unbound_bc7e_init() });
+    let (w, h) = (width.max(1) as usize, height.max(1) as usize);
+    let (bw, bh) = (w.div_ceil(4), h.div_ceil(4));
+    // Native output is aligned; only convert it to bytes after the parallel writes finish.
+    let mut blocks = vec![0u64; bw * bh * 2];
+    blocks
+        .par_chunks_mut(bw * 2)
+        .enumerate()
+        .for_each(|(by, row)| {
+            // Fixed stack storage keeps image-sized temporary allocations out of the encoder.
+            const BATCH: usize = 64;
+            let mut pixels = [0u32; BATCH * 16];
+            for start in (0..bw).step_by(BATCH) {
+                let count = (bw - start).min(BATCH);
+                for bx in 0..count {
+                    let block = gather(data, w, h, start + bx, by);
+                    for (i, texel) in block.iter().enumerate() {
+                        pixels[bx * 16 + i] = u32::from_le_bytes(*texel);
+                    }
+                }
+                // Both slices contain `count` whole blocks and do not alias; initialization is
+                // complete, settings are local to the native call, and other rows are disjoint.
+                unsafe {
+                    unbound_bc7e_blocks(
+                        pixels.as_ptr(),
+                        row[start * 2..].as_mut_ptr(),
+                        count as u32,
+                        quality,
+                        srgb,
+                    );
+                }
+            }
+        });
+    blocks.into_iter().flat_map(u64::to_le_bytes).collect()
+}
+
 /// Compresses one RGBA32F level (little-endian floats, rows bottom-up) to BC6H.
 pub fn compress_level_f32(rgba: &[u8], width: u32, height: u32) -> Vec<u8> {
+    compress_f32_with_settings(rgba, width, height, &intel_tex_2::bc6h::fast_settings())
+}
+
+fn compress_f32_with_settings(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    settings: &intel_tex_2::bc6h::EncodeSettings,
+) -> Vec<u8> {
     let (w, h) = (width.max(1) as usize, height.max(1) as usize);
     let (pw, ph) = (w.next_multiple_of(4), h.next_multiple_of(4));
     // Half floats, a level smaller than a block tiled; negative values clamp to 0 (unsigned).
@@ -219,7 +327,7 @@ pub fn compress_level_f32(rgba: &[u8], width: u32, height: u32) -> Vec<u8> {
         }
     }
     intel_tex_2::bc6h::compress_blocks(
-        &intel_tex_2::bc6h::fast_settings(),
+        settings,
         &intel_tex_2::RgbaSurface {
             data: &half,
             width: pw as u32,
@@ -784,5 +892,55 @@ mod tests {
         assert_eq!(blocks.len(), 8);
         assert_eq!(decode_level(BlockFormat::Bc1, &blocks, 2, 1).len(), 8);
         assert_eq!(compress_level(BlockFormat::Bc7, &rgba, 2, 1).len(), 16);
+    }
+}
+#[test]
+fn measured_import_encoder_keeps_constant_channels_and_small_levels() {
+    // Unity 6000.0.71f1, texturecompression: final levels of HeightBC4 and NormalsBC5.
+    let rgba = [105, 127, 0, 255];
+    let bc4 = compress_import_level(BlockFormat::Bc4, &rgba, 1, 1, 50, false, 0);
+    assert_eq!(bc4, [105, 105, 0, 0, 0, 0, 0, 0]);
+    let normal = [127, 127, 0, 255];
+    let bc5 = compress_import_level(BlockFormat::Bc5, &normal, 1, 1, 50, false, 0);
+    assert_eq!(
+        bc5,
+        [127, 127, 0, 0, 0, 0, 0, 0, 127, 127, 0, 0, 0, 0, 0, 0]
+    );
+    // Independent channels and rectangular sizes also use whole blocks.
+    let data = [21, 194, 43, 99].repeat(3 * 7);
+    let blocks = compress_import_level(BlockFormat::Bc5, &data, 3, 7, 50, false, 0);
+    assert_eq!(blocks.len(), 32);
+    assert_eq!(
+        decode_level(BlockFormat::Bc5, &blocks, 3, 7),
+        [21, 194, 0, 255].repeat(21)
+    );
+}
+
+#[test]
+fn bc7_import_tiles_and_encodes_alpha_in_every_quality() {
+    // Last level of NoiseRGBA32, compared with NoiseBC7's Editor blocks.
+    let rgba = [152, 152, 151, 127];
+    let expected = [
+        0x20, 0x33, 0xff, 0xcc, 0x2f, 0xfb, 0xff, 0xfd, 0xad, 0xaa, 0xaa, 0xaa, 0, 0, 0, 0,
+    ];
+    for quality in [0, 50, 100] {
+        let block = compress_import_level(BlockFormat::Bc7, &rgba, 1, 1, quality, true, 0);
+        assert_eq!(block, expected, "quality {quality}");
+        assert_eq!(decode_level(BlockFormat::Bc7, &block, 1, 1), rgba);
+    }
+}
+
+#[test]
+fn hdr_special_values_and_edge_sizes_do_not_abort_import() {
+    let data: Vec<_> = [f32::NAN, f32::INFINITY, -1.0, 1.0]
+        .repeat(2 * 3)
+        .into_iter()
+        .flat_map(f32::to_le_bytes)
+        .collect();
+    for quality in [0, 50, 100] {
+        assert_eq!(
+            compress_import_level(BlockFormat::Bc6h, &data, 2, 3, quality, false, 0).len(),
+            16
+        );
     }
 }

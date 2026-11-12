@@ -3,6 +3,7 @@ mod graphics;
 mod mtl;
 mod profile;
 mod shader_keywords;
+mod texture;
 mod version;
 
 pub use graphics::{
@@ -12,4 +13,5 @@ pub use graphics::{
 pub use mtl::{MtlColor, MtlRules, MtlTransparency};
 pub use profile::{CompileMode, Feature, InputHandling, Profile, ProfileData};
 pub use shader_keywords::ShaderKeywordRules;
+pub use texture::TextureCompressionRules;
 pub use version::{Stage, UnityVersion};

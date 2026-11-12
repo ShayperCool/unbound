@@ -18,6 +18,7 @@ VirtualGL).
 """
 import argparse
 import filecmp
+import json
 import os
 from pathlib import Path
 import shutil
@@ -123,6 +124,13 @@ def publish(work):
         for log in (work/'native1'/f'{profile}.log', work/'native2'/f'{profile}.log'):
             if 'NVIDIA' not in next((l for l in open(log, errors='replace') if 'Renderer:' in l), ''):
                 sys.exit(f'{log}: the Editor did not render on the NVIDIA GPU; not publishing')
+        previous = target/f'{profile}.jsonl'
+        if previous.exists():
+            old = {r['k']: r['v'] for r in map(json.loads, previous.read_text().splitlines())}
+            new = {r['k']: r['v'] for r in map(json.loads, a.read_text().splitlines())}
+            changed = [key for key, value in old.items() if new.get(key) != value]
+            if changed:
+                sys.exit(f'{profile}: existing reference rows changed: {changed}')
         shutil.copyfile(a, target/f'{profile}.jsonl')
         print('published', target/f'{profile}.jsonl')
     return 0
@@ -150,6 +158,8 @@ def unbound(work):
 def gate(work):
     code = unbound(work)
     for profile in PROFILES:
+        subprocess.run([sys.executable, str(PROBE/'block_report.py'), str(reference_root(PROBE)/f'{profile}.jsonl'),
+                        str(work/'unbound'/f'{profile}.jsonl')], check=True)
         code |= subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)/f'{profile}.jsonl'),
                                 str(work/'unbound'/f'{profile}.jsonl'), '--residuals', str(PROBE/'residuals.json'),
                                 '--profile', profile]).returncode

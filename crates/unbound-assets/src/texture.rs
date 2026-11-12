@@ -215,6 +215,9 @@ pub struct TextureSettings {
     /// 3 low quality.
     #[serde(default)]
     pub compression: i32,
+    /// The selected platform's `compressionQuality`, clamped to Unity's 0..100 range.
+    #[serde(default = "default_compression_quality")]
+    pub compression_quality: i32,
     /// `crunchedCompression` of the build target.
     #[serde(default)]
     pub crunched: bool,
@@ -224,6 +227,10 @@ pub struct TextureSettings {
     /// `pSDRemoveMatte`: take Photoshop's white matte out of a flattened image with transparency.
     #[serde(default)]
     pub remove_matte: bool,
+}
+
+fn default_compression_quality() -> i32 {
+    50
 }
 
 fn one_by_one() -> (u32, u32) {
@@ -289,6 +296,11 @@ impl TextureSettings {
             .and_then(|e| boolean(e, "crunchedCompression"))
             .or_else(|| boolean(imp, "crunchedCompression"))
             .unwrap_or(false);
+        let compression_quality = entry
+            .and_then(|e| int(e, "compressionQuality"))
+            .or_else(|| int(imp, "compressionQuality"))
+            .unwrap_or(50)
+            .clamp(0, 100) as i32;
         let split_alpha = entry
             .and_then(|e| boolean(e, "allowsAlphaSplitting"))
             .unwrap_or(false);
@@ -384,6 +396,7 @@ impl TextureSettings {
             uncompressed,
             explicit_format: platform_format(imp, build_target),
             compression,
+            compression_quality,
             crunched,
             split_alpha,
             remove_matte: boolean(imp, "pSDRemoveMatte").unwrap_or(false),
@@ -561,6 +574,11 @@ pub struct ProjectCompression {
     /// 1 ETC, 2 ETC2, 3 ASTC, 5 DXTC, ...): the first of ProjectSettings'
     /// `m_BuildTargetDefaultTextureCompressionFormat` entry for it.
     pub default_formats: Vec<(String, i32)>,
+    #[serde(default)]
+    pub encoders: unbound_compat::TextureCompressionRules,
+    /// EditorSettings.bc7TextureCompressor: 1 selects ISPC, 0 or 2 selects bc7e.
+    #[serde(default)]
+    pub bc7_compressor: i32,
 }
 
 /// `TextureCompressionFormat.ETC`.
@@ -572,6 +590,27 @@ impl ProjectCompression {
     /// Reads `ProjectSettings/ProjectSettings.asset` of a project (no entries when missing).
     pub fn read(project: &Path) -> Self {
         let mut out = Self::default();
+        out.encoders = std::fs::read_to_string(project.join("ProjectSettings/ProjectVersion.txt"))
+            .ok()
+            .and_then(|text| {
+                text.lines().find_map(|line| {
+                    line.strip_prefix("m_EditorVersion: ")
+                        .and_then(|v| v.trim().parse().ok())
+                })
+            })
+            .map(unbound_compat::TextureCompressionRules::for_version)
+            .unwrap_or_default();
+        out.bc7_compressor =
+            std::fs::read_to_string(project.join("ProjectSettings/EditorSettings.asset"))
+                .ok()
+                .and_then(|text| {
+                    text.lines().find_map(|line| {
+                        line.trim()
+                            .strip_prefix("m_Bc7TextureCompressor: ")
+                            .and_then(|v| v.parse().ok())
+                    })
+                })
+                .unwrap_or(0);
         let player = std::fs::read_to_string(project.join("ProjectSettings/ProjectSettings.asset"))
             .ok()
             .and_then(|text| unbound_yaml::parse_documents(&text).ok())
@@ -616,7 +655,12 @@ impl ProjectCompression {
 
     /// What of the settings imports for `build_target` depend on (part of the cache key).
     fn key(&self, build_target: &str) -> String {
-        format!("compression{:?}", self.default_format(build_target))
+        format!(
+            "compression{:?}/{:?}/bc7{}",
+            self.default_format(build_target),
+            self.encoders,
+            self.bc7_compressor
+        )
     }
 }
 
@@ -758,12 +802,26 @@ pub fn storage(
 
 /// Compresses `texture` to `format` and replaces its pixels by what the blocks decode to (BC6H
 /// keeps its float colour, Unbound has no float decoding of the blocks, and reads alpha 1).
-fn compress_blocks(texture: &mut ImportedTexture, format: BlockFormat) {
+fn compress_blocks(
+    texture: &mut ImportedTexture,
+    format: BlockFormat,
+    project: &ProjectCompression,
+) {
     let mips: Vec<serde_bytes::ByteBuf> = texture
         .mips
         .iter()
         .map(|m| {
-            serde_bytes::ByteBuf::from(if format == BlockFormat::Bc6h {
+            serde_bytes::ByteBuf::from(if project.encoders.measured_import_encoders {
+                bcn::compress_import_level(
+                    format,
+                    &m.data,
+                    m.width,
+                    m.height,
+                    texture.settings.compression_quality,
+                    texture.srgb,
+                    project.bc7_compressor,
+                )
+            } else if format == BlockFormat::Bc6h {
                 bcn::compress_level_f32(&m.data, m.width, m.height)
             } else {
                 bcn::compress_level(format, &m.data, m.width, m.height)
@@ -784,7 +842,7 @@ fn compress_blocks(texture: &mut ImportedTexture, format: BlockFormat) {
     if format.approximates_editor() {
         texture.approximation = Some(format!(
             "{format:?} textures are compressed by Unbound's own encoder: their format and sizes \
-             are the Editor's, their texels differ slightly from the Editor's blocks"
+             are the Editor's; exact blocks are not guaranteed for every input"
         ));
     }
     texture.blocks = Some(Blocks { format, mips });
@@ -1005,7 +1063,8 @@ impl Importer for TextureImporter {
     // 21: Photoshop files are read by Unbound's own reader (16-bit channels round to bytes).
     // 22: Photoshop gray reads opaque, Remove Matte applies.
     // 23: Android imports are ETC1/ETC2-compressed in the Editor's formats (`blocks`).
-    const VERSION: u32 = 24;
+    // 25: measured BC import encoders and per-platform compressor quality.
+    const VERSION: u32 = 25;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -1028,7 +1087,7 @@ impl Importer for TextureImporter {
                 }
             }
             Storage::Blocks(format) => {
-                compress_blocks(&mut texture, format);
+                compress_blocks(&mut texture, format, &self.project);
                 // Unbound's renderer samples no ETC: a GPU with BC formats gets BC7 blocks of
                 // what the ETC blocks decode to (4x smaller than RGBA8).
                 if format.is_etc() && self.compress {

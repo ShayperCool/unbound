@@ -1416,3 +1416,36 @@ fn etc_blocks_decode_as_the_specification() {
     let rgb = decode_blocks(BlockFormat::Etc1, &block[8..], 4, 4);
     assert!(rgb.chunks(4).all(|t| t == [138, 70, 36, 255]), "{rgb:?}");
 }
+
+#[test]
+fn compressor_quality_follows_the_active_platform_override() {
+    let meta = unbound_yaml::parse_value("TextureImporter:\n  compressionQuality: 11\n  platformSettings:\n  - buildTarget: DefaultTexturePlatform\n    compressionQuality: 49\n  - buildTarget: Standalone\n    overridden: 1\n    compressionQuality: 100\n  - buildTarget: Android\n    overridden: 0\n    compressionQuality: 0\n").unwrap();
+    assert_eq!(
+        TextureSettings::read(&meta, "Standalone").compression_quality,
+        100
+    );
+    assert_eq!(
+        TextureSettings::read(&meta, "Android").compression_quality,
+        49
+    );
+    assert_eq!(
+        TextureSettings::read(&meta, "iPhone").compression_quality,
+        49
+    );
+}
+
+#[test]
+fn compression_cache_key_includes_encoder_selection() {
+    let project = ProjectCompression::read(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/texturecompression")
+            .as_path(),
+    );
+    assert!(project.encoders.measured_import_encoders);
+    let mut alternative = project.clone();
+    alternative.bc7_compressor = 1;
+    assert_ne!(project.key("Standalone"), alternative.key("Standalone"));
+    alternative = project.clone();
+    alternative.encoders = unbound_compat::TextureCompressionRules::default();
+    assert_ne!(project.key("Standalone"), alternative.key("Standalone"));
+}
