@@ -6932,41 +6932,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.UIElements.VectorImage",
-    "Message": "F:atlas:UnityEngine.Texture2D attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.VectorImage."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.VectorImage",
-    "Message": "F:indices:System.UInt16[] attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.VectorImage."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.VectorImage",
-    "Message": "F:size:UnityEngine.Vector2 attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.VectorImage."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.VectorImage",
-    "Message": "F:version:System.Int32 attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.VectorImage."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.VectorImage",
-    "Message": "F:vertices:UnityEngine.UIElements.VectorImageVertex[] attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.VectorImage."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.UIElements.VisualElement",
     "Message": "P:UnityEngine.UIElements.IResolvedStyle.unityBackgroundScaleMode():UnityEngine.UIElements.StyleEnum`1<UnityEngine.ScaleMode> attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"unityBackgroundScaleMode is deprecated. Use background-* properties instead.\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.VisualElement."
@@ -8818,13 +8783,6 @@
     "Type": "UnityEngine.UIElements.ThemeStyleSheet",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
     "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEngine.UIElements.ThemeStyleSheet."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEngine.UIElements.VectorImage",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEngine.UIElements.VectorImage."
   },
   {
     "Release": "6000.0.71f1",

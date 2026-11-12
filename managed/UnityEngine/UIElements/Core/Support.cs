@@ -40,20 +40,48 @@ namespace UnityEngine
 
 namespace UnityEngine.UIElements
 {
+    [Serializable]
     public sealed partial class VectorImage : ScriptableObject
     {
-        internal int version;
-        internal Texture2D atlas;
-        /// <summary>The image's geometry (Painter2D.SaveToVectorImage writes it): UIR vertices
-        /// relative to the image's top-left corner, and triangle indices.</summary>
-        internal VectorImageVertex[] vertices;
-        internal ushort[] indices;
+        [SerializeField] internal int version;
+        /// <summary>The texture its gradients sample (null for an image without gradients).</summary>
+        [SerializeField] internal Texture2D atlas;
+        /// <summary>The image's geometry (Painter2D.SaveToVectorImage or an SVG importer writes it):
+        /// UIR vertices relative to the image's top-left corner, and triangle indices.</summary>
+        [SerializeField] internal VectorImageVertex[] vertices;
+        [SerializeField] internal ushort[] indices;
+        /// <summary>Where each gradient lies in <see cref="atlas"/> and how it is sampled.</summary>
+        [SerializeField] internal GradientSettings[] settings;
         /// <summary>The image's size in points (its vector geometry is drawn scaled to the element).</summary>
-        internal Vector2 size;
+        [SerializeField] internal Vector2 size;
 
         public float width => size.x;
 
         public float height => size.y;
+    }
+
+    /// <summary>A gradient of a VectorImage: its type, how texture coordinates outside 0..1 are
+    /// addressed, the radial focus (-1..1) and the texels of its row in the image's atlas.</summary>
+    [Serializable]
+    internal partial struct GradientSettings
+    {
+        public GradientType gradientType;
+        public AddressMode addressMode;
+        public Vector2 radialFocus;
+        public RectInt location;
+    }
+
+    internal enum GradientType
+    {
+        Linear,
+        Radial,
+    }
+
+    internal enum AddressMode
+    {
+        Wrap,
+        Clamp,
+        Mirror,
     }
 
     [Serializable]

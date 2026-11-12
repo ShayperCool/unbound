@@ -49,12 +49,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.UxmlTraits.ctor"); }
         }
     }
-    internal enum AddressMode
-    {
-        Wrap = 0,
-        Clamp = 1,
-        Mirror = 2,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class AdvanceTextGeneratorDecoratorAttribute : global::UnityEngine.PropertyAttribute
     {
@@ -1785,20 +1779,6 @@ namespace UnityEngine.UIElements
         }
     }
     internal unsafe delegate global::UnityEngine.UIElements.ISerializableJsonDictionary GetViewDataDictionary();
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct GradientSettings
-    {
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.GradientType gradientType;
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.AddressMode addressMode;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 radialFocus;
-        [global::Unbound.Stub] public global::UnityEngine.RectInt location;
-    }
-    internal enum GradientType
-    {
-        Linear = 0,
-        Radial = 1,
-    }
     [global::Unbound.Stub]
     public unsafe partial class GroupBox : global::UnityEngine.UIElements.BindableElement, global::UnityEngine.UIElements.IGroupBox
     {
@@ -2841,7 +2821,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal MeshGenerationContext(global::UnityEngine.UIElements.UIR.MeshWriteDataPool meshWriteDataPool, global::UnityEngine.UIElements.UIR.EntryRecorder entryRecorder, global::UnityEngine.UIElements.UIR.TempMeshAllocatorImpl allocator, global::UnityEngine.UIElements.UIR.MeshGenerationDeferrer meshGenerationDeferrer, global::UnityEngine.UIElements.MeshGenerationNodeManager meshGenerationNodeManager) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.ctor"); }
         [global::Unbound.Stub] public void AllocateTempMesh(int vertexCount, int indexCount, out global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices, out global::Unity.Collections.NativeSlice<ushort> indices) { vertices = default; indices = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.AllocateTempMesh"); }
-        [global::Unbound.Stub] public void DrawVectorImage(global::UnityEngine.UIElements.VectorImage vectorImage, global::UnityEngine.Vector2 offset, global::UnityEngine.UIElements.Angle rotationAngle, global::UnityEngine.Vector2 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.DrawVectorImage"); }
         [global::Unbound.Stub] public void DrawText(string text, global::UnityEngine.Vector2 pos, float fontSize, global::UnityEngine.Color color, global::UnityEngine.TextCore.Text.FontAsset font = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.DrawText"); }
         [global::Unbound.Stub] public void GetTempMeshAllocator(out global::UnityEngine.UIElements.TempMeshAllocator allocator) { allocator = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.GetTempMeshAllocator"); }
         [global::Unbound.Stub] public void InsertMeshGenerationNode(out global::UnityEngine.UIElements.MeshGenerationNode node) { node = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.InsertMeshGenerationNode"); }
@@ -5830,10 +5809,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.UxmlTraits.ctor"); }
         }
-    }
-    unsafe partial class VectorImage
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.GradientSettings[] settings;
     }
     internal unsafe delegate void VersionChangedDelegate(global::UnityEngine.UIElements.VisualManager manager, in global::UnityEngine.UIElements.VisualNodeHandle handle, global::UnityEngine.UIElements.VersionChangeType type);
     unsafe partial class VerticalVirtualizationController<T>
