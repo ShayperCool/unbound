@@ -311,8 +311,14 @@ namespace Unbound.Runtime
         internal bool Placed;
         internal int X;
         internal int Y;
+        /// <summary>Stored a quarter turn round in the texture (CharacterInfo.flipped): a glyph wider
+        /// than tall, as Unity stores them. Its texture u runs up the glyph, v along it.</summary>
+        internal bool Flipped;
 
         internal bool HasPixels => Width > 0 && Height > 0 && Coverage != null;
+        /// <summary>The size the glyph takes in the texture.</summary>
+        internal int StoredWidth => Flipped ? Height : Width;
+        internal int StoredHeight => Flipped ? Width : Height;
     }
 
     /// <summary>
@@ -374,6 +380,7 @@ namespace Unbound.Runtime
                 glyph.Width = rendered.Width;
                 glyph.Height = rendered.Height;
                 glyph.Coverage = rendered.Coverage;
+                glyph.Flipped = rendered.Height < rendered.Width;
                 break;
             }
             m_Glyphs[key] = glyph;
@@ -449,7 +456,8 @@ namespace Unbound.Runtime
             return true;
         }
 
-        static int ByHeight(AtlasGlyph a, AtlasGlyph b) => b.Height != a.Height ? b.Height.CompareTo(a.Height) : b.Width.CompareTo(a.Width);
+        static int ByHeight(AtlasGlyph a, AtlasGlyph b) =>
+            b.StoredHeight != a.StoredHeight ? b.StoredHeight.CompareTo(a.StoredHeight) : b.StoredWidth.CompareTo(a.StoredWidth);
 
         void Rebuild(List<AtlasGlyph> pending, HashSet<GlyphKey> requested)
         {
@@ -492,7 +500,7 @@ namespace Unbound.Runtime
             int pad = Padding, x = 0, y = 0, shelf = 0;
             foreach (var g in glyphs)
             {
-                int w = g.Width + 2 * pad, h = g.Height + 2 * pad;
+                int w = g.StoredWidth + 2 * pad, h = g.StoredHeight + 2 * pad;
                 if (w > width || h > height) return false;
                 if (x + w > width)
                 {
@@ -512,7 +520,7 @@ namespace Unbound.Runtime
             // Every glyph has a cell of its own with `pad` empty pixels on each side: its quad
             // samples them, and a bilinear sample at the quad's edge reads only its own cell's
             // padding (with cells sharing one padding gap, a neighbour's edge bled in).
-            int pad = Padding, w = g.Width + 2 * pad, h = g.Height + 2 * pad;
+            int pad = Padding, w = g.StoredWidth + 2 * pad, h = g.StoredHeight + 2 * pad;
             int width = Texture.m_Width, height = Texture.m_Height;
             if (w > width || h > height) return false;
             if (m_ShelfX + w > width)
@@ -531,11 +539,23 @@ namespace Unbound.Runtime
             return true;
         }
 
-        /// <summary>Copies a glyph's coverage (top row first) into the texture (bottom row first).</summary>
+        /// <summary>Copies a glyph's coverage (top row first) into the texture (bottom row first); a
+        /// flipped glyph's column c of row r (from the top) goes to texture (X + Height - 1 - r, Y + c).</summary>
         void Blit(AtlasGlyph g)
         {
             var pixels = Texture.m_Pixels;
             int width = Texture.m_Width;
+            if (g.Flipped)
+            {
+                for (int row = 0; row < g.Height; row++)
+                {
+                    int u = g.X + g.Height - 1 - row;
+                    int src = row * g.Width;
+                    for (int column = 0; column < g.Width; column++)
+                        pixels[(g.Y + column) * width + u] = new Color32(255, 255, 255, g.Coverage[src + column]);
+                }
+                return;
+            }
             for (int row = 0; row < g.Height; row++)
             {
                 int y = g.Y + g.Height - 1 - row;
@@ -550,7 +570,7 @@ namespace Unbound.Runtime
         internal Rect UV(AtlasGlyph g, int pad = 0)
         {
             float w = Texture.m_Width, h = Texture.m_Height;
-            return new Rect((g.X - pad) / w, (g.Y - pad) / h, (g.Width + 2 * pad) / w, (g.Height + 2 * pad) / h);
+            return new Rect((g.X - pad) / w, (g.Y - pad) / h, (g.StoredWidth + 2 * pad) / w, (g.StoredHeight + 2 * pad) / h);
         }
 
         /// <summary>A glyph as CharacterInfo: its cell with the padding on every side (uvs and
@@ -569,7 +589,7 @@ namespace Unbound.Runtime
                 uv = g.Placed ? UV(g, pad) : default,
                 vert = new Rect(g.Left - pad, g.Top + pad, g.Width + 2 * pad, -(g.Height + 2 * pad)),
                 width = g.Advance,
-                flipped = false,
+                flipped = g.Flipped,
             };
 #pragma warning restore 618
         }

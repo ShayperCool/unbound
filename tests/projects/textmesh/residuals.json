@@ -1,6 +1,0 @@
-{
- "Atlas rotation remains different for W: UV dimensions and the obsolete CharacterInfo.uv rectangle differ; glyph metrics, oriented coverage and mesh geometry match. Follow-up: atlas packing parity": [
-  "case/words/mesh/uvTexels",
-  "characterInfo/87"
- ]
-}

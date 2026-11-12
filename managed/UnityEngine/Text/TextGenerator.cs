@@ -892,9 +892,10 @@ namespace Unbound.Runtime
             {
                 var uv = item.Glyph.Placed ? font.Atlas.UV(item.Glyph, pad) : default;
                 bl = new Vector2(uv.xMin, uv.yMin);
-                br = new Vector2(uv.xMax, uv.yMin);
                 tr = new Vector2(uv.xMax, uv.yMax);
-                tl = new Vector2(uv.xMin, uv.yMax);
+                // A flipped glyph (CharacterInfo.flipped) has its top left and bottom right swapped.
+                br = item.Glyph.Flipped ? new Vector2(uv.xMin, uv.yMax) : new Vector2(uv.xMax, uv.yMin);
+                tl = item.Glyph.Flipped ? new Vector2(uv.xMax, uv.yMin) : new Vector2(uv.xMin, uv.yMax);
             }
             else
             {

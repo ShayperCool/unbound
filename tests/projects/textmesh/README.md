@@ -34,8 +34,8 @@ python3 tests/projects/textmesh/run.py publish native-a native-b  # identical re
 python3 tests/projects/textmesh/run.py gate                       # engine vs Reference/
 ```
 
-Numbers compare with an absolute tolerance of 1e-4. `residuals.json` preserves two raw differences:
-Unity rotates `W` in its atlas, so its UV dimensions and obsolete `CharacterInfo.uv` rectangle
-differ. Metrics, glyph coverage, advances, geometry, tab stops, anchors and alignment match.
-`tests/projects/glyphraster` separately compares oriented alpha bytes across fonts, sizes and
-styles. The images are printed as measurements; atlas packing parity remains open.
+Numbers compare with an absolute tolerance of 1e-4; every value matches. A glyph wider than tall
+(`W`) is stored a quarter turn round in the font texture (`CharacterInfo.flipped`), which its UV
+sizes and obsolete `CharacterInfo.uv` rectangle show. `tests/projects/glyphraster` separately
+compares oriented alpha bytes across fonts, sizes and styles. The images are printed as
+measurements. Where in the texture glyphs are packed, and when it grows, is not recorded.
