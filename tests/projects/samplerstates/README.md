@@ -82,6 +82,14 @@ buffer), with 24 bits and with `D16_UNorm_S8_UInt` only the left one; `.format` 
 target's `depthStencilFormat` after Create (the latter reads `D24_UNorm_S8_UInt` on both
 devices).
 
+`Compute.<kernel>.<target>` (after those): compute kernels (`DepthCompute.compute`) reading each
+depth target: `Compare` compares both texels against 0.5 through the texture's own comparison
+sampler, `CompareLoad` compares the first and loads both, `LoadOnly` loads both. On Vulkan a
+`Shadowmap` target compares (greater or equal) and a `Depth` target reads its stored depth, as
+in graphics programs; on OpenGL Core the comparison of the four targets follows no one rule
+(recorded as residuals). Loads read the stored 16-bit depth on both devices; Unbound refuses a
+kernel that compares and loads a texture on the OpenGL device.
+
     python3 tests/projects/samplerstates/run.py native --label a   # the Editor, twice (a-1, a-2)
     python3 tests/projects/samplerstates/run.py publish a-1 a-2
     python3 tests/projects/samplerstates/run.py check

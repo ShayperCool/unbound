@@ -199,7 +199,8 @@ impl ShaderCompiler {
         let mut defines = self.defines(&p, &selected, 50, true, "SHADER_STAGE_COMPUTE");
         defines.extend(declared.defines.iter().cloned());
         let source = self.preprocess(&p, &defines)?.text;
-        let hash = kernel_cache_key(&source, kernel, &selected, storage_formats);
+        let opengl = self.settings.opengl_shading_language;
+        let hash = kernel_cache_key(&source, kernel, &selected, storage_formats, opengl);
         let cached = self
             .settings
             .cache_dir
@@ -212,7 +213,7 @@ impl ShaderCompiler {
             return Ok(Arc::new(compiled));
         }
         let spv = self.glslang(&source, shaderc::ShaderKind::Compute, kernel, &program.file)?;
-        let mut compiled = fit_kernel(&spv, storage_formats)
+        let mut compiled = fit_kernel(&spv, storage_formats, opengl)
             .with_context(|| format!("kernel `{kernel}` of {}", program.file.display()))?;
         compiled.keywords = selected;
         if let Some(path) = &cached {
@@ -321,7 +322,13 @@ fn integer_samplers(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariabl
 
 /// Binds a kernel's resources in group 0 by order, reads its uniform blocks, sets its RW
 /// textures' formats and access, and writes WGSL.
-fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<CompiledKernel> {
+/// `opengl_shading_language`: the kernel runs as OpenGL shading language
+/// (`Settings::opengl_shading_language`), which cannot read a compared texture with `Load`.
+fn fit_kernel(
+    spv: &[u32],
+    storage_formats: &[(String, String)],
+    opengl_shading_language: bool,
+) -> Result<CompiledKernel> {
     // A texture sampled through several samplers: a variable for each (the renderer binds a
     // resource by its name, the texture's).
     let primary = crate::samplers::primary_samplers(&crate::samplers::sampled_pairs(spv)?);
@@ -334,6 +341,9 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
     .words;
     // Compute programs have no clip space.
     let mut module = parse(&words, crate::fit::ClipSpace::Renderer).context("compute program")?;
+    if opengl_shading_language {
+        crate::fit::loads_no_compared_texture(&module)?;
+    }
     let entry = module
         .entry_points
         .iter()
@@ -511,6 +521,7 @@ fn kernel_cache_key(
     kernel: &str,
     keywords: &[String],
     storage_formats: &[(String, String)],
+    opengl_shading_language: bool,
 ) -> String {
     fn field(h: &mut blake3::Hasher, bytes: &[u8]) {
         h.update(&(bytes.len() as u64).to_le_bytes());
@@ -519,6 +530,7 @@ fn kernel_cache_key(
     let mut h = blake3::Hasher::new();
     h.update(b"kernel-v2");
     h.update(&FORMAT_VERSION.to_le_bytes());
+    h.update(&[opengl_shading_language as u8]);
     field(&mut h, source.as_bytes());
     field(&mut h, kernel.as_bytes());
     h.update(&(keywords.len() as u64).to_le_bytes());
@@ -549,11 +561,34 @@ mod tests {
         let keys =
             |words: &[&str]| -> Vec<String> { words.iter().map(|w| w.to_string()).collect() };
         // Field boundaries move without the bytes changing: every key must differ.
-        let a = kernel_cache_key("s", "CSMain", &keys(&[]), &rw(&[("ab", "Rgba8Unorm")]));
-        let b = kernel_cache_key("s", "CSMain", &keys(&[]), &rw(&[("a", "bRgba8Unorm")]));
-        let c = kernel_cache_key("s", "CSMai", &keys(&[]), &rw(&[("nab", "Rgba8Unorm")]));
-        let d = kernel_cache_key("s", "CSMain", &keys(&["A B"]), &rw(&[]));
-        let e = kernel_cache_key("s", "CSMain", &keys(&["A", "B"]), &rw(&[]));
+        let a = kernel_cache_key(
+            "s",
+            "CSMain",
+            &keys(&[]),
+            &rw(&[("ab", "Rgba8Unorm")]),
+            false,
+        );
+        let b = kernel_cache_key(
+            "s",
+            "CSMain",
+            &keys(&[]),
+            &rw(&[("a", "bRgba8Unorm")]),
+            false,
+        );
+        let c = kernel_cache_key(
+            "s",
+            "CSMai",
+            &keys(&[]),
+            &rw(&[("nab", "Rgba8Unorm")]),
+            false,
+        );
+        let d = kernel_cache_key("s", "CSMain", &keys(&["A B"]), &rw(&[]), false);
+        let e = kernel_cache_key("s", "CSMain", &keys(&["A", "B"]), &rw(&[]), false);
+        // A kernel compiled for OpenGL's shading language is cached apart.
+        assert_ne!(
+            kernel_cache_key("s", "CSMain", &keys(&[]), &rw(&[]), false),
+            kernel_cache_key("s", "CSMain", &keys(&[]), &rw(&[]), true)
+        );
         let all = [&a, &b, &c, &d, &e];
         for (i, x) in all.iter().enumerate() {
             for y in &all[i + 1..] {
@@ -562,7 +597,13 @@ mod tests {
         }
         assert_eq!(
             a,
-            kernel_cache_key("s", "CSMain", &keys(&[]), &rw(&[("ab", "Rgba8Unorm")]))
+            kernel_cache_key(
+                "s",
+                "CSMain",
+                &keys(&[]),
+                &rw(&[("ab", "Rgba8Unorm")]),
+                false
+            )
         );
     }
 

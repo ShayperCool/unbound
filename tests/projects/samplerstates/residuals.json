@@ -14,5 +14,16 @@
  "A depth buffer of 16 bits filtered linearly reads 26240/65535 in the Editor (0.25 is stored as 16384/65535); Unbound stores the same 16 bits and reads 0.400392 for 0.400397 (suspected: it filters a float copy of them)": [
   "DepthChannels.splitLinear.raw",
   "DepthChannels.mapLinear.raw"
+ ],
+ "A compute kernel's comparison of the depth targets on the OpenGL Core Editor follows no one rule (the point Depth target compares greater or equal, the bilinear Depth and the point Shadowmap targets read the stored depth, the bilinear Shadowmap compares less or equal as Unbound does; unexplained, suspected texture state left by the earlier draws); Unbound compares less or equal": [
+  "Compute.Compare.split",
+  "Compute.Compare.splitLinear",
+  "Compute.Compare.map"
+ ],
+ "A compute kernel that compares a texture and reads it with Load runs in the OpenGL Core Editor; Unbound refuses it on the OpenGL device (OpenGL's shading language cannot Load a depth texture), as it refuses such graphics programs": [
+  "Compute.CompareLoad.split",
+  "Compute.CompareLoad.splitLinear",
+  "Compute.CompareLoad.map",
+  "Compute.CompareLoad.mapLinear"
  ]
 }

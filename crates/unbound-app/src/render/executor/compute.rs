@@ -1177,6 +1177,28 @@ fn main() {
                             Some(PropertyValue::Image { handle, .. }) => *handle,
                             _ => 0,
                         };
+                        // A depth slot (compared, or read as depth): the texture's depth buffer when
+                        // its shape is the slot's, else a far-plane default, as graphics programs
+                        // read one (the float copy of a depth target is not a depth texture).
+                        if sample == "depth" {
+                            let cube_slot = *dim == TextureDim::Cube;
+                            let depth = self
+                                .textures
+                                .get(&handle)
+                                .filter(|t| texture_dimension(t) == *dim)
+                                .and_then(|t| Some((t.texture.clone(), t.depth_sample.clone()?)));
+                            let (source, view) = match depth {
+                                Some((texture, view)) => (Some(texture), view),
+                                None => {
+                                    if handle != 0 {
+                                        self.warn_once(format!("kdepth{}{}{handle}", d.kernel, r.name), || format!("kernel `{}`: depth texture `{}` is given render texture {handle}, which has no depth buffer of the slot's shape: it reads the far plane", d.kernel, r.name));
+                                    }
+                                    (None, self.depth_default(cube_slot))
+                                }
+                            };
+                            bound.push((r.binding, Bound::View(source, view)));
+                            continue;
+                        }
                         // Integer textures are read by 2D integer slots of their signedness; any
                         // other pairing with an integer slot or texture reads the slot's default.
                         let wanted = match sample.as_str() {
@@ -1270,7 +1292,7 @@ fn main() {
                     }
                     ResourceKind::Sampler {
                         texture,
-                        comparison: _,
+                        comparison,
                         unfiltered,
                     } => {
                         let texture = texture.as_ref().and_then(|t| {
@@ -1296,6 +1318,13 @@ fn main() {
                             .unwrap_or_else(|| {
                                 gpu.sampler_defaults[resource_index].expect("sampler fallback")
                             });
+                        // A comparison sampler compares less-or-equal through the texture's state,
+                        // as a graphics program's does (mirrored with a reversed depth buffer).
+                        let key = if *comparison {
+                            super::SamplerKey { compare: 4, ..key }
+                        } else {
+                            key
+                        };
                         // One sampling an integer texture reads texels unfiltered.
                         let key = if *unfiltered {
                             super::SamplerKey {

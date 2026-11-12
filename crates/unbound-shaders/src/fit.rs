@@ -2601,7 +2601,7 @@ fn rewrap_fragment_outputs(
 
 /// Refuses a program that reads a texture it also compares with `Load`: glslang reads it from
 /// the depth texture, which OpenGL's shading language cannot (the other devices read it).
-fn loads_no_compared_texture(module: &Module) -> Result<()> {
+pub(crate) fn loads_no_compared_texture(module: &Module) -> Result<()> {
     let functions = module
         .functions
         .iter()
