@@ -65,7 +65,8 @@ use std::ffi::c_void;
 /// 56: retained disabled audio components through the filter stage bypass bit, and the
 /// explicit Stop history flag.
 /// 58: `gi_automatic_uvs` (realtime lightmap UVs of renderers with Optimize Realtime UVs).
-pub const NATIVE_API_VERSION: u32 = 58;
+/// 59: `gi_automatic_uvs` takes the mesh as it is and the instance's matrix.
+pub const NATIVE_API_VERSION: u32 = 59;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -272,11 +273,13 @@ pub struct NativeApi {
     /// context current; its answer.
     pub plugin_query: extern "C" fn(*const c_void, i32) -> i32,
     // Version 58: automatic realtime lightmap charts.
-    /// (scene, system, renderer within the system, positions and shading normals of an
-    /// instance that is not turned, with its scale applied (3 floats each), lightmap UVs (2
+    // Version 59: the mesh as it is and the instance's matrix.
+    /// (scene, system, renderer within the system, the mesh's positions and shading normals
+    /// (3 floats each), lightmap UVs (2
     /// floats each), vertex count, triangle indices, index count, world units per texel,
     /// minimum chart size in texels, Max Distance, Max Angle in degrees, flags (1: Ignore
-    /// Normals), out UVs (2 floats per vertex), out error): the realtime lightmap UVs of a
+    /// Normals), the instance's matrix (9 floats, column by column), out UVs (2 floats per
+    /// vertex), out error): the realtime lightmap UVs of a
     /// renderer with Optimize Realtime UVs (`realtime_gi::realtime_uvs` with automatic
     /// charts); 0 on success.
     pub gi_automatic_uvs: extern "C" fn(
@@ -294,6 +297,7 @@ pub struct NativeApi {
         f32,
         f32,
         i32,
+        *const f32,
         *mut f32,
         *mut NativeBuffer,
     ) -> i32,
@@ -539,6 +543,7 @@ extern "C" fn gi_automatic_uvs(
     max_distance: f32,
     max_angle: f32,
     flags: i32,
+    matrix: *const f32,
     out: *mut f32,
     error: *mut NativeBuffer,
 ) -> i32 {
@@ -552,29 +557,37 @@ extern "C" fn gi_automatic_uvs(
                 && min_chart_texels >= 0
                 && !positions.is_null()
                 && !normals.is_null()
+                && !matrix.is_null()
                 && !uvs.is_null()
                 && !indices.is_null()
                 && !out.is_null(),
             "bad automatic realtime lightmap UV arguments"
         );
         let n = vertices as usize;
-        let (positions, normals, uvs, triangles, out) = unsafe {
+        let (positions, normals, uvs, triangles, matrix, out) = unsafe {
             (
                 std::slice::from_raw_parts(positions as *const [f32; 3], n),
                 std::slice::from_raw_parts(normals as *const [f32; 3], n),
                 std::slice::from_raw_parts(uvs as *const [f32; 2], n),
                 std::slice::from_raw_parts(indices as *const [u32; 3], index_count as usize / 3),
+                *(matrix as *const unbound_gi::instance::Matrix),
                 std::slice::from_raw_parts_mut(out, 2 * n),
             )
         };
+        let (positions, normals) = unbound_gi::instance::apply(&matrix, positions, normals)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "the instance's matrix {matrix:?} is singular or turns a normal to no length (not measured)"
+                )
+            })?;
         let input = crate::realtime_gi::UvInput {
-            positions,
+            positions: &positions,
             uvs,
             triangles,
             pixel_size,
             min_chart_texels: min_chart_texels as u32,
             charts: unbound_gi::realtime_uv::Charts::Automatic {
-                normals,
+                normals: &normals,
                 params: unbound_gi::auto_charts::Params {
                     max_distance,
                     max_angle,

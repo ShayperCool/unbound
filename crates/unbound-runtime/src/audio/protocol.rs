@@ -361,11 +361,11 @@ mod tests {
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
     /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12, 29 input frame versions, 30 a decoded-resampling flag and 31 the imported texture's reported format, without changing these layouts.
     /// Version 32 adds mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 the source-loop listener poses 37 the downloaded audio decoder 38 prepared audio callback buffers and 39 retained MSAA resolves.
-    /// Version 40 adds parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins and 42 legacy glyph bearings, without changing audio layouts; 43 adds the zone startup frame flag and 44 Pitch Shifter Max channels 45 precomputed realtime GI and 46 the driver capabilities reply and 47 the component activation flags and reset command 48 the realtime GI update threshold and 49 realtime GI light probes and 50 the screen's stand-in and 51 the realtime GI environment and 52 directional realtime lightmaps and 53 the realtime GI lights' falloff and 54 the native plugins' frame end and 55 an external texture's mip levels; 56 admits the retained component bypass stage bit; 57 (surround effect state shared across speakers) and 58 (automatic realtime lightmap charts) change no layout here.
+    /// Version 40 adds parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins and 42 legacy glyph bearings, without changing audio layouts; 43 adds the zone startup frame flag and 44 Pitch Shifter Max channels 45 precomputed realtime GI and 46 the driver capabilities reply and 47 the component activation flags and reset command 48 the realtime GI update threshold and 49 realtime GI light probes and 50 the screen's stand-in and 51 the realtime GI environment and 52 directional realtime lightmaps and 53 the realtime GI lights' falloff and 54 the native plugins' frame end and 55 an external texture's mip levels; 56 admits the retained component bypass stage bit; 57 (surround effect state shared across speakers) 58 (automatic realtime lightmap charts) and 59 (their instance matrix) change no layout here.
     /// The managed side pins the same version and refuses every other version.
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_58() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 58);
+    fn the_filter_descriptor_layout_is_native_api_59() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 59);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

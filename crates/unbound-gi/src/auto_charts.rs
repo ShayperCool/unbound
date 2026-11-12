@@ -58,8 +58,7 @@ const TIE: f32 = 1e-5;
 /// its plane.
 const PLANAR: f32 = 1e-5;
 /// Pairs tried per round, and rounds at most: the precompute's own counts, which no renderer
-/// setting changes. The rounds of RoomAuto's shapes stop because fewer than two flat parts are
-/// left; a mesh that would need more rounds is refused (not measured).
+/// setting changes.
 const TRIES_PER_ROUND: u32 = 300;
 const MAX_ROUNDS: usize = 100;
 /// Areas and lengths below this count as none.
@@ -125,10 +124,6 @@ impl Plane {
             n: [-self.n[0], -self.n[1], -self.n[2]],
             d: -self.d,
         }
-    }
-    /// Whether the plane faces as `normal` does, within the cosine.
-    fn faces(&self, normal: V3, cosine: f32) -> bool {
-        dot(self.normal(), normal) >= cosine
     }
     fn distance(&self, p: V3) -> f32 {
         let n = self.normal();
@@ -262,6 +257,8 @@ struct Geometry<'a> {
     max_distance: f32,
     cosine: f32,
     groups: Vec<Group>,
+    /// Set when a test of facing was decided by less than the precompute's rounding.
+    ambiguous: std::cell::Cell<bool>,
 }
 
 fn triangle_area(p: [V3; 3]) -> f32 {
@@ -270,6 +267,18 @@ fn triangle_area(p: [V3; 3]) -> f32 {
 }
 
 impl Geometry<'_> {
+    /// Whether the plane faces as `normal` does, within the cosine. A cosine closer to the
+    /// limit than the rounding of the precompute's normals (and of its cosine of Max Angle)
+    /// could fall on the other side of it there: such a test marks the geometry ambiguous.
+    fn faces(&self, plane: &Plane, normal: V3, cosine: f32) -> bool {
+        let n = plane.normal();
+        let d = dot(n, normal);
+        let terms = (n[0] * normal[0]).abs() + (n[1] * normal[1]).abs() + (n[2] * normal[2]).abs();
+        if (d - cosine).abs() <= COSINE_ROUNDING * terms + 2.0 * f32::EPSILON * cosine.abs() {
+            self.ambiguous.set(true);
+        }
+        d >= cosine
+    }
     fn corners(&self, triangle: usize) -> [V3; 3] {
         self.triangles[triangle].map(|v| self.mesh.positions[v as usize])
     }
@@ -355,8 +364,8 @@ fn boxes_meet(a: (V3, V3), b: (V3, V3)) -> bool {
 }
 
 /// The triangles' groups: triangles that share a vertex, where vertices with one position,
-/// lightmap UV and (unless normals are ignored) normal are one. Groups come in the order of
-/// their lowest vertices.
+/// lightmap UV and (unless normals are ignored) normal are one (tests/projects/realtimegi
+/// RoomTurned, FoldKept and FoldIgnored). Groups come in the order of their lowest vertices.
 fn groups(mesh: &Mesh, ignore_normals: bool) -> Vec<Vec<usize>> {
     let count = mesh.positions.len();
     let mut parent: Vec<usize> = (0..count).collect();
@@ -443,6 +452,7 @@ fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
         max_distance: params.max_distance,
         cosine: (2.0 * (params.max_angle / 360.0) * std::f32::consts::PI).cos(),
         groups: Vec::new(),
+        ambiguous: std::cell::Cell::new(false),
     };
     for triangles in groups(mesh, params.ignore_normals) {
         let mut vertices: Vec<usize> = triangles
@@ -505,11 +515,13 @@ fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
         });
         let index = geometry.groups.len() - 1;
         let mut plane = geometry.fit(&[index]);
-        if !plane.faces(normal, 0.0) {
+        // (A plane nearly across the normal leaves the part not flat; its side does not
+        // matter then.)
+        if dot(plane.normal(), normal) < 0.0 {
             plane = plane.flipped();
         }
         let flat = has_normal
-            && plane.faces(normal, geometry.cosine)
+            && geometry.faces(&plane, normal, geometry.cosine)
             && geometry.reach(index, &plane) <= geometry.max_distance;
         // The share of its area that faces away from its normal.
         let away: f32 = areas
@@ -619,7 +631,7 @@ fn on_plane(
         .copied()
         .filter(|g| !seeds.contains(g))
         .filter(|&g| {
-            plane.faces(geometry.groups[g].normal, geometry.cosine)
+            geometry.faces(&plane, geometry.groups[g].normal, geometry.cosine)
                 && geometry.reach(g, plane) <= geometry.max_distance
         })
         .collect()
@@ -767,19 +779,16 @@ fn join(geometry: &Geometry) -> Result<Joined> {
         }
     }
     let mut neighbours = Neighbours::new(geometry, &candidates);
-    // Two neighbouring groups at a right angle but for rounding: whether their normals face
-    // the same half-space, and so whether they may be joined at all, is the rounding's. Their
-    // cosine is zero in any arithmetic only when each of its terms is: a zero that comes of
-    // terms that cancel is the rounding's too.
+    // Two neighbouring groups whose normals' cosine is so near zero that the precompute's
+    // rounding of their normals could give it the other sign: whether they face the same
+    // half-space, and so whether they may be joined at all, is then the rounding's. A cosine
+    // all of whose terms are zero is zero in any arithmetic.
     for &a in &candidates {
         for &b in neighbours.lists[a].iter().filter(|&&b| b > a) {
             let (na, nb) = (geometry.groups[a].normal, geometry.groups[b].normal);
-            let cosine = dot(na, nb);
             let exactly_zero = (0..3).all(|k| na[k] == 0.0 || nb[k] == 0.0);
             ensure!(
-                exactly_zero
-                    || cosine.abs() > RIGHT_ANGLE_ROUNDING
-                    || !joins_at_right_angle(geometry, a, b),
+                exactly_zero || cosine_settled(na, nb) || !joins_at_right_angle(geometry, a, b),
                 "two faces at a right angle but for rounding are close enough to one plane to be joined: whether the precompute joins them hangs on that rounding"
             );
         }
@@ -788,14 +797,12 @@ fn join(geometry: &Geometry) -> Result<Joined> {
     let mut random = Random::new();
     let mut place = vec![NONE; count];
     let mut tries: Vec<Try> = Vec::with_capacity(TRIES_PER_ROUND as usize);
-    for round in 0.. {
+    // The flat parts that the rounds leave are folded or stay charts of their own, as those
+    // a round does not take (tests/projects/realtimegi RoomTurned, Many: 110 parts).
+    for _ in 0..MAX_ROUNDS {
         if candidates.len() < 2 {
             break;
         }
-        ensure!(
-            round < MAX_ROUNDS,
-            "a mesh whose flat parts take more than {MAX_ROUNDS} rounds to join: what the precompute does past its last round is not measured"
-        );
         let mut best: Option<(f32, Plane, usize, usize, u64)> = None;
         tries.clear();
         for _ in 0..TRIES_PER_ROUND {
@@ -811,10 +818,12 @@ fn join(geometry: &Geometry) -> Result<Joined> {
                 continue;
             }
             let mut plane = geometry.fit(&[a, b]);
-            if !plane.faces(na, 0.0) {
+            if !geometry.faces(&plane, na, 0.0) {
                 plane = plane.flipped();
             }
-            if !plane.faces(na, geometry.cosine) || !plane.faces(nb, geometry.cosine) {
+            if !geometry.faces(&plane, na, geometry.cosine)
+                || !geometry.faces(&plane, nb, geometry.cosine)
+            {
                 continue;
             }
             if geometry.reach(a, &plane) > geometry.max_distance
@@ -1185,8 +1194,16 @@ fn turn(frame: &mut Frame, geometry: &Geometry, triangles: &[usize]) {
     frame.v = normalized(cross(frame.n, frame.u));
 }
 
-/// Normals whose cosine is within this of zero are at a right angle but for rounding.
-const RIGHT_ANGLE_ROUNDING: f32 = 1e-6;
+/// How far the precompute's cosine of two group normals may be from the one here, as a share
+/// of the sum of its terms' magnitudes: each component of a normal may differ in its last units
+/// (`NORMALISATION_ULPS` each way), and the three products are rounded and summed.
+const COSINE_ROUNDING: f32 = (4 * NORMALISATION_ULPS + 4) as f32 * f32::EPSILON;
+
+/// Whether the cosine of two group normals has the same sign in the precompute's rounding.
+fn cosine_settled(a: V3, b: V3) -> bool {
+    let terms = (a[0] * b[0]).abs() + (a[1] * b[1]).abs() + (a[2] * b[2]).abs();
+    dot(a, b).abs() > COSINE_ROUNDING * terms
+}
 
 /// Whether two neighbouring flat groups at a right angle would be joined if their normals
 /// leant towards each other: a plane through both that faces as each does within the angle
@@ -1196,8 +1213,8 @@ fn joins_at_right_angle(geometry: &Geometry, a: usize, b: usize) -> bool {
     let (na, nb) = (geometry.groups[a].normal, geometry.groups[b].normal);
     let fitted = geometry.fit(&[a, b]);
     [fitted, fitted.flipped()].iter().any(|plane| {
-        plane.faces(na, geometry.cosine)
-            && plane.faces(nb, geometry.cosine)
+        geometry.faces(&plane, na, geometry.cosine)
+            && geometry.faces(&plane, nb, geometry.cosine)
             && geometry.reach(a, plane) <= geometry.max_distance
             && geometry.reach(b, plane) <= geometry.max_distance
     })
@@ -1276,15 +1293,13 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
         mesh.uvs.len(),
         mesh.positions.len()
     );
+    // (With a limit of zero the precompute keeps the mesh's own charts: those are not made
+    // here.)
     ensure!(
         params.max_distance > 0.0 && params.max_angle > 0.0,
         "automatic charts with Max Distance {} and Max Angle {}",
         params.max_distance,
         params.max_angle
-    );
-    ensure!(
-        !params.ignore_normals,
-        "automatic charts with Ignore Normals are not measured"
     );
     if mesh
         .triangles
@@ -1306,6 +1321,11 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
     }
     let geometry = geometry(mesh, params);
     let joined = join(&geometry)?;
+    ensure!(
+        !geometry.ambiguous.get(),
+        "a part faces a plane at the Max Angle limit ({} degrees) but for rounding: whether the precompute joins it there hangs on that rounding",
+        params.max_angle
+    );
     let sets = joined.planes.len();
     // Each set's triangles: its groups' in group order.
     let mut triangles = vec![Vec::new(); sets];
@@ -1324,11 +1344,21 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
             frame
         })
         .collect();
+    // A part without area that lies by no chart is a chart of its own with all its vertices
+    // at its corner (tests/projects/realtimegi RoomTurned, BoxSliver and BoxPoint: three points
+    // on a line, and three at one point).
+    let mut empty = vec![false; sets];
+    for (g, group) in geometry.groups.iter().enumerate() {
+        let set = joined.of_group[g];
+        if set >= joined.joined && group.area == 0.0 {
+            empty[set] = true;
+        }
+    }
     let mut uvs = vec![[0.0f32; 2]; mesh.positions.len()];
     let mut corner = vec![[f32::MAX; 2]; sets];
     for v in 0..mesh.positions.len() {
         let set = set_of_vertex[v];
-        if set == NONE {
+        if set == NONE || empty[set] {
             continue;
         }
         uvs[v] = frames[set].project(mesh.positions[v]);
@@ -1338,7 +1368,7 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
     }
     for v in 0..mesh.positions.len() {
         let set = set_of_vertex[v];
-        if set != NONE {
+        if set != NONE && !empty[set] {
             uvs[v] = [uvs[v][0] - corner[set][0], uvs[v][1] - corner[set][1]];
         }
     }
@@ -1350,14 +1380,9 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
     // the choice is not made here, unless both lay the chart out the same way.
     for (g, group) in geometry.groups.iter().enumerate() {
         let set = joined.of_group[g];
-        if set < joined.joined {
+        if set < joined.joined || empty[set] {
             continue;
         }
-        ensure!(
-            group.area > 0.0,
-            "a part of the mesh without area ({} triangles) lies by no chart it could be folded into: what the precompute makes of it is not measured",
-            group.triangles.len()
-        );
         ensure!(
             group.normal != [0.0; 3],
             "a part of the mesh ({} triangles) has no normal to face along",
@@ -1698,7 +1723,7 @@ mod tests {
 
     /// Flat parts that each take a round of their own: a hundred rounds are the most.
     #[test]
-    fn a_mesh_that_needs_more_rounds_than_there_are_fails() {
+    fn the_parts_past_the_last_round_are_charts_of_their_own_in_their_order() {
         let row = |count: usize| {
             let mut shape = Shape::default();
             for i in 0..count {
@@ -1717,10 +1742,84 @@ mod tests {
         };
         let charts = auto_charts(&row(MAX_ROUNDS + 1).mesh(), &LIMITS).unwrap();
         assert_eq!(charts.triangles.len(), MAX_ROUNDS + 1);
-        let error = auto_charts(&row(MAX_ROUNDS + 2).mesh(), &LIMITS)
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("rounds to join"), "{error}");
+        // Two left after the last round: they follow the rounds' charts, lowest first.
+        let charts = auto_charts(&row(MAX_ROUNDS + 5).mesh(), &LIMITS).unwrap();
+        assert_eq!(charts.triangles.len(), MAX_ROUNDS + 5);
+        let firsts: Vec<usize> = charts.triangles[MAX_ROUNDS..]
+            .iter()
+            .map(|t| t[0])
+            .collect();
+        assert!(firsts.windows(2).all(|w| w[0] < w[1]), "{firsts:?}");
+    }
+
+    /// A part that faces a plane at the Max Angle limit but for rounding is not joined or kept
+    /// apart here; limits of zero are not automatic charts at all.
+    #[test]
+    fn a_part_at_the_angle_limit_and_limits_of_zero_fail() {
+        // Two quads 40 degrees apart, each 20 from the plane through both.
+        let (sin, cos) = 20.0f32.to_radians().sin_cos();
+        let mut roof = Shape::default();
+        roof.quad(
+            [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 2.0],
+                [cos, -sin, 2.0],
+                [cos, -sin, 0.0],
+            ],
+            [sin, cos, 0.0],
+        );
+        roof.quad(
+            [
+                [0.0, 0.0, 0.0],
+                [-cos, -sin, 0.0],
+                [-cos, -sin, 2.0],
+                [0.0, 0.0, 2.0],
+            ],
+            [-sin, cos, 0.0],
+        );
+        let at = |max_angle: f32| {
+            auto_charts(
+                &roof.mesh(),
+                &Params {
+                    max_angle,
+                    ..LIMITS
+                },
+            )
+        };
+        assert!(at(20.5).is_ok() && at(19.5).is_ok());
+        let error = at(20.0).unwrap_err().to_string();
+        assert!(error.contains("Max Angle limit"), "{error}");
+        for limits in [
+            Params {
+                max_distance: 0.0,
+                ..LIMITS
+            },
+            Params {
+                max_angle: 0.0,
+                ..LIMITS
+            },
+        ] {
+            let error = auto_charts(&roof.mesh(), &limits).unwrap_err().to_string();
+            assert!(
+                error.contains("automatic charts with Max Distance"),
+                "{error}"
+            );
+        }
+    }
+
+    /// A cosine of normals far from zero against its terms has the precompute's sign; one of
+    /// terms that cancel does not.
+    #[test]
+    fn a_cosine_is_settled_when_rounding_cannot_change_its_sign() {
+        // The +Z and -Y faces of RoomTurned's BoxTurned.
+        let up = [4.257_474_7e-8, -1.117_587_1e-8, 1.0];
+        let down = [1.596_553e-8, -1.0, -6.208_816e-9];
+        assert!(cosine_settled(up, down) && dot(up, down) > 0.0);
+        // The +Z and +X faces of a cube turned 25 degrees (RoomTurned's SharedTurned).
+        let front = [-3.311_369_3e-8, 0.0, 1.0];
+        let side = [1.0, 0.0, 3.311_369_3e-8];
+        assert!(!cosine_settled(front, side));
+        assert!(cosine_settled([0.0, 1.0, 0.0], normalized([0.0, 1.0, 1.0])));
     }
 
     /// Turns a shape in its own mesh: by `yaw` degrees about Y, then by `pitch` about X.
@@ -1960,8 +2059,17 @@ mod tests {
         cube.normals.extend([[0.0, 1.0, 0.0]; 3]);
         cube.uvs.extend([[0.0, 0.0]; 3]);
         cube.triangles.push([24, 25, 26]);
-        let error = auto_charts(&cube.mesh(), &LIMITS).unwrap_err().to_string();
-        assert!(error.contains("without area"), "{error}");
+        // A part without area that lies by no chart is a chart of its own, at its corner.
+        let charts = auto_charts(&cube.mesh(), &LIMITS).unwrap();
+        assert_eq!(charts.triangles.len(), 7);
+        assert_eq!(charts.triangles[6], [12]);
+        assert!(charts.uvs[24..].iter().all(|uv| *uv == [0.0, 0.0]));
+        // Three points on a line are one too.
+        cube.positions[25] = [5.0, 5.2, 5.0];
+        cube.positions[26] = [5.0, 5.4, 5.0];
+        let charts = auto_charts(&cube.mesh(), &LIMITS).unwrap();
+        assert_eq!(charts.triangles[6], [12]);
+        assert!(charts.uvs[24..].iter().all(|uv| *uv == [0.0, 0.0]));
 
         let mut cube = solid([1.0, 1.0, 1.0]);
         for normal in &mut cube.normals[..4] {
@@ -1969,15 +2077,6 @@ mod tests {
         }
         let error = auto_charts(&cube.mesh(), &LIMITS).unwrap_err().to_string();
         assert!(error.contains("no normal"), "{error}");
-
-        let ignoring = Params {
-            ignore_normals: true,
-            ..LIMITS
-        };
-        let error = auto_charts(&solid([1.0, 1.0, 1.0]).mesh(), &ignoring)
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("Ignore Normals"), "{error}");
     }
 
     /// Max Angle bounds each part's lean from the plane through a pair, Max Distance its

@@ -232,13 +232,17 @@ impl Chart {
     }
 }
 
-/// Builds a chart from its UVs: scaled to its world area (or, with `world_units`, taken as it
-/// is: UVs in world units), snapped to whole blocks, moved to its mask's origin and rasterized
-/// into the mask (each triangle grown by the border, every cell it touches).
+/// Builds a chart from its UVs: scaled to its world area, snapped to whole blocks, moved to its
+/// mask's origin and rasterized into the mask (each triangle grown by the border, every cell it
+/// touches). `automatic`: a chart the precompute made (`auto_charts`), whose UVs are a
+/// projection in world units: the scale to its world area is one for a flat chart, and more
+/// where faces lean from its plane or are folded into it as lines (tests/projects/realtimegi
+/// RoomTurned, FoldIgnored: a floor and a wall at a right angle projected onto the plane
+/// between them).
 fn build_chart(
     input: &Input,
     uvs: &[[f32; 2]],
-    world_units: bool,
+    automatic: bool,
     triangles: Vec<usize>,
 ) -> Result<Chart> {
     let block = BLOCK_TEXELS as f64;
@@ -265,9 +269,7 @@ fn build_chart(
         }
     }
     // Blocks per UV unit: the chart's world size over its UV size, in blocks of texels.
-    let per_uv = if world_units {
-        1.0 / (input.pixel_size as f64 * block)
-    } else if uv_area > 0.0 {
+    let per_uv = if uv_area > 0.0 {
         (world / uv_area).sqrt() / (input.pixel_size as f64 * block)
     } else {
         0.0
@@ -277,9 +279,14 @@ fn build_chart(
     let mut scale = [0.0; 2];
     for k in 0..2 {
         let extent = (hi[k] - lo[k]) * per_uv;
-        let blocks = (extent + border + CHART_BORDER_MARGIN)
-            .ceil()
-            .max(min_blocks);
+        // An automatic chart of no extent (a part without area) takes one block, whatever the
+        // minimum chart size (tests/projects/realtimegi RoomTurned, BoxSliver and BoxPoint).
+        let least = if automatic && extent == 0.0 {
+            1.0
+        } else {
+            min_blocks
+        };
+        let blocks = (extent + border + CHART_BORDER_MARGIN).ceil().max(least);
         // Checked before its mask is made: a sliver of UV area on a large face would ask for a
         // huge one.
         ensure!(
@@ -954,7 +961,7 @@ pub fn realtime_uvs(input: &Input) -> Result<Output> {
         bail!("a vertex with a non-finite position or lightmap UV");
     }
     let made;
-    let (lists, chart_uvs, world_units) = match input.charts {
+    let (lists, chart_uvs, automatic) = match input.charts {
         Charts::Preserved => (charts(input), input.uvs, false),
         Charts::Automatic { normals, params } => {
             let auto_charts::Charts { uvs, triangles } = auto_charts::auto_charts(
@@ -972,7 +979,7 @@ pub fn realtime_uvs(input: &Input) -> Result<Output> {
     };
     let charts: Vec<Chart> = lists
         .into_iter()
-        .map(|t| build_chart(input, chart_uvs, world_units, t))
+        .map(|t| build_chart(input, chart_uvs, automatic, t))
         .collect::<Result<_>>()?;
     let masks: Vec<&Mask> = charts.iter().map(|c| &c.mask).collect();
     let (positions, width, height) = pack(&masks)?;

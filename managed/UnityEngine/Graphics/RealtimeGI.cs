@@ -205,13 +205,11 @@ namespace UnityEngine
                 system.ScaleOffsets = offsets.ToArray();
                 systems.Add(system);
             }
-            var turned = new HashSet<(Mesh, Vector3)>();
-            foreach (var system in systems) turned.UnionWith(TurnedShapes(system.Renderers));
             for (int index = 0; index < systems.Count; index++)
             {
                 var system = systems[index];
                 // A system is drawn when every renderer of it has its realtime lightmap UVs.
-                var failure = RealtimeUVs(loaded, index, system, settings, turned);
+                var failure = RealtimeUVs(loaded, index, system, settings);
                 if (failure != null)
                 {
                     Warn("uvs:" + failure, $"{file.Path}: a system of its precomputed realtime GI is not drawn: {failure}");
@@ -685,19 +683,18 @@ namespace UnityEngine
         /// system's precomputed layout: Lightmap Parameters that change the charts, such as their
         /// resolution, fail that check). A renderer with Preserve UVs keeps its mesh's lightmap
         /// UV charts; one without (Optimize Realtime UVs in the Inspector) gets the charts the
-        /// precompute makes within its Max Distance and Max Angle, unless it is turned or one
-        /// of <paramref name="turned"/> (<see cref="TurnedShapes"/>). Returns why they could not
-        /// be made, or null.</summary>
-        static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings, HashSet<(Mesh, Vector3)> turned)
+        /// precompute makes within its Max Distance and Max Angle. Returns why they could not be
+        /// made, or null.</summary>
+        static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings)
         {
             float resolution = settings != null ? settings.indirectResolution : 2f;
             for (int r = 0; r < system.Renderers.Length; r++)
             {
                 if (!(system.Renderers[r] is MeshRenderer renderer)) return $"its renderer {r} is missing or not a MeshRenderer (unsupported)";
-                bool automatic = !renderer.m_PreserveUVs;
+                bool automatic = MakesAutomaticCharts(renderer);
                 var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
                 if (mesh == null) return $"'{renderer.name}' has no mesh";
-                if (automatic && AutomaticChartsRefusal(renderer, mesh, turned) is string refusal) return refusal;
+                if (automatic && AutomaticChartsRefusal(renderer, mesh) is string refusal) return refusal;
                 for (int sub = 0; sub < mesh.subMeshCount; sub++)
                     if (mesh.GetTopology(sub) != MeshTopology.Triangles) return $"'{renderer.name}' has a submesh of {mesh.GetTopology(sub)}";
                 float scale = renderer.scaleInLightmap * resolution;
@@ -714,19 +711,19 @@ namespace UnityEngine
                 var positions = new float[3 * vertices.Length];
                 var uvs = new float[2 * vertices.Length];
                 float[] shading = null;
+                float[] instance = null;
                 if (automatic)
                 {
-                    // The precompute's charts are made of the mesh with the instance's scale and
-                    // no rotation: its vertices times the scale, its normals over it.
-                    var size = renderer.transform.lossyScale;
+                    // The precompute's charts are made of the mesh under the instance's
+                    // rotation and scale without its world rotation (WorldScale), which the
+                    // native side applies as the precompute does.
+                    instance = WorldScale(renderer.transform);
                     var normals = mesh.normals;
                     shading = new float[3 * vertices.Length];
                     for (int v = 0; v < vertices.Length; v++)
                     {
-                        var p = Vector3.Scale(vertices[v], size);
-                        positions[3 * v] = p.x; positions[3 * v + 1] = p.y; positions[3 * v + 2] = p.z;
-                        var n = new Vector3(normals[v].x / size.x, normals[v].y / size.y, normals[v].z / size.z).normalized;
-                        shading[3 * v] = n.x; shading[3 * v + 1] = n.y; shading[3 * v + 2] = n.z;
+                        positions[3 * v] = vertices[v].x; positions[3 * v + 1] = vertices[v].y; positions[3 * v + 2] = vertices[v].z;
+                        shading[3 * v] = normals[v].x; shading[3 * v + 1] = normals[v].y; shading[3 * v + 2] = normals[v].z;
                         uvs[2 * v] = source[v].x; uvs[2 * v + 1] = source[v].y;
                     }
                 }
@@ -745,13 +742,14 @@ namespace UnityEngine
                 int status;
                 fixed (float* pp = positions)
                 fixed (float* np = shading)
+                fixed (float* mp = instance)
                 fixed (float* up = uvs)
                 fixed (int* tp = triangles)
                 fixed (float* op = output)
                     status = automatic
                         ? Native.Api.GiAutomaticUvs(scene.Handle, index, r, pp, np, up, vertices.Length, (uint*)tp, triangles.Length,
                             1f / scale, renderer.m_MinimumChartSize, renderer.m_AutoUVMaxDistance, renderer.m_AutoUVMaxAngle,
-                            renderer.m_IgnoreNormalsForChartDetection ? 1 : 0, op, &error)
+                            renderer.m_IgnoreNormalsForChartDetection ? 1 : 0, mp, op, &error)
                         : Native.Api.GiRealtimeUvs(scene.Handle, index, r, pp, up, vertices.Length, (uint*)tp, triangles.Length,
                             1f / scale, renderer.m_MinimumChartSize, op, &error);
                 if (status != 0)
@@ -777,44 +775,80 @@ namespace UnityEngine
             return null;
         }
 
-        static bool Turned(Renderer renderer)
+        /// <summary>Whether the precompute makes the renderer's realtime charts (Optimize Realtime
+        /// UVs) rather than keeping its mesh's: not with Preserve UVs, nor with a Max Distance or
+        /// Max Angle of zero, with which it keeps them too (tests/projects/realtimegi RoomTurned,
+        /// StepNoDistance; a scratch bake of the same step with Max Angle 0 kept them as
+        /// well).</summary>
+        internal static bool MakesAutomaticCharts(MeshRenderer renderer) =>
+            !renderer.m_PreserveUVs && renderer.m_AutoUVMaxDistance > 0f && renderer.m_AutoUVMaxAngle > 0f;
+
+        /// <summary>The rotation of a quaternion, its columns scaled (a 3 x 3 matrix, column by
+        /// column), in the precompute's order of operations.</summary>
+        static float[] RotationScaled(Quaternion q, Vector3 s)
         {
-            var rotation = renderer.transform.rotation;
-            return rotation.x != 0f || rotation.y != 0f || rotation.z != 0f;
+            float x = q.x, y = q.y, z = q.z, w = q.w;
+            return new[]
+            {
+                s.x * ((z * -2f * z + y * -2f * y) + 1f),
+                s.x * ((z * 2f * w + y * 2f * x) + 0f),
+                s.x * ((z * 2f * x + y * -2f * w) + 0f),
+                s.y * ((x * 2f * y + z * -2f * w) + 0f),
+                s.y * ((x * -2f * x + z * -2f * z) + 1f),
+                s.y * ((x * 2f * w + z * 2f * y) + 0f),
+                s.z * ((y * 2f * w + x * 2f * z) + 0f),
+                s.z * ((y * 2f * z + x * -2f * w) + 0f),
+                s.z * ((y * -2f * y + x * -2f * x) + 1f),
+            };
         }
 
-        /// <summary>The meshes and scales of the turned renderers with Optimize Realtime UVs
-        /// among <paramref name="renderers"/>. The precompute makes one set of realtime
-        /// lightmap UVs for the renderers of a mesh with the same scale (Unity 6000.0 Manual,
-        /// "Introduction to lightmap UVs": "Mesh Renderers that use the same mesh with the same
-        /// scale and lightmap resolution share the same UVs"), turned or not.</summary>
-        internal static HashSet<(Mesh, Vector3)> TurnedShapes(IEnumerable<Renderer> renderers)
+        /// <summary><paramref name="a"/> times <paramref name="b"/>, each entry summed as
+        /// (second + third) + first term.</summary>
+        static float[] Product(float[] a, float[] b)
         {
-            var shapes = new HashSet<(Mesh, Vector3)>();
-            foreach (var r in renderers)
+            var o = new float[9];
+            for (int c = 0; c < 3; c++)
+                for (int r = 0; r < 3; r++)
+                    o[3 * c + r] = (b[3 * c + 1] * a[3 + r] + b[3 * c + 2] * a[6 + r]) + b[3 * c] * a[r];
+            return o;
+        }
+
+        /// <summary>The geometry matrix the Unity 6000.0.71f1 Editor gives its precompute for an
+        /// instance with Optimize Realtime UVs: the transform's rotation and scale with its world
+        /// rotation taken out (the inverse of the world rotation times the levels' rotations
+        /// and scales), a 3 x 3 matrix column by column. Single precision, in the order that
+        /// gives the Editor's values to the last bit (tests/projects/realtimegi RoomTurned); a
+        /// level whose scale is negative along an axis turns the rotations below it as a mirror
+        /// does.</summary>
+        internal static float[] WorldScale(Transform transform)
+        {
+            var rotation = transform.localRotation;
+            float x = rotation.x, y = rotation.y, z = rotation.z, w = rotation.w;
+            var scaled = RotationScaled(rotation, transform.localScale);
+            for (var parent = transform.parent; parent != null; parent = parent.parent)
             {
-                if (!(r is MeshRenderer renderer) || renderer.m_PreserveUVs || !Turned(renderer)) continue;
-                var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
-                if (mesh != null) shapes.Add((mesh, renderer.transform.lossyScale));
+                var p = parent.localRotation;
+                var s = parent.localScale;
+                float sx = float.IsNegative(s.x) ? -1f : 1f, sy = float.IsNegative(s.y) ? -1f : 1f, sz = float.IsNegative(s.z) ? -1f : 1f;
+                float xa = sy * sz < 0f ? -x : x, ya = sz * sx < 0f ? -y : y, za = sy * sx < 0f ? -z : z;
+                float nx = -(((ya * p.z - za * p.y) - xa * p.w) - w * p.x);
+                float ny = -(((za * p.x - xa * p.z) - ya * p.w) - w * p.y);
+                float nz = -(((xa * p.y - za * p.w) - w * p.z) - ya * p.x);
+                float nw = ((w * p.w - xa * p.x) - za * p.z) - ya * p.y;
+                x = nx; y = ny; z = nz; w = nw;
+                scaled = Product(RotationScaled(p, s), scaled);
             }
-            return shapes;
+            return Product(RotationScaled(new Quaternion(-x, -y, -z, w), Vector3.one), scaled);
         }
 
         /// <summary>Why the charts of a renderer with Optimize Realtime UVs are not made, or
-        /// null: what is not measured (a limit of zero, a zero or mirrored scale, no normals),
-        /// and a turned renderer or one with the mesh and scale of a turned one
-        /// (<paramref name="turned"/>, <see cref="TurnedShapes"/>). The precompute works with
-        /// what its own removal of a turned instance's rotation leaves, rounding included, and
-        /// that rounding decides some of its charts (docs/REALTIME_GI.md, Automatic charts).</summary>
-        internal static string AutomaticChartsRefusal(MeshRenderer renderer, Mesh mesh, HashSet<(Mesh, Vector3)> turned)
+        /// null: what is not measured (a zero or mirrored scale, no normals). (The precompute
+        /// keys the geometry it makes the charts of by the mesh and the instance matrix, so
+        /// renderers share charts when both are the same: tests/projects/realtimegi RoomTurned,
+        /// SharedTurned and SharedFlat.)</summary>
+        internal static string AutomaticChartsRefusal(MeshRenderer renderer, Mesh mesh)
         {
-            if (!(renderer.m_AutoUVMaxDistance > 0f && renderer.m_AutoUVMaxAngle > 0f))
-                return $"'{renderer.name}' has Optimize Realtime UVs with Max Distance {renderer.m_AutoUVMaxDistance} and Max Angle {renderer.m_AutoUVMaxAngle} (a limit of zero is not measured)";
-            if (Turned(renderer))
-                return $"'{renderer.name}' has Optimize Realtime UVs and is turned (the charts of a turned renderer are not made yet)";
             var size = renderer.transform.lossyScale;
-            if (turned.Contains((mesh, size)))
-                return $"'{renderer.name}' has Optimize Realtime UVs and the mesh and scale of a turned renderer (the precompute makes one set of charts for both, which is not made yet)";
             if (!(size.x > 0f && size.y > 0f && size.z > 0f))
                 return $"'{renderer.name}' has Optimize Realtime UVs and a scale of {size} (a zero or mirrored scale is not measured)";
             if (mesh.normals.Length != mesh.vertexCount)

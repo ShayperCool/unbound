@@ -1917,21 +1917,10 @@ fn automatic_uvs(
     normals: &[[f32; 3]],
     uvs: &[[f32; 2]],
     triangles: &[[u32; 3]],
-    scale: [f32; 3],
+    matrix: crate::instance::Matrix,
     params: crate::auto_charts::Params,
 ) -> anyhow::Result<crate::realtime_uv::Output> {
-    let positions: Vec<[f32; 3]> = positions
-        .iter()
-        .map(|p| [0, 1, 2].map(|k| p[k] * scale[k]))
-        .collect();
-    let normals: Vec<[f32; 3]> = normals
-        .iter()
-        .map(|n| {
-            let scaled = [0, 1, 2].map(|k| n[k] / scale[k]);
-            let length = scaled.iter().map(|x| x * x).sum::<f32>().sqrt();
-            scaled.map(|x| x / length)
-        })
-        .collect();
+    let (positions, normals) = crate::instance::apply(&matrix, positions, normals).unwrap();
     crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
         positions: &positions,
         uvs,
@@ -2109,9 +2098,15 @@ const AUTO_SHAPES: [(&str, Option<&str>, [f32; 3], f32, f32); 18] = [
     ("StepNear", Some("Step"), [1.0, 1.0, 0.8], 0.15, 89.0),
 ];
 
+/// The instance matrix of a renderer that is not turned: its scale.
+fn scaled(scale: [f32; 3]) -> crate::instance::Matrix {
+    [scale[0], 0.0, 0.0, 0.0, scale[1], 0.0, 0.0, 0.0, scale[2]]
+}
+
 fn auto_shape_uvs(name: &str) -> crate::realtime_uv::Output {
     let &(_, asset, scale, max_distance, max_angle) =
         AUTO_SHAPES.iter().find(|s| s.0 == name).unwrap();
+    let scale = scaled(scale);
     let params = crate::auto_charts::Params {
         max_distance,
         max_angle,
@@ -2134,24 +2129,27 @@ fn auto_shape_uvs(name: &str) -> crate::realtime_uv::Output {
     .unwrap_or_else(|e| panic!("{name}: {e:#}"))
 }
 
-#[test]
-fn automatic_charts_lie_where_the_precompute_put_them() {
-    // RoomAuto: the Room and other shapes, every renderer with Preserve UVs off. Each
-    // renderer's charts cover the texels of the precomputed chart mask, chart by chart in the
-    // precompute's order. (The scene's grid of shared vertices and the built-in quad and
-    // plane are single flat charts; the probe's gate draws them.)
-    let data = scene_data("RoomAuto");
-    assert_eq!(data.systems.len(), 1);
-    let system = &data.systems[0];
-    let names = renderer_names("RoomAuto");
+/// Checks each renderer of a scene with automatic charts that `uvs_of` makes: its charts cover
+/// the texels of the precomputed chart mask, chart by chart in the precompute's order, and
+/// there are `expected` of them where that is given. Returns how many were checked.
+fn check_automatic_layouts(
+    scene: &str,
+    uvs_of: &dyn Fn(&str) -> Option<crate::realtime_uv::Output>,
+    expected: &dyn Fn(&str) -> Option<usize>,
+) -> usize {
+    let data = scene_data(scene);
+    let names = renderer_names(scene);
     let mut checked = 0;
     for (k, &(object, _)) in data.renderers.iter().enumerate() {
         let name = names[&object].as_str();
-        if !AUTO_SHAPES.iter().any(|s| s.0 == name) {
-            assert!(["Grid", "Quad", "Plane"].contains(&name), "{name}");
+        let system = data
+            .systems
+            .iter()
+            .find(|s| (s.first_renderer..s.first_renderer + s.renderer_count).contains(&k))
+            .unwrap();
+        let Some(out) = uvs_of(name) else {
             continue;
-        }
-        let out = auto_shape_uvs(name);
+        };
         let st = data.renderer_st[k];
         crate::realtime_uv::check_layout(system, st, &out)
             .unwrap_or_else(|e| panic!("{name}: {e:#}"));
@@ -2175,23 +2173,276 @@ fn automatic_charts_lie_where_the_precompute_put_them() {
             ids.windows(2).all(|pair| pair[0] < pair[1]),
             "{name}: {ids:?}"
         );
-        // How many charts the shapes that show a rule have: a slab's last end face folded into
-        // a large face's chart; roofs of 20, 40 and 100 degrees between their sides, and the
-        // one of 40 within a Max Angle of 30 and of 15; the step with its treads and its
-        // risers joined, and with a Max Distance of 0.3 and of 0.15 a chart a face (at 0.3
-        // their corners are within the limit of a plane through both, 0.2 away, and their
-        // bounds, 0.4 apart and grown by 0.18 each, do not meet).
-        let expected = match name {
-            "Floor" | "Wedge" | "Step" => Some(5),
-            "RoofFlat" | "RoofAngleWide" => Some(1),
-            "RoofSteep" | "RoofAngleTight" => Some(2),
-            "StepMid" | "StepNear" => Some(8),
-            _ => None,
-        };
-        if let Some(expected) = expected {
+        if let Some(expected) = expected(name) {
             assert_eq!(out.charts.len(), expected, "{name}");
         }
         checked += 1;
     }
-    assert_eq!(checked, AUTO_SHAPES.len());
+    checked
+}
+
+#[test]
+fn automatic_charts_lie_where_the_precompute_put_them() {
+    // RoomAuto: the Room and other shapes, every renderer with Preserve UVs off. (The scene's
+    // grid of shared vertices and the built-in quad and plane are single flat charts; the
+    // probe's gate draws them.)
+    let uvs_of = |name: &str| {
+        if !AUTO_SHAPES.iter().any(|s| s.0 == name) {
+            assert!(["Grid", "Quad", "Plane"].contains(&name), "{name}");
+            return None;
+        }
+        Some(auto_shape_uvs(name))
+    };
+    // How many charts the shapes that show a rule have: a slab's last end face folded into a
+    // large face's chart; roofs of 20, 40 and 100 degrees between their sides, and the one of
+    // 40 within a Max Angle of 30 and of 15; the step with its treads and its risers joined,
+    // and with a Max Distance of 0.3 and of 0.15 a chart a face (at 0.3 their corners are
+    // within the limit of a plane through both, 0.2 away, and their bounds, 0.4 apart and
+    // grown by 0.18 each, do not meet).
+    let expected = |name: &str| match name {
+        "Floor" | "Wedge" | "Step" => Some(5),
+        "RoofFlat" | "RoofAngleWide" => Some(1),
+        "RoofSteep" | "RoofAngleTight" => Some(2),
+        "StepMid" | "StepNear" => Some(8),
+        _ => None,
+    };
+    assert_eq!(
+        check_automatic_layouts("RoomAuto", &uvs_of, &expected),
+        AUTO_SHAPES.len()
+    );
+}
+
+/// A quad of its own four vertices (`RealtimeGISetup.AddQuad`): corners in order, one normal,
+/// its lightmap UVs the rectangle `cell` (x, y, width, height).
+fn add_quad(mesh: &mut AutoMesh, corners: [[f32; 3]; 4], normal: [f32; 3], cell: [f32; 4]) {
+    let first = mesh.0.len() as u32;
+    mesh.0.extend(corners);
+    mesh.1.extend([normal; 4]);
+    let (x0, y0, x1, y1) = (cell[0], cell[1], cell[0] + cell[2], cell[1] + cell[3]);
+    mesh.2.extend([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]);
+    mesh.3
+        .extend([[first, first + 1, first + 2], [first, first + 2, first + 3]]);
+}
+
+/// A mesh of the RoomTurned scene, as `RealtimeGISetup.CreateRoom` makes it.
+fn turned_mesh(name: &str) -> AutoMesh {
+    let empty = || (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    match name {
+        "WedgeTurned" => solid([0.4, 0.3, 0.4], false, &prism(&WEDGE, 0.8)),
+        "RoofDistance" => solid([0.0, -1.0, 0.65], false, &roof(20.0, 0.7, 1.3)),
+        "StepNoDistance" => solid([0.2, 0.15, 0.45], false, &prism(&STEP, 0.9)),
+        "FoldKept" | "FoldIgnored" => {
+            // A floor and a wall that share their edge's positions and UVs, not its normals,
+            // unfolded side by side in UV, and a loose quad.
+            let mut mesh = empty();
+            let (o, z) = ([0.0, 0.0, 0.0], [0.0, 0.0, 1.0]);
+            add_quad(
+                &mut mesh,
+                [o, z, [1.0, 0.0, 1.0], [1.0, 0.0, 0.0]],
+                [0.0, 1.0, 0.0],
+                [0.5, 0.1, 0.4, 0.4],
+            );
+            mesh.2[0..4].copy_from_slice(&[[0.5, 0.1], [0.5, 0.5], [0.9, 0.5], [0.9, 0.1]]);
+            add_quad(
+                &mut mesh,
+                [[0.0, 1.0, 0.0], [0.0, 1.0, 1.0], z, o],
+                [1.0, 0.0, 0.0],
+                [0.1, 0.1, 0.4, 0.4],
+            );
+            mesh.2[4..8].copy_from_slice(&[[0.1, 0.1], [0.1, 0.5], [0.5, 0.5], [0.5, 0.1]]);
+            add_quad(
+                &mut mesh,
+                [
+                    [2.0, 0.0, 0.0],
+                    [2.0, 0.0, 0.5],
+                    [2.5, 0.0, 0.5],
+                    [2.5, 0.0, 0.0],
+                ],
+                [0.0, 1.0, 0.0],
+                [0.1, 0.6, 0.3, 0.3],
+            );
+            mesh
+        }
+        "BoxSliver" | "BoxPoint" => {
+            // A box of 0.6 m and a triangle of no area of its own 1.3 m away.
+            let mut mesh = empty();
+            let mut cells = 0;
+            for axis in 0..3 {
+                for side in [-1.0f32, 1.0] {
+                    let mut normal = [0.0; 3];
+                    normal[axis] = side;
+                    let (mut u, mut w) = ([0.0f32; 3], [0.0f32; 3]);
+                    u[(axis + 1) % 3] = 0.3;
+                    w[(axis + 2) % 3] = 0.3;
+                    let c = normal.map(|x| x * 0.3);
+                    let at = |su: f32, sw: f32| [0, 1, 2].map(|k| c[k] + su * u[k] + sw * w[k]);
+                    let corners = if side > 0.0 {
+                        [at(-1.0, -1.0), at(1.0, -1.0), at(1.0, 1.0), at(-1.0, 1.0)]
+                    } else {
+                        [at(-1.0, -1.0), at(-1.0, 1.0), at(1.0, 1.0), at(1.0, -1.0)]
+                    };
+                    let cell = [
+                        0.05 + 0.15 * (cells % 6) as f32,
+                        0.05 + 0.5 * (cells / 6) as f32,
+                        0.12,
+                        0.4,
+                    ];
+                    cells += 1;
+                    add_quad(&mut mesh, corners, normal, cell);
+                }
+            }
+            let first = mesh.0.len() as u32;
+            let at = [1.3, 0.0, 0.0];
+            mesh.0.extend(if name == "BoxSliver" {
+                [at, [1.3, 0.2, 0.0], [1.3, 0.4, 0.0]]
+            } else {
+                [at; 3]
+            });
+            mesh.1.extend([[0.0, 0.0, 1.0]; 3]);
+            mesh.2.extend([[0.95, 0.9], [0.95, 0.92], [0.95, 0.94]]);
+            mesh.3.push([first, first + 1, first + 2]);
+            mesh
+        }
+        "Many" => {
+            // 11 x 10 loose quads of 0.1 m, 0.25 m apart, facing -z.
+            let mut mesh = empty();
+            for row in 0..10 {
+                for column in 0..11 {
+                    let (x, y) = (0.25 * column as f32, 0.25 * row as f32);
+                    add_quad(
+                        &mut mesh,
+                        [
+                            [x, y, 0.0],
+                            [x, y + 0.1, 0.0],
+                            [x + 0.1, y + 0.1, 0.0],
+                            [x + 0.1, y, 0.0],
+                        ],
+                        [0.0, 0.0, -1.0],
+                        [
+                            (column as f32 + 0.1) / 11.0,
+                            (row as f32 + 0.1) / 10.0,
+                            0.8 / 11.0,
+                            0.8 / 10.0,
+                        ],
+                    );
+                }
+            }
+            mesh
+        }
+        _ => panic!("no mesh {name}"),
+    }
+}
+
+/// The RoomTurned scene's renderers by name besides the Room's: a mesh (or the built-in cube),
+/// the instance matrix (`RealtimeGI.WorldScale`, as bits), and Max Distance.
+fn turned_shape(name: &str) -> Option<(Option<&str>, [u32; 9], f32)> {
+    let diagonal = |x: u32, y: u32, z: u32| [x, 0, 0, 0, y, 0, 0, 0, z];
+    Some(match name {
+        // Turned 30 degrees about Y: the rotation is taken out exactly.
+        "SlabTurned" => (None, diagonal(0x3fa66666, 0x3e4ccccd, 0x3f666666), 0.5),
+        "WedgeTurned" => (
+            Some(name),
+            diagonal(0x3f000000, 0x3ecccccd, 0x3ee66666),
+            0.5,
+        ),
+        // Turned (20, 40, 10), and turned 10 about X under a parent turned 45 about Y.
+        "BoxTurned" => (
+            None,
+            [
+                0x3f333333, 0x32400000, 0xb3000000, 0, 0x3f000000, 0x31c00000, 0xb3000000,
+                0xb1800000, 0x3f19999a,
+            ],
+            0.5,
+        ),
+        "Child" => (
+            None,
+            [
+                0x3f400000, 0x32000000, 0, 0xb2000000, 0x3ee66667, 0x31800000, 0, 0, 0x3f19999a,
+            ],
+            0.5,
+        ),
+        // A cube of 0.35 turned 25 degrees about Y, and one not turned: one geometry.
+        "SharedTurned" | "SharedFlat" => (None, diagonal(0x3eb33333, 0x3eb33333, 0x3eb33333), 0.5),
+        "RoofDistance" | "Many" => (Some(name), ONE, 0.1),
+        "FoldKept" | "FoldIgnored" | "BoxSliver" | "BoxPoint" => (Some(name), ONE, 0.5),
+        "StepNoDistance" => (Some(name), ONE, 0.0),
+        _ => return None,
+    })
+}
+
+/// The instance matrix of a renderer neither turned nor scaled, as bits.
+const ONE: [u32; 9] = [0x3f800000, 0, 0, 0, 0x3f800000, 0, 0, 0, 0x3f800000];
+
+#[test]
+fn automatic_charts_of_turned_renderers_lie_where_the_precompute_put_them() {
+    // RoomTurned: the Room and shapes that are turned (the precompute's geometry of them, to
+    // the last bit, from the instance matrix), or whose limits or parts decide their charts.
+    let uvs_of = |name: &str| {
+        let params = DEFAULT_LIMITS;
+        let (asset, matrix, max_distance) = match turned_shape(name) {
+            Some(shape) => shape,
+            None => {
+                let &(_, asset, scale, _, _) = AUTO_SHAPES.iter().find(|s| s.0 == name)?;
+                assert!(asset.is_none(), "{name}");
+                (None, scaled(scale).map(f32::to_bits), 0.5)
+            }
+        };
+        let params = crate::auto_charts::Params {
+            max_distance,
+            ignore_normals: name == "FoldIgnored",
+            ..params
+        };
+        let matrix = matrix.map(f32::from_bits);
+        if max_distance == 0.0 {
+            // With a limit of zero the precompute keeps the mesh's charts.
+            let (positions, _, uvs, triangles) = turned_mesh(asset.unwrap());
+            return Some(
+                crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
+                    positions: &positions,
+                    uvs: &uvs,
+                    triangles: &triangles,
+                    pixel_size: 0.5,
+                    min_chart_texels: 4,
+                    charts: crate::realtime_uv::Charts::Preserved,
+                })
+                .unwrap_or_else(|e| panic!("{name}: {e:#}")),
+            );
+        }
+        Some(
+            match asset {
+                None => automatic_uvs(
+                    &CUBE_POSITIONS,
+                    &CUBE_NORMALS,
+                    &CUBE_UV2,
+                    &CUBE_TRIANGLES,
+                    matrix,
+                    params,
+                ),
+                Some(asset) => {
+                    let (positions, normals, uvs, triangles) = turned_mesh(asset);
+                    automatic_uvs(&positions, &normals, &uvs, &triangles, matrix, params)
+                }
+            }
+            .unwrap_or_else(|e| panic!("{name}: {e:#}")),
+        )
+    };
+    // A box turned about all three axes, and one under a turned parent, have two pairs of
+    // faces at a right angle but for the rounding of the rotation's removal joined; Ignore
+    // Normals makes the fold's floor and wall one part; a Max Distance of 0.1 keeps a roof's
+    // sides apart (their eaves are 0.12 from the plane through both); with one of 0 the step
+    // keeps its own charts, a face each; a part without area is a chart of its own; 110 parts are 110 charts.
+    let expected = |name: &str| match name {
+        "SlabTurned" | "SharedTurned" | "SharedFlat" => Some(6),
+        "BoxTurned" | "Child" => Some(4),
+        "WedgeTurned" => Some(5),
+        "RoofDistance" => Some(2),
+        "FoldKept" => Some(3),
+        "FoldIgnored" => Some(2),
+        "StepNoDistance" => Some(8),
+        "BoxSliver" | "BoxPoint" => Some(7),
+        "Many" => Some(110),
+        _ => None,
+    };
+    let checked = check_automatic_layouts("RoomTurned", &uvs_of, &expected);
+    assert_eq!(checked, 7 + 13);
 }

@@ -678,7 +678,9 @@ pub fn read_probes(handle: u64, out: &mut [f32]) -> Result<usize> {
 /// 3: each chart's blocks are stored; charts go into holes between the charts placed before them.
 /// 4: how the charts are made is part of an entry's key (kept from the mesh, or automatic with
 /// its normals and limits).
-const UV_CACHE_VERSION: u32 = 4;
+/// 5: automatic charts of the instance's geometry as the precompute makes it (turned instances
+/// too), a Max Distance of zero, parts without area and the rounds' limit.
+const UV_CACHE_VERSION: u32 = 5;
 
 /// Renderer `renderer` of system `system`'s realtime lightmap UVs
 /// (`unbound_gi::realtime_uv`), checked against the system's precomputed layout and cached under

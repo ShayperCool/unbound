@@ -7,6 +7,7 @@ pub mod data;
 pub mod directionality;
 mod eigen;
 pub mod environment;
+pub mod instance;
 pub mod probes;
 pub mod realtime_uv;
 pub mod solver;
