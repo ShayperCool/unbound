@@ -29,6 +29,17 @@ def structural(rows):
         'rotation3d': [None, 2, 3], 'both3d': [None, 2, 3],
         'random_scalar': [None, 2, 3], 'random3d': [None, 2, 3],
         'explicit_seed': [None, 2, 3], 'import_axis': [None, 1, 2],
+        **{f'inherit_rot_{mode}_{flags}': [None, 1] for mode in ['2d', 'start3d', 'overLifetime3d', 'bySpeed3d', 'start3dReactivated',
+                                                                       'start3dPlayed', 'start3dSimulated', 'start3dEmitted',
+                                                                       'overLifetime3dEmitted', 'overLifetimeEmitted']
+           for flags in [4, 15]},
+        **{f'inherit_size_{p}_{c}': [None, 1] for p in ['1d', '3d'] for c in ['1d', '3d']},
+        'rotation_emit': [None, 1],
+        **{f'storage_{name}': [0] for name in ['fresh', 'set3d', 'emitted', 'emittedAfterOff']
+           + [f'simulated_{m}' for m in ['start3d', 'rotationSeparate', 'rotationBySpeedSeparate', 'sizeSeparate',
+                                         'sizeBySpeedSeparate', 'alignToDirection', 'rotationModule']]
+           + [f'setParticles_{m}' for m in ['plain', 'rotation3D', 'angularVelocity3D', 'startSize3D', 'scalarSetters']]
+           + [f'setParticles_{m}_{w}' for m in ['rotation3D', 'startSize3D'] for w in ['updated', 'replayed']]},
     }.items():
         counts.update({(name, step): n for step, n in enumerate(steps) if n is not None})
     failures = compare.report({key: {} for key in counts}, {key: {} for key in rows})['failures']

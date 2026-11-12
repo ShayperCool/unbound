@@ -158,3 +158,17 @@ python3 tests/projects/particleseedaxis/randomized.py verify --unity-version 600
 
 A red randomized gate blocks delivery even if the seed/axis gate has no introduced
 values. Do not run the broader affected suites until that blocker is closed.
+
+## Inheritance and particle storage controls
+
+`inherit_rot_<mode>_<flags>` trigger a Manual child with InheritRotation (4) or all
+flags (15) for a 2D child, a 3D start rotation, 3D only through a separate-axes
+rotation module, and a 3D start rotation after the child was reactivated, played,
+simulated for 0.01 s or emitted and cleared. `inherit_size_<parent>_<child>` cross
+uniform and 3D start sizes with InheritSize. `storage_*` read
+`has3DParticleRotations` and `hasNonUniformParticleSizes` after module changes,
+`Emit`, a short `Simulate` per module, and `SetParticles` with the 3D and scalar
+setters, through an update and an emptied restart. `rotation_emit` reads a rotation
+module's angular velocity right after `Emit`. The Editor runs in batch mode on the
+GPU (`run.py native` uses `tests/editor_runner.py`); two captures were identical
+and the original 65 records are byte-identical.

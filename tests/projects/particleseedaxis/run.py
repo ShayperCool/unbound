@@ -12,6 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1]))
 from probe_paths import cache_artifact_path
+import editor_runner  # noqa: E402
 
 
 def main():
@@ -55,9 +56,17 @@ def main():
                MSBUILDDISABLENODEREUSE='1', UseSharedCompilation='false',
                DOTNET_CLI_TELEMETRY_OPTOUT='1')
     if a.mode == 'native':
+        # A batchmode Editor on the GPU (tests/editor_runner.py takes its own launcher lease).
         editor = os.environ.get('UNBOUND_PROBE_UNITY', str(Path.home()/'Unity/Hub/Editor'/a.unity_version/'Editor/Unity'))
-        command = [editor, '-batchmode', '-nographics', '-projectPath', str(project),
-                   '-executeMethod', 'ProbeRunner.Record', '-logFile', str(work/(a.label+'-editor.log'))]
+        job = editor_runner.EditorJob(project, work/(a.label+'-editor.log'), work/(a.label+'-editor'),
+                                      ['-executeMethod', 'ProbeRunner.Record'], batch=True, graphics=True,
+                                      env={'PARTICLE_SEED_AXIS_OUT': str(out)}, timeout=1200, editor=editor,
+                                      label='particleseedaxis-'+a.label)
+        result = editor_runner.run(job)
+        print(editor_runner.summary(result))
+        if result.get('exit_code') or result.get('forced_exit') or not out.exists():
+            raise SystemExit('Capture failed: ' + str(job.log))
+        return
     else:
         if not a.cli or not a.runtime:
             p.error('engine requires --cli and --runtime')

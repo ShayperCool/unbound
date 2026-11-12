@@ -171,6 +171,124 @@ public class SeedAxisProbe : MonoBehaviour
         }
     }
 
+    static void Storage(string name, ParticleSystem ps)
+    {
+        Output.Append("{\"scenario\":\"storage_").Append(name).Append("\",\"step\":0,\"count\":0,\"readCount\":0,\"time\":0,\"parentCount\":0");
+        Output.Append(",\"rotation3D\":").Append(ps.has3DParticleRotations ? "true" : "false");
+        Output.Append(",\"size3D\":").Append(ps.hasNonUniformParticleSizes ? "true" : "false").Append("}\n");
+    }
+
+    // When a system's particles keep 3D rotations and sizes, observed through
+    // has3DParticleRotations and hasNonUniformParticleSizes.
+    static void StorageControls()
+    {
+        var ps = Make("storage", 12345u);
+        var m = ps.main;
+        Storage("fresh", ps);
+        m.startRotation3D = true; m.startSize3D = true;
+        Storage("set3d", ps);
+        ps.Emit(1); ps.Clear(false);
+        Storage("emitted", ps);
+        m.startRotation3D = false; m.startSize3D = false;
+        ps.Emit(1); ps.Clear(false);
+        Storage("emittedAfterOff", ps);
+        DestroyImmediate(ps.gameObject);
+        foreach (string mode in new[] { "start3d", "rotationSeparate", "rotationBySpeedSeparate", "sizeSeparate", "sizeBySpeedSeparate", "alignToDirection", "rotationModule" })
+        {
+            ps = Make("storage_" + mode, 12345u);
+            m = ps.main;
+            if (mode == "start3d") { m.startRotation3D = true; m.startSize3D = true; }
+            if (mode == "rotationSeparate") { var r = ps.rotationOverLifetime; r.enabled = true; r.separateAxes = true; }
+            if (mode == "rotationModule") { var r = ps.rotationOverLifetime; r.enabled = true; }
+            if (mode == "rotationBySpeedSeparate") { var r = ps.rotationBySpeed; r.enabled = true; r.separateAxes = true; }
+            if (mode == "sizeSeparate") { var r = ps.sizeOverLifetime; r.enabled = true; r.separateAxes = true; }
+            if (mode == "sizeBySpeedSeparate") { var r = ps.sizeBySpeed; r.enabled = true; r.separateAxes = true; }
+            if (mode == "alignToDirection") { var sh = ps.shape; sh.enabled = true; sh.alignToDirection = true; }
+            ps.Simulate(.01f, false, true);
+            Storage("simulated_" + mode, ps);
+            DestroyImmediate(ps.gameObject);
+        }
+        {
+            // A rotation module's angular velocity as read right after Emit and after a step.
+            ps = Make("rotation_emit", 12345u);
+            var r = ps.rotationOverLifetime; r.enabled = true; r.separateAxes = true; r.x = .5f; r.y = .6f; r.z = .7f;
+            ps.Emit(1); InitialRecord("rotation_emit", 1, ps);
+            DestroyImmediate(ps.gameObject);
+        }
+        foreach (string mode in new[] { "plain", "rotation3D", "angularVelocity3D", "startSize3D", "scalarSetters" })
+        {
+            ps = Make("storage_set_" + mode, 12345u);
+            var particle = new ParticleSystem.Particle { startLifetime = 2, remainingLifetime = 2, randomSeed = 7 };
+            if (mode == "rotation3D") particle.rotation3D = Vector3.zero;
+            if (mode == "angularVelocity3D") particle.angularVelocity3D = Vector3.zero;
+            if (mode == "startSize3D") particle.startSize3D = Vector3.one;
+            if (mode == "scalarSetters") { particle.rotation = 10; particle.angularVelocity = 5; particle.startSize = 2; }
+            ps.SetParticles(new[] { particle }, 1);
+            Storage("setParticles_" + mode, ps);
+            if (mode == "rotation3D" || mode == "startSize3D")
+            {
+                // A script's 3D particles keep the storage through an update, until a playback
+                // restarts without particles.
+                ps.Simulate(.01f, false, false, false);
+                Storage("setParticles_" + mode + "_updated", ps);
+                ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear); ps.Play(false); ps.Simulate(.01f, false, false, false);
+                Storage("setParticles_" + mode + "_replayed", ps);
+            }
+            DestroyImmediate(ps.gameObject);
+        }
+    }
+
+    // Which inherited values a Manual child takes, by flag, by the child's rotation mode (2D, 3D
+    // start rotation, 3D only through a separate-axes rotation module) and by 3D size on either side.
+    static void InheritanceControls()
+    {
+        foreach (string mode in new[] { "2d", "start3d", "overLifetime3d", "bySpeed3d",
+                     "start3dReactivated", "start3dPlayed", "start3dSimulated", "start3dEmitted",
+                     "overLifetime3dEmitted", "overLifetimeEmitted" })
+        foreach (int flags in new[] { 4, 15 })
+        {
+            string name = "inherit_rot_" + mode + "_" + flags;
+            var parent = Make(name + "_parent", 54321u);
+            var pe = parent.emission; pe.enabled = false;
+            var child = Make(name, 12345u, parent.transform);
+            var m = child.main;
+            if (mode.StartsWith("start3d")) { m.startRotation3D = true; m.startRotationX = .1f; m.startRotationY = .2f; m.startRotationZ = .3f; }
+            // What the child did since its rotation became 3D, before the parent triggers it.
+            if (mode == "start3dReactivated") { child.gameObject.SetActive(false); child.gameObject.SetActive(true); }
+            if (mode == "start3dPlayed") { child.Play(false); child.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear); }
+            if (mode == "start3dSimulated") { child.Simulate(.01f, false, true); child.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear); }
+            if (mode == "start3dEmitted") { child.Emit(1); child.Clear(false); }
+            if (mode == "overLifetime3d") { var r = child.rotationOverLifetime; r.enabled = true; r.separateAxes = true; r.x = .5f; r.y = .6f; r.z = .7f; }
+            if (mode == "overLifetime3dEmitted") { var r = child.rotationOverLifetime; r.enabled = true; r.separateAxes = true; r.x = .5f; r.y = .6f; r.z = .7f; child.Emit(1); child.Clear(false); }
+            if (mode == "overLifetimeEmitted") { var r = child.rotationOverLifetime; r.enabled = true; r.z = .7f; child.Emit(1); child.Clear(false); }
+            if (mode == "bySpeed3d") { var r = child.rotationBySpeed; r.enabled = true; r.separateAxes = true; r.x = .5f; r.y = .6f; r.z = .7f; }
+            var subs = parent.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Manual, (ParticleSystemSubEmitterProperties)flags);
+            var supplied = Parent(ParentSeeds[0]);
+            parent.TriggerSubEmitter(0, ref supplied);
+            Record(name, 1, child, parent, supplied, flags, 0);
+            DestroyImmediate(parent.gameObject);
+        }
+        foreach (bool parent3d in new[] { false, true })
+        foreach (bool child3d in new[] { false, true })
+        {
+            string name = "inherit_size_" + (parent3d ? "3d" : "1d") + "_" + (child3d ? "3d" : "1d");
+            var parent = Make(name + "_parent", 54321u);
+            var pm = parent.main; pm.startSize3D = parent3d;
+            var pe = parent.emission; pe.enabled = false;
+            var child = Make(name, 12345u, parent.transform);
+            var cm = child.main;
+            if (child3d) { cm.startSize3D = true; cm.startSizeX = .5f; cm.startSizeY = .75f; cm.startSizeZ = 1f; }
+            var subs = parent.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Manual, ParticleSystemSubEmitterProperties.InheritSize);
+            var supplied = Parent(ParentSeeds[0]);
+            supplied.startSize3D = new Vector3(2f, 3f, 4f);
+            parent.TriggerSubEmitter(0, ref supplied);
+            Record(name, 1, child, parent, supplied, 2, 0);
+            DestroyImmediate(parent.gameObject);
+        }
+    }
+
     void Start()
     {
         foreach (uint childSeed in ChildSeeds)
@@ -205,6 +323,8 @@ public class SeedAxisProbe : MonoBehaviour
             DestroyImmediate(ps.gameObject);
         }
         InitializationControls();
+        InheritanceControls();
+        StorageControls();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_SEED_AXIS_OUT"), Output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
