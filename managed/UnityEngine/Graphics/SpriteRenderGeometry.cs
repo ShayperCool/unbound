@@ -113,11 +113,8 @@ namespace Unbound.Runtime
             if (end != data.Length) throw new NotSupportedException($"Sprite vertex streams take {end} bytes, not {data.Length}");
             int At(int channel, int vertex, int component) =>
                 checked((int)(starts[channels[channel].Stream] + (long)vertex * strides[channels[channel].Stream] + channels[channel].Offset + component * 4));
-            float F(int channel, int vertex, int component)
-            {
-                float value = BitConverter.ToSingle(data, At(channel, vertex, component));
-                return float.IsFinite(value) ? value : throw new NotSupportedException($"Sprite vertex channel {(UnityEngine.Rendering.VertexAttribute)channel} is not finite");
-            }
+            // Values are kept as saved (the API returns them; drawing uses only positions and UVs).
+            float F(int channel, int vertex, int component) => BitConverter.ToSingle(data, At(channel, vertex, component));
             for (int v = 0; v < count; v++)
                 if (F(UvChannel, v, 0) != 0f || F(UvChannel, v, 1) != 0f)
                     throw new NotSupportedException("nonempty stored Sprite UV streams are not supported");

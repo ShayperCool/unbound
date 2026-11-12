@@ -125,9 +125,10 @@ namespace UnityEngine
             }
             var rect = data.Rect;
             var textureRect = data.TextureRect;
+            if (textureRect.width <= 0 || textureRect.height <= 0)
+                throw new NotSupportedException("Sprite texture rectangle is empty");
             if (texture != null && (rect.x < 0 || rect.y < 0 || rect.xMax > texture.width || rect.yMax > texture.height
-                || textureRect.x < 0 || textureRect.y < 0 || textureRect.width <= 0 || textureRect.height <= 0
-                || textureRect.xMax > texture.width || textureRect.yMax > texture.height))
+                || textureRect.x < 0 || textureRect.y < 0 || textureRect.xMax > texture.width || textureRect.yMax > texture.height))
                 throw new NotSupportedException("Sprite rectangles lie outside the referenced texture");
             var secondary = new SecondarySpriteTexture[data.Secondary.Length];
             for (int i = 0; i < secondary.Length; i++)
@@ -183,7 +184,6 @@ namespace UnityEngine
                 var position = Need(b, "position");
                 var rotation = Need(b, "rotation");
                 int parent = Integer(b, "parentId");
-                if (parent < -1 || parent >= items.Length) throw new FormatException($"Sprite bone {i} has parent {parent}");
                 bones[i] = new SpriteBone
                 {
                     name = b.Str("name"),

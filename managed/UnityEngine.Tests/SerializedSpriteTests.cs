@@ -173,6 +173,7 @@ namespace UnityEngine.Tests
             var mesh = sprite.RenderMesh();
             Assert.Equal(colors, mesh.colors32);
             Object.DestroyImmediate(mesh);
+            Assert.Empty(sprite.ParticleShapeMesh().colors32);
             // A copy's data access view is its own.
             var copy = Object.Instantiate(sprite);
             var white = new Unity.Collections.NativeArray<Color32>(copy.GetVertexCount(), Unity.Collections.Allocator.Temp);
