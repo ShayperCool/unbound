@@ -18,8 +18,13 @@ view type how many callbacks ran. Scenarios:
 - `basic`: the four commands above;
 - `shadows`: the sun casts hard shadows in two cascades (the URP asset's count set at run time)
   onto a ground plane; the range casts and receives shadows, and a second group takes light views
-  alone (`SetEnabledViewTypes`) and draws nothing;
-- `cameras`: a second camera elsewhere renders the group.
+  alone (`SetEnabledViewTypes`) and draws nothing. Two more ranges draw pillars, one on layer 3,
+  which the sun's culling mask leaves out (the sun does not light it, yet it casts a shadow), one on
+  layer 4, which the camera's mask leaves out (not drawn, yet it casts a shadow);
+- `cameras`: a second camera elsewhere renders the group; its culling mask leaves out the pillar's
+  layer, so it does not draw the pillar.
+
+Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
     python3 tests/projects/brg/run.py native --label L [--device vulkan]   # two Editor captures
     python3 tests/projects/brg/run.py publish L-1 L-2 [--device vulkan]
@@ -28,7 +33,7 @@ view type how many callbacks ran. Scenarios:
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images and values (but the buffer target) are identical on both. Unbound: 330/454 values
+the images and values (but the buffer target) are identical on both. Unbound: 354/478 values
 match on each device, the others are listed in `residuals-<device>.json` (the cascades' caster
 culling planes, culling matrix and spheres of the light contexts); `basic` and `cameras` match
-exactly, `shadows` has 18 isolated shadow-edge pixels over 8 (mean 0.01).
+exactly, `shadows` has 31 isolated shadow-edge pixels over 8 (mean 0.02).

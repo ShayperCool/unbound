@@ -27,7 +27,13 @@ public unsafe class BrgProbe : MonoBehaviour
     const int Width = 320, Height = 180;
     const int SizeOfPackedMatrix = 48, SizeOfFloat4 = 16;
     const uint PerInstance = 0x80000000;
-    const int Cubes = 8, Spheres = 2, Mirrored = 2, Instances = Cubes + Spheres + Mirrored, Commands = 4;
+    const int Cubes = 8, Spheres = 2, Mirrored = 2, Masked = 2, Instances = Cubes + Spheres + Mirrored + Masked, Commands = 4;
+    /// <summary>The layer of the pillar the shadows and cameras scenarios draw in a second range:
+    /// the sun's and the second camera's culling masks leave it out.</summary>
+    const int MaskedLayer = 3;
+    /// <summary>The layer of a second pillar, in a third range, that the main camera's culling
+    /// mask leaves out in the shadows scenario.</summary>
+    const int CameraMaskedLayer = 4;
 
     static readonly List<string> s_Rows = new List<string>();
     static string s_Out;
@@ -171,13 +177,19 @@ public unsafe class BrgProbe : MonoBehaviour
             int s = i - Cubes;
             return Matrix4x4.TRS(new Vector3(-0.6f + 1.2f * s, 1.9f, 0.5f), Quaternion.identity, Vector3.one * (0.4f + 0.2f * s));
         }
-        // Mirrored along x: front faces wind the other way.
-        int k = i - Cubes - Spheres;
-        return Matrix4x4.TRS(new Vector3(-1.8f + 3.6f * k, -0.9f, 0.5f), Quaternion.Euler(20f, 35f, 0f), new Vector3(-0.7f, 0.7f, 0.7f));
+        if (i < Cubes + Spheres + Mirrored)
+        {
+            // Mirrored along x: front faces wind the other way.
+            int k = i - Cubes - Spheres;
+            return Matrix4x4.TRS(new Vector3(-1.8f + 3.6f * k, -0.9f, 0.5f), Quaternion.Euler(20f, 35f, 0f), new Vector3(-0.7f, 0.7f, 0.7f));
+        }
+        int m = i - Cubes - Spheres - Mirrored;
+        return Matrix4x4.TRS(new Vector3(2.2f - 4.6f * m, 0.4f, 0.2f + 0.6f * m), Quaternion.identity, new Vector3(0.3f, 1.2f, 0.3f));
     }
 
     static Color InstanceColor(int i)
     {
+        if (i >= Cubes + Spheres + Mirrored) return new Color(0.95f, 0.95f, 0.6f, 1f);
         if (i >= Cubes + Spheres) return new Color(0.9f, 0.3f, 0.8f, 1f);
         if (i >= Cubes) return i == Cubes ? new Color(0.1f, 0.9f, 0.3f, 1f) : new Color(1f, 0.8f, 0.1f, 1f);
         float t = i / (float)(Cubes - 1);
@@ -193,7 +205,9 @@ public unsafe class BrgProbe : MonoBehaviour
     }
 
     /// <summary>The main light casts hard shadows in two cascades onto a ground plane; the range
-    /// casts and receives shadows, and a second group takes light views alone.</summary>
+    /// casts and receives shadows, and a second group takes light views alone. The sun's culling
+    /// mask leaves out the pillar's layer (the sun does not light it), and the camera's leaves out a
+    /// second pillar's.</summary>
     void Shadows()
     {
         m_Light = FindFirstObjectByType<Light>();
@@ -201,6 +215,10 @@ public unsafe class BrgProbe : MonoBehaviour
         int cascades = urp.shadowCascadeCount;
         urp.shadowCascadeCount = 2;
         m_Light.shadows = LightShadows.Hard;
+        int lightMask = m_Light.cullingMask;
+        m_Light.cullingMask = ~(1 << MaskedLayer);
+        int cameraMask = m_Camera.cullingMask;
+        m_Camera.cullingMask = ~(1 << CameraMaskedLayer);
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.transform.position = new Vector3(0f, -0.45f, 1.5f);
         ground.transform.localScale = new Vector3(0.8f, 1f, 0.5f);
@@ -214,16 +232,20 @@ public unsafe class BrgProbe : MonoBehaviour
         m_LightOnly = null;
         DestroyImmediate(ground);
         m_Light.shadows = LightShadows.None;
+        m_Light.cullingMask = lightMask;
+        m_Camera.cullingMask = cameraMask;
         urp.shadowCascadeCount = cascades;
     }
 
-    /// <summary>A second camera, elsewhere, renders the group: its own culling and callback.</summary>
+    /// <summary>A second camera, elsewhere, renders the group: its own culling and callback. Its
+    /// culling mask leaves out the pillar's layer.</summary>
     void Cameras()
     {
         var second = new GameObject("Second Camera").AddComponent<Camera>();
         second.CopyFrom(m_Camera);
         second.transform.SetPositionAndRotation(new Vector3(3f, 2f, -4f), Quaternion.Euler(18f, -35f, 0f));
         second.fieldOfView = 50f;
+        second.cullingMask = ~(1 << MaskedLayer);
         Scenario("cameras", second);
         RecordViews();
         DestroyImmediate(second.gameObject);
@@ -281,16 +303,19 @@ public unsafe class BrgProbe : MonoBehaviour
             m_Views[view] = m_Views.TryGetValue(view, out int n) ? n + 1 : 1;
         }
         if (group != m_Brg) return new JobHandle();
+        // The pillar's range (the shadows and cameras scenarios).
+        bool masked = m_Scenario != "basic";
+        int commandCount = masked ? Commands + Masked : Commands;
         var commands = (BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr();
         Row(key + ".outputCount", output.drawCommands.Length);
         Row(key + ".outputZeroed", commands->drawCommandCount == 0 && commands->drawCommands == null && commands->visibleInstances == null);
         int alignment = UnsafeUtility.AlignOf<long>();
-        commands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>() * Commands, alignment, Allocator.TempJob);
-        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+        commands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>() * commandCount, alignment, Allocator.TempJob);
+        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>() * (1 + Masked), alignment, Allocator.TempJob);
         commands->visibleInstances = (int*)UnsafeUtility.Malloc(Instances * sizeof(int), alignment, Allocator.TempJob);
         commands->drawCommandPickingInstanceIDs = null;
-        commands->drawCommandCount = Commands;
-        commands->drawRangeCount = 1;
+        commands->drawCommandCount = commandCount;
+        commands->drawRangeCount = masked ? 1 + Masked : 1;
         commands->visibleInstanceCount = Instances;
         commands->instanceSortingPositions = null;
         commands->instanceSortingPositionFloatCount = 0;
@@ -317,6 +342,24 @@ public unsafe class BrgProbe : MonoBehaviour
                 ? new BatchFilterSettings { renderingLayerMask = 0xffffffff, shadowCastingMode = ShadowCastingMode.On, receiveShadows = true }
                 : new BatchFilterSettings { renderingLayerMask = 0xffffffff },
         };
+        if (masked)
+            for (int m = 0; m < Masked; m++)
+            {
+                commands->drawCommands[Commands + m] = new BatchDrawCommand
+                {
+                    visibleOffset = (uint)(Cubes + Spheres + Mirrored + m), visibleCount = 1, batchID = m_Batch, materialID = m_Lit, meshID = m_Cube,
+                    submeshIndex = 0, splitVisibilityMask = 0xff, flags = BatchDrawCommandFlags.None, sortingPosition = 0,
+                };
+                commands->drawRanges[1 + m] = new BatchDrawRange
+                {
+                    drawCommandsType = BatchDrawCommandType.Direct, drawCommandsBegin = (uint)(Commands + m), drawCommandsCount = 1,
+                    filterSettings = new BatchFilterSettings
+                    {
+                        renderingLayerMask = 0xffffffff, layer = (byte)(m == 0 ? MaskedLayer : CameraMaskedLayer),
+                        shadowCastingMode = ShadowCastingMode.On, receiveShadows = true,
+                    },
+                };
+            }
         for (int i = 0; i < Instances; i++) commands->visibleInstances[i] = i;
         return new JobHandle();
     }
@@ -349,6 +392,12 @@ public unsafe class BrgProbe : MonoBehaviour
             var p = c.cullingPlanes[i];
             Row(key + ".plane" + i, Floats(new Vector4(p.normal.x, p.normal.y, p.normal.z, p.distance)));
         }
+        if (m_Scenario != "basic")
+            for (int i = 0; i < c.receiverPlaneCount; i++)
+            {
+                var p = c.cullingPlanes[c.receiverPlaneOffset + i];
+                Row(key + ".receiver" + i, Floats(new Vector4(p.normal.x, p.normal.y, p.normal.z, p.distance)));
+            }
         Row(key + ".splits", c.cullingSplits.Length);
         for (int i = 0; i < c.cullingSplits.Length; i++)
         {
