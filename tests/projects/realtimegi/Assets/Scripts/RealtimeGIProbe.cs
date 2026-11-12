@@ -57,6 +57,15 @@ public class RealtimeGIProbe : MonoBehaviour
         if (QualitySettings.activeColorSpace == ColorSpace.Gamma)
         {
             yield return WithoutLightingData();
+            // Then the Room lit in a gamma-space project: as it loads and with its point light
+            // moved.
+            yield return Load("Room");
+            var lit = Scene();
+            yield return Converge();
+            Capture("room-base", lit);
+            lit.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+            yield return Converge();
+            Capture("room-moved", lit);
             Finish();
             yield break;
         }
