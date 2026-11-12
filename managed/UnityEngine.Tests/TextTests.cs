@@ -431,6 +431,26 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>A reset grows the texture at once to the area the kept characters need at the
+        /// density the full texture had (their squared sizes per texel, 1.1 times over), not a side
+        /// at a time (measured, tests/projects/textmesh atlas2).</summary>
+        [Fact]
+        public void AResetGrowsToTheEstimatedAreaAtOnce()
+        {
+            var font = BoxFont();
+            var rebuilt = new List<Font>();
+            void OnRebuilt(Font f) { if (f == font) rebuilt.Add(f); }
+            Font.textureRebuilt += OnRebuilt;
+            try
+            {
+                font.RequestCharactersInTexture("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 90);
+                var texture = (Texture2D)font.material.mainTexture;
+                Assert.Single(rebuilt);
+                Assert.Equal((1024, 1024), (texture.width, texture.height));
+            }
+            finally { Font.textureRebuilt -= OnRebuilt; }
+        }
+
         /// <summary>A text laid out from Font.textureRebuilt while another generation grows the
         /// font's texture (uGUI regenerates its texts so): both come out as they would alone.</summary>
         [Fact]

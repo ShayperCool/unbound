@@ -365,6 +365,12 @@ namespace Unbound.Runtime
         readonly SortedSet<(int X, int Y)> m_Corners = new SortedSet<(int X, int Y)>(CornerOrder.Instance);
         (int X, int Y)? m_Search;
         readonly List<RectInt> m_Cells = new List<RectInt>();
+        /// <summary>The cells overlapping each square of <see cref="GridSide"/> texels of the block, so
+        /// that free space is looked up near a cell instead of among all of them.</summary>
+        List<int>[] m_Grid = Array.Empty<List<int>>();
+        int m_GridColumns;
+        readonly List<int> m_UsedSquares = new List<int>();
+        const int GridSide = 32;
         int m_Block = 1;
         int m_BlockIndex;
         bool m_Started;
@@ -487,7 +493,7 @@ namespace Unbound.Runtime
                     {
                         int block = NextPowerOfTwo(GrowBlockScale * largest);
                         bool wider = Texture.m_Width < Texture.m_Height;
-                        while (true)
+                        while (Texture.m_Width < MaxSize || Texture.m_Height < MaxSize)
                         {
                             if (wider) Texture.m_Width *= 2;
                             else Texture.m_Height *= 2;
@@ -586,15 +592,97 @@ namespace Unbound.Runtime
         {
             m_Corners.Clear();
             m_Cells.Clear();
+            foreach (var square in m_UsedSquares) m_Grid[square].Clear();
+            m_UsedSquares.Clear();
+            m_GridColumns = (m_Block + GridSide - 1) / GridSide;
+            if (m_Grid.Length < m_GridColumns * m_GridColumns)
+            {
+                var grid = new List<int>[m_GridColumns * m_GridColumns];
+                Array.Copy(m_Grid, grid, m_Grid.Length);
+                m_Grid = grid;
+            }
             m_Corners.Add((0, 0));
             m_Search = (0, 0);
         }
 
+        /// <summary>The grid squares a rect of the block overlaps (clamped to the block).</summary>
+        (int Left, int Bottom, int Right, int Top) Squares(int x, int y, int width, int height)
+        {
+            int last = m_GridColumns - 1;
+            return (Math.Clamp(x / GridSide, 0, last), Math.Clamp(y / GridSide, 0, last),
+                Math.Clamp((x + width - 1) / GridSide, 0, last), Math.Clamp((y + height - 1) / GridSide, 0, last));
+        }
+
         bool Free(int x, int y, int width, int height)
         {
-            foreach (var c in m_Cells)
-                if (c.x < x + width && x < c.x + c.width && c.y < y + height && y < c.y + c.height) return false;
+            var (left, bottom, right, top) = Squares(x, y, width, height);
+            for (int row = bottom; row <= top; row++)
+                for (int column = left; column <= right; column++)
+                {
+                    var cells = m_Grid[row * m_GridColumns + column];
+                    if (cells == null) continue;
+                    foreach (int i in cells)
+                    {
+                        var c = m_Cells[i];
+                        if (c.x < x + width && x < c.x + c.width && c.y < y + height && y < c.y + c.height) return false;
+                    }
+                }
             return true;
+        }
+
+        /// <summary>Where a free cell at (x, y) stops sliding left one texel at a time: at the nearest
+        /// right edge of a cell beside it in its rows, or at 0.</summary>
+        int SlideLeft(int x, int y, int width, int height)
+        {
+            int stop = 0;
+            var (_, bottom, right, top) = Squares(0, y, x, height);
+            for (int row = bottom; row <= top; row++)
+                for (int column = 0; column <= right; column++)
+                {
+                    var cells = m_Grid[row * m_GridColumns + column];
+                    if (cells == null) continue;
+                    foreach (int i in cells)
+                    {
+                        var c = m_Cells[i];
+                        if (c.y < y + height && y < c.y + c.height && c.x + c.width <= x) stop = Math.Max(stop, c.x + c.width);
+                    }
+                }
+            return x <= 0 ? x : stop;
+        }
+
+        /// <summary>Where a free cell at (x, y) stops sliding down: at the nearest top edge of a cell
+        /// below it in its columns, or at 0.</summary>
+        int SlideDown(int x, int y, int width, int height)
+        {
+            int stop = 0;
+            var (left, _, right, top) = Squares(x, 0, width, y);
+            for (int row = 0; row <= top; row++)
+                for (int column = left; column <= right; column++)
+                {
+                    var cells = m_Grid[row * m_GridColumns + column];
+                    if (cells == null) continue;
+                    foreach (int i in cells)
+                    {
+                        var c = m_Cells[i];
+                        if (c.x < x + width && x < c.x + c.width && c.y + c.height <= y) stop = Math.Max(stop, c.y + c.height);
+                    }
+                }
+            return y <= 0 ? y : stop;
+        }
+
+        void AddCell(RectInt cell)
+        {
+            int index = m_Cells.Count;
+            m_Cells.Add(cell);
+            var (left, bottom, right, top) = Squares(cell.x, cell.y, cell.width, cell.height);
+            for (int row = bottom; row <= top; row++)
+                for (int column = left; column <= right; column++)
+                {
+                    int square = row * m_GridColumns + column;
+                    var cells = m_Grid[square] ??= new List<int>();
+                    if (cells.Count == 0) m_UsedSquares.Add(square);
+                    cells.Add(index);
+                }
         }
 
         bool TryPlace(AtlasGlyph g)
@@ -627,8 +715,8 @@ namespace Unbound.Runtime
             {
                 var (x, y) = corner;
                 if (x < 0 || y < 0 || x + w > m_Block || y + h > m_Block || !Free(x, y, w, h)) continue;
-                while (x > 0 && Free(x - 1, y, w, h)) x--;
-                while (y > 0 && Free(x, y - 1, w, h)) y--;
+                x = SlideLeft(x, y, w, h);
+                y = SlideDown(x, y, w, h);
                 Take(corner, x, y, w, h);
                 Store(g, x, y);
                 return true;
@@ -651,7 +739,7 @@ namespace Unbound.Runtime
                 break;
             }
             m_Corners.Remove(corner);
-            m_Cells.Add(new RectInt(x, y, w, h));
+            AddCell(new RectInt(x, y, w, h));
             if (x + w < m_Block) m_Corners.Add((x + w, y));
             if (y + h < m_Block) m_Corners.Add((x, y + h));
         }
