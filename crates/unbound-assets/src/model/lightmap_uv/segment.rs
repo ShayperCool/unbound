@@ -531,7 +531,7 @@ impl<'a> Segmentation<'a> {
         for i in 0..borders.len() {
             borders[i].error = self.merge_error(&borders[i]);
         }
-        super::sort::introsort(&mut borders, |a, b| {
+        crate::sort::introsort(&mut borders, |a, b| {
             for k in 0..6 {
                 if a.centroids[k] - b.centroids[k] != 0.0 {
                     return b.centroids[k] < a.centroids[k];

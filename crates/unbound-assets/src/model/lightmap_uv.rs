@@ -22,7 +22,6 @@ mod pack;
 mod param;
 mod segment;
 mod simplify;
-mod sort;
 
 /// The mesh the unwrap works on.
 pub struct UnwrapInput<'a> {

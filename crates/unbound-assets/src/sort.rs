@@ -1,5 +1,7 @@
 //! An unstable introsort: median-of-three quicksort above 16 elements, heapsort past the depth
-//! limit, then insertion sort. The order it leaves equal elements in is part of the result.
+//! limit, then insertion sort. The order it leaves equal elements in is part of the result: it is
+//! the order the Unity 6000.0.71f1 Editor's model importer (lightmap UVs) and realtime GI
+//! precompute (system packing) leave them in.
 
 fn insertion_sort<T: Copy>(v: &mut [T], less: &impl Fn(&T, &T) -> bool) {
     for i in 1..v.len() {

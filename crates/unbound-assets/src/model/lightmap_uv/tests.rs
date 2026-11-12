@@ -703,7 +703,7 @@ fn introsort_orders_like_a_stable_sort_on_distinct_keys() {
         .collect();
     let mut expected = keys.clone();
     expected.sort();
-    sort::introsort(&mut keys, |a, b| a < b);
+    crate::sort::introsort(&mut keys, |a, b| a < b);
     assert_eq!(keys, expected);
 }
 

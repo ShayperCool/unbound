@@ -32,6 +32,7 @@ pub mod model;
 pub mod serialized;
 pub mod serialized_mesh;
 pub mod serialized_texture;
+pub mod sort;
 pub mod sprite;
 pub mod sprite_mesh;
 pub mod texture;
