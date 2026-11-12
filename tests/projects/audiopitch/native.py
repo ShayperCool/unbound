@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -15,7 +16,7 @@ p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
 p.add_argument('--reset-cases', action='store_true', help='Reset output before each case, then run its normal preflight')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
 if a.set == 'wide-pcm' and a.reset_cases:
@@ -25,7 +26,7 @@ if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] !=
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations'):
+if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts'):
     import sys
     sys.path.insert(0, str(fixture.parents[1]))
     from authored_project import assemble
@@ -33,6 +34,15 @@ if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations'):
     if a.set in ('wide', 'wide-pcm', 'configurations'):
         from wide_boot import prepare
         prepare(project)
+    if a.set == 'listener-scripts':
+        # Only the alias used by this independent private capture project is imported.
+        source = (fixture/'Assets/Scripts/EffectProbe.cs').read_text()
+        keep = set(re.findall(r'new\[\] \{ "context_scriptzone_[^"]+", "asset=([^"]+)"', source))
+        assert keep, 'listener script controls have no mixer aliases'
+        for mixer in (project/'Assets/Resources').glob('*.mixer'):
+            if mixer.stem not in keep:
+                mixer.unlink()
+                mixer.with_name(mixer.name+'.meta').unlink(missing_ok=True)
     if a.set == 'configurations':
         from configuration_controls import prepare
         prepare(project)
@@ -44,7 +54,7 @@ import sys
 sys.path.insert(0, str(fixture.parents[1]))
 from editor_runner import EditorJob, run
 import time
-from common import cases, devices, header, surround_cases, transition_cases, reset_cases, scheduled_reset_cases, wet_cases, wet_edge_cases, settings_cases, settings_sessions, context_sessions, prologic_cases, zone_cases, mono_cases, recovery_cases
+from common import cases, devices, header, surround_cases, transition_cases, reset_cases, scheduled_reset_cases, wet_cases, wet_edge_cases, settings_cases, settings_sessions, context_sessions, prologic_cases, zone_cases, mono_cases, recovery_cases, listener_script_cases
 
 
 def capture(work, cases, env=None, prepared=False, buffer=None):
@@ -200,9 +210,9 @@ if a.set in ('settings', 'prologic'):
         from prologic_pairs import compare_pairs
         assert compare_pairs(a.work/'capture', a.work/'paired-modes.jsonl.gz', a.release, a.rate) == 0
     raise SystemExit
-if a.set in ('zones', 'mono', 'recovery'):
-    selected = recovery_cases() if a.set == 'recovery' else zone_cases() if a.set == 'zones' else mono_cases()
-    part(a.work, selected, prepared=a.set == 'recovery')
+if a.set in ('zones', 'mono', 'recovery', 'listener-scripts'):
+    selected = listener_script_cases() if a.set == 'listener-scripts' else recovery_cases() if a.set == 'recovery' else zone_cases() if a.set == 'zones' else mono_cases()
+    part(a.work, selected, prepared=a.set in ('recovery', 'listener-scripts'))
     assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion'
     verify(a.work/'capture', a.release, a.rate, contexts=True, selected=selected)
     raise SystemExit

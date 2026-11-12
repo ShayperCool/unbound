@@ -38,7 +38,7 @@ def all_cases():
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_', 'context_monofx_', 'context_recovery_', 'context_wide_')) and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_', 'context_monofx_', 'context_recovery_', 'context_wide_', 'context_scriptzone_')) and key.startswith('context_') == contexts]
 
 
 def surround_cases():
@@ -47,6 +47,10 @@ def surround_cases():
 
 def recovery_cases():
     return [key for key in all_cases() if key.startswith('context_recovery_')]
+
+
+def listener_script_cases():
+    return [key for key in all_cases() if key.startswith('context_scriptzone_')]
 
 
 def mono_cases():
@@ -123,6 +127,7 @@ def profile(name, rate):
     if name == 'wide-pcm': return dict.fromkeys(wide_pcm_rows())
     if name == 'prologic': return dict.fromkeys(prologic_cases())
     if name == 'zones': return dict.fromkeys(zone_cases())
+    if name == 'listener-scripts': return dict.fromkeys(listener_script_cases())
     if name == 'mono': return dict.fromkeys(mono_cases())
     if name == 'recovery': return dict.fromkeys(recovery_cases())
     if name == 'wet-edges': return dict.fromkeys(wet_edge_cases())

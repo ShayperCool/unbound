@@ -992,6 +992,72 @@ public partial class EffectProbe : MonoBehaviour
         new[] { "context_monofx_1_source_reverb_group_chorus", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att,Chorus", "Music.Chorus.Dry mix=0.2", "Music.Chorus.Wet mix tap 1=0.2", "Music.Chorus.Wet mix tap 2=0.5", "Music.Chorus.Wet mix tap 3=0.9", "Music.Chorus.Delay=11", "Music.Chorus.Rate=3", "Music.Chorus.Depth=0.7", "Music.Chorus.Wet=0", "component=reverb:source" },
         new[] { "context_monofx_1_group_reverb_listener_chorus", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "Music.Reverb.Wet=0", "component=chorus:listener" },
         new[] { "context_monofx_1_receive_after_reverb", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att,Reverb,Send", "Master:Att,Receive", "Music.Send.Level=0", "live:5:Send_Level=-6", "live:8:Send_Level=-80", "live:11:Send_Level=0", "live:14:Send_Level=-12", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "Music.Reverb.Wet=0" },
+        new[] { "context_scriptzone_2_dry_none", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return" },
+        new[] { "context_scriptzone_2_dry_zero", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0" },
+        new[] { "context_scriptzone_2_dry_identity", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=1" },
+        new[] { "context_scriptzone_2_dry_double", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=2" },
+        new[] { "context_scriptzone_2_dry_negative", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=-1" },
+        new[] { "context_scriptzone_2_zone_none", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user" },
+        new[] { "context_scriptzone_2_zone_zero", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=0" },
+        new[] { "context_scriptzone_2_zone_identity", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=1" },
+        new[] { "context_scriptzone_2_zone_double", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=2" },
+        new[] { "context_scriptzone_2_zone_negative", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=-1" },
+        new[] { "context_scriptzone_4_dry_none", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return" },
+        new[] { "context_scriptzone_4_dry_zero", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0" },
+        new[] { "context_scriptzone_4_dry_identity", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=1" },
+        new[] { "context_scriptzone_4_dry_double", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=2" },
+        new[] { "context_scriptzone_4_dry_negative", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=-1" },
+        new[] { "context_scriptzone_4_zone_none", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user" },
+        new[] { "context_scriptzone_4_zone_zero", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=0" },
+        new[] { "context_scriptzone_4_zone_identity", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=1" },
+        new[] { "context_scriptzone_4_zone_double", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=2" },
+        new[] { "context_scriptzone_4_zone_negative", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=-1" },
+        new[] { "context_scriptzone_5_dry_none", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return" },
+        new[] { "context_scriptzone_5_dry_zero", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0" },
+        new[] { "context_scriptzone_5_dry_identity", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=1" },
+        new[] { "context_scriptzone_5_dry_double", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=2" },
+        new[] { "context_scriptzone_5_dry_negative", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=-1" },
+        new[] { "context_scriptzone_5_zone_none", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user" },
+        new[] { "context_scriptzone_5_zone_zero", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=0" },
+        new[] { "context_scriptzone_5_zone_identity", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=1" },
+        new[] { "context_scriptzone_5_zone_double", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=2" },
+        new[] { "context_scriptzone_5_zone_negative", "asset=context_zone_2_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=-1" },
+        new[] { "context_scriptzone_6_dry_none", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return" },
+        new[] { "context_scriptzone_6_dry_zero", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0" },
+        new[] { "context_scriptzone_6_dry_identity", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=1" },
+        new[] { "context_scriptzone_6_dry_double", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=2" },
+        new[] { "context_scriptzone_6_dry_negative", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=-1" },
+        new[] { "context_scriptzone_6_zone_none", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user" },
+        new[] { "context_scriptzone_6_zone_zero", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=0" },
+        new[] { "context_scriptzone_6_zone_identity", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=1" },
+        new[] { "context_scriptzone_6_zone_double", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=2" },
+        new[] { "context_scriptzone_6_zone_negative", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=-1" },
+        new[] { "context_scriptzone_8_dry_none", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return" },
+        new[] { "context_scriptzone_8_dry_zero", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0" },
+        new[] { "context_scriptzone_8_dry_identity", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=1" },
+        new[] { "context_scriptzone_8_dry_double", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=2" },
+        new[] { "context_scriptzone_8_dry_negative", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=-1" },
+        new[] { "context_scriptzone_8_zone_none", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user" },
+        new[] { "context_scriptzone_8_zone_zero", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=0" },
+        new[] { "context_scriptzone_8_zone_identity", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=1" },
+        new[] { "context_scriptzone_8_zone_double", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=2" },
+        new[] { "context_scriptzone_8_zone_negative", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "zone=1", "zone_profile=user", "listener_gain=-1" },
+        new[] { "context_scriptzone_1_dry_none", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0" },
+        new[] { "context_scriptzone_1_dry_zero", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "listener_gain=0" },
+        new[] { "context_scriptzone_1_dry_identity", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "listener_gain=1" },
+        new[] { "context_scriptzone_1_dry_double", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "listener_gain=2" },
+        new[] { "context_scriptzone_1_dry_negative", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "listener_gain=-1" },
+        new[] { "context_scriptzone_1_zone_none", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "zone=1", "zone_profile=user" },
+        new[] { "context_scriptzone_1_zone_zero", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "zone=1", "zone_profile=user", "listener_gain=0" },
+        new[] { "context_scriptzone_1_zone_identity", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "zone=1", "zone_profile=user", "listener_gain=1" },
+        new[] { "context_scriptzone_1_zone_double", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "zone=1", "zone_profile=user", "listener_gain=2" },
+        new[] { "context_scriptzone_1_zone_negative", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "listener_start=0", "zone=1", "zone_profile=user", "listener_gain=-1" },
+        new[] { "context_scriptzone_2_bypass_dry_routed_1", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=1" },
+        new[] { "context_scriptzone_2_bypass_dry_unrouted_0", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=0", "unrouted=1" },
+        new[] { "context_scriptzone_2_bypass_dry_unrouted_1", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=1", "unrouted=1" },
+        new[] { "context_scriptzone_2_bypass_zone_routed_1", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=1", "zone=1", "zone_profile=user" },
+        new[] { "context_scriptzone_2_bypass_zone_unrouted_0", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=0", "unrouted=1", "zone=1", "zone_profile=user" },
+        new[] { "context_scriptzone_2_bypass_zone_unrouted_1", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=1", "unrouted=1", "zone=1", "zone_profile=user" },
     };
     static readonly Dictionary<string, string[]> CaseTokens = new Dictionary<string, string[]>();
     static EffectProbe()
@@ -1112,9 +1178,16 @@ public partial class EffectProbe : MonoBehaviour
         zone.diffusion = 100; zone.density = 100;
     }
 
+    static bool ZoneContext(string key) => key.StartsWith("context_zone_") || key.StartsWith("context_scriptzone_");
+
     static bool ChangeZone(string kind, int block, AudioReverbZone zone,
         AudioReverbZone other, AudioSource source, Transform listener)
     {
+        if (kind == "script_return") {
+            if (block != 4 && block != 12 && block != 20) return false;
+            listener.position = new Vector3(block == 12 ? 20 : 0, 0, 0);
+            return true;
+        }
         int phase = block == 4 ? 0 : block == 8 ? 1 : block == 16 ? 2 : block == 20 ? 3 : block == 24 ? 4 : -1;
         if (phase < 0) return false;
         if (kind == "overlap_move") {
@@ -1222,7 +1295,7 @@ public partial class EffectProbe : MonoBehaviour
                 Save();
                 continue;
             }
-            if (key.StartsWith("context_zone_")) {
+            if (ZoneContext(key)) {
                 gameObject.transform.position = new Vector3(float.Parse(Option(key, "listener_start=", "0"), System.Globalization.CultureInfo.InvariantCulture), 0, 0);
                 gameObject.transform.rotation = Quaternion.identity;
             }
@@ -1311,10 +1384,11 @@ public partial class EffectProbe : MonoBehaviour
             source.bypassListenerEffects = Option(key, "listener_bypass=", "0") == "1";
             source.outputAudioMixerGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Music");
             if (!source.outputAudioMixerGroup) throw new Exception("Missing group Music");
+            if (Option(key, "unrouted=", "0") == "1") source.outputAudioMixerGroup = null;
             source.spatialBlend = float.Parse(Option(key, "blend=", "0"), inv); source.volume = 1;
             source.spread = float.Parse(Option(key, "spread=", "0"), inv);
             source.panStereo = float.Parse(Option(key, "pan=", "0"), inv);
-            if (key.StartsWith("context_zone_")) source.dopplerLevel = 0;
+            if (ZoneContext(key)) source.dopplerLevel = 0;
             var listenerWrite = Option(key, "listener=", "");
             OutputLayoutProbe.WriteChannel = -1;
             if (listenerWrite != "") {
@@ -1322,6 +1396,12 @@ public partial class EffectProbe : MonoBehaviour
                 OutputLayoutProbe.WriteValue = float.Parse(listenerWrite.Split(':')[0], inv);
                 OutputLayoutProbe.WriteChannel = int.Parse(listenerWrite.Split(':')[1], inv);
                 if (layoutProbe == null) layoutProbe = gameObject.AddComponent<OutputLayoutProbe>();
+            }
+            ProbeListenerGain gainProbe = null;
+            string gainOption = Option(key, "listener_gain=", "");
+            if (gainOption != "") {
+                gainProbe = gameObject.AddComponent<ProbeListenerGain>();
+                gainProbe.Gain = float.Parse(gainOption, inv);
             }
             AudioClip clip = null;
             if (Option(key, "music=", "") == "generator") {
@@ -1417,7 +1497,7 @@ public partial class EffectProbe : MonoBehaviour
                         if (zoneChange == "preset") liveZone.reverbPreset = block == 8 ? AudioReverbPreset.Cave : AudioReverbPreset.Generic;
                         if (zoneChange != "" && Engine) FlushEngine();
                     }
-                    if (key.StartsWith("context_zone_") && ChangeZone(Option(key, "zone_control=", ""), block,
+                    if (ZoneContext(key) && Option(key, "zone_control=", "") != "" && ChangeZone(Option(key, "zone_control=", ""), block,
                         liveZone, overlapZone, source, gameObject.transform)) {
                         RecordZoneState(records, key, block, liveZone, overlapZone, source, gameObject.transform);
                         if (Engine) FlushEngine();
@@ -1431,12 +1511,14 @@ public partial class EffectProbe : MonoBehaviour
             }
             if (Option(key, "music=", "") == "generator") records.Add("\""+key+".generator_channels\":"+ProbeGenerator.Channels);
             if (listenerWrite != "") records.Add("\""+key+".listener_channels\":"+OutputLayoutProbe.Channels);
+            if (gainProbe != null) records.Add("\""+key+".listener_gain_channels\":"+gainProbe.Channels);
             foreach (string suffix in new[] { "", ".master" })
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*actualBuffer)+",\"channels\":"+outputChannels+"}");
             Save(); buffer.Dispose();
             }
             OutputLayoutProbe.WriteChannel = -1;
             if (layoutProbe != null) DestroyImmediate(layoutProbe);
+            if (gainProbe != null) DestroyImmediate(gainProbe);
             source.Stop(); if (component) DestroyImmediate(component); if (zoneObject) DestroyImmediate(zoneObject); if (overlapObject) DestroyImmediate(overlapObject); DestroyImmediate(go); if (clip) DestroyImmediate(clip);
             var silence = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
             bool resetTail = Option(key, "reset_to=", "") != "";
@@ -1523,5 +1605,18 @@ public class ProbeScript : MonoBehaviour
     {
         if (WriteChannel < channels)
             for (int i = WriteChannel; i < data.Length; i += channels) data[i] += WriteValue;
+    }
+}
+
+/// <summary>A listener script with a constant gain, independent of the source and zone.</summary>
+public class ProbeListenerGain : MonoBehaviour
+{
+    public volatile float Gain = 1;
+    public volatile int Channels;
+    void OnAudioFilterRead(float[] data, int channels)
+    {
+        Channels = channels;
+        float gain = Gain;
+        for (int i = 0; i < data.Length; i++) data[i] *= gain;
     }
 }

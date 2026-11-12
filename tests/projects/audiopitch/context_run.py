@@ -16,7 +16,7 @@ from common import profile, context_sessions
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
-p.add_argument('--profile', choices=('transitions', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'wide', 'wide-pcm'), default='transitions')
+p.add_argument('--profile', choices=('transitions', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'wide', 'wide-pcm', 'listener-scripts'), default='transitions')
 p.add_argument('--unbound', type=Path, default=os.environ.get('UNBOUND'))
 p.add_argument('--rate', type=int, choices=(48000, 44100), action='append')
 p.add_argument('--work', type=Path)
