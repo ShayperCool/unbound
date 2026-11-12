@@ -76,7 +76,8 @@ with 0.1 to 0.7 s calls, crossing the loop end or not. `stoppedLongStep/*`
 raises `Time.maximumParticleDeltaTime` above the start delay left, and
 `disabledBurst/*` turns the emission module off across a single and a repeating
 burst. `mixedRemainder/*` alternates fixed-step and variable-step calls and adds a
-fresh delayed playback with a long step; `stoppedChild/*` stops a never-played
+fresh delayed playback with a long step; `stoppedLongStep/*/afterPlay{2,3,4}` follow
+a resumed system with delay left over longer and frame-length calls; `stoppedChild/*` stops a never-played
 Birth sub-emitter with its parent. The Editor runs in batch mode on the GPU (`run.py native` uses
 `tests/editor_runner.py`); two captures were identical and the earlier 16573
 records are byte-identical.

@@ -387,6 +387,10 @@ public class EmissionProbe : MonoBehaviour
         ps.Simulate(.3f, false, false, false); ParticleState(key + "/second", ps);
         ps.Play(false);
         ps.Simulate(.3f, false, false, false); ParticleState(key + "/afterPlay", ps);
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/afterPlay2", ps);
+        ps.Simulate(.016f, false, false, false); ParticleState(key + "/afterPlay3", ps);
+        for (int i = 0; i < 5; i++) ps.Simulate(.016f, false, false, false);
+        ParticleState(key + "/afterPlay4", ps);
         UnityEngine.Object.DestroyImmediate(go);
         Time.maximumParticleDeltaTime = saved;
     }
