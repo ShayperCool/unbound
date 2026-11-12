@@ -14,7 +14,7 @@ p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
@@ -22,11 +22,14 @@ if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] !=
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-if a.set == 'recovery':
+if a.set in ('recovery', 'wide'):
     import sys
     sys.path.insert(0, str(fixture.parents[1]))
     from authored_project import assemble
     assemble(fixture.name, a.release, 'default', project)
+    if a.set == 'wide':
+        from wide_boot import prepare
+        prepare(project)
 else:
     shutil.copytree(fixture, project, ignore=shutil.ignore_patterns('Reference', 'Library', 'Logs', '__pycache__', '*.py', '*.md'))
 output = a.work/'capture'
@@ -120,6 +123,27 @@ def record_devices(work):
 
 
 from verify import verify
+if a.set == 'wide':
+    if a.rate != 48000: p.error('wide controls use a 48000 Hz session with per-case configurations')
+    merged = {}
+    for session, selected in context_sessions('wide').items():
+        if a.cases:
+            selected = [key for key in selected if key in a.cases.split(',')]
+            if not selected: continue
+        work = a.work/session
+        work.mkdir()
+        part(work, selected, prepared=True, buffer=8192)
+        assert 'Assertion failed on expression:' not in (work/'editor.log').read_text(), 'Editor assertion'
+        verify(work/'capture', a.release, a.rate, contexts=True, selected=selected)
+        for key, value in header(work/'capture').items():
+            if key in ('release', 'rate'): assert merged.get(key, value) == value, key
+            else: assert key not in merged, key
+            merged[key] = value
+        output.mkdir(exist_ok=True)
+        for file in (work/'capture').glob('*.f32'): os.link(file, output/file.name)
+        (output/'capture.json').write_text(json.dumps(merged, indent=2)+'\n')
+    verify(output, a.release, a.rate, contexts=True, selected=a.cases.split(',') if a.cases else list(__import__('common').wide_rows()))
+    raise SystemExit
 if a.cases:
     selected = a.cases.split(',')
     if len({kind(key) for key in selected}) != 1 or (kind(selected[0]) == 'device' and len(selected) != 1):

@@ -1952,11 +1952,12 @@
  },
  "fixture": {
   "Assets/Editor/ProbeRunner.cs": "6d7ed4ffdd480ed6c13a8a921fd63982267d5a5aaf0d4d65476e2ebf1e760b6b",
-  "Assets/Scripts/EffectProbe.cs": "708be8c33ed872385f6999fd9da513d0db4499df83503e626aff01d89ad04676",
+  "Assets/Scripts/EffectProbe.cs": "4f49500e8857dc395da26700a799d78dd219ac0cf1ea1cf6b32370cd98f40148",
   "Assets/Scripts/LayoutResetControls.cs": "aa163dc7a95126adbfd62269e0e9193668eda175b41a8fe5c98c3bbd6b6f491a",
+  "Assets/StreamingAssets/WideCases.tsv": "dd06b9f2baeb25013f3eeea71ab341949bd782e813881307a7f0e2f4c855c60e",
   "Packages/manifest.json": "86577de3e8b3b1d8925d7d77df7880352ee16a5ed0d4e06447d1a54c19b9e76d",
   "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
-  "tests/projects/audiopitch/native.py": "f78fc50ad63221aa9949b9dbbab608d3b018fdb32746401dbaaa9d833edf423e"
+  "tests/projects/audiopitch/native.py": "39d30c4d3cd9070ebe41e2c7659388bd93557e9cfc338abbf0345e7cbab19f41"
  },
  "format": 1,
  "probe": "audiopitch",

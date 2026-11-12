@@ -4,9 +4,13 @@ import gzip
 import json
 from pathlib import Path
 import re
+from functools import cache
 
 FIXTURE = Path(__file__).resolve().parent
+@cache
 def blocks(case):
+    if case.startswith('context_wide_'):
+        return int(next(token[7:] for token in wide_rows()[case] if token.startswith('blocks=')))
     source = (FIXTURE/'Assets/Scripts/EffectProbe.cs').read_text()
     row = next(line for line in source.splitlines() if 'new[] { "'+case+'"' in line)
     value = re.search(r'"blocks=(\d+)"', row)
@@ -15,14 +19,20 @@ SUFFIXES = ('', '.master')
 RESIDUALS = {}
 
 
+@cache
+def wide_rows():
+    path = FIXTURE/'Assets/StreamingAssets/WideCases.tsv'
+    return {row[0]: row for line in path.read_text().splitlines() if (row := line.split('\t'))}
+
+
 def all_cases():
     source = (FIXTURE/'Assets/Scripts/EffectProbe.cs').read_text()
     body = source.split('Cases = {', 1)[1].split('};', 1)[0]
-    return re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body)
+    return re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body) + list(wide_rows())
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_', 'context_monofx_', 'context_recovery_')) and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_', 'context_monofx_', 'context_recovery_', 'context_wide_')) and key.startswith('context_') == contexts]
 
 
 def surround_cases():
@@ -48,6 +58,11 @@ def prologic_cases():
 def context_sessions(name):
     """Cases whose output configurations need separate processes on both backends."""
     if name == 'settings': return settings_sessions()
+    if name == 'wide':
+        sessions = {}
+        for key in wide_rows():
+            sessions.setdefault('_'.join(key.split('_')[2:5]), []).append(key)
+        return sessions
     if name == 'prologic':
         return {str(mode): [key for key in prologic_cases() if key.startswith(f'context_prologic_{mode}_')] for mode in (2, 7)}
     return {'': list(profile(name, 48000))}
@@ -98,6 +113,7 @@ def profile(name, rate):
     if name == 'layouts': return dict.fromkeys(cases(True))
     if name == 'surround': return dict.fromkeys(surround_cases())
     if name == 'settings': return dict.fromkeys(settings_cases())
+    if name == 'wide': return dict.fromkeys(wide_rows())
     if name == 'prologic': return dict.fromkeys(prologic_cases())
     if name == 'zones': return dict.fromkeys(zone_cases())
     if name == 'mono': return dict.fromkeys(mono_cases())

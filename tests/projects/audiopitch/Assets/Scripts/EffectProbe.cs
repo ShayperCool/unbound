@@ -993,15 +993,26 @@ public partial class EffectProbe : MonoBehaviour
         new[] { "context_monofx_1_group_reverb_listener_chorus", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "Music.Reverb.Wet=0", "component=chorus:listener" },
         new[] { "context_monofx_1_receive_after_reverb", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att,Reverb,Send", "Master:Att,Receive", "Music.Send.Level=0", "live:5:Send_Level=-6", "live:8:Send_Level=-80", "live:11:Send_Level=0", "live:14:Send_Level=-12", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "Music.Reverb.Wet=0" },
     };
+    static readonly Dictionary<string, string[]> CaseTokens = new Dictionary<string, string[]>();
+    static EffectProbe()
+    {
+        var rows = new List<string[]>(Cases);
+        string wide = Path.Combine(Application.streamingAssetsPath, "WideCases.tsv");
+        if (File.Exists(wide)) foreach (string line in File.ReadAllLines(wide))
+            if (!string.IsNullOrEmpty(line)) rows.Add(line.Split('\t'));
+        Cases = rows.ToArray();
+        foreach (var row in Cases) CaseTokens.Add(row[0], row);
+    }
     static int BlockCount, ClipFrames;
     public static string[] Selected()
     {
         var only = Environment.GetEnvironmentVariable("EFFECT_PROBE_CASES");
+        var selected = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
         var keys = new List<string>();
-        foreach (var c in Cases) if ((string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0)) keys.Add(c[0]);
+        foreach (var c in Cases) if (selected == null || selected.Contains(c[0])) keys.Add(c[0]);
         return keys.ToArray();
     }
-    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key);
+    public static string[] Tokens(string key) => CaseTokens[key];
     public static string Option(string key, string name, string fallback)
     {
         foreach (var token in Tokens(key)) if (token.StartsWith(name)) return token.Substring(name.Length);
@@ -1240,7 +1251,7 @@ public partial class EffectProbe : MonoBehaviour
                 // Measure the active DSP layout before choosing the capture buffer dimensions.
                 // The listener callback can start a few frames after a reset; this precedes the
                 // case's mixer and source, so the number of warm buffers does not reach the capture.
-                int warmBlocks = liveContext ? 4 : 16;
+                int warmBlocks = liveContext ? int.Parse(Option(key, "preflight=", "4")) : 16;
                 var warm = new NativeArray<float>(actualBuffer * (liveContext ? outputChannels : 8), Allocator.Persistent);
                 for (int attempt = 0; attempt < warmBlocks && (liveContext || OutputLayoutProbe.Channels == 0); attempt++) {
                     if (!Engine) yield return null; else FlushEngine();
@@ -1321,7 +1332,7 @@ public partial class EffectProbe : MonoBehaviour
                 go.AddComponent<ProbeGenerator>();
             } else {
                 int channels = Option(key, "mono=", "0") == "1" ? 1 : 2;
-                int clipRate = key.StartsWith("context_settings_") ? actual.sampleRate : rate;
+                int clipRate = key.StartsWith("context_settings_") || key.StartsWith("context_wide_") ? actual.sampleRate : rate;
                 clip = AudioClip.Create(key, ClipFrames, channels, clipRate, false);
                 var data = Signal(Option(key, "music=", "dc:0.5"), clipRate);
                 if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
@@ -1478,11 +1489,11 @@ public class ProbeGenerator : MonoBehaviour
         Channels = channels;
         for (int i = 0; i < data.Length; i += channels)
         {
-            if (Signal == "imp" || Signal == "burst" || Signal == "link") {
+            if (Signal == "imp" || Signal == "burst" || Signal == "burst_full" || Signal == "link") {
                 for (int c = 0; c < channels; c++) {
                     float value = 0;
                     if (Signal == "imp" && Frame == 2048 + c * 37) value = (c % 2 == 0 ? 0.25f : -0.1875f);
-                    if (Signal == "burst" && Frame >= 2048 && Frame < 16384) {
+                    if ((Signal == "burst" && Frame >= 2048 && Frame < 16384) || Signal == "burst_full") {
                         Seed = unchecked(Seed * 1664525 + 1013904223);
                         value = ((int)(Seed >> 18) - 8192) / 131072f;
                     }

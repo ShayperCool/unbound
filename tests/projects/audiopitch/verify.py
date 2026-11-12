@@ -51,7 +51,7 @@ def verify(root, release, rate, contexts=False, selected=None):
             assert meta[case+'.mode'] == requested_mode, case
             assert meta[case+'.render_channels'] == 2, case
             assert meta[case+'.rate'] == rate and meta[case+'.buffer'] == 1024, case
-        if case.startswith('context_settings_'):
+        if case.startswith(('context_settings_', 'context_wide_')):
             _, _, requested_rate, requested_buffer, _ = case.split('_', 4)
             assert meta[case+'.rate'] == int(requested_rate), (case, 'unsupported requested sample rate')
             assert meta[case+'.buffer'] == int(requested_buffer), (case, 'unsupported requested DSP buffer')
@@ -60,7 +60,7 @@ def verify(root, release, rate, contexts=False, selected=None):
             size = meta.get(case+'.buffer', 1024)
             mode = meta.get(case+'.mode', 2)
             channels = meta.get(case+'.render_channels') or {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8}[mode]
-            if case.startswith(('context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_zone_', 'context_monofx_')):
+            if case.startswith(('context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_zone_', 'context_monofx_', 'context_wide_')):
                 assert channels == {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8}[mode], (case, 'inactive requested layout', channels)
             assert record == dict(file=case+suffix+'.f32', frames=blocks(case)*size, channels=channels), case+suffix
             values = samples(root, record)
