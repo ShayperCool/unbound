@@ -679,6 +679,33 @@ bounces are calculated internally) to the final lightmap resolution", and Modell
 "the maximum size of gaps that can be ignored for GI" (0.01 in the probe's parameters); the rest
 is how the Editor's products are made in the measured release, as follows.
 
+- **Systems** (`systems.rs`): which renderers form a system and where everything lies.
+  Renderers share a system only with renderers of equal Lightmap Parameters and System Tag
+  ([`LightmapParameters.systemTag`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightmapParameters-systemTag.html):
+  "force an object into a different Enlighten Realtime Global Illumination system even though
+  all the other parameters are the same"). Such a group is one system while its renderers'
+  realtime lightmap UV spaces take at most 4096 texels (each its size, sides rounded up to whole
+  blocks) and fit one system's output; else it is cut in two along the longest axis of their
+  bounds (or one at least half as long), at the bound of a renderer that divides their texels
+  most evenly by the renderers' centres (all on one side: halves by their order), and so on
+  until each part fits or holds one renderer. Within a system, each renderer's charts move as
+  one shape (the blocks they use: another renderer's charts may take the blocks it leaves
+  free) and are packed as a renderer's charts are, largest first, the order of equal ones that
+  of an unstable sort; the system's width is then rounded up to a multiple of 4 texels. Its
+  chart mask numbers the charts renderer by renderer. Systems go into atlases of 1024 texels
+  (the widest and tallest first, each into the first atlas that holds it, split as a binary
+  tree of free rectangles), the last atlas then halved while its systems still fit, down to
+  16. Compared with the Editor's: for every scene of the probe (`Room`, `RoomScaled`,
+  `RoomDirectional`, `RoomSystems`, `RoomCharts`, `RoomAuto`, `RoomTurned`, `RoomHoles`,
+  `RoomBakedEnvironment`) the renderers of each system (`RoomSystems`' two by their System
+  Tag, `RoomTurned`'s two by size: its renderers take 5784 texels), each system's size, every
+  renderer's place in it, the chart mask and the atlases are the Editor's, packing each of the
+  Editor's systems from its renderers in the Editor's order. The Editor orders the groups and
+  the renderers within a system by content hashes of its own, which Unbound does not make: its
+  systems come in the order of their first renderer and their renderers in the scene's order,
+  so equal renderers of one system may swap places (no renderer's lighting changes). Not
+  measured: renderers of several scenes baked together, terrains, and renderers whose
+  geometry the precompute scales (each renderer's UV space is taken at its own size).
 - **Clusters** (`clusters.rs`): a system's surfaces are cut by a grid of cubic voxels from the
   corner of the system's bounds, of the cluster size (one over the realtime resolution times
   the renderer's Scale In Lightmap times the Cluster Resolution: 1 m in the probe's scenes).
@@ -811,10 +838,8 @@ today gets a warning once that the setting is not honoured (`Runtime/Loading.cs`
 data is invalid. It is not wired up because its lighting does not match the Editor's yet (over
 the Room 1.6 to 11% of the lightmap values outside the comparator's tolerance, most of it from
 the clusters, [Unbound's precompute](#unbounds-precompute)) and what it needs is not made: the
-automatic charts still open ([Open](#open)), which renderers form a system and where each
-renderer's charts go in its system's atlas (the system packing; this release's packing within
-a renderer is under [Realtime lightmap UVs](#realtime-lightmap-uvs)), several systems
-referencing each other's clusters, the light probes' positions from the scene, the cache under
+automatic charts still open ([Open](#open)), several systems referencing each other's
+clusters, the light probes' positions from the scene, the cache under
 `Library/Unbound/` keyed by a content hash of the inputs and a format version, and a refusal
 of Lightmap Parameters other than the probe's. Such a bake also makes the baked lightmaps, the
 light probes' baked lighting, the reflection probes and the environment lighting of the
@@ -938,12 +963,13 @@ measure):
 - Phase 2, runtime over Unity's precomputed data (above): unmeasured inputs fail loudly until a
   probe case covers them; the main open items are under [Open](#open).
 - Phase 3, Unbound's own precompute from scene geometry, compared with the Editor's
-  precompute through the same probe: the clusters, their material samples and bounce
+  precompute through the same probe: the systems and their layout (as the Editor's for every
+  scene of the probe), the clusters, their material samples and bounce
   resampling, the transport, the visibility and the light probes' transport are made and
   compared ([Unbound's precompute](#unbounds-precompute)); over the Room its lightmaps have 1.6
   to 11% of their values outside the comparator's tolerance (most of it from the clusters). Not
   made: the engine's use for a scene that asks for a bake on load without lighting data
   (`Lightmapping.bakeOnSceneLoad`), and what it needs: lighting that matches the Editor's, the
-  automatic charts still open, the system packing, several systems, the light probes' positions
+  automatic charts still open, several systems referencing each other, the light probes' positions
   from the scene and the cache by content hash and format version
   ([When the engine would use it](#when-the-engine-would-use-it)).
