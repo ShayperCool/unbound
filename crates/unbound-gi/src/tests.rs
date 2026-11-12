@@ -3712,42 +3712,54 @@ fn sorted_names<'a>(names: impl Iterator<Item = &'a str>) -> Vec<&'a str> {
     v
 }
 
+/// The renderers of a probe scene (in its mapping order) as systems are grouped: the bounds of
+/// their meshes through their matrices (as Renderer.bounds) and their UV spaces.
+fn scene_members(
+    scene: &str,
+    data: &Precomputed,
+    outputs: &[crate::realtime_uv::Output],
+) -> Vec<crate::precompute::systems::Member> {
+    use crate::precompute::systems::Member;
+    let names = renderer_names(scene);
+    let matrices = renderer_matrices(scene);
+    (0..data.renderers.len())
+        .map(|k| {
+            let name = names[&data.renderers[k].0].as_str();
+            let (mut lo, mut hi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+            for p in local_positions(scene, name) {
+                for a in 0..3 {
+                    lo[a] = lo[a].min(p[a]);
+                    hi[a] = hi[a].max(p[a]);
+                }
+            }
+            // The mesh's bounds through the renderer's matrix, as Renderer.bounds.
+            let m = matrices[&data.renderers[k].0];
+            let (mut wlo, mut whi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+            for corner in 0..8 {
+                let p = [0, 1, 2].map(|a| if corner >> a & 1 == 0 { lo[a] } else { hi[a] });
+                for r in 0..3 {
+                    let w = m[r][0] * p[0] + m[r][1] * p[1] + m[r][2] * p[2] + m[r][3];
+                    wlo[r] = wlo[r].min(w);
+                    whi[r] = whi[r].max(w);
+                }
+            }
+            Member::new(wlo, whi, &outputs[k])
+        })
+        .collect()
+}
+
 #[test]
 fn renderers_split_into_systems_as_the_precomputes() {
     // RoomSystems: the walls and the panel with Lightmap Parameters of their own (System Tag
     // 1) are a system of their own. RoomTurned: its renderers take more texels than a system
     // holds and split in two by their places, as the Editor's. The others are one system each.
-    use crate::precompute::systems::{Member, pack_system, scene_systems};
+    use crate::precompute::systems::{pack_system, scene_systems};
     for scene in LAYOUT_SCENES {
         let data = scene_data(scene);
         let outputs = scene_outputs(scene, &data);
         let names = renderer_names(scene);
-        let matrices = renderer_matrices(scene);
         let parameters = renderer_parameters(scene);
-        let members: Vec<Member> = (0..data.renderers.len())
-            .map(|k| {
-                let name = names[&data.renderers[k].0].as_str();
-                let (mut lo, mut hi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
-                for p in local_positions(scene, name) {
-                    for a in 0..3 {
-                        lo[a] = lo[a].min(p[a]);
-                        hi[a] = hi[a].max(p[a]);
-                    }
-                }
-                // The mesh's bounds through the renderer's matrix, as Renderer.bounds.
-                let m = matrices[&data.renderers[k].0];
-                let (mut wlo, mut whi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
-                for corner in 0..8 {
-                    let p = [0, 1, 2].map(|a| if corner >> a & 1 == 0 { lo[a] } else { hi[a] });
-                    for r in 0..3 {
-                        let w = m[r][0] * p[0] + m[r][1] * p[1] + m[r][2] * p[2] + m[r][3];
-                        wlo[r] = wlo[r].min(w);
-                        whi[r] = whi[r].max(w);
-                    }
-                }
-                Member::new(wlo, whi, &outputs[k])
-            })
-            .collect();
+        let members = scene_members(scene, &data, &outputs);
         let keys: Vec<&String> = data.renderers.iter().map(|r| &parameters[&r.0]).collect();
         let systems = scene_systems(&members, &keys, |group| {
             let mine: Vec<&crate::realtime_uv::Output> =
@@ -3779,5 +3791,97 @@ fn renderers_split_into_systems_as_the_precomputes() {
             },
             "{scene}"
         );
+    }
+}
+
+/// A scene's renderers (scene file IDs) in the order the scene file lists them.
+fn renderer_order(scene: &str) -> Vec<i64> {
+    let text =
+        std::fs::read_to_string(probe().join(format!("Assets/Scenes/{scene}.unity"))).unwrap();
+    text.split("--- !u!")
+        .skip(1)
+        .filter(|doc| doc.starts_with("23 "))
+        .map(|doc| {
+            let id = doc.split(" &").nth(1).unwrap();
+            id.split_whitespace().next().unwrap().parse().unwrap()
+        })
+        .collect()
+}
+
+#[test]
+fn systems_in_unbounds_order() {
+    // The systems as Unbound makes them, its renderers in the scene file's order (the Editor's
+    // order comes from content hashes Unbound does not make): the same renderers per system as
+    // the Editor's, each in a UV space of its own size, while a system's size may differ where
+    // shapes of equal blocks come in another order.
+    use crate::precompute::systems::{Member, chart_mask, pack_system, scene_systems};
+    for scene in LAYOUT_SCENES {
+        let data = scene_data(scene);
+        let outputs = scene_outputs(scene, &data);
+        let index: std::collections::HashMap<i64, usize> = data
+            .renderers
+            .iter()
+            .enumerate()
+            .map(|(k, r)| (r.0, k))
+            .collect();
+        // (Renderers outside realtime GI, the probe-lit sphere, are not in the mapping.)
+        let order: Vec<usize> = renderer_order(scene)
+            .iter()
+            .filter_map(|id| index.get(id).copied())
+            .collect();
+        assert_eq!(order.len(), data.renderers.len(), "{scene}");
+        let parameters = renderer_parameters(scene);
+        let all = scene_members(scene, &data, &outputs);
+        let members: Vec<Member> = order.iter().map(|&k| all[k]).collect();
+        let keys: Vec<&String> = order
+            .iter()
+            .map(|&k| &parameters[&data.renderers[k].0])
+            .collect();
+        let fits = |group: &[usize]| {
+            let mine: Vec<&crate::realtime_uv::Output> =
+                group.iter().map(|&i| &outputs[order[i]]).collect();
+            pack_system(&mine).is_ok()
+        };
+        for system in scene_systems(&members, &keys, fits) {
+            let mine: Vec<&crate::realtime_uv::Output> =
+                system.iter().map(|&i| &outputs[order[i]]).collect();
+            let layout = pack_system(&mine).unwrap();
+            let mask = chart_mask(&layout, &mine);
+            let blocks: usize = mine
+                .iter()
+                .flat_map(|o| &o.charts)
+                .map(|c| c.blocks.iter().filter(|&&b| b).count())
+                .sum();
+            assert_eq!(
+                mask.iter().filter(|&&c| c != crate::data::NO_CHART).count(),
+                blocks * 4,
+                "{scene}: charts overlap"
+            );
+            // The Editor's system of these renderers, and its size.
+            let ids: Vec<i64> = system.iter().map(|&i| data.renderers[order[i]].0).collect();
+            let editor = data
+                .systems
+                .iter()
+                .find(|e| {
+                    let range = e.first_renderer..e.first_renderer + e.renderer_count;
+                    e.renderer_count == ids.len()
+                        && range
+                            .into_iter()
+                            .all(|k| ids.contains(&data.renderers[k].0))
+                })
+                .unwrap();
+            let size = (editor.transport.width, editor.transport.height);
+            // Measured: in their scene order the shapes of RoomAuto and RoomHoles pack larger.
+            let expected = match (scene, size) {
+                ("RoomAuto", _) => (68, 70),
+                ("RoomHoles", _) => (52, 64),
+                _ => size,
+            };
+            assert_eq!(
+                (layout.width, layout.height),
+                expected,
+                "{scene}: Editor {size:?}"
+            );
+        }
     }
 }

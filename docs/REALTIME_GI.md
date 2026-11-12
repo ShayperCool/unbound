@@ -686,7 +686,7 @@ is how the Editor's products are made in the measured release, as follows.
   all the other parameters are the same"). Such a group is one system while its renderers'
   realtime lightmap UV spaces take at most 4096 texels (each its size, sides rounded up to whole
   blocks) and fit one system's output; else it is cut in two along the longest axis of their
-  bounds (or one at least half as long), at the bound of a renderer that divides their texels
+  bounds (or one more than half as long), at the bound of a renderer that divides their texels
   most evenly by the renderers' centres (all on one side: halves by their order), and so on
   until each part fits or holds one renderer. Within a system, each renderer's charts move as
   one shape (the blocks they use: another renderer's charts may take the blocks it leaves
@@ -701,11 +701,16 @@ is how the Editor's products are made in the measured release, as follows.
   Tag, `RoomTurned`'s two by size: its renderers take 5784 texels), each system's size, every
   renderer's place in it, the chart mask and the atlases are the Editor's, packing each of the
   Editor's systems from its renderers in the Editor's order. The Editor orders the groups and
-  the renderers within a system by content hashes of its own, which Unbound does not make: its
+  the renderers within a system by content hashes of its own, which Unbound does not make, and
+  a system's layout depends on that order (shapes of equal blocks are packed in it): Unbound's
   systems come in the order of their first renderer and their renderers in the scene's order,
-  so equal renderers of one system may swap places (no renderer's lighting changes). Not
-  measured: renderers of several scenes baked together, terrains, and renderers whose
-  geometry the precompute scales (each renderer's UV space is taken at its own size).
+  which gives the same systems of the same renderers, each in a UV space of its own size, but
+  with other places and so another chart mask, and for `RoomAuto` and `RoomHoles` larger
+  systems (68x70 and 52x64 where the Editor's are 68x62 and 52x60). Not measured: a group cut
+  more than once (and the order of its parts), atlases larger than 128 texels or more than one
+  (whether the Lighting Settings' Max Lightmap Size, 256 or 1024 in the probe's scenes, bounds
+  them), renderers of several scenes baked together, terrains, and renderers whose geometry the
+  precompute scales (each renderer's UV space is taken at its own size).
 - **Clusters** (`clusters.rs`): a system's surfaces are cut by a grid of cubic voxels from the
   corner of the system's bounds, of the cluster size (one over the realtime resolution times
   the renderer's Scale In Lightmap times the Cluster Resolution: 1 m in the probe's scenes).

@@ -251,8 +251,8 @@ impl Member {
     }
 }
 
-/// Splits a group of instances in two along an axis of their bounds: the longest, or one at
-/// least half as long, at the position (one of an instance's bounds) that divides their texels
+/// Splits a group of instances in two along an axis of their bounds: the longest, or one more
+/// than half as long, at the position (one of an instance's bounds) that divides their texels
 /// most evenly (by their bounds' centres; the first of equally even ones); halves by their order
 /// when every centre falls on one side.
 fn split(members: &[Member], group: &[usize]) -> [Vec<usize>; 2] {
@@ -373,9 +373,11 @@ pub fn chart_mask(layout: &SystemLayout, outputs: &[&Output]) -> Vec<u32> {
 /// A scene's systems: its instances grouped by `keys` (what makes instances share a system or
 /// not: equal Lightmap Parameters and System Tag, `LightmapParameters.systemTag`; groups in the
 /// order of their first instance), each group split by size ([`group_systems`]); each system's
-/// instances in their order. (The Editor orders groups and their instances by content hashes
-/// of its own, which Unbound does not make: its systems may come in another order and equal
-/// instances of one system may swap places, which changes no instance's lighting.)
+/// instances in their order. The Editor orders groups and their instances by content hashes
+/// of its own, which Unbound does not make, and a system's layout depends on its instances'
+/// order (shapes of equal blocks go in that order, [`pack_system`]): with another order a
+/// system may differ from the Editor's in size, places and chart mask (docs/REALTIME_GI.md
+/// Systems), each instance keeping its own UV space.
 pub fn scene_systems<K: PartialEq>(
     members: &[Member],
     keys: &[K],

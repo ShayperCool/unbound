@@ -989,6 +989,31 @@ fn systems_split_by_place_until_each_holds_its_budget() {
         scene_systems(&column, &[0; 4], fits),
         vec![vec![0, 1], vec![2, 3]]
     );
+    // An axis is tried only when more than half as long as the longest: z splits these four
+    // evenly, x does not; with z exactly half of x (15.5 of 31) the split is along x.
+    let square = |z_far: f32| {
+        let corner = |x: f32, z: f32, texels: u32| {
+            Member::new(
+                [x, 0.0, z],
+                [x + 1.0, 0.1, z + 1.0],
+                &uv_space(texels, texels),
+            )
+        };
+        vec![
+            corner(0.0, 0.0, 44),
+            corner(0.0, z_far, 44),
+            corner(30.0, 0.0, 20),
+            corner(30.0, z_far, 20),
+        ]
+    };
+    assert_eq!(
+        scene_systems(&square(14.5), &[0; 4], fits),
+        vec![vec![0, 1], vec![2, 3]]
+    );
+    assert_eq!(
+        scene_systems(&square(14.6), &[0; 4], fits),
+        vec![vec![0, 2], vec![1, 3]]
+    );
     // All in one place: halves by their order.
     let heap: Vec<Member> = (0..4).map(|_| at(0.0, 0.0, 40)).collect();
     assert_eq!(
