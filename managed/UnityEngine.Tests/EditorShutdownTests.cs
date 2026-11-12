@@ -19,7 +19,10 @@ namespace UnityEngine.Tests
             using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
             var persistent = SceneRegistry.DontDestroyOnLoad;
             var previousRoots = persistent.Roots.ToArray();
+            var detached = SceneRegistry.Detached;
+            var previousDetached = detached.Roots.ToArray();
             persistent.Roots.Clear();
+            detached.Roots.Clear();
             var first = scenes.Loaded("FirstQuit");
             var firstObject = new GameObject("first");
             var second = scenes.Loaded("SecondQuit");
@@ -65,6 +68,8 @@ namespace UnityEngine.Tests
                 UObject.DestroyImmediate(keep);
                 persistent.Roots.Clear();
                 persistent.Roots.AddRange(previousRoots);
+                detached.Roots.Clear();
+                detached.Roots.AddRange(previousDetached);
             }
         }
     }

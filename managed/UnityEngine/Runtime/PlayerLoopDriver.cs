@@ -679,7 +679,7 @@ namespace Unbound.Runtime
                 if (editorExit) SceneManagerInternal.CloseEditorScenes();
                 else
                 {
-                    EditorSession.DestroyPlayModeObjects();
+                    EditorSession.DestroyPlayModeObjects(destroyDetached: true);
                     SceneRegistry.ResetToUntitled();
                 }
             }

@@ -118,11 +118,13 @@ namespace Unbound.Runtime
             foreach (var child in t.m_Children) Collect(child, into);
         }
 
-        /// <summary>Destroys roots of the loaded and persistent scenes.</summary>
-        internal static void DestroyPlayModeObjects()
+        /// <summary>Destroys playing scene roots. Internal detached holders remain available in
+        /// Edit mode and are destroyed only when the process shuts down.</summary>
+        internal static void DestroyPlayModeObjects(bool destroyDetached = false)
         {
             var scenes = new List<SceneData>(SceneRegistry.Loaded);
             scenes.Add(SceneRegistry.DontDestroyOnLoad);
+            if (destroyDetached) scenes.Add(SceneRegistry.Detached);
             foreach (var scene in scenes)
                 foreach (var root in scene.Roots.ToArray())
                     if (root != null) Object.DestroyImmediate(root);

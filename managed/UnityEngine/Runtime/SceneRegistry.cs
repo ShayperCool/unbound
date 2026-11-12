@@ -157,7 +157,8 @@ namespace Unbound.Runtime
             UnityEngine.SceneManagement.SceneManagerInternal.ResetPending();
             foreach (var scene in Loaded.ToArray()) Forget(scene);
             if (s_DontDestroyOnLoad != null) s_DontDestroyOnLoad.Roots.Clear();
-            s_Detached?.Roots.Clear();
+            // Internal unsaved holders survive stopping Play (tests/projects/hiddenroots).
+            // Keep them registered until final shutdown rather than orphaning live objects.
             Active = null;
             EnsureActive();
         }

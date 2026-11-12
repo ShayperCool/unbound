@@ -671,7 +671,7 @@ namespace UnityEngine.SceneManagement
         /// (Unity 6000.0.71f1: tests/projects/editorcallbacks quit-play control).</summary>
         internal static void CloseEditorScenes()
         {
-            EditorSession.DestroyPlayModeObjects();
+            EditorSession.DestroyPlayModeObjects(destroyDetached: true);
             ResetPending();
             foreach (var scene in SceneRegistry.Loaded.ToArray())
             {

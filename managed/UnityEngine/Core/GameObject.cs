@@ -47,20 +47,18 @@ namespace UnityEngine
         /// no scene, so no scene lists it among its roots and it takes no sibling index there.</summary>
         internal static GameObject CreateDetached(string name)
         {
-            var go = new GameObject(name, bare: true) { m_Scene = SceneRegistry.Detached.Handle };
-            go.CheckMainThreadCreation("Internal_CreateGameObject");
-            go.AddTransform(typeof(Transform));
-            SceneRegistry.AddRoot(go);
+            var go = new GameObject(name, bare: true);
+            Internal_Create(go, null, SceneRegistry.Detached);
             go.hideFlags = HideFlags.HideAndDontSave;
             return go;
         }
 
-        static void Internal_Create(GameObject go, Type[] components)
+        static void Internal_Create(GameObject go, Type[] components, SceneData scene = null)
         {
             go.CheckMainThreadCreation("Internal_CreateGameObject");
             // During a Single load's teardown this is the incoming scene, not the active one, and
             // it is set before any component wakes up.
-            go.m_Scene = SceneRegistry.DefaultCreationScene().Handle;
+            go.m_Scene = (scene ?? SceneRegistry.DefaultCreationScene()).Handle;
             go.AddTransform(typeof(Transform));
             SceneRegistry.AddRoot(go);
             if (components != null)

@@ -1,0 +1,11 @@
+{
+  "commands": ["python3 tests/projects/hiddenroots/run.py check --release $UNBOUND_PROBE_UNITY_VERSION"],
+  "engine_paths": [
+    "managed/UnityEngine/Core/GameObject.cs",
+    "managed/UnityEngine/Editor/EditorSession.cs",
+    "managed/UnityEngine/Runtime/SceneRegistry.cs",
+    "managed/UnityEngine/Graphics/ReflectionProbe.Realtime.cs",
+    "managed/UnityEngine/Particles/ParticleSystem.Lights.cs"
+  ],
+  "summary": "hiddenroots: [0-9]+/[0-9]+ values match"
+}

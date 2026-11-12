@@ -165,7 +165,7 @@ namespace UnityEngine
             {
                 GameObject go;
                 using (ObjectRegistry.AsAssets())
-                    go = new GameObject("Unbound reflection probe camera") { hideFlags = HideFlags.HideAndDontSave };
+                    go = GameObject.CreateDetached("Unbound reflection probe camera");
                 s_Camera = go.AddComponent<Camera>();
                 s_Camera.enabled = false;
             }

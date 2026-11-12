@@ -54,7 +54,7 @@ namespace UnityEngine
             var light = m_ModuleLights[index];
             if (light == null)
             {
-                var go = new GameObject("Particle System Light") { hideFlags = HideFlags.HideAndDontSave };
+                var go = GameObject.CreateDetached("Particle System Light");
                 light = go.AddComponent<Light>();
                 m_ModuleLights[index] = light;
             }
