@@ -531,7 +531,6 @@ namespace Unbound.Runtime
             RichText.Parse(text, richText, style, (Color32)color, items);
             int basePixelSize = font.PixelSize(font.dynamic ? fontSize : 0);
             Measure(items, font, basePixelSize, 1f);
-            List<GlyphKey> empty = null;
             for (int i = 0; i < items.Length; i++)
             {
                 ref var item = ref items[i];
@@ -540,20 +539,8 @@ namespace Unbound.Runtime
                 // lacks does not advance (measured), one it has keeps its advance.
                 item.Visible = true;
                 if (item.CustomIndex < 0 && (item.Glyph == null || !item.Glyph.Found)) item.Advance = 0f;
-                if (item.Glyph != null)
-                    (empty ??= new List<GlyphKey>()).Add(item.Glyph.Key);
             }
-            if (font.m_Source != null)
-            {
-                var keys = Scratch.RentKeys();
-                try
-                {
-                    foreach (var item in items)
-                        if (item.Visible && item.Glyph != null && item.Glyph.HasPixels) keys.Add(item.Glyph.Key);
-                    if (keys.Count > 0 || empty != null) font.Atlas.Request(keys, empty);
-                }
-                finally { Scratch.Return(keys); }
-            }
+            RequestGlyphs(items, font);
 
             // Lines: their sizes, metrics and widths (tabs resolved).
             int wholeTab = (int)tabSize;
@@ -769,8 +756,10 @@ namespace Unbound.Runtime
             var keys = Scratch.RentKeys();
             try
             {
+                // Every character of the text takes a cell, with or without pixels (a space, one
+                // the font lacks), as Unity caches a text's characters.
                 foreach (var item in items)
-                    if (item.Visible && item.Glyph != null) keys.Add(item.Glyph.Key);
+                    if (item.Kind == Kind.Glyph && item.Glyph != null) keys.Add(item.Glyph.Key);
                 if (keys.Count > 0) font.Atlas.Request(keys);
             }
             finally { Scratch.Return(keys); }
@@ -890,12 +879,14 @@ namespace Unbound.Runtime
             }
             else if (item.Glyph != null)
             {
-                var uv = item.Glyph.Placed ? font.Atlas.UV(item.Glyph, pad) : default;
-                bl = new Vector2(uv.xMin, uv.yMin);
-                tr = new Vector2(uv.xMax, uv.yMax);
-                // A flipped glyph (CharacterInfo.flipped) has its top left and bottom right swapped.
-                br = item.Glyph.Flipped ? new Vector2(uv.xMin, uv.yMax) : new Vector2(uv.xMax, uv.yMin);
-                tl = item.Glyph.Flipped ? new Vector2(uv.xMax, uv.yMin) : new Vector2(uv.xMin, uv.yMax);
+                // The corners CharacterInfo reports for the glyph's cell (flipped or not).
+#pragma warning disable 618
+                var info = new CharacterInfo { uv = item.Glyph.Placed ? font.Atlas.UV(item.Glyph) : default, flipped = item.Glyph.Flipped };
+#pragma warning restore 618
+                bl = info.uvBottomLeft;
+                br = info.uvBottomRight;
+                tr = info.uvTopRight;
+                tl = info.uvTopLeft;
             }
             else
             {

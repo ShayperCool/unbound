@@ -67,19 +67,32 @@ namespace UnityEngine.Tests
             finally { job.Complete(); Object.DestroyImmediate(texture); }
         }
 
+        /// <summary>'W' half the size wide and two thirds of it tall, solid.</summary>
+        sealed class BigGlyphSource : GlyphSource
+        {
+            internal override bool HasCharacter(int codepoint) => codepoint == 'W';
+
+            internal override bool Render(int codepoint, int size, FontStyle style, int renderingMode, out RenderedGlyph glyph)
+            {
+                int width = size / 2, height = size * 2 / 3;
+                glyph = new RenderedGlyph { Advance = width, Top = height, Width = width, Height = height, Coverage = new byte[width * height] };
+                Array.Fill(glyph.Coverage, (byte)255);
+                return codepoint == 'W';
+            }
+        }
+
         [Fact]
         public void GrowingTheFontAtlasInvalidatesItsOldViewBeforeReplacingPixels()
         {
-            var font = new Font();
-            var atlas = new FontAtlas(font);
+            var font = new Font(new BigGlyphSource(), 10, "Big");
+            var atlas = font.Atlas;
             var old = atlas.Texture.GetPixelData<byte>(0);
             int oldLength = old.Length;
             var job = new WriteBytes { Data = old }.Schedule();
             try
             {
-                var glyph = new AtlasGlyph { Width = 513, Height = 4, Coverage = new byte[513 * 4] };
-                Array.Fill(glyph.Coverage, (byte)255);
-                typeof(FontAtlas).GetMethod("Rebuild", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(atlas, new object[] { new List<AtlasGlyph> { glyph }, new HashSet<GlyphKey>() });
+                // A 150x200 glyph needs a larger block than the font size gives: the texture grows.
+                font.RequestCharactersInTexture("W", 300);
                 Assert.True(job.IsCompleted);
                 job.Complete();
                 Assert.Throws<ObjectDisposedException>(() => old[0]);

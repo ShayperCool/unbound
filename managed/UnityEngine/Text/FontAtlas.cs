@@ -308,23 +308,35 @@ namespace Unbound.Runtime
         internal int Width;
         internal int Height;
         internal byte[] Coverage;
+        /// <summary>In the texture: its cell (bitmap and padding) at <see cref="X"/>, <see cref="Y"/>,
+        /// the bitmap's top row at the cell's lowest v.</summary>
         internal bool Placed;
         internal int X;
         internal int Y;
         /// <summary>Stored a quarter turn round in the texture (CharacterInfo.flipped): a glyph wider
-        /// than tall, as Unity stores them. Its texture u runs up the glyph, v along it.</summary>
+        /// than tall, as Unity stores them.</summary>
         internal bool Flipped;
+        /// <summary>The last frame (Time.frameCount) a text asked for it.</summary>
+        internal int Frame;
 
         internal bool HasPixels => Width > 0 && Height > 0 && Coverage != null;
-        /// <summary>The size the glyph takes in the texture.</summary>
+        /// <summary>The size the glyph's bitmap takes in the texture.</summary>
         internal int StoredWidth => Flipped ? Height : Width;
         internal int StoredHeight => Flipped ? Width : Height;
     }
 
     /// <summary>
-    /// The texture of a dynamic font: an Alpha8 atlas glyphs are rendered into on request. When a request
-    /// does not fit, the atlas is rebuilt (grown, or at its largest size cleared down to the glyphs being
-    /// requested) and <see cref="Font.textureRebuilt"/> is raised, as Unity's dynamic fonts do.
+    /// The texture of a dynamic font: an Alpha8 atlas glyphs are rendered into on request, packed as the
+    /// Unity 6000.0.71f1 Editor packs them (tests/projects/textmesh atlas controls).
+    ///
+    /// The texture is laid out in square blocks, row by row. Each glyph takes a cell (its bitmap, the
+    /// character padding on every side and the character spacing) in the current block: at the first
+    /// free corner from where the last search stopped, the corners ordered by x + y, then x; the cell
+    /// then slides left and then down while it stays free, and its right and top corners become
+    /// candidates. When no corner takes it, the next block starts empty. When the last block is full the
+    /// texture is reset: it keeps only the characters asked for in this frame, grows when its area at
+    /// the current density would not hold them, and they are packed again (in character order) with
+    /// <see cref="Font.textureRebuilt"/> raised; a second miss doubles the smaller side.
     /// </summary>
     internal sealed class FontAtlas
     {
@@ -332,15 +344,32 @@ namespace Unbound.Runtime
         internal const int MaxSize = 4096;
         /// <summary>Glyph bitmaps kept for measuring beyond those in the texture, before the cache is trimmed.</summary>
         const int MaxCachedGlyphs = 16384;
+        /// <summary>Characters at or below U+001F (control characters) never take a cell.</summary>
+        const int FirstCachedCodepoint = 0x20;
+        /// <summary>A reset's block side, at least: 8 times the font size, a power of two.</summary>
+        const int ResetBlockScale = 8;
+        /// <summary>A grown texture's block side, at least: 4 times the largest size asked for.</summary>
+        const int GrowBlockScale = 4;
+        /// <summary>The squared sizes per texel assumed before any glyph was placed, and the slack the
+        /// estimate of the area needed allows.</summary>
+        const float DefaultDensity = 2f;
+        const float AreaSlack = 1.1f;
 
         readonly Font m_Font;
         internal readonly Texture2D Texture;
         readonly Dictionary<GlyphKey, AtlasGlyph> m_Glyphs = new Dictionary<GlyphKey, AtlasGlyph>();
+        /// <summary>The glyphs in the texture, in the order they were placed.</summary>
         readonly List<AtlasGlyph> m_Placed = new List<AtlasGlyph>();
-        int m_ShelfX;
-        int m_ShelfY;
-        int m_ShelfHeight;
+        /// <summary>The current block: its candidate corners, where the search goes on from (null: past
+        /// the last corner) and the cells taken, in block coordinates.</summary>
+        readonly SortedSet<(int X, int Y)> m_Corners = new SortedSet<(int X, int Y)>(CornerOrder.Instance);
+        (int X, int Y)? m_Search;
+        readonly List<RectInt> m_Cells = new List<RectInt>();
+        int m_Block = 1;
+        int m_BlockIndex;
+        bool m_Started;
         bool m_WarnedFull;
+        readonly List<GlyphKey> m_Asked = new List<GlyphKey>();
 
         /// <summary>How many times the texture was rebuilt (tests).</summary>
         internal int RebuildCount;
@@ -395,182 +424,276 @@ namespace Unbound.Runtime
             foreach (var key in drop) m_Glyphs.Remove(key);
         }
 
-        /// <summary>Puts the glyphs in the texture, and the <paramref name="empty"/> ones (characters
-        /// with no pixels that are still drawn, as a TextMesh draws a glyph the font lacks) as empty
-        /// cells: their padding only. Returns true when the texture was rebuilt (and
-        /// <see cref="Font.textureRebuilt"/> raised).</summary>
-        internal bool Request(IReadOnlyList<GlyphKey> keys, IReadOnlyList<GlyphKey> empty = null)
+        /// <summary>Puts the characters of a text in the texture: every one above U+001F, with or
+        /// without pixels (a space or a character the font lacks takes a cell of padding). Returns true
+        /// when the texture was rebuilt (and <see cref="Font.textureRebuilt"/> raised).</summary>
+        internal bool Request(IReadOnlyList<GlyphKey> keys)
         {
+            int frame = Time.frameCount;
             // Nothing to place (the usual case once a text's glyphs are in): no work lists.
-            if (empty == null && AllPlaced(keys)) return false;
-            var pending = new List<AtlasGlyph>();
-            var seen = new HashSet<GlyphKey>();
-            foreach (var key in keys)
-            {
-                if (!seen.Add(key)) continue;
-                var glyph = Get(key);
-                if (glyph.HasPixels && !glyph.Placed) pending.Add(glyph);
-            }
-            if (empty != null)
-            {
-                HashSet<GlyphKey> cells = null;
-                foreach (var key in empty)
-                {
-                    var glyph = Get(key);
-                    // An empty cell: Blit copies no coverage for a glyph without width or height.
-                    if (glyph.HasPixels || glyph.Placed || (glyph.Width != 0 && glyph.Height != 0)) continue;
-                    if (!(cells ??= new HashSet<GlyphKey>()).Add(key)) continue;
-                    seen.Add(key);
-                    pending.Add(glyph);
-                }
-            }
-            if (pending.Count == 0) return false;
-            // Engine glyph writes take back the cells before changing pixels or atlas size.
+            if (AllPlaced(keys, frame)) return false;
+            // Engine glyph writes take back the pixels before changing them or the atlas size.
             Texture.EnsurePixels();
-            pending.Sort(ByHeight);
-            int placed = 0;
-            for (; placed < pending.Count; placed++)
-                if (!TryPlace(pending[placed])) break;
-            if (placed == pending.Count)
-            {
-                foreach (var g in pending) Blit(g);
-                Texture.m_PixelsDirty = true;
-                return false;
-            }
-            // Undo the partial placement and rebuild with everything.
-            for (int i = 0; i < placed; i++)
-            {
-                pending[i].Placed = false;
-                m_Placed.Remove(pending[i]);
-            }
-            Rebuild(pending, seen);
-            return true;
-        }
-
-        /// <summary>Whether every glyph of <paramref name="keys"/> is known and placed or without
-        /// pixels (a glyph not looked up yet is left to the full request, which makes it).</summary>
-        bool AllPlaced(IReadOnlyList<GlyphKey> keys)
-        {
+            if (!m_Started) Reset();
+            var asked = m_Asked;
+            asked.Clear();
             for (int i = 0; i < keys.Count; i++)
-                if (!m_Glyphs.TryGetValue(keys[i], out var glyph) || glyph.HasPixels && !glyph.Placed) return false;
-            return true;
-        }
-
-        static int ByHeight(AtlasGlyph a, AtlasGlyph b) =>
-            b.StoredHeight != a.StoredHeight ? b.StoredHeight.CompareTo(a.StoredHeight) : b.StoredWidth.CompareTo(a.StoredWidth);
-
-        void Rebuild(List<AtlasGlyph> pending, HashSet<GlyphKey> requested)
-        {
-            Texture.EnsurePixels();
-            var all = new List<AtlasGlyph>(m_Placed);
-            all.AddRange(pending);
-            all.Sort(ByHeight);
-            int width = Texture.m_Width, height = Texture.m_Height;
-            while (!Fits(all, width, height))
+                if (keys[i].Codepoint >= FirstCachedCodepoint) asked.Add(keys[i]);
+            asked.Sort(KeyOrder);
+            Distinct(asked);
+            long askedArea = 0;
+            int largest = 0;
+            foreach (var key in asked)
             {
-                if (width >= MaxSize && height >= MaxSize)
-                {
-                    // Full at the largest size: keep only what is being requested now.
-                    all.RemoveAll(g => !requested.Contains(g.Key));
-                    if (!m_WarnedFull)
-                    {
-                        m_WarnedFull = true;
-                        Debug.LogWarning($"Unbound: the texture of font '{m_Font.m_Name}' is full at {MaxSize}x{MaxSize}; it was cleared.");
-                    }
-                    break;
-                }
-                if (width <= height) width = Math.Min(MaxSize, width * 2);
-                else height = Math.Min(MaxSize, height * 2);
+                askedArea += (long)key.Size * key.Size;
+                largest = Math.Max(largest, key.Size);
             }
-            foreach (var g in m_Placed) g.Placed = false;
-            m_Placed.Clear();
-            Texture.m_Width = width;
-            Texture.m_Height = height;
-            Texture.m_Pixels = new Color32[width * height];
-            m_ShelfX = m_ShelfY = m_ShelfHeight = 0;
-            foreach (var g in all)
-                if (TryPlace(g)) Blit(g);
+            bool reset = false;
+            while (!PlaceAll(asked, frame))
+            {
+                if (reset)
+                {
+                    if (Texture.m_Width >= MaxSize && Texture.m_Height >= MaxSize)
+                    {
+                        if (!m_WarnedFull)
+                        {
+                            m_WarnedFull = true;
+                            Debug.LogWarning($"Unbound: the texture of font '{m_Font.m_Name}' is full at {MaxSize}x{MaxSize}; some characters are not in it.");
+                        }
+                        break;
+                    }
+                    if (Texture.m_Width < Texture.m_Height) Texture.m_Width *= 2;
+                    else Texture.m_Height *= 2;
+                    m_Block = Math.Min(Math.Max(NextPowerOfTwo(GrowBlockScale * largest), m_Block), Texture.m_Width);
+                }
+                else
+                {
+                    // Keep what this frame asked for; grow when the area at the current density would
+                    // not hold it.
+                    long placedArea = 0;
+                    foreach (var g in m_Placed)
+                    {
+                        long area = (long)g.Key.Size * g.Key.Size;
+                        placedArea += area;
+                        if (g.Frame != frame || asked.BinarySearch(g.Key, KeyOrder) >= 0) continue;
+                        asked.Insert(~asked.BinarySearch(g.Key, KeyOrder), g.Key);
+                        askedArea += area;
+                        largest = Math.Max(largest, g.Key.Size);
+                    }
+                    long texels = (long)Texture.m_Width * Texture.m_Height;
+                    float density = placedArea == 0 ? DefaultDensity : (float)placedArea / texels;
+                    long needed = (long)((float)askedArea / density * AreaSlack + 0.5f);
+                    if (texels < needed)
+                    {
+                        int block = NextPowerOfTwo(GrowBlockScale * largest);
+                        bool wider = Texture.m_Width < Texture.m_Height;
+                        while (true)
+                        {
+                            if (wider) Texture.m_Width *= 2;
+                            else Texture.m_Height *= 2;
+                            m_Block = Math.Min(Math.Max(block, m_Block), Texture.m_Width);
+                            if (needed <= (long)Texture.m_Width * Texture.m_Height) break;
+                            wider = Texture.m_Width < Texture.m_Height;
+                        }
+                    }
+                }
+                Reset();
+                reset = true;
+            }
             Texture.m_PixelsDirty = true;
+            if (!reset) return false;
             RebuildCount++;
             Font.InvokeTextureRebuilt_Internal(m_Font);
+            return true;
         }
 
-        bool Fits(List<AtlasGlyph> glyphs, int width, int height)
+        /// <summary>Whether every character of <paramref name="keys"/> is in the texture, marking them
+        /// asked for in this frame (a glyph not looked up yet is left to the full request).</summary>
+        bool AllPlaced(IReadOnlyList<GlyphKey> keys, int frame)
         {
-            int pad = Padding, x = 0, y = 0, shelf = 0;
-            foreach (var g in glyphs)
+            bool all = true;
+            for (int i = 0; i < keys.Count; i++)
             {
-                int w = g.StoredWidth + 2 * pad, h = g.StoredHeight + 2 * pad;
-                if (w > width || h > height) return false;
-                if (x + w > width)
-                {
-                    y += shelf;
-                    x = 0;
-                    shelf = 0;
-                }
-                if (y + h > height) return false;
-                x += w;
-                shelf = Math.Max(shelf, h);
+                if (keys[i].Codepoint < FirstCachedCodepoint) continue;
+                if (m_Glyphs.TryGetValue(keys[i], out var glyph) && glyph.Placed) glyph.Frame = frame;
+                else all = false;
             }
+            return all;
+        }
+
+        /// <summary>Places the characters not yet in the texture, in order; false when one does not fit.</summary>
+        bool PlaceAll(List<GlyphKey> asked, int frame)
+        {
+            foreach (var key in asked)
+            {
+                var glyph = Get(key);
+                if (!glyph.Placed && !TryPlace(glyph)) return false;
+                glyph.Frame = frame;
+            }
+            return true;
+        }
+
+        /// <summary>Character order: code point, size, style.</summary>
+        static readonly Comparison<GlyphKey> s_KeyOrder = (a, b) =>
+            a.Codepoint != b.Codepoint ? ((uint)a.Codepoint).CompareTo((uint)b.Codepoint)
+            : a.Size != b.Size ? a.Size.CompareTo(b.Size)
+            : ((uint)a.Style).CompareTo((uint)b.Style);
+        static readonly IComparer<GlyphKey> KeyOrder = Comparer<GlyphKey>.Create(s_KeyOrder);
+
+        static void Distinct(List<GlyphKey> sorted)
+        {
+            int kept = 0;
+            for (int i = 0; i < sorted.Count; i++)
+                if (kept == 0 || !sorted[i].Equals(sorted[kept - 1])) sorted[kept++] = sorted[i];
+            sorted.RemoveRange(kept, sorted.Count - kept);
+        }
+
+        sealed class CornerOrder : IComparer<(int X, int Y)>
+        {
+            internal static readonly CornerOrder Instance = new CornerOrder();
+
+            public int Compare((int X, int Y) a, (int X, int Y) b)
+            {
+                int sum = (a.X + a.Y).CompareTo(b.X + b.Y);
+                return sum != 0 ? sum : a.X.CompareTo(b.X);
+            }
+        }
+
+        static int NextPowerOfTwo(int value)
+        {
+            int power = 1;
+            while (power < value) power <<= 1;
+            return power;
+        }
+
+        /// <summary>Clears the texture (at most <see cref="MaxSize"/> a side) and the glyphs in it, and
+        /// starts the first block, its side at least 8 times the font size.</summary>
+        void Reset()
+        {
+            Texture.m_Width = Math.Min(Texture.m_Width, MaxSize);
+            Texture.m_Height = Math.Min(Texture.m_Height, MaxSize);
+            foreach (var g in m_Placed) g.Placed = false;
+            m_Placed.Clear();
+            Texture.m_Pixels = new Color32[Texture.m_Width * Texture.m_Height];
+            int block = NextPowerOfTwo(ResetBlockScale * Math.Max(1, (int)m_Font.m_FontSize));
+            m_Block = Math.Min(Math.Max(block, m_Block), Texture.m_Width);
+            m_BlockIndex = 0;
+            StartBlock();
+            m_Started = true;
+        }
+
+        void StartBlock()
+        {
+            m_Corners.Clear();
+            m_Cells.Clear();
+            m_Corners.Add((0, 0));
+            m_Search = (0, 0);
+        }
+
+        bool Free(int x, int y, int width, int height)
+        {
+            foreach (var c in m_Cells)
+                if (c.x < x + width && x < c.x + c.width && c.y < y + height && y < c.y + c.height) return false;
             return true;
         }
 
         bool TryPlace(AtlasGlyph g)
         {
-            // Every glyph has a cell of its own with `pad` empty pixels on each side: its quad
-            // samples them, and a bilinear sample at the quad's edge reads only its own cell's
-            // padding (with cells sharing one padding gap, a neighbour's edge bled in).
-            int pad = Padding, w = g.StoredWidth + 2 * pad, h = g.StoredHeight + 2 * pad;
-            int width = Texture.m_Width, height = Texture.m_Height;
-            if (w > width || h > height) return false;
-            if (m_ShelfX + w > width)
+            int pad = Padding, spacing = m_Font.m_CharacterSpacing;
+            int w = (g.HasPixels ? g.StoredWidth : 0) + 2 * pad + spacing;
+            int h = (g.HasPixels ? g.StoredHeight : 0) + 2 * pad + spacing;
+            while (true)
             {
-                m_ShelfY += m_ShelfHeight;
-                m_ShelfX = 0;
-                m_ShelfHeight = 0;
+                // From where the last search stopped to the last corner, then once more from the
+                // first; a block whose corners all miss is left for the next.
+                var first = m_Corners.Min;
+                if (m_Search is { } from && TryCorners(g, from, w, h)) return true;
+                if (!(m_Search is { } started && CornerOrder.Instance.Compare(started, first) == 0))
+                {
+                    m_Search = first;
+                    if (TryCorners(g, first, w, h)) return true;
+                }
+                if ((long)(Texture.m_Width / m_Block) * (Texture.m_Height / m_Block) <= m_BlockIndex + 1) return false;
+                m_BlockIndex++;
+                StartBlock();
             }
-            if (m_ShelfY + h > height) return false;
-            g.X = m_ShelfX + pad;
-            g.Y = m_ShelfY + pad;
-            g.Placed = true;
-            m_ShelfX += w;
-            m_ShelfHeight = Math.Max(m_ShelfHeight, h);
-            m_Placed.Add(g);
-            return true;
         }
 
-        /// <summary>Copies a glyph's coverage (top row first) into the texture (bottom row first); a
-        /// flipped glyph's column c of row r (from the top) goes to texture (X + Height - 1 - r, Y + c).</summary>
+        /// <summary>The first corner from <paramref name="from"/> on where the cell fits, slid left and
+        /// then down while it stays free.</summary>
+        bool TryCorners(AtlasGlyph g, (int X, int Y) from, int w, int h)
+        {
+            foreach (var corner in m_Corners.GetViewBetween(from, LastCorner))
+            {
+                var (x, y) = corner;
+                if (x < 0 || y < 0 || x + w > m_Block || y + h > m_Block || !Free(x, y, w, h)) continue;
+                while (x > 0 && Free(x - 1, y, w, h)) x--;
+                while (y > 0 && Free(x, y - 1, w, h)) y--;
+                Take(corner, x, y, w, h);
+                Store(g, x, y);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>Beyond every corner a block can have.</summary>
+        static readonly (int X, int Y) LastCorner = (int.MaxValue / 2, int.MaxValue / 2);
+
+        /// <summary>Takes a cell found at <paramref name="corner"/> (slid to x, y): the search goes on
+        /// after that corner, and the cell's right and top corners in the block become candidates.</summary>
+        void Take((int X, int Y) corner, int x, int y, int w, int h)
+        {
+            m_Search = null;
+            foreach (var next in m_Corners.GetViewBetween(corner, LastCorner))
+            {
+                if (CornerOrder.Instance.Compare(next, corner) == 0) continue;
+                m_Search = next;
+                break;
+            }
+            m_Corners.Remove(corner);
+            m_Cells.Add(new RectInt(x, y, w, h));
+            if (x + w < m_Block) m_Corners.Add((x + w, y));
+            if (y + h < m_Block) m_Corners.Add((x, y + h));
+        }
+
+        /// <summary>Puts the glyph's cell at (x, y) of the current block and copies its bitmap in.</summary>
+        void Store(AtlasGlyph g, int x, int y)
+        {
+            int origin = m_BlockIndex * m_Block;
+            g.X = origin % Texture.m_Width + x;
+            g.Y = origin / Texture.m_Width * m_Block + y;
+            g.Placed = true;
+            m_Placed.Add(g);
+            if (g.HasPixels) Blit(g);
+        }
+
+        /// <summary>Copies a glyph's coverage (top row first) into its cell, the top row at the lowest
+        /// v; a flipped glyph's column c of row r goes to (Height - 1 - r, Width - 1 - c) of the bitmap
+        /// area.</summary>
         void Blit(AtlasGlyph g)
         {
             var pixels = Texture.m_Pixels;
-            int width = Texture.m_Width;
-            if (g.Flipped)
-            {
-                for (int row = 0; row < g.Height; row++)
-                {
-                    int u = g.X + g.Height - 1 - row;
-                    int src = row * g.Width;
-                    for (int column = 0; column < g.Width; column++)
-                        pixels[(g.Y + column) * width + u] = new Color32(255, 255, 255, g.Coverage[src + column]);
-                }
-                return;
-            }
+            int width = Texture.m_Width, pad = Padding;
+            int left = g.X + pad, bottom = g.Y + pad;
             for (int row = 0; row < g.Height; row++)
             {
-                int y = g.Y + g.Height - 1 - row;
                 int src = row * g.Width;
-                int dst = y * width + g.X;
-                for (int x = 0; x < g.Width; x++)
-                    pixels[dst + x] = new Color32(255, 255, 255, g.Coverage[src + x]);
+                for (int column = 0; column < g.Width; column++)
+                {
+                    int u = g.Flipped ? left + g.Height - 1 - row : left + column;
+                    int v = g.Flipped ? bottom + g.Width - 1 - column : bottom + row;
+                    pixels[v * width + u] = new Color32(255, 255, 255, g.Coverage[src + column]);
+                }
             }
         }
 
-        /// <summary>The glyph's rectangle in the texture, in uv.</summary>
-        internal Rect UV(AtlasGlyph g, int pad = 0)
+        /// <summary>The glyph's bitmap and padding in the texture as CharacterInfo.uv: from its cell's
+        /// left and highest v, the height negative (the bitmap's top row is at the lowest v).</summary>
+        internal Rect UV(AtlasGlyph g)
         {
             float w = Texture.m_Width, h = Texture.m_Height;
-            return new Rect((g.X - pad) / w, (g.Y - pad) / h, (g.StoredWidth + 2 * pad) / w, (g.StoredHeight + 2 * pad) / h);
+            int pad = Padding, cellWidth = (g.HasPixels ? g.StoredWidth : 0) + 2 * pad, cellHeight = (g.HasPixels ? g.StoredHeight : 0) + 2 * pad;
+            return new Rect(g.X / w, (g.Y + cellHeight) / h, cellWidth / w, -cellHeight / h);
         }
 
         /// <summary>A glyph as CharacterInfo: its cell with the padding on every side (uvs and
@@ -586,7 +709,7 @@ namespace Unbound.Runtime
                 index = g.Key.Codepoint,
                 size = requestedSize,
                 style = g.Key.Style,
-                uv = g.Placed ? UV(g, pad) : default,
+                uv = g.Placed ? UV(g) : default,
                 vert = new Rect(g.Left - pad, g.Top + pad, g.Width + 2 * pad, -(g.Height + 2 * pad)),
                 width = g.Advance,
                 flipped = g.Flipped,
@@ -594,11 +717,11 @@ namespace Unbound.Runtime
 #pragma warning restore 618
         }
 
+        /// <summary>A character's CharacterInfo while it is in the texture (a character the font lacks
+        /// too, with its cell of padding).</summary>
         internal bool TryGetCharacterInfo(int codepoint, int size, int requestedSize, FontStyle style, out CharacterInfo info)
         {
-            // A character the font lacks has one once it has an (empty) cell in the texture, as
-            // Unity's font answers for its missing-glyph glyph (measured, tests/projects/textmesh).
-            if (m_Glyphs.TryGetValue(new GlyphKey(codepoint, size, style), out var g) && (g.Found ? g.Placed || !g.HasPixels : g.Placed))
+            if (m_Glyphs.TryGetValue(new GlyphKey(codepoint, size, style), out var g) && g.Placed)
             {
                 info = ToCharacterInfo(g, requestedSize);
                 return true;
@@ -607,12 +730,12 @@ namespace Unbound.Runtime
             return false;
         }
 
+        /// <summary>The characters in the texture, in the order they were placed.</summary>
         internal CharacterInfo[] CharacterInfos()
         {
-            var list = new List<CharacterInfo>();
-            foreach (var g in m_Glyphs.Values)
-                if (g.Found && (g.Placed || !g.HasPixels)) list.Add(ToCharacterInfo(g, g.Key.Size));
-            return list.ToArray();
+            var list = new CharacterInfo[m_Placed.Count];
+            for (int i = 0; i < list.Length; i++) list[i] = ToCharacterInfo(m_Placed[i], m_Placed[i].Key.Size);
+            return list;
         }
     }
 
@@ -692,6 +815,7 @@ namespace Unbound.Runtime
                 font.m_FallbackGuids = settings.FallbackFonts ?? Array.Empty<string>();
                 font.m_ShouldRoundAdvanceValue = settings.ShouldRoundAdvanceValue;
                 font.m_CharacterPadding = settings.CharacterPadding;
+                font.m_CharacterSpacing = settings.CharacterSpacing;
                 font.m_RenderingMode = settings.RenderingMode;
                 font.InitFromSource(source, settings.FontSize, name, settings.AscentCalculationMode);
                 // A font with a fixed character set is not dynamic: its glyphs have the import size.

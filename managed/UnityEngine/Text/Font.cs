@@ -31,6 +31,8 @@ namespace UnityEngine
         internal bool m_Dynamic;
         internal bool m_ShouldRoundAdvanceValue = true;
         internal int m_CharacterPadding = 1;
+        /// <summary>Texels kept free beside each glyph's cell in a dynamic font texture.</summary>
+        internal int m_CharacterSpacing;
         /// <summary>The importer's FontRenderingMode (Smooth 0, HintedSmooth, HintedRaster, OSDefault).</summary>
         internal int m_RenderingMode;
         internal int m_AsciiStartOffset;
@@ -253,9 +255,9 @@ namespace UnityEngine
                     c = char.ConvertToUtf32(characters[i], characters[++i]);
                 keys.Add(new GlyphKey(c, pixelSize, style));
             }
-            // Characters without pixels (a space) get an empty cell too (measured: their
+            // Characters without pixels (a space) get a cell of padding too (measured: their
             // CharacterInfo has the padding's uvs, tests/projects/textmesh).
-            Atlas.Request(keys, keys);
+            Atlas.Request(keys);
         }
 
         public void RequestCharactersInTexture(string characters, int size) => RequestCharactersInTexture(characters, size, FontStyle.Normal);
@@ -326,6 +328,7 @@ namespace UnityEngine
             m_AsciiStartOffset = body.Int("m_AsciiStartOffset");
             m_Tracking = body.Float("m_Tracking", 1f);
             m_CharacterPadding = body.Int("m_CharacterPadding", 1);
+            m_CharacterSpacing = body.Int("m_CharacterSpacing");
             m_ShouldRoundAdvanceValue = body.Bool("m_ShouldRoundAdvanceValue", true);
             m_Material = resolver.Resolve(body.Ref("m_DefaultMaterial"), typeof(Material)) as Material;
             m_Texture = resolver.Resolve(body.Ref("m_Texture"), typeof(Texture)) as Texture;

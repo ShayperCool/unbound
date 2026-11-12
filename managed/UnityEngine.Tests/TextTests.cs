@@ -55,6 +55,8 @@ namespace Unbound.Tests
         }
     }
 
+    // The texture of a dynamic font keeps what was asked for in the current frame (Time.frameCount).
+    [Collection("Frames")]
     public class TextTests
     {
         static Font BoxFont(int fontSize = 10) => new Font(new BoxGlyphSource(), fontSize, "Box");
@@ -107,7 +109,8 @@ namespace Unbound.Tests
             Assert.Equal(new Vector3(-44, 16, 0), v[2].position); // bottom right
             Assert.Equal(new Vector3(-51, 16, 0), v[3].position); // bottom left
             Assert.Equal(new Vector3(-46, 25, 0), v[4].position);
-            Assert.True(v[0].uv0.y > v[3].uv0.y && v[1].uv0.x > v[0].uv0.x);
+            // The glyph's top row is at the lower v of its cell (measured, tests/projects/textmesh atlas).
+            Assert.True(v[0].uv0.y < v[3].uv0.y && v[1].uv0.x > v[0].uv0.x);
             Assert.Equal(new Color32(255, 255, 255, 255), v[0].color);
             Assert.Equal(3, gen.characterCount);
             Assert.Equal(2, gen.characterCountVisible);
@@ -357,7 +360,8 @@ namespace Unbound.Tests
             Assert.Equal(6, info.maxX);
             var texture = font.material.mainTexture;
             Assert.Equal(7f, (info.uvTopRight.x - info.uvBottomLeft.x) * texture.width, 3);
-            Assert.Equal(9f, (info.uvTopRight.y - info.uvBottomLeft.y) * texture.height, 3);
+            // The uv rect runs down the texture: its top is at the lower v (measured).
+            Assert.Equal(-9f, (info.uvTopRight.y - info.uvBottomLeft.y) * texture.height, 3);
             Assert.True(font.GetCharacterInfo(' ', out var space, 10));
             Assert.Equal(5, space.advance);
             // A requested space gets an empty cell: its padding (measured).
@@ -389,29 +393,40 @@ namespace Unbound.Tests
             Assert.Equal(new Vector2(0.3f, 0.2f), info.uvBottomRight);
         }
 
+        /// <summary>A full texture is reset: it keeps the characters asked for in this frame, grows
+        /// when the area they need at the current density exceeds it, and raises textureRebuilt; the
+        /// characters of earlier frames are dropped (measured, tests/projects/textmesh atlas).</summary>
         [Fact]
-        public void AFullTextureGrowsAndRaisesTextureRebuilt()
+        public void AFullTextureKeepsThisFramesCharactersAndRaisesTextureRebuilt()
         {
             var font = BoxFont();
             var rebuilt = new List<Font>();
-            void OnRebuilt(Font f) => rebuilt.Add(f);
+            void OnRebuilt(Font f) { if (f == font) rebuilt.Add(f); }
             Font.textureRebuilt += OnRebuilt;
+            int frame = Time.s_FrameCount;
             try
             {
-                // 50x70 glyphs (+1 padding): 12 fit in 256x256.
-                font.RequestCharactersInTexture("ABCDEFGHIJKL", 100);
+                font.RequestCharactersInTexture("AB", 10);
                 Assert.Empty(rebuilt);
-                font.RequestCharactersInTexture("MNOPQRSTUVWX", 100);
+                Time.s_FrameCount = frame + 1;
+                // 52x72 cells (50x70 glyphs and padding): two in each 128-texel block of the font's
+                // size, eight in 256x256; twelve do not fit.
+                font.RequestCharactersInTexture("CDEFGHIJKLMN", 100);
                 Assert.Equal(new[] { font }, rebuilt);
                 var texture = (Texture2D)font.material.mainTexture;
-                Assert.Equal(512, texture.width);
-                Assert.Equal(256, texture.height);
-                // Everything requested so far is still there.
-                Assert.True(font.GetCharacterInfo('A', out _, 100));
-                Assert.True(font.GetCharacterInfo('X', out _, 100));
+                Assert.Equal(256, texture.width);
+                Assert.Equal(512, texture.height);
+                Assert.True(font.GetCharacterInfo('C', out _, 100));
+                Assert.True(font.GetCharacterInfo('N', out _, 100));
+                Assert.False(font.GetCharacterInfo('A', out _, 10));
+                // Asked for again, they are put back without a rebuild.
+                font.RequestCharactersInTexture("AB", 10);
+                Assert.Single(rebuilt);
+                Assert.True(font.GetCharacterInfo('A', out _, 10));
             }
             finally
             {
+                Time.s_FrameCount = frame;
                 Font.textureRebuilt -= OnRebuilt;
             }
         }
@@ -429,16 +444,18 @@ namespace Unbound.Tests
             void OnRebuilt(Font f) => inner.Populate("AB", settings);
             Font.textureRebuilt += OnRebuilt;
             var outer = new TextGenerator();
-            try { outer.Populate("MNOPQRSTUVWX", settings); }
+            // Twelve 52x72 cells fill the first block of the grown texture; eighteen more do not fit.
+            const string longer = "MNOPQRSTUVWXYZmnop";
+            try { outer.Populate(longer, settings); }
             finally { Font.textureRebuilt -= OnRebuilt; }
             Assert.Equal(8, inner.vertexCount);
             var innerAlone = new TextGenerator();
             innerAlone.Populate("AB", settings);
             var outerAlone = new TextGenerator();
-            outerAlone.Populate("MNOPQRSTUVWX", settings);
+            outerAlone.Populate(longer, settings);
             Assert.Equal(innerAlone.verts.Select(v => (v.position, v.uv0)), inner.verts.Select(v => (v.position, v.uv0)));
             Assert.Equal(outerAlone.verts.Select(v => (v.position, v.uv0)), outer.verts.Select(v => (v.position, v.uv0)));
-            Assert.Equal(48, outer.vertexCount);
+            Assert.Equal(72, outer.vertexCount);
         }
 
         [Fact]

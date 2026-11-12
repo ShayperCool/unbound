@@ -9,6 +9,7 @@ namespace Unbound.Tests
     /// texture (CharacterInfo.flipped), as the Unity 6000.0.71f1 Editor stores them
     /// (tests/projects/textmesh): the corners CharacterInfo reports and the quads text generation
     /// draws both find the glyph's own pixels there.</summary>
+    [Collection("Frames")]
     public class FontAtlasRotationTests
     {
         /// <summary>'W' a 6 x 3 bitmap, 'I' a 2 x 5 one and 'O' a 4 x 4 one, each pixel a distinct
@@ -63,20 +64,21 @@ namespace Unbound.Tests
             Assert.True(font.GetCharacterInfo('O', out var square));
             Assert.False(square.flipped);
             var texture = (Texture2D)font.material.mainTexture;
-            // The flipped cell is as tall as the glyph is wide: 3 + 2 padding across, 6 + 2 up.
+            // The flipped cell is 3 + 2 padding across and 6 + 2 down the texture (the uv rect's
+            // height is negative: a cell's top is at its lower v).
             Assert.Equal(5, Mathf.RoundToInt(wide.uv.width * texture.width));
-            Assert.Equal(8, Mathf.RoundToInt(wide.uv.height * texture.height));
+            Assert.Equal(-8, Mathf.RoundToInt(wide.uv.height * texture.height));
 #pragma warning restore 618
-            // Its top edge runs up the texture: the corners' u are equal along it.
+            // Its top edge runs along u: the corners' u are equal along it.
             Assert.Equal(wide.uvTopLeft.x, wide.uvTopRight.x);
             Assert.Equal(wide.uvBottomLeft.x, wide.uvBottomRight.x);
             // Each corner, one padding pixel in, is that corner's pixel of the glyph.
-            Assert.Equal(10, Alpha(texture, wide.uvTopLeft, -2, 1));
-            Assert.Equal(10 + 5, Alpha(texture, wide.uvTopRight, -2, -2));
-            Assert.Equal(10 + 12, Alpha(texture, wide.uvBottomLeft, 1, 1));
-            Assert.Equal(10 + 17, Alpha(texture, wide.uvBottomRight, 1, -2));
-            Assert.Equal(10, Alpha(texture, tall.uvTopLeft, 1, -2));
-            Assert.Equal(10 + 9, Alpha(texture, tall.uvBottomRight, -2, 1));
+            Assert.Equal(10, Alpha(texture, wide.uvTopLeft, -2, -2));
+            Assert.Equal(10 + 5, Alpha(texture, wide.uvTopRight, -2, 1));
+            Assert.Equal(10 + 12, Alpha(texture, wide.uvBottomLeft, 1, -2));
+            Assert.Equal(10 + 17, Alpha(texture, wide.uvBottomRight, 1, 1));
+            Assert.Equal(10, Alpha(texture, tall.uvTopLeft, 1, 1));
+            Assert.Equal(10 + 9, Alpha(texture, tall.uvBottomRight, -2, -2));
         }
 
         [Fact]
