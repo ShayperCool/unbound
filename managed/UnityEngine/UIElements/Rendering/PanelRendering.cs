@@ -301,7 +301,7 @@ namespace Unbound.UIElements
             int row = 0;
             foreach (var image in p.GradientImages)
             {
-                foreach (var setting in image.settings)
+                foreach (var setting in image.settings ?? Array.Empty<GradientSettings>())
                 {
                     if (setting.gradientType == GradientType.Radial)
                     {
