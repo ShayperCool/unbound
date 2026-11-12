@@ -115,6 +115,36 @@ public class ClipProbe : MonoBehaviour
 #endif
     }
 
+    /// <summary>Every curve of a Generic model's clips key by key: times, values and both
+    /// tangents. RigLoose is Rig under Keyframe Reduction with loose errors (rotation 15
+    /// degrees, position and scale 40%), where several curves stay within the error of their
+    /// first value but end elsewhere (Head's z position 0.004 to 0.003, Spine's turn of ten
+    /// degrees, Hips' x scale 100 to 150). A curve that never leaves float noise around zero is
+    /// recorded as such (see <see cref="Keys"/>).</summary>
+    static void CurveKeys(string model)
+    {
+#if UNITY_EDITOR
+        foreach (var clip in Clips(model))
+        {
+            var bindings = UnityEditor.AnimationUtility.GetCurveBindings(clip)
+                .OrderBy(b => b.path, StringComparer.Ordinal).ThenBy(b => b.propertyName, StringComparer.Ordinal).ToArray();
+            foreach (var b in bindings)
+            {
+                string key = "curvekeys." + model + "." + clip.name + "." + b.path + "|" + b.propertyName;
+                var keys = UnityEditor.AnimationUtility.GetEditorCurve(clip, b).keys;
+                if (keys.All(k => Mathf.Abs(k.value) < Noise))
+                {
+                    Record(key, "{\"noise\":1}");
+                    continue;
+                }
+                Record(key, "{\"count\":" + keys.Length
+                    + ",\"time\":[" + string.Join(",", keys.Select(k => F(k.time))) + "],\"value\":[" + string.Join(",", keys.Select(k => F(k.value)))
+                    + "],\"in\":[" + string.Join(",", keys.Select(k => F(k.inTangent))) + "],\"out\":[" + string.Join(",", keys.Select(k => F(k.outTangent))) + "]}");
+            }
+        }
+#endif
+    }
+
     /// <summary>The transform curves a Humanoid model's clips keep beside their Animator curves.
     /// HumanTwist's take also turns one twist bone and moves the other (neither is a human
     /// bone); its clip mask is None (HumanTwistNone), made from the model with every transform
@@ -222,6 +252,8 @@ public class ClipProbe : MonoBehaviour
             Imported("RigDefault", true);
             Imported("RigReduced", false);
             Imported("RigOptimal", false);
+            Imported("RigLoose", false);
+            CurveKeys("RigLoose");
             // The rest pose of the models, for the masked and unanimated transforms.
             foreach (var model in new[] { "Rig", "RigDefault", "RigReduced", "RigOptimal", "RigStatic" })
             {
