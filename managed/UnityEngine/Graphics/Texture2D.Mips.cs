@@ -76,7 +76,11 @@ namespace UnityEngine
         /// <summary>A texel as GetPixel reads it.</summary>
         Color Read(int mip, int i)
         {
-            if (SourceCrunch && Compat.RuntimeTextureCompressionMeasured) return Color.white;
+            if (SourceCrunch)
+            {
+                if (Compat.RuntimeTextureCompressionMeasured) return Color.white;
+                throw new UnityException("Texture2D.GetPixel of Crunch archives is unmeasured for this release.");
+            }
             // While views of a compressed texture's blocks exist, a texel is read from its block.
             if (SourceBlocks && m_Store != null) return BlockTexel(mip, i);
             return m_Hdr != null ? FloatCell(mip, i) : Texture2DTexels.Pixel(m_Format, Cell(mip, i));

@@ -717,7 +717,7 @@ impl ProjectCompression {
 /// the `.meta`'s sRGB flag is on (normal maps too, whose flag stays on); an explicit one stays
 /// uncompressed unless both sides are powers of two (20x12 without mips: RGB24 in Gamma,
 /// ETC2_RGB in Linear). Other targets and default formats, automatic ETC_RGB4 at sizes that are
-/// not powers of two, Split Alpha Channel, crunch, automatic HDR on Android, EAC, cubemaps,
+/// not powers of two, Split Alpha Channel, HDR Crunch sources, automatic HDR on Android, EAC imports, cubemaps,
 /// arrays, volumes and the other texture types are unmeasured. The 6000.0.71f1 profile
 /// supports all six square LDR/HDR ASTC footprints and importer quality settings. Android
 /// ASTC defaults use 4x4 at High, 8x8 at Low and 6x6 at Normal, including Single Channel
@@ -740,6 +740,13 @@ pub fn storage(
         return Storage::Uncompressed;
     }
     let android = build_target == "Android";
+    let explicit_crunch = s
+        .explicit_format
+        .and_then(|f| crunch::CrunchFormat::from_unity(f as i32))
+        .is_some();
+    if (s.crunched || explicit_crunch) && !project.encoders.measured_import_encoders {
+        return unsupported("Crunch format selection of this release");
+    }
     let format = match s.explicit_format {
         Some(10) => BlockFormat::Bc1,
         Some(12) => BlockFormat::Bc3,
@@ -839,19 +846,13 @@ pub fn storage(
         }
         return Storage::Blocks(format);
     }
-    let wants_crunch = s
-        .explicit_format
-        .and_then(|f| crunch::CrunchFormat::from_unity(f as i32))
-        .is_some()
+    let wants_crunch = explicit_crunch
         || (s.explicit_format.is_none()
             && s.crunched
             && matches!(
                 format,
                 BlockFormat::Bc1 | BlockFormat::Bc3 | BlockFormat::Etc1 | BlockFormat::Etc2Rgba8
             ));
-    if wants_crunch && !project.encoders.measured_import_encoders {
-        return unsupported("Crunch encoders of this release");
-    }
     if (format == BlockFormat::Bc6h) != hdr {
         return unsupported(&format!("{format:?} from {:?} data", texture.format));
     }
@@ -1202,8 +1203,8 @@ impl Importer for TextureImporter {
     // 28: malformed ASTC mode budgets decode to the format's error colour.
     // 29: BC4/BC5 compare continuous ramp fits and preserve channel-fit rounding.
     // 30: compressed automatic Single Channel red mips retain their source colour-space filtering.
-    // 35: Crunch archives and transcoded blocks, runtime EAC and compressed GPU uploads.
-    const VERSION: u32 = 35;
+    // 36: release-scoped Crunch archives and transcoded blocks, runtime EAC and compressed GPU uploads.
+    const VERSION: u32 = 36;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);

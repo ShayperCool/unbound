@@ -1732,3 +1732,33 @@ fn crunch_colour_fitting_is_independent_of_the_authored_srgb_flag() {
         "texturecompression NoiseCrunchLinearNoMips/SrgbNoMips"
     );
 }
+
+#[test]
+fn automatic_crunch_selection_is_scoped_even_when_high_quality_ignores_the_flag() {
+    let bytes = png(8, 8, |x, y| [(x * 31) as u8, (y * 29) as u8, 190, 255]);
+    let meta = unbound_yaml::parse_value("TextureImporter:\n  platformSettings:\n  - buildTarget: Standalone\n    overridden: 1\n    textureFormat: -1\n    textureCompression: 2\n    crunchedCompression: 1\n").unwrap();
+    let mut importer = TextureImporter {
+        build_target: "Standalone".into(),
+        compress: true,
+        ..TextureImporter::default()
+    };
+    let unmeasured = importer
+        .import(Path::new("Assets/t.png"), &bytes, &meta)
+        .unwrap();
+    assert!(unmeasured.blocks.is_none());
+    assert!(
+        unmeasured
+            .approximation
+            .as_ref()
+            .unwrap()
+            .contains("this release")
+    );
+    importer.project.encoders = unbound_compat::TextureCompressionRules::for_version(
+        unbound_compat::UnityVersion::new(6000, 0, 71),
+    );
+    let measured = importer
+        .import(Path::new("Assets/t.png"), &bytes, &meta)
+        .unwrap();
+    assert_eq!(measured.blocks.unwrap().format, BlockFormat::Bc7);
+    assert!(measured.crunched.is_none());
+}
