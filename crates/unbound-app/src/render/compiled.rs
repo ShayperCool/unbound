@@ -48,6 +48,81 @@ struct Depthless {
     wgsl: String,
 }
 
+/// The most uniform bindings of a program's cbuffers the renderer binds ([`Compiled::uniform_bindings`]):
+/// eight bindings of 64 KB, more than any device's per-stage count leaves room for beside the
+/// per-draw uniform on the measured drivers (14 per stage on OpenGL Core, 15 dynamic ones on
+/// Vulkan, NVIDIA).
+pub const MAX_UNIFORM_BINDINGS: usize = 8;
+
+/// A program's group-0 bind group this frame, and where its uniform bindings start in a draw's
+/// uniform data.
+pub struct ProgramUniforms {
+    pub group: wgpu::BindGroup,
+    bases: [u32; MAX_UNIFORM_BINDINGS],
+    count: usize,
+}
+
+impl ProgramUniforms {
+    /// The dynamic offsets of a draw whose uniform data is at `data` and per-draw uniform at
+    /// `draw`, in binding order (the first uniform binding, the per-draw uniform, the others),
+    /// and how many there are.
+    pub fn offsets(&self, data: u32, draw: u32) -> ([u32; MAX_UNIFORM_BINDINGS + 1], usize) {
+        dynamic_offsets(&self.bases[..self.count], data, draw)
+    }
+}
+
+/// [`ProgramUniforms::offsets`] of uniform bindings starting at `bases` (none: one at 0).
+fn dynamic_offsets(
+    bases: &[u32],
+    data: u32,
+    draw: u32,
+) -> ([u32; MAX_UNIFORM_BINDINGS + 1], usize) {
+    let mut out = [0; MAX_UNIFORM_BINDINGS + 1];
+    out[0] = data + bases.first().copied().unwrap_or(0);
+    out[1] = draw;
+    for (k, base) in bases.iter().enumerate().skip(1) {
+        out[k + 1] = data + base;
+    }
+    (out, bases.len().max(1) + 1)
+}
+
+/// Why a device cannot bind a program's uniform bindings: one is larger than a uniform binding
+/// may be (naming its cbuffers), or there are more than the device binds beside the per-draw
+/// uniform.
+fn uniform_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option<String> {
+    let max_size = limits.max_uniform_buffer_binding_size;
+    for binding in &program.uniform_bindings {
+        if u64::from(binding.size) > u64::from(max_size) {
+            let end = binding.offset + binding.size;
+            let names: Vec<&str> = program
+                .blocks
+                .iter()
+                .filter(|b| b.offset >= binding.offset && b.offset < end)
+                .map(|b| b.name.as_str())
+                .collect();
+            return Some(format!(
+                "its cbuffer{} `{}` take{} {} bytes in one uniform buffer, over the device's {max_size}",
+                if names.len() == 1 { "" } else { "s" },
+                names.join("`, `"),
+                if names.len() == 1 { "s" } else { "" },
+                binding.size,
+            ));
+        }
+    }
+    let count = program.uniform_bindings.len().max(1) as u32 + 1;
+    let room = limits
+        .max_uniform_buffers_per_shader_stage
+        .min(limits.max_dynamic_uniform_buffers_per_pipeline_layout)
+        .min(MAX_UNIFORM_BINDINGS as u32 + 1);
+    (count > room).then(|| {
+        format!(
+            "its cbuffers take {} uniform buffers of up to {} bytes with the renderer's per-draw one, over the {room} the device binds",
+            count,
+            unbound_shaders::UNIFORM_BINDING_BYTES
+        )
+    })
+}
+
 /// Compiled programs and this frame's uniform blocks.
 pub struct CompiledPrograms {
     compiler: Option<ShaderCompiler>,
@@ -257,6 +332,20 @@ impl CompiledPrograms {
         if let Some(id) = self.ids.get(&key) {
             return Some(*id);
         }
+        if let Some(why) = uniform_bindings_refused(&program, &device.limits()) {
+            if purpose == VariantUse::Draw {
+                tracing::warn!(
+                    "shader `{shader}` (keywords: {}): a pass cannot be bound on this device, so it draws with the error shader: {why}",
+                    if keywords.is_empty() {
+                        "none".to_string()
+                    } else {
+                        keywords.join(" ")
+                    }
+                );
+            }
+            self.failed.insert(failure);
+            return None;
+        }
         tracing::info!(
             "shader `{shader}`: compiled its program ({}{})",
             if program.keywords.is_empty() {
@@ -272,12 +361,13 @@ impl CompiledPrograms {
                 source: wgpu::ShaderSource::Wgsl(wgsl.into()),
             })
         };
+        let further = program.uniform_bindings.len().saturating_sub(1);
+        let uniform_entries: Vec<_> = (0..2 + further as u32)
+            .map(|binding| layout_entry(binding, dynamic_uniform()))
+            .collect();
         let uniform_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("unbound program uniforms"),
-            entries: &[
-                layout_entry(0, dynamic_uniform()),
-                layout_entry(1, dynamic_uniform()),
-            ],
+            entries: &uniform_entries,
         });
         let mut texture_entries = Vec::new();
         for k in 0..program.textures.len() as u32 {
@@ -596,7 +686,7 @@ impl CompiledPrograms {
         queue: &wgpu::Queue,
         draws: &wgpu::Buffer,
         draw_size: u64,
-    ) -> HashMap<u32, wgpu::BindGroup> {
+    ) -> HashMap<u32, ProgramUniforms> {
         let mut groups = HashMap::default();
         if self.used.is_empty() {
             return groups;
@@ -612,32 +702,55 @@ impl CompiledPrograms {
         }
         let buffer = self.buffer.as_ref().unwrap();
         queue.write_buffer(buffer, 0, &self.data);
+        let range = |size: u64| {
+            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                buffer,
+                offset: 0,
+                size: wgpu::BufferSize::new(size),
+            })
+        };
+        let mut entries = Vec::with_capacity(MAX_UNIFORM_BINDINGS + 1);
         for &id in &self.used {
             let gpu = &self.programs[id as usize];
-            let size = gpu.program.uniform_size.max(16) as u64;
+            let bindings = &gpu.program.uniform_bindings;
+            // A program without cbuffers binds a minimal range.
+            let first = bindings.first().map_or(16, |b| b.size.max(16));
+            entries.clear();
+            entries.push(wgpu::BindGroupEntry {
+                binding: 0,
+                resource: range(first as u64),
+            });
+            entries.push(wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: draws,
+                    offset: 0,
+                    size: wgpu::BufferSize::new(draw_size),
+                }),
+            });
+            let mut bases = [0; MAX_UNIFORM_BINDINGS];
+            for (k, b) in bindings.iter().enumerate() {
+                bases[k] = b.offset;
+                if k > 0 {
+                    entries.push(wgpu::BindGroupEntry {
+                        binding: k as u32 + 1,
+                        resource: range(b.size as u64),
+                    });
+                }
+            }
             let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("unbound program uniforms"),
                 layout: &gpu.uniform_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                            buffer,
-                            offset: 0,
-                            size: wgpu::BufferSize::new(size),
-                        }),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                            buffer: draws,
-                            offset: 0,
-                            size: wgpu::BufferSize::new(draw_size),
-                        }),
-                    },
-                ],
+                entries: &entries,
             });
-            groups.insert(id, group);
+            groups.insert(
+                id,
+                ProgramUniforms {
+                    group,
+                    bases,
+                    count: bindings.len(),
+                },
+            );
         }
         groups
     }
@@ -1445,6 +1558,89 @@ fn write_array(u: &unbound_shaders::Uniform, components: u32, data: &[f32], out:
 
 #[cfg(test)]
 mod tests {
+
+    /// The per-draw dynamic offsets in binding order: the first uniform binding, the per-draw
+    /// uniform, then the further ones, each at its start in the draw's uniform data.
+    #[test]
+    fn dynamic_offsets_follow_the_binding_order() {
+        assert_eq!(
+            dynamic_offsets(&[], 512, 768),
+            ([512, 768, 0, 0, 0, 0, 0, 0, 0], 2)
+        );
+        let (offsets, count) = dynamic_offsets(&[0, 1024, 66560], 4096, 256);
+        assert_eq!(&offsets[..count], &[4096, 256, 5120, 70656]);
+    }
+
+    /// A program the device cannot bind is refused with its cbuffers named: one binding over the
+    /// device's uniform buffer size, or more bindings than it binds beside the per-draw one.
+    #[test]
+    fn uniform_bindings_over_the_device_limits_are_refused_by_name() {
+        let block = |name: &str, offset, size| unbound_shaders::BlockRange {
+            name: name.into(),
+            offset,
+            size,
+        };
+        let binding = |offset, size| unbound_shaders::UniformBinding { offset, size };
+        let mut program = Compiled {
+            vertex: String::new(),
+            fragment: String::new(),
+            vertex_entry: String::new(),
+            fragment_entry: String::new(),
+            uniforms: Vec::new(),
+            instanced_properties: Vec::new(),
+            mesh_instance_stride: Some(0),
+            mesh_instance_uniform_scaling: false,
+            mesh_instance_max_count: None,
+            uniform_size: 1024 + 65536 + 16384,
+            uniform_bindings: vec![
+                binding(0, 1024),
+                binding(1024, 65536),
+                binding(66560, 16384),
+            ],
+            textures: Vec::new(),
+            texture_dims: Vec::new(),
+            main_texture: false,
+            keywords: Vec::new(),
+            texture_slots: Vec::new(),
+            texture_aliases: Vec::new(),
+            blocks: vec![
+                block("UnityPerDraw", 0, 1024),
+                block("urp_TileBuffer", 1024, 65536),
+                block("urp_ZBinBuffer", 66560, 8192),
+                block("AdditionalLights", 74752, 8192),
+            ],
+            buffers: Vec::new(),
+            extra_vertex_inputs: false,
+            vertex_inputs: true,
+        };
+        let desktop = wgpu::Limits {
+            max_uniform_buffer_binding_size: 65536,
+            max_uniform_buffers_per_shader_stage: 14,
+            max_dynamic_uniform_buffers_per_pipeline_layout: 15,
+            ..wgpu::Limits::default()
+        };
+        assert_eq!(uniform_bindings_refused(&program, &desktop), None);
+        let small = wgpu::Limits {
+            max_uniform_buffer_binding_size: 16384,
+            ..desktop.clone()
+        };
+        let why = uniform_bindings_refused(&program, &small).unwrap();
+        assert!(why.contains("`urp_TileBuffer` takes 65536 bytes"), "{why}");
+        assert!(why.contains("16384"), "{why}");
+        let few = wgpu::Limits {
+            max_dynamic_uniform_buffers_per_pipeline_layout: 3,
+            ..desktop.clone()
+        };
+        let why = uniform_bindings_refused(&program, &few).unwrap();
+        assert!(why.contains("4 uniform buffers"), "{why}");
+        // Past the renderer's own count, whatever the device takes.
+        program.uniform_bindings = (0..MAX_UNIFORM_BINDINGS as u32 + 1)
+            .map(|k| binding(k * 256, 16))
+            .collect();
+        assert!(uniform_bindings_refused(&program, &desktop).is_some());
+        program.uniform_bindings.pop();
+        assert_eq!(uniform_bindings_refused(&program, &desktop), None);
+    }
     use super::*;
     use unbound_shaders::Uniform;
 
@@ -1576,6 +1772,10 @@ mod tests {
             mesh_instance_max_count: None,
             uniforms,
             uniform_size: offset,
+            uniform_bindings: vec![unbound_shaders::UniformBinding {
+                offset: 0,
+                size: offset,
+            }],
             textures: Vec::new(),
             texture_dims: Vec::new(),
             main_texture: true,
@@ -1787,6 +1987,10 @@ mod tests {
                 uniform("_Global", 144, 1, 1),
             ],
             uniform_size: 176,
+            uniform_bindings: vec![unbound_shaders::UniformBinding {
+                offset: 0,
+                size: 176,
+            }],
             textures: Vec::new(),
             texture_dims: Vec::new(),
             main_texture: true,

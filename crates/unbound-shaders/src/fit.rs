@@ -1247,15 +1247,15 @@ pub(crate) fn fit(
         .map(|t| slots.get(t).copied().unwrap_or_default())
         .collect();
 
-    // Every cbuffer of the program in one uniform block, laid out alike in both stages.
+    // The program's cbuffers packed into uniform bindings, laid out alike in both stages.
     let layout = block_layout(&[&vertex, &fragment]);
     merge_blocks(&mut vertex, &layout)?;
     merge_blocks(&mut fragment, &layout)?;
     pad_member_gaps(&mut vertex)?;
     pad_member_gaps(&mut fragment)?;
 
-    let vertex_uniforms = rebind(&mut vertex, &keys, &further, &buffers)?;
-    let fragment_uniforms = rebind(&mut fragment, &keys, &further, &buffers)?;
+    let vertex_uniforms = rebind(&mut vertex, &layout, &keys, &further, &buffers)?;
+    let fragment_uniforms = rebind(&mut fragment, &layout, &keys, &further, &buffers)?;
     let textures: Vec<String> = keys.into_iter().map(|(property, _)| property).collect();
     fit_vertex(&mut vertex, &vertex_scan.input_semantics, clip)?;
     let extra_vertex_inputs = vertex.entry_points.iter().any(|e| {
@@ -1295,6 +1295,15 @@ pub(crate) fn fit(
         } else {
             0
         });
+    // A program's only block is its binding, as large as either stage declares it.
+    let uniform_bindings = match layout.bases.len() {
+        0 => Vec::new(),
+        1 => vec![crate::UniformBinding {
+            offset: 0,
+            size: uniform_size,
+        }],
+        _ => layout.bindings.clone(),
+    };
 
     name_deep_expressions(&mut vertex);
     name_deep_expressions(&mut fragment);
@@ -1313,6 +1322,7 @@ pub(crate) fn fit(
         mesh_instance_uniform_scaling: false,
         mesh_instance_max_count: None,
         uniform_size,
+        uniform_bindings,
         textures,
         texture_dims,
         main_texture,
@@ -1452,14 +1462,33 @@ fn slot_property(name: &str, sampler: bool) -> Option<String> {
     }
 }
 
-/// The program's uniform blocks (cbuffers) by name: each one's offset in the merged block, in
-/// the order the vertex then the fragment program declare them (each 16-byte aligned), and the
-/// merged block's size.
+/// The program's uniform blocks (cbuffers) by name: each one's offset in the draw's uniform
+/// data, in the order the vertex then the fragment program declare them (each 16-byte aligned),
+/// and the uniform bindings they are packed into ([`binding_layout`]).
 struct BlockLayout {
     bases: Vec<(String, u32)>,
     /// Each block's size, by `bases` index.
     spans: Vec<u32>,
+    /// Each block's binding, by `bases` index.
+    binding_of: Vec<usize>,
+    bindings: Vec<crate::UniformBinding>,
     size: u32,
+}
+
+impl BlockLayout {
+    /// The binding a uniform block variable (named after its cbuffer) is packed into.
+    fn binding(&self, block: &str) -> Option<usize> {
+        let k = self.bases.iter().position(|(n, _)| n == block)?;
+        Some(self.binding_of[k])
+    }
+}
+
+/// The name of the merged variable of uniform binding `k` ([`merge_blocks`]).
+fn binding_variable(k: usize) -> String {
+    match k {
+        0 => "UnboundUniforms".to_string(),
+        k => format!("UnboundUniforms{k}"),
+    }
 }
 
 fn block_name(module: &Module, g: &naga::GlobalVariable) -> String {
@@ -1472,9 +1501,7 @@ fn block_name(module: &Module, g: &naga::GlobalVariable) -> String {
 }
 
 fn block_layout(modules: &[&Module]) -> BlockLayout {
-    let mut bases: Vec<(String, u32)> = Vec::new();
-    let mut spans = Vec::new();
-    let mut size = 0u32;
+    let mut blocks: Vec<(String, u32)> = Vec::new();
     for module in modules {
         for (_, g) in module.global_variables.iter() {
             if g.space != AddressSpace::Uniform {
@@ -1484,24 +1511,62 @@ fn block_layout(modules: &[&Module]) -> BlockLayout {
                 continue;
             };
             let name = block_name(module, g);
-            if bases.iter().any(|(n, _)| *n == name) {
-                continue;
+            if !blocks.iter().any(|(n, _)| *n == name) {
+                blocks.push((name, span));
             }
-            let base = size.div_ceil(16) * 16;
-            bases.push((name, base));
-            spans.push(span);
-            size = base + span;
         }
+    }
+    binding_layout(blocks)
+}
+
+/// Packs a program's cbuffers (name and size, in declaration order) into uniform bindings, each
+/// at most [`crate::UNIFORM_BINDING_BYTES`] long: Unity binds every cbuffer as a uniform buffer
+/// of its own, which a device limits to that size (URP's Forward+ cbuffers together take more,
+/// its tile buffer alone that much), and to a handful per stage, which a program's cbuffers can
+/// outnumber. A cbuffer starts the next binding when it does not fit the current one's rest; a
+/// binding after the first starts [`crate::UNIFORM_BINDING_ALIGN`]-aligned. A program whose
+/// cbuffers fit one binding keeps the layout of a single block: each cbuffer 16-byte aligned
+/// after the one before. A cbuffer over the size is a binding of its own, which the renderer
+/// refuses by name on a device that does not take it.
+fn binding_layout(blocks: Vec<(String, u32)>) -> BlockLayout {
+    let mut bases = Vec::new();
+    let mut spans = Vec::new();
+    let mut binding_of = Vec::new();
+    let mut bindings: Vec<crate::UniformBinding> = Vec::new();
+    let mut size = 0u32;
+    for (name, span) in blocks {
+        let next = size.div_ceil(16) * 16;
+        let base = match bindings.last_mut() {
+            Some(b) if next + span - b.offset <= crate::UNIFORM_BINDING_BYTES => next,
+            _ => {
+                let base =
+                    size.div_ceil(crate::UNIFORM_BINDING_ALIGN) * crate::UNIFORM_BINDING_ALIGN;
+                bindings.push(crate::UniformBinding {
+                    offset: base,
+                    size: 0,
+                });
+                base
+            }
+        };
+        let binding = bindings.last_mut().unwrap();
+        binding.size = (base + span - binding.offset).div_ceil(16) * 16;
+        binding_of.push(bindings.len() - 1);
+        bases.push((name, base));
+        spans.push(span);
+        size = base + span;
     }
     BlockLayout {
         bases,
         spans,
+        binding_of,
+        bindings,
         size: size.div_ceil(16) * 16,
     }
 }
 
-/// Puts a module's uniform blocks into one at the layout's offsets: the first block's variable
-/// becomes the merged one, member accesses of the others are redirected to it, and unused
+/// Puts a module's uniform blocks into one per uniform binding at the layout's offsets (relative
+/// to the binding's start): the first block's variable of each binding becomes the merged one
+/// ([`binding_variable`]), member accesses of the others are redirected to it, and unused
 /// variables are dropped.
 fn merge_blocks(module: &mut Module, layout: &BlockLayout) -> Result<()> {
     let blocks: Vec<Handle<naga::GlobalVariable>> = module
@@ -1518,21 +1583,6 @@ fn merge_blocks(module: &mut Module, layout: &BlockLayout) -> Result<()> {
     if blocks.is_empty() || layout.bases.len() < 2 {
         return Ok(());
     }
-    let mut members = Vec::new();
-    let mut first_member: HashMap<Handle<naga::GlobalVariable>, u32> = HashMap::new();
-    let mut order: Vec<(u32, Handle<naga::GlobalVariable>)> = blocks
-        .iter()
-        .map(|h| {
-            let name = block_name(module, &module.global_variables[*h]);
-            let base = layout
-                .bases
-                .iter()
-                .find(|(n, _)| *n == name)
-                .map_or(0, |(_, b)| *b);
-            (base, *h)
-        })
-        .collect();
-    order.sort_by_key(|(base, _)| *base);
     // A gap before a block (one the other stage has) is a padding member: WGSL cannot place a
     // member after an unexplained gap.
     let vec4 = module.types.insert(
@@ -1545,60 +1595,84 @@ fn merge_blocks(module: &mut Module, layout: &BlockLayout) -> Result<()> {
         },
         Span::UNDEFINED,
     );
-    let mut end = 0u32;
-    for (base, h) in &order {
-        let TypeInner::Struct {
-            members: block_members,
-            span,
-        } = module.types[module.global_variables[*h].ty].inner.clone()
-        else {
+    // Each block's merged variable and the index of its first member there.
+    let mut moved: HashMap<Handle<naga::GlobalVariable>, (Handle<naga::GlobalVariable>, u32)> =
+        HashMap::new();
+    for (k, binding) in layout.bindings.iter().enumerate() {
+        let mut order: Vec<(u32, Handle<naga::GlobalVariable>)> = blocks
+            .iter()
+            .filter_map(|h| {
+                let name = block_name(module, &module.global_variables[*h]);
+                if layout.binding(&name) != Some(k) {
+                    return None;
+                }
+                let (_, base) = layout.bases.iter().find(|(n, _)| *n == name)?;
+                Some((base - binding.offset, *h))
+            })
+            .collect();
+        if order.is_empty() {
             continue;
-        };
-        let pad_start = end.div_ceil(16) * 16;
-        if *base > pad_start {
-            let count = (base - pad_start) / 16;
-            let array = module.types.insert(
-                Type {
-                    name: None,
-                    inner: TypeInner::Array {
-                        base: vec4,
-                        size: naga::ArraySize::Constant(std::num::NonZeroU32::new(count).unwrap()),
-                        stride: 16,
+        }
+        order.sort_by_key(|(base, _)| *base);
+        let mut members = Vec::new();
+        let mut end = 0u32;
+        let merged = order[0].1;
+        for (base, h) in &order {
+            let TypeInner::Struct {
+                members: block_members,
+                span,
+            } = module.types[module.global_variables[*h].ty].inner.clone()
+            else {
+                continue;
+            };
+            let pad_start = end.div_ceil(16) * 16;
+            if *base > pad_start {
+                let count = (base - pad_start) / 16;
+                let array = module.types.insert(
+                    Type {
+                        name: None,
+                        inner: TypeInner::Array {
+                            base: vec4,
+                            size: naga::ArraySize::Constant(
+                                std::num::NonZeroU32::new(count).unwrap(),
+                            ),
+                            stride: 16,
+                        },
                     },
+                    Span::UNDEFINED,
+                );
+                members.push(StructMember {
+                    name: Some(format!("unbound_pad{}", members.len())),
+                    ty: array,
+                    binding: None,
+                    offset: pad_start,
+                });
+            }
+            end = base + span;
+            moved.insert(*h, (merged, members.len() as u32));
+            for m in block_members {
+                members.push(StructMember {
+                    name: m.name.clone(),
+                    ty: m.ty,
+                    binding: None,
+                    offset: base + m.offset,
+                });
+            }
+        }
+        let name = binding_variable(k);
+        let merged_ty = module.types.insert(
+            Type {
+                name: Some(name.clone()),
+                inner: TypeInner::Struct {
+                    members,
+                    span: binding.size,
                 },
-                Span::UNDEFINED,
-            );
-            members.push(StructMember {
-                name: Some(format!("unbound_pad{}", members.len())),
-                ty: array,
-                binding: None,
-                offset: pad_start,
-            });
-        }
-        end = base + span;
-        first_member.insert(*h, members.len() as u32);
-        for m in block_members {
-            members.push(StructMember {
-                name: m.name.clone(),
-                ty: m.ty,
-                binding: None,
-                offset: base + m.offset,
-            });
-        }
-    }
-    let merged_ty = module.types.insert(
-        Type {
-            name: Some("UnboundUniforms".into()),
-            inner: TypeInner::Struct {
-                members,
-                span: layout.size,
             },
-        },
-        Span::UNDEFINED,
-    );
-    let merged = order[0].1;
-    module.global_variables[merged].ty = merged_ty;
-    module.global_variables[merged].name = Some("UnboundUniforms".into());
+            Span::UNDEFINED,
+        );
+        module.global_variables[merged].ty = merged_ty;
+        module.global_variables[merged].name = Some(name);
+    }
     let redirect = |exprs: &mut naga::Arena<Expression>| -> Result<()> {
         // Member accesses: their index moves by the block's first member.
         let handles: Vec<Handle<Expression>> = exprs.iter().map(|(h, _)| h).collect();
@@ -1606,7 +1680,7 @@ fn merge_blocks(module: &mut Module, layout: &BlockLayout) -> Result<()> {
         for &e in &handles {
             if let Expression::AccessIndex { base, index } = exprs[e] {
                 if let Expression::GlobalVariable(g) = exprs[base] {
-                    if let Some(first) = first_member.get(&g) {
+                    if let Some((_, first)) = moved.get(&g) {
                         bumps.push((e, index + first));
                     }
                 }
@@ -1619,8 +1693,8 @@ fn merge_blocks(module: &mut Module, layout: &BlockLayout) -> Result<()> {
         }
         for &e in &handles {
             if let Expression::GlobalVariable(g) = &mut exprs[e] {
-                if first_member.contains_key(g) {
-                    *g = merged;
+                if let Some((merged, _)) = moved.get(g) {
+                    *g = *merged;
                 }
             }
         }
@@ -1785,26 +1859,59 @@ fn uniform_block(module: &Module) -> Option<(Handle<Type>, u32)> {
         })
 }
 
-/// Binds the uniform block and textures to the renderer's slots; returns the block's members.
+/// The group-0 binding of uniform binding `k`: binding 1 is the renderer's per-draw uniform.
+pub(crate) fn uniform_binding_slot(k: usize) -> u32 {
+    if k == 0 { 0 } else { k as u32 + 1 }
+}
+
+/// The struct types of a module's group-0 uniform blocks, by binding.
+fn uniform_blocks(module: &Module) -> impl Iterator<Item = Handle<Type>> + '_ {
+    let mut blocks: Vec<(u32, Handle<Type>)> = module
+        .global_variables
+        .iter()
+        .filter_map(
+            |(_, g)| match (g.space, g.binding, &module.types[g.ty].inner) {
+                (
+                    AddressSpace::Uniform,
+                    Some(ResourceBinding { group: 0, binding }),
+                    TypeInner::Struct { .. },
+                ) if binding != 1 => Some((binding, g.ty)),
+                _ => None,
+            },
+        )
+        .collect();
+    blocks.sort_by_key(|(binding, _)| *binding);
+    blocks.into_iter().map(|(_, ty)| ty)
+}
+
+/// Binds the uniform blocks and textures to the renderer's slots; returns the blocks' members, at
+/// their offsets in the draw's uniform data.
 fn rebind(
     module: &mut Module,
+    layout: &BlockLayout,
     textures: &[SlotKey],
     further: &[String],
     buffers: &[BufferSlot],
 ) -> Result<Vec<Uniform>> {
-    let mut block = None;
+    // Each uniform block variable and where its binding starts in the uniform data.
+    let mut blocks = Vec::new();
     let handles: Vec<_> = module.global_variables.iter().map(|(h, _)| h).collect();
     for h in handles {
         let g = &module.global_variables[h];
         match g.space {
             AddressSpace::Uniform => {
-                if block.is_some() {
-                    bail!("more than one uniform block (cbuffer) is not supported");
-                }
-                block = Some(h);
+                // A program's only block keeps its own name; merged ones are named by binding.
+                let name = block_name(module, g);
+                let k = match layout.bases.len() {
+                    0 | 1 => 0,
+                    _ => (0..layout.bindings.len())
+                        .find(|&k| binding_variable(k) == name)
+                        .ok_or_else(|| anyhow!("uniform block `{name}` is in no binding"))?,
+                };
+                blocks.push((h, layout.bindings.get(k).map_or(0, |b| b.offset)));
                 module.global_variables[h].binding = Some(ResourceBinding {
                     group: 0,
-                    binding: 0,
+                    binding: uniform_binding_slot(k),
                 });
             }
             AddressSpace::Handle => {
@@ -1871,21 +1978,20 @@ fn rebind(
             _ => {}
         }
     }
-    let Some(block) = block else {
-        return Ok(Vec::new());
-    };
-    let ty = module.global_variables[block].ty;
-    let TypeInner::Struct { members, .. } = &module.types[ty].inner else {
-        bail!("the uniform block is not a struct");
-    };
     let mut uniforms = Vec::new();
-    for m in members {
-        let Some(name) = m.name.clone() else { continue };
-        if name.starts_with("unbound_pad") {
-            continue;
-        }
-        if let Some(u) = uniform(module, &name, m.ty, m.offset) {
-            uniforms.push(u);
+    for (block, base) in blocks {
+        let ty = module.global_variables[block].ty;
+        let TypeInner::Struct { members, .. } = &module.types[ty].inner else {
+            bail!("the uniform block is not a struct");
+        };
+        for m in members {
+            let Some(name) = m.name.clone() else { continue };
+            if name.starts_with("unbound_pad") {
+                continue;
+            }
+            if let Some(u) = uniform(module, &name, m.ty, base + m.offset) {
+                uniforms.push(u);
+            }
         }
     }
     Ok(uniforms)
@@ -2284,7 +2390,7 @@ fn to_wgsl(module: &Module) -> Result<String> {
     .validate(&back)
     .map_err(|e| anyhow!("the WGSL does not validate: {}", e.emit_to_string(&wgsl)))?;
     // Members keep their order (the WGSL writer may rename them: `x0` becomes `x0_`).
-    if let (Some((ours, _)), Some((theirs, _))) = (uniform_block(module), uniform_block(&back)) {
+    for (ours, theirs) in uniform_blocks(module).zip(uniform_blocks(&back)) {
         let (
             TypeInner::Struct { members: ours, .. },
             TypeInner::Struct {
@@ -2673,4 +2779,65 @@ pub(crate) fn without_depth_output(wgsl: &str) -> Result<Option<(String, String)
     let wgsl = to_wgsl(&module)?;
     let entry = wgsl_entry(&wgsl, naga::ShaderStage::Fragment)?;
     Ok(Some((wgsl, entry)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn layout(blocks: &[(&str, u32)]) -> BlockLayout {
+        binding_layout(blocks.iter().map(|(n, s)| (n.to_string(), *s)).collect())
+    }
+
+    #[test]
+    fn cbuffers_that_fit_one_binding_keep_the_single_block_layout() {
+        let l = layout(&[("A", 68), ("B", 20), ("C", 4)]);
+        assert_eq!(
+            l.bases,
+            vec![("A".into(), 0), ("B".into(), 80), ("C".into(), 112)]
+        );
+        assert_eq!(
+            l.bindings,
+            vec![crate::UniformBinding {
+                offset: 0,
+                size: 128
+            }]
+        );
+        assert_eq!(l.size, 128);
+    }
+
+    #[test]
+    fn a_cbuffer_past_the_binding_size_starts_an_aligned_binding() {
+        let l = layout(&[
+            ("UnityPerDraw", 800),
+            ("urp_TileBuffer", 65536),
+            ("urp_ZBinBuffer", 16384),
+            ("AdditionalLights", 24576),
+            ("UnityPerMaterial", 20),
+        ]);
+        let binding = |name: &str| l.binding(name).unwrap();
+        assert_eq!(binding("UnityPerDraw"), 0);
+        assert_eq!(binding("urp_TileBuffer"), 1);
+        // The ones after the tiles share a binding: they fit together.
+        assert_eq!(binding("urp_ZBinBuffer"), 2);
+        assert_eq!(binding("AdditionalLights"), 2);
+        assert_eq!(binding("UnityPerMaterial"), 2);
+        assert_eq!(l.bindings[1].offset, 1024);
+        assert_eq!(l.bindings[1].size, 65536);
+        assert_eq!(l.bindings[2].offset, 1024 + 65536);
+        assert_eq!(l.bindings[2].size, 16384 + 24576 + 32);
+        assert_eq!(l.size, l.bindings[2].offset + l.bindings[2].size);
+    }
+
+    /// A cbuffer larger than a binding holds is a binding of its own, which the renderer then
+    /// refuses by name on a device that does not take it.
+    #[test]
+    fn an_oversized_cbuffer_is_a_binding_of_its_own() {
+        let l = layout(&[("Small", 16), ("$Global", 70000), ("After", 16)]);
+        assert_eq!(l.binding("Small"), Some(0));
+        assert_eq!(l.binding("$Global"), Some(1));
+        assert_eq!(l.bindings[1].size, 70000);
+        assert_eq!(l.binding("After"), Some(2));
+        assert_eq!(l.bindings[2].offset, (256 + 70000u32).div_ceil(256) * 256);
+    }
 }

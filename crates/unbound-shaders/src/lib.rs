@@ -28,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 38;
+pub const FORMAT_VERSION: u32 = 39;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -101,7 +101,9 @@ pub struct Uniform {
 /// - vertex inputs at the renderer's vertex locations (0 position, 1 normal, 2 tangent, 3 color,
 ///   4..7 uv0..uv3; 8..11 uv4..uv7 from a second vertex buffer, see `extra_vertex_inputs`);
 /// - group 0: binding 0 the uniform block (dynamic offset), binding 1 the renderer's per-draw
-///   uniform (its color multiplies the vertex color, as a CanvasRenderer's color does);
+///   uniform (its color multiplies the vertex color, as a CanvasRenderer's color does), bindings
+///   2.. the further uniform bindings of a program whose cbuffers do not fit one
+///   ([`Compiled::uniform_bindings`]);
 /// - group 1: binding 2k / 2k+1 the texture and sampler of `textures[k]`;
 /// - group 2: binding 0 / 1 `_MainTex` and its sampler, when the program samples it;
 /// - clip space as OpenGL's, turned into the renderer's (bottom-up targets, depth 0..w).
@@ -118,8 +120,12 @@ pub struct Compiled {
     pub mesh_instance_stride: Option<u32>,
     pub mesh_instance_uniform_scaling: bool,
     pub mesh_instance_max_count: Option<u32>,
-    /// The uniform block's size (0 without one).
+    /// The size of a draw's uniform data, every uniform binding's range of it (0 without one).
     pub uniform_size: u32,
+    /// The ranges of the uniform data bound in group 0: the first at binding 0, the `k`th after
+    /// it at binding `k + 1`; one for a program whose cbuffers fit one binding, none without any.
+    #[serde(default)]
+    pub uniform_bindings: Vec<UniformBinding>,
     /// The texture slots' properties, bound in group 1 (slot `k`: the texture at `2 * k`, its
     /// sampler at `2 * k + 1`). A property sampled with and without comparisons is two slots,
     /// the plain one first ([`TextureSlot`]).
@@ -164,7 +170,23 @@ pub struct BufferSlot {
     pub register: Option<u32>,
 }
 
-/// A cbuffer's byte range in the program's uniform block.
+/// The most bytes a uniform binding holds: WebGPU's default `maxUniformBufferBindingSize`, which
+/// the renderer's devices take (65536 on the measured OpenGL Core and Vulkan drivers), and the
+/// most an HLSL cbuffer holds (4096 four-component registers).
+pub const UNIFORM_BINDING_BYTES: u32 = 65536;
+
+/// Where a uniform binding after the first starts in a draw's uniform data: WebGPU's largest
+/// allowed `minUniformBufferOffsetAlignment`, so its dynamic offset is aligned on every device.
+pub const UNIFORM_BINDING_ALIGN: u32 = 256;
+
+/// A uniform binding's byte range in a draw's uniform data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UniformBinding {
+    pub offset: u32,
+    pub size: u32,
+}
+
+/// A cbuffer's byte range in the program's uniform data.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BlockRange {
     pub name: String,
@@ -3434,6 +3456,108 @@ float4 frag() : SV_Target { return _BaseColor * _Cutoff; }
         offsets.dedup();
         assert_eq!(offsets.len(), 3, "{:?}", c.uniforms);
         assert!(c.uniform_size >= u("_Cutoff").offset + 4);
+        // They fit one uniform binding: the whole uniform data, at binding 0 alone.
+        assert_eq!(
+            c.uniform_bindings,
+            vec![UniformBinding {
+                offset: 0,
+                size: c.uniform_size
+            }]
+        );
+        assert!(!c.vertex.contains("@group(0) @binding(2)"), "{}", c.vertex);
+    }
+
+    /// cbuffers that together take more than a uniform binding holds (URP's Forward+ tile buffer
+    /// is 64 KB alone) are packed into further bindings, each within the size, each cbuffer
+    /// whole in one; the uniforms keep their offsets in the draw's uniform data.
+    #[test]
+    fn cbuffers_over_one_uniform_binding_take_further_bindings() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+cbuffer UnityPerDraw { float4x4 unity_ObjectToWorld; float4 unity_LODFade; };
+cbuffer urp_TileBuffer { float4 urp_Tiles[4096]; };
+cbuffer urp_ZBinBuffer { float4 urp_ZBins[1024]; };
+cbuffer UnityPerMaterial { float4 _BaseColor; };
+float4x4 unity_MatrixVP;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, mul(unity_ObjectToWorld, v)) * unity_LODFade.x; }
+float4 frag(float4 p : SV_POSITION) : SV_Target
+{
+    uint i = (uint)p.x;
+    return _BaseColor * urp_Tiles[i & 4095] + urp_ZBins[i & 1023];
+}
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let c = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let u = |n: &str| {
+            c.uniforms
+                .iter()
+                .find(|u| u.name == n)
+                .unwrap_or_else(|| panic!("{n}: {:?}", c.uniforms))
+        };
+        let bindings = &c.uniform_bindings;
+        assert!(bindings.len() >= 2, "{bindings:?}");
+        assert_eq!(bindings[0].offset, 0);
+        for pair in bindings.windows(2) {
+            assert!(
+                pair[0].offset + pair[0].size <= pair[1].offset,
+                "{bindings:?}"
+            );
+        }
+        for b in bindings {
+            assert!(b.size <= UNIFORM_BINDING_BYTES, "{bindings:?}");
+            assert_eq!(b.offset % UNIFORM_BINDING_ALIGN, 0, "{bindings:?}");
+        }
+        assert!(c.uniform_size >= bindings.last().map_or(0, |b| b.offset + b.size));
+        // Every uniform and cbuffer lies whole in one binding.
+        let within = |offset: u32, size: u32| {
+            bindings
+                .iter()
+                .filter(|b| offset >= b.offset && offset + size <= b.offset + b.size)
+                .count()
+        };
+        for x in &c.uniforms {
+            let size = if x.count > 1 {
+                x.stride * x.count
+            } else {
+                4 * x.rows * x.columns
+            };
+            assert_eq!(within(x.offset, size), 1, "{x:?} in {bindings:?}");
+        }
+        for block in &c.blocks {
+            assert_eq!(
+                within(block.offset, block.size),
+                1,
+                "{block:?} in {bindings:?}"
+            );
+        }
+        // The tile buffer takes a binding of its own, 64 KB.
+        let tiles = c
+            .blocks
+            .iter()
+            .find(|b| b.name == "urp_TileBuffer")
+            .unwrap();
+        assert_eq!(tiles.offset, u("urp_Tiles").offset);
+        assert!(
+            bindings
+                .iter()
+                .any(|b| b.offset == tiles.offset && b.size == UNIFORM_BINDING_BYTES),
+            "{bindings:?}"
+        );
+        // The fragment program reads the further bindings at bindings 2.., after the per-draw one.
+        assert!(
+            c.fragment.contains("@group(0) @binding(2)"),
+            "{}",
+            c.fragment
+        );
+        assert!(
+            !c.fragment.contains("@group(0) @binding(1)"),
+            "{}",
+            c.fragment
+        );
+        assert!(c.vertex.contains("@group(0) @binding(1)"), "{}", c.vertex);
     }
 
     #[test]

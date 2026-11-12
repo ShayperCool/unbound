@@ -4435,11 +4435,12 @@ impl UnityRenderer {
                     }
                     PassItem::Draw(d) => {
                         let (id, offset) = d.program;
-                        let Some(group) = programs.get(&id) else {
+                        let Some(uniforms) = programs.get(&id) else {
                             continue;
                         };
                         rp.set_pipeline(&d.pipeline);
-                        rp.set_bind_group(0, group, &[offset, d.offset]);
+                        let (offsets, count) = uniforms.offsets(offset, d.offset);
+                        rp.set_bind_group(0, &uniforms.group, &offsets[..count]);
                         rp.set_bind_group(1, &d.material, &[]);
                         rp.set_bind_group(2, &d.texture, &[]);
                         if let Some(buffers) = &d.buffers {
