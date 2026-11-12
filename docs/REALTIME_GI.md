@@ -787,12 +787,12 @@ is how the Editor's products are made in the measured release, as follows.
   Room's nine probes have 14, 23, 56 and 97 of their 243 coefficients beyond the probe
   comparator's tolerance (plus 1% of their band 0) in `room-base`, `-moved`, `-intensity` and
   `-bounce`, 50 to 78 in the later light cases, and none in the environment-only ones
-  (`room-gradient`, `-envdata`, `-sky-none`), so the environment's part is the Editor's; how
-  much of the rest comes from the clusters' values and how much from the probes' references is
-  not separated. Not
-  measured: probes inside geometry (whose rays all meet back faces and take nothing) and
-  outside the system's bounds. Open: probes lit by several systems (the transport references
-  one system's clusters and the environment) and the Editor's own choice of 64 references.
+  (`room-gradient`, `-envdata`, `-sky-none`, the environment and its bounce off the clusters);
+  how much of the rest comes from the clusters' values and how much from the probes' references
+  is not separated. Not measured: probes inside geometry (whose rays all meet back faces and
+  take nothing) and outside the system's bounds. Open: probes lit by several systems (the
+  transport references one system's clusters and the environment) and the Editor's own choice
+  of 64 references.
 
 ## Engine
 

@@ -3320,7 +3320,7 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         let (off, worst) = r.probes(case);
         eprintln!("{case} probes: {off} coefficients off, worst {worst}");
         assert!(
-            off * 100 <= probes * 115 + 100,
+            off * 100 <= probes * 115,
             "{case}: {off} probe coefficients off"
         );
         assert!(
