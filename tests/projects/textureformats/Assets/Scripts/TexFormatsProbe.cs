@@ -555,6 +555,39 @@ public static class TexFormatsProbe
         Try("rt.msaaLayers.singleLayerSample", () => Floats(s_Out2));
     }
 
+    /// <summary>Texture2DArray.Load from a 2x1 ARGBFloat array target of three layers with mips:
+    /// each layer's mip 0 holds two texels of its own, its mip 1 one color of its own; the layer
+    /// and mip come from material floats.</summary>
+    static void ArrayLoad()
+    {
+        var d = Descriptor(GraphicsFormat.R32G32B32A32_SFloat);
+        d.dimension = TextureDimension.Tex2DArray; d.volumeDepth = 3;
+        d.useMipMap = true; d.autoGenerateMips = false;
+        var array = Target(d);
+        Value("rt.arrayLoad.create", B2(array.Create()));
+        for (int layer = 0; layer < 3; layer++)
+        {
+            float f = layer + 1;
+            s_Mat.SetVector("_Color", new Color(0.125f * f, 0.25f, 0.5f, 1f));
+            s_Mat.SetVector("_Color2", new Color(0.5f, 0.0625f * f, 0.75f, 0.5f));
+            Graphics.Blit(null, array, s_Mat, 2, layer);
+            Graphics.SetRenderTarget(array, 1, CubemapFace.Unknown, layer);
+            GL.Clear(false, true, new Color(0.03125f * f, 0.875f, 0.375f, 0.25f));
+        }
+        Graphics.SetRenderTarget(null as RenderTexture);
+        s_Sample.SetTexture("_ArrayTex", array);
+        foreach (var (name, pass) in new[] { ("signed", 15), ("unsigned", 16) })
+            for (int layer = 0; layer < 3; layer++)
+                for (int mip = 0; mip < 2; mip++)
+                {
+                    s_Sample.SetFloat("_Layer", layer);
+                    s_Sample.SetFloat("_Mip", mip);
+                    Graphics.Blit(null, s_Out2, s_Sample, pass);
+                    Try("rt.arrayLoad." + name + "." + layer + "." + mip, () => Floats(s_Out2));
+                }
+        s_Sample.SetTexture("_ArrayTex", null);
+    }
+
     static void MsaaMips()
     {
         var d = new RenderTextureDescriptor(4, 4, RenderTextureFormat.ARGB32, 0)
@@ -630,6 +663,7 @@ public static class TexFormatsProbe
             foreach (var c in IntTargets) if (Runs("rt." + c.Key)) IntTarget(c);
             if (Runs("rt.msaaMips")) MsaaMips();
             if (Runs("rt.msaaCopies") || Runs("rt.msaaLayers")) MsaaCopiesAndLayers();
+            if (Runs("rt.arrayLoad")) ArrayLoad();
             foreach (var format in new[] { RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBFloat })
                 if (Runs("feedback." + format)) Feedback("feedback." + format, format);
             foreach (var format in new[] { TextureFormat.R16, TextureFormat.RG32, TextureFormat.RGBA64 })

@@ -13,6 +13,8 @@ records, per format, the exact bits of:
   `ReadPixels` into RGBAFloat (and once into RGBA64), `AsyncGPUReadback` in the target's own format
   and into RGBAFloat; integer targets written by integer shader outputs and kernels and read by
   `Texture2D<int4>`/`<uint4>.Load` (as bits);
+- `Texture2DArray.Load` from a three-layer ARGBFloat array target with mips, at a layer and mip
+  from material floats, by signed and unsigned coordinates (`rt.arrayLoad.*`);
 - Texture2Ds: `SetPixel`/`GetPixel`, raw data, `SetPixelData`, GPU point and bilinear samples,
   `ReadPixels` and `AsyncGPUReadback`; creation in formats the device cannot sample.
 

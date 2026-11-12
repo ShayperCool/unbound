@@ -21,6 +21,11 @@ Shader "Probe/TexFormats"
         float4 split(v2f i) : SV_Target { return PICK(i.pos, _Color, _Color2); }
         float4 sample(v2f i) : SV_Target { return tex2Dlod(_MainTex, float4(i.uv, 0, 0)); }
         float4 sampleArray(v2f i) : SV_Target { return _ArrayTex.SampleLevel(sampler_ArrayTex, float3(i.uv, _Layer), 0); }
+        // The texel of the output's column in layer _Layer and mip _Mip, by a signed and an
+        // unsigned coordinate built from scalars.
+        float _Mip;
+        float4 loadArray(v2f i) : SV_Target { return _ArrayTex.Load(int4((int)i.pos.x >> (int)_Mip, 0, (int)_Layer, (int)_Mip)); }
+        float4 loadArrayUnsigned(v2f i) : SV_Target { return _ArrayTex.Load(uint4((uint)i.pos.x >> (uint)_Mip, 0u, (uint)_Layer, (uint)_Mip)); }
         float4 loadInt(v2f i) : SV_Target { return asfloat(_IntTex.Load(int3((int)i.pos.x, 0, 0))); }
         float4 loadUInt(v2f i) : SV_Target { return asfloat(_UIntTex.Load(int3((int)i.pos.x, 0, 0))); }
         float4 feedMain(v2f i) : SV_Target { return tex2Dlod(_MainTex, float4(i.uv, 0, 0)).yzwx; }
@@ -114,6 +119,17 @@ Shader "Probe/TexFormats"
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment sampleArray
+            ENDHLSL }
+        // 15, 16: _ArrayTex.Load at (column >> _Mip, 0, _Layer, _Mip)
+        Pass { HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex vert
+            #pragma fragment loadArray
+            ENDHLSL }
+        Pass { HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex vert
+            #pragma fragment loadArrayUnsigned
             ENDHLSL }
     }
 }
