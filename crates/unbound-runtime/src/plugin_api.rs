@@ -489,6 +489,19 @@ extern "C" fn profiler_available() -> i32 {
     1
 }
 
+/// A script's marker (`ProfilerMarker`, `Profiler.BeginSample`): the one a plugin's
+/// `CreateMarker` of the name gives, made the same way when it is new.
+pub fn script_marker(name: &CStr, category: u16, flags: u16) -> *const MarkerDesc {
+    let mut marker = std::ptr::null();
+    create_marker(&mut marker, name.as_ptr(), category, flags, 0);
+    marker
+}
+
+/// A script's sample of a marker began (0) or ended (1): its event callbacks, as `EmitEvent`.
+pub fn script_marker_event(marker: *const MarkerDesc, kind: u16) {
+    emit_event(marker, kind, 0, std::ptr::null());
+}
+
 extern "C" fn create_marker(
     desc: *mut *const MarkerDesc,
     name: *const c_char,
@@ -868,13 +881,26 @@ mod tests {
             heard(103),
             ["Tested.After 0 0", "Tested.After 1 0", "Tested.After 2 3"]
         );
+        // A script's marker of the name is that marker, and its samples are its events; a
+        // script's new marker is heard of as a plugin's is.
+        assert_eq!(script_marker(c"Tested.After", category, 2), marker);
+        script_marker_event(marker, 0);
+        script_marker_event(marker, 1);
+        assert_eq!(&heard(103)[3..], ["Tested.After 0 0", "Tested.After 1 0"]);
+        assert_eq!((v1.register_create_marker)(Some(on_marker), user(130)), 0);
+        let script = script_marker(c"Tested.Script", category, 2);
+        assert!(heard(130).contains(&"Tested.Script".to_string()));
+        assert_eq!(unsafe { (*script).flags }, 2);
+        assert_eq!((v1.unregister_create_marker)(Some(on_marker), user(130)), 0);
+        script_marker_event(script, 0);
+        script_marker_event(std::ptr::null(), 0);
         assert_eq!(
             (v1.unregister_marker_event)(marker, Some(on_event), user(103)),
             0
         );
         assert!(unsafe { (*marker).callback.is_null() });
         (PROFILER.emit_event)(marker, 0, 0, std::ptr::null());
-        assert_eq!(heard(103).len(), 3);
+        assert_eq!(heard(103).len(), 5);
         assert_eq!(
             (v1.unregister_marker_event)(marker, Some(on_event), user(103)),
             -1

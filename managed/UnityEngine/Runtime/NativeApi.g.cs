@@ -188,5 +188,17 @@ namespace Unbound.Runtime
         /// charts); 0 on success.
         /// </summary>
         internal delegate* unmanaged<ulong, int, int, float*, float*, float*, int, uint*, int, float, int, float, float, int, float*, float*, NativeBuffer*, int> GiAutomaticUvs;
+        /// <summary>
+        /// (name as UTF-8 and its length in bytes, category, flags): the profiler marker of the name
+        /// that native plugins see, made as a plugin's `CreateMarker` makes one (the same name is the
+        /// same marker; plugins' marker callbacks hear of a new one); null for a name that is not
+        /// text.
+        /// </summary>
+        internal delegate* unmanaged<byte*, int, ushort, ushort, void*> PluginScriptMarker;
+        /// <summary>
+        /// (a marker from `plugin_script_marker`, event type: 0 begin, 1 end): the plugins' callbacks
+        /// for the marker's events (`EmitEvent` without data).
+        /// </summary>
+        internal delegate* unmanaged<void*, ushort, void> PluginMarkerEvent;
     }
 }

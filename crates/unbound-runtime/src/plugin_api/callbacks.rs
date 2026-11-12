@@ -15,10 +15,10 @@
 //!   -1; a marker, thread or frame callback, 0.
 //!
 //! What exists here is Unbound's: the Editor's built-in categories (their IDs, names and
-//! colors as it reports them), the markers and categories plugins make, the main thread and
-//! the threads plugins register. Not modelled: the markers scripts make (`ProfilerMarker`,
-//! `Profiler.BeginSample`: the Editor reports them and their samples), the Editor's own
-//! markers, worker threads and job flows; flow callbacks register and are never called.
+//! colors as it reports them), the markers and categories plugins and scripts make (a script's
+//! `ProfilerMarker` or `Profiler.BeginSample` marker with its samples, the script flag set), the
+//! main thread and the threads plugins register. Not modelled: the Editor's own markers,
+//! worker threads and job flows; flow callbacks register and are never called.
 use super::MarkerDesc;
 use std::ffi::{CStr, c_char, c_void};
 use std::sync::Mutex;
@@ -232,17 +232,6 @@ fn remove(list: &mut Vec<Registered>, registered: Registered) -> i32 {
     }
 }
 
-/// What scripts make is not reported: said once, to whoever listens for markers or for a
-/// marker's events.
-fn script_markers_unreported() {
-    static SAID: std::sync::Once = std::sync::Once::new();
-    SAID.call_once(|| {
-        tracing::warn!(
-            "a native plugin listens for profiler markers (IUnityProfilerCallbacks): it hears of the markers plugins make and of their events, not of the ones scripts make (ProfilerMarker, Profiler.BeginSample)"
-        );
-    });
-}
-
 /// A null callback crashes the Editor; here it is refused.
 fn refuse_null(what: &str) -> i32 {
     tracing::error!(
@@ -408,7 +397,6 @@ extern "C" fn register_create_marker(callback: Option<MarkerCallback>, user: *mu
     }) else {
         return -1;
     };
-    script_markers_unreported();
     for address in made {
         callback(address as *const MarkerDesc, user);
     }
@@ -444,7 +432,6 @@ extern "C" fn register_marker_event(
         // The marker says that something listens (plugins read it before they emit).
         listening(marker).store(marker as *mut c_void, Ordering::Release);
     });
-    script_markers_unreported();
     0
 }
 

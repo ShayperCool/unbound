@@ -2,9 +2,6 @@
  "The Editor's own profiler markers, its worker threads and its job flows are not modelled: a plugin's marker and thread callbacks hear of the markers and threads plugins make (and the main thread), and its flow callback is never called": [
   "profiler.editor"
  ],
- "The markers scripts make (ProfilerMarker, Profiler.BeginSample) and their samples are not reported to plugins: the Editor's marker callback hears of them and a marker event callback gets their begin and end (logged once when a plugin listens for markers)": [
-  "profiler.script"
- ],
  "Vulkan: a DontCare event from a script outside rendering gets the Editor's command buffer only while it has one recording (after resource access it has none); Unbound gives its own: unspecified by the interface (DontCare), accepted": [
   "plugin.dontcare.update"
  ],

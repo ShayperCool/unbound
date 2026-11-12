@@ -364,8 +364,8 @@ mod tests {
     /// Version 40 adds parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins and 42 legacy glyph bearings, without changing audio layouts; 43 adds the zone startup frame flag and 44 Pitch Shifter Max channels 45 precomputed realtime GI and 46 the driver capabilities reply and 47 the component activation flags and reset command 48 the realtime GI update threshold and 49 realtime GI light probes and 50 the screen's stand-in and 51 the realtime GI environment and 52 directional realtime lightmaps and 53 the realtime GI lights' falloff and 54 the native plugins' frame end and 55 an external texture's mip levels; 56 admits the retained component bypass stage bit; 57 (surround effect state shared across speakers) 58 (automatic realtime lightmap charts), 59 (their instance matrix) and 60 (BatchRendererGroup draws) change no layout here.
     /// The managed side pins the same version and refuses every other version.
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_60() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 60);
+    fn the_filter_descriptor_layout_is_native_api_61() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 61);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

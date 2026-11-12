@@ -67,6 +67,8 @@ namespace Unbound.Runtime
                 }
             }
             if (!NativeLibrary.TryGetExport(library, "UnityPluginLoad", out var load)) return;
+            // The markers scripts made so far exist for the plugin's marker callbacks.
+            Unbound.Runtime.Profiling.ProfilerCore.ShareMarkersWithPlugins();
             EnsureLogSink();
             Native.Api.PluginLoad((void*)load);
         }

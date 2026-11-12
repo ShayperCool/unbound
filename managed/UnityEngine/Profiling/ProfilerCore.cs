@@ -142,6 +142,9 @@ namespace Unbound.Runtime.Profiling
             /// <summary>The recorders attached; samples are only taken while there are running ones.</summary>
             public volatile Recorder[] Recorders = Array.Empty<Recorder>();
             public string[] MetadataNames;
+            /// <summary>The marker native plugins see (its first field is non-null while one
+            /// listens to its events), once a plugin was loaded.</summary>
+            public IntPtr PluginMarker;
 
             public IntPtr Handle => (IntPtr)(Index + 1);
         }
@@ -166,6 +169,7 @@ namespace Unbound.Runtime.Profiling
             };
             s_Stats.Add(stat);
             s_StatsByName[name] = stat;
+            if (s_SharedWithPlugins) SharePluginMarker(stat);
             // Recorders made before the stat existed start receiving its samples now.
             foreach (var recorder in s_Recorders.Values)
                 if (recorder.Stat == null && recorder.PendingName == name && (recorder.PendingCategory == ushort.MaxValue || recorder.PendingCategory == category))
@@ -184,6 +188,37 @@ namespace Unbound.Runtime.Profiling
                 if (metadataCount > 0) stat.MetadataNames = new string[metadataCount];
                 return stat.Handle;
             }
+        }
+
+        static bool s_SharedWithPlugins;
+
+        /// <summary>A native plugin is loaded: the markers scripts made, and every one made from
+        /// now on, are markers native plugins see, with the script flag as the Unity 6000.0.71f1
+        /// Editor reports them (tests/projects/nativegfx profiler.script).</summary>
+        internal static void ShareMarkersWithPlugins()
+        {
+            if (!Native.IsReady) return;
+            lock (s_Lock)
+            {
+                if (s_SharedWithPlugins) return;
+                s_SharedWithPlugins = true;
+                foreach (var stat in s_Stats) SharePluginMarker(stat);
+            }
+        }
+
+        static void SharePluginMarker(Stat stat)
+        {
+            if (stat.IsCounter || stat.PluginMarker != IntPtr.Zero) return;
+            stat.PluginMarker = (IntPtr)Native.Api.PluginScriptMarker(stat.NameUtf8, stat.NameUtf8Length, stat.Category,
+                (ushort)(stat.Flags | MarkerFlags.Script));
+        }
+
+        /// <summary>A sample began (0) or ended (1): the native plugins listening to the marker
+        /// hear of it; nothing is called while none listens.</summary>
+        static void PluginEvent(Stat stat, ushort kind)
+        {
+            var marker = stat.PluginMarker;
+            if (marker != IntPtr.Zero && *(IntPtr*)marker != IntPtr.Zero) Native.Api.PluginMarkerEvent((void*)marker, kind);
         }
 
         internal static IntPtr GetMarker(string name)
@@ -266,16 +301,19 @@ namespace Unbound.Runtime.Profiling
         internal static void BeginSample(IntPtr marker)
         {
             var stat = StatOf(marker);
-            if (stat == null || stat.Recorders.Length == 0) return;
+            if (stat == null) return;
+            PluginEvent(stat, 0);
+            if (stat.Recorders.Length == 0) return;
             (t_Open ??= new List<(Stat, long)>()).Add((stat, Stopwatch.GetTimestamp()));
         }
 
         internal static void EndSample(IntPtr marker)
         {
+            var stat = StatOf(marker);
+            if (stat != null) PluginEvent(stat, 1);
             var open = t_Open;
             if (open == null || open.Count == 0) return;
             long now = Stopwatch.GetTimestamp();
-            var stat = StatOf(marker);
             for (int i = open.Count - 1; i >= 0; i--)
             {
                 if (open[i].Stat != stat) continue;

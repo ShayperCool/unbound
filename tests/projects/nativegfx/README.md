@@ -96,7 +96,8 @@ Recorded:
   callbacks and 0 for marker, thread and frame callbacks. `profiler.editor` is what only the
   Editor has (markers and threads of its own, job flows); `profiler.script` is a marker a script
   makes (`ProfilerMarker`): the marker callback hears of it (flag `ScriptUser`) and an event
-  callback gets its begin and end.
+  callback gets its begin and end; Unbound reports it so too (the markers scripts made before
+  a plugin loads exist for that plugin's callbacks).
 * **Event queue** (`events.load`, `frames.sequence`; Plugins/nativegfx_events.cpp):
   `IUnityEventQueue` hands the sent events out when the next frame begins, in the order sent: each
   to the handlers of its ID, the last added first, added after the event was sent too, then to

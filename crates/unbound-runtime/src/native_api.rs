@@ -67,7 +67,9 @@ use std::ffi::c_void;
 /// 58: `gi_automatic_uvs` (realtime lightmap UVs of renderers with Optimize Realtime UVs).
 /// 59: `gi_automatic_uvs` takes the mesh as it is and the instance's matrix.
 /// 60: the `DotsDraw` render command (opcode 36, BatchRendererGroup draws).
-pub const NATIVE_API_VERSION: u32 = 60;
+/// 61: `plugin_script_marker`, `plugin_marker_event` (scripts' profiler markers that native
+/// plugins hear of).
+pub const NATIVE_API_VERSION: u32 = 61;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -302,6 +304,15 @@ pub struct NativeApi {
         *mut f32,
         *mut NativeBuffer,
     ) -> i32,
+    // Version 61: scripts' profiler markers for native plugins.
+    /// (name as UTF-8 and its length in bytes, category, flags): the profiler marker of the name
+    /// that native plugins see, made as a plugin's `CreateMarker` makes one (the same name is the
+    /// same marker; plugins' marker callbacks hear of a new one); null for a name that is not
+    /// text.
+    pub plugin_script_marker: extern "C" fn(*const u8, i32, u16, u16) -> *const c_void,
+    /// (a marker from `plugin_script_marker`, event type: 0 begin, 1 end): the plugins' callbacks
+    /// for the marker's events (`EmitEvent` without data).
+    pub plugin_marker_event: extern "C" fn(*const c_void, u16),
 }
 
 pub fn api() -> NativeApi {
@@ -360,6 +371,8 @@ pub fn api() -> NativeApi {
         plugin_events,
         plugin_query,
         gi_automatic_uvs,
+        plugin_script_marker,
+        plugin_marker_event,
     }
 }
 
@@ -1209,6 +1222,30 @@ extern "C" fn plugin_frame() {
 
 extern "C" fn plugin_events() {
     plugin_api::dispatch_events();
+}
+
+extern "C" fn plugin_script_marker(
+    name: *const u8,
+    length: i32,
+    category: u16,
+    flags: u16,
+) -> *const c_void {
+    if name.is_null() || length < 0 {
+        return std::ptr::null();
+    }
+    // SAFETY: the managed side passes a marker's UTF-8 name and its length.
+    let bytes = unsafe { std::slice::from_raw_parts(name, length as usize) };
+    match std::str::from_utf8(bytes)
+        .ok()
+        .and_then(|n| std::ffi::CString::new(n).ok())
+    {
+        Some(name) => plugin_api::script_marker(&name, category, flags) as *const c_void,
+        None => std::ptr::null(),
+    }
+}
+
+extern "C" fn plugin_marker_event(marker: *const c_void, kind: u16) {
+    plugin_api::script_marker_event(marker as *const plugin_api::MarkerDesc, kind);
 }
 
 extern "C" fn plugin_query(query: *const c_void, flags: i32) -> i32 {
