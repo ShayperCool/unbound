@@ -720,6 +720,38 @@ is how the Editor's products are made in the measured release, as follows.
   Editor's own precompute places other points in each bake of a scene (10192, 10196 and 10208
   points in three bakes of the Room).
 
+- **Transport** (`transport.rs`): a texel's light is gathered over its footprint: a grid of
+  4x4 positions over the texel within its renderer's triangles gives the ray origins, without
+  those the clusters' rule hides (inside other geometry, or in a gap within the renderer's
+  Modelling Tolerance); a texel whose whole footprint is hidden takes what the nearest texel of
+  its chart receives. The Lightmap Parameters' Irradiance Quality (8192) rays leave the origins
+  in turn, cosine distributed over the hemisphere, so that each counts the same: one that meets
+  a cluster's front adds its share to that cluster, one that leaves the scene to the
+  environment texel it leaves through (six faces of 8x8, as a cube map stores them), and one
+  that meets a back face or a hidden part nothing. A texel's references are cut to the
+  Irradiance Budget (128): groups that share a coarser value (a tree parent, the environment's
+  next level) are replaced by it with their summed weight, those first whose weights are
+  nearest the coarser value's own shares of its children. The texels are solved in segments of
+  a block of 2x2 texels, the first standing for the block, with its normal and per reference
+  the direction its rays arrive from (the nearest of the directionality's 255 directions to
+  their mean), the weights quantized to the runtime's 16-bit reference and 8-bit texel
+  weights; per block its neighbours of one chart.
+- Compared with the Editor's: the Room's texels are the Editor's; an outward texel's light is
+  the environment's, 0.554 through the cube face it faces and 0.111 through each beside it as
+  the Editor's; in the Room the environment's share of a texel is the Editor's to 0.001 (the
+  median), but for 185 of the 2160 texels more than 0.05 apart: texels under the block and the
+  panel, and edge texels of thin faces beside a perpendicular one (the Editor's ray origins
+  there are not the texel's own: the end face of the ceiling's slab next to the wall's top
+  takes 0.9 of its light from the environment in the Editor, 0.52 in Unbound). Lit through the probe's Room
+  cases, the solver over Unbound's clusters and transport puts 89, 145, 354 and 584 of the
+  5070 values of `room-base`, `-moved`, `-intensity` and `-bounce` outside the comparator's
+  tolerance (median relative error 0.5 to 0.9%; 90 to 560 in the later cases), over the
+  Editor's clusters with Unbound's transport 31, 34, 83 and 212: texels next to the emissive
+  panel and behind it (whose share of the panel is up to 20% from the Editor's) and the edge
+  texels above. With directional lightmaps (`RoomDirectional`) the directionality is 4.9/255
+  from the Editor's on average (0.2/255 from the Editor's transport), the half Lambert term
+  2.4/255 above it.
+
 ## Engine
 
 `Graphics/RealtimeGI.cs` loads a scene's systems (`realtime-gi-load`), makes the renderers'
@@ -832,5 +864,6 @@ measure):
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
   precompute through the same probe: the clusters, their material samples and bounce
-  resampling are made and compared ([Unbound's precompute](#unbounds-precompute)); the
-  transport, the visibility, the probe transport and their use are open.
+  resampling and the transport are made and compared
+  ([Unbound's precompute](#unbounds-precompute)); the visibility, the probe transport and their
+  use are open.
