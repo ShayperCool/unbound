@@ -171,7 +171,7 @@ namespace UnityEngine
                     if (m_Descriptor.depthStencilFormat == GraphicsFormat.None)
                     {
                         Debug.LogWarning($"{value} RenderTexture requested without a depth buffer. Changing to a 16 bit depth buffer. To resolve this warning, please specify the desired number of depth bits when creating the render texture.");
-                        m_Descriptor.depthStencilFormat = GraphicsFormat.D16_UNorm;
+                        m_Descriptor.depthStencilFormat = RenderableDepthFormat(GraphicsFormat.D16_UNorm);
                     }
                     if (value == RenderTextureFormat.Shadowmap) m_Descriptor.shadowSamplingMode = ShadowSamplingMode.CompareDepths;
                 }
