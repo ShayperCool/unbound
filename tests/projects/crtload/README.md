@@ -1,8 +1,8 @@
 # CRT load cycles
 
 Two independent Unity 6000.0.71f1 Editor captures on the existing NVIDIA display
-agree on each profile: normal 116 values and late-only 79. The extensions preserve
-all earlier 58, then 97 normal values and all 62 earlier late-only values. The
+agree on each profile: normal 134 values and late-only 95. The extensions preserve
+all earlier 58, then 97 and 116 normal values and all 62 and 79 earlier late-only values. The
 parent customrt reference and image tolerances remain unchanged.
 
 ```bash
@@ -23,6 +23,7 @@ The original customrt API section destroys its startup textures before that
 point, so they never reach its loaded list. Startup creation does not permanently
 exclude a texture from loading.
 
+A texture made by a loaded listener joins the same load cycle and initializes there.
 A texture created between duplicate phases in a later frame waits for the next
 rendered cycle. The late-only profile makes its first texture there, after empty
 phase visits, and observes the same delay. A changed color and Initialize request

@@ -3,6 +3,8 @@
 {"k":"event.10","v":"screenSkipped:u9:crt1:createdFalse"}
 {"k":"event.11","v":"throwing:u13:crt1:createdFalse"}
 {"k":"event.12","v":"afterThrow:u13:crt1:createdFalse"}
+{"k":"event.13","v":"spawnParent:u15:crt1:createdFalse"}
+{"k":"event.14","v":"spawnChild:u15:crt1:createdFalse"}
 {"k":"event.2","v":"awake:u2:crt1:createdFalse"}
 {"k":"event.3","v":"start:u2:crt1:createdFalse"}
 {"k":"event.4","v":"startCreated:u2:crt1:createdTrue"}
@@ -19,6 +21,8 @@
 {"k":"make.late1","v":"u1:late:createdFalse"}
 {"k":"make.late2","v":"u2:late:createdFalse"}
 {"k":"make.screenSkipped","v":"u7:update:createdFalse"}
+{"k":"make.spawnChild","v":"u15:crt1:createdFalse"}
+{"k":"make.spawnParent","v":"u15:update:createdFalse"}
 {"k":"make.start","v":"u0:start:createdFalse"}
 {"k":"make.startCreated","v":"u0:start:createdTrue"}
 {"k":"make.throwing","v":"u13:update:createdFalse"}
@@ -31,6 +35,8 @@
 {"k":"pixel.first.late1","v":"0.25"}
 {"k":"pixel.first.late2","v":"0.25"}
 {"k":"pixel.first.screenSkipped","v":"0.25"}
+{"k":"pixel.first.spawnChild","v":"0.25"}
+{"k":"pixel.first.spawnParent","v":"0.25"}
 {"k":"pixel.first.start","v":"0.25"}
 {"k":"pixel.first.startCreated","v":"0.25"}
 {"k":"pixel.first.throwing","v":"0.25"}
@@ -41,6 +47,8 @@
 {"k":"pixel.request.u12","v":"0.75"}
 {"k":"pixel.request.u13","v":"0.75"}
 {"k":"pixel.request.u14","v":"0.75"}
+{"k":"pixel.request.u15","v":"0.75"}
+{"k":"pixel.request.u16","v":"0.75"}
 {"k":"pixel.request.u2","v":"0.25"}
 {"k":"pixel.request.u3","v":"0.25"}
 {"k":"pixel.request.u4","v":"0.75"}
@@ -54,6 +62,8 @@
 {"k":"render.u12","v":"True"}
 {"k":"render.u13","v":"True"}
 {"k":"render.u14","v":"True"}
+{"k":"render.u15","v":"True"}
+{"k":"render.u16","v":"True"}
 {"k":"render.u7","v":"False"}
 {"k":"render.u8","v":"False"}
 {"k":"render.u9","v":"True"}
@@ -63,6 +73,8 @@
 {"k":"update.12","v":"beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True"}
 {"k":"update.13","v":"beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True"}
 {"k":"update.14","v":"beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True"}
+{"k":"update.15","v":"beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True"}
+{"k":"update.16","v":"beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True,spawnParent:True:True,spawnChild:True:True"}
 {"k":"update.2","v":"beforeScene:False:False,awake:False:False,start:False:False,startCreated:False:True,update1:False:False,late1:False:False"}
 {"k":"update.3","v":"beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True"}
 {"k":"update.4","v":"beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:False:False"}
@@ -89,6 +101,12 @@
 {"k":"visit.14.after","v":"u14:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True"}
 {"k":"visit.14.before","v":"u14:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True"}
 {"k":"visit.14.between","v":"u14:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True"}
+{"k":"visit.15.after","v":"u15:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True,spawnParent:True:True,spawnChild:True:True"}
+{"k":"visit.15.before","v":"u15:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True,spawnParent:False:False"}
+{"k":"visit.15.between","v":"u15:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True,spawnParent:True:True,spawnChild:True:True"}
+{"k":"visit.16.after","v":"u16:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True,spawnParent:True:True,spawnChild:True:True"}
+{"k":"visit.16.before","v":"u16:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True,spawnParent:True:True,spawnChild:True:True"}
+{"k":"visit.16.between","v":"u16:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True,between:True:True,screenSkipped:True:True,throwing:True:True,afterThrow:True:True,spawnParent:True:True,spawnChild:True:True"}
 {"k":"visit.2.after","v":"u2:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True"}
 {"k":"visit.2.before","v":"u2:beforeScene:False:False,awake:False:False,start:False:False,startCreated:False:True,update1:False:False,late1:False:False,update2:False:False,late2:False:False"}
 {"k":"visit.2.between","v":"u2:beforeScene:True:True,awake:True:True,start:True:True,startCreated:True:True,update1:True:True,late1:True:True,update2:True:True,late2:True:True"}

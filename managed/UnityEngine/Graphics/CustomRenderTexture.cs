@@ -51,6 +51,7 @@ namespace UnityEngine
         RenderTexture m_Other;
         // Scheduling state (CustomRenderTextureManager).
         internal bool m_Loaded;
+        [NonSerialized] internal bool m_LoadRegistered;
         internal bool m_InitPending;
         // Queued again by a change (see Changed).
         internal bool m_ReloadInit, m_ReloadUpdate;
@@ -668,6 +669,8 @@ namespace UnityEngine
     {
         static readonly List<CustomRenderTexture> s_Textures = new List<CustomRenderTexture>();
         static int s_LastUpdateFrame = int.MinValue;
+        static readonly List<CustomRenderTexture> s_LoadQueue = new List<CustomRenderTexture>();
+        static bool s_ProcessingLoads;
 
         public static event Action<CustomRenderTexture> textureLoaded;
         public static event Action<CustomRenderTexture> textureUnloaded;
@@ -677,10 +680,13 @@ namespace UnityEngine
         internal static void Register(CustomRenderTexture texture)
         {
             s_Textures.Add(texture);
+            texture.m_LoadRegistered = true;
+            if (s_ProcessingLoads) s_LoadQueue.Add(texture);
         }
 
         internal static void Unregister(CustomRenderTexture texture)
         {
+            texture.m_LoadRegistered = false;
             if (!s_Textures.Remove(texture)) return;
             if (texture.m_Loaded) textureUnloaded?.Invoke(texture);
             texture.m_Loaded = false;
@@ -697,6 +703,42 @@ namespace UnityEngine
 
         internal static void InvokeTriggerUpdate(CustomRenderTexture crt, int updateCount) => updateTriggered?.Invoke(crt, updateCount);
         internal static void InvokeTriggerInitialize(CustomRenderTexture crt) => initializeTriggered?.Invoke(crt);
+
+        static void MarkLoaded(CustomRenderTexture texture, HashSet<CustomRenderTexture> fresh)
+        {
+            if (texture == null || texture.m_Loaded) return;
+            texture.m_Loaded = true;
+            fresh.Add(texture);
+            try { textureLoaded?.Invoke(texture); }
+            catch (Exception e) when (Compat.CustomRenderTextureLifecycleMeasured) { Debug.LogException(e); }
+        }
+
+        static void LoadPendingTextures(HashSet<CustomRenderTexture> fresh)
+        {
+            if (!Compat.CustomRenderTextureLifecycleMeasured)
+            {
+                foreach (var texture in s_Textures.ToArray()) MarkLoaded(texture, fresh);
+                return;
+            }
+            s_LoadQueue.Clear();
+            foreach (var texture in s_Textures)
+                if (!texture.m_Loaded) s_LoadQueue.Add(texture);
+            s_ProcessingLoads = true;
+            try
+            {
+                // Constructors called by a loaded listener append to this same work list.
+                for (int i = 0; i < s_LoadQueue.Count; i++)
+                {
+                    var texture = s_LoadQueue[i];
+                    if (texture != null && texture.m_LoadRegistered) MarkLoaded(texture, fresh);
+                }
+            }
+            finally
+            {
+                s_ProcessingLoads = false;
+                s_LoadQueue.Clear();
+            }
+        }
 
         internal static void BeginPlayMode() => s_LastUpdateFrame = int.MinValue;
 
@@ -716,14 +758,7 @@ namespace UnityEngine
             if (s_Textures.Count == 0) return;
             s_Textures.RemoveAll(t => t == null);
             var fresh = new HashSet<CustomRenderTexture>();
-            foreach (var t in s_Textures.ToArray())
-            {
-                if (t.m_Loaded) continue;
-                t.m_Loaded = true;
-                fresh.Add(t);
-                try { textureLoaded?.Invoke(t); }
-                catch (Exception e) when (Compat.CustomRenderTextureLifecycleMeasured) { Debug.LogException(e); }
-            }
+            LoadPendingTextures(fresh);
             float delta = Time.deltaTime;
             foreach (var t in Ordered())
             {

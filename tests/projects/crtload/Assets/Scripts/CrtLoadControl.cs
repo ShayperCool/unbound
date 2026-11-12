@@ -36,6 +36,7 @@ public sealed class CrtLoadControl : MonoBehaviour
         };
         CustomRenderTextureManager.textureLoaded += texture =>
         {
+            if (texture.name == "spawnParent") Make("spawnChild");
             if (texture.name == "throwing") throw new InvalidOperationException("CRT load callback");
         };
         Application.logMessageReceived += (message, trace, type) =>
@@ -147,7 +148,7 @@ public sealed class CrtLoadControl : MonoBehaviour
         if (Loaded.Contains(requested)) Put("pixel.request.u" + update, Pixel(requested));
         if (update == 6) UnityEngine.Rendering.OnDemandRendering.renderFrameInterval = 3;
         if (update == 12) UnityEngine.Rendering.OnDemandRendering.renderFrameInterval = 1;
-        if (update != 14) return;
+        if (update != 16) return;
         Put("callback.exception.logs", exceptions);
         Values.Sort(StringComparer.Ordinal);
         Put("complete", 1);
@@ -168,6 +169,7 @@ public sealed class CrtLoadControl : MonoBehaviour
         Put("update." + update, State());
         if (!lateOnly && update <= 2) Make("update" + update);
         if (update == 13) { Make("throwing"); Make("afterThrow"); }
+        if (update == 15) Make("spawnParent");
         if (update > 6)
         {
             bool renders = UnityEngine.Rendering.OnDemandRendering.willCurrentFrameRender;

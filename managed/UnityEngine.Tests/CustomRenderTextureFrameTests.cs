@@ -72,19 +72,53 @@ namespace Unbound.Tests
         {
             using var scope = new Scope();
             var first = Make();
+            Step(20);
+            Assert.True(first.m_Loaded);
+            var second = Make();
+            Step(20);
+            Assert.False(second.m_Loaded);
+            Step(21);
+            Assert.True(second.m_Loaded);
+        }
+
+        [Fact]
+        public void CallbackCreationsJoinTheCurrentLoadCycle()
+        {
+            using var scope = new Scope();
+            var first = Make();
             CustomRenderTexture second = null;
             void Loaded(CustomRenderTexture texture) { if (ReferenceEquals(texture, first)) second = Make(); }
             CustomRenderTextureManager.textureLoaded += Loaded;
             try
             {
                 Step(20);
-                Assert.True(first.m_Loaded);
+                Assert.True(first.IsCreated());
                 Assert.NotNull(second);
-                Assert.False(second.m_Loaded);
-                Step(20);
-                Assert.False(second.m_Loaded);
-                Step(21);
                 Assert.True(second.m_Loaded);
+                Assert.True(second.IsCreated());
+            }
+            finally { CustomRenderTextureManager.textureLoaded -= Loaded; }
+        }
+
+        [Fact]
+        public void ATextureDestroyedDuringALoadCallbackIsNotLoaded()
+        {
+            using var scope = new Scope();
+            var first = Make();
+            var second = Make();
+            int notifications = 0;
+            void Loaded(CustomRenderTexture texture)
+            {
+                notifications++;
+                if (ReferenceEquals(texture, first)) Object.DestroyImmediate(second);
+            }
+            CustomRenderTextureManager.textureLoaded += Loaded;
+            try
+            {
+                Step(20);
+                Assert.True(second == null);
+                Assert.False(second.m_Loaded);
+                Assert.Equal(1, notifications);
             }
             finally { CustomRenderTextureManager.textureLoaded -= Loaded; }
         }
