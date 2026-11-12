@@ -85,8 +85,9 @@ namespace UnityEngine
         /// and asset bundles are refused with an error, as are objects that are not assets, and
         /// null is ignored. An unloaded material reads its saved state again where it is referenced
         /// (what was set from script is gone); an unloaded ScriptableObject is destroyed and the
-        /// next load reads a new one from its file. The Editor hands the reloaded material out as a
-        /// new wrapper of the same object; Unbound keeps the one object. An unloaded custom render
+        /// next load reads a new one from its file. On 6000.0.71f1 the reloaded material has a new
+        /// wrapper of the same object, with shared values (tests/projects/materialalias); Compat
+        /// retains the previous unmeasured wrapper behavior for other releases. An unloaded custom render
         /// texture asset stops updating and frees its GPU data (tests/projects/customrt).
         /// Not measured, done as for materials (Scripting API 6000.0 UnloadUnusedAssets: assets other
         /// than ScriptableObjects "are loaded back the next time one of its properties or methods
