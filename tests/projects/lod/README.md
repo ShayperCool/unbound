@@ -6,17 +6,26 @@ and 90, LOD biases 0.5, 1 and 2, the group scaled by 2 or sized 3, QualitySettin
 1, ForceLOD(2) and ForceLOD(0), from aside, and orthographic sizes 0.2 to 6.2 (steps of 0.01);
 the drawn level is the color of a 9x9 render's center pixel. Also the group's API values.
 
-Record Unity's reference (the Editor needs a display; `ProbeRunner.Create` made the scene):
+Record Unity's reference with the driver (two independent windowed Editor captures on the GPU,
+published only when both are identical; `ProbeRunner.Create` made the scene):
 
-    LOD_PROBE_OUT=$PWD/tests/projects/lod/Reference \
-        ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -projectPath tests/projects/lod \
-        -executeMethod ProbeRunner.Record -logFile ~/.cache/lod.log
+    python3 tests/projects/lod/run.py editor  --release 6000.0.71f1 --label <label>
+    python3 tests/projects/lod/run.py publish --release 6000.0.71f1 --label <label>
+
+Sample distances and orthographic sizes are one division of whole numbers, so that every scripting
+runtime gives the same float. Each render waits until 2 ms of real time have passed since the
+camera's previous render: in the Editor a render that comes sooner can draw the levels chosen for
+the camera's previous place (measured with `run.py editor --hold`, which adds `hold` rows and is
+not published: on that machine a wait of 0.5 ms still drew the old level, 0.75 ms and more the new
+one). Unbound chooses the level at every render and does not model that hold.
 
 Run Unbound and compare (sweeps up to a distance of 15: farther the cube covers less than a pixel):
 
     LOD_PROBE_OUT=/tmp/lod unbound run -p tests/projects/lod --frames 20000 --size 320x180 --no-watch
     python3 tests/projects/lod/compare.py tests/projects/lod/Reference /tmp/lod
 
-What still differs: in the Editor some transitions come a sample or two later than the height
-rule gives (one transition of a sweep, not the others: 1.48 for 1.4434), and at 0.8 the cube's
-front face lies on the near plane, which the Editor draws and Unbound clips.
+Unbound matches every record of the reference. The level rule: a level is drawn while the
+camera's distance times 2 tan(fov / 2) / lodBias (for an orthographic camera twice its size over
+the bias) is less than the group's world size over the level's transition height; at equality
+the next level is drawn (the fov 90 sweep's last level ends at 5.0, the orthographic one at
+size 5.0).

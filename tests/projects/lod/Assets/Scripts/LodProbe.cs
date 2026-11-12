@@ -18,6 +18,13 @@ public class LodProbe : MonoBehaviour
     readonly StringBuilder m_Out = new StringBuilder();
     RenderTexture m_Target;
     Texture2D m_Read;
+    /// <summary>The real time since the camera's last render, and how long a sample waits for:
+    /// the Editor keeps a camera's level choices for a millisecond of real time (see the README),
+    /// so a render that follows the last one sooner draws the levels of the camera's old place.
+    /// LOD_PROBE_WAIT_MS sets another wait, to measure that; the reference is recorded with
+    /// the default.</summary>
+    readonly System.Diagnostics.Stopwatch m_SinceRender = System.Diagnostics.Stopwatch.StartNew();
+    double m_WaitMs = 2.0;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("LodProbe").AddComponent<LodProbe>();
@@ -40,7 +47,9 @@ public class LodProbe : MonoBehaviour
     int Drawn(Camera camera)
     {
         camera.targetTexture = m_Target;
+        while (m_SinceRender.Elapsed.TotalMilliseconds < m_WaitMs) { }
         camera.Render();
+        m_SinceRender.Restart();
         RenderTexture.active = m_Target;
         m_Read.ReadPixels(new Rect(0, 0, 9, 9), 0, 0);
         RenderTexture.active = null;
@@ -56,6 +65,8 @@ public class LodProbe : MonoBehaviour
     {
         var dir = System.Environment.GetEnvironmentVariable("LOD_PROBE_OUT") ?? "/tmp/lod";
         Directory.CreateDirectory(dir);
+        var waitSetting = System.Environment.GetEnvironmentVariable("LOD_PROBE_WAIT_MS");
+        if (!string.IsNullOrEmpty(waitSetting)) m_WaitMs = double.Parse(waitSetting, CultureInfo.InvariantCulture);
         m_Target = new RenderTexture(9, 9, 24, RenderTextureFormat.ARGB32);
         m_Read = new Texture2D(9, 9, TextureFormat.RGBA32, false);
         float startBias = QualitySettings.lodBias;
@@ -95,7 +106,8 @@ public class LodProbe : MonoBehaviour
             var levels = new List<string>();
             for (int k = 0; k <= 1200; k++)
             {
-                float d = 0.5f + k * 0.02f;
+                // One division of whole numbers: the same float in every scripting runtime.
+                float d = (25 + k) / 50f;
                 cameraObject.transform.position = offset + new Vector3(0f, 0f, -d);
                 cameraObject.transform.LookAt(Vector3.zero);
                 yield return null;
@@ -132,13 +144,39 @@ public class LodProbe : MonoBehaviour
         var ortho = new List<string>();
         for (int k = 0; k <= 600; k++)
         {
-            camera.orthographicSize = 0.2f + k * 0.01f;
+            camera.orthographicSize = (20 + k) / 100f;
             cameraObject.transform.position = new Vector3(0f, 0f, -5f);
             cameraObject.transform.rotation = Quaternion.identity;
             yield return null;
             ortho.Add(Drawn(camera).ToString());
         }
         m_Out.Append($"{{\"case\":\"ortho\",\"levels\":[{string.Join(",", ortho)}]}}\n");
+
+        // Only on request (LOD_PROBE_HOLD), for it depends on the machine's speed and is not part
+        // of the reference: how soon after a render the camera's next render draws the level of
+        // its new place. The camera goes from a place of level 0 to one of level 1 and renders
+        // again after each wait.
+        if (!string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("LOD_PROBE_HOLD")))
+        {
+            camera.orthographic = false;
+            camera.fieldOfView = 60f;
+            cameraObject.transform.rotation = Quaternion.identity;
+            double usual = m_WaitMs;
+            foreach (double wait in new[] { 0.0, 0.25, 0.5, 0.75, 0.9, 1.1, 1.25, 1.5, 2.0, 0.0, 0.5, 0.9, 1.1, 2.0 })
+            {
+                m_WaitMs = 5.0;
+                cameraObject.transform.position = new Vector3(0f, 0f, -1f);
+                int before = Drawn(camera);
+                m_WaitMs = wait;
+                cameraObject.transform.position = new Vector3(0f, 0f, -2f);
+                int after = Drawn(camera);
+                m_WaitMs = 5.0;
+                int later = Drawn(camera);
+                m_Out.Append($"{{\"case\":\"hold\",\"waitMs\":{wait.ToString("R", CultureInfo.InvariantCulture)},\"before\":{before},\"after\":{after},\"later\":{later}}}\n");
+                yield return null;
+            }
+            m_WaitMs = usual;
+        }
 
         QualitySettings.lodBias = startBias;
         QualitySettings.maximumLODLevel = startMax;
