@@ -22,6 +22,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import editor_path, reference_file, run_root, unity_version
+from input_capture_validation import capture_problem
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -109,6 +110,10 @@ def editor(work):
 
 def publish(work):
     a, b = work/'native1'/'record.jsonl', work/'native2'/'record.jsonl'
+    for capture in (a, b):
+        problem = capture_problem(capture)
+        if problem:
+            sys.exit(f'{capture}: {problem}; not publishing')
     result = subprocess.run([sys.executable, str(PROBE/'compare.py'), '--native', str(a), str(b)])
     if result.returncode:
         sys.exit('the two Editor captures disagree; not publishing')
@@ -124,6 +129,9 @@ def unbound(work):
         raise FileExistsError(f'Engine capture exists; choose a fresh label: {work}')
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
     reference = reference_file(PROBE, 'jsonl')
+    problem = capture_problem(reference)
+    if problem:
+        sys.exit(f'{reference}: {problem}; cannot generate an input replay')
     project = copy_project(work/'projects'/'unbound')
     out = work/'unbound'/'record.jsonl'
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,5 @@
+{
+  "fast_commands": [
+    "python3 -m unittest discover -s tests/projects/inputframes -p test_capture_validation.py"
+  ]
+}

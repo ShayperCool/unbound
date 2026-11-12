@@ -1,0 +1,16 @@
+{"k":"afterName.changes","v":"0"}
+{"k":"afterName.events","v":"0"}
+{"k":"afterSecondName.changes","v":"0"}
+{"k":"afterSecondName.events","v":"0"}
+{"k":"afterSecondSignal.changes","v":"2"}
+{"k":"afterSecondSignal.events","v":"2"}
+{"k":"afterSignal.changes","v":"1"}
+{"k":"afterSignal.events","v":"1"}
+{"k":"beforeName.changes","v":"0"}
+{"k":"beforeName.events","v":"0"}
+{"k":"firstName","v":"A"}
+{"k":"keyboard.present","v":"True"}
+{"k":"layout","v":"English (US)"}
+{"k":"secondName","v":"B"}
+{"k":"signal.keymapPresent","v":"True"}
+{"k":"complete","v":"1"}
