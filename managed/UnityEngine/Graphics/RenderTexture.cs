@@ -156,8 +156,28 @@ namespace UnityEngine
         public override int height { get => m_Descriptor.height; set { Change(); m_Descriptor.height = value; m_Height = value; if (!m_Created) m_AllocatedMipCount = null; } }
         public int depth { get => m_Descriptor.depthBufferBits; set { Change(); m_Descriptor.depthBufferBits = value; } }
         /// <summary>The color format; a depth-only target is Depth, or Shadowmap when it compares
-        /// (measured).</summary>
-        public RenderTextureFormat format { get => m_Descriptor.colorFormat; set { Change(); m_Descriptor.colorFormat = value; } }
+        /// (measured). Set, it is taken in the texture's own encoding as it is (no device
+        /// fallback, unlike the descriptor's), a Shadowmap turns comparing on and nothing turns it
+        /// off, and a depth-only format without a depth buffer gets 16 bits, with Unity's warning
+        /// (Unity 6000.0.71f1's RenderTexture.format).</summary>
+        public RenderTextureFormat format
+        {
+            get => m_Descriptor.colorFormat;
+            set
+            {
+                Change();
+                if (value == RenderTextureFormat.Depth || value == RenderTextureFormat.Shadowmap)
+                {
+                    if (m_Descriptor.depthStencilFormat == GraphicsFormat.None)
+                    {
+                        Debug.LogWarning($"{value} RenderTexture requested without a depth buffer. Changing to a 16 bit depth buffer. To resolve this warning, please specify the desired number of depth bits when creating the render texture.");
+                        m_Descriptor.depthStencilFormat = GraphicsFormat.D16_UNorm;
+                    }
+                    if (value == RenderTextureFormat.Shadowmap) m_Descriptor.shadowSamplingMode = ShadowSamplingMode.CompareDepths;
+                }
+                m_Descriptor.graphicsFormat = GraphicsFormatUtility.GetGraphicsFormat(value, m_Descriptor.sRGB);
+            }
+        }
         public new GraphicsFormat graphicsFormat { get => m_Descriptor.graphicsFormat; set { Change(); m_Descriptor.graphicsFormat = value; } }
         internal override GraphicsFormat GraphicsFormatOf() => m_Descriptor.graphicsFormat;
         public GraphicsFormat depthStencilFormat { get => m_Descriptor.depthStencilFormat; set { Change(); m_Descriptor.depthStencilFormat = RenderableDepthFormat(value); } }
