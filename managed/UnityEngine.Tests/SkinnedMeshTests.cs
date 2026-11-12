@@ -287,8 +287,20 @@ namespace UnityEngine.Tests
                 // pass's skin; the particle shape takes the pose as it is.
                 Time.s_FrameCount++;
                 Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
-                Assert.Equal(1f, s.renderer.CurrentGeometry(out _).vertices[0].x);
+                var current = s.renderer.CurrentGeometry(out _);
+                Assert.Equal(1f, current.vertices[0].x);
                 Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
+                // The current pose is skinned once a frame (an emission of many particles reads it
+                // once), and again when BakeMesh skins into it.
+                int version = current.m_PositionsVersion;
+                s.bone.localPosition = new Vector3(1.5f, 0f, 0f);
+                Assert.Same(current, s.renderer.CurrentGeometry(out _));
+                Assert.Equal(version, current.m_PositionsVersion);
+                var baked = new Mesh();
+                s.renderer.BakeMesh(baked);
+                Object.DestroyImmediate(baked);
+                Assert.Equal(1.5f, s.renderer.CurrentGeometry(out _).vertices[0].x);
+                s.bone.localPosition = new Vector3(1f, 0f, 0f);
                 s.renderer.forceMatrixRecalculationPerRender = true;
                 Assert.Equal(1f, s.renderer.DrawGeometry(out _).vertices[0].x);
                 s.bone.localPosition = new Vector3(2f, 0f, 0f);

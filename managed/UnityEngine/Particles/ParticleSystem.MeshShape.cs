@@ -352,8 +352,9 @@ namespace UnityEngine
                     if (S.skinnedMeshRenderer is SkinnedMeshRenderer skinned && skinned != null)
                     {
                         renderer = skinned;
-                        // The current pose: the (skinned, blend-shaped or cloth) mesh the renderer
-                        // draws this frame, brought back into the renderer's space.
+                        // The current pose: the renderer's (skinned, blend-shaped or cloth) mesh
+                        // as it is at the frame's first emission (and after BakeMesh), apart from
+                        // the skinning pass's skin, brought back into the renderer's space.
                         mesh = skinned.CurrentGeometry(out var model);
                         var shared = skinned.sharedMesh;
                         if (mesh != null && shared != null && !ReferenceEquals(mesh, shared))
