@@ -757,8 +757,9 @@ impl Regions {
         if whole.id == OPEN_REGION {
             made.push(rest);
         }
-        // Largest first; of equal ones the later (their order is not measured:
-        // docs/REALTIME_GI.md).
+        // Largest first; of equal ones the later, which puts the later of two equal regions
+        // first in the list (tests/projects/realtimegi RoomHoles: of two holes of one size a
+        // plate takes the right one, and of two stacked the upper one).
         let mut kept: Vec<Region> = Vec::with_capacity(made.len());
         for region in made {
             let (width, height) = (

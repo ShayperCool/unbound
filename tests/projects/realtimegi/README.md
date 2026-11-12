@@ -47,6 +47,9 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
   `RoofAngleWide` and `RoofAngleTight` (roofs of 20 degrees with Max Angle 30 and 15),
   `StepMid` and `StepNear` (the step's mesh, 1.2 and 0.8 times as long, with Max Distance 0.3
   and 0.15).
+- `RoomHoles`: as `Room` (`run.py setup-holes` adds this scene alone), with two panels made as
+  `RoomCharts`' are: `TwinHoles` (two holes of one size side by side) and `TwinHolesStacked`
+  (the same stacked), each with one plate either hole holds.
 - `RoomTurned`: as `RoomAuto`'s room (`run.py setup-turned` adds this scene alone), with
   `SlabTurned` (a cube of 1.3 x 0.2 x 0.9 turned 30 degrees about Y), `BoxTurned` (a cube of
   0.7 x 0.5 x 0.6 turned (20, 40, 10)), `WedgeTurned` (the wedge turned 30 degrees and scaled
@@ -188,7 +191,8 @@ the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
 
 Then `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
 `RoomCharts` cases are. The charts the precompute made are in the scene's precomputed data, as
-there. Last, `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`.
+there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`. Last, `RoomHoles`
+(`roomholes-base`).
 
 With `--color-space gamma` the same project is in the gamma color space (run.py changes the
 copy's player settings) and the probe records the scenes without lighting data alone, their

@@ -484,10 +484,13 @@ blocks and holds all three above the ring, the hole empty; a plate with two hole
 first loose plate takes the hole of its own size although the larger hole comes first from the
 bottom left, and the second the larger hole's lowest, leftmost place; and an arch, whose pocket
 is open to the lower edge and takes a plate as a hole does. Each loose plate lies on the
-precomputed chart of its own number. Not measured, and implemented as one consistent rule: what
-giving a region up changes for the charts placed after it, the order of regions of equal size,
-how many blocks a region that reaches the rows above every chart counts, and up to what region
-size a place for the smallest chart is searched before a region is given up; a difference
+precomputed chart of its own number. Of regions of one size the later (from the bottom left)
+comes first: `RoomHoles` has a panel with two holes of one size side by side and one with two
+stacked, each with a plate either holds, and the plate takes the right one and the upper one.
+Not measured, and implemented as one consistent rule: what giving a region up changes for the
+charts placed after it, how many blocks a region that reaches the rows above every chart
+counts, and up to what region size a place for the smallest chart is searched before a region
+is given up (no scene of the probe separates them from the rest of the packing); a difference
 there shows as a failed layout check, not as wrong lighting. (Within a system, other renderers'
 charts may lie in the blocks a renderer's own charts leave free: the check compares only the
 blocks its charts use.)

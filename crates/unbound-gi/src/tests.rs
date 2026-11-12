@@ -1752,25 +1752,30 @@ fn panel_uvs_from(name: &str, third_channel: bool) -> crate::realtime_uv::Output
     .unwrap()
 }
 
-#[test]
-fn charts_fill_holes_as_the_precompute_packs_them() {
-    // RoomCharts: the Room with four panels whose charts leave holes and a plate with a third
-    // UV channel.
-    let data = scene_data("RoomCharts");
+/// Checks every renderer of a scene of the Room and panels: its realtime lightmap UVs lie in the
+/// precomputed layout; a panel's charts use exactly the texels of the precomputed chart mask
+/// (a hole that took no chart stays empty) and lie on charts numbered in their order. Returns
+/// how many panels were checked.
+fn check_panel_layouts(
+    scene: &str,
+    panel: &dyn Fn(&str) -> Option<crate::realtime_uv::Output>,
+) -> usize {
+    let data = scene_data(scene);
     assert_eq!(data.systems.len(), 1);
     let system = &data.systems[0];
-    let names = renderer_names("RoomCharts");
+    let names = renderer_names(scene);
     let mut panels = 0;
     for (k, &(object, _)) in data.renderers.iter().enumerate() {
         let name = names[&object].as_str();
-        let is_panel = PANELS.iter().any(|p| p.0 == name);
+        let made = panel(name);
+        let is_panel = made.is_some();
         let out = match name {
             "Floor" | "Ceiling" => cube_uvs([6.0, 0.2, 6.0], 0.5),
             "Back" => cube_uvs([6.0, 4.0, 0.2], 0.5),
             "Left" | "Right" => cube_uvs([0.2, 4.0, 6.0], 0.5),
             "Block" => cube_uvs([1.2, 1.5, 1.2], 0.5),
             "Panel" => cube_uvs([1.0, 1.2, 0.1], 0.5),
-            _ => panel_uvs(name),
+            _ => made.unwrap_or_else(|| panic!("no panel {name}")),
         };
         let st = data.renderer_st[k];
         crate::realtime_uv::check_layout(system, st, &out)
@@ -1779,7 +1784,7 @@ fn charts_fill_holes_as_the_precompute_packs_them() {
             continue;
         }
         panels += 1;
-        // In this scene's panels, the blocks no chart uses are no chart's in the precomputed
+        // In these scenes' panels, the blocks no chart uses are no chart's in the precomputed
         // mask either: a hole that took no chart stays empty. (Not a rule of the check: the
         // system's packing puts other instances' charts into such blocks, as in the ceiling's.)
         let sw = system.transport.width;
@@ -1823,6 +1828,19 @@ fn charts_fill_holes_as_the_precompute_packs_them() {
             "{name}: {ids:?}"
         );
     }
+    panels
+}
+
+#[test]
+fn charts_fill_holes_as_the_precompute_packs_them() {
+    // RoomCharts: the Room with four panels whose charts leave holes and a plate with a third
+    // UV channel.
+    let panels = check_panel_layouts("RoomCharts", &|name: &str| {
+        PANELS.iter().any(|p| p.0 == name).then(|| panel_uvs(name))
+    });
+    let data = scene_data("RoomCharts");
+    let system = &data.systems[0];
+    let names = renderer_names("RoomCharts");
     assert_eq!(panels, PANELS.len());
     let rects = |name: &str| {
         let out = panel_uvs(name);
@@ -2476,4 +2494,62 @@ fn matrices_a_unit_in_the_last_place_apart_lay_charts_out_alike() {
             "{p:?} {q:?}"
         );
     }
+}
+
+/// The RoomHoles scene's panels: two holes of one size side by side, and the same stacked,
+/// each with one plate either holds.
+#[allow(clippy::type_complexity)]
+const HOLE_PANELS: [(&str, &[f32], &[f32], &[&str], &[[f32; 4]]); 2] = [
+    (
+        "TwinHoles",
+        &[0.0, 0.3, 2.65, 2.95, 5.3, 5.6],
+        &[0.0, 0.3, 2.8, 3.1],
+        &["#####", "#.#.#", "#####"],
+        &[[0.9, 0.4, 1.2, 1.2]],
+    ),
+    (
+        "TwinHolesStacked",
+        &[0.0, 0.3, 2.8, 3.1],
+        &[0.0, 0.3, 2.65, 2.95, 5.3, 5.6],
+        &["###", "#.#", "###", "#.#", "###"],
+        &[[0.9, 0.4, 1.2, 1.2]],
+    ),
+];
+
+fn hole_panel_uvs(name: &str) -> Option<crate::realtime_uv::Output> {
+    let &(_, xs, ys, rows, plates) = HOLE_PANELS.iter().find(|p| p.0 == name)?;
+    let (positions, uvs, triangles) = panel(xs, ys, rows, plates);
+    Some(
+        crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
+            positions: &positions,
+            uvs: &uvs,
+            triangles: &triangles,
+            pixel_size: 0.5,
+            min_chart_texels: 4,
+            charts: crate::realtime_uv::Charts::Preserved,
+        })
+        .unwrap(),
+    )
+}
+
+#[test]
+fn of_two_holes_of_one_size_a_chart_takes_the_one_the_precompute_does() {
+    assert_eq!(
+        check_panel_layouts("RoomHoles", &hole_panel_uvs),
+        HOLE_PANELS.len()
+    );
+    let rects = |name: &str| {
+        let out = hole_panel_uvs(name).unwrap();
+        let rects: Vec<[u32; 4]> = out.charts.iter().map(|c| c.rect).collect();
+        (out.width, out.height, rects)
+    };
+    // Side by side the plate takes the right hole, stacked the upper one.
+    assert_eq!(
+        rects("TwinHoles"),
+        (14, 8, vec![[0, 0, 14, 8], [8, 2, 4, 4]])
+    );
+    assert_eq!(
+        rects("TwinHolesStacked"),
+        (8, 14, vec![[0, 0, 8, 14], [2, 8, 4, 4]])
+    );
 }
