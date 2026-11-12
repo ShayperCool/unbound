@@ -13,6 +13,18 @@
 {"key":"outside positions","value":"0 0 0 2 0 0 0 2 0 0 0 2 4 1 1 -1 0.5 0.25"}
 {"key":"outside indices","value":"1 3 4 2 5 3 0 2 0 3 1 2"}
 {"key":"outside cells","value":"3"}
+{"key":"duplicate near positions","value":"0 0 0 2 0 0 0 2 0 0 0 2"}
+{"key":"duplicate near indices","value":"3 1 0 2"}
+{"key":"duplicate near cells","value":"1"}
+{"key":"duplicate threshold positions","value":"0 0 0 2 0 0 0 2 0 0 0 2 0.05 0 0"}
+{"key":"duplicate threshold indices","value":"4 1 2 3 3 2 4 0"}
+{"key":"duplicate threshold cells","value":"2"}
+{"key":"duplicate beyond positions","value":"0 0 0 2 0 0 0 2 0 0 0 2 0.051 0 0"}
+{"key":"duplicate beyond indices","value":"4 1 2 3 3 2 4 0"}
+{"key":"duplicate beyond cells","value":"2"}
+{"key":"duplicate chain positions","value":"0 0 0 2 0 0 0 2 0 0 0 2"}
+{"key":"duplicate chain indices","value":"3 1 0 2"}
+{"key":"duplicate chain cells","value":"1"}
 {"key":"cycle seed 0","value":"1 10.8846769"}
 {"key":"cycle seed 1","value":"1 10.8846769"}
 {"key":"cycle seed 2","value":"1 10.8846769"}
@@ -35,6 +47,212 @@
 {"key":"cycle seed 19","value":"1 10.8846769"}
 {"key":"cycle seed 20","value":"1 10.8846769"}
 {"key":"cycle seed 21","value":"1 10.8846769"}
+{"key":"main mesh positions","value":"-1.87 0.229999989 -1.89 -2.16999984 0.35 0.19 -1.96999991 0.179999992 1.91 -1.83999991 2.26 -1.92 -2.14999986 2.40999985 0.02 -1.93 2.11 1.93999994 0.17 0.31 -2.1 -0.02 0.44 -0.13 0.0899999961 0.14 2.06 0.179999992 2.22 -2.03 0.04 2.45 -0.19 -0.01 2.38999987 1.86 2.11 0.329999983 -2.05 1.9 0.459999979 0.07 1.88 0.48999998 2.05 2.02 2.12 -1.89 1.93999994 2.41999984 -0.149999991 2.08 2.31 1.91"}
+{"key":"main mesh indices","value":"1 5 7 4 7 6 3 9 8 17 5 14 7 3 1 4 10 16 15 9 6 15 12 9 8 6 12 0 17 13 12 14 1 8 7 2 13 6 12 8 13 8 12 14 7 15 13 6 13 15 12 6 7 5 1 2 5 10 7 4 7 6 13 8 7 5 8 11 8 5 17 11 8 5 7 2 13 11 17 16 11 10 5 4 8 11 17 14 17 11 13 14 7 8 13 14 7 11 8 14 13 11 7 14 4 3 1 0 7 10 3 4 7 11 13 10 5 11 7 10 13 10 11 16 12 13 17 16 12 15 13 16 17 15 12 16 13 15 7 16 15 10 7 16 7 10 13 16 3 10 7 9 15 6 7 9 7 10 15 9 1 3 7 0 3 6 7 0 8 2 1 0 6 8 7 0 7 8 1 0"}
+{"key":"main mesh cells","value":"45"}
+{"key":"main boundary seed -1","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 0","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 1","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 2","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 3","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 4","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 5","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 6","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 7","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 8","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 9","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 10","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 11","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 12","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 13","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 14","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 15","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 16","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 17","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 18","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 19","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 20","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 21","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 22","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 23","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 24","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 25","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 26","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 27","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 28","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 29","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 30","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 31","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 32","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 33","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 34","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 35","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 36","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 37","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 38","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 39","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 40","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 41","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 42","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 43","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 44","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 45","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 46","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 47","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 48","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 49","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 50","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 51","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 52","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 53","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 54","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 55","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 56","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 57","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 58","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 59","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 60","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 61","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 62","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 63","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 64","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 65","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 66","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 67","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 68","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 69","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 70","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 71","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main boundary seed 72","value":"-1 0.0322196633 1 1 1 1"}
+{"key":"main forward","value":"1 1 1 1"}
+{"key":"main reverse","value":"1 1 1 1"}
+{"key":"combined mesh positions","value":"-1.87 0.229999989 -1.89 -2.16999984 0.35 0.19 -1.96999991 0.179999992 1.91 -1.83999991 2.26 -1.92 -2.14999986 2.40999985 0.02 -1.93 2.11 1.93999994 0.17 0.31 -2.1 -0.02 0.44 -0.13 0.0899999961 0.14 2.06 0.179999992 2.22 -2.03 0.04 2.45 -0.19 -0.01 2.38999987 1.86 2.11 0.329999983 -2.05 1.9 0.459999979 0.07 1.88 0.48999998 2.05 2.02 2.12 -1.89 1.93999994 2.41999984 -0.149999991 2.08 2.31 1.91 4.17 0.28 -0.859999955 3.82 0.359999985 1.1 3.87 2.33 -0.82 3.92999983 2.37999988 0.89 6.15 0.26 -1.16 6.12 0.329999983 0.919999957 6.06999969 2.46 -1.01 5.85999966 2.39999986 1.04"}
+{"key":"combined mesh indices","value":"10 9 7 3 7 4 10 3 6 0 7 3 21 19 13 20 7 9 6 3 9 10 24 3 17 13 21 19 21 20 24 25 21 13 17 16 10 5 11 4 17 11 13 14 7 0 1 3 10 15 9 16 17 19 21 25 11 10 24 25 19 20 21 18 24 22 20 12 7 5 1 2 21 18 20 25 5 10 7 4 21 25 24 16 11 25 21 16 13 20 19 18 13 19 17 14 13 11 7 14 20 9 24 15 17 21 11 25 5 2 7 8 10 9 24 16 1 5 7 4 9 15 20 16 1 4 7 3 5 11 7 10 17 8 11 14 13 8 19 14 7 11 13 10 19 8 18 23 20 18 24 25 5 11 17 8 7 11 5 8 11 8 7 14 7 8 13 14 18 8 22 23 18 24 25 23 24 25 10 16 8 17 5 14 19 14 8 23 14 19 25 23 17 19 25 14 15 6 9 12 1 0 4 3 21 20 13 16 10 25 11 16 17 11 21 16 24 18 20 22 20 15 24 12 0 22 18 8 13 6 7 15 6 9 7 15 7 9 10 15 18 22 0 12 13 18 19 8 24 9 20 16 20 22 18 12 24 20 21 16 7 0 6 8 7 6 13 8 7 2 1 8 2 0 1 8 1 0 7 8 18 22 24 23 19 18 21 23 18 25 21 23 21 25 19 23 6 15 13 12 6 8 0 12 0 8 18 12 20 18 13 12 13 15 20 12 18 8 13 12 13 8 6 12 20 15 13 16 13 11 17 16 13 10 11 16 7 10 13 16 7 15 10 16 13 15 7 16"}
+{"key":"combined mesh cells","value":"87"}
+{"key":"combined boundary seed -1","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 0","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 1","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 2","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 3","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 4","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 5","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 6","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 7","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 8","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 9","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 10","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 11","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 12","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 13","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 14","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 15","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 16","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 17","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 18","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 19","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 20","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 21","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 22","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 23","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 24","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 25","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 26","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 27","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 28","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 29","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 30","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 31","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 32","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 33","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 34","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 35","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 36","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 37","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 38","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 39","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 40","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 41","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 42","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 43","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 44","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 45","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 46","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 47","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 48","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 49","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 50","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 51","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 52","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 53","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 54","value":"54 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 55","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 56","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 57","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 58","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 59","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 60","value":"60 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 61","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 62","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 63","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 64","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 65","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 66","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 67","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 68","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 69","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 70","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 71","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 72","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 73","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 74","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 75","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 76","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 77","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 78","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 79","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 80","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 81","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 82","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 83","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 84","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 85","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 86","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 87","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 88","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 89","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 90","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 91","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 92","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 93","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 94","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 95","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 96","value":"96 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 97","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 98","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 99","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 100","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 101","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 102","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 103","value":"103 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 104","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 105","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 106","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 107","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 108","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 109","value":"70 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 110","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 111","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 112","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 113","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 114","value":"63 0.0316874124 1 0 1 1"}
+{"key":"combined boundary seed 115","value":"115 0 0 0 1 1"}
+{"key":"combined boundary seed 116","value":"116 0.0316874646 1 1.1920929E-07 1 1"}
+{"key":"combined boundary seed 117","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 118","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined boundary seed 119","value":"119 0.0316874124 1 1 1 1"}
+{"key":"combined boundary seed 120","value":"56 0.0316874236 1.00000024 -1.1920929E-07 1 1"}
+{"key":"combined forward","value":"1 1 1 1"}
+{"key":"combined reverse","value":"1 1 1 1"}
 {"key":"face 0 seed -1","value":"9 1.5"}
 {"key":"face 0 seed 0","value":"9 1.5"}
 {"key":"face 0 seed 1","value":"9 1.5"}
@@ -65,4 +283,16 @@
 {"key":"renderer 3","value":"2.5 2.5"}
 {"key":"renderer 4","value":"4.66666651 4.66666651"}
 {"key":"renderer 5","value":"0.0322196633 0.0322196633"}
+{"key":"bounds axis 0 sample 0","value":"-1 0.0322196633"}
+{"key":"bounds axis 0 sample 1","value":"53 8"}
+{"key":"bounds axis 0 sample 2","value":"-1 0.0322196633"}
+{"key":"bounds axis 0 sample 3","value":"38 8"}
+{"key":"bounds axis 1 sample 0","value":"-1 0.0322196633"}
+{"key":"bounds axis 1 sample 1","value":"59 8"}
+{"key":"bounds axis 1 sample 2","value":"-1 0.0322196633"}
+{"key":"bounds axis 1 sample 3","value":"38 8"}
+{"key":"bounds axis 2 sample 0","value":"-1 0.0322196633"}
+{"key":"bounds axis 2 sample 1","value":"58 8"}
+{"key":"bounds axis 2 sample 2","value":"-1 0.0322196633"}
+{"key":"bounds axis 2 sample 3","value":"41 8"}
 {"key":"complete","value":"true"}

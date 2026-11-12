@@ -230,20 +230,21 @@ managed tests, source-only reuse-disabled red control 6 assertion failures/3 gua
 and six engine captures. API 0/2319 is reused through 65228 equal external metadata
 rows. Root checks and admission: `validation/runs/lp-identity-root-admission-20261104/`.
 
-### Q381 lookup and occlusion scope
+### Q381 lookup and Q406 bounds and mesh scope
 
-The current main comparison is 375/625, previously 367/625, with no lost matches and an
-unchanged PNG. The six single-scene query-index keys now match. The combined-scene queries
-at point 6 now return occlusion channel 1 as zero, previously about 0.655. The 250 remaining
-strict differences split into 228 numeric-only keys, at most 1.1920928955078125e-7 per component
-with mixed signs, and 22 functional keys:
+The current main comparison is 379/625, previously 375/625 after Q381 and 367/625 before it,
+with no lost matches and an unchanged PNG. The six single-scene query-index keys match. The
+combined-scene queries at point 6 return occlusion channel 1 as zero, previously about 0.655.
+Q406 corrects query bounds rounding and resolves four occlusion-at-probe rows. The 246 remaining
+strict differences split into the unchanged 228 numeric-only keys, at most
+1.1920928955078125e-7 per component with mixed signs, and 18 functional keys:
 
 * Twelve query-index keys in `additive tetrahedralized` and `unloaded`, at points 0, 1, 2, 3, 6
   and 8. The combined mesh's topology and order remain open.
 * Four combined counts/shared-Main keys, 120 cells versus the reference's 121.
-* Six `occlusion at probes` rows. Probe 8's channel 0 remains zero versus one in all six
-  snapshots; combined probe 22's channel 1 also remains zero versus one. Boundary-cell choice
-  changes which channels are present, even where a contributing vertex's weight is zero.
+* Two `occlusion at probes` rows, `additive tetrahedralized` and `unloaded`. Combined probe 22's
+  channel 1 remains zero versus one. Its boundary-cell choice changes which channels are
+  present, even where a contributing vertex's weight is zero.
 
 The walk accepts nonnegative weights exactly, chooses a later slot when minimum weights tie,
 and stops a two-step cycle with the current weights. A renderer remembers its last found cell.
@@ -268,11 +269,63 @@ the ambient probe. Moving to `(0.5,0.5,0.25)` returns 2.5. Several starting hint
 faces, and renderer hints agree with unhinted results after the lighting changes. Complete index
 answers remain in the strict comparison. Open-cell extrapolation and the outer bounds have
 additional controls at `(1,1,1)` and `(2.01,1,1)`: the first returns 4.66666651 through an open
-cell, the second returns ambient. The current diagnostic comparison is 37/68. Its 31 strict
+cell, the second returns ambient. The original 68-row diagnostic subset remains 37/68. Its 31 strict
 failures are 16 query-index answers, four mesh index orders, the retained duplicate position,
 and ten ambient-component values at most 3.725290298461914e-9 off. Every cell count and every
 non-ambient lighting result matches. The ten ambient differences are numeric residuals in these
 controls; the 21 index/position differences remain open, with no tolerance changes.
+
+Q406 adds every starting cell for Main probe 8 and combined probe 22, and both forward and
+reverse bulk-query orders. Every Main hint returns index -1, ambient lighting and occlusion one.
+The bounds are stored as `(min + max) * 0.5` and `(max - min) * 0.5`, then tested through the
+reconstructed minimum and maximum. In Main, this changes minimum y from 0.14000000059604645
+to 0.1400001049041748. Probe 8 falls outside. This is a measured 6000.0.71f1 rounding rule,
+not an epsilon expansion. Independent synthetic layouts repeat that result on each axis and
+check a point 1e-6 inside, 1e-6 outside and an interior point. Managed tests also cover snapshots
+and combinations. The engine keeps finite nearest-probe fallback available for invalid bounds.
+
+Combined probe 22 remains inside the bounds. Different valid starting cells in the Editor can
+return channel 1 as one, zero or a small signed rounding value; one captured walk returns zero
+lighting. Both bulk orders return channel 1 as one in this layout. These observations do not
+establish hint-invariant occlusion. The engine's forward bulk order still returns zero; this
+remaining boundary-cell selection rule is open.
+
+The extended visualization layouts measure duplicate tolerance independently of runtime
+combination. A point 0.049 units from the first point is removed, while distances 0.05 and 0.051
+are retained. In the chain at x=0, 0.04 and 0.08, only the first point survives. Checking against
+all earlier input positions, including a discarded position, explains these measured answers;
+checking only retained positions does not. The runtime builder does not implement this
+visualization preprocessing, and shrinking its public probe arrays is not justified by this
+Editor-only helper. Runtime duplicate coefficients and scene combination remain unmeasured.
+
+The actual Main and combined positions also go through the visualization helper, preserving
+all vertex indices. Main has 45 inner cells. The combined helper has 87 inner cells; the engine
+has 86. An independent empty-circumsphere check identifies the missing cell as vertices
+10, 11, 24 and 25 in the captured combined positions. Its circumsphere contains an artificial
+enclosing vertex used by the current builder. The finite enclosure therefore suppresses a
+valid cell. This rules out a pure index-order explanation for the 120-versus-121 total.
+An arbitrary increase of the enclosure constant is not a general correction. Construction
+with an unbounded hull, tetrahedron and hull-face order, vertex rotation, neighbour order and
+search-start selection remain open. No layout-specific cell insertion or index remapping is used.
+The observed construction uses incremental Delaunay insertion; deterministic randomized point
+ordering alone does not determine final cell order because cell replacement and traversal matter.
+Coplanar, duplicate and thin layouts retain their raw reference answers. These controls do not
+establish general degeneracy parity.
+
+The full extended comparison is 47/298, previously 45/298 on the same source and reference.
+There are 250 differing keys and one missing key, `combined boundary seed 120`, because the
+engine has one fewer cell. Ninety differing keys are ambient-only rounding, at most
+3.725290298461914e-9. The other 160 contain mesh positions, counts, index order or combined
+boundary SH/occlusion differences. `bounds axis 1 sample 3` also differs by
+4.76837158203125e-7 in its coefficient of eight, alongside its index difference. Those raw
+answers and the original tolerances remain unchanged. In particular, the 22 earlier cycle
+controls and the original 68-row subset retain their Q381 results.
+
+`mesh_diagnostics.py REFERENCE CAPTURE --report REPORT` independently enumerates empty
+circumspheres using exact integer arithmetic on the recorded float32 coordinates. It reports
+all missing and extra vertex sets, and any cospherical ties, separately from the strict index
+comparison. Both actual layouts have no such ties. This diagnostic preserves the gap; it is
+not a replacement verdict or an ordering normalization for `compare.py`.
 
 The Extra bake also records the rounding-cycle position
 (5.498985290527344,2.438500165939331,-0.5086919069290161) with affine coefficients and all 22
@@ -321,3 +374,5 @@ Unity 6000.0 contracts checked for this work:
 * [LightProbeProxyVolume](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightProbeProxyVolume.html):
   a spatial grid supplies lighting gradients across large objects. Grid sampling is outside this
   change; it is not established by the single-position renderer controls.
+
+* [Lightmapping.Tetrahedralize](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Lightmapping.Tetrahedralize.html)

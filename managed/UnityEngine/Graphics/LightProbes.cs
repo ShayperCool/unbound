@@ -59,6 +59,13 @@ namespace UnityEngine
                 m_Min = Vector3.Min(m_Min, Positions[i]);
                 m_Max = Vector3.Max(m_Max, Positions[i]);
             }
+            // The stored bounds use a center and half-size. Their single-precision round trip
+            // can put an extremal probe just outside the query bounds (6000.0.71f1 geometry
+            // controls). Use the reconstructed extrema for query bounds.
+            Vector3 center = (m_Min + m_Max) * 0.5f;
+            Vector3 extent = (m_Max - m_Min) * 0.5f;
+            m_Min = center - extent;
+            m_Max = center + extent;
             // Invalid bounds cannot rule out the finite cells or nearest probes still present.
             m_HasBounds = float.IsFinite(m_Min.x) && float.IsFinite(m_Min.y) && float.IsFinite(m_Min.z)
                 && float.IsFinite(m_Max.x) && float.IsFinite(m_Max.y) && float.IsFinite(m_Max.z);

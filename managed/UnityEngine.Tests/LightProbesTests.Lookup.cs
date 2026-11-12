@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Xunit;
@@ -65,6 +66,34 @@ namespace Unbound.Tests
                 Assert.InRange(MathF.Abs(sh[0, 0] + 0.000001f), 0f, 0.0000001f);
                 Assert.True(set.Evaluate(new Vector3(0.5f, 0.5f, 0.000001f), ref hint, out _, out _));
                 Assert.Equal(0, hint);
+            }
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void QueryBoundsRetainCenterAndExtentRounding(int axis)
+        {
+            var positions = new[] { Vector3.zero, new Vector3(2, 0, 0), new Vector3(0, 2, 0), new Vector3(0, 0, 2) };
+            for (int i = 0; i < positions.Length; i++)
+                positions[i][axis] = positions[i][axis] == 0f ? 0.14f : 2.45f;
+            var probes = Baked(positions, _ => 8f);
+            ProbeTetrahedralization.Build(probes.m_Self);
+            foreach (var set in new[] { probes.m_Self, probes.m_Self.Snapshot(), ProbeTetrahedralization.Combine(new List<ProbeSet> { probes.m_Self }) })
+            {
+                int hint = 0;
+                // The raw minimum is inside the point extrema but outside the rounded bounds.
+                Assert.False(set.Evaluate(positions[0], ref hint, out _, out var occ));
+                Assert.Equal(-1, hint);
+                Assert.Equal(Vector4.one, occ);
+                var inside = positions[0];
+                inside[axis] += 0.000001f;
+                Assert.True(set.Evaluate(inside, ref hint, out var sh, out _));
+                Assert.InRange(MathF.Abs(sh[0, 0] - 8f), 0f, 0.000001f);
+                var outside = positions[0];
+                outside[axis] -= 0.000001f;
+                Assert.False(set.Evaluate(outside, ref hint, out _, out _));
             }
         }
 

@@ -31,6 +31,10 @@ public static class ProbeGeometry
         yield return new KeyValuePair<string, Vector3[]>("thin", new[] {
             Vector3.zero, new Vector3(2, 0, 0), new Vector3(0, 0, 2), new Vector3(2, 0.0001f, 2), new Vector3(1, 0.1f, 1) });
         yield return new KeyValuePair<string, Vector3[]>("outside", tetra.Concat(new[] { new Vector3(4, 1, 1), new Vector3(-1, 0.5f, 0.25f) }).ToArray());
+        yield return new KeyValuePair<string, Vector3[]>("duplicate near", tetra.Concat(new[] { new Vector3(0.049f, 0, 0) }).ToArray());
+        yield return new KeyValuePair<string, Vector3[]>("duplicate threshold", tetra.Concat(new[] { new Vector3(0.05f, 0, 0) }).ToArray());
+        yield return new KeyValuePair<string, Vector3[]>("duplicate beyond", tetra.Concat(new[] { new Vector3(0.051f, 0, 0) }).ToArray());
+        yield return new KeyValuePair<string, Vector3[]>("duplicate chain", tetra.Concat(new[] { new Vector3(0.04f, 0, 0), new Vector3(0.08f, 0, 0) }).ToArray());
     }
 
     static void Mesh(Vector3[] points, out int[] indices, out Vector3[] positions)
@@ -85,6 +89,27 @@ public static class ProbeGeometry
         probes.bakedProbes = original;
     }
 
+    static void SetPositions(Vector3[] points, SphericalHarmonicsL2[] coefficients)
+    {
+        if (!IsEngine)
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Main.unity");
+            var probes = LightmapSettings.lightProbes;
+            if (!probes.SetPositionsSelf(points, false)) throw new Exception("positions rejected");
+            LightProbes.Tetrahedralize();
+            probes.bakedProbes = coefficients;
+            return;
+        }
+        var setType = typeof(LightProbes).Assembly.GetType("UnityEngine.ProbeSet", true);
+        const BindingFlags fields = BindingFlags.Instance | BindingFlags.NonPublic;
+        var set = Activator.CreateInstance(setType, true);
+        setType.GetField("Positions", fields).SetValue(set, points);
+        setType.GetField("Probes", fields).SetValue(set, coefficients);
+        typeof(LightProbes).Assembly.GetType("UnityEngine.ProbeTetrahedralization", true)
+            .GetMethod("Build", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new[] { set });
+        typeof(LightProbes).GetField("m_Set", fields).SetValue(LightmapSettings.lightProbes, set);
+    }
+
     static void Faces()
     {
         var points = new List<Vector3> { Vector3.zero, new Vector3(2, 0, 0), new Vector3(0, 2, 0), new Vector3(0, 0, 2) };
@@ -99,25 +124,7 @@ public static class ProbeGeometry
             sh[0, 0] = p.x + 2f * p.y + 4f * p.z;
             return sh;
         }).ToArray();
-        if (!IsEngine)
-        {
-            UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Main.unity");
-            var probes = LightmapSettings.lightProbes;
-            if (!probes.SetPositionsSelf(points.ToArray(), false)) throw new Exception("positions rejected");
-            LightProbes.Tetrahedralize();
-            probes.bakedProbes = coefficients;
-        }
-        else
-        {
-            var setType = typeof(LightProbes).Assembly.GetType("UnityEngine.ProbeSet", true);
-            const BindingFlags fields = BindingFlags.Instance | BindingFlags.NonPublic;
-            var set = Activator.CreateInstance(setType, true);
-            setType.GetField("Positions", fields).SetValue(set, points.ToArray());
-            setType.GetField("Probes", fields).SetValue(set, coefficients);
-            typeof(LightProbes).Assembly.GetType("UnityEngine.ProbeTetrahedralization", true)
-                .GetMethod("Build", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new[] { set });
-            typeof(LightProbes).GetField("m_Set", fields).SetValue(LightmapSettings.lightProbes, set);
-        }
+        SetPositions(points.ToArray(), coefficients);
         var samples = new[] { new Vector3(0.5f, 0.5f, 0), new Vector3(0.5f, 0.5f, 0.000001f),
             new Vector3(0.5f, 0.5f, -0.000001f), new Vector3(0.5f, 0.5f, 0.25f),
             new Vector3(1, 1, 1), new Vector3(2.01f, 1, 1) };
@@ -139,6 +146,69 @@ public static class ProbeGeometry
             Put("renderer " + i, F(hinted[0, 0]) + " " + F(plain[0, 0]));
         }
         UnityEngine.Object.DestroyImmediate(renderer.gameObject);
+    }
+
+    static void RoundedBounds()
+    {
+        for (int axis = 0; axis < 3; axis++)
+        {
+            var points = new Vector3[18];
+            points[0] = Vector3.zero;
+            points[1] = new Vector3(2, 0, 0);
+            points[2] = new Vector3(0, 2, 0);
+            points[3] = new Vector3(0, 0, 2);
+            for (int i = 4; i < points.Length; i++)
+                points[i] = new Vector3(0.25f + (i % 3) * 0.1f, 0.25f + (i % 5) * 0.1f, 0.25f + (i % 7) * 0.05f);
+            for (int i = 0; i < points.Length; i++)
+                points[i][axis] = points[i][axis] == 0f ? 0.14f : points[i][axis] == 2f ? 2.45f : points[i][axis] + 0.14f;
+            var coefficients = points.Select(p =>
+            {
+                SphericalHarmonicsL2 sh = default;
+                sh[0, 0] = 8f;
+                return sh;
+            }).ToArray();
+            SetPositions(points, coefficients);
+            var inside = points[0];
+            inside[axis] += 0.000001f;
+            var outside = points[0];
+            outside[axis] -= 0.000001f;
+            var samples = new[] { points[0], inside, outside, (points[0] + points[1] + points[2] + points[3]) / 4f };
+            using (var query = new LightProbesQuery(Allocator.TempJob))
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    int index = -1;
+                    query.CalculateInterpolatedLightAndOcclusionProbe(samples[i], ref index, out var sh, out _);
+                    Put("bounds axis " + axis + " sample " + i, index + " " + F(sh[0, 0]));
+                }
+        }
+    }
+
+    static void Boundary(string label, int probe)
+    {
+        var probes = LightmapSettings.lightProbes;
+        Mesh(probes.positions, out var indices, out var positions);
+        Put(label + " mesh positions", Positions(positions));
+        Put(label + " mesh indices", string.Join(" ", indices));
+        Put(label + " mesh cells", (indices.Length / 4).ToString(CultureInfo.InvariantCulture));
+        var point = probes.positions[probe];
+        using (var query = new LightProbesQuery(Allocator.TempJob))
+            for (int seed = -1; seed < probes.cellCount; seed++)
+            {
+                int index = seed;
+                query.CalculateInterpolatedLightAndOcclusionProbe(point, ref index, out var sh, out var occ);
+                Put(label + " boundary seed " + seed, index + " " + F(sh[0, 0]) + " " +
+                    F(occ.x) + " " + F(occ.y) + " " + F(occ.z) + " " + F(occ.w));
+            }
+        var forward = probes.positions;
+        var reverse = forward.Reverse().ToArray();
+        foreach (var ordered in new[] { forward, reverse })
+        {
+            var occ = new Vector4[ordered.Length];
+            LightProbes.CalculateInterpolatedLightAndOcclusionProbes(ordered, null, occ);
+            int slot = ordered == forward ? probe : ordered.Length - 1 - probe;
+            Put(label + (ordered == forward ? " forward" : " reverse"),
+                F(occ[slot].x) + " " + F(occ[slot].y) + " " + F(occ[slot].z) + " " + F(occ[slot].w));
+        }
     }
 
     static void Meshes()
@@ -166,7 +236,14 @@ public static class ProbeGeometry
         s_Recording = true;
         Meshes();
         Cycle();
+        UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Main.unity");
+        Boundary("main", 8);
+        UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Extra.unity",
+            UnityEditor.SceneManagement.OpenSceneMode.Additive);
+        LightProbes.Tetrahedralize();
+        Boundary("combined", 22);
         Faces();
+        RoundedBounds();
         Complete();
     }
 
@@ -184,7 +261,15 @@ public static class ProbeGeometry
         yield return null;
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Main")
             throw new Exception("Main scene did not finish loading");
+        Boundary("main", 8);
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Extra", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+        yield return null;
+        LightProbes.Tetrahedralize();
+        Boundary("combined", 22);
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Main");
+        yield return null;
         Faces();
+        RoundedBounds();
         Complete();
     }
 
