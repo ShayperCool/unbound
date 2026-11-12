@@ -230,7 +230,8 @@ namespace Unbound.Runtime
 
         /// <summary>The .meta's names of an importer's objects: <c>fileIDToRecycleName</c>
         /// (<c>fileID: name</c>, the class being <c>fileID / 100000</c>) and
-        /// <c>internalIDToNameTable</c> (<c>- first: {classID: fileID}, second: name</c>).</summary>
+        /// <c>internalIDToNameTable</c> (<c>- first: {classID: fileID}, second: name</c>), read as the
+        /// native importers' table is (FileIdTable in crates/unbound-assets/src/meta.rs).</summary>
         internal static List<(int ClassId, long FileId, string Name)> NameTable(YNode settings)
         {
             List<(int, long, string)> table = null;
@@ -244,9 +245,11 @@ namespace Unbound.Runtime
                 foreach (var entry in named.Items)
                 {
                     var first = entry.Get("first");
-                    if (first == null || first.Kind != YKind.Map || first.Keys.Length != 1) continue;
-                    if (!int.TryParse(first.Keys[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var classId)) continue;
-                    (table ??= new List<(int, long, string)>()).Add((classId, first.Values[0].AsLong(), entry.Get("second")?.AsString() ?? ""));
+                    if (first == null || first.Kind != YKind.Map) continue;
+                    var name = entry.Get("second")?.AsString() ?? "";
+                    for (int i = 0; i < first.Keys.Length; i++)
+                        if (int.TryParse(first.Keys[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var classId))
+                            (table ??= new List<(int, long, string)>()).Add((classId, first.Values[i].AsLong(), name));
                 }
             return table;
         }

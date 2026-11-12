@@ -61,8 +61,8 @@ namespace UnityEngine.Tests
         }
 
         // The .meta's name tables give an added object its file id when the entry names its identifier
-        // and its class (measured with a Shader Graph's shader in the Unity 6000.0.71f1 Editor,
-        // tests/projects/shadergraph); here the same rule for a texture and a script object.
+        // and its class (matches the Unity 6000.0.71f1 Editor with a texture and a script object,
+        // tests/projects/scriptedfileids, and with a Shader Graph's shader, tests/projects/shadergraph).
         [Theory]
         [InlineData("  fileIDToRecycleName:\n    2800000: MainAsset\n", 2800000L, false)]
         [InlineData("  fileIDToRecycleName:\n    11400000: MainAsset\n", 0L, false)]
