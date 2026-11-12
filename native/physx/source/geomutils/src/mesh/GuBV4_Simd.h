@@ -3,7 +3,8 @@
 // The BV4 midphase is written with SSE2 intrinsics and upstream compiles it on Intel CPUs only.
 // GU_BV4_SIMD enables it wherever those intrinsics are available: on Intel natively and on NEON
 // (arm64) through the definitions below. Each definition gives the same bits as the SSE2
-// instruction of the same name, so BV4 queries traverse and answer as they do on Intel.
+// instruction of the same name, so arm64 runs the same BV4 traversal as Intel. The vector math
+// layer BV4 also calls (Ps::aos) has its own NEON implementation and may round differently.
 
 #ifndef GU_BV4_SIMD_H
 #define GU_BV4_SIMD_H

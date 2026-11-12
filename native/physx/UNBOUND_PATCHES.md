@@ -29,7 +29,8 @@ identified separately where relevant.
 | Run the BV4 midphase on NEON | [GuBV4_Simd.h](source/geomutils/src/mesh/GuBV4_Simd.h) (added); the BV4 guards of [GuBV4.h](source/geomutils/src/mesh/GuBV4.h), [GuBV4_Common.h](source/geomutils/src/mesh/GuBV4_Common.h), [GuBV4_Internal.h](source/geomutils/src/mesh/GuBV4_Internal.h), [GuBV4_AABBAABBSweepTest.h](source/geomutils/src/mesh/GuBV4_AABBAABBSweepTest.h), [GuBV4_BoxBoxOverlapTest.h](source/geomutils/src/mesh/GuBV4_BoxBoxOverlapTest.h), [GuMidphaseInterface.h](source/geomutils/src/mesh/GuMidphaseInterface.h), [GuMidphaseBV4.cpp](source/geomutils/src/mesh/GuMidphaseBV4.cpp) and the `GuBV4_*` query sources (`AABBSweep`, `BoxOverlap`, `CapsuleSweep`, `CapsuleSweepAA`, `OBBSweep`, `Raycast`, `SphereOverlap`, `SphereSweep`) | Q249 |
 
 The comparison against `4724b839e749590151e862695e1e31ad94447151` contains only
-the last three patches, in `ScNPhaseCore.cpp` and `ScShapeSim.cpp`. The older
+the trigger/trigger filtering, interaction-creation callback and trigger-role
+patches, in `ScNPhaseCore.cpp` and `ScShapeSim.cpp`. The older
 patches remain part of the current SDK and are included here.
 
 ## Refresh Discrete bodies moved by CCD
@@ -297,7 +298,9 @@ comparison, lane sign bits, round-to-nearest integer conversion and shifts. `GuB
 `GuBV4_Common.h` and `GuMidphaseInterface.h` include it. Every guard
 `PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)` of the BV4 sources becomes `GU_BV4_SIMD`,
 and every plain `PX_INTEL_FAMILY` guard there becomes `PX_INTEL_FAMILY || GU_BV4_SIMD`, so
-the Intel build compiles exactly as before and arm64 compiles the same traversal. Cooking
+the Intel build compiles exactly as before and arm64 compiles the same traversal. The
+vector math layer the BV4 code also calls (`Ps::aos`, for example `V4RecipFast`) keeps its
+own NEON implementation, so results may differ from Intel in the last bits. Cooking
 (`GuBV4Build.cpp`) was never guarded.
 
 Measured requirement: the Unity 6000.0.71f1 macOS arm64 Editor records the same 3203
