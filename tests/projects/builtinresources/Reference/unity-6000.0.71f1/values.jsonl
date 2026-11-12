@@ -1,0 +1,348 @@
+{"k":"R/Internal-ErrorShader.shader/Shader","v":"Shader default 17 'Hidden/InternalErrorShader' shader 'Hidden/InternalErrorShader'"}
+{"k":"R/Internal-Clear.shader/Shader","v":"Shader default 68 'Hidden/InternalClear' shader 'Hidden/InternalClear'"}
+{"k":"R/Internal-Colored.shader/Shader","v":"Shader default 69 'Hidden/Internal-Colored' shader 'Hidden/Internal-Colored'"}
+{"k":"R/Internal-Loading.shader/Shader","v":"Shader default 70 'Hidden/Internal-Loading' shader 'Hidden/Internal-Loading'"}
+{"k":"R/Internal-Skinning.compute/ComputeShader","v":"ComputeShader default 300 'Internal-Skinning'"}
+{"k":"R/Internal-BlendShape.compute/ComputeShader","v":"ComputeShader default 301 'Internal-BlendShape'"}
+{"k":"R/Internal-VT-TranslationTableReplace.compute/ComputeShader","v":"ComputeShader default 400 'Internal-VT-TranslationTableReplace'"}
+{"k":"R/Internal-VT-TranslationTableUpsample.compute/ComputeShader","v":"ComputeShader default 401 'Internal-VT-TranslationTableUpsample'"}
+{"k":"R/Internal-CreateFoveatedShadingRateTextureArray.compute/ComputeShader","v":"ComputeShader default 600 'Internal-CreateFoveatedShadingRateTextureArray'"}
+{"k":"R/Internal-CreateFoveatedShadingRateTextureNoArray.compute/ComputeShader","v":"ComputeShader default 601 'Internal-CreateFoveatedShadingRateTextureNoArray'"}
+{"k":"R/Internal-YFlipFoveatedShadingTexture.compute/ComputeShader","v":"ComputeShader default 602 'Internal-YFlipFoveatedShadingTexture'"}
+{"k":"R/Soft.psd/Texture2D","v":"Texture2D default 10001 'Soft' 128x128 Alpha8 mips 8 wrap Clamp filter Bilinear readable False"}
+{"k":"R/LegacyRuntime.ttf/Material","v":"Material default 10100 'Font Material' shader 'GUI/Text Shader' queue 3000"}
+{"k":"R/Font.shader/Shader","v":"Shader default 10101 'GUI/Text Shader' shader 'GUI/Text Shader'"}
+{"k":"R/LegacyRuntime.ttf/Font","v":"Font default 10102 'LegacyRuntime' size 13 dynamic True"}
+{"k":"R/LegacyRuntime.ttf/Texture2D","v":"Texture2D default 10103 'Font Texture' 256x256 Alpha8 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/Cube.fbx/Mesh","v":"Mesh default 10202 'Cube' vertices 24 submeshes 1 indices 36 bounds 0,0,0 1,1,1 readable True"}
+{"k":"R/New-Cylinder.fbx/Mesh","v":"Mesh default 10206 'Cylinder' vertices 88 submeshes 1 indices 240 bounds 0,0,0 1,2,1 readable True"}
+{"k":"R/New-Sphere.fbx/Mesh","v":"Mesh default 10207 'Sphere' vertices 515 submeshes 1 indices 2304 bounds 0,0,0 1,1,1 readable True"}
+{"k":"R/New-Capsule.fbx/Mesh","v":"Mesh default 10208 'Capsule' vertices 550 submeshes 1 indices 2496 bounds 0,0,0 1,2,1 readable True"}
+{"k":"R/New-Plane.fbx/Mesh","v":"Mesh default 10209 'Plane' vertices 121 submeshes 1 indices 600 bounds 0,0,0 10,0,10 readable True"}
+{"k":"R/Quad.fbx/Mesh","v":"Mesh default 10210 'Quad' vertices 4 submeshes 1 indices 6 bounds 0,0,0 1,1,0 readable True"}
+{"k":"R/icosphere.fbx/Mesh","v":"Mesh default 10211 'Icosphere' vertices 42 submeshes 1 indices 240 bounds 0,0,0 2.0348,2.1395,2.1395 readable False"}
+{"k":"R/icosahedron.fbx/Mesh","v":"Mesh default 10212 'icosahedron' vertices 12 submeshes 1 indices 60 bounds 0,0,0 2.2494,2.1393,2.5149 readable False"}
+{"k":"R/pyramid.fbx/Mesh","v":"Mesh default 10213 'pyramid' vertices 5 submeshes 1 indices 18 bounds 0,0,0.5 2,2,1 readable False"}
+{"k":"R/Sphere.fbx/Mesh","v":"Mesh default 10200 'pSphere1' vertices 439 submeshes 1 indices 2280 bounds 0,0,0 2,2,2 readable True"}
+{"k":"R/Cylinder.fbx/Mesh","v":"Mesh default 10203 'pCylinder1' vertices 124 submeshes 1 indices 240 bounds 0,0,0 2,2,2 readable True"}
+{"k":"R/Plane.fbx/Mesh","v":"Mesh default 10204 'pPlane1' vertices 121 submeshes 1 indices 600 bounds 0,0,0 1,0,1 readable True"}
+{"k":"R/Capsule.fbx/Mesh","v":"Mesh default 10205 'polySurface2' vertices 410 submeshes 1 indices 2010 bounds 0,0,0 2,4,2 readable True"}
+{"k":"R/EscToExit_back.png/Texture2D","v":"Texture2D default 10401 'EscToExit_back' 74x71 RGBA32 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/EscToExit_text.png/Texture2D","v":"Texture2D default 10402 'EscToExit_Text' 267x20 RGBA32 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/UnityWaterMark-trial-big.png/Texture2D","v":"Texture2D default 10406 'UnityWatermark-trial-big' 512x94 RGBA32 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/UnityWaterMark-trial.png/Texture2D","v":"Texture2D default 10407 'UnityWatermark-trial' 76x14 RGBA32 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/UnityWaterMark-edu.png/Texture2D","v":"Texture2D default 10409 'UnityWatermark-edu' 148x17 RGBA32 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/UnityWaterMark-dev.png/Texture2D","v":"Texture2D default 10410 'UnityWatermark-dev' 115x17 RGBA32 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/WarningSign.psd/Texture2D","v":"Texture2D default 10411 'WarningSign' 64x64 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/UnityWaterMark-proto.png/Texture2D","v":"Texture2D default 10413 'UnityWatermark-proto' 87x13 RGBA32 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/PerformanceTools/FrameDebuggerRenderTargetDisplay.shader/Shader","v":"Shader default 10755 'Hidden/FrameDebuggerRenderTargetDisplay' shader 'Hidden/FrameDebuggerRenderTargetDisplay'"}
+{"k":"R/PerformanceTools/FrameDebuggerRenderTargetDisplay.mat/Material","v":"Material default 10756 'FrameDebuggerRenderTargetDisplay' shader 'Hidden/FrameDebuggerRenderTargetDisplay' queue 2000"}
+{"k":"R/GameSkin/GameSkin.guiskin/GUISkin","v":"GUISkin default 11000 'GameSkin'"}
+{"k":"R/GameSkin/box.png/Texture2D","v":"Texture2D default 11001 'box' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/button active.png/Texture2D","v":"Texture2D default 11002 'button active' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/button hover.png/Texture2D","v":"Texture2D default 11003 'button hover' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/button on hover.png/Texture2D","v":"Texture2D default 11004 'button on hover' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/button on.png/Texture2D","v":"Texture2D default 11005 'button on' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/button.png/Texture2D","v":"Texture2D default 11006 'button' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/horizontal scrollbar thumb.png/Texture2D","v":"Texture2D default 11007 'horizontal scrollbar thumb' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/horizontal scrollbar.png/Texture2D","v":"Texture2D default 11008 'horizontal scrollbar' 18x15 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/horizontalslider.png/Texture2D","v":"Texture2D default 11009 'horizontalslider' 8x7 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/slider thumb active.png/Texture2D","v":"Texture2D default 11010 'slider thumb active' 8x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/slider thumb.png/Texture2D","v":"Texture2D default 11011 'slider thumb' 8x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/slidert humb hover.png/Texture2D","v":"Texture2D default 11012 'slidert humb hover' 8x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/toggle active.png/Texture2D","v":"Texture2D default 11013 'toggle active' 14x14 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/toggle hover.png/Texture2D","v":"Texture2D default 11014 'toggle hover' 14x14 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/toggle on hover.png/Texture2D","v":"Texture2D default 11015 'toggle on hover' 14x14 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/toggle on.png/Texture2D","v":"Texture2D default 11016 'toggle on' 14x14 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/toggle on active.png/Texture2D","v":"Texture2D default 11017 'toggle on active' 14x14 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/toggle.png/Texture2D","v":"Texture2D default 11018 'toggle' 14x14 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/vertical scrollbar thumb.png/Texture2D","v":"Texture2D default 11019 'vertical scrollbar thumb' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/vertical scrollbar.png/Texture2D","v":"Texture2D default 11020 'vertical scrollbar' 15x18 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/verticalslider.png/Texture2D","v":"Texture2D default 11021 'verticalslider' 7x8 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/window on.png/Texture2D","v":"Texture2D default 11022 'window on' 17x27 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/window.png/Texture2D","v":"Texture2D default 11023 'window' 17x27 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/textfield.png/Texture2D","v":"Texture2D default 11024 'textfield' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/textfield on.png/Texture2D","v":"Texture2D default 11025 'textfield on' 12x12 RGBA32 mips 1 wrap Clamp filter Bilinear readable False"}
+{"k":"R/GameSkin/textfield hover.png/Texture2D","v":"Texture2D default 11026 'textfield hover' 12x12 RGBA32 mips 1 wrap Repeat filter Bilinear readable False"}
+{"k":"R/TemplateAsset/MonoScript","v":"MonoScript default 11993 'TemplateAsset' length 0"}
+{"k":"R/VisualTreeAsset/MonoScript","v":"MonoScript default 11995 'VisualTreeAsset' length 0"}
+{"k":"R/StyleSheet/MonoScript","v":"MonoScript default 11998 'StyleSheet' length 0"}
+{"k":"R/ThemeStyleSheet/MonoScript","v":"MonoScript default 19202 'ThemeStyleSheet' length 0"}
+{"k":"R/GUISkin/MonoScript","v":"MonoScript default 12001 'GUISkin' length 0"}
+{"k":"R/VR/UnitySplash-HolographicTrackingLoss.png/Texture2D","v":"null | Error: The resource VR/UnitySplash-HolographicTrackingLoss.png could not be loaded from the resource file!"}
+{"k":"R/Tile/MonoScript","v":"MonoScript default 13312 'Tile' length 0"}
+{"k":"R/TileBase/MonoScript","v":"MonoScript default 13313 'TileBase' length 0"}
+{"k":"R/TextSettings/MonoScript","v":"MonoScript default 19000 'TextSettings' length 0"}
+{"k":"R/FontAsset/MonoScript","v":"MonoScript default 19001 'FontAsset' length 0"}
+{"k":"R/SpriteAsset/MonoScript","v":"MonoScript default 19002 'SpriteAsset' length 0"}
+{"k":"R/TextColorGradient/MonoScript","v":"MonoScript default 19003 'TextColorGradient' length 0"}
+{"k":"R/TextStyleSheet/MonoScript","v":"MonoScript default 19004 'TextStyleSheet' length 0"}
+{"k":"R/VectorImage/MonoScript","v":"MonoScript default 19100 'VectorImage' length 0"}
+{"k":"R/PanelSettings/MonoScript","v":"MonoScript default 19101 'PanelSettings' length 0"}
+{"k":"R/UIDocument/MonoScript","v":"MonoScript default 19102 'UIDocument' length 0"}
+{"k":"R/PanelTextSettings/MonoScript","v":"MonoScript default 19103 'PanelTextSettings' length 0"}
+{"k":"R/UIRenderer/MonoScript","v":"MonoScript default 19104 'UIRenderer' length 0"}
+{"k":"R/InputSystemEventSystem/MonoScript","v":"MonoScript default 19105 'InputSystemEventSystem' length 0"}
+{"k":"E/Internal-StencilWrite.shader/Shader","v":"Shader extra 19 'Hidden/Internal-StencilWrite' shader 'Hidden/Internal-StencilWrite'"}
+{"k":"E/Internal-CombineDepthNormals.shader/Shader","v":"Shader extra 65 'Hidden/Internal-CombineDepthNormals' shader 'Hidden/Internal-CombineDepthNormals'"}
+{"k":"E/Internal-BlitCopy.shader/Shader","v":"Shader extra 66 'Hidden/BlitCopy' shader 'Hidden/BlitCopy'"}
+{"k":"E/Internal-BlitCopyDepth.shader/Shader","v":"Shader extra 67 'Hidden/BlitCopyDepth' shader 'Hidden/BlitCopyDepth'"}
+{"k":"E/Internal-BlitCopyWithDepth.shader/Shader","v":"Shader extra 107 'Hidden/BlitCopyWithDepth' shader 'Hidden/BlitCopyWithDepth'"}
+{"k":"E/Internal-ConvertTexture.shader/Shader","v":"Shader extra 68 'Hidden/ConvertTexture' shader 'Hidden/ConvertTexture'"}
+{"k":"E/Internal-BlitToDepth.shader/Shader","v":"Shader extra 109 'Hidden/BlitToDepth' shader 'Hidden/BlitToDepth'"}
+{"k":"E/Internal-BlitToDepth_MSAA.shader/Shader","v":"Shader extra 110 'Hidden/BlitToDepth_MSAA' shader 'Hidden/BlitToDepth_MSAA'"}
+{"k":"E/Internal-BlitCopyHDRTonemap.shader/Shader","v":"Shader extra 111 'Hidden/BlitCopyHDRTonemap' shader 'Hidden/BlitCopyHDRTonemap'"}
+{"k":"E/Internal-BlitCopyHDRTonemappedToHDRTonemap.shader/Shader","v":"Shader extra 112 'Hidden/BlitCopyHDRTonemappedToHDRTonemap' shader 'Hidden/BlitCopyHDRTonemappedToHDRTonemap'"}
+{"k":"E/Internal-BlitCopyHDRTonemappedToSDR.shader/Shader","v":"Shader extra 114 'Hidden/BlitCopyHDRTonemappedToSDR' shader 'Hidden/BlitCopyHDRTonemappedToSDR'"}
+{"k":"E/StandardSpecular.shader/Shader","v":"Shader extra 45 'Standard (Specular setup)' shader 'Standard (Specular setup)'"}
+{"k":"E/Standard.shader/Shader","v":"Shader extra 46 'Standard' shader 'Standard'"}
+{"k":"E/AutodeskInteractive.shader/Shader","v":"Shader extra 47 'Autodesk Interactive' shader 'Autodesk Interactive'"}
+{"k":"E/Internal-ScreenSpaceShadows.shader/Shader","v":"Shader extra 64 'Hidden/Internal-ScreenSpaceShadows' shader 'Hidden/Internal-ScreenSpaceShadows'"}
+{"k":"E/Internal-DepthNormalsTexture.shader/Shader","v":"Shader extra 62 'Hidden/Internal-DepthNormalsTexture' shader 'Hidden/Internal-DepthNormalsTexture'"}
+{"k":"E/Internal-DeferredReflections.shader/Shader","v":"Shader extra 74 'Hidden/Internal-DeferredReflections' shader 'Hidden/Internal-DeferredReflections'"}
+{"k":"E/Internal-DeferredShading.shader/Shader","v":"Shader extra 69 'Hidden/Internal-DeferredShading' shader 'Hidden/Internal-DeferredShading'"}
+{"k":"E/Internal-MotionVectors.shader/Shader","v":"Shader extra 75 'Hidden/Internal-MotionVectors' shader 'Hidden/Internal-MotionVectors'"}
+{"k":"E/Normal-VertexLit.shader/Shader","v":"Shader extra 6 'Legacy Shaders/VertexLit' shader 'Legacy Shaders/VertexLit'"}
+{"k":"E/Normal-DiffuseFast.shader/Shader","v":"Shader extra 1 'Legacy Shaders/Diffuse Fast' shader 'Legacy Shaders/Diffuse Fast'"}
+{"k":"E/Normal-Diffuse.shader/Shader","v":"Shader extra 7 'Legacy Shaders/Diffuse' shader 'Legacy Shaders/Diffuse'"}
+{"k":"E/Normal-Bumped.shader/Shader","v":"Shader extra 2 'Legacy Shaders/Bumped Diffuse' shader 'Legacy Shaders/Bumped Diffuse'"}
+{"k":"E/Normal-Glossy.shader/Shader","v":"Shader extra 3 'Legacy Shaders/Specular' shader 'Legacy Shaders/Specular'"}
+{"k":"E/Normal-BumpSpec.shader/Shader","v":"Shader extra 4 'Legacy Shaders/Bumped Specular' shader 'Legacy Shaders/Bumped Specular'"}
+{"k":"E/Normal-DiffuseDetail.shader/Shader","v":"Shader extra 5 'Legacy Shaders/Diffuse Detail' shader 'Legacy Shaders/Diffuse Detail'"}
+{"k":"E/Illumin-VertexLit.shader/Shader","v":"Shader extra 14 'Legacy Shaders/Self-Illumin/VertexLit' shader 'Legacy Shaders/Self-Illumin/VertexLit'"}
+{"k":"E/Illumin-Diffuse.shader/Shader","v":"Shader extra 10 'Legacy Shaders/Self-Illumin/Diffuse' shader 'Legacy Shaders/Self-Illumin/Diffuse'"}
+{"k":"E/Illumin-Bumped.shader/Shader","v":"Shader extra 11 'Legacy Shaders/Self-Illumin/Bumped Diffuse' shader 'Legacy Shaders/Self-Illumin/Bumped Diffuse'"}
+{"k":"E/Illumin-Glossy.shader/Shader","v":"Shader extra 12 'Legacy Shaders/Self-Illumin/Specular' shader 'Legacy Shaders/Self-Illumin/Specular'"}
+{"k":"E/Illumin-BumpSpec.shader/Shader","v":"Shader extra 13 'Legacy Shaders/Self-Illumin/Bumped Specular' shader 'Legacy Shaders/Self-Illumin/Bumped Specular'"}
+{"k":"E/Reflect-VertexLit.shader/Shader","v":"Shader extra 24 'Legacy Shaders/Reflective/VertexLit' shader 'Legacy Shaders/Reflective/VertexLit'"}
+{"k":"E/Reflect-BumpNolight.shader/Shader","v":"Shader extra 25 'Legacy Shaders/Reflective/Bumped Unlit' shader 'Legacy Shaders/Reflective/Bumped Unlit'"}
+{"k":"E/Reflect-Diffuse.shader/Shader","v":"Shader extra 20 'Legacy Shaders/Reflective/Diffuse' shader 'Legacy Shaders/Reflective/Diffuse'"}
+{"k":"E/Reflect-Bumped.shader/Shader","v":"Shader extra 21 'Legacy Shaders/Reflective/Bumped Diffuse' shader 'Legacy Shaders/Reflective/Bumped Diffuse'"}
+{"k":"E/Reflect-BumpVertexLit.shader/Shader","v":"Shader extra 26 'Legacy Shaders/Reflective/Bumped VertexLit' shader 'Legacy Shaders/Reflective/Bumped VertexLit'"}
+{"k":"E/Reflect-Glossy.shader/Shader","v":"Shader extra 22 'Legacy Shaders/Reflective/Specular' shader 'Legacy Shaders/Reflective/Specular'"}
+{"k":"E/Reflect-BumpSpec.shader/Shader","v":"Shader extra 23 'Legacy Shaders/Reflective/Bumped Specular' shader 'Legacy Shaders/Reflective/Bumped Specular'"}
+{"k":"E/Alpha-VertexLit.shader/Shader","v":"Shader extra 34 'Legacy Shaders/Transparent/VertexLit' shader 'Legacy Shaders/Transparent/VertexLit'"}
+{"k":"E/Alpha-Diffuse.shader/Shader","v":"Shader extra 30 'Legacy Shaders/Transparent/Diffuse' shader 'Legacy Shaders/Transparent/Diffuse'"}
+{"k":"E/Alpha-Bumped.shader/Shader","v":"Shader extra 31 'Legacy Shaders/Transparent/Bumped Diffuse' shader 'Legacy Shaders/Transparent/Bumped Diffuse'"}
+{"k":"E/Alpha-Glossy.shader/Shader","v":"Shader extra 32 'Legacy Shaders/Transparent/Specular' shader 'Legacy Shaders/Transparent/Specular'"}
+{"k":"E/Alpha-BumpSpec.shader/Shader","v":"Shader extra 33 'Legacy Shaders/Transparent/Bumped Specular' shader 'Legacy Shaders/Transparent/Bumped Specular'"}
+{"k":"E/AlphaTest-VertexLit.shader/Shader","v":"Shader extra 50 'Legacy Shaders/Transparent/Cutout/VertexLit' shader 'Legacy Shaders/Transparent/Cutout/VertexLit'"}
+{"k":"E/AlphaTest-Diffuse.shader/Shader","v":"Shader extra 51 'Legacy Shaders/Transparent/Cutout/Diffuse' shader 'Legacy Shaders/Transparent/Cutout/Diffuse'"}
+{"k":"E/AlphaTest-Bumped.shader/Shader","v":"Shader extra 52 'Legacy Shaders/Transparent/Cutout/Bumped Diffuse' shader 'Legacy Shaders/Transparent/Cutout/Bumped Diffuse'"}
+{"k":"E/AlphaTest-Glossy.shader/Shader","v":"Shader extra 53 'Legacy Shaders/Transparent/Cutout/Specular' shader 'Legacy Shaders/Transparent/Cutout/Specular'"}
+{"k":"E/AlphaTest-BumpSpec.shader/Shader","v":"Shader extra 54 'Legacy Shaders/Transparent/Cutout/Bumped Specular' shader 'Legacy Shaders/Transparent/Cutout/Bumped Specular'"}
+{"k":"E/Normal-Parallax.shader/Shader","v":"Shader extra 8 'Legacy Shaders/Parallax Diffuse' shader 'Legacy Shaders/Parallax Diffuse'"}
+{"k":"E/Normal-ParallaxSpec.shader/Shader","v":"Shader extra 9 'Legacy Shaders/Parallax Specular' shader 'Legacy Shaders/Parallax Specular'"}
+{"k":"E/Illumin-Parallax.shader/Shader","v":"Shader extra 15 'Legacy Shaders/Self-Illumin/Parallax Diffuse' shader 'Legacy Shaders/Self-Illumin/Parallax Diffuse'"}
+{"k":"E/Illumin-ParallaxSpec.shader/Shader","v":"Shader extra 16 'Legacy Shaders/Self-Illumin/Parallax Specular' shader 'Legacy Shaders/Self-Illumin/Parallax Specular'"}
+{"k":"E/Reflect-Parallax.shader/Shader","v":"Shader extra 27 'Legacy Shaders/Reflective/Parallax Diffuse' shader 'Legacy Shaders/Reflective/Parallax Diffuse'"}
+{"k":"E/Reflect-ParallaxSpec.shader/Shader","v":"Shader extra 28 'Legacy Shaders/Reflective/Parallax Specular' shader 'Legacy Shaders/Reflective/Parallax Specular'"}
+{"k":"E/Alpha-Parallax.shader/Shader","v":"Shader extra 35 'Legacy Shaders/Transparent/Parallax Diffuse' shader 'Legacy Shaders/Transparent/Parallax Diffuse'"}
+{"k":"E/Alpha-ParallaxSpec.shader/Shader","v":"Shader extra 36 'Legacy Shaders/Transparent/Parallax Specular' shader 'Legacy Shaders/Transparent/Parallax Specular'"}
+{"k":"E/AlphaTest-SoftEdgeUnlit.shader/Shader","v":"Shader extra 10512 'Legacy Shaders/Transparent/Cutout/Soft Edge Unlit' shader 'Legacy Shaders/Transparent/Cutout/Soft Edge Unlit'"}
+{"k":"E/Decal.shader/Shader","v":"Shader extra 100 'Legacy Shaders/Decal' shader 'Legacy Shaders/Decal'"}
+{"k":"E/Internal-Flare.shader/Shader","v":"Shader extra 102 'Hidden/Internal-Flare' shader 'Hidden/Internal-Flare'"}
+{"k":"E/Flare.shader/Shader","v":"Shader extra 101 'FX/Flare' shader 'FX/Flare'"}
+{"k":"E/Skybox-Cubed.shader/Shader","v":"Shader extra 103 'Skybox/Cubemap' shader 'Skybox/Cubemap'"}
+{"k":"E/Skybox.shader/Shader","v":"Shader extra 104 'Skybox/6 Sided' shader 'Skybox/6 Sided'"}
+{"k":"E/Internal-Halo.shader/Shader","v":"Shader extra 105 'Hidden/Internal-Halo' shader 'Hidden/Internal-Halo'"}
+{"k":"E/Skybox-Procedural.shader/Shader","v":"Shader extra 106 'Skybox/Procedural' shader 'Skybox/Procedural'"}
+{"k":"E/Skybox-Panoramic.shader/Shader","v":"Shader extra 108 'Skybox/Panoramic' shader 'Skybox/Panoramic'"}
+{"k":"E/Internal-DebugPattern.shader/Shader","v":"Shader extra 113 'Hidden/Internal-DebugPattern' shader 'Hidden/Internal-DebugPattern'"}
+{"k":"E/Particle Add.shader/Shader","v":"Shader extra 200 'Legacy Shaders/Particles/Additive' shader 'Legacy Shaders/Particles/Additive'"}
+{"k":"E/Particle AddMultiply.shader/Shader","v":"Shader extra 201 'Legacy Shaders/Particles/~Additive-Multiply' shader 'Legacy Shaders/Particles/~Additive-Multiply'"}
+{"k":"E/Particle AddSmooth.shader/Shader","v":"Shader extra 202 'Legacy Shaders/Particles/Additive (Soft)' shader 'Legacy Shaders/Particles/Additive (Soft)'"}
+{"k":"E/Particle Alpha Blend.shader/Shader","v":"Shader extra 203 'Legacy Shaders/Particles/Alpha Blended' shader 'Legacy Shaders/Particles/Alpha Blended'"}
+{"k":"E/Particle Multiply.shader/Shader","v":"Shader extra 205 'Legacy Shaders/Particles/Multiply' shader 'Legacy Shaders/Particles/Multiply'"}
+{"k":"E/Particle MultiplyDouble.shader/Shader","v":"Shader extra 206 'Legacy Shaders/Particles/Multiply (Double)' shader 'Legacy Shaders/Particles/Multiply (Double)'"}
+{"k":"E/Particle Premultiply Blend.shader/Shader","v":"Shader extra 207 'Legacy Shaders/Particles/Alpha Blended Premultiply' shader 'Legacy Shaders/Particles/Alpha Blended Premultiply'"}
+{"k":"E/Particle VertexLit Blended.shader/Shader","v":"Shader extra 208 'Legacy Shaders/Particles/VertexLit Blended' shader 'Legacy Shaders/Particles/VertexLit Blended'"}
+{"k":"E/Particle Anim Alpha Blend.shader/Shader","v":"Shader extra 209 'Legacy Shaders/Particles/Anim Alpha Blended' shader 'Legacy Shaders/Particles/Anim Alpha Blended'"}
+{"k":"E/Particle Standard Surface.shader/Shader","v":"Shader extra 210 'Particles/Standard Surface' shader 'Particles/Standard Surface'"}
+{"k":"E/Particle Standard Unlit.shader/Shader","v":"Shader extra 211 'Particles/Standard Unlit' shader 'Particles/Standard Unlit'"}
+{"k":"E/Sprites-Diffuse.shader/Shader","v":"Shader extra 10800 'Sprites/Diffuse' shader 'Sprites/Diffuse'"}
+{"k":"E/TerrainShaders/Splats/Terrain-Utilities.shader/Shader","v":"Shader extra 10490 'Hidden/Nature/Terrain/Utilities' shader 'Hidden/Nature/Terrain/Utilities'"}
+{"k":"E/TerrainShaders/Details/VertexLit.shader/Shader","v":"Shader extra 10500 'Hidden/TerrainEngine/Details/Vertexlit' shader 'Hidden/TerrainEngine/Details/Vertexlit'"}
+{"k":"E/TerrainShaders/Details/WavingGrass.shader/Shader","v":"Shader extra 10501 'Hidden/TerrainEngine/Details/WavingDoublePass' shader 'Hidden/TerrainEngine/Details/WavingDoublePass'"}
+{"k":"E/TerrainShaders/Details/WavingGrassBillboard.shader/Shader","v":"Shader extra 10502 'Hidden/TerrainEngine/Details/BillboardWavingDoublePass' shader 'Hidden/TerrainEngine/Details/BillboardWavingDoublePass'"}
+{"k":"E/TerrainShaders/Trees/BillboardTree.shader/Shader","v":"Shader extra 10507 'Hidden/TerrainEngine/BillboardTree' shader 'Hidden/TerrainEngine/BillboardTree'"}
+{"k":"E/TerrainShaders/Trees/CameraFacingBillboardTree.shader/Shader","v":"Shader extra 10513 'Hidden/TerrainEngine/CameraFacingBillboardTree' shader 'Hidden/TerrainEngine/CameraFacingBillboardTree'"}
+{"k":"E/TerrainShaders/Splats/DiffuseBase.shader/Shader","v":"Shader extra 10504 'Hidden/TerrainEngine/Splatmap/Diffuse-Base' shader 'Hidden/TerrainEngine/Splatmap/Diffuse-Base'"}
+{"k":"E/TerrainShaders/Splats/DiffuseBaseGen.shader/Shader","v":"Shader extra 10506 'Hidden/TerrainEngine/Splatmap/Diffuse-BaseGen' shader 'Hidden/TerrainEngine/Splatmap/Diffuse-BaseGen'"}
+{"k":"E/TerrainShaders/Splats/AddPass.shader/Shader","v":"Shader extra 10503 'Hidden/TerrainEngine/Splatmap/Diffuse-AddPass' shader 'Hidden/TerrainEngine/Splatmap/Diffuse-AddPass'"}
+{"k":"E/TerrainShaders/Splats/FirstPass.shader/Shader","v":"Shader extra 10505 'Nature/Terrain/Diffuse' shader 'Nature/Terrain/Diffuse'"}
+{"k":"E/Lightmap-VertexLit.shader/Shader","v":"Shader extra 40 'Legacy Shaders/Lightmapped/VertexLit' shader 'Legacy Shaders/Lightmapped/VertexLit'"}
+{"k":"E/Lightmap-Diffuse.shader/Shader","v":"Shader extra 41 'Legacy Shaders/Lightmapped/Diffuse' shader 'Legacy Shaders/Lightmapped/Diffuse'"}
+{"k":"E/Lightmap-Bumped.shader/Shader","v":"Shader extra 42 'Legacy Shaders/Lightmapped/Bumped Diffuse' shader 'Legacy Shaders/Lightmapped/Bumped Diffuse'"}
+{"k":"E/Lightmap-Glossy.shader/Shader","v":"Shader extra 43 'Legacy Shaders/Lightmapped/Specular' shader 'Legacy Shaders/Lightmapped/Specular'"}
+{"k":"E/Lightmap-BumpSpec.shader/Shader","v":"Shader extra 44 'Legacy Shaders/Lightmapped/Bumped Specular' shader 'Legacy Shaders/Lightmapped/Bumped Specular'"}
+{"k":"E/Internal-GUITextureClip.shader/Shader","v":"Shader extra 9000 'Hidden/Internal-GUITextureClip' shader 'Hidden/Internal-GUITextureClip'"}
+{"k":"E/Internal-GUITextureClipText.shader/Shader","v":"Shader extra 9001 'Hidden/Internal-GUITextureClipText' shader 'Hidden/Internal-GUITextureClipText'"}
+{"k":"E/Internal-GUITexture.shader/Shader","v":"Shader extra 9002 'Hidden/Internal-GUITexture' shader 'Hidden/Internal-GUITexture'"}
+{"k":"E/Internal-GUITextureBlit.shader/Shader","v":"Shader extra 9003 'Hidden/Internal-GUITextureBlit' shader 'Hidden/Internal-GUITextureBlit'"}
+{"k":"E/Internal-GUIRoundedRect.shader/Shader","v":"Shader extra 9004 'Hidden/Internal-GUIRoundedRect' shader 'Hidden/Internal-GUIRoundedRect'"}
+{"k":"E/Internal-GUIRoundedRectWithColorPerBorder.shader/Shader","v":"Shader extra 9007 'Hidden/Internal-GUIRoundedRectWithColorPerBorder' shader 'Hidden/Internal-GUIRoundedRectWithColorPerBorder'"}
+{"k":"E/Internal/UIElements/Internal-UIRDefault.shader/Shader","v":"Shader extra 9100 'Hidden/Internal-UIRDefault' shader 'Hidden/Internal-UIRDefault'"}
+{"k":"E/Internal/UIElements/Internal-UIRAtlasBlitCopy.shader/Shader","v":"Shader extra 9101 'Hidden/Internal-UIRAtlasBlitCopy' shader 'Hidden/Internal-UIRAtlasBlitCopy'"}
+{"k":"E/Internal/UIElements/Internal-UIRDefaultWorld.shader/Shader","v":"Shader extra 9102 'Hidden/Internal-UIRDefaultWorld' shader 'Hidden/Internal-UIRDefaultWorld'"}
+{"k":"E/Internal/UIElements/EditorUIE.shader/Shader","v":"Shader extra 9103 'Hidden/UIElements/EditorUIE' shader 'Hidden/UIElements/EditorUIE'"}
+{"k":"E/Internal/UIElements/Internal-UIE-ColorConversionBlit.shader/Shader","v":"Shader extra 9105 'Hidden/Internal-UIE-ColorConversionBlit' shader 'Hidden/Internal-UIE-ColorConversionBlit'"}
+{"k":"E/Nature/SoftOcclusion/TreeSoftOcclusionBarkRendertex.shader/Shader","v":"Shader extra 10508 'Hidden/Nature/Tree Soft Occlusion Bark Rendertex' shader 'Hidden/Nature/Tree Soft Occlusion Bark Rendertex'"}
+{"k":"E/Nature/SoftOcclusion/TreeSoftOcclusionBark.shader/Shader","v":"Shader extra 10509 'Nature/Tree Soft Occlusion Bark' shader 'Nature/Tree Soft Occlusion Bark'"}
+{"k":"E/Nature/SoftOcclusion/TreeSoftOcclusionLeavesRendertex.shader/Shader","v":"Shader extra 10510 'Hidden/Nature/Tree Soft Occlusion Leaves Rendertex' shader 'Hidden/Nature/Tree Soft Occlusion Leaves Rendertex'"}
+{"k":"E/Nature/SoftOcclusion/TreeSoftOcclusionLeaves.shader/Shader","v":"Shader extra 10511 'Nature/Tree Soft Occlusion Leaves' shader 'Nature/Tree Soft Occlusion Leaves'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorBark.shader/Shader","v":"Shader extra 10600 'Nature/Tree Creator Bark' shader 'Nature/Tree Creator Bark'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorLeaves.shader/Shader","v":"Shader extra 10601 'Nature/Tree Creator Leaves' shader 'Nature/Tree Creator Leaves'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorBarkRendertex.shader/Shader","v":"Shader extra 10602 'Hidden/Nature/Tree Creator Bark Rendertex' shader 'Hidden/Nature/Tree Creator Bark Rendertex'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorLeavesRendertex.shader/Shader","v":"Shader extra 10603 'Hidden/Nature/Tree Creator Leaves Rendertex' shader 'Hidden/Nature/Tree Creator Leaves Rendertex'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorBarkOptimized.shader/Shader","v":"Shader extra 10604 'Hidden/Nature/Tree Creator Bark Optimized' shader 'Hidden/Nature/Tree Creator Bark Optimized'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorLeavesOptimized.shader/Shader","v":"Shader extra 10605 'Hidden/Nature/Tree Creator Leaves Optimized' shader 'Hidden/Nature/Tree Creator Leaves Optimized'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorLeavesFast.shader/Shader","v":"Shader extra 10606 'Nature/Tree Creator Leaves Fast' shader 'Nature/Tree Creator Leaves Fast'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorLeavesFastOptimized.shader/Shader","v":"Shader extra 10607 'Hidden/Nature/Tree Creator Leaves Fast Optimized' shader 'Hidden/Nature/Tree Creator Leaves Fast Optimized'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorAlbedoRenderTex.shader/Shader","v":"Shader extra 10608 'Hidden/Nature/Tree Creator Albedo Rendertex' shader 'Hidden/Nature/Tree Creator Albedo Rendertex'"}
+{"k":"E/Nature/TreeCreator/TreeCreatorNormalRendertex.shader/Shader","v":"Shader extra 10609 'Hidden/Nature/Tree Creator Normal Rendertex' shader 'Hidden/Nature/Tree Creator Normal Rendertex'"}
+{"k":"E/TerrainShaders/Splats/Specular-AddPass.shader/Shader","v":"Shader extra 10621 'Hidden/TerrainEngine/Splatmap/Specular-AddPass' shader 'Hidden/TerrainEngine/Splatmap/Specular-AddPass'"}
+{"k":"E/TerrainShaders/Splats/Specular-Base.shader/Shader","v":"Shader extra 10622 'Hidden/TerrainEngine/Splatmap/Specular-Base' shader 'Hidden/TerrainEngine/Splatmap/Specular-Base'"}
+{"k":"E/TerrainShaders/Splats/Specular-FirstPass.shader/Shader","v":"Shader extra 10620 'Nature/Terrain/Specular' shader 'Nature/Terrain/Specular'"}
+{"k":"E/TerrainShaders/Splats/Standard-AddPass.shader/Shader","v":"Shader extra 10624 'Hidden/TerrainEngine/Splatmap/Standard-AddPass' shader 'Hidden/TerrainEngine/Splatmap/Standard-AddPass'"}
+{"k":"E/TerrainShaders/Splats/Standard-Base.shader/Shader","v":"Shader extra 10625 'Hidden/TerrainEngine/Splatmap/Standard-Base' shader 'Hidden/TerrainEngine/Splatmap/Standard-Base'"}
+{"k":"E/TerrainShaders/Splats/Standard-BaseGen.shader/Shader","v":"Shader extra 10626 'Hidden/TerrainEngine/Splatmap/Standard-BaseGen' shader 'Hidden/TerrainEngine/Splatmap/Standard-BaseGen'"}
+{"k":"E/TerrainShaders/Splats/Standard-FirstPass.shader/Shader","v":"Shader extra 10623 'Nature/Terrain/Standard' shader 'Nature/Terrain/Standard'"}
+{"k":"E/Default-Terrain-Diffuse.mat/Material","v":"Material extra 10650 'Default-Terrain-Diffuse' shader 'Nature/Terrain/Diffuse' queue 1901"}
+{"k":"E/Default-Terrain-Specular.mat/Material","v":"Material extra 10651 'Default-Terrain-Specular' shader 'Nature/Terrain/Specular' queue 1900"}
+{"k":"E/Default-Terrain-Standard.mat/Material","v":"Material extra 10652 'Default-Terrain-Standard' shader 'Nature/Terrain/Standard' queue 1900"}
+{"k":"E/Mobile/Mobile-Skybox.shader/Shader","v":"Shader extra 10700 'Mobile/Skybox' shader 'Mobile/Skybox'"}
+{"k":"E/Mobile/Mobile-VertexLit.shader/Shader","v":"Shader extra 10701 'Mobile/VertexLit' shader 'Mobile/VertexLit'"}
+{"k":"E/Mobile/Mobile-Diffuse.shader/Shader","v":"Shader extra 10703 'Mobile/Diffuse' shader 'Mobile/Diffuse'"}
+{"k":"E/Mobile/Mobile-Bumped.shader/Shader","v":"Shader extra 10704 'Mobile/Bumped Diffuse' shader 'Mobile/Bumped Diffuse'"}
+{"k":"E/Mobile/Mobile-BumpSpec.shader/Shader","v":"Shader extra 10705 'Mobile/Bumped Specular' shader 'Mobile/Bumped Specular'"}
+{"k":"E/Mobile/Mobile-BumpSpec-1DirectionalLight.shader/Shader","v":"Shader extra 10706 'Mobile/Bumped Specular (1 Directional Realtime Light)' shader 'Mobile/Bumped Specular (1 Directional Realtime Light)'"}
+{"k":"E/Mobile/Mobile-VertexLit-OnlyDirectionalLights.shader/Shader","v":"Shader extra 10707 'Mobile/VertexLit (Only Directional Lights)' shader 'Mobile/VertexLit (Only Directional Lights)'"}
+{"k":"E/Mobile/Mobile-Lightmap-Unlit.shader/Shader","v":"Shader extra 10708 'Mobile/Unlit (Supports Lightmap)' shader 'Mobile/Unlit (Supports Lightmap)'"}
+{"k":"E/Mobile/Mobile-Particle-Add.shader/Shader","v":"Shader extra 10720 'Mobile/Particles/Additive' shader 'Mobile/Particles/Additive'"}
+{"k":"E/Mobile/Mobile-Particle-Alpha.shader/Shader","v":"Shader extra 10721 'Mobile/Particles/Alpha Blended' shader 'Mobile/Particles/Alpha Blended'"}
+{"k":"E/Mobile/Mobile-Particle-Alpha-VertexLit.shader/Shader","v":"Shader extra 10722 'Mobile/Particles/VertexLit Blended' shader 'Mobile/Particles/VertexLit Blended'"}
+{"k":"E/Mobile/Mobile-Particle-Multiply.shader/Shader","v":"Shader extra 10723 'Mobile/Particles/Multiply' shader 'Mobile/Particles/Multiply'"}
+{"k":"E/Unlit/Unlit-Alpha.shader/Shader","v":"Shader extra 10750 'Unlit/Transparent' shader 'Unlit/Transparent'"}
+{"k":"E/Unlit/Unlit-AlphaTest.shader/Shader","v":"Shader extra 10751 'Unlit/Transparent Cutout' shader 'Unlit/Transparent Cutout'"}
+{"k":"E/Unlit/Unlit-Normal.shader/Shader","v":"Shader extra 10752 'Unlit/Texture' shader 'Unlit/Texture'"}
+{"k":"E/Sprites-Default.shader/Shader","v":"Shader extra 10753 'Sprites/Default' shader 'Sprites/Default'"}
+{"k":"E/Sprites-Default.mat/Material","v":"Material extra 10754 'Sprites-Default' shader 'Sprites/Default' queue 3000"}
+{"k":"E/Unlit/Unlit-Color.shader/Shader","v":"Shader extra 10755 'Unlit/Color' shader 'Unlit/Color'"}
+{"k":"E/Sprites-Mask.shader/Shader","v":"Shader extra 10757 'Sprites/Mask' shader 'Sprites/Mask'"}
+{"k":"E/Sprites-Mask.mat/Material","v":"Material extra 10758 'Sprites-Mask' shader 'Sprites/Mask' queue 3000"}
+{"k":"E/UI/UI-Unlit-Transparent.shader/Shader","v":"Shader extra 10760 'UI/Unlit/Transparent' shader 'UI/Unlit/Transparent'"}
+{"k":"E/UI/UI-Unlit-Detail.shader/Shader","v":"Shader extra 10761 'UI/Unlit/Detail' shader 'UI/Unlit/Detail'"}
+{"k":"E/UI/UI-Unlit-Text.shader/Shader","v":"Shader extra 10762 'UI/Unlit/Text' shader 'UI/Unlit/Text'"}
+{"k":"E/UI/UI-Unlit-TextDetail.shader/Shader","v":"Shader extra 10763 'UI/Unlit/Text Detail' shader 'UI/Unlit/Text Detail'"}
+{"k":"E/UI/UI-Lit-Transparent.shader/Shader","v":"Shader extra 10764 'UI/Lit/Transparent' shader 'UI/Lit/Transparent'"}
+{"k":"E/UI/UI-Lit-Bumped.shader/Shader","v":"Shader extra 10765 'UI/Lit/Bumped' shader 'UI/Lit/Bumped'"}
+{"k":"E/UI/UI-Lit-Detail.shader/Shader","v":"Shader extra 10766 'UI/Lit/Detail' shader 'UI/Lit/Detail'"}
+{"k":"E/UI/UI-Lit-Refraction.shader/Shader","v":"Shader extra 10767 'UI/Lit/Refraction' shader 'UI/Lit/Refraction'"}
+{"k":"E/UI/UI-Lit-RefractionDetail.shader/Shader","v":"Shader extra 10768 'UI/Lit/Refraction Detail' shader 'UI/Lit/Refraction Detail'"}
+{"k":"E/UI/UI-Default.shader/Shader","v":"Shader extra 10770 'UI/Default' shader 'UI/Default'"}
+{"k":"E/UI/UI-DefaultFont.shader/Shader","v":"Shader extra 10782 'UI/Default Font' shader 'UI/Default Font'"}
+{"k":"E/UI/UI-DefaultETC1.shader/Shader","v":"Shader extra 10783 'UI/DefaultETC1' shader 'UI/DefaultETC1'"}
+{"k":"E/UI/UI-CompositeOverdraw.shader/Shader","v":"Shader extra 10784 'Hidden/UI/CompositeOverdraw' shader 'Hidden/UI/CompositeOverdraw'"}
+{"k":"E/UI/UI-Overdraw.shader/Shader","v":"Shader extra 10785 'Hidden/UI/Overdraw' shader 'Hidden/UI/Overdraw'"}
+{"k":"E/Default-Particle.psd/Texture2D","v":"Texture2D extra 10300 'Default-Particle' 64x64 RGBA32 mips 7 wrap Repeat filter Bilinear readable False"}
+{"k":"E/Default-Particle.mat/Material","v":"Material extra 10301 'Default-Particle' shader 'Legacy Shaders/Particles/Alpha Blended Premultiply' queue 3000"}
+{"k":"E/Default-Diffuse.mat/Material","v":"Material extra 10302 'Default-Diffuse' shader 'Legacy Shaders/Diffuse' queue 2000"}
+{"k":"E/Default-Material.mat/Material","v":"Material extra 10303 'Default-Material' shader 'Standard' queue 2000"}
+{"k":"E/Default-Skybox.mat/Material","v":"Material extra 10304 'Default-Skybox' shader 'Skybox/Procedural' queue 1000"}
+{"k":"E/Default-Checker.png/Texture2D","v":"Texture2D extra 10305 'Default-Checker' 64x64 RGB24 mips 7 wrap Repeat filter Bilinear readable False"}
+{"k":"E/Default-Line.mat/Material","v":"Material extra 10306 'Default-Line' shader 'Legacy Shaders/Particles/Alpha Blended Premultiply' queue 3000"}
+{"k":"E/Default-ParticleSystem.psd/Texture2D","v":"Texture2D extra 10307 'Default-ParticleSystem' 64x64 RGBA32 mips 7 wrap Clamp filter Bilinear readable False"}
+{"k":"E/Default-ParticleSystem.mat/Material","v":"Material extra 10308 'Default-ParticleSystem' shader 'Particles/Standard Unlit' queue 3000"}
+{"k":"E/Default-Checker-Gray.png/Texture2D","v":"Texture2D extra 10309 'Default-Checker-Gray' 64x64 RGB24 mips 7 wrap Repeat filter Bilinear readable False"}
+{"k":"E/UI/Skin/Checkmark.psd/Texture2D","v":"Texture2D extra 10900 'Checkmark' 64x64 RGBA32 mips 7 wrap Clamp filter Bilinear readable False"}
+{"k":"E/UI/Skin/Checkmark.psd/Sprite","v":"Sprite extra 10901 'Checkmark' rect 12,12,40,40 border 0,0,0,0 ppu 200 texture 'Checkmark'"}
+{"k":"E/UI/Skin/UISprite.psd/Texture2D","v":"Texture2D extra 10904 'UISprite' 32x32 RGBA32 mips 6 wrap Clamp filter Bilinear readable False"}
+{"k":"E/UI/Skin/UISprite.psd/Sprite","v":"Sprite extra 10905 'UISprite' rect 0,0,32,32 border 10,10,10,10 ppu 200 texture 'UISprite'"}
+{"k":"E/UI/Skin/Background.psd/Texture2D","v":"Texture2D extra 10906 'Background' 32x32 RGBA32 mips 6 wrap Clamp filter Bilinear readable False"}
+{"k":"E/UI/Skin/Background.psd/Sprite","v":"Sprite extra 10907 'Background' rect 0,0,32,32 border 10,10,10,10 ppu 200 texture 'Background'"}
+{"k":"E/UI/Skin/InputFieldBackground.psd/Texture2D","v":"Texture2D extra 10910 'InputFieldBackground' 32x32 RGBA32 mips 6 wrap Clamp filter Bilinear readable False"}
+{"k":"E/UI/Skin/InputFieldBackground.psd/Sprite","v":"Sprite extra 10911 'InputFieldBackground' rect 0,0,32,32 border 10,10,10,10 ppu 200 texture 'InputFieldBackground'"}
+{"k":"E/UI/Skin/Knob.psd/Texture2D","v":"Texture2D extra 10912 'Knob' 64x64 RGBA32 mips 7 wrap Clamp filter Bilinear readable False"}
+{"k":"E/UI/Skin/Knob.psd/Sprite","v":"Sprite extra 10913 'Knob' rect 12,12,40,40 border 0,0,0,0 ppu 200 texture 'Knob'"}
+{"k":"E/UI/Skin/DropdownArrow.psd/Texture2D","v":"Texture2D extra 10914 'DropdownArrow' 64x64 RGBA32 mips 7 wrap Clamp filter Bilinear readable False"}
+{"k":"E/UI/Skin/DropdownArrow.psd/Sprite","v":"Sprite extra 10915 'DropdownArrow' rect 12,12,40,40 border 0,0,0,0 ppu 200 texture 'DropdownArrow'"}
+{"k":"E/UI/Skin/UIMask.psd/Texture2D","v":"Texture2D extra 10916 'UIMask' 32x32 RGBA32 mips 6 wrap Clamp filter Bilinear readable False"}
+{"k":"E/UI/Skin/UIMask.psd/Sprite","v":"Sprite extra 10917 'UIMask' rect 0,0,32,32 border 10,10,10,10 ppu 200 texture 'UIMask'"}
+{"k":"E/Nature/SpeedTree.shader/Shader","v":"Shader extra 14000 'Nature/SpeedTree' shader 'Nature/SpeedTree'"}
+{"k":"E/Nature/SpeedTreeBillboard.shader/Shader","v":"Shader extra 14001 'Nature/SpeedTree Billboard' shader 'Nature/SpeedTree Billboard'"}
+{"k":"E/Nature/SpeedTree8.shader/Shader","v":"Shader extra 14002 'Nature/SpeedTree8' shader 'Nature/SpeedTree8'"}
+{"k":"E/Nature/SpeedTree9.shader/Shader","v":"Shader extra 14003 'Nature/SpeedTree9' shader 'Nature/SpeedTree9'"}
+{"k":"E/GIDebug/TextureUV.shader/Shader","v":"Shader extra 15100 'Hidden/GIDebug/TextureUV' shader 'Hidden/GIDebug/TextureUV'"}
+{"k":"E/GIDebug/ShowLightMask.shader/Shader","v":"Shader extra 15101 'Hidden/GIDebug/ShowLightMask' shader 'Hidden/GIDebug/ShowLightMask'"}
+{"k":"E/GIDebug/UV1sAsPositions.shader/Shader","v":"Shader extra 15102 'Hidden/GIDebug/UV1sAsPositions' shader 'Hidden/GIDebug/UV1sAsPositions'"}
+{"k":"E/GIDebug/VertexColors.shader/Shader","v":"Shader extra 15103 'Hidden/GIDebug/VertexColors' shader 'Hidden/GIDebug/VertexColors'"}
+{"k":"E/Cubemaps/CubeBlur.shader/Shader","v":"Shader extra 15104 'Hidden/CubeBlur' shader 'Hidden/CubeBlur'"}
+{"k":"E/Cubemaps/CubeCopy.shader/Shader","v":"Shader extra 15105 'Hidden/CubeCopy' shader 'Hidden/CubeCopy'"}
+{"k":"E/Cubemaps/CubeBlend.shader/Shader","v":"Shader extra 15106 'Hidden/CubeBlend' shader 'Hidden/CubeBlend'"}
+{"k":"E/LightmapParameters/Default-HighResolution.giparams/LightmapParameters","v":"LightmapParameters extra 15200 'Default-HighResolution'"}
+{"k":"E/LightmapParameters/Default-LowResolution.giparams/LightmapParameters","v":"LightmapParameters extra 15201 'Default-LowResolution'"}
+{"k":"E/LightmapParameters/Default-VeryLowResolution.giparams/LightmapParameters","v":"LightmapParameters extra 15203 'Default-VeryLowResolution'"}
+{"k":"E/LightmapParameters/Default-Medium.giparams/LightmapParameters","v":"LightmapParameters extra 15204 'Default-Medium'"}
+{"k":"E/VR/Shaders/SpatialMappingOcclusion.shader/Shader","v":"Shader extra 15300 'VR/SpatialMapping/Occlusion' shader 'VR/SpatialMapping/Occlusion'"}
+{"k":"E/VR/Shaders/SpatialMappingWireframe.shader/Shader","v":"Shader extra 15301 'VR/SpatialMapping/Wireframe' shader 'VR/SpatialMapping/Wireframe'"}
+{"k":"E/VR/Materials/SpatialMappingOcclusion.mat/Material","v":"Material extra 15302 'SpatialMappingOcclusion' shader 'VR/SpatialMapping/Occlusion' queue 2000"}
+{"k":"E/VR/Materials/SpatialMappingWireframe.mat/Material","v":"Material extra 15303 'SpatialMappingWireframe' shader 'VR/SpatialMapping/Wireframe' queue 2000"}
+{"k":"E/VR/Shaders/BlitTexArraySlice.shader/Shader","v":"Shader extra 15304 'Hidden/VR/BlitTexArraySlice' shader 'Hidden/VR/BlitTexArraySlice'"}
+{"k":"E/VR/Shaders/Internal-VRDistortion.shader/Shader","v":"Shader extra 15305 'Hidden/VR/Internal-VRDistortion' shader 'Hidden/VR/Internal-VRDistortion'"}
+{"k":"E/VR/Shaders/BlitTexArraySliceToDepth.shader/Shader","v":"Shader extra 15306 'Hidden/VR/BlitTexArraySliceToDepth' shader 'Hidden/VR/BlitTexArraySliceToDepth'"}
+{"k":"E/VR/Shaders/BlitTexArraySliceToDepth_MSAA.shader/Shader","v":"Shader extra 15307 'Hidden/VR/BlitTexArraySliceToDepth_MSAA' shader 'Hidden/VR/BlitTexArraySliceToDepth_MSAA'"}
+{"k":"E/Internal-ODSWorldTexture.shader/Shader","v":"Shader extra 15308 'Hidden/Internal-ODSWorldTexture' shader 'Hidden/Internal-ODSWorldTexture'"}
+{"k":"E/Internal-CubemapToEquirect.shader/Shader","v":"Shader extra 15309 'Hidden/Internal-CubemapToEquirect' shader 'Hidden/Internal-CubemapToEquirect'"}
+{"k":"E/VR/Shaders/BlitFromTex2DToTexArraySlice.shader/Shader","v":"Shader extra 15312 'Hidden/VR/BlitFromTex2DToTexArraySlice' shader 'Hidden/VR/BlitFromTex2DToTexArraySlice'"}
+{"k":"E/VR/Shaders/BlitCopyHDRTonemapTexArraySlice.shader/Shader","v":"Shader extra 15313 'Hidden/VR/BlitCopyHDRTonemapTexArraySlice' shader 'Hidden/VR/BlitCopyHDRTonemapTexArraySlice'"}
+{"k":"E/VR/Shaders/BlitCopyHDRTonemappedToHDRTonemapTexArraySlice.shader/Shader","v":"Shader extra 15314 'Hidden/VR/BlitCopyHDRTonemappedToHDRTonemapTexArraySlice' shader 'Hidden/VR/BlitCopyHDRTonemappedToHDRTonemapTexArraySlice'"}
+{"k":"E/VR/Shaders/BlitCopyHDRTonemappedToSDRTexArraySlice.shader/Shader","v":"Shader extra 15315 'Hidden/VR/BlitCopyHDRTonemappedToSDRTexArraySlice' shader 'Hidden/VR/BlitCopyHDRTonemappedToSDRTexArraySlice'"}
+{"k":"E/VideoComposite.shader/Shader","v":"Shader extra 16000 'Hidden/VideoComposite' shader 'Hidden/VideoComposite'"}
+{"k":"E/VideoDecode.shader/Shader","v":"Shader extra 16001 'Hidden/VideoDecode' shader 'Hidden/VideoDecode'"}
+{"k":"E/VideoDecodeOSX.shader/Shader","v":"Shader extra 16002 'Hidden/VideoDecodeOSX' shader 'Hidden/VideoDecodeOSX'"}
+{"k":"E/VideoDecodeAndroid.shader/Shader","v":"Shader extra 16003 'Hidden/VideoDecodeAndroid' shader 'Hidden/VideoDecodeAndroid'"}
+{"k":"E/Compositing.shader/Shader","v":"Shader extra 17000 'Hidden/Compositing' shader 'Hidden/Compositing'"}
+{"k":"E/TerrainShaders/Utils/PaintHeight.shader/Shader","v":"Shader extra 18000 'Hidden/TerrainEngine/PaintHeight' shader 'Hidden/TerrainEngine/PaintHeight'"}
+{"k":"E/TerrainShaders/Utils/TerrainHeightBlitCopy.shader/Shader","v":"Shader extra 18001 'Hidden/TerrainEngine/HeightBlitCopy' shader 'Hidden/TerrainEngine/HeightBlitCopy'"}
+{"k":"E/TerrainShaders/Utils/GenNormalmap.shader/Shader","v":"Shader extra 18002 'Hidden/TerrainEngine/GenerateNormalmap' shader 'Hidden/TerrainEngine/GenerateNormalmap'"}
+{"k":"E/TerrainShaders/Utils/TerrainLayerUtils.shader/Shader","v":"Shader extra 18003 'Hidden/TerrainEngine/TerrainLayerUtils' shader 'Hidden/TerrainEngine/TerrainLayerUtils'"}
+{"k":"E/TerrainShaders/Utils/BrushPreview.shader/Shader","v":"Shader extra 18004 'Hidden/TerrainEngine/BrushPreview' shader 'Hidden/TerrainEngine/BrushPreview'"}
+{"k":"E/TerrainShaders/Utils/CrossBlendNeighbors.shader/Shader","v":"Shader extra 18005 'Hidden/TerrainEngine/CrossBlendNeighbors' shader 'Hidden/TerrainEngine/CrossBlendNeighbors'"}
+{"k":"E/TerrainShaders/Utils/TerrainBlitCopyZWrite.shader/Shader","v":"Shader extra 18006 'Hidden/TerrainEngine/TerrainBlitCopyZWrite' shader 'Hidden/TerrainEngine/TerrainBlitCopyZWrite'"}
+{"k":"E/TextCore/TextCore-SDF.shader/Shader","v":"Shader extra 19010 'Hidden/TextCore/Distance Field' shader 'Hidden/TextCore/Distance Field'"}
+{"k":"E/TextCore/TextCore-SDF-SSD.shader/Shader","v":"Shader extra 19011 'Hidden/TextCore/Distance Field SSD' shader 'Hidden/TextCore/Distance Field SSD'"}
+{"k":"E/TextCore/Sprite.shader/Shader","v":"Shader extra 19012 'Hidden/TextCore/Sprite' shader 'Hidden/TextCore/Sprite'"}
+{"k":"E/SplashScreen/UnitySplash-Dark.png/Texture2D","v":"Texture2D extra 20000 'UnitySplash-Dark' 2048x1024 RGBA32 mips 12 wrap Clamp filter Bilinear readable True"}
+{"k":"E/SplashScreen/UnitySplash-Dark.png/Sprite","v":"Sprite extra 20001 'UnitySplash-Dark' rect 0,0,2048,1024 border 0,0,0,0 ppu 100 texture 'UnitySplash-Dark'"}
+{"k":"E/SplashScreen/UnitySplash-Light.png/Texture2D","v":"Texture2D extra 10403 'UnitySplash-Light' 2048x1024 RGBA32 mips 12 wrap Clamp filter Bilinear readable True"}
+{"k":"E/SplashScreen/UnitySplash-Light.png/Sprite","v":"Sprite extra 10404 'UnitySplash-Light' rect 0,0,2048,1024 border 0,0,0,0 ppu 100 texture 'UnitySplash-Light'"}
+{"k":"E/Invalidated.png/Texture2D","v":"Texture2D extra 20100 'Invalidated' 64x8 RGBA32 mips 1 wrap Repeat filter Point readable False"}
+{"k":"E/Default-Skybox-Cubemap.exr/Cubemap","v":"Cubemap extra 20200 'Default-Skybox-Cubemap' 128 RGBA32 mips 8"}
+{"k":"E/Default-LightingData.asset/LightingDataAsset","v":"LightingDataAsset extra 20201 'LightingData'"}
+{"k":"E/icudt73l.bytes/TextAsset","v":"TextAsset extra 20204 'icudt73l' length 4563350"}
+{"k":"case/pyramid.FBX","v":"null | Assert: Failed to find pyramid.FBX | Error: The resource pyramid.FBX could not be loaded from the resource file!"}
+{"k":"missing/Nope.fbx","v":"null | Assert: Failed to find Nope.fbx | Error: The resource Nope.fbx could not be loaded from the resource file!"}
+{"k":"base/Cube.fbx/Object","v":"null | Assert: Failed to find Cube.fbx | Error: The resource Cube.fbx could not be loaded from the resource file!"}
+{"k":"other/Cube.fbx/Texture2D","v":"null | Assert: Failed to find Cube.fbx | Error: The resource Cube.fbx could not be loaded from the resource file!"}
+{"k":"arial/Font","v":"throws ArgumentException: Arial.ttf is no longer a valid built in font. Please use LegacyRuntime.ttf"}
+{"k":"arial/Material","v":"throws ArgumentException: Arial.ttf is no longer a valid built in font. Please use LegacyRuntime.ttf"}
+{"k":"empty/Mesh","v":"throws ArgumentException: Invalid path"}
+{"k":"null/Mesh","v":"throws ArgumentException: Invalid path"}
+{"k":"skin/MonoBehaviour","v":"null"}
+{"k":"skin/ScriptableObject","v":"GUISkin default 11000 'GameSkin'"}
+{"k":"crossed/R/Default-Material.mat","v":"null | Assert: Failed to find Default-Material.mat | Error: The resource Default-Material.mat could not be loaded from the resource file!"}
+{"k":"crossed/E/Cube.fbx","v":"null | Assert: Failed to find Cube.fbx | Error: The resource Cube.fbx could not be loaded from the resource file!"}
+{"k":"case/E/default-material.mat","v":"null | Assert: Failed to find default-material.mat | Error: The resource default-material.mat could not be loaded from the resource file!"}
+{"k":"base/E/Default-Material.mat/Object","v":"null | Assert: Failed to find Default-Material.mat | Error: The resource Default-Material.mat could not be loaded from the resource file!"}
+{"k":"missing/E/Nope.mat","v":"null | Assert: Failed to find Nope.mat | Error: The resource Nope.mat could not be loaded from the resource file!"}
+{"k":"arial/E/Font","v":"throws ArgumentException: Arial.ttf is no longer a valid built in font. Please use LegacyRuntime.ttf | Assert: Failed to find LegacyRuntime.ttf | Error: The resource LegacyRuntime.ttf could not be loaded from the resource file!"}
+{"k":"same/pyramid.fbx","v":"True"}
+{"k":"same/E/Default-Material.mat","v":"True"}
+{"k":"primitive/Sphere","v":"Mesh default 10207 'Sphere' vertices 515 submeshes 1 indices 2304 bounds 0,0,0 1,1,1 readable True"}
+{"k":"primitive/Capsule","v":"Mesh default 10208 'Capsule' vertices 550 submeshes 1 indices 2496 bounds 0,0,0 1,2,1 readable True"}
+{"k":"primitive/Cylinder","v":"Mesh default 10206 'Cylinder' vertices 88 submeshes 1 indices 240 bounds 0,0,0 1,2,1 readable True"}
+{"k":"primitive/Cube","v":"Mesh default 10202 'Cube' vertices 24 submeshes 1 indices 36 bounds 0,0,0 1,1,1 readable True"}
+{"k":"primitive/Plane","v":"Mesh default 10209 'Plane' vertices 121 submeshes 1 indices 600 bounds 0,0,0 10,0,10 readable True"}
+{"k":"primitive/Quad","v":"Mesh default 10210 'Quad' vertices 4 submeshes 1 indices 6 bounds 0,0,0 1,1,0 readable True"}
+{"k":"complete","v":true}

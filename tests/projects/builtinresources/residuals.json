@@ -1,0 +1,28 @@
+{
+ "Unity's internal compute shaders (skinning, blend shapes, virtual texturing, foveated shading) are stored compiled; Unbound makes no ComputeShader object for them and logs the error (follow-up: an object that names itself and refuses dispatch loudly)": [
+  "R/Internal-Skinning.compute/ComputeShader",
+  "R/Internal-BlendShape.compute/ComputeShader",
+  "R/Internal-VT-TranslationTableReplace.compute/ComputeShader",
+  "R/Internal-VT-TranslationTableUpsample.compute/ComputeShader",
+  "R/Internal-CreateFoveatedShadingRateTextureArray.compute/ComputeShader",
+  "R/Internal-CreateFoveatedShadingRateTextureNoArray.compute/ComputeShader",
+  "R/Internal-YFlipFoveatedShadingTexture.compute/ComputeShader"
+ ],
+ "LightmapParameters and LightingDataAsset are Editor classes Unbound does not implement as objects (the built-in lighting data is read by the scene loader instead); a lookup by these types finds nothing": [
+  "E/LightmapParameters/Default-HighResolution.giparams/LightmapParameters",
+  "E/LightmapParameters/Default-LowResolution.giparams/LightmapParameters",
+  "E/LightmapParameters/Default-Medium.giparams/LightmapParameters",
+  "E/LightmapParameters/Default-VeryLowResolution.giparams/LightmapParameters",
+  "E/Default-LightingData.asset/LightingDataAsset"
+ ],
+ "The built-in splash textures are readable in the Editor; Unbound uploads built-in textures without a CPU copy (isReadable false)": [
+  "E/SplashScreen/UnitySplash-Dark.png/Texture2D",
+  "E/SplashScreen/UnitySplash-Light.png/Texture2D"
+ ],
+ "The ICU data TextAsset (4.5 MB of binary data) is not read from the install": [
+  "E/icudt73l.bytes/TextAsset"
+ ],
+ "LegacyRuntime is Unbound's dynamic font (FreeType): its Font Texture is the atlas Unbound renders (clamped, readable), not the install's serialized one": [
+  "R/LegacyRuntime.ttf/Texture2D"
+ ]
+}

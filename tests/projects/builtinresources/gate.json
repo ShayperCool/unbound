@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/builtinresources/run.py gate"
+  ],
+  "summary": "builtinresources: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Resources.cs",
+    "managed/UnityEngine/Graphics/AssetImporters.cs",
+    "managed/UnityEngine/Graphics/BuiltinSpriteData.cs",
+    "data/profiles/builtin-6000.0.json",
+    "crates/unbound-runtime/src/lighting.rs"
+  ]
+}
