@@ -112,3 +112,8 @@ from the existing output-layout controls.
 
 [Q373 closure](CLOSURE.md) lists the landed profiles, retained device differences
 and open queue work without extending their measured scope.
+
+Startup timing after AudioSettings.Reset has an additional
+[19-control diagnostic](RECOVERY.md) recording relative DSP frames and source
+positions. It and the earlier immediate/scheduled recovery diagnostics remain
+uncertified; they do not run in the engine land gate.

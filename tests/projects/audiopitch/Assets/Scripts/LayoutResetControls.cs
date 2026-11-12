@@ -20,6 +20,7 @@ public partial class EffectProbe
         bool callbackDevice = true, callbackPlaying = true, callbackRead = true;
         int callbackClipBits = -1;
         AudioClip recovered = null;
+        bool controlled = Option(key, "recovery_renderer=", "0") == "1";
         bool recover = Option(key, "recover=", "1") == "1";
         records.Add("\"" + key + ".recovery_lead_frames\":" + (Option(key, "scheduled=", "0") == "1" ? 8 * config.dspBufferSize : 0));
         void Changed(bool device)
@@ -28,6 +29,7 @@ public partial class EffectProbe
             callbackMode = (int)AudioSettings.GetConfiguration().speakerMode;
             var lost = new float[2]; callbackRead = clip.GetData(lost, 2048);
             callbackClipBits = BitConverter.SingleToInt32Bits(lost[0]);
+            if (controlled && !AudioRenderer.Start()) throw new Exception("callback renderer restart failed");
             if (!recover) return;
             recovered = AudioClip.Create(key + "_recovered", ClipFrames, 2, config.sampleRate, false);
             if (!recovered.SetData(Signal(Option(key, "music=", "dc:0.25"), config.sampleRate), 0))
@@ -42,6 +44,13 @@ public partial class EffectProbe
                 if (edit == "end") source.SetScheduledEndTime(start + 2048.0 / config.sampleRate);
             }
             else source.Play();
+            if (controlled) {
+                double before = AudioSettings.dspTime;
+                int pause = int.Parse(Option(key, "recovery_pause_ms=", "0"));
+                if (pause > 0) System.Threading.Thread.Sleep(pause);
+                records.Add("\"" + key + ".callback_elapsed_frames\":" + (long)Math.Round((AudioSettings.dspTime - before) * config.sampleRate));
+                records.Add("\"" + key + ".callback_position\":" + source.timeSamples);
+            }
         }
         var master = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
         var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags);
@@ -65,7 +74,7 @@ public partial class EffectProbe
                 records.Add("\"" + key + ".callback_clip_read\":" + (callbackRead ? "true" : "false"));
                 records.Add("\"" + key + ".callback_clip_bits\":" + callbackClipBits);
                 records.Add("\"" + key + ".after_playing\":" + (source.isPlaying ? "true" : "false"));
-                if (!AudioRenderer.Start()) throw new Exception("live layout renderer restart failed");
+                if (!controlled && !AudioRenderer.Start()) throw new Exception("live layout renderer restart failed");
                 config = AudioSettings.GetConfiguration();
                 records.Add("\"" + key + ".after_mode\":" + (int)config.speakerMode);
             }
@@ -79,7 +88,12 @@ public partial class EffectProbe
                 for (int block = 0; block < blocks; block++) {
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("reset sink failed");
+                    double beforeRender = controlled ? AudioSettings.dspTime : 0;
                     if (!AudioRenderer.Render(buffer)) throw new Exception("reset render failed");
+                    if (controlled && segment == 1) {
+                        records.Add("\"" + key + ".render_frames_" + block + "\":" + (long)Math.Round((AudioSettings.dspTime - beforeRender) * config.sampleRate));
+                        records.Add("\"" + key + ".source_frames_" + block + "\":" + source.timeSamples);
+                    }
                     for (int i = 0; i < buffer.Length; i++) { writer.Write(buffer[i]); masterWriter.Write(sink[i]); }
                 }
             }

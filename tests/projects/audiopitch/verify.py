@@ -15,7 +15,7 @@ def verify(root, release, rate, contexts=False, selected=None):
                     assert isinstance(meta[f'{case}.{mode}.{field}'], int), (case, mode, field)
                 assert meta[f'{case}.{mode}.channels'] > 0, (case, mode)
             continue
-        if case.startswith('context_live_reset_'):
+        if case.startswith(('context_live_reset_', 'context_recovery_')):
             after_width = {1:1,2:2,3:4,4:5,5:6,6:8}[meta[case+'.after_mode']]
             for segment, count, width in [('', 8, meta[case+'.render_channels']), ('.after', 24, after_width), ('.drain', 8, after_width)]:
                 for suffix in SUFFIXES:
@@ -24,6 +24,14 @@ def verify(root, release, rate, contexts=False, selected=None):
                     assert record == dict(file=name+'.f32', frames=count*meta[case+'.buffer'], channels=width), name
                     values = samples(root, record)
                     assert len(values) == count*meta[case+'.buffer']*width and all(map(math.isfinite, values)), name
+            if case.startswith('context_recovery_'):
+                recover = not case.endswith('_idle')
+                if recover:
+                    assert meta[case+'.callback_elapsed_frames'] == 0, case
+                    assert meta[case+'.callback_position'] == 0, case
+                for block in range(24):
+                    assert meta[f'{case}.render_frames_{block}'] == meta[case+'.buffer'], (case, block)
+                    assert isinstance(meta[f'{case}.source_frames_{block}'], int) and meta[f'{case}.source_frames_{block}'] >= 0, (case, block)
             assert meta[case+'.before_playing'] and meta[case+'.callbacks'] == 1
             assert not meta[case+'.callback_device'] and not meta[case+'.callback_playing']
             assert meta[case+'.before_clip_bits'] == 1048576000 and meta[case+'.callback_clip_bits'] == 0
