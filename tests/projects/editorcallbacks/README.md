@@ -107,3 +107,29 @@ at frames 2/4/6 and 2/3/4, so the profile makes no exact-duration assertion.
 promises an asynchronous operation, not a fixed number of frames. The original
 scene-queue source path, reference and strict comparator retain the two-load
 timing discrepancy.
+
+The completion times depend on elapsed loading work and the remaining integration
+budget. Unbound keeps the existing equal-priority FIFO, completed progress and
+activation hold behavior. It does not claim that its deterministic completion
+frames reproduce the Editor's wall-clock schedule. The original strict queue
+report remains 0/9 streams, with 64 Editor-only and 44 Unbound-only lines.
+
+The Unity 6000.0 contracts distinguish the controls:
+
+* [AsyncOperation.allowSceneActivation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AsyncOperation-allowSceneActivation.html)
+  holds progress at 0.9 and isDone false, blocking later operations such as an
+  unload until activation is allowed. The existing held and forced SceneLoop
+  profiles exercise the hold with later work pending.
+* [Application.backgroundLoadingPriority](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Application-backgroundLoadingPriority.html)
+  limits total main-thread integration time in a built Player to 2, 4, 10 or
+  50 milliseconds for Low, BelowNormal, Normal or High. The documented limitation
+  says this setting has no effect in the Editor. These captures are Editor
+  captures, so changing this property cannot establish a Player loading budget.
+* [AsyncOperation.priority](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AsyncOperation-priority.html)
+  selects higher-priority queued work first, with no effect after background work
+  starts. The FIFO controls use equal default priorities. Non-default priorities
+  need a separate discriminating control and queue implementation.
+
+These contracts give no exact completion frame. Unequal priority scheduling,
+large-scene work spanning several budgets and built Player loading remain open;
+no frame-delay constant is inferred from the two-load capture.
