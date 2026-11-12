@@ -1,0 +1,12 @@
+{
+ "commands": [
+  "python3 tests/projects/shadertargets/run.py check",
+  "python3 tests/projects/shadertargets/run.py check --device vulkan"
+ ],
+ "summary": "\\d+/\\d+ records match.*",
+ "engine_paths": [
+  "crates/unbound-shaders/src/targets.rs",
+  "crates/unbound-shaders/src/lib.rs",
+  "crates/unbound-shaders/src/keywords.rs"
+ ]
+}
