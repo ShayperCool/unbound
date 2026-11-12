@@ -84,6 +84,38 @@ namespace UnityEngine.Tests
             return agent;
         }
 
+        [Theory]
+        [InlineData(0f)]
+        [InlineData(2f)]
+        public void BrakingTakesTheWholeSlowerPlanWhenItsHeadingChanges(float upward)
+        {
+            var agent = Agent(new Vector3(-4f, 0f, -4f));
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            Assert.True(agent.SetDestination(Center + new Vector3(-3.4f, 0f, -4f)));
+            AgentSystem.Step();
+            agent.velocity = new Vector3(0f, upward, 4f);
+            AgentSystem.Step();
+            var plan = agent.desiredVelocity;
+            var before = agent.nextPosition;
+            Assert.True(plan.x > 3f);
+            AgentSystem.Step();
+            Assert.InRange(MathF.Abs(agent.nextPosition.x - before.x - plan.x * Dt), 0f, 1e-4f);
+            Assert.InRange(MathF.Abs(agent.nextPosition.z - before.z - plan.z * Dt), 0f, 1e-4f);
+        }
+
+        [Fact]
+        public void ReachingTheDestinationEndsAPathWithoutAutomaticBraking()
+        {
+            var agent = Agent(new Vector3(-4f, 0f, -4f));
+            agent.autoBraking = false;
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            Assert.True(agent.SetDestination(Center + new Vector3(-3.65f, 0f, -4f)));
+            for (int i = 0; i < 100; i++) AgentSystem.Step();
+            Assert.InRange(Vector3.Distance(agent.nextPosition, agent.destination), 0f, 1e-3f);
+            Assert.Equal(Vector3.zero, agent.velocity);
+            Assert.False(agent.hasPath);
+        }
+
         [Fact]
         public void TheAgentUpdateRunsAtPreUpdatesAIUpdateAndNothingAfterTheScripts()
         {

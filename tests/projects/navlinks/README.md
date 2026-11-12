@@ -78,3 +78,25 @@ destination on frame 127. The speed and stop changes address the first pair;
 landing path state, arrival, crowd steering and route geometry remain visible
 in the unchanged comparator. A link's approach length relative to agent radius
 is not covered by the current reference.
+
+Q361/Q342 movement follow-up reduces strict failures from 9327 to 1993. The
+reference and tolerances remain unchanged. Crossing agents supply their planned
+velocity to crowd avoidance, while `velocity` still reports the frame's actual
+position change. A waiting agent permits zero steering speed, including the
+separation calculation. Braking takes the whole slower plan, so a tilted landing
+velocity can become a horizontal walking velocity on the next update. Reaching
+a straight destination ends the path with automatic braking disabled too.
+
+`costlow` and `areajump` each fall from 869 to 2 failing values; `nobraking`
+from 2423 to 1; `two` from 1678 to 65; `crosstile` from 2369 to 939. The
+remaining `crosstile` divergence starts with desired velocity on frame 86; the
+remaining `two` divergence starts with rotation on 111. No lane's failing-value
+count increases. Some previously matching keys within these changing
+trajectories differ, including three path-end reports near arrival; the full
+reports retain them. They are not assertions of universal parity.
+
+Horizontal arrival remains open. Simply replacing the internal step's 3D norm
+with its horizontal norm adds 785 failures in `endatlink`: the agent lands past
+its destination on frame 110 and must return to it on 111. The final change
+retains that existing behavior. Managed controls exercise a destination at the
+landing, arrival without braking, and braking that changes heading.

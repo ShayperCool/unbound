@@ -1264,7 +1264,11 @@ namespace DotRecast.Detour.Crowd
                     ag.desiredSpeed = speed;
                     dvel = dvel * speed;
                     // Unbound: waiting for an occupied link, it plans to stand (see TriggerOffMeshConnections).
-                    if (ag.waitingForConnection) dvel = RcVec3f.Zero;
+                    if (ag.waitingForConnection)
+                    {
+                        dvel = RcVec3f.Zero;
+                        ag.desiredSpeed = 0f;
+                    }
                 }
 
                 // Separation
@@ -1575,9 +1579,10 @@ namespace DotRecast.Detour.Crowd
                     ag.nvel = AlongAtSpeed(RcVec3f.Subtract(anim.endPos, anim.startPos), ag.option.maxSpeed);
                 }
 
-                // Update velocity.
-                ag.vel = RcVec3f.Zero;
-                ag.dvel = RcVec3f.Zero;
+                // Other agents predict this agent at its planned traversal velocity.
+                // Its reported velocity still comes from the position change over the frame.
+                ag.vel = ag.nvel;
+                ag.pvel = ag.nvel;
             }
         }
 

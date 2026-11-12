@@ -1765,7 +1765,7 @@ namespace Unbound.Runtime
                 return;
             }
             // The step that reaches the end from where the update began lands on it (measured).
-            if (leftBefore <= 1e-3f || (agent.autoBraking && step >= leftBefore))
+            if (leftBefore <= 1e-3f || step >= leftBefore)
             {
                 ag.npos = last.pos;
                 ag.vel = RcVec3f.Zero;

@@ -114,6 +114,20 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnAgentStopsWhenItsDestinationIsTheLinkLanding()
+        {
+            var agent = Agent(autoTraverse: true);
+            Assert.True(agent.SetDestination(LinkEnd));
+            var destination = agent.destination;
+            StepOntoLink(agent);
+            for (int i = 0; i < 300; i++) Step();
+            Assert.False(agent.isOnOffMeshLink);
+            Assert.False(agent.hasPath);
+            Assert.Equal(Vector3.zero, agent.velocity);
+            Assert.InRange(Dist2D(agent.nextPosition, destination), 0f, 1e-3f);
+        }
+
+        [Fact]
         public void StoppingOnALinkPreservesItsProgressAndPlanUntilResumed()
         {
             var agent = Agent(autoTraverse: true);
@@ -373,7 +387,18 @@ namespace UnityEngine.Tests
             go.transform.position = new Vector3(-6f, 0f, 1f);
             var second = go.AddComponent<NavMeshAgent>();
             Assert.True(second.SetDestination(Destination));
-            for (int i = 0; i < 120; i++) Step();
+            bool waited = false;
+            for (int i = 0; i < 120; i++)
+            {
+                bool wasWaiting = second.m_Crowd.waitingForConnection;
+                Step();
+                if (wasWaiting && second.m_Crowd.waitingForConnection)
+                {
+                    waited = true;
+                    Assert.Equal(Vector3.zero, second.desiredVelocity);
+                }
+            }
+            Assert.True(waited);
             Assert.True(first.isOnOffMeshLink);
             Assert.True(NavMesh.IsLinkOccupied(m_Link));
             Assert.False(second.isOnOffMeshLink);

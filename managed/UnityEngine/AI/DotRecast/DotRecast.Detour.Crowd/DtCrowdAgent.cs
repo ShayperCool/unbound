@@ -122,14 +122,9 @@ namespace DotRecast.Detour.Crowd
         {
             // Fake dynamic constraint.
             float maxDelta = option.maxAcceleration * dt;
-            // Unbound: a braking agent's speed follows its plan whatever its acceleration (Unity's;
-            // measured).
-            if (braking)
-            {
-                float speedLoss = vel.Length() - pvel.Length();
-                if (speedLoss > maxDelta)
-                    maxDelta = speedLoss;
-            }
+            // Braking takes the whole planned velocity when it reduces speed, including a
+            // change of heading after landing (Unity 6000.0.71f1, navlinks costlow/areajump).
+            if (braking && pvel.LengthSquared() <= vel.LengthSquared()) return pvel;
             RcVec3f dv = RcVec3f.Subtract(pvel, vel);
             float ds = dv.Length();
             if (ds > maxDelta)
