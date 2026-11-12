@@ -575,6 +575,57 @@ namespace Unbound.Runtime
                     Get = o => ((Transform)o).parent,
                 };
             }
+            else if (target is Collider)
+            {
+                yield return new NativeField
+                {
+                    Name = "m_Material", Type = typeof(PhysicsMaterial), Shape = Shape.UnityObject, TypeName = Compat.PhysicsMaterialPropertyTypeName,
+                    Get = o => ((Collider)o).sharedMaterial, Set = (o, v) => ((Collider)o).sharedMaterial = (PhysicsMaterial)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_IncludeLayers", Type = typeof(LayerMask), Shape = Shape.LayerMask, TypeName = "LayerMask",
+                    Get = o => ((Collider)o).includeLayers, Set = (o, v) => ((Collider)o).includeLayers = (LayerMask)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_ExcludeLayers", Type = typeof(LayerMask), Shape = Shape.LayerMask, TypeName = "LayerMask",
+                    Get = o => ((Collider)o).excludeLayers, Set = (o, v) => ((Collider)o).excludeLayers = (LayerMask)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_LayerOverridePriority", Type = typeof(int), Shape = Shape.Int, TypeName = "int",
+                    Get = o => ((Collider)o).layerOverridePriority, Set = (o, v) => ((Collider)o).layerOverridePriority = (int)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_IsTrigger", Type = typeof(bool), Shape = Shape.Bool, TypeName = "bool",
+                    Get = o => ((Collider)o).isTrigger, Set = (o, v) => ((Collider)o).isTrigger = (bool)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_ProvidesContacts", Type = typeof(bool), Shape = Shape.Bool, TypeName = "bool",
+                    Get = o => ((Collider)o).providesContacts, Set = (o, v) => ((Collider)o).providesContacts = (bool)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_Enabled", Type = typeof(bool), Shape = Shape.Bool, TypeName = "bool",
+                    Get = o => ((Collider)o).enabled, Set = (o, v) => ((Collider)o).enabled = (bool)v,
+                };
+                if (target is BoxCollider)
+                {
+                    yield return new NativeField
+                    {
+                        Name = "m_Size", Type = typeof(Vector3), Shape = Shape.Vector3, TypeName = "Vector3",
+                        Get = o => ((BoxCollider)o).size, Set = (o, v) => ((BoxCollider)o).size = (Vector3)v,
+                    };
+                    yield return new NativeField
+                    {
+                        Name = "m_Center", Type = typeof(Vector3), Shape = Shape.Vector3, TypeName = "Vector3",
+                        Get = o => ((BoxCollider)o).center, Set = (o, v) => ((BoxCollider)o).center = (Vector3)v,
+                    };
+                }
+            }
             else if (target is PlayerSettings)
             {
                 yield return NameField(hidden: false);
@@ -777,7 +828,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Writes a leaf (or a part of one) into the buffer; false when nothing changed.</summary>
-        internal static bool SetValue(SerializedNode node, object value)
+        internal static bool SetValue(SerializedNode node, object value, bool force = false)
         {
             if (node.ReadOnly) return false;
             switch (node.Kind)
@@ -785,16 +836,20 @@ namespace Unbound.Runtime
                 case SerializedNodeKind.Component:
                 {
                     var whole = GetValue(node.Parent);
-                    if (ValueEquals(node.Component.Get(whole), value)) return false;
-                    return SetValue(node.Parent, node.Component.With(whole, value));
+                    if (!force && ValueEquals(node.Component.Get(whole), value)) return false;
+                    bool parentReplaced = node.Parent.Replaced;
+                    bool changed = SetValue(node.Parent, node.Component.With(whole, value), force);
+                    node.Parent.Replaced = parentReplaced;
+                    if (changed) MarkReplaced(node);
+                    return changed;
                 }
                 case SerializedNodeKind.ArraySize:
                     return Resize(node.Parent.Parent, Convert.ToInt32(value, CultureInfo.InvariantCulture));
                 case SerializedNodeKind.Leaf:
-                    if (ValueEquals(node.Value, value)) return false;
+                    if (!force && ValueEquals(node.Value, value)) return false;
                     node.Value = CopyLeaf(value, node.Shape);
                     if (node.TypeTree && node.Shape == Shape.String) TypeTreeSerialized.Chars(node);
-                    MarkDirty(node);
+                    MarkReplaced(node);
                     return true;
                 default:
                     return false;
@@ -1064,13 +1119,27 @@ namespace Unbound.Runtime
             }
         }
 
+        // A component edit changes that component on each target, retaining its other values.
+        static object ApplyComponents(SerializedNode node, object live)
+        {
+            foreach (var child in node.Children)
+            {
+                if (!child.Dirty || child.Component == null) continue;
+                object part = child.Replaced ? CopyLeaf(GetValue(child), child.Shape)
+                    : ApplyComponents(child, child.Component.Get(live));
+                live = child.Component.With(live, part);
+            }
+            return live;
+        }
+
         static object ApplyNode(SerializedNode node, object live, bool primary)
         {
             if (node.Replaced) return Build(node, live, primary);
             switch (node.Kind)
             {
                 case SerializedNodeKind.Leaf:
-                    return CopyLeaf(node.Value, node.Shape);
+                    return node.Children.Count == 0 || live == null
+                        ? CopyLeaf(node.Value, node.Shape) : ApplyComponents(node, live);
                 case SerializedNodeKind.Composite:
                     if (live == null) return Build(node, null, primary);
                     ApplyChildren(node, live, primary);

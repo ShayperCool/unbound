@@ -580,7 +580,8 @@ namespace UnityEditor
 
         void Write(SerializedNode node, object value)
         {
-            if (SerializedTree.SetValue(node, value)) Changed(structural: node.Kind == SerializedNodeKind.ArraySize);
+            bool force = m_SerializedObject.isEditingMultipleObjects && hasMultipleDifferentValues;
+            if (SerializedTree.SetValue(node, value, force)) Changed(structural: node.Kind == SerializedNodeKind.ArraySize);
         }
 
         static bool IsIntegral(SerializedNode n) =>

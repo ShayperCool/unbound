@@ -454,6 +454,9 @@ namespace Unbound.Runtime
         /// their selectable SAT path is documented, but not yet measured by this fixture.</summary>
         internal static bool PhysicsPcmEnabled(bool projectValue) => Major >= 6000 || projectValue;
 
+        /// <summary>The public physics material type was renamed in Unity 6.</summary>
+        internal static string PhysicsMaterialPropertyTypeName => Major >= 6000 ? "PPtr<PhysicsMaterial>" : "PPtr<PhysicMaterial>";
+
         /// <summary>Contact point requests and compound collision-message routing, measured by
         /// contactmodify3d in 6000.0.71f1. Other releases retain unconditional point reporting and
         /// collider-plus-body delivery until
