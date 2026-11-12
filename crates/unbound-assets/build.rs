@@ -7,6 +7,34 @@ use std::path::{Path, PathBuf};
 
 fn main() {
     let native = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../native");
+    let astc = native.join("astcenc");
+    let astc_adapter = native.join("unbound_astc.cpp");
+    println!("cargo:rerun-if-changed={}", astc.display());
+    println!("cargo:rerun-if-changed={}", astc_adapter.display());
+    let mut astc_sources: Vec<_> = std::fs::read_dir(&astc)
+        .expect("reading native/astcenc")
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "cpp"))
+        .collect();
+    astc_sources.sort();
+    let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+    cc::Build::new()
+        .cpp(true)
+        .std("c++14")
+        .files(astc_sources)
+        .file(astc_adapter)
+        .include(&native)
+        .define("ASTCENC_DYNAMIC_LIBRARY", None)
+        .define("ASTCENC_SSE", if arch == "x86_64" { "20" } else { "0" })
+        .define("ASTCENC_NEON", if arch == "aarch64" { "1" } else { "0" })
+        .define("ASTCENC_AVX", "0")
+        .define("ASTCENC_F16C", "0")
+        .define("ASTCENC_POPCNT", "0")
+        .define("NDEBUG", None)
+        .opt_level(2)
+        .flag_if_supported("-ffp-contract=off")
+        .warnings(false)
+        .compile("unbound_astc");
     println!(
         "cargo:rerun-if-changed={}",
         native.join("amd_bc4").display()
