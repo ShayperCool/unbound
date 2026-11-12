@@ -804,9 +804,11 @@ is how the Editor's products are made in the measured release, as follows.
   of the Editor's points through both systems is the Editor's in 99.2% and 99.0% of the values
   (through a system's own surfaces alone in 82% and 69%), and each light probe takes the share
   of its light each system and the environment give it within 0.003 of the Editor's. Each system's
-  clusters still leave out only the points its own surfaces hide. Not measured: whether the
-  Editor's systems see only the systems near them (its parameters have a distance for which
-  systems are included), and scenes of more than two systems.
+  clusters still leave out only the points its own surfaces hide (a floor under another
+  system's wall keeps its points there, while its texels there are hidden), and every
+  transport and light probe set lists every system of the scene, whether it references it or
+  not. Not measured: whether the Editor's systems see only the systems near them, and scenes
+  of more than two systems.
 - **Visibility** (`visibility.rs`): for directional lights, per direction of 27 rings of
   latitude around +y (ring r of `floor(52 sin(r / 26 of a half turn)) + 1` directions, 875 in
   all, as the Editor's) and per cluster, the share of its points from which a ray toward that

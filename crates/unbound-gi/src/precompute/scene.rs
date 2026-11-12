@@ -33,6 +33,12 @@ impl<'a> Scene<'a> {
             hashes.iter().all(|h| *h != ENVIRONMENT_ID),
             "a system hash equal to the environment's"
         );
+        // Transports number their dependencies in 16 bits (the environment and the systems).
+        ensure!(
+            systems.len() < u16::MAX as usize,
+            "{} systems in one scene",
+            systems.len()
+        );
         for (i, h) in hashes.iter().enumerate() {
             ensure!(!hashes[..i].contains(h), "two systems of one hash");
         }
