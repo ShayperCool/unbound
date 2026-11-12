@@ -25,8 +25,10 @@ of IDs `count` to `count · m − 1` with zero matrices and zero instanced prope
 uniforms the variant declares instanced and those the draw gives as arrays), as the Unity
 6000.0.71f1 Editor draws a mesh-instancing call's multiplied instances where no earlier
 draw wrote their instance data (tests/projects/cmdbuffers `device.multiplier.placed.*`,
-`device.multiplier.camera.*`). Standalone instancing whose multiplied IDs pass a native batch
-does not add them (warned, unmeasured).
+`device.multiplier.camera.*`); where earlier draws wrote it, the Editor's read what they left
+(`device.multiplier.stale.*`, warned of, not reproduced). The added draws keep the call's last
+instance's winding. Standalone instancing whose multiplied IDs pass a native batch does not
+add them (warned, unmeasured).
 
 ### BatchRendererGroup draws (NativeApi 60)
 
