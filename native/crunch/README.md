@@ -9,6 +9,7 @@ Prepared source carries modification notices for portability patches:
 - `crn_vector.cpp` selects the wide integer overloads explicitly.
 - `crn_platform.h` uses portable traps and the standard file API on Apple platforms.
 - `crn_mem.cpp` uses Apple's allocation-size API there.
+- `crn_console.h` includes the terminal headers at file scope, outside `namespace crnlib`; the macOS SDK otherwise leaves the global `uuid_t` undeclared.
 - `crn_timer.cpp` includes the portable time declarations.
 - `crn_jpge.cpp` and `inc/crn_decomp.h` use Apple's allocation declarations there.
 

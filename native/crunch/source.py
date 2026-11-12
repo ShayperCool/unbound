@@ -90,6 +90,10 @@ def prepare():
                 ('#include <malloc.h>', '#if defined(__APPLE__)\n#include <malloc/malloc.h>\n#else\n#include <malloc.h>\n#endif'),
                 ('#define _msize malloc_usable_size', '#if defined(__APPLE__)\n#define _msize malloc_size\n#else\n#define _msize malloc_usable_size\n#endif'),
             ])
+            patch(temporary, 'crn_console.h', [
+                ('#include <conio.h>\n#endif\nnamespace crnlib {',
+                 '#include <conio.h>\n#elif defined(__GNUC__)\n#include <termios.h>\n#include <unistd.h>\n#endif\nnamespace crnlib {'),
+            ])
             patch(temporary, 'crn_timer.cpp', [('#include <sys/timex.h>', '#include <sys/time.h>')])
             patch(temporary, 'crn_jpge.cpp', [
                 ('#include <malloc.h>', '#if defined(__APPLE__)\n#include <malloc/malloc.h>\n#else\n#include <malloc.h>\n#endif'),
