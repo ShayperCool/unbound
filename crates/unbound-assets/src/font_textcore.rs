@@ -753,6 +753,9 @@ mod tests {
             (5, 7, 4, 0, 100),
             (6, 6, 2, 4, 0),
             (1, 1, 1, 2, 100),
+            (70, 45, 32, 2, 50),
+            (0, 0, 32, 4, 50),
+            (40, 0, 8, 0, 50),
         ] {
             let mono = noise((width * height) as usize, density);
             let (out_width, out_height) = ((width + up - 1) / up, (height + up - 1) / up);
