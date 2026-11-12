@@ -9,3 +9,4 @@ anyhow.workspace = true
 half = "2"
 unbound-assets.workspace = true
 unbound-yaml.workspace = true
+rayon.workspace = true
