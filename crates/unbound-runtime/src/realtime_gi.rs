@@ -857,17 +857,12 @@ fn write_cached(path: &Path, output: &unbound_gi::realtime_uv::Output) -> Result
         }));
     }
     let bytes: Vec<u8> = words.into_iter().flat_map(u32::to_le_bytes).collect();
-    let dir = path.parent().context("no cache folder")?;
-    std::fs::create_dir_all(dir)?;
-    let temp = path.with_extension(format!("tmp{}", std::process::id()));
-    std::fs::write(&temp, &bytes)?;
-    std::fs::rename(&temp, path)?;
-    Ok(())
+    write_atomic(path, &bytes)
 }
 
-/// Format version of Unbound's own precompute cache entries (`bake`).
-/// 1: the systems, their layout, clusters, transport, visibility and light probes of
-/// `unbound_gi::precompute::bake`, in `unbound_gi::data::encode_precomputed`'s encoding.
+/// Format version of the bake's cache entries (`bake`), beyond what the precompute's own
+/// version (`unbound_gi::precompute::FORMAT_VERSION`) covers.
+/// 1: a checksum, then `unbound_gi::data::encode_precomputed`'s encoding.
 const BAKE_CACHE_VERSION: u32 = 1;
 
 /// One renderer of a scene as Unbound's own precompute takes it.
@@ -936,19 +931,10 @@ impl BakeInput {
 /// under `<project>/Library/Unbound/RealtimeGI` by a hash of every input and the format
 /// version.
 pub fn bake(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<Json> {
-    let mut key = blake3::Hasher::new();
-    key.update(&BAKE_CACHE_VERSION.to_le_bytes());
-    key.update(&UV_CACHE_VERSION.to_le_bytes());
-    key.update(&(inputs.len() as u64).to_le_bytes());
-    for input in inputs {
-        input.hash_into(&mut key);
-    }
-    key.update(&(probes.len() as u64).to_le_bytes());
-    key.update(bytes_of(probes));
     let path = crate::state::state()
         .project_root
         .join("Library/Unbound/RealtimeGI")
-        .join(format!("{}.bin", key.finalize().to_hex()));
+        .join(format!("{}.bin", bake_key(inputs, probes)));
     let data = match read_baked(&path) {
         Some(data) => data,
         None => {
@@ -970,82 +956,130 @@ pub fn bake(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<Json> {
     register(data, &ranges)
 }
 
-fn bake_fresh(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<unbound_gi::data::Precomputed> {
-    struct Made {
-        positions: Vec<[f32; 3]>,
-        normals: Vec<[f32; 3]>,
-        uvs: unbound_gi::realtime_uv::Output,
-        bounds: ([f32; 3], [f32; 3]),
+/// The cache key of a bake: every input, the probes, and the versions of everything that makes
+/// its output.
+fn bake_key(inputs: &[BakeInput], probes: &[[f32; 3]]) -> String {
+    let mut key = blake3::Hasher::new();
+    key.update(&BAKE_CACHE_VERSION.to_le_bytes());
+    key.update(&unbound_gi::precompute::FORMAT_VERSION.to_le_bytes());
+    key.update(&UV_CACHE_VERSION.to_le_bytes());
+    key.update(&(inputs.len() as u64).to_le_bytes());
+    for input in inputs {
+        input.hash_into(&mut key);
     }
+    key.update(&(probes.len() as u64).to_le_bytes());
+    key.update(bytes_of(probes));
+    key.finalize().to_hex().to_string()
+}
+
+/// A renderer as the bake places it: world positions and normals, realtime lightmap UVs and
+/// world bounds.
+struct Placed {
+    positions: Vec<[f32; 3]>,
+    normals: Vec<[f32; 3]>,
+    uvs: unbound_gi::realtime_uv::Output,
+    bounds: ([f32; 3], [f32; 3]),
+}
+
+/// A normal through a matrix's rotation and scale (column by column): by its cofactors, the
+/// inverse transpose up to the determinant's size and kept when the matrix flattens one axis
+/// (a plane scaled to no height keeps its normal); its sign follows the determinant's (a mirror
+/// turns it); zero when the matrix flattens two axes.
+fn turned_normal(m: &[f32; 9], n: [f32; 3]) -> [f32; 3] {
+    let c = |i: usize, j: usize| m[3 * j + i];
+    let cofactor = |i: usize, j: usize| {
+        let (i1, i2) = ((i + 1) % 3, (i + 2) % 3);
+        let (j1, j2) = ((j + 1) % 3, (j + 2) % 3);
+        c(i1, j1) * c(i2, j2) - c(i1, j2) * c(i2, j1)
+    };
+    let det: f32 = (0..3).map(|j| c(0, j) * cofactor(0, j)).sum();
+    let sign = if det < 0.0 { -1.0 } else { 1.0 };
+    let turned: [f32; 3] =
+        [0, 1, 2].map(|i| sign * (0..3).map(|j| cofactor(i, j) * n[j]).sum::<f32>());
+    let length = (turned[0] * turned[0] + turned[1] * turned[1] + turned[2] * turned[2]).sqrt();
+    if length > 0.0 && length.is_finite() {
+        turned.map(|v| v / length)
+    } else {
+        [0.0; 3]
+    }
+}
+
+/// `input` placed in the world, its realtime lightmap UVs made as the managed side makes them.
+fn place(input: &BakeInput) -> Result<Placed> {
+    let m = &input.local_to_world;
+    let positions: Vec<[f32; 3]> = input.positions.iter().map(|&p| point(m, p)).collect();
+    let rotation_scale = [m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10]];
+    let normals = if input.normals.len() == input.positions.len() {
+        input
+            .normals
+            .iter()
+            .map(|&n| turned_normal(&rotation_scale, n))
+            .collect()
+    } else {
+        vec![[0.0; 3]; input.positions.len()]
+    };
+    let placed;
+    let uv_input = match &input.automatic {
+        None => UvInput {
+            positions: &positions,
+            uvs: &input.uvs,
+            triangles: &input.triangles,
+            pixel_size: input.pixel_size,
+            min_chart_texels: input.min_chart_texels,
+            charts: unbound_gi::realtime_uv::Charts::Preserved,
+        },
+        Some((matrix, params)) => {
+            placed = unbound_gi::instance::apply(matrix, &input.positions, &input.normals)
+                .ok_or_else(|| anyhow::anyhow!("the instance's matrix {matrix:?} is singular"))?;
+            UvInput {
+                positions: &placed.0,
+                uvs: &input.uvs,
+                triangles: &input.triangles,
+                pixel_size: input.pixel_size,
+                min_chart_texels: input.min_chart_texels,
+                charts: unbound_gi::realtime_uv::Charts::Automatic {
+                    normals: &placed.1,
+                    params: *params,
+                },
+            }
+        }
+    };
+    let uvs = unbound_gi::realtime_uv::realtime_uvs(&uv_input)?;
+    // The mesh's bounds through the matrix, as Renderer.bounds.
+    let (mut lo, mut hi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+    let (mut llo, mut lhi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+    for p in &input.positions {
+        for a in 0..3 {
+            llo[a] = llo[a].min(p[a]);
+            lhi[a] = lhi[a].max(p[a]);
+        }
+    }
+    for corner in 0..8 {
+        let p = [0, 1, 2].map(|a| if corner >> a & 1 == 0 { llo[a] } else { lhi[a] });
+        let w = point(m, p);
+        for a in 0..3 {
+            lo[a] = lo[a].min(w[a]);
+            hi[a] = hi[a].max(w[a]);
+        }
+    }
+    Ok(Placed {
+        positions,
+        normals,
+        uvs,
+        bounds: (lo, hi),
+    })
+}
+
+fn bake_fresh(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<unbound_gi::data::Precomputed> {
+    // A renderer of no triangles takes part in nothing.
+    let inputs: Vec<&BakeInput> = inputs
+        .iter()
+        .filter(|i| !i.triangles.is_empty() && !i.positions.is_empty())
+        .collect();
     let made = inputs
         .iter()
-        .map(|input| -> Result<Made> {
-            let m = &input.local_to_world;
-            let positions: Vec<[f32; 3]> = input.positions.iter().map(|&p| point(m, p)).collect();
-            // Normals through the inverse transpose of the matrix's rotation and scale.
-            let rotation_scale = [m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10]];
-            let normals = if input.normals.len() == input.positions.len() {
-                unbound_gi::instance::apply(&rotation_scale, &input.positions, &input.normals)
-                    .ok_or_else(|| anyhow::anyhow!("a renderer of a singular matrix"))?
-                    .1
-            } else {
-                vec![[0.0; 3]; input.positions.len()]
-            };
-            let placed;
-            let uv_input = match &input.automatic {
-                None => UvInput {
-                    positions: &positions,
-                    uvs: &input.uvs,
-                    triangles: &input.triangles,
-                    pixel_size: input.pixel_size,
-                    min_chart_texels: input.min_chart_texels,
-                    charts: unbound_gi::realtime_uv::Charts::Preserved,
-                },
-                Some((matrix, params)) => {
-                    placed = unbound_gi::instance::apply(matrix, &input.positions, &input.normals)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("the instance's matrix {matrix:?} is singular")
-                        })?;
-                    UvInput {
-                        positions: &placed.0,
-                        uvs: &input.uvs,
-                        triangles: &input.triangles,
-                        pixel_size: input.pixel_size,
-                        min_chart_texels: input.min_chart_texels,
-                        charts: unbound_gi::realtime_uv::Charts::Automatic {
-                            normals: &placed.1,
-                            params: *params,
-                        },
-                    }
-                }
-            };
-            let uvs = unbound_gi::realtime_uv::realtime_uvs(&uv_input)?;
-            // The mesh's bounds through the matrix, as Renderer.bounds.
-            let (mut lo, mut hi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
-            let (mut llo, mut lhi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
-            for p in &input.positions {
-                for a in 0..3 {
-                    llo[a] = llo[a].min(p[a]);
-                    lhi[a] = lhi[a].max(p[a]);
-                }
-            }
-            for corner in 0..8 {
-                let p = [0, 1, 2].map(|a| if corner >> a & 1 == 0 { llo[a] } else { lhi[a] });
-                let w = point(m, p);
-                for a in 0..3 {
-                    lo[a] = lo[a].min(w[a]);
-                    hi[a] = hi[a].max(w[a]);
-                }
-            }
-            Ok(Made {
-                positions,
-                normals,
-                uvs,
-                bounds: (lo, hi),
-            })
-        })
         .enumerate()
-        .map(|(k, made)| made.with_context(|| format!("renderer {k}")))
+        .map(|(k, input)| place(input).with_context(|| format!("renderer {k}")))
         .collect::<Result<Vec<_>>>()?;
     let renderers: Vec<unbound_gi::precompute::bake::BakeRenderer> = inputs
         .iter()
@@ -1080,10 +1114,17 @@ fn write_baked(path: &Path, data: &unbound_gi::data::Precomputed) -> Result<()> 
     let encoded = unbound_gi::data::encode_precomputed(data);
     let mut bytes = blake3::hash(&encoded).as_bytes().to_vec();
     bytes.extend_from_slice(&encoded);
+    write_atomic(path, &bytes)
+}
+
+/// Writes a cache entry whole or not at all: to a file of its own, then renamed into place.
+fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
+    static NEXT_TEMP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let dir = path.parent().context("no cache folder")?;
     std::fs::create_dir_all(dir)?;
-    let temp = path.with_extension(format!("tmp{}", std::process::id()));
-    std::fs::write(&temp, &bytes)?;
+    let n = NEXT_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let temp = path.with_extension(format!("tmp{}-{n}", std::process::id()));
+    std::fs::write(&temp, bytes)?;
     std::fs::rename(&temp, path)?;
     Ok(())
 }
@@ -1653,8 +1694,6 @@ mod tests {
         assert_eq!(data.systems.len(), 1);
         assert_eq!(data.renderers.len(), 4);
         assert_eq!(data.probe_sets.len(), 1);
-        // Normals through the matrix: the floor's top faces up in world space.
-        assert!(data.systems[0].input.normals.iter().any(|n| n[1] > 0.99));
         let dir = std::env::temp_dir().join(format!("unbound-bake-{}", std::process::id()));
         let path = dir.join("scene.bin");
         write_baked(&path, &data).unwrap();
@@ -1672,10 +1711,61 @@ mod tests {
         std::fs::write(&path, &bytes[..40]).unwrap();
         assert!(read_baked(&path).is_none());
         std::fs::remove_dir_all(dir).unwrap();
-        // A renderer with a singular matrix fails the bake by name.
-        let mut flat = box_input(5, [1.0, 1.0, 1.0], [0.0; 3]);
-        flat.local_to_world[0] = 0.0;
-        let error = bake_fresh(&[flat], &[]).unwrap_err();
-        assert!(format!("{error:#}").contains("renderer 0"), "{error:#}");
+        // A renderer of no triangles takes part in nothing.
+        let mut empty = box_input(6, [1.0; 3], [0.0; 3]);
+        empty.triangles.clear();
+        let mut with_empty: Vec<BakeInput> = inputs.into_iter().collect();
+        with_empty.push(empty);
+        assert_eq!(bake_fresh(&with_empty, &[]).unwrap().renderers.len(), 4);
+    }
+
+    #[test]
+    fn a_renderer_is_placed_through_its_matrix() {
+        // A box of 2 x 1 x 1 turned 90 degrees about Y and moved to (5, 1, -3): its +x face
+        // faces -z, the vertex (0.5, 0.5, 0.5) of that face lies at (5.5, 1.5, -4), and its
+        // bounds are 1 x 1 x 2 around (5, 1, -3).
+        let mut input = box_input(1, [1.0; 3], [0.0; 3]);
+        input.local_to_world = [
+            0.0, 0.0, -2.0, 0.0, // x to -2z
+            0.0, 1.0, 0.0, 0.0, // y
+            1.0, 0.0, 0.0, 0.0, // z to x
+            5.0, 1.0, -3.0, 1.0,
+        ];
+        let placed = place(&input).unwrap();
+        let v = (0..input.positions.len())
+            .find(|&i| input.positions[i] == [0.5; 3] && input.normals[i] == [1.0, 0.0, 0.0])
+            .unwrap();
+        assert_eq!(placed.positions[v], [5.5, 1.5, -4.0]);
+        assert_eq!(placed.normals[v], [0.0, 0.0, -1.0]);
+        assert_eq!(placed.bounds, ([4.5, 0.5, -4.0], [5.5, 1.5, -2.0]));
+        // A mirror turns the normals with it; a plane scaled to no height keeps its up normal
+        // (the bake takes it), one flattened along two axes has none.
+        let mut mirrored = box_input(2, [-1.0, 1.0, 1.0], [0.0; 3]);
+        mirrored.normals = vec![[1.0, 0.0, 0.0]; mirrored.positions.len()];
+        assert_eq!(place(&mirrored).unwrap().normals[0], [-1.0, 0.0, 0.0]);
+        let mut flat = box_input(3, [10.0, 0.0, 10.0], [0.0; 3]);
+        flat.normals = vec![[0.0, 1.0, 0.0]; flat.positions.len()];
+        assert_eq!(place(&flat).unwrap().normals[0], [0.0, 1.0, 0.0]);
+        assert_eq!(
+            turned_normal(
+                &[10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0]
+            ),
+            [0.0; 3]
+        );
+    }
+
+    #[test]
+    fn a_bakes_key_covers_its_inputs() {
+        let inputs = [box_input(1, [4.0, 0.2, 4.0], [0.0; 3])];
+        let key = bake_key(&inputs, &[]);
+        assert_eq!(key, bake_key(&inputs, &[]));
+        let mut moved = box_input(1, [4.0, 0.2, 4.0], [0.0; 3]);
+        moved.local_to_world[13] = 0.001;
+        assert_ne!(key, bake_key(&[moved], &[]));
+        let mut grouped = box_input(1, [4.0, 0.2, 4.0], [0.0; 3]);
+        grouped.group = 1;
+        assert_ne!(key, bake_key(&[grouped], &[]));
+        assert_ne!(key, bake_key(&inputs, &[[0.0, 1.0, 0.0]]));
     }
 }

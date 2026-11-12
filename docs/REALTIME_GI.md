@@ -846,8 +846,10 @@ is how the Editor's products are made in the measured release, as follows.
   and its light probes' positions: the systems and their layout, then per system its clusters,
   transport and visibility through the whole scene, and one light probe set, in the form the
   runtime reads the Editor's data in. The result is cached under
-  `Library/Unbound/RealtimeGI/` by a hash of every input and the cache's format version, with
-  a checksum: a damaged or stale entry is made again. Made from the Room's renderers alone, in
+  `Library/Unbound/RealtimeGI/` by a hash of every input and the format versions of the cache
+  and of the precompute (`precompute::FORMAT_VERSION`), with a checksum: a damaged or stale
+  entry is made again. A renderer of no triangles takes no part; a normal goes through its
+  renderer's matrix by its cofactors (a plane scaled to no height keeps its normal). Made from the Room's renderers alone, in
   the scene's order, the Room is one system of 52 x 52 texels in an atlas of 64 as the
   Editor's, and `room-base` puts 79 of its 5070 values outside the comparator's tolerance (83
   over the Editor's layout), its light probes 15 of their 243 coefficients (14).

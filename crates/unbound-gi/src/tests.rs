@@ -4174,6 +4174,8 @@ fn the_room_baked_from_its_renderers_lights_as_the_editors() {
     eprintln!("room-base baked: {fails} of {total} outside the tolerance, median {median}");
     let (off, worst) = r.probes("room-base");
     eprintln!("room-base baked probes: {off} coefficients off, worst {worst}");
+    // Measured: 15 (with the Editor's layout 14).
+    assert!(off * 100 <= 15 * 115, "{off} probe coefficients off");
     assert!(total > 4000 && median < 0.01);
     assert!(fails * 100 <= 83 * 115, "{fails}");
 }
