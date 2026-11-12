@@ -308,6 +308,52 @@ namespace UnityEngine.Tests
             Assert.Equal(0u, Assert.Single(Collect(Cull(), all, sun)).Dots.Value.Header.Flags);
         }
 
+        /// <summary>What is not drawn as Unity draws it is said once: a lightmapped command draws
+        /// without its lightmap, a cross-fade keyword command without the keyword, and an output
+        /// that counts commands it did not allocate is not drawn at all.</summary>
+        [Fact]
+        public void UnsupportedCommandPartsAreWarnedOnce()
+        {
+            BatchCulling.s_Warned = 0;
+            int mode = 0;
+            var group = Group((g, c, o, u) =>
+            {
+                if (mode == 1)
+                {
+                    var d = (BatchCullingOutputDrawCommands*)o.drawCommands.GetUnsafePtr();
+                    d->drawCommandCount = 1;
+                    d->visibleInstanceCount = 1;
+                    return default;
+                }
+                return Emit(new BatchFilterSettings { renderingLayerMask = uint.MaxValue }, 1, new BatchDrawCommand
+                {
+                    batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1,
+                    flags = BatchDrawCommandFlags.IsLightMapped | BatchDrawCommandFlags.LODCrossFadeKeyword,
+                })(g, c, o, u);
+            });
+            group.RegisterMesh(m_Mesh);
+            group.RegisterMaterial(m_Material);
+            AddBatch(group);
+            var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            try
+            {
+                Assert.Single(Collect(Cull(), all));
+                Assert.Single(Collect(Cull(), all));
+                Assert.Equal(1, logged.FindAll(m => m.Contains("IsLightMapped")).Count);
+                Assert.Equal(1, logged.FindAll(m => m.Contains("LODCrossFadeKeyword")).Count);
+                mode = 1;
+                Assert.Empty(Collect(Cull(), all));
+                Assert.Contains(logged, m => m.Contains("without allocating"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+        }
+
         [Fact]
         public void TheFramesEndFreesTheArraysTheCallbackAllocated()
         {

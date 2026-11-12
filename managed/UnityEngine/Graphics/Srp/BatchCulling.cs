@@ -106,8 +106,10 @@ namespace Unbound.Runtime
         /// MotionVectorGenerationMode.Camera, zero motion for ForceNoMotion, and the main light for
         /// the commands it lights: there is one, its culling mask has the range's layer and,
         /// the command lightmapped, its direct light is not in the lightmaps (the rule of
-        /// unity_LightData.z: <see cref="FrameBuilder.InLightmap"/>). Matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/brg.
+        /// unity_LightData.z: <see cref="FrameBuilder.InLightmap"/>). The probe
+        /// (tests/projects/brg, matching the Unity 6000.0.71f1 Editor) covers the flip and the main
+        /// light of an unlightmapped command at the default motion mode; the other motion modes
+        /// (no motion vector pass is drawn) and lightmapped commands are not measured.
         /// </summary>
         internal struct Header
         {
@@ -197,11 +199,29 @@ namespace Unbound.Runtime
             return lighting;
         }
 
-        static readonly HashSet<string> s_Warned = new HashSet<string>();
+        /// <summary>The unsupported parts of draw commands warned about so far, one bit each
+        /// (<see cref="WarnOnce"/>): checking costs no allocation once warned.</summary>
+        internal static uint s_Warned;
 
-        static void WarnOnce(string key, string message)
+        // Unsupported parts of draw commands (bits of s_Warned).
+        const int UnsupportedIndirect = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2, UnsupportedLightmap = 3,
+            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5;
+
+        static readonly string[] s_Unsupported =
         {
-            if (s_Warned.Add(key)) Debug.LogWarning("Unbound: " + message);
+            "BatchRendererGroup indirect draw commands are not supported yet; they are not drawn.",
+            "BatchRendererGroup procedural draw commands are not supported yet; they are not drawn.",
+            "BatchRendererGroup procedural indirect draw commands are not supported yet; they are not drawn.",
+            "BatchRendererGroup draw commands flagged IsLightMapped draw without their lightmaps (LIGHTMAP_ON and the lightmap of lightmapIndex are not bound yet).",
+            "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
+            "a BatchRendererGroup culling callback gave draw commands or visible instances without allocating their arrays; its output is not drawn.",
+        };
+
+        static void WarnOnce(int what)
+        {
+            if ((s_Warned & (1u << what)) != 0) return;
+            s_Warned |= 1u << what;
+            Debug.LogWarning("Unbound: " + s_Unsupported[what]);
         }
 
         /// <summary>
@@ -218,7 +238,13 @@ namespace Unbound.Runtime
             {
                 if (output.View != BatchCullingViewType.Camera || output.Group == null) continue;
                 ref var d = ref output.Drawn;
-                for (int r = 0; r < d.drawRangeCount && d.drawRanges != null; r++)
+                if ((d.drawCommandCount > 0 && d.drawCommands == null) || (d.visibleInstanceCount > 0 && d.visibleInstances == null)
+                    || (d.drawRangeCount > 0 && d.drawRanges == null))
+                {
+                    WarnOnce(UnsupportedMissingArrays);
+                    continue;
+                }
+                for (int r = 0; r < d.drawRangeCount; r++)
                 {
                     var range = d.drawRanges[r];
                     var filter = range.filterSettings;
@@ -228,7 +254,12 @@ namespace Unbound.Runtime
                     if (filtering.excludeMotionVectorObjects && filter.motionMode == MotionVectorGenerationMode.Object) continue;
                     if (range.drawCommandsType != BatchDrawCommandType.Direct)
                     {
-                        WarnOnce("type" + range.drawCommandsType, $"BatchRendererGroup {range.drawCommandsType} draw commands are not supported yet; they are not drawn.");
+                        WarnOnce(range.drawCommandsType switch
+                        {
+                            BatchDrawCommandType.Indirect => UnsupportedIndirect,
+                            BatchDrawCommandType.Procedural => UnsupportedProcedural,
+                            _ => UnsupportedProceduralIndirect,
+                        });
                         continue;
                     }
                     var lighting = LightingOf(filter);
@@ -251,6 +282,8 @@ namespace Unbound.Runtime
                         if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
                         var flags = (uint)command.flags;
                         bool lightmapped = (command.flags & BatchDrawCommandFlags.IsLightMapped) != 0;
+                        if (lightmapped) WarnOnce(UnsupportedLightmap);
+                        if ((command.flags & BatchDrawCommandFlags.LODCrossFadeKeyword) == BatchDrawCommandFlags.LODCrossFadeKeyword) WarnOnce(UnsupportedCrossFadeKeyword);
                         var bounds = mesh.bounds;
                         var header = new Header
                         {

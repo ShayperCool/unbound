@@ -462,7 +462,7 @@ namespace UnityEngine.Rendering
 
         public void SetPickingMaterial(Material material) => Unbound.Runtime.Stubs.Ignored("BatchRendererGroup.SetPickingMaterial", "has no effect: Unbound has no Scene view picking");
 
-        public void SetErrorMaterial(Material material) => Unbound.Runtime.Stubs.Ignored("BatchRendererGroup.SetErrorMaterial", "is not honoured yet: draws of shaders without DOTS instancing are skipped");
+        public void SetErrorMaterial(Material material) => Unbound.Runtime.Stubs.Ignored("BatchRendererGroup.SetErrorMaterial", "is not honoured yet: draws of shaders without DOTS instancing are skipped with a warning");
 
         public void SetLoadingMaterial(Material material) => Unbound.Runtime.Stubs.Ignored("BatchRendererGroup.SetLoadingMaterial", "has no effect: shaders compile before they draw");
 
