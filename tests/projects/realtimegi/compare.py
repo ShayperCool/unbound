@@ -228,13 +228,6 @@ def main():
             compare_atlas(path.name, path, cap/path.name, result)
         elif path.suffix == '.rlm':
             compare_atlas(path.name, path, cap/path.name, result, own)
-    for case, (compared, off, details) in sorted(own.items()):
-        result.lines.append(f'{case} (renderers): {off} of {compared} values off (allowed {int(OWN_SHARE * compared)})')
-        if off > OWN_SHARE * compared:
-            result.fail('gated', f'{case}: {off} of {compared} renderer lightmap values off', details)
-        elif off:
-            result.details.append(f'{case}: {off} renderer lightmap values off (allowed {int(OWN_SHARE * compared)})')
-            result.details.extend('  ' + d for d in details)
         elif path.suffix == '.png':
             if not (cap/path.name).is_file():
                 result.fail('gated', f'{path.name}: missing')
@@ -245,6 +238,13 @@ def main():
             if diff is None or diff[0] > FRAME_MEAN:
                 result.fail('gated', f'{path.name}: ' + ('size differs' if diff is None else
                                                          f'frame mean {diff[0]:.2f} over {FRAME_MEAN}'))
+    for case, (compared, off, details) in sorted(own.items()):
+        result.lines.append(f'{case} (renderers): {off} of {compared} values off (allowed {int(OWN_SHARE * compared)})')
+        if off > OWN_SHARE * compared:
+            result.fail('gated', f'{case}: {off} of {compared} renderer lightmap values off', details)
+        elif off:
+            result.details.append(f'{case}: {off} renderer lightmap values off (allowed {int(OWN_SHARE * compared)})')
+            result.details.extend('  ' + d for d in details)
     for extra in sorted(p.name for p in cap.iterdir() if p.suffix in ('.atlas', '.dir', '.png', '.rlm')
                         and not (ref/p.name).exists() and not (args.own_layout and p.suffix in laid_out)):
         result.fail('state', f'{extra}: extra output')

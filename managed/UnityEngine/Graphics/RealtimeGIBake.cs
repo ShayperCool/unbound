@@ -19,6 +19,13 @@ namespace UnityEngine
         /// <summary>StaticEditorFlags.ContributeGI.</summary>
         const uint ContributeGI = 1;
 
+        /// <summary>The scenes (paths) the Editor baked when it opened them this session: a scene
+        /// loaded again at runtime keeps its bake (tests/projects/realtimegi
+        /// `roombakereload-base`), a scene never opened is not baked.</summary>
+        static readonly HashSet<string> s_BakedScenes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        internal static bool BakedThisSession(string path) => !string.IsNullOrEmpty(path) && s_BakedScenes.Contains(path);
+
         /// <summary>Says once what the Editor's bake of a scene it opens without lighting data
         /// would make and Unbound does not: baked lightmaps and the light probes' baked lighting
         /// (baked global illumination on; a scene without Lighting Settings has the defaults',
@@ -239,7 +246,8 @@ namespace UnityEngine
             if (!(scale > 0f)) { why = "it has no realtime lightmap resolution"; return null; }
             if (!(ParametersOf(renderer.m_LightmapParameters, settings) is BakeParameters parameters))
             {
-                why = renderer.m_LightmapParameters.Guid == BuiltinExtraGuid
+                var named = renderer.m_LightmapParameters.IsNull && settings != null ? settings.DefaultLightmapParameters : renderer.m_LightmapParameters;
+                why = named.Guid == BuiltinExtraGuid
                     ? "its built-in Lightmap Parameters are not Default-Medium (not measured)"
                     : "its Lightmap Parameters cannot be read";
                 return null;

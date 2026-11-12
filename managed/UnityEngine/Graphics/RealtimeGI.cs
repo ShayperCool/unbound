@@ -156,6 +156,8 @@ namespace UnityEngine
             if (baked)
             {
                 if (!bake) return;
+                if (Unbound.Runtime.SceneRegistry.Get(new Unbound.Runtime.SceneHandle(scene)) is { } opened && !string.IsNullOrEmpty(opened.Path))
+                    s_BakedScenes.Add(opened.Path);
                 NoteBakeParts(file, settings);
                 // A scene without Lighting Settings has the defaults', which leave realtime GI off.
                 if (settings == null || !settings.realtimeGI) return;

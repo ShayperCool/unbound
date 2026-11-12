@@ -873,12 +873,14 @@ of projects created in Unity 2023.2 or earlier). Measured (tests/projects/realti
 the Unity 6000.0.71f1 Editor on the NVIDIA OpenGL Core device): opening such a scene starts a
 bake at once, also in batch mode; entering Play mode before it is done stops it and the scene
 plays without realtime GI; once it is done the scene has lighting data and Play mode draws its
-realtime GI (the Room's: within 0.7% of `room-base`); a scene loaded at runtime is not baked,
-whatever it asks for (`roombakeloaded-base`: no realtime GI).
+realtime GI (the Room's: within 0.7% of `room-base`), also when it is loaded again at runtime
+(`roombakereload-base`); a scene loaded at runtime that was not opened is not baked, whatever
+it asks for (`roombakeloaded-base`: no realtime GI).
 
 Unbound uses its precompute there: a scene the Editor opens (the first scene, the one Play
 mode starts with, `EditorSceneManager.OpenScene` in Edit mode; `SceneData.OpenedInEditor`; not
-one loaded in Play mode, also through `EditorSceneManager.LoadSceneInPlayMode`) whose
+one loaded in Play mode, also through `EditorSceneManager.LoadSceneInPlayMode`, unless it was
+opened and baked earlier in the session) whose
 LightmapSettings ask for a bake on load, which has no lighting data and whose Lighting Settings
 have realtime GI on, gets the realtime GI [Unbound's precompute](#unbounds-precompute) makes
 of its renderers (`Graphics/RealtimeGIBake.cs`, `realtime-gi-bake`), as if the Editor's bake

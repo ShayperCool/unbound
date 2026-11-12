@@ -600,7 +600,10 @@ namespace Unbound.Runtime
                 // additive one adds to it.
                 bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
                 var references = LightingReferences(doc.Body);
-                bool bake = scene != null && scene.OpenedInEditor && AsksForBake(doc.Body, references.Data);
+                // The Editor bakes a scene it opens; its bake then stays the scene's for the
+                // session, also when the scene is loaded again at runtime.
+                bool bake = scene != null && AsksForBake(doc.Body, references.Data)
+                    && (scene.OpenedInEditor || RealtimeGI.BakedThisSession(scene.Path));
                 RenderSettings.ReadLightingData(references.Data, resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
                 if (scene != null)
                 {

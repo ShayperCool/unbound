@@ -222,7 +222,8 @@ mode until the bake that opening it starts is done, and enters Play mode
 (`RealtimeGIRunner.RecordBake`, `REALTIME_GI_BAKE`): `roombake-base` and `roombake-moved` (the
 point light moved) record the realtime GI the bake made, each renderer's realtime lightmap also
 in its own realtime lightmap UV space (`<case>-<renderer>.rlm`), `roombake-lightprobes` the
-light probes; then `RoomBakeLoaded`, loaded at runtime, records `roombakeloaded-base`. Its own
+light probes; `RoomBake` loaded again at runtime records `roombakereload-base`; then
+`RoomBakeLoaded`, loaded at runtime, records `roombakeloaded-base`. Its own
 reference set is `Reference/unity-<release>/bake`.
 
 ## What the Editor does (this capture)
@@ -350,8 +351,8 @@ Observations (not documented guarantees):
   each reflects the black cube and has a zero ambient probe (`--color-space gamma`). Not
   captured: other ambient or reflection sources, another reflection resolution, a named sun
   that is disabled, not directional or not a light of the scene, rendering features a render
-  pipeline declares itself or changed after a load, and a scene with
-  `Lightmapping.bakeOnSceneLoad` on (Unbound does not bake it and says so once).
+  pipeline declares itself or changed after a load, and these environment scenes with
+  `Lightmapping.bakeOnSceneLoad` on (a Room asking for it is the `--bake` capture).
 - The reflection and the ambient probe are the active scene's: a scene added to another changes
   neither (`*-plus-*`), and `SceneManager.SetActiveScene` with the added scene switches both
   within the frame (`-active`), as the documentation says of the active scene ("from what Scene
@@ -423,7 +424,8 @@ Observations (not documented guarantees):
   its realtime GI (`roombake-*`), which is the Room's (the lightmap values within 0.7% of
   `room-base`'s on average). A scene loaded at runtime is not baked, whatever it asks for:
   `RoomBakeLoaded` has no realtime GI (realtime lightmap index -1) and its lightmaps mode is 1
-  (`roombakeloaded-base`).
+  (`roombakeloaded-base`), while `RoomBake` itself, loaded again at runtime after the bake,
+  keeps its realtime GI (`roombakereload-base`).
 
 ## Unbound
 

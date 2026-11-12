@@ -630,13 +630,12 @@ public class RealtimeGIProbe : MonoBehaviour
         "LegacyTwoSuns", "LegacyTwoSunsTurned", "LegacyNamedSun",
     };
 
-    /// <summary>Each scene without lighting data: what it reflects by default, its ambient
-    /// probe as loaded and in the custom mode.</summary>
     /// <summary>`RoomBake`, opened by the Editor and baked when it opened (no lighting data, a
     /// bake on load asked for): its realtime GI as loaded and with the point light moved, each
     /// renderer's realtime lightmap also in its own UV space (`.rlm`: where the renderers lie in
-    /// the atlas is the bake's own choice); then `RoomBakeLoaded`, the same scene loaded at
-    /// runtime, which no bake made lighting data for.</summary>
+    /// the atlas is the bake's own choice); then `RoomBake` loaded again at runtime; then
+    /// `RoomBakeLoaded`, the same scene under another name loaded at runtime, which no bake made
+    /// lighting data for.</summary>
     IEnumerator BakeOnLoad()
     {
         var s = Scene();
@@ -648,6 +647,12 @@ public class RealtimeGIProbe : MonoBehaviour
         yield return Converge();
         Capture("roombake-moved", s, false);
         DumpRenderers("roombake-moved", s);
+        // The opened scene loaded again at runtime (as a level restarts).
+        yield return Load("RoomBake");
+        var reloaded = Scene();
+        yield return Converge();
+        Capture("roombakereload-base", reloaded, false);
+        DumpRenderers("roombakereload-base", reloaded);
         yield return Load("RoomBakeLoaded");
         var loaded = Scene();
         yield return Converge();
@@ -676,6 +681,8 @@ public class RealtimeGIProbe : MonoBehaviour
         }
     }
 
+    /// <summary>Each scene without lighting data: what it reflects by default, its ambient
+    /// probe as loaded and in the custom mode.</summary>
     IEnumerator WithoutLightingData()
     {
         foreach (var name in NoData)
