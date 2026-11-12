@@ -152,6 +152,24 @@ public class ClipProbe : MonoBehaviour
 #endif
     }
 
+    /// <summary>Every transform of a model with its local rotation as imported, the sign
+    /// included (fields ending in `.q`, which the comparator does not match with their
+    /// negation): HumanTwistGeneric is the HumanTwist rig imported as Generic, whose bones
+    /// include rotations with a negative w; its clip's rotation curves are recorded with the
+    /// sign too (<see cref="Imported"/>).</summary>
+    static void Nodes(string model)
+    {
+        var root = Resources.Load<GameObject>(model).transform;
+        var parts = new List<string>();
+        void Walk(Transform t, string path)
+        {
+            parts.Add(S(path + ".q") + ":" + Q(t.localRotation));
+            foreach (Transform child in t) Walk(child, path.Length == 0 ? child.name : path + "/" + child.name);
+        }
+        Walk(root, "");
+        Record("nodes." + model, "{" + string.Join(",", parts) + "}");
+    }
+
     static string Snapshot(Animator animator, ClipReceiver receiver)
     {
         var parts = new List<string>();
@@ -230,6 +248,8 @@ public class ClipProbe : MonoBehaviour
             Keys("HumanOptimal");
             Keys("HumanLong");
             foreach (var mask in new[] { "None", "All", "Part" }) TransformCurves("HumanTwist" + mask);
+            Nodes("HumanTwistGeneric");
+            Imported("HumanTwistGeneric", true);
         }
         catch (Exception e)
         {

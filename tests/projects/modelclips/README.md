@@ -14,7 +14,8 @@ animation import. Two Humanoid rigs carry one clip each under a reducing compres
 `HumanOptimal` (Optimal, Position Error 5); `HumanLong` is the same rig with compression Off
 and a clip of 31 frames (made by tests/projects/humanoid/make_models.py); `HumanTwistNone`,
 `HumanTwistAll` and `HumanTwistPart` carry animated bones that are not human bones under three
-clip masks. Other Humanoid clip settings are not covered.
+clip masks; `HumanTwistGeneric` is the same file imported as Generic. Other Humanoid clip
+settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
 `AnimationUtility.GetAnimationClipSettings`, curve bindings, the curves' values at every half
@@ -146,6 +147,26 @@ Unmeasured for Humanoid clips: clips of fifty frames and more (the limit of a re
 is the generic reduction's, tests/projects/modelaxis), other frame rates, a Position Error of
 0 (Unbound then keeps every key) and a humanoid oversampling above one.
 
-Unbound matches 3211/3211 records. The generic reducing compression modes are compared by their
+## Rotation signs
+
+`nodes.HumanTwistGeneric` records the local rotation of every transform of `HumanTwistGeneric`
+(the HumanTwist file imported as Generic) as imported, and its clip's rotation curves are
+recorded like every clip's; the comparator matches the fields ending in `.q` and the curves'
+values with their signs, not up to a negation (a quaternion's sign does not change the
+rotation, but scripts read it).
+
+- 20 node rotations, four of them with a negative w: each has the sign a rotation matrix gives
+  its quaternion (w positive while |w| is above 1/2, else the component of the matrix's
+  largest diagonal element positive).
+- The 19 rotation curves start with the same sign at the take's start, four with a negative w,
+  and every key lies in the hemisphere of the key before it.
+- A clip from the middle of a take (`clip.Rig.Beyond`, from frame 40) starts with the sign the
+  take's rotations have reached there: `Spin` has turned past half a turn and starts with a
+  negative w, the opposite of its own matrix's sign.
+
+Not measured: Legacy imports, ties between diagonal elements, a range that starts before its
+take, and a turn of half a revolution or more between two frames.
+
+Unbound matches 3545/3545 records. The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
 set).
