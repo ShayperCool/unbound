@@ -656,8 +656,6 @@ fn a_texel_inside_other_geometry_takes_a_neighbours_light() {
     let mask: Vec<u32> = (0..64 * 64)
         .map(|i| (i % 64 >= 8 || i / 64 >= 8) as u32)
         .collect();
-    let mut floor_texels = Mesh::default();
-    floor_texels.quad([0.0; 3], [0.0, 0.0, 4.0], [4.0, 0.0, 0.0], [0.0, 0.0]);
     let t = super::transport::transport(
         &instances,
         &c,
@@ -762,7 +760,16 @@ fn an_odd_output_solves_its_directionality_on_whole_blocks() {
         solver.update();
     }
     let d = solver.directionality().unwrap();
-    // A floor under a uniform sky: the light comes from straight up, blue (z, in the tangent
-    // frame's up) high, in every whole block's texels.
-    assert!(d[0][3] > 0, "{:?}", d[0]);
+    // A floor under a uniform sky: in every whole block's texels the light comes from straight
+    // up (world +y: green high, red and blue near the middle), its mean direction over the
+    // cosine-weighted hemisphere two thirds long.
+    for y in 0..8 {
+        for x in 0..8 {
+            let t = d[y * 9 + x];
+            assert!(
+                t[1] > 200 && (t[0] as i32 - 128).abs() < 16 && (t[2] as i32 - 128).abs() < 16,
+                "{t:?}"
+            );
+        }
+    }
 }

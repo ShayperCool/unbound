@@ -747,17 +747,21 @@ is how the Editor's products are made in the measured release, as follows.
   the wall's top takes 0.9 of its light from the environment in the Editor, 0.52 in Unbound;
   an unresolved hypothesis is that the Editor's ray origins of such texels lie elsewhere than
   on the texel's own footprint). Lit through the probe's Room cases, the solver over Unbound's
-  clusters and transport puts 80, 123, 323 and 554 of the 5070 values of `room-base`,
+  clusters and transport puts 83, 125, 329 and 553 of the 5070 values of `room-base`,
   `-moved`, `-intensity` and `-bounce` outside the comparator's tolerance (median relative
-  error 0.5 to 0.9%; 87 to 457 in the later cases), over the Editor's clusters with Unbound's
-  transport 31, 34, 83 and 212: texels next to the emissive panel and behind it (whose share of
-  the panel is up to 20% from the Editor's) and the edge texels above. Ruled out on the way:
+  error 0.5 to 0.9%; 87 to 458 in the later cases). The transport alone is closer: in a local
+  experiment with the Editor's own cluster geometry (which its precompute keeps outside the
+  project) and Unbound's transport the same cases put 12, 14, 29 and 81 values outside it, so
+  the clusters are most of the difference; what is left of the transport's is the texels next
+  to the emissive panel and behind it and the edge texels above. Ruled out on the way:
   all of a texel's rays from its centre (more of the values outside the tolerance), each origin
   taking every 16th ray (its rays all within one wedge of azimuths), and a budget that joins the
   lightest groups first (five times the values outside it of no budget at all; joining where it
   changes least is about as good as none). With directional lightmaps (`RoomDirectional`) the
   directionality is 4.9/255 from the Editor's on average (0.2/255 from the Editor's transport),
-  the half Lambert term 2.4/255 above it.
+  the half Lambert term 2.4/255 above it. Open: a system's transport traces only its own
+  surfaces and references only its own values and the environment; scenes of several systems
+  (the probe's `RoomSystems`) need the others' surfaces and values.
 
 ## Engine
 

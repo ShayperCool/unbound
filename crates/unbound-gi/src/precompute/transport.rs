@@ -4,20 +4,22 @@
 //! weight, one that leaves the scene to the environment texel it leaves through. The texels are
 //! solved in segments of a block of 2x2 texels each, their weights quantized as the runtime
 //! reads them, with each reference's direction for the directionality.
-use super::clusters::{Clustering, Instance, NO_CLUSTER, around, hemisphere, hidden, push_off};
+use super::clusters::{
+    CULL_RAYS, Clustering, Instance, NO_CLUSTER, around, hemisphere, hidden, push_off,
+};
 use super::math::{V3, add, dot, normalized, scale};
-use crate::data::{ENVIRONMENT_ID, Segment, Transport};
+use crate::data::{ENVIRONMENT_ID, ENVIRONMENT_VALUES, Segment, Transport};
 use crate::directionality::{
     DIRECTIONS, NEIGHBOUR_ABOVE, NEIGHBOUR_ABOVE_LEFT, NEIGHBOUR_ABOVE_RIGHT, NEIGHBOUR_BELOW,
     NEIGHBOUR_BELOW_LEFT, NEIGHBOUR_BELOW_RIGHT, NEIGHBOUR_LEFT, NEIGHBOUR_RIGHT,
 };
-use crate::environment::RESOLUTION;
+use crate::environment::{RESOLUTION, level_of};
 use anyhow::{Result, ensure};
 use rayon::prelude::*;
 
-/// Rays that test whether an origin lies inside other geometry.
-const HIDDEN_RAYS: usize = 16;
-/// How far (texels) a texel whose footprint is hidden looks for one of its chart that is not.
+/// How far (texels) a texel whose footprint is hidden looks for one of its chart that is not:
+/// Unbound's choice, as far as a chart's hidden part reaches in the probe's scenes (the floor
+/// under the block, 3 texels) and more; a texel with none that near receives no light.
 const FILL_RADIUS: i64 = 8;
 /// The cube faces' axes (+X, -X, +Y, -Y, +Z, -Z): where each face's columns and rows run (from
 /// its top left) and where it looks, as a cube map stores them.
@@ -53,13 +55,10 @@ pub fn environment_texel(d: V3) -> u32 {
 
 /// The direction through the centre of the environment value `t`, of any level.
 pub fn environment_direction(t: u32) -> V3 {
-    let (mut e, mut size) = (t as usize, RESOLUTION);
-    while size > 1 && e >= 6 * size * size {
-        e -= 6 * size * size;
-        size /= 2;
-    }
+    let (size, start) = level_of(t as usize).unwrap_or((1, ENVIRONMENT_VALUES - 6));
+    let e = (t as usize - start).min(6 * size * size - 1);
     let (face, rest) = (e / (size * size), e % (size * size));
-    let (across, down, view) = FACES[face.min(5)];
+    let (across, down, view) = FACES[face];
     let at = |i: usize| (i as f32 + 0.5) / size as f32 * 2.0 - 1.0;
     normalized(add(
         view,
@@ -78,7 +77,8 @@ pub struct Origin {
     pub texel_size: f32,
 }
 
-/// Sub-positions per texel side whose surface points are a texel's ray origins.
+/// Sub-positions per texel side whose surface points are a texel's ray origins (Unbound's
+/// choice: 16 origins, 512 of the default 8192 rays each).
 const SUB: usize = 4;
 
 /// A texel's surface: the point at its centre and its ray origins.
@@ -96,6 +96,9 @@ pub fn footprints(instances: &[Instance], width: u32, height: u32) -> Vec<Option
     // Which renderer each texel's centre lies in (the triangle it lies deepest in), and there.
     let mut owner: Vec<Option<(usize, f32, Origin)>> = vec![None; size];
     let mut out: Vec<Vec<Origin>> = vec![Vec::new(); size];
+    // Which of a texel's sub-positions an origin was made of (one on an edge of two of its
+    // triangles counts once).
+    let mut taken = vec![0u16; size];
     for pass in 0..2 {
         for (i, inst) in instances.iter().enumerate() {
             for t in inst.triangles {
@@ -159,7 +162,9 @@ pub fn footprints(instances: &[Instance], width: u32, height: u32) -> Vec<Option
                                     y as f32 + (sy as f32 + 0.5) / SUB as f32,
                                 ];
                                 let b = bary(q);
-                                if b.iter().all(|&v| v >= -1e-5) {
+                                let bit = 1u16 << (sy * SUB + sx);
+                                if taken[at] & bit == 0 && b.iter().all(|&v| v >= -1e-5) {
+                                    taken[at] |= bit;
                                     out[at].push(point(b));
                                 }
                             }
@@ -250,24 +255,16 @@ fn coarser(r: u32, refs: Refs, tree_parent: &[u32]) -> Option<u32> {
             .copied()
             .filter(|&p| p != u32::MAX);
     }
-    let mut e = (r - refs.environment) as usize;
-    let (mut size, mut at) = (RESOLUTION, 0usize);
-    while size > 1 {
-        let level = 6 * size * size;
-        if e < level {
-            let (face, rest) = (e / (size * size), e % (size * size));
-            let (x, y) = (rest % size, rest / size);
-            let half = size / 2;
-            return Some(
-                refs.environment
-                    + (at + level + face * half * half + (y / 2) * half + x / 2) as u32,
-            );
-        }
-        e -= level;
-        at += level;
-        size /= 2;
+    let e = (r - refs.environment) as usize;
+    let (size, start) = level_of(e)?;
+    if size == 1 {
+        return None;
     }
-    None
+    let (face, rest) = ((e - start) / (size * size), (e - start) % (size * size));
+    let (x, y) = (rest % size, rest / size);
+    let half = size / 2;
+    let next = start + 6 * size * size;
+    Some(refs.environment + (next + face * half * half + (y / 2) * half + x / 2) as u32)
 }
 
 /// The values one coarser value stands for, and the share of it each child has: a tree parent's
@@ -310,26 +307,21 @@ impl Hierarchy {
             }
             return;
         }
-        // The environment value's level and place, and the four under it.
-        let mut e = (p - self.refs.environment) as usize;
-        let (mut size, mut at) = (RESOLUTION, 0usize);
-        while size > 1 {
-            let level = 6 * size * size;
-            let half = size / 2;
-            let coarse = 6 * half * half;
-            if e >= level && e < level + coarse {
-                let k = e - level;
-                let (face, rest) = (k / (half * half), k % (half * half));
-                let (x, y) = (rest % half, rest / half);
-                for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
-                    let fine = at + face * size * size + (2 * y + dy) * size + 2 * x + dx;
-                    out.push((self.refs.environment + fine as u32, 0.25));
-                }
-                return;
-            }
-            e -= level;
-            at += level;
-            size = half;
+        // The environment value's level and place, and the four under it in the level before.
+        let e = (p - self.refs.environment) as usize;
+        let Some((half, start)) = level_of(e) else {
+            return;
+        };
+        if half == RESOLUTION {
+            return;
+        }
+        let size = 2 * half;
+        let finer = start - 6 * size * size;
+        let (face, rest) = ((e - start) / (half * half), (e - start) % (half * half));
+        let (x, y) = (rest % half, rest / half);
+        for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+            let fine = finer + face * size * size + (2 * y + dy) * size + 2 * x + dx;
+            out.push((self.refs.environment + fine as u32, 0.25));
         }
     }
 }
@@ -454,7 +446,7 @@ pub fn transport(
     let hierarchy = Hierarchy::new(input, numbering);
     let footprints = footprints(instances, width, height);
     let rays = hemisphere(settings.rays);
-    let test = hemisphere(HIDDEN_RAYS);
+    let test = hemisphere(CULL_RAYS);
     // A texel's origins that other geometry does not hide (also in a gap its renderer's
     // Modelling Tolerance ignores).
     let visible: Vec<Option<Vec<Origin>>> = footprints
@@ -494,30 +486,20 @@ pub fn transport(
         let (x, y) = ((at as u32 % width) as i64, (at as u32 / width) as i64);
         let chart = chart_mask[at];
         let mut best: Option<(i64, usize)> = None;
-        for radius in 1..=FILL_RADIUS {
-            for dy in -radius..=radius {
-                for dx in -radius..=radius {
-                    let (nx, ny) = (x + dx, y + dy);
-                    if dx.abs().max(dy.abs()) != radius
-                        || nx < 0
-                        || ny < 0
-                        || nx >= width as i64
-                        || ny >= height as i64
-                    {
-                        continue;
-                    }
-                    let n = (ny * width as i64 + nx) as usize;
-                    if chart_mask[n] == chart && visible[n].as_ref().is_some_and(|v| !v.is_empty())
-                    {
-                        let d = dx * dx + dy * dy;
-                        if best.is_none_or(|(bd, _)| d < bd) {
-                            best = Some((d, n));
-                        }
-                    }
+        for dy in -FILL_RADIUS..=FILL_RADIUS {
+            for dx in -FILL_RADIUS..=FILL_RADIUS {
+                let (nx, ny) = (x + dx, y + dy);
+                if nx < 0 || ny < 0 || nx >= width as i64 || ny >= height as i64 {
+                    continue;
                 }
-            }
-            if best.is_some() {
-                break;
+                let n = (ny * width as i64 + nx) as usize;
+                let d = dx * dx + dy * dy;
+                if chart_mask[n] == chart
+                    && visible[n].as_ref().is_some_and(|v| !v.is_empty())
+                    && best.is_none_or(|(bd, _)| d < bd)
+                {
+                    best = Some((d, n));
+                }
             }
         }
         if let Some((_, n)) = best {

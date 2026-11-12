@@ -1074,24 +1074,18 @@ fn cube_uvs(scale: [f32; 3], pixel_size: f32) -> crate::realtime_uv::Output {
     .unwrap()
 }
 
-/// The Room scene's renderers (file IDs) and their scales.
-const ROOM_SCALES: [(i64, [f32; 3]); 7] = [
-    (152063223, [6.0, 0.2, 6.0]),  // Floor
-    (973394265, [1.2, 1.5, 1.2]),  // Block
-    (308039783, [0.2, 4.0, 6.0]),  // Left
-    (1583214537, [0.2, 4.0, 6.0]), // Right
-    (605051979, [6.0, 4.0, 0.2]),  // Back
-    (948094850, [6.0, 0.2, 6.0]),  // Ceiling
-    (PANEL, [1.0, 1.2, 0.1]),      // Panel
-];
-
 #[test]
 fn realtime_uvs_match_the_precomputed_layout() {
     let data = room_data();
     let system = &data.systems[0];
     let mut sizes = Vec::new();
+    let names = renderer_names("Room");
     for (k, &(object, _)) in data.renderers.iter().enumerate() {
-        let scale = ROOM_SCALES.iter().find(|r| r.0 == object).unwrap().1;
+        let scale = ROOM_SHAPES
+            .iter()
+            .find(|r| r.0 == names[&object])
+            .unwrap()
+            .1;
         // Realtime resolution 2 texels per unit.
         let out = cube_uvs(scale, 0.5);
         crate::realtime_uv::check_layout(system, data.renderer_st[k], &out).unwrap();
@@ -3233,39 +3227,40 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         ..cube
     };
     // With the values outside the probe comparator's tolerance (of 5070) measured with Unbound's
-    // clusters and transport; with the Editor's clusters and Unbound's transport the first four
-    // are 31, 34, 83 and 212 (docs/REALTIME_GI.md, Unbound's precompute).
+    // clusters and transport. (In a local experiment with the Editor's own cluster geometry,
+    // which its precompute keeps outside the project, and this transport, the first four were
+    // 12, 14, 29 and 81: docs/REALTIME_GI.md, Unbound's precompute.)
     let cases = [
-        (BASE, "room-base", 80),
-        (moved, "room-moved", 123),
-        (lit, "room-intensity", 323),
-        (Room { bounce: 3.0, ..lit }, "room-bounce", 554),
+        (BASE, "room-base", 83),
+        (moved, "room-moved", 125),
+        (lit, "room-intensity", 329),
+        (Room { bounce: 3.0, ..lit }, "room-bounce", 553),
         (
             Room {
                 indirect_scale: 2.0,
                 ..lit
             },
             "room-indirectscale",
-            422,
+            428,
         ),
-        (call, "room-emission-call", 361),
-        (set, "room-setemissive", 374),
-        (then, "room-setemissive-then-call", 374),
-        (blue_called, "room-albedo-call", 361),
-        (ambient, "room-env-call", 456),
+        (call, "room-emission-call", 364),
+        (set, "room-setemissive", 378),
+        (then, "room-setemissive-then-call", 378),
+        (blue_called, "room-albedo-call", 360),
+        (ambient, "room-env-call", 457),
         (
             Room {
                 point_light: false,
                 ..ambient
             },
             "room-pointoff",
-            457,
+            458,
         ),
-        (spot, "room-spot", 436),
-        (behind, "room-spot-behind", 446),
+        (spot, "room-spot", 433),
+        (behind, "room-spot-behind", 443),
         (gradient, "room-gradient", 87),
-        (cube, "room-envdata", 156),
-        (flat, "room-sky-none", 158),
+        (cube, "room-envdata", 155),
+        (flat, "room-sky-none", 157),
     ];
     for (room, case, measured) in cases {
         if case == "room-emission-call" {
@@ -3331,11 +3326,11 @@ fn own_transport_gives_the_directionality_of_the_editors() {
             channel.map(|c| c / (count / 4) as f32),
             signed.map(|c| c / (count / 4) as f32)
         );
-        // Measured: 63 and 114 lightmap values outside the tolerance; the directionality 4.9/255
+        // Measured: 64 and 113 lightmap values outside the tolerance; the directionality 4.9/255
         // off on average (0.2/255 from the Editor's transport), a third of its values more than
         // 2.5/255 (docs/REALTIME_GI.md).
         assert!(
-            fails * 100 <= [63, 114][(case != "roomdirectional-base") as usize] * 115,
+            fails * 100 <= [64, 113][(case != "roomdirectional-base") as usize] * 115,
             "{case}"
         );
         assert!(count > 6000 && mean < 5.5, "{case}: {mean}");

@@ -11,6 +11,21 @@ pub const RESOLUTION: usize = 8;
 /// Values of the finest level: six faces.
 pub const FACE_VALUES: usize = 6 * RESOLUTION * RESOLUTION;
 
+/// The level of the environment value `index`: its values along a face's side and the index of
+/// the level's first value; `None` past the last level.
+pub fn level_of(index: usize) -> Option<(usize, usize)> {
+    let (mut size, mut start) = (RESOLUTION, 0);
+    while size >= 1 {
+        let level = 6 * size * size;
+        if index < start + level {
+            return Some((size, start));
+        }
+        start += level;
+        size /= 2;
+    }
+    None
+}
+
 /// The environment values of `faces` (six faces, each row by row, `FACE_VALUES` in all) into
 /// `out` (`ENVIRONMENT_VALUES`).
 pub fn environment_values(faces: &[[f32; 3]], out: &mut [[f32; 3]]) -> Result<()> {
@@ -64,5 +79,13 @@ mod tests {
             assert_eq!(out[ENVIRONMENT_VALUES - 6 + face], [face as f32, 31.5, 1.0]);
         }
         assert!(environment_values(&faces[1..], &mut out).is_err());
+        // The levels' places.
+        assert_eq!(level_of(0), Some((8, 0)));
+        assert_eq!(level_of(FACE_VALUES), Some((4, FACE_VALUES)));
+        assert_eq!(
+            level_of(ENVIRONMENT_VALUES - 1),
+            Some((1, ENVIRONMENT_VALUES - 6))
+        );
+        assert_eq!(level_of(ENVIRONMENT_VALUES), None);
     }
 }

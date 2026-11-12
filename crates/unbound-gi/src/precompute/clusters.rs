@@ -27,7 +27,7 @@ const COPLANAR: f32 = 0.999;
 const CANDIDATES: usize = 8;
 /// Rays that test whether a point lies inside other geometry, and how many of them may meet a
 /// back face before it does.
-const CULL_RAYS: usize = 16;
+pub(super) const CULL_RAYS: usize = 16;
 const CULL_BACK_FACES: usize = 4;
 /// Children per parent of the cluster tree at most.
 const TREE_CHILDREN: usize = 8;
