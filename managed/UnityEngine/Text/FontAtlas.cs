@@ -374,7 +374,6 @@ namespace Unbound.Runtime
         int m_Block = 1;
         int m_BlockIndex;
         bool m_Started;
-        bool m_WarnedFull;
         readonly List<GlyphKey> m_Asked = new List<GlyphKey>();
 
         /// <summary>How many times the texture was rebuilt (tests).</summary>
@@ -457,17 +456,16 @@ namespace Unbound.Runtime
             bool reset = false;
             while (!PlaceAll(asked, frame))
             {
+                // A texture at its largest size is neither grown nor reset: what did not fit is left
+                // out, with Unity's error, and no rebuild is announced (matches the Unity 6000.0.71f1
+                // Editor, tests/projects/textcolor legacy/full).
+                if (Texture.m_Width >= MaxSize && Texture.m_Height >= MaxSize)
+                {
+                    Debug.LogError($"Failed to update dynamic font ({m_Font.m_Name}) texture; all the needed characters do not fit onto a single texture (max size {MaxSize}). Try using less text or a smaller font size.");
+                    break;
+                }
                 if (reset)
                 {
-                    if (Texture.m_Width >= MaxSize && Texture.m_Height >= MaxSize)
-                    {
-                        if (!m_WarnedFull)
-                        {
-                            m_WarnedFull = true;
-                            Debug.LogWarning($"Unbound: the texture of font '{m_Font.m_Name}' is full at {MaxSize}x{MaxSize}; some characters are not in it.");
-                        }
-                        break;
-                    }
                     if (Texture.m_Width < Texture.m_Height) Texture.m_Width *= 2;
                     else Texture.m_Height *= 2;
                     m_Block = Math.Min(Math.Max(NextPowerOfTwo(GrowBlockScale * largest), m_Block), Texture.m_Width);

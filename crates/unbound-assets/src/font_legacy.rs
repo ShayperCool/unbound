@@ -22,6 +22,32 @@ const LOAD_FLAGS: [ft::FT_Int32; 4] = [
 ];
 
 impl FreeTypeFace {
+    /// The glyph of a face that cannot take the requested size (a bitmap-only face without that
+    /// strike): no pixels, the advance in font units over 64, whatever the size (matches the Unity
+    /// 6000.0.71f1 Editor, tests/projects/textcolor: a colour emoji face's glyph keeps advance 40
+    /// at 32 and 64 pixels). `None` for a scalable face, whose size request does not fail.
+    unsafe fn unsized_legacy_glyph(&mut self, index: ft::FT_UInt) -> Option<GlyphBitmap> {
+        unsafe {
+            if (*self.face).face_flags & ft::FT_FACE_FLAG_SCALABLE as ft::FT_Long != 0 {
+                return None;
+            }
+            if ft::FT_Load_Glyph(self.face, index, ft::FT_LOAD_NO_SCALE as ft::FT_Int32) != 0 {
+                return None;
+            }
+            let slot = &*(*self.face).glyph;
+            Some(GlyphBitmap {
+                advance: slot.metrics.horiAdvance as f32 / 64.0,
+                left: 0,
+                top: 0,
+                top_offset: 0.0,
+                width: 0,
+                height: 0,
+                bounds: (0.0, 0.0, 0.0, 0.0),
+                coverage: Vec::new(),
+            })
+        }
+    }
+
     /// A legacy dynamic-font glyph of `character` at `size` pixels per em.
     pub(crate) fn render_legacy(
         &mut self,
@@ -48,12 +74,14 @@ impl FreeTypeFace {
                 yy: 0x10000,
             };
             ft::FT_Set_Transform(self.face, &mut matrix, std::ptr::null_mut());
-            if ft::FT_Set_Char_Size(self.face, 0, (size * 64.0) as ft::FT_F26Dot6, 0, 72) != 0 {
-                return None;
-            }
+            let sized =
+                ft::FT_Set_Char_Size(self.face, 0, (size * 64.0) as ft::FT_F26Dot6, 0, 72) == 0;
             let index = ft::FT_Get_Char_Index(self.face, character as ft::FT_ULong);
             if index == 0 {
                 return None;
+            }
+            if !sized {
+                return self.unsized_legacy_glyph(index);
             }
             let flags = usize::try_from(mode)
                 .ok()
@@ -118,6 +146,24 @@ mod tests {
         include_bytes!("../../../tests/projects/glyphraster/Assets/Resources/Synthetic.ttf");
     const STYLED: &[u8] =
         include_bytes!("../../../tests/projects/glyphraster/Assets/Resources/Styled.ttf");
+
+    // Editor: textcolor legacy/emoji. A bitmap-only face cannot take a size it has no strike for:
+    // its glyph has no pixels and the advance in font units over 64 at every size.
+    #[test]
+    fn a_bitmap_only_face_gives_empty_glyphs_with_unscaled_advances() {
+        let emoji = face(include_bytes!(
+            "../../../tests/projects/textcolor/Assets/Resources/Fonts/EmojiProbe.ttf"
+        ));
+        for size in [32.0, 64.0] {
+            let heart = emoji.render('\u{2764}', size, false, false).unwrap();
+            assert!(heart.coverage.is_empty());
+            assert_eq!((heart.width, heart.height), (0, 0));
+            assert_eq!(heart.advance, 39.84375);
+        }
+        // A scalable face is unchanged: its glyph has pixels and a scaled advance.
+        let sans = face(SANS).render('W', 32.0, false, false).unwrap();
+        assert!(!sans.coverage.is_empty());
+    }
 
     #[test]
     fn empty_glyph_keeps_its_advance_and_bold_bearing() {
