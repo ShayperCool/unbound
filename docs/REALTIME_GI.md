@@ -556,8 +556,12 @@ measured beyond them.
   alone decides `RoofDistance`, the roof of `RoofAngleWide` with Max Distance 0.1: its eaves
   are 0.12 from the plane through both sides, whose bounds meet, and it has two charts.
 - With Max Distance or Max Angle of zero the precompute keeps the mesh's own charts, as with
-  Preserve UVs (`StepNoDistance`: each face its own lightmap UVs, scaled alike; a scratch bake
-  of the step with Max Angle 0 kept them too).
+  Preserve UVs (`StepNoDistance` and `StepNoAngle`: each face its own lightmap UVs).
+- Renderers share one geometry when they have the same mesh and their instance matrices round
+  to the same thousandths (the Manual's "same mesh with the same scale", which a turned one's
+  matrix has but for its last digits): in a scratch bake an unturned cube of 0.7 x 0.5 x 0.6
+  took the four charts of one turned (20, 40, 10) beside it. Which of their matrices the
+  geometry is made of, one of an earlier bake's among them, is not known.
 - Leftovers (parts that are not flat, then the flat parts no round took) are folded into the
   nearest joined set whose bounds they meet, when they have less than a tenth of its area and
   all their vertices are closer to its plane than Max Distance. Their normal is not asked: the
@@ -588,10 +592,9 @@ blocks of the precomputed chart mask, in chart order, and its lightmaps match th
 `RoomTurned` is the Room so too (its walls as in `RoomAuto`) with a slab turned 30 degrees about
 Y (the rotation's removal is exact there: six charts), a box turned (20, 40, 10) and one turned
 10 degrees about X under a parent turned 45 about Y and scaled 1.5 (four charts each), the wedge
-turned and scaled, a cube of 0.35 turned 25 degrees about Y beside an unturned one (the
-precompute keys the geometry it makes charts of by the mesh and the instance matrix, and the
-turned one's matrix is the scale alone: one geometry for both), and `RoofDistance`, `FoldKept`,
-`FoldIgnored`, `StepNoDistance`, `BoxSliver`, `BoxPoint` and `Many`. The precompute made two
+turned and scaled, a cube of 0.35 turned 25 degrees about Y beside an unturned one (the turned
+one's matrix is the scale alone: one geometry for both), and `RoofDistance`, `FoldKept`,
+`FoldIgnored`, `StepNoDistance`, `StepNoAngle`, `BoxSliver`, `BoxPoint` and `Many`. The precompute made two
 systems of it. Its renderers' charts cover the precomputed chart masks in chart order too
 (`roomturned-base`, `roomturned-moved`).
 
@@ -599,6 +602,10 @@ The check against the precomputed chart mask compares the blocks the charts cove
 face lies in them: two charts of one size taken in the other order would pass it with their
 lighting exchanged. So what Unbound cannot make as the Editor does is refused, not left to the
 check. Each refusal is a warning that names the renderer, and its system is then not drawn:
+
+- Renderers that share their mesh and rounded instance matrix with one whose matrix is not the
+  same to the last bit (an unturned twin of a turned renderer, say): which matrix the shared
+  geometry was made of is not known.
 
 - Choices that rounding decides, the last digits of a normalisation here and in the
   precompute being apart: two neighbouring flat parts whose normals' cosine could have the
@@ -625,16 +632,18 @@ check. Each refusal is a warning that names the renderer, and its system is then
 - A planar part left on its own on a plane that is not along the coordinate axes, whose own
   lightmap UVs are an undistorted copy of its shape and are laid out otherwise than its
   projection: both are then equally true but for rounding.
-- A zero or mirrored scale and a mesh without normals: not measured. (In a scratch bake a bent
+- A zero or mirrored scale anywhere up the hierarchy and a mesh without normals: not
+  measured. (In a scratch bake a bent
   part alone in its mesh, two quads 40 degrees apart, was laid out as its projection and its
   own UVs both would be; that does not tell the choice.)
 
 Not measured, and implemented as written above: scale under parents that skew it (the
 transform's `lossyScale` is used), meshes that mix triangles wound with and against their
 normals, and a small part that is not flat folded into a set it lies by (projected onto that
-set's plane, as the flat leftovers measured are). Not guarded: a part's distance within the last digits of Max Distance, and what the Editor's
-own cache of earlier bakes may share with a renderer (it keeps results by mesh and scale across
-bakes; a scratch bake reused one for a renderer that had since been turned).
+set's plane, as the flat leftovers measured are). Not guarded: a part's distance within the
+last digits of Max Distance, and what the Editor's own cache of earlier bakes may share with a
+renderer (it keeps geometries by mesh and rounded matrix across bakes, so a renderer turned by
+less than that rounding since may keep its earlier one).
 
 ## Engine
 

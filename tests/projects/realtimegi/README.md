@@ -55,7 +55,8 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
   25 degrees about Y), `RoofDistance` (the roof of 20 degrees with Max Distance 0.1),
   `FoldKept` and `FoldIgnored` (a floor and a wall at a right angle that share their edge's
   positions and UVs but not its normals, and a loose quad; the second with Ignore Normals),
-  `StepNoDistance` (the step with Max Distance 0), `BoxSliver` and `BoxPoint` (a box of 0.6 m
+  `StepNoDistance` and `StepNoAngle` (the step with Max Distance 0 and with Max Angle 0),
+  `BoxSliver` and `BoxPoint` (a box of 0.6 m
   and a triangle of no area a metre away: three points on a line, three at one point), and
   `Many` (11 x 10 loose quads in one plane with Max Distance 0.1).
 
@@ -388,7 +389,8 @@ Observations (not documented guarantees):
   removal is exact for it), the box turned (20, 40, 10) and the one under a turned parent four
   (two pairs of faces at a right angle but for that removal's rounding joined), the turned
   wedge five; the two cubes of 0.35 share one geometry; the roof with Max Distance 0.1 has two
-  charts, the step with 0 keeps its own lightmap UVs (a chart a face, as with Preserve UVs); with Ignore Normals the fold's floor and wall are one
+  charts, the steps with limits of 0 keep their own lightmap UVs (a chart a face, as with
+  Preserve UVs); with Ignore Normals the fold's floor and wall are one
   chart of 4 x 6 texels (projected onto the plane between them and scaled to their area),
   without it two; a triangle of no area is a chart of one block with all its corners at its
   corner; the 110 quads are 110 charts.
