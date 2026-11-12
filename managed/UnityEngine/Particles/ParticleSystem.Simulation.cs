@@ -214,6 +214,7 @@ namespace UnityEngine
             float step = dt / steps;
             float share = distance / steps;
             float remaining = carry ? dt + m_StepRemainder : dt;
+            m_CallStartTime = m_Time;
             try
             {
                 for (int i = 0; remaining > 1e-6f && i < 100000; i++)
@@ -240,6 +241,10 @@ namespace UnityEngine
                 m_StepDt = 0f;
             }
         }
+
+        /// <summary>The playback time where the current advance started: only an advance that starts
+        /// at zero counts a start delay down.</summary>
+        float m_CallStartTime;
 
         /// <summary>The emitter's world position a particle that has lived <paramref name="age"/>
         /// seconds of the current step was born at.</summary>
@@ -383,23 +388,25 @@ namespace UnityEngine
 
         void AdvanceEmissionStep(float dt, float distance)
         {
-            // Rate births spread their ages over the whole step, also over the part a start delay
-            // took (6000.0.71f1, tests/projects/particleemission stoppedLongStep/0.5/0.1/afterPlay).
-            float wholeStep = dt;
+            // The span the step's rate births spread their ages over.
+            float ageSpan = dt;
             if (m_DelayRemaining > 0f)
             {
-                // A system whose emission is stopped keeps its remaining start delay: a step no
-                // longer than it leaves the clock at the start (no burst, module curves at time
-                // 0), a longer one advances the clock by the excess, without counting the delay
-                // down (6000.0.71f1, tests/projects/particlegravity delay/*, particleemission
-                // stoppedSimulate/*/*/0.25).
                 float d = Mathf.Min(dt, m_DelayRemaining);
-                if (!m_StopEmitting)
+                distance *= dt > 0f ? (dt - d) / dt : 0f;
+                if (!m_StopEmitting && m_CallStartTime == 0f)
                 {
+                    // An emitting system whose advance starts at playback time zero counts its
+                    // start delay down; the step that ends it emits over the rest.
                     m_DelayRemaining -= d;
                     m_TotalTime += d;
+                    ageSpan = dt - d;
                 }
-                distance *= dt > 0f ? (dt - d) / dt : 0f;
+                // Otherwise (stopped, or resumed at a later time with delay left) the delay stays:
+                // a step no longer than it leaves the clock where it is (no burst, module curves
+                // unchanged), a longer one advances it by the excess, and births spread over the
+                // whole step (6000.0.71f1, tests/projects/particlegravity delay/*,
+                // particleemission stoppedSimulate/*/*/0.25, stoppedLongStep/*, mixedRemainder/*/true).
                 dt -= d;
                 if (dt <= 0f) return;
             }
@@ -420,7 +427,7 @@ namespace UnityEngine
             m_RateBatchStartLoop = m_Loop;
             m_UseRateBatch = StartsInBatches;
             bool planned = emit && (m_UseRateBatch ? PlanRate(t0, dt, duration, rateRandom) : PlanConstantRate(t0, dt, duration));
-            if (planned) m_StepRateDt = wholeStep;
+            if (planned) m_StepRateDt = ageSpan;
             m_CollectRateBatch = m_UseRateBatch && m_StepRateBirths > 0;
             int guard = 0;
             var segment = BurstSegment.Within;
@@ -449,7 +456,7 @@ namespace UnityEngine
                     CollectBursts(t0, duration, step, BurstSegment.BeforeWrap, duration);
                     EmitOverDistance(t0, duration, rest, step, distance * ((duration - t0) / step));
                 }
-                else if (passBursts) PassBursts(duration, BurstSegment.BeforeWrap);
+                else if (passBursts) CollectBursts(t0, duration, step, BurstSegment.BeforeWrap, duration, fire: false);
                 m_Loop++;
                 CarryEmissionPhase(duration);
                 Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
@@ -464,7 +471,7 @@ namespace UnityEngine
                 EmitStepBursts(t1);
                 EmitOverDistance(t0, t1, 0f, step, distance * ((t1 - t0) / step));
             }
-            else if (passBursts) PassBursts(t1, segment);
+            else if (passBursts) CollectBursts(t0, t1, step, segment, duration, fire: false);
             if (planned) m_RateAccumulator = m_StepRateRemainder;
             m_Time = t1;
         }
@@ -960,7 +967,9 @@ namespace UnityEngine
         /// the whole step, the part before the end measured to <see cref="BurstWrapMargin"/>
         /// past it; repeats are aged the whole step. Probability and count are drawn here, in
         /// list order.</summary>
-        void CollectBursts(float a, float b, float step, BurstSegment segment, float duration)
+        /// <param name="fire">False counts the cycles due as passed, without drawing their
+        /// probabilities or emitting (a step without emission).</param>
+        void CollectBursts(float a, float b, float step, BurstSegment segment, float duration, bool fire = true)
         {
             var bursts = m_Emission.bursts;
             if (bursts.Count == 0) return;
@@ -976,7 +985,7 @@ namespace UnityEngine
                 {
                     float at = burst.m_Time + c * interval;
                     if (c == 0 ? (endIncluded ? at > b : at >= b) : at > b || at >= duration) break;
-                    if (burst.probability >= 1f || burst.probability > 0f && NextEmissionValue() < burst.probability)
+                    if (fire && (burst.probability >= 1f || burst.probability > 0f && NextEmissionValue() < burst.probability))
                     {
                         int count = BurstCount(burst.m_Count, at / duration);
                         if (count > 0)
@@ -993,32 +1002,6 @@ namespace UnityEngine
                     }
                     c++;
                     if (cycles == 0 && c > 100000) break;
-                }
-                m_BurstCycles[i] = c;
-            }
-        }
-
-        /// <summary>Counts the burst cycles due by playback time <paramref name="b"/> as passed,
-        /// without drawing their probabilities or emitting: the same due test as
-        /// <see cref="CollectBursts"/>.</summary>
-        void PassBursts(float b, BurstSegment segment)
-        {
-            var bursts = m_Emission.bursts;
-            if (bursts.Count == 0) return;
-            if (m_BurstCycles.Length != bursts.Count) Array.Resize(ref m_BurstCycles, bursts.Count);
-            bool endIncluded = segment == BurstSegment.BeforeWrap;
-            float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            for (int i = 0; i < bursts.Count; i++)
-            {
-                var burst = bursts[i];
-                int cycles = burst.cycleCount; // 0: forever
-                float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
-                int c = m_BurstCycles[i];
-                while ((cycles == 0 || c < cycles) && !(c > 100000))
-                {
-                    float at = burst.m_Time + c * interval;
-                    if (c == 0 ? (endIncluded ? at > b : at >= b) : at > b || at >= duration) break;
-                    c++;
                 }
                 m_BurstCycles[i] = c;
             }

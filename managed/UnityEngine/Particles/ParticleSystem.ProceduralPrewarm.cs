@@ -39,6 +39,7 @@ namespace UnityEngine
             float margin = Mathf.Max(ProceduralEndMargin, duration * ProceduralEndMarginScale);
             m_Prewarming = true;
             m_ProceduralPrewarm = true;
+            m_CallStartTime = m_Time;
             try
             {
                 float remaining = span;

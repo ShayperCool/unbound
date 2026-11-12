@@ -528,6 +528,60 @@ namespace UnityEngine.Tests
             }
         }
 
+        // particleemission mixedRemainder/false/0.5/0/true: a fresh playback counts its delay
+        // down and spreads the births of the step that ends it over the rest of that step.
+        [Fact]
+        public void AFreshPlaybackSpreadsBirthsOverThePartAfterItsDelay()
+        {
+            float saved = Time.maximumParticleDeltaTime;
+            Time.maximumParticleDeltaTime = .5f;
+            var ps = MakeStopped(0, 10, .1f);
+            try
+            {
+                ps.Play(false);
+                ps.Simulate(.5f, false, false, false);
+                Assert.Equal(.4f, ps.time, 1e-6f);
+                var particles = new ParticleSystem.Particle[8];
+                Assert.Equal(4, ps.GetParticles(particles));
+                var lives = new float[4];
+                for (int i = 0; i < 4; i++) lives[i] = particles[i].remainingLifetime;
+                System.Array.Sort(lives);
+                for (int i = 0; i < 4; i++) Assert.Equal(4.7f + .1f * i, lives[i], 2e-4f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Time.maximumParticleDeltaTime = saved;
+            }
+        }
+
+        // particleemission mixedRemainder/*: fixed-step and variable-step calls share what the
+        // previous call left unstepped.
+        [Theory]
+        [InlineData(true, .25f, .3f, .24f, .55f)]
+        [InlineData(true, .25f, .016f, .24f, .266f)]
+        [InlineData(false, .25f, .016f, .25f, .25f)]
+        public void FixedAndVariableCallsShareTheUnsteppedTime(bool fixedFirst, float first, float second, float afterFirst, float afterSecond)
+        {
+            var ps = MakeStopped(0, 10, 0);
+            try
+            {
+                ps.Play(false);
+                ps.Simulate(first, false, false, fixedFirst);
+                Assert.Equal(afterFirst, ps.time, 1e-6f);
+                ps.Simulate(second, false, false, !fixedFirst);
+                Assert.Equal(afterSecond, ps.time, 1e-6f);
+                if (!fixedFirst)
+                {
+                    // The fixed call's unstepped 0.016 joins the next variable-step call.
+                    ps.Play(false);
+                    ps.Simulate(second, false, false, false);
+                    Assert.Equal(.282f, ps.time, 1e-6f);
+                }
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         // particleemission stoppedSimulate/6/3 and disabledBurst/*: a burst cycle that passes while
         // the system does not emit never fires; later cycles still do.
         [Theory]
