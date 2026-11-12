@@ -142,7 +142,8 @@ Measured import block totals, Gamma / Linear, including every mip:
 | BC6H | 2712 / 2744 | 2729 / 2744 |
 | BC7 | 6904 / 6964 | 6904 / 6964 |
 
-The one DXT5 residual is WideNormal\'s 2x1 mip, whose source filtering differs.\nBC7 residuals are in CutoutBC7, FlatBC7 and SoftHigh. The largest level-0 channel difference
+The one DXT5 residual is WideNormal's 2x1 mip, whose source filtering differs.
+BC7 residuals are in CutoutBC7, FlatBC7 and SoftHigh. The largest level-0 channel difference
 is 195/255 in CutoutBC7, and a lower FlatBC7 level reaches 109/255. These remain unresolved.
 BC4/BC5 match every current import block. BC6H retains
 encoding differences and its existing CPU float-read limitation. The comparator lists every
