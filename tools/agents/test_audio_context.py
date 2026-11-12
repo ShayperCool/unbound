@@ -155,8 +155,8 @@ time.sleep(60)
                 self.assertLess(time.monotonic(), deadline)
                 time.sleep(.01)
             raise KeyboardInterrupt
-        with mock.patch.object(os, 'pidfd_open', None), \
-             mock.patch.object(signal, 'pidfd_send_signal', None), \
+        with mock.patch.object(os, 'pidfd_open', None, create=True), \
+             mock.patch.object(signal, 'pidfd_send_signal', None, create=True), \
              mock.patch.object(context, 'time') as clock:
             clock.sleep.side_effect = interrupt
             with self.assertRaises(KeyboardInterrupt):
