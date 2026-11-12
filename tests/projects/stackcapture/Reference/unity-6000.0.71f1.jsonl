@@ -1,0 +1,15 @@
+{"k":"direct.message","v":"InvalidOperationException: inner failure"}
+{"k":"direct.trace","v":"StackCaptureControl.Leaf (System.Int32 count, System.String value) (at Assets/Scripts/StackCaptureControl.cs:30)\nStackCaptureControl.Capture () (at Assets/Scripts/StackCaptureControl.cs:36)\nUnityEngine.Debug:LogException(Exception)\nStackCaptureControl:Start() (at Assets/Scripts/StackCaptureControl.cs:63)\n"}
+{"k":"empty.message","v":"Exception"}
+{"k":"empty.trace","v":"UnityEngine.Debug:LogException(Exception)\nStackCaptureControl:Start() (at Assets/Scripts/StackCaptureControl.cs:69)\n"}
+{"k":"generic.message","v":"InvalidOperationException: generic failure"}
+{"k":"generic.trace","v":"StackGenericControl`1[T].Leaf[TValue] (T owner, TValue value) (at Assets/Scripts/StackCaptureControl.cs:95)\nStackGenericControl`1[T].Capture (T owner) (at Assets/Scripts/StackCaptureControl.cs:87)\nUnityEngine.Debug:LogException(Exception)\nStackCaptureControl:Start() (at Assets/Scripts/StackCaptureControl.cs:71)\n"}
+{"k":"noneCaptured.message","v":"InvalidOperationException: inner failure"}
+{"k":"noneCaptured.trace","v":""}
+{"k":"noneEmpty.message","v":"Exception"}
+{"k":"noneEmpty.trace","v":""}
+{"k":"unthrownOuter.message","v":"InvalidOperationException: inner failure"}
+{"k":"unthrownOuter.trace","v":"StackCaptureControl.Leaf (System.Int32 count, System.String value) (at Assets/Scripts/StackCaptureControl.cs:30)\nStackCaptureControl.Capture () (at Assets/Scripts/StackCaptureControl.cs:36)\nRethrow as ArgumentException: unthrown outer\nUnityEngine.Debug:LogException(Exception)\nStackCaptureControl:Start() (at Assets/Scripts/StackCaptureControl.cs:67)\n"}
+{"k":"wrapped.message","v":"InvalidOperationException: nested failure"}
+{"k":"wrapped.trace","v":"StackCaptureControl.Leaf (System.Int32 count, System.String value) (at Assets/Scripts/StackCaptureControl.cs:30)\nStackCaptureControl.Wrapped () (at Assets/Scripts/StackCaptureControl.cs:46)\nRethrow as ArgumentException: outer failure\nStackCaptureControl.Wrapped () (at Assets/Scripts/StackCaptureControl.cs:47)\nUnityEngine.Debug:LogException(Exception)\nStackCaptureControl:Start() (at Assets/Scripts/StackCaptureControl.cs:65)\n"}
+{"k":"complete","v":"1"}

@@ -32,6 +32,10 @@ namespace Unbound.Runtime
         /// on Unity 6000.0.71f1. Other releases retain the unmeasured previous wrapper.</summary>
         internal static bool MaterialReloadWrappersMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Captured exception formatting, tests/projects/stackcapture on 6000.0.71f1.
+        /// Other releases retain their unmeasured previous exception text.</summary>
+        internal static bool CapturedStackTracesMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Pending Starts without an earlier callback visit run at the PostLateUpdate
         /// scripting point, measured by editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
         internal static bool PendingStartsAfterLateUpdate => Release == (6000, 0, 71, 'f', 1);

@@ -11,7 +11,7 @@ namespace Unbound.Runtime
     /// parameters separated by commas without spaces, a source location where the frame has one.
     /// Only the game's frames are listed: the engine's own frames (Unbound's runtime, the class
     /// libraries) stand for the Editor's native code, which writes none.</summary>
-    internal static class UnityStackTrace
+    internal static partial class UnityStackTrace
     {
         /// <summary>The game frames above the <paramref name="skipFrames"/> innermost ones (engine frames
         /// are left out anyway), the first line being
@@ -31,10 +31,7 @@ namespace Unbound.Runtime
                 string file = frame.GetFileName();
                 if (!string.IsNullOrEmpty(file))
                 {
-                    file = file.Replace('\\', '/');
-                    if (!string.IsNullOrEmpty(projectFolder) && file.StartsWith(projectFolder, StringComparison.Ordinal))
-                        file = file.Substring(projectFolder.Length);
-                    text.Append(" (at ").Append(file).Append(':').Append(frame.GetFileLineNumber()).Append(')');
+                    text.Append(" (at ").Append(SourcePath(file, projectFolder)).Append(':').Append(frame.GetFileLineNumber()).Append(')');
                 }
                 text.Append('\n');
             }
@@ -46,6 +43,7 @@ namespace Unbound.Runtime
 
         static bool IsGameMethod(MethodBase method)
         {
+            if (method.DeclaringType == null) return false;
             var assembly = method.DeclaringType?.Assembly ?? method.Module.Assembly;
             if (assembly == s_Engine || assembly == s_CoreLib) return false;
             string name = assembly.GetName().Name ?? "";

@@ -123,7 +123,7 @@ namespace Unbound.Runtime
 
         // Preserve membership before resolution discards a spelling. LinkTarget sees dangling
         // links, and targets are walked again so aliases in their ancestors are checked too.
-        static string Resolve(string path, Action<string> check = null)
+        internal static string Resolve(string path, Action<string> check = null)
         {
             int followed = 0;
             return ResolveSegments(path, check, ref followed);

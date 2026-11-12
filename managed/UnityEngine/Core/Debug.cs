@@ -141,17 +141,8 @@ namespace UnityEngine
         public void LogException(Exception exception, Object context)
         {
             if (exception == null) return;
-            var chain = new System.Collections.Generic.List<Exception>();
-            for (var e = exception; e != null; e = e.InnerException) chain.Add(e);
-            var innermost = chain[chain.Count - 1];
-            var message = $"{innermost.GetType().Name}: {innermost.Message}";
-            var trace = new System.Text.StringBuilder(innermost.StackTrace ?? "");
-            for (int i = chain.Count - 2; i >= 0; i--)
-            {
-                trace.Append("\nRethrow as ").Append(chain[i].GetType().Name).Append(": ").Append(chain[i].Message).Append('\n');
-                trace.Append(chain[i].StackTrace ?? "");
-            }
-            Log.Write(LogType.Exception, message, trace.ToString(), context, exception);
+            var formatted = UnityStackTrace.ExceptionText(exception);
+            Log.Write(LogType.Exception, formatted.Message, formatted.Trace, context, exception);
         }
     }
 
@@ -267,8 +258,10 @@ namespace UnityEngine
 
         public static void LogErrorFormat(Object context, string format, params object[] args) => unityLogger.LogFormat(LogType.Error, context, format, args);
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         public static void LogException(Exception exception) => unityLogger.LogException(exception, null);
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         public static void LogException(Exception exception, Object context) => unityLogger.LogException(exception, context);
 
         /// <summary>Pauses Play mode, as the Editor's pause button: at once (pauseStateChanged
