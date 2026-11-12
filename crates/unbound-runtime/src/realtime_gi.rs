@@ -862,7 +862,7 @@ fn write_cached(path: &Path, output: &unbound_gi::realtime_uv::Output) -> Result
 
 /// Format version of the bake's cache entries (`bake`), beyond what the precompute's own
 /// version (`unbound_gi::precompute::FORMAT_VERSION`) covers.
-/// 1: a checksum, then `unbound_gi::data::encode_precomputed`'s encoding.
+/// 1: a checksum, then `unbound_gi::precompute::bake::Baked::encode`'s encoding.
 const BAKE_CACHE_VERSION: u32 = 1;
 
 /// One renderer of a scene as Unbound's own precompute takes it.
@@ -890,6 +890,8 @@ pub struct BakeInput {
     pub modelling_tolerance: f32,
     /// Renderers share a system only within one group (Lightmap Parameters and System Tag).
     pub group: u64,
+    /// Its Lightmap Parameters' Irradiance Quality and Budget (one per group).
+    pub settings: unbound_gi::precompute::transport::Settings,
 }
 
 fn point(m: &[f32; 16], p: [f32; 3]) -> [f32; 3] {
@@ -923,6 +925,8 @@ impl BakeInput {
         }
         key.update(&self.min_chart_texels.to_le_bytes());
         key.update(&self.group.to_le_bytes());
+        key.update(&(self.settings.rays as u64).to_le_bytes());
+        key.update(&(self.settings.budget as u64).to_le_bytes());
     }
 }
 
@@ -935,25 +939,32 @@ pub fn bake(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<Json> {
         .project_root
         .join("Library/Unbound/RealtimeGI")
         .join(format!("{}.bin", bake_key(inputs, probes)));
-    let data = match read_baked(&path) {
-        Some(data) => data,
+    let baked = match read_baked(&path) {
+        Some(baked) => baked,
         None => {
-            let data = bake_fresh(inputs, probes)?;
-            if let Err(e) = write_baked(&path, &data) {
+            let baked = bake_fresh(inputs, probes)?;
+            if let Err(e) = write_baked(&path, &baked) {
                 tracing::debug!(
                     "caching precomputed realtime GI in {}: {e:#}",
                     path.display()
                 );
             }
-            data
+            baked
         }
     };
-    let ranges: Vec<([u8; 16], usize, usize)> = data
+    let ranges: Vec<([u8; 16], usize, usize)> = baked
+        .data
         .probe_sets
         .iter()
         .map(|set| (set.hash, 0, set.probes.len()))
         .collect();
-    register(data, &ranges)
+    let mut answer = register(baked.data, &ranges)?;
+    answer["refused"] = baked
+        .refused
+        .iter()
+        .map(|((object, prefab), error)| json!({ "object": object, "prefab": prefab, "error": error }))
+        .collect();
+    Ok(answer)
 }
 
 /// The cache key of a bake: every input, the probes, and the versions of everything that makes
@@ -983,7 +994,8 @@ struct Placed {
 
 /// A normal through a matrix's rotation and scale (column by column): by its cofactors, the
 /// inverse transpose up to the determinant's size and kept when the matrix flattens one axis
-/// (a plane scaled to no height keeps its normal); its sign follows the determinant's (a mirror
+/// (a plane scaled to no height keeps its normal; mirrored too, its sign is then a choice of
+/// Unbound's: the Editor's is not measured); its sign follows the determinant's (a mirror
 /// turns it); zero when the matrix flattens two axes.
 fn turned_normal(m: &[f32; 9], n: [f32; 3]) -> [f32; 3] {
     let c = |i: usize, j: usize| m[3 * j + i];
@@ -1070,20 +1082,26 @@ fn place(input: &BakeInput) -> Result<Placed> {
     })
 }
 
-fn bake_fresh(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<unbound_gi::data::Precomputed> {
-    // A renderer of no triangles takes part in nothing.
-    let inputs: Vec<&BakeInput> = inputs
+/// The bake of `inputs`: a renderer that cannot be placed (its realtime lightmap UVs cannot be
+/// made, say) is left out and listed, as is one of no triangles.
+fn bake_fresh(
+    inputs: &[BakeInput],
+    probes: &[[f32; 3]],
+) -> Result<unbound_gi::precompute::bake::Baked> {
+    let mut refused = Vec::new();
+    let mut taken = Vec::with_capacity(inputs.len());
+    for input in inputs {
+        if input.triangles.is_empty() || input.positions.is_empty() {
+            refused.push(((input.object, input.prefab), "no triangles".to_string()));
+            continue;
+        }
+        match place(input) {
+            Ok(placed) => taken.push((input, placed)),
+            Err(e) => refused.push(((input.object, input.prefab), format!("{e:#}"))),
+        }
+    }
+    let renderers: Vec<unbound_gi::precompute::bake::BakeRenderer> = taken
         .iter()
-        .filter(|i| !i.triangles.is_empty() && !i.positions.is_empty())
-        .collect();
-    let made = inputs
-        .iter()
-        .enumerate()
-        .map(|(k, input)| place(input).with_context(|| format!("renderer {k}")))
-        .collect::<Result<Vec<_>>>()?;
-    let renderers: Vec<unbound_gi::precompute::bake::BakeRenderer> = inputs
-        .iter()
-        .zip(&made)
         .map(|(input, made)| unbound_gi::precompute::bake::BakeRenderer {
             id: (input.object, input.prefab),
             positions: &made.positions,
@@ -1094,24 +1112,28 @@ fn bake_fresh(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<unbound_gi::d
             cluster_size: input.cluster_size,
             modelling_tolerance: input.modelling_tolerance,
             group: input.group,
+            settings: input.settings,
         })
         .collect();
-    unbound_gi::precompute::bake::bake(&renderers, probes)
+    let mut baked = unbound_gi::precompute::bake::bake(&renderers, probes)?;
+    refused.append(&mut baked.refused);
+    baked.refused = refused;
+    Ok(baked)
 }
 
 /// The cache entry at `path`: a checksum of the rest, then the encoded data; `None` when there
 /// is none or it is damaged (it is made again).
-fn read_baked(path: &Path) -> Option<unbound_gi::data::Precomputed> {
+fn read_baked(path: &Path) -> Option<unbound_gi::precompute::bake::Baked> {
     let bytes = std::fs::read(path).ok()?;
     let (sum, rest) = bytes.split_at_checked(32)?;
     if blake3::hash(rest).as_bytes() != sum {
         return None;
     }
-    unbound_gi::data::decode_precomputed(rest).ok()
+    unbound_gi::precompute::bake::Baked::decode(rest).ok()
 }
 
-fn write_baked(path: &Path, data: &unbound_gi::data::Precomputed) -> Result<()> {
-    let encoded = unbound_gi::data::encode_precomputed(data);
+fn write_baked(path: &Path, baked: &unbound_gi::precompute::bake::Baked) -> Result<()> {
+    let encoded = baked.encode();
     let mut bytes = blake3::hash(&encoded).as_bytes().to_vec();
     bytes.extend_from_slice(&encoded);
     write_atomic(path, &bytes)
@@ -1678,6 +1700,7 @@ mod tests {
             cluster_size: 1.0,
             modelling_tolerance: 0.01,
             group: 0,
+            settings: unbound_gi::precompute::transport::DEFAULT_SETTINGS,
         }
     }
 
@@ -1690,18 +1713,16 @@ mod tests {
             box_input(3, [4.0, 3.0, 0.2], [0.0, 1.5, 2.1]),
             box_input(4, [1.0, 1.0, 1.0], [0.5, 0.5, -0.5]),
         ];
-        let data = bake_fresh(&inputs, &[[0.0, 1.0, 0.0]]).unwrap();
+        let baked = bake_fresh(&inputs, &[[0.0, 1.0, 0.0]]).unwrap();
+        assert!(baked.refused.is_empty());
+        let data = &baked.data;
         assert_eq!(data.systems.len(), 1);
         assert_eq!(data.renderers.len(), 4);
         assert_eq!(data.probe_sets.len(), 1);
         let dir = std::env::temp_dir().join(format!("unbound-bake-{}", std::process::id()));
         let path = dir.join("scene.bin");
-        write_baked(&path, &data).unwrap();
-        let back = read_baked(&path).unwrap();
-        assert_eq!(
-            unbound_gi::data::encode_precomputed(&back),
-            unbound_gi::data::encode_precomputed(&data)
-        );
+        write_baked(&path, &baked).unwrap();
+        assert_eq!(read_baked(&path).unwrap().encode(), baked.encode());
         // A changed byte or a truncated entry is not used (it is made again).
         let mut bytes = std::fs::read(&path).unwrap();
         let last = bytes.len() - 1;
@@ -1711,12 +1732,31 @@ mod tests {
         std::fs::write(&path, &bytes[..40]).unwrap();
         assert!(read_baked(&path).is_none());
         std::fs::remove_dir_all(dir).unwrap();
-        // A renderer of no triangles takes part in nothing.
+        // A renderer of no triangles, and one whose UVs cannot be made (a vertex that is not
+        // finite), are left out and listed by their ids; the others are baked.
         let mut empty = box_input(6, [1.0; 3], [0.0; 3]);
         empty.triangles.clear();
-        let mut with_empty: Vec<BakeInput> = inputs.into_iter().collect();
-        with_empty.push(empty);
-        assert_eq!(bake_fresh(&with_empty, &[]).unwrap().renderers.len(), 4);
+        let mut broken = box_input(7, [1.0; 3], [0.0, 3.0, 0.0]);
+        broken.positions[0][0] = f32::NAN;
+        let mut more: Vec<BakeInput> = inputs.into_iter().collect();
+        more.push(empty);
+        more.push(broken);
+        let baked = bake_fresh(&more, &[]).unwrap();
+        assert_eq!(baked.data.renderers.len(), 4);
+        let refused: Vec<i64> = baked.refused.iter().map(|r| r.0.0).collect();
+        assert_eq!(refused, vec![6, 7]);
+        assert!(
+            baked.refused[1].1.contains("non-finite"),
+            "{}",
+            baked.refused[1].1
+        );
+        // Other irradiance settings change the key (and the transport they make).
+        let mut fewer = box_input(1, [4.0, 0.2, 4.0], [0.0, -0.1, 0.0]);
+        fewer.settings.budget = 32;
+        assert_ne!(
+            bake_key(&[fewer], &[]),
+            bake_key(&[box_input(1, [4.0, 0.2, 4.0], [0.0, -0.1, 0.0])], &[])
+        );
     }
 
     #[test]

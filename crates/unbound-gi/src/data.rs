@@ -909,25 +909,3 @@ crate::codec::codec_struct!(Precomputed {
     renderers,
     renderer_st,
 });
-
-/// The first bytes of an encoded [`Precomputed`] ([`encode_precomputed`]).
-const ENCODED_MAGIC: &[u8; 8] = b"UBGIPRE1";
-
-/// `data` in Unbound's own binary encoding (the cache of its precompute; not the Editor's).
-pub fn encode_precomputed(data: &Precomputed) -> Vec<u8> {
-    let mut w = crate::codec::Writer(ENCODED_MAGIC.to_vec());
-    crate::codec::Codec::write(data, &mut w);
-    w.0
-}
-
-/// The data [`encode_precomputed`] wrote; fails on anything else (a damaged entry).
-pub fn decode_precomputed(bytes: &[u8]) -> Result<Precomputed> {
-    ensure!(
-        bytes.starts_with(ENCODED_MAGIC),
-        "not Unbound's encoding of precomputed realtime GI"
-    );
-    let mut r = crate::codec::Reader::new(&bytes[ENCODED_MAGIC.len()..]);
-    let data: Precomputed = crate::codec::Codec::read(&mut r)?;
-    r.finished()?;
-    Ok(data)
-}

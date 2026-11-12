@@ -4056,11 +4056,17 @@ fn compare_baked(
             .unwrap();
         let system = &data.systems[s];
         let st = data.renderer_st[k];
-        let (w, h) = (system.transport.width as f32, system.transport.height as f32);
+        let (w, h) = (
+            system.transport.width as f32,
+            system.transport.height as f32,
+        );
         (
             s,
             [(st[2] * w).round() as usize, (st[3] * h).round() as usize],
-            [system.atlas_offset.0 as usize, system.atlas_offset.1 as usize],
+            [
+                system.atlas_offset.0 as usize,
+                system.atlas_offset.1 as usize,
+            ],
         )
     };
     let (mut fails, mut total, mut relative) = (0, 0, Vec::new());
@@ -4078,9 +4084,8 @@ fn compare_baked(
                     if r[3] <= 0.0 {
                         continue;
                     }
-                    let got = crate::solver::decode_rgb9e5(
-                        encoded[s][(ours[1] + y) * sw + ours[0] + x],
-                    );
+                    let got =
+                        crate::solver::decode_rgb9e5(encoded[s][(ours[1] + y) * sw + ours[0] + x]);
                     for k in 0..3 {
                         let d = (got[k] - r[k]).abs();
                         total += 1;
@@ -4141,19 +4146,23 @@ fn the_room_baked_from_its_renderers_lights_as_the_editors() {
                 cluster_size: 1.0,
                 modelling_tolerance: 0.01,
                 group: 0,
+                settings: crate::precompute::transport::DEFAULT_SETTINGS,
             }
         })
         .collect();
     let baked = bake(&renderers, &ROOM_PROBES).unwrap();
+    assert!(baked.refused.is_empty());
+    // The encoding the cache keeps gives it back to the byte.
+    let bytes = baked.encode();
+    let back = crate::precompute::bake::Baked::decode(&bytes).unwrap();
+    assert_eq!(back.encode(), bytes);
+    assert!(crate::precompute::bake::Baked::decode(&bytes[..bytes.len() - 1]).is_err());
+    let baked = baked.data;
+    let back = back.data;
     assert_eq!(baked.systems.len(), 1);
     assert_eq!(baked.atlas_sizes, vec![64]);
     let system = &baked.systems[0];
     assert_eq!((system.transport.width, system.transport.height), (52, 52));
-    // The encoding the cache keeps gives it back to the byte.
-    let bytes = crate::data::encode_precomputed(&baked);
-    let back = crate::data::decode_precomputed(&bytes).unwrap();
-    assert_eq!(crate::data::encode_precomputed(&back), bytes);
-    assert!(crate::data::decode_precomputed(&bytes[..bytes.len() - 1]).is_err());
     let mut r = Replay::new();
     r.solver = SystemSolver::new(Arc::new(back.systems[0].clone())).unwrap();
     r.probes = ProbeSetSolver::new(
@@ -4177,5 +4186,6 @@ fn the_room_baked_from_its_renderers_lights_as_the_editors() {
     // Measured: 15 (with the Editor's layout 14).
     assert!(off * 100 <= 15 * 115, "{off} probe coefficients off");
     assert!(total > 4000 && median < 0.01);
-    assert!(fails * 100 <= 83 * 115, "{fails}");
+    // Measured: 79 (over the Editor's layout 83).
+    assert!(fails * 100 <= 79 * 115, "{fails}");
 }

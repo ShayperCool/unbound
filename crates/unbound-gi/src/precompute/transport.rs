@@ -430,7 +430,7 @@ fn direction_index(d: V3) -> u8 {
 }
 
 /// The precompute's settings of a system (its Lightmap Parameters).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Settings {
     /// Rays per texel: Irradiance Quality.
     pub rays: usize,
