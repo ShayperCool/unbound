@@ -452,3 +452,44 @@ fn surfaces_facing_geometry_within_the_modelling_tolerance_are_left_out() {
         "{near_count}"
     );
 }
+
+#[test]
+fn a_dense_mesh_is_not_refused() {
+    // 640 000 triangles within four voxels: a part each, far under the limit.
+    let mut m = Mesh::default();
+    let n = 400u32;
+    for z in 0..=n {
+        for x in 0..=n {
+            m.positions
+                .push([2.0 * x as f32 / n as f32, 0.0, 2.0 * z as f32 / n as f32]);
+            m.normals.push([0.0, 1.0, 0.0]);
+            m.texels.push([0.0, 0.0]);
+        }
+    }
+    for z in 0..n {
+        for x in 0..n {
+            let a = z * (n + 1) + x;
+            m.triangles.push([a, a + n + 1, a + n + 2]);
+            m.triangles.push([a, a + n + 2, a + 1]);
+        }
+    }
+    let c = cluster(&[m.instance(1.0)], 32, 32).unwrap();
+    assert_eq!(c.input.clusters(), 4);
+    assert!((c.areas.iter().sum::<f32>() - 4.0).abs() < 1e-2);
+}
+
+#[test]
+fn a_mesh_without_normals_faces_its_winding() {
+    // A box whose normals are zero stands on a floor: rays meeting it from outside meet its
+    // front, so the floor round it keeps its points and the floor under it does not.
+    let ground = floor(4.0, 4.0);
+    let mut block = Mesh::default();
+    block.open_box([1.0, 0.0, 1.0], [2.0, 1.0, 2.0]);
+    block.normals.iter_mut().for_each(|n| *n = [0.0; 3]);
+    let c = cluster(&[ground.instance(1.0), block.instance(1.0)], 64, 64).unwrap();
+    let floor_points = c.input.positions.iter().filter(|p| p[1] == 0.0).count() as f32;
+    assert!(
+        (floor_points - 15.0 * SAMPLES_PER_CLUSTER).abs() <= 24.0,
+        "{floor_points}"
+    );
+}

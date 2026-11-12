@@ -17,7 +17,9 @@ pub const SAMPLES_PER_CLUSTER: f32 = 32.0;
 /// Points come in groups of this many neighbours (as the input samples store them; a cluster
 /// most of which other geometry hides may keep fewer).
 pub const GROUP: usize = 4;
-/// A part of a voxel no larger than this share of a voxel face joins neighbours.
+/// A part of a voxel no larger than this share of a voxel face joins neighbours (the Unity
+/// 6000.0.71f1 Editor's precompute of tests/projects/realtimegi: its smallest cluster covers 0.4
+/// of a face, the largest part that joins others 0.2).
 const MIN_CLUSTER_SHARE: f32 = 0.4;
 /// Parts whose normals are closer than this (cosine) are one plane.
 const COPLANAR: f32 = 0.999;
@@ -138,6 +140,25 @@ fn dice(t: [Vertex; 3], origin: V3, size: f32, instance: u32, out: &mut Vec<Piec
             }
         }
     }
+}
+
+/// How many voxel parts the triangle `p` is cut into at most by the grid from `origin` of
+/// cluster size `s`: no more than the voxels its bounds span, nor than its area and its
+/// perimeter cross.
+fn parts_bound(p: [V3; 3], origin: V3, s: f32) -> f64 {
+    let span: f64 = (0..3)
+        .map(|k| {
+            let cell = |x: f32| ((x - origin[k]) / s).floor() as f64;
+            let lo = p.iter().map(|q| q[k]).fold(f32::INFINITY, f32::min);
+            let hi = p.iter().map(|q| q[k]).fold(f32::NEG_INFINITY, f32::max);
+            cell(hi) - cell(lo) + 1.0
+        })
+        .product();
+    let area = 0.5 * super::math::length(cross(sub(p[1], p[0]), sub(p[2], p[0])));
+    let edges: f32 = (0..3)
+        .map(|e| super::math::length(sub(p[(e + 1) % 3], p[e])))
+        .sum();
+    span.min((area / (s * s) + 3.0 * edges / s + 8.0) as f64)
 }
 
 /// The part of `polygon` on the side `sign * (x[axis] - plane) >= 0`.
@@ -298,25 +319,34 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
                         origin[k] = origin[k].min(q[k]);
                     }
                 }
-                // At most the voxels its area and its perimeter cross.
-                let s = inst.cluster_size;
-                let area = 0.5 * super::math::length(cross(sub(p[1], p[0]), sub(p[2], p[0])));
-                let edges: f32 = (0..3)
-                    .map(|e| super::math::length(sub(p[(e + 1) % 3], p[e])))
-                    .sum();
-                estimate += (area / (s * s) + 3.0 * edges / s + 8.0) as f64;
             }
-            source.push(p);
-            facing.push(add(
+            // The side its vertex normals face; its winding's where they cancel or are zero.
+            let sum = add(
                 add(inst.normals[t[0] as usize], inst.normals[t[1] as usize]),
                 inst.normals[t[2] as usize],
-            ));
+            );
+            facing.push(
+                if dot(sum, sum) > 0.0 && sum.iter().all(|v| v.is_finite()) {
+                    sum
+                } else {
+                    cross(sub(p[1], p[0]), sub(p[2], p[0]))
+                },
+            );
+            source.push(p);
         }
     }
     ensure!(
         origin.iter().all(|v| v.is_finite()),
         "a system without finite triangles"
     );
+    for inst in instances {
+        for t in inst.triangles {
+            let p = t.map(|v| inst.positions[v as usize]);
+            if p.iter().flatten().all(|v| v.is_finite()) {
+                estimate += parts_bound(p, origin, inst.cluster_size);
+            }
+        }
+    }
     ensure!(
         estimate <= MAX_PIECES as f64,
         "realtime GI: the cluster sizes cut the system into about {estimate:.0} parts, more than {MAX_PIECES}"
@@ -355,44 +385,62 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
             .push(k as u32);
     }
     let mut parts = UnionFind::new(pieces.len());
+    /// A part of a voxel being gathered: its pieces, their corners and their distinct normals.
+    struct Clump {
+        members: Vec<u32>,
+        corners: std::collections::HashSet<[i32; 3]>,
+        normals: Vec<V3>,
+    }
+    let faces_all = |normals: &[V3], n: V3| normals.iter().all(|&m| dot(m, n) > 0.0);
     for list in by_voxel.values() {
-        // Each part's pieces and corner keys, in this voxel.
-        let mut clumps: Vec<(Vec<u32>, std::collections::HashSet<[i32; 3]>)> = Vec::new();
+        let mut clumps: Vec<Clump> = Vec::new();
         for &k in list {
             let piece = &pieces[k as usize];
             let corners: std::collections::HashSet<[i32; 3]> =
                 piece.polygon.iter().map(|v| key(v.p)).collect();
-            let joins = |c: &(Vec<u32>, std::collections::HashSet<[i32; 3]>)| {
-                c.0.iter()
-                    .all(|&m| dot(pieces[m as usize].normal, piece.normal) > 0.0)
-                    && !c.1.is_disjoint(&corners)
+            let joins =
+                |c: &Clump| !c.corners.is_disjoint(&corners) && faces_all(&c.normals, piece.normal);
+            let Some(first) = clumps.iter().position(joins) else {
+                clumps.push(Clump {
+                    members: vec![k],
+                    corners,
+                    normals: vec![piece.normal],
+                });
+                continue;
             };
-            match clumps.iter().position(joins) {
-                Some(first) => {
-                    clumps[first].0.push(k);
-                    clumps[first].1.extend(corners.iter().copied());
-                    let mut i = first + 1;
-                    while i < clumps.len() {
-                        let fits = clumps[i].0.iter().all(|&m| {
-                            clumps[first].0.iter().all(|&n| {
-                                dot(pieces[m as usize].normal, pieces[n as usize].normal) > 0.0
-                            })
-                        }) && !clumps[i].1.is_disjoint(&corners);
-                        if fits {
-                            let other = clumps.remove(i);
-                            clumps[first].0.extend(other.0);
-                            clumps[first].1.extend(other.1);
-                        } else {
-                            i += 1;
+            let target = &mut clumps[first];
+            target.members.push(k);
+            target.corners.extend(corners.iter().copied());
+            if !target.normals.contains(&piece.normal) {
+                target.normals.push(piece.normal);
+            }
+            // The later parts this piece touches merge in when all their normals and the
+            // part's face one half-space.
+            let mut i = first + 1;
+            while i < clumps.len() {
+                let fits = !clumps[i].corners.is_disjoint(&corners)
+                    && clumps[i]
+                        .normals
+                        .iter()
+                        .all(|&n| faces_all(&clumps[first].normals, n));
+                if fits {
+                    let other = clumps.remove(i);
+                    let target = &mut clumps[first];
+                    target.members.extend(other.members);
+                    target.corners.extend(other.corners);
+                    for n in other.normals {
+                        if !target.normals.contains(&n) {
+                            target.normals.push(n);
                         }
                     }
+                } else {
+                    i += 1;
                 }
-                None => clumps.push((vec![k], corners)),
             }
         }
-        for (members, _) in clumps {
-            for &m in &members[1..] {
-                parts.union(members[0], m);
+        for clump in clumps {
+            for &m in &clump.members[1..] {
+                parts.union(clump.members[0], m);
             }
         }
     }

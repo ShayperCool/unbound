@@ -7,6 +7,10 @@ use super::math::{V3, cross, dot, sub};
 const LEAF_TRIANGLES: usize = 4;
 /// Bins of the surface area heuristic per split axis.
 const BINS: usize = 16;
+/// Below this depth a node is split by the surface area heuristic, deeper at its middle, so
+/// that no tree is deeper than the traversal's stack.
+const SAH_DEPTH: usize = 48;
+const STACK: usize = 2 * (SAH_DEPTH + 33);
 
 /// A ray's nearest hit.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -70,7 +74,7 @@ impl Bvh {
         };
         if !bvh.triangles.is_empty() {
             let n = bvh.triangles.len();
-            bvh.build(&centroids, 0, n);
+            bvh.build(&centroids, 0, n, 0);
         }
         bvh
     }
@@ -86,7 +90,7 @@ impl Bvh {
     }
 
     /// Builds the node of `order[start..end]` and its subtree; returns its index.
-    fn build(&mut self, centroids: &[V3], start: usize, end: usize) -> usize {
+    fn build(&mut self, centroids: &[V3], start: usize, end: usize, depth: usize) -> usize {
         let (lo, hi) = self.bounds(start, end);
         let index = self.nodes.len();
         self.nodes.push(Node {
@@ -104,7 +108,7 @@ impl Bvh {
             grow(&mut clo, &mut chi, centroids[t as usize]);
         }
         let mut best: Option<(f32, usize, f32)> = None;
-        for axis in 0..3 {
+        for axis in (0..3).filter(|_| depth < SAH_DEPTH) {
             let extent = chi[axis] - clo[axis];
             if extent <= 0.0 {
                 continue;
@@ -154,11 +158,11 @@ impl Bvh {
                 }
                 start + i
             }
-            // All centroids coincide: halve the list.
+            // All centroids coincide, or the tree is deep: halve the list.
             None => start + (end - start) / 2,
         };
-        self.build(centroids, start, mid);
-        let second = self.build(centroids, mid, end);
+        self.build(centroids, start, mid, depth + 1);
+        let second = self.build(centroids, mid, end, depth + 1);
         self.nodes[index].start = second as u32;
         self.nodes[index].count = 0;
         index
@@ -177,7 +181,7 @@ impl Bvh {
         let inverse: V3 = std::array::from_fn(|k| 1.0 / direction[k]);
         let mut best: Option<Hit> = None;
         let mut limit = max_distance;
-        let mut stack = [0u32; 64];
+        let mut stack = [0u32; STACK];
         let mut top = 1;
         while top > 0 {
             top -= 1;
