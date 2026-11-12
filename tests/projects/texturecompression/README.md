@@ -170,6 +170,27 @@ has no component mapping, and its format set has no alpha-only format. An R8 vie
 red and an alpha of one. Consequently, a one-channel upload cannot preserve Alpha8 sampling
 through the current view API; a shader-side component mapping is a separate renderer change.
 
+The current GPU allocation stores four bytes per texel instead of one, an extra three bytes
+and four times the unpadded upload traffic. CPU/import storage and the upload packet retain
+one byte per texel; the renderer expands it to RGBA8 before writing the GPU texture.
+
+| 1024x1024 Alpha8 texture | One-channel payload | Current RGBA8 GPU payload | Extra GPU payload |
+|---|---:|---:|---:|
+| Top level only | 1 MiB | 4 MiB | 3 MiB |
+| Full mip chain | about 1.33 MiB | about 5.33 MiB | about 4 MiB |
+
+These are texel payload sizes; device allocation alignment can add overhead. The expansion
+also needs a CPU conversion and temporary four-byte output. This part records the cost and
+does not change renderer storage.
+
+Two ordinary UI/effect Alpha8 images, recorded twice with the GPU Editor in Gamma and
+AndroidGamma, match all 37 values per image. Their two complete mip chains contain 43690
+one-byte texels per profile, with exact raw bytes and GPU samples. Block counts do not apply
+to this uncompressed format. Fresh repeats of the complete six-profile reference are identical
+to all 8229 canonical rows. The part's 4397-texture clean-cache runs have zero failures:
+20.18 s before and 19.58 s after, total process CPU 94.45 s before and 96.45 s after.
+There is no encoder or storage change; shared-machine timings do not isolate Alpha8 cost.
+
 Measured runtime blocks (Gamma and Linear are identical):
 
 | Format | Fast exact / total | High quality exact / total |
