@@ -1,0 +1,19 @@
+{
+  "commands": [
+    "python3 tests/projects/attributeinheritance/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Attributes.cs",
+    "managed/UnityEngine/Editor/Editors.cs",
+    "managed/UnityEngine/Editor/TypeCache.cs",
+    "managed/UnityEngine/Editor/EditorInitialization.cs",
+    "managed/UnityEngine/Editor/EditorAssemblies.cs",
+    "managed/UnityEngine/Editor/EditorGUIState.cs",
+    "managed/UnityEngine/Runtime/Messages.cs",
+    "managed/UnityEngine/Runtime/Components.cs",
+    "managed/UnityEngine/Runtime/Serialization.cs",
+    "managed/UnityEngine/UIElements/Uxml/",
+    "managed/Unbound.ApiTools/"
+  ]
+}

@@ -53,7 +53,7 @@ namespace UnityEngine
 
     /// <summary>A StateMachineBehaviour type marked with this is used as one instance shared by
     /// every Animator, instead of one instance per Animator.</summary>
-    [AttributeUsage(AttributeTargets.Class)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class, AllowMultiple = false)]
     public sealed partial class SharedBetweenAnimatorsAttribute : Attribute
     {
     }

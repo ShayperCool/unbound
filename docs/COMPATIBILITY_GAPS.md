@@ -294,10 +294,14 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 - [x] Q403 declaration checking: `unbound api-check` compares release metadata, including custom
       attribute arguments, AttributeUsage, optional defaults, constants, modifiers, constraints,
       interfaces, accessors and storage metadata. See [declaration policy](API_DECLARATIONS.md).
-      The initial 6000.0.71f1 audit has 1,357 exact migration exceptions in
-      `managed/UnityEngine/ApiCheckAllowList.json`: attributes 973, modifiers 88, parameters 74,
+      The current 6000.0.71f1 audit has 1,327 exact migration exceptions in
+      `managed/UnityEngine/ApiCheckAllowList.json`: attributes 943, modifiers 88, parameters 74,
       accessors 70, layout 68, interfaces 65, accessibility 18 and constraints 1. These remain open
       declaration repairs, with raw counts and individual reasons retained by the checker.
+      Q403 lookup checks are done (`attributeinheritance`, 215 exact Editor records): thirty
+      attribute-type declarations now match the release metadata; eleven direct-discovery lookup
+      policies carry individual measured reasons. TypeCache, editor registration and JSON rename/
+      envelope controls match the Editor; serialized prefab renames remain supported.
 
 - [x] `Stubs.Ignored(member)` (warn once, like `NotImplemented`) for knowingly ignored members,
       and an `[EditorFaithful("why")]` marker for real no-ops; every hand-written empty body,

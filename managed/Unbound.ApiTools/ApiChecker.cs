@@ -120,6 +120,7 @@ sealed partial class StubBuilder
         }
 
         CheckStorageMetadata();
+        CheckAttributeLookups();
 
         foreach (var silent in _sources.Silent)
         {

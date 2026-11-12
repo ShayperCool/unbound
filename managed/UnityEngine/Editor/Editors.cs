@@ -142,7 +142,7 @@ namespace UnityEditor
                 foreach (var type in TypeCache.GetTypesWithAttribute<CustomEditor>())
                 {
                     if (type.IsAbstract || !typeof(Editor).IsAssignableFrom(type)) continue;
-                    bool multi = type.IsDefined(typeof(CanEditMultipleObjects), true);
+                    bool multi = type.IsDefined(typeof(CanEditMultipleObjects), false);
                     foreach (var attribute in type.GetCustomAttributes<CustomEditor>(false))
                         if (attribute.m_InspectedType != null)
                             list.Add((attribute.m_InspectedType, type, attribute.m_EditorForChildClasses, attribute.isFallback, multi));
@@ -285,7 +285,7 @@ namespace UnityEditor
     }
 
     /// <summary>Marks an editor that can inspect several objects at once.</summary>
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+
     public sealed partial class CanEditMultipleObjects : Attribute
     {
         public CanEditMultipleObjects() { }

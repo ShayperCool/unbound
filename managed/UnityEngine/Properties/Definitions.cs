@@ -7,7 +7,8 @@ namespace Unity.Properties
 {
     /// <summary>Makes a member a property of its container's property bag (fields that would not be
     /// serialized, C# properties).</summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+    [global::UnityEngine.Scripting.@RequireAttributeUsagesAttribute]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field)]
     public partial class CreatePropertyAttribute : RequiredMemberAttribute
     {
         public bool ReadOnly { get; set; }

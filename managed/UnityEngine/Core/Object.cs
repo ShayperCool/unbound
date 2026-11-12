@@ -458,7 +458,7 @@ namespace UnityEngine
 
 namespace UnityEngine.Internal
 {
-    [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.ReturnValue)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Parameter | global::System.AttributeTargets.GenericParameter)]
     public partial class DefaultValueAttribute : Attribute
     {
         readonly object DefaultValue;

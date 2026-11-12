@@ -33,6 +33,8 @@ sealed class HandWrittenSources
         public string What = "";
     }
 
+    public string? DirectoryPath { get; }
+
     readonly Dictionary<string, TypeInfo> _types = new(StringComparer.Ordinal);
 
     /// <summary>The hand-written members that silently do nothing (see <see cref="SilentMember"/>).</summary>
@@ -43,6 +45,7 @@ sealed class HandWrittenSources
     {
         if (dir == null || !Directory.Exists(dir))
             return;
+        DirectoryPath = Path.GetFullPath(dir);
         var generated = Path.Combine(Path.GetFullPath(dir), "Generated") + Path.DirectorySeparatorChar;
         foreach (var file in Directory.GetFiles(dir, "*.cs", SearchOption.AllDirectories).OrderBy(f => f, StringComparer.Ordinal))
         {

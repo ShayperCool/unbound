@@ -599,6 +599,7 @@ namespace UnityEditor
         public virtual float GetHeight() => EditorGUIUtility.singleLineHeight;
     }
 
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
     public sealed partial class CustomPropertyDrawer : Attribute
     {
         internal Type m_Type;

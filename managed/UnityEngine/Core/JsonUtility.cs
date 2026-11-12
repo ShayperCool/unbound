@@ -93,8 +93,11 @@ namespace UnityEngine
             var reader = new JsonReader { Editor = true };
             if (objectToOverwrite is Object unityObject)
             {
-                // The object's data is under its class name; a bare object is read as it is.
-                var body = root.Members.Count == 1 && root.Members[0].Value.Kind == JsonKind.Object ? root.Members[0].Value : root;
+                // Engine objects read their named envelope. A missing envelope still completes
+                // deserialization callbacks, with no fields changed (attributeinheritance).
+                var body = root.Get(EditorClassName(unityObject));
+                if (body == null || body.Kind != JsonKind.Object)
+                    body = new JsonNode { Kind = JsonKind.Object, Members = new List<(string, JsonNode)>() };
                 reader.ReadEngineObject(unityObject, body);
             }
             else
@@ -479,9 +482,6 @@ namespace UnityEngine
                 {
                     if (member.Shape == Shape.ManagedReference) continue;
                     var value = node.Get(member.Name);
-                    if (value == null)
-                        foreach (var former in member.FormerNames)
-                            if ((value = node.Get(former)) != null) break;
                     if (value == null) continue;
                     try
                     {

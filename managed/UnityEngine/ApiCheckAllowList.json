@@ -667,13 +667,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "Unity.Burst.BurstAuthorizedExternalMethodAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:64){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:64){};UnityEngine.Scripting.RequireAttributeUsagesAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: Unity.Burst.BurstAuthorizedExternalMethodAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "Unity.CodeEditor.CodeEditor",
     "Message": "M:static SetExternalScriptEditor`0(System.String):System.Void attributes is [], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: Unity.CodeEditor.CodeEditor."
@@ -866,13 +859,6 @@
     "Type": "Unity.Properties.ConversionRegistry",
     "Message": "field m_Converters attributes is [System.Runtime.CompilerServices.TupleElementNamesAttribute:M:.ctor`0(System.String[]):System.Void(System.String[]:[System.String:\"Source\",System.String:\"Destination\"]){}], Unity's is []",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: Unity.Properties.ConversionRegistry."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "Unity.Properties.CreatePropertyAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){};UnityEngine.Scripting.RequireAttributeUsagesAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: Unity.Properties.CreatePropertyAttribute."
   },
   {
     "Release": "6000.0.71f1",
@@ -1262,23 +1248,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEditor.CanEditMultipleObjects",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:False}], Unity's is []",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.CanEditMultipleObjects."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEditor.ConsoleWindow",
     "Message": "type attributes is [], Unity's is [UnityEditor.EditorWindowTitleAttribute:M:.ctor`0():System.Void(){title=System.String:\"Console\",useTypeNameAsIconName=System.Boolean:True}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.ConsoleWindow."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.CustomPropertyDrawer",
-    "Message": "type attributes is [], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:True,Inherited=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.CustomPropertyDrawer."
   },
   {
     "Release": "6000.0.71f1",
@@ -2165,13 +2137,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Bindings.VisibleToOtherModulesAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:32767){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:5628){Inherited=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Bindings.VisibleToOtherModulesAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.BlendWeights",
     "Message": "F:static const FourBones:UnityEngine.BlendWeights attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"BlendWeights.FourBones is obsolete. Use SkinWeights.FourBones instead (UnityUpgradable) -> SkinWeights.FourBones\",System.Boolean:True){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.BlendWeights."
@@ -2399,13 +2364,6 @@
     "Type": "UnityEngine.Color",
     "Message": "type attributes is [System.Reflection.DefaultMemberAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Item\"){}], Unity's is [System.Reflection.DefaultMemberAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Item\"){};UnityEngine.NativeClassAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ColorRGBAf\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Color."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ColorUsageAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ColorUsageAttribute."
   },
   {
     "Release": "6000.0.71f1",
@@ -2711,20 +2669,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.ContextMenuItemAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:True,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ContextMenuItemAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.CreateAssetMenuAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){Inherited=System.Boolean:False}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.CreateAssetMenuAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Cubemap",
     "Message": "type attributes is [], Unity's is [UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Cubemap."
@@ -2746,23 +2690,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.DelayedAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.DelayedAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.DetailPrototype",
     "Message": "P:bendFactor():System.Single attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"bendFactor has no effect and is deprecated.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"bendFactor has no effect and is deprecated.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.DetailPrototype."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.DisallowMultipleComponent",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:False}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){Inherited=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.DisallowMultipleComponent."
   },
   {
     "Release": "6000.0.71f1",
@@ -3453,13 +3383,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.HeaderAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:True,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){AllowMultiple=System.Boolean:True,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.HeaderAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.HideFlags",
     "Message": "type attributes is [], Unity's is [System.FlagsAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.HideFlags."
@@ -3474,30 +3397,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.IconAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){Inherited=System.Boolean:False}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True};System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UNITY_EDITOR\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.IconAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Input",
     "Message": "P:static isGyroAvailable():System.Boolean attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"isGyroAvailable property is deprecated. Please use SystemInfo.supportsGyroscope instead.\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Input."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.InspectorOrderAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:16){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.InspectorOrderAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Internal.DefaultValueAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:10240){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:18432){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Internal.DefaultValueAttribute."
   },
   {
     "Release": "6000.0.71f1",
@@ -3803,13 +3705,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.MinAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.MinAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.MonoBehaviour",
     "Message": "type attributes is [], Unity's is [UnityEngine.ExtensionOfNativeClassAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.MonoBehaviour."
@@ -3817,23 +3712,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.MultilineAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.MultilineAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.NPOTSupport",
     "Message": "F:static const None:UnityEngine.NPOTSupport attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"NPOTSupport.None does not happen on any platforms\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.NPOTSupport."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.NativeClassAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:12){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:12){Inherited=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.NativeClassAttribute."
   },
   {
     "Release": "6000.0.71f1",
@@ -4699,13 +4580,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.PropertyAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.PropertyAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.QualitySettings",
     "Message": "P:static masterTextureLimit():System.Int32 attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgradable) -> globalTextureMipmapLimit\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgradable) -> globalTextureMipmapLimit\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.QualitySettings."
@@ -4744,13 +4618,6 @@
     "Type": "UnityEngine.Random+State",
     "Message": "field s3 attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Random+State."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RangeAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RangeAttribute."
   },
   {
     "Release": "6000.0.71f1",
@@ -5581,62 +5448,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Scripting.AlwaysLinkAssemblyAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:6141){Inherited=System.Boolean:False}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:1){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Scripting.AlwaysLinkAssemblyAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Scripting.PreserveAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:6140){Inherited=System.Boolean:False}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:6141){Inherited=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Scripting.PreserveAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Scripting.RequireAttributeUsagesAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:1036){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Scripting.RequireAttributeUsagesAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Scripting.RequireDerivedAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:1036){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Scripting.RequireDerivedAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Scripting.RequireImplementorsAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:1036){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:1024){AllowMultiple=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Scripting.RequireImplementorsAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Scripting.RequiredMemberAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:1996){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:992){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Scripting.RequiredMemberAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.SelectionBaseAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SelectionBaseAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.SharedBetweenAnimatorsAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:4){AllowMultiple=System.Boolean:False}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SharedBetweenAnimatorsAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Social",
     "Message": "type attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Social is deprecated and will be removed in a future release.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Social is deprecated and will be removed in a future release.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Social."
@@ -5780,13 +5591,6 @@
     "Type": "UnityEngine.SocialPlatforms.UserState",
     "Message": "type attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UserState is deprecated and will be removed in a future release.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"UserState is deprecated and will be removed in a future release.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SocialPlatforms.UserState."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.SpaceAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:260){AllowMultiple=System.Boolean:True,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:True,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SpaceAttribute."
   },
   {
     "Release": "6000.0.71f1",
@@ -5990,13 +5794,6 @@
     "Type": "UnityEngine.TerrainRenderFlags",
     "Message": "F:static const trees:UnityEngine.TerrainRenderFlags attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TerrainRenderFlags.trees is obsolete, use TerrainRenderFlags.Trees instead. (UnityUpgradable) -> Trees\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TerrainRenderFlags."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextAreaAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:384){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextAreaAttribute."
   },
   {
     "Release": "6000.0.71f1",
@@ -6235,13 +6032,6 @@
     "Type": "UnityEngine.TextureFormat",
     "Message": "F:static const ETC_RGBA8_3DS:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member ETC_RGB4_3DS is obsolete. Nintendo 3DS is no longer supported.\",System.Boolean:True){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TooltipAttribute",
-    "Message": "type attributes is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:256){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}], Unity's is [System.AttributeUsageAttribute:M:.ctor`0(System.AttributeTargets):System.Void(System.AttributeTargets:Int32:32767){AllowMultiple=System.Boolean:False,Inherited=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TooltipAttribute."
   },
   {
     "Release": "6000.0.71f1",
@@ -8363,6 +8153,83 @@
     "Type": "UnityEngine.YieldInstruction",
     "Message": "storage layout is NotPublic,pack=0,size=0, Unity's is SequentialLayout,pack=0,size=0",
     "Reason": "Queued storage-layout migration; validate interop and serialization with the reference layout before changing it. Owner: UnityEngine.YieldInstruction."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "<dynamic attribute>",
+    "Message": "UnityEngine/Editor/TypeCache.cs MethodsWith: m.IsDefined(attribute, false): inherit is False, reference AttributeUsage is not statically known",
+    "Reason": "TypeCache indexes declared method annotations. The overriding-method control is absent from the Native method cache while its base declaration is present, tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "<dynamic attribute>",
+    "Message": "UnityEngine/Editor/TypeCache.cs WithAttribute: t.IsDefined(attribute, false): inherit is False, reference AttributeUsage is not statically known",
+    "Reason": "TypeCache indexes annotations declared on each type, independently of CLR inheritance. Native controls AttributeInheritanceControls.InheritedMarker.cache-derived and attribute-subclass.derived are false in tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "T",
+    "Message": "UnityEngine/Editor/EditorAssemblies.cs GetAllMethodsWithAttribute: m.IsDefined(typeof(T), false): inherit is False, reference AttributeUsage is not statically known",
+    "Reason": "This discovery enumerates DeclaredOnly methods. Native callback and menu controls run the marked base method once and omit its unmarked hiding method, tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "T",
+    "Message": "UnityEngine/Editor/EditorInitialization.cs TryGetAttribute: method.GetCustomAttribute<T>(false): inherit is False, reference AttributeUsage is not statically known",
+    "Reason": "Static callback discovery uses the selected declaration. Native load, enter-play, reload and scene controls run the marked base method once and omit the hiding method, tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEditor.CanEditMultipleObjects",
+    "Message": "UnityEngine/Editor/Editors.cs Editors: type.IsDefined(typeof(CanEditMultipleObjects), false): inherit is False, reference AttributeUsage is True",
+    "Reason": "Multi-object editor registration requires the marker on the selected editor class. Native inherited-multi is false even though CLR inherited reflection is true, tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEditor.CustomEditor",
+    "Message": "UnityEngine/Editor/Editors.cs Editors: type.GetCustomAttributes<CustomEditor>(false): inherit is False, reference AttributeUsage is True",
+    "Reason": "CustomEditor registration uses the editor class declaration; editorForChildClasses separately controls target inheritance. Native base, no-children and children controls and the unmarked editor subclass are recorded in tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEditor.MenuItem",
+    "Message": "UnityEngine/Editor/EditorApplication.cs ExecuteMenuItem: method.GetCustomAttributes(typeof(MenuItem), false): inherit is False, reference AttributeUsage is True",
+    "Reason": "Menu registration uses each declared static method. Native menu controls execute the marked base method once and omit the hiding method, tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEngine.ImageEffectOpaque",
+    "Message": "UnityEngine/Runtime/Messages.cs Build: image.IsDefined(typeof(ImageEffectOpaque), false): inherit is False, reference AttributeUsage is True",
+    "Reason": "ImageEffectOpaque belongs to the selected OnRenderImage declaration. Native base and inherited-method controls run image before post-render; an unmarked override runs afterward, tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEngine.UIElements.UxmlAttributeAttribute",
+    "Message": "UnityEngine/UIElements/Uxml/UxmlAttributeValues.cs Build: member.GetCustomAttribute<UxmlAttributeAttribute>(false): inherit is False, reference AttributeUsage is True",
+    "Reason": "The reader walks each base with DeclaredOnly and applies that declaration. Native inherited nonvirtual UXML members retain their values. Unity 6000.0.71f1 rejects virtual UxmlAttribute properties with UITKSG008; tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEngine.UIElements.UxmlTypeReferenceAttribute",
+    "Message": "UnityEngine/UIElements/Uxml/UxmlAttributeValues.cs TryRead: .GetCustomAttribute<UxmlTypeReferenceAttribute>(false): inherit is False, reference AttributeUsage is True",
+    "Reason": "The member record identifies its declaring base member. Native inherited UxmlTypeReference control resolves BoxCollider. Virtual UxmlAttribute properties are rejected by Unity 6000.0.71f1 with UITKSG008; tests/projects/attributeinheritance."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEngine.UIElements.UxmlTypeReferenceAttribute",
+    "Message": "UnityEngine/UIElements/Uxml/VisualTreeAsset.cs ApplyMember: member.Info.GetCustomAttribute<UxmlTypeReferenceAttribute>(false): inherit is False, reference AttributeUsage is True",
+    "Reason": "The member record identifies its declaring base member. Native inherited UxmlTypeReference control resolves BoxCollider. Virtual UxmlAttribute properties are rejected by Unity 6000.0.71f1 with UITKSG008; tests/projects/attributeinheritance."
   },
   {
     "Release": "6000.0.71f1",

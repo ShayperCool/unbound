@@ -50,3 +50,20 @@ The extended checks found 1,357 differences: 973 attribute, 74 parameter, 70 acc
 They are exact migration entries, not claims of matching declarations. Owning module slices
 must remove each entry when they fix the corresponding declaration. The counts remain in the
 JSON report so annotations and signatures cannot disappear into an aggregate pass result.
+
+## Reflection lookup policies
+
+The `lookup` category checks explicit reflection inherit arguments throughout `managed/`, excluding
+tests and generated sources. It resolves attribute usage from the reference assemblies rather
+than trusting the implementation's declaration. Unknown direct/computed lookups and explicit
+lookups in inactive conditional branches remain visible until they have a policy. FieldInfo and
+attributes restricted to targets without an inheritance chain do not need an inheritance policy.
+A general inherited query delegates each attribute's usage rules to the CLR.
+
+The Editor sometimes discovers declarations directly despite an attribute allowing CLR
+inheritance. TypeCache, callback discovery, editor registration, UXML member records and image
+message selection have exact exceptions with their measured reasons. The
+[attribute inheritance probe](../tests/projects/attributeinheritance/README.md) tests the cases
+where direct and inherited discovery produce different results, and keeps editor/drawer child
+flags independent. The attribute declaration repair removes 30 initial annotation differences,
+leaving 1,327 declaration migrations and eleven measured lookup policies.

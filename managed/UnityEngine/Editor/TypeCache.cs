@@ -82,7 +82,7 @@ namespace UnityEditor
         static IEnumerable<Type> WithAttribute(Assembly a, Type attribute)
         {
             foreach (var t in Types(a))
-                if (t.IsDefined(attribute, attribute.GetCustomAttribute<AttributeUsageAttribute>()?.Inherited ?? true)) yield return t;
+                if (t.IsDefined(attribute, false)) yield return t;
         }
 
         static IEnumerable<MethodInfo> MethodsWith(Assembly a, Type attribute)

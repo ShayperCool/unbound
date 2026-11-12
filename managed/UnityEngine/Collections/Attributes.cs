@@ -127,7 +127,8 @@ namespace Unity.Burst
     {
     }
 
-    [AttributeUsage(AttributeTargets.Method)]
+    [global::UnityEngine.Scripting.@RequireAttributeUsagesAttribute]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Method)]
     public partial class BurstAuthorizedExternalMethodAttribute : Attribute
     {
     }

@@ -38,7 +38,7 @@ namespace UnityEngine
         }
     }
 
-    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class, Inherited = false)]
     public sealed partial class DisallowMultipleComponent : Attribute
     {
     }
@@ -66,7 +66,7 @@ namespace UnityEngine
         public int componentOrder { get; }
     }
 
-    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public sealed partial class CreateAssetMenuAttribute : Attribute
     {
         public string menuName { get; set; }
@@ -90,7 +90,7 @@ namespace UnityEngine
         }
     }
 
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = true)]
     public partial class ContextMenuItemAttribute : PropertyAttribute
     {
         public readonly string name;
@@ -109,7 +109,7 @@ namespace UnityEngine
         public virtual string URL { get; }
     }
 
-    [AttributeUsage(AttributeTargets.Class, Inherited = true)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
     public partial class SelectionBaseAttribute : Attribute
     {
     }
@@ -121,32 +121,32 @@ namespace UnityEngine
 
     namespace Scripting
     {
-        [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Enum | AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Event | AttributeTargets.Interface | AttributeTargets.Delegate, Inherited = false)]
+        [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Assembly | global::System.AttributeTargets.Class | global::System.AttributeTargets.Struct | global::System.AttributeTargets.Enum | global::System.AttributeTargets.Constructor | global::System.AttributeTargets.Method | global::System.AttributeTargets.Property | global::System.AttributeTargets.Field | global::System.AttributeTargets.Event | global::System.AttributeTargets.Interface | global::System.AttributeTargets.Delegate, Inherited = false)]
         public partial class PreserveAttribute : Attribute
         {
         }
 
-        [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Enum | AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Event | AttributeTargets.Interface | AttributeTargets.Delegate, Inherited = false)]
+        [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Assembly)]
         public partial class AlwaysLinkAssemblyAttribute : Attribute
         {
         }
 
-        [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface)]
+        [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class, AllowMultiple = false)]
         public partial class RequireDerivedAttribute : Attribute
         {
         }
 
-        [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface)]
+        [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Interface, AllowMultiple = false)]
         public partial class RequireImplementorsAttribute : Attribute
         {
         }
 
-        [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Event)]
+        [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Constructor | global::System.AttributeTargets.Method | global::System.AttributeTargets.Property | global::System.AttributeTargets.Field | global::System.AttributeTargets.Event)]
         public partial class RequiredMemberAttribute : Attribute
         {
         }
 
-        [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface)]
+        [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class, AllowMultiple = false)]
         public partial class RequireAttributeUsagesAttribute : Attribute
         {
         }
@@ -163,7 +163,7 @@ namespace UnityEngine
 
     // ------------------------------------------------------------------ inspector attributes
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public abstract partial class PropertyAttribute : Attribute
     {
         protected PropertyAttribute() { }
@@ -173,14 +173,14 @@ namespace UnityEngine
         public bool applyToCollection => applyToCollection_;
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = true)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = true)]
     public partial class HeaderAttribute : PropertyAttribute
     {
         public readonly string header;
         public HeaderAttribute(string header) { this.header = header; }
     }
 
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Class, Inherited = true, AllowMultiple = true)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = true)]
     public partial class SpaceAttribute : PropertyAttribute
     {
         public readonly float height;
@@ -188,14 +188,14 @@ namespace UnityEngine
         public SpaceAttribute(float height) { this.height = height; }
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.All, Inherited = true, AllowMultiple = false)]
     public partial class TooltipAttribute : PropertyAttribute
     {
         public readonly string tooltip;
         public TooltipAttribute(string tooltip) { this.tooltip = tooltip; }
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public sealed partial class RangeAttribute : PropertyAttribute
     {
         public readonly float min;
@@ -207,14 +207,14 @@ namespace UnityEngine
         }
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public sealed partial class MinAttribute : PropertyAttribute
     {
         public readonly float min;
         public MinAttribute(float min) { this.min = min; }
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public sealed partial class MultilineAttribute : PropertyAttribute
     {
         public readonly int lines;
@@ -222,7 +222,7 @@ namespace UnityEngine
         public MultilineAttribute(int lines) { this.lines = lines; }
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public sealed partial class TextAreaAttribute : PropertyAttribute
     {
         public readonly int minLines;
@@ -235,7 +235,7 @@ namespace UnityEngine
         }
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public sealed partial class ColorUsageAttribute : PropertyAttribute
     {
         public readonly bool showAlpha = true;
@@ -257,7 +257,7 @@ namespace UnityEngine
         public GradientUsageAttribute(bool hdr, ColorSpace colorSpace) { this.hdr = hdr; this.colorSpace = colorSpace; }
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Property | global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public sealed partial class DelayedAttribute : PropertyAttribute
     {
     }
@@ -274,7 +274,7 @@ namespace UnityEngine
     {
     }
 
-    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Enum)]
     public partial class InspectorOrderAttribute : PropertyAttribute
     {
         public InspectorOrderAttribute(InspectorSort inspectorSort = InspectorSort.ByName, InspectorSortDirection sortDirection = InspectorSortDirection.Ascending) { }
@@ -292,7 +292,8 @@ namespace UnityEngine
         Descending = 1,
     }
 
-    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
+    [global::System.Diagnostics.@ConditionalAttribute("UNITY_EDITOR")]
     public partial class IconAttribute : Attribute
     {
         public IconAttribute(string path) { this.path = path; }
@@ -343,7 +344,7 @@ namespace UnityEngine.Scripting.APIUpdating
 namespace UnityEngine.Bindings
 {
     // Attributes Unity's own engine code carries; packages occasionally reference them.
-    [AttributeUsage(AttributeTargets.All)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class | global::System.AttributeTargets.Struct | global::System.AttributeTargets.Enum | global::System.AttributeTargets.Constructor | global::System.AttributeTargets.Method | global::System.AttributeTargets.Property | global::System.AttributeTargets.Field | global::System.AttributeTargets.Interface | global::System.AttributeTargets.Delegate, Inherited = false)]
     internal partial class VisibleToOtherModulesAttribute : Attribute
     {
         public VisibleToOtherModulesAttribute() { }

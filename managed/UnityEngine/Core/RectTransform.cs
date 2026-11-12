@@ -356,7 +356,7 @@ namespace UnityEngine
     }
 
     /// <summary>Marks a class as the managed side of a native engine class (Unity's binding attribute).</summary>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+    [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Class | global::System.AttributeTargets.Struct, Inherited = false)]
     internal sealed partial class NativeClassAttribute : Attribute
     {
         public NativeClassAttribute(string name) { }
