@@ -78,7 +78,7 @@ exactly. Its earlier 56 introduced pixels were fixed, not waived as insignifican
 Every probe that failed in the sheriff's full suite on `a6f0d8af2` (148 pass / 45 fail / 10 report
 of 203) and had no open task, with what its failures are and where they are recorded. Counts are
 that run's, except for the named follow-up replays in each row, including
-Q369/Q296/Q363/Q248. One probe can hold several causes; each is listed with its own count. Classes:
+Q369/Q296/Q363/Q248 and Q372/Q368/Q353. One probe can hold several causes; each is listed with its own count. Classes:
 
 - **order**: an order or text Unity's documentation leaves open (see the notes under the table);
 - **residual**: listed in [Known insignificant residuals](#known-insignificant-residuals);
@@ -87,6 +87,14 @@ Q369/Q296/Q363/Q248. One probe can hold several causes; each is listed with its 
 
 Corrected references are identified below. Comparators and tolerances are unchanged, and raw
 engine differences still fail. The shared sheriff baseline has not been promoted by this work.
+
+The 2026-11-12 Q372/Q368/Q353 follow-ups close inherited Edit-mode execution and startup ownership
+(`editinheritance`, 171/171 values), imported texture flags (`assetclones`, 14340/14340),
+Editor/Play exit controls (`editorcallbacks`, 114/114 values across four quit profiles),
+and internal reflection/particle-light root ownership (`hiddenroots`, 15/15).
+The retained callback order, queued-load timing, stack, resource identity, input,
+importer and numerical differences below remain visible in the strict comparisons.
+Each gap row gives the measured context and the remaining follow-up scope.
 
 | Probe | Failing | What fails | Class and record |
 |---|---|---|---|
@@ -98,7 +106,7 @@ engine differences still fail. The shared sheriff baseline has not been promoted
 | customrt | 40 of 140 images, 3 of 352 values | 3D custom render textures are not updated (40 images, 1 log value); textures made in the first Play-mode frame are loaded there (2 values) | gap, row `CustomRenderTexture` |
 | destroycontract | 0 of 1115 keys after Q374, previously 887 | The first Play frame renders its cameras but has no EOF completion; both coroutine and Awaitable waiters first resume in the next frame. The measured startup phase now follows that rule. Existing Q363 reference rows and comparator are unchanged | closed, row `First rendered frame and EOF coroutine startup`; `eofstartup` adds 78 values from two identical windowed GPU Editor captures |
 | droppedparams | 1 of 252 values | A material unloaded with `Resources.UnloadAsset` comes back as a new wrapper in the Editor, the same one in Unbound | gap, row `Resources.UnloadAsset` |
-| editorcallbacks | 24 missing and 24 extra events and 21 prefab fields of the main record; 0 of 9 scene-queue streams | The 24 event pairs are scene-object wake order; the missing Editor-exit unload now matches. The initial scene is active during early runtime initialization. The 21 fields are serialized engine fields. The strict two-load timing discrepancy remains | order (24); gaps `PrefabUtility.IsPartOf*` and `Queued LoadSceneAsync staging`; teardown closed by quit-play and leave-play controls, startup ownership by tests/projects/editinheritance |
+| editorcallbacks | 24 missing and 24 extra events and 21 prefab fields of the main record; 0 of 9 scene-queue streams | The 24 event pairs are scene-object wake order; the missing Editor-exit unload now matches. The initial scene is active during early runtime initialization. The 21 fields are serialized engine fields. The strict two-load timing discrepancy remains | order (24); gaps `PrefabUtility.IsPartOf*` and `Queued LoadSceneAsync staging`; teardown closed by quit-play, throwing-unload and leave-play controls; inherited Edit execution and startup ownership by tests/projects/editinheritance; internal root ownership by tests/projects/hiddenroots |
 | flares | 20 of 231 images (77 of 217 before the flare elements were built in view space; 14 `fl.*` images added since) | Halo falloff below 1/255 (20 `h.*` and `ho.*` images) | residual (one entry). Closed: row `Lens flare element edge line` (41 images, and the 16 of the former texel residual with them) |
 | geometryframe2d | 0 of 50863 values after Q360 | All 6121 original failures are resolved: 5983 composite geometry values and 138 capsule/circle/box cast values. The 430-scenario reference adds divergent frame, generation, edge and synchronization controls while preserving all prior scenario values | done for measured 6000.0.71f1, row `CompositeCollider2D geometry and cast contact features` |
 | inputframes | 1 of 3786 records | One keyboard device-configuration event of the Input System is missing | gap, row `Press and release within one frame lost` (unexplained) |

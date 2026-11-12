@@ -44,36 +44,35 @@ reach their `done` record and be byte-identical, and no existing reference. `com
 event sequence in order and every prefab record field by field, exactly, and lists every
 difference (see its docstring for the one normalization: the Editor's Edit mode domain).
 
-## Root order and activation remain open
+## Scene roots and activation
 
 `QueryScene` enumerates `GetRootGameObjects()` before walking each root's children,
 so the raw prefab records retain root order. The prefab comparator keys those
 records by phase and object and does not check their ordering. The Unity reference
 returns Main's roots as PlainA, Plain, OuterA, VariantA, ModelA, Holder, Unpacked,
 Lone; Second as PlainB, OuterB; and Additive as VariantC, AdditiveLone. Those are
-the scenes' SceneRoots lists. The saved Root capture differs in all three scenes.
+the scenes' SceneRoots lists.
 
-`BuildHierarchy` currently resolves SceneRoots entries only as Transforms. Prefab
-roots listed by PrefabInstance id are appended later. This measured root-order
-defect is significant and remains open. Fixing roots alone would worsen Second's
-Awake/OnEnable order, which currently matches some positions by accident.
+The root-query discrepancy is closed for these fixtures. `BuildHierarchy` resolves
+both Transform and PrefabInstance entries in SceneRoots, retains unlisted roots,
+and excludes nested transforms from prefab-instance root aliases. The SceneLoop
+companions compare root order and sibling indices strictly. The original callback
+and prefab reference and comparator are unchanged.
 
-Existing scenes cannot establish a general activation rule: document order equals
-numeric fileID order in every fixture, all woken markers have execution order 0,
-and the discriminating cases use one marker class. No candidate explains Main's
-prefab-instance wake order. Do not infer an activation sort from the root-order
-API contract. The source/evidence audit and full sequences are saved under
-`validation/runs/claude-fresh-20261101b/activation-audit/`.
+These fixtures do not establish a general activation rule: document order equals
+numeric fileID order, all woken markers have execution order 0, and the
+discriminating cases use one marker class. Root-query order does not justify a
+new activation sort. The remaining wake-order differences stay in the raw report.
+Earlier activation-witness attempts that exited abnormally remain diagnostic;
+they are not canonical references for the current root-query controls.
 
-Two subsequent scene-activation witness attempts each stopped after their first
-Editor launch crashed during shutdown. Both completed files have identical bytes,
-but neither passed the strict exit gate, so they do not form a valid Native pair
-and no new reference was published. Deferring the shutdown operations passed
-mock controls but did not prevent the second crash. The activation rule and the
-coupled root-order correction remain held. Receipts are under
-`validation/runs/sceneactivation-witness-20261102/` and
-`validation/runs/sceneactivation-witness2-20261102/`; their outputs are diagnostic.
-
+The separate `tests/projects/hiddenroots` control also confirms that internal
+realtime reflection and particle-light holders consume no scene root or later
+sibling index. With domain reload disabled, the Editor's reflection camera
+survives stopping Play. Detached holders therefore remain registered in Edit mode
+and are destroyed at final process shutdown; particle systems destroy the light
+holders they own. The ordinary public HideAndDontSave flag transition is a
+separate open gap, recorded in COMPATIBILITY_GAPS.
 
 ## Teardown and queued-load controls
 
