@@ -69,6 +69,11 @@ namespace Unbound.Runtime
             }
         }
 
+        internal static void ReplaceWrapper(Object obj)
+        {
+            lock (s_Objects) s_Objects[obj.m_InstanceID] = new WeakReference<Object>(obj);
+        }
+
         internal static void Unregister(Object obj)
         {
             Gizmos.Untrack(obj);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unbound.Runtime;
 using UnityEngine.SceneManagement;
 
@@ -13,7 +14,39 @@ namespace UnityEngine
     public partial class Object
     {
         internal int m_InstanceID;
-        internal string m_Name = "";
+        string m_LocalName = "";
+        SharedIdentity m_SharedIdentity;
+        internal string m_Name
+        {
+            get => m_SharedIdentity?.Name ?? m_LocalName;
+            set { if (m_SharedIdentity == null) m_LocalName = value; else m_SharedIdentity.Name = value; }
+        }
+
+        // Old and current asset wrappers name the same engine object. Weak membership avoids
+        // retaining old wrappers; the current one stays reachable while any wrapper is held.
+        sealed class SharedIdentity
+        {
+            internal string Name;
+            internal HideFlags Flags;
+            internal Object Current;
+            internal readonly ConditionalWeakTable<Object, AliasMarker> Wrappers = new ConditionalWeakTable<Object, AliasMarker>();
+        }
+        sealed class AliasMarker { }
+        static readonly AliasMarker s_AliasMarker = new AliasMarker();
+
+        internal Object CreateReloadWrapper()
+        {
+            if (m_SharedIdentity == null)
+            {
+                m_SharedIdentity = new SharedIdentity { Name = m_LocalName, Flags = m_HideFlags };
+                m_SharedIdentity.Wrappers.Add(this, s_AliasMarker);
+            }
+            var wrapper = (Object)MemberwiseClone();
+            m_SharedIdentity.Wrappers.Add(wrapper, s_AliasMarker);
+            m_SharedIdentity.Current = wrapper;
+            ObjectRegistry.ReplaceWrapper(wrapper);
+            return wrapper;
+        }
         /// <summary>Unity's pointer to the native object: zero once it is destroyed (or was never
         /// created). Plugins read it by reflection for fast null checks, so it keeps Unity's name.</summary>
         IntPtr m_CachedPtr = (IntPtr)1;
@@ -26,7 +59,12 @@ namespace UnityEngine
         internal bool m_Destroyed
         {
             get => m_CachedPtr == IntPtr.Zero;
-            set => m_CachedPtr = value ? IntPtr.Zero : (IntPtr)1;
+            set
+            {
+                var pointer = value ? IntPtr.Zero : (IntPtr)1;
+                if (m_SharedIdentity == null) m_CachedPtr = pointer;
+                else foreach (var member in m_SharedIdentity.Wrappers) member.Key.m_CachedPtr = pointer;
+            }
         }
         /// <summary>Destroy() was called; teardown awaits a player-loop delivery point.</summary>
         internal bool m_PendingDestroy;
@@ -63,13 +101,14 @@ namespace UnityEngine
             get
             {
                 MainThreadCheck.Check("get_hideFlags");
-                return m_HideFlags;
+                return m_SharedIdentity?.Flags ?? m_HideFlags;
             }
             set
             {
                 MainThreadCheck.Check("set_hideFlags");
-                var previous = m_HideFlags;
-                m_HideFlags = value;
+                var previous = m_SharedIdentity?.Flags ?? m_HideFlags;
+                if (m_SharedIdentity == null) m_HideFlags = value;
+                else m_SharedIdentity.Flags = value;
                 OnHideFlagsChanged(previous);
             }
         }

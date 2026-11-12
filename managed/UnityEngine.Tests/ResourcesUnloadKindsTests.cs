@@ -52,8 +52,8 @@ namespace Unbound.Tests
     /// stack, however, is not examined [...] All assets other than ScriptableObjects are loaded back
     /// in the next time one of its properties or methods is used"; HideFlags.DontUnloadUnusedAsset:
     /// "The object will not be unloaded by Resources.UnloadUnusedAssets." The Editor's reload of a
-    /// material in place is measured (tests/projects/droppedparams unload.material); the other
-    /// kinds follow it unmeasured. These tests check that what scripts changed is gone and the
+    /// material's saved values is measured (tests/projects/droppedparams unload.material and
+    /// materialalias); the other kinds restore their data unmeasured. These tests check that what scripts changed is gone and the
     /// saved data is back; they assert no wrapper identity beyond the object the loader keeps.
     /// </summary>
     public class ResourcesUnloadKindsTests

@@ -23,35 +23,76 @@ namespace UnityEngine
             internal Vector2 Offset;
         }
 
-        Shader m_Shader;
-        internal int m_CustomRenderQueue = -1;
-        internal readonly Dictionary<int, float> m_Floats = new Dictionary<int, float>();
-        internal readonly Dictionary<int, int> m_Ints = new Dictionary<int, int>();
-        internal readonly Dictionary<int, Vector4> m_Vectors = new Dictionary<int, Vector4>();
+        // Reload wrappers share one material's values and renderer state. Ordinary copies
+        // construct a separate state through the regular constructors.
+        sealed class MaterialState
+        {
+            internal Shader m_Shader;
+            internal int m_CustomRenderQueue = -1;
+            internal readonly Dictionary<int, float> m_Floats = new Dictionary<int, float>();
+            internal readonly Dictionary<int, int> m_Ints = new Dictionary<int, int>();
+            internal readonly Dictionary<int, Vector4> m_Vectors = new Dictionary<int, Vector4>();
+            internal readonly HashSet<int> m_RawBindings = new HashSet<int>();
+            internal readonly Dictionary<int, Matrix4x4> m_Matrices = new Dictionary<int, Matrix4x4>();
+            internal readonly Dictionary<int, TextureSlot> m_Textures = new Dictionary<int, TextureSlot>();
+            internal readonly Dictionary<int, object> m_Buffers = new Dictionary<int, object>();
+            internal readonly Dictionary<int, object> m_Arrays = new Dictionary<int, object>();
+            internal readonly HashSet<string> m_Keywords = new HashSet<string>();
+            internal readonly List<string> m_KeywordExtras = new List<string>();
+            internal readonly HashSet<int> m_ScriptSet = new HashSet<int>();
+            internal readonly HashSet<int> m_TextureNames = new HashSet<int>();
+            internal readonly Dictionary<string, string> m_Tags = new Dictionary<string, string>();
+            internal ulong m_Handle;
+            internal bool m_Dirty = true;
+            internal bool m_EnableInstancing;
+            internal MaterialGlobalIlluminationFlags m_GIFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            internal int m_Version;
+            internal bool m_DoubleSidedGI;
+            internal Material m_Parent;
+            internal HashSet<int> m_Own;
+            internal HashSet<int> m_Locked;
+            internal int m_InheritedVersion = -1;
+            internal bool m_Inheriting;
+            internal HashSet<string> m_DisabledPasses;
+            internal int m_LodEpoch;
+            internal string m_SentShader;
+            internal bool m_InheritQueue;
+            internal bool m_InheritFlags;
+            internal bool m_InheritKeywords;
+        }
+        readonly MaterialState m_State = new MaterialState();
+
+        internal Material ReloadWrapper() => (Material)CreateReloadWrapper();
+
+        Shader m_Shader { get => m_State.m_Shader; set => m_State.m_Shader = value; }
+        internal int m_CustomRenderQueue { get => m_State.m_CustomRenderQueue; set => m_State.m_CustomRenderQueue = value; }
+        internal Dictionary<int, float> m_Floats { get => m_State.m_Floats; }
+        internal Dictionary<int, int> m_Ints { get => m_State.m_Ints; }
+        internal Dictionary<int, Vector4> m_Vectors { get => m_State.m_Vectors; }
         // Synthetic renderer copies contain property-block GPU values, already in working space.
-        internal readonly HashSet<int> m_RawBindings = new HashSet<int>();
-        internal readonly Dictionary<int, Matrix4x4> m_Matrices = new Dictionary<int, Matrix4x4>();
-        internal readonly Dictionary<int, TextureSlot> m_Textures = new Dictionary<int, TextureSlot>();
+        internal HashSet<int> m_RawBindings { get => m_State.m_RawBindings; }
+        internal Dictionary<int, Matrix4x4> m_Matrices { get => m_State.m_Matrices; }
+        internal Dictionary<int, TextureSlot> m_Textures { get => m_State.m_Textures; }
         /// <summary>Buffers by property (ComputeBuffer or GraphicsBuffer): structured buffers, and
         /// constant buffers by their cbuffer's name.</summary>
-        internal readonly Dictionary<int, object> m_Buffers = new Dictionary<int, object>();
+        internal Dictionary<int, object> m_Buffers { get => m_State.m_Buffers; }
         /// <summary>Array properties: float[], Vector4[] (colors too) or Matrix4x4[].</summary>
-        internal readonly Dictionary<int, object> m_Arrays = new Dictionary<int, object>();
-        internal readonly HashSet<string> m_Keywords = new HashSet<string>();
+        internal Dictionary<int, object> m_Arrays { get => m_State.m_Arrays; }
+        internal HashSet<string> m_Keywords { get => m_State.m_Keywords; }
         /// <summary>Keyword names given again, and empty ones: the material keeps them as given
         /// (canonical mat.set.shaderKeywords lists an undeclared name as often as it was set). They
         /// are not drawn with: the renderer gets <see cref="m_Keywords"/> as before.</summary>
-        internal readonly List<string> m_KeywordExtras = new List<string>();
+        internal List<string> m_KeywordExtras { get => m_State.m_KeywordExtras; }
         /// <summary>Names set from script: the material has them whatever its shader declares.</summary>
-        internal readonly HashSet<int> m_ScriptSet = new HashSet<int>();
+        internal HashSet<int> m_ScriptSet { get => m_State.m_ScriptSet; }
         /// <summary>Texture names the material has a slot for: those of the shaders it had, those
         /// saved with it (the values of other saved names are kept for a later shader, unseen).</summary>
-        internal readonly HashSet<int> m_TextureNames = new HashSet<int>();
-        internal readonly Dictionary<string, string> m_Tags = new Dictionary<string, string>();
-        internal ulong m_Handle;
-        internal bool m_Dirty = true;
-        bool m_EnableInstancing;
-        MaterialGlobalIlluminationFlags m_GIFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+        internal HashSet<int> m_TextureNames { get => m_State.m_TextureNames; }
+        internal Dictionary<string, string> m_Tags { get => m_State.m_Tags; }
+        internal ulong m_Handle { get => m_State.m_Handle; set => m_State.m_Handle = value; }
+        internal bool m_Dirty { get => m_State.m_Dirty; set => m_State.m_Dirty = value; }
+        bool m_EnableInstancing { get => m_State.m_EnableInstancing; set => m_State.m_EnableInstancing = value; }
+        MaterialGlobalIlluminationFlags m_GIFlags { get => m_State.m_GIFlags; set => m_State.m_GIFlags = value; }
 
         static readonly int s_Color = Shader.PropertyToID("_Color");
         static readonly int s_MainTex = Shader.PropertyToID("_MainTex");
@@ -166,7 +207,7 @@ namespace UnityEngine
         }
 
         /// <summary>Counts changes, for copies made from this material (property blocks).</summary>
-        internal int m_Version;
+        internal int m_Version { get => m_State.m_Version; set => m_State.m_Version = value; }
 
         public Shader shader
         {
@@ -357,7 +398,7 @@ namespace UnityEngine
                 MarkDirty();
             }
         }
-        bool m_DoubleSidedGI;
+        bool m_DoubleSidedGI { get => m_State.m_DoubleSidedGI; set => m_State.m_DoubleSidedGI = value; }
 
         public bool enableInstancing
         {
@@ -429,14 +470,16 @@ namespace UnityEngine
             return differ;
         }
 
-        Material m_Parent;
+        Material m_Parent { get => m_State.m_Parent; set => m_State.m_Parent = value; }
         /// <summary>The properties a variant overrides (null when it is not one).</summary>
-        HashSet<int> m_Own;
+        HashSet<int> m_Own { get => m_State.m_Own; set => m_State.m_Own = value; }
         /// <summary>The properties it locks for its variants (m_LockedProperties).</summary>
-        HashSet<int> m_Locked;
-        bool m_InheritQueue, m_InheritFlags, m_InheritKeywords;
-        int m_InheritedVersion = -1;
-        bool m_Inheriting;
+        HashSet<int> m_Locked { get => m_State.m_Locked; set => m_State.m_Locked = value; }
+        bool m_InheritQueue { get => m_State.m_InheritQueue; set => m_State.m_InheritQueue = value; }
+        bool m_InheritFlags { get => m_State.m_InheritFlags; set => m_State.m_InheritFlags = value; }
+        bool m_InheritKeywords { get => m_State.m_InheritKeywords; set => m_State.m_InheritKeywords = value; }
+        int m_InheritedVersion { get => m_State.m_InheritedVersion; set => m_State.m_InheritedVersion = value; }
+        bool m_Inheriting { get => m_State.m_Inheriting; set => m_State.m_Inheriting = value; }
 
         /// <summary>A property set from script; a variant then overrides it.</summary>
         void ScriptSet(int nameID)
@@ -592,7 +635,7 @@ namespace UnityEngine
         /// <summary>The LightMode tags of passes disabled on this material, compared
         /// case-insensitively (measured: tests/projects/builtinrp passes.*): the renderer skips
         /// them (built-in forward, shadow caster and depth passes, renderer lists).</summary>
-        HashSet<string> m_DisabledPasses;
+        HashSet<string> m_DisabledPasses { get => m_State.m_DisabledPasses; set => m_State.m_DisabledPasses = value; }
 
         internal bool HasDisabledPasses => m_DisabledPasses != null && m_DisabledPasses.Count > 0;
 
@@ -1091,6 +1134,11 @@ namespace UnityEngine
             CopyProperties(saved);
             m_Shader = saved.m_Shader;
             m_DoubleSidedGI = saved.m_DoubleSidedGI;
+            if (Compat.MaterialReloadWrappersMeasured)
+            {
+                m_Name = saved.m_Name;
+                hideFlags = saved.hideFlags;
+            }
             DestroyImmediate(saved, true);
         }
 
@@ -1106,7 +1154,7 @@ namespace UnityEngine
         public void CopyPropertiesFromMaterial(Material mat)
         {
             if (mat == null) throw new ArgumentNullException(nameof(mat));
-            if (m_Parent != null && !ReferenceEquals(mat, this))
+            if (m_Parent != null && mat != this)
                 Unbound.Runtime.Stubs.Ignored("Material.CopyPropertiesFromMaterial into a material variant",
                     "copies the values without making them overrides: a later change of the parent can replace them");
             CopyProperties(mat);
@@ -1116,7 +1164,7 @@ namespace UnityEngine
         {
             mat.Inherit();
             Inherit();
-            if (ReferenceEquals(mat, this)) return;
+            if (mat == this) return;
             var shaderBefore = m_Shader;
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
             m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear();
@@ -1136,7 +1184,7 @@ namespace UnityEngine
             if (mat == null) throw new ArgumentNullException(nameof(mat));
             mat.Inherit();
             Inherit();
-            if (ReferenceEquals(mat, this)) return;
+            if (mat == this) return;
             if (m_Parent != null)
                 Unbound.Runtime.Stubs.Ignored("Material.CopyMatchingPropertiesFromMaterial into a material variant",
                     "copies the values without making them overrides: a later change of the parent can replace them");
@@ -1381,8 +1429,8 @@ namespace UnityEngine
         // ------------------------------------------------------------------ renderer side
 
         /// <summary>Sends the material to the renderer when it changed; returns its handle.</summary>
-        int m_LodEpoch;
-        string m_SentShader;
+        int m_LodEpoch { get => m_State.m_LodEpoch; set => m_State.m_LodEpoch = value; }
+        string m_SentShader { get => m_State.m_SentShader; set => m_State.m_SentShader = value; }
 
         internal unsafe ulong Sync()
         {

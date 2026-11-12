@@ -848,12 +848,13 @@ namespace Unbound.Runtime
 
         /// <summary>
         /// Resources.UnloadAsset of a loaded asset. A material alone in its file reads it again in
-        /// place; a ScriptableObject alone in its file is destroyed and the file forgotten, so the
+        /// place and gives later loads a new wrapper with the same identity and shared values
+        /// (6000.0.71f1, materialalias); a ScriptableObject alone in its file is destroyed and forgotten, so the
         /// next load reads it again (both measured, tests/projects/droppedparams unload.*). An
         /// imported Texture2D or AudioClip is imported again into its renderer or mixer handle, a
         /// mesh read from a document (a model's, a mesh asset's) takes that document's data again,
         /// and an imported TextAsset frees its bytes, read from its file at their next use: each
-        /// stays the same object, as the material does (unmeasured for these kinds). False for
+        /// stays the same wrapper (unmeasured for these kinds). False for
         /// what is not unloaded (other kinds, shared-file materials and ScriptableObjects).
         /// </summary>
         internal static bool Unload(Object asset)
@@ -861,7 +862,7 @@ namespace Unbound.Runtime
             string guid = null;
             long fileId = 0;
             foreach (var pair in s_Objects)
-                if (ReferenceEquals(pair.Value, asset)) { (guid, fileId) = pair.Key; break; }
+                if (pair.Value == asset) { (guid, fileId) = pair.Key; break; }
             if (guid == null || !s_Files.TryGetValue(guid, out var file) || file == null) return false;
             switch (asset)
             {
@@ -876,6 +877,13 @@ namespace Unbound.Runtime
                     var saved = ReadAgain(guid, fileId) as Material;
                     if (saved == null) return false;
                     material.RevertTo(saved);
+                    if (Compat.MaterialReloadWrappersMeasured)
+                    {
+                        var wrapper = material.ReloadWrapper();
+                        s_Objects[(guid, fileId)] = wrapper;
+                        file.Objects[fileId] = wrapper;
+                        if (file.MainObject == material) file.MainObject = wrapper;
+                    }
                     return true;
                 case Texture2D texture:
                     return texture.ReloadImported();

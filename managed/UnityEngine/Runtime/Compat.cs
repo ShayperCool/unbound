@@ -28,6 +28,10 @@ namespace Unbound.Runtime
         /// tests/projects/hiddenflags on Unity 6000.0.71f1.</summary>
         internal static bool HideFlagsRootOwnershipMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Material reload wrapper identity and shared state, tests/projects/materialalias
+        /// on Unity 6000.0.71f1. Other releases retain the unmeasured previous wrapper.</summary>
+        internal static bool MaterialReloadWrappersMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Pending Starts without an earlier callback visit run at the PostLateUpdate
         /// scripting point, measured by editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
         internal static bool PendingStartsAfterLateUpdate => Release == (6000, 0, 71, 'f', 1);
