@@ -103,7 +103,9 @@ bytes. Other releases retain point insertion and previous input handling through
 Compat. Invalid or overflowing stored predictions also keep point insertion to
 avoid an unbounded cell traversal. Grid cell sizes include the mean diameter
 and predicted travel of both agents and the existing obstacle-circle proxies,
-so obstacle size or speed alone cannot cause an unbounded number of cells.
+and oversized footprints use a pooled bounds tree instead of cell-by-cell
+storage. Candidate coverage and cell-order admission are preserved; unit controls
+include 9,999 distant participants and the 64-candidate limit.
 Box obstacles retain their existing circle approximation, unmeasured here.
 
 The remaining full-precision trace keeps distinct causes visible. Walker changes

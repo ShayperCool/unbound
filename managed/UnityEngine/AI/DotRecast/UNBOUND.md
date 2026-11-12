@@ -79,8 +79,9 @@ Altered (marked `Unbound:` in the sources):
   its current velocity over the prediction time, expanded by its radius. The
   compatibility profile selects this insertion and finite radius/velocity input
   validation. Cell sizes include both agents and obstacle-circle footprints,
-  so their storage depends on participant count rather than obstacle radius or
-  velocity magnitude. Box obstacles retain the existing circle approximation.
+  and footprints larger than 64 cells use a pooled bounds tree. The tree keeps
+  the same first-overlapping-cell and reverse-insertion candidate order while
+  bounding storage to a constant number of entries per participant. Box obstacles retain the existing circle approximation.
   Other releases retain point insertion and agent-only sizing, unmeasured there.
 
 - crowd separation and collisions as Unity's: a push of 1.4·(1 − (d/2.5r)²) from more important

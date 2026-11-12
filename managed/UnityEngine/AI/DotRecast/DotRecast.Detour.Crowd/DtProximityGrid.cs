@@ -46,6 +46,114 @@ namespace DotRecast.Detour.Crowd
         private Item[] _pool;
         private int _poolHead;
 
+        // Wide rectangles use a pooled bounds tree rather than one entry per covered cell.
+        // The query still orders candidates by their first overlapping cell and insertion order.
+        const int MaxCellsPerItem = 64;
+        struct BoundsItem { public int id, order, minx, miny, maxx, maxy; }
+        struct BoundsNode { public int minx, miny, maxx, maxy, start, count, left, right, maxOrder; }
+        BoundsItem[] _bounds = new BoundsItem[256];
+        BoundsNode[] _nodes = new BoundsNode[512];
+        int _boundsCount, _nodeCount;
+        bool _useBounds, _treeBuilt;
+        static int CompareBounds(BoundsItem a, BoundsItem b, bool x) => x
+            ? ((long)a.minx + a.maxx).CompareTo((long)b.minx + b.maxx)
+            : ((long)a.miny + a.maxy).CompareTo((long)b.miny + b.maxy);
+
+        // In-place heapsort avoids comparer delegates and temporary arrays during tree rebuilds.
+        void SortBounds(int start, int count, bool x)
+        {
+            for (int root = count / 2 - 1; root >= 0; root--) SiftBounds(start, root, count, x);
+            for (int end = count - 1; end > 0; end--)
+            {
+                (_bounds[start], _bounds[start + end]) = (_bounds[start + end], _bounds[start]);
+                SiftBounds(start, 0, end, x);
+            }
+        }
+
+        void SiftBounds(int start, int root, int count, bool x)
+        {
+            while (root < count / 2)
+            {
+                int child = root * 2 + 1;
+                if (child + 1 < count && CompareBounds(_bounds[start + child], _bounds[start + child + 1], x) < 0) child++;
+                if (CompareBounds(_bounds[start + root], _bounds[start + child], x) >= 0) return;
+                (_bounds[start + root], _bounds[start + child]) = (_bounds[start + child], _bounds[start + root]);
+                root = child;
+            }
+        }
+        internal int StoredItemCount => _useBounds ? _boundsCount : _poolHead;
+
+        static int Cell(float value, float inverse)
+        {
+            double cell = MathF.Floor(value * inverse);
+            return cell <= int.MinValue ? int.MinValue : cell >= int.MaxValue ? int.MaxValue : (int)cell;
+        }
+
+        static ulong CellKey(int x, int y) => ((ulong)((uint)y ^ 0x80000000u) << 32) | ((uint)x ^ 0x80000000u);
+
+        int BuildTree(int start, int count)
+        {
+            int index = _nodeCount++;
+            var node = new BoundsNode { minx = int.MaxValue, miny = int.MaxValue,
+                maxx = int.MinValue, maxy = int.MinValue, start = start, count = count, left = -1 };
+            for (int i = start; i < start + count; i++)
+            {
+                node.maxOrder = Math.Max(node.maxOrder, _bounds[i].order);
+                node.minx = Math.Min(node.minx, _bounds[i].minx); node.miny = Math.Min(node.miny, _bounds[i].miny);
+                node.maxx = Math.Max(node.maxx, _bounds[i].maxx); node.maxy = Math.Max(node.maxy, _bounds[i].maxy);
+            }
+            if (count > 8)
+            {
+                SortBounds(start, count, (long)node.maxx - node.minx >= (long)node.maxy - node.miny);
+                int half = count / 2;
+                node.left = BuildTree(start, half); node.right = BuildTree(start + half, count - half);
+            }
+            _nodes[index] = node;
+            return index;
+        }
+
+        void QueryTree(int index, int minx, int miny, int maxx, int maxy,
+            Span<int> ids, Span<int> orders, Span<ulong> keys, ref int count, int capacity)
+        {
+            ref var node = ref _nodes[index];
+            if (node.minx > maxx || node.miny > maxy || node.maxx < minx || node.maxy < miny) return;
+            ulong first = CellKey(Math.Max(minx, node.minx), Math.Max(miny, node.miny));
+            if (count == capacity && (first > keys[count - 1]
+                || (first == keys[count - 1] && node.maxOrder <= orders[count - 1]))) return;
+            if (node.left >= 0)
+            {
+                int left = node.left, right = node.right;
+                ulong leftKey = CellKey(Math.Max(minx, _nodes[left].minx), Math.Max(miny, _nodes[left].miny));
+                ulong rightKey = CellKey(Math.Max(minx, _nodes[right].minx), Math.Max(miny, _nodes[right].miny));
+                if (rightKey < leftKey || (rightKey == leftKey && _nodes[right].maxOrder > _nodes[left].maxOrder))
+                    (left, right) = (right, left);
+                QueryTree(left, minx, miny, maxx, maxy, ids, orders, keys, ref count, capacity);
+                QueryTree(right, minx, miny, maxx, maxy, ids, orders, keys, ref count, capacity);
+                return;
+            }
+            for (int i = node.start; i < node.start + node.count; i++)
+            {
+                ref var item = ref _bounds[i];
+                if (item.minx > maxx || item.miny > maxy || item.maxx < minx || item.maxy < miny) continue;
+                ulong key = CellKey(Math.Max(minx, item.minx), Math.Max(miny, item.miny));
+                int existing = 0;
+                while (existing < count && ids[existing] != item.id) existing++;
+                if (existing < count)
+                {
+                    if (keys[existing] < key || (keys[existing] == key && orders[existing] >= item.order)) continue;
+                    for (int j = existing; j + 1 < count; j++) { ids[j] = ids[j + 1]; orders[j] = orders[j + 1]; keys[j] = keys[j + 1]; }
+                    count--;
+                }
+                int at = 0;
+                while (at < count && (keys[at] < key || (keys[at] == key && orders[at] > item.order))) at++;
+                if (at >= capacity) continue;
+                int last = Math.Min(count, capacity - 1);
+                for (int j = last; j > at; j--) { ids[j] = ids[j - 1]; orders[j] = orders[j - 1]; keys[j] = keys[j - 1]; }
+                ids[at] = item.id; orders[at] = item.order; keys[at] = key;
+                count = Math.Min(count + 1, capacity);
+            }
+        }
+
         public DtProximityGrid(float cellSize)
         {
             SetCellSize(cellSize, cellSize);
@@ -102,6 +210,8 @@ namespace DotRecast.Detour.Crowd
         {
             Array.Fill(_buckets, -1);
             _poolHead = 0;
+            _boundsCount = _nodeCount = 0;
+            _useBounds = _treeBuilt = false;
         }
 
         // Unlike upstream, the pool grows instead of dropping items: DtCrowd
@@ -122,14 +232,24 @@ namespace DotRecast.Detour.Crowd
 
         public void AddItem(DtCrowdAgent agent, float minx, float miny, float maxx, float maxy)
         {
-            int iminx = (int)MathF.Floor(minx * _invCellSizeX);
-            int iminy = (int)MathF.Floor(miny * _invCellSizeY);
-            int imaxx = (int)MathF.Floor(maxx * _invCellSizeX);
-            int imaxy = (int)MathF.Floor(maxy * _invCellSizeY);
-
-            for (int y = iminy; y <= imaxy; ++y)
+            int iminx = Cell(minx, _invCellSizeX), iminy = Cell(miny, _invCellSizeY);
+            int imaxx = Cell(maxx, _invCellSizeX), imaxy = Cell(maxy, _invCellSizeY);
+            if (iminx > imaxx || iminy > imaxy) return;
+            if (_boundsCount == _bounds.Length)
             {
-                for (int x = iminx; x <= imaxx; ++x)
+                Array.Resize(ref _bounds, _bounds.Length * 2);
+                Array.Resize(ref _nodes, _bounds.Length * 2);
+            }
+            _bounds[_boundsCount] = new BoundsItem { id = agent.idx, order = _boundsCount,
+                minx = iminx, miny = iminy, maxx = imaxx, maxy = imaxy };
+            _boundsCount++;
+            _treeBuilt = false;
+            if (((double)imaxx - iminx + 1) * ((double)imaxy - iminy + 1) > MaxCellsPerItem) _useBounds = true;
+            if (_useBounds) return;
+
+            for (int y = iminy; ; ++y)
+            {
+                for (int x = iminx; ; ++x)
                 {
                     if (_poolHead >= _pool.Length)
                     {
@@ -146,22 +266,33 @@ namespace DotRecast.Detour.Crowd
                     item.id = agent.idx;
                     item.next = _buckets[h];
                     _buckets[h] = idx;
+                    if (x == imaxx) break;
                 }
+                if (y == imaxy) break;
             }
         }
 
         public int QueryItems(float minx, float miny, float maxx, float maxy, Span<int> ids, int maxIds)
         {
-            int iminx = (int)MathF.Floor(minx * _invCellSizeX);
-            int iminy = (int)MathF.Floor(miny * _invCellSizeY);
-            int imaxx = (int)MathF.Floor(maxx * _invCellSizeX);
-            int imaxy = (int)MathF.Floor(maxy * _invCellSizeY);
+            int iminx = Cell(minx, _invCellSizeX), iminy = Cell(miny, _invCellSizeY);
+            int imaxx = Cell(maxx, _invCellSizeX), imaxy = Cell(maxy, _invCellSizeY);
+            if (maxIds <= 0 || iminx > imaxx || iminy > imaxy) return 0;
+            if (_useBounds || ((double)imaxx - iminx + 1) * ((double)imaxy - iminy + 1) > MaxCellsPerItem)
+            {
+                if (_boundsCount == 0) return 0;
+                if (!_treeBuilt) { _nodeCount = 0; BuildTree(0, _boundsCount); _treeBuilt = true; }
+                int count = 0;
+                Span<int> orders = stackalloc int[maxIds];
+                Span<ulong> keys = stackalloc ulong[maxIds];
+                QueryTree(0, iminx, iminy, imaxx, imaxy, ids, orders, keys, ref count, maxIds);
+                return count;
+            }
 
             int n = 0;
 
-            for (int y = iminy; y <= imaxy; ++y)
+            for (int y = iminy; ; ++y)
             {
-                for (int x = iminx; x <= imaxx; ++x)
+                for (int x = iminx; ; ++x)
                 {
                     int idx = _buckets[HashPos2(x, y, _buckets.Length)];
                     while (idx != -1)
@@ -189,7 +320,9 @@ namespace DotRecast.Detour.Crowd
 
                         idx = item.next;
                     }
+                    if (x == imaxx) break;
                 }
+                if (y == imaxy) break;
             }
 
             return n;
@@ -197,7 +330,13 @@ namespace DotRecast.Detour.Crowd
 
         public IEnumerable<(long, int)> GetItemCounts()
         {
-            // Debug/visualization only - allocation here is fine.
+            // Debug/visualization only - allocation here is fine. Wide bounds are represented
+            // by their first cell, one storage entry each rather than expanded cell coverage.
+            if (_useBounds)
+            {
+                for (int i = 0; i < _boundsCount; i++) yield return (CombineKey(_bounds[i].minx, _bounds[i].miny), 1);
+                yield break;
+            }
             Dictionary<long, int> counts = new Dictionary<long, int>();
             for (int i = 0; i < _poolHead; ++i)
             {

@@ -347,9 +347,10 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(10000f, 0f)]
-        [InlineData(0.5f, -10000f)]
-        public void LargeAndFastObstaclesHaveBoundedGridStorageWithoutLosingCoverage(float radius, float speed)
+        [InlineData(10000f, 0f, 0)]
+        [InlineData(10000f, 0f, 9999)]
+        [InlineData(0.5f, -10000f, 9999)]
+        public void LargeAndFastObstaclesHaveBoundedGridStorageWithoutLosingCoverage(float radius, float speed, int distantCount)
         {
             string release = ProjectInfo.UnityVersion;
             ProjectInfo.UnityVersion = "6000.0.71f1";
@@ -359,11 +360,12 @@ namespace UnityEngine.Tests
                 agent.speed = 1f;
                 var obstacle = Capsule(new Vector3(2f, 1f, 2f), radius);
                 obstacle.velocity = new Vector3(speed, 0f, speed);
+                for (int i = 0; i < distantCount; i++) Capsule(new Vector3(1000000f + 2f * i, 1f, 1000000f), 0.5f);
                 Step();
                 var crowd = AgentSystem.CrowdOf(agent.m_Surface);
                 // Two footprints, each at most four cells per axis after sizing from both.
-                int entries = crowd.GetGrid().GetItemCounts().Sum(cell => cell.Item2);
-                Assert.InRange(entries, 1, 2 * 4 * 4);
+                int entries = crowd.GetGrid().StoredItemCount;
+                Assert.InRange(entries, 1, distantCount == 0 ? 2 * 4 * 4 : 2 * 64);
                 var member = crowd.GetActiveAgents().Single(a => ReferenceEquals(a.option.userData, obstacle));
                 Assert.Contains(member, Enumerable.Range(0, agent.m_Crowd.nneis).Select(i => agent.m_Crowd.neis[i].agent));
             }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DotRecast.Core.Numerics;
 using DotRecast.Detour.Crowd;
 using Unbound.Runtime;
@@ -252,6 +253,71 @@ namespace UnityEngine.Tests
             DtCrowd.PredictionBounds(position, RcVec3f.Zero, float.MaxValue, 2f, out var min, out var max);
             Assert.Equal(position, min);
             Assert.Equal(position, max);
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(25)]
+        [InlineData(100)]
+        public void WideGridBoundsRetainCellOrderAndCandidateLimit(int reach)
+        {
+            var grid = new DtProximityGrid(1f);
+            var rectangles = new List<(int id, int order, int x0, int z0, int x1, int z1)>();
+            var random = new System.Random(715);
+            for (int i = 0; i < 200; i++)
+            {
+                int x = random.Next(-20, 20), z = random.Next(-20, 20);
+                int width = i == 73 ? 10000 : random.Next(1, 5);
+                rectangles.Add((1000 - i, i, x - width, z - width, x + width, z + width));
+                grid.AddItem(new DtCrowdAgent(1000 - i), x - width, z - width, x + width, z + width);
+            }
+            var expected = rectangles.Where(r => r.x0 <= reach && r.z0 <= reach && r.x1 >= -reach && r.z1 >= -reach)
+                .OrderBy(r => Math.Max(r.z0, -reach)).ThenBy(r => Math.Max(r.x0, -reach))
+                .ThenByDescending(r => r.order).Take(64).Select(r => r.id).ToArray();
+            Span<int> found = stackalloc int[64];
+            int count = grid.QueryItems(-reach, -reach, reach, reach, found, found.Length);
+            Assert.Equal(expected, found.Slice(0, count).ToArray());
+            Assert.Equal(200, grid.StoredItemCount);
+            grid.Clear();
+            grid.AddItem(new DtCrowdAgent(7), 0f, 0f, 0f, 0f);
+            count = grid.QueryItems(-reach, -reach, reach, reach, found, found.Length);
+            Assert.Equal(1, count);
+            Assert.Equal(7, found[0]);
+        }
+
+        [Fact]
+        public void WideGridRebuildsReuseTheirStorage()
+        {
+            var grid = new DtProximityGrid(1f);
+            var agents = Enumerable.Range(0, 200).Select(i => new DtCrowdAgent(i)).ToArray();
+            Span<int> found = stackalloc int[64];
+            long allocated = 0;
+            int count = 0;
+            for (int repeat = 0; repeat < 20; repeat++)
+            {
+                grid.Clear();
+                for (int i = 0; i < agents.Length; i++)
+                    grid.AddItem(agents[i], -10000f, -10000f, 10000f, 10000f);
+                count = grid.QueryItems(-1f, -1f, 1f, 1f, found, found.Length);
+                if (repeat == 1) allocated = GC.GetAllocatedBytesForCurrentThread();
+            }
+            long delta = GC.GetAllocatedBytesForCurrentThread() - allocated;
+            Assert.Equal(0, delta);
+            Assert.Equal(64, count);
+            Assert.Equal(199, found[0]);
+            Assert.Equal(136, found[63]);
+        }
+
+        [Theory]
+        [InlineData(float.MaxValue)]
+        [InlineData(float.MinValue)]
+        public void ExtremeGridCoordinatesDoNotWrapCellTraversal(float coordinate)
+        {
+            var grid = new DtProximityGrid(1f);
+            grid.AddItem(new DtCrowdAgent(3), coordinate, coordinate, coordinate, coordinate);
+            Span<int> found = stackalloc int[2];
+            Assert.Equal(1, grid.QueryItems(coordinate, coordinate, coordinate, coordinate, found, found.Length));
+            Assert.Equal(3, found[0]);
         }
 
         static List<DtCrowdAgent> Neighbours(NavMeshAgent agent)
