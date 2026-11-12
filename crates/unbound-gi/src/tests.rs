@@ -2543,3 +2543,194 @@ fn of_two_holes_of_one_size_a_chart_takes_the_one_the_precompute_does() {
         (8, 14, vec![[0, 0, 8, 14], [2, 8, 4, 4]])
     );
 }
+
+/// The Room scene's renderers (file IDs) and their positions.
+const ROOM_POSITIONS: [(i64, [f32; 3]); 7] = [
+    (152063223, [0.0, -0.1, 0.0]),
+    (973394265, [0.8, 0.75, 0.8]),
+    (308039783, [-3.1, 2.0, 0.0]),
+    (1583214537, [3.1, 2.0, 0.0]),
+    (605051979, [0.0, 2.0, 3.1]),
+    (948094850, [0.0, 4.1, 0.0]),
+    (PANEL, [-1.2, 0.6, 1.6]),
+];
+
+/// A renderer of the Room system as Unbound's precompute takes it: world positions and normals
+/// and its realtime lightmap UVs in the system's texels (Unbound's realtime UVs placed where the
+/// scene mapping puts the renderer).
+struct OwnInstance {
+    positions: Vec<[f32; 3]>,
+    normals: Vec<[f32; 3]>,
+    texels: Vec<[f32; 2]>,
+}
+
+fn room_instances(data: &Precomputed) -> Vec<OwnInstance> {
+    let system = &data.systems[0];
+    let (w, h) = (
+        system.transport.width as f32,
+        system.transport.height as f32,
+    );
+    (0..system.renderer_count)
+        .map(|k| {
+            let object = data.renderers[system.first_renderer + k].0;
+            let scale = ROOM_SCALES.iter().find(|r| r.0 == object).unwrap().1;
+            let at = ROOM_POSITIONS.iter().find(|r| r.0 == object).unwrap().1;
+            let st = data.renderer_st[system.first_renderer + k];
+            OwnInstance {
+                positions: CUBE_POSITIONS
+                    .iter()
+                    .map(|p| std::array::from_fn(|i| p[i] * scale[i] + at[i]))
+                    .collect(),
+                normals: CUBE_NORMALS.to_vec(),
+                texels: cube_uvs(scale, 0.5)
+                    .uvs
+                    .iter()
+                    .map(|uv| [(uv[0] * st[0] + st[2]) * w, (uv[1] * st[1] + st[3]) * h])
+                    .collect(),
+            }
+        })
+        .collect()
+}
+
+/// Per plane of the Room's faces (normal rounded to an axis, offset in decimetres) with more than
+/// 50 points: the points of `input` on it and their mean direct light from an unshadowed point
+/// light at `light` (the built-in pipeline's falloff over a range of 10).
+fn light_per_face(
+    input: &crate::data::InputSamples,
+    light: [f32; 3],
+) -> std::collections::BTreeMap<([i32; 3], i32), (usize, f64)> {
+    let mut out: std::collections::BTreeMap<([i32; 3], i32), (usize, f64)> = Default::default();
+    for (p, n) in input.positions.iter().zip(&input.normals) {
+        let axis = n.map(|v| v.round() as i32);
+        let offset = (0..3).map(|k| p[k] * axis[k] as f32).sum::<f32>() * 10.0;
+        let to: [f32; 3] = std::array::from_fn(|k| light[k] - p[k]);
+        let distance = to.iter().map(|v| v * v).sum::<f32>().sqrt();
+        let facing = ((0..3).map(|k| to[k] * n[k]).sum::<f32>() / distance).max(0.0);
+        let x = distance / 10.0;
+        let e = out.entry((axis, offset.round() as i32)).or_default();
+        e.0 += 1;
+        e.1 += (facing / (1.0 + 25.0 * x * x)) as f64;
+    }
+    out.retain(|_, v| v.0 > 50);
+    out
+}
+
+#[test]
+fn own_clusters_of_the_room_compare_with_the_editors() {
+    use crate::precompute::clusters::{Instance, cluster};
+    let data = room_data();
+    let editor = &data.systems[0];
+    let own = room_instances(&data);
+    let instances: Vec<Instance> = own
+        .iter()
+        .map(|i| Instance {
+            positions: &i.positions,
+            normals: &i.normals,
+            texels: &i.texels,
+            triangles: &CUBE_TRIANGLES,
+            cluster_size: 1.0,
+        })
+        .collect();
+    let (w, h) = (editor.transport.width, editor.transport.height);
+    let ours = cluster(&instances, w, h).unwrap();
+    let (n_ours, n_editor) = (ours.input.clusters(), editor.input.clusters());
+    let (p_ours, p_editor) = (ours.input.positions.len(), editor.input.positions.len());
+    eprintln!("clusters {n_ours} (Editor {n_editor}), points {p_ours} (Editor {p_editor})");
+    // The same density of points; a few more clusters (where the Editor joins a small part to
+    // a neighbour of another plane, Unbound prefers small parts of the same plane).
+    assert!((p_ours as f32 / p_editor as f32 - 1.0).abs() < 0.02);
+    assert!(n_ours >= n_editor && n_ours as f32 <= 1.15 * n_editor as f32);
+    // On each face plane the mean direct light of its points as the Editor's, within 2%.
+    let (a, b) = (
+        light_per_face(&ours.input, BASE.light),
+        light_per_face(&editor.input, BASE.light),
+    );
+    assert_eq!(a.keys().collect::<Vec<_>>(), b.keys().collect::<Vec<_>>());
+    for (face, &(count, sum)) in &a {
+        let (theirs, their_sum) = b[face];
+        let (mine, theirs_mean) = (sum / count as f64, their_sum / theirs as f64);
+        eprintln!(
+            "{face:?}: {count} points (Editor {theirs}), light per point {mine:.4} (Editor {theirs_mean:.4})"
+        );
+        assert!(
+            (count as f32 / theirs as f32 - 1.0).abs() < 0.25,
+            "{face:?}"
+        );
+        assert!(
+            (mine - theirs_mean).abs() <= 0.02 * theirs_mean.max(1e-3),
+            "{face:?}"
+        );
+    }
+    // Most of the Editor's clusters lie within one of Unbound's: of each, the share of its
+    // points on the surface of the cluster of Unbound's that holds most of them.
+    let triangles: Vec<(usize, [[f32; 3]; 3])> = (0..ours.triangle_cluster.len())
+        .map(|t| {
+            (
+                ours.triangle_cluster[t] as usize,
+                ours.bvh.triangle(t as u32),
+            )
+        })
+        .collect();
+    let mut within = 0;
+    for c in 0..n_editor {
+        let range =
+            editor.input.cluster_points[c] as usize..editor.input.cluster_points[c + 1] as usize;
+        let mut count: std::collections::HashMap<usize, usize> = Default::default();
+        for p in range.clone() {
+            if let Some(o) = cluster_containing(&triangles, editor.input.positions[p]) {
+                *count.entry(o).or_default() += 1;
+            }
+        }
+        let most = count.values().copied().max().unwrap_or(0);
+        within += (most * 10 >= range.len() * 9) as usize;
+    }
+    // 194 of 312: the others are the Editor's clusters of a large part and small parts of
+    // other planes beside it, which Unbound joins otherwise (docs/REALTIME_GI.md).
+    eprintln!(
+        "{within} of {n_editor} Editor clusters have 90% of their points in one of Unbound's"
+    );
+    assert!(within * 10 >= n_editor * 6);
+    // No point lies where the block and the panel stand on the floor (the Editor's
+    // precompute leaves those parts out).
+    for p in &ours.input.positions {
+        let under = |lo: [f32; 2], hi: [f32; 2]| {
+            p[1].abs() < 1e-4
+                && p[0] > lo[0] + 0.01
+                && p[0] < hi[0] - 0.01
+                && p[2] > lo[1] + 0.01
+                && p[2] < hi[1] - 0.01
+        };
+        assert!(
+            !under([0.2, 0.2], [1.4, 1.4]) && !under([-1.7, 1.55], [-0.7, 1.65]),
+            "{p:?}"
+        );
+    }
+}
+
+/// The cluster of `triangles` whose triangle holds `p` (within 2 mm of its plane).
+fn cluster_containing(triangles: &[(usize, [[f32; 3]; 3])], p: [f32; 3]) -> Option<usize> {
+    let sub = |a: [f32; 3], b: [f32; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    let cross = |a: [f32; 3], b: [f32; 3]| {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let dot = |a: [f32; 3], b: [f32; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    let mut best: Option<(f32, usize)> = None;
+    for &(c, t) in triangles {
+        let n = cross(sub(t[1], t[0]), sub(t[2], t[0]));
+        let len = dot(n, n).sqrt();
+        if len == 0.0 {
+            continue;
+        }
+        let d = (dot(sub(p, t[0]), n) / len).abs();
+        let inside =
+            (0..3).all(|k| dot(cross(sub(t[(k + 1) % 3], t[k]), sub(p, t[k])), n) >= -2e-3 * len);
+        if d <= 2e-3 && inside && best.is_none_or(|(bd, _)| d < bd) {
+            best = Some((d, c));
+        }
+    }
+    best.map(|b| b.1)
+}
