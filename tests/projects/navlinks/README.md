@@ -101,3 +101,9 @@ with its horizontal norm adds 785 failures in `endatlink`: the agent lands past
 its destination on frame 110 and must return to it on 111. The final change
 retains that existing behavior. Managed controls exercise a destination at the
 landing, arrival without braking, and braking that changes heading.
+
+Final Q361 first-frame grouping (strict comparator): `speedmid` has no failures;
+`nobraking` has one hasPath value at frame 110; `stopmid` has two values, first
+hasPath at 147; `crosstile` has 939 values, first desired velocity at 86; `two`
+has 65 values, first rotation at 111. These are case totals, not independent
+causes per value. The reference remains byte-identical.
