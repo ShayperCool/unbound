@@ -41,16 +41,18 @@ struct SlotWet {
     maximum: f32,
     static_only: bool,
 }
+// Mixer gain conversion at the measured +30 dB slot limit.
+const MAX_SLOT_GAIN: f32 = 31.674294;
 const STATIC_SLOT_WET: Option<SlotWet> = Some(SlotWet {
-    maximum: f32::MAX,
+    maximum: MAX_SLOT_GAIN,
     static_only: true,
 });
 // Static wet startup controls in the five effect probes and mixerreverb.
 const SLOT_STARTUP_FRAMES: f32 = 64.0;
 // Live wet/dry gain controls in tests/projects/audiodistortion, Unity 6000.0.71f1.
 const SLOT_TRANSITION_FRAMES: u32 = 64;
-const UNIT_SLOT_WET: Option<SlotWet> = Some(SlotWet {
-    maximum: 1.0,
+const REVERB_SLOT_WET: Option<SlotWet> = Some(SlotWet {
+    maximum: MAX_SLOT_GAIN,
     static_only: false,
 });
 
@@ -60,7 +62,7 @@ impl EffectKind {
         (Self::Lowpass, "Lowpass", None),
         (Self::Highpass, "Highpass", None),
         (Self::Echo, "Echo", None),
-        (Self::SfxReverb, "SFX Reverb", UNIT_SLOT_WET),
+        (Self::SfxReverb, "SFX Reverb", REVERB_SLOT_WET),
         (Self::Send, "Send", None),
         (Self::Receive, "Receive", None),
         (Self::DuckVolume, "Duck Volume", None),
@@ -163,25 +165,35 @@ const PITCH_SPEAKER_MODES: [i32; 6] = [
 
 /// The output covered by Normalize and static-wet captures (Unity 6000.0.71f1 Linux Editor,
 /// tests/projects/audionormalize and tests/projects/audiopitch): these rates, DSP buffers of
-/// this many frames and the stereo speaker mode. Other layouts fail rather than run unmeasured.
+/// this many frames and stereo; the surround profile also covers Quad, 5.0, 5.1 and 7.1.
 pub(crate) const MEASURED_LAYOUT: MeasuredLayout = MeasuredLayout {
     rates: [48000, 44100],
     buffer: 1024,
-    speaker_mode: 2,
 };
 pub(crate) struct MeasuredLayout {
     rates: [u32; 2],
     buffer: u32,
-    /// `AudioSpeakerMode.Stereo`.
-    speaker_mode: i32,
 }
 impl MeasuredLayout {
-    pub(crate) fn ensure(&self, effect: &str, config: &MixerConfig) -> anyhow::Result<()> {
+    pub(crate) fn ensure(
+        &self,
+        effect: &str,
+        config: &MixerConfig,
+        surround: bool,
+    ) -> anyhow::Result<()> {
         anyhow::ensure!(
             self.rates.contains(&config.sample_rate)
                 && config.buffer_size == self.buffer
-                && config.speaker_mode == self.speaker_mode,
-            "AudioMixer {effect} is measured only at 48000/44100 Hz with 1024-frame stereo output"
+                && (config.speaker_mode == speaker_mode::STEREO
+                    || (surround
+                        && matches!(
+                            config.speaker_mode,
+                            speaker_mode::QUAD
+                                | speaker_mode::SURROUND
+                                | speaker_mode::MODE_5POINT1
+                                | speaker_mode::MODE_7POINT1
+                        ))),
+            "AudioMixer {effect} is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output"
         );
         Ok(())
     }
@@ -396,6 +408,12 @@ impl EffectSpec {
             );
             let policy = policy.unwrap();
             anyhow::ensure!(
+                self.kind != EffectKind::SfxReverb.name()
+                    || level <= 1.0
+                    || self.surround_effects_measured,
+                "AudioMixer SFX Reverb slot boost is unmeasured for this profile"
+            );
+            anyhow::ensure!(
                 !policy.static_only || self.slot_wet_measured,
                 "AudioMixer static wet mixing is measured only for Unity 6000.0.71f1"
             );
@@ -455,8 +473,9 @@ impl EffectSpec {
         }
         if (kind.layout_limited() && kind != EffectKind::PitchShifter)
             || (self.mix_level.is_some() && kind.wet_policy().is_some_and(|p| p.static_only))
+            || (kind == EffectKind::SfxReverb && self.mix_level.is_some_and(|level| level > 1.0))
         {
-            MEASURED_LAYOUT.ensure(&self.kind, config)?;
+            MEASURED_LAYOUT.ensure(&self.kind, config, self.surround_effects_measured)?;
         }
         Ok(())
     }
@@ -717,6 +736,58 @@ fn slot_blend(output: &mut [f32], input: &[f32], wet: f32, dry: f32, frame: usiz
     }
 }
 
+/// Shared connection gains for a mixer slot, advanced once per frame across every speaker.
+struct SlotMix<'a> {
+    level: Option<f32>,
+    measured: bool,
+    live: bool,
+    audible: bool,
+    age: usize,
+    channels: Option<usize>,
+    wet: &'a mut ParameterRamp,
+    dry: &'a mut ParameterRamp,
+}
+impl SlotMix<'_> {
+    fn finish(&mut self, output: &mut [f32], input: &[f32], frame: usize) {
+        let Some(level) = self.level else { return };
+        if level == 0.0
+            && self.measured
+            && (!self.live || (self.wet.value == 0.0 && self.dry.value == 1.0))
+        {
+            output.copy_from_slice(input);
+            return;
+        }
+        let wet = if self.audible { level } else { 0.0 };
+        let dry = (1.0 - level).max(-1.0);
+        let (wet, dry) = if self.live {
+            match self.channels {
+                Some(channels) => (
+                    self.wet
+                        .gain_channels(level, SLOT_TRANSITION_FRAMES, channels),
+                    self.dry
+                        .gain_channels(dry, SLOT_TRANSITION_FRAMES, channels),
+                ),
+                None => (
+                    self.wet.gain(level, SLOT_TRANSITION_FRAMES),
+                    self.dry.gain(dry, SLOT_TRANSITION_FRAMES),
+                ),
+            }
+        } else {
+            (wet, dry)
+        };
+        if self.channels.is_some() && (wet == 1.0 || dry == 1.0) {
+            let startup = ((self.age + frame) as f32 / SLOT_STARTUP_FRAMES).min(1.0);
+            let wet = if wet == 1.0 { wet } else { wet * startup };
+            let dry = if dry == 1.0 { dry } else { dry * startup };
+            for (out, input) in output.iter_mut().zip(input) {
+                *out = wet * *out + dry * input;
+            }
+        } else {
+            slot_blend(output, input, wet, dry, self.age + frame);
+        }
+    }
+}
+
 pub struct Effect {
     pub spec: EffectSpec,
     /// `spec.kind`, parsed once; None for a kind the mixer does not run (bypassed only).
@@ -744,6 +815,7 @@ pub struct Effect {
     wet_ramp: ParameterRamp,
     dry_ramp: ParameterRamp,
     send_from: f32,
+    send_ramp: ParameterRamp,
     send_frames: u32,
     buffer: u32,
     /// Channels of the output layout the group carries (see [`Effect::set_layout`]).
@@ -773,6 +845,7 @@ impl Effect {
             resonance: 1.0,
             rate,
             send_from: spec.send_level,
+            send_ramp: ParameterRamp::new(0.0),
             send_frames: 0,
             gain_ramp: ParameterRamp::new(spec.gain),
             wet_ramp: ParameterRamp::new(if spec.mix_audible {
@@ -837,7 +910,13 @@ impl Effect {
         if let Some(sfx) = &spec.sfx {
             let reverb = match &mut self.reverb {
                 Some(reverb) if reverb.configuration() == (rate, buffer.max(1)) => reverb,
-                slot => slot.insert(Box::new(SfxReverb::new(rate, buffer)?)),
+                slot => {
+                    let mut reverb = SfxReverb::new(rate, buffer)?;
+                    if spec.effect_transitions_measured {
+                        reverb.enable_startup();
+                    }
+                    slot.insert(Box::new(reverb))
+                }
             };
             // Measured parameter changes crossfade through one DSP buffer, as on zones
             // (tests/projects/audiodistortion live sfxreverb/reverbfilter controls).
@@ -920,6 +999,7 @@ impl Effect {
         self.eq.h = Default::default();
         self.frames = 0;
         self.send_from = self.spec.send_level;
+        self.send_ramp = ParameterRamp::new(0.0);
         self.send_frames = 0;
         self.gain_ramp = ParameterRamp::new(self.spec.gain);
         self.wet_ramp = ParameterRamp::new(if self.spec.mix_audible {
@@ -1034,7 +1114,11 @@ impl Effect {
         matches!(
             self.kind,
             Some(EffectKind::Compressor | EffectKind::DuckVolume)
-        ) || (self.spec.surround_effects_measured && self.kind == Some(EffectKind::SfxReverb))
+        ) || (self.spec.surround_effects_measured
+            && matches!(
+                self.kind,
+                Some(EffectKind::SfxReverb | EffectKind::Normalize | EffectKind::Send)
+            ))
     }
     /// A linked effect ([`Effect::links_channels`]) on every channel of a layout wider than
     /// stereo: `front` and the `extra` pairs, with each pair's sidechain blocks. A compressor
@@ -1043,12 +1127,44 @@ impl Effect {
         &mut self,
         front: &mut [f32],
         extra: &mut [&mut [f32]],
-        sidechains: &HashMap<String, Vec<f32>>,
-        sidechain_lanes: &[HashMap<String, Vec<f32>>],
+        sidechains: &mut HashMap<String, Vec<f32>>,
+        sidechain_lanes: &mut [HashMap<String, Vec<f32>>],
         bypass: bool,
+        muted: usize,
     ) {
         let frames = front.len() / 2;
         match self.kind {
+            Some(EffectKind::Send) => {
+                if let Some(target) = &self.spec.send_target {
+                    let mut front_side = sidechains.get_mut(target);
+                    let mut sides = sidechain_lanes.iter_mut();
+                    let mut extra_sides: [Option<&mut Vec<f32>>; MAX_EXTRA_PAIRS] =
+                        std::array::from_fn(|_| sides.next().and_then(|map| map.get_mut(target)));
+                    for frame in 0..frames {
+                        for channel in 0..self.layout {
+                            let gain = self.send_ramp.next_retained(
+                                self.spec.send_level,
+                                self.buffer * self.layout as u32,
+                            );
+                            if frame < muted {
+                                continue;
+                            }
+                            let (input, side) = if channel < 2 {
+                                (front[frame * 2 + channel], &mut front_side)
+                            } else {
+                                (
+                                    extra[(channel - 2) / 2][frame * 2 + channel % 2],
+                                    &mut extra_sides[(channel - 2) / 2],
+                                )
+                            };
+                            if let Some(side) = side {
+                                side[frame * 2 + channel % 2] += input * gain;
+                            }
+                        }
+                    }
+                    self.gain = self.send_ramp.value;
+                }
+            }
             Some(EffectKind::Compressor) => {
                 if bypass || self.spec.bypass {
                     return;
@@ -1089,6 +1205,42 @@ impl Effect {
                     );
                 }
             }
+            Some(EffectKind::Normalize) => {
+                if bypass || self.spec.bypass {
+                    return;
+                }
+                let live = self.live_slot();
+                let skip = live && self.spec.mix_level == Some(0.0);
+                let mut mix = SlotMix {
+                    level: self.spec.mix_level,
+                    measured: self.spec.slot_wet_measured,
+                    live,
+                    audible: self.spec.mix_audible,
+                    age: self.frames as usize,
+                    channels: self
+                        .spec
+                        .surround_effects_measured
+                        .then_some(self.layout.max(2)),
+                    wet: &mut self.wet_ramp,
+                    dry: &mut self.dry_ramp,
+                };
+                if skip {
+                    super::channels::process_frames(front, extra, self.layout, |output, frame| {
+                        let mut input = [0.0; 8];
+                        input[..output.len()].copy_from_slice(output);
+                        mix.finish(output, &input[..output.len()], frame);
+                    });
+                } else if let Some(spec) = &self.spec.normalize {
+                    self.normalize.process_linked_with(
+                        front,
+                        extra,
+                        self.layout,
+                        spec,
+                        self.rate,
+                        |output, input, frame| mix.finish(output, input, frame),
+                    );
+                }
+            }
             Some(EffectKind::SfxReverb) => {
                 self.process_shared_reverb(front, extra, bypass);
                 return;
@@ -1107,23 +1259,29 @@ impl Effect {
         if bypass || self.spec.bypass {
             return;
         }
+        let live = self.live_slot();
+        let skip = live && self.spec.mix_level == Some(0.0);
         if let Some(reverb) = &mut self.reverb {
-            let level = self.spec.mix_level;
-            let identity = level == Some(0.0) && self.spec.slot_wet_measured;
-            let audible = self.spec.mix_audible;
-            let age = self.frames as usize;
-            reverb.process_linked_with(front, extra, self.layout, |output, input, frame| {
-                if identity {
-                    output.copy_from_slice(input);
-                } else if let Some(level) = level {
-                    slot_blend(
-                        output,
-                        input,
-                        if audible { level } else { 0.0 },
-                        (1.0 - level).max(-1.0),
-                        age + frame,
-                    );
+            let mut mix = SlotMix {
+                level: self.spec.mix_level,
+                measured: self.spec.slot_wet_measured,
+                live,
+                audible: self.spec.mix_audible,
+                age: self.frames as usize,
+                channels: self
+                    .spec
+                    .surround_effects_measured
+                    .then_some(self.layout.max(2)),
+                wet: &mut self.wet_ramp,
+                dry: &mut self.dry_ramp,
+            };
+            super::channels::process_frames(front, extra, self.layout, |output, frame| {
+                let mut input = [0.0; 8];
+                input[..output.len()].copy_from_slice(output);
+                if !skip {
+                    reverb.process_frame(output);
                 }
+                mix.finish(output, &input[..output.len()], frame);
             });
         }
         self.frames = self.frames.saturating_add((front.len() / 2) as u32);
@@ -1138,42 +1296,43 @@ impl Effect {
                     * ((position as f32 + channel as f32 * 0.5) / self.buffer as f32)
         }
     }
+    fn live_slot(&self) -> bool {
+        self.spec.slot_wet_transitions_measured
+            && self.kind.is_some_and(|kind| {
+                kind.static_wet()
+                    || (kind == EffectKind::SfxReverb && self.spec.surround_effects_measured)
+            })
+    }
     pub fn process(&mut self, samples: &mut [f32], bypass: bool) {
         let wet = self.spec.mix_level.filter(|_| !bypass && !self.spec.bypass);
         if wet.is_some() {
             self.scratch[..samples.len()].copy_from_slice(samples);
         }
-        let live_wet = self.spec.slot_wet_transitions_measured
-            && self.kind.is_some_and(EffectKind::static_wet);
+        let live = self.live_slot();
         // A fully dry live slot skips the kernel while its gains can still be finishing.
-        if !(live_wet && wet == Some(0.0)) {
+        if !(live && wet == Some(0.0)) {
             self.process_effect(samples, bypass);
         }
-        if wet == Some(0.0)
-            && self.spec.slot_wet_measured
-            && (!live_wet || (self.wet_ramp.value == 0.0 && self.dry_ramp.value == 1.0))
-        {
-            // The fully dry slot is an identity, including its startup frames. Keep the
-            // static kernel history advancing; the live path above pauses it at zero wet.
-            samples.copy_from_slice(&self.scratch[..samples.len()]);
-        } else if let Some(level) = wet {
-            let wet = if self.spec.mix_audible { level } else { 0.0 };
-            let dry = (1.0 - level).max(-1.0);
-            // The slot adds its own 64-frame startup fade around the processed/dry sum.
-            for (frame, (out, input)) in samples
+        if wet.is_some() {
+            let mut mix = SlotMix {
+                level: wet,
+                measured: self.spec.slot_wet_measured,
+                live,
+                audible: self.spec.mix_audible,
+                age: self.frames as usize,
+                channels: self
+                    .spec
+                    .surround_effects_measured
+                    .then_some(self.layout.max(2)),
+                wet: &mut self.wet_ramp,
+                dry: &mut self.dry_ramp,
+            };
+            for (frame, (output, input)) in samples
                 .chunks_exact_mut(2)
                 .zip(self.scratch.chunks_exact(2))
                 .enumerate()
             {
-                let (wet, dry) = if live_wet {
-                    (
-                        self.wet_ramp.gain(level, SLOT_TRANSITION_FRAMES),
-                        self.dry_ramp.gain(dry, SLOT_TRANSITION_FRAMES),
-                    )
-                } else {
-                    (wet, dry)
-                };
-                slot_blend(out, input, wet, dry, self.frames as usize + frame);
+                mix.finish(output, input, frame);
             }
         }
         if !bypass && !self.spec.bypass {
@@ -1393,7 +1552,7 @@ impl GroupNode {
         let pairs = lanes.len().min(MAX_EXTRA_PAIRS);
         for (index, effect) in effects.iter_mut().enumerate() {
             let front = &mut buffer[..n * 2];
-            if pairs > 0 && effect.links_channels() {
+            if effect.layout >= 2 && effect.links_channels() {
                 let mut lane_buffers = lanes.iter_mut();
                 let mut extra: [&mut [f32]; MAX_EXTRA_PAIRS] = std::array::from_fn(|_| {
                     lane_buffers
@@ -1406,6 +1565,7 @@ impl GroupNode {
                     sidechains,
                     sidechain_lanes,
                     bypass,
+                    muted,
                 );
                 continue;
             }
@@ -1453,6 +1613,79 @@ fn sync_effects(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn send_slope_visits_active_speakers_in_order_across_partial_blocks() {
+        for channels in [2, 5, 8] {
+            let spec: EffectSpec = serde_json::from_value(serde_json::json!({
+                "id": "send", "kind": "Send", "sendTarget": "return", "sendLevel": 1.0,
+                "surroundEffectsMeasured": true,
+            }))
+            .unwrap();
+            let mut effect = Effect::new(spec.clone(), 32000, 97).unwrap();
+            effect.set_layout(channels);
+            let mut silent = [0.0; 97 * 2];
+            let mut rear = [[0.0; 97 * 2]; MAX_EXTRA_PAIRS];
+            let mut extra: Vec<&mut [f32]> = rear[..(channels - 1) / 2]
+                .iter_mut()
+                .map(|pair| &mut pair[..])
+                .collect();
+            effect.process_linked(
+                &mut silent,
+                &mut extra,
+                &mut HashMap::new(),
+                &mut [],
+                false,
+                97,
+            );
+            let mut initial = 0.0;
+            for _ in 0..97 * channels {
+                initial += 1.0 / (97 * channels) as f32;
+            }
+            let mut changed = spec;
+            changed.send_level = 0.25;
+            effect.update(changed, 32000, 97).unwrap();
+            let mut expected = initial;
+            let step = (0.25 - expected) / (97 * channels) as f32;
+            for frames in [17, 31, 49] {
+                let mut front = vec![1.0; frames * 2];
+                let mut buffers: Vec<Vec<f32>> = (0..(channels - 1) / 2)
+                    .map(|_| vec![1.0; frames * 2])
+                    .collect();
+                let mut extra: Vec<&mut [f32]> =
+                    buffers.iter_mut().map(Vec::as_mut_slice).collect();
+                let mut side = HashMap::from([("return".into(), vec![0.0; frames * 2])]);
+                let mut lanes: Vec<_> = (0..extra.len()).map(|_| side.clone()).collect();
+                effect.process_linked(&mut front, &mut extra, &mut side, &mut lanes, false, 0);
+                for frame in 0..frames {
+                    for channel in 0..channels {
+                        let values = if channel < 2 {
+                            &side["return"]
+                        } else {
+                            &lanes[(channel - 2) / 2]["return"]
+                        };
+                        assert_eq!(values[frame * 2 + channel % 2], expected);
+                        expected += step;
+                    }
+                    if channels % 2 != 0 {
+                        assert_eq!(lanes.last().unwrap()["return"][frame * 2 + 1], 0.0);
+                    }
+                }
+            }
+            // The following period starts from its accumulated endpoint, then corrects the error.
+            let mut front = [1.0; 2];
+            let mut rear = [[1.0; 2]; MAX_EXTRA_PAIRS];
+            let mut extra: Vec<&mut [f32]> = rear[..(channels - 1) / 2]
+                .iter_mut()
+                .map(|pair| &mut pair[..])
+                .collect();
+            let mut side = HashMap::from([("return".into(), vec![0.0; 2])]);
+            let mut lanes = vec![side.clone(); extra.len()];
+            effect.process_linked(&mut front, &mut extra, &mut side, &mut lanes, false, 0);
+            assert_eq!(side["return"][0], expected);
+            assert!((side["return"][1] - 0.25).abs() < 0.0001);
+        }
+    }
 
     #[test]
     fn a_newly_enabled_lowpass_matches_the_recorded_first_audible_buffer() {

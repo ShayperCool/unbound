@@ -21,12 +21,22 @@ impl ParameterRamp {
     /// Slot gain controls keep changes below the measured gain deadband and bypass the
     /// multiplication at unity. Both wet and dry paths share this operation.
     pub(crate) fn gain(&mut self, target: f32, frames: u32) -> f32 {
-        // Unity 6000.0.71f1, tests/projects/audiodistortion live gain-delta controls.
-        const MIN_GAIN_CHANGE: f32 = 0.00032;
+        self.gain_channels(target, frames, 2)
+    }
+
+    /// The connection deadband sums the absolute gain step over the active speakers.
+    pub(crate) fn gain_channels(&mut self, target: f32, frames: u32, channels: usize) -> f32 {
+        // Stereo boundary controls: audiodistortion; wider layouts: audiopitch wet profile.
+        const MIN_SUM_STEP: f32 = 0.00001;
+        let step = ((target - self.value) / frames as f32).abs();
+        let mut sum = 0.0;
+        for _ in 0..channels {
+            sum += step;
+        }
         if target == 1.0 {
             *self = Self::new(1.0);
             1.0
-        } else if self.position == 0 && (target - self.value).abs() < MIN_GAIN_CHANGE {
+        } else if self.position == 0 && sum < MIN_SUM_STEP {
             self.value
         } else {
             let value = self.next(target, frames);
@@ -41,9 +51,18 @@ impl ParameterRamp {
     /// target snaps to its endpoint, bounding accumulated roundoff. Repeated descriptor
     /// submissions never restart the slope. `frames` must be positive and fixed between resets.
     pub(crate) fn next(&mut self, target: f32, frames: u32) -> f32 {
+        self.advance(target, frames, true)
+    }
+
+    /// Send gains retain their accumulated endpoint and correct its remaining error next period.
+    pub(crate) fn next_retained(&mut self, target: f32, frames: u32) -> f32 {
+        self.advance(target, frames, false)
+    }
+
+    fn advance(&mut self, target: f32, frames: u32, snap: bool) -> f32 {
         debug_assert!(frames > 0 && self.position < frames);
         if self.position == 0 {
-            if self.target == target {
+            if snap && self.target == target {
                 self.value = target;
                 self.step = 0.0;
             } else {
@@ -64,6 +83,32 @@ impl ParameterRamp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wider_connections_apply_a_small_change_that_stereo_retains() {
+        for channels in [2, 4, 5, 6, 8] {
+            let boundary = 0.00064 / channels as f32;
+            let mut below = ParameterRamp::new(0.0);
+            for _ in 0..128 {
+                assert_eq!(below.gain_channels(boundary * 0.999, 64, channels), 0.0);
+            }
+            let target = boundary * 1.001;
+            let mut above = ParameterRamp::new(0.0);
+            assert_eq!(above.gain_channels(target, 64, channels), 0.0);
+            assert!(above.gain_channels(target, 64, channels) > 0.0);
+            for _ in 2..64 {
+                above.gain_channels(target, 64, channels);
+            }
+            assert_eq!(above.gain_channels(target, 64, channels), target);
+        }
+        let mut stereo = ParameterRamp::new(0.0);
+        let mut quad = ParameterRamp::new(0.0);
+        for _ in 0..128 {
+            assert_eq!(stereo.gain_channels(0.0003163, 64, 2), 0.0);
+            quad.gain_channels(0.0003163, 64, 4);
+        }
+        assert_eq!(quad.value, 0.0003163);
+    }
 
     #[test]
     fn gain_changes_at_the_floor_are_applied_and_changes_below_it_are_retained() {

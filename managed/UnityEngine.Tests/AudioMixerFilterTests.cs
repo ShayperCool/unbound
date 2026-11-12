@@ -46,6 +46,39 @@ namespace UnityEngine.Tests
             return (mixer, group, effect);
         }
 
+        [Theory]
+        [InlineData("6000.0.71f1", true)]
+        [InlineData("6000.0.72f1", false)]
+        public void ActivatingAMixerSubmitsSilentSiblingGroups(string release, bool eager)
+        {
+            ProjectInfo.UnityVersion = release;
+            var backend = new VirtualAudioBackend();
+            AudioBackend.Use(backend);
+            var mixer = new AudioMixer();
+            var master = new AudioMixerGroup { m_Mixer = mixer, m_Name = "Master" };
+            var active = new AudioMixerGroup { m_Mixer = mixer, m_Name = "Active" };
+            var silent = new AudioMixerGroup { m_Mixer = mixer, m_Name = "Silent", m_VolumeGuid = "silentVolume" };
+            master.m_Children.Add(active); master.m_Children.Add(silent);
+            mixer.m_MasterGroup = master;
+            mixer.m_Exposed["SilentVolume"] = "silentVolume";
+            var snapshot = new AudioMixerSnapshot { m_Mixer = mixer };
+            snapshot.m_Values["silentVolume"] = -6f;
+            mixer.m_StartSnapshot = snapshot;
+            ulong activeHandle = active.Handle;
+            Assert.NotEqual(0UL, activeHandle);
+            Assert.Equal(eager, silent.m_Handle != 0);
+            if (eager)
+            {
+                ulong silentHandle = silent.m_Handle;
+                Assert.Equal(AudioMixer.DecibelsToGain(-6f), backend.GroupGain(silentHandle));
+                mixer.SetFloat("SilentVolume", -12f);
+                AudioSystem.Update();
+                Assert.Equal(AudioMixer.DecibelsToGain(-12f), backend.GroupGain(silentHandle));
+                Assert.Equal(silentHandle, silent.Handle);
+                Assert.Equal(activeHandle, active.Handle);
+            }
+        }
+
         [Fact]
         public void SnapshotStartsAtTheSubmittedOverrideAndClearRevealsItsProgress()
         {
@@ -350,7 +383,16 @@ namespace UnityEngine.Tests
             Assert.True(mixer.SetFloat("Wet", -70f));
             using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
                 Assert.False(payload.RootElement.GetProperty("effects")[0].GetProperty("mixAudible").GetBoolean());
+            foreach (float db in new[] { 3f, 6f, 30f })
+            {
+                Assert.True(mixer.SetFloat("Wet", db));
+                using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+                Assert.Equal(AudioMixer.DspGain(db, 30f), payload.RootElement.GetProperty("effects")[0].GetProperty("mixLevel").GetSingle());
+            }
+            Assert.True(mixer.SetFloat("Wet", 31f));
+            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
             Assert.True(mixer.SetFloat("Wet", 3f));
+            ProjectInfo.UnityVersion = "6000.0.70f1";
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
         }
 

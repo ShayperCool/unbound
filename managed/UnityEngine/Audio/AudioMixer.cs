@@ -386,6 +386,17 @@ namespace UnityEngine.Audio
                 foreach (var pair in initial.m_Values) m_Values[pair.Key] = pair.Value;
         }
 
+        internal void ActivateGroups()
+        {
+            Build();
+            // Silent groups share the graph's processing lifetime, including gain changes
+            // before their first source arrives (tests/projects/mixerduck).
+            // Assign every handle first so Send targets and parent links cannot recurse.
+            foreach (var group in m_Groups)
+                if (group.m_Handle == 0) group.m_Handle = AudioBackend.NextHandle();
+            foreach (var group in m_Groups) AudioSystem.PushGroup(group);
+        }
+
         void Collect(AudioMixerGroup group, AudioMixerGroup parent)
         {
             if (m_Groups.Contains(group)) return;
@@ -455,9 +466,14 @@ namespace UnityEngine.Audio
             {
                 if (m_Handle == 0)
                 {
-                    m_Handle = AudioBackend.NextHandle();
                     m_Mixer?.Build();
-                    AudioSystem.PushGroup(this);
+                    if (m_Mixer != null && Compat.MixerGraphStartupMeasured && m_Mixer.m_Groups.Contains(this))
+                        m_Mixer.ActivateGroups();
+                    else
+                    {
+                        m_Handle = AudioBackend.NextHandle();
+                        AudioSystem.PushGroup(this);
+                    }
                 }
                 return m_Handle;
             }
@@ -537,7 +553,7 @@ namespace UnityEngine.Audio
                 if (!bypass && effect.m_EnableWetMix && !rule.Wet)
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 float wetDb = effect.m_MixLevelGuid != null ? m_Mixer.Value(effect.m_MixLevelGuid) : 0f;
-                if (!bypass && effect.m_EnableWetMix && rule.StaticWet) effect.RequireMeasuredOutput();
+                if (!bypass && effect.m_EnableWetMix && (rule.StaticWet || (reverb && wetDb > 0f))) effect.RequireMeasuredOutput();
                 if (!bypass && effect.m_EnableWetMix && rule.StaticWet && !Compat.MixerStaticWetMeasured)
                     throw new NotSupportedException("AudioMixer static wet mixing is measured only for Unity 6000.0.71f1");
                 if (!bypass && effect.m_EnableWetMix && (!float.IsFinite(wetDb) || wetDb > rule.MaxWetDb))
@@ -756,7 +772,8 @@ namespace Unbound.Runtime
         internal static (bool Supported, bool Wet, bool StaticWet, float MaxWetDb) Rule(string kind)
         {
             foreach (var rule in EffectKinds)
-                if (rule.Name == kind) return (true, rule.Wet, rule.StaticWet, rule.MaxWetDb);
+                if (rule.Name == kind) return (true, rule.Wet, rule.StaticWet,
+                    kind == SfxReverb && Compat.AudioSurroundEffectsMeasured ? MaximumStaticWetDb : rule.MaxWetDb);
             return (false, false, false, 0);
         }
         internal static float CutoffDefault(string effect) => effect == "Highpass Simple" ? 1000f : 5000f;
@@ -804,8 +821,12 @@ namespace Unbound.Runtime
         {
             // The layout the mixer runs, which a narrower device lowers below the request.
             var config = AudioSettings.GetConfiguration();
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || AudioBackend.Current.ActiveSpeakerMode != AudioSpeakerMode.Stereo)
-                throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output");
+            var mode = AudioBackend.Current.ActiveSpeakerMode;
+            bool layout = mode == AudioSpeakerMode.Stereo || (Compat.AudioSurroundEffectsMeasured
+                && (mode == AudioSpeakerMode.Quad || mode == AudioSpeakerMode.Surround
+                    || mode == AudioSpeakerMode.Mode5point1 || mode == AudioSpeakerMode.Mode7point1));
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || !layout)
+                throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output");
         }
         // Native 6000.0.71f1 keeps exposed values verbatim but clamps the DSP amount.
         internal float DistortionConfiguration(UnityEngine.Audio.AudioMixer mixer)

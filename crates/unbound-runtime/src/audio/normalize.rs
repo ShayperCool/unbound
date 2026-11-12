@@ -33,27 +33,87 @@ impl Default for Normalize {
 }
 impl Normalize {
     pub fn process(&mut self, samples: &mut [f32], spec: &NormalizeSpec, rate: u32) {
+        self.process_linked_with(samples, &mut [], 2, spec, rate, |_, _, _| {});
+    }
+
+    /// One peak envelope drives every active speaker, including the LFE channel.
+    pub(crate) fn process_linked_with(
+        &mut self,
+        front: &mut [f32],
+        extra: &mut [&mut [f32]],
+        channels: usize,
+        spec: &NormalizeSpec,
+        rate: u32,
+        mut finish: impl FnMut(&mut [f32], &[f32], usize),
+    ) {
         let decay = if spec.fade == 0.0 {
             1.0
         } else {
             1.0 / (spec.fade * rate as f32 / 1000.0)
         };
-        for frame in samples.chunks_exact_mut(2) {
-            self.peak = (self.peak - decay)
-                .max(spec.lowest)
-                .max(frame[0].abs())
-                .max(frame[1].abs());
+        super::channels::process_frames(front, extra, channels, |frame, index| {
+            let mut dry = [0.0; 8];
+            dry[..channels].copy_from_slice(frame);
+            self.peak = (self.peak - decay).max(spec.lowest);
+            for x in frame.iter() {
+                self.peak = self.peak.max(x.abs());
+            }
             let gain = spec.maximum.min(1.0 / self.peak);
-            for x in frame {
+            for x in frame.iter_mut() {
                 *x *= gain;
             }
-        }
+            finish(frame, &dry[..channels], index);
+        });
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn one_envelope_includes_rear_speakers_but_excludes_an_unused_pair_slot() {
+        let spec = NormalizeSpec {
+            fade: 0.0,
+            lowest: 0.01,
+            maximum: 10.0,
+        };
+        let mut front = vec![0.125; 97 * 2];
+        let mut middle = vec![0.25; 97 * 2];
+        let mut rear = vec![0.5; 97 * 2];
+        for pair in rear.chunks_exact_mut(2) {
+            pair[1] = 100.0;
+        }
+        Normalize::default().process_linked_with(
+            &mut front,
+            &mut [&mut middle, &mut rear],
+            5,
+            &spec,
+            32000,
+            |_, _, _| {},
+        );
+        assert!(front.iter().all(|&x| x == 0.25));
+        assert!(middle.iter().all(|&x| x == 0.5));
+        assert!(rear.chunks_exact(2).all(|pair| pair == [1.0, 100.0]));
+
+        // The envelope decays once per frame, independent of the number of speakers.
+        let spec = NormalizeSpec {
+            fade: 200.0,
+            lowest: 0.01,
+            maximum: 10.0,
+        };
+        let mut stereo = Normalize::default();
+        let mut wide = Normalize::default();
+        for _ in 0..11 {
+            let mut pair = [0.0625; 97 * 2];
+            let mut front = pair;
+            let mut rear = pair;
+            stereo.process(&mut pair, &spec, 32000);
+            wide.process_linked_with(&mut front, &mut [&mut rear], 4, &spec, 32000, |_, _, _| {});
+            assert_eq!(front, pair);
+            assert_eq!(rear, pair);
+        }
+    }
+
     #[test]
     fn native_default_peak_response_and_linked_channels() {
         // Captured default_dc_quarter: silent first 1024 frames, then [0.25, -0.125].

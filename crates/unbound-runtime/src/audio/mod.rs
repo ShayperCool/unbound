@@ -8,6 +8,7 @@
 //! the frame's time in whole DSP buffers each frame, so playback, `time`, `isPlaying` and
 //! scheduling behave the same, deterministically, without opening a device.
 pub mod capture;
+pub(crate) mod channels;
 pub mod chorus;
 pub mod compressor;
 pub mod duck;

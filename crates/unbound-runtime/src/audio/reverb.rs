@@ -102,12 +102,43 @@ struct Coefficients {
     fan_out: [usize; 8],
 }
 
+/// Empty network state before the first period: the initial input delays are 40/60 ms,
+/// and the gains, damping and rotation approach the first requested parameters together.
+fn startup_coefficients(mut c: Coefficients, rate: u32) -> Coefficients {
+    const INITIAL_EARLY_DELAY: f32 = 0.04;
+    const INITIAL_LATE_DELAY: f32 = 0.06;
+    const INITIAL_INPUT_POLE: f32 = 0.02;
+    const INITIAL_LINE_POLE: f32 = 0.6;
+    const INITIAL_FEEDBACK_GAIN: f32 = 0.32;
+    let rate = rate as f32;
+    c.hf = INITIAL_INPUT_POLE;
+    c.early_gain = 0.0;
+    c.late_gain = 0.0;
+    c.rotation = (1.0, 1.0);
+    c.damping.fill(INITIAL_LINE_POLE);
+    c.decay.fill(INITIAL_FEEDBACK_GAIN);
+    c.early[0][0] = ((INITIAL_EARLY_DELAY * rate) as usize).saturating_sub(1);
+    let mut tap = LATE_TAP_S;
+    for (index, delay) in c.late.iter_mut().enumerate() {
+        let seconds = if index == 0 {
+            INITIAL_LATE_DELAY
+        } else {
+            let seconds = INITIAL_LATE_DELAY + tap;
+            tap *= LATE_TAP_RATIO;
+            seconds
+        };
+        *delay = ((seconds * rate) as usize).saturating_sub(1);
+    }
+    c
+}
+
 pub struct SfxReverb {
     rate: u32,
     c: Coefficients,
     previous: Coefficients,
     pending: Coefficients,
     configured: bool,
+    startup_pending: bool,
     /// Set at a DSP-buffer boundary when the pending parameters differ from the previous ones.
     transitioning: bool,
     buffer_size: usize,
@@ -141,6 +172,7 @@ impl SfxReverb {
             previous: Coefficients::default(),
             pending: Coefficients::default(),
             configured: false,
+            startup_pending: false,
             transitioning: false,
             buffer_size: buffer_size.max(1) as usize,
             buffer_position: 0,
@@ -157,8 +189,14 @@ impl SfxReverb {
         })
     }
 
+    /// Initial coefficients and input taps approach the requested settings over one DSP period.
+    /// Unity 6000.0.71f1, tests/projects/audiopitch wet startup controls.
+    pub(crate) fn enable_startup(&mut self) {
+        self.startup_pending = true;
+    }
+
     /// Starts an empty shared zone return before its first active parameter update.
-    /// Existing source and mixer effects keep their ordinary initial parameter application.
+    /// Ordinary effects approach their first parameters during processing instead.
     pub fn initialize_zone_return(&mut self) {
         self.tune(&SfxReverbSpec {
             dry_level: -10000.0,
@@ -176,16 +214,9 @@ impl SfxReverb {
             room_lf: 0.0,
             lf_reference: 250.0,
         });
-        // Measured startup values, tests/projects/audioreverb lifecycle controls.
-        const INITIAL_INPUT_POLE: f32 = 0.02;
-        const INITIAL_LINE_POLE: f32 = 0.6;
-        const INITIAL_FEEDBACK_GAIN: f32 = 0.32;
-        self.c.hf = INITIAL_INPUT_POLE;
-        self.c.early_gain = 0.0;
-        self.c.late_gain = 0.0;
-        self.c.rotation = (1.0, 1.0);
-        self.c.damping.fill(INITIAL_LINE_POLE);
-        self.c.decay.fill(INITIAL_FEEDBACK_GAIN);
+        // The same empty-network coefficients precede activation of the shared return.
+        // Unity 6000.0.71f1, tests/projects/audioreverb lifecycle controls.
+        self.c = startup_coefficients(self.c, self.rate);
         self.previous = self.c;
         self.transitioning = false;
         self.pending = self.c;
@@ -355,27 +386,22 @@ impl SfxReverb {
         channels: usize,
         mut finish: impl FnMut(&mut [f32], &[f32], usize),
     ) {
-        debug_assert!((2..=8).contains(&channels));
-        for frame in 0..front.len() / 2 {
-            let mut input = [0.0; 8];
-            input[..2].copy_from_slice(&front[frame * 2..frame * 2 + 2]);
-            for channel in 2..channels {
-                input[channel] = extra[(channel - 2) / 2][frame * 2 + channel % 2];
-            }
-            let dry = input;
-            self.process_frame(&mut input[..channels]);
-            finish(&mut input[..channels], &dry[..channels], frame);
-            front[frame * 2..frame * 2 + 2].copy_from_slice(&input[..2]);
-            for channel in 2..channels {
-                extra[(channel - 2) / 2][frame * 2 + channel % 2] = input[channel];
-            }
-        }
+        super::channels::process_frames(front, extra, channels, |input, frame| {
+            let mut dry = [0.0; 8];
+            dry[..channels].copy_from_slice(input);
+            self.process_frame(input);
+            finish(input, &dry[..channels], frame);
+        });
     }
 
     pub(crate) fn process_frame(&mut self, speakers: &mut [f32]) {
         let channels = speakers.len();
         if self.buffer_position == 0 {
             self.previous = self.c;
+            if self.startup_pending {
+                self.previous = startup_coefficients(self.previous, self.rate);
+                self.startup_pending = false;
+            }
             self.c = self.pending;
             self.transitioning = self.previous != self.c;
         }
@@ -500,6 +526,76 @@ fn damping(c1: f32, ratio: f32, w: f32) -> f32 {
 mod tests {
     use super::*;
     use crate::audio::effects::{Effect, EffectSpec};
+
+    #[test]
+    fn initial_network_transition_matches_the_full_quad_reference_across_partial_chunks() {
+        use std::collections::HashMap;
+        use std::io::Read;
+        for rate in [48000, 44100] {
+            let file = std::fs::File::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join(format!("../../tests/projects/audiopitch/Reference/unity-6000.0.71f1/wet/rate-{rate}/context_wet_quad_reverb_unwrapped.master.f32.gz"))).unwrap();
+            let mut bytes = Vec::new();
+            flate2::read::GzDecoder::new(file)
+                .read_to_end(&mut bytes)
+                .unwrap();
+            let reference: Vec<_> = bytes
+                .chunks_exact(4)
+                .map(|x| f32::from_le_bytes(x.try_into().unwrap()))
+                .collect();
+            let frames = reference.len() / 4;
+            let parameters: EffectSpec = serde_json::from_value(serde_json::json!({
+                "id": "startup", "kind": "SFX Reverb", "effectTransitionsMeasured": true,
+                "surroundEffectsMeasured": true,
+                "sfx": { "dryLevel": -600.0, "room": -500.0, "roomHf": -300.0,
+                    "decayTime": 0.3, "decayHfRatio": 0.5, "reflections": -500.0,
+                    "reflectDelay": 0.007, "reverb": -500.0, "reverbDelay": 0.011,
+                    "diffusion": 100.0, "density": 100.0, "hfReference": 5000.0,
+                    "roomLf": 0.0, "lfReference": 250.0 }
+            }))
+            .unwrap();
+            let mut effect = Effect::new(parameters, rate, 1024).unwrap();
+            effect.set_layout(4);
+            // The group's input starts with its ordinary one-period fade, before the effect.
+            let input =
+                |channel, frame| 0.0625 * (channel + 1) as f32 * (frame as f32 / 1024.0).min(1.0);
+            let mut front: Vec<_> = (0..frames)
+                .flat_map(|frame| [input(0, frame), input(1, frame)])
+                .collect();
+            let mut rear: Vec<_> = (0..frames)
+                .flat_map(|frame| [input(2, frame), input(3, frame)])
+                .collect();
+            let mut position = 0;
+            while position < frames {
+                let end = (position + 97).min(frames);
+                effect.process_linked(
+                    &mut front[position * 2..end * 2],
+                    &mut [&mut rear[position * 2..end * 2]],
+                    &mut HashMap::new(),
+                    &mut [],
+                    false,
+                    0,
+                );
+                position = end;
+            }
+            for (frame, expected) in reference.chunks_exact(4).enumerate() {
+                let actual = [
+                    front[frame * 2],
+                    front[frame * 2 + 1],
+                    rear[frame * 2],
+                    rear[frame * 2 + 1],
+                ];
+                for channel in 0..4 {
+                    assert!(
+                        (actual[channel] - expected[channel]).abs()
+                            <= 2e-5 + 2e-4 * expected[channel].abs(),
+                        "rate={rate} frame={frame} channel={channel}: {} != {}",
+                        actual[channel],
+                        expected[channel]
+                    );
+                }
+            }
+        }
+    }
 
     #[test]
     fn room_hf_at_the_lowest_references_reaches_the_pole_limit() {

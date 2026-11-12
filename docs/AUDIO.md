@@ -828,7 +828,11 @@ mono clips, bypass and Master routing. Every startup frame remains compared.
 The committed authored inputs assemble without the Editor; the declared gate runs
 the engine and preserves strict float/PCM failures under the existing tolerances.
 
-Other rates, buffers and layouts fail explicitly. Static slot Wet follows the shared
+Q373 adds all-speaker Normalize in Quad/5.0/5.1/7.1 at these same rates and
+buffer size. One envelope decays once per frame and takes the maximum over
+every active speaker, including LFE. The unused storage slot of 5.0 is excluded.
+See [the wet profiles](../tests/projects/audiopitch/WET.md) for front/rear/LFE
+controls. Other rates, buffers and layouts fail explicitly. Static slot Wet follows the shared
 rule below. Live Normalize parameters and timed snapshots are covered below; bypass and placement changes remain unmeasured and fail clearly. Existing audio
 residuals are retained unchanged.
 
@@ -894,7 +898,7 @@ tests/projects/audiopitch layout and device controls:
 | Measured quad/5.0/5.1/7.1 | Stereo 2D clips reach FL/FR exactly as in stereo; a mono 2D clip uses the stereo pan law on FL/FR and, in 5.1 and 7.1, feeds LFE at unity gain whatever the pan. 3D directions (listener-space lateral and forward components) pan between the two neighbouring speakers with power-normalized vector-base gains; speakers sit at (∓1, 1) and (∓1, −1), the centre at (0, 1), and in 7.1 at (∓0.5, 0.866), (0, 1), (∓0.707, −0.707) and (∓1, 0). Each 3D channel also feeds LFE at unity; a source at the listener reaches every speaker at √2/n. Spread rotates each clip channel's direction by half the spread either way, and a mono clip averages its two directions. Spatial blend mixes the 2D and 3D speaker levels; attenuation blends apart. Group effects on extra pairs, generators writing every channel and clip-source scripts writing beyond the front pair match. Engine: `spatial::surround`, `SpeakerLayout`. |
 | Measured devices | `driverCapabilities` follows the device's channel count: 4 report Quad, 6 report 5.1, 8 report 7.1, and 1, 2, 3, 5 and 7 report Stereo. A request above the capabilities runs at them (5.0/5.1/7.1 on four channels run quad, 7.1 on six runs 5.1); Prologic always runs as two channels; `GetConfiguration` keeps the request (`device_1`..`device_8`). Engine: `driver_capabilities` and `active_speaker_mode` in `audio/mod.rs`. Without an output device the virtual device stands for a stereo device; `UNBOUND_AUDIO_DEVICE_CHANNELS` sets its channel count (the probe uses the capture device's). Normalize, static Wet and Pitch Shifter check the layout the mixer runs. |
 | Measured surround effects | Q337, tests/projects/audiopitch `surround`: Compressor/Duck link every active speaker including LFE, with Duck timing scaled by channel count; SFX Reverb shares an eight-line network; Chorus cycles three wet taps across speakers; Flange shares its sweep with separate channel histories. Source/listener Chorus/Reverb and front/rear mono 3D zone sends/returns pass at 48000/44100 Hz, 1024-frame buffers, quad/5.0/5.1/7.1. `Compat.AudioSurroundEffectsMeasured` selects the rule. See [contracts and scope](../tests/projects/audiopitch/SURROUND.md). |
-| Unmeasured | Other releases retain per-pair effects and front-pair zones, with a warning for SFX Reverb. Normalize stays limited to stereo. Surround live parameter/topology/layout transitions, wet slots, other rates/buffers, Prologic, scripted zone sends and overlapping surround zones remain unmeasured, as do channel-asymmetric effects in mono. |
+| Unmeasured | Other releases retain per-pair effects and front-pair zones, with a warning for SFX Reverb. Other rates/buffers, Prologic, surround topology changes, scripted zone sends and overlapping surround zones remain unmeasured, as do channel-asymmetric effects in mono. The separate transitions and wet profiles below cover the measured live and wet contexts. |
 
 AudioRenderer buffers and group sinks hold the layout's channel count in every layout.
 
@@ -983,3 +987,34 @@ The resonant Lowpass/Highpass kernels use the measured per-sample parameter step
 100 + 10 Hz and resonance by one, clamping each step to the target. This covers live setters
 and the first audible buffer of an initially disabled unit. Other releases retain the earlier
 unmeasured endpoint-sum ramp. The shared cores serve mixer effects and components.
+
+# Surround wet slots and silent groups
+
+Q373 adds 238 wet controls and 18 placement controls in
+[tests/projects/audiopitch/WET.md](../tests/projects/audiopitch/WET.md),
+Unity 6000.0.71f1 at 48000/44100 Hz, 1024-frame buffers, Quad/5.0/5.1/7.1.
+Distortion, Chorus, Flange, Normalize, Pitch Shifter and SFX Reverb cover
+static -80 through +30 dB and live wet changes. Connection deadbands sum
+absolute gain steps over active speakers; unity connections pass directly.
+Normalize shares one envelope over active speakers. Send advances one gain
+ramp across interleaved speakers, retains accumulated endpoints and advances
+through the first muted period. `Compat.AudioSurroundEffectsMeasured` selects
+these rules; other releases retain per-pair Send processing and refuse the
+new wide wet/Normalize contexts.
+
+`Compat.MixerGraphStartupMeasured` activates all groups together when a mixer
+first gets a routed handle. Silent groups process with the graph, so their
+gains retain actual parameter changes before a source is first created.
+This is measured behavior, not an API promise about graph construction.
+
+`Compat.MixerEffectTransitionsMeasured` also selects the SFX Reverb initial
+coefficient transition. The empty network starts with 40/60 ms input taps,
+input pole 0.02, zero early/late gains, line pole 0.6, feedback gain 0.32 and
+unit rotation gains, then approaches its requested settings over one DSP
+period. Zone initialization reuses the same coefficients. Other releases
+retain their prior startup application and need measurement.
+
+Every one of 94,505,124 values per rate passes the existing bounds. Strict
+reports keep all one-step device differences, with no added allowance for
+Master floats. Other wet-effect kinds, topology changes, Mono, Prologic and
+other rates/buffers remain outside this measurement.
