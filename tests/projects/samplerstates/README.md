@@ -86,9 +86,13 @@ devices).
 quad over its left texel and the same quad through a mirrored matrix (negative determinant) over
 its right one, with a two-sided stencil state writing 1 for front faces and 255 for back faces,
 then red where the stencil is 1 and green where it is 255; once plain, once with
-`GL.invertCulling`. On both devices the plain quad takes the front state and the mirrored one
-the back state; with inverted culling the other way round. A mirrored draw turns its faces
-round, while inverted culling turns which faces count as front.
+`GL.invertCulling`; then culling back faces (`cullBack`), and both through a command buffer's
+DrawMesh (`commandBuffer`, `commandBufferCullBack`). On both devices the plain quad takes the
+front state and the mirrored one the back state, with inverted culling the other way round, and
+culling back faces culls the mirrored quad: DrawMeshNow and CommandBuffer.DrawMesh draw a
+mirrored matrix as it is (its faces turned round), while inverted culling turns which faces
+count as front. Unbound flips culling and the stencil faces for every mirrored draw (as for
+renderers): the five mirrored rows are declared residuals until mirroring follows the draw path.
 
 `Compute.<kernel>.<target>` (after those): compute kernels (`DepthCompute.compute`) reading each
 depth target: `Compare` compares both texels against 0.5 through the texture's own comparison

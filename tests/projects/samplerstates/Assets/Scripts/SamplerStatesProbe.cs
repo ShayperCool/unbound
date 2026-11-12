@@ -259,9 +259,11 @@ public class UitkProbe : MonoBehaviour
     {
 #if UNITY_EDITOR
         var faces = new Material(UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/StencilFaces.shader"));
+        var facesCulled = new Material(UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/StencilFacesCullBack.shader"));
         var equal = new Material(UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/StencilEqual.shader"));
 #else
         var faces = new Material(Shader.Find("Probe/SamplerStates/StencilFaces"));
+        var facesCulled = new Material(Shader.Find("Probe/SamplerStates/StencilFacesCullBack"));
         var equal = new Material(Shader.Find("Probe/SamplerStates/StencilEqual"));
 #endif
         var quad = new Mesh { vertices = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(.5f, 1, 0), new Vector3(.5f, 0, 0) } };
@@ -295,6 +297,56 @@ public class UitkProbe : MonoBehaviour
             string name = "StencilFaces." + (invert ? "invertCulling" : "plain");
             Row(rows, name + ".normal", readback.GetPixel(0, 0));
             Row(rows, name + ".mirrored", readback.GetPixel(1, 0));
+        }
+        // Then the same quads drawn culling back faces (a mirrored quad drawn shows that the draw
+        // flips its culling), and both kinds drawn by a command buffer.
+        void Test()
+        {
+            equal.SetInt("_Ref", 1); equal.SetColor("_Color", Color.red); equal.SetPass(0);
+            Graphics.DrawMeshNow(full, Matrix4x4.identity);
+            equal.SetInt("_Ref", 255); equal.SetColor("_Color", Color.green); equal.SetPass(0);
+            Graphics.DrawMeshNow(full, Matrix4x4.identity);
+        }
+        void Record(string name)
+        {
+            readback.ReadPixels(new Rect(0, 0, 2, 1), 0, 0);
+            readback.Apply();
+            Row(rows, "StencilFaces." + name + ".normal", readback.GetPixel(0, 0));
+            Row(rows, "StencilFaces." + name + ".mirrored", readback.GetPixel(1, 0));
+        }
+        {
+            var previous = RenderTexture.active;
+            RenderTexture.active = target;
+            GL.Clear(true, true, new Color(0, 0, 0, 1));
+            GL.PushMatrix();
+            GL.LoadOrtho();
+            facesCulled.SetPass(0);
+            Graphics.DrawMeshNow(quad, Matrix4x4.identity);
+            Graphics.DrawMeshNow(quad, mirrored);
+            Test();
+            GL.PopMatrix();
+            Record("cullBack");
+            RenderTexture.active = previous;
+        }
+        foreach (var (material, name) in new[] { (faces, "commandBuffer"), (facesCulled, "commandBufferCullBack") })
+        {
+            using (var cmd = new UnityEngine.Rendering.CommandBuffer())
+            {
+                cmd.SetRenderTarget(target);
+                cmd.ClearRenderTarget(true, true, new Color(0, 0, 0, 1));
+                cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.Ortho(0, 1, 0, 1, -1, 1));
+                cmd.DrawMesh(quad, Matrix4x4.identity, material, 0, 0);
+                cmd.DrawMesh(quad, mirrored, material, 0, 0);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            var previous = RenderTexture.active;
+            RenderTexture.active = target;
+            GL.PushMatrix();
+            GL.LoadOrtho();
+            Test();
+            GL.PopMatrix();
+            Record(name);
+            RenderTexture.active = previous;
         }
     }
 
