@@ -3,8 +3,8 @@
 This is the complete source-patch inventory for the vendored PhysX 4.1.2 tree.
 [UNBOUND.md](UNBOUND.md) records its upstream revision,
 `a2c0428acab643e60618c681b501e86f7fd558cc`, and the directories retained at import.
-The local import is `9a4c8ad7`. Relative to that import, twelve SDK source/header
-files have changes, listed below. The import's directory exclusions and the
+The local import is `9a4c8ad7`. Relative to that import, twenty-seven SDK source/header
+files have changes and one header is added, listed below. The import's directory exclusions and the
 Unbound build/shim code outside this directory are separate from these patches.
 
 The behavioral references cited here were recorded with the Unity 6000.0.71f1
@@ -26,6 +26,7 @@ identified separately where relevant.
 | Run pair callbacks during interaction creation | [ScNPhaseCore.cpp](source/simulationcontroller/src/ScNPhaseCore.cpp), `Sc::NPhaseCore::createRbElementInteraction` overload taking shapes | `9491a8bc` |
 | Change trigger role without broadphase reinsertion | [ScShapeSim.cpp](source/simulationcontroller/src/ScShapeSim.cpp), `physx::Sc::ShapeSim::onFlagChange` | `9491a8bc` |
 | Refit objects moved late in a query-tree rebuild | [SqAABBPruner.cpp](source/scenequery/src/SqAABBPruner.cpp), `Sq::AABBPruner::updateObjectsAfterManualBoundsUpdates`, `Sq::AABBPruner::updateObjectsAndInflateBounds` | Q276 |
+| Run the BV4 midphase on NEON | [GuBV4_Simd.h](source/geomutils/src/mesh/GuBV4_Simd.h) (added); the BV4 guards of [GuBV4.h](source/geomutils/src/mesh/GuBV4.h), [GuBV4_Common.h](source/geomutils/src/mesh/GuBV4_Common.h), [GuBV4_Internal.h](source/geomutils/src/mesh/GuBV4_Internal.h), [GuBV4_AABBAABBSweepTest.h](source/geomutils/src/mesh/GuBV4_AABBAABBSweepTest.h), [GuBV4_BoxBoxOverlapTest.h](source/geomutils/src/mesh/GuBV4_BoxBoxOverlapTest.h), [GuMidphaseInterface.h](source/geomutils/src/mesh/GuMidphaseInterface.h), [GuMidphaseBV4.cpp](source/geomutils/src/mesh/GuMidphaseBV4.cpp) and the `GuBV4_*` query sources (`AABBSweep`, `BoxOverlap`, `CapsuleSweep`, `CapsuleSweepAA`, `OBBSweep`, `Raycast`, `SphereOverlap`, `SphereSweep`) | Q249 |
 
 The comparison against `4724b839e749590151e862695e1e31ad94447151` contains only
 the last three patches, in `ScNPhaseCore.cpp` and `ScShapeSim.cpp`. The older
@@ -275,6 +276,38 @@ reaches the object. `PhysicsStaticMoveQueryTests` reproduces it in a local
 physics scene: a static that jumps 100 units every seventh frame while another
 static keeps the rebuilds going is missed by a sweep on some frames without the
 patch.
+
+## Run the BV4 midphase on NEON
+
+Upstream compiles the BV4 midphase (`PxMeshMidPhase::eBVH34`, Unity's "fast midphase"
+and its default cooking) only for Intel CPUs: elsewhere `GuMidphaseInterface.h` answers
+every query of a BV4 mesh with nothing and reports "BV4 midphase only supported on
+Intel platforms" once. On arm64 rays, sweeps, overlaps and contact generation therefore
+missed every mesh collider. The BV4 query code is written with SSE2 intrinsics on
+`__m128`/`__m128i`.
+
+The added `GuBV4_Simd.h` defines `GU_BV4_SIMD` as `(PX_INTEL_FAMILY || PX_NEON) &&
+!defined(PX_SIMD_DISABLED)` and, on NEON, gives the SSE2 types and every intrinsic the BV4
+sources use (`_mm_castps_si128`, `_mm_castsi128_ps`, `_mm_shuffle_epi32`, `_mm_and_ps`,
+`_mm_or_ps`, `_mm_cmpgt_ps`, `_mm_movemask_ps`, `_mm_load1_ps`, `_mm_store_ps`,
+`_mm_load_si128`, `_mm_set_ps`, `_mm_set_epi32`, `_mm_set1_epi32`, `_mm_and_si128`,
+`_mm_cvtepi32_ps`, `_mm_srai_epi32`, `_mm_slli_epi32`, `_MM_SHUFFLE`) with the same bits
+as the SSE2 instruction: bitwise operations and reinterpretations, an ordered greater-than
+comparison, lane sign bits, round-to-nearest integer conversion and shifts. `GuBV4.h`,
+`GuBV4_Common.h` and `GuMidphaseInterface.h` include it. Every guard
+`PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)` of the BV4 sources becomes `GU_BV4_SIMD`,
+and every plain `PX_INTEL_FAMILY` guard there becomes `PX_INTEL_FAMILY || GU_BV4_SIMD`, so
+the Intel build compiles exactly as before and arm64 compiles the same traversal. Cooking
+(`GuBV4Build.cpp`) was never guarded.
+
+Measured requirement: the Unity 6000.0.71f1 macOS arm64 Editor records the same 3203
+tests/projects/rayhits values as the Linux reference (`Reference/values.jsonl`), box casts
+against meshes included. On macOS arm64 Unbound matches them: 7/3203 before the patch
+(every mesh query missing), 3203/3203 with it; tests/projects/physicsbatch gives
+5858/5870, the Linux sheriff baseline's result and its 12 retained mesh slot-order rows.
+Cooking arm64 meshes with the BVH33 midphase instead was measured as a control and does not
+reproduce the reference: rayhits 3083/3203 (120 box-cast hit points on meshes), physicsbatch
+5734/5870. The Linux x86_64 probes do not exercise the NEON definitions.
 
 ## Replay and maintain the inventory
 
