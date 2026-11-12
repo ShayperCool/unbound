@@ -53,3 +53,7 @@ Unity 6000.0 documents [frame metadata](https://docs.unity3d.com/6000.0/Document
 as profiler capture data and [CommandBuffer samples](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.BeginSample.html)
 as profiling commands. Exact conditional names and overload selection come from the
 6000.0.71f1 release assemblies; the paired captures check compilation and reflection.
+
+The conditional expansion adds 23 rows from two identical GPU Editor captures,
+bringing the canonical reference to 238 rows. All 215 earlier reference rows remain
+byte-identical; the comparator still rejects every missing, extra or changed value.
