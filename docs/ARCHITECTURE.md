@@ -91,10 +91,25 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   parts adding the missing members to hand-written types (which must therefore be `partial`).
   Generated code is marked `[Unbound.Stub]`; bodies call `Unbound.Runtime.Stubs.NotImplemented`
   and return defaults. Implementing a member by hand and regenerating drops its stub.
-  `unbound api-check -p <project>` (CI: exits non-zero) checks the hand-written code against the
-  release: a member with Unity's name but another signature suppresses the stub and fails game code
-  with MissingMethodException, so signatures, type placement (namespace, nesting), enum values,
-  accessibility and public struct field layout must match Unity's exactly.
+  `unbound api-check -p <project>` fails on unaccepted differences in hand-written declarations:
+  signatures, type placement, enum values, accessibility, layout, base types/interfaces, generic
+  constraints, modifiers, accessors/events, custom attributes at every metadata target, constants
+  and optional/ref/in/out/params parameters. The shared attribute exclusion policy and exact,
+  reasoned release exceptions are documented in [API_DECLARATIONS.md](API_DECLARATIONS.md).
+  The same check validates explicit attribute inheritance lookups against the release metadata;
+  measured Editor discovery policies have separate exact exceptions. Raw category counts remain
+  visible even when exceptions are accepted. New API declarations come from the release through
+  the stub generator, and their default state comes from the release's Editor.
+  The managed landing step runs this check after `gen-stubs`, reusing the no-stubs build, and runs
+  the API tooling tests. A cold command can exceed 30 seconds; the incremental check takes roughly
+  20 seconds on the validation machine.
+  `unbound api-defaults -p <project>` inventories matching hand-written types and compares simple
+  managed constructor literal stores without executing reference assemblies. The
+  [defaultstate probe](../tests/projects/defaultstate/README.md) records creation-time public
+  fields/properties in two independent GPU Editor runs and replays the same inventory in Unbound.
+  Its suite recipe rejects new differences and stale migration entries while printing every
+  queued discrepancy, missing/extra row and undecided coverage count. Variable and context-limited
+  observations remain explicit gaps; a clean migration gate does not assert universal parity.
   `unbound api-gaps` lists the types and members a project's assemblies (and the plugins they
   reference) use that the implementation lacks or only stubs, by call sites, with a coverage line.
 * **Hot reload**: game assemblies are loaded with modifiable-assembly support and edits are applied

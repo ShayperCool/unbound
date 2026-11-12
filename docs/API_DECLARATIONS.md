@@ -67,3 +67,22 @@ message selection have exact exceptions with their measured reasons. The
 where direct and inherited discovery produce different results, and keeps editor/drawer child
 flags independent. The attribute declaration repair removes 30 initial annotation differences,
 leaving 1,327 declaration migrations and eleven measured lookup policies.
+
+## Landing checks and default state
+
+The managed landing step runs `api-check` after stub generation and fails on any new or stale
+exception. It also runs the API tooling tests. Managed sources, compatibility profiles and changes
+to the gate itself select this step. The incremental check reuses the no-stubs build; a cold check
+can exceed the budget for an always-run check.
+
+At Q403 gate integration, module follow-ups had reduced the declaration queue to 1,321 entries:
+938 attribute, 74 parameter, 70 accessor, 68 layout, 65 interface, 87 modifier, 18 accessibility and
+one generic-constraint difference. The eleven measured lookup policies remain separate. The JSON
+report is the authoritative count for later changes.
+
+[`defaultstate`](../tests/projects/defaultstate/README.md) records the public creation-time state
+of matching implemented types and compares decidable constructor literal stores. Its suite recipe
+keeps every queued discrepancy visible, requires reasons and rejects new or stale entries.
+Factory/context failures, variable observations and truncated nested values remain explicit
+coverage gaps. New declarations come from the selected release through the stub generator; new
+defaults need release evidence and a control that can distinguish the behavior being implemented.

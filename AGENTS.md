@@ -32,6 +32,13 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 
 ## Rules of the codebase
 
+- When adding or changing a Unity API type or member, obtain its declaration from the selected
+  release's assemblies through `Unbound.ApiTools.StubGenerator`: signature, attributes and
+  `AttributeUsage`, optional parameter defaults, constants, enum values and modifiers. Take default
+  state from that release, with an Editor probe where runtime initialization determines the value.
+  Keep `unbound api-check` and the default-state probe clean. Each exception needs an exact
+  release-specific allow-list entry with a nonempty reason; queued defaults retain their raw
+  discrepancies and counts until their module is fixed.
 - Never write to a Unity project's authored files (`Assets/`, `Packages/`, `ProjectSettings/`) except
   through explicit, Unity-compatible edits. Anything Unbound produces goes to
   `<project>/Library/Unbound/` (per-project cache) or the global cache (`$XDG_CACHE_HOME/unbound`).

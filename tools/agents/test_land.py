@@ -1155,5 +1155,47 @@ class AutomaticProbeTests(unittest.TestCase):
             self.assertNotEqual(a, land.stamp_path('tree', [], False, self.root, base='base-a'))
 
 
+class ApiGateTests(unittest.TestCase):
+    def test_gate_configuration_changes_select_managed_api_checks(self):
+        for path in ['managed/UnityEngine/Core/Attributes.cs', 'crates/unbound-compat/src/lib.rs',
+                     'tools/agents/land.py', 'tools/agents/test_land.py']:
+            self.assertIsNotNone(land.STUB_INPUTS.match(path), path)
+        self.assertIsNone(land.STUB_INPUTS.match('docs/API_DECLARATIONS.md'))
+
+    def test_declaration_failures_stop_managed_gate_after_generation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cli = root/'unbound'
+            cli.write_bytes(str(root/'crates/unbound').encode())
+            log = root/'gate.log'
+            log.write_text('')
+            gate = land.Gate(root, 'base', [], False, log,
+                             environment={'UNBOUND_MANAGED_DIR': '/unrelated-runtime'})
+            with mock.patch.object(land, 'git', return_value=''), \
+                 mock.patch.object(gate, 'step', side_effect=[0, 1]) as step, \
+                 mock.patch.object(gate, 'fail', side_effect=SystemExit(5)):
+                with self.assertRaises(SystemExit):
+                    gate.stubs(cli)
+            self.assertEqual([call.args[0] for call in step.call_args_list],
+                             ['generated stubs', 'API declarations and attribute lookups'])
+            check = step.call_args_list[1]
+            self.assertIn('api-check', check.args[1])
+            self.assertNotIn('UNBOUND_MANAGED_DIR', check.kwargs['env'])
+
+    def test_successful_declaration_check_runs_tooling_controls(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cli = root/'unbound'
+            cli.write_bytes(str(root/'crates/unbound').encode())
+            gate = land.Gate(root, 'base', [], False, root/'gate.log', environment={})
+            with mock.patch.object(land, 'git', return_value=''), \
+                 mock.patch.object(gate, 'step', return_value=0) as step:
+                gate.stubs(cli)
+            self.assertEqual([call.args[0] for call in step.call_args_list],
+                             ['generated stubs', 'API declarations and attribute lookups', 'API tooling tests'])
+            self.assertIn('managed/Unbound.ApiTools.Tests/Unbound.ApiTools.Tests.csproj',
+                          step.call_args_list[-1].args[1])
+
+
 if __name__ == '__main__':
     unittest.main()

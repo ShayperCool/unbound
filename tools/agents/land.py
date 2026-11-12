@@ -19,9 +19,10 @@ its original worktree and warm build target.
 Gate:
   - the oracle guard (tools/agents/oracle_guard.py);
   - the release build, which fails on "WITHOUT compatibility stubs";
-  - when managed/ or the compatibility profile changed: `$UNBOUND gen-stubs` with the gate's own
-    build, which fails when the hand-written code does not build without stubs or when the
+  - when managed/, the compatibility profile or this gate changed: `$UNBOUND gen-stubs` with the
+    gate's own build, which fails when the hand-written code does not build without stubs or when the
     generator's output differs from the committed managed/UnityEngine/Generated/ (restored after);
+  - API declarations, attribute lookups and API tooling tests in that managed step;
   - managed unit tests, where only failures not listed in known-test-failures.txt count;
   - Rust tests of the touched crates;
   - each --probe command, which must exit 0. $UNBOUND names the built CLI and
@@ -71,8 +72,8 @@ LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 DOCS_ONLY = re.compile(r'(\.md$)|(^docs/)')
 GENERATED = 'managed/UnityEngine/Generated'
 # What the generated stubs are made from: the hand-written API and the generator (managed/), and
-# the profile's stub family and platform modules (unbound-compat).
-STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/)')
+# the profile's stub family and platform modules (unbound-compat). Gate changes exercise this step too.
+STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/|tools/agents/(?:land|test_land)\.py$)')
 STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
 CATALOG_SOURCE = (HERE/'probe_catalog.py').read_text()
@@ -511,6 +512,21 @@ class Gate:
             listing = '\n  '.join(drift.splitlines()[:20])
             die(5, f'gate failed at generated stubs: {GENERATED}/ is not what gen-stubs generates:\n  {listing}\n'
                    f'Run `$UNBOUND gen-stubs -p {STUB_PROJECT}`, commit the result, land again; full log: {self.log}')
+
+        # gen-stubs built the hand-written assembly; the incremental declaration and lookup
+        # check reuses that build.
+        check = [str(cli), 'api-check', '-p', STUB_PROJECT]
+        if LAUNCHER.is_file():
+            check = [str(LAUNCHER), '--kind', 'tool', *check]
+        if self.step('API declarations and attribute lookups', check, env=env):
+            self.fail('API declarations and attribute lookups')
+        dotnet = Path.home()/'.dotnet/dotnet'
+        tools_tests = [str(dotnet) if dotnet.is_file() else 'dotnet', 'test',
+                       'managed/Unbound.ApiTools.Tests/Unbound.ApiTools.Tests.csproj', '-c', 'Release']
+        if LAUNCHER.is_file():
+            tools_tests = [str(LAUNCHER), '--kind', 'test', *tools_tests]
+        if self.step('API tooling tests', tools_tests, env=env):
+            self.fail('API tooling tests')
 
     def managed_tests(self, target):
         dotnet = Path.home()/'.dotnet/dotnet'
