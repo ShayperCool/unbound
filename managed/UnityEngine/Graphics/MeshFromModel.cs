@@ -54,7 +54,14 @@ namespace UnityEngine
         internal void FillFromModel(JsonElement m)
         {
             Fill(m);
-            // Last, so that filling never runs against a mesh that is already unreadable.
+            AdoptReadability(m);
+        }
+
+        /// <summary>Adopts the <c>readable</c> field of a host answer (a model's mesh, a built-in
+        /// mesh of the install). Last, so that filling never runs against a mesh that is already
+        /// unreadable.</summary>
+        internal void AdoptReadability(JsonElement m)
+        {
             if (ModelReadable(m) is bool readable) m_IsReadable = readable;
         }
 

@@ -324,7 +324,8 @@ namespace UnityEngine.Tests
         static string TextureAnswer(string name, int width, int height, int mips) =>
             new JsonObject
             {
-                ["name"] = name, ["width"] = width, ["height"] = height, ["mipCount"] = mips,
+                // The five textures are stored as RGBA32 (TextureFormat 4).
+                ["name"] = name, ["width"] = width, ["height"] = height, ["format"] = 4, ["mipCount"] = mips,
                 ["dimension"] = 2, ["rgbm"] = false, ["linear"] = false,
             }.ToJsonString();
 
@@ -716,7 +717,7 @@ namespace UnityEngine.Tests
         /// <summary>Red on 8ece7bb2 (assertion: a drawn sprite is returned, its texture taken at
         /// fileId - 1 whatever the record says). The record's texture reference decides: a
         /// reference outside the profile's table, to an object of another class, or to a
-        /// texture not read from the install (which would be drawn) is an error.</summary>
+        /// texture whose own record cannot be read is an error.</summary>
         [Theory]
         [InlineData(99999L, "is not a built-in object of the release profile")]
         [InlineData(10905L, "is of class 213, not a Texture2D (28)")]
@@ -795,22 +796,21 @@ namespace UnityEngine.Tests
             NothingMadeFor(10905);
         }
 
-        // ------------------------------------------------------------------ preservation
+        // ------------------------------------------------------------------ every built-in sprite
 
-        /// <summary>Preservation control, not red on 8ece7bb2: a built-in UI sprite outside the
-        /// five keeps its path (no record or texture is asked for; the drawn 32x32 texture at
-        /// pixels per unit 100 with a 10 pixel border, as before).</summary>
+        /// <summary>A built-in UI sprite outside the five (InputFieldBackground) is read from its
+        /// own record as well (tests/projects/builtinresources: pixels per unit 200, not a drawn
+        /// stand-in): without an answer for its record it is an error and nothing is drawn.</summary>
         [Fact]
-        public void TheOtherBuiltinSpritesKeepTheirPath()
+        public void EveryBuiltinSpriteIsReadFromItsRecord()
         {
-            var sprite = BuiltinShaders.Resolve(Extra, 10911) as Sprite;
-            Assert.NotNull(sprite);
-            Assert.Equal("InputFieldBackground", sprite.name);
-            Assert.Equal(new Rect(0f, 0f, 32f, 32f), sprite.rect);
-            Assert.Equal(100f, sprite.pixelsPerUnit);
-            Assert.Equal(new Vector4(10f, 10f, 10f, 10f), sprite.border);
-            Assert.Same(BuiltinShaders.Resolve(Extra, 10910), sprite.texture);
-            Assert.DoesNotContain(s_Calls, c => c.StartsWith("editor-resource", StringComparison.Ordinal) || c.StartsWith("load-texture-object", StringComparison.Ordinal));
+            Object sprite = null;
+            var errors = Errors(() => sprite = BuiltinShaders.Resolve(Extra, 10911));
+            Assert.Null(sprite);
+            Assert.Equal(1, Asked("editor-resource", 10911));
+            Assert.Contains(errors, e => e.Contains("built-in Sprite 'InputFieldBackground' ("));
+            NothingMadeFor(10911);
+            NothingMadeFor(10910);
         }
     }
 }

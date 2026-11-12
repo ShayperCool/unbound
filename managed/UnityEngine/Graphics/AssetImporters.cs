@@ -263,16 +263,18 @@ namespace Unbound.Runtime
         internal static readonly Dictionary<long, int> DefaultClasses = new Dictionary<long, int>();
         static readonly Dictionary<(string, long), Object> s_Objects = new Dictionary<(string, long), Object>();
 
-        /// <summary>The built-in file an object loaded from (its GUID), if it is a built-in one.</summary>
-        internal static bool TryGetGuid(Object obj, out string guid)
+        /// <summary>The built-in file an object loaded from (its GUID) and its file id there, if it
+        /// is a built-in one.</summary>
+        internal static bool TryGetLocation(Object obj, out string guid, out long fileId)
         {
             foreach (var entry in s_Objects)
             {
                 if (!ReferenceEquals(entry.Value, obj)) continue;
-                guid = entry.Key.Item1;
+                (guid, fileId) = entry.Key;
                 return true;
             }
             guid = null;
+            fileId = 0;
             return false;
         }
 
@@ -344,7 +346,9 @@ namespace Unbound.Runtime
                     Array.Copy(indices, first, part, 0, length);
                     mesh.SetIndices(part, (MeshTopology)s[3].GetInt32(), sub++, true, baseVertex);
                 }
-                // The Editor lets scripts read the built-in meshes.
+                // As stored: the primitives are readable, the icosphere, icosahedron and pyramid
+                // are not (tests/projects/builtinresources).
+                mesh.AdoptReadability(root);
                 return mesh;
             }
             catch (Exception e)
@@ -413,40 +417,43 @@ namespace Unbound.Runtime
                         if (obj != null) break;
                         // Read before the material exists: one that cannot be read is not made.
                         if (!TryStoredRenderQueue(guid, fileId, name, out var rawQueue)) return null;
-                        var material = new Material(Shader.Find(MaterialShader(name)) ?? BuiltinShaders.ByName("Standard")) { name = name };
+                        var shader = BuiltinSpriteData.MaterialShader(guid, fileId, name);
+                        if (shader == null) return null;
+                        var material = new Material(shader) { name = name };
                         material.m_CustomRenderQueue = rawQueue;
                         obj = material;
                         break;
                     }
                     case 28:
-                        // The built-in uGUI sprites' textures: the install's own, never drawn.
-                        if (BuiltinSpriteData.Reads(guid, name))
-                        {
-                            obj = BuiltinSpriteData.LoadTexture(guid, fileId, name);
-                            break;
-                        }
-                        obj = BuiltinFonts.Get(name) ?? (name == "Default-Checker-Gray" ? Texture2D.FromSerialized(guid, fileId) : null) ?? BuiltinTexture(name);
+                        // The font's texture is the dynamic font's own; every other built-in
+                        // texture is the install's (an error names one that cannot be read).
+                        obj = BuiltinFonts.Get(name) ?? BuiltinSpriteData.LoadTexture(guid, fileId, name);
+                        if (obj == null) return null;
                         break;
                     case 43:
                         // The install's own mesh, else a generated primitive.
                         obj = SerializedMesh(guid, fileId) ?? BuiltinMeshes.Create(name);
                         if (obj == null) goto default;
                         break;
+                    case 89:
+                        obj = Cubemap.FromSerialized(guid, fileId);
+                        if (obj == null) return null;
+                        break;
+                    case EngineTypes.MonoScriptId:
+                        // The engine's script objects: no text, the engine class they name.
+                        obj = new UnityEditor.MonoScript(Array.Empty<byte>(), name, guid) { m_FileId = fileId };
+                        break;
                     case 213:
-                    {
                         // The built-in uGUI sprites: the install's records, with their own texture
                         // reference, rect, pivot, pixels per unit, border and mesh.
-                        if (BuiltinSpriteData.Reads(guid, name))
-                        {
-                            obj = BuiltinSpriteData.LoadSprite(guid, fileId, name);
-                            break;
-                        }
-                        var texture = (Texture2D)Get(guid, fileId - 1, name);
-                        const float border = 10f;
-                        obj = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(border, border, border, border));
-                        obj.m_Name = name;
+                        obj = BuiltinSpriteData.LoadSprite(guid, fileId, name);
+                        if (obj == null) return null;
                         break;
-                    }
+                    case 114 when guid == BuiltinShaders.DefaultGuid:
+                        // The one MonoBehaviour of `unity default resources`: the GameSkin, which
+                        // GUI.skin starts as.
+                        obj = BuiltinGuiSkin.Skin;
+                        break;
                     default:
                         Debug.LogWarning($"Unbound: built-in resource '{name}' (class {classId}) is not available.");
                         return null;
@@ -515,48 +522,5 @@ namespace Unbound.Runtime
         }
 
         const long DefaultCheckerGrayFileId = 10309;
-
-        static string MaterialShader(string material)
-        {
-            switch (material)
-            {
-                case "Sprites-Default": return "Sprites/Default";
-                case "Sprites-Mask": return "Sprites/Mask";
-                case "Default-Particle": return "Legacy Shaders/Particles/Alpha Blended Premultiply";
-                case "Default-ParticleSystem": return "Particles/Standard Unlit";
-                case "Default-Line": return "Legacy Shaders/Particles/Alpha Blended Premultiply";
-                case "Default-Diffuse": return "Legacy Shaders/Diffuse";
-                case "Default-Skybox": return "Skybox/Procedural";
-                case "Font Material": return "GUI/Text Shader";
-                case "Default-Terrain-Standard": return "Nature/Terrain/Standard";
-                case "Default-Terrain-Diffuse": return "Nature/Terrain/Diffuse";
-                case "Default-Terrain-Specular": return "Nature/Terrain/Specular";
-                default: return "Standard";
-            }
-        }
-
-        /// <summary>The other built-in UI textures, drawn here: rounded rectangles. (UISprite,
-        /// Background, Knob, Checkmark and DropdownArrow are the install's own: BuiltinSpriteData.)</summary>
-        static Texture2D BuiltinTexture(string name)
-        {
-            const int size = 32;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = name, filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-            var pixels = new Color32[size * size];
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float cx = x + 0.5f - size / 2f, cy = y + 0.5f - size / 2f;
-                    // A rounded rectangle with a 4 pixel radius.
-                    float dx = Mathf.Max(0f, Mathf.Abs(cx) - (size / 2f - 4f));
-                    float dy = Mathf.Max(0f, Mathf.Abs(cy) - (size / 2f - 4f));
-                    float a = Mathf.Clamp01(4f - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
-                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
-                }
-            }
-            texture.SetPixels32(pixels);
-            texture.Apply(false, false);
-            return texture;
-        }
     }
 }

@@ -39,7 +39,9 @@ namespace UnityEngine.Tests
 
         /// <summary>The stand-in host's answers by (guid, fileId): status 0 with JSON, else an error.</summary>
         static readonly Dictionary<(string, long), (int Status, string Answer)> s_Answers = new Dictionary<(string, long), (int, string)>();
-        /// <summary>Every native call in order: "method guid fileId" for queue calls, else the method.</summary>
+        /// <summary>The stand-in host's material records (`editor-resource`) by (guid, fileId).</summary>
+        static readonly Dictionary<(string, long), string> s_Records = new Dictionary<(string, long), string>();
+        /// <summary>Every native call in order: "method guid fileId" for queue and record calls, else the method.</summary>
         static readonly List<string> s_Calls = new List<string>();
 
         readonly object m_PreviousApi = Api.GetValue(null), m_PreviousReady = Ready.GetValue(null);
@@ -63,6 +65,7 @@ namespace UnityEngine.Tests
             m_BuiltinShaders = Keys(BuiltinShaderCache);
             m_Replacements = Keys(Replacements);
             s_Answers.Clear();
+            s_Records.Clear();
             s_Calls.Clear();
             ShaderDeclarations.ResetForTests();
             ShaderDeclarations.s_FrameForTests = 1;
@@ -113,6 +116,7 @@ namespace UnityEngine.Tests
             Api.SetValue(null, m_PreviousApi);
             Ready.SetValue(null, m_PreviousReady);
             s_Answers.Clear();
+            s_Records.Clear();
             s_Calls.Clear();
         }
 
@@ -134,7 +138,16 @@ namespace UnityEngine.Tests
             var name = Encoding.UTF8.GetString(method, methodLength);
             try
             {
-                if (name == "builtin-material-queue")
+                if (name == "editor-resource")
+                {
+                    // The material's record: its name and the shader it references (in its own file).
+                    using var input = JsonDocument.Parse(Encoding.UTF8.GetString(request, requestLength));
+                    var guid = input.RootElement.GetProperty("guid").GetString();
+                    long fileId = input.RootElement.GetProperty("fileId").GetInt64();
+                    s_Calls.Add(name + " " + guid + " " + fileId);
+                    (status, result) = s_Records.TryGetValue((guid, fileId), out var record) ? (0, record) : (1, "no object " + fileId);
+                }
+                else if (name == "builtin-material-queue")
                 {
                     using var input = JsonDocument.Parse(Encoding.UTF8.GetString(request, requestLength));
                     var guid = input.RootElement.GetProperty("guid").GetString();
@@ -181,13 +194,14 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A built-in Material in the profile's table whose installed object the host
-        /// answers with <paramref name="answer"/> (status 0) or an error, and the built-in shader
-        /// its name is made with.</summary>
+        /// answers with <paramref name="answer"/> (status 0) or an error, and whose record names
+        /// the built-in shader <paramref name="shaderFileId"/> of its own file.</summary>
         void Builtin(string guid, long fileId, string name, string shader, long shaderFileId, int status, string answer)
         {
             Register(guid, fileId, name, 21);
-            Register(Extra, shaderFileId, shader, 48);
+            Register(guid, shaderFileId, shader, 48);
             s_Answers[(guid, fileId)] = (status, answer);
+            s_Records[(guid, fileId)] = "{\"classId\":21,\"fields\":{\"m_Name\":\"" + name + "\",\"m_Shader\":{\"fileID\":" + shaderFileId + ",\"guid\":\"" + guid + "\"}}}";
         }
 
         void Builtin(string guid, long fileId, string name, string shader, long shaderFileId, int stored) =>
@@ -253,8 +267,8 @@ namespace UnityEngine.Tests
         /// <summary>Red on 1f41393e (assertion): no `builtin-material-queue` call is made (Asked 0)
         /// and the override rows come out -1 instead of the stored 3000 / 2000. Every row is the
         /// 6000.0.71f1 install's class-21 object (Native asset-state observation:
-        /// builtin-material-state.json), with the shader its name is made with (the stored shader
-        /// is not read here; SpatialMapping and FrameDebugger names are made with Standard).</summary>
+        /// builtin-material-state.json), with the shader its record references (`m_Shader`, as
+        /// the Editor answers them: tests/projects/builtinresources).</summary>
         [Theory]
         [InlineData(Extra, 10301L, "Default-Particle", "Legacy Shaders/Particles/Alpha Blended Premultiply", 207L, -1)]
         [InlineData(Extra, 10302L, "Default-Diffuse", "Legacy Shaders/Diffuse", 7L, -1)]
@@ -267,9 +281,9 @@ namespace UnityEngine.Tests
         [InlineData(Extra, 10652L, "Default-Terrain-Standard", "Nature/Terrain/Standard", 10623L, -1)]
         [InlineData(Extra, 10754L, "Sprites-Default", "Sprites/Default", 10753L, -1)]
         [InlineData(Extra, 10758L, "Sprites-Mask", "Sprites/Mask", 10757L, -1)]
-        [InlineData(Extra, 15302L, "SpatialMappingOcclusion", "Standard", 46L, 2000)]
-        [InlineData(Extra, 15303L, "SpatialMappingWireframe", "Standard", 46L, 2000)]
-        [InlineData(Default, 10756L, "FrameDebuggerRenderTargetDisplay", "Standard", 46L, -1)]
+        [InlineData(Extra, 15302L, "SpatialMappingOcclusion", "VR/SpatialMapping/Occlusion", 15300L, 2000)]
+        [InlineData(Extra, 15303L, "SpatialMappingWireframe", "VR/SpatialMapping/Wireframe", 15301L, 2000)]
+        [InlineData(Default, 10756L, "FrameDebuggerRenderTargetDisplay", "Hidden/FrameDebuggerRenderTargetDisplay", 10755L, -1)]
         public void InstalledBuiltinMaterialsAreMadeWithTheirStoredRawQueue(string guid, long fileId, string name, string shader, long shaderFileId, int stored)
         {
             Builtin(guid, fileId, name, shader, shaderFileId, stored);

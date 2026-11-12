@@ -253,6 +253,7 @@ namespace UnityEngine
                 texture.m_Name = root.GetProperty("name").GetString() ?? "";
                 texture.m_Width = root.GetProperty("width").GetInt32();
                 texture.m_Height = root.GetProperty("height").GetInt32();
+                texture.m_Format = (TextureFormat)root.GetProperty("format").GetInt32();
                 texture.m_MipCount = Math.Max(1, root.GetProperty("mipCount").GetInt32());
                 texture.m_GpuMipCount = texture.m_MipCount;
                 texture.m_Linear = root.TryGetProperty("linear", out var linear) && linear.GetBoolean();

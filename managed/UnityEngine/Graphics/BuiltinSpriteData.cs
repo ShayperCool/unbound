@@ -8,8 +8,8 @@ using Object = UnityEngine.Object;
 namespace Unbound.Runtime
 {
     /// <summary>
-    /// The built-in uGUI sprites of `unity_builtin_extra` (UISprite, Background, Knob, Checkmark,
-    /// DropdownArrow) and their textures, read from the install's own records by the host: the
+    /// The built-in sprites of `unity_builtin_extra` (the uGUI ones) and the install's built-in
+    /// textures, read from the install's own records by the host: the
     /// Sprite record by `{guid, fileId}` through the `editor-resource` call, its texture by the
     /// record's texture reference through the serialized Texture2D loader. Nothing is drawn or
     /// assumed here: a record the host cannot answer, an object of another class, or record
@@ -18,21 +18,14 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class BuiltinSpriteData
     {
-        /// <summary>The built-in sprites (and their textures, which carry the same names) read here.</summary>
-        static readonly string[] s_Names = { "UISprite", "Background", "Knob", "Checkmark", "DropdownArrow" };
-
         const int SpriteClassId = 213;
         const int Texture2DClassId = 28;
-
-        /// <summary>Whether the built-in object `name` of the file `guid` (lower case) is one of
-        /// the sprites, or sprite textures, read from the install.</summary>
-        internal static bool Reads(string guid, string name) =>
-            guid == BuiltinShaders.ExtraGuid && Array.IndexOf(s_Names, name) >= 0;
+        const int MaterialClassId = 21;
 
         static string Identity(string type, string guid, long fileId, string name) =>
             $"built-in {type} '{name}' ({{fileID: {fileId}, guid: {guid}}})";
 
-        /// <summary>The installed texture `fileId` of `unity_builtin_extra`, through the serialized
+        /// <summary>The installed texture `fileId` of a built-in resource file, through the serialized
         /// Texture2D loader, with the sampler of its record (`m_TextureSettings`: filter mode,
         /// anisotropic level, mip bias, wrap modes). Null, with an error naming it, when its record
         /// or its pixels cannot be read or it is not the texture the profile's table names.</summary>
@@ -129,6 +122,34 @@ namespace Unbound.Runtime
             return Field(root, "fields").Clone();
         }
 
+        /// <summary>The shader the installed Material `fileId` names (its record's `m_Shader`, a
+        /// built-in shader). Null, with an error naming the material, when the record cannot be
+        /// read or names no built-in shader.</summary>
+        internal static Shader MaterialShader(string guid, long fileId, string name)
+        {
+            var identity = Identity("Material", guid, fileId, name);
+            if (!Native.IsReady)
+            {
+                Debug.LogError($"Unbound: {identity} is not available: it is read from the install's resources by the host, which is not connected.");
+                return null;
+            }
+            try
+            {
+                var fields = RecordFields(guid, fileId, MaterialClassId, "Material");
+                var recordName = Str(fields, "m_Name");
+                if (recordName != name) throw new FormatException($"the install's object {fileId} is the material '{recordName}'");
+                if (!Reference(Field(fields, "m_Shader"), out var shaderGuid, out var shaderFileId))
+                    throw new FormatException("the material has no shader");
+                if (BuiltinShaders.Resolve(shaderGuid, shaderFileId) is Shader shader) return shader;
+                throw new FormatException($"its shader {{fileID: {shaderFileId}, guid: {shaderGuid}}} is not a built-in shader");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Unbound: {identity} is not available: its record could not be read ({e.Message}).");
+                return null;
+            }
+        }
+
         /// <summary>The installed Sprite `fileId` of `unity_builtin_extra` from its record: its
         /// texture (the record's reference, shared with every other reference to it), rect,
         /// pivot, pixels per unit, border, mesh, texture rect and physics shapes. Null, with an
@@ -193,11 +214,6 @@ namespace Unbound.Runtime
             if (classId != Texture2DClassId)
             {
                 Debug.LogError($"Unbound: {identity} is not available: its texture {{fileID: {fileId}, guid: {guid}}} ('{textureName}') is of class {classId}, not a Texture2D ({Texture2DClassId}).");
-                return null;
-            }
-            if (!Reads(guid, textureName))
-            {
-                Debug.LogError($"Unbound: {identity} is not available: its texture '{textureName}' ({{fileID: {fileId}, guid: {guid}}}) is not one read from the install.");
                 return null;
             }
             if (BuiltinObjects.Get(guid, fileId, textureName) is Texture2D texture) return texture;
