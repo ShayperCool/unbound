@@ -16,6 +16,18 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Mesh instances under an instance multiplier (NativeApi 65)
+
+Opcode 30 `MeshInstance` carries `u32 index, u32 count`: the call's instance count follows the
+index. A mesh instance's draw keeps one instance at its index whatever the multiplier; after
+the draw of instance `count - 1` the renderer adds, under a multiplier m above one, the draws
+of IDs `count` to `count · m − 1` with zero matrices and zero instanced properties (scalar
+uniforms the variant declares instanced and those the draw gives as arrays), as the Unity
+6000.0.71f1 Editor draws a mesh-instancing call's multiplied instances where no earlier
+draw wrote their instance data (tests/projects/cmdbuffers `device.multiplier.placed.*`,
+`device.multiplier.camera.*`). Standalone instancing whose multiplied IDs pass a native batch
+does not add them (warned, unmeasured).
+
 ### BatchRendererGroup draws (NativeApi 60)
 
 `DotsDraw` (opcode 36: `u32 header[8]`, `u32 window_offset`, `u32 window_size`, `u32 count`,
@@ -332,7 +344,7 @@ before and after it, as on Unity's render thread) and a read back.
 27 DispatchIndirect u64 args, u32 offset, then Dispatch's fields   // group counts: 3 u32s of args
 28 DrawIndices  u64 buffer, u8 index_size (2; 4 from protocol 10), u32 first, u32 count   // next Draw's indices, base vertex 0 or the indirect arguments' (protocol 8)
 29 CopyDepth    u64 source, u64 destination       // protocol 9
-30 MeshInstance u32 index                         // next Draw is this instance of a mesh-instancing call (protocols 11, 12)
+30 MeshInstance u32 index, u32 count            // next Draw is this instance of a mesh-instancing call of count instances (protocols 11, 12; count NativeApi 65)
 34 Plugin       u8 kind, u64 callback, fields    // a native plugin's callback (protocol 15)
 35 ScreenStandIn u64 texture                     // the screen's stand-in, 0 none (NativeApi 50)
 36 DotsDraw     u32 header[8], u32 window_offset, u32 window_size, u32 count, u32 visible[count]
