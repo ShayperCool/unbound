@@ -186,7 +186,17 @@ namespace Unbound.Runtime
                 parameters[i] = s_ZoneParameters[i].Observe(parameters[i]);
         }
 
-        internal static void Remove(AudioReverbZone zone) => s_Zones.Remove(zone);
+        internal static void Remove(AudioReverbZone zone)
+        {
+            if (s_Zones.Remove(zone) && Compat.AudioZoneStartupMeasured)
+            {
+                // Removing the last active zone submits an absent-zone request immediately,
+                // even when another zone is created before the next audio frame.
+                float* parameters = stackalloc float[14];
+                AudioReverbZone.Blend(s_Zones, s_HearingPosition, parameters);
+                ApplyZoneParameters(parameters);
+            }
+        }
 
         internal static void Forget(AudioReverbZone zone)
         {

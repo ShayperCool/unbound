@@ -128,6 +128,21 @@ namespace UnityEngine.Tests
             Assert.Equal(measured ? 100f : 0f, m_Backend.LastFrame.Zone.Reverb[10]);
         }
 
+        [Fact]
+        public void ImmediateZoneReplacementObservesTheAbsentRequestBetweenReturns()
+        {
+            var first = Zone(0);
+            AudioSystem.Update();
+            Assert.Equal(0.02f, m_Backend.LastFrame.Zone.Reverb[6]);
+            Assert.Equal(0.04f, m_Backend.LastFrame.Zone.Reverb[8]);
+            Object.DestroyImmediate(first.gameObject);
+            var replacement = Zone(0);
+            AudioSystem.Update();
+            Assert.Equal(0.007f, m_Backend.LastFrame.Zone.Reverb[6]);
+            Assert.Equal(0.011f, m_Backend.LastFrame.Zone.Reverb[8]);
+            Assert.Equal(Blend(Vector3.zero, replacement)[7], m_Backend.LastFrame.Zone.Reverb[7]);
+        }
+
         sealed class Errors : ILogHandler
         {
             internal readonly List<string> Messages = new List<string>();

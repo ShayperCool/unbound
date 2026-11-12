@@ -20,7 +20,10 @@ These are measured processing rules for this release and context.
 
 The shared return retains its initial processing values until a parameter request
 changes, including when the listener starts outside and a return is recreated.
-Requests persist across return lifetimes. The engine uses the same rule for every
+Requests persist across return lifetimes. Removing a zone updates the remaining
+zone blend immediately, even if replacement precedes the next audio frame. The
+existing reverb controls also exercise that replacement context. The engine uses
+the same rule for every
 zone parameter, selected by `Compat.AudioZoneStartupMeasured`. The existing
 surround compatibility profile selects the independent post-script return and
 unrouted bypass paths. Other releases retain their previous unmeasured paths.
