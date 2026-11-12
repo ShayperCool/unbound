@@ -590,10 +590,13 @@ public static class RealtimeGISetup
                 lit.Add(Custom(name, fold, new Vector3(-2.7f, 2.9f + 0.6f * i, 1.2f), Vector3.zero, Vector3.one, white, v, n, uv, t));
                 limits[fold] = (0.5f, 89f, i == 1);
             }
-            // A Max Distance of zero: the step's section again, a chart a face.
+            // A Max Distance of zero: the step's section again.
             var section = new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0.3f), new Vector2(0.4f, 0.3f), new Vector2(0.4f, 0.7f), new Vector2(0f, 0.7f) };
             lit.Add(Solid(name, "StepNoDistance", new Vector3(1.7f, 0.01f, -2.4f), Vector3.zero, white, new Vector3(0.2f, 0.15f, 0.45f), false, Prism(section, 0.9f)));
             limits["StepNoDistance"] = (0f, 89f, false);
+            // And a Max Angle of zero.
+            lit.Add(Solid(name, "StepNoAngle", new Vector3(1.7f, 0.01f, -1.2f), Vector3.zero, white, new Vector3(0.2f, 0.15f, 0.45f), false, Prism(section, 0.8f)));
+            limits["StepNoAngle"] = (0.5f, 0f, false);
             // A box with a triangle of no area of its own a metre away: three points on a line,
             // and three at one point.
             for (var i = 0; i < 2; i++)
