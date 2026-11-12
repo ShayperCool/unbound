@@ -761,6 +761,76 @@ fn front_facing(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
+/// Declares the integer vectors that naga's SPIR-V reader looks up for the texel coordinates of
+/// arrayed images (`vec2<i32>` for a `Texture2DArray`, `vec3` for a cube array) when it splits
+/// the array layer off an integer coordinate: it declares only the float ones itself and panics
+/// when a program builds its `Load` coordinate from scalars, so that no integer vector of that
+/// size exists (`_Array.Load(int4(x, 0, (int)_Layer, 0))`). Unused type declarations change no
+/// emitted code; a module without arrayed images is returned as it is.
+fn image_coordinate_vectors(words: &[u32]) -> Result<Vec<u32>> {
+    const OP_TYPE_INT: u32 = 21;
+    const OP_TYPE_VECTOR: u32 = 23;
+    const OP_TYPE_IMAGE: u32 = 25;
+    const DIM_2D: u32 = 1;
+    const DIM_CUBE: u32 = 3;
+    let mut sizes = Vec::new();
+    let mut integers = Vec::new();
+    let mut vectors = std::collections::HashSet::new();
+    let mut at = 5;
+    while at < words.len() {
+        let count = (words[at] >> 16) as usize;
+        if count == 0 || at + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        let i = &words[at..at + count];
+        match i[0] & 0xffff {
+            OP_TYPE_INT if count == 4 && i[2] == 32 => integers.push(i[1]),
+            OP_TYPE_VECTOR if count == 4 => {
+                vectors.insert((i[2], i[3]));
+            }
+            OP_TYPE_IMAGE if count >= 9 && i[5] != 0 => {
+                // 1D arrays split a scalar off; 3D images are never arrayed.
+                let size = match i[3] {
+                    DIM_2D => 2,
+                    DIM_CUBE => 3,
+                    _ => 0,
+                };
+                if size != 0 && !sizes.contains(&size) {
+                    sizes.push(size);
+                }
+            }
+            _ => {}
+        }
+        at += count;
+    }
+    let missing: Vec<(u32, u32)> = integers
+        .iter()
+        .flat_map(|&int| sizes.iter().map(move |&size| (int, size)))
+        .filter(|pair| !vectors.contains(pair))
+        .collect();
+    if missing.is_empty() {
+        return Ok(words.to_vec());
+    }
+    let mut bound = words[3];
+    let mut out = Vec::with_capacity(words.len() + 4 * missing.len());
+    out.extend_from_slice(&words[..5]);
+    let mut at = 5;
+    while at < words.len() {
+        let count = (words[at] >> 16) as usize;
+        let i = &words[at..at + count];
+        out.extend_from_slice(i);
+        if i[0] & 0xffff == OP_TYPE_INT {
+            for &(_, size) in missing.iter().filter(|(int, _)| *int == i[1]) {
+                out.extend([(4 << 16) | OP_TYPE_VECTOR, bound, i[1], size]);
+                bound += 1;
+            }
+        }
+        at += count;
+    }
+    out[3] = bound;
+    Ok(out)
+}
+
 /// HLSL StructuredBuffer<T3> elements occupy three scalars. WGSL array<vec3<T>>
 /// instead advances by four. Represent these runtime-array elements as scalar structs and
 /// reconstruct vectors on loads, leaving arithmetic and constant component accesses intact.
@@ -948,7 +1018,7 @@ impl ClipSpace {
 }
 
 pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
-    let words = pack_storage_vectors(words)?;
+    let words = image_coordinate_vectors(&pack_storage_vectors(words)?)?;
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     let options = naga::front::spv::Options {
         adjust_coordinate_space: clip == ClipSpace::OpenGl,
@@ -2784,6 +2854,49 @@ pub(crate) fn without_depth_output(wgsl: &str) -> Result<Option<(String, String)
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fragment_spirv(source: &str) -> Vec<u32> {
+        let compiler = shaderc::Compiler::new().unwrap();
+        let mut o = shaderc::CompileOptions::new().unwrap();
+        o.set_source_language(shaderc::SourceLanguage::HLSL);
+        compiler
+            .compile_into_spirv(source, shaderc::ShaderKind::Fragment, "t", "frag", Some(&o))
+            .unwrap()
+            .as_binary()
+            .to_vec()
+    }
+
+    #[test]
+    fn integer_coordinate_vectors_are_declared_once_for_arrayed_images_only() {
+        let count = |words: &[u32], size: u32| {
+            let mut n = 0;
+            let mut at = 5;
+            while at < words.len() {
+                let len = (words[at] >> 16) as usize;
+                if words[at] & 0xffff == 23 && words[at + 3] == size {
+                    n += 1;
+                }
+                at += len;
+            }
+            n
+        };
+        // The layer of a cube array and of a 2D array, from scalars only.
+        let arrays = fragment_spirv(
+            "Texture2DArray<int4> A; TextureCubeArray C; SamplerState s; int L;\n\
+             float4 frag() : SV_Target { return float4(A.Load(int4(1, 2, L, 0))) + C.SampleLevel(s, float4(1, 0, 0, L), 0); }",
+        );
+        let declared = image_coordinate_vectors(&arrays).unwrap();
+        assert!(declared.len() > arrays.len());
+        // Declared once: a second pass adds nothing.
+        assert_eq!(image_coordinate_vectors(&declared).unwrap(), declared);
+        assert!(count(&declared, 2) > count(&arrays, 2));
+        parse(&arrays, ClipSpace::Renderer).unwrap();
+        // Without an arrayed image the module is unchanged.
+        let plain = fragment_spirv(
+            "Texture2D<int4> T; int L;\nfloat4 frag() : SV_Target { return float4(T.Load(int3(1, L, 0))); }",
+        );
+        assert_eq!(image_coordinate_vectors(&plain).unwrap(), plain);
+    }
 
     fn layout(blocks: &[(&str, u32)]) -> BlockLayout {
         binding_layout(blocks.iter().map(|(n, s)| (n.to_string(), *s)).collect())

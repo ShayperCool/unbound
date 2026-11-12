@@ -2189,6 +2189,53 @@ float4 frag() : SV_Target { return 1; }
         assert!(reads(&mut compiler, attribute));
     }
 
+    /// `Texture2DArray.Load` with a coordinate built from scalars (the layer from a material
+    /// float) compiles: the integer coordinate types the SPIR-V reader needs to split the layer
+    /// off are declared (it panicked before); the layer and mip reach `textureLoad`.
+    #[test]
+    fn array_loads_with_coordinates_built_from_scalars_compile() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2DArray<float4> _ArrayTex;
+Texture2DArray<uint4> _UIntArray;
+float _Layer;
+uint _Mip;
+struct v2f { float4 pos : SV_POSITION; };
+v2f vert(float4 v : POSITION) { v2f o; o.pos = v; return o; }
+float4 frag(v2f i) : SV_Target
+{
+    uint4 u = _UIntArray.Load(uint4((uint)i.pos.x, 0u, 3u, _Mip));
+    return _ArrayTex.Load(int4((int)i.pos.x, 0, (int)_Layer, 0)) + float4(u);
+}
+"#;
+        for device in [
+            unbound_compat::GraphicsDevice::OpenGLCore,
+            unbound_compat::GraphicsDevice::Vulkan,
+        ] {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            let compiled = compiler
+                .compile(&program(source, false), &[], false)
+                .unwrap();
+            let loads: Vec<&str> = compiled
+                .fragment
+                .lines()
+                .filter(|l| l.contains("textureLoad("))
+                .collect();
+            assert_eq!(loads.len(), 2, "{}", compiled.fragment);
+            assert!(
+                loads.iter().any(|l| l.contains("_ArrayTex"))
+                    && loads.iter().any(|l| l.contains("_UIntArray")),
+                "{}",
+                compiled.fragment
+            );
+        }
+    }
+
     #[test]
     fn texture_slots_record_their_texel_type() {
         // Shader cache 15: float, integer and depth declarations give the slot its texel type;
