@@ -69,6 +69,7 @@ namespace Unbound.Runtime
 
         static readonly List<DataInstance> s_Data = new List<DataInstance>();
         static readonly List<LinkInstance> s_Links = new List<LinkInstance>();
+        static readonly Dictionary<int, Vector3> s_LinkUp = new Dictionary<int, Vector3>();
         static readonly Dictionary<int, Surface> s_Surfaces = new Dictionary<int, Surface>();
         static int s_NextId = 1;
         static bool s_Dirty;
@@ -84,6 +85,15 @@ namespace Unbound.Runtime
         internal static int PathStaleVersion;
 
         internal static void MarkPathsStale() => PathStaleVersion++;
+
+        /// <summary>The current NavMesh or link's up axis, cached when the world changes.</summary>
+        internal static Vector3 UpAxis(Surface surface, long polyRef, int linkId)
+        {
+            if (linkId != 0 && s_LinkUp.TryGetValue(linkId, out var linkUp)) return linkUp;
+            return surface != null && polyRef != 0
+                && surface.DataOfTile.TryGetValue(DtDetour.DecodePolyIdTile(polyRef), out var data)
+                ? data.Rotation * Vector3.up : Vector3.up;
+        }
 
         /// <summary>The id of the data instance a polygon of the surface came from; 0 for none.</summary>
         internal static int DataOfPoly(Surface surface, long polyRef) =>
@@ -205,6 +215,8 @@ namespace Unbound.Runtime
         {
             if (!s_Dirty) return;
             s_Dirty = false;
+            s_LinkUp.Clear();
+            foreach (var link in s_Links) s_LinkUp[link.Id] = link.Rotation * Vector3.up;
             Version++;
             s_Surfaces.Clear();
             HasHeightMeshes = false;

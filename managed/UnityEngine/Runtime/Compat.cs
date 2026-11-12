@@ -19,6 +19,11 @@ namespace Unbound.Runtime
         /// point insertion and input handling.</summary>
         internal static bool NavMeshPredictionBoundsMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Local heading, the movement threshold and up-axis alignment, measured by
+        /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
+        /// unmeasured quaternion interpolation.</summary>
+        internal static bool NavMeshOrientationMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by
         /// tests/projects/quaternioneuler on 6000.0.71f1. Other releases retain their unmeasured
         /// single-precision arithmetic.</summary>

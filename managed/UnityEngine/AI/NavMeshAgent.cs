@@ -1634,6 +1634,7 @@ namespace Unbound.Runtime
                 // An agent that moved stands there now; one that did not keeps its transform until
                 // its next early update (measured).
                 if (agent.updatePosition && !agent.m_NextPosition.Equals(previous)) WriteTransform(agent);
+                if (Compat.NavMeshOrientationMeasured && agent.updateUpAxis) AlignUpAxis(agent);
                 if (agent.updateRotation) Rotate(agent, dt);
             }
         }
@@ -1857,6 +1858,11 @@ namespace Unbound.Runtime
             // (Unity 6000.0.71f1, tests/projects/navlinks startonlink and waitrebuild).
             else if (ag.animation.active) next = ag.vel;
             else next = ag.nvel;
+            if (Compat.NavMeshOrientationMeasured)
+            {
+                RotateLocalHeading(agent, NavMesh.V(next), dt);
+                return;
+            }
             var heading = new Vector3(next.X, 0f, next.Z);
             float speed = heading.magnitude;
             if (speed < 1e-3f) return;
@@ -1865,6 +1871,43 @@ namespace Unbound.Runtime
             float left = QuaternionMath.Angle(rotation, target);
             float step = Mathf.Min(agent.angularSpeed * dt, (TurnGain + speed) * left * dt);
             agent.transform.rotation = QuaternionMath.RotateTowards(rotation, target, step);
+        }
+
+        // Minimum projected forward length for an up-axis adjustment, measured in the rotation controls.
+        const float UpAlignmentMinForwardLengthSquared = 0.000001f;
+
+        static void AlignUpAxis(NavMeshAgent agent)
+        {
+            var up = NavWorld.UpAxis(agent.m_Surface, agent.m_Crowd.corridor.GetFirstPoly(),
+                agent.isOnOffMeshLink ? agent.m_LinkId : 0);
+            var rotation = agent.transform.rotation;
+            var forward = rotation * Vector3.forward;
+            var projected = forward - up * Vector3.Dot(forward, up);
+            rotation = Quaternion.FromToRotation(rotation * Vector3.up, up) * rotation;
+            if (projected.sqrMagnitude > UpAlignmentMinForwardLengthSquared)
+                rotation = Quaternion.FromToRotation(rotation * Vector3.forward, projected) * rotation;
+            agent.transform.rotation = rotation;
+        }
+
+        // Unity 6000.0.71f1, tests/projects/navlinks rotation controls: turn about the
+        // agent's local up axis using the signed heading error, including small angles.
+        const float TurnMinSpeedSquared = 0.001f;
+
+        static void RotateLocalHeading(NavMeshAgent agent, Vector3 velocity, float dt)
+        {
+            var rotation = agent.transform.rotation;
+            var local = Quaternion.Inverse(rotation) * velocity;
+            float speedSquared = local.x * local.x + local.z * local.z;
+            if (!(speedSquared > TurnMinSpeedSquared)) return;
+            float angle = MathF.Atan2(local.x, local.z);
+            float left = MathF.Abs(angle);
+            float speed = MathF.Sqrt(speedSquared);
+            float limit = agent.angularSpeed / 360f * 2f * MathF.PI;
+            float rate = MathF.Min(limit, (TurnGain + speed) * left);
+            float step = MathF.Min(rate * dt, left);
+            if (angle < 0f) step = -step;
+            float half = step * 0.5f;
+            agent.transform.rotation = rotation * new Quaternion(0f, MathF.Sin(half), 0f, MathF.Cos(half));
         }
 
         /// <summary>The links an agent is on during the crowd update (also those taken in it).</summary>
