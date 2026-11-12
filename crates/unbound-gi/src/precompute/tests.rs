@@ -4,6 +4,9 @@ use super::clusters::{GROUP, Instance, SAMPLES_PER_CLUSTER, cluster};
 use super::geometry::Bvh;
 use super::math::V3;
 
+/// Lightmap Parameters' default Modelling Tolerance.
+const TOLERANCE: f32 = 0.01;
+
 /// A mesh: positions, normals, texels and triangles.
 #[derive(Default)]
 struct Mesh {
@@ -45,6 +48,7 @@ impl Mesh {
             texels: &self.texels,
             triangles: &self.triangles,
             cluster_size,
+            modelling_tolerance: TOLERANCE,
         }
     }
 }
@@ -294,4 +298,157 @@ fn a_voxels_part_faces_one_half_space() {
         .quad([0.0; 3], [0.0, 0.9, 0.0], [0.0, 0.0, 0.9], [10.0, 0.0]);
     let c = cluster(&[corner.instance(1.0)], 32, 32).unwrap();
     assert_eq!(c.input.clusters(), 2);
+}
+
+#[test]
+fn a_face_on_a_voxel_plane_keeps_its_area() {
+    // At a cluster size of 0.2 a shelf at 1.8 lies on a plane of the grid from 0, which the
+    // division by the size and the planes' positions round to opposite sides of.
+    let mut m = floor(1.0, 1.0);
+    m.quad(
+        [0.0, 1.8, 0.0],
+        [0.0, 0.0, 0.6],
+        [0.6, 0.0, 0.0],
+        [10.0, 0.0],
+    );
+    let c = cluster(&[m.instance(0.2)], 32, 32).unwrap();
+    assert!(
+        (c.areas.iter().sum::<f32>() - 1.36).abs() < 1e-3,
+        "{:?}",
+        c.areas.iter().sum::<f32>()
+    );
+    for size in [0.1, 0.3, 0.4, 0.45] {
+        let c = cluster(&[m.instance(size)], 32, 32).unwrap();
+        assert!((c.areas.iter().sum::<f32>() - 1.36).abs() < 1e-3, "{size}");
+    }
+    // A face on a plane between two slabs is in one of them, not in both.
+    let c = cluster(&[floor(1.0, 1.0).instance(0.25)], 32, 32).unwrap();
+    assert_eq!(c.input.clusters(), 16);
+}
+
+#[test]
+fn renderers_of_other_cluster_sizes_keep_their_own_density() {
+    let ground = floor(4.0, 4.0);
+    let mut block = Mesh::default();
+    block.open_box([1.0, 0.0, 1.0], [2.0, 1.0, 2.0]);
+    let c = cluster(&[ground.instance(1.0), block.instance(0.5)], 64, 64).unwrap();
+    // The box's faces in clusters of half a unit, each of the precompute's points.
+    let m = &c.materials;
+    let box_clusters: Vec<usize> = (0..c.input.clusters())
+        .filter(|&k| m.groups[m.cluster_groups[k] as usize].0 == 1)
+        .collect();
+    assert_eq!(box_clusters.len(), 5 * 4);
+    for k in box_clusters {
+        let n = c.input.cluster_points[k + 1] - c.input.cluster_points[k];
+        assert_eq!(n, SAMPLES_PER_CLUSTER as u32);
+    }
+    // The floor's points: its area less the box's footprint at one cluster's density per unit.
+    let floor_points: usize = m
+        .groups
+        .iter()
+        .filter(|g| g.0 == 0)
+        .map(|g| g.1 as usize)
+        .sum();
+    assert!(
+        (floor_points as f32 - 15.0 * SAMPLES_PER_CLUSTER).abs() <= 24.0,
+        "{floor_points}"
+    );
+}
+
+#[test]
+fn far_and_tilted_surfaces_keep_their_points() {
+    // A slope far from the origin: its points' rays must not meet its own triangles.
+    let mut m = Mesh::default();
+    m.quad(
+        [300.0, 200.0, 300.0],
+        [0.0, 0.6, 2.0],
+        [2.0, 0.3, 0.0],
+        [0.0, 0.0],
+    );
+    let area = {
+        let n = super::math::cross([0.0, 0.6, 2.0], [2.0, 0.3, 0.0]);
+        super::math::length(n)
+    };
+    let c = cluster(&[m.instance(0.2)], 32, 32).unwrap();
+    assert!(
+        (c.areas.iter().sum::<f32>() - area).abs() < 1e-3 * area,
+        "{}",
+        c.areas.iter().sum::<f32>()
+    );
+}
+
+#[test]
+fn vertices_no_triangle_uses_change_nothing() {
+    let m = floor(2.0, 2.0);
+    let a = cluster(&[m.instance(1.0)], 32, 32).unwrap();
+    let mut n = floor(2.0, 2.0);
+    for p in [[-1e9, 5.0, 3.0], [f32::NEG_INFINITY, 0.0, 0.0]] {
+        n.positions.push(p);
+        n.normals.push([0.0, 1.0, 0.0]);
+        n.texels.push([0.0, 0.0]);
+    }
+    let b = cluster(&[n.instance(1.0)], 32, 32).unwrap();
+    assert_eq!(a.input.positions, b.input.positions);
+}
+
+#[test]
+fn surfaces_facing_geometry_within_the_modelling_tolerance_are_left_out() {
+    // A slab 0.5 cm and one 2 cm above a floor: the floor under the first and the first's
+    // bottom face each other within the tolerance of 1 cm and have no points; under the
+    // second they keep them.
+    let ground = floor(4.0, 2.0);
+    let slab = |y: f32, x: f32| {
+        let mut m = Mesh::default();
+        // Its bottom facing down and its top facing up.
+        m.quad([x, y, 0.5], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 20.0])
+            .quad(
+                [x, y + 0.1, 0.5],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0, 0.0],
+                [10.0, 20.0],
+            );
+        m
+    };
+    let (near, far) = (slab(0.005, 0.5), slab(0.02, 2.5));
+    let c = cluster(
+        &[ground.instance(1.0), near.instance(1.0), far.instance(1.0)],
+        64,
+        64,
+    )
+    .unwrap();
+    let inside = |p: &V3, x: f32| p[0] > x + 0.05 && p[0] < x + 0.95 && p[2] > 0.55 && p[2] < 1.45;
+    let below = |p: &V3, y: f32| p[1] <= y + 1e-6;
+    let near_count = c
+        .input
+        .positions
+        .iter()
+        .filter(|p| inside(p, 0.5) && below(p, 0.005))
+        .count();
+    let far_count = c
+        .input
+        .positions
+        .iter()
+        .filter(|p| inside(p, 2.5) && below(p, 0.02))
+        .count();
+    assert_eq!(near_count, 0);
+    assert!(
+        far_count as f32 >= 1.5 * SAMPLES_PER_CLUSTER * 0.8,
+        "{far_count}"
+    );
+    // At a tolerance of zero both gaps keep their points.
+    let open = [&ground, &near, &far].map(|m| Instance {
+        modelling_tolerance: 0.0,
+        ..m.instance(1.0)
+    });
+    let c = cluster(&open, 64, 64).unwrap();
+    let near_count = c
+        .input
+        .positions
+        .iter()
+        .filter(|p| inside(p, 0.5) && below(p, 0.005))
+        .count();
+    assert!(
+        near_count as f32 >= 1.5 * SAMPLES_PER_CLUSTER * 0.8,
+        "{near_count}"
+    );
 }

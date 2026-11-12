@@ -14,7 +14,8 @@ use std::collections::HashMap;
 /// Points per cluster of a full voxel face (the Unity 6000.0.71f1 Editor's precompute places
 /// 32 points per square of the cluster size, in groups of four).
 pub const SAMPLES_PER_CLUSTER: f32 = 32.0;
-/// Points come in groups of this many (one normal per group in the input samples).
+/// Points come in groups of this many neighbours (as the input samples store them; a cluster
+/// most of which other geometry hides may keep fewer).
 pub const GROUP: usize = 4;
 /// A part of a voxel no larger than this share of a voxel face joins neighbours.
 const MIN_CLUSTER_SHARE: f32 = 0.4;
@@ -31,9 +32,11 @@ const TREE_CHILDREN: usize = 8;
 /// The cluster of a triangle no cluster holds: other geometry hides all of its part.
 pub const NO_CLUSTER: u32 = u32::MAX;
 /// Voxel parts of a system at most (the precompute's memory grows with them).
-const MAX_PIECES: usize = 4_000_000;
-/// How far ray origins are pushed off their surface, relative to the cluster size.
+const MAX_PIECES: usize = 2_000_000;
+/// How far ray origins are pushed off their surface, relative to the cluster size, and relative
+/// to their coordinates (16 units of the last place of a float).
 const PUSH_OFF: f32 = 1e-4;
+const PUSH_OFF_ROUNDING: f32 = 16.0 * f32::EPSILON;
 
 /// One renderer of a system as the precompute sees it.
 pub struct Instance<'a> {
@@ -45,6 +48,9 @@ pub struct Instance<'a> {
     pub triangles: &'a [[u32; 3]],
     /// The voxel size of its clusters (world units).
     pub cluster_size: f32,
+    /// Lightmap Parameters' Modelling Tolerance: its surfaces facing geometry no farther than
+    /// this are left out.
+    pub modelling_tolerance: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -65,13 +71,14 @@ fn vlerp(a: Vertex, b: Vertex, t: f32) -> Vertex {
     }
 }
 
-/// A convex part of a triangle within one voxel.
+/// A convex part of a triangle within one voxel (of its renderer's cluster size).
 struct Piece {
     polygon: Vec<Vertex>,
     instance: u32,
     voxel: [i32; 3],
     normal: V3,
     area: f32,
+    size: f32,
 }
 
 /// The parts of the triangle `t` in the voxels it crosses: cut into slabs along x, the slabs
@@ -90,34 +97,33 @@ fn dice(t: [Vertex; 3], origin: V3, size: f32, instance: u32, out: &mut Vec<Piec
         // Degenerate or not finite: no surface.
         return;
     }
+    // Each slab is the closed interval from its lower plane to the next one's, computed the one
+    // way; a piece flat on a slab's upper plane belongs to the next slab only.
+    let plane = |k: usize, i: i32| origin[k] + i as f32 * size;
     let range = |polygon: &[Vertex], k: usize| {
         let lo = polygon.iter().map(|v| v.p[k]).fold(f32::INFINITY, f32::min);
         let hi = polygon
             .iter()
             .map(|v| v.p[k])
             .fold(f32::NEG_INFINITY, f32::max);
+        // One slab more on either side than the division gives: it may round across a plane.
         let cell = |x: f32| ((x - origin[k]) / size).floor() as i32;
-        cell(lo)..=cell(hi)
+        cell(lo).saturating_sub(1)..=cell(hi).saturating_add(1)
     };
-    let slab = |polygon: &[Vertex], k: usize, i: i32| {
-        let lo = origin[k] + i as f32 * size;
-        clip(&clip(polygon, k, lo, 1.0), k, lo + size, -1.0)
+    let slab = |polygon: &[Vertex], k: usize, i: i32| -> Option<Vec<Vertex>> {
+        let (lo, hi) = (plane(k, i), plane(k, i + 1));
+        let part = clip(&clip(polygon, k, lo, 1.0), k, hi, -1.0);
+        let flat_on_top = part.iter().all(|v| v.p[k] == hi);
+        (part.len() >= 3 && !(flat_on_top && lo < hi)).then_some(part)
     };
     for x in range(&t, 0) {
-        let px = slab(&t, 0, x);
-        if px.len() < 3 {
-            continue;
-        }
+        let Some(px) = slab(&t, 0, x) else { continue };
         for y in range(&px, 1) {
-            let py = slab(&px, 1, y);
-            if py.len() < 3 {
-                continue;
-            }
+            let Some(py) = slab(&px, 1, y) else { continue };
             for z in range(&py, 2) {
-                let polygon = slab(&py, 2, z);
-                if polygon.len() < 3 {
+                let Some(polygon) = slab(&py, 2, z) else {
                     continue;
-                }
+                };
                 let area = polygon_area(&polygon);
                 if area > 0.0 {
                     out.push(Piece {
@@ -126,6 +132,7 @@ fn dice(t: [Vertex; 3], origin: V3, size: f32, instance: u32, out: &mut Vec<Piec
                         voxel: [x, y, z],
                         normal,
                         area,
+                        size,
                     });
                 }
             }
@@ -228,18 +235,28 @@ pub fn around(n: V3, d: V3) -> V3 {
     add(add(scale(t, d[0]), scale(b, d[1])), scale(n, d[2]))
 }
 
-/// Whether the point `p` of normal `n` lies inside other geometry: too many of its rays meet a
-/// back face.
-pub(super) fn hidden(bvh: &Bvh, rays: &[V3], p: V3, n: V3, push: f32) -> bool {
+/// How far a ray starts off the surface at `p`: a share of the cluster size, and far enough
+/// from the surface for the rounding of coordinates as large as `p`'s.
+pub(super) fn push_off(p: V3, size: f32) -> f32 {
+    let magnitude = p.iter().fold(0f32, |m, v| m.max(v.abs()));
+    PUSH_OFF * size + magnitude * PUSH_OFF_ROUNDING
+}
+
+/// Whether the point `p` of normal `n` is hidden: inside other geometry (too many of its rays
+/// meet a back face) or in a gap no wider than `gap` (every ray meets geometry within that
+/// height above its surface: Lightmap Parameters' Modelling Tolerance, "the maximum size of
+/// gaps that can be ignored for GI").
+pub(super) fn hidden(bvh: &Bvh, rays: &[V3], p: V3, n: V3, push: f32, gap: f32) -> bool {
     let origin = add(p, scale(n, push));
-    let back = rays
-        .iter()
-        .filter(|&&d| {
-            bvh.intersect(origin, around(n, d), f32::INFINITY)
-                .is_some_and(|h| !h.front)
-        })
-        .count();
-    back > CULL_BACK_FACES
+    let (mut back, mut closed) = (0, 0);
+    for &d in rays {
+        let dir = around(n, d);
+        if let Some(h) = bvh.intersect(origin, dir, f32::INFINITY) {
+            back += !h.front as usize;
+            closed += (h.distance * dot(dir, n) <= gap) as usize;
+        }
+    }
+    back > CULL_BACK_FACES || closed == rays.len()
 }
 
 /// The system's clusters. `width` and `height`: the system's output size in texels.
@@ -250,6 +267,7 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
         "a system output of {width}x{height}"
     );
     let mut origin = [f32::INFINITY; 3];
+    let mut estimate = 0f64;
     let mut source = Vec::new();
     let mut facing = Vec::new();
     for (i, inst) in instances.iter().enumerate() {
@@ -259,26 +277,50 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
             inst.cluster_size
         );
         ensure!(
+            inst.modelling_tolerance >= 0.0 && inst.modelling_tolerance.is_finite(),
+            "renderer {i}: a modelling tolerance of {}",
+            inst.modelling_tolerance
+        );
+        ensure!(
             inst.normals.len() == inst.positions.len() && inst.texels.len() == inst.positions.len(),
             "renderer {i}: vertex streams of different lengths"
         );
-        for p in inst.positions {
-            for k in 0..3 {
-                origin[k] = origin[k].min(p[k]);
-            }
-        }
         for t in inst.triangles {
             ensure!(
                 t.iter().all(|&v| (v as usize) < inst.positions.len()),
                 "renderer {i}: a triangle past its vertices"
             );
-            source.push(t.map(|v| inst.positions[v as usize]));
+            let p = t.map(|v| inst.positions[v as usize]);
+            // The grid starts at the corner of the finite triangles' bounds.
+            if p.iter().flatten().all(|v| v.is_finite()) {
+                for q in p {
+                    for k in 0..3 {
+                        origin[k] = origin[k].min(q[k]);
+                    }
+                }
+                // At most the voxels its area and its perimeter cross.
+                let s = inst.cluster_size;
+                let area = 0.5 * super::math::length(cross(sub(p[1], p[0]), sub(p[2], p[0])));
+                let edges: f32 = (0..3)
+                    .map(|e| super::math::length(sub(p[(e + 1) % 3], p[e])))
+                    .sum();
+                estimate += (area / (s * s) + 3.0 * edges / s + 8.0) as f64;
+            }
+            source.push(p);
             facing.push(add(
                 add(inst.normals[t[0] as usize], inst.normals[t[1] as usize]),
                 inst.normals[t[2] as usize],
             ));
         }
     }
+    ensure!(
+        origin.iter().all(|v| v.is_finite()),
+        "a system without finite triangles"
+    );
+    ensure!(
+        estimate <= MAX_PIECES as f64,
+        "realtime GI: the cluster sizes cut the system into about {estimate:.0} parts, more than {MAX_PIECES}"
+    );
     // Points inside other geometry are found against the renderers' own triangles.
     let scene = Bvh::new(source, facing);
 
@@ -291,10 +333,11 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
                 uv: inst.texels[v as usize],
             });
             dice(v, origin, inst.cluster_size, i as u32, &mut pieces);
+            // The estimate bounds the parts but for slivers; this bounds them all.
             ensure!(
-                pieces.len() <= MAX_PIECES,
-                "realtime GI: renderer {i} cuts the system into more than {MAX_PIECES} parts at a cluster size of {}",
-                inst.cluster_size
+                pieces.len() <= 2 * MAX_PIECES,
+                "realtime GI: renderer {i} cuts the system into more than {} parts",
+                2 * MAX_PIECES
             );
         }
     }
@@ -386,8 +429,9 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
         n.sort_unstable();
     }
     let normal_of = |part: u32| pieces[part as usize].normal;
-    // Every cluster must exceed this area: 0.4 of a face of the smallest voxels (the Unity
-    // 6000.0.71f1 Editor's precompute, tests/projects/realtimegi).
+    // Every cluster must exceed this area: 0.4 of a face of the smallest voxels (the smallest
+    // cluster of the Unity 6000.0.71f1 Editor's precompute of tests/projects/realtimegi covers
+    // 0.4 of a face; its systems are of one cluster size, several are not measured).
     let smallest = instances
         .iter()
         .map(|i| i.cluster_size)
@@ -460,25 +504,35 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
     for c in &mut clusters {
         c.sort_unstable();
     }
-    let voxel_min = pieces.iter().fold([i32::MAX; 3], |m, p| {
-        std::array::from_fn(|k| m[k].min(p.voxel[k]))
+    // A piece's voxel in the grid of the smallest voxels (the voxels of renderers of other
+    // cluster sizes are in other grids from the same corner).
+    let cells: Vec<[i32; 3]> = pieces
+        .iter()
+        .map(|p| {
+            p.voxel
+                .map(|v| ((v as f32 + 0.5) * p.size / smallest).floor() as i32)
+        })
+        .collect();
+    let cell_min = cells.iter().fold([i32::MAX; 3], |m, c| {
+        std::array::from_fn(|k| m[k].min(c[k]))
     });
     let morton = |v: [i32; 3]| -> u64 {
         let mut code = 0u64;
         for bit in 0..21 {
             for k in 0..3 {
-                code |= ((((v[k] - voxel_min[k]) as u64) >> bit) & 1) << (3 * bit + k);
+                code |= ((((v[k] - cell_min[k]) as u64) >> bit) & 1) << (3 * bit + k);
             }
         }
         code
     };
-    clusters.sort_by_key(|c| (morton(pieces[c[0] as usize].voxel), c[0]));
+    clusters.sort_by_key(|c| (morton(cells[c[0] as usize]), c[0]));
 
     // Points, per cluster in parallel.
     let rays = hemisphere(CULL_RAYS);
+    let gaps: Vec<f32> = instances.iter().map(|i| i.modelling_tolerance).collect();
     let made: Vec<ClusterPoints> = clusters
         .par_iter()
-        .map(|list| cluster_points(list, &pieces, instances, &scene, &rays))
+        .map(|list| cluster_points(list, &pieces, &gaps, &scene, &rays))
         .collect();
     let mut positions = Vec::new();
     let mut normals = Vec::new();
@@ -520,7 +574,8 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
         !kept.is_empty(),
         "a system all of whose surface other geometry hides"
     );
-    let (tree_children, tree_weights) = tree(&kept, &pieces, &areas);
+    let kept_cells: Vec<[i32; 3]> = kept.iter().map(|c| cells[c[0] as usize]).collect();
+    let (tree_children, tree_weights) = tree(&kept_cells, &areas);
     let input = InputSamples {
         positions,
         normals,
@@ -553,14 +608,21 @@ struct ClusterPoints {
 fn cluster_points(
     list: &[u32],
     pieces: &[Piece],
-    instances: &[Instance],
+    gaps: &[f32],
     scene: &Bvh,
     rays: &[V3],
 ) -> ClusterPoints {
-    let size = instances[pieces[list[0] as usize].instance as usize].cluster_size;
     let area: f32 = list.iter().map(|&k| pieces[k as usize].area).sum();
-    let density = SAMPLES_PER_CLUSTER / (size * size);
-    let wanted = (area * density / GROUP as f32).round().max(1.0) as usize * GROUP;
+    let list_size = pieces[list[0] as usize].size;
+    // The points its pieces ask for at their renderers' cluster sizes.
+    let points: f32 = list
+        .iter()
+        .map(|&k| {
+            let p = &pieces[k as usize];
+            p.area * SAMPLES_PER_CLUSTER / (p.size * p.size)
+        })
+        .sum();
+    let wanted = (points / GROUP as f32).round().max(1.0) as usize * GROUP;
     // Candidates spread over the pieces by area, each with its piece's renderer.
     let mut candidates: Vec<(Vertex, u32)> = Vec::new();
     let total = wanted * CANDIDATES;
@@ -614,11 +676,13 @@ fn cluster_points(
             facing.push(piece.normal);
         }
     }
-    let push = PUSH_OFF * size;
     let visible: Vec<(Vertex, u32)> = candidates
         .iter()
         .copied()
-        .filter(|(v, _)| !hidden(scene, rays, v.p, v.n, push))
+        .filter(|(v, instance)| {
+            let gap = gaps[*instance as usize];
+            !hidden(scene, rays, v.p, v.n, push_off(v.p, list_size), gap)
+        })
         .collect();
     // The cluster's area that other geometry does not hide; one all of which is hidden is no
     // cluster (its surface stays in the scene, as a part of no cluster).
@@ -627,7 +691,10 @@ fn cluster_points(
     } else {
         area * visible.len() as f32 / candidates.len() as f32
     };
-    let count = ((shown * density / GROUP as f32).round().max(1.0) as usize * GROUP)
+    let count = ((points * shown / area.max(f32::MIN_POSITIVE) / GROUP as f32)
+        .round()
+        .max(1.0) as usize
+        * GROUP)
         .min(visible.len() / GROUP * GROUP)
         .max(GROUP.min(visible.len()));
     ClusterPoints {
@@ -695,14 +762,12 @@ fn grouped(points: &[(Vertex, u32)]) -> Vec<Vec<(Vertex, u32)>> {
     out
 }
 
-/// The cluster tree: parents over runs of neighbouring clusters, bottom up, each child weighted
-/// by its share of its parent's area (in 255ths), up to a single root.
-fn tree(clusters: &[Vec<u32>], pieces: &[Piece], areas: &[f32]) -> (Vec<u8>, Vec<u8>) {
-    let mut level: Vec<([i32; 3], f32)> = clusters
-        .iter()
-        .zip(areas)
-        .map(|(c, &a)| (pieces[c[0] as usize].voxel, a))
-        .collect();
+/// The cluster tree: parents over runs of neighbouring clusters (`cells`: each cluster's voxel in
+/// the grid of the smallest voxels), bottom up, each child weighted by its share of its parent's
+/// area (in 255ths), up to a single root.
+fn tree(cells: &[[i32; 3]], areas: &[f32]) -> (Vec<u8>, Vec<u8>) {
+    let mut level: Vec<([i32; 3], f32)> =
+        cells.iter().copied().zip(areas.iter().copied()).collect();
     let mut children = Vec::new();
     let mut weights = Vec::new();
     let mut shift = 1;
