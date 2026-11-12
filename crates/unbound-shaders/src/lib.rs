@@ -687,13 +687,22 @@ impl ShaderCompiler {
             pragmas = Pragmas::read(&self.discover(&pass, linear)?);
             pragmas.surface = Some(words);
         }
-        for what in &pragmas.requirements.unknown {
-            if self.warned.insert((program.file.clone(), what.clone())) {
-                tracing::warn!("{}", left_out_warning(&program.file, what));
-            }
-        }
+        self.warn_left_out(&program.file, &pragmas.requirements.unknown);
         self.pragmas.insert(key, pragmas.clone());
         Ok(pragmas)
+    }
+
+    /// Warns of the requirement names Unity does not know that `file` has not been warned of
+    /// yet; returns how many it warned of.
+    fn warn_left_out(&mut self, file: &Path, unknown: &[String]) -> usize {
+        let mut warned = 0;
+        for what in unknown {
+            if self.warned.insert((file.to_path_buf(), what.clone())) {
+                tracing::warn!("{}", left_out_warning(file, what));
+                warned += 1;
+            }
+        }
+        warned
     }
 
     /// A program's `#pragma` lines after preprocessing (active branches, `#include_with_pragmas`
@@ -3047,6 +3056,11 @@ float4 frag() : SV_Target { return 1; }
             .map(|(file, what)| left_out_warning(file, what))
             .collect();
         warned.sort();
+        // Each pass, reading and variant above went through the guard: none warns again.
+        let a = Path::new("Assets/A.shader");
+        assert_eq!(compiler.warn_left_out(a, &first.requirements.unknown), 0);
+        let c = Path::new("Assets/C.shader");
+        assert_eq!(compiler.warn_left_out(c, &first.requirements.unknown), 2);
         assert_eq!(
             warned,
             [
