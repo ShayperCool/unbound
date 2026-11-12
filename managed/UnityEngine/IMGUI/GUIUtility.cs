@@ -312,13 +312,21 @@ namespace UnityEngine
 
         public static Rect AlignRectToDevice(Rect rect) => AlignRectToDevice(rect, out _, out _);
 
+        /// <summary>The pixels per point of the device a UI Toolkit panel draws to while it generates
+        /// an element's content (0 outside): AlignRectToDevice aligns to that panel's pixels then.</summary>
+        internal static float uaContentPixelsPerPoint;
+
+        /// <summary>The rectangle on the device's pixel grid: its screen rectangle in pixels, each edge
+        /// rounded. Inside a UI Toolkit panel's content generation the grid is the panel's (its
+        /// scaled pixels per point; matches the Unity 6000.0.71f1 Editor, tests/projects/uitkvector).</summary>
         public static Rect AlignRectToDevice(Rect rect, out int widthInPixels, out int heightInPixels)
         {
+            float ppp = uaContentPixelsPerPoint > 0f ? uaContentPixelsPerPoint : pixelsPerPoint;
             var screen = GUIToScreenRect(rect);
-            var aligned = Rect.MinMaxRect(Mathf.Round(screen.xMin), Mathf.Round(screen.yMin), Mathf.Round(screen.xMax), Mathf.Round(screen.yMax));
+            var aligned = Rect.MinMaxRect(Mathf.Round(screen.xMin * ppp), Mathf.Round(screen.yMin * ppp), Mathf.Round(screen.xMax * ppp), Mathf.Round(screen.yMax * ppp));
             widthInPixels = (int)aligned.width;
             heightInPixels = (int)aligned.height;
-            return ScreenToGUIRect(aligned);
+            return ScreenToGUIRect(Rect.MinMaxRect(aligned.xMin / ppp, aligned.yMin / ppp, aligned.xMax / ppp, aligned.yMax / ppp));
         }
 
         internal static bool HitTest(Rect rect, Vector2 point, int offset) =>

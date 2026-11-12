@@ -165,12 +165,15 @@ namespace Unbound.UIElements
                     m_Recording = null;
                 }
                 m_Recording = g.Content;
+                float devicePixelsPerPoint = GUIUtility.uaContentPixelsPerPoint;
+                GUIUtility.uaContentPixelsPerPoint = m_PixelsPerPoint;
                 try
                 {
                     DrawContent(ve);
                 }
                 finally
                 {
+                    GUIUtility.uaContentPixelsPerPoint = devicePixelsPerPoint;
                     CloseSegment();
                     m_Recording = null;
                 }
