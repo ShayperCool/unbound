@@ -151,7 +151,8 @@ impl EffectKind {
 
 /// The output contexts of the Pitch Shifter captures (Unity 6000.0.71f1 Linux Editor,
 /// tests/projects/audiopitch): output rates, DSP buffer lengths and `AudioSpeakerMode` values
-/// Mono, Stereo, Quad, Surround, Mode5point1 and Mode7point1. Prologic stays unmeasured.
+/// Mono, Stereo, Quad, Surround, Mode5point1 and Mode7point1. Prologic fallback admission
+/// is selected separately for its measured release and output settings.
 const PITCH_RATES: [u32; 2] = [48000, 44100];
 const PITCH_BUFFERS: [u32; 4] = [256, 512, 1024, 2048];
 const PITCH_SPEAKER_MODES: [i32; 6] = [
@@ -454,6 +455,21 @@ impl EffectSpec {
         group_bypass: bool,
     ) -> anyhow::Result<()> {
         self.validate(config.sample_rate, config.buffer_size)?;
+        // tests/projects/audiopitch Prologic controls observe the stereo fallback at this pair.
+        // This affects admission only; the requested mode and two-channel routing are retained.
+        let measured_config = MixerConfig {
+            speaker_mode: if self.surround_effects_measured
+                && config.speaker_mode == speaker_mode::PROLOGIC
+                && matches!(config.sample_rate, 48000 | 44100)
+                && config.buffer_size == 1024
+            {
+                speaker_mode::STEREO
+            } else {
+                config.speaker_mode
+            },
+            ..*config
+        };
+        let config = &measured_config;
         if self.bypass || group_bypass {
             return Ok(());
         }
@@ -1643,6 +1659,39 @@ fn sync_effects(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn prologic_fallback_admission_is_limited_to_the_measured_profile() {
+        for kind in ["Normalize", "Pitch Shifter", "Distortion"] {
+            let mut spec: EffectSpec = serde_json::from_value(serde_json::json!({
+                "id": "fallback", "kind": kind, "surroundEffectsMeasured": true,
+                "slotWetMeasured": true, "mixLevel": 0.5, "distortion": 0.7,
+                "normalize": { "fade": 50.0, "lowest": 0.01, "maximum": 10.0 },
+                "pitchShifter": { "pitch": 0.75 }
+            }))
+            .unwrap();
+            for rate in [48000, 44100] {
+                let config = MixerConfig {
+                    sample_rate: rate,
+                    speaker_mode: speaker_mode::PROLOGIC,
+                    ..Default::default()
+                };
+                spec.validate_in_group(&config, false).unwrap();
+                spec.surround_effects_measured = false;
+                assert!(spec.validate_in_group(&config, false).is_err());
+                spec.surround_effects_measured = true;
+            }
+            for (rate, buffer) in [(32000, 256), (48000, 512), (96000, 2048)] {
+                let config = MixerConfig {
+                    sample_rate: rate,
+                    buffer_size: buffer,
+                    speaker_mode: speaker_mode::PROLOGIC,
+                    ..Default::default()
+                };
+                assert!(spec.validate_in_group(&config, false).is_err());
+            }
+        }
+    }
 
     #[test]
     fn additional_output_admission_keeps_rate_and_buffer_pairs_together() {

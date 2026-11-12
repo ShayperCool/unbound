@@ -1002,7 +1002,7 @@ namespace UnityEngine.Tests
             bool pitch = name == "Pitch Shifter";
             var mono = measured; mono.speakerMode = AudioSpeakerMode.Mono;
             var quad = measured; quad.speakerMode = AudioSpeakerMode.Quad;
-            var prologic = measured; prologic.speakerMode = AudioSpeakerMode.Prologic;
+            var prologic = measured; prologic.speakerMode = AudioSpeakerMode.Prologic; prologic.dspBufferSize = 4096;
             var rate = measured; rate.sampleRate = 22050;
             var buffer = measured; buffer.dspBufferSize = 4096;
             foreach (var config in pitch ? new[] { prologic, rate, buffer } : new[] { mono, prologic, rate, buffer })
@@ -1075,6 +1075,41 @@ namespace UnityEngine.Tests
             mixer.Tick(0, 0);
             Assert.True(mixer.GetFloat("Cutoff", out value));
             Assert.Equal(5000f, value);
+        }
+
+        [Theory]
+        [InlineData("Distortion")]
+        [InlineData("Chorus")]
+        [InlineData("Flange")]
+        [InlineData("Normalize")]
+        [InlineData("Pitch Shifter")]
+        [InlineData("SFX Reverb")]
+        public void PrologicFallbackUsesOnlyTheMeasuredReleaseAndSettings(string kind)
+        {
+            var (mixer, group, effect) = Fixture();
+            var parameters = kind == "Chorus" ? AudioMixerEffectController.ChorusParameters
+                : kind == "Flange" ? AudioMixerEffectController.FlangeParameters
+                : kind == "Normalize" ? AudioMixerEffectController.NormalizeParameters
+                : kind == "Pitch Shifter" ? AudioMixerEffectController.PitchShifterParameters
+                : kind == "SFX Reverb" ? AudioMixerEffectController.SfxReverbParameters : new[] { "Level" };
+            UseEffect(mixer, effect, kind, parameters);
+            effect.m_EnableWetMix = true; effect.m_MixLevelGuid = "wet";
+            mixer.m_Exposed["Wet"] = "wet"; mixer.SetFloat("Wet", 6f);
+            var original = AudioSettings.GetConfiguration();
+            foreach (int rate in new[] { 48000, 44100 })
+            {
+                var config = original; config.speakerMode = AudioSpeakerMode.Prologic; config.sampleRate = rate;
+                Assert.True(AudioSettings.Reset(config));
+                Assert.Equal(AudioSpeakerMode.Prologic, AudioSettings.GetConfiguration().speakerMode);
+                group.DspConfiguration();
+                ProjectInfo.UnityVersion = "6000.0.72f1";
+                Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                config.dspBufferSize = 512;
+                Assert.True(AudioSettings.Reset(config));
+                Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+            }
+            Assert.True(AudioSettings.Reset(original));
         }
 
         [Theory]

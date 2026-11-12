@@ -821,11 +821,22 @@ namespace Unbound.Runtime
         {
             // The layout the mixer runs, which a narrower device lowers below the request.
             var config = AudioSettings.GetConfiguration();
-            var mode = AudioBackend.Current.ActiveSpeakerMode;
+            var mode = MeasuredOutputMode(config);
             bool layout = mode == AudioSpeakerMode.Stereo || (Compat.AudioSurroundEffectsMeasured && MeasuredSpeakerOutput(mode));
             bool standard = (config.sampleRate == 48000 || config.sampleRate == 44100) && config.dspBufferSize == 1024;
             if (!layout || !(standard || AdditionalMeasuredOutput(config, mode)))
                 throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output, or the additional measured output settings");
+        }
+
+        // The Prologic profile observes a two-channel fallback at these original settings.
+        // Keep the requested configuration visible and use its measured layout for admission.
+        static AudioSpeakerMode MeasuredOutputMode(AudioConfiguration config)
+        {
+            var mode = AudioBackend.Current.ActiveSpeakerMode;
+            if (Compat.AudioSurroundEffectsMeasured && mode == AudioSpeakerMode.Prologic
+                && (config.sampleRate == 48000 || config.sampleRate == 44100) && config.dspBufferSize == 1024)
+                return AudioSpeakerMode.Stereo;
+            return mode;
         }
 
         // Paired settings measured by tests/projects/audiopitch, in addition to the original profiles.
@@ -865,7 +876,7 @@ namespace Unbound.Runtime
             // The DSP takes the whole channel count of the clamped value (maxch_raw_* controls).
             int maxChannels = (int)Mathf.Clamp(v[3], PitchShifterMinimums[3], PitchShifterMaximums[3]);
             var config = AudioSettings.GetConfiguration();
-            var mode = AudioBackend.Current.ActiveSpeakerMode;
+            var mode = MeasuredOutputMode(config);
             bool standard = (config.sampleRate == 48000 || config.sampleRate == 44100)
                 && Array.IndexOf(PitchShifterSpeakerModes, mode) >= 0
                 && (config.dspBufferSize == 256 || config.dspBufferSize == 512 || config.dspBufferSize == 1024 || config.dspBufferSize == 2048);

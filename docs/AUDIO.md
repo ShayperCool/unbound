@@ -873,7 +873,7 @@ In mono output the effect processes the single mono channel (see Output layouts 
 rest is the measured release's behavior, recorded in the probe cause table.
 
 Static slot Wet follows the shared rule below; live Pitch and wet changes are covered below. Active unmeasured releases,
-Prologic output, and output rates and buffers outside the measured set fail clearly. `unbound doctor`
+Prologic outside its measured fallback, and output rates and buffers outside the measured set fail clearly. `unbound doctor`
 lists these Pitch Shifter limits in the effect-class detail. No prior DSP kernel or ClearFloat
 ownership behavior changes. The optional `audiopitch/regressions.py` runs the unchanged
 Distortion, Chorus, Flange, Normalize and ClearFloat probes with one private runtime snapshot.
@@ -898,7 +898,7 @@ tests/projects/audiopitch layout and device controls:
 | Measured quad/5.0/5.1/7.1 | Stereo 2D clips reach FL/FR exactly as in stereo; a mono 2D clip uses the stereo pan law on FL/FR and, in 5.1 and 7.1, feeds LFE at unity gain whatever the pan. 3D directions (listener-space lateral and forward components) pan between the two neighbouring speakers with power-normalized vector-base gains; speakers sit at (∓1, 1) and (∓1, −1), the centre at (0, 1), and in 7.1 at (∓0.5, 0.866), (0, 1), (∓0.707, −0.707) and (∓1, 0). Each 3D channel also feeds LFE at unity; a source at the listener reaches every speaker at √2/n. Spread rotates each clip channel's direction by half the spread either way, and a mono clip averages its two directions. Spatial blend mixes the 2D and 3D speaker levels; attenuation blends apart. Group effects on extra pairs, generators writing every channel and clip-source scripts writing beyond the front pair match. Engine: `spatial::surround`, `SpeakerLayout`. |
 | Measured devices | `driverCapabilities` follows the device's channel count: 4 report Quad, 6 report 5.1, 8 report 7.1, and 1, 2, 3, 5 and 7 report Stereo. A request above the capabilities runs at them (5.0/5.1/7.1 on four channels run quad, 7.1 on six runs 5.1); Prologic always runs as two channels; `GetConfiguration` keeps the request (`device_1`..`device_8`). Engine: `driver_capabilities` and `active_speaker_mode` in `audio/mod.rs`. Without an output device the virtual device stands for a stereo device; `UNBOUND_AUDIO_DEVICE_CHANNELS` sets its channel count (the probe uses the capture device's). Normalize, static Wet and Pitch Shifter check the layout the mixer runs. |
 | Measured surround effects | Q337, tests/projects/audiopitch `surround`: Compressor/Duck link every active speaker including LFE, with Duck timing scaled by channel count; SFX Reverb shares an eight-line network; Chorus cycles three wet taps across speakers; Flange shares its sweep with separate channel histories. Source/listener Chorus/Reverb and front/rear mono 3D zone sends/returns pass at 48000/44100 Hz, 1024-frame buffers, quad/5.0/5.1/7.1. `Compat.AudioSurroundEffectsMeasured` selects the rule. See [contracts and scope](../tests/projects/audiopitch/SURROUND.md). |
-| Unmeasured | Other releases retain per-pair effects and front-pair zones, with a warning for SFX Reverb. Other rates/buffers, Prologic, surround topology changes, scripted zone sends and overlapping surround zones remain unmeasured, as do channel-asymmetric effects in mono. The separate transitions and wet profiles below cover the measured live and wet contexts. |
+| Unmeasured | Other releases retain per-pair effects and front-pair zones, with a warning for SFX Reverb. Other rates/buffers outside SETTINGS.md, Prologic outside PROLOGIC.md, surround topology changes, scripted zone sends and overlapping surround zones remain unmeasured, as do channel-asymmetric effects in mono. The separate transitions and wet profiles below cover the measured live and wet contexts. |
 
 AudioRenderer buffers and group sinks hold the layout's channel count in every layout.
 
@@ -1016,7 +1016,7 @@ retain their prior startup application and need measurement.
 
 Every one of 94,505,124 values per rate passes the existing bounds. Strict
 reports keep all one-step device differences, with no added allowance for
-Master floats. Other wet-effect kinds, topology changes, Mono, Prologic and
+Master floats. Other wet-effect kinds, topology changes, Mono, Prologic outside its measured fallback and
 other rates/buffers remain outside this measurement.
 
 ### Additional measured output settings
@@ -1030,3 +1030,13 @@ remain outside that extension. The reverb early taps and allpasses scale from
 single-precision seconds; their sample offsets at 48000 and 44100 Hz are
 unchanged. Other releases retain the previous unmeasured delay approximation.
 The wider 96000 Hz / 2048-frame callback captures remain Q373-R2.
+
+### Prologic fallback
+
+The [paired Prologic profile](../tests/projects/audiopitch/PROLOGIC.md) records
+Unity 6000.0.71f1 Linux falling back to Stereo while retaining the requested
+Prologic getter. Each of 21 controls produces bit-identical PCM in separate
+Stereo and Prologic sessions at 48000 and 44100 Hz with 1024-frame buffers.
+Normalize, wet slots and default Pitch Shifter admission use that measured
+fallback through the existing surround Compat selector. Matrix encoding and
+other Prologic rate/buffer pairs remain unmeasured.
