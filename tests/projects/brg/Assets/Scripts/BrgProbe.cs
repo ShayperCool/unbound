@@ -40,6 +40,15 @@ public unsafe class BrgProbe : MonoBehaviour
 
     BatchRendererGroup m_Brg;
     GraphicsBuffer m_Buffer;
+    /// <summary>The instance data as uploaded, its colours' byte address and its size.</summary>
+    float[] m_Data;
+    int m_ColorsAt, m_Bytes, m_ObjectToWorldAt, m_WorldToObjectAt;
+    Mesh m_CubeMesh;
+    /// <summary>Run between a scenario's two renders (the lifetime scenario's buffer update).</summary>
+    Action m_BetweenRenders;
+    /// <summary>The errors scenario's extra commands: an unknown mesh, a material without DOTS instancing.</summary>
+    BatchMaterialID m_NoDots;
+    readonly List<string> m_Log = new List<string>();
     BatchID m_Batch;
     BatchMeshID m_Cube, m_Sphere;
     BatchMaterialID m_Lit, m_Unlit;
@@ -73,6 +82,8 @@ public unsafe class BrgProbe : MonoBehaviour
             Scenario("basic");
             Shadows();
             Cameras();
+            Lifetime();
+            Errors();
         }
         catch (Exception e)
         {
@@ -108,7 +119,7 @@ public unsafe class BrgProbe : MonoBehaviour
         Row("bufferTarget", target.ToString());
         Row("maxWindow", BatchRendererGroup.GetConstantBufferMaxWindowSize());
         m_Brg = new BatchRendererGroup(OnPerformCulling, IntPtr.Zero);
-        var cube = PrimitiveMesh(PrimitiveType.Cube);
+        var cube = m_CubeMesh = PrimitiveMesh(PrimitiveType.Cube);
         var sphere = PrimitiveMesh(PrimitiveType.Sphere);
         m_Cube = m_Brg.RegisterMesh(cube);
         m_Sphere = m_Brg.RegisterMesh(sphere);
@@ -132,7 +143,11 @@ public unsafe class BrgProbe : MonoBehaviour
         int worldToObject = objectToWorld + SizeOfPackedMatrix * Instances;
         int colors = worldToObject + SizeOfPackedMatrix * Instances;
         int bytes = colors + SizeOfFloat4 * Instances;
-        var data = new float[bytes / 4];
+        var data = m_Data = new float[bytes / 4];
+        m_ColorsAt = colors;
+        m_Bytes = bytes;
+        m_ObjectToWorldAt = objectToWorld;
+        m_WorldToObjectAt = worldToObject;
         for (int i = 0; i < Instances; i++)
         {
             var m = InstanceMatrix(i);
@@ -142,25 +157,129 @@ public unsafe class BrgProbe : MonoBehaviour
             int o = colors / 4 + i * 4;
             data[o] = c.r; data[o + 1] = c.g; data[o + 2] = c.b; data[o + 3] = c.a;
         }
-        if (target == BatchBufferTarget.ConstantBuffer)
-        {
-            m_Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Constant, bytes / 16, 16);
-            m_Buffer.SetData(data);
-        }
-        else
-        {
-            m_Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Raw, bytes / 4, 4);
-            m_Buffer.SetData(data);
-        }
-        var metadata = new NativeArray<MetadataValue>(3, Allocator.Temp);
-        metadata[0] = new MetadataValue { NameID = Shader.PropertyToID("unity_ObjectToWorld"), Value = PerInstance | (uint)objectToWorld };
-        metadata[1] = new MetadataValue { NameID = Shader.PropertyToID("unity_WorldToObject"), Value = PerInstance | (uint)worldToObject };
-        metadata[2] = new MetadataValue { NameID = Shader.PropertyToID("_BaseColor"), Value = PerInstance | (uint)colors };
-        m_Batch = target == BatchBufferTarget.ConstantBuffer
-            ? m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 0, (uint)bytes)
-            : m_Brg.AddBatch(metadata, m_Buffer.bufferHandle);
-        metadata.Dispose();
+        m_Buffer = NewBuffer(data);
+        m_Batch = AddInstanceBatch(m_Buffer);
         Row("ids.batch", m_Batch.value);
+    }
+
+    /// <summary>A buffer of the device's target holding <paramref name="data"/>.</summary>
+    GraphicsBuffer NewBuffer(float[] data)
+    {
+        var buffer = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? new GraphicsBuffer(GraphicsBuffer.Target.Constant, m_Bytes / 16, 16)
+            : new GraphicsBuffer(GraphicsBuffer.Target.Raw, m_Bytes / 4, 4);
+        buffer.SetData(data);
+        return buffer;
+    }
+
+    NativeArray<MetadataValue> Metadata()
+    {
+        var metadata = new NativeArray<MetadataValue>(3, Allocator.Temp);
+        metadata[0] = new MetadataValue { NameID = Shader.PropertyToID("unity_ObjectToWorld"), Value = PerInstance | (uint)m_ObjectToWorldAt };
+        metadata[1] = new MetadataValue { NameID = Shader.PropertyToID("unity_WorldToObject"), Value = PerInstance | (uint)m_WorldToObjectAt };
+        metadata[2] = new MetadataValue { NameID = Shader.PropertyToID("_BaseColor"), Value = PerInstance | (uint)m_ColorsAt };
+        return metadata;
+    }
+
+    /// <summary>A batch of the instances in <paramref name="buffer"/> (a constant buffer through a
+    /// window of the whole data).</summary>
+    BatchID AddInstanceBatch(GraphicsBuffer buffer)
+    {
+        var metadata = Metadata();
+        var id = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? m_Brg.AddBatch(metadata, buffer.bufferHandle, 0, (uint)m_Bytes)
+            : m_Brg.AddBatch(metadata, buffer.bufferHandle);
+        metadata.Dispose();
+        return id;
+    }
+
+    /// <summary>The instance data with every cube's colour replaced.</summary>
+    float[] Recolored(Color color)
+    {
+        var data = (float[])m_Data.Clone();
+        for (int i = 0; i < Cubes; i++)
+        {
+            int o = m_ColorsAt / 4 + i * 4;
+            data[o] = color.r; data[o + 1] = color.g; data[o + 2] = color.b; data[o + 3] = color.a;
+        }
+        return data;
+    }
+
+    /// <summary>A batch removed and added again, a mesh unregistered by every owner and registered
+    /// again, then the instance data changed between the two renders (the second draws the new
+    /// colours), and another buffer swapped in for the batch.</summary>
+    void Lifetime()
+    {
+        m_Brg.RemoveBatch(m_Batch);
+        m_Batch = AddInstanceBatch(m_Buffer);
+        Row("lifetime.batchAgain", m_Batch.value);
+        m_Brg.UnregisterMesh(m_Cube);
+        Row("lifetime.meshKept", m_Brg.GetRegisteredMesh(m_Cube) == m_CubeMesh);
+        m_Brg.UnregisterMesh(m_Cube);
+        Row("lifetime.meshGone", m_Brg.GetRegisteredMesh(m_Cube) == null);
+        m_Cube = m_Brg.RegisterMesh(m_CubeMesh);
+        Row("lifetime.meshAgain", m_Cube.value);
+        m_BetweenRenders = () => m_Buffer.SetData(Recolored(new Color(0.9f, 0.1f, 0.1f, 1f)));
+        Scenario("lifetime");
+        RecordViews();
+        m_BetweenRenders = null;
+        var swap = NewBuffer(Recolored(new Color(0.1f, 0.2f, 0.9f, 1f)));
+        m_Brg.SetBatchBuffer(m_Batch, swap.bufferHandle);
+        Scenario("swap");
+        RecordViews();
+        m_Brg.SetBatchBuffer(m_Batch, m_Buffer.bufferHandle);
+        swap.Dispose();
+    }
+
+    /// <summary>What the API refuses on the device, with the Editor's messages: AddBatch windows
+    /// against the buffer target, then commands of an unknown mesh and of a material without DOTS
+    /// instancing over two renders.</summary>
+    void Errors()
+    {
+        Application.logMessageReceived += Capture;
+        try
+        {
+            var metadata = Metadata();
+            if (BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer)
+            {
+                Row("errors.add.noWindow", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle).value);
+                Row("errors.add.unaligned", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 16, 256).value);
+                Row("errors.add.oversized", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 0, 32768).value);
+            }
+            else
+            {
+                Row("errors.add.window", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 0, 256).value);
+            }
+            metadata.Dispose();
+            RecordLog("errors.add");
+            var noDots = new Material(Shader.Find("Probe/NoDots"));
+            m_NoDots = m_Brg.RegisterMaterial(noDots);
+            Scenario("errors");
+            RecordViews();
+            RecordLog("errors.draw");
+        }
+        finally
+        {
+            Application.logMessageReceived -= Capture;
+        }
+    }
+
+    void Capture(string message, string stackTrace, LogType type)
+    {
+        // Unbound's own notes are not the Editor's.
+        if (message.StartsWith("Unbound:", StringComparison.Ordinal)) return;
+        m_Log.Add(type + ": " + message);
+    }
+
+    /// <summary>The messages logged since the last call, each with how many times.</summary>
+    void RecordLog(string key)
+    {
+        var counts = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (var line in m_Log) counts[line] = counts.TryGetValue(line, out int n) ? n + 1 : 1;
+        int i = 0;
+        foreach (var pair in counts) Row(key + ".log" + i++, pair.Value + "x " + pair.Key);
+        Row(key + ".logs", counts.Count);
+        m_Log.Clear();
     }
 
     static Matrix4x4 InstanceMatrix(int i)
@@ -281,6 +400,7 @@ public unsafe class BrgProbe : MonoBehaviour
             m_Calls = 0;
             m_ViewCamera.Render();
             Row(name + ".r" + m_Render + ".calls", m_Calls);
+            if (m_Render == 1) m_BetweenRenders?.Invoke();
         }
         RenderTexture.active = target;
         var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
@@ -305,13 +425,14 @@ public unsafe class BrgProbe : MonoBehaviour
         if (group != m_Brg) return new JobHandle();
         // The pillar's range (the shadows and cameras scenarios).
         bool masked = m_Scenario != "basic";
-        int commandCount = masked ? Commands + Masked : Commands;
+        bool errors = m_Scenario == "errors";
+        int commandCount = (masked ? Commands + Masked : Commands) + (errors ? 2 : 0);
         var commands = (BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr();
         Row(key + ".outputCount", output.drawCommands.Length);
         Row(key + ".outputZeroed", commands->drawCommandCount == 0 && commands->drawCommands == null && commands->visibleInstances == null);
         int alignment = UnsafeUtility.AlignOf<long>();
         commands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>() * commandCount, alignment, Allocator.TempJob);
-        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>() * (1 + Masked), alignment, Allocator.TempJob);
+        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>() * (2 + Masked), alignment, Allocator.TempJob);
         commands->visibleInstances = (int*)UnsafeUtility.Malloc(Instances * sizeof(int), alignment, Allocator.TempJob);
         commands->drawCommandPickingInstanceIDs = null;
         commands->drawCommandCount = commandCount;
@@ -360,6 +481,27 @@ public unsafe class BrgProbe : MonoBehaviour
                     },
                 };
             }
+        if (errors)
+        {
+            // An unknown mesh, and a material without DOTS instancing, in a range of their own.
+            int at = Commands + Masked;
+            commands->drawCommands[at] = new BatchDrawCommand
+            {
+                visibleOffset = 0, visibleCount = 1, batchID = m_Batch, materialID = m_Lit, meshID = new BatchMeshID { value = 99 },
+                submeshIndex = 0, splitVisibilityMask = 0xff,
+            };
+            commands->drawCommands[at + 1] = new BatchDrawCommand
+            {
+                visibleOffset = 1, visibleCount = 1, batchID = m_Batch, materialID = m_NoDots, meshID = m_Cube,
+                submeshIndex = 0, splitVisibilityMask = 0xff,
+            };
+            commands->drawRanges[1 + Masked] = new BatchDrawRange
+            {
+                drawCommandsType = BatchDrawCommandType.Direct, drawCommandsBegin = (uint)at, drawCommandsCount = 2,
+                filterSettings = new BatchFilterSettings { renderingLayerMask = 0xffffffff },
+            };
+            commands->drawRangeCount = 2 + Masked;
+        }
         for (int i = 0; i < Instances; i++) commands->visibleInstances[i] = i;
         return new JobHandle();
     }
