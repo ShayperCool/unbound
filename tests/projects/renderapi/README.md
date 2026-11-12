@@ -89,9 +89,12 @@ read in Update holds the last frame's skin. The previous buffer holds the skin o
 before only with skinnedMotionVectors on and a camera drawing motion vectors; otherwise it reads
 the same data as the current buffer. A disabled renderer keeps its last skin. With an active
 Cloth, GetVertexBuffer holds the cloth's particles (positions and normals equal to
-`Cloth.vertices`/`normals`, recorded from the second frame on; the first frame's contents
+`Cloth.vertices`/`normals`, recorded from the third frame on; the first two frames' contents
 vary between runs) and the previous buffer reads the same. With the cloth disabled, the
-buffer holds the ordinary skin.
+buffer holds the ordinary skin. `prevskin.force.*` renders a skinned triangle twice in one
+Update with its bone moved before each render: both renders draw the last frame's skin, also
+for a renderer whose buffer was asked for, while with forceMatrixRecalculationPerRender each
+render draws the bone as it is then; the next frame draws the last pose.
 
 ## Game-view gizmos
 

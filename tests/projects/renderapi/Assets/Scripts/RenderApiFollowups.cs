@@ -527,9 +527,10 @@ public sealed partial class RenderApiProbe
         var cloth = clothObject.AddComponent<Cloth>();
         cloth.coefficients = new[] { new ClothSkinningCoefficient { maxDistance = 0 }, new ClothSkinningCoefficient { maxDistance = 0 },
             new ClothSkinningCoefficient { maxDistance = 10 }, new ClothSkinningCoefficient { maxDistance = 10 } };
-        // The first frame's buffer is not recorded: what it holds varies from run to run.
+        // The first two frames' buffers are not recorded: what they hold varies from run to run.
         yield return null;
-        for (int f = 1; f <= 4; f++)
+        yield return null;
+        for (int f = 2; f <= 4; f++)
         {
             yield return null;
             string k = "prevskin.cloth.frame" + f;
@@ -556,6 +557,41 @@ public sealed partial class RenderApiProbe
         cloth.enabled = false; yield return null;
         Try("prevskin.cloth.disabled", () => { using (var c = clothSkin.GetVertexBuffer()) SkinRead("prevskin.cloth.disabled.current", c, true); });
         DestroyImmediate(clothObject); DestroyImmediate(clothMesh); DestroyImmediate(clothMaterial);
+    }
+}
+
+public sealed partial class RenderApiProbe
+{
+    /// <summary>A skinned triangle rendered twice in one Update with its bone moved between the
+    /// renders (after a frame at a first pose), with forceMatrixRecalculationPerRender off and
+    /// on, and with its buffer asked for; then the next frame.</summary>
+    IEnumerator ForcedSkinCases()
+    {
+        foreach (var (name, force, buffer) in new[] { ("plain", false, false), ("forced", true, false), ("buffer", false, true) })
+        {
+            string p = "prevskin.force." + name;
+            var go = new GameObject("forced skin");
+            var bone = new GameObject("bone").transform; bone.SetParent(go.transform, false);
+            var skin = go.AddComponent<SkinnedMeshRenderer>();
+            var mesh = Make(); mesh.triangles = new[] { 0, 2, 1 };
+            mesh.boneWeights = new[] { new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 } };
+            mesh.bindposes = new[] { Matrix4x4.identity };
+            skin.sharedMesh = mesh; skin.bones = new[] { bone }; skin.rootBone = go.transform; skin.updateWhenOffscreen = true;
+            skin.forceMatrixRecalculationPerRender = force;
+            var material = new Material(Shader.Find("Unlit/Color")); material.color = Color.green;
+            skin.sharedMaterial = material;
+            bone.localPosition = new Vector3(-1.5f, 0, 0);
+            yield return null;
+            if (buffer) using (skin.GetVertexBuffer()) { }
+            yield return null;
+            bone.localPosition = Vector3.zero;
+            Image(p + ".first");
+            bone.localPosition = new Vector3(1.5f, 0, 0);
+            Image(p + ".second");
+            yield return null;
+            Image(p + ".next");
+            DestroyImmediate(go); DestroyImmediate(mesh); DestroyImmediate(material);
+        }
     }
 }
 
