@@ -430,6 +430,31 @@ namespace UnityEngine.Tests
             Assert.True(second.isOnOffMeshLink);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void LinkUpAxisChangesOnEntryAndReturnsOnLandingWithoutTurning(bool align)
+        {
+            string previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            NavMesh.RemoveLink(m_Link);
+            var rotation = Quaternion.Euler(30f, 0f, 0f);
+            var connection = NavMesh.AddLink(new NavMeshLinkData { startPosition = LinkStart, endPosition = LinkEnd,
+                bidirectional = true, costModifier = -1f }, Vector3.zero, rotation);
+            try
+            {
+                var agent = Agent(autoTraverse: true);
+                agent.updateRotation = false;
+                agent.updateUpAxis = align;
+                StepOntoLink(agent);
+                Assert.True((agent.transform.up - (align ? rotation * Vector3.up : Vector3.up)).magnitude < 1e-4f);
+                for (int i = 0; i < 150 && agent.isOnOffMeshLink; i++) Step();
+                Assert.False(agent.isOnOffMeshLink);
+                Assert.True((agent.transform.up - Vector3.up).magnitude < 1e-4f);
+            }
+            finally { NavMesh.RemoveLink(connection); ProjectInfo.UnityVersion = previous; }
+        }
+
         [Fact]
         public void AStationaryLinkApproachKeepsItsRotation()
         {

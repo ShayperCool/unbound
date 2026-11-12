@@ -734,7 +734,141 @@ public class NavLinksProbe : MonoBehaviour
             crossing.Link.activated = true;
             other.Link.activated = true;
         }
+        yield return RecordRotationControls();
+        yield return RecordPathEndControls();
+        yield return RecordStoppingControls();
         Finish(0);
+    }
+
+    IEnumerator RecordRotationControls()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "auto");
+        foreach (string kind in new[] { "tiny.positive", "tiny.negative", "wrap", "tilted", "tilted.align", "tilted.disabledRotation", "negated", "slow.below", "slow.above", "limit", "disabled" })
+        {
+            var lane = new Lane { Name = "rotation." + kind, O = source.O };
+            var start = new Vector3(-8f, 0f, -1f);
+            var destination = kind == "wrap" ? new Vector3(-8f, 0f, 1.5f) : new Vector3(-3f, 0f, -1f);
+            var agent = Agent(lane, "a", start, destination, a =>
+            {
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+                a.updateUpAxis = kind == "tilted.align" || kind == "tilted.disabledRotation";
+                a.transform.rotation = kind == "tiny.positive" ? Quaternion.Euler(0f, 89.9f, 0f)
+                    : kind == "tiny.negative" ? Quaternion.Euler(0f, 90.1f, 0f)
+                    : kind == "wrap" ? Quaternion.Euler(0f, 359.9f, 0f)
+                    : kind.StartsWith("tilted") ? Quaternion.Euler(25f, 40f, 15f)
+                    : kind == "negated" ? new Quaternion(0f, -0.34202015f, 0f, -0.9396926f)
+                    : Quaternion.identity;
+                if (kind.StartsWith("slow.")) { a.speed = kind.EndsWith("below") ? 0.02f : 0.05f; a.acceleration = 100f; }
+                if (kind == "limit") a.angularSpeed = 5f;
+                if (kind == "disabled" || kind == "tilted.disabledRotation") a.updateRotation = false;
+            });
+            for (int frame = 1; frame <= 80; frame++)
+            {
+                yield return null;
+                Line(lane.Name, "a", frame, State(lane, agent) + ",\"yaw\":" + N(Mathf.DeltaAngle(0f, agent.transform.eulerAngles.y))
+                    + ",\"up\":" + V(agent.transform.up));
+            }
+            DestroyImmediate(agent.gameObject);
+        }
+        var settings = NavMesh.GetSettingsByID(0);
+        var floor = new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box,
+            size = new Vector3(12f, 1f, 8f), transform = Matrix4x4.Translate(new Vector3(0f, -0.5f, 0f)) };
+        var data = NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource> { floor },
+            new Bounds(Vector3.zero, new Vector3(16f, 6f, 12f)), Vector3.zero, Quaternion.identity);
+        var origin = new Vector3(0f, 0f, -300f);
+        var surfaceRotation = Quaternion.Euler(25f, 0f, 15f);
+        var instance = NavMesh.AddNavMeshData(data, origin, surfaceRotation);
+        foreach (bool align in new[] { false, true })
+        {
+            var lane = new Lane { Name = "rotation.surface." + (align ? "align" : "keep"), O = origin };
+            var go = new GameObject(lane.Name);
+            go.transform.position = origin;
+            var agent = go.AddComponent<NavMeshAgent>();
+            agent.updateRotation = false;
+            agent.updateUpAxis = align;
+            agent.transform.rotation = Quaternion.identity;
+            for (int frame = 1; frame <= 8; frame++)
+            {
+                yield return null;
+                Line(lane.Name, "a", frame, "\"on\":" + B(agent.isOnNavMesh) + ",\"up\":" + V(agent.transform.up));
+            }
+            DestroyImmediate(go);
+        }
+        NavMesh.RemoveNavMeshData(instance);
+        DestroyImmediate(data);
+
+        var sources = new List<NavMeshBuildSource>();
+        foreach (float x in new[] { -4f, 4f })
+            sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(4f, 1f, 6f), transform = Matrix4x4.Translate(new Vector3(x, -0.5f, 0f)) });
+        data = NavMeshBuilder.BuildNavMeshData(settings, sources,
+            new Bounds(Vector3.zero, new Vector3(16f, 6f, 10f)), Vector3.zero, Quaternion.identity);
+        origin = new Vector3(0f, 0f, -500f);
+        instance = NavMesh.AddNavMeshData(data, origin, Quaternion.identity);
+        var connection = NavMesh.AddLink(new NavMeshLinkData { startPosition = new Vector3(-2.5f, 0f, 0f),
+            endPosition = new Vector3(2.5f, 0f, 0f), bidirectional = true, costModifier = -1f },
+            origin, Quaternion.Euler(30f, 0f, 0f));
+        var linkLane = new Lane { Name = "rotation.link.align", O = origin };
+        var linkAgent = Agent(linkLane, "a", new Vector3(-4f, 0f, 0f), new Vector3(4f, 0f, 0f), a =>
+        {
+            a.updateRotation = false;
+            a.updateUpAxis = true;
+            a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+        });
+        for (int frame = 1; frame <= 180; frame++)
+        {
+            yield return null;
+            Line(linkLane.Name, "a", frame, "\"on\":" + B(linkAgent.isOnNavMesh) + ",\"link\":"
+                + B(linkAgent.isOnOffMeshLink) + ",\"up\":" + V(linkAgent.transform.up));
+        }
+        DestroyImmediate(linkAgent.gameObject);
+        NavMesh.RemoveLink(connection);
+        NavMesh.RemoveNavMeshData(instance);
+        DestroyImmediate(data);
+    }
+
+    IEnumerator RecordPathEndControls()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "auto");
+        var lane = new Lane { Name = "endpoint.stopping", O = source.O };
+        var agent = Agent(lane, "a", new Vector3(-8f, 0f, -1f), new Vector3(-3f, 0f, -1f), a =>
+        {
+            a.stoppingDistance = 0.6f;
+            a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+        });
+        for (int frame = 1; frame <= 100; frame++)
+        {
+            if (frame == 81) agent.ResetPath();
+            yield return null;
+            Line(lane.Name, "a", frame, State(lane, agent));
+        }
+        DestroyImmediate(agent.gameObject);
+    }
+
+    IEnumerator RecordStoppingControls()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "auto");
+        foreach (bool brake in new[] { true, false })
+        {
+            var lane = new Lane { Name = brake ? "stopping.large.resume" : "stopping.noBrake", O = source.O };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -1f), new Vector3(-3f, 0f, -1f), a =>
+            {
+                a.stoppingDistance = brake ? 1.5f : 0.6f;
+                a.autoBraking = brake;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            for (int frame = 1; frame <= 130; frame++)
+            {
+                if (frame == 101)
+                {
+                    if (brake) agent.stoppingDistance = 0f;
+                    else agent.ResetPath();
+                }
+                yield return null;
+                Line(lane.Name, "a", frame, State(lane, agent) + ",\"stoppingDistance\":" + N(agent.stoppingDistance));
+            }
+            DestroyImmediate(agent.gameObject);
+        }
     }
 
     string State(Lane lane, NavMeshAgent agent)

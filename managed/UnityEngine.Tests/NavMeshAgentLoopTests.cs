@@ -328,6 +328,178 @@ namespace UnityEngine.Tests
             Assert.Equal(before + 30f * Dt, agent.transform.eulerAngles.y, 3);
         }
 
+        static void AtRelease(string release, Action body)
+        {
+            string previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = release;
+            try { body(); }
+            finally { ProjectInfo.UnityVersion = previous; }
+        }
+
+        [Theory]
+        [InlineData(89.9f, false)]
+        [InlineData(90.1f, false)]
+        [InlineData(359.9f, true)]
+        public void SmallHeadingErrorsConvergeFromBothSidesAndAcrossZero(float yaw, bool north)
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+                agent.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                Assert.True(agent.SetDestination(Center + (north ? new Vector3(-5f, 0f, 4f) : new Vector3(5f, 0f, -4f))));
+                for (int i = 0; i < 80; i++) AgentSystem.Step();
+                Assert.InRange(Mathf.Abs(Mathf.DeltaAngle(agent.transform.eulerAngles.y, north ? 0f : 90f)), 0f, 0.005f);
+            });
+        }
+
+        [Theory]
+        [InlineData(0.02f, false)]
+        [InlineData(0.05f, true)]
+        public void TurningHasAMovementThreshold(float speed, bool turns)
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.speed = speed;
+                agent.acceleration = 100f;
+                agent.SetDestination(Center + new Vector3(5f, 0f, -4f));
+                for (int i = 0; i < 40; i++) AgentSystem.Step();
+                if (turns) Assert.True(agent.transform.eulerAngles.y > 1f);
+                else Assert.Equal(Quaternion.identity, agent.transform.rotation);
+            });
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void UpAxisAlignmentIsIndependentOfTurning(bool align, bool turn)
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.updateUpAxis = align;
+                agent.updateRotation = turn;
+                agent.transform.rotation = Quaternion.Euler(25f, 40f, 15f);
+                var before = agent.transform.up;
+                agent.SetDestination(Center + new Vector3(5f, 0f, -4f));
+                for (int i = 0; i < 40; i++) AgentSystem.Step();
+                Assert.True((agent.transform.up - (align ? Vector3.up : before)).magnitude < 1e-4f);
+            });
+        }
+
+        [Fact]
+        public void OtherReleasesRetainTheirUnmeasuredHeadingInterpolation()
+        {
+            AtRelease("6000.0.72f1", () =>
+            {
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.updateUpAxis = false;
+                agent.transform.rotation = Quaternion.Euler(25f, 40f, 15f);
+                var before = agent.transform.up;
+                agent.SetDestination(Center + new Vector3(5f, 0f, -4f));
+                for (int i = 0; i < 80; i++) AgentSystem.Step();
+                Assert.True((agent.transform.up - before).magnitude > 0.01f);
+            });
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void APlacedSurfaceSuppliesItsUpAxisWithoutTurning(bool align)
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var source = new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box,
+                    size = new Vector3(12f, 1f, 8f), transform = Matrix4x4.Translate(new Vector3(0f, -0.5f, 0f)) };
+                var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), new List<NavMeshBuildSource> { source },
+                    new Bounds(Vector3.zero, new Vector3(16f, 6f, 12f)), Vector3.zero, Quaternion.identity);
+                var origin = new Vector3(0f, 0f, -300f);
+                var rotation = Quaternion.Euler(25f, 0f, 15f);
+                var instance = NavMesh.AddNavMeshData(data, origin, rotation);
+                try
+                {
+                    var agent = Agent(origin - Center);
+                    Assert.True(agent.isOnNavMesh);
+                    agent.updateRotation = false;
+                    agent.updateUpAxis = align;
+                    agent.transform.rotation = Quaternion.identity;
+                    AgentSystem.Step();
+                    Assert.True((agent.transform.up - (align ? rotation * Vector3.up : Vector3.up)).magnitude < 1e-4f);
+                }
+                finally { NavMesh.RemoveNavMeshData(instance); Object.DestroyImmediate(data); }
+            });
+        }
+
+        [Theory]
+        [InlineData("6000.0.71f1", 0f, true)]
+        [InlineData("6000.0.71f1", 0.6f, true)]
+        [InlineData("6000.0.72f1", 0.6f, false)]
+        public void EndpointReportingSurvivesArrivalInTheMeasuredProfile(string release, float stoppingDistance, bool keepsTarget)
+        {
+            AtRelease(release, () =>
+            {
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.stoppingDistance = stoppingDistance;
+                agent.SetDestination(Center + new Vector3(5f, 0f, -4f));
+                AgentSystem.Step();
+                var target = agent.pathEndPosition;
+                for (int i = 0; i < 300 && agent.hasPath; i++) AgentSystem.Step();
+                Assert.False(agent.hasPath);
+                Assert.True((target - agent.nextPosition).magnitude > 0.001f);
+                Assert.True((agent.pathEndPosition - (keepsTarget ? target : agent.nextPosition)).magnitude < 1e-4f);
+                agent.ResetPath();
+                Assert.Equal(agent.nextPosition, agent.pathEndPosition);
+            });
+        }
+
+        [Theory]
+        [InlineData(true, 1.5f)]
+        [InlineData(false, 0.6f)]
+        public void StoppingDistanceDeceleratesWithoutDroppingThePathAndCanResume(bool brake, float stoppingDistance)
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.speed = 2f;
+                agent.stoppingDistance = stoppingDistance;
+                agent.autoBraking = brake;
+                agent.SetDestination(Center + new Vector3(5f, 0f, -4f));
+                for (int i = 0; i < 300; i++) AgentSystem.Step();
+                Assert.True(agent.hasPath);
+                Assert.InRange(agent.remainingDistance, 0.05f, stoppingDistance);
+                Assert.True(agent.velocity.magnitude < 1e-4f);
+                var stoppedAt = agent.nextPosition;
+                var end = agent.pathEndPosition;
+                agent.stoppingDistance = 0f;
+                for (int i = 0; i < 4; i++) AgentSystem.Step();
+                Assert.True(agent.nextPosition.x > stoppedAt.x);
+                Assert.Equal(end, agent.pathEndPosition);
+                for (int i = 0; i < 300 && agent.hasPath; i++) AgentSystem.Step();
+                Assert.False(agent.hasPath);
+                Assert.True((agent.nextPosition - end).magnitude < 0.01f);
+            });
+        }
+
+        [Fact]
+        public void ResettingABrakingPathThenDeceleratesAtTheAccelerationLimit()
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var agent = Walking(1);
+                for (int i = 0; i < 200 && !agent.m_Crowd.braking; i++) AgentSystem.Step();
+                Assert.True(agent.m_Crowd.braking);
+                agent.ResetPath();
+                AgentSystem.Step();
+                float before = agent.velocity.magnitude;
+                Assert.True(before > agent.acceleration * Dt);
+                AgentSystem.Step();
+                Assert.Equal(before - agent.acceleration * Dt, agent.velocity.magnitude, 4);
+            });
+        }
+
         [Fact]
         public void AStoppedAgentSlowsDownAtItsAcceleration()
         {
