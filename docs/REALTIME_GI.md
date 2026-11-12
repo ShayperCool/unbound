@@ -190,7 +190,8 @@ that throws leaves the frame without lights, with a warning.
 Area lights add nothing to realtime GI, but `LightmapperUtils` gives a rectangle or disc light
 the range `Light.dilatedRange`: a rectangle light's range plus half its diagonal, a disc light's
 plus half its `areaSize.x`, any other light's range itself (tests/projects/realtimegi
-`lights-dilatedrange`, rectangles of 2 x 1, 3 x 3 and no size, discs whatever `areaSize.y`).
+`lights-dilatedrange`: rectangles of 2 x 1, 3 x 3 and no size, discs of two radii whatever
+`areaSize.y`, and every other light type).
 
 A short range brings out a residual of a few texels: with the Room's point light at range 4
 and the legacy falloff, 10 values of the floor's texels next to the left wall are 10-12% above

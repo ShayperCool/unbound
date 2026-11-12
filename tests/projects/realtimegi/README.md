@@ -198,9 +198,9 @@ there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`.
 `room-delegate-legacy` and `room-delegate-undefined` at the point light's own range,
 `room-delegate-inversesquared` and `room-delegate-norange` (InverseSquaredNoRangeAttenuation)
 with its range 4. Last, `lights-dilatedrange`: `Light.dilatedRange` of a light of range 5 as a
-rectangle (2 x 1, 3 x 3, no size), a disc (`areaSize` 1.5 by 0.3 and by 7), a point, a spot and
-a directional light, and the range `LightmapperUtils.Extract` gives the 2 x 1 rectangle and the
-first disc.
+rectangle (2 x 1, 3 x 3, no size), a disc (`areaSize` 1.5 by 0.3 and by 7, 4 by 0.3), and a
+point, spot, directional, pyramid, box and tube light of `areaSize` 2 x 1, and the range
+`LightmapperUtils.Extract` gives the 2 x 1 rectangle and the first disc.
 
 With `--color-space gamma` the same project is in the gamma color space (run.py changes the
 copy's player settings) and the probe records the scenes without lighting data, their rows
@@ -369,8 +369,8 @@ Observations (not documented guarantees):
   (the two lightmaps are byte-identical), and InverseSquaredNoRangeAttenuation is the
   inverse-squared falloff without its window (brighter toward the range, nothing from it on).
   `Light.dilatedRange` is a rectangle light's range plus half its diagonal (6.118034 for 2 x 1),
-  a disc light's plus half its `areaSize.x` (5.75, whatever `areaSize.y`), any other light's
-  range; `LightmapperUtils` gives area lights that range.
+  a disc light's plus half its `areaSize.x` (5.75 and 7, whatever `areaSize.y`), any other
+  light's range (every other light type); `LightmapperUtils` gives area lights that range.
 - Under the Universal Render Pipeline the lights reach realtime GI as the pipeline's delegate
   gives them (`Lightmapping.SetDelegate`): an inverse-squared falloff with the range's window
   (the lightmaps are a third to a tenth of the built-in pipeline's; with range 4 the far walls

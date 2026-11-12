@@ -680,7 +680,7 @@ public class RealtimeGIProbe : MonoBehaviour
         }
     };
 
-    /// <summary>Light.dilatedRange of a light of range 5 by type and area size, and the range
+    /// <summary>Light.dilatedRange of a light of range 5 by type (every type) and area size, and the range
     /// LightmapperUtils gives a rectangle and a disc light.</summary>
     static string DilatedRanges()
     {
@@ -703,9 +703,13 @@ public class RealtimeGIProbe : MonoBehaviour
         var disc = new GI.DiscLight();
         GI.LightmapperUtils.Extract(light, ref disc);
         Add("discWide", LightType.Disc, new Vector2(1.5f, 7f));
+        Add("discLarge", LightType.Disc, new Vector2(4f, 0.3f));
         Add("point", LightType.Point, new Vector2(2f, 1f));
         Add("spot", LightType.Spot, new Vector2(2f, 1f));
         Add("directional", LightType.Directional, new Vector2(2f, 1f));
+        Add("pyramid", LightType.Pyramid, new Vector2(2f, 1f));
+        Add("box", LightType.Box, new Vector2(2f, 1f));
+        Add("tube", LightType.Tube, new Vector2(2f, 1f));
         sb.Append(",\"extractedRectangle\":").Append(F(rect.range)).Append(",\"extractedDisc\":").Append(F(disc.range));
         Destroy(go);
         return sb.ToString();

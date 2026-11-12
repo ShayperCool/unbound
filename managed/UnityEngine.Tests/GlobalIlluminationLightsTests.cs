@@ -175,7 +175,8 @@ namespace UnityEngine.Tests
                 light.areaSize = Vector2.zero;
                 Assert.Equal(5f, light.dilatedRange);
                 light.areaSize = new Vector2(2f, 1f);
-                foreach (var type in new[] { UnityEngine.LightType.Point, UnityEngine.LightType.Spot, UnityEngine.LightType.Directional })
+                foreach (var type in new[] { UnityEngine.LightType.Point, UnityEngine.LightType.Spot, UnityEngine.LightType.Directional,
+                    UnityEngine.LightType.Pyramid, UnityEngine.LightType.Box, UnityEngine.LightType.Tube })
                 {
                     light.type = type;
                     Assert.Equal(5f, light.dilatedRange);
