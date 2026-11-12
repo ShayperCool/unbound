@@ -152,6 +152,10 @@ pub struct TextureSettings {
     /// The `.meta`'s own sRGB flag, which normal maps keep (on) too.
     #[serde(default)]
     pub srgb_flag: bool,
+    /// In the measured import profile, compressed automatic Single Channel red mips use the authored
+    /// colour-space flag while their GPU format stays linear.
+    #[serde(default)]
+    pub single_channel_mip_srgb: bool,
     /// Set by the importer in a gamma-space project: HDR colour is stored gamma-encoded.
     #[serde(default)]
     pub gamma_hdr: bool,
@@ -350,6 +354,7 @@ impl TextureSettings {
             single_channel_component: int(imp, "singleChannelComponent").unwrap_or(0) as i32,
             srgb,
             srgb_flag,
+            single_channel_mip_srgb: false,
             gamma_hdr: false,
             normal_maps_xyz: false,
             alpha_source,
@@ -1107,7 +1112,8 @@ impl Importer for TextureImporter {
     // 27: Fast LDR ASTC storage, clamped edges and the normal-map RGB24 fallback.
     // 28: malformed ASTC mode budgets decode to the format's error colour.
     // 29: BC4/BC5 compare continuous ramp fits and preserve channel-fit rounding.
-    const VERSION: u32 = 29;
+    // 30: compressed automatic Single Channel red mips retain their source colour-space filtering.
+    const VERSION: u32 = 30;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -1122,6 +1128,13 @@ impl Importer for TextureImporter {
             settings.uncompressed = false;
             settings.format_alpha = Some(true);
         }
+        settings.single_channel_mip_srgb = self.project.encoders.measured_import_encoders
+            && settings.shape == TextureShape::Texture2D
+            && settings.texture_type == TextureType::SingleChannel
+            && settings.single_channel_component == 1
+            && settings.explicit_format.is_none()
+            && settings.compression != 0
+            && settings.srgb_flag;
         settings.gamma_hdr = self.gamma;
         settings.normal_maps_xyz = self.normal_maps_xyz;
         let mut texture = import_texture(source, bytes, meta, settings)?;
@@ -1384,7 +1397,10 @@ fn mip_chain_with_columns(
     let levels = settings.mipmaps && (image.width > 1 || image.height > 1);
     // The Editor filters sRGB colour in linear light (only when there are mips to make) and
     // makes normals from float heights; other 8-bit textures keep their top level in bytes.
-    let srgb = settings.srgb && format == TextureFormat::Rgba8 && levels && height.is_none();
+    let srgb = (settings.srgb || settings.single_channel_mip_srgb)
+        && format == TextureFormat::Rgba8
+        && levels
+        && height.is_none();
     let top = if height.is_some() {
         mipmaps::Top::Unorm
     } else if srgb {

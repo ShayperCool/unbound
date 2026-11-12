@@ -23,6 +23,9 @@ SoftNormal compression=normal
 SoftHigh compression=high android=ETC2_RGBA8
 FlatNormal compression=normal android=ETC2_RGB4
 FlatOpaque compression=normal alpha=none
+HeightRedLinear type=single channel=red compression=normal srgb=0
+HeightSingleSrgb type=single channel=red srgb=1
+HeightSingleLinear type=single channel=red srgb=0
 HeightRed type=single channel=red compression=normal
 HeightRedQ0 type=single channel=red compression=normal quality=0
 HeightRedHigh type=single channel=red compression=high

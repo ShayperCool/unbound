@@ -1499,3 +1499,43 @@ fn astc_fast_storage_and_normal_override_are_scoped() {
     let unmeasured = import("Android", 0, 50, 0, Default::default());
     assert!(unmeasured.blocks.is_none());
 }
+
+#[test]
+fn automatic_single_red_filters_mips_before_selecting_linear_storage() {
+    let bytes = png(4, 4, |x, _| {
+        let c = if x % 2 == 0 { 0 } else { 255 };
+        [c, c, c, 255]
+    });
+    let measured = unbound_compat::TextureCompressionRules::for_version(
+        unbound_compat::UnityVersion::new(6000, 0, 71),
+    );
+    let import = |srgb: i32, compression: i32, encoders| {
+        let meta = unbound_yaml::parse_value(&format!(
+            "TextureImporter:\n  textureType: 10\n  singleChannelComponent: 1\n  mipmaps:\n    enableMipMap: 1\n    sRGBTexture: {srgb}\n  platformSettings:\n  - buildTarget: DefaultTexturePlatform\n    textureCompression: {compression}\n"
+        )).unwrap();
+        TextureImporter {
+            compress: false,
+            project: ProjectCompression {
+                encoders,
+                ..ProjectCompression::default()
+            },
+            ..TextureImporter::default()
+        }
+        .import(Path::new("Assets/channels.png"), &bytes, &meta)
+        .unwrap()
+    };
+    let authored_srgb = import(1, 1, measured);
+    let authored_linear = import(0, 1, measured);
+    assert!(!authored_srgb.srgb && !authored_linear.srgb);
+    assert_eq!(authored_srgb.gpu_channel(), Some(GpuChannel::Red));
+    assert_eq!(
+        authored_srgb.reported_format(),
+        Some(BlockFormat::Bc4.unity_format())
+    );
+    assert_eq!(authored_srgb.mips[1].data[0], 188);
+    assert_eq!(authored_linear.mips[1].data[0], 128);
+    let uncompressed = import(1, 0, measured);
+    assert_eq!(uncompressed.reported_format(), Some(unity_format::R8));
+    assert_eq!(uncompressed.mips[1].data[0], 128);
+    assert_eq!(import(1, 1, Default::default()).mips[1].data[0], 128);
+}

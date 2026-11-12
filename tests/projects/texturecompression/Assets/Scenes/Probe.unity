@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &1949217902
+--- !u!1 &1063779127
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1949217904}
-  - component: {fileID: 1949217903}
+  - component: {fileID: 1063779129}
+  - component: {fileID: 1063779128}
   m_Layer: 0
   m_Name: TextureCompressionProbe
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1949217903
+--- !u!114 &1063779128
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1949217902}
+  m_GameObject: {fileID: 1063779127}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 50b3960969ba1ce99ba6e03ca7d533a2, type: 3}
@@ -175,7 +175,10 @@ MonoBehaviour:
   - {fileID: 2800000, guid: a76b06fd9fe902b6ab3d3fb65be7871d, type: 3}
   - {fileID: 2800000, guid: 681d17b074159c467a032519e297dc38, type: 3}
   - {fileID: 2800000, guid: 03575b608cf58d82cb389082a9b85e0c, type: 3}
+  - {fileID: 2800000, guid: add4648fed976a7ea97d0f326e0b28b5, type: 3}
   - {fileID: 2800000, guid: 34a745d6e3e4897829928e3eea7ddbf0, type: 3}
+  - {fileID: 2800000, guid: 1de00619aadfcd54c8ab130ec632a7ea, type: 3}
+  - {fileID: 2800000, guid: 4f6adff3c0d3e6d97b512e0f4492cff8, type: 3}
   - {fileID: 2800000, guid: 6a630ac66455a209ab04034a1373c53a, type: 3}
   - {fileID: 2800000, guid: af0342ecd1cc66c0bbc617a2bf336d86, type: 3}
   - {fileID: 2800000, guid: bfd7a97813f46adba8cf71c189d5785c, type: 3}
@@ -256,13 +259,13 @@ MonoBehaviour:
   - {fileID: 2800000, guid: b28072392b87c05ed8f36c8d45fe993e, type: 3}
   - {fileID: 2800000, guid: c55c4584c0deb1ec59998c727f1370b0, type: 3}
   - {fileID: 2800000, guid: b0a50a016e452972e9b739e7822a9570, type: 3}
---- !u!4 &1949217904
+--- !u!4 &1063779129
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1949217902}
+  m_GameObject: {fileID: 1063779127}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -275,4 +278,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1949217904}
+  - {fileID: 1063779129}
