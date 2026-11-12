@@ -64,6 +64,102 @@ pub(super) fn compress(rgba: &[u8], width: u32, height: u32, format: BlockFormat
     output
 }
 
+// Validate the 2D ASTC bit budget before the byte decoder reads variable-length fields.
+// The format allows at most 64 weights in 24..96 bits, and at most 18 endpoint values.
+// Void-extent blocks have a separate constant-colour payload.
+fn valid_header(block: &[u8]) -> bool {
+    const MAX_WEIGHTS: u32 = 64;
+    const MIN_WEIGHT_BITS: u32 = 24;
+    const MAX_WEIGHT_BITS: u32 = 96;
+    const MAX_ENDPOINT_VALUES: u32 = 18;
+    const BLOCK_BITS: u32 = 128;
+    let bits = u128::from_le_bytes(block.try_into().unwrap());
+    let field = |at: u32, mask: u32| ((bits >> at) as u32) & mask;
+    let mode = field(0, 2047);
+    if mode & 511 == 508 {
+        return true;
+    }
+    let mut high = field(9, 1);
+    let mut dual = field(10, 1);
+    let a = field(5, 3);
+    let base;
+    let (x, y);
+    if mode & 3 != 0 {
+        base = field(4, 1) | (mode & 3) * 2;
+        let b = field(7, 3);
+        (x, y) = match field(2, 3) {
+            0 => (b + 4, a + 2),
+            1 => (b + 8, a + 2),
+            2 => (a + 2, b + 8),
+            _ if mode & 256 != 0 => ((b & 1) + 2, a + 2),
+            _ => (a + 2, (b & 1) + 6),
+        };
+    } else {
+        base = field(4, 1) | field(2, 3) * 2;
+        (x, y) = match field(7, 3) {
+            0 => (12, a + 2),
+            1 => (a + 2, 12),
+            2 => {
+                high = 0;
+                dual = 0;
+                (a + 6, field(9, 3) + 6)
+            }
+            _ if a == 0 => (6, 10),
+            _ if a == 1 => (10, 6),
+            _ => return false,
+        };
+    }
+    if base < 2 {
+        return false;
+    }
+    let count = x * y * (dual + 1);
+    if count > MAX_WEIGHTS {
+        return false;
+    }
+    let quant = base - 2 + high * 6;
+    // Integer sequence sizes for 2,3,4,5,6,8,10,12,16,20,24,32 weight levels.
+    let (binary, trits, quints) = match quant {
+        0 => (1, 0, 0),
+        1 => (0, 1, 0),
+        2 => (2, 0, 0),
+        3 => (0, 0, 1),
+        4 => (1, 1, 0),
+        5 => (3, 0, 0),
+        6 => (1, 0, 1),
+        7 => (2, 1, 0),
+        8 => (4, 0, 0),
+        9 => (2, 0, 1),
+        10 => (3, 1, 0),
+        11 => (5, 0, 0),
+        _ => return false,
+    };
+    let weight_bits =
+        count * binary + (count * 8).div_ceil(5) * trits + (count * 7).div_ceil(3) * quints;
+    if !(MIN_WEIGHT_BITS..=MAX_WEIGHT_BITS).contains(&weight_bits) {
+        return false;
+    }
+    let partitions = field(11, 3) + 1;
+    if partitions == 4 && dual != 0 {
+        return false;
+    }
+    let (config, endpoints) = if partitions == 1 {
+        (17, 2 + 2 * field(15, 3))
+    } else {
+        let class = field(23, 3);
+        if class == 0 {
+            (29, partitions * (2 + 2 * field(27, 3)))
+        } else {
+            let endpoints = (0..partitions)
+                .map(|i| 2 + 2 * (class - 1 + field(25 + i, 1)))
+                .sum();
+            (25 + partitions * 3, endpoints)
+        }
+    };
+    let config = config + dual * 2;
+    let min_endpoint_bits = endpoints + (endpoints * 8).div_ceil(5);
+    endpoints <= MAX_ENDPOINT_VALUES && config + weight_bits + min_endpoint_bits <= BLOCK_BITS
+}
+
 pub(super) fn decode(blocks: &[u8], width: u32, height: u32, format: BlockFormat) -> Vec<u8> {
     let (w, h) = (width.max(1) as usize, height.max(1) as usize);
     let side = format.footprint() as usize;
@@ -75,7 +171,11 @@ pub(super) fn decode(blocks: &[u8], width: u32, height: u32, format: BlockFormat
         .enumerate()
     {
         let mut image = [0u32; 64];
-        texture2ddecoder::decode_astc_block(block, side, side, &mut image);
+        if valid_header(block) {
+            texture2ddecoder::decode_astc_block(block, side, side, &mut image);
+        } else {
+            image.fill(0xffff00ff); // The ASTC error colour: opaque magenta.
+        }
         let (bx, by) = (i % across * side, i / across * side);
         for y in 0..side.min(h - by) {
             for x in 0..side.min(w - bx) {
@@ -90,6 +190,57 @@ pub(super) fn decode(blocks: &[u8], width: u32, height: u32, format: BlockFormat
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn malformed_payloads_do_not_abort_raw_block_operations() {
+        for format in [
+            BlockFormat::Astc4x4,
+            BlockFormat::Astc5x5,
+            BlockFormat::Astc6x6,
+            BlockFormat::Astc8x8,
+        ] {
+            let side = format.footprint();
+            assert_eq!(
+                decode(&[167; 16], side, side, format),
+                [255, 0, 255, 255].repeat((side * side) as usize)
+            );
+            let mut seed = 31u64;
+            for _ in 0..4096 {
+                let mut block = [0u8; 16];
+                for byte in &mut block {
+                    seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+                    *byte = (seed >> 32) as u8;
+                }
+                assert_eq!(
+                    decode(&block, side, side, format).len(),
+                    (side * side * 4) as usize
+                );
+            }
+        }
+    }
+    #[test]
+    fn encoded_rectangles_pass_the_block_budget_checks() {
+        let rgba: Vec<u8> = (0..9)
+            .flat_map(|y| {
+                (0..13).flat_map(move |x| {
+                    [
+                        (x * 17) as u8,
+                        (y * 23) as u8,
+                        ((x ^ y) * 11) as u8,
+                        (x * y * 39) as u8,
+                    ]
+                })
+            })
+            .collect();
+        for format in [
+            BlockFormat::Astc4x4,
+            BlockFormat::Astc5x5,
+            BlockFormat::Astc6x6,
+            BlockFormat::Astc8x8,
+        ] {
+            let encoded = compress(&rgba, 13, 9, format);
+            assert!(encoded.chunks_exact(16).all(valid_header));
+        }
+    }
     #[test]
     fn fast_rgba_block_matches_the_reference() {
         let rgba = [

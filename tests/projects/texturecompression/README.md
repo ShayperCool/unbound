@@ -189,7 +189,7 @@ other releases retain the previous path. GPU storage uses decoded RGBA8 pixels, 
 
 The normal-map control also records a Standalone RGB24 override becoming DXT5, while Default
 RGB24 imports stay RGB24. The measured import profile applies that fallback before processing.
-Texture cache v27 includes these output changes.
+Texture cache v28 includes these output changes and malformed-block validation.
 
 Crunch controls cover DXT1 and DXT5 at qualities 0, 50 and 100, with ETC_RGB4Crunched and
 ETC2_RGBA8Crunched Android counterparts, gradients, noisy alpha and flat colour. Crunch encoding
@@ -199,3 +199,10 @@ pixels and diagnoses that difference. block_report.py counts the missing logical
 from dimensions and mip levels, rather than treating archive bytes as blocks. If two archives
 of the same format differ, their per-block exactness needs a transcoded comparison; the report
 labels its zero verified lower bound instead of asserting every decoded block differs.
+
+
+ASTC raw-data and copy operations tolerate malformed block payloads. The decoder checks the
+[2D mode weight and endpoint budgets](https://github.com/ARM-software/astc-encoder/blob/main/Source/astcenc_block_sizes.cpp)
+before reading variable-length fields; impossible budgets produce the format's opaque magenta
+error colour. The copy control's source bytes are deliberately different from its destination.
+Regression tests also decode deterministic arbitrary payloads at every supported footprint.
