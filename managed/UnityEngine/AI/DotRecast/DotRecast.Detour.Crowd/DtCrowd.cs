@@ -1582,7 +1582,6 @@ namespace DotRecast.Detour.Crowd
                 // Other agents predict this agent at its planned traversal velocity.
                 // Its reported velocity still comes from the position change over the frame.
                 ag.vel = ag.nvel;
-                ag.pvel = ag.nvel;
             }
         }
 

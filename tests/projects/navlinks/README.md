@@ -84,8 +84,9 @@ reference and tolerances remain unchanged. Crossing agents supply their planned
 velocity to crowd avoidance, while `velocity` still reports the frame's actual
 position change. A waiting agent permits zero steering speed, including the
 separation calculation. Braking takes the whole slower plan, so a tilted landing
-velocity can become a horizontal walking velocity on the next update. Reaching
-a straight destination ends the path with automatic braking disabled too.
+velocity can become a horizontal walking velocity on the next update. When the final horizontal movement segment reaches the destination, the path
+ends with automatic braking disabled too. Scripted movement sideways or away
+does not count as arrival.
 
 `costlow` and `areajump` each fall from 869 to 2 failing values; `nobraking`
 from 2423 to 1; `two` from 1678 to 65; `crosstile` from 2369 to 939. The

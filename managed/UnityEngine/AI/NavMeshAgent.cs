@@ -1736,6 +1736,8 @@ namespace Unbound.Runtime
             return p;
         }
 
+        const float ArrivalSnapDistance = 1e-3f;
+
         /// <summary>The end of the path (measured): within the stopping distance an agent stops;
         /// within 0.01 its path no longer counts as one (hasPath is false) while it closes in;
         /// a step that would pass the end lands on it and the agent stands.</summary>
@@ -1765,7 +1767,9 @@ namespace Unbound.Runtime
                 return;
             }
             // The step that reaches the end from where the update began lands on it (measured).
-            if (leftBefore <= 1e-3f || step >= leftBefore)
+            bool reached = agent.autoBraking ? step >= leftBefore
+                : ag.ncorners == 1 && CrossesDestination(before, ag.npos, last.pos);
+            if (leftBefore <= ArrivalSnapDistance || reached)
             {
                 ag.npos = last.pos;
                 ag.vel = RcVec3f.Zero;
@@ -1781,6 +1785,20 @@ namespace Unbound.Runtime
                 return;
             }
             agent.SetArrived(left < 0.01f);
+        }
+
+        // Without braking, travel length alone cannot establish arrival: a script may move
+        // sideways or away. Only the final movement segment reaching the destination counts.
+        static bool CrossesDestination(RcVec3f before, RcVec3f after, RcVec3f destination)
+        {
+            float dx = after.X - before.X, dz = after.Z - before.Z;
+            float lengthSquared = dx * dx + dz * dz;
+            if (lengthSquared == 0f) return false;
+            float tx = destination.X - before.X, tz = destination.Z - before.Z;
+            float t = (tx * dx + tz * dz) / lengthSquared;
+            if (t < 0f || t > 1f) return false;
+            float ex = tx - t * dx, ez = tz - t * dz;
+            return ex * ex + ez * ez <= ArrivalSnapDistance * ArrivalSnapDistance;
         }
 
         internal static void WriteTransform(NavMeshAgent agent)

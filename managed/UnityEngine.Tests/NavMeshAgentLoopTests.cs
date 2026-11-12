@@ -103,6 +103,25 @@ namespace UnityEngine.Tests
             Assert.InRange(MathF.Abs(agent.nextPosition.z - before.z - plan.z * Dt), 0f, 1e-4f);
         }
 
+        [Theory]
+        [InlineData(0f, 20f)]
+        [InlineData(-20f, 0f)]
+        public void ScriptedUnbrakedMotionDoesNotArriveByDistanceAlone(float x, float z)
+        {
+            var agent = Agent(new Vector3(-4f, 0f, -4f));
+            agent.autoBraking = false;
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            Assert.True(agent.SetDestination(Center + new Vector3(-3.65f, 0f, -4f)));
+            AgentSystem.Step();
+            var before = agent.nextPosition;
+            agent.velocity = new Vector3(x, 0f, z);
+            AgentSystem.Step();
+            Assert.InRange(MathF.Abs(agent.nextPosition.x - before.x - x * Dt), 0f, 1e-3f);
+            Assert.InRange(MathF.Abs(agent.nextPosition.z - before.z - z * Dt), 0f, 1e-3f);
+            Assert.True(agent.hasPath);
+            Assert.True(agent.remainingDistance > 0.3f);
+        }
+
         [Fact]
         public void ReachingTheDestinationEndsAPathWithoutAutomaticBraking()
         {

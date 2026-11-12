@@ -114,6 +114,26 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ResetDuringTraversalKeepsTheObliqueWalkingVelocity()
+        {
+            var agent = Agent(autoTraverse: true);
+            Assert.True(agent.Warp(new Vector3(-7f, 0f, -1f)));
+            Assert.True(agent.SetDestination(Destination));
+            StepOntoLink(agent);
+            var walking = agent.m_Crowd.pvel;
+            Assert.True(MathF.Abs(walking.Z) > 0.05f);
+            for (int i = 0; i < 10; i++) Step();
+            agent.ResetPath();
+            Step();
+            var landing = agent.nextPosition;
+            Step();
+            var motion = agent.nextPosition - landing;
+            var actual = new Vector2(motion.x, motion.z).normalized;
+            var expected = new Vector2(walking.X, walking.Z).normalized;
+            Assert.InRange(Vector2.Distance(actual, expected), 0f, 1e-3f);
+        }
+
+        [Fact]
         public void AnAgentStopsWhenItsDestinationIsTheLinkLanding()
         {
             var agent = Agent(autoTraverse: true);
