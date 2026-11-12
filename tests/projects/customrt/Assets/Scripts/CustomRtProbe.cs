@@ -327,6 +327,106 @@ public class CustomRtProbe : MonoBehaviour
         foreach (var s in Variables()) yield return s;
         foreach (var s in Assets()) yield return s;
         foreach (var s in Loading()) yield return s;
+        foreach (var s in VolumeSelf()) yield return s;
+        foreach (var s in Changed()) yield return s;
+    }
+
+    /// <summary>Properties set after a texture was loaded (after every other section, added
+    /// later). Each texture initializes on load to a color, is updated once with the coords pass,
+    /// then has one property set; it is read before, in the next frame and in the one after.
+    /// Also what setting an initialization material does to the initialization texture and
+    /// color.</summary>
+    IEnumerable Changed()
+    {
+        Begin("changed");
+        var initColor = new Color(0.25f, 0.5f, 0.75f, 1f);
+        CustomRenderTexture Make(string n)
+        {
+            var t = Crt("changed." + n, 4, 2);
+            t.initializationColor = initColor;
+            t.initializationMode = CustomRenderTextureUpdateMode.OnLoad;
+            t.updateMode = CustomRenderTextureUpdateMode.OnDemand;
+            t.material = Mat(coords);
+            return t;
+        }
+        var cases = new List<(string, CustomRenderTexture, Action<CustomRenderTexture>)>
+        {
+            ("none", Make("none"), t => { }),
+            ("material", Make("material"), t => t.material = Mat(coords)),
+            ("materialSame", Make("materialSame"), t => t.material = t.material),
+            ("initColor", Make("initColor"), t => t.initializationColor = new Color(0, 1, 0, 1)),
+            ("initColorSame", Make("initColorSame"), t => t.initializationColor = t.initializationColor),
+            ("initMaterial", Make("initMaterial"), t => t.initializationMaterial = Mat(coords)),
+            ("initTexture", Make("initTexture"), t => t.initializationTexture = Texture2D.whiteTexture),
+            ("initSource", Make("initSource"), t => t.initializationSource = CustomRenderTextureInitializationSource.Material),
+            ("initMode", Make("initMode"), t => t.initializationMode = CustomRenderTextureUpdateMode.OnLoad),
+            ("updateMode", Make("updateMode"), t => t.updateMode = CustomRenderTextureUpdateMode.OnLoad),
+            ("faceMask", Make("faceMask"), t => t.cubemapFaceMask = 5),
+            ("shaderPass", Make("shaderPass"), t => t.shaderPass = 3),
+        };
+        // Initialized by request instead, so that setting the mode to OnLoad is a change.
+        var byRequest = cases[8].Item2;
+        byRequest.initializationMode = CustomRenderTextureUpdateMode.OnDemand;
+        byRequest.Initialize();
+        var reset = Crt("changed.reset", 4, 2);
+        reset.initializationTexture = Texture2D.whiteTexture;
+        reset.initializationColor = new Color(1, 0, 0, 0.5f);
+        reset.initializationMaterial = Mat(coords);
+        Describe("changed.reset.material", reset);
+        reset.initializationMaterial = null;
+        Describe("changed.reset.null", reset);
+        yield return null;
+        foreach (var (_, t, _) in cases) t.Update();
+        yield return null;
+        foreach (var (n, t, change) in cases)
+        {
+            Read("changed." + n + ".before", t);
+            change(t);
+        }
+        yield return null;
+        foreach (var (n, t, _) in cases) Read("changed." + n + ".after", t);
+        yield return null;
+        foreach (var (n, t, _) in cases) Read("changed." + n + ".later", t);
+        End();
+        yield return null;
+    }
+
+    /// <summary>A double-buffered volume reading itself, after every other section (added
+    /// later): its first update writes the parameters of each slice, the second adds _Add
+    /// (1, 0, 0, 0) to what <c>_SelfTexture3D</c> gives at each slice's texcoords. Both buffers
+    /// are read after each update.</summary>
+    IEnumerable VolumeSelf()
+    {
+        Begin("volumeSelf");
+        var t = Crt("volumeSelf", 4, 2);
+        t.dimension = TextureDimension.Tex3D;
+        t.volumeDepth = 4;
+        t.depth = 0;
+        t.doubleBuffered = true;
+        t.initializationColor = new Color(0.5f, 0, 0, 0);
+        t.initializationMode = CustomRenderTextureUpdateMode.OnLoad;
+        t.updateMode = CustomRenderTextureUpdateMode.OnDemand;
+        t.material = Mat(coords);
+        t.shaderPass = 2;
+        yield return null;
+        t.Update();
+        yield return null;
+        for (int slice = 0; slice < 4; slice++)
+        {
+            Read("volumeSelf.first." + slice, t, slice);
+            Read("volumeSelf.first.other." + slice, t.GetDoubleBufferRenderTexture(), slice);
+        }
+        t.material = Mat(self3D);
+        t.shaderPass = 0;
+        t.Update();
+        yield return null;
+        for (int slice = 0; slice < 4; slice++)
+        {
+            Read("volumeSelf.second." + slice, t, slice);
+            Read("volumeSelf.second.other." + slice, t.GetDoubleBufferRenderTexture(), slice);
+        }
+        End();
+        yield return null;
     }
 
     /// <summary>When textures made with default settings are first seen, late in the run: one
