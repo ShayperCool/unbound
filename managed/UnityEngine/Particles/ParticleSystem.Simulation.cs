@@ -203,14 +203,17 @@ namespace UnityEngine
         /// <summary>Advances by <paramref name="dt"/> (simulation speed applied) in equal steps no
         /// longer than Time.maximumParticleDeltaTime: Unity splits 0.05 s into two 0.025 s steps at the
         /// default 0.03 (measured: the system's time accumulates exactly those steps).</summary>
-        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f)
+        /// <param name="carry">Whether the time earlier calls left unstepped (<see cref="m_StepRemainder"/>)
+        /// joins this advance, and its own residual is kept for the next: not inside a fixed-step
+        /// Simulate, which keeps that remainder itself.</param>
+        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f, bool carry = true)
         {
             float max = Time.maximumParticleDeltaTime;
             int steps = max > 0f ? (int)Math.Ceiling(dt / max) : 1;
             steps = Math.Clamp(steps, 1, 100000);
             float step = dt / steps;
             float share = distance / steps;
-            float remaining = dt;
+            float remaining = carry ? dt + m_StepRemainder : dt;
             try
             {
                 for (int i = 0; remaining > 1e-6f && i < 100000; i++)
@@ -226,6 +229,9 @@ namespace UnityEngine
                     remaining -= used;
                     if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
                 }
+                // Only the residual that ends the advance carries over (not the rest of an
+                // advance a pause cut short).
+                if (carry) m_StepRemainder = remaining > 0f && remaining <= 1e-6f ? remaining : 0f;
             }
             finally
             {
@@ -377,16 +383,22 @@ namespace UnityEngine
 
         void AdvanceEmissionStep(float dt, float distance)
         {
+            // Rate births spread their ages over the whole step, also over the part a start delay
+            // took (6000.0.71f1, tests/projects/particleemission stoppedLongStep/0.5/0.1/afterPlay).
+            float wholeStep = dt;
             if (m_DelayRemaining > 0f)
             {
-                // A system whose emission ended before its start delay passed (Emit into a delayed
-                // system) keeps its clock at the start: the delay never elapses, no burst fires
-                // and module curves stay at time 0 (6000.0.71f1, tests/projects/particlegravity
-                // delay/*).
-                if (m_StopEmitting) return;
+                // A system whose emission is stopped keeps its remaining start delay: a step no
+                // longer than it leaves the clock at the start (no burst, module curves at time
+                // 0), a longer one advances the clock by the excess, without counting the delay
+                // down (6000.0.71f1, tests/projects/particlegravity delay/*, particleemission
+                // stoppedSimulate/*/*/0.25).
                 float d = Mathf.Min(dt, m_DelayRemaining);
-                m_DelayRemaining -= d;
-                m_TotalTime += d;
+                if (!m_StopEmitting)
+                {
+                    m_DelayRemaining -= d;
+                    m_TotalTime += d;
+                }
                 distance *= dt > 0f ? (dt - d) / dt : 0f;
                 dt -= d;
                 if (dt <= 0f) return;
@@ -394,6 +406,11 @@ namespace UnityEngine
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
             // The time keeps running after Stop (measured); only emission ends.
             bool emit = m_SubEmitterParent == null && !m_StopEmitting && m_Emission.enabled;
+            // A burst cycle whose time passes while the system does not emit (stopped, or its
+            // emission module off) does not fire when emission resumes later in that loop
+            // (6000.0.71f1, tests/projects/particleemission stoppedSimulate/6/3, disabledBurst/*).
+            // A sub-emitter's bursts belong to its parent's events instead.
+            bool passBursts = !emit && m_SubEmitterParent == null;
             // One time-rate draw per step, shared across the loop boundary's segments.
             float rateRandom = emit ? NextEmissionValue() : 0f;
             float step = dt;
@@ -403,6 +420,7 @@ namespace UnityEngine
             m_RateBatchStartLoop = m_Loop;
             m_UseRateBatch = StartsInBatches;
             bool planned = emit && (m_UseRateBatch ? PlanRate(t0, dt, duration, rateRandom) : PlanConstantRate(t0, dt, duration));
+            if (planned) m_StepRateDt = wholeStep;
             m_CollectRateBatch = m_UseRateBatch && m_StepRateBirths > 0;
             int guard = 0;
             var segment = BurstSegment.Within;
@@ -431,6 +449,7 @@ namespace UnityEngine
                     CollectBursts(t0, duration, step, BurstSegment.BeforeWrap, duration);
                     EmitOverDistance(t0, duration, rest, step, distance * ((duration - t0) / step));
                 }
+                else if (passBursts) PassBursts(duration, BurstSegment.BeforeWrap);
                 m_Loop++;
                 CarryEmissionPhase(duration);
                 Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
@@ -445,6 +464,7 @@ namespace UnityEngine
                 EmitStepBursts(t1);
                 EmitOverDistance(t0, t1, 0f, step, distance * ((t1 - t0) / step));
             }
+            else if (passBursts) PassBursts(t1, segment);
             if (planned) m_RateAccumulator = m_StepRateRemainder;
             m_Time = t1;
         }
@@ -973,6 +993,32 @@ namespace UnityEngine
                     }
                     c++;
                     if (cycles == 0 && c > 100000) break;
+                }
+                m_BurstCycles[i] = c;
+            }
+        }
+
+        /// <summary>Counts the burst cycles due by playback time <paramref name="b"/> as passed,
+        /// without drawing their probabilities or emitting: the same due test as
+        /// <see cref="CollectBursts"/>.</summary>
+        void PassBursts(float b, BurstSegment segment)
+        {
+            var bursts = m_Emission.bursts;
+            if (bursts.Count == 0) return;
+            if (m_BurstCycles.Length != bursts.Count) Array.Resize(ref m_BurstCycles, bursts.Count);
+            bool endIncluded = segment == BurstSegment.BeforeWrap;
+            float duration = Mathf.Max(m_Main.duration, 0.0001f);
+            for (int i = 0; i < bursts.Count; i++)
+            {
+                var burst = bursts[i];
+                int cycles = burst.cycleCount; // 0: forever
+                float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
+                int c = m_BurstCycles[i];
+                while ((cycles == 0 || c < cycles) && !(c > 100000))
+                {
+                    float at = burst.m_Time + c * interval;
+                    if (c == 0 ? (endIncluded ? at > b : at >= b) : at > b || at >= duration) break;
+                    c++;
                 }
                 m_BurstCycles[i] = c;
             }
@@ -1620,7 +1666,7 @@ namespace UnityEngine
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
             float advance = dt;
             if (m_DelayRemaining > 0f && m_IsPlaying && !m_BirthDelayClock)
-                advance = m_StopEmitting ? 0f : Mathf.Max(0f, dt - m_DelayRemaining);
+                advance = Mathf.Max(0f, dt - m_DelayRemaining);
             float endTime = m_Time + advance;
             if (m_Main.loop) endTime %= duration;
             return Mathf.Clamp01(endTime / duration);

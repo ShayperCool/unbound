@@ -37,8 +37,12 @@ namespace UnityEngine
         internal float m_DelayRemaining;
         internal int m_Loop;
         internal float m_RateAccumulator;
-        /// <summary>Simulate with a fixed time step: the time not yet stepped.</summary>
-        internal float m_FixedRemainder;
+        /// <summary>The time of earlier calls not yet stepped: what a fixed-step Simulate left
+        /// below one step, or the residual (at most a microsecond) that ends a variable-step
+        /// advance. The next advance adds it to its own time; a new playback drops it
+        /// (6000.0.71f1, tests/projects/particleemission stoppedSimulate/*/1/0 and
+        /// stoppedResume/*).</summary>
+        internal float m_StepRemainder;
         internal float m_DistanceAccumulator;
         internal int[] m_BurstCycles = Array.Empty<int>();
         internal ulong m_RandomState;
@@ -375,7 +379,7 @@ namespace UnityEngine
                     ps.ClearParticles();
                     ps.m_IsPlaying = false;
                     ps.m_StopEmitting = false;
-                    ps.m_FixedRemainder = 0f;
+                    ps.m_StepRemainder = 0f;
                 }
             var startedSystems = new bool[systems.Count];
             var stoppedSystems = new bool[systems.Count];
@@ -435,14 +439,14 @@ namespace UnityEngine
                     if (fixedTimeStep)
                     {
                         float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
-                        ps.m_FixedRemainder += total;
-                        int count = (int)Math.Min(ps.m_FixedRemainder / step, 100000f);
+                        ps.m_StepRemainder += total;
+                        int count = (int)Math.Min(ps.m_StepRemainder / step, 100000f);
                         float distance = ps.m_FrameDistance / Math.Max(count, 1);
-                        for (int guard = 0; ps.m_FixedRemainder >= step && guard < 100000; guard++)
+                        for (int guard = 0; ps.m_StepRemainder >= step && guard < 100000; guard++)
                         {
-                            if (stopped) ps.AdvanceStoppedClock(step, distance);
-                            else ps.Advance(step, distance, false, (float)guard / Math.Max(count, 1), (float)(guard + 1) / Math.Max(count, 1));
-                            ps.m_FixedRemainder -= step;
+                            if (stopped) ps.AdvanceStoppedClock(step, distance, carry: false);
+                            else ps.Advance(step, distance, false, (float)guard / Math.Max(count, 1), (float)(guard + 1) / Math.Max(count, 1), carry: false);
+                            ps.m_StepRemainder -= step;
                         }
                     }
                     // Native's non-fixed Simulate ignores calls below ten microseconds;
@@ -492,13 +496,23 @@ namespace UnityEngine
             return order;
         }
 
-        void AdvanceStoppedClock(float dt, float distance)
+        /// <summary>A stopped system still simulates particles supplied by SetParticles, and its
+        /// steps advance the clock (past what is left of its start delay, see
+        /// AdvanceEmissionStep) without restarting automatic emission. One that never played
+        /// takes its start delay at its first stopped step (6000.0.71f1,
+        /// tests/projects/particleemission stoppedSimulate/{1,2,3}/1/0.25).</summary>
+        void AdvanceStoppedClock(float dt, float distance, bool carry = true)
         {
-            // Native keeps a stopped system inside an unfinished start delay at time zero.
-            // Stopped systems still simulate particles supplied by SetParticles, and their step
-            // advances the clock without restarting automatic emission.
-            if (m_DelayRemaining <= 0f) Advance(dt, distance, false);
+            if (!m_HasPlayed && !m_StoppedDelayTaken)
+            {
+                m_StoppedDelayTaken = true;
+                m_DelayRemaining = Mathf.Max(0f, m_Main.startDelay.Evaluate(0f, ModuleValue(m_PlaybackSeed, 0u)));
+            }
+            Advance(dt, distance, false, carry: carry);
         }
+
+        /// <summary>A system that never played has taken its start delay for its stopped clock.</summary>
+        bool m_StoppedDelayTaken;
 
         /// <summary>Emits now; a system not playing starts playing (measured).</summary>
         public void Emit(int count) => EmitNow(count, default, false);
@@ -1124,6 +1138,7 @@ namespace UnityEngine
             m_LoopStart = false;
             m_DistanceAccumulator = 0f;
             Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
+            m_StepRemainder = 0f;
             m_IsPlaying = true;
             m_StopEmitting = false;
             m_StopPending = false;
@@ -1300,28 +1315,24 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>Either behaviour latches the stop of emission, whatever the system did
+        /// before (also one that never played): only a playback start clears it, so a later
+        /// non-restarting Simulate advances the stopped clock without emitting (6000.0.71f1,
+        /// tests/projects/particleemission longCall/false/* and stoppedSimulate/*).</summary>
         void StopSelf(ParticleSystemStopBehavior behavior)
         {
             m_StartedByParent = false;
+            m_StopEmitting = true;
             if (behavior == ParticleSystemStopBehavior.StopEmittingAndClear)
             {
                 bool wasPlaying = m_IsPlaying;
-                bool hadPlayback = wasPlaying || m_IsPaused || m_StopEmitting;
                 ClearParticles();
                 m_IsPlaying = false;
                 m_IsPaused = false;
-                // A later non-restarting Simulate must advance the stopped clock,
-                // rather than restart emission after StopEmittingAndClear.
-                m_StopEmitting = hadPlayback;
-                m_DelayRemaining = 0f;
                 m_CullingMissed = 0f;
                 if (wasPlaying) OnStopped();
                 return;
             }
-            // Stop also latches a completed, paused Simulate history. Otherwise
-            // stopping its now-empty buffer erases the pause and the next
-            // non-restarting Simulate starts automatic emission again.
-            if (m_IsPlaying || m_IsPaused) m_StopEmitting = true;
             if (m_Count == 0)
             {
                 m_IsPlaying = false;

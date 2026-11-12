@@ -425,5 +425,138 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
+        static ParticleSystem MakeStopped(int mode, float rate, float delay, ParticleSystem.Burst[] bursts = null)
+        {
+            var go = new GameObject("emission-stopped"); go.SetActive(false);
+            var ps = go.AddComponent<ParticleSystem>();
+            var main = ps.main; main.playOnAwake = false; main.duration = 1; main.loop = true;
+            main.startDelay = delay; main.startLifetime = 5; main.startSpeed = 0;
+            var shape = ps.shape; shape.enabled = false;
+            var emission = ps.emission; emission.rateOverTime = rate;
+            if (bursts != null) emission.SetBursts(bursts);
+            ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
+            if (mode == 1) ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            go.SetActive(true);
+            if (mode == 2) ps.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+            if (mode == 3) { ps.Play(false); ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear); }
+            return ps;
+        }
+
+        // particleemission longCall/false/*, stoppedSimulate/{0,1,3,5}/1/0: any Stop stops emission,
+        // also before the system ever played; a system never stopped emits.
+        [Theory]
+        [InlineData(0, 3)]
+        [InlineData(1, 0)]
+        [InlineData(2, 0)]
+        [InlineData(3, 0)]
+        public void NonRestartingSimulateEmitsOnlyIfNeverStopped(int mode, int count)
+        {
+            var ps = MakeStopped(mode, 10, 0);
+            try
+            {
+                ps.Simulate(.3f, false, false, false);
+                Assert.Equal(count, ps.particleCount);
+                Assert.Equal(.3f, ps.time, 1e-6f);
+                // Paused by Simulate, it is alive.
+                State(ps, false, false, true, false, true);
+                ps.Simulate(.7f, false, false, false);
+                ps.Play(false);
+                // Play resumes the paused clock and emission.
+                State(ps, true, true, false, false, true);
+                Assert.Equal(0.9999995f, ps.time);
+                int before = ps.particleCount;
+                // The sub-microsecond time the two calls left joins this one: the particle due
+                // just after the loop end counts (3, not 2, without the carry).
+                ps.Simulate(.3f, false, false, false);
+                Assert.Equal(before + 3, ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        // particleemission stoppedSimulate/{1,4}/1/0.25 and stoppedLongStep/*: a stopped system keeps
+        // the start delay it has left; a step longer than that advances by the excess.
+        [Theory]
+        [InlineData(1, .03f, .25f, 0f, 0f, .05f)]
+        [InlineData(3, .5f, .1f, .2f, .4f, .6f)]
+        [InlineData(3, .5f, .25f, .05f, .1f, .15f)]
+        [InlineData(3, .5f, .4f, 0f, 0f, 0f)]
+        public void StoppedClockKeepsTheStartDelayLeft(int mode, float maximum, float delay, float first, float second, float resumed)
+        {
+            float saved = Time.maximumParticleDeltaTime;
+            Time.maximumParticleDeltaTime = maximum;
+            var ps = MakeStopped(mode, 10, delay);
+            try
+            {
+                ps.Simulate(.3f, false, false, false);
+                Assert.Equal(first, ps.time, 1e-6f);
+                ps.Simulate(.3f, false, false, false);
+                Assert.Equal(second, ps.time, 1e-6f);
+                Assert.Equal(0, ps.particleCount);
+                ps.Play(false);
+                ps.Simulate(.3f, false, false, false);
+                Assert.Equal(resumed, ps.time, 1e-6f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Time.maximumParticleDeltaTime = saved;
+            }
+        }
+
+        // particleemission stoppedLongStep/0.5/0.1/afterPlay: a step that ends the start delay
+        // spreads its rate births over the whole step, delay included (age 0.15, not 0.1).
+        [Fact]
+        public void RateBirthsInTheStepEndingTheDelaySpreadOverTheWholeStep()
+        {
+            float saved = Time.maximumParticleDeltaTime;
+            Time.maximumParticleDeltaTime = .5f;
+            var ps = MakeStopped(3, 10, .1f);
+            try
+            {
+                ps.Simulate(.3f, false, false, false);
+                ps.Simulate(.3f, false, false, false);
+                ps.Play(false);
+                ps.Simulate(.3f, false, false, false);
+                var particles = new ParticleSystem.Particle[4];
+                Assert.Equal(1, ps.GetParticles(particles));
+                Assert.Equal(4.85f, particles[0].remainingLifetime, 2e-4f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Time.maximumParticleDeltaTime = saved;
+            }
+        }
+
+        // particleemission stoppedSimulate/6/3 and disabledBurst/*: a burst cycle that passes while
+        // the system does not emit never fires; later cycles still do.
+        [Theory]
+        [InlineData(false, false, 0, 2)]
+        [InlineData(true, false, 4, 6)]
+        [InlineData(false, true, 0, 2)]
+        public void BurstCyclesPassedWithoutEmissionDoNotFireLater(bool repeat, bool stop, int resumed, int nextLoop)
+        {
+            var burst = new ParticleSystem.Burst(.25f, (short)2);
+            if (repeat) { burst.cycleCount = 3; burst.repeatInterval = .2f; }
+            var ps = MakeStopped(0, 0, 0, new[] { burst });
+            try
+            {
+                ps.Play(false);
+                ps.Simulate(.1f, false, false, false);
+                var emission = ps.emission;
+                if (stop) ps.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+                else emission.enabled = false;
+                ps.Simulate(.3f, false, false, false);
+                Assert.Equal(0, ps.particleCount);
+                if (stop) ps.Play(false);
+                else emission.enabled = true;
+                ps.Simulate(.3f, false, false, false);
+                Assert.Equal(resumed, ps.particleCount);
+                ps.Simulate(.7f, false, false, false);
+                Assert.Equal(nextLoop, ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
     }
 }
+
