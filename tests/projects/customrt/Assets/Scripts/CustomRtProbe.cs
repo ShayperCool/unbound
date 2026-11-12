@@ -329,6 +329,69 @@ public class CustomRtProbe : MonoBehaviour
         foreach (var s in Loading()) yield return s;
         foreach (var s in VolumeSelf()) yield return s;
         foreach (var s in Changed()) yield return s;
+        foreach (var s in Later()) yield return s;
+    }
+
+    /// <summary>After every other section (added later): a double-buffered volume reading itself
+    /// updated in two frames in a row, and in one frame with Update(2), both buffers read after
+    /// each; and textures updating on load but initialized only by request, whose material is
+    /// changed after their shader pass was set to the info pass (or only the pass is set).</summary>
+    IEnumerable Later()
+    {
+        Begin("later");
+        CustomRenderTexture Volume(string n)
+        {
+            var t = Crt("later." + n, 4, 2);
+            t.dimension = TextureDimension.Tex3D;
+            t.volumeDepth = 4;
+            t.depth = 0;
+            t.doubleBuffered = true;
+            t.initializationColor = new Color(0.5f, 0, 0, 0);
+            t.initializationMode = CustomRenderTextureUpdateMode.OnLoad;
+            t.updateMode = CustomRenderTextureUpdateMode.OnDemand;
+            t.material = Mat(self3D);
+            return t;
+        }
+        var frames = Volume("volumeFrames");
+        var twice = Volume("volumeTwice");
+        CustomRenderTexture OnLoadUpdate(string n)
+        {
+            var t = Crt("later." + n, 4, 2);
+            t.initializationColor = new Color(0.25f, 0.5f, 0.75f, 1f);
+            t.initializationMode = CustomRenderTextureUpdateMode.OnDemand;
+            t.updateMode = CustomRenderTextureUpdateMode.OnLoad;
+            t.material = Mat(coords);
+            t.Initialize();
+            return t;
+        }
+        var swapped = OnLoadUpdate("materialUpdate");
+        var passOnly = OnLoadUpdate("passOnly");
+        yield return null;
+        void Volumes(string step)
+        {
+            foreach (var (n, t) in new[] { ("volumeFrames", frames), ("volumeTwice", twice) })
+                for (int slice = 0; slice < 4; slice++)
+                {
+                    Read("later." + n + "." + step + "." + slice, t, slice);
+                    Read("later." + n + "." + step + ".other." + slice, t.GetDoubleBufferRenderTexture(), slice);
+                }
+        }
+        frames.Update();
+        twice.Update(2);
+        yield return null;
+        Volumes("first");
+        frames.Update();
+        Read("later.materialUpdate.before", swapped);
+        Read("later.passOnly.before", passOnly);
+        swapped.shaderPass = 1;
+        swapped.material = Mat(coords);
+        passOnly.shaderPass = 1;
+        yield return null;
+        Volumes("second");
+        Read("later.materialUpdate.after", swapped);
+        Read("later.passOnly.after", passOnly);
+        End();
+        yield return null;
     }
 
     /// <summary>Properties set after a texture was loaded (after every other section, added
