@@ -821,7 +821,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 46;
+    const VERSION: u32 = 47;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1106,6 +1106,10 @@ pub fn import_model(
             axes::normalize_rotation(node);
         }
     }
+    // Every node's final rotation, after any axis conversion, takes the importer's sign.
+    for node in &mut builder.model.nodes {
+        node.rotation = importer_sign(node.rotation);
+    }
     builder.assign_material_ids(imp, &mut ids);
 
     // Source descriptions are consumed only after None/remap handling. A deferred MTL
@@ -1342,12 +1346,7 @@ impl<'a> Builder<'a> {
             parent,
             children: Vec::new(),
             position: self.position(placement.position(t, parent_offset)),
-            rotation: [
-                t.rotation.x as f32,
-                -t.rotation.y as f32,
-                -t.rotation.z as f32,
-                t.rotation.w as f32,
-            ],
+            rotation: unity_rotation(t.rotation),
             scale: [t.scale.x as f32, t.scale.y as f32, t.scale.z as f32],
             game_object: game_object.into(),
             transform: transform.into(),
@@ -1486,6 +1485,8 @@ impl<'a> Builder<'a> {
             });
         let mut clips = Vec::new();
         let mut warnings = Vec::new();
+        // Per take and node, the signs of its rotations along the take.
+        let mut take_signs: HashMap<(u32, u32), TakeSigns> = HashMap::new();
         let preview_ranges = takes.iter().map(|take| {
             let name = take.stack.element.name.to_string();
             let mut range = ClipRange::take(&name, take.begin * fps, take.end * fps);
@@ -1615,17 +1616,26 @@ impl<'a> Builder<'a> {
                     });
                     rotations.push(Key {
                         time: rotation_time,
-                        value: [
-                            t.rotation.x as f32,
-                            -t.rotation.y as f32,
-                            -t.rotation.z as f32,
-                            t.rotation.w as f32,
-                        ],
+                        value: unity_rotation(t.rotation),
                     });
                     scales.push(Key {
                         time,
                         value: [t.scale.x as f32, t.scale.y as f32, t.scale.z as f32],
                     });
+                }
+                // The first key takes the sign the take's rotations have there and the others
+                // keep theirs towards it (the track then puts each in the previous one's
+                // hemisphere).
+                if let Some(first) = rotations.first().map(|key| key.value) {
+                    let signed = take_signs
+                        .entry((stack.element.element_id, index))
+                        .or_default()
+                        .at(&stack.anim, source, time_begin, start, fps);
+                    if dot(first, signed) < 0.0 {
+                        for key in &mut rotations {
+                            key.value = key.value.map(|v| -v);
+                        }
+                    }
                 }
                 let positions = only(channels[0], positions);
                 let rotations = only(channels[1], rotations);
@@ -1817,12 +1827,7 @@ impl<'a> Builder<'a> {
             for &i in &chain {
                 let t = ufbx::evaluate_transform(anim, self.sources[i as usize], time);
                 let lp = self.position(self.placed(i, &t));
-                let lq = [
-                    t.rotation.x as f32,
-                    -t.rotation.y as f32,
-                    -t.rotation.z as f32,
-                    t.rotation.w as f32,
-                ];
+                let lq = unity_rotation(t.rotation);
                 let moved = rotate(q, [lp[0] * s[0], lp[1] * s[1], lp[2] * s[2]]);
                 p = [p[0] + moved[0], p[1] + moved[1], p[2] + moved[2]];
                 q = quat_mul(q, lq);
@@ -3415,18 +3420,26 @@ const MIN_TAKE_SPAN: f64 = f32::EPSILON as f64;
 /// The times a clip is resampled at: its start, every frame of the take after it, and its end
 /// (a range from frame 4.5 has keys at 4.5, 5, 6, ...; measured, tests/projects/modelclips).
 fn frame_times(start: f64, end: f64, fps: f64) -> Vec<f64> {
-    const EPSILON: f64 = 1e-6;
     let mut times = vec![start];
-    let first = (start * fps + EPSILON).floor() as i64 + 1;
+    let first = whole_frame(start, fps) + 1;
     times.extend(
         (first..)
             .map(|frame| frame as f64 / fps)
-            .take_while(|&t| t < end - EPSILON),
+            .take_while(|&t| t < end - FRAME_EPSILON),
     );
-    if end > start + EPSILON {
+    if end > start + FRAME_EPSILON {
         times.push(end);
     }
     times
+}
+
+/// How close (in seconds) a time must be to a frame to count as on it.
+const FRAME_EPSILON: f64 = 1e-6;
+
+/// The last whole frame at or before `time` (a time within [`FRAME_EPSILON`] below a frame
+/// counts as on it).
+fn whole_frame(time: f64, fps: f64) -> i64 {
+    (time * fps + FRAME_EPSILON).floor() as i64
 }
 
 /// The key time of a clip's resampled transform curve at `time` of a range starting at `start`,
@@ -3444,6 +3457,124 @@ fn frame_key_time(time: f64, start: f64, fps: f64) -> f32 {
     } else {
         (time - start) as f32
     }
+}
+
+/// A node's rotation (`x, y, z, w`, Unity's axes) in a take at `time`, with the sign ufbx
+/// gives it.
+fn take_rotation(anim: &ufbx::Anim, node: &ufbx::Node, time: f64) -> [f32; 4] {
+    unity_rotation(ufbx::evaluate_transform(anim, node, time).rotation)
+}
+
+/// A ufbx rotation in Unity's axes (the X reflection), with the sign ufbx gives it.
+fn unity_rotation(q: ufbx::Quat) -> [f32; 4] {
+    [q.x as f32, -q.y as f32, -q.z as f32, q.w as f32]
+}
+
+fn dot(a: [f32; 4], b: [f32; 4]) -> f32 {
+    (0..4).map(|c| a[c] * b[c]).sum()
+}
+
+/// The signs of one node's rotations along a take, as the Editor's model importer has them:
+/// the rotation at the take's start takes [`importer_sign`], and each frame after it lies in
+/// the hemisphere of the frame before, so a clip that starts later in the take starts with the
+/// sign the take has reached there, not with the sign its own first rotation would take.
+/// Matches the Unity 6000.0.71f1 Editor, tests/projects/modelclips: `clip.Rig.Beyond`, a range
+/// from frame 40 of a take whose `Spin` node has turned past half a turn by then, starts with
+/// a negative w and a negative y and z, where its own matrix's sign would have them positive;
+/// the clips from the take's start (`clip.HumanTwistGeneric.Scene`) start with
+/// [`importer_sign`]. A turn of half a revolution or more between two frames is unmeasured,
+/// as is a range that starts before its take (it takes the take's first frame's hemisphere).
+#[derive(Default)]
+struct TakeSigns {
+    /// Per frame of [`frame_times`] from the take's start: whether the rotation there is the
+    /// negation of [`take_rotation`]'s.
+    negated: Vec<bool>,
+    /// The signed rotation at the last of those frames.
+    last: [f32; 4],
+}
+
+impl TakeSigns {
+    /// The time of frame `k` after the take's start, as [`frame_times`] has them: the start
+    /// itself, then whole frames.
+    fn frame_time(begin: f64, fps: f64, k: usize) -> f64 {
+        if k == 0 {
+            begin
+        } else {
+            (whole_frame(begin, fps) + k as i64) as f64 / fps
+        }
+    }
+
+    /// The node's rotation at `time`, with the take's sign there. A time before the take's
+    /// start takes the hemisphere of the take's first frame (unmeasured).
+    fn at(
+        &mut self,
+        anim: &ufbx::Anim,
+        node: &ufbx::Node,
+        begin: f64,
+        time: f64,
+        fps: f64,
+    ) -> [f32; 4] {
+        let towards = |q: [f32; 4], previous: [f32; 4]| {
+            if dot(q, previous) < 0.0 {
+                q.map(|v| -v)
+            } else {
+                q
+            }
+        };
+        if self.negated.is_empty() {
+            let raw = take_rotation(anim, node, begin);
+            self.last = importer_sign(raw);
+            self.negated.push(self.last != raw);
+        }
+        // The last frame at or before `time`.
+        let frame = (whole_frame(time, fps) - whole_frame(begin, fps)).max(0) as usize;
+        while self.negated.len() <= frame {
+            let raw = take_rotation(anim, node, Self::frame_time(begin, fps, self.negated.len()));
+            self.last = towards(raw, self.last);
+            self.negated.push(self.last != raw);
+        }
+        let raw = take_rotation(anim, node, Self::frame_time(begin, fps, frame));
+        let signed = if self.negated[frame] {
+            raw.map(|v| -v)
+        } else {
+            raw
+        };
+        towards(take_rotation(anim, node, time), signed)
+    }
+}
+
+/// A rotation (`x, y, z, w`) with the sign the Editor's model importer gives a node's final
+/// rotation and its rotation at the start of a take: the sign a rotation matrix gives its quaternion, w
+/// positive while the matrix's trace is positive (|w| above 1/2), else the component of the
+/// largest diagonal element positive. Matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/modelclips `nodes.HumanTwistGeneric` and the rotation curves of
+/// `clip.HumanTwistGeneric.Scene` (a Generic import: 20 node rotations and 19 curves, four of
+/// each with a negative w). The Humanoid clip conversion applies the same rule to what it
+/// samples (managed `HumanClipImport.ImporterSign`). Ties between diagonal elements and a
+/// trace of exactly zero are unmeasured (x before y before z here), as are Legacy imports, the
+/// nodes of a static model whose axes are converted (the rule applies after the conversion),
+/// and the MotionQ curves of a root node, which keep the sign of their product. A rotation that is
+/// zero or not a number stays as it is.
+fn importer_sign(q: [f32; 4]) -> [f32; 4] {
+    let [x, y, z, w] = q;
+    let (xx, yy, zz) = (x * x, y * y, z * z);
+    // The diagonal of the rotation's matrix, scaled by the squared length.
+    let n = xx + yy + zz + w * w;
+    let (m00, m11, m22) = (
+        n - 2.0 * (yy + zz),
+        n - 2.0 * (xx + zz),
+        n - 2.0 * (xx + yy),
+    );
+    let deciding = if m00 + m11 + m22 > 0.0 {
+        w
+    } else if m00 >= m11 && m00 >= m22 {
+        x
+    } else if m11 >= m22 {
+        y
+    } else {
+        z
+    };
+    if deciding < 0.0 { q.map(|v| -v) } else { q }
 }
 
 /// The level of a node named `<name>_LOD<n>`.

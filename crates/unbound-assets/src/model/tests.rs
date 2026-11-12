@@ -1304,6 +1304,164 @@ fn a_humanoid_clips_transform_keys_take_the_shared_frame_times() {
     assert_ne!(5.0 * (1.0f32 / 24.0), (5.0f64 / 24.0) as f32);
 }
 
+/// Node rotations and the first keys of rotation curves take the sign a rotation matrix gives
+/// its quaternion (tests/projects/modelclips HumanTwistGeneric, a Generic import: the Editor's
+/// 20 node rotations and 19 rotation curves, four of each with a negative w). The four measured
+/// negative ones are checked by value; every other node and curve by the rule, and each key
+/// lies in the hemisphere of the one before it.
+#[test]
+fn rotations_take_the_sign_of_their_matrix() {
+    // The rule itself: w positive above a half turn's cosine, else the largest diagonal
+    // element's component; a zero rotation and one that is not a number stay.
+    let h = std::f32::consts::FRAC_1_SQRT_2;
+    assert_eq!(importer_sign([0.0, 0.0, -h, -h]), [0.0, 0.0, h, h]);
+    assert_eq!(importer_sign([0.0, 0.0, h, h]), [0.0, 0.0, h, h]);
+    // 200 degrees about x: the trace is negative and x decides, so w stays negative.
+    let (sin, cos) = 100f32.to_radians().sin_cos();
+    assert_eq!(importer_sign([sin, 0.0, 0.0, cos]), [sin, 0.0, 0.0, cos]);
+    assert_eq!(importer_sign([-sin, 0.0, 0.0, -cos]), [sin, 0.0, 0.0, cos]);
+    assert_eq!(importer_sign([0.1, -sin, 0.0, -cos]), [-0.1, sin, 0.0, cos]);
+    assert_eq!(importer_sign([0.1, 0.0, -sin, -cos]), [-0.1, 0.0, sin, cos]);
+    // Not of unit length: the same sign as the unit rotation.
+    assert_eq!(
+        importer_sign([-2.0 * sin, 0.0, 0.0, -2.0 * cos]),
+        [2.0 * sin, 0.0, 0.0, 2.0 * cos]
+    );
+    assert_eq!(importer_sign([0.0; 4]), [0.0; 4]);
+    assert!(importer_sign([f32::NAN; 4]).iter().all(|v| v.is_nan()));
+
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelclips/Assets/Resources/HumanTwistGeneric.fbx");
+    let settings = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+    let model = ModelImporter::default()
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap();
+    let path = |mut index: u32| {
+        let mut parts = Vec::new();
+        while let Some(parent) = model.nodes[index as usize].parent {
+            parts.push(model.nodes[index as usize].name.clone());
+            index = parent;
+        }
+        parts.reverse();
+        parts.join("/")
+    };
+    // The Editor's values (nodes.HumanTwistGeneric).
+    let measured: [(&str, [f32; 4]); 4] = [
+        (
+            "Root/Hips/LeftUpperLeg",
+            [-0.173610568, -0.00361531437, 0.9845943, -0.0205034558],
+        ),
+        (
+            "Root/Hips/SpineHelper/Spine/LeftUpperArm",
+            [0.8492892, -0.4019245, 0.3161406, -0.131223962],
+        ),
+        (
+            "Root/Hips/SpineHelper/Spine/RightUpperArm/RightLowerArm",
+            [0.0173410885, 0.9229305, -0.0418650843, -0.3822905],
+        ),
+        (
+            "Root/Hips/SpineHelper/Spine/RightUpperArm/RightLowerArm/RightHand",
+            [0.0418650769, 0.922930539, -0.01734109, -0.382290244],
+        ),
+    ];
+    let close = |a: [f32; 4], b: [f32; 4]| (0..4).all(|c| (a[c] - b[c]).abs() < 2e-4);
+    let mut negative = 0;
+    for (index, node) in model.nodes.iter().enumerate() {
+        assert_eq!(importer_sign(node.rotation), node.rotation, "{}", node.name);
+        negative += usize::from(node.rotation[3] < 0.0);
+        if let Some((_, q)) = measured.iter().find(|(p, _)| *p == path(index as u32)) {
+            assert!(
+                close(node.rotation, *q),
+                "{} {:?}",
+                node.name,
+                node.rotation
+            );
+        }
+    }
+    assert_eq!(negative, measured.len());
+    let clip = model.clips.iter().find(|c| !c.preview).unwrap();
+    let mut negative = 0;
+    for curves in &clip.curves {
+        let (keys, _) = curves.rotation_track(clip.smooth);
+        let Some(first) = keys.first() else { continue };
+        assert_eq!(importer_sign(first.value), first.value, "{}", curves.path);
+        negative += usize::from(first.value[3] < 0.0);
+        for pair in keys.windows(2) {
+            let dot: f32 = (0..4).map(|c| pair[0].value[c] * pair[1].value[c]).sum();
+            assert!(dot >= 0.0, "{}", curves.path);
+        }
+    }
+    assert_eq!(negative, measured.len());
+
+    // A clip from the middle of a take starts with the sign the take has reached there: the
+    // Editor's first key of `Spin` in the range from frame 40 (clip.Rig.Beyond), whose own
+    // matrix's sign would be the opposite one. Control: the take's first clip starts with the
+    // matrix's sign.
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelclips/Assets/Resources/Rig.fbx");
+    let settings = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+    let model = ModelImporter::default()
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap();
+    let first_key = |clip: &str| {
+        let clip = model.clips.iter().find(|c| c.name == clip).unwrap();
+        let spin = clip.curves.iter().find(|c| c.path == "Spin").unwrap();
+        spin.rotation_track(clip.smooth).0[0].value
+    };
+    let beyond = first_key("Beyond");
+    assert!(
+        close(
+            beyond,
+            [0.353553355, -0.6123725, -0.612372339, -0.353553444]
+        ),
+        "{beyond:?}"
+    );
+    assert_ne!(importer_sign(beyond), beyond);
+    let whole = first_key("__preview__Scene");
+    assert_eq!(importer_sign(whole), whole);
+}
+
+/// The sign rule holds for a node's final rotation, after the axis conversion of a static
+/// model too (tests/projects/modelaxis Axis, Signed and Pivots: static files in several up and
+/// front axes, with and without Bake Axis Conversion, among them `Signed/U2S1B0H0`,
+/// `Signed/U2S1B0H1` and `Pivots/MaxZup`, whose converted rotations change sign; the Editor
+/// reference records bases only, so this sign is the rule applied, unmeasured).
+#[test]
+fn axis_converted_static_nodes_take_the_sign_of_their_matrix() {
+    let resources = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelaxis/Assets/Resources");
+    let mut files = Vec::new();
+    for set in ["Axis", "Signed", "Pivots"] {
+        for entry in std::fs::read_dir(resources.join(set)).unwrap() {
+            let source = entry.unwrap().path();
+            if source.extension().is_some_and(|e| e == "fbx") {
+                files.push(source);
+            }
+        }
+    }
+    for set in ["Signed/U2S1B0H0", "Signed/U2S1B0H1", "Pivots/MaxZup"] {
+        assert!(
+            files.contains(&resources.join(set).with_extension("fbx")),
+            "{set}"
+        );
+    }
+    for source in &files {
+        let settings = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+        let model = ModelImporter::default()
+            .import(source, &std::fs::read(source).unwrap(), &settings)
+            .unwrap();
+        for node in &model.nodes {
+            assert_eq!(
+                importer_sign(node.rotation),
+                node.rotation,
+                "{} {}",
+                source.display(),
+                node.name
+            );
+        }
+    }
+}
+
 /// The transforms whose curves a Humanoid clip keeps beside its muscle curves: the nodes the
 /// take animates and the clip's mask leaves on, none with mask type None (tests/projects/modelclips
 /// HumanTwistNone, HumanTwistAll, HumanTwistPart: the take also animates the two twist bones,

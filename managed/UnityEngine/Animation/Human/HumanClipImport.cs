@@ -289,7 +289,8 @@ namespace Unbound.Runtime.Humanoid
         /// outside the reference of the probe's three models imported as Generic: all 105
         /// rotation curves and 108 node rotations follow it, eight of each with a negative w.
         /// Ties between diagonal elements and a trace of exactly zero are unmeasured (x before
-        /// y before z here).</summary>
+        /// y before z here). The model importer gives its node rotations and clip keys the same
+        /// rule (crates/unbound-assets/src/model.rs `importer_sign`).</summary>
         internal static bool ImporterSign(F4 q)
         {
             float xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z;

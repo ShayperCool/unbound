@@ -164,7 +164,7 @@ rotation, but scripts read it).
   take's rotations have reached there: `Spin` has turned past half a turn and starts with a
   negative w, the opposite of its own matrix's sign.
 
-Not measured: Legacy imports, ties between diagonal elements, a range that starts before its
+Not measured: Legacy imports, static models whose axes are converted, ties between diagonal elements, a range that starts before its
 take, and a turn of half a revolution or more between two frames.
 
 Unbound matches 3545/3545 records. The generic reducing compression modes are compared by their
