@@ -88,9 +88,9 @@ coverage gaps. New declarations come from the selected release through the stub 
 defaults need release evidence and a control that can distinguish the behavior being implemented.
 
 Q411's shared removed-getter migration resolves 1,196 rows. The Core slice resolves
-another 156 rows, including one Canvas viewport observation. The default-state probe
-now has 10,470 exact rows and 1,469 queued rows, including the unchanged 50 variable
-rows. Its 11,517 canonical rows preserve every original reference line. Added controls
+another 156 rows, including one Canvas viewport observation; Physics2D resolves 157
+more. The default-state probe now has 10,495 exact rows and 1,312 queued rows, including
+the unchanged 50 variable rows. Its 11,534 canonical rows preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases and refresh-rate arithmetic.
 
@@ -106,3 +106,9 @@ CoreModule keeps 116 rows requiring operation/payload validity, rendering initia
 or imported/serialized state controls. Two TextCore instance IDs and one Canvas early
 layout value retain updated exact implementation payloads, without changing reference
 values or adding variable policies.
+
+Physics2D retains five default-state rows after factory, collision and capability fixes.
+Its 17 controls include live collision entry/exit and observable contact-array mutation,
+so changing an invalid manual constructor does not change valid callback payloads. The
+existing exact-release Physics2D mechanism carries these observations. Polygon initialization
+and initial substep accounting remain explicit follow-ups; no variable policy was widened.

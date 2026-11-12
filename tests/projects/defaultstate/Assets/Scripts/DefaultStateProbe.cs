@@ -43,6 +43,8 @@ public sealed class DefaultStateProbe : MonoBehaviour
             category="class", status="candidate" });
         RemovedGetterControls();
         CoreControls();
+        Physics2DControls();
+        Physics2DPayloadControls();
         Emit("complete","value","1"); output.Dispose(); output=null;
         EditorApplication.Exit(0);
     }
@@ -167,6 +169,82 @@ public sealed class DefaultStateProbe : MonoBehaviour
     }
     static void CoreValue(string key, object value)
     { Emit("CoreControl/" + key, "value", Format(value, value.GetType(), new HashSet<object>(identity), 0)); }
+    static Type ProbeType(string name)
+    { var entry = candidates.First(c => c.type == "UnityEngine." + name); return Type.GetType(entry.type + ", " + entry.module, true); }
+    static void Physics2DControls()
+    {
+        var owner = new GameObject("Physics2DFactoryControl");
+        try
+        {
+            owner.SetActive(false);
+            owner.AddComponent(ProbeType("Rigidbody2D"));
+            foreach (var name in new[] { "Collider2D", "Joint2D", "AnchoredJoint2D", "Effector2D", "PhysicsUpdateBehaviour2D" })
+                CoreValue("Physics2D/base/" + name, owner.AddComponent(ProbeType(name)) == null);
+            foreach (var name in new[] { "BoxCollider2D", "DistanceJoint2D", "PointEffector2D" })
+                CoreValue("Physics2D/concrete/" + name, owner.AddComponent(ProbeType(name)) != null);
+            CoreValue("Physics2D/count", owner.GetComponents<Component>().Length);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(owner); }
+        foreach (bool populated in new[] { false, true })
+        {
+            var requiredOwner = new GameObject("RequiredCollider2DControl");
+            var previous = Debug.unityLogger.logHandler;
+            var handler = new FactoryControlLogHandler(previous);
+            try
+            {
+                requiredOwner.SetActive(false);
+                if (populated) requiredOwner.AddComponent(ProbeType("BoxCollider2D"));
+                Debug.unityLogger.logHandler = handler;
+                var component = requiredOwner.AddComponent<Collider2DRequiredControlBehaviour>();
+                CoreValue("Physics2D/required/" + populated, new object[] { component == null,
+                    requiredOwner.GetComponents<Component>().Select(c => c.GetType().Name).OrderBy(n => n, StringComparer.Ordinal).ToArray(), handler.errors });
+            }
+            finally { Debug.unityLogger.logHandler = previous; UnityEngine.Object.DestroyImmediate(requiredOwner); }
+        }
+    }
+    static void Physics2DPayloadControls()
+    {
+        var invalid = new Collision2D();
+        string firstError = "returned";
+        try { var ignored = invalid.contacts; } catch (Exception error) { firstError = error.GetType().FullName; }
+        CoreValue("Physics2D/collision/default", new object[] { invalid.enabled, invalid.contactCount, firstError });
+        CoreValue("Physics2D/collision/retry", new object[] { invalid.contacts.Length,
+            invalid.GetContacts(new ContactPoint2D[0]), ReferenceEquals(invalid.contacts, invalid.contacts) });
+        var compositeOwner = new GameObject("CompositeCapabilityControl");
+        try
+        {
+            compositeOwner.SetActive(false);
+            compositeOwner.AddComponent<Rigidbody2D>(); compositeOwner.AddComponent<CompositeCollider2D>();
+            var edge = compositeOwner.AddComponent<EdgeCollider2D>();
+            edge.points = new[] { new Vector2(-1,-1), new Vector2(-1,1), new Vector2(1,1), new Vector2(1,-1), new Vector2(-1,-1) };
+            edge.compositeOperation = Collider2D.CompositeOperation.Merge;
+            var box = compositeOwner.AddComponent<BoxCollider2D>();
+            box.compositeOperation = Collider2D.CompositeOperation.Merge;
+            CoreValue("Physics2D/compositeCapability", new object[] { edge.compositeCapable, edge.compositeOperation,
+                box.compositeCapable, box.compositeOperation });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(compositeOwner); }
+        var previousMode = Physics2D.simulationMode;
+        var first = new GameObject("CollisionControlFirst"); var second = new GameObject("CollisionControlSecond");
+        try
+        {
+            Physics2D.simulationMode = SimulationMode2D.Script;
+            var body = first.AddComponent<Rigidbody2D>(); body.gravityScale = 0;
+            first.AddComponent<BoxCollider2D>();
+            var observer = first.AddComponent<CollisionContactControl>();
+            second.transform.position = new Vector3(0.5f, 0, 0); second.AddComponent<BoxCollider2D>();
+            Physics2D.SyncTransforms(); Physics2D.Simulate(0.02f);
+            CoreValue("Physics2D/collision/enter", observer.enter ?? new object[] { "missing" });
+            second.transform.position = new Vector3(5,0,0);
+            Physics2D.SyncTransforms(); Physics2D.Simulate(0.02f);
+            CoreValue("Physics2D/collision/exit", observer.exit ?? new object[] { "missing" });
+            CoreValue("Physics2D/sceneContext", new object[] { default(PhysicsScene2D).IsValid(), default(PhysicsScene2D).subStepCount,
+                Physics2D.defaultPhysicsScene.IsValid(), Physics2D.defaultPhysicsScene.subStepCount,
+                default(PhysicsScene2D).GetHashCode(), Physics2D.defaultPhysicsScene.GetHashCode() });
+        }
+        finally
+        { UnityEngine.Object.DestroyImmediate(first); UnityEngine.Object.DestroyImmediate(second); Physics2D.simulationMode = previousMode; }
+    }
     static void RemovedGetterControls()
     {
         foreach (var populated in new[] { false, true })

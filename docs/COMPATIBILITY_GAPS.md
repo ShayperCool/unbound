@@ -329,11 +329,11 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 
 - [x] Q403 default-state capture and comparison: [defaultstate](../tests/projects/defaultstate/README.md)
       covers 1,032 constructible matching types. Q411's shared mechanism resolves 1,196 rows;
-      its Core slice resolves another 156. The 11,517-row reference preserves all original
-      rows and adds independently repeated message, constructor, requirement and arithmetic
-      controls. The comparison has 10,470 exact rows, 1,047 differing reference rows, 420 extra
-      implementation rows and the unchanged 50 variable observations inside 1,469 exact,
-      reasoned migration entries. CoreModule retains 116 rows; the README lists every module
+      its Core slice resolves another 156 and Physics2D resolves 157. The 11,534-row reference preserves all original
+      rows and adds independently repeated message, constructor, requirement, collision and arithmetic
+      controls. The comparison has 10,495 exact rows, 1,039 differing reference rows, 271 extra
+      implementation rows and the unchanged 50 variable observations inside 1,312 exact,
+      reasoned migration entries. CoreModule retains 116 rows and Physics2D five; the README lists every module
       and the unresolved payload, rendering and import contexts. Static constructor comparison
       remains separate, including its queued rendering split-index default.
 - [ ] Q411 other-release initialization: constructor, factory eligibility and refresh-rate

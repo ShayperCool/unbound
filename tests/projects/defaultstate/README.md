@@ -106,8 +106,9 @@ contexts. Both independent GPU repeats and Unbound match all 54 controls. The or
 11,421 reference rows remain byte-identical, giving 11,475 total rows.
 
 The Core slice adds another 42 independent controls while preserving all prior rows,
-for 11,517 total rows. The comparison now has 10,470 exact rows, 1,047 differing
-reference rows, zero missing rows and 420 extra implementation rows. Its 1,469 queue
+for 11,517 rows at that stage. Physics2D adds 17 more controls, for 11,534 current
+rows. The comparison now has 10,495 exact rows, 1,039 differing reference rows, zero
+missing rows and 271 extra implementation rows. Its 1,312 queue
 entries retain the same 50 variable rows; two happen to equal the implementation
 snapshot. Variable rows remain unresolved comparisons.
 
@@ -145,12 +146,43 @@ API pages describe supported component lookup through GetComponent. The exact re
 getter exceptions are observations of 6000.0.71f1 in this probe, not a documented
 release-independent exception contract.
 
+The Physics2D slice resolves 157 rows: 154 from the five rejected base factories,
+two Collision2D constructor observations and the EdgeCollider2D composite capability.
+Its 17 added controls retain all 11,517 earlier reference rows byte for byte. The
+Physics2D package is now explicit so the required-collider and callback scripts can
+reference the module. The 42 prior Core controls still match both GPU captures.
+
+| Physics2D cause | Rule and controls |
+| --- | --- |
+| Factory eligibility | Collider2D, Joint2D, AnchoredJoint2D, Effector2D and PhysicsUpdateBehaviour2D reject direct creation. Box, distance-joint and point-effector controls remain valid. A missing abstract collider requirement rejects its script silently; an existing BoxCollider2D satisfies it. |
+| Collision construction and legacy array | A manual Collision2D starts disabled with no contact source. Its first contacts read throws after caching an empty array; later reads reuse that array. Live enter callbacks remain enabled with valid contact data. Mutating the legacy array changes GetContact and both GetContacts results, while a real exit callback remains enabled with a reusable empty array. |
+| Composite capability | Edge chains do not supply filled composite geometry, even when their endpoints form a closed loop. Merge assignments remain None for that edge; the neighboring BoxCollider2D accepts Merge. The same rule is used for runtime reads and copies. |
+
+The [6000.0 contacts documentation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collision2D-contacts.html)
+warns that the property allocates and recommends GetContact/GetContacts. It does not
+promise fresh arrays on repeated reads. The [enabled documentation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collision2D-enabled.html)
+describes response state and notes that callbacks can occur without response. The
+manual-constructor, cache identity and exit observations above are release-specific
+probe results, not broader callback guarantees.
+[Composite operations](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider2D-compositeOperation.html)
+apply to supported collider geometry and use the composite's material/trigger/effector
+settings. The edge and box controls distinguish supported from unsupported sources.
+The existing measured Physics2D compatibility mechanism selects these rules; other
+releases retain their previous unmeasured contact and capability paths.
+
+Physics2D keeps five rows: two polygon initialization values, the initial substep count,
+and the two already-variable joint forces. Both scene values are valid/equal and report
+one after a real Script simulation, ruling out invalid-scene and constant-counter
+explanations for the earlier zero-versus-one discrepancy. The polygon radius and angular
+arithmetic still need one reconstructed initializer plus import/runtime controls.
+No cache writer, cache schema or serialized output changes in this slice; the runtime
+reader applies the same capability rule to already parsed input.
+
 | Release module | Queued rows |
 | --- | ---: |
 | UnityEngine.ParticleSystemModule | 347 |
 | UnityEditor.CoreModule | 219 |
 | UnityEngine.AudioModule | 189 |
-| UnityEngine.Physics2DModule | 162 |
 | UnityEngine.UIElementsModule | 159 |
 | UnityEngine.CoreModule | 116 |
 | UnityEngine.PhysicsModule | 92 |
@@ -166,6 +198,7 @@ release-independent exception contract.
 | UnityEngine.SpriteShapeModule | 7 |
 | UnityEngine.UnityWebRequestModule | 6 |
 | UnityEngine.AIModule | 5 |
+| UnityEngine.Physics2DModule | 5 |
 | UnityEngine.SpriteMaskModule | 5 |
 | UnityEngine.UIModule | 3 |
 | UnityEngine.UnityWebRequestTextureModule | 3 |

@@ -22,7 +22,10 @@ namespace Unbound.Runtime
         /// Other releases retain their previous, unmeasured creation rules.</summary>
         internal static bool ComponentFactoryEligibilityMeasured => Release == (6000, 0, 71, 'f', 1);
         internal static bool NativeComponentIsAbstract(Type type) => ComponentFactoryEligibilityMeasured
-            && (type == typeof(UnityEngine.Behaviour) || type == typeof(UnityEngine.Renderer));
+            && (type == typeof(UnityEngine.Behaviour) || type == typeof(UnityEngine.Renderer)
+                || type == typeof(UnityEngine.Collider2D) || type == typeof(UnityEngine.Joint2D)
+                || type == typeof(UnityEngine.AnchoredJoint2D) || type == typeof(UnityEngine.Effector2D)
+                || type == typeof(UnityEngine.PhysicsUpdateBehaviour2D));
 
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>

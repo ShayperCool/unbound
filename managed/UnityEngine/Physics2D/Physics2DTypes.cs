@@ -183,8 +183,11 @@ namespace UnityEngine
         internal Rigidbody2D m_CollisionRigidbody;
         internal Rigidbody2D m_CollisionOtherRigidbody;
         internal Vector2 m_CollisionRelativeVelocity;
-        internal bool m_CollisionEnabled = true;
-        internal ContactPoint2D[] m_CollisionContacts = Array.Empty<ContactPoint2D>();
+        internal bool m_CollisionEnabled = !Unbound.Runtime.Compat.Physics2DSimulationMeasured;
+        internal ContactPoint2D[] m_CollisionContacts = Unbound.Runtime.Compat.Physics2DSimulationMeasured ? null : Array.Empty<ContactPoint2D>();
+        ContactPoint2D[] m_CollisionContactCache;
+        ContactPoint2D[] ReadableContacts => Unbound.Runtime.Compat.Physics2DSimulationMeasured && m_CollisionContactCache != null
+            ? m_CollisionContactCache : m_CollisionContacts;
         internal int m_CollisionContactCount;
 
         public Collision2D() { }
@@ -203,7 +206,11 @@ namespace UnityEngine
         {
             get
             {
+                bool cached = Unbound.Runtime.Compat.Physics2DSimulationMeasured;
+                if (cached && m_CollisionContactCache != null) return m_CollisionContactCache;
                 var copy = new ContactPoint2D[m_CollisionContactCount];
+                // Retain the allocation even if an uninitialized source makes the copy throw.
+                if (cached) m_CollisionContactCache = copy;
                 Array.Copy(m_CollisionContacts, copy, m_CollisionContactCount);
                 return copy;
             }
@@ -213,14 +220,14 @@ namespace UnityEngine
         {
             if (index < 0 || index >= m_CollisionContactCount)
                 throw new ArgumentOutOfRangeException($"Cannot get contact at index {index}. There are {m_CollisionContactCount} contact(s).");
-            return m_CollisionContacts[index];
+            return ReadableContacts[index];
         }
 
         public int GetContacts(ContactPoint2D[] contacts)
         {
             if (contacts == null) throw new NullReferenceException("Cannot get contacts as the provided array is NULL.");
             int count = Math.Min(m_CollisionContactCount, contacts.Length);
-            Array.Copy(m_CollisionContacts, contacts, count);
+            Array.Copy(ReadableContacts, contacts, count);
             return count;
         }
 
@@ -228,7 +235,7 @@ namespace UnityEngine
         {
             if (contacts == null) throw new NullReferenceException("Cannot get contacts as the provided list is NULL.");
             contacts.Clear();
-            for (int i = 0; i < m_CollisionContactCount; i++) contacts.Add(m_CollisionContacts[i]);
+            for (int i = 0; i < m_CollisionContactCount; i++) contacts.Add(ReadableContacts[i]);
             return m_CollisionContactCount;
         }
     }

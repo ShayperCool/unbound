@@ -201,6 +201,7 @@ namespace UnityEngine
             get => m_CompositeOperation;
             set
             {
+                if (Unbound.Runtime.Compat.Physics2DSimulationMeasured && !SupportsCompositeOperations) return;
                 var before = Composite();
                 m_CompositeOperation = value;
                 before?.SourcesChanged();
@@ -310,9 +311,10 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Every collider but a composite can be merged into one (Unity 2023.1 extended
-        /// composites to all collider types; Unbound's CompositeCollider2D merges them all).</summary>
-        public bool compositeCapable => !(this is CompositeCollider2D);
+        // Composite operations consume filled shapes; edge chains and composites are not sources.
+        internal bool SupportsCompositeOperations => !(this is CompositeCollider2D)
+            && (!Unbound.Runtime.Compat.Physics2DSimulationMeasured || !(this is EdgeCollider2D));
+        public bool compositeCapable => SupportsCompositeOperations;
 
         public PhysicsMaterial2D sharedMaterial
         {
@@ -578,6 +580,8 @@ namespace UnityEngine
             m_UsedByEffector = body.Bool("m_UsedByEffector");
             if (body.Get("m_CompositeOperation") != null) m_CompositeOperation = (CompositeOperation)body.Int("m_CompositeOperation");
             else m_CompositeOperation = body.Bool("m_UsedByComposite") ? CompositeOperation.Merge : CompositeOperation.None;
+            if (Unbound.Runtime.Compat.Physics2DSimulationMeasured && !SupportsCompositeOperations)
+                m_CompositeOperation = CompositeOperation.None;
             m_CompositeOrder = body.Int("m_CompositeOrder");
             m_Offset = body.Vector2("m_Offset");
         }
@@ -588,7 +592,8 @@ namespace UnityEngine
             m_Density = s.m_Density;
             m_IsTrigger = s.m_IsTrigger;
             m_UsedByEffector = s.m_UsedByEffector;
-            m_CompositeOperation = s.m_CompositeOperation;
+            m_CompositeOperation = Unbound.Runtime.Compat.Physics2DSimulationMeasured && !SupportsCompositeOperations
+                ? CompositeOperation.None : s.m_CompositeOperation;
             m_CompositeOrder = s.m_CompositeOrder;
             m_Offset = s.m_Offset;
             m_Material = s.m_Material;

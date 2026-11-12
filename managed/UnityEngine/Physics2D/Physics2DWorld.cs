@@ -1311,6 +1311,8 @@ namespace Unbound.Runtime
         {
             var collision = new Collision2D
             {
+                m_CollisionEnabled = true,
+                m_CollisionContacts = Array.Empty<ContactPoint2D>(),
                 m_CollisionCollider = other,
                 m_CollisionOtherCollider = self,
                 m_CollisionRigidbody = other.m_AttachedBody,
