@@ -256,8 +256,8 @@ public unsafe class BrgProbe : MonoBehaviour
             RecordLog("errors.add");
             var noDots = new Material(Shader.Find("Probe/NoDots"));
             m_NoDots = m_Brg.RegisterMaterial(noDots);
-            // The Editor reports such commands from its rendering, after the frame that drew them:
-            // a capture closed in the same frame sees them only by chance (one of four did), so
+            // The Editor logs an error for each such command once per run, delivered after the
+            // frame that drew them: a capture closed in the same frame sees them only by chance, so
             // nothing is recorded of them.
             Scenario("errors");
             RecordViews();

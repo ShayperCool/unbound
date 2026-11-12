@@ -29,8 +29,8 @@ view type how many callbacks ran. Scenarios:
 - `errors`: AddBatch windows the device refuses (`errors.add`: the IDs and the Editor's messages,
   which differ by device), then two more commands, of an unknown mesh and of `Probe/NoDots`
   (`Assets/Shaders`, SRP Batcher compatible, without DOTS instancing): neither is drawn. The Editor
-  reports both from its rendering after the frame that drew them (a capture closed in that frame
-  saw them in one of four runs), so their messages are not recorded.
+  logs an error for each once per run, delivered after the frame that drew them, so the probe,
+  which records within that frame, does not record them.
 
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
