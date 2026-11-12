@@ -109,12 +109,16 @@ public class BoundaryProbe : MonoBehaviour
             for (int separation = 0; separation < offsets.Length; separation++)
             foreach (bool kill in new[] { false, true }) {
                 float sum = cr + pr;
-                var position = directions[direction] * (sum * (1f + offsets[separation]));
+                // The script's own arithmetic is written in double precision with one rounding
+                // to float, as the Editor's scripting runtime evaluates these float expressions,
+                // so both runtimes place the particle on the same float (the difference itself is
+                // the gap row `Script float arithmetic in single precision`).
+                var position = directions[direction] * (float)((double)sum * (1.0 + offsets[separation]));
                 var delta = position - bounds.center;
                 float distanceSquared = delta.sqrMagnitude, distance = delta.magnitude;
                 var radial = delta - delta / distance * cr;
                 var normalized = delta / cr;
-                float normalizedRadius = 1f + pr / cr;
+                float normalizedRadius = (float)(1.0 + (double)pr / cr);
                 var closest = collider.ClosestPoint(position);
                 var key = "arithmetic/" + geometry + "/" + direction + "/" + separation
                     + (kill ? "/killOutside" : "/ignoreOutside");
@@ -129,10 +133,10 @@ public class BoundaryProbe : MonoBehaviour
                     + ",\"distanceSquared\":" + F(distanceSquared) + ",\"distance\":" + F(distance)
                     + ",\"sumSquared\":" + F(sum * sum) + ",\"radialSquared\":" + F(radial.sqrMagnitude)
                     + ",\"closest\":" + V(closest) + ",\"closestSquared\":" + F((position - closest).sqrMagnitude)
-                    + ",\"predicates\":{\"sumSquared\":" + B(distanceSquared <= sum * sum)
-                    + ",\"distance\":" + B(distance <= sum) + ",\"radialSquared\":" + B(radial.sqrMagnitude <= pr * pr)
-                    + ",\"normalizedSquared\":" + B(normalized.sqrMagnitude <= normalizedRadius * normalizedRadius)
-                    + ",\"publicClosestSquared\":" + B((position - closest).sqrMagnitude <= pr * pr)
+                    + ",\"predicates\":{\"sumSquared\":" + B(distanceSquared <= (double)sum * sum)
+                    + ",\"distance\":" + B(distance <= sum) + ",\"radialSquared\":" + B(radial.sqrMagnitude <= (double)pr * pr)
+                    + ",\"normalizedSquared\":" + B(normalized.sqrMagnitude <= (double)normalizedRadius * normalizedRadius)
+                    + ",\"publicClosestSquared\":" + B((position - closest).sqrMagnitude <= (double)pr * pr)
                     + ",\"expandedAabb\":" + B(Mathf.Max(Mathf.Abs(delta.x), Mathf.Max(Mathf.Abs(delta.y), Mathf.Abs(delta.z))) <= sum)
                     + "},\"particle\":" + Particle(p, ps, collider) + "}");
                 ps.SetParticles(new[] { p }, 1);

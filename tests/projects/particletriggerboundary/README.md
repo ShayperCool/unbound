@@ -80,6 +80,14 @@ the summed-radius boundary. All 84 configurations have stationary Ignore/Kill
 twins and positive life. Inputs record ordinary scalar float predicates before
 simulation. The separations were fixed before either Native capture.
 
+The script writes the placement `sum * (1 + offset)` and the predicate
+comparisons in double precision with one rounding to float. That is how the
+Editor's scripting runtime already evaluates these float expressions (a capture
+with the explicit form is byte-identical to the reference); without it, a
+single-precision runtime places the particle one float step away and the rows
+test that arithmetic instead of the trigger. The Editor runs in batch mode on
+the GPU (`run.py native` uses `tests/editor_runner.py`).
+
 Both independent Native captures agree byte for byte. Every tested diagonal
 retains its particle, including radius `.5`, zero particle size and distance
 `.525`. Every axial case at relative separation `.0001` is removed. At radius
