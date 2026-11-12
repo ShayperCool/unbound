@@ -123,6 +123,7 @@ namespace UnityEngine
             if (desc.width <= 0 || desc.height <= 0)
                 throw new ArgumentException("RenderTextureDesc width and height must be greater than zero.");
             m_Descriptor = desc;
+            m_Descriptor.depthStencilFormat = RenderableDepthFormat(desc.depthStencilFormat);
             m_CreatedFromScript = true;
             m_Width = desc.width;
             m_Height = desc.height;
@@ -155,7 +156,7 @@ namespace UnityEngine
         public RenderTextureFormat format { get => m_Descriptor.colorFormat; set { Change(); m_Descriptor.colorFormat = value; } }
         public new GraphicsFormat graphicsFormat { get => m_Descriptor.graphicsFormat; set { Change(); m_Descriptor.graphicsFormat = value; } }
         internal override GraphicsFormat GraphicsFormatOf() => m_Descriptor.graphicsFormat;
-        public GraphicsFormat depthStencilFormat { get => m_Descriptor.depthStencilFormat; set { Change(); m_Descriptor.depthStencilFormat = value; } }
+        public GraphicsFormat depthStencilFormat { get => m_Descriptor.depthStencilFormat; set { Change(); m_Descriptor.depthStencilFormat = RenderableDepthFormat(value); } }
         public GraphicsFormat stencilFormat { get => m_Descriptor.stencilFormat; set { Change(); m_Descriptor.stencilFormat = value; } }
         public bool useMipMap { get => m_Descriptor.useMipMap; set { Change(); m_Descriptor.useMipMap = value; if (!m_Created) m_AllocatedMipCount = null; } }
         public bool autoGenerateMips { get => m_Descriptor.autoGenerateMips; set { Change(); m_Descriptor.autoGenerateMips = value; } }
@@ -435,7 +436,7 @@ namespace UnityEngine
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             var dimension = m_Descriptor.dimension;
             int layers = GpuLayers;
-            int depthBits = GraphicsFormatUtility.GetDepthBits(m_Descriptor.depthStencilFormat);
+            int depthBits = StoredDepthBits(m_Descriptor.depthStencilFormat);
             int mipCount = !m_Descriptor.useMipMap ? 1 : MipLevels(m_Descriptor);
             if (Compat.RenderingMeasured && dimension != TextureDimension.Tex3D && m_Descriptor.msaaSamples > 1)
                 mipCount = 1;
@@ -476,6 +477,8 @@ namespace UnityEngine
 
         public static RenderTexture GetTemporary(RenderTextureDescriptor desc)
         {
+            // As the texture keeps it, so that a pooled one matches again.
+            desc.depthStencilFormat = RenderableDepthFormat(desc.depthStencilFormat);
             foreach (var t in s_Temporaries)
             {
                 if (t.m_PooledFree && SameShape(t.m_Descriptor, desc))
@@ -590,6 +593,27 @@ namespace UnityEngine
 
         public static bool SupportsStencil(RenderTexture rt) =>
             rt == null || GraphicsFormatUtility.IsStencilFormat(rt.m_Descriptor.depthStencilFormat);
+
+        /// <summary>The depth-stencil format a render texture keeps: the device's compatible render
+        /// format of one it cannot render (D16_UNorm_S8_UInt reads back as D24_UNorm_S8_UInt on
+        /// both measured devices, tests/projects/samplerstates Stencil.d16s8.format; measured after
+        /// Create, Unbound converts when the format is set), the format itself otherwise or when
+        /// there is no compatible one.</summary>
+        internal static GraphicsFormat RenderableDepthFormat(GraphicsFormat format)
+        {
+            if (format == GraphicsFormat.None || SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render)) return format;
+            var compatible = SystemInfo.GetCompatibleFormat(format, GraphicsFormatUsage.Render);
+            return compatible == GraphicsFormat.None ? format : compatible;
+        }
+
+        /// <summary>The depth bits of the buffer the renderer stores for a depth-stencil format;
+        /// a 16-bit format with stencil gets 24 bits, as the renderer has no 16-bit buffer with
+        /// stencil (16 bits alone are stored as 16, without stencil).</summary>
+        internal static int StoredDepthBits(GraphicsFormat format)
+        {
+            int bits = GraphicsFormatUtility.GetDepthBits(format);
+            return bits == 16 && GraphicsFormatUtility.IsStencilFormat(format) ? 24 : bits;
+        }
 
         public static GraphicsFormat GetCompatibleFormat(RenderTextureFormat renderTextureFormat, RenderTextureReadWrite readWrite) =>
             GraphicsFormatUtility.GetGraphicsFormat(renderTextureFormat, readWrite);
