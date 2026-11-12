@@ -69,6 +69,7 @@ namespace UnityEngine
             if (dt <= 0f) return false;
             m_CollisionEvents.Clear();
             ClearTriggerEvents();
+            RefreshParticleStorage();
             m_Rays = m_AssignedRays;
             m_CollectTriggers = true;
             try
@@ -1339,6 +1340,10 @@ namespace UnityEngine
             p.m_InvStartLifetime = invLifetime;
             p.m_AgePercent = 0f;
             p.m_Flags |= Particle.FlagAgeInitialized;
+            // A particle has its rotation modules' speed from its birth, also one a script emits
+            // without simulating it (6000.0.71f1, tests/projects/particleseedaxis rotation_emit).
+            if (!(hasOverrides && o.m_AngularVelocitySet) && (m_Rotation.enabled || m_RotationBySpeed.enabled))
+                p.m_AngularVelocity = AngularVelocity(in p, 0f, velocity);
             return lifetime > 0f && kept;
         }
 
@@ -2465,8 +2470,11 @@ namespace UnityEngine
                     p.m_StartColor = (Color)p.m_StartColor * parentColor;
                 if ((properties & ParticleSystemSubEmitterProperties.InheritSize) != 0)
                     p.m_StartSize = Vector3.Scale(p.m_StartSize, parentSize);
+                // The parent's x and y rotations join only a child whose own start rotation is 3D;
+                // its z rotation joins any child (6000.0.71f1, tests/projects/particleseedaxis
+                // inherit_rot_*: a 3D child through its rotation modules alone takes z only).
                 if ((properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0)
-                    p.m_Rotation += parentRotation;
+                    p.m_Rotation += m_Main.startRotation3D ? parentRotation : new Vector3(0f, 0f, parentRotation.z);
                 if ((properties & ParticleSystemSubEmitterProperties.InheritLifetime) != 0)
                 {
                     p.m_StartLifetime *= parentLife;
@@ -2490,6 +2498,7 @@ namespace UnityEngine
                     laneContext.TemporaryLane = true;
                 }
                 bool alive = Integrate(ref p, particleAge, ref laneContext);
+                FitParticleStorage(ref p);
                 if (batched)
                 {
                     if (!alive) marks[index] |= SlotMark.Dead;
@@ -2538,7 +2547,8 @@ namespace UnityEngine
         /// <summary>A particle's size now: start size, size over lifetime, size by speed.</summary>
         internal Vector3 CurrentSize3D(ref Particle p, bool includeNoise = true)
         {
-            var size = p.m_StartSize;
+            // Storage for uniform sizes keeps the x size alone (particleseedaxis inherit_size_*).
+            var size = m_Storage3DSize ? p.m_StartSize : new Vector3(p.m_StartSize.x, p.m_StartSize.x, p.m_StartSize.x);
             uint seed = p.m_RandomSeed;
             if (m_Size.enabled)
             {

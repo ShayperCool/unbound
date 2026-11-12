@@ -46,6 +46,9 @@ namespace UnityEngine
             /// <summary>The shape texture's clip channel discarded this newborn of an Emit call: it
             /// leaves when the call has emitted all its particles.</summary>
             internal const uint FlagShapeDiscarded = 128;
+            /// <summary>Set by the 3D setters (startSize3D; rotation3D, angularVelocity3D): a particle a
+            /// script supplies with them makes the system keep 3D sizes or rotations.</summary>
+            internal const uint FlagSize3DSet = 256, FlagRotation3DSet = 512;
 
             [Obsolete("Please use Particle.remainingLifetime instead. (UnityUpgradable) -> UnityEngine.ParticleSystem/Particle.remainingLifetime", false)]
             public float lifetime { get => remainingLifetime; set => remainingLifetime = value; }
@@ -79,7 +82,7 @@ namespace UnityEngine
                 set => m_StartSize = new Vector3(value, value, value);
             }
 
-            public Vector3 startSize3D { get => m_StartSize; set => m_StartSize = value; }
+            public Vector3 startSize3D { get => m_StartSize; set { m_StartSize = value; m_Flags |= FlagSize3DSet; } }
 
             public float rotation
             {
@@ -90,7 +93,7 @@ namespace UnityEngine
             public Vector3 rotation3D
             {
                 get => m_Rotation * Mathf.Rad2Deg;
-                set => m_Rotation = value * Mathf.Deg2Rad;
+                set { m_Rotation = value * Mathf.Deg2Rad; m_Flags |= FlagRotation3DSet; }
             }
 
             public float angularVelocity
@@ -102,7 +105,7 @@ namespace UnityEngine
             public Vector3 angularVelocity3D
             {
                 get => m_AngularVelocity * Mathf.Rad2Deg;
-                set => m_AngularVelocity = value * Mathf.Deg2Rad;
+                set { m_AngularVelocity = value * Mathf.Deg2Rad; m_Flags |= FlagRotation3DSet; }
             }
 
             public float GetCurrentSize(ParticleSystem system) => system.CurrentSize3D(ref this, includeNoise: false).x;

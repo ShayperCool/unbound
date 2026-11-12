@@ -161,11 +161,51 @@ namespace UnityEngine
 
         static bool MayBeNonZero(in ModuleCurve curve) => curve.mode != ParticleSystemCurveMode.Constant || curve.scalar != 0f;
 
-        public bool has3DParticleRotations =>
-            m_Main.startRotation3D || (m_Rotation.enabled && m_Rotation.separateAxes) || (m_RotationBySpeed.enabled && m_RotationBySpeed.separateAxes);
+        /// <summary>Whether the system's particles keep 3D rotations: decided by the modules when it
+        /// last updated, emitted from a script or took SetParticles, not when a module changes
+        /// (6000.0.71f1, tests/projects/particleseedaxis storage_*).</summary>
+        public bool has3DParticleRotations => m_Storage3DRotation;
 
-        public bool hasNonUniformParticleSizes =>
-            m_Main.startSize3D || (m_Size.enabled && m_Size.separateAxes) || (m_SizeBySpeed.enabled && m_SizeBySpeed.separateAxes);
+        /// <summary>Whether the system's particles keep non-uniform sizes, decided as
+        /// <see cref="has3DParticleRotations"/>.</summary>
+        public bool hasNonUniformParticleSizes => m_Storage3DSize;
+
+        /// <summary>What the particle storage keeps beyond a z rotation and a uniform size: 3D
+        /// rotations, non-uniform sizes, rotation speeds. A sub-emitter's emission into a child
+        /// does not refresh it, so a child that never updated since a module asked for more keeps
+        /// its first layout (6000.0.71f1, tests/projects/particleseedaxis inherit_*).</summary>
+        bool m_Storage3DRotation, m_Storage3DSize, m_StorageRotationSpeed;
+
+        /// <summary>A script supplied particles through the 3D setters (SetParticles, Emit with
+        /// EmitParams): their storage stays 3D until a playback starts with no particles left.</summary>
+        bool m_ScriptRotation3D, m_ScriptSize3D;
+
+        /// <summary>The storage the current modules ask for, with what a script supplied: on every
+        /// update, script emission and SetParticles. Also takes away what they no longer ask for
+        /// (particleseedaxis storage_emittedAfterOff).</summary>
+        internal void RefreshParticleStorage()
+        {
+            m_Storage3DRotation = m_ScriptRotation3D || m_Main.startRotation3D || (m_Shape.enabled && m_Shape.alignToDirection)
+                || (m_Rotation.enabled && m_Rotation.separateAxes) || (m_RotationBySpeed.enabled && m_RotationBySpeed.separateAxes);
+            m_Storage3DSize = m_ScriptSize3D || m_Main.startSize3D || (m_Size.enabled && m_Size.separateAxes)
+                || (m_SizeBySpeed.enabled && m_SizeBySpeed.separateAxes);
+            m_StorageRotationSpeed = m_Rotation.enabled || m_RotationBySpeed.enabled;
+        }
+
+        /// <summary>A particle a script supplied through its 3D setters keeps its 3D values.</summary>
+        void KeepSupplied3D(uint flags)
+        {
+            if ((flags & Particle.FlagRotation3DSet) != 0) m_Storage3DRotation = m_ScriptRotation3D = true;
+            if ((flags & Particle.FlagSize3DSet) != 0) m_Storage3DSize = m_ScriptSize3D = true;
+        }
+
+        /// <summary>Drops from a particle what the storage does not keep.</summary>
+        void FitParticleStorage(ref Particle p)
+        {
+            if (!m_Storage3DRotation) p.m_Rotation = new Vector3(0f, 0f, p.m_Rotation.z);
+            if (!m_Storage3DSize) p.m_StartSize = new Vector3(p.m_StartSize.x, p.m_StartSize.x, p.m_StartSize.x);
+            if (!m_StorageRotationSpeed) p.m_AngularVelocity = Vector3.zero;
+        }
 
         // ------------------------------------------------------------------ modules
 
@@ -422,6 +462,9 @@ namespace UnityEngine
                     bool stopped = stoppedSystems[index];
                     ps.m_IsPaused = false;
                     ps.m_CollisionEvents.Clear();
+                    // Every system a Simulate call updates takes the storage its modules ask for,
+                    // also when the call is shorter than a step.
+                    ps.RefreshParticleStorage();
                     ps.TrackEmitter(t);
                     // A sub-emitter that a restarting call starts with its parent keeps its time
                     // until the next call (measured with children). One that only its parent's
@@ -525,6 +568,8 @@ namespace UnityEngine
         {
             ParticleSystemManager.Sync();
             if (count == 0) return;
+            RefreshParticleStorage();
+            if (hasOverrides) KeepSupplied3D(emitParams.m_Particle.m_Flags);
             if (!m_IsPlaying || m_IsPaused)
             {
                 m_IsPlaying = true;
@@ -629,6 +674,8 @@ namespace UnityEngine
             if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
             int count = offset + size;
             int before = m_Count;
+            RefreshParticleStorage();
+            for (int i = 0; i < size; i++) KeepSupplied3D(particles[i].m_Flags);
             Reserve(count);
             if (count > 0) MaterializeAxisOfRotation();
             for (int i = 0; i < size && offset + i < count; i++) WriteParticle(offset + i, particles[i], offset + i < before);
@@ -1120,6 +1167,7 @@ namespace UnityEngine
         internal void Restart(bool prewarm)
         {
             m_StartedByParent = false;
+            if (m_Count == 0) m_ScriptRotation3D = m_ScriptSize3D = false;
             BeginPlaybackRandom();
             uint seed = m_PlaybackSeed;
             m_RandomState = ((ulong)seed << 32) ^ 0x9e3779b97f4a7c15UL ^ seed;
@@ -1182,6 +1230,7 @@ namespace UnityEngine
             // by Simulate makes none (tests/projects/particlerender collide/cache/simulate_medium);
             // its particles meet only planes already cached (Unbound's choice for prewarm, unmeasured).
             m_Rays = 0;
+            RefreshParticleStorage();
             float lifetime = Mathf.Max(LongestLifetime(m_Main.startLifetime), 0.0001f);
             if (!Compat.ParticlePrewarmMeasured)
             {
