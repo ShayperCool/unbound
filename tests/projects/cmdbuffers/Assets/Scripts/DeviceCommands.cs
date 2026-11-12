@@ -33,6 +33,64 @@ public partial class CmdBuffersProbe
             reset.SetInstanceMultiplier(1);
             Graphics.ExecuteCommandBuffer(reset);
         }
+        MeshMultiplierPlaced(image, quad, matrices);
+    }
+
+    /// <summary>Mesh instances placed by their raw instance IDs under a multiplier: which IDs a
+    /// call of two instances (and of one) draws, and what the added instances read of the call's
+    /// instanced colors (no earlier draw of this section wrote past two instances). Through a
+    /// command buffer and through a camera's queued draws of the persistent multiplier.</summary>
+    void MeshMultiplierPlaced(RenderTexture image, Mesh quad, Matrix4x4[] matrices)
+    {
+        Material Placed(float mode)
+        {
+            var m = Keep(new Material(Resources.Load<Shader>("MeshInstancePlace")) { enableInstancing = true });
+            m.SetFloat("_Mode", mode);
+            return m;
+        }
+        var byColor = Placed(0);
+        var byId = Placed(1);
+        var two = new MaterialPropertyBlock();
+        two.SetVectorArray("_Color", new[] { Rgb(10, 100, 200), Rgb(150, 50, 90) });
+        void Execute(string key, uint multiplier, Material mat, MaterialPropertyBlock block, int count)
+        {
+            using var cmd = new CommandBuffer();
+            cmd.SetRenderTarget(image);
+            cmd.ClearRenderTarget(false, true, Color.clear);
+            cmd.SetInstanceMultiplier(multiplier);
+            cmd.DrawMeshInstanced(quad, 0, mat, 0, matrices, count, block);
+            Try(key, () => { Graphics.ExecuteCommandBuffer(cmd); Value(key + ".ok", "true"); });
+            Value(key + ".pixels", Read(image));
+            using var reset = new CommandBuffer();
+            reset.SetInstanceMultiplier(1);
+            Graphics.ExecuteCommandBuffer(reset);
+        }
+        foreach (uint multiplier in new uint[] { 1, 2, 3 })
+            Execute("device.multiplier.placed.ids." + multiplier, multiplier, byId, null, 2);
+        Execute("device.multiplier.placed.ids.one.3", 3, byId, null, 1);
+        foreach (uint multiplier in new uint[] { 2, 3 })
+            Execute("device.multiplier.placed.colors." + multiplier, multiplier, byColor, two, 2);
+        var go = new GameObject("MultiplierCamera");
+        var camera = go.AddComponent<Camera>();
+        camera.enabled = false;
+        camera.targetTexture = image;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = Color.clear;
+        camera.orthographic = true;
+        camera.transform.position = new Vector3(0, 0, -5);
+        var bounds = new Bounds(Vector3.zero, Vector3.one * 100);
+        foreach (uint multiplier in new uint[] { 1, 2 })
+        {
+            using (var set = new CommandBuffer()) { set.SetInstanceMultiplier(multiplier); Graphics.ExecuteCommandBuffer(set); }
+            Graphics.RenderMeshInstanced(new RenderParams(byId) { camera = camera, worldBounds = bounds }, quad, 0, matrices, 2);
+            camera.Render();
+            Value("device.multiplier.camera.ids." + multiplier + ".pixels", Read(image));
+            Graphics.RenderMeshInstanced(new RenderParams(byColor) { camera = camera, worldBounds = bounds, matProps = two }, quad, 0, matrices, 2);
+            camera.Render();
+            Value("device.multiplier.camera.colors." + multiplier + ".pixels", Read(image));
+        }
+        using (var set = new CommandBuffer()) { set.SetInstanceMultiplier(1); Graphics.ExecuteCommandBuffer(set); }
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     void DeviceCommands()
