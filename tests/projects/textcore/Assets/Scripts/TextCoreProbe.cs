@@ -109,6 +109,108 @@ public class TextCoreProbe : MonoBehaviour
 
             RecordGlyphs(f, asset);
         }
+
+        if (fonts.Length > 0 && fonts[0] != null) EngineControls(0, fonts[0]);
+    }
+
+    // ---- Font engine controls ----
+
+    static readonly GlyphRenderMode[] s_RenderModes =
+    {
+        GlyphRenderMode.SMOOTH_HINTED, GlyphRenderMode.SMOOTH, GlyphRenderMode.RASTER_HINTED, GlyphRenderMode.RASTER,
+        GlyphRenderMode.SDF, GlyphRenderMode.SDF8, GlyphRenderMode.SDF16, GlyphRenderMode.SDF32,
+        GlyphRenderMode.SDFAA_HINTED, GlyphRenderMode.SDFAA, GlyphRenderMode.COLOR, GlyphRenderMode.COLOR_HINTED,
+    };
+
+    static readonly GlyphLoadFlags[] s_LoadFlags =
+    {
+        GlyphLoadFlags.LOAD_DEFAULT, GlyphLoadFlags.LOAD_NO_HINTING, GlyphLoadFlags.LOAD_NO_SCALE, GlyphLoadFlags.LOAD_COMPUTE_METRICS,
+        GlyphLoadFlags.LOAD_RENDER | GlyphLoadFlags.LOAD_NO_HINTING, GlyphLoadFlags.LOAD_NO_BITMAP | GlyphLoadFlags.LOAD_NO_HINTING,
+    };
+
+    /// <summary>The font engine outside UI Toolkit's one setting: a font asset per render mode (24
+    /// points, padding 4, 256 x 256) with its glyphs' metrics, rects and atlas pixels around them
+    /// (alpha, or RGBA for color atlases; rows bottom first); the face info at other sizes, a
+    /// fractional one included; and glyph loads with each load flag.</summary>
+    void EngineControls(int index, Font font)
+    {
+        const string chars = "AgW&";
+        foreach (var mode in s_RenderModes)
+        {
+            var asset = FontAsset.CreateFontAsset(font, 24, 4, mode, 256, 256, AtlasPopulationMode.Dynamic, false);
+            if (asset == null)
+            {
+                Line("mode", "\"font\":" + index + ",\"mode\":" + (int)mode + ",\"asset\":null");
+                continue;
+            }
+            asset.TryAddCharacters(chars);
+            var texture = asset.atlasTextures[0];
+            bool rgba = texture.format != TextureFormat.Alpha8;
+            var pixels = texture.GetPixels32();
+            var sb = new StringBuilder();
+            sb.Append("\"font\":").Append(index).Append(",\"mode\":").Append((int)mode)
+                .Append(",\"format\":").Append(Str(texture.format.ToString())).Append(",\"glyphs\":[");
+            bool first = true;
+            foreach (var c in chars)
+            {
+                if (!asset.characterLookupTable.TryGetValue(c, out var character)) continue;
+                var g = character.glyph;
+                var m = g.metrics;
+                var r = g.glyphRect;
+                int p = asset.atlasPadding;
+                int x = Math.Max(0, r.x - p), y = Math.Max(0, r.y - p);
+                int w = Math.Min(texture.width - x, r.width + 2 * p), h = Math.Min(texture.height - y, r.height + 2 * p);
+                var bytes = new byte[w * h * (rgba ? 4 : 1)];
+                int k = 0;
+                for (int row = 0; row < h; row++)
+                    for (int col = 0; col < w; col++)
+                    {
+                        var px = pixels[(y + row) * texture.width + x + col];
+                        if (rgba)
+                        {
+                            bytes[k++] = px.r;
+                            bytes[k++] = px.g;
+                            bytes[k++] = px.b;
+                        }
+                        bytes[k++] = px.a;
+                    }
+                if (!first) sb.Append(',');
+                first = false;
+                sb.Append("{\"char\":").Append((int)c).Append(",\"glyph\":").Append(g.index)
+                    .Append(",\"metrics\":[").Append(F(m.width)).Append(',').Append(F(m.height)).Append(',').Append(F(m.horizontalBearingX))
+                    .Append(',').Append(F(m.horizontalBearingY)).Append(',').Append(F(m.horizontalAdvance)).Append(']')
+                    .Append(",\"rect\":[").Append(r.x).Append(',').Append(r.y).Append(',').Append(r.width).Append(',').Append(r.height).Append(']')
+                    .Append(",\"region\":[").Append(x).Append(',').Append(y).Append(',').Append(w).Append(',').Append(h).Append(']')
+                    .Append(",\"pixels\":").Append(Str(Convert.ToBase64String(bytes))).Append('}');
+            }
+            Line("mode", sb.Append(']').ToString());
+        }
+
+        foreach (var size in new[] { 13f, 24f, 24.5f, 37f })
+        {
+            var error = FontEngine.LoadFontFace(font, size, 0);
+            var face = FontEngine.GetFaceInfo();
+            Line("face", "\"font\":" + index + ",\"size\":" + F(size) + ",\"error\":" + Str(error.ToString()) +
+                ",\"pointSize\":" + F(face.pointSize) + ",\"lineHeight\":" + F(face.lineHeight) + ",\"ascentLine\":" + F(face.ascentLine) +
+                ",\"capLine\":" + F(face.capLine) + ",\"meanLine\":" + F(face.meanLine) + ",\"descentLine\":" + F(face.descentLine) +
+                ",\"underlineOffset\":" + F(face.underlineOffset) + ",\"strikethroughOffset\":" + F(face.strikethroughOffset) +
+                ",\"tabWidth\":" + F(face.tabWidth));
+        }
+
+        FontEngine.LoadFontFace(font, 37f, 0);
+        foreach (var c in "gH\u00f1 ")
+            foreach (var flags in s_LoadFlags)
+            {
+                bool found = FontEngine.TryGetGlyphWithUnicodeValue(c, flags, out var g);
+                var sb = new StringBuilder();
+                sb.Append("\"font\":").Append(index).Append(",\"char\":").Append((int)c).Append(",\"flags\":").Append((int)flags)
+                    .Append(",\"found\":").Append(found ? "true" : "false");
+                if (found)
+                    sb.Append(",\"glyph\":").Append(g.index).Append(",\"metrics\":[").Append(F(g.metrics.width)).Append(',').Append(F(g.metrics.height))
+                        .Append(',').Append(F(g.metrics.horizontalBearingX)).Append(',').Append(F(g.metrics.horizontalBearingY)).Append(',')
+                        .Append(F(g.metrics.horizontalAdvance)).Append("],\"rect\":[").Append(g.glyphRect.width).Append(',').Append(g.glyphRect.height).Append(']');
+                Line("load", sb.ToString());
+            }
     }
 
     // ---- Cases ----

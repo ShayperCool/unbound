@@ -8,7 +8,12 @@ pixels, a new font asset's first measure (before the kerning of its new glyphs i
 cases of `TextGenerator.GetPreferredValues` and `GenerateText` (characters, lines and mesh vertices):
 words and sentences at 11 to 22 points in normal, bold and italic, wrapped paragraphs, whitespace
 modes, every vertical and horizontal alignment kind, overflow modes, letter, word and paragraph
-spacing, rich text tags, tabs, line breaks, escapes and accented text.
+spacing, rich text tags, tabs, line breaks, escapes and accented text. Then the font engine outside
+UI Toolkit's setting, for Liberation Sans: a font asset per `GlyphRenderMode` (smooth, raster,
+SDF, SDF8 to SDF32, SDFAA, color; hinted and not; 24 points, padding 4) with its glyphs' metrics,
+atlas rects and the atlas pixels around them; the face info at 13, 24, 24.5 and 37 points; and
+glyph loads with each `GlyphLoadFlags` (default, no hinting, no scale, compute metrics, render,
+no bitmap).
 
 Fonts: Liberation Sans (from the OS) and Inter (from the Editor's resources), copied into
 `Assets/Fonts` by the setup (they are not committed), and UI Toolkit's default runtime font, the
@@ -37,14 +42,12 @@ reference's. Without them the engine skips both fonts and no case is compared.
     python3 tests/projects/textcore/compare.py tests/projects/textcore/Reference/unity-6000.0.71f1.jsonl.gz /tmp/textcore-unbound.jsonl
 
 `tools/agents/suite.py --only textcore` does the same on a copy of the project. With the fonts,
-372 cases are compared and 48 differ (42 italic, 2 bold italic, 4 normal) by the cap line below;
-with the atlas differences of the same paragraph the total is 8226 of 615779 values. On macOS set
+all 372 cases and the font engine controls match (616847 values; the atlas pixels of the controls
+exactly). On macOS set
 `UNBOUND_PROBE_UNITY` to the Editor's executable (or `TEXTCORE_INTER`) and
 `TEXTCORE_LIBERATION_SANS`: neither default path exists there.
 
-Known differences: Unity's FaceInfo cap and mean lines are the tops of 'H' and 'x' hinted by the
-font's TrueType instructions, which Unbound approximates (Inter's cap line is 66 in Unity, 65 in
-Unbound, moving synthesized italics and cap-line alignment by a fraction of a pixel); SDF atlas pixels
-are an exact distance field where Unity's SDFAA is an anti-aliased distance transform; Unity's kerning
-pair records carry uninitialized lookup flags (not compared). NotInter is not loaded without the
-Editor resources.
+Not compared: Unity's kerning pair records carry uninitialized lookup flags, which differ from run
+to run. Rows added to the reference are appended to the committed ones, which stay as recorded.
+NotInter is not loaded without the Editor resources. Measured on the NVIDIA driver; the font
+engine itself runs on the CPU.

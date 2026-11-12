@@ -6,7 +6,8 @@
 Per font: the font asset's face info and settings, its glyphs (metrics and atlas rects, in the
 order they were added), characters, kerning pairs and free/used atlas rects, and atlas pixels of
 a few glyphs (alpha, within 1/255 counts as the same); then every case's preferred size,
-characters, lines and mesh vertices. Floats must be equal; the first differences of each kind
+characters, lines and mesh vertices; then the font engine controls (a font asset per render mode
+with its glyphs and atlas pixels, exact; face info at other sizes; glyph loads per load flag). Floats must be equal; the first differences of each kind
 are shown. A font the run could not load (the Editor resource without the Editor) is skipped.
 """
 import base64
@@ -118,6 +119,48 @@ def main():
         report.check('atlas', where + ' max alpha error <= 1', True, worst <= 1)
         if worst > 1:
             print(f'   {where}: max alpha error {worst}, {sum(1 for x, y in zip(a, b) if abs(x - y) > 1)} of {len(a)} pixels')
+    # Font engine controls: per render mode the glyphs and their atlas pixels (exact), the face
+    # info at other sizes and glyph loads per load flag.
+    modes_got = {(l['font'], l['mode']): l for l in by_type(unbound, 'mode')}
+    for want in by_type(reference, 'mode'):
+        if want['font'] not in loaded:
+            continue
+        where = f'font {want["font"]} mode {want["mode"]}'
+        have = modes_got.get((want['font'], want['mode']))
+        if have is None:
+            report.check('mode', where, 'present', 'missing')
+            continue
+        report.check('mode', where + ' format', want.get('format'), have.get('format'))
+        got = {g['char']: g for g in have.get('glyphs', [])}
+        for g in want.get('glyphs', []):
+            name = f'{where} {chr(g["char"])!r}'
+            h = got.get(g['char'])
+            if h is None:
+                report.check('mode', name, 'present', 'missing')
+                continue
+            for key in ('glyph', 'metrics', 'rect', 'region'):
+                compare_values(report, 'mode', f'{name} {key}', g[key], h.get(key))
+            a, b = base64.b64decode(g['pixels']), base64.b64decode(h.get('pixels', ''))
+            if len(a) != len(b):
+                report.check('mode', name + ' pixel count', len(a), len(b))
+                continue
+            wrong = sum(1 for x, y in zip(a, b) if x != y)
+            report.check('mode', name + ' pixels equal', True, wrong == 0)
+            if wrong:
+                print(f'   {name}: {wrong} of {len(a)} bytes differ, max {max(abs(x - y) for x, y in zip(a, b))}')
+    for kind, key in (('face', lambda l: (l['font'], l['size'])), ('load', lambda l: (l['font'], l['char'], l['flags']))):
+        got = {key(l): l for l in by_type(unbound, kind)}
+        for want in by_type(reference, kind):
+            if want['font'] not in loaded:
+                continue
+            have = got.get(key(want))
+            where = f'{kind} {key(want)}'
+            if have is None:
+                report.check('engine', where, 'present', 'missing')
+                continue
+            for field in want:
+                if field != 'type':
+                    compare_values(report, 'engine', f'{where} {field}', want[field], have.get(field))
     for want, have in zip(by_type(reference, 'cold'), by_type(unbound, 'cold')):
         for key in ('first', 'second', 'pairsBefore', 'pairsAfter', 'glyphs'):
             compare_values(report, 'cold', f'cold {key}', want.get(key), have.get(key))
