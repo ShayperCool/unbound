@@ -1792,13 +1792,13 @@ mod tests {
     }
 
     /// Off the coordinate axes a set of the very same area as the winner's is refused unless
-    /// the winner stays the winner for every rounding of the frames' axes.
+    /// the two areas stay equal over a sweep of the axes' scales: equal by their shape.
     #[test]
-    fn congruent_sets_off_the_axes_are_refused_unless_every_rounding_settles_them() {
+    fn congruent_sets_off_the_axes_are_refused_unless_they_stay_tied_by_shape() {
         let mut centred = solid([4.0, 3.0, 5.0]);
         turn_in_mesh(&mut centred, 45.0, 0.0);
         // Opposite faces about the mesh's origin are normalised from the same squared lengths,
-        // and their areas stay equal for every rounding.
+        // and their areas stay equal over the sweep.
         assert_eq!(
             auto_charts(&centred.mesh(), &LIMITS)
                 .unwrap()
