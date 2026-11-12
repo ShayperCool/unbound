@@ -2147,7 +2147,6 @@ mod tests {
         };
         out.fill(0xff);
         fill(&instanced, &plan, &added, &mut out);
-        assert_eq!(f(&out, 48), 0.0, "its matrix is zero");
         assert_eq!(
             [f(&out, 64), f(&out, 76), f(&out, 80)],
             [0.0; 3],
@@ -2157,6 +2156,29 @@ mod tests {
             [f(&out, 96), f(&out, 144), f(&out, 176), f(&out, 192)],
             [2.0, 3.0, 0.25, 0.75],
             "ordinary uniforms, globals and uniform arrays keep their values"
+        );
+        // Its inverse matrix is zero too, where a zero matrix's inverse would be the identity.
+        let mut inverted = instanced.clone();
+        inverted
+            .uniforms
+            .push(uniform("unity_WorldToObject", 208, 4, 4));
+        inverted.uniform_size = 272;
+        let mut inverted_plan = plan.clone();
+        inverted_plan.push(Source::of("unity_WorldToObject"));
+        let mut block = vec![0xffu8; 272];
+        let world_to_object =
+            |block: &[u8]| -> Vec<f32> { (0..16).map(|k| f(block, 208 + 4 * k)).collect() };
+        fill(&inverted, &inverted_plan, &past, &mut block);
+        assert_eq!(
+            world_to_object(&block),
+            inverse(&model).to_vec(),
+            "an instance's own inverse"
+        );
+        fill(&inverted, &inverted_plan, &added, &mut block);
+        assert_eq!(
+            world_to_object(&block),
+            vec![0.0; 16],
+            "an added instance's is zero"
         );
         let not_instance = DrawValues {
             instance: None,

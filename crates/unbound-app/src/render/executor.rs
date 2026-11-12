@@ -454,6 +454,8 @@ struct MeshInstanceSlot {
     /// One of the instances an instance multiplier adds past the call's count
     /// ([`UnityRenderer::multiplied_instances`]): it has no instance data.
     added: bool,
+    /// An added instance's winding: the call's last instance's (its own matrix is zero).
+    mirrored: bool,
 }
 
 /// How a draw's instances get their data, which selects its variant: none of their own, a
@@ -587,6 +589,10 @@ pub struct UnityRenderer {
     presented: Arc<Mutex<Option<Presented>>>,
     started: Instant,
     warned: HashSet<String>,
+    /// Whether the instances an instance multiplier adds to mesh instancing were warned of
+    /// (`multiplied_instances`), and those it does not add past a native batch.
+    multiplied_instances_warned: bool,
+    multiplied_past_batch_warned: bool,
     traced_frames: u64,
     compiled: compiled::CompiledPrograms,
     /// `GrabPass` textures by name, and the named ones grabbed in this camera's render.
@@ -698,6 +704,8 @@ impl UnityRenderer {
             presented,
             started: Instant::now(),
             warned: HashSet::default(),
+            multiplied_instances_warned: false,
+            multiplied_past_batch_warned: false,
             traced_frames: 0,
             grabs: HashMap::default(),
             grabbed: HashSet::default(),
@@ -2581,16 +2589,26 @@ impl UnityRenderer {
         // Where the passes into the depth-only target being drawn start (this submission's).
         let mut depth_mark = 0usize;
         // The instances an instance multiplier adds to a mesh-instancing call, drawn after its
-        // last one (`multiplied_instances`), popped before the next command.
-        let mut added: Vec<(MeshInstanceSlot, Box<commands::Draw>)> = Vec::new();
+        // last one before the next command (`multiplied_instances`): the next one and the end
+        // of their IDs, and the call's last draw, handed back after each of them is drawn (a
+        // draw that is skipped skips the rest).
+        let mut added: Option<(MeshInstanceSlot, u32)> = None;
+        let mut added_draw: Option<Box<commands::Draw>> = None;
         let mut commands = commands.into_iter();
         loop {
-            let command = match added.pop() {
-                Some((slot, draw)) => {
+            let command = match (added.take(), added_draw.take()) {
+                (Some((slot, end)), Some(draw)) => {
+                    if slot.index + 1 < end {
+                        let next = MeshInstanceSlot {
+                            index: slot.index + 1,
+                            ..slot
+                        };
+                        added = Some((next, end));
+                    }
                     self.state.mesh_instance = Some(slot);
                     Command::Draw(draw)
                 }
-                None => match commands.next() {
+                _ => match commands.next() {
                     Some(command) => command,
                     None => break,
                 },
@@ -2769,6 +2787,7 @@ impl UnityRenderer {
                         index,
                         count,
                         added: false,
+                        mirrored: false,
                     })
                 }
                 Command::InstanceMultiplier(multiplier) => {
@@ -2970,7 +2989,7 @@ impl UnityRenderer {
                             .push(PassItem::Clear(pipeline, offset, viewport));
                     }
                 }
-                Command::Draw(draw) => {
+                Command::Draw(mut draw) => {
                     if self.sync_mesh_buffers(draw.mesh, &mut passes) {
                         open = false;
                     }
@@ -3090,6 +3109,8 @@ impl UnityRenderer {
                             }
                         }
                     }
+                    // Standalone instancing whose multiplied IDs pass a native batch.
+                    let mut past_batch = false;
                     for item in planned {
                         match item {
                             Planned::Draw(mut d) => {
@@ -3130,16 +3151,12 @@ impl UnityRenderer {
                                             "standalone mesh instancing property data exceeds a native batch: draw skipped".into());
                                         continue;
                                     }
-                                    if let Some(slot) = mesh_instance
-                                        && self.state.instance_multiplier > 1
-                                        && slot.count.saturating_mul(self.state.instance_multiplier)
+                                    if mesh_instance.is_some_and(|slot| {
+                                        slot.count.saturating_mul(self.state.instance_multiplier)
                                             > capacity
-                                    {
-                                        self.warn_once(format!("mesh-instance-multiplied-batch{}", d.program.0), ||
-                                            "an instance multiplier on standalone mesh instancing past a native batch's instances is unmeasured: the instances it adds are not drawn".into());
-                                        if slot.added {
-                                            continue;
-                                        }
+                                    }) {
+                                        // Checked before any is added (`multiplied_instances`).
+                                        past_batch = true;
                                     }
                                     d.first_instance %= capacity;
                                 }
@@ -3172,12 +3189,14 @@ impl UnityRenderer {
                             }
                         }
                     }
-                    if let Some(slot) = mesh_instance
-                        && !slot.added
-                        && slot.index + 1 == slot.count
-                        && self.state.instance_multiplier > 1
-                    {
-                        self.multiplied_instances(&draw, slot, &mut added);
+                    if let Some(slot) = mesh_instance {
+                        if slot.added {
+                            added_draw = Some(draw);
+                        } else if slot.index + 1 == slot.count && self.state.instance_multiplier > 1
+                        {
+                            added = self.multiplied_instances(&mut draw, slot, past_batch);
+                            added_draw = added.is_some().then_some(draw);
+                        }
                     }
                 }
                 Command::MeshBuffers(binding) => self.bind_mesh_buffers(*binding),
@@ -3396,32 +3415,47 @@ impl UnityRenderer {
 
     /// The instances an instance multiplier adds to a mesh-instancing call of `slot.count`
     /// instances drawn one by one: IDs `count..count * multiplier` (as `SetInstanceMultiplier`
-    /// multiplies a draw's instance count), queued in `added` to draw after its last instance.
-    /// They have no instance data: their matrices and instanced properties read zero, what the
-    /// Unity 6000.0.71f1 Editor's added instances read where no earlier instanced draw wrote
+    /// multiplies a draw's instance count), drawn after its last instance from that instance's
+    /// draw (`draw`, its matrix zeroed): the first added slot and the end of their IDs. They
+    /// have no instance data: their matrices and instanced properties read zero, what the Unity
+    /// 6000.0.71f1 Editor's added instances read where no earlier instanced draw wrote
     /// (tests/projects/cmdbuffers `device.multiplier.*`). Where earlier draws wrote more
-    /// instances the Editor's read what they left (measured, not reproduced: warned of).
+    /// instances the Editor's read what they left (`device.multiplier.stale.*`, not reproduced:
+    /// warned of). They keep the last instance's winding (Unbound's choice; the Editor draws the
+    /// call as one). None past a native batch of standalone instancing (unmeasured, warned of).
     fn multiplied_instances(
         &mut self,
-        draw: &commands::Draw,
+        draw: &mut commands::Draw,
         slot: MeshInstanceSlot,
-        added: &mut Vec<(MeshInstanceSlot, Box<commands::Draw>)>,
-    ) {
-        self.warn_once("mesh-instance-multiplied".into(), || {
-            "an instance multiplier's added mesh instances read zero instance data; Unity's read what earlier instanced draws left in its instance buffer".into()
-        });
-        let mut empty = draw.clone();
-        empty.model = [0.0; 16];
-        let end = slot.count.saturating_mul(self.state.instance_multiplier);
-        // Popped from the end: drawn in ID order.
-        for index in (slot.count..end).rev() {
-            let slot = MeshInstanceSlot {
-                index,
-                count: slot.count,
-                added: true,
-            };
-            added.push((slot, Box::new(empty.clone())));
+        past_batch: bool,
+    ) -> Option<(MeshInstanceSlot, u32)> {
+        if past_batch {
+            if !self.multiplied_past_batch_warned {
+                self.multiplied_past_batch_warned = true;
+                tracing::warn!(
+                    "an instance multiplier on standalone mesh instancing past a native batch's instances is unmeasured: the instances it adds are not drawn"
+                );
+            }
+            return None;
         }
+        if !self.multiplied_instances_warned {
+            self.multiplied_instances_warned = true;
+            tracing::warn!(
+                "an instance multiplier's added mesh instances read zero instance data; Unity's read what earlier instanced draws left in its instance buffer"
+            );
+        }
+        let mirrored = determinant3(&draw.model) < 0.0;
+        draw.model = [0.0; 16];
+        let first = MeshInstanceSlot {
+            index: slot.count,
+            count: slot.count,
+            added: true,
+            mirrored,
+        };
+        Some((
+            first,
+            slot.count.saturating_mul(self.state.instance_multiplier),
+        ))
     }
 
     /// The pipelines, bind groups and uniforms of a draw: one per pass it draws.
@@ -3691,11 +3725,13 @@ impl UnityRenderer {
             let flip = dots.is_some_and(|d| {
                 d.header[commands::DOTS_HEADER_FLAGS] & commands::DOTS_FLAG_FLIP_WINDING != 0
             });
-            (state, stencil_ref) = self.draw_state(
-                state,
-                stencil_ref,
-                ((determinant3(&draw.model) < 0.0) != top_down) != flip,
-            );
+            // An added mesh instance keeps its call's winding (`multiplied_instances`).
+            let mirrored = match mesh_instance {
+                Some(slot) if slot.added => slot.mirrored,
+                _ => determinant3(&draw.model) < 0.0,
+            };
+            (state, stencil_ref) =
+                self.draw_state(state, stencil_ref, (mirrored != top_down) != flip);
             let key = PipelineKey {
                 state,
                 topology: sub.topology,
