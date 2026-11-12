@@ -171,7 +171,7 @@ namespace UnityEngine
         public bool hasNonUniformParticleSizes => m_Storage3DSize;
 
         /// <summary>What the particle storage keeps beyond a z rotation and a uniform size: 3D
-        /// rotations, non-uniform sizes, rotation speeds. A sub-emitter's emission into a child
+        /// rotations, non-uniform sizes, rotation speeds. A script's TriggerSubEmitter into a child
         /// does not refresh it, so a child that never updated since a module asked for more keeps
         /// its first layout (6000.0.71f1, tests/projects/particleseedaxis inherit_*).</summary>
         bool m_Storage3DRotation, m_Storage3DSize, m_StorageRotationSpeed;
