@@ -247,6 +247,13 @@ that colour delta remains strict and belongs to the existing perceptual-gradient
   parser missed that form, and its missing-font recipe compared no cases. A replay
   against that unchanged baseline therefore flags the visibility increase. It is
   not waived and no baseline is promoted here.
+- **Text rendering, Q362/Q300.** Textcore passes all 616859 values (8226 differed):
+  TextCore glyphs load and rasterize through FreeType per render mode, with the
+  hinted face lines and the Editor's SDFAA and SDF fields. Textmesh passes 1355/1355
+  (two rotation residuals before) with the dynamic font texture packed, grown and
+  reset as in the Editor. Still open, unmeasured: color glyph bitmaps (rendered as
+  coverage), bitmap-only faces' strike choice, non-zero `characterSpacing`, scaled
+  (canvas) dynamic font requests, and a font texture full at 4096.
 - **Wind clock, Q363.** A fixed capture interval replaces wall-time-dependent
   phases. All 18 records match, with the same raw comparator and tolerances.
 - **Work-area sampling, Q296.** Inputplatform waits up to ten seconds for both
@@ -735,7 +742,7 @@ volume/snapshots/exposed parameters, `OnAudioFilterRead`, VideoPlayer.
 
 Done: Canvas render modes, sorting, nested overrides, CanvasRenderer (meshes, materials, pop
 materials, culling, alpha), CanvasGroup, RectTransformUtility, legacy fonts and TextGenerator,
-FontEngine (raster/SDF/SDFAA, kerning), IMGUI, UI Toolkit (UXML/USS, layout, rendering, text,
+FontEngine (raster/SDF/SDFAA, hinted face lines, kerning), dynamic font texture packing, IMGUI, UI Toolkit (UXML/USS, layout, rendering, text,
 ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, InputForUI.
 
 | Gap | Where | | Impact |
