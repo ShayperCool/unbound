@@ -392,8 +392,8 @@ namespace Unbound.UIElements
             if (type == VertSvgGradient)
             {
                 // settingIndex: the row as two bytes (row >> 8, row & 0xFF), as UIR packs it. Unity's
-                // shader reads them back as high * 255 + low, so from row 256 on it reads the row
-                // before (as in the Unity 6000.0.71f1 Editor, tests/projects/uitkvector
+                // shader reads them back as high * 255 + low, that is row - (row >> 8): from row 256
+                // on an earlier row (as in the Unity 6000.0.71f1 Editor, tests/projects/uitkvector
                 // gradient-rows).
                 int row = (setting + m_SettingOffset) & 0xFFFF;
                 Uvs[5].Add(new Vector4((row >> 8) * Byte, (row & 0xFF) * Byte, 0f, 0f));

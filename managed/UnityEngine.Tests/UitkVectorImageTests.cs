@@ -260,18 +260,21 @@ namespace UnityEngine.Tests
             var handler = Debug.unityLogger.logHandler;
             bool playing = EditorSession.IsPlaying;
             var logs = new Logs();
+            PanelSettings editMode = null, playMode = null;
             Debug.unityLogger.logHandler = logs;
             try
             {
                 EditorSession.IsPlaying = false;
-                ScriptableObject.CreateInstance<PanelSettings>();
+                editMode = ScriptableObject.CreateInstance<PanelSettings>();
                 Assert.Empty(logs.Lines);
                 EditorSession.IsPlaying = true;
-                ScriptableObject.CreateInstance<PanelSettings>();
+                playMode = ScriptableObject.CreateInstance<PanelSettings>();
                 Assert.Equal(new[] { "No Theme Style Sheet set to PanelSettings , UI will not render properly" }, logs.Lines);
             }
             finally
             {
+                Object.DestroyImmediate(editMode);
+                Object.DestroyImmediate(playMode);
                 Debug.unityLogger.logHandler = handler;
                 EditorSession.IsPlaying = playing;
             }
