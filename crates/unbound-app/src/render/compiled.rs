@@ -172,6 +172,9 @@ pub struct DrawValues<'a, 'buffers> {
     /// The draw is this instance of a mesh-instancing call (`MeshInstance`): its scalar
     /// uniforms take this element of the draw's arrays of their name.
     pub instance: Option<u32>,
+    /// The instance is one an instance multiplier adds past its call's count: its matrices
+    /// and instanced properties read zero (no instance data was written for it).
+    pub instance_empty: bool,
     /// One uniform's selected element, over the draw's other values (see [`write_uniform`]).
     pub element: Option<(&'a str, &'a PropertyValue)>,
 }
@@ -1050,7 +1053,9 @@ fn builtin_value(which: Builtin, name: &str, v: &DrawValues, textures: &[String]
             }
         }
         ObjectToWorld => mat(v.model),
-        WorldToObject => mat(if v.gizmo_draw {
+        WorldToObject => mat(if v.instance_empty {
+            [0.0; 16]
+        } else if v.gizmo_draw {
             // Gizmos transform normals as directions. Unity's shader sources factor their
             // normal matrix through this uniform and the inverse view matrix.
             transpose(&v.model)
@@ -1287,6 +1292,12 @@ fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, 
         return;
     }
     let instanced = || program.instanced_properties.contains(&u.name);
+    if v.instance_empty
+        && (instanced() || matches!(v.override_of(&u.name), Some(PropertyValue::Array { .. })))
+    {
+        write_value(u, &Value::Matrix([0.0; 16]), out);
+        return;
+    }
     let element;
     let material_only = match (v.instance, v.override_of(&u.name)) {
         (Some(index), Some(PropertyValue::Array { components, data })) => {
@@ -1879,6 +1890,7 @@ mod tests {
                 texture_size: &size,
                 constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
                 instance,
+                instance_empty: false,
                 element: None,
             };
             let mut full = vec![0u8; offset as usize];
@@ -2018,6 +2030,7 @@ mod tests {
             texture_size: &size,
             constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
             instance: None,
+            instance_empty: false,
             element: None,
         };
         let mut out = vec![0u8; 176];
@@ -2124,6 +2137,26 @@ mod tests {
         assert!(
             (f(&out, 64) - 0.214).abs() < 0.001 && f(&out, 80) == 0.25,
             "past an array's end the material's value applies"
+        );
+        // An instance an instance multiplier adds past the call's count has no instance data.
+        let added = DrawValues {
+            model: [0.0; 16],
+            instance: Some(2),
+            instance_empty: true,
+            ..instance
+        };
+        out.fill(0xff);
+        fill(&instanced, &plan, &added, &mut out);
+        assert_eq!(f(&out, 48), 0.0, "its matrix is zero");
+        assert_eq!(
+            [f(&out, 64), f(&out, 76), f(&out, 80)],
+            [0.0; 3],
+            "its instanced properties and the call's arrays read zero"
+        );
+        assert_eq!(
+            [f(&out, 96), f(&out, 144), f(&out, 176), f(&out, 192)],
+            [2.0, 3.0, 0.25, 0.75],
+            "ordinary uniforms, globals and uniform arrays keep their values"
         );
         let not_instance = DrawValues {
             instance: None,

@@ -437,11 +437,23 @@ struct State {
     draw_setup: Option<(u32, u64, u32, bool)>,
     instance_multiplier: u32,
     /// The next draw is this instance of a mesh-instancing call (`MeshInstance`).
-    mesh_instance: Option<u32>,
+    mesh_instance: Option<MeshInstanceSlot>,
     /// The next draw is a BatchRendererGroup draw command's (`DotsDraw`).
     dots: Option<commands::DotsDraw>,
     /// The next draw's indices from a buffer (`DrawIndices`): buffer, index size, first, count.
     draw_indices: Option<(u64, u8, u32, u32)>,
+}
+
+/// A draw's place in a mesh-instancing call replayed as one draw per instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MeshInstanceSlot {
+    /// Its logical instance ID, and the element of the draw's arrays its scalar uniforms take.
+    index: u32,
+    /// The call's instance count.
+    count: u32,
+    /// One of the instances an instance multiplier adds past the call's count
+    /// ([`UnityRenderer::multiplied_instances`]): it has no instance data.
+    added: bool,
 }
 
 /// How a draw's instances get their data, which selects its variant: none of their own, a
@@ -2568,7 +2580,21 @@ impl UnityRenderer {
         let mut draws = 0usize;
         // Where the passes into the depth-only target being drawn start (this submission's).
         let mut depth_mark = 0usize;
-        for command in commands {
+        // The instances an instance multiplier adds to a mesh-instancing call, drawn after its
+        // last one (`multiplied_instances`), popped before the next command.
+        let mut added: Vec<(MeshInstanceSlot, Box<commands::Draw>)> = Vec::new();
+        let mut commands = commands.into_iter();
+        loop {
+            let command = match added.pop() {
+                Some((slot, draw)) => {
+                    self.state.mesh_instance = Some(slot);
+                    Command::Draw(draw)
+                }
+                None => match commands.next() {
+                    Some(command) => command,
+                    None => break,
+                },
+            };
             if !matches!(command, Command::Plugin(_)) {
                 self.plugin_pass_open = false;
             }
@@ -2738,7 +2764,13 @@ impl UnityRenderer {
                     open = false;
                 }
                 Command::Viewport(v) => self.state.viewport = v,
-                Command::MeshInstance(index) => self.state.mesh_instance = Some(index),
+                Command::MeshInstance { index, count } => {
+                    self.state.mesh_instance = Some(MeshInstanceSlot {
+                        index,
+                        count,
+                        added: false,
+                    })
+                }
                 Command::InstanceMultiplier(multiplier) => {
                     self.state.instance_multiplier = multiplier.max(1)
                 }
@@ -2943,7 +2975,7 @@ impl UnityRenderer {
                         open = false;
                     }
                     let mesh_instance = self.state.mesh_instance.take();
-                    let first_instance = mesh_instance.unwrap_or(0);
+                    let first_instance = mesh_instance.map_or(0, |m| m.index);
                     let dots = self.state.dots.take();
                     // Taken first: a draw's indices never pass to a later draw.
                     let indices = self.state.draw_indices.take();
@@ -3062,7 +3094,9 @@ impl UnityRenderer {
                         match item {
                             Planned::Draw(mut d) => {
                                 d.first_instance = first_instance;
-                                if d.indirect.is_none() {
+                                // A mesh-instancing call's instances are drawn one by one, the
+                                // multiplier's are added after them (`multiplied_instances`).
+                                if d.indirect.is_none() && mesh_instance.is_none() {
                                     d.instances =
                                         d.instances.wrapping_mul(self.state.instance_multiplier);
                                     d.first_instance = d
@@ -3096,6 +3130,17 @@ impl UnityRenderer {
                                             "standalone mesh instancing property data exceeds a native batch: draw skipped".into());
                                         continue;
                                     }
+                                    if let Some(slot) = mesh_instance
+                                        && self.state.instance_multiplier > 1
+                                        && slot.count.saturating_mul(self.state.instance_multiplier)
+                                            > capacity
+                                    {
+                                        self.warn_once(format!("mesh-instance-multiplied-batch{}", d.program.0), ||
+                                            "an instance multiplier on standalone mesh instancing past a native batch's instances is unmeasured: the instances it adds are not drawn".into());
+                                        if slot.added {
+                                            continue;
+                                        }
+                                    }
                                     d.first_instance %= capacity;
                                 }
                                 if !open {
@@ -3126,6 +3171,13 @@ impl UnityRenderer {
                                 passes.push(Op::DepthCopy(copy));
                             }
                         }
+                    }
+                    if let Some(slot) = mesh_instance
+                        && !slot.added
+                        && slot.index + 1 == slot.count
+                        && self.state.instance_multiplier > 1
+                    {
+                        self.multiplied_instances(&draw, slot, &mut added);
                     }
                 }
                 Command::MeshBuffers(binding) => self.bind_mesh_buffers(*binding),
@@ -3342,13 +3394,43 @@ impl UnityRenderer {
         )
     }
 
+    /// The instances an instance multiplier adds to a mesh-instancing call of `slot.count`
+    /// instances drawn one by one: IDs `count..count * multiplier` (as `SetInstanceMultiplier`
+    /// multiplies a draw's instance count), queued in `added` to draw after its last instance.
+    /// They have no instance data: their matrices and instanced properties read zero, what the
+    /// Unity 6000.0.71f1 Editor's added instances read where no earlier instanced draw wrote
+    /// (tests/projects/cmdbuffers `device.multiplier.*`). Where earlier draws wrote more
+    /// instances the Editor's read what they left (measured, not reproduced: warned of).
+    fn multiplied_instances(
+        &mut self,
+        draw: &commands::Draw,
+        slot: MeshInstanceSlot,
+        added: &mut Vec<(MeshInstanceSlot, Box<commands::Draw>)>,
+    ) {
+        self.warn_once("mesh-instance-multiplied".into(), || {
+            "an instance multiplier's added mesh instances read zero instance data; Unity's read what earlier instanced draws left in its instance buffer".into()
+        });
+        let mut empty = draw.clone();
+        empty.model = [0.0; 16];
+        let end = slot.count.saturating_mul(self.state.instance_multiplier);
+        // Popped from the end: drawn in ID order.
+        for index in (slot.count..end).rev() {
+            let slot = MeshInstanceSlot {
+                index,
+                count: slot.count,
+                added: true,
+            };
+            added.push((slot, Box::new(empty.clone())));
+        }
+    }
+
     /// The pipelines, bind groups and uniforms of a draw: one per pass it draws.
     fn plan_draw(
         &mut self,
         draw: &commands::Draw,
         target: &Target,
         time: f32,
-        mesh_instance: Option<u32>,
+        mesh_instance: Option<MeshInstanceSlot>,
         dots: Option<&commands::DotsDraw>,
     ) -> Vec<Planned> {
         let mut planned = Vec::new();
@@ -3743,7 +3825,8 @@ impl UnityRenderer {
                 main_alpha_only: alpha_only,
                 texture_size: &size,
                 constant_buffer: &constant_buffer,
-                instance: mesh_instance,
+                instance: mesh_instance.map(|m| m.index),
+                instance_empty: mesh_instance.is_some_and(|m| m.added),
                 element: None,
             };
             if let Some(filter) = trace_uniforms()

@@ -316,14 +316,16 @@ namespace Unbound.Tests
         // ---------------------------------------------------------------- guards (green before and after)
 
         [Fact]
-        public void MeshReplayDrawSetupCarriesItsLogicalFirstInstance()
+        public void MeshReplayDrawSetupCarriesItsLogicalFirstInstanceAndCallCount()
         {
             foreach (uint index in new[] { 7u, 0u })
             {
-                var expected = new List<byte> { 30 }; // MeshInstance, render protocols 11 and 12.
+                // MeshInstance, render protocols 11 and 12, with the call's count (NativeApi 65).
+                var expected = new List<byte> { 30 };
                 expected.AddRange(BitConverter.GetBytes(index));
+                expected.AddRange(BitConverter.GetBytes(9u));
                 expected.AddRange(SetupBytes(1, 0, 0, false));
-                Assert.Equal(expected.ToArray(), Encoded(new DrawSetup { Instances = 1, MeshInstance = index }));
+                Assert.Equal(expected.ToArray(), Encoded(new DrawSetup { Instances = 1, MeshInstance = index, MeshInstanceCount = 9 }));
             }
         }
 

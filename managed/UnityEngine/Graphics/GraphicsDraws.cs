@@ -136,7 +136,7 @@ namespace UnityEngine
             int queued = Immediate.Queued.Count;
             var values = MeshInstanceProperties(properties);
             for (int i = 0; i < count; i++)
-                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i }, lighting);
+                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i, MeshInstanceCount = (uint)count }, lighting);
             // The group's sort key is the box's centre, ties within the call kept in call order
             // (Unbound's choice, unmeasured).
             WithWorldBounds(queued, bounds);
@@ -255,7 +255,7 @@ namespace UnityEngine
             for (int i = 0; i < instanceCount; i++)
             {
                 var matrix = System.Runtime.InteropServices.MemoryMarshal.Read<Matrix4x4>(data.Slice((startInstance + i) * stride, 64));
-                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i }, lighting);
+                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i, MeshInstanceCount = (uint)instanceCount }, lighting);
                 if (!automatic) continue;
                 if (i == 0) bounds = Transformed(mesh.bounds, matrix);
                 else bounds.Encapsulate(Transformed(mesh.bounds, matrix));

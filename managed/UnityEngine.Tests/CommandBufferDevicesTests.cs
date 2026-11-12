@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -8,18 +9,46 @@ namespace Unbound.Tests
 {
     public class CommandBufferDevicesTests
     {
+        /// <summary>A command buffer's mesh instances under an instance multiplier record each
+        /// instance with the call's count, whatever the multiplier (the renderer adds the
+        /// multiplied instances): nothing is refused.</summary>
         [Fact]
-        public void MeshExpansionRejectsNontrivialInstanceMultipliers()
+        public void MeshExpansionUnderInstanceMultipliersRecordsTheCallsCount()
         {
+            var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/MultipliedInstances\" { SubShader { Pass {} } }");
+            var material = new Material(shader) { enableInstancing = true };
+            var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up } };
+            mesh.triangles = new[] { 0, 1, 2 };
             try
             {
-                GfxStream.InstanceMultiplier(2);
-                Assert.Equal("Unbound: instance multipliers on CPU-expanded mesh instances are not supported.",
-                    Assert.Throws<NotSupportedException>(() => GfxStream.MeshInstance(0)).Message);
-                GfxStream.InstanceMultiplier(0);
-                GfxStream.MeshInstance(1);
+                using var cmd = new CommandBuffer();
+                cmd.SetInstanceMultiplier(3);
+                cmd.DrawMeshInstanced(mesh, 0, material, 0, new[] { Matrix4x4.identity, Matrix4x4.identity }, 2);
+                cmd.SetInstanceMultiplier(1);
+                GfxStream.Flush();
+                Graphics.ExecuteCommandBuffer(cmd);
+                var bytes = GfxStream.Recorded.ToArray();
+                GfxStream.Flush();
+                for (uint index = 0; index < 2; index++)
+                {
+                    var instance = new byte[] { 30 }.Concat(BitConverter.GetBytes(index)).Concat(BitConverter.GetBytes(2u)).ToArray();
+                    Assert.Equal(1, Occurrences(bytes, instance));
+                }
             }
-            finally { GfxStream.InstanceMultiplier(1); }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(mesh);
+                UnityEngine.Object.DestroyImmediate(material);
+                UnityEngine.Object.DestroyImmediate(shader);
+            }
+        }
+
+        static int Occurrences(byte[] bytes, byte[] part)
+        {
+            int n = 0;
+            for (int at = 0; at + part.Length <= bytes.Length; at++)
+                if (bytes.AsSpan(at, part.Length).SequenceEqual(part)) n++;
+            return n;
         }
 
         [Fact]

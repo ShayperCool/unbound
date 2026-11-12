@@ -323,25 +323,22 @@ namespace Unbound.Runtime
             U64(texture);
         }
 
-        static uint s_InstanceMultiplier = 1;
-
         internal static void InstanceMultiplier(uint multiplier)
         {
-            s_InstanceMultiplier = Math.Max(1u, multiplier);
             U8(InstanceMultiplierOp);
             U32(multiplier);
         }
 
-        /// <summary>The next draw is instance <paramref name="index"/> of a mesh-instancing call:
-        /// its first logical instance, and the element its scalar uniforms take from the draw's
-        /// property arrays (render protocol 12).</summary>
-        internal static void MeshInstance(uint index)
+        /// <summary>The next draw is instance <paramref name="index"/> of a mesh-instancing call
+        /// of <paramref name="count"/> instances: its first logical instance, and the element its
+        /// scalar uniforms take from the draw's property arrays (render protocol 12). Under an
+        /// instance multiplier the renderer adds the call's further instances after its last one
+        /// (NativeApi 65).</summary>
+        internal static void MeshInstance(uint index, uint count)
         {
-            // Expanded draws cannot supply another instance's matrix and property element.
-            if (s_InstanceMultiplier != 1)
-                throw new NotSupportedException("Unbound: instance multipliers on CPU-expanded mesh instances are not supported.");
             U8(MeshInstanceOp);
             U32(index);
+            U32(count);
         }
 
         /// <summary>The next draw is a BatchRendererGroup draw command's: its material's DOTS
@@ -425,7 +422,7 @@ namespace Unbound.Runtime
         /// (DrawIndices: buffer, index size, first index, index count).</summary>
         internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
         {
-            if (setup.MeshInstance is uint index) MeshInstance(index);
+            if (setup.MeshInstance is uint index) MeshInstance(index, setup.MeshInstanceCount);
             s_PendingCommand = setup.Command ?? -1;
             U8(DrawSetupOp);
             U32(setup.Instances);

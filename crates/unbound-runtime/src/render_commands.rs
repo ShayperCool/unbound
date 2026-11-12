@@ -192,10 +192,13 @@ pub enum Command {
     /// `args` (a buffer handle; 0: none) at `offset` — indexed (index count, instance count, first
     /// index, base vertex, first instance: DrawMeshInstancedIndirect) or not (vertex count,
     /// instance count, first vertex, first instance: DrawProceduralIndirect).
-    /// The next draw is instance `index` of a mesh-instancing call (render protocols 11, 12):
-    /// its first logical instance, and the element its scalar uniforms take from the draw's
-    /// property arrays.
-    MeshInstance(u32),
+    /// The next draw is instance `index` of a mesh-instancing call of `count` instances
+    /// (render protocols 11, 12; the count NativeApi 65): its first logical instance, and the
+    /// element its scalar uniforms take from the draw's property arrays.
+    MeshInstance {
+        index: u32,
+        count: u32,
+    },
     /// Multiplies later direct draws, across submissions. Zero resets it to one.
     InstanceMultiplier(u32),
     /// The render texture that stands for the screen while a screen camera draws into it (0:
@@ -627,7 +630,10 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     extra: colors,
                 }
             }
-            op::MESH_INSTANCE => Command::MeshInstance(r.u32()?),
+            op::MESH_INSTANCE => Command::MeshInstance {
+                index: r.u32()?,
+                count: r.u32()?,
+            },
             op::INSTANCE_MULTIPLIER => Command::InstanceMultiplier(r.u32()?),
             op::SCREEN_STAND_IN => Command::ScreenStandIn(r.u64()?),
             op::DOTS_DRAW => {
@@ -1064,9 +1070,10 @@ impl Writer {
                     self.u32(*v);
                 }
             }
-            Command::MeshInstance(first) => {
+            Command::MeshInstance { index, count } => {
                 self.bytes.push(op::MESH_INSTANCE);
-                self.u32(*first);
+                self.u32(*index);
+                self.u32(*count);
             }
             Command::DrawSetup {
                 instances,
@@ -1465,7 +1472,7 @@ mod tests {
             },
             Command::Global("_Tint".into(), PropertyValue::Vector([1.0, 0.5, 0.25, 1.0])),
             Command::Keyword("FOG_LINEAR".into(), true),
-            Command::MeshInstance(7),
+            Command::MeshInstance { index: 7, count: 9 },
             Command::InstanceMultiplier(0),
             Command::InstanceMultiplier(3),
             Command::ScreenStandIn(42),
@@ -1835,10 +1842,10 @@ mod tests {
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
-    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads.
+    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 64);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 65);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

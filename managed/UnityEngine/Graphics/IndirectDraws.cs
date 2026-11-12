@@ -22,6 +22,8 @@ namespace Unbound.Runtime
         /// instance: its logical instance ID, and the element of the draw's property arrays its
         /// scalar uniforms take (GfxStream.MeshInstance).</summary>
         internal uint? MeshInstance;
+        /// <summary>The instance count of that mesh-instancing call.</summary>
+        internal uint MeshInstanceCount;
         /// <summary>The indirect command an indirect draw runs (its <c>unity_BaseCommandID</c>,
         /// what UnityIndirect.cginc's GetCommandID reads); null: none.</summary>
         internal int? Command;
@@ -232,7 +234,7 @@ namespace UnityEngine.Rendering
                 int pass = shaderPass < 0 ? GfxStream.AllPasses : shaderPass;
                 for (int i = 0; i < count; i++)
                 {
-                    GfxStream.MeshInstance((uint)i);
+                    GfxStream.MeshInstance((uint)i, (uint)count);
                     GfxStream.Draw(meshHandle, submeshIndex, materialHandle, pass, copies[i], Color.white, properties: values);
                 }
             });
