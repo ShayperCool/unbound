@@ -43,6 +43,18 @@ the names returned by `common.recovery_cases()`, then compare with the same
 profile. All raw samples, source positions and discrepancies remain visible.
 No alignment, reordered records, extra tolerance or sample limit is applied.
 
+The full 19-control repeats compare 8,160,617 values per rate. At 48000 Hz they
+retain 404,561 exact differences; the engine comparison retains 382,753 failures
+at the existing PCM gate. At 44100 Hz the repeats agree exactly and the engine
+gate passes, with 237 strict device differences. The independent 48000 result
+prevents certifying the profile. No failure is classified as an accepted residual.
+
+Fresh repeats of the unchanged immediate diagnostic at 48000 Hz agree on all
+24,543,998 values. The unchanged scheduled diagnostic at 44100 Hz retains
+421,351 exact differences across six controls out of 25,428,803 values. Earlier
+repeat failures remain recorded in TRANSITIONS.md. A matching repeat pair does
+not remove those counterexamples.
+
 Q373-R1 remains open for callback playback publication, scheduled recovery and
 real-device queue timing. The earlier [immediate and scheduled diagnostics](TRANSITIONS.md#reset-diagnostics)
 remain runnable and unchanged. Neither those recordings nor this expanded
