@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 62;
+        internal const uint CurrentVersion = 63;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -64,11 +64,13 @@ namespace Unbound.Runtime
         /// <summary>(font handle, code point): the glyph index, 0 when the face lacks it.</summary>
         internal delegate* unmanaged<ulong, uint, uint> FontGlyphIndex;
         /// <summary>
-        /// (font handle, glyph index, pixel size, SDF padding, out info, out pixels): 1 when the face
-        /// has the glyph. With a negative padding the pixels are coverage, as `font_glyph`'s; else a
-        /// signed distance field grown by the padding on every side (`FontFace::render_glyph_sdf`).
+        /// (font handle, glyph index, whole pixel size, FreeType load flags, render mode, padding, out
+        /// info, out pixels): 1 when the face loads the glyph. Render mode 0 loads its metrics only,
+        /// with the load flags; a `GlyphRenderMode` renders it for an atlas as that mode loads it
+        /// (`FontFace::textcore_render`): the pixels are `(rect width + 2 padding) x (rect height + 2
+        /// padding)` bytes, top row first.
         /// </summary>
-        internal delegate* unmanaged<ulong, uint, float, int, GlyphOutlineInfo*, NativeBuffer*, int> FontRenderGlyph;
+        internal delegate* unmanaged<ulong, uint, int, int, int, int, TextCoreGlyphInfo*, NativeBuffer*, int> FontRenderGlyph;
         /// <summary>
         /// (texture handle, 0 for the screen; x, y, width, height; float; out pixels): 1 with the
         /// rectangle's RGBA pixels, rows bottom first, 4 bytes each (16 when float).

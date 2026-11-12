@@ -5,8 +5,9 @@ using Unbound.Runtime;
 
 // TextCore's font engine: the face TextMeshPro's dynamic font assets load glyphs from, and the
 // packing and rendering of those glyphs into their atlas textures. Faces and glyphs come from the
-// native side (`font-open`, `font_render_glyph`); the values match Unity's FreeType-based engine
-// (glyph metrics in 1/64 pixel, SDF encoded `0.5 + d / (2 (padding + 1))`).
+// native side (`font-open`, `font_render_glyph`), which loads and rasterizes them with FreeType as
+// the Unity 6000.0.71f1 Editor does (tests/projects/textcore): whole pixel sizes, the caller's
+// load flags, and per render mode its load flags and distance field.
 
 namespace UnityEngine.TextCore.LowLevel
 {
@@ -83,12 +84,8 @@ namespace UnityEngine.TextCore.LowLevel
 
     public sealed partial class FontEngine
     {
-        const int k_RasterModeMono = 2;
-        const int k_RasterModeSdf = 32;
-        const int k_RasterModeSdfaa = 64;
-        const int k_RasterModeColor = 65536;
         /// <summary>The size a face loads at when none is given.</summary>
-        const float k_DefaultPointSize = 90f;
+        const int k_DefaultPointSize = 90;
 
         sealed class FaceJson
         {
@@ -98,12 +95,8 @@ namespace UnityEngine.TextCore.LowLevel
             public int LineGap { get; set; }
             public string Family { get; set; }
             public string Style { get; set; }
-            public int CapHeight { get; set; }
-            public int XHeight { get; set; }
             public int[] Underline { get; set; }
-            public int SpaceAdvance { get; set; }
             public int GlyphCount { get; set; }
-            public bool Hinted { get; set; }
             public int FaceCount { get; set; } = 1;
         }
 
@@ -121,7 +114,8 @@ namespace UnityEngine.TextCore.LowLevel
         static readonly JsonSerializerOptions s_Json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
         static readonly Dictionary<ulong, FaceJson> s_Descriptions = new Dictionary<ulong, FaceJson>();
         static LoadedFace s_Face;
-        static float s_PointSize = k_DefaultPointSize;
+        /// <summary>The face size in whole pixels per em, as FreeType sizes it.</summary>
+        static int s_PointSize = k_DefaultPointSize;
 
         public static FontEngineError InitializeFontEngine() => FontEngineError.Success;
 
@@ -139,7 +133,7 @@ namespace UnityEngine.TextCore.LowLevel
 
         // ---- Faces ----
 
-        public static FontEngineError LoadFontFace(string filePath) => LoadFontFace(filePath, s_PointSize, 0);
+        public static FontEngineError LoadFontFace(string filePath) => LoadFontFace(filePath, (float)s_PointSize, 0);
 
         public static FontEngineError LoadFontFace(string filePath, int pointSize) => LoadFontFace(filePath, (float)pointSize, 0);
 
@@ -151,7 +145,7 @@ namespace UnityEngine.TextCore.LowLevel
             return Load(new LoadedFace { Handle = source.Handle, FilePath = filePath, FaceIndex = faceIndex }, pointSize);
         }
 
-        public static FontEngineError LoadFontFace(byte[] sourceFontFile) => LoadFontFace(sourceFontFile, s_PointSize, 0);
+        public static FontEngineError LoadFontFace(byte[] sourceFontFile) => LoadFontFace(sourceFontFile, (float)s_PointSize, 0);
 
         public static FontEngineError LoadFontFace(byte[] sourceFontFile, int pointSize) => LoadFontFace(sourceFontFile, (float)pointSize, 0);
 
@@ -163,7 +157,7 @@ namespace UnityEngine.TextCore.LowLevel
             return Load(new LoadedFace { Handle = source.Handle, Data = sourceFontFile, FaceIndex = faceIndex }, pointSize);
         }
 
-        public static FontEngineError LoadFontFace(Font font) => LoadFontFace(font, s_PointSize, 0);
+        public static FontEngineError LoadFontFace(Font font) => LoadFontFace(font, (float)s_PointSize, 0);
 
         public static FontEngineError LoadFontFace(Font font, int pointSize) => LoadFontFace(font, (float)pointSize, 0);
 
@@ -176,7 +170,7 @@ namespace UnityEngine.TextCore.LowLevel
             return Load(new LoadedFace { Handle = source.Handle, FaceIndex = faceIndex }, pointSize);
         }
 
-        public static FontEngineError LoadFontFace(string familyName, string styleName) => LoadFontFace(familyName, styleName, s_PointSize);
+        public static FontEngineError LoadFontFace(string familyName, string styleName) => LoadFontFace(familyName, styleName, (float)s_PointSize);
 
         public static FontEngineError LoadFontFace(string familyName, string styleName, float pointSize)
         {
@@ -189,8 +183,11 @@ namespace UnityEngine.TextCore.LowLevel
             face.Info = Describe(face.Handle);
             if (face.Info == null) return FontEngineError.Invalid_Face;
             s_Face = face;
-            return SetFaceSize(pointSize);
+            return SetFaceSize(WholePixels(pointSize));
         }
+
+        /// <summary>Fractional sizes load at the nearest whole size, halves away from zero.</summary>
+        static int WholePixels(float pointSize) => (int)Math.Round(pointSize, MidpointRounding.AwayFromZero);
 
         static FaceJson Describe(ulong handle)
         {
@@ -219,11 +216,9 @@ namespace UnityEngine.TextCore.LowLevel
             return FontEngineError.Success;
         }
 
-        public static FontEngineError SetFaceSize(int pointSize) => SetFaceSize((float)pointSize);
-
-        static FontEngineError SetFaceSize(float pointSize)
+        public static FontEngineError SetFaceSize(int pointSize)
         {
-            if (pointSize <= 0f) return FontEngineError.Invalid_Pixel_Size;
+            if (pointSize <= 0) return FontEngineError.Invalid_Pixel_Size;
             s_PointSize = pointSize;
             return s_Face != null ? FontEngineError.Success : FontEngineError.Invalid_Face;
         }
@@ -288,9 +283,9 @@ namespace UnityEngine.TextCore.LowLevel
         internal static bool IsColorFontFace() => false;
 
         /// <summary>The loaded face at the current size. Lines come from the face's ascender,
-        /// descender and gap; the cap and mean lines are the tops of 'H' and 'x' as FreeType grid-fits
-        /// them (rounded by a hinted font, else rounded up); the strikethrough sits at 2/5 of the mean
-        /// line, as Unity places it.</summary>
+        /// descender and gap; the cap and mean lines are the bearings of 'H' and 'x' and the tab width
+        /// the advance of the space, loaded with hinting (0 when the face lacks the character); the
+        /// strikethrough sits at 2/5 of the mean line, as Unity places it.</summary>
         public static FaceInfo GetFaceInfo()
         {
             var face = new FaceInfo();
@@ -302,8 +297,8 @@ namespace UnityEngine.TextCore.LowLevel
             float descent = info.Descender * scale;
             float underlinePosition = info.Underline != null && info.Underline.Length == 2 ? info.Underline[0] : 0;
             float underlineThickness = info.Underline != null && info.Underline.Length == 2 ? info.Underline[1] : 0;
-            float capLine = LineTop('H', info.CapHeight * scale, info.Hinted);
-            float meanLine = LineTop('x', info.XHeight * scale, info.Hinted);
+            float capLine = HintedMetrics('H').BearingY;
+            float meanLine = HintedMetrics('x').BearingY;
             face.faceIndex = s_Face.FaceIndex;
             face.familyName = info.Family;
             face.styleName = info.Style;
@@ -327,21 +322,19 @@ namespace UnityEngine.TextCore.LowLevel
             face.underlineThickness = underlineThickness * scale;
             face.strikethroughOffset = meanLine / 2.5f;
             face.strikethroughThickness = face.underlineThickness;
-            face.tabWidth = (float)Math.Round(Fixed(info.SpaceAdvance * scale), MidpointRounding.AwayFromZero);
+            face.tabWidth = HintedMetrics(' ').Advance;
             return face;
         }
 
-        static float LineTop(char c, float fallback, bool hinted)
+        /// <summary>A character's metrics loaded with hinting (FreeType's default load), as the face
+        /// info reads them; zero when the face lacks it.</summary>
+        static TextCoreGlyphInfo HintedMetrics(char c)
         {
-            float top = fallback;
             uint index = Native.FontGlyphIndex(s_Face.Handle, c);
-            if (index != 0 && Native.FontRenderGlyph(s_Face.Handle, index, s_PointSize, -1, out var outline, out _) && outline.Width > 0)
-                top = outline.YMax;
-            return hinted ? (float)Math.Round(top, MidpointRounding.AwayFromZero) : (float)Math.Ceiling(top);
+            return index != 0 && Native.FontRenderGlyph(s_Face.Handle, index, s_PointSize, (int)GlyphLoadFlags.LOAD_COMPUTE_METRICS, 0, 0, out var metrics, out _)
+                ? metrics
+                : default;
         }
-
-        /// <summary>A value in pixels as FreeType's 26.6 fixed point holds it.</summary>
-        static float Fixed(float pixels) => (float)Math.Round(pixels * 64f, MidpointRounding.AwayFromZero) / 64f;
 
         // ---- Glyphs ----
 
@@ -364,32 +357,21 @@ namespace UnityEngine.TextCore.LowLevel
             return index != 0 && TryGetGlyphWithIndexValue(index, flags, out glyph);
         }
 
-        /// <summary>The glyph's metrics at the current size (in font units with LOAD_NO_SCALE), and
-        /// a glyph rect at the origin the size of its bitmap.</summary>
+        /// <summary>The glyph's metrics at the current size loaded with <paramref name="flags"/>
+        /// (FreeType's load flags; LOAD_NO_SCALE gives font units, divided by 64 like pixels), and a
+        /// glyph rect at the origin the size of its bitmap.</summary>
         public static bool TryGetGlyphWithIndexValue(uint glyphIndex, GlyphLoadFlags flags, out Glyph glyph)
         {
             glyph = null;
             if (s_Face == null || glyphIndex >= (uint)Math.Max(0, s_Face.Info.GlyphCount)) return false;
-            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, s_PointSize, -1, out var info, out _)) return false;
-            glyph = MakeGlyph(glyphIndex, info, (flags & GlyphLoadFlags.LOAD_NO_SCALE) != 0 ? s_Face.Info.UnitsPerEm / s_PointSize : 1f);
+            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, s_PointSize, (int)flags, 0, 0, out var info, out _)) return false;
+            glyph = MakeGlyph(glyphIndex, info);
             return true;
         }
 
-        static Glyph MakeGlyph(uint index, GlyphOutlineInfo info, float unitScale)
-        {
-            bool empty = info.Width <= 0 || info.Height <= 0;
-            float Scaled(float pixels) => unitScale == 1f ? Fixed(pixels) : (float)Math.Round(pixels * unitScale);
-            var metrics = empty
-                ? new GlyphMetrics(0f, 0f, 0f, 0f, Scaled(info.Advance))
-                : new GlyphMetrics(
-                    Scaled(info.XMax - info.XMin),
-                    Scaled(info.YMax - info.YMin),
-                    Scaled(info.XMin),
-                    Scaled(info.YMax),
-                    Scaled(info.Advance));
-            var rect = empty ? GlyphRect.zero : new GlyphRect(0, 0, info.Width, info.Height);
-            return new Glyph(index, metrics, rect, 1f, 0);
-        }
+        static Glyph MakeGlyph(uint index, in TextCoreGlyphInfo info) =>
+            new Glyph(index, new GlyphMetrics(info.Width, info.Height, info.BearingX, info.BearingY, info.Advance),
+                new GlyphRect(0, 0, info.RectWidth, info.RectHeight), 1f, 0);
 
         // ---- Atlas packing (MaxRects over TextMeshPro's free and used rect lists) ----
 
@@ -475,10 +457,18 @@ namespace UnityEngine.TextCore.LowLevel
 
         internal static bool TryAddGlyphToTexture(uint glyphIndex, int padding, GlyphPackingMode packingMode, List<GlyphRect> freeGlyphRects, List<GlyphRect> usedGlyphRects, GlyphRenderMode renderMode, Texture2D texture, out Glyph glyph)
         {
+            // The glyph's metrics and rect are those of the render mode's load.
             glyph = null;
-            if (texture == null || !TryGetGlyphWithIndexValue(glyphIndex, GlyphLoadFlags.LOAD_NO_HINTING, out var loaded)) return false;
+            if (s_Face == null || texture == null) return false;
+            if (!Native.FontRenderGlyph(s_Face.Handle, glyphIndex, s_PointSize, 0, (int)renderMode, padding, out var info, out var pixels)) return false;
+            var loaded = MakeGlyph(glyphIndex, info);
             if (!TryPackGlyphInAtlas(loaded, padding, packingMode, renderMode, texture.width, texture.height, freeGlyphRects, usedGlyphRects)) return false;
-            if (loaded.glyphRect.width > 0 && RenderGlyphToTexture(loaded, padding, renderMode, texture) != FontEngineError.Success) return false;
+            if (loaded.glyphRect.width > 0)
+            {
+                var atlas = AtlasPixels(texture);
+                Place(loaded.glyphRect, info, pixels, texture.width, texture.height, (i, v) => atlas[i] = new Color32(255, 255, 255, v));
+                texture.m_PixelsDirty = true;
+            }
             glyph = loaded;
             return true;
         }
@@ -518,23 +508,28 @@ namespace UnityEngine.TextCore.LowLevel
             return texture.m_Pixels;
         }
 
-        /// <summary>Renders a glyph at its glyph rect (rows bottom first, as the rect counts them):
-        /// SDF modes fill the padding around it with the distance field, the others write coverage.</summary>
+        /// <summary>Renders a glyph at its glyph rect's position (rows bottom first, as the rect
+        /// counts them): the render mode's tile, the distance fields with the padding around them.</summary>
         static FontEngineError Render(Glyph glyph, int padding, GlyphRenderMode renderMode, int width, int height, Action<int, byte> write)
         {
             if (glyph == null) return FontEngineError.Invalid_Glyph_Index;
             var rect = glyph.glyphRect;
             if (rect.width <= 0 || rect.height <= 0) return FontEngineError.Success;
-            int mode = (int)renderMode;
-            bool sdf = (mode & (k_RasterModeSdf | k_RasterModeSdfaa)) != 0;
-            bool mono = (mode & k_RasterModeMono) != 0 && (mode & k_RasterModeColor) == 0;
-            int grow = sdf ? Math.Max(0, padding) : 0;
-            if (!Native.FontRenderGlyph(s_Face.Handle, glyph.index, s_PointSize, sdf ? grow : -1, out var info, out var pixels))
+            if (!Native.FontRenderGlyph(s_Face.Handle, glyph.index, s_PointSize, 0, (int)renderMode, padding, out var info, out var pixels))
                 return FontEngineError.Invalid_Glyph_Index;
-            if (pixels == null) return FontEngineError.Success;
-            int w = info.Width + grow * 2;
-            int h = info.Height + grow * 2;
-            if (pixels.Length < w * h) return FontEngineError.Invalid_Glyph_Index;
+            Place(rect, info, pixels, width, height, write);
+            return FontEngineError.Success;
+        }
+
+        /// <summary>Writes a rendered tile (rows top first) with its bitmap's bottom-left corner at
+        /// the rect's position: the tile's own size places it, not the rect's.</summary>
+        static void Place(GlyphRect rect, in TextCoreGlyphInfo info, byte[] pixels, int width, int height, Action<int, byte> write)
+        {
+            if (pixels == null) return;
+            int grow = info.Padding;
+            int w = info.RectWidth + grow * 2;
+            int h = info.RectHeight + grow * 2;
+            if (w <= 0 || h <= 0 || pixels.Length < w * h) return;
             int left = rect.x - grow;
             int bottom = rect.y - grow;
             for (int row = 0; row < h; row++)
@@ -545,12 +540,9 @@ namespace UnityEngine.TextCore.LowLevel
                 {
                     int x = left + column;
                     if (x < 0 || x >= width) continue;
-                    byte v = pixels[row * w + column];
-                    if (mono) v = v >= 128 ? (byte)255 : (byte)0;
-                    write(y * width + x, v);
+                    write(y * width + x, pixels[row * w + column]);
                 }
             }
-            return FontEngineError.Success;
         }
 
         // ---- Kerning ----
@@ -584,7 +576,7 @@ namespace UnityEngine.TextCore.LowLevel
         }
 
         /// <summary>Scales font units to the current size (the older, pixel-valued queries).</summary>
-        static float PixelScale => s_Face != null ? s_PointSize / Math.Max(1, s_Face.Info.UnitsPerEm) : 1f;
+        static float PixelScale => s_Face != null ? (float)s_PointSize / Math.Max(1, s_Face.Info.UnitsPerEm) : 1f;
 
         internal static GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentTable(uint[] glyphIndexes) =>
             glyphIndexes == null ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, glyphIndexes), PixelScale);

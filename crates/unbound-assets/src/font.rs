@@ -2,20 +2,21 @@
 //! `TrueTypeFontImporter` settings of a `.meta`, and the font data of Unity's built-in
 //! `LegacyRuntime.ttf`, which lives inside a player's `unity default resources`.
 //!
-//! Legacy dynamic glyphs use the bundled FreeType backend with explicit importer rendering
-//! modes. Glyph-index rendering and distance fields retain their outline path for TextCore.
+//! Legacy dynamic glyphs and TextCore's glyphs (by index, with their distance fields) both go
+//! through the bundled FreeType library (`font_legacy`, `font_textcore`).
 use crate::{
     Importer,
     meta::{importer, int},
 };
-use ab_glyph_rasterizer::{Rasterizer, point};
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 use std::{
     path::Path,
     sync::{Arc, Mutex, OnceLock},
 };
-use ttf_parser::{Face, OutlineBuilder};
+use ttf_parser::Face;
+
+pub use crate::font_textcore::{TextCoreGlyph, TextCoreTile, render_mode};
 use unbound_yaml::{Guid, Value};
 
 /// File extensions Unity's TrueTypeFontImporter handles.
@@ -48,16 +49,10 @@ pub struct FaceMetrics {
 /// strikeout, `(y offset, y size)` of super- and subscripts.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub struct FaceDetails {
-    pub cap_height: i16,
-    pub x_height: i16,
     pub underline: (i16, i16),
     pub strikeout: (i16, i16),
     pub superscript: (i16, i16),
     pub subscript: (i16, i16),
-    pub space_advance: u16,
-    /// Whether the font carries TrueType hinting programs (`fpgm`), which snap its heights to
-    /// whole pixels where an unhinted font's are rounded up.
-    pub hinted: bool,
 }
 
 /// A rasterized glyph. `coverage` holds `width * height` bytes, top row first.
@@ -82,7 +77,7 @@ pub struct GlyphBitmap {
 /// A loaded face: the font file's bytes and the face index in it.
 pub struct FontFace {
     data: Arc<[u8]>,
-    legacy: OnceLock<Mutex<Option<crate::font_legacy::LegacyFace>>>,
+    freetype: OnceLock<Mutex<Option<crate::font_freetype::FreeTypeFace>>>,
     index: u32,
     metrics: FaceMetrics,
 }
@@ -95,7 +90,7 @@ impl FontFace {
         };
         Ok(Self {
             data: data.into(),
-            legacy: OnceLock::new(),
+            freetype: OnceLock::new(),
             index,
             metrics,
         })
@@ -132,21 +127,39 @@ impl FontFace {
         italic: bool,
         mode: i32,
     ) -> Option<GlyphBitmap> {
-        self.with_legacy(|face| face.render(c, size, bold, italic, mode))?
+        self.with_freetype(|face| face.render_legacy(c, size, bold, italic, mode))?
     }
 
     /// The face's own style as a Unity `FontStyle` (1 bold, 2 italic), from FreeType's style
     /// flags: what a request for that style finds without synthesis.
     pub fn legacy_style(&self) -> i32 {
-        self.with_legacy(|face| face.style()).unwrap_or(0)
+        self.with_freetype(|face| face.style()).unwrap_or(0)
     }
 
-    fn with_legacy<T>(
+    /// TextCore: the metrics of glyph `glyph` at `pixels` per em, loaded with FreeType load
+    /// `flags` (TextCore's `GlyphLoadFlags`).
+    pub fn textcore_glyph(&self, glyph: u32, pixels: i32, flags: i32) -> Option<TextCoreGlyph> {
+        self.with_freetype(|face| face.textcore_glyph(glyph, pixels, flags))?
+    }
+
+    /// TextCore: glyph `glyph` at `pixels` per em rendered for an atlas in `render_mode` (a
+    /// `GlyphRenderMode`), the distance fields with `padding` around them.
+    pub fn textcore_render(
         &self,
-        f: impl FnOnce(&mut crate::font_legacy::LegacyFace) -> T,
+        glyph: u32,
+        pixels: i32,
+        render_mode: i32,
+        padding: i32,
+    ) -> Option<TextCoreTile> {
+        self.with_freetype(|face| face.textcore_render(glyph, pixels, render_mode, padding))?
+    }
+
+    fn with_freetype<T>(
+        &self,
+        f: impl FnOnce(&mut crate::font_freetype::FreeTypeFace) -> T,
     ) -> Option<T> {
-        let backend = self.legacy.get_or_init(|| {
-            let face = crate::font_legacy::LegacyFace::new(self.data.clone(), self.index)
+        let backend = self.freetype.get_or_init(|| {
+            let face = crate::font_freetype::FreeTypeFace::new(self.data.clone(), self.index)
                 .map_err(|error| tracing::warn!("{error:#}"))
                 .ok();
             Mutex::new(face)
@@ -176,20 +189,10 @@ impl FontFace {
         let script =
             |m: Option<ttf_parser::ScriptMetrics>| m.map_or((0, 0), |m| (m.y_offset, m.y_size));
         FaceDetails {
-            cap_height: face.capital_height().unwrap_or(0),
-            x_height: face.x_height().unwrap_or(0),
             underline: line(face.underline_metrics()),
             strikeout: line(face.strikeout_metrics()),
             superscript: script(face.superscript_metrics()),
             subscript: script(face.subscript_metrics()),
-            space_advance: face
-                .glyph_index(' ')
-                .and_then(|g| face.glyph_hor_advance(g))
-                .unwrap_or(0),
-            hinted: face
-                .raw_face()
-                .table(ttf_parser::Tag::from_bytes(b"fpgm"))
-                .is_some(),
         }
     }
 
@@ -278,107 +281,6 @@ impl FontFace {
         }
         pairs
     }
-
-    /// Glyph `glyph` (an index) at `size` pixels per em, from its outline (TextCore's glyphs;
-    /// legacy dynamic fonts render through [`Self::render_legacy`]).
-    pub fn render_glyph(&self, glyph: u16, size: f32) -> Option<GlyphBitmap> {
-        let face = self.face();
-        let glyph = ttf_parser::GlyphId(glyph);
-        if glyph.0 >= face.number_of_glyphs() {
-            return None;
-        }
-        let scale = size / self.metrics.units_per_em.max(1) as f32;
-        let advance = face.glyph_hor_advance(glyph).unwrap_or(0) as f32 * scale;
-        let mut outline = Outline {
-            scale,
-            segments: Vec::new(),
-            start: (0.0, 0.0),
-            last: (0.0, 0.0),
-        };
-        outline_scaled(&face, glyph, &mut outline, 0);
-        if outline.segments.is_empty() {
-            return Some(GlyphBitmap {
-                advance,
-                left: 0,
-                top: 0,
-                top_offset: 0.0,
-                width: 0,
-                height: 0,
-                bounds: (0.0, 0.0, 0.0, 0.0),
-                coverage: Vec::new(),
-            });
-        }
-        // The control box in pixels (26.6 precision, as FreeType scales the points).
-        let (mut x_min, mut y_min, mut x_max, mut y_max) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
-        for segment in &outline.segments {
-            for (x, y) in segment.points() {
-                x_min = x_min.min(x);
-                y_min = y_min.min(y);
-                x_max = x_max.max(x);
-                y_max = y_max.max(y);
-            }
-        }
-        let left = x_min.floor() as i32;
-        let bottom = y_min.floor() as i32;
-        let right = x_max.ceil() as i32;
-        let top = y_max.ceil() as i32;
-        let width = (right - left).max(1);
-        let height = (top - bottom).max(1);
-        let mut raster = Rasterizer::new(width as usize, height as usize);
-        let to = |(x, y): (f32, f32)| point(x - left as f32, top as f32 - y);
-        for segment in &outline.segments {
-            match *segment {
-                Segment::Line(a, b) => raster.draw_line(to(a), to(b)),
-                Segment::Quad(a, b, c) => raster.draw_quad(to(a), to(b), to(c)),
-                Segment::Cubic(a, b, c, d) => raster.draw_cubic(to(a), to(b), to(c), to(d)),
-            }
-        }
-        let mut coverage = vec![0u8; (width * height) as usize];
-        raster.for_each_pixel_2d(|x, y, alpha| {
-            coverage[(y * width as u32 + x) as usize] =
-                (alpha.clamp(0.0, 1.0) * 255.0).round() as u8;
-        });
-        Some(GlyphBitmap {
-            advance,
-            left,
-            top,
-            top_offset: 0.0,
-            width,
-            height,
-            bounds: (x_min, y_min, x_max, y_max),
-            coverage,
-        })
-    }
-
-    /// Glyph `glyph` at `size` pixels per em as a signed distance field, TextCore's SDF encoding:
-    /// the bitmap of [`Self::render_glyph`] grown by `padding` pixels on every side (`coverage`
-    /// holds `(width + 2 padding) * (height + 2 padding)` bytes, top row first), each pixel
-    /// `0.5 + d / (2 (padding + 1))` where `d` is the distance in pixels from its center to the
-    /// outline, positive inside. TextMeshPro's gradient scale is `padding + 1` to match.
-    pub fn render_glyph_sdf(&self, glyph: u16, size: f32, padding: i32) -> Option<GlyphBitmap> {
-        let mut bitmap = self.render_glyph(glyph, size)?;
-        if bitmap.coverage.is_empty() {
-            return Some(bitmap);
-        }
-        let face = self.face();
-        let mut outline = Outline {
-            scale: size / self.metrics.units_per_em.max(1) as f32,
-            segments: Vec::new(),
-            start: (0.0, 0.0),
-            last: (0.0, 0.0),
-        };
-        outline_scaled(&face, ttf_parser::GlyphId(glyph), &mut outline, 0);
-        let padding = padding.max(0);
-        bitmap.coverage = signed_distance_field(
-            &flatten(&outline.segments),
-            bitmap.left - padding,
-            bitmap.top + padding,
-            bitmap.width + 2 * padding,
-            bitmap.height + 2 * padding,
-            (padding + 1) as f32,
-        );
-        Some(bitmap)
-    }
 }
 
 fn read_metrics(face: &Face) -> FaceMetrics {
@@ -425,329 +327,6 @@ fn read_metrics(face: &Face) -> FaceMetrics {
         family,
         style,
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Segment {
-    Line((f32, f32), (f32, f32)),
-    Quad((f32, f32), (f32, f32), (f32, f32)),
-    Cubic((f32, f32), (f32, f32), (f32, f32), (f32, f32)),
-}
-
-impl Segment {
-    /// Every point, control points included (FreeType's control box).
-    fn points(&self) -> Vec<(f32, f32)> {
-        match *self {
-            Segment::Line(a, b) => vec![a, b],
-            Segment::Quad(a, b, c) => vec![a, b, c],
-            Segment::Cubic(a, b, c, d) => vec![a, b, c, d],
-        }
-    }
-}
-
-/// Collects a glyph outline in pixels (y up), quantized to 1/64 pixel as FreeType does.
-struct Outline {
-    scale: f32,
-    segments: Vec<Segment>,
-    start: (f32, f32),
-    last: (f32, f32),
-}
-
-impl Outline {
-    fn map(&self, x: f32, y: f32) -> (f32, f32) {
-        let q = |v: f32| (v * 64.0).round() / 64.0;
-        (q(x * self.scale), q(y * self.scale))
-    }
-
-    fn transform(&mut self, f: impl Fn((f32, f32)) -> (f32, f32)) {
-        for segment in &mut self.segments {
-            *segment = match *segment {
-                Segment::Line(a, b) => Segment::Line(f(a), f(b)),
-                Segment::Quad(a, b, c) => Segment::Quad(f(a), f(b), f(c)),
-                Segment::Cubic(a, b, c, d) => Segment::Cubic(f(a), f(b), f(c), f(d)),
-            };
-        }
-    }
-}
-
-/// A glyph's outline in pixels as FreeType scales it: a simple glyph's points each scaled and
-/// rounded to 1/64 pixel; a composite glyph's components scaled on their own, transformed by
-/// their matrix (each product rounded, as `FT_Vector_Transform`), then moved by their offset
-/// scaled and rounded separately, so an accented letter's parts land where FreeType puts them
-/// (scaling the composed outline in font units can be 1/64 pixel off).
-fn outline_scaled(face: &Face, glyph: ttf_parser::GlyphId, out: &mut Outline, depth: u8) {
-    let components = if depth < 8 {
-        composite_components(face, glyph)
-    } else {
-        None
-    };
-    let Some(components) = components else {
-        face.outline_glyph(glyph, out);
-        return;
-    };
-    for component in components {
-        let mut part = Outline {
-            scale: out.scale,
-            segments: Vec::new(),
-            start: (0.0, 0.0),
-            last: (0.0, 0.0),
-        };
-        outline_scaled(face, component.glyph, &mut part, depth + 1);
-        let q = |v: f32| (v * 64.0).round() / 64.0;
-        if let Some([xx, yx, xy, yy]) = component.matrix {
-            part.transform(|(x, y)| (q(x * xx) + q(y * xy), q(x * yx) + q(y * yy)));
-        }
-        let (dx, dy) = (
-            q(component.dx as f32 * out.scale),
-            q(component.dy as f32 * out.scale),
-        );
-        part.transform(|(x, y)| (x + dx, y + dy));
-        out.segments.append(&mut part.segments);
-    }
-}
-
-/// A component of a composite TrueType glyph.
-struct Component {
-    glyph: ttf_parser::GlyphId,
-    /// Offset in font units.
-    dx: i32,
-    dy: i32,
-    /// `[xx, yx, xy, yy]` when the component is scaled or transformed.
-    matrix: Option<[f32; 4]>,
-}
-
-/// The components of a composite glyph placed by offsets; `None` for a simple glyph, a font
-/// without a `glyf` table, or components placed by matching points (left to ttf-parser).
-fn composite_components(face: &Face, glyph: ttf_parser::GlyphId) -> Option<Vec<Component>> {
-    let raw = face.raw_face();
-    let glyf = raw.table(ttf_parser::Tag::from_bytes(b"glyf"))?;
-    let loca = raw.table(ttf_parser::Tag::from_bytes(b"loca"))?;
-    let index = glyph.0 as usize;
-    let u16_at = |data: &[u8], at: usize| {
-        data.get(at..at + 2)
-            .map(|b| u16::from_be_bytes([b[0], b[1]]))
-    };
-    let (start, end) = match face.tables().head.index_to_location_format {
-        ttf_parser::head::IndexToLocationFormat::Short => (
-            u16_at(loca, index * 2)? as usize * 2,
-            u16_at(loca, index * 2 + 2)? as usize * 2,
-        ),
-        ttf_parser::head::IndexToLocationFormat::Long => {
-            let u32_at = |at: usize| {
-                loca.get(at..at + 4)
-                    .map(|b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]) as usize)
-            };
-            (u32_at(index * 4)?, u32_at(index * 4 + 4)?)
-        }
-    };
-    let data = glyf.get(start..end)?;
-    if data.len() < 10 || (u16_at(data, 0)? as i16) >= 0 {
-        return None;
-    }
-    let f2dot14 = |at: usize| u16_at(data, at).map(|v| v as i16 as f32 / 16384.0);
-    let mut components = Vec::new();
-    let mut at = 10;
-    loop {
-        let flags = u16_at(data, at)?;
-        let glyph = ttf_parser::GlyphId(u16_at(data, at + 2)?);
-        at += 4;
-        let (dx, dy) = if flags & 0x0001 != 0 {
-            let (a, b) = (u16_at(data, at)?, u16_at(data, at + 2)?);
-            at += 4;
-            (a as i16 as i32, b as i16 as i32)
-        } else {
-            let (a, b) = (*data.get(at)?, *data.get(at + 1)?);
-            at += 2;
-            (a as i8 as i32, b as i8 as i32)
-        };
-        if flags & 0x0002 == 0 {
-            // ARGS_ARE_XY_VALUES unset: the arguments are points to match.
-            return None;
-        }
-        let matrix = if flags & 0x0008 != 0 {
-            let s = f2dot14(at)?;
-            at += 2;
-            Some([s, 0.0, 0.0, s])
-        } else if flags & 0x0040 != 0 {
-            let (sx, sy) = (f2dot14(at)?, f2dot14(at + 2)?);
-            at += 4;
-            Some([sx, 0.0, 0.0, sy])
-        } else if flags & 0x0080 != 0 {
-            let m = [
-                f2dot14(at)?,
-                f2dot14(at + 2)?,
-                f2dot14(at + 4)?,
-                f2dot14(at + 6)?,
-            ];
-            at += 8;
-            Some(m)
-        } else {
-            None
-        };
-        components.push(Component {
-            glyph,
-            dx,
-            dy,
-            matrix,
-        });
-        if flags & 0x0020 == 0 {
-            break;
-        }
-    }
-    Some(components)
-}
-
-impl OutlineBuilder for Outline {
-    fn move_to(&mut self, x: f32, y: f32) {
-        self.start = self.map(x, y);
-        self.last = self.start;
-    }
-
-    fn line_to(&mut self, x: f32, y: f32) {
-        let p = self.map(x, y);
-        self.segments.push(Segment::Line(self.last, p));
-        self.last = p;
-    }
-
-    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
-        let c = self.map(x1, y1);
-        let p = self.map(x, y);
-        self.segments.push(Segment::Quad(self.last, c, p));
-        self.last = p;
-    }
-
-    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
-        let c1 = self.map(x1, y1);
-        let c2 = self.map(x2, y2);
-        let p = self.map(x, y);
-        self.segments.push(Segment::Cubic(self.last, c1, c2, p));
-        self.last = p;
-    }
-
-    fn close(&mut self) {
-        if self.last != self.start {
-            self.segments.push(Segment::Line(self.last, self.start));
-        }
-        self.last = self.start;
-    }
-}
-
-/// The outline as line segments, curves split finely enough (0.02 px) for distances.
-fn flatten(segments: &[Segment]) -> Vec<((f32, f32), (f32, f32))> {
-    const TOLERANCE: f32 = 0.02;
-    let steps =
-        |deviation: f32| ((deviation / (8.0 * TOLERANCE)).sqrt().ceil() as usize).clamp(1, 64);
-    let length = |(x, y): (f32, f32)| (x * x + y * y).sqrt();
-    let mut lines = Vec::with_capacity(segments.len() * 4);
-    let mut push_curve = |n: usize, at: &dyn Fn(f32) -> (f32, f32)| {
-        let mut previous = at(0.0);
-        for i in 1..=n {
-            let point = at(i as f32 / n as f32);
-            lines.push((previous, point));
-            previous = point;
-        }
-    };
-    for segment in segments {
-        match *segment {
-            Segment::Line(a, b) => {
-                push_curve(1, &|t| (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t))
-            }
-            Segment::Quad(a, b, c) => {
-                let n = steps(length((a.0 - 2.0 * b.0 + c.0, a.1 - 2.0 * b.1 + c.1)));
-                push_curve(n, &|t| {
-                    let u = 1.0 - t;
-                    (
-                        u * u * a.0 + 2.0 * u * t * b.0 + t * t * c.0,
-                        u * u * a.1 + 2.0 * u * t * b.1 + t * t * c.1,
-                    )
-                });
-            }
-            Segment::Cubic(a, b, c, d) => {
-                let first = length((a.0 - 2.0 * b.0 + c.0, a.1 - 2.0 * b.1 + c.1));
-                let second = length((b.0 - 2.0 * c.0 + d.0, b.1 - 2.0 * c.1 + d.1));
-                let n = steps(1.5 * first.max(second));
-                push_curve(n, &|t| {
-                    let u = 1.0 - t;
-                    let (w0, w1, w2, w3) = (u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t);
-                    (
-                        w0 * a.0 + w1 * b.0 + w2 * c.0 + w3 * d.0,
-                        w0 * a.1 + w1 * b.1 + w2 * c.1 + w3 * d.1,
-                    )
-                });
-            }
-        }
-    }
-    lines
-}
-
-/// Distances from the pixel centers of a `width` x `height` region whose top-left corner is at
-/// (`left`, `top`) (pixels, y up) to the outline `lines`, encoded `0.5 + d / (2 spread)` as bytes,
-/// top row first; `d` is positive inside (non-zero winding).
-fn signed_distance_field(
-    lines: &[((f32, f32), (f32, f32))],
-    left: i32,
-    top: i32,
-    width: i32,
-    height: i32,
-    spread: f32,
-) -> Vec<u8> {
-    let (w, h) = (width.max(0) as usize, height.max(0) as usize);
-    let center = |i: usize, j: usize| (left as f32 + i as f32 + 0.5, top as f32 - j as f32 - 0.5);
-    // Squared distances, from each line to the pixels within `spread` of it.
-    let mut nearest = vec![spread * spread; w * h];
-    for &(a, b) in lines {
-        let (x_min, x_max) = (a.0.min(b.0) - spread, a.0.max(b.0) + spread);
-        let (y_min, y_max) = (a.1.min(b.1) - spread, a.1.max(b.1) + spread);
-        let i0 = ((x_min - left as f32 - 0.5).floor().max(0.0)) as usize;
-        let i1 = ((x_max - left as f32 - 0.5).ceil().max(-1.0) + 1.0).min(w as f32) as usize;
-        let j0 = ((top as f32 - y_max - 0.5).floor().max(0.0)) as usize;
-        let j1 = ((top as f32 - y_min - 0.5).ceil().max(-1.0) + 1.0).min(h as f32) as usize;
-        let (dx, dy) = (b.0 - a.0, b.1 - a.1);
-        let length2 = dx * dx + dy * dy;
-        for j in j0..j1 {
-            for i in i0..i1 {
-                let (px, py) = center(i, j);
-                let t = if length2 > 0.0 {
-                    (((px - a.0) * dx + (py - a.1) * dy) / length2).clamp(0.0, 1.0)
-                } else {
-                    0.0
-                };
-                let (ex, ey) = (a.0 + dx * t - px, a.1 + dy * t - py);
-                let d2 = ex * ex + ey * ey;
-                let slot = &mut nearest[j * w + i];
-                if d2 < *slot {
-                    *slot = d2;
-                }
-            }
-        }
-    }
-    let mut field = vec![0u8; w * h];
-    let mut crossings: Vec<(f32, i32)> = Vec::new();
-    for j in 0..h {
-        // The row's winding numbers: where the outline crosses the pixel centers' line.
-        let y = top as f32 - j as f32 - 0.5;
-        crossings.clear();
-        for &(a, b) in lines {
-            if (a.1 <= y && b.1 > y) || (b.1 <= y && a.1 > y) {
-                let x = a.0 + (y - a.1) / (b.1 - a.1) * (b.0 - a.0);
-                crossings.push((x, if b.1 > a.1 { 1 } else { -1 }));
-            }
-        }
-        crossings.sort_by(|p, q| p.0.total_cmp(&q.0));
-        let mut next = 0;
-        let mut winding = 0;
-        for i in 0..w {
-            let (x, _) = center(i, j);
-            while next < crossings.len() && crossings[next].0 <= x {
-                winding += crossings[next].1;
-                next += 1;
-            }
-            let d = nearest[j * w + i].sqrt();
-            let d = if winding != 0 { d } else { -d };
-            field[j * w + i] = ((0.5 + d / (2.0 * spread)).clamp(0.0, 1.0) * 255.0).round() as u8;
-        }
-    }
-    field
 }
 
 /// The `TrueTypeFontImporter` settings of a `.meta`.
@@ -964,32 +543,6 @@ mod tests {
         let italic = face.render('l', 48.0, false, true).unwrap();
         assert_eq!(italic.advance, regular.advance);
         assert!(italic.width > regular.width + 5);
-    }
-
-    #[test]
-    fn sdf_encodes_distance_to_the_outline() {
-        let Some(face) = system_face() else { return };
-        let index = face.glyph_index('l');
-        let raster = face.render_glyph(index, 64.0).unwrap();
-        let padding = 5;
-        let sdf = face.render_glyph_sdf(index, 64.0, padding).unwrap();
-        let (w, h) = (raster.width + 2 * padding, raster.height + 2 * padding);
-        assert_eq!((sdf.width, sdf.height), (raster.width, raster.height));
-        assert_eq!(sdf.coverage.len(), (w * h) as usize);
-        let at = |x: i32, y: i32| sdf.coverage[(y * w + x) as usize];
-        // The padding's corner is far outside, the stem's middle inside.
-        assert_eq!(at(0, 0), 0);
-        let middle = at(w / 2, h / 2);
-        assert!(middle > 128, "{middle}");
-        // Across the stem's left edge the value climbs 255 / (2 (padding + 1)) a pixel.
-        let row: Vec<u8> = (0..w).map(|x| at(x, h / 2)).collect();
-        let edge = row.iter().position(|&v| v >= 128).unwrap();
-        let step = row[edge] as f32 - row[edge - 1] as f32;
-        assert!((step - 255.0 / 12.0).abs() < 1.5, "{step} in {row:?}");
-        // The bounds are the outline's: the bitmap covers them.
-        let (x_min, y_min, x_max, y_max) = sdf.bounds;
-        assert!(x_min >= sdf.left as f32 && x_max <= (sdf.left + sdf.width) as f32);
-        assert!(y_max <= sdf.top as f32 && y_min >= (sdf.top - sdf.height) as f32);
     }
 
     #[test]

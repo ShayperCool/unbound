@@ -24,20 +24,19 @@ namespace Unbound.Runtime
         internal int Height;
     }
 
-    /// <summary>A glyph rendered by index: the bitmap as in <see cref="GlyphInfo"/> plus the
-    /// outline's unrounded control box in pixels (relative to the pen on the baseline).</summary>
+    /// <summary>A TextCore glyph: FreeType's metrics in pixels, its atlas rect size and the padding
+    /// around rendered distance fields (see <see cref="NativeApi.FontRenderGlyph"/>).</summary>
     [StructLayout(LayoutKind.Sequential)]
-    internal struct GlyphOutlineInfo
+    internal struct TextCoreGlyphInfo
     {
+        internal float Width;
+        internal float Height;
+        internal float BearingX;
+        internal float BearingY;
         internal float Advance;
-        internal float XMin;
-        internal float YMin;
-        internal float XMax;
-        internal float YMax;
-        internal int Left;
-        internal int Top;
-        internal int Width;
-        internal int Height;
+        internal int RectWidth;
+        internal int RectHeight;
+        internal int Padding;
     }
 
     internal static unsafe class Native
@@ -316,16 +315,18 @@ namespace Unbound.Runtime
         internal static uint FontGlyphIndex(ulong font, uint codepoint) =>
             s_Ready && font != 0 ? s_Api.FontGlyphIndex(font, codepoint) : 0;
 
-        /// <summary>A glyph of a native font face by index; false when the face lacks it. The pixels
-        /// (top row first) are null for an empty glyph; see <see cref="NativeApi.FontRenderGlyph"/>.</summary>
-        internal static bool FontRenderGlyph(ulong font, uint glyph, float size, int sdfPadding, out GlyphOutlineInfo info, out byte[] pixels)
+        /// <summary>A TextCore glyph of a native font face by index at a whole pixel size; false when
+        /// the face cannot load it. Render mode 0 loads only its metrics with <paramref name="loadFlags"/>
+        /// (FreeType's); a GlyphRenderMode renders it for an atlas, the pixels (top row first) null for
+        /// an empty glyph; see <see cref="NativeApi.FontRenderGlyph"/>.</summary>
+        internal static bool FontRenderGlyph(ulong font, uint glyph, int pixelSize, int loadFlags, int renderMode, int padding, out TextCoreGlyphInfo info, out byte[] pixels)
         {
             info = default;
             pixels = null;
             if (!s_Ready || font == 0) return false;
             NativeBuffer buffer;
-            GlyphOutlineInfo rendered;
-            int found = s_Api.FontRenderGlyph(font, glyph, size, sdfPadding, &rendered, &buffer);
+            TextCoreGlyphInfo rendered;
+            int found = s_Api.FontRenderGlyph(font, glyph, pixelSize, loadFlags, renderMode, padding, &rendered, &buffer);
             try
             {
                 info = rendered;

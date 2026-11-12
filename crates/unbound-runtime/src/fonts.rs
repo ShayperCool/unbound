@@ -1,6 +1,7 @@
 //! The faces behind the managed engine's `Font` objects, by handle: project font files, Unity's
 //! built-in `LegacyRuntime.ttf` and OS fonts. The managed side lays text out and keeps the glyph
-//! atlas; it asks here for face metrics (`font-open`) and rasterized glyphs (`font_glyph`).
+//! atlas; it asks here for face metrics (`font-open`) and rasterized glyphs (`font_glyph`,
+//! TextCore's `font_render_glyph`).
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::{Value as Json, json};
@@ -11,7 +12,10 @@ use std::{
 };
 use unbound_assets::{
     AssetCache,
-    font::{BuiltinFontImporter, FontFace, FontSettings, GlyphBitmap, LEGACY_RUNTIME_PATH_ID},
+    font::{
+        BuiltinFontImporter, FontFace, FontSettings, GlyphBitmap, LEGACY_RUNTIME_PATH_ID,
+        TextCoreTile,
+    },
 };
 use unbound_yaml::Guid;
 
@@ -47,20 +51,27 @@ fn face(handle: u64) -> Option<Arc<FontFace>> {
     faces.get((handle as usize).checked_sub(1)?).cloned()
 }
 
-/// A glyph of a face by glyph index, at `size` pixels per em: its coverage, or with an SDF
-/// padding its signed distance field (`FontFace::render_glyph_sdf`).
-pub fn glyph_by_index(
+/// TextCore: glyph `glyph` of a face at `pixels` per em. With a render mode (a
+/// `GlyphRenderMode`) it is rendered for an atlas, with `padding` around distance fields; with
+/// render mode 0 only its metrics are loaded, with FreeType load `flags`.
+pub fn textcore_glyph(
     handle: u64,
     glyph: u32,
-    size: f32,
-    sdf_padding: Option<i32>,
-) -> Option<GlyphBitmap> {
+    pixels: i32,
+    flags: i32,
+    render_mode: i32,
+    padding: i32,
+) -> Option<TextCoreTile> {
     let face = face(handle)?;
-    let glyph = u16::try_from(glyph).ok()?;
-    match sdf_padding {
-        Some(padding) => face.render_glyph_sdf(glyph, size, padding),
-        None => face.render_glyph(glyph, size),
+    if render_mode == 0 {
+        let glyph = face.textcore_glyph(glyph, pixels, flags)?;
+        return Some(TextCoreTile {
+            glyph,
+            padding: 0,
+            pixels: Vec::new(),
+        });
     }
+    face.textcore_render(glyph, pixels, render_mode, padding)
 }
 
 /// The glyph index of a code point in a face (0 when the face lacks it).
@@ -83,15 +94,11 @@ pub fn describe(handle: u64) -> Result<Json> {
         "lineGap": m.line_gap,
         "family": m.family,
         "style": m.style,
-        "capHeight": d.cap_height,
-        "xHeight": d.x_height,
         "underline": [d.underline.0, d.underline.1],
         "strikeout": [d.strikeout.0, d.strikeout.1],
         "superscript": [d.superscript.0, d.superscript.1],
         "subscript": [d.subscript.0, d.subscript.1],
-        "spaceAdvance": d.space_advance,
         "glyphCount": face.glyph_count(),
-        "hinted": d.hinted,
         "faceCount": face.face_count(),
     }))
 }

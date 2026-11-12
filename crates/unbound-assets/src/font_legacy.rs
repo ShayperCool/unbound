@@ -1,9 +1,9 @@
 //! Legacy dynamic-font rendering (Font, UI Text, TextMesh, IMGUI) through the bundled FreeType
 //! library, configured as the Unity 6000.0.71f1 Editor renders dynamic fonts
-//! (tests/projects/glyphraster). TextCore's outline and distance-field path stays independent.
+//! (tests/projects/glyphraster). TextCore's glyphs use the same faces (`font_textcore`).
 use super::font::GlyphBitmap;
+use crate::font_freetype::{FT_Bitmap_Embolden, FreeTypeFace, coverage};
 use freetype_sys as ft;
-use std::sync::Arc;
 
 /// Synthetic italic: a horizontal shear of 0.25 (16.16 fixed point), applied only when the face
 /// is not italic itself.
@@ -12,9 +12,6 @@ const ITALIC_SHEAR: ft::FT_Fixed = 0x4000;
 /// directions; the advance stays the face's and the glyph's top moves up by the same amount.
 const BOLD_SIZE_DIVISOR: f32 = 55.0;
 const BOLD_MIN_STRENGTH: f32 = 1.0;
-/// Rows of converted bitmaps are aligned to 4 bytes, as FreeType's conversion is asked to.
-const CONVERT_ALIGNMENT: ft::FT_Int = 4;
-
 /// Load flags per `FontRenderingMode` (Smooth, HintedSmooth, HintedRaster, OSDefault); the
 /// render mode is the load target's. Unknown modes render as Smooth.
 const LOAD_FLAGS: [ft::FT_Int32; 4] = [
@@ -24,78 +21,9 @@ const LOAD_FLAGS: [ft::FT_Int32; 4] = [
     ft::FT_LOAD_NO_HINTING,
 ];
 
-unsafe extern "C" {
-    fn FT_Bitmap_Embolden(
-        library: ft::FT_Library,
-        bitmap: *mut ft::FT_Bitmap,
-        x_strength: ft::FT_Pos,
-        y_strength: ft::FT_Pos,
-    ) -> ft::FT_Error;
-    fn FT_Bitmap_Init(bitmap: *mut ft::FT_Bitmap);
-    fn FT_Bitmap_Convert(
-        library: ft::FT_Library,
-        source: *const ft::FT_Bitmap,
-        target: *mut ft::FT_Bitmap,
-        alignment: ft::FT_Int,
-    ) -> ft::FT_Error;
-    fn FT_Bitmap_Done(library: ft::FT_Library, bitmap: *mut ft::FT_Bitmap) -> ft::FT_Error;
-}
-
-pub(crate) struct LegacyFace {
-    face: ft::FT_Face,
-    library: ft::FT_Library,
-    _data: Arc<[u8]>,
-}
-
-// Each instance owns its library and face and is only accessed through FontFace's mutex.
-unsafe impl Send for LegacyFace {}
-
-impl Drop for LegacyFace {
-    fn drop(&mut self) {
-        unsafe {
-            ft::FT_Done_Face(self.face);
-            ft::FT_Done_FreeType(self.library);
-        }
-    }
-}
-
-impl LegacyFace {
-    pub(crate) fn new(data: Arc<[u8]>, index: u32) -> anyhow::Result<Self> {
-        let data_length = data.len().try_into()?;
-        unsafe {
-            let mut library = std::ptr::null_mut();
-            anyhow::ensure!(
-                ft::FT_Init_FreeType(&mut library) == 0,
-                "initializing font rendering"
-            );
-            let mut face = std::ptr::null_mut();
-            let result = ft::FT_New_Memory_Face(
-                library,
-                data.as_ptr(),
-                data_length,
-                index.into(),
-                &mut face,
-            );
-            if result != 0 {
-                ft::FT_Done_FreeType(library);
-                anyhow::bail!("opening font for legacy rendering: FreeType error {result}");
-            }
-            Ok(Self {
-                face,
-                library,
-                _data: data,
-            })
-        }
-    }
-
-    /// The face's own style as a Unity `FontStyle`: 1 bold, 2 italic.
-    pub(crate) fn style(&self) -> i32 {
-        let flags = unsafe { (*self.face).style_flags };
-        i32::from(flags & ft::FT_STYLE_FLAG_BOLD != 0)
-            | (i32::from(flags & ft::FT_STYLE_FLAG_ITALIC != 0) << 1)
-    }
-
-    pub(crate) fn render(
+impl FreeTypeFace {
+    /// A legacy dynamic-font glyph of `character` at `size` pixels per em.
+    pub(crate) fn render_legacy(
         &mut self,
         character: char,
         size: f32,
@@ -177,63 +105,6 @@ impl LegacyFace {
             })
         }
     }
-}
-
-/// A rendered bitmap as 8-bit coverage, top row first. An 8-bit gray bitmap is taken as it is;
-/// other layouts (monochrome, 2/4-bit gray, colour) go through FreeType's conversion, and fewer
-/// than 256 levels are then stretched to 0..255 as `level * (1 / (levels - 1)) * 255`, truncated.
-/// Unmeasured: synthetic bold on an embedded 2/4-bit strike leaves an 8-bit bitmap with its few
-/// levels, which is taken unstretched (no probe font has such strikes).
-unsafe fn coverage(library: ft::FT_Library, bitmap: &ft::FT_Bitmap) -> Option<Vec<u8>> {
-    if bitmap.pixel_mode as u32 == ft::FT_PIXEL_MODE_GRAY {
-        return unsafe { copy_rows(bitmap, 1.0) };
-    }
-    unsafe {
-        let mut converted = std::mem::zeroed::<ft::FT_Bitmap>();
-        FT_Bitmap_Init(&mut converted);
-        let result = if FT_Bitmap_Convert(library, bitmap, &mut converted, CONVERT_ALIGNMENT) == 0 {
-            let levels = converted.num_grays as f32;
-            let scale = if converted.num_grays == 256 || levels < 2.0 {
-                1.0
-            } else {
-                (1.0 / (levels - 1.0)) * 255.0
-            };
-            copy_rows(&converted, scale)
-        } else {
-            None
-        };
-        FT_Bitmap_Done(library, &mut converted);
-        result
-    }
-}
-
-/// The rows of an 8-bit bitmap, each value multiplied by `scale` (1 keeps it).
-unsafe fn copy_rows(bitmap: &ft::FT_Bitmap, scale: f32) -> Option<Vec<u8>> {
-    let width = usize::try_from(bitmap.width).ok()?;
-    let height = usize::try_from(bitmap.rows).ok()?;
-    let length = width.checked_mul(height)?;
-    let mut coverage = Vec::new();
-    coverage.try_reserve_exact(length).ok()?;
-    if length == 0 {
-        return Some(coverage);
-    }
-    if bitmap.buffer.is_null() {
-        return None;
-    }
-    let stride = bitmap.pitch.unsigned_abs() as usize;
-    if stride < width {
-        return None;
-    }
-    for y in 0..height {
-        let row = if bitmap.pitch >= 0 { y } else { height - 1 - y };
-        let source = unsafe { std::slice::from_raw_parts(bitmap.buffer.add(row * stride), width) };
-        if scale == 1.0 {
-            coverage.extend_from_slice(source);
-        } else {
-            coverage.extend(source.iter().map(|&v| (v as f32 * scale) as i32 as u8));
-        }
-    }
-    Some(coverage)
 }
 
 #[cfg(test)]

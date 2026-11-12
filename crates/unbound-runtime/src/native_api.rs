@@ -70,7 +70,9 @@ use std::ffi::c_void;
 /// 61: `plugin_script_marker`, `plugin_marker_event` (scripts' profiler markers that native
 /// plugins hear of).
 /// 62: allocation-free HDR block pixel reads.
-pub const NATIVE_API_VERSION: u32 = 62;
+/// 63: `font_render_glyph` loads TextCore glyphs with FreeType load flags and render modes, in
+/// whole pixel sizes, and reports `TextCoreGlyphInfo`.
+pub const NATIVE_API_VERSION: u32 = 63;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -83,20 +85,19 @@ pub struct GlyphInfo {
     pub height: i32,
 }
 
-/// A glyph rendered by index (`font_render_glyph`): the bitmap as in [`GlyphInfo`] plus the
-/// outline's unrounded control box in pixels, which TextCore reports as the glyph metrics.
+/// A TextCore glyph (`font_render_glyph`): FreeType's metrics in pixels and its atlas rect size.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default)]
-pub struct GlyphOutlineInfo {
+pub struct TextCoreGlyphInfo {
+    pub width: f32,
+    pub height: f32,
+    pub bearing_x: f32,
+    pub bearing_y: f32,
     pub advance: f32,
-    pub x_min: f32,
-    pub y_min: f32,
-    pub x_max: f32,
-    pub y_max: f32,
-    pub left: i32,
-    pub top: i32,
-    pub width: i32,
-    pub height: i32,
+    pub rect_width: i32,
+    pub rect_height: i32,
+    /// The padding around the rendered pixels (distance field modes; 0 otherwise).
+    pub padding: i32,
 }
 
 /// A buffer handed to the managed side; it gives it back to `free_buffer`.
@@ -171,11 +172,21 @@ pub struct NativeApi {
     // Version 6: glyphs by index (TextCore's FontEngine).
     /// (font handle, code point): the glyph index, 0 when the face lacks it.
     pub font_glyph_index: extern "C" fn(u64, u32) -> u32,
-    /// (font handle, glyph index, pixel size, SDF padding, out info, out pixels): 1 when the face
-    /// has the glyph. With a negative padding the pixels are coverage, as `font_glyph`'s; else a
-    /// signed distance field grown by the padding on every side (`FontFace::render_glyph_sdf`).
-    pub font_render_glyph:
-        extern "C" fn(u64, u32, f32, i32, *mut GlyphOutlineInfo, *mut NativeBuffer) -> i32,
+    /// (font handle, glyph index, whole pixel size, FreeType load flags, render mode, padding, out
+    /// info, out pixels): 1 when the face loads the glyph. Render mode 0 loads its metrics only,
+    /// with the load flags; a `GlyphRenderMode` renders it for an atlas as that mode loads it
+    /// (`FontFace::textcore_render`): the pixels are `(rect width + 2 padding) x (rect height + 2
+    /// padding)` bytes, top row first.
+    pub font_render_glyph: extern "C" fn(
+        u64,
+        u32,
+        i32,
+        i32,
+        i32,
+        i32,
+        *mut TextCoreGlyphInfo,
+        *mut NativeBuffer,
+    ) -> i32,
     // Version 7: no new entries; `FrameInput` gained the frame's ordered key events.
     // Version 9: the command stream replaces the frame packet.
     /// (texture handle, 0 for the screen; x, y, width, height; float; out pixels): 1 with the
@@ -681,36 +692,37 @@ extern "C" fn font_glyph_index(font: u64, codepoint: u32) -> u32 {
 extern "C" fn font_render_glyph(
     font: u64,
     glyph: u32,
-    size: f32,
-    sdf_padding: i32,
-    info: *mut GlyphOutlineInfo,
-    pixels: *mut NativeBuffer,
+    pixels: i32,
+    flags: i32,
+    render_mode: i32,
+    padding: i32,
+    info: *mut TextCoreGlyphInfo,
+    out: *mut NativeBuffer,
 ) -> i32 {
-    let sdf = (sdf_padding >= 0).then_some(sdf_padding);
-    let rendered =
-        std::panic::catch_unwind(|| crate::fonts::glyph_by_index(font, glyph, size, sdf));
+    let rendered = std::panic::catch_unwind(|| {
+        crate::fonts::textcore_glyph(font, glyph, pixels, flags, render_mode, padding)
+    });
     unsafe {
-        let Ok(Some(glyph)) = rendered else {
-            *info = GlyphOutlineInfo::default();
-            *pixels = NativeBuffer::empty();
+        let Ok(Some(tile)) = rendered else {
+            *info = TextCoreGlyphInfo::default();
+            *out = NativeBuffer::empty();
             return 0;
         };
-        let (x_min, y_min, x_max, y_max) = glyph.bounds;
-        *info = GlyphOutlineInfo {
-            advance: glyph.advance,
-            x_min,
-            y_min,
-            x_max,
-            y_max,
-            left: glyph.left,
-            top: glyph.top,
-            width: glyph.width,
-            height: glyph.height,
+        let g = tile.glyph;
+        *info = TextCoreGlyphInfo {
+            width: g.width,
+            height: g.height,
+            bearing_x: g.bearing_x,
+            bearing_y: g.bearing_y,
+            advance: g.advance,
+            rect_width: g.rect_width,
+            rect_height: g.rect_height,
+            padding: tile.padding,
         };
-        *pixels = if glyph.coverage.is_empty() {
+        *out = if tile.pixels.is_empty() {
             NativeBuffer::empty()
         } else {
-            NativeBuffer::from_vec(glyph.coverage)
+            NativeBuffer::from_vec(tile.pixels)
         };
     }
     1
