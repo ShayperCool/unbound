@@ -209,8 +209,9 @@ the original value, tested per axis and on the whole vector) but not which keys 
 measured rule, applied to the every-frame keys of compression Off (positions with linear,
 rotations and scales with smooth slopes):
 
-- A curve that the segment between its first and last keys with flat slopes holds everywhere
-  becomes those two keys. Otherwise keys are dropped from the start while the segment from the
+- A curve that the constant at its first key's value holds everywhere becomes two keys at its
+  first and last times, both with that value and flat slopes (tests/projects/modelclips
+  `RigLoose`, where curves within the error of their first value end elsewhere). Otherwise keys are dropped from the start while the segment from the
   last kept key to the next one, with their own slopes, holds the every-frame curve at each
   frame, at each dropped key and halfway between, spanning fewer than 50 frames.
 - "Holds": rotations within the error in degrees (normalized dot product) with the segment's

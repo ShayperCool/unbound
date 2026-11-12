@@ -138,6 +138,29 @@ namespace UnityEngine.Tests
             Assert.True(Reduce(noise, Slopes(Times(21), noise), 0.005f).Kept.Length > 2);
         }
 
+        /// <summary>The whole-curve test holds the curve against the constant at its first value
+        /// at the same points as the walk: a slow drift that stays within the error is flat,
+        /// while keys that all lie within the error of the first value but whose curve leaves
+        /// it between them (steep alternating slopes) are not.</summary>
+        [Fact]
+        public void TheConstantAtTheFirstValueIsCheckedBetweenKeys()
+        {
+            var drift = new float[21];
+            for (int i = 0; i < drift.Length; i++) drift[i] = 2f + 0.0004f * i;
+            var reduced = Reduce(drift, Slopes(Times(21), drift), 0.005f);
+            Assert.True(reduced.Flat);
+            Assert.Equal(new[] { 0, 20 }, reduced.Kept);
+
+            var level = new float[21];
+            var steep = new float[21];
+            for (int i = 0; i < level.Length; i++)
+            {
+                level[i] = 1f;
+                steep[i] = i % 2 == 0 ? 50f : -50f;
+            }
+            Assert.False(Reduce(level, steep, 0.005f).Flat);
+        }
+
         /// <summary>Curves of one or two keys stay as they are.</summary>
         [Fact]
         public void ShortCurvesKeepTheirKeys()

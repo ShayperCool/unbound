@@ -12,8 +12,10 @@ namespace Unbound.Runtime.Humanoid
     /// is the model importer's float reduction (crates/unbound-assets/src/model/curves.rs
     /// `reduce` with `float_within`), here on the converted curves:
     /// <list type="bullet">
-    /// <item>a curve whose every key is within the error of its first key becomes its first and
-    /// last keys with zero slopes;</item>
+    /// <item>a curve that the constant at its first key's value holds (checked as a segment,
+    /// below, from the first key to the last key's time with the first value at both ends, zero
+    /// slopes and no span limit) becomes two keys at the first and last times, both with the
+    /// first key's value and zero slopes (the Editor's two-key curves have equal ends);</item>
     /// <item>otherwise, walking from the first key, a key is dropped while the Hermite segment
     /// from the last kept key to the next one, with their own slopes, stays within the error of
     /// the curve at every frame from its start, at every dropped key and halfway between
@@ -69,15 +71,19 @@ namespace Unbound.Runtime.Humanoid
             return Hermite(times[i], values[i], slopes[i], times[i + 1], values[i + 1], slopes[i + 1], time);
         }
 
-        /// <summary>Whether the segment from key <paramref name="a"/> to key <paramref name="b"/>
-        /// holds the curve: at every frame from its start, at the keys between them and halfway
-        /// between consecutive ones.</summary>
-        static bool Holds(float[] times, float[] values, float[] slopes, int a, int b, float step, float error)
+        /// <summary>Whether the segment from key <paramref name="a"/> to key <paramref name="b"/>,
+        /// leaving with value <paramref name="va"/> and slope <paramref name="sa"/> and arriving
+        /// with <paramref name="vb"/> and <paramref name="sb"/>, holds the curve: at every frame
+        /// from its start, at the keys between them and halfway between consecutive ones; a
+        /// <paramref name="limited"/> segment also spans fewer than
+        /// <see cref="MaxReducedFrames"/> frames.</summary>
+        static bool Holds(float[] times, float[] values, float[] slopes, int a, int b, float va, float sa, float vb, float sb,
+            bool limited, float step, float error)
         {
             float span = times[b] - times[a];
-            if (!(span < step * MaxReducedFrames)) return false;
+            if (limited && !(span < step * MaxReducedFrames)) return false;
             bool Check(float time) => Within(Evaluate(times, values, slopes, time),
-                Hermite(times[a], values[a], slopes[a], times[b], values[b], slopes[b], time), error);
+                Hermite(times[a], va, sa, times[b], vb, sb, time), error);
             int frames = (int)(span / step);
             for (int i = 0; i <= frames; i++)
                 if (!Check((float)i * step + times[a])) return false;
@@ -93,8 +99,9 @@ namespace Unbound.Runtime.Humanoid
 
         /// <summary>Reduces a curve keyed at <paramref name="times"/> (one key a frame of
         /// <paramref name="step"/> seconds) with one slope a key: fills <paramref name="kept"/>
-        /// with the indices of the keys that stay. True when the curve is constant within the
-        /// error: its two keys then have zero slopes.</summary>
+        /// with the indices of the keys that stay. True when the constant at the first key's value
+        /// holds the curve: its two keys then both take the first key's value with zero
+        /// slopes.</summary>
         internal static bool Reduce(float[] times, float[] values, float[] slopes, float step, float error, List<int> kept)
         {
             kept.Clear();
@@ -104,15 +111,15 @@ namespace Unbound.Runtime.Humanoid
                 for (int i = 0; i < n; i++) kept.Add(i);
                 return false;
             }
-            bool constant = true;
-            for (int i = 1; i < n && constant; i++) constant = Within(values[i], values[0], error);
+            bool constant = Holds(times, values, slopes, 0, n - 1, values[0], 0f, values[0], 0f, false, step, error);
             kept.Add(0);
             if (!constant)
             {
                 int last = 0;
                 for (int i = 1; i < n - 1; i++)
                 {
-                    if (Holds(times, values, slopes, last, i + 1, step, error)) continue;
+                    if (Holds(times, values, slopes, last, i + 1, values[last], slopes[last], values[i + 1], slopes[i + 1], true, step, error))
+                        continue;
                     kept.Add(i);
                     last = i;
                 }

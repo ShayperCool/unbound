@@ -96,8 +96,13 @@ fn hermite<const N: usize>(
 /// keyed on every frame (`step` = 1 / sample rate) with its slopes; `within(curve, segment)`
 /// says whether a value of the reduced segment is close enough to the curve's.
 ///
-/// A curve the segment from its first to its last key (both with zero slopes) holds everywhere
-/// becomes those two keys. Otherwise, walking from the first key, a key is dropped while the
+/// A curve that the constant at its first key's value holds everywhere (the segment from the
+/// first key to the last key's time, both with the first value and zero slopes; no span limit)
+/// becomes those two keys, the last one with the first key's value too: matches the Unity
+/// 6000.0.71f1 Editor, tests/projects/modelclips `RigLoose`, whose curves that stay within the
+/// error of their first value but end elsewhere (Head's z position, Hips' scale) become two
+/// equal keys, and the two-key curves of `HumanReduced`, whose ends are equal. Otherwise,
+/// walking from the first key, a key is dropped while the
 /// segment from the last kept key to the next one, with their own slopes, holds the curve at
 /// every `step` from its start, at every dropped key and halfway between consecutive ones, and
 /// spans less than [`MAX_REDUCED_FRAMES`] steps. Kept keys keep their slopes.
@@ -139,9 +144,13 @@ pub fn reduce<const N: usize>(
         check((previous + b.time) * 0.5)
     };
     let zero = [0.0; N];
-    let (first, last) = (&keys[0], &keys[n - 1]);
-    if holds(first, &zero, last, &zero, 1..n - 1, false) {
-        return (vec![first.clone(), last.clone()], vec![(zero, zero); 2]);
+    let first = &keys[0];
+    let flat_end = Key {
+        time: keys[n - 1].time,
+        value: first.value,
+    };
+    if holds(first, &zero, &flat_end, &zero, 1..n - 1, false) {
+        return (vec![first.clone(), flat_end], vec![(zero, zero); 2]);
     }
     let (mut out, mut out_slopes) = (vec![first.clone()], vec![slopes[0]]);
     let mut kept = 0;
@@ -160,7 +169,7 @@ pub fn reduce<const N: usize>(
             kept = i;
         }
     }
-    out.push(last.clone());
+    out.push(keys[n - 1].clone());
     out_slopes.push(slopes[n - 1]);
     (out, out_slopes)
 }
@@ -276,6 +285,53 @@ mod tests {
         );
         assert_eq!(kept, vec![keys[0], keys[30]]);
         assert_eq!(slopes, vec![([0.0], [0.0]); 2]);
+    }
+
+    #[test]
+    fn a_curve_within_the_error_of_its_first_value_becomes_that_value() {
+        // A slow drift that ends 0.45% above its start, at an error of 0.5%: both kept keys
+        // take the first value (the Editor's two keys are equal), not the drift's end.
+        let keys = dense(31, |i| 2.0 + 0.0003 * i);
+        let (kept, slopes) = reduce(
+            &keys,
+            &key_slopes(&keys, false),
+            1.0 / 30.0,
+            float_within(0.005),
+        );
+        assert_eq!(kept, vec![keys[0], key(keys[30].time, 2.0)]);
+        assert_eq!(slopes, vec![([0.0], [0.0]); 2]);
+        // A curve that leaves the error of its first value is walked, even where the segment
+        // between its own ends with flat slopes would hold it: an ease from 2 to 2.2, which is
+        // that segment itself, at an error of 6% (2.2 is 9% above the start). Its last key
+        // keeps its own slope.
+        let keys = dense(31, |i| {
+            2.0 + 0.2 * (i / 30.0) * (i / 30.0) * (3.0 - 2.0 * i / 30.0)
+        });
+        let slopes = key_slopes(&keys, false);
+        let (kept, kept_slopes) = reduce(&keys, &slopes, 1.0 / 30.0, float_within(0.06));
+        assert_eq!(kept.last(), keys.last());
+        assert_eq!(kept_slopes.last(), slopes.last());
+        // The same for rotations: a turn of 0.4 degrees at an error of 0.5 degrees.
+        let turn = |degrees: f32| {
+            let (s, c) = (degrees.to_radians() / 2.0).sin_cos();
+            [0.0, s, 0.0, c]
+        };
+        let keys: Vec<Key<4>> = (0..31)
+            .map(|i| Key {
+                time: i as f32 / 30.0,
+                value: turn(0.4 * i as f32 / 30.0),
+            })
+            .collect();
+        let (kept, _) = reduce(
+            &keys,
+            &key_slopes(&keys, true),
+            1.0 / 30.0,
+            rotation_within(0.5),
+        );
+        assert_eq!(
+            kept.iter().map(|k| (k.time, k.value)).collect::<Vec<_>>(),
+            vec![(0.0, turn(0.0)), (keys[30].time, turn(0.0))]
+        );
     }
 
     #[test]

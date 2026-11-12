@@ -443,7 +443,9 @@ namespace UnityEngine
                 {
                     int source = keptKeys != null ? keptKeys[k] : k;
                     float slope = flat ? 0f : slopes[source];
-                    keys[k] = new Keyframe(curvesOut.Times[source], values[source], slope, slope, 1f / 3f, 1f / 3f);
+                    // A flat curve's keys both take its first value.
+                    float value = flat ? values[0] : values[source];
+                    keys[k] = new Keyframe(curvesOut.Times[source], value, slope, slope, 1f / 3f, 1f / 3f);
                     keys[k].weightedMode = WeightedMode.None;
                 }
                 m_Curves.Add(new ClipCurve

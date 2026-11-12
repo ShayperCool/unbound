@@ -8,8 +8,8 @@ transform masks (from the model, from an AvatarMask asset, a stale copy of anoth
 with mask type None), additive reference frames (inside and outside the range, and disabled),
 Animator parameter curves (float, int and bool parameters, a curve without a parameter, with loop
 pose) and events (also with cycle offsets). `RigDefault`, `RigReduced` and `RigOptimal` are the same file with the default clip
-settings and animation compression Off, KeyframeReduction and Optimal, and `RigStatic` without
-animation import. Two Humanoid rigs carry one clip each under a reducing compression:
+settings and animation compression Off, KeyframeReduction and Optimal, `RigLoose` the same under
+KeyframeReduction with loose errors, and `RigStatic` without animation import. Two Humanoid rigs carry one clip each under a reducing compression:
 `HumanReduced` (Keyframe Reduction, Rotation and Scale Errors 5, Position Error 0.5) and
 `HumanOptimal` (Optimal, Position Error 5); `HumanLong` is the same rig with compression Off
 and a clip of 31 frames (made by tests/projects/humanoid/make_models.py); `HumanTwistNone`,
@@ -167,6 +167,21 @@ rotation, but scripts read it).
 Not measured: Legacy imports, static models whose axes are converted, ties between diagonal elements, a range that starts before its
 take, and a turn of half a revolution or more between two frames.
 
-Unbound matches 3545/3545 records. The generic reducing compression modes are compared by their
+## Whole-curve reduction
+
+`RigLoose` is `Rig.fbx` under Keyframe Reduction with a Rotation Error of 15 degrees and Position
+and Scale Errors of 40%. `curvekeys.RigLoose.Scene.<path>|<property>` records every key of each
+curve of its clip (times, values, both tangents; curves that never leave float noise around zero
+are recorded as noise). Several curves stay within the error of their first value but end
+elsewhere: Head's z position (0.004, 0.006 at 1.5 s, 0.003 at the end), Hips' x scale (100 to
+150) and its z scale.
+
+- Each of them becomes two keys at the clip's first and last times, both with the first key's
+  value and flat tangents (Head z: 0.004 and 0.004; Hips x scale: 100 and 100). A segment between
+  the curve's own first and last values would end at the last value instead.
+- The curves that leave the error of their first value are reduced from the start as in the
+  `Reduced` set of tests/projects/modelaxis.
+
+Unbound matches 3611/3611 records. The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
 set).
