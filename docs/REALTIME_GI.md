@@ -510,19 +510,32 @@ faces sharing a UV edge in real-time lightmaps. If the angle between the faces i
 value, Unity simplifies the UV charts" (`m_AutoUVMaxAngle`, 89); Ignore Normals, "to prevent
 Unity from splitting the UV charts" (`m_IgnoreNormalsForChartDetection`). How charts are merged
 and laid out is not documented. What follows is Unbound's rule
-(`crates/unbound-gi/src/auto_charts.rs`); it gives the Editor's precomputed layouts for the
-shapes of `RoomAuto` in tests/projects/realtimegi, and is not measured beyond them.
+(`crates/unbound-gi/src/auto_charts.rs`, `instance.rs`); it gives the Editor's precomputed
+layouts for the shapes of `RoomAuto` and `RoomTurned` in tests/projects/realtimegi, and is not
+measured beyond them.
 
-- Geometry: the mesh with the instance's scale and without its rotation (positions times the
-  scale, normals over it, normalised), which is what sharing by mesh and scale needs. Each
-  triangle counts as facing the way its vertices' normals do, whatever its winding.
+- Geometry: the mesh under the instance's rotation and scale with its world rotation taken
+  out, which is what sharing by mesh and scale needs. The matrix is the inverse of the world
+  rotation times the product of the levels' rotations and scales up the hierarchy
+  (`RealtimeGI.WorldScale`), positions are turned by it and normals by its inverse transpose
+  (from an elimination with partial pivoting) and divided by their length, every step in
+  single precision in an order that gives the Editor's cached precompute input to the last
+  bit for the turned shapes of `RoomTurned`. For an instance that is not turned that is the
+  scale alone; for a turned one the rotation's removal leaves rounding in the last digits (a
+  normal of (4.3e-8, -1.1e-8, 1), say), and that rounding decides charts: two faces of a box
+  turned (20, 40, 10) at a right angle but for it face the same half-space by a cosine of
+  5e-9 and are joined, so the box has four charts. Each triangle counts as facing the way its
+  vertices' normals do, whatever its winding.
 - Parts: triangles connected through their vertices, where vertices with the same position,
-  lightmap UV and normal are one vertex. A part has its area, its normal (the mean of its
+  lightmap UV and (unless the renderer has Ignore Normals) normal are one vertex: with Ignore
+  Normals a floor and a wall that share their edge's positions and UVs are one part
+  (`FoldIgnored`), without it two (`FoldKept`). A part has its area, its normal (the mean of its
   triangles' normals by area, a triangle's normal being that of its three vertex normals
   together) and the plane that fits its vertices by least squares. It is flat when that plane
   is within Max Angle of its normal, all its vertices are within Max Distance of the plane and
   no more than a tenth of its area faces away from its normal.
-- Joining, in rounds while at least two flat parts are left (at most a hundred rounds): 300
+- Joining, in rounds while at least two flat parts are left (at most a hundred rounds; the parts
+  left after them are treated as those no round took, `Many`: 110 loose quads): 300
   pairs are tried, a flat part and one of its neighbours (the flat parts whose bounds, grown
   by 0.6 of Max Distance, meet its own; itself among them), picked by a fixed pseudo-random
   sequence (the standard Mersenne Twister with its default seed). A pair whose normals face the
@@ -539,21 +552,28 @@ shapes of `RoomAuto` in tests/projects/realtimegi, and is not measured beyond th
   0.3 (`StepMid`) and with 0.15 (`StepNear`). By the rule its two treads join at 0.5, as its
   two risers do: each pair is 0.4 m apart, its corners at most 0.2 m from the plane through
   both. At 0.3 the corners are still within the limit of that plane; what keeps the pairs
-  apart is that their bounds, grown by 0.6 of the limit each, no longer meet.
+  apart is that their bounds, grown by 0.6 of the limit each, no longer meet. The distance
+  alone decides `RoofDistance`, the roof of `RoofAngleWide` with Max Distance 0.1: its eaves
+  are 0.12 from the plane through both sides, whose bounds meet, and it has two charts.
+- With Max Distance or Max Angle of zero the precompute keeps the mesh's own charts, as with
+  Preserve UVs (`StepNoDistance`: each face its own lightmap UVs, scaled alike; a scratch bake
+  of the step with Max Angle 0 kept them too).
 - Leftovers (parts that are not flat, then the flat parts no round took) are folded into the
   nearest joined set whose bounds they meet, when they have less than a tenth of its area and
   all their vertices are closer to its plane than Max Distance. Their normal is not asked: the
   last end face of a 6 x 0.2 x 4 m slab becomes a line in a large face's chart, and the slab has
-  five charts. What is still left is a chart of its own.
+  five charts. What is still left is a chart of its own; a part without area there has all its
+  vertices at its chart's corner and takes one block, whatever the minimum chart size
+  (`BoxSliver`, `BoxPoint`: three points on a line and three at one point, a metre from a box).
 - Each set is projected onto its plane, in world units, with its axes turned to the direction
   along which the legs of its right-angled triangles carry the most area (directions within 3
   degrees of parallel or perpendicular count as one). A part left on its own is projected too,
   unless its own lightmap UVs are truer to its shape (compared by the angles of its triangles).
-- The charts are sized and packed as [above](#realtime-lightmap-uvs), from their world extents
-  instead of their UV shapes: a width and a height in blocks, `max(ceil(extent / block + 0.5 +
-  1e-4), minimum chart size / 2)`, each axis stretched to fill its blocks. So a chart has the
-  proportions of the surface, not of its UVs: at two texels a metre a 6 x 4 m face takes 14 x 10
-  texels and a 6 x 0.2 m one 14 x 4.
+- The charts are sized and packed as [above](#realtime-lightmap-uvs), scaled to their world
+  area: a flat chart's projection is in world units already, so a chart has the proportions of
+  the surface, not of its UVs: at two texels a metre a 6 x 4 m face takes 14 x 10 texels and a
+  6 x 0.2 m one 14 x 4. Where faces lean from the chart's plane the scale is more than one: the
+  floor and wall of `FoldIgnored`, projected onto the plane between them, take 4 x 6 texels.
 
 `RoomAuto` is the Room with Optimize Realtime UVs on every lit renderer (minimum chart size 4;
 the limits of a new renderer but for the four shapes named above) and fourteen more shapes: a
@@ -565,22 +585,27 @@ roofs and two steps of the limits. For every one of its renderers Unbound's char
 blocks of the precomputed chart mask, in chart order, and its lightmaps match the Editor's
 (`roomauto-base`, `roomauto-moved`).
 
+`RoomTurned` is the Room so too (its walls as in `RoomAuto`) with a slab turned 30 degrees about
+Y (the rotation's removal is exact there: six charts), a box turned (20, 40, 10) and one turned
+10 degrees about X under a parent turned 45 about Y and scaled 1.5 (four charts each), the wedge
+turned and scaled, a cube of 0.35 turned 25 degrees about Y beside an unturned one (the
+precompute keys the geometry it makes charts of by the mesh and the instance matrix, and the
+turned one's matrix is the scale alone: one geometry for both), and `RoofDistance`, `FoldKept`,
+`FoldIgnored`, `StepNoDistance`, `BoxSliver`, `BoxPoint` and `Many`. The precompute made two
+systems of it. Its renderers' charts cover the precomputed chart masks in chart order too
+(`roomturned-base`, `roomturned-moved`).
+
 The check against the precomputed chart mask compares the blocks the charts cover, not which
 face lies in them: two charts of one size taken in the other order would pass it with their
 lighting exchanged. So what Unbound cannot make as the Editor does is refused, not left to the
 check. Each refusal is a warning that names the renderer, and its system is then not drawn:
 
-- A turned renderer, and a renderer with the mesh and scale of a turned one in the same scene
-  (the Editor makes one set of UVs for both). The Editor's geometry of a turned instance
-  carries rounding in the last digits (a normal of (-1, 0, 3.7e-8), say), and that rounding
-  decides charts: faces at a right angle face the same half-space or not by it, and in a bake
-  of a turned slab of 3 x 0.2 x 2 m (not part of the probe's scene) the Editor joined each
-  thin side to a large face and made three charts, not five. Unbound does not reproduce that
-  rounding.
-- Choices that rounding decides in an instance that is not turned, where the mesh itself is
-  off the coordinate axes: two neighbouring flat parts at a right angle but for rounding that
-  one plane could hold within the limits (their normals' cosine is near zero, or zero only
-  because its terms cancel, as for a slab modelled at 45 degrees); two different sets that are
+- Choices that rounding decides, the last digits of a normalisation here and in the
+  precompute being apart: two neighbouring flat parts whose normals' cosine could have the
+  other sign there (it is closer to zero than that rounding against its terms, or zero only
+  because its terms cancel: a slab modelled at 45 degrees, a cube of 0.45 turned 25 degrees)
+  that one plane could hold within the limits; a test of facing that close to Max Angle; two
+  different sets that are
   the largest of a round, of the same area or of one but for rounding (within 1e-5 of each
   other); a leftover as near to two sets in the same way. Along the coordinate axes the
   arithmetic is exact and such ties are taken in order, as the Editor takes them in the scene's
@@ -592,7 +617,6 @@ check. Each refusal is a warning that names the renderer, and its system is then
   faces of a box modelled turned about its mesh's origin. Congruent faces of such a box moved
   off that origin, sets within 1e-5 of the winner's area and a leftover as near to two sets
   are refused there.
-- A mesh whose flat parts take more than the hundred rounds to join.
 - A part that is not flat within the limits and that nothing folds in: curved surfaces. Their
   charts need a measure of overlap in the projection, which is not implemented.
 - A bent part left on its own (flat within the limits, not planar): whether it keeps its own
@@ -601,16 +625,16 @@ check. Each refusal is a warning that names the renderer, and its system is then
 - A planar part left on its own on a plane that is not along the coordinate axes, whose own
   lightmap UVs are an undistorted copy of its shape and are laid out otherwise than its
   projection: both are then equally true but for rounding.
-- Ignore Normals, Max Distance or Max Angle of zero, a zero or mirrored scale, a mesh without
-  normals, and a part without area that lies by no chart: not measured.
+- A zero or mirrored scale and a mesh without normals: not measured. (In a scratch bake a bent
+  part alone in its mesh, two quads 40 degrees apart, was laid out as its projection and its
+  own UVs both would be; that does not tell the choice.)
 
 Not measured, and implemented as written above: scale under parents that skew it (the
 transform's `lossyScale` is used), meshes that mix triangles wound with and against their
 normals, and a small part that is not flat folded into a set it lies by (projected onto that
-set's plane, as the flat leftovers measured are). Not guarded: a part exactly at a limit but for rounding (its lean or its distance
-within the last digits of Max Angle or Max Distance, off the coordinate axes), and what the
-Editor's own cache of earlier bakes may share with a renderer (it keeps results by mesh and
-scale across bakes; a scratch bake reused one for a renderer that had since been turned).
+set's plane, as the flat leftovers measured are). Not guarded: a part's distance within the last digits of Max Distance, and what the Editor's
+own cache of earlier bakes may share with a renderer (it keeps results by mesh and scale across
+bakes; a scratch bake reused one for a renderer that had since been turned).
 
 ## Engine
 

@@ -47,6 +47,17 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
   `RoofAngleWide` and `RoofAngleTight` (roofs of 20 degrees with Max Angle 30 and 15),
   `StepMid` and `StepNear` (the step's mesh, 1.2 and 0.8 times as long, with Max Distance 0.3
   and 0.15).
+- `RoomTurned`: as `RoomAuto`'s room (`run.py setup-turned` adds this scene alone), with
+  `SlabTurned` (a cube of 1.3 x 0.2 x 0.9 turned 30 degrees about Y), `BoxTurned` (a cube of
+  0.7 x 0.5 x 0.6 turned (20, 40, 10)), `WedgeTurned` (the wedge turned 30 degrees and scaled
+  (0.5, 0.4, 0.45)), `Child` (a cube of 0.5 x 0.3 x 0.4 turned 10 degrees about X under `Pivot`,
+  turned 45 about Y and scaled 1.5), `SharedTurned` and `SharedFlat` (cubes of 0.35, one turned
+  25 degrees about Y), `RoofDistance` (the roof of 20 degrees with Max Distance 0.1),
+  `FoldKept` and `FoldIgnored` (a floor and a wall at a right angle that share their edge's
+  positions and UVs but not its normals, and a loose quad; the second with Ignore Normals),
+  `StepNoDistance` (the step with Max Distance 0), `BoxSliver` and `BoxPoint` (a box of 0.6 m
+  and a triangle of no area a metre away: three points on a line, three at one point), and
+  `Many` (11 x 10 loose quads in one plane with Max Distance 0.1).
 
 `Assets/Scripts/RealtimeGIProbe.cs` (with `REALTIME_GI_OUT` set) changes one input at a time and
 records, per case:
@@ -174,9 +185,9 @@ inputs what they were before the load, and its lights put out again (`room-envda
 the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
 (`roombakedenvironment-envdata-loaded`).
 
-Last, `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
+Then `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
 `RoomCharts` cases are. The charts the precompute made are in the scene's precomputed data, as
-there.
+there. Last, `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`.
 
 With `--color-space gamma` the same project is in the gamma color space (run.py changes the
 copy's player settings) and the probe records the scenes without lighting data alone, their
@@ -373,6 +384,14 @@ Observations (not documented guarantees):
   charts with Max Distance 0.5, has a chart for each of its eight faces with 0.3 and with 0.15
   (its treads, as its risers, are 0.4 m apart, their corners 0.2 m from the plane through
   both).
+  `RoomTurned` (two systems): the slab turned 30 degrees has six charts (the rotation's
+  removal is exact for it), the box turned (20, 40, 10) and the one under a turned parent four
+  (two pairs of faces at a right angle but for that removal's rounding joined), the turned
+  wedge five; the two cubes of 0.35 share one geometry; the roof with Max Distance 0.1 has two
+  charts, the step with 0 keeps its own lightmap UVs (a chart a face, as with Preserve UVs); with Ignore Normals the fold's floor and wall are one
+  chart of 4 x 6 texels (projected onto the plane between them and scaled to their area),
+  without it two; a triangle of no area is a chart of one block with all its corners at its
+  corner; the 110 quads are 110 charts.
   docs/REALTIME_GI.md (Automatic charts) has the rule Unbound makes them by and what it does
   not make.
 
