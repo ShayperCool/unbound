@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/svgsprites/run.py check"],
+  "summary": "svgsprites: \\d+ values, 0 differences"
+}

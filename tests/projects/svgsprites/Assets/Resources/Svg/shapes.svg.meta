@@ -1,0 +1,11 @@
+fileFormatVersion: 2
+guid: e4b68a95e8dde45ab5e397cf345a8a77
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: a57477913897c46af95d590f580878bd, type: 3}
+  svgType: 0
