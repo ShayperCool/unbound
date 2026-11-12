@@ -29,6 +29,11 @@ namespace Unbound.Runtime
         /// unmeasured arrival-dependent endpoint.</summary>
         internal static bool NavMeshCorridorReportingMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Stopping distance selects planned speed before braking, measured by
+        /// tests/projects/navlinks on 6000.0.71f1. Other releases retain their previous,
+        /// unmeasured immediate stop.</summary>
+        internal static bool NavMeshStoppingDistanceMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by
         /// tests/projects/quaternioneuler on 6000.0.71f1. Other releases retain their unmeasured
         /// single-precision arithmetic.</summary>

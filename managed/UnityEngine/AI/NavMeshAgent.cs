@@ -463,16 +463,7 @@ namespace UnityEngine.AI
                     count = m_Crowd.corridor.FindCorners(corners, corners.Length, m_Surface.Query, CrowdFilter);
                 else
                     Array.Copy(m_Crowd.corners, corners, count);
-                if (count == 0) return 0f;
-                if ((corners[count - 1].flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) return float.PositiveInfinity;
-                float d = 0f;
-                var p = m_Crowd.npos;
-                for (int i = 0; i < count; i++)
-                {
-                    d += RcVec3f.Distance(p, corners[i].pos);
-                    p = corners[i].pos;
-                }
-                return d;
+                return DtCrowdAgent.KnownPathLength(m_Crowd.npos, corners, count);
             }
         }
 
@@ -998,6 +989,7 @@ namespace Unbound.Runtime
                 {
                     maxTopologyOptimizationIterations = 8,
                     predictNeighbourBounds = Compat.NavMeshPredictionBoundsMeasured,
+                    measuredStoppingDistance = Compat.NavMeshStoppingDistanceMeasured,
                 };
                 crowd = new DtCrowd(config, surface.Mesh, i => AreaFilter.Of(-1));
                 crowd.tryEnterConnection = polyRef => TryEnterLink(surface, polyRef);
@@ -1042,6 +1034,7 @@ namespace Unbound.Runtime
                 maxAcceleration = agent.acceleration,
                 maxSpeed = agent.isStopped ? 0f : agent.speed,
                 stopped = agent.isStopped,
+                stoppingDistance = agent.stoppingDistance,
                 reachSpeed = agent.speed,
                 separationWeight = 1.4f,
                 updateFlags = flags,
@@ -1788,7 +1781,7 @@ namespace Unbound.Runtime
                 p = q = ag.corners[i].pos;
             }
             float step = ag.vel.Length() * dt;
-            if (agent.stoppingDistance > 0f && left <= agent.stoppingDistance)
+            if (!Compat.NavMeshStoppingDistanceMeasured && agent.stoppingDistance > 0f && left <= agent.stoppingDistance)
             {
                 ag.vel = RcVec3f.Zero;
                 ag.nvel = RcVec3f.Zero;

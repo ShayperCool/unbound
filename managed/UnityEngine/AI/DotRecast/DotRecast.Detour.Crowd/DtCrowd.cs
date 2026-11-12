@@ -1253,6 +1253,9 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
+                // A braking plan belongs to its active path, including when the request was reset.
+                if (_config.measuredStoppingDistance) ag.brakingNow = false;
+
                 if (ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_NONE)
                 {
                     continue;
@@ -1282,6 +1285,13 @@ namespace DotRecast.Detour.Crowd
                     // deceleration that stops them there (v²/2d) at each update (measured).
                     // Agents without auto braking (UNBOUND_NO_BRAKING) keep their speed.
                     float speed = ag.option.maxSpeed;
+                    // Unity 6000.0.71f1, tests/projects/navlinks stopping controls: the stop
+                    // radius requests zero speed before the automatic braking calculation.
+                    if (_config.measuredStoppingDistance
+                        && (ag.ncorners > 0 || ag.corridor.GetPathCount() >= 2)
+                        && ag.option.stoppingDistance > (ag.ncorners == 0 ? RcVec3f.Distance(ag.npos, ag.corridor.GetTarget())
+                            : DtCrowdAgent.KnownPathLength(ag.npos, ag.corners, ag.ncorners)))
+                        speed = 0f;
                     ag.brakingNow = false;
                     if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_NO_BRAKING) == 0)
                     {

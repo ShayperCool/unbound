@@ -24,6 +24,7 @@ namespace DotRecast.Detour.Crowd
         public readonly float maxAgentRadius;
         // Unbound: selected by the runtime compatibility profile when the crowd is created.
         public bool predictNeighbourBounds;
+        public bool measuredStoppingDistance;
 
         public int pathQueueSize = 32; // Max number of path requests in the queue
         public int maxFindPathIterations = 100; // Max number of sliced path finding iterations executed per update (used to handle longer paths and replans)

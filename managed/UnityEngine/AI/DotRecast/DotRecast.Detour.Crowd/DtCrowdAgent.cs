@@ -164,6 +164,19 @@ namespace DotRecast.Detour.Crowd
             return false;
         }
 
+        public static float KnownPathLength(RcVec3f position, DtStraightPath[] corners, int count)
+        {
+            if (count == 0) return 0f;
+            if ((corners[count - 1].flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) return float.PositiveInfinity;
+            float distance = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                distance += RcVec3f.Distance(position, corners[i].pos);
+                position = corners[i].pos;
+            }
+            return distance;
+        }
+
         public float GetDistanceToGoal(float range)
         {
             if (0 == ncorners)

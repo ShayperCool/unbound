@@ -31,6 +31,7 @@ namespace DotRecast.Detour.Crowd
         /// Unbound: the agent's speed setting, also while it is stopped (maxSpeed 0): how far it looks
         /// for neighbours and edges (for a stopped agent Unbound's choice, unmeasured).
         public float reachSpeed;
+        public float stoppingDistance;
         public bool stopped; // Unbound: pauses automatic link traversal without losing its plan.
 
         /// How aggresive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0]
