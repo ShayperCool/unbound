@@ -585,12 +585,13 @@ check. Each refusal is a warning that names the renderer, and its system is then
   other); a leftover as near to two sets in the same way. Along the coordinate axes the
   arithmetic is exact and such ties are taken in order, as the Editor takes them in the scene's
   boxes and steps (the two charts of a step's tread and riser of one size among them). Off the
-  axes the last digits of a unit vector need not be the precompute's: a round's winner is kept
-  only when it stays the winner for every scale of the two sets' projection axes within two
-  units in the last place (axes normalised from the same squared length scaled alike), as for
-  the two sides of the scene's roofs and the opposite faces of a box modelled turned about its
-  mesh's origin; congruent faces of such a box moved off that origin are refused. A leftover
-  as near to two sets off the axes is refused.
+  axes the last digits of a unit vector need not be the precompute's, and only sets of the very
+  same area that are equal by their shape are taken in order: their projections are images of
+  each other whatever the scale of the projection axes (checked by a sweep of those scales over
+  a few units in the last place), as for the two sides of the scene's roofs and the opposite
+  faces of a box modelled turned about its mesh's origin. Congruent faces of such a box moved
+  off that origin, sets within 1e-5 of the winner's area and a leftover as near to two sets
+  are refused there.
 - A mesh whose flat parts take more than the hundred rounds to join.
 - A part that is not flat within the limits and that nothing folds in: curved surfaces. Their
   charts need a measure of overlap in the projection, which is not implemented.

@@ -148,9 +148,10 @@ struct Frame {
 }
 
 /// Off the coordinate axes the last digits of a unit vector here need not be the
-/// precompute's. A choice between two sets that rests on their projections is trusted only
-/// when it holds for every scale of their axes within this many units in the last place of the
-/// one here.
+/// precompute's. Two sets of the very same area there are taken as a tie only when they stay
+/// one over a sweep of their axes' scales by this many units in the last place (`stays_tied`).
+/// The sweep tells a tie by shape from one by rounding; it is not a bound on the precompute's
+/// rounding.
 const NORMALISATION_ULPS: i32 = 2;
 
 /// `1 / sqrt(length2)` moved by `steps` units in the last place.
@@ -698,44 +699,34 @@ fn tied(a: f32, b: f32) -> bool {
     a != b && (a - b).abs() <= TIE * a.abs().max(b.abs())
 }
 
-/// Whether the set `first` keeps the larger area than `second` for every scale of the two
-/// frames' axes within `NORMALISATION_ULPS` (axes normalised from the same squared length are
-/// scaled alike): strictly larger when `second` was tried first, else at least as large.
-fn settled(
-    geometry: &Geometry,
-    first: (&[usize], &Plane),
-    second: (&[usize], &Plane),
-    second_tried_first: bool,
-) -> bool {
+/// Whether two sets of the very same area keep it for every scale of their frames' axes in a
+/// sweep of `NORMALISATION_ULPS` units in the last place either way, axes normalised from the
+/// same squared length scaled alike. It holds when the two projections are images of each
+/// other whatever the axes' scale, as are the opposite faces of a box about its mesh's origin
+/// or the two sides of a roof mirrored across a coordinate plane: the areas are then equal by
+/// their shape, not by the rounding here.
+fn stays_tied(geometry: &Geometry, first: (&[usize], &Plane), second: (&[usize], &Plane)) -> bool {
     let steps = -NORMALISATION_ULPS..=NORMALISATION_ULPS;
-    for (ua, va) in steps
-        .clone()
-        .flat_map(|u| steps.clone().map(move |v| (u, v)))
-    {
-        let frame_a = Frame::rounded(first.1, ua, va);
-        let area_a = geometry.area_in(first.0, &frame_a);
-        for (ub, vb) in steps
+    let sweep = || {
+        steps
             .clone()
             .flat_map(|u| steps.clone().map(move |v| (u, v)))
-        {
-            let frame_b = Frame::rounded(second.1, ub, vb);
-            if (frame_a.squares[0] == frame_b.squares[0] && ua != ub)
-                || (frame_a.squares[1] == frame_b.squares[1] && va != vb)
-            {
-                continue;
-            }
-            let area_b = geometry.area_in(second.0, &frame_b);
-            let keeps = if second_tried_first {
-                area_a > area_b
-            } else {
-                area_a >= area_b
-            };
-            if !keeps {
-                return false;
-            }
-        }
-    }
-    true
+    };
+    let seconds: Vec<(i32, i32, [f32; 2], f32)> = sweep()
+        .map(|(u, v)| {
+            let frame = Frame::rounded(second.1, u, v);
+            (u, v, frame.squares, geometry.area_in(second.0, &frame))
+        })
+        .collect();
+    sweep().all(|(ua, va)| {
+        let frame = Frame::rounded(first.1, ua, va);
+        let area = geometry.area_in(first.0, &frame);
+        seconds.iter().all(|&(ub, vb, squares, other)| {
+            (frame.squares[0] == squares[0] && ua != ub)
+                || (frame.squares[1] == squares[1] && va != vb)
+                || area == other
+        })
+    })
 }
 
 /// A set of groups as one number, whatever their order.
@@ -859,15 +850,12 @@ fn join(geometry: &Geometry) -> Result<Joined> {
         let set = gather(a, b, &plane, &mut place);
         // Another set whose area is the winner's or is so but for rounding: along the
         // coordinate axes the arithmetic here is the precompute's, and the first tried is
-        // taken; off them the winner must stay the winner for every rounding of the two
-        // frames' axes (`settled`), else the precompute's own rounding decides.
+        // taken. Off them the precompute's own rounding decides, unless the two areas are the
+        // very same and stay so over the sweep of `stays_tied`: equal by their shape, the first
+        // tried is taken there too.
         let along = plane.along_axes();
-        let won = tries
-            .iter()
-            .position(|t| t.key == key && t.area == most)
-            .unwrap_or(0);
         let mut checked: Vec<(u64, Plane)> = Vec::new();
-        for (at, other) in tries.iter().enumerate() {
+        for other in &tries {
             if other.key == key || (other.area != most && !tied(other.area, most)) {
                 continue;
             }
@@ -878,14 +866,12 @@ fn join(geometry: &Geometry) -> Result<Joined> {
                 continue;
             }
             checked.push((other.key, other.plane));
-            let other_set = gather(other.a, other.b, &other.plane, &mut place);
+            let by_shape = other.area == most && {
+                let other_set = gather(other.a, other.b, &other.plane, &mut place);
+                stays_tied(geometry, (&set, &plane), (&other_set, &other.plane))
+            };
             ensure!(
-                settled(
-                    geometry,
-                    (&set, &plane),
-                    (&other_set, &other.plane),
-                    at < won
-                ),
+                by_shape,
                 "two sets of faces are the largest of a round but for rounding (areas {most} and {}): which the precompute takes hangs on that rounding",
                 other.area
             );
@@ -1839,11 +1825,32 @@ mod tests {
                     .find(|&o| dot(geometry.groups[o].normal, n) < -0.999)
                     .unwrap();
                 let (pa, pb) = (&geometry.groups[a].plane, &geometry.groups[b].plane);
-                pa.along_axes() || settled(&geometry, (&[a], pa), (&[b], pb), false)
+                pa.along_axes() || stays_tied(&geometry, (&[a], pa), (&[b], pb))
             })
         };
         assert!(opposite_faces_settle(&centred));
         assert!(!opposite_faces_settle(&moved));
+
+        // Two rectangles turned alike, one larger by two parts in a million: the larger would
+        // win for every scale of the axes, and the margin is still the rounding's.
+        let mut pair = Shape::default();
+        for (x, depth) in [(0.0, 0.7), (10.0, 0.7 * (1.0 + 2e-6))] {
+            pair.quad(
+                [
+                    [x, 0.0, 0.0],
+                    [x + 2.2, 0.0, 0.0],
+                    [x + 2.2, 0.0, depth],
+                    [x, 0.0, depth],
+                ],
+                [0.0, 1.0, 0.0],
+            );
+        }
+        turn_in_mesh(&mut pair, 37.0, 23.0);
+        let error = auto_charts(&pair.mesh(), &LIMITS).unwrap_err().to_string();
+        assert!(
+            error.contains("largest of a round but for rounding"),
+            "{error}"
+        );
     }
 
     /// Two rectangles of the same size that lie differently: their areas along their planes
