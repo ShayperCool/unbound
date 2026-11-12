@@ -1128,9 +1128,11 @@ impl Region {
     }
 }
 
-/// The Tight mesh, texture rect and physics shape of a sprite. `round` is
-/// false for Polygon-mode sprites (their outline vertices are kept as authored).
-pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, round: bool) -> SpriteGeometry {
+/// The Tight mesh, texture rect and physics shape of a sprite. `polygon`: Polygon sprite mode,
+/// whose mesh is always Tight (whatever the mesh type and rect size), whose outline vertices are
+/// kept as authored and whose default physics shape is its mesh's boundary.
+pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, polygon: bool) -> SpriteGeometry {
+    let round = !polygon;
     let [rx, ry, rw, rh] = s.rect;
     let pivot_from_centre = [
         (s.pivot[0] * rw + rx) - (rw * 0.5 + rx),
@@ -1143,7 +1145,9 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, round: bool) -> Spri
         physics: Vec::new(),
     };
     let region = Region::new(texture, s.rect, pivot_from_centre);
-    let tight = if s.outline.is_empty() {
+    let tight = if polygon {
+        true
+    } else if s.outline.is_empty() {
         s.tight && 32.0 <= rw && 32.0 <= rh
     } else {
         s.tight
@@ -1210,11 +1214,19 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, round: bool) -> Spri
                     .collect()
             })
             .collect();
-    } else if s.generate_physics_shape && !round {
-        tracing::warn!(
-            "the default physics shape of a Polygon-mode sprite (the outline of its mesh) is not \
-             supported: the sprite gets none"
-        );
+    } else if s.generate_physics_shape && polygon {
+        out.physics = vec![match &out.mesh {
+            Some(mesh) => mesh_boundary(&mesh.vertices, &mesh.triangles),
+            // Nothing triangulated (a zero-area outline): the quad the sprite renders, its rect's
+            // corners in units from the pivot (as `Sprite.vertices` gives them).
+            None => {
+                let (px, py) = (s.pivot[0] * rw, s.pivot[1] * rh);
+                let [left, right] = [0.0, rw].map(|x| (x - px) / ppu);
+                let [bottom, top] = [0.0, rh].map(|y| (y - py) / ppu);
+                let quad = [[left, top], [right, top], [left, bottom], [right, bottom]];
+                mesh_boundary(&quad, &QUAD_TRIANGLES)
+            }
+        }];
     } else if s.generate_physics_shape
         && let Some(region) = &region
         && let Some(shape) = region.trace(texture, 0.25, 200, 0)
@@ -1232,6 +1244,118 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, round: bool) -> Spri
             .collect();
     }
     out
+}
+
+/// The triangles of the quad a sprite without a Tight mesh renders: top left, top right, bottom
+/// left, bottom right.
+const QUAD_TRIANGLES: [u16; 6] = [0, 1, 2, 2, 1, 3];
+
+/// The default physics shape of a Polygon-mode sprite: one path through the vertices of its mesh's
+/// boundary edges (edges used by exactly one triangle), matching the Unity 6000.0.71f1 Editor
+/// (tests/projects/spriteimport).
+///
+/// Each triangle `(a, b, c)` adds its edges `(a, b)`, `(b, c)`, `(c, a)` to an open-addressing
+/// table keyed by `min << 16 | max`; an edge seen again only counts up and keeps the direction it
+/// was first seen in. The boundary edges are taken in table-slot order, then chained: each next
+/// position takes the first later edge that starts where the previous one ends (none found: the
+/// order stays). The path is the start vertex of every edge, so separate boundary loops (islands,
+/// holes) follow each other in the one path, as in the Editor.
+pub fn mesh_boundary(vertices: &[[f32; 2]], triangles: &[u16]) -> Vec<[f32; 2]> {
+    let mut edges = EdgeTable::default();
+    for t in triangles.chunks_exact(3) {
+        edges.add(t[0], t[1]);
+        edges.add(t[1], t[2]);
+        edges.add(t[2], t[0]);
+    }
+    let mut boundary: Vec<(u16, u16)> = edges
+        .slots
+        .iter()
+        .flatten()
+        .filter(|e| e.count == 1)
+        .map(|e| (e.first, e.second))
+        .collect();
+    for i in 1..boundary.len() {
+        let end = boundary[i - 1].1;
+        if let Some(j) = (i..boundary.len()).find(|&j| boundary[j].0 == end) {
+            boundary.swap(i, j);
+        }
+    }
+    boundary
+        .iter()
+        .filter_map(|&(a, _)| vertices.get(a as usize).copied())
+        .collect()
+}
+
+/// The edge table of [`mesh_boundary`]. Its slot order is the order of the boundary edges, so the
+/// table grows as measured: 64 slots at first, doubled when a new edge finds two thirds of them
+/// used; an edge's home slot is bits 4 and up of its key, collisions probe 1, 2, 3, ... slots on.
+#[derive(Default)]
+struct EdgeTable {
+    slots: Vec<Option<TableEdge>>,
+    len: usize,
+}
+
+#[derive(Clone, Copy)]
+struct TableEdge {
+    key: u32,
+    first: u16,
+    second: u16,
+    count: u32,
+}
+
+impl EdgeTable {
+    const INITIAL_SLOTS: usize = 64;
+
+    fn add(&mut self, a: u16, b: u16) {
+        let (lo, hi) = if a < b { (a, b) } else { (b, a) };
+        let key = (lo as u32) << 16 | hi as u32;
+        if let Some(i) = self.find(key) {
+            if let Some(edge) = &mut self.slots[i] {
+                edge.count += 1;
+            }
+            return;
+        }
+        if self.len >= self.slots.len() * 2 / 3 {
+            let size = (self.slots.len() * 2).max(Self::INITIAL_SLOTS);
+            let old = std::mem::replace(&mut self.slots, vec![None; size]);
+            for edge in old.into_iter().flatten() {
+                let i = self.free_slot(edge.key);
+                self.slots[i] = Some(edge);
+            }
+        }
+        let i = self.free_slot(key);
+        self.slots[i] = Some(TableEdge {
+            key,
+            first: a,
+            second: b,
+            count: 1,
+        });
+        self.len += 1;
+    }
+
+    fn probe(&self, key: u32) -> impl Iterator<Item = usize> + '_ {
+        let mask = self.slots.len() - 1;
+        let home = (key >> 4) as usize & mask;
+        (0..self.slots.len()).scan(home, move |at, step| {
+            *at = (*at + step) & mask;
+            Some(*at)
+        })
+    }
+
+    fn find(&self, key: u32) -> Option<usize> {
+        if self.slots.is_empty() {
+            return None;
+        }
+        self.probe(key)
+            .take_while(|&i| self.slots[i].is_some())
+            .find(|&i| self.slots[i].is_some_and(|e| e.key == key))
+    }
+
+    fn free_slot(&self, key: u32) -> usize {
+        self.probe(key)
+            .find(|&i| self.slots[i].is_none())
+            .expect("the edge table keeps a third of its slots free")
+    }
 }
 
 /// Removes vertices within 1e-4 of their neighbours' segment, then the two
@@ -1430,5 +1554,98 @@ mod tests {
         let (v, t) = mesh(&alpha, 32, 32, 1);
         assert_eq!(v, [[10.0, 19.0], [17.0, 10.0], [17.0, 19.0], [10.0, 10.0]]);
         assert_eq!(t, [3, 0, 1, 2, 1, 0]);
+    }
+
+    fn points(p: &[[i32; 2]]) -> Vec<[f32; 2]> {
+        p.iter().map(|v| [v[0] as f32, v[1] as f32]).collect()
+    }
+
+    // Polygon-mode meshes and default physics shapes of the Editor (tests/projects/spriteimport).
+    #[test]
+    fn polygon_physics_shape_is_the_mesh_boundary() {
+        let convex = points(&[[0, 25], [20, -21], [24, 10], [-20, -20], [-22, 12]]);
+        assert_eq!(
+            mesh_boundary(&convex, &[4, 0, 3, 1, 3, 0, 2, 1, 0]),
+            points(&[[-22, 12], [0, 25], [24, 10], [20, -21], [-20, -20]])
+        );
+        // Separate loops follow each other in one path, in table order.
+        let islands = points(&[
+            [-6, -26],
+            [-16, -6],
+            [-26, -26],
+            [4, 26],
+            [26, 4],
+            [26, 26],
+            [4, 4],
+        ]);
+        assert_eq!(
+            mesh_boundary(&islands, &[6, 3, 4, 5, 4, 3, 2, 1, 0]),
+            points(&[
+                [4, 4],
+                [4, 26],
+                [26, 26],
+                [26, 4],
+                [-26, -26],
+                [-16, -6],
+                [-6, -26]
+            ])
+        );
+        let hole = points(&[
+            [26, 26],
+            [10, 10],
+            [26, -26],
+            [-10, 10],
+            [-26, 26],
+            [-10, -10],
+            [10, -10],
+            [-26, -26],
+        ]);
+        let triangles = [
+            4, 5, 7, 2, 7, 5, 6, 2, 5, 1, 2, 6, 0, 3, 4, 5, 4, 3, 1, 3, 0, 2, 1, 0,
+        ];
+        assert_eq!(
+            mesh_boundary(&hole, &triangles),
+            points(&[
+                [-26, 26],
+                [26, 26],
+                [26, -26],
+                [-26, -26],
+                [-10, -10],
+                [10, -10],
+                [10, 10],
+                [-10, 10],
+            ])
+        );
+        let quad = points(&[[-32, 32], [32, 32], [-32, -32], [32, -32]]);
+        assert_eq!(
+            mesh_boundary(&quad, &QUAD_TRIANGLES),
+            points(&[[-32, 32], [32, 32], [32, -32], [-32, -32]])
+        );
+    }
+
+    #[test]
+    fn mesh_boundary_tolerates_imperfect_meshes() {
+        let v = points(&[[0, 0], [1, 0], [0, 1], [1, 1], [2, 2]]);
+        // An edge of three triangles is no boundary edge; an index without a vertex adds no point.
+        let fan = mesh_boundary(&v, &[0, 1, 2, 1, 0, 3, 0, 1, 4]);
+        assert_eq!(fan.len(), 6);
+        assert!(!fan.windows(2).any(|w| w == [[0.0, 0.0], [1.0, 0.0]]));
+        assert_eq!(mesh_boundary(&v, &[0, 1, 9]), points(&[[0, 0], [1, 0]]));
+        assert!(mesh_boundary(&v, &[]).is_empty());
+        // Enough edges to grow the table past its first 64 slots keeps one closed loop.
+        let n = 100u16;
+        let ring: Vec<[f32; 2]> = (0..n)
+            .map(|i| {
+                let a = i as f32 * std::f32::consts::TAU / n as f32;
+                [a.cos(), a.sin()]
+            })
+            .collect();
+        let fan: Vec<u16> = (1..n - 1).flat_map(|i| [0, i, i + 1]).collect();
+        let path = mesh_boundary(&ring, &fan);
+        assert_eq!(path.len(), n as usize);
+        let mut sorted = path.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.dedup();
+        assert_eq!(sorted.len(), n as usize);
     }
 }

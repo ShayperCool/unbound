@@ -1204,7 +1204,9 @@ impl Importer for TextureImporter {
     // 29: BC4/BC5 compare continuous ramp fits and preserve channel-fit rounding.
     // 30: compressed automatic Single Channel red mips retain their source colour-space filtering.
     // 36: release-scoped Crunch archives and transcoded blocks, runtime EAC and compressed GPU uploads.
-    const VERSION: u32 = 36;
+    // 37: Polygon-mode sprites are always Tight and get their mesh's boundary as the default
+    //     physics shape.
+    const VERSION: u32 = 37;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);

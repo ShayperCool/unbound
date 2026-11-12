@@ -464,7 +464,7 @@ pub fn build_geometry(
             physics_shape: &sprite.physics_shape,
             generate_physics_shape: sprite.generate_physics_shape,
         },
-        !polygon,
+        polygon,
     );
     sprite.mesh = geometry.mesh;
     sprite.texture_rect_bounds = Some(geometry.texture_rect);
