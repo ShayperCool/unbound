@@ -91,8 +91,8 @@ DrawMesh (`commandBuffer`, `commandBufferCullBack`). On both devices the plain q
 front state and the mirrored one the back state, with inverted culling the other way round, and
 culling back faces culls the mirrored quad: DrawMeshNow and CommandBuffer.DrawMesh draw a
 mirrored matrix as it is (its faces turned round), while inverted culling turns which faces
-count as front. Unbound flips culling and the stencil faces for every mirrored draw (as for
-renderers): the five mirrored rows are declared residuals until mirroring follows the draw path.
+count as front. Unbound flips culling and the stencil faces for every mirrored draw (how renderers mirror is
+unmeasured): the five mirrored rows are declared residuals until mirroring follows the draw path.
 
 `Compute.<kernel>.<target>` (after those): compute kernels (`DepthCompute.compute`) reading each
 depth target: `Compare` compares both texels against 0.5 through the texture's own comparison
