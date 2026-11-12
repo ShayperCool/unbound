@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
-exclude = ["vendor/wgpu-sampler/wgpu", "vendor/wgpu-sampler/wgpu-core", "vendor/wgpu-sampler/wgpu-hal"]
+exclude = ["vendor/wgpu-sampler/wgpu", "vendor/wgpu-sampler/wgpu-core", "vendor/wgpu-sampler/wgpu-hal", "vendor/freetype-sys"]
 
 [workspace.package]
 version = "0.1.0"
@@ -48,3 +48,5 @@ debug = "line-tables-only"
 wgpu = { path = "vendor/wgpu-sampler/wgpu" }
 wgpu-core = { path = "vendor/wgpu-sampler/wgpu-core" }
 wgpu-hal = { path = "vendor/wgpu-sampler/wgpu-hal" }
+# FreeType sources prepared outside the shared Cargo registry (vendor/freetype-sys/PATCHES.md).
+freetype-sys = { path = "vendor/freetype-sys" }
