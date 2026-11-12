@@ -194,6 +194,12 @@ namespace Unbound.Runtime
             {
                 s_Importing--;
             }
+            // The main object takes the asset's file name, whatever the importer named it
+            // (measured: tests/projects/svgsprites, a GameObject the importer names "transform"). A
+            // Shader keeps the name its source declares, which Shader.Find looks up
+            // (tests/projects/shadergraph).
+            if (ctx.mainObject != null && !(ctx.mainObject is Shader))
+                ctx.mainObject.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };
             var table = settings.Count > 0 ? NameTable(settings[0].Body) : null;
             foreach (var (identifier, obj) in ctx.m_Objects)

@@ -917,7 +917,10 @@ namespace UnityEngine
             mesh = null;
             model = default;
             texture = null;
-            if (m_Sprite == null || m_Sprite.texture == null) return false;
+            if (m_Sprite == null || m_Sprite.texture == null && !m_Sprite.m_DrawnWithoutTexture) return false;
+            // Sliced and tiled drawing lays the texture out; a sprite without one has none to lay out
+            // (unmeasured).
+            if (m_Sprite.texture == null && m_DrawMode != SpriteDrawMode.Simple) return false;
             mesh = m_DrawMode == SpriteDrawMode.Simple ? DeformedMesh() ?? m_Sprite.RenderMesh() : SlicedMesh();
             model = UnityEngine.U2D.PixelPerfectRendering.Snap(transform.localToWorldMatrix);
             if (Unbound.Runtime.Compat.RenderingMeasured && (!float.IsFinite(model.m03) || !float.IsFinite(model.m13) || !float.IsFinite(model.m23))) return false;

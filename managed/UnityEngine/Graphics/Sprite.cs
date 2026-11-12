@@ -25,6 +25,10 @@ namespace UnityEngine
         /// <summary>OverrideGeometry replaced the mesh: the bounds follow its vertices.</summary>
         bool m_GeometryOverridden;
         internal Mesh m_Mesh;
+        /// <summary>Made without a texture (vector sprites): drawn with its material alone. A
+        /// sprite whose texture is missing is not drawn (measured: tests/projects/svgsprites,
+        /// tests/projects/spriteassets).</summary>
+        internal bool m_DrawnWithoutTexture;
         /// <summary>The geometry the particle Shape module samples (see ParticleShapeMesh).</summary>
         Mesh m_ShapeMesh;
         /// <summary>The secondary textures (an imported sprite's are loaded when first asked for).</summary>
@@ -96,6 +100,24 @@ namespace UnityEngine
 
         public static Sprite Create(Texture2D texture, Rect rect, Vector2 pivot) =>
             Create(texture, rect, pivot, 100f, 0, SpriteMeshType.Tight, Vector4.zero, false);
+
+        /// <summary>A Tight sprite with a rect, a normalized pivot and an optional texture but no
+        /// geometry yet (OverrideGeometry gives it some), as the SVG importer makes its sprites.
+        /// A pixels per unit of 0 or less keeps the default of 100.</summary>
+        internal static Sprite Create(Rect rect, Vector2 pivot, float pixelsToUnits, Texture2D texture) => new Sprite
+        {
+            m_Texture = texture,
+            m_Rect = rect,
+            m_Pivot = new Vector2(pivot.x * rect.width, pivot.y * rect.height),
+            m_PixelsPerUnit = pixelsToUnits > 0 ? pixelsToUnits : 100f,
+            m_MeshType = SpriteMeshType.Tight,
+            m_DrawnWithoutTexture = texture == null,
+            m_Vertices = Array.Empty<Vector2>(),
+            m_UV = Array.Empty<Vector2>(),
+            m_Triangles = Array.Empty<ushort>(),
+        };
+
+        internal static Sprite Create(Rect rect, Vector2 pivot, float pixelsToUnits) => Create(rect, pivot, pixelsToUnits, null);
 
         /// <summary>A sprite of an imported texture, from its import definition: the Tight mesh
         /// (vertices in units from the pivot, uvs, triangles; null for a quad), the texture rect
@@ -273,16 +295,24 @@ namespace UnityEngine
                     Debug.LogError(FormattableString.Invariant($"Invalid vertex array. Some vertices are outside of the Sprite rectangle: ({m_Rect.width:F6}, {m_Rect.height:F6})."));
                     return;
                 }
-            float w = m_Texture != null ? m_Texture.width : 1f;
-            float h = m_Texture != null ? m_Texture.height : 1f;
             m_Vertices = new Vector2[vertices.Length];
             m_UV = new Vector2[vertices.Length];
             for (int i = 0; i < vertices.Length; i++)
             {
-                // Overridden vertices are in pixels within the rect.
+                // Overridden vertices are in pixels within the rect; without a texture the UVs
+                // stay zero (measured: tests/projects/svgsprites, tests/projects/spriteassets).
                 m_Vertices[i] = new Vector2((vertices[i].x - m_Pivot.x) / m_PixelsPerUnit, (vertices[i].y - m_Pivot.y) / m_PixelsPerUnit);
-                m_UV[i] = new Vector2((m_Rect.x + vertices[i].x) / w, (m_Rect.y + vertices[i].y) / h);
+                if (m_Texture != null)
+                    m_UV[i] = new Vector2((m_Rect.x + vertices[i].x) / m_Texture.width, (m_Rect.y + vertices[i].y) / m_Texture.height);
             }
+            // The other per-vertex channels no longer match the new vertices.
+            m_Normals = null;
+            m_Tangents = null;
+            m_Colors = null;
+            m_BoneWeights = null;
+            m_TexCoords = null;
+            m_MeshData?.Free();
+            m_MeshData = null;
             m_Triangles = (ushort[])triangles.Clone();
             m_GeometryOverridden = true;
             m_Mesh = null;
@@ -339,6 +369,10 @@ namespace UnityEngine
             mesh.vertices = positions;
             mesh.uv = m_UV;
             if (colors && m_Colors != null && m_Colors.Length == positions.Length) mesh.colors32 = m_Colors;
+            if (m_TexCoords != null)
+                for (int channel = 1; channel < m_TexCoords.Length; channel++)
+                    if (m_TexCoords[channel] != null && m_TexCoords[channel].Length == positions.Length)
+                        mesh.SetUVs(channel, m_TexCoords[channel]);
             var tris = new int[m_Triangles.Length];
             for (int i = 0; i < tris.Length; i++) tris[i] = m_Triangles[i];
             mesh.triangles = tris;

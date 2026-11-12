@@ -8577,7 +8577,6 @@ namespace UnityEditor
         internal static global::UnityEngine.Material lightmapFullHDRMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.lightmapFullHDRMaterial"); return default; } }
         internal static global::UnityEngine.Material guiTextureClipVerticallyMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.guiTextureClipVerticallyMaterial"); return default; } }
         internal static bool isCollectingTooltips { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.isCollectingTooltips"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.isCollectingTooltips"); } }
-        public static event global::System.Action<global::UnityEditor.EditorWindow, global::UnityEditor.HyperLinkClickedEventArgs> hyperLinkClicked { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.hyperLinkClicked"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe partial class DisabledGuiViewInputScope : global::UnityEngine.GUI.Scope
         {
@@ -12585,12 +12584,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public void Insert(string name, string templateName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HumanTemplate.Insert"); }
         [global::Unbound.Stub] public string Find(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HumanTemplate.Find"); return default; }
         [global::Unbound.Stub] public void ClearTemplate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HumanTemplate.ClearTemplate"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class HyperLinkClickedEventArgs
-    {
-        [global::Unbound.Stub] internal HyperLinkClickedEventArgs(global::System.Collections.Generic.Dictionary<string, string> hyperLinkData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HyperLinkClickedEventArgs.ctor"); }
-        public global::System.Collections.Generic.Dictionary<string, string> hyperLinkData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HyperLinkClickedEventArgs.hyperLinkData"); return new global::System.Collections.Generic.Dictionary<string, string>(); } }
     }
     internal unsafe partial interface IAnimationWindowController
     {
@@ -24639,8 +24632,7 @@ namespace UnityEditor
         internal static global::UnityEngine.Material previewSpriteDefaultMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtility.previewSpriteDefaultMaterial"); return default; } }
         public unsafe delegate string ShowFileDialogDelegate(string title, string defaultName, string extension, string message, string defaultPath);
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class SpriteUtilityWindow : global::UnityEditor.EditorWindow
+    unsafe partial class SpriteUtilityWindow
     {
         [global::Unbound.Stub] protected global::UnityEditor.SpriteUtilityWindow.Styles m_Styles;
         protected const float k_BorderMargin = 10f;
@@ -24679,11 +24671,9 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void DrawToolBarWidget(ref global::UnityEngine.Rect drawRect, ref global::UnityEngine.Rect toolbarRect, global::System.Action<global::UnityEngine.Rect> drawAction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.DrawToolBarWidget"); }
         [global::Unbound.Stub] internal static bool DoOpenSpriteEditorWindowUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.DoOpenSpriteEditorWindowUI"); return default; }
         [global::System.Obsolete("Use SpriteUtility.SetShowSpriteEditorWindowWithObject instead")] [global::Unbound.Stub] internal static void SetShowSpriteEditorWindow(global::System.Func<bool> spriteEditorWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.SetShowSpriteEditorWindow"); }
-        [global::Unbound.Stub] internal static void SetShowSpriteEditorWindowWithObject(global::System.Func<global::UnityEngine.Object, bool> spriteEditorWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.SetShowSpriteEditorWindowWithObject"); }
         [global::Unbound.Stub] internal static void SetApplySpriteEditorWindow(global::System.Action action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.SetApplySpriteEditorWindow"); }
         [global::Unbound.Stub] internal static bool ShowSpriteEditorWindow(global::UnityEngine.Object obj = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.ShowSpriteEditorWindow"); return default; }
         [global::Unbound.Stub] internal static void ApplySpriteEditorWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.ApplySpriteEditorWindow"); }
-        [global::Unbound.Stub] public SpriteUtilityWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.ctor"); }
         protected global::UnityEngine.Rect maxScrollRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.maxScrollRect"); return default; } }
         protected global::UnityEngine.Rect maxRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.maxRect"); return default; } }
         [global::Unbound.Stub]
@@ -49457,11 +49447,8 @@ namespace UnityEditor.U2D
         [global::Unbound.Stub] public static void PackAtlases(global::UnityEngine.U2D.SpriteAtlas[] atlases, global::UnityEditor.BuildTarget target, bool canCancel = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasUtility.PackAtlases"); }
         [global::Unbound.Stub] public SpriteAtlasUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasUtility.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class SpriteEditorExtension
+    unsafe static partial class SpriteEditorExtension
     {
-        [global::Unbound.Stub] public static global::UnityEditor.GUID GetSpriteID(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteEditorExtension.GetSpriteID"); return default; }
-        [global::Unbound.Stub] public static void SetSpriteID(this global::UnityEngine.Sprite sprite, global::UnityEditor.GUID guid) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteEditorExtension.SetSpriteID"); }
         [global::Unbound.Stub] internal static global::UnityEngine.U2D.SpriteAtlas GetActiveAtlas(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteEditorExtension.GetActiveAtlas"); return default; }
         [global::Unbound.Stub] internal static string GetActiveAtlasName(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteEditorExtension.GetActiveAtlasName"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D GetActiveAtlasTexture(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteEditorExtension.GetActiveAtlasTexture"); return default; }

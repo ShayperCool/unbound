@@ -341,6 +341,11 @@ namespace UnityEngine
         internal Vector3[] m_Normals;
         internal Vector4[] m_Tangents;
         internal Color32[] m_Colors;
+        /// <summary>Texture coordinate channels 1 to 7 by channel (null when none is set; channel 0
+        /// is m_UV).</summary>
+        internal Vector2[][] m_TexCoords;
+        /// <summary>The GUID of the sprite's Sprite Editor rect.</summary>
+        internal UnityEditor.GUID m_SpriteID;
         SpriteMeshData m_MeshData;
 
         /// <summary>The authored mesh and skin of an imported sprite: vertices in pixels from the
@@ -398,6 +403,9 @@ namespace UnityEngine
             CopyChannel(data, Rendering.VertexAttribute.Tangent, m_Tangents);
             CopyChannel(data, Rendering.VertexAttribute.Color, m_Colors);
             CopyChannel(data, Rendering.VertexAttribute.BlendWeight, m_BoneWeights);
+            if (m_TexCoords != null)
+                for (int channel = 1; channel < m_TexCoords.Length; channel++)
+                    CopyChannel(data, Rendering.VertexAttribute.TexCoord0 + channel, m_TexCoords[channel]);
             fixed (ushort* t = m_Triangles) data.SetIndices(t, m_Triangles.Length);
             fixed (Matrix4x4* b = m_BindPoses) data.SetBindPoses(b, m_BindPoses.Length);
             m_MeshData = data;
@@ -439,6 +447,15 @@ namespace UnityEngine
             m_Normals = ChannelValues<Vector3>(data, Rendering.VertexAttribute.Normal);
             m_Tangents = ChannelValues<Vector4>(data, Rendering.VertexAttribute.Tangent);
             m_Colors = ChannelValues<Color32>(data, Rendering.VertexAttribute.Color);
+            Vector2[][] texCoords = null;
+            for (int channel = 1; channel < 8; channel++)
+            {
+                var values = ChannelValues<Vector2>(data, Rendering.VertexAttribute.TexCoord0 + channel);
+                if (values == null) continue;
+                texCoords ??= new Vector2[8][];
+                texCoords[channel] = values;
+            }
+            m_TexCoords = texCoords;
             m_BindPoses = new Matrix4x4[data.BindPoseCount];
             for (int i = 0; i < data.BindPoseCount; i++) m_BindPoses[i] = data.BindPoses[i];
             m_Mesh = null;

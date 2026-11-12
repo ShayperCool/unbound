@@ -62,6 +62,17 @@ namespace UnityEngine
         static void Internal_Create(GameObject go, Type[] components, SceneData scene = null)
         {
             go.CheckMainThreadCreation("Internal_CreateGameObject");
+            // A GameObject a project's importer makes is part of the asset it imports, as a loaded
+            // prefab's are: in no scene, never awake (measured: tests/projects/svgsprites).
+            if (Unbound.Runtime.ScriptedImports.Importing)
+            {
+                go.m_IsPrefabAsset = true;
+                go.AddTransform(typeof(Transform));
+                if (components != null)
+                    foreach (var type in components)
+                        go.AddComponent(type);
+                return;
+            }
             // During a Single load's teardown this is the incoming scene, not the active one, and
             // it is set before any component wakes up.
             go.m_Scene = (scene ?? SceneRegistry.DefaultCreationScene()).Handle;
