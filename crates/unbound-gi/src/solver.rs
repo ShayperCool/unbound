@@ -425,10 +425,10 @@ pub fn update_in(systems: &mut [SystemSolver], index: usize) -> usize {
 }
 
 impl SystemSolver {
-    /// A system alone. The solve is the same in a gamma-space project as in a linear one
-    /// (tests/projects/realtimegi `--color-space gamma`, `room-base`: the lightmaps match);
-    /// only their decoding for drawing differs. Fails for transports that reference other
-    /// systems (not supported yet).
+    /// A system alone. The solver does not depend on the project's color space: its inputs are
+    /// converted before it, and the lightmaps' decoding for drawing differs after it
+    /// (tests/projects/realtimegi `--color-space gamma`). Fails for transports that reference
+    /// other systems (not supported yet).
     pub fn new(system: Arc<System>) -> Result<Self> {
         let scene = [system.clone()];
         Self::new_in_scene(system, &scene)

@@ -23,8 +23,10 @@ lightmaps are drawn), light probes of a scene that are not the current ones (add
 systems that reference another scene's systems and linear light intensity in the built-in
 pipeline. In a gamma-space project the systems solve as in a linear one and the shaders decode
 the realtime lightmap with an exponent of 1/2.2 (`unity_DynamicLightmap_HDR` (1, 1/2.2) instead
-of (1, 1); tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps and frames
-match, as loaded and with its point light moved; its other cases are not measured there).
+of (1, 1)), and `DynamicGI.SetEmissive` takes its color as a gamma color in both
+(tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps and frames match, as
+loaded, with its point light moved and in the three emission cases; its other cases are not
+measured there).
 
 ## Documented contract (6000.0)
 

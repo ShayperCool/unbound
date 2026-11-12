@@ -196,7 +196,9 @@ there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`.
 
 With `--color-space gamma` the same project is in the gamma color space (run.py changes the
 copy's player settings) and the probe records the scenes without lighting data, their rows
-named as above, then the Room lit (`room-base`, and `room-moved` with its point light moved). That set is its own reference, `Reference/unity-<version>/gamma`.
+named as above, then the Room lit: `room-base`, `room-moved` with its point light moved, and
+the three emission cases (`room-emission-call`, `room-setemissive`,
+`room-setemissive-then-call`). That set is its own reference, `Reference/unity-<version>/gamma`.
 
 With `--pipeline urp` the same project is drawn by the Universal Render Pipeline (run.py adds
 the package and the pipeline assets of tests/projects/urp to the run's copy) and the probe

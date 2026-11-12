@@ -284,13 +284,15 @@ namespace UnityEngine
                 at.Scene.Systems[at.System].MaterialsDirty = true;
         }
 
-        /// <summary>DynamicGI.SetEmissive: the renderer emits <paramref name="color"/> (in the
-        /// project's color space) for realtime GI instead of its materials' emission, until the
-        /// scene unloads.</summary>
+        /// <summary>DynamicGI.SetEmissive: the renderer emits <paramref name="color"/> for realtime
+        /// GI instead of its materials' emission, until the scene unloads. The color is taken as
+        /// a gamma color and converted, in a gamma-space project as in a linear one, as the
+        /// solver's other inputs are (tests/projects/realtimegi `room-setemissive`, and with
+        /// `--color-space gamma`).</summary>
         internal static unsafe void SetEmissive(Renderer renderer, Color color)
         {
             if (renderer == null || !s_Renderers.TryGetValue(renderer, out var at)) return;
-            var linear = QualitySettings.activeColorSpace == ColorSpace.Linear ? color.linear : color;
+            var linear = color.linear;
             float* rgb = stackalloc float[3] { linear.r, linear.g, linear.b };
             NativeBuffer error;
             if (Native.Api.GiSetEmissive(at.Scene.Handle, at.System, at.Index, rgb, &error) != 0) Failed(at.Scene, error);
