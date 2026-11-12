@@ -1,3 +1,4 @@
+// Unbound: select preset tables independently for each context initialization.
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
 // Copyright 2011-2023 Arm Limited
@@ -517,7 +518,7 @@ astcenc_error astcenc_config_init(
 		return ASTCENC_ERR_BAD_QUALITY;
 	}
 
-	static const std::array<astcenc_preset_config, 6>* preset_configs;
+	const std::array<astcenc_preset_config, 6>* preset_configs;
 	int texels_int = block_x * block_y * block_z;
 	if (texels_int < 25)
 	{

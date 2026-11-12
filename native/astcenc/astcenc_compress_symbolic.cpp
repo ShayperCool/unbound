@@ -1,3 +1,4 @@
+// Unbound: keep the search threshold local to the current encoder configuration.
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
 // Copyright 2011-2023 Arm Limited
@@ -1280,7 +1281,7 @@ void compress_block(
 		1.0f
 	};
 
-	static const float errorval_overshoot = 1.0f / ctx.config.tune_mse_overshoot;
+	const float errorval_overshoot = 1.0f / ctx.config.tune_mse_overshoot;
 
 	// Only enable MODE0 fast path (trial 0) if 2D, and more than 25 texels
 	int start_trial = 1;

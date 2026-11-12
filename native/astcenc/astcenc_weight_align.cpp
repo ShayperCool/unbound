@@ -1,3 +1,4 @@
+// Unbound: initialize the shared angular tables once before concurrent encoding.
 // SPDX-License-Identifier: Apache-2.0
 // ----------------------------------------------------------------------------
 // Copyright 2011-2022 Arm Limited
@@ -38,6 +39,7 @@
  */
 
 #include "astcenc_internal.h"
+#include <mutex>
 #include "astcenc_vecmathlib.h"
 
 #include <stdio.h>
@@ -70,16 +72,19 @@ alignas(ASTCENC_VECALIGN) static float cos_table[SINCOS_STEPS][ANGULAR_STEPS];
 /* See header for documentation. */
 void prepare_angular_tables()
 {
-	for (unsigned int i = 0; i < ANGULAR_STEPS; i++)
-	{
-		float angle_step = static_cast<float>(i + 1);
-
-		for (unsigned int j = 0; j < SINCOS_STEPS; j++)
+	static std::once_flag once;
+	std::call_once(once, []() {
+		for (unsigned int i = 0; i < ANGULAR_STEPS; i++)
 		{
-			sin_table[j][i] = static_cast<float>(sinf((2.0f * astc::PI / (SINCOS_STEPS - 1.0f)) * angle_step * static_cast<float>(j)));
-			cos_table[j][i] = static_cast<float>(cosf((2.0f * astc::PI / (SINCOS_STEPS - 1.0f)) * angle_step * static_cast<float>(j)));
+			float angle_step = static_cast<float>(i + 1);
+
+			for (unsigned int j = 0; j < SINCOS_STEPS; j++)
+			{
+				sin_table[j][i] = static_cast<float>(sinf((2.0f * astc::PI / (SINCOS_STEPS - 1.0f)) * angle_step * static_cast<float>(j)));
+				cos_table[j][i] = static_cast<float>(cosf((2.0f * astc::PI / (SINCOS_STEPS - 1.0f)) * angle_step * static_cast<float>(j)));
+			}
 		}
-	}
+	});
 }
 
 /**
