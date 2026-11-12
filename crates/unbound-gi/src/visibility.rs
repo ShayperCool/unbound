@@ -109,6 +109,34 @@ impl Visibility {
         })
     }
 
+    /// The rings of latitude: each ring's first direction and number of directions.
+    pub fn rings(&self) -> &[(u32, u32)] {
+        &self.rings
+    }
+
+    /// The stored values of direction `direction` for `clusters` clusters.
+    pub fn values(&self, direction: usize, clusters: usize) -> Result<Vec<u8>> {
+        let (bits, mask) = self.bits();
+        let per_direction = clusters.div_ceil(self.values_per_byte);
+        let range = self
+            .streams
+            .get(direction / self.directions_per_stream)
+            .with_context(|| format!("visibility direction {direction} not stored"))?
+            .clone();
+        let mut stream = Vec::new();
+        decode_runs(&self.data[range], &mut stream)?;
+        let at = (direction % self.directions_per_stream) * per_direction;
+        let bytes = stream
+            .get(at..at + per_direction)
+            .context("a visibility stream shorter than its directions")?;
+        Ok((0..clusters)
+            .map(|c| {
+                ((bytes[c / self.values_per_byte] as u32 >> ((c % self.values_per_byte) * bits))
+                    & mask) as u8
+            })
+            .collect())
+    }
+
     /// The bits of one value and their mask.
     fn bits(&self) -> (usize, u32) {
         let bits = 8 / self.values_per_byte;
@@ -209,6 +237,123 @@ impl Visibility {
     }
 }
 
+/// The rings of latitude of `count` rings around +y (from +y to -y, `count` at least 2): each
+/// ring's first direction and number of directions, `floor(2 (count - 1) sin(latitude)) + 1`
+/// (the Unity 6000.0.71f1 Editor's precompute: 875 directions on 27 rings in
+/// tests/projects/realtimegi).
+pub fn ring_layout(count: usize) -> Vec<(u32, u32)> {
+    let last = (count.max(2) - 1) as f64;
+    let mut first = 0u32;
+    (0..count.max(2))
+        .map(|r| {
+            let n =
+                (2.0 * last * (std::f64::consts::PI * r as f64 / last).sin()).floor() as u32 + 1;
+            let ring = (first, n);
+            first += n;
+            ring
+        })
+        .collect()
+}
+
+/// The unit direction `j` of ring `r` of `rings` (toward the light): latitude `r / (rings - 1)`
+/// of a half turn from +y, longitude `j / n` of a turn, as [`Visibility::lookup`] reads them.
+pub fn ring_direction(rings: usize, r: usize, j: u32, n: u32) -> [f32; 3] {
+    let theta = std::f64::consts::PI * r as f64 / (rings.max(2) - 1) as f64;
+    let phi = 2.0 * std::f64::consts::PI * (j as f64 / n as f64) - std::f64::consts::PI;
+    [
+        (-theta.sin() * phi.cos()) as f32,
+        theta.cos() as f32,
+        (theta.sin() * phi.sin()) as f32,
+    ]
+}
+
+impl Visibility {
+    /// Visibility made of `values`: per stored direction (the rings' in order), per cluster a
+    /// value from 0 (no point sees it) to `(1 << (8 / values_per_byte)) - 1` (all do), stored in
+    /// streams of `directions_per_stream` directions.
+    pub fn from_values(
+        rings: Vec<(u32, u32)>,
+        values_per_byte: usize,
+        directions_per_stream: usize,
+        values: &[Vec<u8>],
+    ) -> Result<Self> {
+        ensure!(
+            matches!(values_per_byte, 1 | 2 | 4 | 8) && directions_per_stream > 0,
+            "{values_per_byte} visibility values per byte, {directions_per_stream} directions a stream"
+        );
+        ensure!(
+            (1..=MAX_RINGS).contains(&rings.len()),
+            "{} rings of directions",
+            rings.len()
+        );
+        let directions: u32 = rings.iter().map(|r| r.1).sum();
+        ensure!(
+            values.len() == directions as usize,
+            "{} directions of values for {directions}",
+            values.len()
+        );
+        let clusters = values.first().map_or(0, Vec::len);
+        let bits = 8 / values_per_byte;
+        let mask = (1u32 << bits) - 1;
+        let per_direction = clusters.div_ceil(values_per_byte);
+        let (mut data, mut streams) = (Vec::new(), Vec::new());
+        for chunk in values.chunks(directions_per_stream) {
+            let mut raw = Vec::with_capacity(chunk.len() * per_direction);
+            for direction in chunk {
+                ensure!(
+                    direction.len() == clusters,
+                    "directions of different cluster counts"
+                );
+                for byte in direction.chunks(values_per_byte) {
+                    raw.push(byte.iter().enumerate().fold(0u8, |acc, (k, &v)| {
+                        acc | (((v as u32).min(mask) as u8) << (k * bits))
+                    }));
+                }
+            }
+            let start = data.len();
+            encode_runs(&raw, &mut data);
+            streams.push(start..data.len());
+        }
+        Ok(Self {
+            values_per_byte,
+            directions_per_stream,
+            streams,
+            data,
+            rings,
+        })
+    }
+}
+
+/// Run-length encoding [`decode_runs`] reads: runs of three or more equal bytes repeat, the rest
+/// is copied.
+fn encode_runs(src: &[u8], out: &mut Vec<u8>) {
+    const MAX: usize = 0x7F;
+    let mut i = 0;
+    let mut literal: Vec<u8> = Vec::new();
+    let flush = |literal: &mut Vec<u8>, out: &mut Vec<u8>| {
+        for chunk in literal.chunks(MAX) {
+            out.push(chunk.len() as u8);
+            out.extend_from_slice(chunk);
+        }
+        literal.clear();
+    };
+    while i < src.len() {
+        let mut run = 1;
+        while i + run < src.len() && src[i + run] == src[i] && run < MAX {
+            run += 1;
+        }
+        if run >= 3 {
+            flush(&mut literal, out);
+            out.push(0x80 + run as u8);
+            out.push(src[i]);
+        } else {
+            literal.extend_from_slice(&src[i..i + run]);
+        }
+        i += run;
+    }
+    flush(&mut literal, out);
+}
+
 /// Run-length decoding: a byte n below 0x80 copies the next n bytes, a byte 0x80 + n repeats
 /// the next byte n times.
 fn decode_runs(src: &[u8], out: &mut Vec<u8>) -> Result<()> {
@@ -235,6 +380,54 @@ fn decode_runs(src: &[u8], out: &mut Vec<u8>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn made_visibility_reads_back() {
+        // Every run length and mixtures round-trip through the encoding.
+        for src in [
+            vec![],
+            vec![5u8; 300],
+            (0..300u32).map(|v| (v % 7) as u8).collect(),
+            [vec![1u8; 3], vec![2, 3], vec![4u8; 130]].concat(),
+        ] {
+            let mut encoded = Vec::new();
+            encode_runs(&src, &mut encoded);
+            let mut decoded = Vec::new();
+            decode_runs(&encoded, &mut decoded).unwrap();
+            assert_eq!(decoded, src);
+        }
+        // Values of 5 clusters over the 27 rings' directions: direction d gives cluster c
+        // (c + d) % 4; looking a stored direction up reads its values back.
+        let rings = ring_layout(27);
+        assert_eq!(rings.len(), 27);
+        assert_eq!(rings.iter().map(|r| r.1).sum::<u32>(), 875);
+        assert_eq!(rings[13], (411, 53));
+        let n: u32 = rings.iter().map(|r| r.1).sum();
+        let values: Vec<Vec<u8>> = (0..n)
+            .map(|d| (0..5).map(|c| ((c + d) % 4) as u8).collect())
+            .collect();
+        let v = Visibility::from_values(rings.clone(), 4, 4, &values).unwrap();
+        let mut out = [0u32; 5];
+        for (r, &(first, count)) in rings.iter().enumerate().step_by(5) {
+            for j in [0, count / 2] {
+                let d = ring_direction(27, r, j, count);
+                let (index, weight) = v.lookup(d);
+                // The direction itself (within rounding of its position) weighs nearly all.
+                let k = (0..4).max_by_key(|&k| weight[k]).unwrap();
+                assert_eq!(index[k], (first + j) as usize, "ring {r} direction {j}");
+                v.visible_points(d, |_| 300, &mut Vec::new(), &mut out)
+                    .unwrap();
+                for (c, &points) in out.iter().enumerate() {
+                    let expected = ((c as u32 + first + j) % 4) * 100;
+                    assert!(
+                        points.abs_diff(expected) <= 3,
+                        "{r} {j} {c}: {points} {expected}"
+                    );
+                }
+            }
+        }
+        assert!(Visibility::from_values(rings, 3, 4, &values).is_err());
+    }
 
     #[test]
     fn runs_copy_and_repeat() {

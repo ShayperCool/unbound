@@ -762,6 +762,17 @@ is how the Editor's products are made in the measured release, as follows.
   the half Lambert term 2.4/255 above it. Open: a system's transport traces only its own
   surfaces and references only its own values and the environment; scenes of several systems
   (the probe's `RoomSystems`) need the others' surfaces and values.
+- **Visibility** (`visibility.rs`): for directional lights, per direction of 27 rings of
+  latitude around +y (ring r of `floor(52 sin(r / 26 of a half turn)) + 1` directions, 875 in
+  all, as the Editor's) and per cluster, the share of its points from which a ray toward that
+  direction leaves the scene, rounded to 2 bits. A point less than 0.25 (cosine) behind its
+  surface's horizon takes the direction along its surface instead (so that a light at the
+  horizon, read between stored directions, is not cut off), one farther behind does not see it.
+  Computed for the Editor's own clusters of the Room (their points), 99.5% of the 273 000
+  values are the Editor's and every one within a step of it (the stored points are rounded to
+  8 bits in their cluster's bounds). With Unbound's clusters, transport and visibility the
+  directional light's Room cases (`room-directional`, `-turned`, `-noshadows`) put 498 to 520
+  of their 5070 lightmap values outside the comparator's tolerance, as the other light cases.
 
 ## Engine
 
@@ -875,6 +886,6 @@ measure):
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
   precompute through the same probe: the clusters, their material samples and bounce
-  resampling and the transport are made and compared
-  ([Unbound's precompute](#unbounds-precompute)); the visibility, the probe transport and their
-  use are open.
+  resampling, the transport and the visibility are made and compared
+  ([Unbound's precompute](#unbounds-precompute)); the probe transport and their use are
+  open.

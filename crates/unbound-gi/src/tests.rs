@@ -3033,8 +3033,8 @@ fn cluster_containing(triangles: &[(usize, [[f32; 3]; 3])], p: [f32; 3]) -> Opti
     best.map(|b| b.1)
 }
 
-/// The system of a scene made of the Room's renderers with Unbound's own clusters and transport
-/// in place of the Editor's (its layout, chart mask and visibility stay the Editor's).
+/// The system of a scene made of the Room's renderers with Unbound's own clusters, transport and
+/// visibility in place of the Editor's (its layout and chart mask stay the Editor's).
 fn own_room_system(data: &Precomputed, scene: &str) -> System {
     use crate::precompute::{clusters, transport};
     let own = room_instances_of(data, scene);
@@ -3062,6 +3062,8 @@ fn own_room_system(data: &Precomputed, scene: &str) -> System {
         transport::DEFAULT_SETTINGS,
     )
     .unwrap();
+    system.visibility =
+        Ok(crate::precompute::visibility::visibility(&clustering.input, &clustering).unwrap());
     system.input = clustering.input;
     system.materials = clustering.materials;
     system
@@ -3166,8 +3168,7 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
     let mut r = Replay::new();
     r.solver = SystemSolver::new(Arc::new(own)).unwrap();
     r.data.systems[0] = r.solver.system().clone();
-    // The probe's Room cases in their order, but the directional light's (they read the
-    // precomputed visibility); converged from each other as in the Editor.
+    // The probe's Room cases in their order, converged from each other as in the Editor.
     let moved = Room {
         light: MOVED,
         ..BASE
@@ -3210,11 +3211,16 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         spot: Some(([-1.5, 1.0, 0.8], [1.0, 0.0, 0.0], 60.0)),
         ..ambient
     };
-    let gradient = Room {
+    let sun = Room {
         spot: None,
+        sun: Some((40.0, 25.0)),
+        ..behind
+    };
+    let gradient = Room {
+        sun: None,
         panel_set_emissive: Some([0.0; 3]),
         gradient: Some([[0.5, 0.6, 0.9], [0.4, 0.35, 0.3], [0.15, 0.12, 0.1]]),
-        ..behind
+        ..sun
     };
     let cube = Room {
         cube: true,
@@ -3227,7 +3233,7 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         ..cube
     };
     // With the values outside the probe comparator's tolerance (of 5070) measured with Unbound's
-    // clusters and transport. (In a local experiment with the Editor's own cluster geometry,
+    // clusters, transport and visibility. (In a local experiment with the Editor's own cluster geometry,
     // which its precompute keeps outside the project, and this transport, the first four were
     // 12, 14, 29 and 81: docs/REALTIME_GI.md, Unbound's precompute.)
     let cases = [
@@ -3258,7 +3264,17 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         ),
         (spot, "room-spot", 433),
         (behind, "room-spot-behind", 443),
-        (gradient, "room-gradient", 87),
+        (sun, "room-directional", 498),
+        (
+            Room {
+                sun: Some((57.0, -33.0)),
+                ..sun
+            },
+            "room-directional-turned",
+            520,
+        ),
+        (sun, "room-directional-noshadows", 505),
+        (gradient, "room-gradient", 86),
         (cube, "room-envdata", 155),
         (flat, "room-sky-none", 157),
     ];
@@ -3335,4 +3351,49 @@ fn own_transport_gives_the_directionality_of_the_editors() {
         );
         assert!(count > 6000 && mean < 5.5, "{case}: {mean}");
     }
+}
+
+#[test]
+fn own_visibility_of_the_editors_points_matches_its_precompute() {
+    // The visibility Unbound computes for the Editor's own clusters of the Room (its points)
+    // against the values the Editor stored: the same 27 rings, and per direction and cluster
+    // the same 2-bit share of points that see the sky but for points near a step (the stored
+    // points are rounded to 8 bits in their cluster's bounds).
+    use crate::precompute::clusters;
+    let data = room_data();
+    let editor = &data.systems[0];
+    let stored = editor.visibility.as_ref().unwrap();
+    assert_eq!(stored.rings(), &crate::visibility::ring_layout(27)[..]);
+    let own = room_instances(&data);
+    let instances: Vec<clusters::Instance> = own
+        .iter()
+        .map(|i| clusters::Instance {
+            positions: &i.positions,
+            normals: &i.normals,
+            texels: &i.texels,
+            triangles: &CUBE_TRIANGLES,
+            cluster_size: 1.0,
+            modelling_tolerance: 0.01,
+        })
+        .collect();
+    let surfaces = clusters::cluster(&instances, 52, 52).unwrap();
+    let ours = crate::precompute::visibility::visibility(&editor.input, &surfaces).unwrap();
+    assert_eq!(ours.rings(), stored.rings());
+    let n = editor.input.clusters();
+    let directions: u32 = stored.rings().iter().map(|r| r.1).sum();
+    let (mut same, mut near, mut total) = (0, 0, 0);
+    for d in 0..directions as usize {
+        let (a, b) = (ours.values(d, n).unwrap(), stored.values(d, n).unwrap());
+        for (x, y) in a.iter().zip(&b) {
+            same += (x == y) as usize;
+            near += (x.abs_diff(*y) <= 1) as usize;
+            total += 1;
+        }
+    }
+    eprintln!("visibility: {same} of {total} values the Editor's, {near} within one step");
+    // Measured: 93% the same.
+    assert!(
+        same * 100 >= total * 92 && near * 100 >= total * 99,
+        "{same} {near} {total}"
+    );
 }

@@ -773,3 +773,39 @@ fn an_odd_output_solves_its_directionality_on_whole_blocks() {
         }
     }
 }
+
+#[test]
+fn a_cluster_sees_the_sky_above_its_horizon() {
+    use crate::visibility::{ring_direction, ring_layout};
+    // A floor under the open sky, and the same under a lid.
+    let open = floor(2.0, 2.0);
+    let mut lid = Mesh::default();
+    lid.quad(
+        [-50.0, 1.0, -50.0],
+        [100.0, 0.0, 0.0],
+        [0.0, 0.0, 100.0],
+        [0.0, 0.0],
+    );
+    for (meshes, covered) in [(vec![&open], false), (vec![&open, &lid], true)] {
+        let instances: Vec<Instance> = meshes.iter().map(|m| m.instance(1.0)).collect();
+        let c = cluster(&instances, 32, 32).unwrap();
+        let v = super::visibility::visibility(&c.input, &c).unwrap();
+        let rings = ring_layout(super::visibility::RINGS);
+        // The floor's clusters only (the lid's face down).
+        let floor_clusters: Vec<usize> = (0..c.input.clusters())
+            .filter(|&k| c.input.positions[c.input.cluster_points[k] as usize][1] == 0.0)
+            .collect();
+        assert_eq!(floor_clusters.len(), 4);
+        for (r, &(first, n)) in rings.iter().enumerate() {
+            let d = ring_direction(super::visibility::RINGS, r, 0, n);
+            let values = v.values(first as usize, c.input.clusters()).unwrap();
+            for &k in &floor_clusters {
+                // Above the horizon all of it sees the sky, but under the lid; at the horizon
+                // and a little behind it (along the surface, between floor and lid) too;
+                // farther behind none.
+                let expected = if d[1] <= -0.25 || (covered && d[1] > 0.01) { 0 } else { 3 };
+                assert_eq!(values[k], expected, "ring {r} ({d:?}), covered {covered}");
+            }
+        }
+    }
+}
