@@ -22,12 +22,6 @@ namespace UnityEngine
         public static Texture exposure { get => s_Exposure; set => s_Exposure = value; }
         public static float probeSize => Unbound.Runtime.Compat.GizmoProbeSize;
 
-        static void UnsupportedDrawing()
-        {
-            if (!s_Drawing) OutsideCallback();
-            throw new NotSupportedException("Unbound: this Game-view Gizmos drawing operation is not supported.");
-        }
-
         static void OutsideCallback() => throw new ArgumentException("Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected.");
 
         public static void DrawLine(Vector3 from, Vector3 to) => Line(from, to);
@@ -84,12 +78,41 @@ namespace UnityEngine
             try { Draw(mesh, Matrix4x4.TRS(position, rotation, scale), true, submeshIndex); }
             finally { GL.wireframe = previous; }
         }
-        public static void DrawIcon(Vector3 center, string name, bool allowScaling, Color tint) => UnsupportedDrawing();
-        public static void DrawGUITexture(Rect screenRect, Texture texture, int leftBorder, int rightBorder, int topBorder, int bottomBorder, Material mat) => UnsupportedDrawing();
+        /// <summary>Icons are not drawn in the Game view (the Unity 6000.0.71f1 Editor's, with
+        /// Gizmos on: tests/projects/renderapi <c>gizmoops.*</c>).</summary>
+        public static void DrawIcon(Vector3 center, string name, bool allowScaling, Color tint)
+        {
+            if (!s_Drawing) OutsideCallback();
+        }
+
+        /// <summary>The Game view of the Unity 6000.0.71f1 Editor draws the texture on a quad in the
+        /// world's XY plane, but how it rounds a rect that is not on whole units is not reproduced
+        /// (tests/projects/renderapi README): refused.</summary>
+        public static void DrawGUITexture(Rect screenRect, Texture texture, int leftBorder, int rightBorder, int topBorder, int bottomBorder, Material mat)
+        {
+            if (!s_Drawing) OutsideCallback();
+            throw new NotSupportedException("Unbound: Game-view Gizmos.DrawGUITexture is not supported.");
+        }
+
+        /// <summary>A frustum's edges in the gizmo matrix's space: the rectangles at
+        /// <paramref name="minRange"/> and <paramref name="maxRange"/> along +Z from
+        /// <paramref name="center"/> (vertical field of view <paramref name="fov"/> degrees, width over
+        /// height <paramref name="aspect"/>) and the four lines between their corners (tests/projects/
+        /// renderapi <c>gizmoops.*</c>). Outside gizmo callbacks it does nothing (renderapi).</summary>
         [Unbound.EditorFaithful("Outside gizmo callbacks DrawFrustum does nothing in the 6000.0.71f1 Play-mode capture (renderapi).")]
         public static void DrawFrustum(Vector3 center, float fov, float maxRange, float minRange, float aspect)
         {
-            if (s_Drawing) UnsupportedDrawing();
+            if (!s_Drawing) return;
+            float slope = Mathf.Tan(fov * .5f * Mathf.Deg2Rad);
+            Vector3 Corner(float range, float x, float y) => center + new Vector3(x * range * slope * aspect, y * range * slope, range);
+            for (int i = 0; i < 4; i++)
+            {
+                float x0 = i == 0 || i == 3 ? -1 : 1, y0 = i < 2 ? -1 : 1;
+                float x1 = i < 2 ? 1 : -1, y1 = i == 0 || i == 3 ? -1 : 1;
+                Line(Corner(minRange, x0, y0), Corner(minRange, x1, y1));
+                Line(Corner(maxRange, x0, y0), Corner(maxRange, x1, y1));
+                Line(Corner(minRange, x0, y0), Corner(maxRange, x0, y0));
+            }
         }
         [Unbound.EditorFaithful("Without a current gizmo view, the 6000.0.71f1 Play-mode capture answers NaN (renderapi).")]
         public static float CalculateLOD(Vector3 position, float radius) => float.NaN;

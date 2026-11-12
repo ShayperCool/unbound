@@ -18,7 +18,7 @@ use unbound_project::Project;
 
 const RENDERING_LIMITATIONS: &[&str] = &[
     "Editor asynchronous shader-compilation startup delays are not reproduced; the FlareLayer probe controls compilation synchronously.",
-    "Game-view Gizmos.DrawIcon, DrawGUITexture and DrawFrustum are not supported; Scene-view rendering is not available.",
+    "Game-view Gizmos.DrawGUITexture is not supported; Scene-view rendering is not available.",
 ];
 
 const AUDIO_LIMITATIONS: &[&str] = &[
