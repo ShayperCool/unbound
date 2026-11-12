@@ -609,8 +609,10 @@ namespace Unbound.Runtime
         (int Left, int Bottom, int Right, int Top) Squares(int x, int y, int width, int height)
         {
             int last = m_GridColumns - 1;
-            return (Math.Clamp(x / GridSide, 0, last), Math.Clamp(y / GridSide, 0, last),
-                Math.Clamp((x + width - 1) / GridSide, 0, last), Math.Clamp((y + height - 1) / GridSide, 0, last));
+            int left = Math.Clamp(x / GridSide, 0, last), bottom = Math.Clamp(y / GridSide, 0, last);
+            // A cell of no width or height (a negative character spacing) still covers its square.
+            return (left, bottom, Math.Clamp((x + Math.Max(1, width) - 1) / GridSide, left, last),
+                Math.Clamp((y + Math.Max(1, height) - 1) / GridSide, bottom, last));
         }
 
         bool Free(int x, int y, int width, int height)

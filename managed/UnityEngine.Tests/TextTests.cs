@@ -433,7 +433,8 @@ namespace Unbound.Tests
 
         /// <summary>A reset grows the texture at once to the area the kept characters need at the
         /// density the full texture had (their squared sizes per texel, 1.1 times over), not a side
-        /// at a time (measured, tests/projects/textmesh atlas2).</summary>
+        /// at a time: the rule measured in tests/projects/textmesh atlas2, pinned here on synthetic
+        /// glyphs.</summary>
         [Fact]
         public void AResetGrowsToTheEstimatedAreaAtOnce()
         {
