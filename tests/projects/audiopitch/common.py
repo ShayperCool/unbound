@@ -22,11 +22,15 @@ def all_cases():
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_')) and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_')) and key.startswith('context_') == contexts]
 
 
 def surround_cases():
     return [key for key in all_cases() if key.startswith('context_fx_')]
+
+
+def zone_cases():
+    return [key for key in all_cases() if key.startswith('context_zone_')]
 
 
 def prologic_cases():
@@ -87,6 +91,7 @@ def profile(name, rate):
     if name == 'surround': return dict.fromkeys(surround_cases())
     if name == 'settings': return dict.fromkeys(settings_cases())
     if name == 'prologic': return dict.fromkeys(prologic_cases())
+    if name == 'zones': return dict.fromkeys(zone_cases())
     if name == 'wet-edges': return dict.fromkeys(wet_edge_cases())
     if name == 'wet': return dict.fromkeys(wet_cases())
     if name == 'transitions': return dict.fromkeys(transition_cases())

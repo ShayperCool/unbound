@@ -101,3 +101,7 @@ unchanged.
 
 The paired Stereo/Prologic capture and its measured fallback scope are in
 [PROLOGIC.md](PROLOGIC.md).
+
+The independent `zones` profile measures live User parameters, radii and movement,
+source sends, overlapping zones and listener-component placement. See [ZONES.md](ZONES.md)
+for contracts, reference history and remaining scope.

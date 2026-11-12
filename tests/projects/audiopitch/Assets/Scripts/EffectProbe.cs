@@ -832,6 +832,83 @@ public partial class EffectProbe : MonoBehaviour
         new[] { "context_prologic_7_spatial_rear_rotated", "mode=Prologic", "blocks=32", "preflight=4", "music=noise:0.2", "mono=1", "Music:Att", "blend=1", "pos=0:0:-10", "listener_yaw=90" },
         new[] { "context_prologic_7_stereo_clip", "mode=Prologic", "blocks=32", "preflight=4", "music=noise:0.2", "Music:Att" },
         new[] { "context_prologic_7_reverb_boost", "mode=Prologic", "blocks=32", "preflight=4", "music=generator", "gen=all", "Music:Att,Reverb", "Music.Reverb.Dry Level=-600", "Music.Reverb.Room=-500", "Music.Reverb.Room HF=-300", "Music.Reverb.Decay Time=0.3", "Music.Reverb.Reflections=-500", "Music.Reverb.Reflect Delay=0.007", "Music.Reverb.Reverb=-500", "Music.Reverb.Reverb Delay=0.011", "Music.Reverb.Wet=30" },
+        new[] { "context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_dry" },
+        new[] { "context_zone_2_roomhf", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=roomhf", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_2_delay", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=delay", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_2_radius", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=radius", "zone=1", "zone_profile=user", "listener_start=12.5" },
+        new[] { "context_zone_2_zone_move", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=zone_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_2_listener_move", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_2_source_mix", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=source_mix", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_2_preset_then_user", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_then_user", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_2_preset_control", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_control", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_2_overlap_move", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_move", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_2_overlap_scalar", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_scalar", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_2_overlap_enable", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_enable", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_2_listener_chorus", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener" },
+        new[] { "context_zone_4_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_dry" },
+        new[] { "context_zone_4_roomhf", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=roomhf", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_4_delay", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=delay", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_4_radius", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=radius", "zone=1", "zone_profile=user", "listener_start=12.5" },
+        new[] { "context_zone_4_zone_move", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=zone_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_4_listener_move", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_4_source_mix", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=source_mix", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_4_preset_then_user", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_then_user", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_4_preset_control", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_control", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_4_overlap_move", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_move", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_4_overlap_scalar", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_scalar", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_4_overlap_enable", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_enable", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_4_listener_chorus", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener" },
+        new[] { "context_zone_5_listener_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_dry" },
+        new[] { "context_zone_5_roomhf", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=roomhf", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_5_delay", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=delay", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_5_radius", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=radius", "zone=1", "zone_profile=user", "listener_start=12.5" },
+        new[] { "context_zone_5_zone_move", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=zone_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_5_listener_move", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_5_source_mix", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=source_mix", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_5_preset_then_user", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_then_user", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_5_preset_control", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_control", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_5_overlap_move", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_move", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_5_overlap_scalar", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_scalar", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_5_overlap_enable", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_enable", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_5_listener_chorus", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener" },
+        new[] { "context_zone_6_listener_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_dry" },
+        new[] { "context_zone_6_roomhf", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=roomhf", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_6_delay", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=delay", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_6_radius", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=radius", "zone=1", "zone_profile=user", "listener_start=12.5" },
+        new[] { "context_zone_6_zone_move", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=zone_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_6_listener_move", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_6_source_mix", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=source_mix", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_6_preset_then_user", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_then_user", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_6_preset_control", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_control", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_6_overlap_move", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_move", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_6_overlap_scalar", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_scalar", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_6_overlap_enable", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_enable", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_6_listener_chorus", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener" },
+        new[] { "context_zone_8_listener_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_dry" },
+        new[] { "context_zone_8_roomhf", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=roomhf", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_8_delay", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=delay", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_8_radius", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=radius", "zone=1", "zone_profile=user", "listener_start=12.5" },
+        new[] { "context_zone_8_zone_move", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=zone_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_8_listener_move", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_move", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_8_source_mix", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=source_mix", "zone=1", "zone_profile=user" },
+        new[] { "context_zone_8_preset_then_user", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_then_user", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_8_preset_control", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=preset_control", "zone=1", "zone_profile=generic" },
+        new[] { "context_zone_8_overlap_move", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_move", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_8_overlap_scalar", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_scalar", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_8_overlap_enable", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=overlap_enable", "zone=1", "zone_profile=user", "overlap=1" },
+        new[] { "context_zone_8_listener_chorus", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener" },
+        new[] { "context_zone_2_listener_chorus_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "component=chorus:listener" },
+        new[] { "context_zone_2_listener_chorus_bypass", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener", "listener_bypass=1" },
+        new[] { "context_zone_4_listener_chorus_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "component=chorus:listener" },
+        new[] { "context_zone_4_listener_chorus_bypass", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener", "listener_bypass=1" },
+        new[] { "context_zone_5_listener_chorus_dry", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "component=chorus:listener" },
+        new[] { "context_zone_5_listener_chorus_bypass", "mode=Surround", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener", "listener_bypass=1" },
+        new[] { "context_zone_6_listener_chorus_dry", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "component=chorus:listener" },
+        new[] { "context_zone_6_listener_chorus_bypass", "mode=Mode5point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener", "listener_bypass=1" },
+        new[] { "context_zone_8_listener_chorus_dry", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "component=chorus:listener" },
+        new[] { "context_zone_8_listener_chorus_bypass", "mode=Mode7point1", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=listener_chorus", "zone=1", "zone_profile=user", "component=chorus:listener", "listener_bypass=1" },
+        new[] { "context_zone_2_radius_near", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=radius", "zone=1", "zone_profile=user", "listener_start=10.5" },
+        new[] { "context_zone_2_radius_reference", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "zone_control=radius_reference", "zone=1", "zone_profile=user", "listener_start=12.5" },
     };
     static int BlockCount, ClipFrames;
     public static string[] Selected()
@@ -908,6 +985,7 @@ public partial class EffectProbe : MonoBehaviour
                 case "ramp": if (f >= 1024) { l = 0.25f * (f - 1024) / (ClipFrames - 1024); r = -0.5f * l; } break;
                 case "tone": if (f >= 1024) l = r = (float)(amplitude * Math.Sin(2 * Math.PI * frequency * (f - 1024) / rate)); if (!on) { l *= 0.1f; r *= 0.1f; } break;
                 case "noise":
+                case "noise_full":
                     seed = seed * 1664525u + 1013904223u; l = amplitude * ((seed >> 8) / 8388608f - 1f);
                     seed = seed * 1664525u + 1013904223u; r = amplitude * ((seed >> 8) / 8388608f - 1f);
                     if (f < 1024) l = r = 0;
@@ -924,11 +1002,85 @@ public partial class EffectProbe : MonoBehaviour
                 case "none": break;
                 default: throw new Exception("Unknown signal " + spec);
             }
-            if (f >= 16384) l = r = 0;
+            if (f >= 16384 && parts[0] != "noise_full") l = r = 0;
             data[2 * f] = l; data[2 * f + 1] = r;
         }
         return data;
     }
+    static void ConfigureZone(AudioReverbZone zone)
+    {
+        zone.reverbPreset = AudioReverbPreset.User;
+        zone.room = -500; zone.roomHF = -300; zone.roomLF = -200;
+        zone.decayTime = 0.3f; zone.decayHFRatio = 0.7f;
+        zone.reflections = -500; zone.reflectionsDelay = 0.007f;
+        zone.reverb = -500; zone.reverbDelay = 0.011f;
+        zone.HFReference = 5000; zone.LFReference = 250;
+        zone.diffusion = 100; zone.density = 100;
+    }
+
+    static bool ChangeZone(string kind, int block, AudioReverbZone zone,
+        AudioReverbZone other, AudioSource source, Transform listener)
+    {
+        int phase = block == 4 ? 0 : block == 8 ? 1 : block == 16 ? 2 : block == 20 ? 3 : block == 24 ? 4 : -1;
+        if (phase < 0) return false;
+        if (kind == "overlap_move") {
+            if (phase == 0) other.transform.position = new Vector3(12.5f, 0, 0);
+            if (phase == 1) zone.transform.position = new Vector3(12.5f, 0, 0);
+            if (phase == 2) other.transform.position = new Vector3(20, 0, 0);
+            if (phase == 3) zone.transform.position = Vector3.zero;
+            if (phase == 4) other.transform.position = Vector3.zero;
+            return true;
+        }
+        if (phase >= 3) return false;
+        if (kind == "listener_move" || kind == "listener_dry") {
+            listener.position = new Vector3(phase == 0 ? 12.5f : phase == 1 ? 20 : 0, 0, 0);
+            return true;
+        }
+        if (zone == null) return false;
+        switch (kind) {
+            case "roomhf": case "listener_chorus": zone.roomHF = phase == 0 ? -1800 : phase == 1 ? 0 : -300; break;
+            case "delay": zone.reflectionsDelay = phase == 0 ? 0.03f : phase == 1 ? 0.001f : 0.007f; break;
+            case "radius_reference": zone.LFReference = phase == 0 ? 1000 : phase == 1 ? 250 : 500; break;
+            case "radius":
+                zone.minDistance = 0; zone.maxDistance = phase == 0 ? 5 : 25;
+                if (phase == 2) zone.minDistance = 20;
+                break;
+            case "zone_move": zone.transform.position = new Vector3(phase == 0 ? 20 : phase == 1 ? 12.5f : 0, 0, 0); break;
+            case "source_mix": source.reverbZoneMix = phase == 0 ? 0 : phase == 1 ? 0.5f : 1.1f; break;
+            case "preset_then_user": case "preset_control":
+                if (phase == 0) { if (kind == "preset_control") return false; zone.roomHF = -1800; }
+                if (phase == 1) zone.reverbPreset = AudioReverbPreset.User;
+                if (phase == 2) zone.reverbPreset = AudioReverbPreset.Generic;
+                break;
+            case "overlap_scalar":
+                if (phase == 0) zone.roomHF = -1800;
+                if (phase == 1) { other.reverbPreset = AudioReverbPreset.User; other.room = -1600; other.roomHF = -1200; }
+                if (phase == 2) { zone.decayTime = 0.8f; other.reflectionsDelay = 0.03f; }
+                break;
+            case "overlap_enable":
+                if (phase < 2) other.enabled = phase == 1;
+                else other.reverbPreset = AudioReverbPreset.Generic;
+                break;
+            default: throw new Exception("Unknown zone control " + kind);
+        }
+        return true;
+    }
+
+    static void RecordZoneState(List<string> records, string key, int block,
+        AudioReverbZone zone, AudioReverbZone other, AudioSource source, Transform listener)
+    {
+        int Bits(float value) => BitConverter.SingleToInt32Bits(value);
+        if (key.EndsWith("_radius_reference"))
+            records.Add("\""+key+".zone_refs_"+block+"\":{\"hf_bits\":"+Bits(zone.HFReference)+",\"lf_bits\":"+Bits(zone.LFReference)+"}");
+        records.Add("\""+key+".zone_update_"+block+"\":{\"listener_x_bits\":"+Bits(listener.position.x)
+            +",\"zone_x_bits\":"+Bits(zone != null ? zone.transform.position.x : 0)
+            +",\"min_bits\":"+Bits(zone != null ? zone.minDistance : 0)+",\"max_bits\":"+Bits(zone != null ? zone.maxDistance : 0)
+            +",\"preset\":"+(zone != null ? (int)zone.reverbPreset : -1)+",\"room_hf\":"+(zone != null ? zone.roomHF : 0)
+            +",\"delay_bits\":"+Bits(zone != null ? zone.reflectionsDelay : 0)+",\"mix_bits\":"+Bits(source.reverbZoneMix)
+            +",\"other_x_bits\":"+Bits(other != null ? other.transform.position.x : 0)
+            +",\"other_enabled\":"+(other != null && other.enabled ? "true" : "false")+"}");
+    }
+
     System.Collections.IEnumerator Capture()
     {
         if (m_Captured) yield break;
@@ -973,6 +1125,10 @@ public partial class EffectProbe : MonoBehaviour
                 }
                 Save();
                 continue;
+            }
+            if (key.StartsWith("context_zone_")) {
+                gameObject.transform.position = new Vector3(float.Parse(Option(key, "listener_start=", "0"), System.Globalization.CultureInfo.InvariantCulture), 0, 0);
+                gameObject.transform.rotation = Quaternion.identity;
             }
             int requestedBuffer = int.Parse(Option(key, "buffer=", "1024"));
             int requestedRate = int.Parse(Option(key, "rate=", rate.ToString()));
@@ -1062,6 +1218,7 @@ public partial class EffectProbe : MonoBehaviour
             source.spatialBlend = float.Parse(Option(key, "blend=", "0"), inv); source.volume = 1;
             source.spread = float.Parse(Option(key, "spread=", "0"), inv);
             source.panStereo = float.Parse(Option(key, "pan=", "0"), inv);
+            if (key.StartsWith("context_zone_")) source.dopplerLevel = 0;
             var listenerWrite = Option(key, "listener=", "");
             OutputLayoutProbe.WriteChannel = -1;
             if (listenerWrite != "") {
@@ -1096,13 +1253,20 @@ public partial class EffectProbe : MonoBehaviour
                 }
             }
             GameObject zoneObject = null;
-            AudioReverbZone liveZone = null;
+            AudioReverbZone liveZone = null, overlapZone = null;
+            GameObject overlapObject = null;
             if (Option(key, "zone=", "0") == "1") {
                 zoneObject = new GameObject("ProbeZone");
                 var zone = zoneObject.AddComponent<AudioReverbZone>();
                 liveZone = zone;
                 zone.reverbPreset = AudioReverbPreset.Generic;
                 zone.minDistance = 10; zone.maxDistance = 15;
+                if (Option(key, "zone_profile=", "") == "user") ConfigureZone(zone);
+                if (Option(key, "overlap=", "0") == "1") {
+                    overlapObject = new GameObject("OverlapZone"); overlapZone = overlapObject.AddComponent<AudioReverbZone>();
+                    overlapZone.reverbPreset = AudioReverbPreset.Cave;
+                    overlapZone.minDistance = 10; overlapZone.maxDistance = 15;
+                }
             }
             Component component = null;
             var filter = Option(key, "component=", "");
@@ -1157,6 +1321,11 @@ public partial class EffectProbe : MonoBehaviour
                         if (zoneChange == "preset") liveZone.reverbPreset = block == 8 ? AudioReverbPreset.Cave : AudioReverbPreset.Generic;
                         if (zoneChange != "" && Engine) FlushEngine();
                     }
+                    if (key.StartsWith("context_zone_") && ChangeZone(Option(key, "zone_control=", ""), block,
+                        liveZone, overlapZone, source, gameObject.transform)) {
+                        RecordZoneState(records, key, block, liveZone, overlapZone, source, gameObject.transform);
+                        if (Engine) FlushEngine();
+                    }
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
@@ -1172,7 +1341,7 @@ public partial class EffectProbe : MonoBehaviour
             }
             OutputLayoutProbe.WriteChannel = -1;
             if (layoutProbe != null) DestroyImmediate(layoutProbe);
-            source.Stop(); if (component) DestroyImmediate(component); if (zoneObject) DestroyImmediate(zoneObject); DestroyImmediate(go); if (clip) DestroyImmediate(clip);
+            source.Stop(); if (component) DestroyImmediate(component); if (zoneObject) DestroyImmediate(zoneObject); if (overlapObject) DestroyImmediate(overlapObject); DestroyImmediate(go); if (clip) DestroyImmediate(clip);
             var silence = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
             bool resetTail = Option(key, "reset_to=", "") != "";
             var drainSink = resetTail ? new NativeArray<float>(silence.Length, Allocator.Persistent) : default;
