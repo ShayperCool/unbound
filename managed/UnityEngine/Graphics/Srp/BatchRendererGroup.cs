@@ -375,9 +375,10 @@ namespace UnityEngine.Rendering
         /// <summary>
         /// Whether the device takes AddBatch's window, else the Editor's error and no batch
         /// (BatchID.Null): a constant buffer needs a window, at an offset the device's constant
-        /// buffer alignment divides and no larger than its constant buffer limit; a raw buffer takes
-        /// none. Matches the Unity 6000.0.71f1 Editor, tests/projects/brg <c>errors.add</c> (a
-        /// 32768-byte window is taken: the limit is the device's constant buffer size).
+        /// buffer alignment divides and no larger than its constant buffer size (SystemInfo's
+        /// maxConstantBufferSize: a 32768-byte window is taken, a 65792-byte one refused); a raw
+        /// buffer takes neither a window nor an offset. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/brg <c>errors.add</c>.
         /// </summary>
         static bool WindowAccepted(uint offset, uint window)
         {
