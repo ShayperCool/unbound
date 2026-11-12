@@ -446,11 +446,10 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A skinned renderer away from the origin (the table keeps the pose in the
-        /// renderer's space, in arrays of its own) skinned again by the next skinning pass, into
-        /// the arrays the drawn mesh keeps: the next emission takes that pose. BakeMesh skins into
-        /// arrays of its own and leaves the pass's pose.</summary>
+        /// renderer's space, in arrays of its own) skinned again within a frame (BakeMesh skins
+        /// at once, into the arrays the drawn mesh keeps): the next emission takes that pose.</summary>
         [Fact]
-        public void ASkinnedShapeTakesAPoseSkinnedAgainIntoTheSameArrays()
+        public void ASkinnedShapeTakesAPoseSkinnedAgainWithinTheFrame()
         {
             var root = new GameObject("root");
             root.transform.position = new Vector3(10f, 0f, 0f);
@@ -486,9 +485,6 @@ namespace UnityEngine.Tests
                 var baked = new Mesh();
                 renderer.BakeMesh(baked);
                 Object.DestroyImmediate(baked);
-                ps.Emit(1);
-                Assert.Contains(new Vector3(1f, 0f, 0f), table.Vertices);
-                Time.s_FrameCount++;
                 ps.Emit(1);
                 Assert.Contains(new Vector3(1f, 0f, 3f), table.Vertices);
             }

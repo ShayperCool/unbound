@@ -354,7 +354,7 @@ namespace UnityEngine
                         renderer = skinned;
                         // The current pose: the (skinned, blend-shaped or cloth) mesh the renderer
                         // draws this frame, brought back into the renderer's space.
-                        mesh = skinned.DrawGeometry(out var model);
+                        mesh = skinned.CurrentGeometry(out var model);
                         var shared = skinned.sharedMesh;
                         if (mesh != null && shared != null && !ReferenceEquals(mesh, shared))
                         {

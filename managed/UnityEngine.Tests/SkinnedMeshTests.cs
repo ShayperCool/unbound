@@ -283,6 +283,12 @@ namespace UnityEngine.Tests
                 Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
                 s.bone.localPosition = new Vector3(1f, 0f, 0f);
                 Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
+                // A frame whose pass has not run yet (a camera rendered in Update) draws the last
+                // pass's skin; the particle shape takes the pose as it is.
+                Time.s_FrameCount++;
+                Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
+                Assert.Equal(1f, s.renderer.CurrentGeometry(out _).vertices[0].x);
+                Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
                 s.renderer.forceMatrixRecalculationPerRender = true;
                 Assert.Equal(1f, s.renderer.DrawGeometry(out _).vertices[0].x);
                 s.bone.localPosition = new Vector3(2f, 0f, 0f);

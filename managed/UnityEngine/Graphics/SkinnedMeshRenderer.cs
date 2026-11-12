@@ -673,7 +673,14 @@ namespace UnityEngine
             if (mesh != null) FrameBuilder.AddMeshDraws(this, mesh, model, Color.white, camera, into);
         }
 
-        internal override Mesh DrawGeometry(out Matrix4x4 model)
+        /// <summary>The pose as it is now (a particle system's emission shape): the drawn
+        /// geometry, skinned now apart from the pass's skin. The Editor's emission takes a bone
+        /// moved before it (tests/projects/particlemeshshape <c>skinned/bone</c>).</summary>
+        internal Mesh CurrentGeometry(out Matrix4x4 model) => Geometry(out model, now: true);
+
+        internal override Mesh DrawGeometry(out Matrix4x4 model) => Geometry(out model, forceMatrixRecalculationPerRender);
+
+        Mesh Geometry(out Matrix4x4 model, bool now)
         {
             model = transform.localToWorldMatrix;
             if (m_Mesh == null) return null;
@@ -690,13 +697,13 @@ namespace UnityEngine
             }
             if (!IsSkinned)
             {
-                return HasShapes || m_GraphicsOutputRequested ? Deform() : m_Mesh;
+                return HasShapes || m_GraphicsOutputRequested ? Deform(now) : m_Mesh;
             }
             model = m_GraphicsOutputRequested ? transform.localToWorldMatrix : Matrix4x4.identity;
-            // "Must be set ... to manually render a skinned mesh multiple times within a single
-            // update" (the Scripting API): each draw skins now, apart from the pass's skin
-            // (measured: prevskin.force.forced).
-            return Deform(now: forceMatrixRecalculationPerRender);
+            // forceMatrixRecalculationPerRender "must be set ... to manually render a skinned mesh
+            // multiple times within a single update" (the Scripting API): each draw then skins now,
+            // apart from the pass's skin (measured: renderapi prevskin.force.forced).
+            return Deform(now);
         }
 
         public void BakeMesh(Mesh mesh) => BakeMesh(mesh, false);
