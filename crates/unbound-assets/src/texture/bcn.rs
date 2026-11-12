@@ -1172,3 +1172,79 @@ fn hdr_special_values_and_edge_sizes_do_not_abort_import() {
         );
     }
 }
+
+#[test]
+fn channel_fit_selects_the_continuous_ramp_before_rounding() {
+    // Unity 6000.0.71f1, texturecompression NormalsBC5, mip 0 block (8, 0).
+    // The red field is narrower than the green field; each channel fits its own ramp.
+    let red = [
+        123, 115, 110, 107, 124, 120, 116, 115, 126, 125, 123, 123, 128, 130, 131, 131,
+    ];
+    let green = [
+        180, 181, 180, 178, 176, 179, 181, 181, 167, 173, 177, 180, 154, 162, 169, 175,
+    ];
+    let pixels: Vec<_> = red
+        .into_iter()
+        .zip(green)
+        .flat_map(|(r, g)| [r, g, 0, 255])
+        .collect();
+    let expected = [
+        130, 107, 243, 51, 214, 210, 38, 0, 180, 155, 0, 32, 0, 157, 16, 83,
+    ];
+    assert_eq!(
+        compress_import_level(BlockFormat::Bc5, &pixels, 4, 4, 50, false, 0),
+        expected
+    );
+    assert_eq!(
+        compress_import_level(BlockFormat::Bc4, &pixels, 4, 4, 0, false, 0),
+        expected[..8]
+    );
+    // Swapping channels must swap their encodings, regardless of colour-space or quality inputs.
+    let swapped: Vec<_> = pixels
+        .chunks_exact(4)
+        .flat_map(|p| [p[1], p[0], 197, 0])
+        .collect();
+    let expected_swapped: Vec<_> = expected[8..]
+        .iter()
+        .chain(&expected[..8])
+        .copied()
+        .collect();
+    assert_eq!(
+        compress_import_level(BlockFormat::Bc5, &swapped, 4, 4, 100, true, 0),
+        expected_swapped
+    );
+}
+
+#[test]
+fn channel_fit_ties_keep_two_values_or_choose_six_steps() {
+    // Unity 6000.0.71f1, texturecompression ChannelFitsBC4, first two blocks.
+    let fields = [
+        (
+            [
+                130, 130, 130, 130, 130, 130, 130, 130, 131, 131, 131, 131, 98, 98, 98, 98,
+            ],
+            [98, 130, 73, 146, 36, 73, 2, 0],
+        ),
+        (
+            [7, 1, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1],
+            [2, 7, 129, 1, 219, 182, 109, 3],
+        ),
+    ];
+    // A two-value field uses its endpoints directly, even when both fits have zero error.
+    let two_values: Vec<_> = [25u8; 8]
+        .into_iter()
+        .chain([56; 8])
+        .flat_map(|r| [r, 0, 0, 255])
+        .collect();
+    assert_eq!(
+        compress_import_level(BlockFormat::Bc4, &two_values, 4, 4, 50, false, 0),
+        [56, 25, 73, 146, 36, 0, 0, 0]
+    );
+    for (red, expected) in fields {
+        let data: Vec<_> = red.into_iter().flat_map(|r| [r, 43, 197, 255]).collect();
+        assert_eq!(
+            compress_import_level(BlockFormat::Bc4, &data, 4, 4, 50, false, 0),
+            expected
+        );
+    }
+}

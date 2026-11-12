@@ -1106,7 +1106,8 @@ impl Importer for TextureImporter {
     // 26: the compression cache key also records the runtime encoder profile.
     // 27: Fast LDR ASTC storage, clamped edges and the normal-map RGB24 fallback.
     // 28: malformed ASTC mode budgets decode to the format's error colour.
-    const VERSION: u32 = 28;
+    // 29: BC4/BC5 compare continuous ramp fits and preserve channel-fit rounding.
+    const VERSION: u32 = 29;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);

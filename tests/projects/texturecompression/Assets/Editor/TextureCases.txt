@@ -1,3 +1,6 @@
+ChannelFitsBC4 format=BC4 srgb=0 mips=0
+ChannelFitsBC5 format=BC5 srgb=0 mips=0
+ChannelFitsRGBA32 format=RGBA32 srgb=0 mips=0
 SmoothNormal compression=normal
 SmoothNormalQ0 compression=normal quality=0
 SmoothNormalQ100 compression=normal quality=100

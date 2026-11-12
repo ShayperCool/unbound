@@ -176,42 +176,23 @@ static CODECFLOAT Clstr1(CMP_BYTE*  pcIndices,
 
 static CODECFLOAT RmpSrch1(CODECFLOAT _Blk[MAX_BLOCK],
                            CODECFLOAT _Rpt[MAX_BLOCK],
-                           CODECFLOAT _maxerror,
                            CODECFLOAT _min_ex,
                            CODECFLOAT _max_ex,
                            int        _NmbrClrs,
                            CMP_BYTE   nNumPoints)
 {
-    CODECFLOAT       error  = 0;
-    const CODECFLOAT step   = (_max_ex - _min_ex) / (CODECFLOAT)(nNumPoints - 1);
-    const CODECFLOAT step_h = step * 0.5f;
-    const CODECFLOAT rstep  = 1.0f / step;
-
-    for (int i = 0; i < _NmbrClrs; i++)
-    {
-        CODECFLOAT v;
-        // Work out which value in the block this select
-        CODECFLOAT del;
-
-        if ((del = _Blk[i] - _min_ex) <= 0)
-            v = _min_ex;
-        else if (_Blk[i] - _max_ex >= 0)
-            v = _max_ex;
-        else
-            v = (floor((del + step_h) * rstep) * step) + _min_ex;
-
-        // And accumulate the error
-        CODECFLOAT del2 = (_Blk[i] - v);
-        error += del2 * del2 * _Rpt[i];
-
-        // if we've already lost to the previous step bail out
-        if (_maxerror < error)
-        {
-            error = _maxerror;
-            break;
-        }
+    // Nearest-even quantization and four independent sums retain the measured
+    // fit selection at rounding ties. No partial-sum early exit changes that order.
+    const float step = (_max_ex - _min_ex) / float(nNumPoints - 1);
+    const float inverse = 1.0f / step;
+    float lanes[4] = {};
+    for (int i = 0; i < _NmbrClrs; ++i) {
+        float value = std::nearbyint((_Blk[i] - _min_ex) * inverse) * step + _min_ex;
+        value = std::min(std::max(value, _min_ex), _max_ex);
+        const float delta = _Blk[i] - value;
+        lanes[i % 4] += delta * delta * _Rpt[i];
     }
-    return error;
+    return (lanes[0] + lanes[2]) + (lanes[1] + lanes[3]);
 }
 
 static CODECFLOAT Refine1(CODECFLOAT  _Blk[MAX_BLOCK],
@@ -252,7 +233,7 @@ static CODECFLOAT Refine1(CODECFLOAT  _Blk[MAX_BLOCK],
             cr_max = min(cr_max, _max_bnd);
 
             CODECFLOAT error;
-            error = RmpSrch1(_Blk, _Rpt, maxerror, cr_min, cr_max, _NmbrClrs, dwNumPoints);
+            error = RmpSrch1(_Blk, _Rpt, cr_min, cr_max, _NmbrClrs, dwNumPoints);
 
             if (error < maxerror)
             {
@@ -438,7 +419,7 @@ static CODECFLOAT CompBlock1(CODECFLOAT _RmpPnts[NUM_ENDPOINTS],
                 for (CODECFLOAT step_r = gbl_rrb; gbl_rlb <= step_r; step_r -= GBL_SCH_STEP)
                 {
                     CODECFLOAT sch_err;
-                    sch_err = RmpSrch1(afUniqueValues, afValueRepeats, gbl_err, step_l, step_r, dwUniqueValues, dwNumPoints);
+                    sch_err = RmpSrch1(afUniqueValues, afValueRepeats, step_l, step_r, dwUniqueValues, dwNumPoints);
                     if (sch_err < gbl_err)
                     {
                         gbl_err = sch_err;
@@ -503,58 +484,46 @@ static CODECFLOAT CompBlock1(CODECFLOAT _RmpPnts[NUM_ENDPOINTS],
     return fMaxError;
 }
 
-/*--------------------------------------------------------------------------------------------
-// input [0,1]
-void CompBlock1X(CODECFLOAT* _Blk, [IN] scalar data block (alphas or normals) in float format
-                 CMP_DWORD blockCompressed[NUM_ENDPOINTS],  [OUT] compressed data in DXT5 alpha foramt
-                 int _NbrClrs,              [IN] actual number of elements in the block
-                 int _intPrec,              [IN} integer precision; it applies both to the input data and
-                                                 to the ramp points
-                 int _fracPrec,             [IN] fractional precision of the ramp points
-                 bool _bFixedRamp,          [IN] non-fixed ramp means we have input and generate
-                                                 output as float. fixed ramp means that they are fractional numbers.
-               )
----------------------------------------------------------------------------------------------*/
-
-CODECFLOAT CompBlock1X(CODECFLOAT* _Blk,
-                       CMP_WORD    dwBlockSize,
-                       CMP_BYTE    nEndpoints[2],
-                       CMP_BYTE*   pcIndices,
-                       CMP_BYTE    dwNumPoints,
-                       bool        bFixedRampPoints,
-                       bool        _bUseSSE2,
-                       int         _intPrec,
-                       int         _fracPrec,
-                       bool        _bFixedRamp)
-{
-    // just to make them initialized
-    if (!_bFixedRamp)
-    {
-        _intPrec  = 8;
-        _fracPrec = 0;
+// Unity 6000.0.71f1, tests/projects/texturecompression: compare the continuous
+// fit errors before assigning indices to the rounded ramps. Equal errors prefer
+// the six-step ramp. BC5 calls this same routine independently for each channel.
+extern "C" void unbound_bc4_block(const uint8_t* src, uint8_t* dst) {
+    bool constant = true;
+    for (int i = 1; i < 16; ++i)
+        constant &= src[i] == src[0];
+    if (constant) {
+        dst[0] = dst[1] = src[0];
+        std::memset(dst + 2, 0, 6);
+        return;
     }
 
-    // this one makes the bulk of the work
-    CODECFLOAT Ramp[NUM_ENDPOINTS];
-    CompBlock1(Ramp, _Blk, dwBlockSize, dwNumPoints, bFixedRampPoints, _intPrec, _fracPrec, _bFixedRamp, _bUseSSE2, false);
-
-    // final clusterization applied
-    CODECFLOAT fError = Clstr1(pcIndices, _Blk, Ramp, dwBlockSize, dwNumPoints, bFixedRampPoints, _intPrec, _fracPrec, _bFixedRamp);
-    nEndpoints[0]     = (BYTE)Ramp[0];
-    nEndpoints[1]     = (BYTE)Ramp[1];
-
-    return fError;
-}
-
-
-extern "C" void unbound_bc4_block(const uint8_t *src, uint8_t *dst) {
- bool same=true;for(int i=1;i<16;++i)same&=src[i]==src[0];if(same){dst[0]=dst[1]=src[0];for(int i=2;i<8;++i)dst[i]=0;return;}
- float f[16]; for(int i=0;i<16;++i) f[i]=float(src[i])/255.f;
- uint8_t ends[2][2], idx[2][16];
- float e=CompBlock1X(f,16,ends[0],idx[0],8,false,false,8,0,true);
- int best=0;
- if(e!=0.f) { float e2=CompBlock1X(f,16,ends[1],idx[1],6,true,false,8,0,true); if(e2<e) best=1; }
- uint64_t bits=uint64_t(ends[best][0])|(uint64_t(ends[best][1])<<8);
- for(int i=0;i<16;++i) bits|=uint64_t(idx[best][i])<<(16+3*i);
- for(int i=0;i<8;++i)dst[i]=uint8_t(bits>>(8*i));
+    constexpr float byte_scale = 1.f / 255.f;
+    float values[16];
+    for (int i = 0; i < 16; ++i)
+        values[i] = float(src[i]) * byte_scale;
+    float endpoints[2][2];
+    const float eight_error = CompBlock1(endpoints[0], values, 16, 8, false, 8, 0, true, false, false);
+    const float six_error = CompBlock1(endpoints[1], values, 16, 6, true, 8, 0, true, false, false);
+    // A field with at most two distinct values uses its two endpoints directly.
+    // Only larger fields compare the two ramp fits.
+    int second = -1;
+    bool more_than_two = false;
+    for (int i = 1; i < 16; ++i) {
+        if (src[i] == src[0] || src[i] == second)
+            continue;
+        if (second >= 0) {
+            more_than_two = true;
+            break;
+        }
+        second = src[i];
+    }
+    const bool fixed_extremes = more_than_two && six_error <= eight_error;
+    float* ramp = endpoints[fixed_extremes];
+    uint8_t indices[16];
+    Clstr1(indices, values, ramp, 16, fixed_extremes ? 6 : 8, fixed_extremes, 8, 0, true);
+    uint64_t bits = uint64_t(ramp[0]) | (uint64_t(ramp[1]) << 8);
+    for (int i = 0; i < 16; ++i)
+        bits |= uint64_t(indices[i]) << (16 + 3 * i);
+    for (int i = 0; i < 8; ++i)
+        dst[i] = uint8_t(bits >> (8 * i));
 }

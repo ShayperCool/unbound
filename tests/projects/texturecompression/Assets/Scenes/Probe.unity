@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &2004885705
+--- !u!1 &1949217902
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2004885707}
-  - component: {fileID: 2004885706}
+  - component: {fileID: 1949217904}
+  - component: {fileID: 1949217903}
   m_Layer: 0
   m_Name: TextureCompressionProbe
   m_TagString: Untagged
@@ -136,19 +136,22 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2004885706
+--- !u!114 &1949217903
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2004885705}
+  m_GameObject: {fileID: 1949217902}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 50b3960969ba1ce99ba6e03ca7d533a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   textures:
+  - {fileID: 2800000, guid: 51c5cbb4768416e78b4f7b14655fa978, type: 3}
+  - {fileID: 2800000, guid: 44d4f6e2e9a193a559735d4acd655b4f, type: 3}
+  - {fileID: 2800000, guid: 36024e0ab033b923295c9ff370774a16, type: 3}
   - {fileID: 2800000, guid: e11cf4ee867b56e9fbd3c5d59bf42c24, type: 3}
   - {fileID: 2800000, guid: 424c96bc7fd2fe044ad0f6baa497d115, type: 3}
   - {fileID: 2800000, guid: 7e6f27c47aebaf788b3ced3bc80ef157, type: 3}
@@ -253,13 +256,13 @@ MonoBehaviour:
   - {fileID: 2800000, guid: b28072392b87c05ed8f36c8d45fe993e, type: 3}
   - {fileID: 2800000, guid: c55c4584c0deb1ec59998c727f1370b0, type: 3}
   - {fileID: 2800000, guid: b0a50a016e452972e9b739e7822a9570, type: 3}
---- !u!4 &2004885707
+--- !u!4 &1949217904
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2004885705}
+  m_GameObject: {fileID: 1949217902}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -272,4 +275,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 2004885707}
+  - {fileID: 1949217904}

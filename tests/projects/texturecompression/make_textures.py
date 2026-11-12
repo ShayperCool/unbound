@@ -57,7 +57,27 @@ def flat():
     return 64, 64, rows
 
 
+def channel_fits():
+    # Narrow and wide fields, fixed extremes, repeated values and constant channels.
+    # Equal continuous-fit errors distinguish six-step selection from eight-step selection.
+    fields = [
+        [98] * 4 + [131] * 4 + [130] * 8,
+        [0, 0, 2, 1, 0, 0, 0, 0, 2, 0, 0, 0, 7, 1, 0, 2],
+        [24, 25, 24, 25, 56, 57, 56, 57] * 2,
+        [i * 17 for i in range(16)],
+    ]
+    rows = [[None] * 16 for _ in range(16)]
+    for by in range(4):
+        for bx in range(4):
+            red = fields[bx]
+            green = fields[by]
+            for i in range(16):
+                rows[by * 4 + i // 4][bx * 4 + i % 4] = (red[i], green[15 - i], 197, i * 17)
+    return 16, 16, rows
+
+
 SOURCES = {
+    'ChannelFits': channel_fits,
     'Smooth': base.smooth,
     'Noise': lambda: base.noise(64, 64, 1),
     'Cutout': base.cutout,
@@ -76,6 +96,9 @@ SOURCES = {
 # name: (source, settings). Every case is readable, with mips, sRGB and on the default platform
 # (no override) unless its settings say otherwise.
 CASES = {
+    'ChannelFitsBC4': ('ChannelFits', 'format=BC4 srgb=0 mips=0'),
+    'ChannelFitsBC5': ('ChannelFits', 'format=BC5 srgb=0 mips=0'),
+    'ChannelFitsRGBA32': ('ChannelFits', 'format=RGBA32 srgb=0 mips=0'),
     # Automatic formats on the Standalone target: Normal, High and Low compression, three
     # compressor qualities.
     'SmoothNormal': ('Smooth', 'compression=normal'),
