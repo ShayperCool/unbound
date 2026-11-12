@@ -54,3 +54,12 @@ every original reference row. The new `warp.sync` control matches 41/41 values.
 `height.agents` falls from 18 to 14/816 differences: 13 bump-walker X positions (frames 90 to 150)
 and the ramp walker’s final vertical velocity at frame 205 remain. The four Warp coordinates
 now match. Polygon selection, height projection and comparator tolerances are unchanged.
+
+
+Q385 retains all 14 height-agent differences. The local-heading, endpoint and stopping-plan
+changes do not change these captures. Imported height queries remain 103/103. Runtime
+`buildHeightMesh` still warns and produces no additional height data; implementing it
+needs a walkable height surface and per-tile lookup data, rather than using unfiltered
+source triangles. The documented terrain-orientation and preserveTilesOutsideBounds
+limits remain required controls for that follow-up. No arrival threshold, nearest-layer
+preference or comparator tolerance was changed to reduce the remaining count.
