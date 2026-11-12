@@ -1229,6 +1229,7 @@ namespace DotRecast.Detour.Crowd
 
                         ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
                         ag.ncorners = 0;
+                        ag.reportedCorners = 0;
                         ag.hasSteer = false;
                         ag.nneis = 0;
                         continue;

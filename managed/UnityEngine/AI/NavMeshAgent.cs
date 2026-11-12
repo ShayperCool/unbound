@@ -298,12 +298,20 @@ namespace UnityEngine.AI
         /// <summary>On a link: the link's end (measured: tests/projects/navlinks, every frame on a
         /// link, crossing or waiting). Else the corner the agent last steered by: a path given
         /// between agent updates shows from the next update on (navlinks `incall`); without one, the
-        /// end of its path.</summary>
+        /// end of its path. With the measured corridor reporting, the first corner found after the
+        /// last step (a corner passed within a centimetre is dropped), else the corridor's end
+        /// (Unity 6000.0.71f1, tests/projects/navlinks).</summary>
         public Vector3 steeringTarget =>
             isOnOffMeshLink ? CurrentLinkEnd()
             : m_Crowd == null ? m_NextPosition
+            : Compat.NavMeshCorridorReportingMeasured ? ReportedSteeringTarget()
             : m_Crowd.hasSteer ? NavMesh.V(m_Crowd.steerPos)
             : FollowingPath ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
+
+        Vector3 ReportedSteeringTarget() =>
+            m_Crowd.reportedCorners > 0 ? NavMesh.V(m_Crowd.reportedSteer)
+            : m_HasDestination && m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
+                ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
 
         /// <summary>The destination as it lies on the NavMesh (the point the target was mapped to),
         /// then the end of the path found for it, partial ones included (measured:
@@ -357,6 +365,8 @@ namespace UnityEngine.AI
             m_ReportedDestination = m_Destination;
             m_HasDestination = true;
             AgentSystem.ApplyPath(this, m_RequestedPath);
+            // A path set directly reports its corners at once.
+            if (Compat.NavMeshCorridorReportingMeasured) AgentSystem.ReportCorners(this);
             return true;
         }
 
@@ -378,6 +388,7 @@ namespace UnityEngine.AI
                 AgentSystem.CrowdOf(m_Surface)?.ResetMoveTarget(m_Crowd);
                 m_Crowd.corridor.Reset(m_Crowd.corridor.GetFirstPoly(), m_Crowd.npos);
                 m_Crowd.ncorners = 0;
+                m_Crowd.reportedCorners = 0;
                 m_Crowd.hasSteer = false;
             }
         }
@@ -385,7 +396,15 @@ namespace UnityEngine.AI
         /// <summary>A path is being followed: also the current one while a new one is pending
         /// (measured: tests/projects/navlinks pendingold, offedge). A path given in the call to a
         /// standing agent counts from the next agent update (measured: targets, incall).</summary>
-        public bool hasPath => FollowingPath && !m_PathFromCall;
+        public bool hasPath => Compat.NavMeshCorridorReportingMeasured ? ReportsPath : FollowingPath && !m_PathFromCall;
+
+        /// <summary>The path as reported between updates: corners remain from where the last step
+        /// took the agent, the corridor still has more than one polygon, or the agent is on a link.
+        /// Within a centimetre of its end on its last polygon, and in the update it leaves a link,
+        /// it reports none (Unity 6000.0.71f1, tests/projects/navlinks and navmesh).</summary>
+        bool ReportsPath => m_Crowd != null && m_HasDestination && !m_PathFromCall
+            && m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
+            && (m_Crowd.reportedCorners > 0 || m_Crowd.corridor.GetPathCount() >= 2 || isOnOffMeshLink);
 
         /// <summary>A path given in SetDestination to an agent without one: not reported by hasPath
         /// until the next agent update.</summary>
@@ -723,6 +742,8 @@ namespace UnityEngine.AI
             m_NextPosition = end;
             m_LinkId = 0;
             m_LinkCompleting = true;
+            // Off the link, it reports corners again after its next walking update.
+            m_Crowd.reportedCorners = 0;
             var crowd = AgentSystem.CrowdOf(m_Surface);
             if (crowd != null)
             {
@@ -1247,6 +1268,9 @@ namespace Unbound.Runtime
             ag.vel = moving.vel;
             ag.pvel = moving.pvel;
             ag.braking = moving.braking;
+            // The reported corners stay until the next update finds them again.
+            ag.reportedCorners = moving.reportedCorners;
+            ag.reportedSteer = moving.reportedSteer;
             if (!following) return;
             ag.nvel = moving.nvel;
             ag.dvel = moving.dvel;
@@ -1625,6 +1649,13 @@ namespace Unbound.Runtime
                 // The step over the frame, pushes out of other agents included (measured).
                 agent.m_Velocity = (agent.m_NextPosition - previous) / dt;
                 StopAtDestination(agent, dt, NavMesh.V(previous));
+                // Corners are found after the step only for an agent that walked through it: one
+                // that was on a link at the step reports none until its next update.
+                if (Compat.NavMeshCorridorReportingMeasured)
+                {
+                    if (agent.m_StepWalking) ReportCorners(agent);
+                    else agent.m_Crowd.reportedCorners = 0;
+                }
                 // An agent that moved stands there now; one that did not keeps its transform until
                 // its next early update (measured).
                 if (agent.updatePosition && !agent.m_NextPosition.Equals(previous)) WriteTransform(agent);
@@ -1809,6 +1840,31 @@ namespace Unbound.Runtime
                 return;
             }
             agent.SetArrived(left < 0.01f);
+        }
+
+        /// <summary>Unity's leading-corner pruning distance (also for the path's end), in metres.</summary>
+        const float ReportedCornerMinDistance = 0.01f;
+
+        static readonly DtStraightPath[] s_ReportedCorners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
+
+        /// <summary>The corners a walking agent with a path reports until its next update, from where
+        /// it now stands: leading corners within a centimetre in the ground plane are dropped,
+        /// the path's end included, unless it starts a link (Unity 6000.0.71f1,
+        /// tests/projects/navlinks and navmesh: hasPath and steeringTarget).</summary>
+        internal static void ReportCorners(NavMeshAgent agent)
+        {
+            var ag = agent.m_Crowd;
+            ag.reportedCorners = 0;
+            if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING
+                || ag.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID || agent.m_Surface == null) return;
+            var corners = s_ReportedCorners;
+            int n = ag.corridor.FindCorners(corners, corners.Length, agent.m_Surface.Query, agent.CrowdFilter);
+            // The corridor's corners keep the path's end however near (see DtPathCorridor.FindCorners).
+            if (n > 0 && (corners[0].flags & DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION) == 0
+                && RcVec.Dist2DSqr(corners[0].pos, ag.corridor.GetPos()) <= ReportedCornerMinDistance * ReportedCornerMinDistance)
+                n = 0;
+            ag.reportedCorners = n;
+            if (n > 0) ag.reportedSteer = corners[0].pos;
         }
 
         // Without braking, travel length alone cannot establish arrival: a script may move

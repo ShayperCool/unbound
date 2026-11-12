@@ -95,6 +95,12 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
+        /// Unbound: the corners the agent reports between updates, found again from where its step
+        /// took it (the first is its steering target); none while it is on a link or in the update
+        /// it leaves one, until it walks through an update.
+        public int reportedCorners;
+        public RcVec3f reportedSteer;
+
         public DtMoveRequestState targetState; // < State of the movement request.
         public long targetRef; // < Target polyref of the movement request.
         public RcVec3f targetPos = new RcVec3f(); // < Target position of the movement request (or velocity in case of DT_CROWDAGENT_TARGET_VELOCITY).

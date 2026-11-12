@@ -618,6 +618,84 @@ namespace UnityEngine.Tests
             Assert.True(Dist2D(agent.nextPosition, Destination) <= 1e-2f, $"stopped at {agent.nextPosition}");
         }
 
+        static void AtRelease(string release, Action body)
+        {
+            string previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = release;
+            try { body(); }
+            finally { ProjectInfo.UnityVersion = previous; }
+        }
+
+        /// <summary>hasPath reports corners found after the agent's last walking step, a corridor
+        /// of more than one polygon, or the link (Unity 6000.0.71f1, tests/projects/navlinks: every
+        /// lane's landing frame). Landing on the destination's polygon, automatically or by
+        /// CompleteOffMeshLink, the agent reports no path until it walks through an update; its
+        /// steering target is then the corridor's end. Other releases keep the previous report.</summary>
+        [Theory]
+        [InlineData("6000.0.71f1", true)]
+        [InlineData("6000.0.71f1", false)]
+        [InlineData("6000.0.72f1", true)]
+        [InlineData("6000.0.72f1", false)]
+        public void LeavingALinkReportsNoPathUntilAWalkingUpdate(string release, bool autoTraverse)
+        {
+            AtRelease(release, () =>
+            {
+                bool measured = release == "6000.0.71f1";
+                var agent = Agent(autoTraverse);
+                StepOntoLink(agent);
+                if (autoTraverse)
+                {
+                    for (int i = 0; i < 300 && agent.isOnOffMeshLink; i++)
+                    {
+                        Assert.True(agent.hasPath);
+                        Step();
+                    }
+                }
+                else
+                {
+                    Step();
+                    Assert.True(agent.hasPath);
+                    agent.CompleteOffMeshLink();
+                }
+                Assert.False(agent.isOnOffMeshLink);
+                int polygons = agent.m_Crowd.corridor.GetPathCount();
+                // Landing automatically, on the destination's polygon, the corridor has one polygon;
+                // a corridor that goes on to another polygon still reports a path.
+                if (autoTraverse) Assert.Equal(1, polygons);
+                Assert.Equal(!measured || polygons >= 2, agent.hasPath);
+                if (measured) Assert.Equal(Destination.x, agent.steeringTarget.x, 3);
+                Step();
+                Assert.False(agent.isOnOffMeshLink);
+                Assert.True(agent.hasPath);
+                Assert.Equal(Destination.x, agent.steeringTarget.x, 3);
+            });
+        }
+
+        /// <summary>Within a centimetre of its destination on its last polygon the agent reports no
+        /// path, also while it still closes in (the end is dropped like any corner).</summary>
+        [Fact]
+        public void TheLastCentimetreOnTheLastPolygonReportsNoPath()
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var agent = Agent(autoTraverse: true);
+                bool sawPath = false, wasOnLink = false;
+                for (int i = 0; i < 600; i++)
+                {
+                    Step();
+                    // On the link, and in the update that leaves it (see above).
+                    bool skip = agent.isOnOffMeshLink || wasOnLink;
+                    wasOnLink = agent.isOnOffMeshLink;
+                    if (skip) continue;
+                    float left = Dist2D(agent.nextPosition, Destination);
+                    if (agent.m_Crowd.corridor.GetPathCount() == 1 && left <= 0.01f) Assert.False(agent.hasPath);
+                    else if (left > 0.011f) { Assert.True(agent.hasPath); sawPath = true; }
+                }
+                Assert.True(sawPath);
+                Assert.False(agent.hasPath);
+            });
+        }
+
         [Fact]
         public void AScriptMovesAWaitingAgentOverTheLinkFreely()
         {
