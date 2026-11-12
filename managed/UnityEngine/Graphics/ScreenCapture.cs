@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using Unbound.Runtime;
 using UnityEngine.Rendering;
 
@@ -170,9 +171,11 @@ namespace UnityEngine
             var savedActive = RenderTexture.ActiveTarget;
             var saved = GfxStream.Current;
             bool srgbWrite = GL.sRGBWrite;
-            var settings = SupersampleSettings.Apply(superSize);
+            var settings = default(SupersampleSettings);
             try
             {
+                settings = SupersampleSettings.Capture();
+                settings.Apply(superSize);
                 GfxStream.Scissor(null);
                 GL.sRGBWrite = true;
                 var cameras = Camera.CollectActive();
@@ -210,12 +213,13 @@ namespace UnityEngine
         /// (x, y) is the output's pixel (x * N + i, y * N + j) (RGBA bytes, rows bottom first).</summary>
         internal static void Interleave(byte[] tile, int tileWidth, int tileHeight, byte[] output, int superSize, int i, int j)
         {
-            int width = tileWidth * superSize, step = superSize * 4;
+            var source = MemoryMarshal.Cast<byte, uint>(tile.AsSpan(0, tileWidth * tileHeight * 4));
+            var target = MemoryMarshal.Cast<byte, uint>(output.AsSpan());
+            int width = tileWidth * superSize;
             for (int y = 0; y < tileHeight; y++)
             {
-                int from = y * tileWidth * 4, to = ((y * superSize + j) * width + i) * 4;
-                for (int x = 0; x < tileWidth; x++, from += 4, to += step)
-                    Buffer.BlockCopy(tile, from, output, to, 4);
+                int from = y * tileWidth, to = (y * superSize + j) * width + i;
+                for (int x = 0; x < tileWidth; x++, to += superSize) target[to] = source[from + x];
             }
         }
 
@@ -261,8 +265,10 @@ namespace UnityEngine
         }
 
         /// <summary>A camera's projection moved by (offsetX, offsetY) of the pixels of its pixel
-        /// rect: added to the third column of a perspective projection, taken from the fourth of
-        /// an orthographic one.</summary>
+        /// rect: added to the third column for a camera that is not orthographic, taken from the
+        /// fourth for an orthographic one. The camera's flag decides, not its matrix: a camera
+        /// that is not orthographic but has an orthographic matrix set gets the perspective move,
+        /// as in the Editor (tests/projects/screencapture <c>proj.customOrtho</c>).</summary>
         internal static Matrix4x4 TileProjection(Matrix4x4 projection, bool orthographic, Rect pixelRect, float offsetX, float offsetY)
         {
             float x = offsetX / (pixelRect.width * 0.5f), y = offsetY / (pixelRect.height * 0.5f);
@@ -281,50 +287,56 @@ namespace UnityEngine
 
         /// <summary>
         /// The texture settings of a supersized capture (Unity 6000.0.71f1 Editor,
-        /// tests/projects/screencapture <c>mip.*</c>): for its duration the global anisotropic
-        /// limits are 16 and 16, and every 2D texture with mipmaps samples with its mip bias
-        /// lowered by 1 + log2(superSize); both are put back afterwards.
+        /// tests/projects/screencapture <c>mip.*</c>): for its duration every texture filters at
+        /// anisotropic level 16 whatever <see cref="QualitySettings.anisotropicFiltering"/> and
+        /// the global limits say (but a texture of level 0, as always, at 1), and every 2D texture
+        /// with mipmaps samples with its mip bias lowered by 1 + log2(superSize). The public
+        /// settings are untouched; the renderer gets them back afterwards, and the biases too.
         /// </summary>
         internal readonly struct SupersampleSettings
         {
-            /// <summary>The forced minimum and maximum anisotropic level during the capture.</summary>
+            /// <summary>The anisotropic level of every texture during the capture.</summary>
             const int CaptureAnisotropy = 16;
 
-            readonly int m_ForcedMin, m_GlobalMax;
             readonly Texture[] m_Textures;
             readonly float[] m_Biases;
 
-            SupersampleSettings(int forcedMin, int globalMax, Texture[] textures, float[] biases)
+            SupersampleSettings(Texture[] textures, float[] biases)
             {
-                m_ForcedMin = forcedMin;
-                m_GlobalMax = globalMax;
                 m_Textures = textures;
                 m_Biases = biases;
             }
 
-            internal static SupersampleSettings Apply(int superSize)
+            /// <summary>The textures the capture biases and their biases to put back; nothing is
+            /// changed yet.</summary>
+            internal static SupersampleSettings Capture()
             {
-                Texture.GetGlobalAnisotropicFilteringLimits(out int forcedMin, out int globalMax);
-                Texture.SetGlobalAnisotropicFilteringLimits(CaptureAnisotropy, CaptureAnisotropy);
-                float shift = -1f - MathF.Log2(superSize);
-                var all = Resources.FindObjectsOfTypeAll<Texture>();
                 var textures = new List<Texture>();
                 var biases = new List<float>();
-                foreach (var texture in all)
+                foreach (var texture in Resources.FindObjectsOfTypeAll<Texture>())
                 {
                     if (texture.dimension != TextureDimension.Tex2D || texture.mipmapCount <= 1) continue;
                     textures.Add(texture);
                     biases.Add(texture.mipMapBias);
-                    texture.mipMapBias += shift;
                 }
-                return new SupersampleSettings(forcedMin, globalMax, textures.ToArray(), biases.ToArray());
+                return new SupersampleSettings(textures.ToArray(), biases.ToArray());
             }
 
+            internal void Apply(int superSize)
+            {
+                // Forced on, with the forced minimum and the maximum both at the capture's level.
+                GfxStream.Anisotropy((int)AnisotropicFiltering.ForceEnable, CaptureAnisotropy, CaptureAnisotropy);
+                float shift = -1f - MathF.Log2(superSize);
+                for (int k = 0; k < m_Textures.Length; k++) m_Textures[k].mipMapBias = m_Biases[k] + shift;
+            }
+
+            /// <summary>Puts back what <see cref="Capture"/> recorded (nothing for a default value).</summary>
             internal void Restore()
             {
+                if (m_Textures == null) return;
                 for (int k = 0; k < m_Textures.Length; k++)
                     if (m_Textures[k] != null) m_Textures[k].mipMapBias = m_Biases[k];
-                Texture.SetGlobalAnisotropicFilteringLimits(m_ForcedMin, m_GlobalMax);
+                Texture.EmitAnisotropicFiltering();
             }
         }
 

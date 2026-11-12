@@ -73,30 +73,36 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>During the capture every 2D texture with mipmaps samples 1 + log2 N levels
-        /// finer and the anisotropic limits are 16 and 16; textures without mipmaps and of other
-        /// dimensions keep their bias, and everything is put back afterwards.</summary>
         [Fact]
-        public void CaptureSettingsBiasMippedTexturesAndRaiseAnisotropyThenRestore()
+        public void DefaultSettingsRestoreNothing() => default(ScreenCapture.SupersampleSettings).Restore();
+
+        /// <summary>During the capture every 2D texture with mipmaps samples 1 + log2 N levels
+        /// finer; textures without mipmaps keep their bias, the public anisotropic settings are
+        /// untouched (the capture's level 16 goes to the renderer only), and every bias is put
+        /// back afterwards. Measured for Texture2D; the render texture's bias and the cubemap's
+        /// unchanged one are Unbound's choices (not in the probe).</summary>
+        [Fact]
+        public void CaptureSettingsBiasMippedTexturesThenRestore()
         {
             var mipped = new Texture2D(8, 8, TextureFormat.RGBA32, true) { mipMapBias = 0.25f };
             var plain = new Texture2D(8, 8, TextureFormat.RGBA32, false) { mipMapBias = 0.5f };
             var cube = new Cubemap(8, TextureFormat.RGBA32, true) { mipMapBias = 0.75f };
             var target = new RenderTexture(8, 8, 0) { useMipMap = true, autoGenerateMips = false, mipMapBias = -0.5f };
-            Texture.GetGlobalAnisotropicFilteringLimits(out int startForced, out int startMax);
+            var filtering = QualitySettings.anisotropicFiltering;
             try
             {
-                Texture.SetGlobalAnisotropicFilteringLimits(3, 7);
-                var settings = ScreenCapture.SupersampleSettings.Apply(3);
-                Texture.GetGlobalAnisotropicFilteringLimits(out int forced, out int max);
-                Assert.Equal((16, 16), (forced, max));
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
+                var settings = ScreenCapture.SupersampleSettings.Capture();
+                Assert.Equal(0.25f, mipped.mipMapBias);
+                settings.Apply(3);
+                Assert.Equal(AnisotropicFiltering.Disable, QualitySettings.anisotropicFiltering);
                 Assert.Equal(0.25f + (-1f - MathF.Log2(3f)), mipped.mipMapBias);
-                Assert.Equal(-0.5f + (-1f - MathF.Log2(3f)), target.mipMapBias);
                 Assert.Equal(0.5f, plain.mipMapBias);
+                // Not measured: a mipmapped render texture is biased like a texture, a cubemap not.
+                Assert.Equal(-0.5f + (-1f - MathF.Log2(3f)), target.mipMapBias);
                 Assert.Equal(0.75f, cube.mipMapBias);
                 settings.Restore();
-                Texture.GetGlobalAnisotropicFilteringLimits(out forced, out max);
-                Assert.Equal((3, 7), (forced, max));
+                Assert.Equal(AnisotropicFiltering.Disable, QualitySettings.anisotropicFiltering);
                 Assert.Equal(0.25f, mipped.mipMapBias);
                 Assert.Equal(-0.5f, target.mipMapBias);
                 Assert.Equal(0.5f, plain.mipMapBias);
@@ -104,7 +110,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                Texture.SetGlobalAnisotropicFilteringLimits(startForced, startMax);
+                QualitySettings.anisotropicFiltering = filtering;
                 Object.DestroyImmediate(mipped);
                 Object.DestroyImmediate(plain);
                 Object.DestroyImmediate(cube);

@@ -144,12 +144,6 @@ namespace UnityEngine
             EmitAnisotropicFiltering();
         }
 
-        internal static void GetGlobalAnisotropicFilteringLimits(out int forcedMin, out int globalMax)
-        {
-            forcedMin = s_ForcedMinAniso;
-            globalMax = s_GlobalMaxAniso;
-        }
-
         internal static void EmitAnisotropicFiltering() =>
             Unbound.Runtime.GfxStream.Anisotropy((int)s_Anisotropic, s_ForcedMinAniso, s_GlobalMaxAniso);
     }
