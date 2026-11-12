@@ -198,14 +198,14 @@ pub fn footprints(instances: &[Instance], width: u32, height: u32) -> Vec<Option
 /// the environment's values from [`Refs::environment`].
 #[derive(Default, Clone)]
 struct Gathered {
-    refs: Vec<(u32, f32, V3)>,
+    refs: Vec<(u32, (f32, V3))>,
 }
 
 /// How the references of a texel are numbered: the system's values first.
 #[derive(Clone, Copy)]
-struct Refs {
+pub(super) struct Refs {
     /// The first environment reference.
-    environment: u32,
+    pub(super) environment: u32,
 }
 
 fn gather(origins: &[Origin], clustering: &Clustering, rays: &[V3], refs: Refs) -> Gathered {
@@ -235,7 +235,7 @@ fn gather(origins: &[Origin], clustering: &Clustering, rays: &[V3], refs: Refs) 
         e.0 += share;
         e.1 = add(e.1, dir);
     }
-    let mut refs: Vec<(u32, f32, V3)> = acc.into_iter().map(|(r, (w, d))| (r, w, d)).collect();
+    let mut refs: Vec<(u32, (f32, V3))> = acc.into_iter().collect();
     refs.sort_unstable_by_key(|r| r.0);
     Gathered { refs }
 }
@@ -272,14 +272,14 @@ fn coarser(r: u32, refs: Refs, tree_parent: &[u32]) -> Option<u32> {
 
 /// The values one coarser value stands for, and the share of it each child has: a tree parent's
 /// children (their weights), a coarser environment value's 2x2 finer ones (a quarter each).
-struct Hierarchy {
+pub(super) struct Hierarchy {
     refs: Refs,
     tree_parent: Vec<u32>,
     tree_children: Vec<Vec<(u32, f32)>>,
 }
 
 impl Hierarchy {
-    fn new(input: &crate::data::InputSamples, refs: Refs) -> Self {
+    pub(super) fn new(input: &crate::data::InputSamples, refs: Refs) -> Self {
         let clusters = input.clusters();
         let mut tree_parent = vec![u32::MAX; input.values()];
         let mut tree_children = vec![Vec::new(); input.tree_children.len()];
@@ -329,63 +329,92 @@ impl Hierarchy {
     }
 }
 
-/// Cuts a texel's references down to `budget` (Lightmap Parameters' Irradiance Budget): groups
-/// of references that share a coarser value are replaced by it with their summed weight, those
-/// first whose weights are nearest the coarser value's own shares of its children (where the
-/// replacement changes least), until few enough are left or nothing more can be joined.
-fn reduce(g: &mut Gathered, budget: usize, h: &Hierarchy, clusters: usize) {
+/// A reference's weight that groups of references can be joined by.
+pub(super) trait Weight: Copy + Default {
+    /// Adds `other`'s weight.
+    fn join(&mut self, other: &Self);
+    /// The parts of it the joining compares (the light it takes, per coefficient).
+    fn parts(&self) -> &[f32];
+}
+
+/// A texel's weight of a reference and the sum of the directions its rays arrive from.
+impl Weight for (f32, V3) {
+    fn join(&mut self, other: &Self) {
+        self.0 += other.0;
+        self.1 = add(self.1, other.1);
+    }
+    fn parts(&self) -> &[f32] {
+        std::slice::from_ref(&self.0)
+    }
+}
+
+/// Cuts references (sorted, each with its weight) down to `budget`: groups that share a coarser
+/// value are replaced by it with their joined weight, those first whose weights are nearest the
+/// coarser value's own shares of its children (where the replacement changes least); when no
+/// two share one, the cheapest are raised to their coarser values. Until few enough are left or
+/// all are the coarsest (the tree's roots, the environment's six faces).
+pub(super) fn reduce<W: Weight>(
+    refs: &mut Vec<(u32, W)>,
+    budget: usize,
+    h: &Hierarchy,
+    clusters: usize,
+) {
     let mut children = Vec::new();
-    while g.refs.len() > budget {
+    while refs.len() > budget {
         let mut groups: std::collections::BTreeMap<u32, usize> = Default::default();
-        for &(r, _, _) in &g.refs {
+        for &(r, _) in refs.iter() {
             if let Some(p) = coarser(r, h.refs, &h.tree_parent) {
                 *groups.entry(p).or_default() += 1;
             }
         }
         // Each joinable group's change: how far its weights are from the coarser value's
-        // shares of their sum, over all its children.
-        let weight = |r: u32| {
-            g.refs
-                .binary_search_by_key(&r, |x| x.0)
-                .map_or(0.0, |i| g.refs[i].1)
+        // shares of their sum, over all its children and every part of the weights.
+        let parts = refs.first().map_or(0, |r| r.1.parts().len());
+        let weight = |r: u32, k: usize| {
+            refs.binary_search_by_key(&r, |x| x.0)
+                .map_or(0.0, |i| refs[i].1.parts()[k])
         };
         let mut joinable: Vec<(f32, u32, usize)> = Vec::new();
         for (&p, &n) in &groups {
-            if n < 2 {
-                continue;
-            }
             h.children(p, clusters, &mut children);
-            let total: f32 = children.iter().map(|&(c, _)| weight(c)).sum();
-            let change: f32 = children
-                .iter()
-                .map(|&(c, share)| (weight(c) - total * share).abs())
-                .sum();
+            let mut change = 0.0;
+            for k in 0..parts {
+                let total: f32 = children.iter().map(|&(c, _)| weight(c, k)).sum();
+                change += children
+                    .iter()
+                    .map(|&(c, share)| (weight(c, k) - total * share).abs())
+                    .sum::<f32>();
+            }
             joinable.push((change, p, n));
         }
         if joinable.is_empty() {
             return;
         }
         joinable.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
-        let mut excess = g.refs.len() - budget;
+        let mut excess = refs.len() - budget;
         let mut chosen = std::collections::HashSet::new();
-        for (_, p, n) in joinable {
-            if excess == 0 {
-                break;
+        if joinable.iter().any(|&(_, _, n)| n > 1) {
+            for &(_, p, n) in joinable.iter().filter(|j| j.2 > 1) {
+                if excess == 0 {
+                    break;
+                }
+                chosen.insert(p);
+                excess = excess.saturating_sub(n - 1);
             }
-            chosen.insert(p);
-            excess = excess.saturating_sub(n - 1);
+        } else {
+            // No two share a coarser value: the cheapest are raised to theirs (as many as are
+            // too many), so that they meet others there.
+            chosen.extend(joinable.iter().take(excess).map(|j| j.1));
         }
-        let mut merged: std::collections::BTreeMap<u32, (f32, V3)> = Default::default();
-        for &(r, w, d) in &g.refs {
+        let mut merged: std::collections::BTreeMap<u32, W> = Default::default();
+        for &(r, w) in refs.iter() {
             let key = match coarser(r, h.refs, &h.tree_parent) {
                 Some(p) if chosen.contains(&p) => p,
                 _ => r,
             };
-            let e = merged.entry(key).or_default();
-            e.0 += w;
-            e.1 = add(e.1, d);
+            merged.entry(key).or_default().join(&w);
         }
-        g.refs = merged.into_iter().map(|(r, (w, d))| (r, w, d)).collect();
+        *refs = merged.into_iter().collect();
     }
 }
 
@@ -473,7 +502,7 @@ pub fn transport(
         .map(|o| match o {
             Some(list) if !list.is_empty() => {
                 let mut g = gather(list, clustering, &rays, numbering);
-                reduce(&mut g, settings.budget, &hierarchy, input.clusters());
+                reduce(&mut g.refs, settings.budget, &hierarchy, input.clusters());
                 Some(g)
             }
             Some(_) => Some(Gathered::default()),
@@ -539,7 +568,7 @@ pub fn transport(
             let mut max = vec![0f32; refs.len()];
             let mut dense = vec![0f32; texels.len() * refs.len()];
             for (t, &texel) in texels.iter().enumerate() {
-                for &(r, w, _) in &of(texel).refs {
+                for &(r, (w, _)) in &of(texel).refs {
                     let k = refs.binary_search(&r).unwrap();
                     dense[t * refs.len() + k] = w;
                     max[k] = max[k].max(w);
@@ -572,7 +601,7 @@ pub fn transport(
             let block_directions: Vec<u8> = refs
                 .iter()
                 .map(|&r| match first.refs.binary_search_by_key(&r, |x| x.0) {
-                    Ok(i) => direction_index(first.refs[i].2),
+                    Ok(i) => direction_index(first.refs[i].1.1),
                     Err(_) => 0,
                 })
                 .collect();
