@@ -186,8 +186,7 @@ They remain exact-key residuals; no tolerance has changed. The full comparator r
 7283/7467 exact values in each Standalone profile, with 184 listed residuals, and
 6635, 6616, 6626 and 6985/7467 in AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC,
 with 832, 851, 841 and 482 residuals.
-Android runtime ETC encoding is unchanged by these encoder changes; direct R8/RG16 runtime
-EAC storage remains unresolved. The runtime encoder profile is part of the compression key.
+Android runtime ETC encoding is unchanged by these encoder changes; direct R8/RG16 runtime EAC uses the measured profile described below. The runtime encoder profile is part of the compression key.
 
 For this runtime change, the ordinary-project clean-cache import processed 4397 textures with
 zero failures: 16.65 s before and 18.36 s after. Two subsequent runs took 21.44 s and 26.69 s
@@ -221,9 +220,7 @@ filters HDR radiance before clamping each level to bytes, without HDR gamma conv
 Constructors accept odd dimensions. Distinct source/destination copy controls verify matching
 5x5 footprints copy CPU blocks, while 5x5-to-6x6 leaves the destination unchanged. HDR constructor,
 raw-view and mip controls retain values above one and alpha, including divergent writes of red
-4 in the first mip and red 6 in another mip. HDR GPU fallbacks retain float radiance, using RGBA16F for initial imports and RGBA32F for
-runtime block uploads; LDR uses RGBA8. Neither path applies a second lossy encoding. Native
-ASTC upload remains a renderer follow-up.
+4 in the first mip and red 6 in another mip. HDR GPU fallbacks retain float radiance with RGBA16F storage; LDR uses RGBA8. Neither path applies a second lossy encoding. Native ASTC upload uses the capability and footprint checks described below.
 
 The CPU decoder uses the same Arm library, with the linear LDR profile even for an sRGB texture.
 It tolerates arbitrary raw payloads; invalid blocks produce the codec's error colour. Deterministic
@@ -238,14 +235,11 @@ source encodes colour to gamma independently of that flag, then stores a linear 
 HdrRGBAFloat and HdrBC6H distinguish source preparation from compressed decoding.
 Texture cache v33 includes these ASTC and source-processing changes.
 
-Crunch controls cover DXT1 and DXT5 at qualities 0, 50 and 100, with ETC_RGB4Crunched and
-ETC2_RGBA8Crunched Android counterparts, gradients, noisy alpha and flat colour. Crunch encoding
-and archive storage remain unresolved. The [public Crunch fork's ZLIB licence](https://github.com/Unity-Technologies/crunch/blob/unity/license.txt)
-permits redistribution; this is an implementation follow-up. The importer keeps uncompressed
-pixels and diagnoses that difference. block_report.py counts the missing logical GPU blocks
-from dimensions and mip levels, rather than treating archive bytes as blocks. If two archives
-of the same format differ, their per-block exactness needs a transcoded comparison; the report
-labels its zero verified lower bound instead of asserting every decoded block differs.
+Crunch controls cover DXT1 and DXT5 at qualities 0, 50 and 100, ETC_RGB4Crunched and
+ETC2_RGBA8Crunched Android counterparts, automatic selection, normal maps and non-power-of-two
+fallbacks. The pinned public zlib-licensed Crunch fork provides archive encoding and transcoding.
+The archive and its GPU blocks are retained separately. The additional Crunch section below
+records the implemented slice and the remaining HDR-source limitation.
 
 
 Measured ASTC import blocks, including every mip:
@@ -304,12 +298,100 @@ and 18.86 s after, with total process CPU including the cached second pass 92.19
 does not measure the added ASTC searches, whose Normal/Best settings perform more work than
 retaining uncompressed pixels.
 
-Crunch storage is absent for 0/1029 DXT1Crunched and 0/1372 DXT5Crunched logical blocks in each
-Standalone profile. AndroidGamma, AndroidETC2 and AndroidASTC have 0/1029 ETC_RGB4Crunched
-and 0/1372 ETC2_RGBA8Crunched; AndroidLinear has only ETC2_RGBA8Crunched, 0/2401. Quality-specific counts remain in block_report.py's output. The part's ordinary-project
-clean-cache import was 20.58 s before and 21.52 s after, 4397 textures and zero failed imports.
+
 
 The ASTC_5x5 region controls distinguish 5-aligned coordinates and sizes from 4-aligned ones.
 The source has CPU green/GPU red and the destination CPU yellow/GPU blue before the call.
 The 5-aligned region changes only the destination GPU; the 4-aligned region changes nothing.
 The destination's CPU blocks stay yellow in both controls.
+
+## Crunch archives, runtime EAC and ASTC uploads
+
+The additional 6000.0.71f1 controls have two identical GPU Editor recordings per profile.
+All 7467 earlier reference rows remain byte-identical. The current reference has 8209 rows.
+The implementation uses the public [Crunch 1.04 fork at revision 8708900](https://github.com/Unity-Technologies/crunch/tree/8708900eca8ec609d279270e72936258f81ddfb7)
+under its zlib licence, with portable compilation and checked archive transcoding.
+Texture cache v36 records archive storage and format selection; NativeApi 63 carries the
+allocation-free HDR/EAC texel decoder and ASTC packet formats.
+
+Default colour textures use perceptual Crunch fitting regardless of their authored sRGB flag;
+normal maps disable it. NoiseCrunchLinearNoMips and NoiseCrunchSrgbNoMips have identical archives,
+while normal-map controls retain their normal layout. Automatic High Quality BC7 and desktop
+HDR BC6H ignore Crunch. ASTC and ETC2 RGB also ignore the flag. ETC1 selected for an sRGB texture
+in a Linear project becomes the alpha-capable ETC2 Crunch format. A mipmapped 20x12 explicit
+RGB Crunch texture falls back to RGB24 in Gamma, dropping alpha; the Linear ETC2 selection
+falls back to RGBA32 and preserves alpha. These are release-scoped observations. Other releases
+retain diagnosed uncompressed storage for Crunch selection.
+
+| Source, Unity 6000.0 | Contract or measured control |
+|---|---|
+| [GetPixels](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.GetPixels.html) | Crunch is unsupported by the float-array API; use GetPixels32. The probe records its exception independently from byte reads. |
+| [GetRawTextureData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.GetRawTextureData.html) and [GetPixelData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.GetPixelData.html) | The generic APIs expose CPU storage. The Crunch controls change a header byte through each view, observe it through the byte-array API, then restore it. Generic raw length is the archive length. GetPixelData reports decoded-block lengths but starts at the archive pointer. Only a safe prefix is sampled in the Editor. |
+| [LoadRawTextureData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.LoadRawTextureData.html) | Complete data fills the texture's mip chain. The added control loads a valid archive into a new texture, applies it and records its changed CPU/GPU pixels for all four Crunch formats. |
+| Editor reference, Crunch reads | GetPixels32 decodes the archive; individual GetPixel/GetPixelBilinear return white without errors. New Crunch constructors retain their format and have zero archive bytes. |
+
+Archives and transcoded GPU blocks are separate stores. Raw views alias the archive. Unbound
+pads the view allocation with zeros where decoded-block lengths extend beyond the actual archive;
+those extra bytes are an explicit memory-safety choice, not a measured Editor value. Generic raw
+views and byte-array reads retain the actual archive length. Invalid archives are rejected before
+transcoding. Partial SetPixelData and CopyTexture involving Crunch remain diagnosed unsupported;
+archive variants other than the measured fork, shapes other than 2D and dimensions above the
+codec's 4096 limit remain outside this implementation. HDR-to-Crunch source preparation is
+unresolved, so Android HDR keeps its previous diagnosed float fallback. It is counted as missing
+compressed storage, without claiming its colour differences are harmless.
+
+Measured import blocks, including all mip levels:
+
+| Profile | DXT1Crunched | DXT5Crunched | ETC_RGB4Crunched | ETC2_RGBA8Crunched |
+|---|---:|---:|---:|---:|
+| Gamma / Linear | 1715 / 1715 | 2928 / 2928 | none | none |
+| AndroidGamma | none | none | 2401 / 2401 | 2928 / 3271 |
+| AndroidLinear | none | none | none | 5329 / 5672 |
+| AndroidETC2 | none | none | 1029 / 1029 | 2928 / 3271 |
+| AndroidASTC | none | none | 1029 / 1029 | 1899 / 2242 |
+
+Every produced 8-bit Crunch archive matches byte for byte. The 343 missing ETC2 Crunch blocks
+per Android profile are the HDR source. Valid archive-load controls add 343/343 blocks per
+format, or 686/686 ETC2 RGBA blocks in AndroidLinear. Different archives are compared after
+transcoding by `block_report.py`, preserving the strict archive comparison separately.
+Two ordinary UI/effect images, three qualities and four codecs add 8202/8202 exact blocks for
+each of DXT1Crunched, DXT5Crunched, ETC_RGB4Crunched and ETC2_RGBA8Crunched. Their complete
+uncompressed source mip chains also match; private images and repeats stay outside Git.
+
+Android runtime Compress now selects unsigned EAC_R/EAC_RG for direct R8/RG16 textures.
+Its independent encoder reuses the existing channel fitter; exact ETC encoding remains outside
+scope. It produces 0/20 exact EAC_R blocks and 0/22 EAC_RG blocks across both qualities in this
+corpus. Manual EAC storage controls retain 2055/2055 red blocks and 7/7 red/green blocks exactly.
+The CPU decoder reads eight-bit base-plus-modifier values; GPU decoding retains eleven-bit
+channel values in normalized 16-bit textures, rather than narrowing them to bytes. The complete
+2048-value multiplier-zero control retains 45 one-UNorm16-step GPU differences on the measured
+OpenGL device. Its raw blocks and all CPU bytes match. Devices without normalized 16-bit storage
+use the renderer's existing diagnosed fallback.
+
+The measured Android runtime mechanism checks intermediate mip dimensions while both sides
+still span at least three texels. A non-block-aligned level there leaves the source uncompressed:
+12x8 with mips is unchanged, while 12x8 without mips and 12x4 with mips compress. This resolves
+the older rectangular RGB/RGBA controls as well. Standalone runtime BC4/BC5 still have 2/726 and
+4/728 differing blocks across both qualities, all in partial 3x2/3x1 levels. A decoded channel
+can differ by 145/255 there; these remain unresolved padding/fitting differences.
+
+ASTC packets retain all six LDR/HDR footprints. The renderer uploads native blocks only when
+the enabled device features include that channel's ASTC capability and the base extent fits its
+actual footprint. Other sizes retain logical dimensions through decoded RGBA8 or RGBA16F
+fallbacks; no second lossy encoding or UV-changing padding is introduced. Footprint/capability
+checks cover all 18 packet variants, and an HDR partial-extent test preserves values above one.
+The available NVIDIA device lacks ASTC, so the full GPU replay verifies fallbacks. Native ASTC
+hardware execution remains a follow-up for an ASTC-capable device.
+
+Strict comparisons after these changes have 8087/8209 exact values in Gamma and Linear;
+AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC have 7472, 7453, 7427 and 7822 exact.
+The remaining 122, 122, 737, 756, 782 and 387 values are listed individually or by existing
+residual declarations. Added ETC2 RGB automatic controls reproduce the corresponding older
+normal/quality controls in both implementations, including their existing fitting differences.
+No raw discrepancy or comparator tolerance is removed.
+
+The part's clean-cache ordinary-project import processed 4397 textures with zero failures:
+19.25 s before and 14.16 s after, total process CPU including the cached second pass 94.90 s
+before and 96.61 s after. An earlier after-run took 15.98 s and 94.02 s CPU. Shared-machine wall
+time varies; these runs show no noticeable import regression for the existing workload. They
+do not measure a project dominated by newly enabled Crunch archives or the larger ASTC searches.
