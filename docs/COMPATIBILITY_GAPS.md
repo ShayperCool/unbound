@@ -205,11 +205,31 @@ The Q362/Q300 text work closes textcore (all 616859 values match; 8226 differed)
 TextCore glyphs load and rasterize through FreeType per render mode, with the hinted
 face lines and the Editor's SDFAA and SDF fields. Textmesh passes 1355/1355 (two
 rotation residuals before), its dynamic font texture packed, grown and reset as in
-the Editor. Measured on 6000.0.71f1 only. Q407 (tests/projects/textcolor) adds colour
+the Editor. Measured on 6000.0.71f1 only. Q407 (tests/projects/textcolor, new: 15 of 19
+values match, the other 4 are listed residuals; its panel image matches) adds colour
 bitmap glyphs (TextCore colour atlases, UI Toolkit drawing, legacy fonts), the strike of a
 bitmap-only face, importer character spacing, a scaled canvas's requests and a legacy
 texture full at 4096; its open differences (a TextGenerator called directly, an OS fallback
-face reloaded by name) are listed in its `residuals.json` and the colour glyph row.
+face reloaded by name) are listed in its `residuals.json` and the colour glyph row. Open
+there as well, unmeasured: colour vector (COLR) faces, several strikes per face, a request
+at a bitmap-only face's exact strike size through a legacy font, and a full legacy texture
+that still holds glyphs of older frames (Unbound evicts them with a reset).
+
+The Q349 UI Toolkit work adds uitkvector (new: 69 of 69 values; both panel images within
+the limits of its `image_limits.json`): SVG files imported by the `com.unity.vectorgraphics`
+2.0.0-preview.25 package's own ScriptedImporter and drawn as backgrounds, `Image` elements
+and through `MeshGenerationContext.DrawVectorImage`, where Unbound warned once and drew
+nothing before. Uitkpainter compares all 140 meshes with no open case (the three curve cases
+without length were open before, and seven such meshes are added). Uxmlattributes matches
+1099 of 1099 values (1074 before): a list item whose file id names no object of a project
+ScriptedImporter's asset is empty without a message, as in the Editor. The image limits
+keep two residuals visible (a gradient stroke the package computes as NaN, and seam pixels
+the Editor samples from its UI Toolkit dynamic atlas). Open, in the rows `UI Toolkit
+VectorImage drawing and SVG import` and `UI Toolkit runtime stubs`: the importer's sprite and
+texture outputs (the import fails with a warning), the 2D Sprite package's Editor hooks, the
+dynamic atlas, UXML `VectorImage` references, and, unmeasured, arc pieces of radius above 0
+whose end tangents oppose and pieces cut at the subdivision depth limit. Measured on
+6000.0.71f1 only.
 
 Seen beside these, tracked elsewhere and not classified again: coreapis, humanfirstpose,
 humanoid, indirectspec, modelimport, particles, shaderkeywords and terrain have open tasks, deferred

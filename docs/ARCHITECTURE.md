@@ -363,7 +363,9 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   into the font asset's own free/used rect lists; SDF modes get an exact distance field computed
   from the glyph outline (`render_glyph_sdf`, `0.5 + d / (2 (padding + 1))` as Unity encodes it).
   Composite glyphs scale their components separately, as FreeType does.
-  Not yet read: GSUB ligatures, mark positioning, `cmap` variation sequences, color glyphs.
+  Colour bitmap glyphs (embedded colour strikes) go into COLOR atlases as premultiplied RGBA.
+  Not yet read: GSUB ligatures, mark positioning, `cmap` variation sequences, colour vector
+  (COLR) glyphs.
 * **TextCore text engine** (`managed/UnityEngine/Text/TextCoreText`, UI Toolkit's text): font
   assets with dynamic atlases (kerning of new glyphs read by `FontAsset.UpdateFontAssetsInUpdateQueue`,
   as in Unity), text settings and the generator (rich text, wrapping, alignment, overflow, spacing,
