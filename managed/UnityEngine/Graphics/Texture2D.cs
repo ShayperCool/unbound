@@ -724,7 +724,7 @@ namespace UnityEngine
         {
             Texture2D texture;
             using (ObjectRegistry.AsAssets())
-                texture = new Texture2D { m_Name = name, IsPersistentAsset = true, m_AssetGuid = guid, m_ImportedFrom = guid };
+                texture = new Texture2D { m_Name = name, hideFlags = HideFlags.NotEditable, IsPersistentAsset = true, m_AssetGuid = guid, m_ImportedFrom = guid };
             texture.m_NativeHandle = handle;
             texture.ApplyImport(info);
             return texture;

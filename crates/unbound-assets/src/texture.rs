@@ -1005,7 +1005,7 @@ impl Importer for TextureImporter {
     // 21: Photoshop files are read by Unbound's own reader (16-bit channels round to bytes).
     // 22: Photoshop gray reads opaque, Remove Matte applies.
     // 23: Android imports are ETC1/ETC2-compressed in the Editor's formats (`blocks`).
-    const VERSION: u32 = 23;
+    const VERSION: u32 = 24;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
