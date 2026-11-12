@@ -775,6 +775,22 @@ is how the Editor's products are made in the measured release, as follows.
   of their 5070 lightmap values outside the comparator's tolerance, as the other light cases.
   Measured for the probe's default Lightmap Parameters only: whether the rings, the 2 bits or
   the 0.25 behind the horizon change with other parameters is not.
+- **Light probes** (`probes.rs`): per light probe, 8192 rays leave its position in all
+  directions (a Fibonacci sphere, each counting the same) and add the spherical harmonics basis
+  of their direction, in `SphericalHarmonicsL2`'s order and scale (the radiance's projection
+  times each band's convolution with the cosine over pi), to what they meet: a cluster's front,
+  the environment texel they leave through, nothing for a back face. A probe's references are
+  cut as a texel's are, through the cluster tree and the environment's levels, comparing all
+  nine coefficients, to 512 (the Editor's probe sets of the probe hold at most 64 per probe;
+  Unbound's tree, which groups clusters by position alone, loses detail at fewer: 23 of the 243
+  coefficients of `room-base` off at 128, 14 at 512). With Unbound's clusters and transport the
+  Room's nine probes have 14, 23, 56 and 97 of their 243 coefficients beyond the probe
+  comparator's tolerance (plus 1% of their band 0) in `room-base`, `-moved`, `-intensity` and
+  `-bounce`, 50 to 78 in the later light cases, and none in the environment-only ones
+  (`room-gradient`, `-envdata`, `-sky-none`): what is left follows the clusters' values. Not
+  measured: probes inside geometry (whose rays all meet back faces and take nothing) and
+  outside the system's bounds. Open: probes lit by several systems (the transport references
+  one system's clusters and the environment) and the Editor's own choice of 64 references.
 
 ## Engine
 
@@ -888,6 +904,5 @@ measure):
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
   precompute through the same probe: the clusters, their material samples and bounce
-  resampling, the transport and the visibility are made and compared
-  ([Unbound's precompute](#unbounds-precompute)); the probe transport and their use are
-  open.
+  resampling, the transport, the visibility and the light probes' transport are made and
+  compared ([Unbound's precompute](#unbounds-precompute)); their use by the engine is open.
