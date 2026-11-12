@@ -822,11 +822,25 @@ namespace Unbound.Runtime
             // The layout the mixer runs, which a narrower device lowers below the request.
             var config = AudioSettings.GetConfiguration();
             var mode = AudioBackend.Current.ActiveSpeakerMode;
-            bool layout = mode == AudioSpeakerMode.Stereo || (Compat.AudioSurroundEffectsMeasured
-                && (mode == AudioSpeakerMode.Quad || mode == AudioSpeakerMode.Surround
-                    || mode == AudioSpeakerMode.Mode5point1 || mode == AudioSpeakerMode.Mode7point1));
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || !layout)
-                throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output");
+            bool layout = mode == AudioSpeakerMode.Stereo || (Compat.AudioSurroundEffectsMeasured && MeasuredSpeakerOutput(mode));
+            bool standard = (config.sampleRate == 48000 || config.sampleRate == 44100) && config.dspBufferSize == 1024;
+            if (!layout || !(standard || AdditionalMeasuredOutput(config, mode)))
+                throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output, or the additional measured output settings");
+        }
+
+        // Paired settings measured by tests/projects/audiopitch, in addition to the original profiles.
+        static readonly (int Rate, int Buffer)[] AdditionalOutputSettings = { (32000, 256), (48000, 512), (96000, 2048) };
+        static bool MeasuredSpeakerOutput(AudioSpeakerMode mode) => mode == AudioSpeakerMode.Stereo
+            || mode == AudioSpeakerMode.Quad || mode == AudioSpeakerMode.Surround
+            || mode == AudioSpeakerMode.Mode5point1 || mode == AudioSpeakerMode.Mode7point1;
+
+        static bool AdditionalMeasuredOutput(AudioConfiguration config, AudioSpeakerMode mode)
+        {
+            if (!Compat.AudioSurroundEffectsMeasured || !MeasuredSpeakerOutput(mode)) return false;
+            if (config.sampleRate == 96000 && mode != AudioSpeakerMode.Stereo && mode != AudioSpeakerMode.Quad) return false;
+            foreach (var setting in AdditionalOutputSettings)
+                if (config.sampleRate == setting.Rate && config.dspBufferSize == setting.Buffer) return true;
+            return false;
         }
         // Native 6000.0.71f1 keeps exposed values verbatim but clamps the DSP amount.
         internal float DistortionConfiguration(UnityEngine.Audio.AudioMixer mixer)
@@ -851,9 +865,12 @@ namespace Unbound.Runtime
             // The DSP takes the whole channel count of the clamped value (maxch_raw_* controls).
             int maxChannels = (int)Mathf.Clamp(v[3], PitchShifterMinimums[3], PitchShifterMaximums[3]);
             var config = AudioSettings.GetConfiguration();
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || Array.IndexOf(PitchShifterSpeakerModes, AudioBackend.Current.ActiveSpeakerMode) < 0
-                || (config.dspBufferSize != 256 && config.dspBufferSize != 512 && config.dspBufferSize != 1024 && config.dspBufferSize != 2048))
-                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame mono, stereo, quad, 5.0, 5.1 or 7.1 output");
+            var mode = AudioBackend.Current.ActiveSpeakerMode;
+            bool standard = (config.sampleRate == 48000 || config.sampleRate == 44100)
+                && Array.IndexOf(PitchShifterSpeakerModes, mode) >= 0
+                && (config.dspBufferSize == 256 || config.dspBufferSize == 512 || config.dspBufferSize == 1024 || config.dspBufferSize == 2048);
+            if (!(standard || AdditionalMeasuredOutput(config, mode)))
+                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame mono, stereo, quad, 5.0, 5.1 or 7.1 output, or the additional measured output settings");
             return new { pitch = Mathf.Clamp(v[0], 0.5f, 2f), fft_size = fftSize, max_channels = maxChannels };
         }
         internal object NormalizeConfiguration(UnityEngine.Audio.AudioMixer mixer)

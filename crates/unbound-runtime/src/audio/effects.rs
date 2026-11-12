@@ -163,6 +163,32 @@ const PITCH_SPEAKER_MODES: [i32; 6] = [
     speaker_mode::MODE_7POINT1,
 ];
 
+// Paired output settings measured by tests/projects/audiopitch's settings profile.
+// Other combinations of these rates and buffer lengths remain unmeasured.
+const ADDITIONAL_OUTPUT_SETTINGS: [(u32, u32); 3] = [(32000, 256), (48000, 512), (96000, 2048)];
+
+fn measured_speaker_output(mode: i32) -> bool {
+    matches!(
+        mode,
+        speaker_mode::STEREO
+            | speaker_mode::QUAD
+            | speaker_mode::SURROUND
+            | speaker_mode::MODE_5POINT1
+            | speaker_mode::MODE_7POINT1
+    )
+}
+
+fn additional_measured_output(config: &MixerConfig, enabled: bool) -> bool {
+    enabled
+        && measured_speaker_output(config.speaker_mode)
+        && (config.sample_rate != 96000
+            || matches!(
+                config.speaker_mode,
+                speaker_mode::STEREO | speaker_mode::QUAD
+            ))
+        && ADDITIONAL_OUTPUT_SETTINGS.contains(&(config.sample_rate, config.buffer_size))
+}
+
 /// The output covered by Normalize and static-wet captures (Unity 6000.0.71f1 Linux Editor,
 /// tests/projects/audionormalize and tests/projects/audiopitch): these rates, DSP buffers of
 /// this many frames and stereo; the surround profile also covers Quad, 5.0, 5.1 and 7.1.
@@ -182,18 +208,12 @@ impl MeasuredLayout {
         surround: bool,
     ) -> anyhow::Result<()> {
         anyhow::ensure!(
-            self.rates.contains(&config.sample_rate)
-                && config.buffer_size == self.buffer
-                && (config.speaker_mode == speaker_mode::STEREO
-                    || (surround
-                        && matches!(
-                            config.speaker_mode,
-                            speaker_mode::QUAD
-                                | speaker_mode::SURROUND
-                                | speaker_mode::MODE_5POINT1
-                                | speaker_mode::MODE_7POINT1
-                        ))),
-            "AudioMixer {effect} is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output"
+            (config.speaker_mode == speaker_mode::STEREO
+                || (surround && measured_speaker_output(config.speaker_mode)))
+                && ((self.rates.contains(&config.sample_rate)
+                    && config.buffer_size == self.buffer)
+                    || additional_measured_output(config, surround)),
+            "AudioMixer {effect} is measured only at 48000/44100 Hz with 1024-frame stereo output or measured surround output, or the additional measured output settings"
         );
         Ok(())
     }
@@ -465,10 +485,11 @@ impl EffectSpec {
         );
         if kind == EffectKind::PitchShifter {
             anyhow::ensure!(
-                PITCH_RATES.contains(&config.sample_rate)
+                (PITCH_RATES.contains(&config.sample_rate)
                     && PITCH_BUFFERS.contains(&config.buffer_size)
-                    && PITCH_SPEAKER_MODES.contains(&config.speaker_mode),
-                "AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame mono, stereo, quad, 5.0, 5.1 or 7.1 output"
+                    && PITCH_SPEAKER_MODES.contains(&config.speaker_mode))
+                    || additional_measured_output(config, self.surround_effects_measured),
+                "AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame mono, stereo, quad, 5.0, 5.1 or 7.1 output, or the additional measured output settings"
             );
         }
         if (kind.layout_limited() && kind != EffectKind::PitchShifter)
@@ -909,9 +930,18 @@ impl Effect {
         }
         if let Some(sfx) = &spec.sfx {
             let reverb = match &mut self.reverb {
-                Some(reverb) if reverb.configuration() == (rate, buffer.max(1)) => reverb,
+                Some(reverb)
+                    if reverb.configuration() == (rate, buffer.max(1))
+                        && reverb.measured_delays() == spec.effect_transitions_measured =>
+                {
+                    reverb
+                }
                 slot => {
-                    let mut reverb = SfxReverb::new(rate, buffer)?;
+                    let mut reverb = SfxReverb::with_measured_delays(
+                        rate,
+                        buffer,
+                        spec.effect_transitions_measured,
+                    )?;
                     if spec.effect_transitions_measured {
                         reverb.enable_startup();
                     }
@@ -1613,6 +1643,63 @@ fn sync_effects(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn additional_output_admission_keeps_rate_and_buffer_pairs_together() {
+        for kind in ["Normalize", "Pitch Shifter"] {
+            let mut spec: EffectSpec = serde_json::from_value(serde_json::json!({
+                "id": "output", "kind": kind, "surroundEffectsMeasured": true,
+                "slotWetMeasured": true, "mixLevel": 0.5,
+                "normalize": { "fade": 50.0, "lowest": 0.01, "maximum": 10.0 },
+                "pitchShifter": { "pitch": 0.75 }
+            }))
+            .unwrap();
+            for mode in [
+                speaker_mode::STEREO,
+                speaker_mode::QUAD,
+                speaker_mode::SURROUND,
+                speaker_mode::MODE_5POINT1,
+                speaker_mode::MODE_7POINT1,
+            ] {
+                for (rate, buffer) in [(32000, 256), (48000, 512), (96000, 2048)] {
+                    if rate == 96000 && !matches!(mode, speaker_mode::STEREO | speaker_mode::QUAD) {
+                        continue;
+                    }
+                    let config = MixerConfig {
+                        sample_rate: rate,
+                        buffer_size: buffer,
+                        speaker_mode: mode,
+                        ..Default::default()
+                    };
+                    spec.validate_in_group(&config, false).unwrap();
+                    spec.surround_effects_measured = false;
+                    assert!(spec.validate_in_group(&config, false).is_err());
+                    spec.surround_effects_measured = true;
+                }
+            }
+            for (rate, buffer, mode) in [
+                (32000, 512, speaker_mode::STEREO),
+                (96000, 256, speaker_mode::QUAD),
+                (48000, 256, speaker_mode::STEREO),
+                (32000, 256, speaker_mode::MONO),
+                (96000, 2048, speaker_mode::SURROUND),
+                (96000, 2048, speaker_mode::MODE_5POINT1),
+                (96000, 2048, speaker_mode::MODE_7POINT1),
+                (96000, 2048, speaker_mode::PROLOGIC),
+            ] {
+                let config = MixerConfig {
+                    sample_rate: rate,
+                    buffer_size: buffer,
+                    speaker_mode: mode,
+                    ..Default::default()
+                };
+                assert!(
+                    spec.validate_in_group(&config, false).is_err(),
+                    "{kind}: {rate}/{buffer}/{mode}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn send_slope_visits_active_speakers_in_order_across_partial_blocks() {

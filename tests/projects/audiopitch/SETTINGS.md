@@ -43,3 +43,12 @@ reference, and the newly extended mixer admission rejects these layouts at this
 pair. A clip-backed diagnostic also could not establish active width through
 AudioRenderer.GetSampleCountForCaptureFrame in this offline capture setup.
 The raw diagnostics remain outside Git; no comparator bounds were changed.
+
+Independent clean repeats agree exactly on 54,134,190 values. The engine passes
+all values under the existing gate. The strict comparison retains 3,921
+single-step device PCM differences; every Master float passes the original
+float bounds. A previous repeat pair had one larger device-sample discrepancy
+in the 32000 Hz / 256-frame 5.1 session. That entire session was recorded twice
+again and matched exactly before publication; the original pair is retained as
+a diagnostic. All 1,246 previously authored inputs remain byte-identical, and
+336 inputs are added for this profile.

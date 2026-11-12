@@ -53,10 +53,15 @@ pub struct SfxReverbSpec {
     pub lf_reference: f32,
 }
 
-// Tap times in milliseconds; the measured sample offsets are floor(ms * rate / 1000) at both rates.
-// Line 0's offset includes the frame its base subtracts.
-const EARLY_MS: [[f32; 4]; 2] = [[0.0, 7.926, 20.075, 50.781], [4.984, 12.616, 31.932, 80.76]];
-const EARLY_ALLPASS_MS: [f32; 2] = [5.885, 7.676];
+// Other releases retain the previous 48/44.1 kHz delay approximation pending measurement.
+const LEGACY_EARLY_MS: [[f32; 4]; 2] =
+    [[0.0, 7.926, 20.075, 50.781], [4.984, 12.616, 31.932, 80.76]];
+const LEGACY_ALLPASS_MS: [f32; 2] = [5.885, 7.676];
+// Unity 6000.0.71f1, tests/projects/audiopitch settings controls. Nonzero delays
+// truncate the single-precision seconds-to-samples product, then subtract one sample.
+const FIRST_EARLY_TAP_SECONDS: f32 = 0.005;
+const EARLY_TAP_RATIO: f32 = 1.59;
+const ALLPASS_SECONDS: [f32; 2] = [0.0059, 0.0077];
 const EARLY_ALLPASS_GAIN: f32 = 0.63;
 // Late input taps use the sum of Reflect Delay and Reverb Delay before truncation.
 // Output delays are a separate geometric series; their histories stay separate on retuning.
@@ -72,6 +77,31 @@ const MAX_HISTORY_BYTES: usize = 8 * 1024 * 1024;
 
 fn frames(ms: f32, rate: u32) -> usize {
     (ms as f64 * rate as f64 / 1000.0) as usize
+}
+
+fn sample_delay(seconds: f32, rate: u32) -> usize {
+    ((seconds * rate as f32) as usize).saturating_sub(1)
+}
+
+fn early_offsets(rate: u32, measured: bool) -> [[usize; 4]; 2] {
+    if !measured {
+        return LEGACY_EARLY_MS.map(|row| row.map(|ms| frames(ms, rate)));
+    }
+    let mut offsets = [[0; 4]; 2];
+    let mut seconds = FIRST_EARLY_TAP_SECONDS;
+    for tap in 1..8 {
+        offsets[tap % 2][tap / 2] = sample_delay(seconds, rate);
+        seconds *= EARLY_TAP_RATIO;
+    }
+    offsets
+}
+
+fn allpass_delays(rate: u32, measured: bool) -> [usize; 2] {
+    if measured {
+        ALLPASS_SECONDS.map(|seconds| sample_delay(seconds, rate).max(1))
+    } else {
+        LEGACY_ALLPASS_MS.map(|ms| frames(ms, rate).max(1))
+    }
 }
 fn level(mb: f32) -> f32 {
     10f32.powf(mb / 2000.0)
@@ -134,6 +164,8 @@ fn startup_coefficients(mut c: Coefficients, rate: u32) -> Coefficients {
 
 pub struct SfxReverb {
     rate: u32,
+    measured_delays: bool,
+    early_offsets: [[usize; 4]; 2],
     c: Coefficients,
     previous: Coefficients,
     pending: Coefficients,
@@ -157,6 +189,14 @@ pub struct SfxReverb {
 
 impl SfxReverb {
     pub fn new(rate: u32, buffer_size: u32) -> anyhow::Result<Self> {
+        Self::with_measured_delays(rate, buffer_size, false)
+    }
+
+    pub fn with_measured_delays(
+        rate: u32,
+        buffer_size: u32,
+        measured: bool,
+    ) -> anyhow::Result<Self> {
         // The longest input read is the late network at maximal Reflect and Reverb Delay.
         let input = frames(400.0 + LATE_TAP_S * 1000.0 * LATE_TAP_RATIO.powi(6), rate) + 3;
         let line_len = (LINE_MS * LINE_RATIO.powi(7) * rate as f32 / 1000.0).round() as usize + 2;
@@ -165,9 +205,12 @@ impl SfxReverb {
             bytes <= MAX_HISTORY_BYTES,
             "AudioMixer SFX Reverb history exceeds the supported 8 MiB limit at {rate} Hz"
         );
-        let allpass = |i: usize| ring(frames(EARLY_ALLPASS_MS[i], rate).max(1));
+        let offsets = early_offsets(rate, measured);
+        let delays = allpass_delays(rate, measured);
         Ok(Self {
             rate,
+            measured_delays: measured,
+            early_offsets: offsets,
             c: Coefficients::default(),
             previous: Coefficients::default(),
             pending: Coefficients::default(),
@@ -177,16 +220,20 @@ impl SfxReverb {
             buffer_size: buffer_size.max(1) as usize,
             buffer_position: 0,
             input: ring(input)?,
-            early_output: ring(frames(EARLY_MS[1][3], rate) + 1)?,
+            early_output: ring(offsets[1][3] + 1)?,
             lines: ring(8 * line_len)?,
             line_len,
-            allpass: [allpass(0)?, allpass(1)?],
+            allpass: [ring(delays[0])?, ring(delays[1])?],
             allpass_pos: [0; 2],
             pos: 0,
             hf: [0.0; 2],
             lf: [0.0; 4],
             damped: [0.0; 8],
         })
+    }
+
+    pub fn measured_delays(&self) -> bool {
+        self.measured_delays
     }
 
     /// Initial coefficients and input taps approach the requested settings over one DSP period.
@@ -285,9 +332,9 @@ impl SfxReverb {
         // The Native rounding is float32: 0.02 * 48000 must give 960.
         let reflect = p.reflect_delay.clamp(0.0, 0.3);
         let early_base = ((reflect * rate) as usize).saturating_sub(1);
-        for (taps, ms) in c.early.iter_mut().zip(EARLY_MS) {
-            for (tap, ms) in taps.iter_mut().zip(ms) {
-                *tap = early_base + frames(ms, self.rate);
+        for (taps, offsets) in c.early.iter_mut().zip(self.early_offsets) {
+            for (tap, offset) in taps.iter_mut().zip(offsets) {
+                *tap = early_base + offset;
             }
         }
         c.early_gain = std::f32::consts::FRAC_1_SQRT_2
@@ -526,6 +573,23 @@ fn damping(c1: f32, ratio: f32, w: f32) -> f32 {
 mod tests {
     use super::*;
     use crate::audio::effects::{Effect, EffectSpec};
+
+    #[test]
+    fn early_delays_scale_in_seconds_and_preserve_the_original_rate_controls() {
+        for rate in [44100, 48000] {
+            assert_eq!(early_offsets(rate, true), early_offsets(rate, false));
+            assert_eq!(allpass_delays(rate, true), allpass_delays(rate, false));
+        }
+        assert_eq!(allpass_delays(32000, true), [187, 245]);
+        assert_eq!(allpass_delays(96000, true), [565, 738]);
+        assert_eq!(allpass_delays(22050, true), [129, 168]);
+        assert_eq!(allpass_delays(1, true), [1, 1]);
+        assert_eq!(
+            early_offsets(96000, true),
+            [[0, 762, 1928, 4876], [479, 1212, 3066, 7754]]
+        );
+        assert_ne!(allpass_delays(32000, true), allpass_delays(32000, false));
+    }
 
     #[test]
     fn initial_network_transition_matches_the_full_quad_reference_across_partial_chunks() {

@@ -1542,7 +1542,11 @@ impl Mixer {
             }
             return;
         }
-        self.zone = match SfxReverb::new(rate, self.config.buffer_size) {
+        self.zone = match SfxReverb::with_measured_delays(
+            rate,
+            self.config.buffer_size,
+            measured_startup,
+        ) {
             Ok(mut reverb) => {
                 if measured_startup {
                     reverb.initialize_zone_return();

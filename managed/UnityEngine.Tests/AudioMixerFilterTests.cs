@@ -1083,6 +1083,46 @@ namespace UnityEngine.Tests
         [InlineData("Flange")]
         [InlineData("Normalize")]
         [InlineData("Pitch Shifter")]
+        [InlineData("SFX Reverb")]
+        public void AdditionalOutputSettingsKeepMeasuredRateAndBufferPairs(string kind)
+        {
+            var (mixer, group, effect) = Fixture();
+            var parameters = kind == "Chorus" ? AudioMixerEffectController.ChorusParameters
+                : kind == "Flange" ? AudioMixerEffectController.FlangeParameters
+                : kind == "Normalize" ? AudioMixerEffectController.NormalizeParameters
+                : kind == "Pitch Shifter" ? AudioMixerEffectController.PitchShifterParameters
+                : kind == "SFX Reverb" ? AudioMixerEffectController.SfxReverbParameters : new[] { "Level" };
+            UseEffect(mixer, effect, kind, parameters);
+            effect.m_EnableWetMix = true; effect.m_MixLevelGuid = "wet";
+            mixer.m_Exposed["Wet"] = "wet"; mixer.SetFloat("Wet", 6f);
+            var original = AudioSettings.GetConfiguration();
+            foreach (var setting in new[] { (32000, 256), (48000, 512), (96000, 2048) })
+            {
+                var config = original; config.sampleRate = setting.Item1; config.dspBufferSize = setting.Item2;
+                Assert.True(AudioSettings.Reset(config));
+                group.DspConfiguration(); AudioBackend.Current.UpdateGroup(group);
+            }
+            foreach (var setting in new[] { (32000, 512), (96000, 256), (48000, 256) })
+            {
+                var config = original; config.sampleRate = setting.Item1; config.dspBufferSize = setting.Item2;
+                Assert.True(AudioSettings.Reset(config));
+                Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+            }
+            foreach (var mode in new[] { AudioSpeakerMode.Mono, AudioSpeakerMode.Prologic })
+            {
+                var config = original; config.sampleRate = 96000; config.dspBufferSize = 2048; config.speakerMode = mode;
+                Assert.True(AudioSettings.Reset(config));
+                Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+            }
+            Assert.True(AudioSettings.Reset(original));
+        }
+
+        [Theory]
+        [InlineData("Distortion")]
+        [InlineData("Chorus")]
+        [InlineData("Flange")]
+        [InlineData("Normalize")]
+        [InlineData("Pitch Shifter")]
         public void StaticSlotWetUsesTheSameAcceptanceAndDbGainForBothBackends(string kind)
         {
             var (mixer, group, effect) = Fixture();
@@ -1107,7 +1147,7 @@ namespace UnityEngine.Tests
                 ProjectInfo.UnityVersion = "6000.0.70f1";
                 Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(submit).Message);
                 ProjectInfo.UnityVersion = "6000.0.71f1";
-                var config = AudioSettings.GetConfiguration(); config.dspBufferSize = 512;
+                var config = AudioSettings.GetConfiguration(); config.dspBufferSize = 256;
                 AudioSettings.Reset(config);
                 Assert.Contains("1024-frame stereo", Assert.Throws<NotSupportedException>(submit).Message);
                 config.dspBufferSize = 1024; AudioSettings.Reset(config);

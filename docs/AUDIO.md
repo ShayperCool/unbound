@@ -1018,3 +1018,15 @@ Every one of 94,505,124 values per rate passes the existing bounds. Strict
 reports keep all one-step device differences, with no added allowance for
 Master floats. Other wet-effect kinds, topology changes, Mono, Prologic and
 other rates/buffers remain outside this measurement.
+
+### Additional measured output settings
+
+The audiopitch [settings profile](../tests/projects/audiopitch/SETTINGS.md) covers
+32000 Hz / 256 frames and 48000 Hz / 512 frames in stereo, Quad, Surround, 5.1
+and 7.1, plus 96000 Hz / 2048 frames in stereo and Quad, on Unity 6000.0.71f1.
+Normalize, static/live wet slots and default Pitch Shifter admission use these
+exact pairs through the existing surround compatibility selector. Other pairs
+remain outside that extension. The reverb early taps and allpasses scale from
+single-precision seconds; their sample offsets at 48000 and 44100 Hz are
+unchanged. Other releases retain the previous unmeasured delay approximation.
+The wider 96000 Hz / 2048-frame callback captures remain Q373-R2.
