@@ -121,6 +121,26 @@ public static class RealtimeGISetup
         }
     }
 
+    /// <summary>Adds the <c>RoomHoles</c> scene alone: the room with panels of two holes of one
+    /// size and a plate either holds.</summary>
+    public static void CreateHoles()
+    {
+        try
+        {
+            CreateRoom("RoomHoles", LightmapsMode.NonDirectional, 1f, 1f, holes: true);
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            scenes.Add(new EditorBuildSettingsScene($"{Scenes}/RoomHoles.unity", true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     /// <summary>Adds the <c>RoomCharts</c> scene alone: the room with the chart panels.</summary>
     public static void CreateCharts()
     {
@@ -438,7 +458,7 @@ public static class RealtimeGISetup
         triangles.AddRange(new[] { first, first + 1, first + 2, first, first + 2, first + 3 });
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false)
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false, bool holes = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -494,6 +514,18 @@ public static class RealtimeGISetup
             // UVs come from Mesh.uv3 when a mesh has it (Manual, "Generate lightmap UVs").
             lit.Add(Panel(name, "Channels", new Vector3(-2.6f, 0.02f, -2.6f), new Vector3(90f, 0f, 0f), white,
                 new[] { 0f, 2f }, new[] { 0f, 1f }, new[] { "#" }, new Rect[0], new Vector2(0.5f, 1f)));
+        }
+
+        if (holes)
+        {
+            // On the back wall: two holes of one size side by side and a plate either holds; on
+            // the right wall the same stacked.
+            lit.Add(Panel(name, "TwinHoles", new Vector3(-2.5f, 0.3f, 2.95f), Vector3.zero, white,
+                new[] { 0f, 0.3f, 2.65f, 2.95f, 5.3f, 5.6f }, new[] { 0f, 0.3f, 2.8f, 3.1f }, new[] { "#####", "#.#.#", "#####" },
+                new[] { new Rect(0.9f, 0.4f, 1.2f, 1.2f) }));
+            lit.Add(Panel(name, "TwinHolesStacked", new Vector3(2.95f, 0.3f, 2.5f), new Vector3(0f, 90f, 0f), white,
+                new[] { 0f, 0.3f, 2.8f, 3.1f }, new[] { 0f, 0.3f, 2.65f, 2.95f, 5.3f, 5.6f }, new[] { "###", "#.#", "###", "#.#", "###" },
+                new[] { new Rect(0.9f, 0.4f, 1.2f, 1.2f) }));
         }
 
         if (autoCharts)

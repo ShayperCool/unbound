@@ -80,5 +80,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/RoomTurned.unity
     guid: 03e0d87bf3db9ca37875f1d8d9aa12fc
+  - enabled: 1
+    path: Assets/Scenes/RoomHoles.unity
+    guid: 7229714b49cdfe7219f6cbab856ee3fa
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

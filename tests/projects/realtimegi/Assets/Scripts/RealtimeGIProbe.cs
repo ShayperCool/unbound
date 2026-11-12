@@ -564,6 +564,12 @@ public class RealtimeGIProbe : MonoBehaviour
         s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
         yield return Converge();
         Capture("roomturned-moved", s);
+
+        // The room with two panels whose two holes are of one size, and a plate either holds.
+        yield return Load("RoomHoles");
+        s = Scene();
+        yield return Converge();
+        Capture("roomholes-base", s);
         Finish();
     }
 
