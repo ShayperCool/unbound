@@ -44,6 +44,10 @@ namespace Unbound.Runtime
         /// buffers, tests/projects/clipmemory on 6000.0.71f1. Other releases remain unmeasured.</summary>
         internal static bool CreatedClipStreamMemoryMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>CRT loading, callback delivery and render-cycle scheduling,
+        /// tests/projects/crtload on 6000.0.71f1. Other releases retain unmeasured prior behavior.</summary>
+        internal static bool CustomRenderTextureLifecycleMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Pending Starts without an earlier callback visit run at the PostLateUpdate
         /// scripting point, measured by editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
         internal static bool PendingStartsAfterLateUpdate => Release == (6000, 0, 71, 'f', 1);

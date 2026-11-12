@@ -80,6 +80,8 @@ namespace Unbound.Runtime
 
         internal static int MainThreadId => s_MainThreadId;
 
+        internal static bool IsPlayModeEntryFrame => s_Booted && EditorSession.IsPlaying && !s_EnteredPlayMode;
+
         /// <summary>Runs an action on the main thread: now when called there, otherwise in the frame.</summary>
         internal static void RunOnMainThread(Action action)
         {
@@ -167,6 +169,7 @@ namespace Unbound.Runtime
             });
             Register(typeof(PL.Update.ScriptRunDelayedTasks), MainThreadContext.Instance.RunPending);
             Register(typeof(PL.PreLateUpdate.ScriptRunBehaviourLateUpdate), Lifecycle.RunLateUpdate);
+            Register(typeof(PL.PostLateUpdate.UpdateCustomRenderTextures), CustomRenderTextureManager.UpdateAll);
             // Automatic stop actions and custom loops without the scripting pump retain their
             // end-of-frame fallback. Other releases keep their previous, unmeasured timing.
             Register(typeof(PL.PostLateUpdate.PlayerSendFrameStarted), () =>
@@ -389,12 +392,14 @@ namespace Unbound.Runtime
         {
             s_EnteredPlayMode = false;
             AnimationSystem.BeginPlayMode();
+            CustomRenderTextureManager.BeginPlayMode();
             UnityEngine.SendMouseEvents.Reset();
         }
 
         static void Boot(string firstScene, bool unused)
         {
             AnimationSystem.BeginPlayMode();
+            CustomRenderTextureManager.BeginPlayMode();
             var initialScene = string.IsNullOrEmpty(firstScene) ? null : SceneManagerInternal.PreparePlayModeScene(firstScene);
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
             Unbound.Runtime.NativePlugins.Boot();

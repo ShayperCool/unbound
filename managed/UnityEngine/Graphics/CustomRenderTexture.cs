@@ -667,7 +667,7 @@ namespace UnityEngine
     public static partial class CustomRenderTextureManager
     {
         static readonly List<CustomRenderTexture> s_Textures = new List<CustomRenderTexture>();
-        static bool s_Registered;
+        static int s_LastUpdateFrame = int.MinValue;
 
         public static event Action<CustomRenderTexture> textureLoaded;
         public static event Action<CustomRenderTexture> textureUnloaded;
@@ -676,11 +676,6 @@ namespace UnityEngine
 
         internal static void Register(CustomRenderTexture texture)
         {
-            if (!s_Registered)
-            {
-                s_Registered = true;
-                PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.UpdateCustomRenderTextures), UpdateAll);
-            }
             s_Textures.Add(texture);
         }
 
@@ -703,11 +698,21 @@ namespace UnityEngine
         internal static void InvokeTriggerUpdate(CustomRenderTexture crt, int updateCount) => updateTriggered?.Invoke(crt, updateCount);
         internal static void InvokeTriggerInitialize(CustomRenderTexture crt) => initializeTriggered?.Invoke(crt);
 
+        internal static void BeginPlayMode() => s_LastUpdateFrame = int.MinValue;
+
         /// <summary>PostLateUpdate.UpdateCustomRenderTextures: newly seen textures load (and run
         /// their OnLoad initialization and update), then each texture, after those its materials
         /// read, initializes and updates as its modes and requests say.</summary>
-        static void UpdateAll()
+        internal static void UpdateAll()
         {
+            if (Compat.CustomRenderTextureLifecycleMeasured)
+            {
+                if (PlayerLoopDriver.IsPlayModeEntryFrame || !OnDemandRendering.RendersThisFrame) return;
+                int frame = Time.frameCount;
+                if (s_LastUpdateFrame == frame) return;
+                // Empty visits also consume the frame: work added by a later loop system waits.
+                s_LastUpdateFrame = frame;
+            }
             if (s_Textures.Count == 0) return;
             s_Textures.RemoveAll(t => t == null);
             var fresh = new HashSet<CustomRenderTexture>();
@@ -716,7 +721,8 @@ namespace UnityEngine
                 if (t.m_Loaded) continue;
                 t.m_Loaded = true;
                 fresh.Add(t);
-                textureLoaded?.Invoke(t);
+                try { textureLoaded?.Invoke(t); }
+                catch (Exception e) when (Compat.CustomRenderTextureLifecycleMeasured) { Debug.LogException(e); }
             }
             float delta = Time.deltaTime;
             foreach (var t in Ordered())

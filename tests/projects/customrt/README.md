@@ -76,9 +76,13 @@ and image manifest, with the rtdepth probe's float tolerance (absolute and relat
   frame, Realtime updates from that frame on. `Update(n)` and `Initialize()` fire
   `updateTriggered`/`initializeTriggered` at the call and run at the next update point,
   initialization first. Destroying the texture or `Resources.UnloadAsset` fires `textureUnloaded`.
-  `GetAllCustomRenderTextures` lists the loaded textures. Textures made in the first frame of
-  Play mode (the api section) are not loaded by that frame's update point (no event, not
-  created, not listed); textures made later load in their frame (the loading section).
+  `GetAllCustomRenderTextures` lists the loaded textures. The initial Play entry cycle does
+  not process pending loads. The API section destroys its startup textures before the next
+  eligible cycle, so they never enter its list. The [crtload control](../crtload/README.md)
+  keeps startup textures alive and observes their OnLoad initialization on the next rendered
+  cycle. It also checks later-frame and empty repeated phases, skipped screen frames and a
+  throwing loaded listener. These scheduling corrections match all 448 values and 228 images;
+  the reference and tolerances remain unchanged.
 * Initialization writes both buffers: with the material's first pass only (Material source),
   else the texture times the color converted to linear (sampled with the texture's own filter),
   else the color unconverted. Cubemaps initialize every face whatever the face mask.
