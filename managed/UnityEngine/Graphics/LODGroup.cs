@@ -21,12 +21,15 @@ namespace UnityEngine
     }
 
     /// <summary>
-    /// Levels of detail: each camera draws the renderers of one level, the first whose transition
-    /// height the group's screen-relative height reaches (from QualitySettings.maximumLODLevel on),
-    /// none past the last. The height is the group's world size (its size times its largest scale)
-    /// over the view's height at the reference point's distance (2 d tan(fov / 2); twice the
-    /// orthographic size), times QualitySettings.lodBias (measured, tests/projects/lod). Levels
-    /// switch at once (cross-fades are not drawn).
+    /// Levels of detail: each camera draws the renderers of one level, the first (from
+    /// QualitySettings.maximumLODLevel on) whose reach the camera is within, none past the last.
+    /// A level reaches as far as the group's world size (its size times its largest scale) over
+    /// the level's transition height; the camera's distance counts times the view's height at
+    /// distance 1 (2 tan(fov / 2); for an orthographic camera twice its size, at any distance)
+    /// over QualitySettings.lodBias, and a level ends where the two are equal (measured,
+    /// tests/projects/lod). In terms of the group's height on screen: a level is drawn while
+    /// that height is more than its transition height. Levels switch at once (cross-fades are
+    /// not drawn).
     /// </summary>
     [ClassId(205)]
     public partial class LODGroup : Component
@@ -144,13 +147,32 @@ namespace UnityEngine
         {
             if (m_LODs.Length == 0) return -1;
             if (m_Forced >= 0) return Math.Min(m_Forced, m_LODs.Length - 1);
-            float viewHeight = camera.orthographic
-                ? 2f * camera.orthographicSize
-                : 2f * (reference - cameraPosition).magnitude * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
-            float height = viewHeight > 0f ? worldSize / viewHeight * QualitySettings.lodBias : float.PositiveInfinity;
+            float distance = ViewDistance(camera, cameraPosition, reference);
             for (int i = Math.Max(0, QualitySettings.maximumLODLevel); i < m_LODs.Length; i++)
-                if (height >= m_LODs[i].screenRelativeTransitionHeight) return i;
+                if (distance < worldSize / m_LODs[i].screenRelativeTransitionHeight) return i;
             return -1;
+        }
+
+        /// <summary>
+        /// The distance a level's reach is compared with: the reference point's distance times
+        /// the view's height at distance 1 (twice the tangent of half the field of view) over
+        /// the LOD bias; for an orthographic camera its height (twice the orthographic size)
+        /// over the bias, at any distance. A level is drawn while this is less than the
+        /// group's size over the level's height: at equality the next level is (Unity
+        /// 6000.0.71f1, tests/projects/lod: the fov 90 sweep's last level ends at 5.0 exactly,
+        /// the orthographic one's at size 5.0).
+        /// </summary>
+        static float ViewDistance(Camera camera, Vector3 cameraPosition, Vector3 reference)
+        {
+            float bias = QualitySettings.lodBias;
+            if (camera.orthographic) return (camera.orthographicSize + camera.orthographicSize) / bias;
+            float fieldOfView = camera.fieldOfView;
+            // Half the field of view in radians, its sums and products in this float order (the
+            // order decides the ties of the probe's sweeps).
+            float tangent = Mathf.Tan((fieldOfView / 360f + fieldOfView / 360f) * Mathf.PI * 0.5f);
+            float scale = (tangent + tangent) / bias;
+            var to = reference - cameraPosition;
+            return Mathf.Sqrt((to.z * to.z + to.y * to.y + to.x * to.x) * (scale * scale));
         }
 
         /// <summary>Whether a camera draws a renderer of the group: whether it is in the camera's level.</summary>
