@@ -3168,6 +3168,9 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
     let mut r = Replay::new();
     r.solver = SystemSolver::new(Arc::new(own)).unwrap();
     r.data.systems[0] = r.solver.system().clone();
+    // And Unbound's own light probe transport.
+    let set = own_room_probes(&r.data);
+    r.probes = ProbeSetSolver::new(Arc::new(set), std::slice::from_ref(&r.solver)).unwrap();
     // The probe's Room cases in their order, converged from each other as in the Editor.
     let moved = Room {
         light: MOVED,
@@ -3233,14 +3236,15 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         ..cube
     };
     // With the values outside the probe comparator's tolerance (of 5070) measured with Unbound's
-    // clusters, transport and visibility. (In a local experiment with the Editor's own cluster geometry,
-    // which its precompute keeps outside the project, and this transport, the first four were
-    // 12, 14, 29 and 81: docs/REALTIME_GI.md, Unbound's precompute.)
+    // clusters, transport and visibility, and the light probe coefficients off (of 243) with its
+    // probe transport. (In a local experiment with the Editor's own cluster geometry, which its
+    // precompute keeps outside the project, and this transport, the first four were 12, 14, 29
+    // and 81 values: docs/REALTIME_GI.md, Unbound's precompute.)
     let cases = [
-        (BASE, "room-base", 83),
-        (moved, "room-moved", 125),
-        (lit, "room-intensity", 329),
-        (Room { bounce: 3.0, ..lit }, "room-bounce", 553),
+        (BASE, "room-base", 83, 14),
+        (moved, "room-moved", 125, 23),
+        (lit, "room-intensity", 329, 56),
+        (Room { bounce: 3.0, ..lit }, "room-bounce", 553, 97),
         (
             Room {
                 indirect_scale: 2.0,
@@ -3248,12 +3252,13 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
             },
             "room-indirectscale",
             428,
+            74,
         ),
-        (call, "room-emission-call", 364),
-        (set, "room-setemissive", 378),
-        (then, "room-setemissive-then-call", 378),
-        (blue_called, "room-albedo-call", 360),
-        (ambient, "room-env-call", 457),
+        (call, "room-emission-call", 364, 61),
+        (set, "room-setemissive", 378, 78),
+        (then, "room-setemissive-then-call", 378, 78),
+        (blue_called, "room-albedo-call", 360, 78),
+        (ambient, "room-env-call", 457, 76),
         (
             Room {
                 point_light: false,
@@ -3261,10 +3266,11 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
             },
             "room-pointoff",
             458,
+            60,
         ),
-        (spot, "room-spot", 433),
-        (behind, "room-spot-behind", 443),
-        (sun, "room-directional", 498),
+        (spot, "room-spot", 433, 54),
+        (behind, "room-spot-behind", 443, 59),
+        (sun, "room-directional", 498, 50),
         (
             Room {
                 sun: Some((57.0, -33.0)),
@@ -3272,13 +3278,14 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
             },
             "room-directional-turned",
             520,
+            56,
         ),
-        (sun, "room-directional-noshadows", 505),
-        (gradient, "room-gradient", 86),
-        (cube, "room-envdata", 155),
-        (flat, "room-sky-none", 157),
+        (sun, "room-directional-noshadows", 505, 52),
+        (gradient, "room-gradient", 86, 0),
+        (cube, "room-envdata", 155, 0),
+        (flat, "room-sky-none", 157, 0),
     ];
-    for (room, case, measured) in cases {
+    for (room, case, measured, probes) in cases {
         if case == "room-emission-call" {
             r.set(lit);
             r.converge();
@@ -3286,6 +3293,14 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         let (fails, total, median) = r.case(room, case);
         eprintln!(
             "{case}: {fails} of {total} values outside the tolerance, median relative error {median}"
+        );
+        // The light probes' coefficients (243 of the nine probes) beyond the probe comparator's
+        // tolerance plus 1% of their band 0 (as the replay of the Editor's own data counts them).
+        let (off, worst) = r.probes(case);
+        eprintln!("{case} probes: {off} coefficients off, worst {worst}");
+        assert!(
+            off * 100 <= probes * 115 + 100,
+            "{case}: {off} probe coefficients off"
         );
         assert!(
             fails * 100 <= measured * 115,
@@ -3396,4 +3411,44 @@ fn own_visibility_of_the_editors_points_matches_its_precompute() {
         same * 1000 >= total * 990 && near == total,
         "{same} {near} {total}"
     );
+}
+
+/// The Room's light probes (its light probe group, in its order).
+const ROOM_PROBES: [[f32; 3]; 9] = [
+    [-2.0, 0.5, -2.0],
+    [-2.0, 0.5, 2.0],
+    [-2.0, 3.5, -2.0],
+    [-2.0, 3.5, 2.0],
+    [2.0, 0.5, -2.0],
+    [2.0, 0.5, 2.0],
+    [2.0, 3.5, -2.0],
+    [2.0, 3.5, 2.0],
+    [0.0, 2.0, 0.0],
+];
+
+/// The Room's probe set made by Unbound's precompute for the system of `data` (its own clusters).
+fn own_room_probes(data: &Precomputed) -> crate::data::ProbeSet {
+    use crate::precompute::clusters;
+    let own = room_instances(data);
+    let instances: Vec<clusters::Instance> = own
+        .iter()
+        .map(|i| clusters::Instance {
+            positions: &i.positions,
+            normals: &i.normals,
+            texels: &i.texels,
+            triangles: &CUBE_TRIANGLES,
+            cluster_size: 1.0,
+            modelling_tolerance: 0.01,
+        })
+        .collect();
+    let c = clusters::cluster(&instances, 52, 52).unwrap();
+    crate::precompute::probes::probe_set(
+        &ROOM_PROBES,
+        &c,
+        data.systems[0].input_hash,
+        data.probe_sets[0].hash,
+        8192,
+        crate::precompute::probes::PROBE_BUDGET,
+    )
+    .unwrap()
 }

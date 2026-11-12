@@ -803,9 +803,61 @@ fn a_cluster_sees_the_sky_above_its_horizon() {
                 // Above the horizon all of it sees the sky, but under the lid; at the horizon
                 // and a little behind it (along the surface, between floor and lid) too;
                 // farther behind none.
-                let expected = if d[1] <= -0.25 || (covered && d[1] > 0.01) { 0 } else { 3 };
+                let expected = if d[1] <= -0.25 || (covered && d[1] > 0.01) {
+                    0
+                } else {
+                    3
+                };
                 assert_eq!(values[k], expected, "ring {r} ({d:?}), covered {covered}");
             }
         }
     }
+}
+
+#[test]
+fn a_probe_above_a_floor_takes_half_its_light_from_it() {
+    // A probe above a wide floor: the sky above gives band 0 a half and the up coefficient (y) a
+    // half per unit of its value, the floor below a half and minus a half (a uniform unit
+    // radiance all round gives band 0 one).
+    let m = floor(400.0, 400.0);
+    let instances = [m.instance(40.0)];
+    let c = cluster(&instances, 64, 64).unwrap();
+    let set =
+        super::probes::probe_set(&[[200.0, 1.0, 200.0]], &c, [7; 16], [8; 16], 8192, 1000).unwrap();
+    let p = &set.probes[0];
+    let (mut sky, mut ground) = ([0f32; 9], [0f32; 9]);
+    for (&(dep, _), w) in p.references.iter().zip(&p.weights) {
+        let sum = if dep == 0 { &mut sky } else { &mut ground };
+        for k in 0..9 {
+            sum[k] += w[k];
+        }
+    }
+    for (sum, sign) in [(sky, 1.0), (ground, -1.0)] {
+        assert!(
+            (sum[0] - 0.5).abs() < 0.01 && (sum[1] - 0.5 * sign).abs() < 0.01,
+            "{sum:?}"
+        );
+        // Nothing along x or z.
+        assert!(sum[2].abs() < 0.01 && sum[3].abs() < 0.01, "{sum:?}");
+    }
+    // With a budget of 8 its references are joined to at most eight, keeping their sum.
+    let set =
+        super::probes::probe_set(&[[200.0, 1.0, 200.0]], &c, [7; 16], [8; 16], 8192, 8).unwrap();
+    assert!(
+        set.probes[0].references.len() <= 8,
+        "{:?}",
+        set.probes[0].references
+    );
+    let total: f32 = set.probes[0].weights.iter().map(|w| w[0]).sum();
+    assert!((total - 1.0).abs() < 0.01, "{total}");
+    // Down to the coarsest values: the tree's root and the five environment faces the sky covers.
+    let set =
+        super::probes::probe_set(&[[200.0, 1.0, 200.0]], &c, [7; 16], [8; 16], 8192, 1).unwrap();
+    assert_eq!(
+        set.probes[0].references.len(),
+        6,
+        "{:?}",
+        set.probes[0].references
+    );
+    assert!(super::probes::probe_set(&[[0.0; 3]], &c, [7; 16], [8; 16], 0, 4).is_err());
 }

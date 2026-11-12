@@ -6,6 +6,7 @@
 pub mod clusters;
 pub mod geometry;
 mod math;
+pub mod probes;
 pub mod transport;
 pub mod visibility;
 
