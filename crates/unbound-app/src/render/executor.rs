@@ -134,6 +134,8 @@ struct Target {
     resolve: Option<wgpu::TextureView>,
     samples: u32,
     depth: Option<wgpu::TextureView>,
+    /// The depth buffer's format (with `depth`).
+    depth_format: Option<wgpu::TextureFormat>,
     format: wgpu::TextureFormat,
     width: u32,
     height: u32,
@@ -387,6 +389,8 @@ struct DepthBlit {
     /// The source's sample count (1: not multisampled).
     source_samples: u32,
     destination: wgpu::TextureView,
+    /// The destination depth buffer's format.
+    format: wgpu::TextureFormat,
     samples: u32,
 }
 
@@ -484,7 +488,10 @@ pub struct UnityRenderer {
     /// single-sample and multisampled.
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>; CopyKind::COUNT],
     /// The `CopyDepth` pipelines, by (source multisampled, destination samples, per sample).
-    depth_blit_pipelines: HashMap<(bool, u32, bool), (wgpu::RenderPipeline, wgpu::BindGroupLayout)>,
+    depth_blit_pipelines: HashMap<
+        (bool, u32, bool, wgpu::TextureFormat),
+        (wgpu::RenderPipeline, wgpu::BindGroupLayout),
+    >,
     /// Integer copies of float textures that integer slots read, by texture and signedness.
     bit_views: HashMap<(u64, bool), (u32, u32, wgpu::TextureView)>,
     /// Main-texture bind groups of render targets' depth elements, by texture and color space,
@@ -2025,22 +2032,26 @@ impl UnityRenderer {
         };
         let from = end(self, source);
         let to_view = if destination == 0 {
-            Some(self.ensure_screen(self.screen_slot).depth.clone())
+            Some((
+                self.ensure_screen(self.screen_slot).depth.clone(),
+                DEPTH_FORMAT,
+            ))
         } else {
             self.textures
                 .get(&destination)
-                .and_then(|t| t.depth.clone())
+                .and_then(|t| Some((t.depth.clone()?, t.depth_format()?)))
         };
         let to = end(self, destination);
         match (from, to, to_view) {
             (
                 Some((source, source_samples, size)),
                 Some((_, samples, to_size)),
-                Some(destination),
+                Some((destination, format)),
             ) if size == to_size => Some(DepthBlit {
                 source,
                 source_samples,
                 destination,
+                format,
                 samples,
             }),
             _ => {
@@ -2058,8 +2069,9 @@ impl UnityRenderer {
         multisampled: bool,
         samples: u32,
         per_sample: bool,
+        format: wgpu::TextureFormat,
     ) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout) {
-        let key = (multisampled, samples, per_sample);
+        let key = (multisampled, samples, per_sample, format);
         if let Some(p) = self.depth_blit_pipelines.get(&key) {
             return p.clone();
         }
@@ -2110,7 +2122,7 @@ impl UnityRenderer {
             }),
             primitive: wgpu::PrimitiveState::default(),
             depth_stencil: Some(wgpu::DepthStencilState {
-                format: DEPTH_FORMAT,
+                format,
                 depth_write_enabled: Some(true),
                 depth_compare: Some(wgpu::CompareFunction::Always),
                 stencil: wgpu::StencilState::default(),
@@ -2299,6 +2311,7 @@ impl UnityRenderer {
             resolve: None,
             samples: 1,
             depth: Some(s.depth.clone()),
+            depth_format: Some(DEPTH_FORMAT),
             format,
             width: s.width,
             height: s.height,
@@ -2405,6 +2418,7 @@ impl UnityRenderer {
                 depth_slice: t.volume.then_some(layer),
                 resolve,
                 samples,
+                depth_format: depth_view.as_ref().and(t.depth_format()),
                 depth: depth_view,
                 format: t.target_format(space),
                 width: (t.width >> mip).max(1),
@@ -2420,8 +2434,14 @@ impl UnityRenderer {
         };
         if depth == commands::NO_TEXTURE {
             target.depth = None;
+            target.depth_format = None;
         } else if depth != 0 && depth != color {
-            target.depth = self.textures.get(&depth).and_then(|d| d.depth.clone());
+            let separate = self
+                .textures
+                .get(&depth)
+                .and_then(|d| Some((d.depth.clone()?, d.depth_format()?)));
+            target.depth_format = separate.as_ref().map(|(_, format)| *format);
+            target.depth = separate.map(|(view, _)| view);
         }
         Some(target)
     }
@@ -2880,7 +2900,7 @@ impl UnityRenderer {
                             ClearKey {
                                 format: target.format,
                                 extra: target.extra_formats(),
-                                depth: target.depth.is_some(),
+                                depth: target.depth_format,
                                 samples: target.samples,
                                 color: clear_color,
                                 clear_depth,
@@ -3536,7 +3556,7 @@ impl UnityRenderer {
                 state,
                 topology: sub.topology,
                 format: target.format,
-                depth: target.depth.is_some(),
+                depth: target.depth_format,
                 samples: target.samples,
                 depth_bias: self.state.depth_bias.map(f32::to_bits),
                 extra: target.extra_formats(),
@@ -4067,6 +4087,7 @@ impl UnityRenderer {
                         b.source_samples > 1,
                         b.samples,
                         b.samples > 1 && b.samples == b.source_samples,
+                        b.format,
                     );
                     let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                         label: Some("unbound depth blit"),
@@ -4085,10 +4106,12 @@ impl UnityRenderer {
                                 load: wgpu::LoadOp::Load,
                                 store: wgpu::StoreOp::Store,
                             }),
-                            stencil_ops: Some(wgpu::Operations {
-                                load: wgpu::LoadOp::Clear(0),
-                                store: wgpu::StoreOp::Store,
-                            }),
+                            stencil_ops: b.format.has_stencil_aspect().then_some(
+                                wgpu::Operations {
+                                    load: wgpu::LoadOp::Clear(0),
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            ),
                         }),
                         timestamp_writes: None,
                         occlusion_query_set: None,
@@ -4261,13 +4284,18 @@ impl UnityRenderer {
                             },
                             store: wgpu::StoreOp::Store,
                         }),
-                        stencil_ops: Some(wgpu::Operations {
-                            load: match pass.depth_clear {
-                                Some((_, s)) => wgpu::LoadOp::Clear(s),
-                                None => wgpu::LoadOp::Load,
-                            },
-                            store: wgpu::StoreOp::Store,
-                        }),
+                        // A buffer without stencil (16 bits) has no stencil to load or clear.
+                        stencil_ops: pass
+                            .target
+                            .depth_format
+                            .is_some_and(|f| f.has_stencil_aspect())
+                            .then_some(wgpu::Operations {
+                                load: match pass.depth_clear {
+                                    Some((_, s)) => wgpu::LoadOp::Clear(s),
+                                    None => wgpu::LoadOp::Load,
+                                },
+                                store: wgpu::StoreOp::Store,
+                            }),
                     }
                 }),
                 timestamp_writes: None,

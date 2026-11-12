@@ -13,7 +13,8 @@ pub struct PipelineKey {
     pub state: RenderState,
     pub topology: Topology,
     pub format: wgpu::TextureFormat,
-    pub depth: bool,
+    /// The target's depth buffer format (none: no depth buffer).
+    pub depth: Option<wgpu::TextureFormat>,
     /// The target's MSAA samples.
     pub samples: u32,
     /// The global depth bias added to the pass's `Offset`: units, slope factor (`f32` bits).
@@ -27,7 +28,7 @@ pub struct ClearKey {
     pub format: wgpu::TextureFormat,
     /// The target's further colors: a viewport clear clears the first (Unbound), leaving them.
     pub extra: [Option<wgpu::TextureFormat>; 7],
-    pub depth: bool,
+    pub depth: Option<wgpu::TextureFormat>,
     pub color: bool,
     pub clear_depth: bool,
     pub samples: u32,
@@ -213,7 +214,7 @@ impl Pipelines {
                 buffers: &[],
             },
             primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: key.depth.then(|| {
+            depth_stencil: key.depth.map(|format| {
                 let face = wgpu::StencilFaceState {
                     compare: wgpu::CompareFunction::Always,
                     fail_op: wgpu::StencilOperation::Replace,
@@ -221,14 +222,18 @@ impl Pipelines {
                     pass_op: wgpu::StencilOperation::Replace,
                 };
                 wgpu::DepthStencilState {
-                    format: DEPTH_FORMAT,
+                    format,
                     depth_write_enabled: Some(key.clear_depth),
                     depth_compare: Some(wgpu::CompareFunction::Always),
-                    stencil: wgpu::StencilState {
-                        front: face,
-                        back: face,
-                        read_mask: 0xff,
-                        write_mask: if key.clear_depth { 0xff } else { 0 },
+                    stencil: if format.has_stencil_aspect() {
+                        wgpu::StencilState {
+                            front: face,
+                            back: face,
+                            read_mask: 0xff,
+                            write_mask: if key.clear_depth { 0xff } else { 0 },
+                        }
+                    } else {
+                        wgpu::StencilState::default()
                     },
                     bias: wgpu::DepthBiasState::default(),
                 }
@@ -357,8 +362,9 @@ pub fn create_pipeline(
         ),
         None => (blend_of(s.blend), color_writes(s.color_mask)),
     };
-    let depth_stencil = key.depth.then(|| {
-        let stencil = match s.stencil {
+    let depth_stencil = key.depth.map(|format| {
+        // A buffer without stencil (16 bits) ignores the pass's stencil state.
+        let stencil = match s.stencil.filter(|_| format.has_stencil_aspect()) {
             Some(st) => {
                 let face = |[comp, pass, fail, zfail]: [u8; 4]| wgpu::StencilFaceState {
                     compare: compare(comp),
@@ -376,7 +382,7 @@ pub fn create_pipeline(
             None => wgpu::StencilState::default(),
         };
         wgpu::DepthStencilState {
-            format: DEPTH_FORMAT,
+            format,
             depth_write_enabled: Some(s.zwrite),
             depth_compare: Some(compare(s.ztest)),
             stencil,

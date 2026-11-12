@@ -13,10 +13,8 @@
   "CmpOwn.splitLinear",
   "CmpInline.splitLinear"
  ],
- "A depth buffer of 16 bits stores 16 bits in the Editor (0.25 as 16384/65535, both texels filtered as 26240/65535); Unbound's stores 24": [
-  "DepthChannels.split.raw",
+ "A depth buffer of 16 bits filtered linearly reads 26240/65535 in the Editor (0.25 is stored as 16384/65535); Unbound stores the same 16 bits but filters a float copy of them (0.400392 for 0.400397)": [
   "DepthChannels.splitLinear.raw",
-  "DepthChannels.map.raw",
   "DepthChannels.mapLinear.raw"
  ],
  "TextureWrapMode.MirrorOnce, inline as a texture's own, is sampled as Mirror (the mirror-once row of docs/COMPATIBILITY_GAPS.md)": [

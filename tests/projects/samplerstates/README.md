@@ -71,8 +71,10 @@ are drawn alone, and a program without colors leaves the target as it was.
 Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--force-vulkan` with
 `--device vulkan`) with the device's reference. `residuals.json` and `residuals-vulkan.json`
 list the cases that differ with their cause: Unbound compares where the Editor's comparison
-reads the depth of a texture whose state does not compare, stores 24 bits where the
-Editor's depth buffer has 16, and samples `MirrorOnce` as `Mirror`.
+reads the depth of a texture whose state does not compare, filters a 16-bit depth buffer
+through a float copy where the Editor's linear filter reads 26240/65535, and samples
+`MirrorOnce` as `Mirror`. A depth buffer of 16 bits is stored as 16 bits without stencil, as in
+the Editor.
 
     python3 tests/projects/samplerstates/run.py native --label a   # the Editor, twice (a-1, a-2)
     python3 tests/projects/samplerstates/run.py publish a-1 a-2

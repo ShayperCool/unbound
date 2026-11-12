@@ -443,7 +443,7 @@ impl CompiledPrograms {
         }
         // A target without a depth buffer has nowhere to write a program's depth output: it is
         // drawn with the program's colors alone.
-        if !key.depth
+        if key.depth.is_none()
             && gpu.depthless.is_none()
             && super::pipelines::writes_depth(&gpu.program.fragment)
         {
@@ -462,7 +462,7 @@ impl CompiledPrograms {
             );
         }
         let (fragment, entry, wgsl) = match (&gpu.depthless, key.depth) {
-            (Some(depthless), false) => {
+            (Some(depthless), None) => {
                 let depthless = depthless.as_ref().map_err(String::clone)?;
                 (&depthless.module, &depthless.entry, &depthless.wgsl)
             }

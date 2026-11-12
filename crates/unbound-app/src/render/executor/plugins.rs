@@ -986,7 +986,11 @@ fn descriptor(gpu: &GpuTexture) -> owned::Texture {
         auto_generate_mips: gpu.auto_generate_mips,
         defer_mips: gpu.defer_mips,
         samples: gpu.samples,
-        depth_bits: if gpu.depth_texture.is_some() { 24 } else { 0 },
+        depth_bits: match gpu.depth_format() {
+            Some(wgpu::TextureFormat::Depth16Unorm) => 16,
+            Some(_) => 24,
+            None => 0,
+        },
         layers: 1,
         dimension: 2,
         ..Default::default()

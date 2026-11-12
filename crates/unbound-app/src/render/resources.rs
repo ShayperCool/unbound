@@ -372,6 +372,17 @@ pub fn depth_copy_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::
 /// `UnityEngine.Rendering.TextureDimension.Tex2DArray` in the texture packet.
 pub const TEX2D_ARRAY: i32 = 5;
 
+/// The depth buffer of a render texture of `bits` depth bits: 16 bits without stencil, any
+/// other depth with 24 bits and stencil (`RenderTexture.depth`; Unity 6000.0.71f1 stores a 16-bit
+/// buffer as D16, tests/projects/samplerstates and nativegfx).
+pub fn depth_format(bits: i32) -> wgpu::TextureFormat {
+    if bits == 16 {
+        wgpu::TextureFormat::Depth16Unorm
+    } else {
+        wgpu::TextureFormat::Depth24PlusStencil8
+    }
+}
+
 pub struct GpuTexture {
     pub texture: wgpu::Texture,
     /// Raw view (gamma projects; data textures).
@@ -425,6 +436,11 @@ pub struct GpuTexture {
 }
 
 impl GpuTexture {
+    /// The format of the render target's depth buffer, if it has one.
+    pub fn depth_format(&self) -> Option<wgpu::TextureFormat> {
+        self.depth_texture.as_ref().map(|t| t.format())
+    }
+
     pub fn view_for(&self, color_space: i32) -> &wgpu::TextureView {
         if let Some(copy) = self.depth_copy.as_ref().filter(|_| self.format == 5) {
             return copy;
@@ -1159,7 +1175,7 @@ pub fn upload_texture_with(
             && e.samples == samples
             && e.render_target == render_target
             && e.random_write == t.random_write
-            && (e.depth.is_some() == (t.depth_bits > 0))
+            && e.depth_format() == (t.depth_bits > 0).then(|| depth_format(t.depth_bits))
     });
     let mut gpu = match reuse {
         Some(mut e) => {
@@ -1266,7 +1282,7 @@ pub fn upload_texture_with(
                     mip_level_count: if samples == 1 { mip_count } else { 1 },
                     sample_count: samples,
                     dimension: wgpu::TextureDimension::D2,
-                    format: wgpu::TextureFormat::Depth24PlusStencil8,
+                    format: depth_format(t.depth_bits),
                     // A multisampled one is read by the depth copy only.
                     usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                         | wgpu::TextureUsages::TEXTURE_BINDING,

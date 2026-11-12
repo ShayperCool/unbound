@@ -137,7 +137,7 @@ impl UnityRenderer {
                                         state,
                                         topology,
                                         format: target.format,
-                                        depth: target.depth.is_some(),
+                                        depth: target.depth_format,
                                         samples: target.samples,
                                         depth_bias: self.state.depth_bias.map(f32::to_bits),
                                         extra: target.extra_formats(),
