@@ -141,6 +141,9 @@ public sealed class BuiltinConfig
 {
     public int Class { get; set; }
     public string Name { get; set; } = "";
+    /// <summary>The path the object is registered under (Resources.GetBuiltinResource,
+    /// AssetDatabase.GetBuiltinExtraResource).</summary>
+    public string Path { get; set; } = "";
 }
 
 public sealed class SortingLayerConfig
@@ -345,11 +348,13 @@ public static unsafe class Game
         {
             var names = kind == "extra" ? BuiltinShaders.ExtraNames : BuiltinShaders.DefaultNames;
             var classes = kind == "extra" ? BuiltinObjects.ExtraClasses : BuiltinObjects.DefaultClasses;
+            var paths = kind == "extra" ? BuiltinResources.ExtraPaths : BuiltinResources.DefaultPaths;
             foreach (var (id, entry) in table)
             {
                 if (!long.TryParse(id, out var fileId)) continue;
                 names[fileId] = entry.Name;
                 classes[fileId] = entry.Class;
+                if (entry.Path.Length > 0) paths[(entry.Path, entry.Class)] = fileId;
             }
         }
         if (c.SortingLayers.Count > 0)

@@ -13,6 +13,8 @@ namespace UnityEditor
         static float s_FieldWidth;
         static Stack<float> s_ContextWidthStack = new Stack<float>(10);
 
+        internal static Object GetBuiltinExtraResource(System.Type type, string path) => Unbound.Runtime.BuiltinResources.GetExtra(type, path);
+
         public static bool hierarchyMode { get; set; }
 
         /// <summary>The dark (Pro) skin is the Editor's: the user's choice in its preferences

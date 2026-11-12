@@ -65,14 +65,37 @@ namespace Unbound.Runtime
             return null;
         }
 
+        /// <summary>The Editor's MonoScript class: its engine class here derives from TextAsset
+        /// without one of its own (MonoScript documents are not read as objects).</summary>
+        internal const int MonoScriptId = 115;
+
+        /// <summary>The engine class a managed type stands for, which an object's class must equal
+        /// for a lookup by type and class (Resources.GetBuiltinResource): the type's own class id,
+        /// MonoBehaviour (114) for MonoBehaviour and ScriptableObject and their script classes,
+        /// MonoScript (115); -1 for a type without one (Object, abstract bases without a class).</summary>
+        internal static int EngineClassIdOf(Type type)
+        {
+            if (typeof(MonoBehaviour).IsAssignableFrom(type) || typeof(ScriptableObject).IsAssignableFrom(type)) return MonoBehaviourId;
+            if (type == typeof(UnityEditor.MonoScript)) return MonoScriptId;
+            return s_ClassIdOf.TryGetValue(type, out var id) ? id : -1;
+        }
+
+        /// <summary>Engine type → its class id (the first of several, as SpriteAtlas's).</summary>
+        static readonly Dictionary<Type, int> s_ClassIdOf = new Dictionary<Type, int>();
+
         static EngineTypes()
         {
             Register(TransformId, typeof(Transform));
             Register(RectTransformId, typeof(RectTransform));
+            s_ClassIdOf[typeof(Transform)] = TransformId;
+            s_ClassIdOf[typeof(RectTransform)] = RectTransformId;
             foreach (var type in typeof(Object).Assembly.GetTypes())
             {
                 foreach (ClassIdAttribute attribute in type.GetCustomAttributes(typeof(ClassIdAttribute), false))
+                {
                     s_ByClassId[attribute.Id] = type;
+                    s_ClassIdOf.TryAdd(type, attribute.Id);
+                }
             }
         }
     }

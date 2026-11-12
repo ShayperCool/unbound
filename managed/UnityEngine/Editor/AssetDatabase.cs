@@ -84,6 +84,10 @@ namespace UnityEditor
 
         public static string[] GetAllAssetPaths() => Entries.Select(e => e.Path).ToArray();
 
+        public static Object GetBuiltinExtraResource(Type type, string path) => BuiltinResources.GetExtra(type, path);
+
+        public static T GetBuiltinExtraResource<T>(string path) where T : Object => (T)GetBuiltinExtraResource(typeof(T), path);
+
         public static Object LoadAssetAtPath(string assetPath, Type type)
         {
             if (SettingsAssets.AtPath(assetPath) is SettingsFile settings)
@@ -125,7 +129,7 @@ namespace UnityEditor
             if (SettingsAssets.Of(assetObject) is SettingsFile settings) return settings.AssetPath;
             if (AssetDatabaseRuntime.TryGetLocation(assetObject, out var guid, out _)) return GUIDToAssetPath(guid);
             // Unity's built-in resources report the files the Editor loads them from.
-            if (BuiltinObjects.TryGetGuid(assetObject, out var builtin))
+            if (BuiltinObjects.TryGetLocation(assetObject, out var builtin, out _))
                 return string.Equals(builtin, BuiltinShaders.ExtraGuid, StringComparison.OrdinalIgnoreCase)
                     ? "Resources/unity_builtin_extra"
                     : "Library/unity default resources";
@@ -156,7 +160,8 @@ namespace UnityEditor
 
         public static bool TryGetGUIDAndLocalFileIdentifier(Object obj, out string guid, out long localId)
         {
-            if (obj != null && AssetDatabaseRuntime.TryGetLocation(obj, out guid, out localId)) return true;
+            if (obj != null && (AssetDatabaseRuntime.TryGetLocation(obj, out guid, out localId) || BuiltinObjects.TryGetLocation(obj, out guid, out localId)))
+                return true;
             guid = "";
             localId = 0;
             return false;
@@ -336,6 +341,10 @@ namespace UnityEditor
     public partial class MonoScript : TextAsset
     {
         internal string m_Guid;
+        /// <summary>The script's file id in its file: a script file's own, or a built-in script's.</summary>
+        internal long m_FileId = ScriptFileId;
+
+        const long ScriptFileId = 11500000;
 
         public MonoScript() { }
 
@@ -349,7 +358,7 @@ namespace UnityEditor
             m_Guid = guid;
         }
 
-        public Type GetClass() => m_Guid != null ? GameDomain.ResolveScript(m_Guid, 11500000) : null;
+        public Type GetClass() => m_Guid != null ? GameDomain.ResolveScript(m_Guid, m_FileId) : null;
 
         public static MonoScript FromMonoBehaviour(MonoBehaviour behaviour) => FromType(behaviour?.GetType());
 

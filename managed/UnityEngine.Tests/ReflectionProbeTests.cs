@@ -26,7 +26,8 @@ namespace UnityEngine.Tests
             var go = new GameObject("R");
             go.transform.position = position;
             go.transform.localScale = Vector3.one * scale;
-            go.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+            using (new BuiltinPathTable().Default(10202, "Cube.fbx", "Cube", 43))
+                go.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
             var renderer = go.AddComponent<MeshRenderer>();
             renderer.reflectionProbeUsage = usage;
             var list = new List<ReflectionProbeBlendInfo>();

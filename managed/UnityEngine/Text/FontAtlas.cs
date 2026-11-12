@@ -896,7 +896,6 @@ namespace Unbound.Runtime
         internal static void Register()
         {
             AssetDatabaseRuntime.Importers["font"] = Import;
-            BuiltinResources.Factories["Font:LegacyRuntime.ttf"] = () => BuiltinFonts.LegacyRuntime;
         }
 
         static LoadedFile Import(AssetDatabaseRuntime.AssetInfo info)

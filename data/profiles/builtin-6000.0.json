@@ -2,1298 +2,1621 @@
 "default": {
 "10001": {
 "class": 28,
-"name": "Soft"
+"name": "Soft",
+"path": "Soft.psd"
 },
 "10100": {
 "class": 21,
-"name": "Font Material"
+"name": "Font Material",
+"path": "LegacyRuntime.ttf"
 },
 "10101": {
 "class": 48,
-"name": "GUI/Text Shader"
+"name": "GUI/Text Shader",
+"path": "Font.shader"
 },
 "10102": {
 "class": 128,
-"name": "LegacyRuntime"
+"name": "LegacyRuntime",
+"path": "LegacyRuntime.ttf"
 },
 "10103": {
 "class": 28,
-"name": "Font Texture"
+"name": "Font Texture",
+"path": "LegacyRuntime.ttf"
 },
 "10200": {
 "class": 43,
-"name": "pSphere1"
+"name": "pSphere1",
+"path": "Sphere.fbx"
 },
 "10202": {
 "class": 43,
-"name": "Cube"
+"name": "Cube",
+"path": "Cube.fbx"
 },
 "10203": {
 "class": 43,
-"name": "pCylinder1"
+"name": "pCylinder1",
+"path": "Cylinder.fbx"
 },
 "10204": {
 "class": 43,
-"name": "pPlane1"
+"name": "pPlane1",
+"path": "Plane.fbx"
 },
 "10205": {
 "class": 43,
-"name": "polySurface2"
+"name": "polySurface2",
+"path": "Capsule.fbx"
 },
 "10206": {
 "class": 43,
-"name": "Cylinder"
+"name": "Cylinder",
+"path": "New-Cylinder.fbx"
 },
 "10207": {
 "class": 43,
-"name": "Sphere"
+"name": "Sphere",
+"path": "New-Sphere.fbx"
 },
 "10208": {
 "class": 43,
-"name": "Capsule"
+"name": "Capsule",
+"path": "New-Capsule.fbx"
 },
 "10209": {
 "class": 43,
-"name": "Plane"
+"name": "Plane",
+"path": "New-Plane.fbx"
 },
 "10210": {
 "class": 43,
-"name": "Quad"
+"name": "Quad",
+"path": "Quad.fbx"
 },
 "10211": {
 "class": 43,
-"name": "Icosphere"
+"name": "Icosphere",
+"path": "icosphere.fbx"
 },
 "10212": {
 "class": 43,
-"name": "icosahedron"
+"name": "icosahedron",
+"path": "icosahedron.fbx"
 },
 "10213": {
 "class": 43,
-"name": "pyramid"
+"name": "pyramid",
+"path": "pyramid.fbx"
 },
 "10401": {
 "class": 28,
-"name": "EscToExit_back"
+"name": "EscToExit_back",
+"path": "EscToExit_back.png"
 },
 "10402": {
 "class": 28,
-"name": "EscToExit_Text"
+"name": "EscToExit_Text",
+"path": "EscToExit_text.png"
 },
 "10406": {
 "class": 28,
-"name": "UnityWatermark-trial-big"
+"name": "UnityWatermark-trial-big",
+"path": "UnityWaterMark-trial-big.png"
 },
 "10407": {
 "class": 28,
-"name": "UnityWatermark-trial"
+"name": "UnityWatermark-trial",
+"path": "UnityWaterMark-trial.png"
 },
 "10409": {
 "class": 28,
-"name": "UnityWatermark-edu"
+"name": "UnityWatermark-edu",
+"path": "UnityWaterMark-edu.png"
 },
 "10410": {
 "class": 28,
-"name": "UnityWatermark-dev"
+"name": "UnityWatermark-dev",
+"path": "UnityWaterMark-dev.png"
 },
 "10411": {
 "class": 28,
-"name": "WarningSign"
+"name": "WarningSign",
+"path": "WarningSign.psd"
 },
 "10413": {
 "class": 28,
-"name": "UnityWatermark-proto"
+"name": "UnityWatermark-proto",
+"path": "UnityWaterMark-proto.png"
 },
 "10755": {
 "class": 48,
-"name": "Hidden/FrameDebuggerRenderTargetDisplay"
+"name": "Hidden/FrameDebuggerRenderTargetDisplay",
+"path": "PerformanceTools/FrameDebuggerRenderTargetDisplay.shader"
 },
 "10756": {
 "class": 21,
-"name": "FrameDebuggerRenderTargetDisplay"
+"name": "FrameDebuggerRenderTargetDisplay",
+"path": "PerformanceTools/FrameDebuggerRenderTargetDisplay.mat"
 },
 "11000": {
 "class": 114,
-"name": "GameSkin"
+"name": "GameSkin",
+"path": "GameSkin/GameSkin.guiskin"
 },
 "11001": {
 "class": 28,
-"name": "box"
+"name": "box",
+"path": "GameSkin/box.png"
 },
 "11002": {
 "class": 28,
-"name": "button active"
+"name": "button active",
+"path": "GameSkin/button active.png"
 },
 "11003": {
 "class": 28,
-"name": "button hover"
+"name": "button hover",
+"path": "GameSkin/button hover.png"
 },
 "11004": {
 "class": 28,
-"name": "button on hover"
+"name": "button on hover",
+"path": "GameSkin/button on hover.png"
 },
 "11005": {
 "class": 28,
-"name": "button on"
+"name": "button on",
+"path": "GameSkin/button on.png"
 },
 "11006": {
 "class": 28,
-"name": "button"
+"name": "button",
+"path": "GameSkin/button.png"
 },
 "11007": {
 "class": 28,
-"name": "horizontal scrollbar thumb"
+"name": "horizontal scrollbar thumb",
+"path": "GameSkin/horizontal scrollbar thumb.png"
 },
 "11008": {
 "class": 28,
-"name": "horizontal scrollbar"
+"name": "horizontal scrollbar",
+"path": "GameSkin/horizontal scrollbar.png"
 },
 "11009": {
 "class": 28,
-"name": "horizontalslider"
+"name": "horizontalslider",
+"path": "GameSkin/horizontalslider.png"
 },
 "11010": {
 "class": 28,
-"name": "slider thumb active"
+"name": "slider thumb active",
+"path": "GameSkin/slider thumb active.png"
 },
 "11011": {
 "class": 28,
-"name": "slider thumb"
+"name": "slider thumb",
+"path": "GameSkin/slider thumb.png"
 },
 "11012": {
 "class": 28,
-"name": "slidert humb hover"
+"name": "slidert humb hover",
+"path": "GameSkin/slidert humb hover.png"
 },
 "11013": {
 "class": 28,
-"name": "toggle active"
+"name": "toggle active",
+"path": "GameSkin/toggle active.png"
 },
 "11014": {
 "class": 28,
-"name": "toggle hover"
+"name": "toggle hover",
+"path": "GameSkin/toggle hover.png"
 },
 "11015": {
 "class": 28,
-"name": "toggle on hover"
+"name": "toggle on hover",
+"path": "GameSkin/toggle on hover.png"
 },
 "11016": {
 "class": 28,
-"name": "toggle on"
+"name": "toggle on",
+"path": "GameSkin/toggle on.png"
 },
 "11017": {
 "class": 28,
-"name": "toggle on active"
+"name": "toggle on active",
+"path": "GameSkin/toggle on active.png"
 },
 "11018": {
 "class": 28,
-"name": "toggle"
+"name": "toggle",
+"path": "GameSkin/toggle.png"
 },
 "11019": {
 "class": 28,
-"name": "vertical scrollbar thumb"
+"name": "vertical scrollbar thumb",
+"path": "GameSkin/vertical scrollbar thumb.png"
 },
 "11020": {
 "class": 28,
-"name": "vertical scrollbar"
+"name": "vertical scrollbar",
+"path": "GameSkin/vertical scrollbar.png"
 },
 "11021": {
 "class": 28,
-"name": "verticalslider"
+"name": "verticalslider",
+"path": "GameSkin/verticalslider.png"
 },
 "11022": {
 "class": 28,
-"name": "window on"
+"name": "window on",
+"path": "GameSkin/window on.png"
 },
 "11023": {
 "class": 28,
-"name": "window"
+"name": "window",
+"path": "GameSkin/window.png"
 },
 "11024": {
 "class": 28,
-"name": "textfield"
+"name": "textfield",
+"path": "GameSkin/textfield.png"
 },
 "11025": {
 "class": 28,
-"name": "textfield on"
+"name": "textfield on",
+"path": "GameSkin/textfield on.png"
 },
 "11026": {
 "class": 28,
-"name": "textfield hover"
+"name": "textfield hover",
+"path": "GameSkin/textfield hover.png"
 },
 "11993": {
 "class": 115,
-"name": "TemplateAsset"
+"name": "TemplateAsset",
+"path": "TemplateAsset"
 },
 "11995": {
 "class": 115,
-"name": "VisualTreeAsset"
+"name": "VisualTreeAsset",
+"path": "VisualTreeAsset"
 },
 "11998": {
 "class": 115,
-"name": "StyleSheet"
+"name": "StyleSheet",
+"path": "StyleSheet"
 },
 "12001": {
 "class": 115,
-"name": "GUISkin"
+"name": "GUISkin",
+"path": "GUISkin"
 },
 "13312": {
 "class": 115,
-"name": "Tile"
+"name": "Tile",
+"path": "Tile"
 },
 "13313": {
 "class": 115,
-"name": "TileBase"
+"name": "TileBase",
+"path": "TileBase"
 },
 "15000": {
 "class": 28,
-"name": "UnitySplash-HolographicTrackingLoss"
+"name": "UnitySplash-HolographicTrackingLoss",
+"path": "VR/UnitySplash-HolographicTrackingLoss.png"
 },
 "17": {
 "class": 48,
-"name": "Hidden/InternalErrorShader"
+"name": "Hidden/InternalErrorShader",
+"path": "Internal-ErrorShader.shader"
 },
 "19000": {
 "class": 115,
-"name": "TextSettings"
+"name": "TextSettings",
+"path": "TextSettings"
 },
 "19001": {
 "class": 115,
-"name": "FontAsset"
+"name": "FontAsset",
+"path": "FontAsset"
 },
 "19002": {
 "class": 115,
-"name": "SpriteAsset"
+"name": "SpriteAsset",
+"path": "SpriteAsset"
 },
 "19003": {
 "class": 115,
-"name": "TextColorGradient"
+"name": "TextColorGradient",
+"path": "TextColorGradient"
 },
 "19004": {
 "class": 115,
-"name": "TextStyleSheet"
+"name": "TextStyleSheet",
+"path": "TextStyleSheet"
 },
 "19100": {
 "class": 115,
-"name": "VectorImage"
+"name": "VectorImage",
+"path": "VectorImage"
 },
 "19101": {
 "class": 115,
-"name": "PanelSettings"
+"name": "PanelSettings",
+"path": "PanelSettings"
 },
 "19102": {
 "class": 115,
-"name": "UIDocument"
+"name": "UIDocument",
+"path": "UIDocument"
 },
 "19103": {
 "class": 115,
-"name": "PanelTextSettings"
+"name": "PanelTextSettings",
+"path": "PanelTextSettings"
 },
 "19104": {
 "class": 115,
-"name": "UIRenderer"
+"name": "UIRenderer",
+"path": "UIRenderer"
 },
 "19105": {
 "class": 115,
-"name": "InputSystemEventSystem"
+"name": "InputSystemEventSystem",
+"path": "InputSystemEventSystem"
 },
 "19202": {
 "class": 115,
-"name": "ThemeStyleSheet"
+"name": "ThemeStyleSheet",
+"path": "ThemeStyleSheet"
 },
 "300": {
 "class": 72,
-"name": "Internal-Skinning"
+"name": "Internal-Skinning",
+"path": "Internal-Skinning.compute"
 },
 "301": {
 "class": 72,
-"name": "Internal-BlendShape"
+"name": "Internal-BlendShape",
+"path": "Internal-BlendShape.compute"
 },
 "400": {
 "class": 72,
-"name": "Internal-VT-TranslationTableReplace"
+"name": "Internal-VT-TranslationTableReplace",
+"path": "Internal-VT-TranslationTableReplace.compute"
 },
 "401": {
 "class": 72,
-"name": "Internal-VT-TranslationTableUpsample"
+"name": "Internal-VT-TranslationTableUpsample",
+"path": "Internal-VT-TranslationTableUpsample.compute"
 },
 "600": {
 "class": 72,
-"name": "Internal-CreateFoveatedShadingRateTextureArray"
+"name": "Internal-CreateFoveatedShadingRateTextureArray",
+"path": "Internal-CreateFoveatedShadingRateTextureArray.compute"
 },
 "601": {
 "class": 72,
-"name": "Internal-CreateFoveatedShadingRateTextureNoArray"
+"name": "Internal-CreateFoveatedShadingRateTextureNoArray",
+"path": "Internal-CreateFoveatedShadingRateTextureNoArray.compute"
 },
 "602": {
 "class": 72,
-"name": "Internal-YFlipFoveatedShadingTexture"
+"name": "Internal-YFlipFoveatedShadingTexture",
+"path": "Internal-YFlipFoveatedShadingTexture.compute"
 },
 "68": {
 "class": 48,
-"name": "Hidden/InternalClear"
+"name": "Hidden/InternalClear",
+"path": "Internal-Clear.shader"
 },
 "69": {
 "class": 48,
-"name": "Hidden/Internal-Colored"
+"name": "Hidden/Internal-Colored",
+"path": "Internal-Colored.shader"
 },
 "70": {
 "class": 48,
-"name": "Hidden/Internal-Loading"
+"name": "Hidden/Internal-Loading",
+"path": "Internal-Loading.shader"
 }
 },
 "extra": {
 "1": {
 "class": 48,
-"name": "Legacy Shaders/Diffuse Fast"
+"name": "Legacy Shaders/Diffuse Fast",
+"path": "Normal-DiffuseFast.shader"
 },
 "10": {
 "class": 48,
-"name": "Legacy Shaders/Self-Illumin/Diffuse"
+"name": "Legacy Shaders/Self-Illumin/Diffuse",
+"path": "Illumin-Diffuse.shader"
 },
 "100": {
 "class": 48,
-"name": "Legacy Shaders/Decal"
+"name": "Legacy Shaders/Decal",
+"path": "Decal.shader"
 },
 "101": {
 "class": 48,
-"name": "FX/Flare"
+"name": "FX/Flare",
+"path": "Flare.shader"
 },
 "102": {
 "class": 48,
-"name": "Hidden/Internal-Flare"
+"name": "Hidden/Internal-Flare",
+"path": "Internal-Flare.shader"
 },
 "103": {
 "class": 48,
-"name": "Skybox/Cubemap"
+"name": "Skybox/Cubemap",
+"path": "Skybox-Cubed.shader"
 },
 "10300": {
 "class": 28,
-"name": "Default-Particle"
+"name": "Default-Particle",
+"path": "Default-Particle.psd"
 },
 "10301": {
 "class": 21,
-"name": "Default-Particle"
+"name": "Default-Particle",
+"path": "Default-Particle.mat"
 },
 "10302": {
 "class": 21,
-"name": "Default-Diffuse"
+"name": "Default-Diffuse",
+"path": "Default-Diffuse.mat"
 },
 "10303": {
 "class": 21,
-"name": "Default-Material"
+"name": "Default-Material",
+"path": "Default-Material.mat"
 },
 "10304": {
 "class": 21,
-"name": "Default-Skybox"
+"name": "Default-Skybox",
+"path": "Default-Skybox.mat"
 },
 "10305": {
 "class": 28,
-"name": "Default-Checker"
+"name": "Default-Checker",
+"path": "Default-Checker.png"
 },
 "10306": {
 "class": 21,
-"name": "Default-Line"
+"name": "Default-Line",
+"path": "Default-Line.mat"
 },
 "10307": {
 "class": 28,
-"name": "Default-ParticleSystem"
+"name": "Default-ParticleSystem",
+"path": "Default-ParticleSystem.psd"
 },
 "10308": {
 "class": 21,
-"name": "Default-ParticleSystem"
+"name": "Default-ParticleSystem",
+"path": "Default-ParticleSystem.mat"
 },
 "10309": {
 "class": 28,
-"name": "Default-Checker-Gray"
+"name": "Default-Checker-Gray",
+"path": "Default-Checker-Gray.png"
 },
 "104": {
 "class": 48,
-"name": "Skybox/6 Sided"
+"name": "Skybox/6 Sided",
+"path": "Skybox.shader"
 },
 "10403": {
 "class": 28,
-"name": "UnitySplash-Light"
+"name": "UnitySplash-Light",
+"path": "SplashScreen/UnitySplash-Light.png"
 },
 "10404": {
 "class": 213,
-"name": "UnitySplash-Light"
+"name": "UnitySplash-Light",
+"path": "SplashScreen/UnitySplash-Light.png"
 },
 "10490": {
 "class": 48,
-"name": "Hidden/Nature/Terrain/Utilities"
+"name": "Hidden/Nature/Terrain/Utilities",
+"path": "TerrainShaders/Splats/Terrain-Utilities.shader"
 },
 "105": {
 "class": 48,
-"name": "Hidden/Internal-Halo"
+"name": "Hidden/Internal-Halo",
+"path": "Internal-Halo.shader"
 },
 "10500": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Details/Vertexlit"
+"name": "Hidden/TerrainEngine/Details/Vertexlit",
+"path": "TerrainShaders/Details/VertexLit.shader"
 },
 "10501": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Details/WavingDoublePass"
+"name": "Hidden/TerrainEngine/Details/WavingDoublePass",
+"path": "TerrainShaders/Details/WavingGrass.shader"
 },
 "10502": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Details/BillboardWavingDoublePass"
+"name": "Hidden/TerrainEngine/Details/BillboardWavingDoublePass",
+"path": "TerrainShaders/Details/WavingGrassBillboard.shader"
 },
 "10503": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Splatmap/Diffuse-AddPass"
+"name": "Hidden/TerrainEngine/Splatmap/Diffuse-AddPass",
+"path": "TerrainShaders/Splats/AddPass.shader"
 },
 "10504": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Splatmap/Diffuse-Base"
+"name": "Hidden/TerrainEngine/Splatmap/Diffuse-Base",
+"path": "TerrainShaders/Splats/DiffuseBase.shader"
 },
 "10505": {
 "class": 48,
-"name": "Nature/Terrain/Diffuse"
+"name": "Nature/Terrain/Diffuse",
+"path": "TerrainShaders/Splats/FirstPass.shader"
 },
 "10506": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Splatmap/Diffuse-BaseGen"
+"name": "Hidden/TerrainEngine/Splatmap/Diffuse-BaseGen",
+"path": "TerrainShaders/Splats/DiffuseBaseGen.shader"
 },
 "10507": {
 "class": 48,
-"name": "Hidden/TerrainEngine/BillboardTree"
+"name": "Hidden/TerrainEngine/BillboardTree",
+"path": "TerrainShaders/Trees/BillboardTree.shader"
 },
 "10508": {
 "class": 48,
-"name": "Hidden/Nature/Tree Soft Occlusion Bark Rendertex"
+"name": "Hidden/Nature/Tree Soft Occlusion Bark Rendertex",
+"path": "Nature/SoftOcclusion/TreeSoftOcclusionBarkRendertex.shader"
 },
 "10509": {
 "class": 48,
-"name": "Nature/Tree Soft Occlusion Bark"
+"name": "Nature/Tree Soft Occlusion Bark",
+"path": "Nature/SoftOcclusion/TreeSoftOcclusionBark.shader"
 },
 "10510": {
 "class": 48,
-"name": "Hidden/Nature/Tree Soft Occlusion Leaves Rendertex"
+"name": "Hidden/Nature/Tree Soft Occlusion Leaves Rendertex",
+"path": "Nature/SoftOcclusion/TreeSoftOcclusionLeavesRendertex.shader"
 },
 "10511": {
 "class": 48,
-"name": "Nature/Tree Soft Occlusion Leaves"
+"name": "Nature/Tree Soft Occlusion Leaves",
+"path": "Nature/SoftOcclusion/TreeSoftOcclusionLeaves.shader"
 },
 "10512": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Cutout/Soft Edge Unlit"
+"name": "Legacy Shaders/Transparent/Cutout/Soft Edge Unlit",
+"path": "AlphaTest-SoftEdgeUnlit.shader"
 },
 "10513": {
 "class": 48,
-"name": "Hidden/TerrainEngine/CameraFacingBillboardTree"
+"name": "Hidden/TerrainEngine/CameraFacingBillboardTree",
+"path": "TerrainShaders/Trees/CameraFacingBillboardTree.shader"
 },
 "106": {
 "class": 48,
-"name": "Skybox/Procedural"
+"name": "Skybox/Procedural",
+"path": "Skybox-Procedural.shader"
 },
 "10600": {
 "class": 48,
-"name": "Nature/Tree Creator Bark"
+"name": "Nature/Tree Creator Bark",
+"path": "Nature/TreeCreator/TreeCreatorBark.shader"
 },
 "10601": {
 "class": 48,
-"name": "Nature/Tree Creator Leaves"
+"name": "Nature/Tree Creator Leaves",
+"path": "Nature/TreeCreator/TreeCreatorLeaves.shader"
 },
 "10602": {
 "class": 48,
-"name": "Hidden/Nature/Tree Creator Bark Rendertex"
+"name": "Hidden/Nature/Tree Creator Bark Rendertex",
+"path": "Nature/TreeCreator/TreeCreatorBarkRendertex.shader"
 },
 "10603": {
 "class": 48,
-"name": "Hidden/Nature/Tree Creator Leaves Rendertex"
+"name": "Hidden/Nature/Tree Creator Leaves Rendertex",
+"path": "Nature/TreeCreator/TreeCreatorLeavesRendertex.shader"
 },
 "10604": {
 "class": 48,
-"name": "Hidden/Nature/Tree Creator Bark Optimized"
+"name": "Hidden/Nature/Tree Creator Bark Optimized",
+"path": "Nature/TreeCreator/TreeCreatorBarkOptimized.shader"
 },
 "10605": {
 "class": 48,
-"name": "Hidden/Nature/Tree Creator Leaves Optimized"
+"name": "Hidden/Nature/Tree Creator Leaves Optimized",
+"path": "Nature/TreeCreator/TreeCreatorLeavesOptimized.shader"
 },
 "10606": {
 "class": 48,
-"name": "Nature/Tree Creator Leaves Fast"
+"name": "Nature/Tree Creator Leaves Fast",
+"path": "Nature/TreeCreator/TreeCreatorLeavesFast.shader"
 },
 "10607": {
 "class": 48,
-"name": "Hidden/Nature/Tree Creator Leaves Fast Optimized"
+"name": "Hidden/Nature/Tree Creator Leaves Fast Optimized",
+"path": "Nature/TreeCreator/TreeCreatorLeavesFastOptimized.shader"
 },
 "10608": {
 "class": 48,
-"name": "Hidden/Nature/Tree Creator Albedo Rendertex"
+"name": "Hidden/Nature/Tree Creator Albedo Rendertex",
+"path": "Nature/TreeCreator/TreeCreatorAlbedoRenderTex.shader"
 },
 "10609": {
 "class": 48,
-"name": "Hidden/Nature/Tree Creator Normal Rendertex"
+"name": "Hidden/Nature/Tree Creator Normal Rendertex",
+"path": "Nature/TreeCreator/TreeCreatorNormalRendertex.shader"
 },
 "10620": {
 "class": 48,
-"name": "Nature/Terrain/Specular"
+"name": "Nature/Terrain/Specular",
+"path": "TerrainShaders/Splats/Specular-FirstPass.shader"
 },
 "10621": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Splatmap/Specular-AddPass"
+"name": "Hidden/TerrainEngine/Splatmap/Specular-AddPass",
+"path": "TerrainShaders/Splats/Specular-AddPass.shader"
 },
 "10622": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Splatmap/Specular-Base"
+"name": "Hidden/TerrainEngine/Splatmap/Specular-Base",
+"path": "TerrainShaders/Splats/Specular-Base.shader"
 },
 "10623": {
 "class": 48,
-"name": "Nature/Terrain/Standard"
+"name": "Nature/Terrain/Standard",
+"path": "TerrainShaders/Splats/Standard-FirstPass.shader"
 },
 "10624": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Splatmap/Standard-AddPass"
+"name": "Hidden/TerrainEngine/Splatmap/Standard-AddPass",
+"path": "TerrainShaders/Splats/Standard-AddPass.shader"
 },
 "10625": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Splatmap/Standard-Base"
+"name": "Hidden/TerrainEngine/Splatmap/Standard-Base",
+"path": "TerrainShaders/Splats/Standard-Base.shader"
 },
 "10626": {
 "class": 48,
-"name": "Hidden/TerrainEngine/Splatmap/Standard-BaseGen"
+"name": "Hidden/TerrainEngine/Splatmap/Standard-BaseGen",
+"path": "TerrainShaders/Splats/Standard-BaseGen.shader"
 },
 "10650": {
 "class": 21,
-"name": "Default-Terrain-Diffuse"
+"name": "Default-Terrain-Diffuse",
+"path": "Default-Terrain-Diffuse.mat"
 },
 "10651": {
 "class": 21,
-"name": "Default-Terrain-Specular"
+"name": "Default-Terrain-Specular",
+"path": "Default-Terrain-Specular.mat"
 },
 "10652": {
 "class": 21,
-"name": "Default-Terrain-Standard"
+"name": "Default-Terrain-Standard",
+"path": "Default-Terrain-Standard.mat"
 },
 "107": {
 "class": 48,
-"name": "Hidden/BlitCopyWithDepth"
+"name": "Hidden/BlitCopyWithDepth",
+"path": "Internal-BlitCopyWithDepth.shader"
 },
 "10700": {
 "class": 48,
-"name": "Mobile/Skybox"
+"name": "Mobile/Skybox",
+"path": "Mobile/Mobile-Skybox.shader"
 },
 "10701": {
 "class": 48,
-"name": "Mobile/VertexLit"
+"name": "Mobile/VertexLit",
+"path": "Mobile/Mobile-VertexLit.shader"
 },
 "10703": {
 "class": 48,
-"name": "Mobile/Diffuse"
+"name": "Mobile/Diffuse",
+"path": "Mobile/Mobile-Diffuse.shader"
 },
 "10704": {
 "class": 48,
-"name": "Mobile/Bumped Diffuse"
+"name": "Mobile/Bumped Diffuse",
+"path": "Mobile/Mobile-Bumped.shader"
 },
 "10705": {
 "class": 48,
-"name": "Mobile/Bumped Specular"
+"name": "Mobile/Bumped Specular",
+"path": "Mobile/Mobile-BumpSpec.shader"
 },
 "10706": {
 "class": 48,
-"name": "Mobile/Bumped Specular (1 Directional Realtime Light)"
+"name": "Mobile/Bumped Specular (1 Directional Realtime Light)",
+"path": "Mobile/Mobile-BumpSpec-1DirectionalLight.shader"
 },
 "10707": {
 "class": 48,
-"name": "Mobile/VertexLit (Only Directional Lights)"
+"name": "Mobile/VertexLit (Only Directional Lights)",
+"path": "Mobile/Mobile-VertexLit-OnlyDirectionalLights.shader"
 },
 "10708": {
 "class": 48,
-"name": "Mobile/Unlit (Supports Lightmap)"
+"name": "Mobile/Unlit (Supports Lightmap)",
+"path": "Mobile/Mobile-Lightmap-Unlit.shader"
 },
 "10720": {
 "class": 48,
-"name": "Mobile/Particles/Additive"
+"name": "Mobile/Particles/Additive",
+"path": "Mobile/Mobile-Particle-Add.shader"
 },
 "10721": {
 "class": 48,
-"name": "Mobile/Particles/Alpha Blended"
+"name": "Mobile/Particles/Alpha Blended",
+"path": "Mobile/Mobile-Particle-Alpha.shader"
 },
 "10722": {
 "class": 48,
-"name": "Mobile/Particles/VertexLit Blended"
+"name": "Mobile/Particles/VertexLit Blended",
+"path": "Mobile/Mobile-Particle-Alpha-VertexLit.shader"
 },
 "10723": {
 "class": 48,
-"name": "Mobile/Particles/Multiply"
+"name": "Mobile/Particles/Multiply",
+"path": "Mobile/Mobile-Particle-Multiply.shader"
 },
 "10750": {
 "class": 48,
-"name": "Unlit/Transparent"
+"name": "Unlit/Transparent",
+"path": "Unlit/Unlit-Alpha.shader"
 },
 "10751": {
 "class": 48,
-"name": "Unlit/Transparent Cutout"
+"name": "Unlit/Transparent Cutout",
+"path": "Unlit/Unlit-AlphaTest.shader"
 },
 "10752": {
 "class": 48,
-"name": "Unlit/Texture"
+"name": "Unlit/Texture",
+"path": "Unlit/Unlit-Normal.shader"
 },
 "10753": {
 "class": 48,
-"name": "Sprites/Default"
+"name": "Sprites/Default",
+"path": "Sprites-Default.shader"
 },
 "10754": {
 "class": 21,
-"name": "Sprites-Default"
+"name": "Sprites-Default",
+"path": "Sprites-Default.mat"
 },
 "10755": {
 "class": 48,
-"name": "Unlit/Color"
+"name": "Unlit/Color",
+"path": "Unlit/Unlit-Color.shader"
 },
 "10757": {
 "class": 48,
-"name": "Sprites/Mask"
+"name": "Sprites/Mask",
+"path": "Sprites-Mask.shader"
 },
 "10758": {
 "class": 21,
-"name": "Sprites-Mask"
+"name": "Sprites-Mask",
+"path": "Sprites-Mask.mat"
 },
 "10760": {
 "class": 48,
-"name": "UI/Unlit/Transparent"
+"name": "UI/Unlit/Transparent",
+"path": "UI/UI-Unlit-Transparent.shader"
 },
 "10761": {
 "class": 48,
-"name": "UI/Unlit/Detail"
+"name": "UI/Unlit/Detail",
+"path": "UI/UI-Unlit-Detail.shader"
 },
 "10762": {
 "class": 48,
-"name": "UI/Unlit/Text"
+"name": "UI/Unlit/Text",
+"path": "UI/UI-Unlit-Text.shader"
 },
 "10763": {
 "class": 48,
-"name": "UI/Unlit/Text Detail"
+"name": "UI/Unlit/Text Detail",
+"path": "UI/UI-Unlit-TextDetail.shader"
 },
 "10764": {
 "class": 48,
-"name": "UI/Lit/Transparent"
+"name": "UI/Lit/Transparent",
+"path": "UI/UI-Lit-Transparent.shader"
 },
 "10765": {
 "class": 48,
-"name": "UI/Lit/Bumped"
+"name": "UI/Lit/Bumped",
+"path": "UI/UI-Lit-Bumped.shader"
 },
 "10766": {
 "class": 48,
-"name": "UI/Lit/Detail"
+"name": "UI/Lit/Detail",
+"path": "UI/UI-Lit-Detail.shader"
 },
 "10767": {
 "class": 48,
-"name": "UI/Lit/Refraction"
+"name": "UI/Lit/Refraction",
+"path": "UI/UI-Lit-Refraction.shader"
 },
 "10768": {
 "class": 48,
-"name": "UI/Lit/Refraction Detail"
+"name": "UI/Lit/Refraction Detail",
+"path": "UI/UI-Lit-RefractionDetail.shader"
 },
 "10770": {
 "class": 48,
-"name": "UI/Default"
+"name": "UI/Default",
+"path": "UI/UI-Default.shader"
 },
 "10782": {
 "class": 48,
-"name": "UI/Default Font"
+"name": "UI/Default Font",
+"path": "UI/UI-DefaultFont.shader"
 },
 "10783": {
 "class": 48,
-"name": "UI/DefaultETC1"
+"name": "UI/DefaultETC1",
+"path": "UI/UI-DefaultETC1.shader"
 },
 "10784": {
 "class": 48,
-"name": "Hidden/UI/CompositeOverdraw"
+"name": "Hidden/UI/CompositeOverdraw",
+"path": "UI/UI-CompositeOverdraw.shader"
 },
 "10785": {
 "class": 48,
-"name": "Hidden/UI/Overdraw"
+"name": "Hidden/UI/Overdraw",
+"path": "UI/UI-Overdraw.shader"
 },
 "108": {
 "class": 48,
-"name": "Skybox/Panoramic"
+"name": "Skybox/Panoramic",
+"path": "Skybox-Panoramic.shader"
 },
 "10800": {
 "class": 48,
-"name": "Sprites/Diffuse"
+"name": "Sprites/Diffuse",
+"path": "Sprites-Diffuse.shader"
 },
 "109": {
 "class": 48,
-"name": "Hidden/BlitToDepth"
+"name": "Hidden/BlitToDepth",
+"path": "Internal-BlitToDepth.shader"
 },
 "10900": {
 "class": 28,
-"name": "Checkmark"
+"name": "Checkmark",
+"path": "UI/Skin/Checkmark.psd"
 },
 "10901": {
 "class": 213,
-"name": "Checkmark"
+"name": "Checkmark",
+"path": "UI/Skin/Checkmark.psd"
 },
 "10904": {
 "class": 28,
-"name": "UISprite"
+"name": "UISprite",
+"path": "UI/Skin/UISprite.psd"
 },
 "10905": {
 "class": 213,
-"name": "UISprite"
+"name": "UISprite",
+"path": "UI/Skin/UISprite.psd"
 },
 "10906": {
 "class": 28,
-"name": "Background"
+"name": "Background",
+"path": "UI/Skin/Background.psd"
 },
 "10907": {
 "class": 213,
-"name": "Background"
+"name": "Background",
+"path": "UI/Skin/Background.psd"
 },
 "10910": {
 "class": 28,
-"name": "InputFieldBackground"
+"name": "InputFieldBackground",
+"path": "UI/Skin/InputFieldBackground.psd"
 },
 "10911": {
 "class": 213,
-"name": "InputFieldBackground"
+"name": "InputFieldBackground",
+"path": "UI/Skin/InputFieldBackground.psd"
 },
 "10912": {
 "class": 28,
-"name": "Knob"
+"name": "Knob",
+"path": "UI/Skin/Knob.psd"
 },
 "10913": {
 "class": 213,
-"name": "Knob"
+"name": "Knob",
+"path": "UI/Skin/Knob.psd"
 },
 "10914": {
 "class": 28,
-"name": "DropdownArrow"
+"name": "DropdownArrow",
+"path": "UI/Skin/DropdownArrow.psd"
 },
 "10915": {
 "class": 213,
-"name": "DropdownArrow"
+"name": "DropdownArrow",
+"path": "UI/Skin/DropdownArrow.psd"
 },
 "10916": {
 "class": 28,
-"name": "UIMask"
+"name": "UIMask",
+"path": "UI/Skin/UIMask.psd"
 },
 "10917": {
 "class": 213,
-"name": "UIMask"
+"name": "UIMask",
+"path": "UI/Skin/UIMask.psd"
 },
 "11": {
 "class": 48,
-"name": "Legacy Shaders/Self-Illumin/Bumped Diffuse"
+"name": "Legacy Shaders/Self-Illumin/Bumped Diffuse",
+"path": "Illumin-Bumped.shader"
 },
 "110": {
 "class": 48,
-"name": "Hidden/BlitToDepth_MSAA"
+"name": "Hidden/BlitToDepth_MSAA",
+"path": "Internal-BlitToDepth_MSAA.shader"
 },
 "111": {
 "class": 48,
-"name": "Hidden/BlitCopyHDRTonemap"
+"name": "Hidden/BlitCopyHDRTonemap",
+"path": "Internal-BlitCopyHDRTonemap.shader"
 },
 "112": {
 "class": 48,
-"name": "Hidden/BlitCopyHDRTonemappedToHDRTonemap"
+"name": "Hidden/BlitCopyHDRTonemappedToHDRTonemap",
+"path": "Internal-BlitCopyHDRTonemappedToHDRTonemap.shader"
 },
 "113": {
 "class": 48,
-"name": "Hidden/Internal-DebugPattern"
+"name": "Hidden/Internal-DebugPattern",
+"path": "Internal-DebugPattern.shader"
 },
 "114": {
 "class": 48,
-"name": "Hidden/BlitCopyHDRTonemappedToSDR"
+"name": "Hidden/BlitCopyHDRTonemappedToSDR",
+"path": "Internal-BlitCopyHDRTonemappedToSDR.shader"
 },
 "12": {
 "class": 48,
-"name": "Legacy Shaders/Self-Illumin/Specular"
+"name": "Legacy Shaders/Self-Illumin/Specular",
+"path": "Illumin-Glossy.shader"
 },
 "13": {
 "class": 48,
-"name": "Legacy Shaders/Self-Illumin/Bumped Specular"
+"name": "Legacy Shaders/Self-Illumin/Bumped Specular",
+"path": "Illumin-BumpSpec.shader"
 },
 "14": {
 "class": 48,
-"name": "Legacy Shaders/Self-Illumin/VertexLit"
+"name": "Legacy Shaders/Self-Illumin/VertexLit",
+"path": "Illumin-VertexLit.shader"
 },
 "14000": {
 "class": 48,
-"name": "Nature/SpeedTree"
+"name": "Nature/SpeedTree",
+"path": "Nature/SpeedTree.shader"
 },
 "14001": {
 "class": 48,
-"name": "Nature/SpeedTree Billboard"
+"name": "Nature/SpeedTree Billboard",
+"path": "Nature/SpeedTreeBillboard.shader"
 },
 "14002": {
 "class": 48,
-"name": "Nature/SpeedTree8"
+"name": "Nature/SpeedTree8",
+"path": "Nature/SpeedTree8.shader"
 },
 "14003": {
 "class": 48,
-"name": "Nature/SpeedTree9"
+"name": "Nature/SpeedTree9",
+"path": "Nature/SpeedTree9.shader"
 },
 "15": {
 "class": 48,
-"name": "Legacy Shaders/Self-Illumin/Parallax Diffuse"
+"name": "Legacy Shaders/Self-Illumin/Parallax Diffuse",
+"path": "Illumin-Parallax.shader"
 },
 "15100": {
 "class": 48,
-"name": "Hidden/GIDebug/TextureUV"
+"name": "Hidden/GIDebug/TextureUV",
+"path": "GIDebug/TextureUV.shader"
 },
 "15101": {
 "class": 48,
-"name": "Hidden/GIDebug/ShowLightMask"
+"name": "Hidden/GIDebug/ShowLightMask",
+"path": "GIDebug/ShowLightMask.shader"
 },
 "15102": {
 "class": 48,
-"name": "Hidden/GIDebug/UV1sAsPositions"
+"name": "Hidden/GIDebug/UV1sAsPositions",
+"path": "GIDebug/UV1sAsPositions.shader"
 },
 "15103": {
 "class": 48,
-"name": "Hidden/GIDebug/VertexColors"
+"name": "Hidden/GIDebug/VertexColors",
+"path": "GIDebug/VertexColors.shader"
 },
 "15104": {
 "class": 48,
-"name": "Hidden/CubeBlur"
+"name": "Hidden/CubeBlur",
+"path": "Cubemaps/CubeBlur.shader"
 },
 "15105": {
 "class": 48,
-"name": "Hidden/CubeCopy"
+"name": "Hidden/CubeCopy",
+"path": "Cubemaps/CubeCopy.shader"
 },
 "15106": {
 "class": 48,
-"name": "Hidden/CubeBlend"
+"name": "Hidden/CubeBlend",
+"path": "Cubemaps/CubeBlend.shader"
 },
 "15200": {
 "class": 1113,
-"name": "Default-HighResolution"
+"name": "Default-HighResolution",
+"path": "LightmapParameters/Default-HighResolution.giparams"
 },
 "15201": {
 "class": 1113,
-"name": "Default-LowResolution"
+"name": "Default-LowResolution",
+"path": "LightmapParameters/Default-LowResolution.giparams"
 },
 "15203": {
 "class": 1113,
-"name": "Default-VeryLowResolution"
+"name": "Default-VeryLowResolution",
+"path": "LightmapParameters/Default-VeryLowResolution.giparams"
 },
 "15204": {
 "class": 1113,
-"name": "Default-Medium"
+"name": "Default-Medium",
+"path": "LightmapParameters/Default-Medium.giparams"
 },
 "15300": {
 "class": 48,
-"name": "VR/SpatialMapping/Occlusion"
+"name": "VR/SpatialMapping/Occlusion",
+"path": "VR/Shaders/SpatialMappingOcclusion.shader"
 },
 "15301": {
 "class": 48,
-"name": "VR/SpatialMapping/Wireframe"
+"name": "VR/SpatialMapping/Wireframe",
+"path": "VR/Shaders/SpatialMappingWireframe.shader"
 },
 "15302": {
 "class": 21,
-"name": "SpatialMappingOcclusion"
+"name": "SpatialMappingOcclusion",
+"path": "VR/Materials/SpatialMappingOcclusion.mat"
 },
 "15303": {
 "class": 21,
-"name": "SpatialMappingWireframe"
+"name": "SpatialMappingWireframe",
+"path": "VR/Materials/SpatialMappingWireframe.mat"
 },
 "15304": {
 "class": 48,
-"name": "Hidden/VR/BlitTexArraySlice"
+"name": "Hidden/VR/BlitTexArraySlice",
+"path": "VR/Shaders/BlitTexArraySlice.shader"
 },
 "15305": {
 "class": 48,
-"name": "Hidden/VR/Internal-VRDistortion"
+"name": "Hidden/VR/Internal-VRDistortion",
+"path": "VR/Shaders/Internal-VRDistortion.shader"
 },
 "15306": {
 "class": 48,
-"name": "Hidden/VR/BlitTexArraySliceToDepth"
+"name": "Hidden/VR/BlitTexArraySliceToDepth",
+"path": "VR/Shaders/BlitTexArraySliceToDepth.shader"
 },
 "15307": {
 "class": 48,
-"name": "Hidden/VR/BlitTexArraySliceToDepth_MSAA"
+"name": "Hidden/VR/BlitTexArraySliceToDepth_MSAA",
+"path": "VR/Shaders/BlitTexArraySliceToDepth_MSAA.shader"
 },
 "15308": {
 "class": 48,
-"name": "Hidden/Internal-ODSWorldTexture"
+"name": "Hidden/Internal-ODSWorldTexture",
+"path": "Internal-ODSWorldTexture.shader"
 },
 "15309": {
 "class": 48,
-"name": "Hidden/Internal-CubemapToEquirect"
+"name": "Hidden/Internal-CubemapToEquirect",
+"path": "Internal-CubemapToEquirect.shader"
 },
 "15312": {
 "class": 48,
-"name": "Hidden/VR/BlitFromTex2DToTexArraySlice"
+"name": "Hidden/VR/BlitFromTex2DToTexArraySlice",
+"path": "VR/Shaders/BlitFromTex2DToTexArraySlice.shader"
 },
 "15313": {
 "class": 48,
-"name": "Hidden/VR/BlitCopyHDRTonemapTexArraySlice"
+"name": "Hidden/VR/BlitCopyHDRTonemapTexArraySlice",
+"path": "VR/Shaders/BlitCopyHDRTonemapTexArraySlice.shader"
 },
 "15314": {
 "class": 48,
-"name": "Hidden/VR/BlitCopyHDRTonemappedToHDRTonemapTexArraySlice"
+"name": "Hidden/VR/BlitCopyHDRTonemappedToHDRTonemapTexArraySlice",
+"path": "VR/Shaders/BlitCopyHDRTonemappedToHDRTonemapTexArraySlice.shader"
 },
 "15315": {
 "class": 48,
-"name": "Hidden/VR/BlitCopyHDRTonemappedToSDRTexArraySlice"
+"name": "Hidden/VR/BlitCopyHDRTonemappedToSDRTexArraySlice",
+"path": "VR/Shaders/BlitCopyHDRTonemappedToSDRTexArraySlice.shader"
 },
 "16": {
 "class": 48,
-"name": "Legacy Shaders/Self-Illumin/Parallax Specular"
+"name": "Legacy Shaders/Self-Illumin/Parallax Specular",
+"path": "Illumin-ParallaxSpec.shader"
 },
 "16000": {
 "class": 48,
-"name": "Hidden/VideoComposite"
+"name": "Hidden/VideoComposite",
+"path": "VideoComposite.shader"
 },
 "16001": {
 "class": 48,
-"name": "Hidden/VideoDecode"
+"name": "Hidden/VideoDecode",
+"path": "VideoDecode.shader"
 },
 "16002": {
 "class": 48,
-"name": "Hidden/VideoDecodeOSX"
+"name": "Hidden/VideoDecodeOSX",
+"path": "VideoDecodeOSX.shader"
 },
 "16003": {
 "class": 48,
-"name": "Hidden/VideoDecodeAndroid"
+"name": "Hidden/VideoDecodeAndroid",
+"path": "VideoDecodeAndroid.shader"
 },
 "17000": {
 "class": 48,
-"name": "Hidden/Compositing"
+"name": "Hidden/Compositing",
+"path": "Compositing.shader"
 },
 "18000": {
 "class": 48,
-"name": "Hidden/TerrainEngine/PaintHeight"
+"name": "Hidden/TerrainEngine/PaintHeight",
+"path": "TerrainShaders/Utils/PaintHeight.shader"
 },
 "18001": {
 "class": 48,
-"name": "Hidden/TerrainEngine/HeightBlitCopy"
+"name": "Hidden/TerrainEngine/HeightBlitCopy",
+"path": "TerrainShaders/Utils/TerrainHeightBlitCopy.shader"
 },
 "18002": {
 "class": 48,
-"name": "Hidden/TerrainEngine/GenerateNormalmap"
+"name": "Hidden/TerrainEngine/GenerateNormalmap",
+"path": "TerrainShaders/Utils/GenNormalmap.shader"
 },
 "18003": {
 "class": 48,
-"name": "Hidden/TerrainEngine/TerrainLayerUtils"
+"name": "Hidden/TerrainEngine/TerrainLayerUtils",
+"path": "TerrainShaders/Utils/TerrainLayerUtils.shader"
 },
 "18004": {
 "class": 48,
-"name": "Hidden/TerrainEngine/BrushPreview"
+"name": "Hidden/TerrainEngine/BrushPreview",
+"path": "TerrainShaders/Utils/BrushPreview.shader"
 },
 "18005": {
 "class": 48,
-"name": "Hidden/TerrainEngine/CrossBlendNeighbors"
+"name": "Hidden/TerrainEngine/CrossBlendNeighbors",
+"path": "TerrainShaders/Utils/CrossBlendNeighbors.shader"
 },
 "18006": {
 "class": 48,
-"name": "Hidden/TerrainEngine/TerrainBlitCopyZWrite"
+"name": "Hidden/TerrainEngine/TerrainBlitCopyZWrite",
+"path": "TerrainShaders/Utils/TerrainBlitCopyZWrite.shader"
 },
 "19": {
 "class": 48,
-"name": "Hidden/Internal-StencilWrite"
+"name": "Hidden/Internal-StencilWrite",
+"path": "Internal-StencilWrite.shader"
 },
 "19010": {
 "class": 48,
-"name": "Hidden/TextCore/Distance Field"
+"name": "Hidden/TextCore/Distance Field",
+"path": "TextCore/TextCore-SDF.shader"
 },
 "19011": {
 "class": 48,
-"name": "Hidden/TextCore/Distance Field SSD"
+"name": "Hidden/TextCore/Distance Field SSD",
+"path": "TextCore/TextCore-SDF-SSD.shader"
 },
 "19012": {
 "class": 48,
-"name": "Hidden/TextCore/Sprite"
+"name": "Hidden/TextCore/Sprite",
+"path": "TextCore/Sprite.shader"
 },
 "2": {
 "class": 48,
-"name": "Legacy Shaders/Bumped Diffuse"
+"name": "Legacy Shaders/Bumped Diffuse",
+"path": "Normal-Bumped.shader"
 },
 "20": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/Diffuse"
+"name": "Legacy Shaders/Reflective/Diffuse",
+"path": "Reflect-Diffuse.shader"
 },
 "200": {
 "class": 48,
-"name": "Legacy Shaders/Particles/Additive"
+"name": "Legacy Shaders/Particles/Additive",
+"path": "Particle Add.shader"
 },
 "20000": {
 "class": 28,
-"name": "UnitySplash-Dark"
+"name": "UnitySplash-Dark",
+"path": "SplashScreen/UnitySplash-Dark.png"
 },
 "20001": {
 "class": 213,
-"name": "UnitySplash-Dark"
+"name": "UnitySplash-Dark",
+"path": "SplashScreen/UnitySplash-Dark.png"
 },
 "201": {
 "class": 48,
-"name": "Legacy Shaders/Particles/~Additive-Multiply"
+"name": "Legacy Shaders/Particles/~Additive-Multiply",
+"path": "Particle AddMultiply.shader"
 },
 "20100": {
 "class": 28,
-"name": "Invalidated"
+"name": "Invalidated",
+"path": "Invalidated.png"
 },
 "202": {
 "class": 48,
-"name": "Legacy Shaders/Particles/Additive (Soft)"
+"name": "Legacy Shaders/Particles/Additive (Soft)",
+"path": "Particle AddSmooth.shader"
 },
 "20200": {
 "class": 89,
-"name": "Default-Skybox-Cubemap"
+"name": "Default-Skybox-Cubemap",
+"path": "Default-Skybox-Cubemap.exr"
 },
 "20201": {
 "class": 1120,
-"name": "LightingData"
+"name": "LightingData",
+"path": "Default-LightingData.asset"
 },
 "20204": {
 "class": 49,
-"name": "icudt73l"
+"name": "icudt73l",
+"path": "icudt73l.bytes"
 },
 "203": {
 "class": 48,
-"name": "Legacy Shaders/Particles/Alpha Blended"
+"name": "Legacy Shaders/Particles/Alpha Blended",
+"path": "Particle Alpha Blend.shader"
 },
 "205": {
 "class": 48,
-"name": "Legacy Shaders/Particles/Multiply"
+"name": "Legacy Shaders/Particles/Multiply",
+"path": "Particle Multiply.shader"
 },
 "206": {
 "class": 48,
-"name": "Legacy Shaders/Particles/Multiply (Double)"
+"name": "Legacy Shaders/Particles/Multiply (Double)",
+"path": "Particle MultiplyDouble.shader"
 },
 "207": {
 "class": 48,
-"name": "Legacy Shaders/Particles/Alpha Blended Premultiply"
+"name": "Legacy Shaders/Particles/Alpha Blended Premultiply",
+"path": "Particle Premultiply Blend.shader"
 },
 "208": {
 "class": 48,
-"name": "Legacy Shaders/Particles/VertexLit Blended"
+"name": "Legacy Shaders/Particles/VertexLit Blended",
+"path": "Particle VertexLit Blended.shader"
 },
 "209": {
 "class": 48,
-"name": "Legacy Shaders/Particles/Anim Alpha Blended"
+"name": "Legacy Shaders/Particles/Anim Alpha Blended",
+"path": "Particle Anim Alpha Blend.shader"
 },
 "21": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/Bumped Diffuse"
+"name": "Legacy Shaders/Reflective/Bumped Diffuse",
+"path": "Reflect-Bumped.shader"
 },
 "210": {
 "class": 48,
-"name": "Particles/Standard Surface"
+"name": "Particles/Standard Surface",
+"path": "Particle Standard Surface.shader"
 },
 "211": {
 "class": 48,
-"name": "Particles/Standard Unlit"
+"name": "Particles/Standard Unlit",
+"path": "Particle Standard Unlit.shader"
 },
 "22": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/Specular"
+"name": "Legacy Shaders/Reflective/Specular",
+"path": "Reflect-Glossy.shader"
 },
 "23": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/Bumped Specular"
+"name": "Legacy Shaders/Reflective/Bumped Specular",
+"path": "Reflect-BumpSpec.shader"
 },
 "24": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/VertexLit"
+"name": "Legacy Shaders/Reflective/VertexLit",
+"path": "Reflect-VertexLit.shader"
 },
 "25": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/Bumped Unlit"
+"name": "Legacy Shaders/Reflective/Bumped Unlit",
+"path": "Reflect-BumpNolight.shader"
 },
 "26": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/Bumped VertexLit"
+"name": "Legacy Shaders/Reflective/Bumped VertexLit",
+"path": "Reflect-BumpVertexLit.shader"
 },
 "27": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/Parallax Diffuse"
+"name": "Legacy Shaders/Reflective/Parallax Diffuse",
+"path": "Reflect-Parallax.shader"
 },
 "28": {
 "class": 48,
-"name": "Legacy Shaders/Reflective/Parallax Specular"
+"name": "Legacy Shaders/Reflective/Parallax Specular",
+"path": "Reflect-ParallaxSpec.shader"
 },
 "3": {
 "class": 48,
-"name": "Legacy Shaders/Specular"
+"name": "Legacy Shaders/Specular",
+"path": "Normal-Glossy.shader"
 },
 "30": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Diffuse"
+"name": "Legacy Shaders/Transparent/Diffuse",
+"path": "Alpha-Diffuse.shader"
 },
 "31": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Bumped Diffuse"
+"name": "Legacy Shaders/Transparent/Bumped Diffuse",
+"path": "Alpha-Bumped.shader"
 },
 "32": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Specular"
+"name": "Legacy Shaders/Transparent/Specular",
+"path": "Alpha-Glossy.shader"
 },
 "33": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Bumped Specular"
+"name": "Legacy Shaders/Transparent/Bumped Specular",
+"path": "Alpha-BumpSpec.shader"
 },
 "34": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/VertexLit"
+"name": "Legacy Shaders/Transparent/VertexLit",
+"path": "Alpha-VertexLit.shader"
 },
 "35": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Parallax Diffuse"
+"name": "Legacy Shaders/Transparent/Parallax Diffuse",
+"path": "Alpha-Parallax.shader"
 },
 "36": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Parallax Specular"
+"name": "Legacy Shaders/Transparent/Parallax Specular",
+"path": "Alpha-ParallaxSpec.shader"
 },
 "4": {
 "class": 48,
-"name": "Legacy Shaders/Bumped Specular"
+"name": "Legacy Shaders/Bumped Specular",
+"path": "Normal-BumpSpec.shader"
 },
 "40": {
 "class": 48,
-"name": "Legacy Shaders/Lightmapped/VertexLit"
+"name": "Legacy Shaders/Lightmapped/VertexLit",
+"path": "Lightmap-VertexLit.shader"
 },
 "41": {
 "class": 48,
-"name": "Legacy Shaders/Lightmapped/Diffuse"
+"name": "Legacy Shaders/Lightmapped/Diffuse",
+"path": "Lightmap-Diffuse.shader"
 },
 "42": {
 "class": 48,
-"name": "Legacy Shaders/Lightmapped/Bumped Diffuse"
+"name": "Legacy Shaders/Lightmapped/Bumped Diffuse",
+"path": "Lightmap-Bumped.shader"
 },
 "43": {
 "class": 48,
-"name": "Legacy Shaders/Lightmapped/Specular"
+"name": "Legacy Shaders/Lightmapped/Specular",
+"path": "Lightmap-Glossy.shader"
 },
 "44": {
 "class": 48,
-"name": "Legacy Shaders/Lightmapped/Bumped Specular"
+"name": "Legacy Shaders/Lightmapped/Bumped Specular",
+"path": "Lightmap-BumpSpec.shader"
 },
 "45": {
 "class": 48,
-"name": "Standard (Specular setup)"
+"name": "Standard (Specular setup)",
+"path": "StandardSpecular.shader"
 },
 "46": {
 "class": 48,
-"name": "Standard"
+"name": "Standard",
+"path": "Standard.shader"
 },
 "47": {
 "class": 48,
-"name": "Autodesk Interactive"
+"name": "Autodesk Interactive",
+"path": "AutodeskInteractive.shader"
 },
 "5": {
 "class": 48,
-"name": "Legacy Shaders/Diffuse Detail"
+"name": "Legacy Shaders/Diffuse Detail",
+"path": "Normal-DiffuseDetail.shader"
 },
 "50": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Cutout/VertexLit"
+"name": "Legacy Shaders/Transparent/Cutout/VertexLit",
+"path": "AlphaTest-VertexLit.shader"
 },
 "51": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Cutout/Diffuse"
+"name": "Legacy Shaders/Transparent/Cutout/Diffuse",
+"path": "AlphaTest-Diffuse.shader"
 },
 "52": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Cutout/Bumped Diffuse"
+"name": "Legacy Shaders/Transparent/Cutout/Bumped Diffuse",
+"path": "AlphaTest-Bumped.shader"
 },
 "53": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Cutout/Specular"
+"name": "Legacy Shaders/Transparent/Cutout/Specular",
+"path": "AlphaTest-Glossy.shader"
 },
 "54": {
 "class": 48,
-"name": "Legacy Shaders/Transparent/Cutout/Bumped Specular"
+"name": "Legacy Shaders/Transparent/Cutout/Bumped Specular",
+"path": "AlphaTest-BumpSpec.shader"
 },
 "6": {
 "class": 48,
-"name": "Legacy Shaders/VertexLit"
+"name": "Legacy Shaders/VertexLit",
+"path": "Normal-VertexLit.shader"
 },
 "62": {
 "class": 48,
-"name": "Hidden/Internal-DepthNormalsTexture"
+"name": "Hidden/Internal-DepthNormalsTexture",
+"path": "Internal-DepthNormalsTexture.shader"
 },
 "64": {
 "class": 48,
-"name": "Hidden/Internal-ScreenSpaceShadows"
+"name": "Hidden/Internal-ScreenSpaceShadows",
+"path": "Internal-ScreenSpaceShadows.shader"
 },
 "65": {
 "class": 48,
-"name": "Hidden/Internal-CombineDepthNormals"
+"name": "Hidden/Internal-CombineDepthNormals",
+"path": "Internal-CombineDepthNormals.shader"
 },
 "66": {
 "class": 48,
-"name": "Hidden/BlitCopy"
+"name": "Hidden/BlitCopy",
+"path": "Internal-BlitCopy.shader"
 },
 "67": {
 "class": 48,
-"name": "Hidden/BlitCopyDepth"
+"name": "Hidden/BlitCopyDepth",
+"path": "Internal-BlitCopyDepth.shader"
 },
 "68": {
 "class": 48,
-"name": "Hidden/ConvertTexture"
+"name": "Hidden/ConvertTexture",
+"path": "Internal-ConvertTexture.shader"
 },
 "69": {
 "class": 48,
-"name": "Hidden/Internal-DeferredShading"
+"name": "Hidden/Internal-DeferredShading",
+"path": "Internal-DeferredShading.shader"
 },
 "7": {
 "class": 48,
-"name": "Legacy Shaders/Diffuse"
+"name": "Legacy Shaders/Diffuse",
+"path": "Normal-Diffuse.shader"
 },
 "74": {
 "class": 48,
-"name": "Hidden/Internal-DeferredReflections"
+"name": "Hidden/Internal-DeferredReflections",
+"path": "Internal-DeferredReflections.shader"
 },
 "75": {
 "class": 48,
-"name": "Hidden/Internal-MotionVectors"
+"name": "Hidden/Internal-MotionVectors",
+"path": "Internal-MotionVectors.shader"
 },
 "8": {
 "class": 48,
-"name": "Legacy Shaders/Parallax Diffuse"
+"name": "Legacy Shaders/Parallax Diffuse",
+"path": "Normal-Parallax.shader"
 },
 "9": {
 "class": 48,
-"name": "Legacy Shaders/Parallax Specular"
+"name": "Legacy Shaders/Parallax Specular",
+"path": "Normal-ParallaxSpec.shader"
 },
 "9000": {
 "class": 48,
-"name": "Hidden/Internal-GUITextureClip"
+"name": "Hidden/Internal-GUITextureClip",
+"path": "Internal-GUITextureClip.shader"
 },
 "9001": {
 "class": 48,
-"name": "Hidden/Internal-GUITextureClipText"
+"name": "Hidden/Internal-GUITextureClipText",
+"path": "Internal-GUITextureClipText.shader"
 },
 "9002": {
 "class": 48,
-"name": "Hidden/Internal-GUITexture"
+"name": "Hidden/Internal-GUITexture",
+"path": "Internal-GUITexture.shader"
 },
 "9003": {
 "class": 48,
-"name": "Hidden/Internal-GUITextureBlit"
+"name": "Hidden/Internal-GUITextureBlit",
+"path": "Internal-GUITextureBlit.shader"
 },
 "9004": {
 "class": 48,
-"name": "Hidden/Internal-GUIRoundedRect"
+"name": "Hidden/Internal-GUIRoundedRect",
+"path": "Internal-GUIRoundedRect.shader"
 },
 "9007": {
 "class": 48,
-"name": "Hidden/Internal-GUIRoundedRectWithColorPerBorder"
+"name": "Hidden/Internal-GUIRoundedRectWithColorPerBorder",
+"path": "Internal-GUIRoundedRectWithColorPerBorder.shader"
 },
 "9100": {
 "class": 48,
-"name": "Hidden/Internal-UIRDefault"
+"name": "Hidden/Internal-UIRDefault",
+"path": "Internal/UIElements/Internal-UIRDefault.shader"
 },
 "9101": {
 "class": 48,
-"name": "Hidden/Internal-UIRAtlasBlitCopy"
+"name": "Hidden/Internal-UIRAtlasBlitCopy",
+"path": "Internal/UIElements/Internal-UIRAtlasBlitCopy.shader"
 },
 "9102": {
 "class": 48,
-"name": "Hidden/Internal-UIRDefaultWorld"
+"name": "Hidden/Internal-UIRDefaultWorld",
+"path": "Internal/UIElements/Internal-UIRDefaultWorld.shader"
 },
 "9103": {
 "class": 48,
-"name": "Hidden/UIElements/EditorUIE"
+"name": "Hidden/UIElements/EditorUIE",
+"path": "Internal/UIElements/EditorUIE.shader"
 },
 "9105": {
 "class": 48,
-"name": "Hidden/Internal-UIE-ColorConversionBlit"
+"name": "Hidden/Internal-UIE-ColorConversionBlit",
+"path": "Internal/UIElements/Internal-UIE-ColorConversionBlit.shader"
 }
 },
-"source": "Unity 6000.0.71f1 Editor/Data/Resources: unity_builtin_extra and unity default resources (object names by file id)"
+"source": "Unity 6000.0.71f1 Editor/Data/Resources: unity_builtin_extra and unity default resources (object names by file id, the path each is registered under for Resources.GetBuiltinResource and AssetDatabase.GetBuiltinExtraResource)"
 }

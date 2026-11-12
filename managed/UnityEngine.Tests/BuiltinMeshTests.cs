@@ -47,7 +47,8 @@ namespace UnityEngine.Tests
             var quad = BuiltinMeshes.Create("Quad");
             Assert.Equal(4, quad.vertexCount);
             AssertOutward(quad, Vector3.forward);
-            Assert.NotNull(Resources.GetBuiltinResource<Mesh>("Cube.fbx"));
+            using (new BuiltinPathTable().Default(10202, "Cube.fbx", "Cube", 43))
+                Assert.NotNull(Resources.GetBuiltinResource<Mesh>("Cube.fbx"));
         }
     }
 }

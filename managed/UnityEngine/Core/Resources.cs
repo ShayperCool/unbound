@@ -199,32 +199,61 @@ namespace Unbound.Runtime
         }
     }
 
-    /// <summary>Unity's built-in resources (Resources.GetBuiltinResource, `{fileID, guid 0000...e000/f000}`).</summary>
+    /// <summary>
+    /// Unity's built-in resources by the path each object of the install's resource files is
+    /// registered under: Resources.GetBuiltinResource looks in `unity default resources`,
+    /// AssetDatabase.GetBuiltinExtraResource in `unity_builtin_extra` (the release profile's
+    /// tables, filled by the host). As the Unity 6000.0.71f1 Editor (tests/projects/builtinresources):
+    /// a path matches case-sensitively, and only together with the object's own class (the
+    /// requested type's engine class: a base class such as Object finds nothing, a script class
+    /// finds its MonoBehaviour object when that object is an instance of it); a path that is not
+    /// registered with that class logs an assertion and an error and answers null; a null or empty
+    /// path throws; "Arial.ttf" is looked up as "LegacyRuntime.ttf" and then throws. Every call
+    /// answers the same object.
+    /// </summary>
     internal static class BuiltinResources
     {
-        internal static readonly Dictionary<string, Func<UnityEngine.Object>> Factories = new Dictionary<string, Func<UnityEngine.Object>>();
-        static readonly Dictionary<string, UnityEngine.Object> s_Cache = new Dictionary<string, UnityEngine.Object>();
+        /// <summary>(path, class id) → file id in `unity default resources`.</summary>
+        internal static readonly Dictionary<(string, int), long> DefaultPaths = new Dictionary<(string, int), long>();
+        /// <summary>(path, class id) → file id in `unity_builtin_extra`.</summary>
+        internal static readonly Dictionary<(string, int), long> ExtraPaths = new Dictionary<(string, int), long>();
 
-        internal static UnityEngine.Object Get(Type type, string path)
+        const string RemovedFont = "Arial.ttf";
+        const string RemovedFontReplacement = "LegacyRuntime.ttf";
+
+        internal static UnityEngine.Object Get(Type type, string path) => Lookup(type, path, extra: false);
+
+        internal static UnityEngine.Object GetExtra(Type type, string path) => Lookup(type, path, extra: true);
+
+        static UnityEngine.Object Lookup(Type type, string path, bool extra)
         {
-            var key = $"{type.Name}:{path}";
-            if (s_Cache.TryGetValue(key, out var cached)) return cached;
-            if (!Factories.TryGetValue(key, out var factory) && type == typeof(UnityEngine.Mesh) && path.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(path)) throw new ArgumentException("Invalid path");
+            bool removedFont = path == RemovedFont;
+            if (removedFont) path = RemovedFontReplacement;
+            var found = Find(type, path, extra);
+            if (removedFont)
+                throw new ArgumentException($"{RemovedFont} is no longer a valid built in font. Please use {RemovedFontReplacement}");
+            return found;
+        }
+
+        static UnityEngine.Object Find(Type type, string path, bool extra)
+        {
+            var paths = extra ? ExtraPaths : DefaultPaths;
+            int classId = type == null ? -1 : EngineTypes.EngineClassIdOf(type);
+            if (!paths.TryGetValue((path, classId), out var fileId))
             {
-                // The primitives: "Cube.fbx", "Sphere.fbx", ...
-                var mesh = UnityEngine.BuiltinMeshes.Create(path.Substring(0, path.Length - 4));
-                if (mesh != null)
-                {
-                    mesh.IsPersistentAsset = true;
-                    return s_Cache[key] = mesh;
-                }
-            }
-            if (factory == null)
-            {
-                UnityEngine.Debug.LogWarning($"Unbound: built-in resource {path} ({type.Name}) is not available.");
+                UnityEngine.Debug.LogAssertion($"Failed to find {path}");
+                UnityEngine.Debug.LogError($"The resource {path} could not be loaded from the resource file!");
                 return null;
             }
-            return s_Cache[key] = factory();
+            var found = BuiltinShaders.Resolve(extra ? BuiltinShaders.ExtraGuid : BuiltinShaders.DefaultGuid, fileId);
+            if (found == null)
+            {
+                UnityEngine.Debug.LogError($"The resource {path} could not be loaded from the resource file!");
+                return null;
+            }
+            // A script class's MonoBehaviour object answers only a type it is an instance of.
+            return type.IsInstanceOfType(found) ? found : null;
         }
     }
 }

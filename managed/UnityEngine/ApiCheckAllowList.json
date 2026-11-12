@@ -906,6 +906,13 @@
     "Release": "6000.0.71f1",
     "Category": "attributes",
     "Type": "UnityEditor.AssetDatabase",
+    "Message": "M:static GetBuiltinExtraResource`0(System.Type,System.String):UnityEngine.Object attributes is [], Unity's is [UnityEngineInternal.TypeInferenceRuleAttribute:M:.ctor`0(UnityEngineInternal.TypeInferenceRules):System.Void(UnityEngineInternal.TypeInferenceRules:Int32:0){}]",
+    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AssetDatabase."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "attributes",
+    "Type": "UnityEditor.AssetDatabase",
     "Message": "M:static LoadAssetAtPath`0(System.String,System.Type):UnityEngine.Object attributes is [], Unity's is [UnityEngineInternal.TypeInferenceRuleAttribute:M:.ctor`0(UnityEngineInternal.TypeInferenceRules):System.Void(UnityEngineInternal.TypeInferenceRules:Int32:1){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AssetDatabase."
   },
