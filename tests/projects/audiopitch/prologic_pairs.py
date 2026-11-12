@@ -11,14 +11,18 @@ from verify import verify
 
 def compare_pairs(root, report, release, rate):
     verify(root, release, rate, contexts=True, selected=prologic_cases())
+    pairs = [(key, key.replace('context_prologic_2_', 'context_prologic_7_', 1))
+             for key in prologic_cases() if key.startswith('context_prologic_2_')]
+    return compare_mode_pairs(root, report, release, rate, pairs)
+
+
+def compare_mode_pairs(root, report, release, rate, pairs, suffixes=SUFFIXES):
     meta = header(root)
     tested = failed = 0
     report.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(report, 'xt') as output:
-        for key in prologic_cases():
-            if not key.startswith('context_prologic_2_'): continue
-            other = key.replace('context_prologic_2_', 'context_prologic_7_', 1)
-            for suffix in SUFFIXES:
+        for key, other in pairs:
+            for suffix in suffixes:
                 left = samples(root, meta[key+suffix])
                 right = samples(root, meta[other+suffix])
                 left_bits = array.array('I'); left_bits.frombytes(left.tobytes())

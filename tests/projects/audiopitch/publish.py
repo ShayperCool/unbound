@@ -27,9 +27,13 @@ p.add_argument('--mono', action='store_true', help='Publish Mono output and Ster
 p.add_argument('--listener-scripts', action='store_true', help='Publish listener script and zone-return controls')
 p.add_argument('--wide', action='store_true', help='Publish the independent wide output-settings controls')
 p.add_argument('--wide-pcm', action='store_true', help='Publish the certified wide settings')
+p.add_argument('--encoding', action='store_true', help='Publish six-input encoder availability diagnostics, without engine PCM admission')
 a = p.parse_args()
 if a.settings and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
 selected = mono_cases() if a.mono else zone_cases() if a.zones else prologic_cases() if a.prologic else settings_cases() if a.settings else wet_edge_cases() if a.wet_edges else wet_cases() if a.wet else transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
+if a.encoding:
+    from common import encoding_cases
+    selected = encoding_cases()
 if a.listener_scripts:
     from common import listener_script_cases
     selected = listener_script_cases()
@@ -56,6 +60,7 @@ if a.prologic: target = target/'prologic'
 if a.zones: target = target/'zones'
 if a.mono: target = target/'mono'
 if a.listener_scripts: target = target/'listener-scripts'
+if a.encoding: target = target/'encoding'
 if a.wide: target = target/'wide'
 if a.wide_pcm: target = target/'wide-pcm'
 target = target/('rate-'+str(a.rate))

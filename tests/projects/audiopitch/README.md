@@ -129,3 +129,10 @@ The [listener script profile](LISTENER_SCRIPTS.md) adds 66 controls at both rate
 including zone entry, departure and return, script gain controls, static Mono
 zones and routed/unrouted listener bypass. It has an independent canonical
 reference and engine-only gate.
+
+
+The [six-input Prologic diagnostic](ENCODING.md) distinguishes the reference
+device's plain Stereo fallback from matrix encoding with six-channel impulses
+and noise. Its Native mode-pair relationship is checked in the existing Prologic
+gate. The complete six-input engine diagnostic remains open and is not a PCM
+admission; `context_run.py --profile encoding` returns its unfiltered failures.

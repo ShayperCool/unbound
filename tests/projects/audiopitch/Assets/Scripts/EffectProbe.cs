@@ -9,6 +9,10 @@ using Unity.Collections;
 public partial class EffectProbe : MonoBehaviour
 {
     public static readonly string[][] Cases = {
+        new[] { "context_encoding_2_impulses", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=impulses" },
+        new[] { "context_encoding_2_noise", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise" },
+        new[] { "context_encoding_7_impulses", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=impulses" },
+        new[] { "context_encoding_7_noise", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise" },
         new[] { "plain", "music=imp", "Music:Att" },
         new[] { "default_imp", "music=imp" },
         new[] { "default_silence", "music=none" },
@@ -1146,8 +1150,8 @@ public partial class EffectProbe : MonoBehaviour
                 case "tone": if (f >= 1024) l = r = (float)(amplitude * Math.Sin(2 * Math.PI * frequency * (f - 1024) / rate)); if (!on) { l *= 0.1f; r *= 0.1f; } break;
                 case "noise":
                 case "noise_full":
-                    seed = seed * 1664525u + 1013904223u; l = amplitude * ((seed >> 8) / 8388608f - 1f);
-                    seed = seed * 1664525u + 1013904223u; r = amplitude * ((seed >> 8) / 8388608f - 1f);
+                    seed = ProbeNoise.Next(seed); l = amplitude * ((seed >> 8) / 8388608f - 1f);
+                    seed = ProbeNoise.Next(seed); r = amplitude * ((seed >> 8) / 8388608f - 1f);
                     if (f < 1024) l = r = 0;
                     break;
                 case "endimp": l = f == 16383 ? 0.5f : 0; r = f == 16128 ? -0.25f : 0; break;
@@ -1165,6 +1169,24 @@ public partial class EffectProbe : MonoBehaviour
             if (f >= 16384 && parts[0] != "noise_full") l = r = 0;
             data[2 * f] = l; data[2 * f + 1] = r;
         }
+        return data;
+    }
+    static float[] SixChannelSignal(string signal)
+    {
+        const int channels = 6;
+        var data = new float[ClipFrames * channels];
+        if (signal == "impulses") {
+            // Separate channel basis impulses follow the initial gain transitions.
+            const int firstFrame = 4096, channelSpacing = 2048;
+            for (int channel = 0; channel < channels; channel++)
+                data[(firstFrame + channelSpacing * channel) * channels + channel] = 0.25f;
+        } else if (signal == "noise") {
+            uint seed = 7654321;
+            for (int i = 0; i < data.Length; i++) {
+                seed = ProbeNoise.Next(seed);
+                data[i] = 0.1f * ((seed >> 8) / 8388608f - 1f);
+            }
+        } else throw new Exception("Unknown six-channel signal " + signal);
         return data;
     }
     static void ConfigureZone(AudioReverbZone zone)
@@ -1413,13 +1435,26 @@ public partial class EffectProbe : MonoBehaviour
                 ProbeGenerator.AllChannels = Option(key, "gen=", "") == "all";
                 go.AddComponent<ProbeGenerator>();
             } else {
-                int channels = Option(key, "mono=", "0") == "1" ? 1 : 2;
+                int channels = int.Parse(Option(key, "clip_channels=", Option(key, "mono=", "0") == "1" ? "1" : "2"));
                 int clipRate = key.StartsWith("context_settings_") || key.StartsWith("context_wide_") ? actual.sampleRate : rate;
                 clip = AudioClip.Create(key, ClipFrames, channels, clipRate, false);
-                var data = Signal(Option(key, "music=", "dc:0.5"), clipRate);
+                var data = channels == 6 ? SixChannelSignal(Option(key, "six_signal=", "")) : Signal(Option(key, "music=", "dc:0.5"), clipRate);
                 if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
                 if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
                 source.clip = clip;
+                if (channels == 6) {
+                    var observed = new float[ClipFrames * channels];
+                    if (!clip.GetData(observed, 0)) throw new Exception("six-channel GetData failed");
+                    for (int i = 0; i < data.Length; i++)
+                        if (observed[i] != data[i]) throw new Exception("six-channel readback differs at " + i);
+                    using (var input = new BinaryWriter(File.Create(Path.Combine(output, key+".input.f32"))))
+                        foreach (var sample in observed) input.Write(sample);
+                    records.Add("\""+key+".input_channels\":"+clip.channels);
+                    records.Add("\""+key+".input_frames\":"+ClipFrames);
+                    records.Add("\""+key+".input_roundtrip\":true");
+                    records.Add("\""+key+".driver_caps\":"+(int)AudioSettings.driverCapabilities);
+                    records.Add("\""+key+".input\":{\"file\":\""+key+".input.f32\",\"frames\":"+ClipFrames+",\"channels\":6}");
+                }
                 var script = Option(key, "script=", "");
                 if (script != "") {
                     // A clip source's script adds a constant to one channel.
@@ -1578,7 +1613,7 @@ public class ProbeGenerator : MonoBehaviour
                     float value = 0;
                     if (Signal == "imp" && Frame == 2048 + c * 37) value = (c % 2 == 0 ? 0.25f : -0.1875f);
                     if ((Signal == "burst" && Frame >= 2048 && Frame < 16384) || Signal == "burst_full") {
-                        Seed = unchecked(Seed * 1664525 + 1013904223);
+                        Seed = ProbeNoise.Next(Seed);
                         value = ((int)(Seed >> 18) - 8192) / 131072f;
                     }
                     if (Signal == "link") value = c == Dominant && Frame >= 2048 && Frame < 12288 ? 0.75f : 0.015625f;
@@ -1619,4 +1654,11 @@ public class ProbeListenerGain : MonoBehaviour
         float gain = Gain;
         for (int i = 0; i < data.Length; i++) data[i] *= gain;
     }
+}
+
+// One fixed scalar stream supplies the probe's independent signal generators.
+public static class ProbeNoise
+{
+    const uint Multiplier = 1664525u, Increment = 1013904223u;
+    public static uint Next(uint seed) => unchecked(seed * Multiplier + Increment);
 }

@@ -55,11 +55,28 @@ def verify(root, release, rate, contexts=False, selected=None):
             for block in phases: assert isinstance(meta[f'{case}.zone_update_{block}'], dict), (case, block)
             if case.endswith('_radius_reference'):
                 for block in phases: assert isinstance(meta[f'{case}.zone_refs_{block}'], dict), (case, block)
-        if case.startswith('context_prologic_'):
+        if case.startswith(('context_prologic_', 'context_encoding_')):
             requested_mode = int(case.split('_')[2])
             assert meta[case+'.mode'] == requested_mode, case
             assert meta[case+'.render_channels'] == 2, case
             assert meta[case+'.rate'] == rate and meta[case+'.buffer'] == 1024, case
+        if case.startswith('context_encoding_'):
+            assert meta[case+'.input_channels'] == 6, case
+            assert meta[case+'.input_frames'] == 32768, case
+            assert meta[case+'.input_roundtrip'] is True, case
+            assert meta[case+'.driver_caps'] == 6, case
+            record = meta[case+'.input']
+            assert record == dict(file=case+'.input.f32', frames=32768, channels=6), case
+            values = samples(root, record)
+            assert len(values) == 32768*6 and all(map(math.isfinite, values)), case
+            if case.endswith('_impulses'):
+                assert [(i, value) for i, value in enumerate(values) if value] == [
+                    ((4096+2048*channel)*6+channel, 0.25) for channel in range(6)], case
+            else:
+                import hashlib
+                columns = [values[channel::6] for channel in range(6)]
+                assert all(sum(value != 0 for value in column) > 32000 for column in columns), case
+                assert len({hashlib.sha256(column.tobytes()).digest() for column in columns}) == 6, case
         if case.startswith(('context_settings_', 'context_wide_')):
             _, _, requested_rate, requested_buffer, _ = case.split('_', 4)
             assert meta[case+'.rate'] == int(requested_rate), (case, 'unsupported requested sample rate')

@@ -100,7 +100,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--release', required=True)
     p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
-    p.add_argument('--profile', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'listener-scripts'), default='all')
+    p.add_argument('--profile', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'listener-scripts', 'encoding'), default='all')
     p.add_argument('--reference', type=Path, help='Override only for independent Native agreement')
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--before', type=Path)

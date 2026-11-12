@@ -16,7 +16,7 @@ p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
 p.add_argument('--reset-cases', action='store_true', help='Reset output before each case, then run its normal preflight')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
 if a.set == 'wide-pcm' and a.reset_cases:
@@ -26,7 +26,7 @@ if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] !=
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts'):
+if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding'):
     import sys
     sys.path.insert(0, str(fixture.parents[1]))
     from authored_project import assemble
@@ -34,11 +34,12 @@ if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts
     if a.set in ('wide', 'wide-pcm', 'configurations'):
         from wide_boot import prepare
         prepare(project)
-    if a.set == 'listener-scripts':
+    if a.set in ('listener-scripts', 'encoding'):
         # Only the alias used by this independent private capture project is imported.
         source = (fixture/'Assets/Scripts/EffectProbe.cs').read_text()
-        keep = set(re.findall(r'new\[\] \{ "context_scriptzone_[^"]+", "asset=([^"]+)"', source))
-        assert keep, 'listener script controls have no mixer aliases'
+        prefix = 'context_scriptzone_' if a.set == 'listener-scripts' else 'context_encoding_'
+        keep = set(re.findall(r'new\[\] \{ "'+prefix+r'[^"]+", "asset=([^"]+)"', source))
+        assert keep, 'prepared controls have no mixer aliases'
         for mixer in (project/'Assets/Resources').glob('*.mixer'):
             if mixer.stem not in keep:
                 mixer.unlink()
@@ -172,8 +173,8 @@ if a.cases:
     selected = a.cases.split(',')
     if len({kind(key) for key in selected}) != 1 or (kind(selected[0]) == 'device' and len(selected) != 1):
         p.error('select controls of one set (one device control per session)')
-    part(a.work, selected)
-    if any(key.startswith(('context_settings_', 'context_prologic_')) for key in selected):
+    part(a.work, selected, prepared=a.set == 'encoding')
+    if any(key.startswith(('context_settings_', 'context_prologic_', 'context_encoding_')) for key in selected):
         assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion; see '+str(a.work/'editor.log')
     verify(a.work/'capture', a.release, a.rate, contexts=kind(selected[0]) == 'layout', selected=selected)
     raise SystemExit
@@ -186,14 +187,14 @@ if a.set == 'layouts':
     part(a.work, cases(True))
     verify(a.work/'capture', a.release, a.rate, contexts=True)
     raise SystemExit
-if a.set in ('settings', 'prologic'):
+if a.set in ('settings', 'prologic', 'encoding'):
     if a.set == 'settings' and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
     merged = {}
     for index, (session, selected) in enumerate(context_sessions(a.set).items()):
         work = a.work/session
         work.mkdir()
         buffer = int(session.split('_')[1]) if a.set == 'settings' else 1024
-        part(work, selected, prepared=index > 0, buffer=buffer)
+        part(work, selected, prepared=a.set == 'encoding' or index > 0, buffer=buffer)
         assert 'Assertion failed on expression:' not in (work/'editor.log').read_text(), 'Editor assertion; see '+str(work/'editor.log')
         verify(work/'capture', a.release, a.rate, contexts=True, selected=selected)
         for key, value in header(work/'capture').items():
@@ -205,7 +206,10 @@ if a.set in ('settings', 'prologic'):
         (a.work/'capture').mkdir(exist_ok=True)
         for f in (work/'capture').glob('*.f32'): shutil.copy2(f, a.work/'capture'/f.name)
     (a.work/'capture/capture.json').write_text(json.dumps(merged, indent=2)+'\n')
-    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=settings_cases() if a.set == 'settings' else prologic_cases())
+    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=list(__import__('common').profile(a.set, a.rate)))
+    if a.set == 'encoding':
+        from encoding_pairs import compare_encoding_pairs
+        assert compare_encoding_pairs(a.work/'capture', a.work/'paired-six-input-modes.jsonl.gz', a.release, a.rate) == 0
     if a.set == 'prologic':
         from prologic_pairs import compare_pairs
         assert compare_pairs(a.work/'capture', a.work/'paired-modes.jsonl.gz', a.release, a.rate) == 0

@@ -30,3 +30,12 @@ Record two independent captures with `native.py --release 6000.0.71f1 --rate RAT
 --set prologic --work FRESH_CACHE_DIRECTORY`. Publish one with `publish.py
 --prologic --repeat REPEAT`; raw repeats stay outside Git. The engine-only gate
 is `context_run.py --release 6000.0.71f1 --profile prologic`.
+
+
+The separate [six-input availability profile](ENCODING.md) adds actual
+six-channel generated clips with isolated impulses and dense independent input.
+The same Linux eight-channel reference device produces bit-identical Stereo and
+Prologic output at both rates, including the complete six-input response. Its
+canonical Native availability relationship is checked by the `prologic` gate.
+The engine's six-channel voice-input diagnostic remains open; it does not extend
+the 42-control mono/stereo-input PCM admission above.

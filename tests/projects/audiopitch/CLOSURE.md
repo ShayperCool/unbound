@@ -11,7 +11,7 @@ for other releases, devices, platforms or arbitrary graph edits.
 | 2. Wet and linked paths | [238 wet and 18 placement controls](WET.md) at those rates/buffer and surround layouts. Six wet kinds, Send/Receive, Normalize and reverb startup. | 94,505,124 values per rate pass; strict device differences 721/694 in wet and 29/33 in wet-edges. Silent groups retain their actual history before sources arrive. |
 | 3. Rate/buffer pairs | [168 controls](SETTINGS.md): 32000/256 and 48000/512 in Stereo/Quad/5.0/5.1/7.1; 96000/2048 in Stereo/Quad. | 54,134,190 values pass; 3921 strict device differences. Further output settings are covered by row 3b. |
 | 3b. Wide settings | [2940 controls](WIDE.md): four rates, eleven requested buffer sizes, Stereo/Quad/5.0/5.1/7.1; two entire rate/buffer pairs excluded. | 964,835,412 values pass; 85,136 strict device differences. Complete 3080-control diagnostics retain all failures. |
-| 4. Prologic | [42 paired controls](PROLOGIC.md) at 48000/44100 Hz, 1024 frames. The recorded device falls back to plain Stereo while retaining the requested getter. | 5,505,368 values per rate pass; strict device differences 236/250. Paired Stereo/Prologic PCM is exact in both repeats. |
+| 4. Prologic | [42 paired mono/stereo-input controls](PROLOGIC.md) at 48000/44100 Hz, 1024 frames. Four additional [six-input Native controls](ENCODING.md) qualify Stereo fallback on the reference device. | 5,505,368 values per rate pass; strict device differences 236/250. Paired Stereo/Prologic PCM is exact in both repeats. |
 | 5. Live zones | [77 controls](ZONES.md) at 48000/44100 Hz, 1024 frames, Stereo/Quad/5.0/5.1/7.1. Movement, radii, User edits, overlap and listener components. | 24,838,909 values per rate pass; strict device differences 10,836/11,006. |
 | 6. Mono effects | [64 controls](MONO.md) at 48000/44100 Hz, 1024 frames. Chorus taps, reverb folding between effects, wet boundaries and linked processing, with Stereo-output mono-clip controls. | 4,456,925 values per rate pass; strict device differences 329/401. |
 | 7. Listener scripts | [66 controls](LISTENER_SCRIPTS.md) at both rates, 1024 frames. Moving wide zones, static Mono zones, script gains and routed/unrouted listener bypass. | 17,826,478 values per rate pass; strict device differences 2528/2902. |
@@ -48,3 +48,13 @@ audio probes remain required validation gates.
   profiles remain unmeasured. Newly admitted Normalize/static wet settings fail
   clearly outside their measured contexts. Other releases retain the documented
   previous paths until measured.
+
+
+The [six-input availability reference](ENCODING.md) compares every input, Master
+and device sample in independent Stereo and Prologic sessions. It supplies no
+encoded-output reference on this Linux PulseAudio device. Engine data readback
+preserves all six inputs, while voice rendering reads only the first two;
+262,014 gate failures per rate remain in the complete diagnostic. Multichannel
+voice input, source processing and routing are an open follow-up, outside the
+mono/stereo-input fallback admission. Other drivers and releases remain
+unmeasured.

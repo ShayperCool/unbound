@@ -16,7 +16,7 @@ from common import profile, context_sessions
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
-p.add_argument('--profile', choices=('transitions', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'wide', 'wide-pcm', 'listener-scripts'), default='transitions')
+p.add_argument('--profile', choices=('transitions', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'wide', 'wide-pcm', 'listener-scripts', 'encoding'), default='transitions')
 p.add_argument('--unbound', type=Path, default=os.environ.get('UNBOUND'))
 p.add_argument('--rate', type=int, choices=(48000, 44100), action='append')
 p.add_argument('--work', type=Path)
@@ -36,6 +36,11 @@ if a.profile in ('wide', 'wide-pcm'):
     prepare(work/'project')
 failed = False
 for rate in a.rate or ((48000,) if a.profile in ('settings', 'wide', 'wide-pcm') else (48000, 44100)):
+    if a.profile == 'prologic':
+        from encoding_pairs import compare_encoding_pairs
+        availability = fixture/'Reference'/('unity-'+a.release)/'encoding'/('rate-'+str(rate))
+        if compare_encoding_pairs(availability, work/('native-six-input-pairs-'+str(rate)+'.jsonl.gz'), a.release, rate):
+            raise SystemExit('the recorded six-input availability relationship differs')
     if a.profile == 'prologic':
         from prologic_pairs import compare_pairs
         reference = fixture/'Reference'/('unity-'+a.release)/'prologic'/('rate-'+str(rate))
