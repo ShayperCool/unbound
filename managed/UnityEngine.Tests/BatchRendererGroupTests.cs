@@ -314,6 +314,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void UnsupportedCommandPartsAreWarnedOnce()
         {
+            uint warned = BatchCulling.s_Warned;
             BatchCulling.s_Warned = 0;
             int mode = 0;
             var group = Group((g, c, o, u) =>
@@ -351,6 +352,7 @@ namespace UnityEngine.Tests
             finally
             {
                 Debug.unityLogger.logHandler = previous;
+                BatchCulling.s_Warned = warned;
             }
         }
 

@@ -3557,13 +3557,27 @@ impl UnityRenderer {
                         InstancingMode::Dots => keywords.push(DOTS_INSTANCING_KEYWORD.into()),
                         InstancingMode::None => {}
                     }
-                    let (id, errored) = self.variant_or_error(
+                    let (mut id, errored) = self.variant_or_error(
                         &resolved.shader,
                         &pass.program,
                         &keywords,
                         linear,
                         &layout,
                     );
+                    // A BatchRendererGroup draw of a pass without DOTS instancing (or that does
+                    // not compile) is skipped, decided once: its instances would all draw at the
+                    // draw's own place.
+                    if mode == InstancingMode::Dots
+                        && id.is_some_and(|id| errored || !self.compiled.dots_instanced(id))
+                    {
+                        id = None;
+                        let shader = resolved.shader.clone();
+                        self.warn_once(format!("dots{shader}#{pass_index}"), || {
+                            format!(
+                                "shader `{shader}` pass {pass_index} has no DOTS instancing variant: its BatchRendererGroup draws are skipped"
+                            )
+                        });
+                    }
                     if let Some(m) = self.materials.get_mut(&draw.material) {
                         m.variants.insert(key, (id, errored));
                     }
@@ -3586,17 +3600,6 @@ impl UnityRenderer {
                 );
             }
             let Some(id) = id else { continue };
-            // A BatchRendererGroup draw of a pass without DOTS instancing (or that does not
-            // compile) is skipped: its instances would all draw at the draw's own place.
-            if mode == InstancingMode::Dots && (errored || !self.compiled.dots_instanced(id)) {
-                let shader = resolved.shader.clone();
-                self.warn_once(format!("dots{shader}#{pass_index}"), || {
-                    format!(
-                        "shader `{shader}` pass {pass_index} has no DOTS instancing variant: its BatchRendererGroup draws are skipped"
-                    )
-                });
-                continue;
-            }
             let (mut state, mut stencil_ref) = if errored {
                 (Default::default(), 0)
             } else {
