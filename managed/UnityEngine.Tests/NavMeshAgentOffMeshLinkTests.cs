@@ -618,14 +618,6 @@ namespace UnityEngine.Tests
             Assert.True(Dist2D(agent.nextPosition, Destination) <= 1e-2f, $"stopped at {agent.nextPosition}");
         }
 
-        static void AtRelease(string release, Action body)
-        {
-            string previous = ProjectInfo.UnityVersion;
-            ProjectInfo.UnityVersion = release;
-            try { body(); }
-            finally { ProjectInfo.UnityVersion = previous; }
-        }
-
         /// <summary>hasPath reports corners found after the agent's last walking step, a corridor
         /// of more than one polygon, or the link (Unity 6000.0.71f1, tests/projects/navlinks: every
         /// lane's landing frame). Landing on the destination's polygon, automatically or by
@@ -638,7 +630,7 @@ namespace UnityEngine.Tests
         [InlineData("6000.0.72f1", false)]
         public void LeavingALinkReportsNoPathUntilAWalkingUpdate(string release, bool autoTraverse)
         {
-            AtRelease(release, () =>
+            NavigationTestRelease.At(release, () =>
             {
                 bool measured = release == "6000.0.71f1";
                 var agent = Agent(autoTraverse);
@@ -659,9 +651,10 @@ namespace UnityEngine.Tests
                 }
                 Assert.False(agent.isOnOffMeshLink);
                 int polygons = agent.m_Crowd.corridor.GetPathCount();
-                // Landing automatically, on the destination's polygon, the corridor has one polygon;
-                // a corridor that goes on to another polygon still reports a path.
-                if (autoTraverse) Assert.Equal(1, polygons);
+                // Landing automatically, on the destination's polygon, the corridor has one polygon.
+                // Completed by script where the link ends, its corridor still holds the next polygon:
+                // it reports a path in either release.
+                Assert.Equal(autoTraverse ? 1 : 2, polygons);
                 Assert.Equal(!measured || polygons >= 2, agent.hasPath);
                 if (measured) Assert.Equal(Destination.x, agent.steeringTarget.x, 3);
                 Step();
@@ -671,12 +664,50 @@ namespace UnityEngine.Tests
             });
         }
 
+        /// <summary>A path given by SetPath is reported at once, by a standing agent too, with its
+        /// first corner as the steering target (Unbound's choice in the measured profile,
+        /// unmeasured; the previous report also counted it at once).</summary>
+        [Fact]
+        public void SetPathReportsItsCornersAtOnce()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var go = new GameObject("standing");
+                m_Objects.Add(go);
+                go.transform.position = new Vector3(-7f, 0f, -1f);
+                var agent = go.AddComponent<NavMeshAgent>();
+                Step();
+                // A target on the agent's own polygon: a one-polygon path.
+                var path = new NavMeshPath();
+                var target = Vector3.zero;
+                foreach (var offset in new[] { new Vector3(0.5f, 0f, 0.5f), new Vector3(-0.5f, 0f, 0.5f), new Vector3(0.5f, 0f, -0.5f), new Vector3(-0.5f, 0f, -0.5f) })
+                {
+                    target = agent.nextPosition + offset;
+                    if (agent.CalculatePath(target, path) && path.m_Polygons.Length == 1) break;
+                }
+                Assert.Single(path.m_Polygons);
+                Assert.False(agent.hasPath);
+                Assert.True(agent.SetPath(path));
+                Assert.True(agent.hasPath);
+                Assert.True(Dist2D(agent.steeringTarget, target) < 1e-3f);
+
+                // Walking towards the destination, a new path changes the steering target at once.
+                Assert.True(agent.SetDestination(Destination));
+                for (int i = 0; i < 5; i++) Step();
+                Assert.True(agent.hasPath);
+                var other = new Vector3(-7f, 0f, 1.5f);
+                Assert.True(agent.CalculatePath(other, path));
+                Assert.True(agent.SetPath(path));
+                Assert.True(Dist2D(agent.steeringTarget, path.corners[1]) < 1e-3f);
+            });
+        }
+
         /// <summary>Within a centimetre of its destination on its last polygon the agent reports no
         /// path, also while it still closes in (the end is dropped like any corner).</summary>
         [Fact]
         public void TheLastCentimetreOnTheLastPolygonReportsNoPath()
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var agent = Agent(autoTraverse: true);
                 bool sawPath = false, wasOnLink = false;

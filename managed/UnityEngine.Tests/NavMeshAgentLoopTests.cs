@@ -328,21 +328,13 @@ namespace UnityEngine.Tests
             Assert.Equal(before + 30f * Dt, agent.transform.eulerAngles.y, 3);
         }
 
-        static void AtRelease(string release, Action body)
-        {
-            string previous = ProjectInfo.UnityVersion;
-            ProjectInfo.UnityVersion = release;
-            try { body(); }
-            finally { ProjectInfo.UnityVersion = previous; }
-        }
-
         [Theory]
         [InlineData(89.9f, false)]
         [InlineData(90.1f, false)]
         [InlineData(359.9f, true)]
         public void SmallHeadingErrorsConvergeFromBothSidesAndAcrossZero(float yaw, bool north)
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
@@ -358,7 +350,7 @@ namespace UnityEngine.Tests
         [InlineData(0.05f, true)]
         public void TurningHasAMovementThreshold(float speed, bool turns)
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.speed = speed;
@@ -377,7 +369,7 @@ namespace UnityEngine.Tests
         [InlineData(true, true)]
         public void UpAxisAlignmentIsIndependentOfTurning(bool align, bool turn)
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.updateUpAxis = align;
@@ -393,7 +385,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void OtherReleasesRetainTheirUnmeasuredHeadingInterpolation()
         {
-            AtRelease("6000.0.72f1", () =>
+            NavigationTestRelease.At("6000.0.72f1", () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.updateUpAxis = false;
@@ -410,7 +402,7 @@ namespace UnityEngine.Tests
         [InlineData(true)]
         public void APlacedSurfaceSuppliesItsUpAxisWithoutTurning(bool align)
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var source = new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box,
                     size = new Vector3(12f, 1f, 8f), transform = Matrix4x4.Translate(new Vector3(0f, -0.5f, 0f)) };
@@ -439,7 +431,7 @@ namespace UnityEngine.Tests
         [InlineData("6000.0.72f1", 0.6f, false)]
         public void EndpointReportingSurvivesArrivalInTheMeasuredProfile(string release, float stoppingDistance, bool keepsTarget)
         {
-            AtRelease(release, () =>
+            NavigationTestRelease.At(release, () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.stoppingDistance = stoppingDistance;
@@ -460,7 +452,7 @@ namespace UnityEngine.Tests
         [InlineData(false, 0.6f)]
         public void StoppingDistanceDeceleratesWithoutDroppingThePathAndCanResume(bool brake, float stoppingDistance)
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.speed = 2f;
@@ -486,7 +478,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void ResettingABrakingPathThenDeceleratesAtTheAccelerationLimit()
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var agent = Walking(1);
                 for (int i = 0; i < 200 && !agent.m_Crowd.braking; i++) AgentSystem.Step();
@@ -505,7 +497,7 @@ namespace UnityEngine.Tests
         [InlineData(true)]
         public void VerticalAndInvertedUpAxisAdjustmentsStayFinite(bool inverted)
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.updateRotation = false;
@@ -524,7 +516,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void ASingularParentedUpAdjustmentUsesIdentityInParentSpace()
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var parent = new GameObject("rotation parent");
                 m_Objects.Add(parent);
@@ -544,7 +536,7 @@ namespace UnityEngine.Tests
         [InlineData(true)]
         public void UpAlignmentWritesOnlyWhenItChangesTheRotation(bool tilted)
         {
-            AtRelease("6000.0.71f1", () =>
+            NavigationTestRelease.At("6000.0.71f1", () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.updatePosition = false;

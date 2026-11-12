@@ -133,9 +133,12 @@ namespace DotRecast.Detour.Crowd
         ///  @param[in]		navquery		The query object used to build the corridor.
         ///  @param[in]		filter			The filter to apply to the operation.
         /// @return The number of corners returned in the corner buffers. [0 <= value <= @p maxCorners]
+        /// Unbound: how near (in the ground plane) a leading corner counts as reached, in metres
+        /// (Detour's; also Unity's reported corners and path end).
+        public const float MIN_TARGET_DIST = 0.01f;
+
         public int FindCorners(Span<DtStraightPath> corners, int maxCorners, DtNavMeshQuery navquery, IDtQueryFilter filter)
         {
-            const float MIN_TARGET_DIST = 0.01f;
 
             int ncorners = 0;
             navquery.FindStraightPath(m_pos, m_target, m_path, m_npath, corners, out ncorners, maxCorners, 0);

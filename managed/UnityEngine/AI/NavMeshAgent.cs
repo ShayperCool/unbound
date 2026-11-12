@@ -365,7 +365,8 @@ namespace UnityEngine.AI
             m_ReportedDestination = m_Destination;
             m_HasDestination = true;
             AgentSystem.ApplyPath(this, m_RequestedPath);
-            // A path set directly reports its corners at once.
+            // A path set directly reports its corners at once (Unbound's choice, unmeasured:
+            // hasPath was already true at once before the measured corner reports).
             if (Compat.NavMeshCorridorReportingMeasured) AgentSystem.ReportCorners(this);
             return true;
         }
@@ -1615,7 +1616,15 @@ namespace Unbound.Runtime
                     CrowdOf(agent.m_Surface).UpdateAgentParameters(agent.m_Crowd, Params(agent));
                 }
             }
-            if (dt <= 0f) return;
+            if (dt <= 0f)
+            {
+                // Without a step (time scale 0) the reported corners follow paths applied in this
+                // update from where the agents stand (Unbound's choice, unmeasured).
+                if (Compat.NavMeshCorridorReportingMeasured)
+                    foreach (var agent in s_Agents)
+                        if (agent.m_Crowd != null && agent.m_Crowd.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) ReportCorners(agent);
+                return;
+            }
             if (s_ConfiguredPrediction != NavMesh.avoidancePredictionTime)
                 foreach (var crowd in s_Crowds.Values) ConfigureAvoidance(crowd);
             s_OccupiedLinks.Clear();
@@ -1839,11 +1848,8 @@ namespace Unbound.Runtime
                 agent.SetArrived(true);
                 return;
             }
-            agent.SetArrived(left < 0.01f);
+            agent.SetArrived(left < DtPathCorridor.MIN_TARGET_DIST);
         }
-
-        /// <summary>Unity's leading-corner pruning distance (also for the path's end), in metres.</summary>
-        const float ReportedCornerMinDistance = 0.01f;
 
         static readonly DtStraightPath[] s_ReportedCorners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
 
@@ -1861,7 +1867,7 @@ namespace Unbound.Runtime
             int n = ag.corridor.FindCorners(corners, corners.Length, agent.m_Surface.Query, agent.CrowdFilter);
             // The corridor's corners keep the path's end however near (see DtPathCorridor.FindCorners).
             if (n > 0 && (corners[0].flags & DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION) == 0
-                && RcVec.Dist2DSqr(corners[0].pos, ag.corridor.GetPos()) <= ReportedCornerMinDistance * ReportedCornerMinDistance)
+                && RcVec.Dist2DSqr(corners[0].pos, ag.corridor.GetPos()) <= DtPathCorridor.MIN_TARGET_DIST * DtPathCorridor.MIN_TARGET_DIST)
                 n = 0;
             ag.reportedCorners = n;
             if (n > 0) ag.reportedSteer = corners[0].pos;
