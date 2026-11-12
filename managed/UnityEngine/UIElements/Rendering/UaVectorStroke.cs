@@ -517,7 +517,7 @@ namespace Unbound.UIElements
             for (int k = 0; k < n; k++)
             {
                 var piece = m_Pieces[k];
-                bool arc = piece.IsArc && piece.Radius > 0f;
+                bool arc = piece.DrawsAsArc;
                 var t0 = k == 0 && capStart ? UaCurveSubdivision.PieceTangent(piece, curve, true) : curve.Tangent(piece.T0);
                 var t1 = k == n - 1 && capEnd ? UaCurveSubdivision.PieceTangent(piece, curve, false) : curve.Tangent(piece.T1);
                 float cross = t0.x * t1.y - t1.x * t0.y;
@@ -531,7 +531,16 @@ namespace Unbound.UIElements
                 byte flags = 0;
                 if (arc)
                 {
-                    if (UaVector.Dot(t0, t1) < 0f) flags = PieceSkipped;
+                    if (UaVector.Dot(t0, t1) < 0f)
+                    {
+                        // Ends whose tangents oppose: the piece shrinks to its middle point (its quad
+                        // keeps its corners), where a dot is drawn.
+                        flags = PieceSkipped;
+                        piece.P0 = piece.P1 = piece.Center = piece.Pm;
+                        piece.Radius = 0f;
+                        piece.IsPoint = true;
+                        m_Pieces[k] = piece;
+                    }
                     else if (CollapseInner(m_Quads.Count - 4)) flags = PieceCollapsed;
                 }
                 m_PieceFlags.Add(flags);
@@ -539,11 +548,10 @@ namespace Unbound.UIElements
             for (int k = 0; k < n; k++)
             {
                 var piece = m_Pieces[k];
-                if (m_PieceFlags[k] == PieceSkipped) continue;
                 int q = k * 4, first = m_Mesh.VertexCount;
                 // A piece's quad: its start corner, the two end corners, the other start corner.
                 Color32 tint = UaVector.Tint(m_PieceColors[k]), endTint = UaVector.Tint(m_PieceColors[k + 1]);
-                if (piece.IsArc && piece.Radius > 0f)
+                if (piece.DrawsAsArc)
                 {
                     float toHit = UaVector.Length(piece.Pm - m_Quads[q + 2]);
                     if (m_PieceFlags[k] == PieceCollapsed && half >= toHit)
@@ -579,16 +587,18 @@ namespace Unbound.UIElements
                 m_Mesh.TriangleCW(first, first + 1, first + 2);
                 m_Mesh.TriangleCW(first, first + 2, first + 3);
                 if (m_PieceFlags[k] == PieceCollapsed) OuterMargin(piece, q, half, tint, endTint);
+                else if (m_PieceFlags[k] == PieceSkipped) Dot(piece.Pm, half, extent, tint);
             }
             UaCurvePiece f = m_Pieces[0], l = m_Pieces[n - 1];
-            var ds = f.IsArc && f.Radius > 0f ? UaCurveSubdivision.PieceTangent(f, curve, true) : curve.Tangent(0f);
-            var de = l.IsArc && l.Radius > 0f ? UaCurveSubdivision.PieceTangent(l, curve, false) : curve.Tangent(1f);
+            var ds = f.DrawsAsArc ? UaCurveSubdivision.PieceTangent(f, curve, true) : curve.Tangent(0f);
+            var de = l.DrawsAsArc ? UaCurveSubdivision.PieceTangent(l, curve, false) : curve.Tangent(1f);
             m_Starts[index] = new UaSegmentEnd { P0 = f.P0, P1 = f.P1, Dir = ds, Arc = true, Color = m_PieceColors[0], Valid = true };
             m_Ends[index] = new UaSegmentEnd { P0 = l.P0, P1 = l.P1, Dir = de, Arc = true, Color = m_PieceColors[n], Valid = true };
             m_Mesh.AddBounds(curve.P0);
             m_Mesh.AddBounds(curve.P3);
-            AddNormalBounds(curve.P0, ds);
-            AddNormalBounds(curve.P3, de);
+            // The normals at the first and last pieces' ends (a shrunk piece's middle point).
+            AddNormalBounds(f.P0, ds);
+            AddNormalBounds(l.P1, de);
             curve.AddExtremeBounds(m_Mesh, half);
         }
 
@@ -614,6 +624,23 @@ namespace Unbound.UIElements
             m_Mesh.Add(o0, endTint, new Vector4((o0.x - hit.x) * i0, (o0.y - hit.y) * i0, UaVector.UnusedArc, UaVector.UnusedArc));
             m_Mesh.TriangleCW(first, first + 1, first + 2);
             m_Mesh.TriangleCW(first, first + 2, first + 3);
+        }
+
+        /// <summary>A round dot of the line's width at <paramref name="center"/>: a centre vertex and
+        /// the four corners of its square (half the width plus the anti-aliasing margin out), the
+        /// coverage circle the line's half width (as the Unity 6000.0.71f1 Editor draws a curve piece
+        /// whose end tangents oppose, tests/projects/uitkpainter curve-loop-opposed).</summary>
+        void Dot(Vector2 center, float half, float extent, Color32 tint)
+        {
+            float inv = 1f / half;
+            var unused = new Vector4(0f, 0f, UaVector.UnusedArc, UaVector.UnusedArc);
+            int c = m_Mesh.Add(center, tint, unused);
+            for (int i = 0; i < 4; i++)
+            {
+                var d = new Vector2(i == 0 || i == 3 ? -extent : extent, i < 2 ? -extent : extent);
+                m_Mesh.Add(center + d, tint, new Vector4(d.x * inv, d.y * inv, UaVector.UnusedArc, UaVector.UnusedArc));
+            }
+            for (int i = 0; i < 4; i++) m_Mesh.Triangle(c, c + 1 + i, c + 1 + (i + 1) % 4);
         }
 
         const byte PieceSkipped = 1, PieceCollapsed = 2;

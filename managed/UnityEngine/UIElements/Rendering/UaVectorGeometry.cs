@@ -319,14 +319,18 @@ namespace Unbound.UIElements
     }
 
     /// <summary>A piece of a Bézier curve: a circular arc (<see cref="IsArc"/>, with
-    /// <see cref="Center"/> and <see cref="Radius"/>; a zero radius draws it as its chord) or a
-    /// straight line through its points.</summary>
+    /// <see cref="Center"/> and <see cref="Radius"/>; a zero radius draws it as its chord), a point
+    /// (<see cref="IsPoint"/>: its ends coincide; an arc of radius 0 around them) or a straight
+    /// line through its points.</summary>
     internal struct UaCurvePiece
     {
         public float T0, T1;
         public Vector2 P0, Pm, P1, Center;
         public float Radius;
-        public bool IsArc;
+        public bool IsArc, IsPoint;
+
+        /// <summary>Whether it is drawn as an arc (with coverage circles around its center).</summary>
+        internal bool DrawsAsArc => IsArc && (Radius > 0f || IsPoint);
     }
 
     /// <summary>Approximates a cubic Bézier curve by circular arcs and straight pieces, the way
@@ -354,7 +358,16 @@ namespace Unbound.UIElements
         {
             float tm = (t0 + t1) * 0.5f;
             Vector2 p0 = curve.Eval(t0), pm = curve.Eval(tm), p1 = curve.Eval(t1);
-            if (depth > MaxDepth || (Math.Abs(p0.x - p1.x) <= UaVector.Epsilon && Math.Abs(p0.y - p1.y) <= UaVector.Epsilon))
+            // Ends that coincide make a point: an arc of radius 0 centred on them, drawn between the
+            // normals of the curve's tangents there (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/uitkpainter curve-loop-*, wherever the curve lies).
+            if (Math.Abs(p0.x - p1.x) <= UaVector.Epsilon && Math.Abs(p0.y - p1.y) <= UaVector.Epsilon)
+            {
+                SplitLarge(curve, new UaCurvePiece { T0 = t0, T1 = t1, P0 = p0, Pm = pm, P1 = p1, Center = p0, IsArc = true, IsPoint = true }, into);
+                return;
+            }
+            // Past the depth limit (unmeasured): the piece's chord.
+            if (depth > MaxDepth)
             {
                 SplitLarge(curve, new UaCurvePiece { T0 = t0, T1 = t1, P0 = p0, Pm = pm, P1 = p1, IsArc = true }, into);
                 return;
