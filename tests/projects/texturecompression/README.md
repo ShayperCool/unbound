@@ -183,9 +183,9 @@ Runtime edge blocks repeat their remaining rows and columns. The 3x2 RGB mip sti
 unresolved colour/padding difference, reaching 35/255 in a decoded channel. Other residuals
 are small-mip colour fitting and the flat-RGB fast case (GPU difference at most 2/255).
 They remain exact-key residuals; no tolerance has changed. The full comparator records
-5129/5331 exact values in each Standalone profile, with 202 listed residuals, and
-4394, 4381, 4385 and 4368/5331 in AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC,
-with 937, 950, 946 and 963 residuals.
+7283/7467 exact values in each Standalone profile, with 184 listed residuals, and
+6635, 6616, 6626 and 6985/7467 in AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC,
+with 832, 851, 841 and 482 residuals.
 Android runtime ETC encoding is unchanged by these encoder changes; direct R8/RG16 runtime
 EAC storage remains unresolved. The runtime encoder profile is part of the compression key.
 
@@ -194,30 +194,49 @@ zero failures: 16.65 s before and 18.36 s after. Two subsequent runs took 21.44 
 on the shared machine while other validation jobs were active. Import encoder selection and
 quality are unchanged in this part; these wall times do not isolate encoder cost.
 
-## Fast ASTC and Crunch controls
+## ASTC profiles and Crunch controls
 
-The AndroidASTC profile names ASTC as the default compression format. Automatic selection is
-4x4 at High Quality, 8x8 at Low Quality, and 6x6 at Normal; Single Channel red follows those
-footprints and alpha stays Alpha8. Normal maps keep XYZ channels with opaque alpha. These are
-6000.0.71f1 measurements, including Fast controls outside the explicit-format cases.
-The public [TextureImporterCompression](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureImporterCompression.html)
-API describes platform-dependent quality formats; it does not promise compressed-block identity.
-[ASTC_6x6](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureFormat.ASTC_6x6.html)
-uses 128 bits for each 6x6 footprint. Raw sizes in the probe distinguish that from 4x4 BC blocks.
+The AndroidASTC profile selects ASTC by default. Automatic selection is 4x4 at High Quality,
+8x8 at Low Quality, and 6x6 at Normal, including Single Channel red and alpha. Normal maps
+keep XYZ channels with opaque alpha. Automatic HDR remains ETC2_RGBA8; explicit ASTC HDR
+formats use HDR blocks. These choices are measured for 6000.0.71f1.
 
-The measured Fast LDR profile (quality 0, footprints 4x4, 5x5, 6x6 and 8x8) uses the complete
-C interface packaged with intel_tex_2. Its [ISPCTextureCompressor source](https://github.com/GameTechDev/ISPCTextureCompressor)
-is MIT licensed. Padding clamps the edge texel, including sub-block mips; ASTC GetPixels32
-returns actual mip dimensions. Tiny 2x2 imports, 20x12 and 30x18 mipless imports compress; the
-30x18 mip chain stays uncompressed. ASTC constructors accept 7x5 sides. Copy controls use distinct source/destination bytes:
-matching 5x5 footprints copy the CPU blocks; a 5x5-to-6x6 copy keeps the destination unchanged. Qualities other than
-Fast, HDR ASTC, and 10x10/12x12 remain uncompressed approximations with explicit diagnostics;
-Single Channel ASTC encoder settings remain unresolved and retain uncompressed storage with a diagnostic;
-other releases retain the previous path. GPU storage uses decoded RGBA8 pixels, without a second lossy encoding. Native ASTC upload needs a separate renderer capability path.
+| Source, Unity 6000.0 | Contract or observation |
+|---|---|
+| [Texture compression formats](https://docs.unity3d.com/6000.0/Documentation/Manual/class-TextureImporterOverride.html) | ASTC uses 128 bits per block, with six square footprints from 4x4 through 12x12. HDR support depends on the graphics device and API; unsupported devices require a fallback. The probe checks every footprint, partial edge blocks and sub-block mips. |
+| [compressionQuality](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureImporter-compressionQuality.html) | Quality ranges from 0 to 100. The API does not promise block identity. NoiseASTC6Q1/Q49/Q50/Q51/Q99/Q100 distinguish the measured search boundaries. |
+| Editor reference, added ASTC controls | Standard LDR quality 0 at 4x4/5x5/6x6/8x8 uses ISPC Fast. Other qualities, 10x10/12x12, HDR and Single Channel use Arm astc-encoder 4.3.0, with effort 10 below quality 50, 60 at 50, and 98 above 50. Single red swizzles RRR1; single alpha uses 000A. HDR inputs are quantized to half precision before encoding. |
+
+The complete Fast C interface packaged with intel_tex_2 remains in use for that slice;
+[ISPCTextureCompressor](https://github.com/GameTechDev/ISPCTextureCompressor) is MIT licensed.
+The other measured profiles use the vendored [Arm astc-encoder 4.3.0](https://github.com/ARM-software/astc-encoder/tree/4.3.0),
+under Apache-2.0. Its dependency notes record the context-local settings and shared-table fixes.
+Mixed-quality controls verify that earlier textures cannot alter a later encoder's search settings.
+The same Compat flag selects the measured ASTC mechanism. Other releases retain diagnosed
+uncompressed storage; no exact-block claim applies to them.
+
+Padding clamps the edge texel, including sub-block mips. GetPixels32 returns actual mip dimensions.
+Tiny 2x2 and mipless 20x12/30x18 imports compress; non-power-of-two mip chains use RGBA32, including opaque and HDR sources. The fallback
+filters HDR radiance before clamping each level to bytes, without HDR gamma conversion.
+Constructors accept odd dimensions. Distinct source/destination copy controls verify matching
+5x5 footprints copy CPU blocks, while 5x5-to-6x6 leaves the destination unchanged. HDR constructor,
+raw-view and mip controls retain values above one and alpha, including divergent writes of red
+4 in the first mip and red 6 in another mip. HDR GPU fallbacks retain float radiance, using RGBA16F for initial imports and RGBA32F for
+runtime block uploads; LDR uses RGBA8. Neither path applies a second lossy encoding. Native
+ASTC upload remains a renderer follow-up.
+
+The CPU decoder uses the same Arm library, with the linear LDR profile even for an sRGB texture.
+It tolerates arbitrary raw payloads; invalid blocks produce the codec's error colour. Deterministic
+arbitrary-payload tests cover malformed data. HDR reads decode to float; byte reads clamp to bytes.
+Per-thread decoder contexts are cached by footprint/profile, and HDR GetPixel writes into caller-owned
+storage. The previous byte decoder and its separate mode validator have been removed.
 
 The normal-map control also records a Standalone RGB24 override becoming DXT5, while Default
-RGB24 imports stay RGB24. The measured import profile applies that fallback before processing.
-Texture cache v30 includes these output changes, malformed-block validation and the channel-fit updates.
+RGB24 imports stay RGB24. Explicit Single Channel RGBA32 preserves all four source channels.
+Explicit colour formats keep their authored sRGB flag. In a Gamma project, a Default 2D HDR
+source encodes colour to gamma independently of that flag, then stores a linear HDR format;
+HdrRGBAFloat and HdrBC6H distinguish source preparation from compressed decoding.
+Texture cache v33 includes these ASTC and source-processing changes.
 
 Crunch controls cover DXT1 and DXT5 at qualities 0, 50 and 100, with ETC_RGB4Crunched and
 ETC2_RGBA8Crunched Android counterparts, gradients, noisy alpha and flat colour. Crunch encoding
@@ -229,35 +248,61 @@ of the same format differ, their per-block exactness needs a transcoded comparis
 labels its zero verified lower bound instead of asserting every decoded block differs.
 
 
-ASTC raw-data and copy operations tolerate malformed block payloads. The decoder checks the
-[2D mode weight and endpoint budgets](https://github.com/ARM-software/astc-encoder/blob/main/Source/astcenc_block_sizes.cpp)
-before reading variable-length fields; impossible budgets produce the format's opaque magenta
-error colour. The copy control's source bytes are deliberately different from its destination.
-Regression tests also decode deterministic arbitrary payloads at every supported footprint.
-
 Measured ASTC import blocks, including every mip:
 
-| Footprint / quality | AndroidGamma, AndroidLinear, AndroidETC2 | AndroidASTC default profile |
+| Footprint / importer quality | AndroidGamma, AndroidLinear, AndroidETC2 | AndroidASTC default profile |
 |---|---:|---:|
-| 4x4 Fast | 619 / 686 | 1171 / 1372 |
-| 5x5 Fast | 241 / 241 | 241 / 241 |
-| 6x6 Fast | 716 / 717 | 1201 / 1409 |
-| 8x8 Fast | 113 / 114 | 201 / 202 |
-| 4x4 Normal / Best | no cases | 0 / 1029 at each quality |
-| 6x6 Normal | 0 / 173 | 0 / 2944 |
-| 6x6 Best | no cases | 0 / 346 |
-| 8x8 Normal | no cases | 0 / 176 |
-| 8x8 Best | 0 / 88 | 0 / 88 |
-| HDR 6x6 Normal | 0 / 173 | 0 / 173 |
+| LDR 4x4, 0 | 619 / 686 | 1171 / 1372 |
+| LDR 4x4, 50 and 100 | no cases | 1029 / 1029 at each quality |
+| LDR 5x5, 0, 50 and 100 | 241 / 241 at each quality | 241 / 241 at each quality |
+| LDR 6x6, 0 | 1408 / 1409 | 2066 / 2101 |
+| LDR 6x6, 1, 49, 51 and 99 | 173 / 173 at each quality | 173 / 173 at each quality |
+| LDR 6x6, 50 | 1557 / 1557 | 4328 / 4328 |
+| LDR 6x6, 100 | 1211 / 1211 | 1557 / 1557 |
+| LDR 8x8, 0 | 113 / 114 | 201 / 202 |
+| LDR 8x8, 50 | no cases | 176 / 176 |
+| LDR 8x8, 100 | 88 / 88 | 88 / 88 |
+| LDR 10x10, 0, 50 and 100 | 73 / 73 at each quality | 73 / 73 at each quality |
+| LDR 12x12, 0, 50 and 100 | 53 / 53 at each quality | 53 / 53 at each quality |
+| HDR 4x4, 0, 50 and 100 | 343 / 343 at each quality | 343 / 343 at each quality |
+| HDR 5x5, 0, 50 and 100 | 241 / 241 at each quality | 241 / 241 at each quality |
+| HDR 6x6, 0 and 100 | 173 / 173 at each quality | 173 / 173 at each quality |
+| HDR 6x6, 50 | 350 / 350 | 350 / 350 |
+| HDR 8x8, 0, 50 and 100 | 88 / 88 at each quality | 88 / 88 at each quality |
+| HDR 10x10, 0, 50 and 100 | 73 / 73 at each quality | 73 / 73 at each quality |
+| HDR 12x12, 0, 50 and 100 | 53 / 53 at each quality | 53 / 53 at each quality |
 
-The default profile's Fast 6x6 denominator includes 173 unresolved Single Channel blocks with
-no compressed storage. The other 35 residual blocks are gradient fitting and one Flat block;
-the ordinary Android profiles have only that Flat block left at 6x6. Fast 4x4 residuals are
-opaque gradients; Fast 8x8 has one Noise block. Flat6 reaches 88/255 decoded channel error.
-For matching valid blocks the current byte decoder still differs by 1/255 in some channels.
-Arbitrary constructor payloads can differ across the full channel range in CPU reads; their
-raw blocks and sizes match. These are explicit decoder follow-ups, including the decoder
-shared with AssetBundle content, rather than tolerance changes.
+Single Channel controls include varying red and alpha, three qualities, an authored sRGB flag,
+and both automatic and explicit formats. All their blocks match. HDR includes negative, infinite
+and NaN source values, partial edge blocks, and float reads above one. Non-power-of-two Single
+Channel and HDR controls verify the RGBA32 fallback separately from compression.
+
+The remaining probe fitting differences are in the existing ISPC Fast slice: opaque gradients,
+one Flat6 block and one Noise8 block. Flat6 reaches 88/255 decoded channel error. The previous
+byte-decoder differences, including arbitrary constructor payloads, are resolved in this corpus.
+Four HDR pixel strings in the Gamma Android profiles and nine in AndroidLinear differ only in
+Mono/CoreCLR decimal midpoint formatting. Their numbers parse to identical float32 values;
+raw blocks, byte reads and GPU samples match. They remain exact-key residuals without changing
+the comparator or its tolerance.
+
+Two ordinary UI/effect images, captured twice on the GPU outside the repository, give:
+
+| LDR footprint | Quality 0 exact / total | Quality 50 exact / total | Quality 100 exact / total |
+|---|---:|---:|---:|
+| 4x4 | 1855 / 2734 | 2734 / 2734 | 2734 / 2734 |
+| 5x5 | 1508 / 1834 | 1834 / 1834 | 1834 / 1834 |
+| 6x6 | 1087 / 1314 | 1314 / 1314 | 1314 / 1314 |
+| 8x8 | 613 / 688 | 688 / 688 | 688 / 688 |
+| 10x10 | 484 / 484 | 484 / 484 | 484 / 484 |
+| 12x12 | 348 / 348 | 348 / 348 | 348 / 348 |
+
+The ordinary images' uncompressed source controls match at every mip. These results extend the
+measured content; the Fast residuals show why the probe's exact 5x5 result is not a universal claim.
+The part's clean-cache import of 4397 ordinary-project textures had zero failures, 19.96 s before
+and 18.86 s after, with total process CPU including the cached second pass 92.19 s before and
+90.08 s after. An earlier after-run took 17.07 s and 83.51 s CPU. Shared-machine wall time does not isolate encoder cost. This Standalone workload
+does not measure the added ASTC searches, whose Normal/Best settings perform more work than
+retaining uncompressed pixels.
 
 Crunch storage is absent for 0/1029 DXT1Crunched and 0/1372 DXT5Crunched logical blocks in each
 Standalone profile. AndroidGamma, AndroidETC2 and AndroidASTC have 0/1029 ETC_RGB4Crunched
