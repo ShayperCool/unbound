@@ -146,6 +146,10 @@ fn build_crunch(native: &Path) {
     let prepare = native.join("crunch/source.py");
     let adapter = native.join("unbound_crunch.cpp");
     println!("cargo:rerun-if-changed={}", prepare.display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        native.join("pinned_source.py").display()
+    );
     println!("cargo:rerun-if-changed={}", adapter.display());
     for key in [
         "XDG_CACHE_HOME",
