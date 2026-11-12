@@ -420,9 +420,7 @@ namespace UnityEngine.Experimental.GlobalIllumination
             rect.position = l.transform.position;
             rect.orientation = l.transform.rotation;
             Colors(l, out rect.color, out rect.indirectColor);
-            // (Unity gives an area light's range dilated by its size, Light.dilatedRange, which
-            // Unbound does not compute.)
-            rect.range = l.range;
+            rect.range = l.dilatedRange;
             rect.width = l.areaSize.x;
             rect.height = l.areaSize.y;
             rect.falloff = FalloffType.Legacy;
@@ -436,8 +434,7 @@ namespace UnityEngine.Experimental.GlobalIllumination
             disc.position = l.transform.position;
             disc.orientation = l.transform.rotation;
             Colors(l, out disc.color, out disc.indirectColor);
-            // (As a rectangle light's: not dilated.)
-            disc.range = l.range;
+            disc.range = l.dilatedRange;
             disc.radius = l.areaSize.x;
             disc.falloff = FalloffType.Legacy;
         }

@@ -146,6 +146,48 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnAreaLightsRangeIsDilatedByItsSizeAndLightmapperUtilsGivesThatRange()
+        {
+            var go = new GameObject("Area");
+            try
+            {
+                var light = go.AddComponent<Light>();
+                light.range = 5f;
+                light.areaSize = new Vector2(2f, 1f);
+                // A rectangle: its range plus half its diagonal.
+                light.type = UnityEngine.LightType.Rectangle;
+                float rectangle = 5f + 0.5f * Mathf.Sqrt(5f);
+                Assert.Equal(rectangle, light.dilatedRange, 6);
+                var rect = new GI.RectangleLight();
+                GI.LightmapperUtils.Extract(light, ref rect);
+                Assert.Equal(light.dilatedRange, rect.range);
+                Assert.Equal((2f, 1f), (rect.width, rect.height));
+                // A disc: its range plus half of areaSize.x (its radius), whatever areaSize.y.
+                light.type = UnityEngine.LightType.Disc;
+                Assert.Equal(6f, light.dilatedRange);
+                light.areaSize = new Vector2(2f, 7f);
+                Assert.Equal(6f, light.dilatedRange);
+                var disc = new GI.DiscLight();
+                GI.LightmapperUtils.Extract(light, ref disc);
+                Assert.Equal(6f, disc.range);
+                // A rectangle without size, and the other light types: the range itself.
+                light.type = UnityEngine.LightType.Rectangle;
+                light.areaSize = Vector2.zero;
+                Assert.Equal(5f, light.dilatedRange);
+                light.areaSize = new Vector2(2f, 1f);
+                foreach (var type in new[] { UnityEngine.LightType.Point, UnityEngine.LightType.Spot, UnityEngine.LightType.Directional })
+                {
+                    light.type = type;
+                    Assert.Equal(5f, light.dilatedRange);
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
         public void LightmapperUtilsAppliesTheColorTemperatureToTheConvertedComponents()
         {
             var go = new GameObject("Warm");

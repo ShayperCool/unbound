@@ -74,6 +74,16 @@ namespace UnityEngine
         public float intensity { get => m_Intensity; set => m_Intensity = Mathf.Max(0f, value); }
         public float bounceIntensity { get => m_BounceIntensity; set => m_BounceIntensity = value; }
         public float range { get => m_Range; set => m_Range = value; }
+        /// <summary>The range within which an area light lights a point (Light.dilatedRange): a
+        /// rectangle light's range plus half its diagonal, a disc light's plus half its
+        /// areaSize.x; any other light's range (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/realtimegi `lights-dilatedrange`).</summary>
+        public float dilatedRange => m_Type switch
+        {
+            LightType.Rectangle => m_Range + 0.5f * Mathf.Sqrt(m_AreaSize.x * m_AreaSize.x + m_AreaSize.y * m_AreaSize.y),
+            LightType.Disc => m_Range + 0.5f * m_AreaSize.x,
+            _ => m_Range,
+        };
         public float spotAngle { get => m_SpotAngle; set => m_SpotAngle = value; }
         public float innerSpotAngle { get => m_InnerSpotAngle; set => m_InnerSpotAngle = value; }
         public int cullingMask { get => m_CullingMask; set => m_CullingMask = value; }
