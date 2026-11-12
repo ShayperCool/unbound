@@ -10,6 +10,7 @@ use unbound_assets::{
     serialized::SerializedFile,
     serialized_mesh::SerializedMeshImporter,
     serialized_texture::SerializedTextureImporter,
+    texture::unity_format,
 };
 use unbound_project::assetdb::AssetDb;
 use unbound_yaml::{Guid, Value};
@@ -113,7 +114,9 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
 }
 
 /// Uploads a texture or cubemap of a serialized file under `handle`: `{ name, width, height,
-/// mipCount, dimension, rgbm }`. RGBA32 data only (what the built-in reflection holds).
+/// format, mipCount, dimension, rgbm, linear }`, `format` the stored TextureFormat. RGBA32, RGB24
+/// (opaque alpha added) and Alpha8 data (the install's built-in textures); another format is an
+/// error naming it.
 pub fn load_texture_object(
     db: &AssetDb,
     unity_data: &Path,
@@ -134,14 +137,23 @@ pub fn load_texture_object(
     if let Err(e) = cache.save() {
         tracing::debug!("saving the built-in cache index: {e:#}");
     }
-    // RGBA32 as stored; RGB24 (the built-in checker) gets an opaque alpha, mip by mip.
-    let data = match t.format {
-        4 => t.data.clone(),
-        3 => t
-            .data
-            .chunks_exact(3)
-            .flat_map(|c| [c[0], c[1], c[2], 255])
-            .collect(),
+    // Linear data samples as stored; gamma data may be read through an sRGB view.
+    // m_ColorSpace 1 is colour data, sampled through an sRGB view (the built-in default
+    // reflection's RGBM texels and the checker: measured against the Editor's mirror
+    // sphere, tests/projects/ambient); 0 is linear data.
+    let rgba = i32::from(t.color_space != 1);
+    // RGBA32 as stored; RGB24 (the built-in checker) gets an opaque alpha, mip by mip; Alpha8
+    // (the spot cookie, the font texture) keeps its one channel, sampled (0, 0, 0, a).
+    let (format, data) = match t.format {
+        unity_format::RGBA32 => (rgba, t.data.clone()),
+        unity_format::RGB24 => (
+            rgba,
+            t.data
+                .chunks_exact(3)
+                .flat_map(|c| [c[0], c[1], c[2], 255])
+                .collect(),
+        ),
+        unity_format::ALPHA8 => (crate::render_protocol::texture_format::ALPHA8, t.data.clone()),
         _ => anyhow::bail!(
             "texture `{}` has TextureFormat {}, which Unbound does not read from serialized files yet",
             t.name,
@@ -153,11 +165,7 @@ pub fn load_texture_object(
         crate::render_protocol::owned::Texture {
             width: t.width,
             height: t.height,
-            // Linear data samples as stored; gamma data may be read through an sRGB view.
-            // m_ColorSpace 1 is colour data, sampled through an sRGB view (the built-in default
-            // reflection's RGBM texels and the checker: measured against the Editor's mirror
-            // sphere, tests/projects/ambient); 0 is linear data.
-            format: i32::from(t.color_space != 1),
+            format,
             mip_count: t.mip_count,
             data,
             filter_mode: t.filter_mode,
@@ -180,6 +188,7 @@ pub fn load_texture_object(
         "name": t.name,
         "width": t.width,
         "height": t.height,
+        "format": t.format,
         "mipCount": t.mip_count,
         "dimension": t.dimension,
         "rgbm": t.lightmap_format == 5,
@@ -188,7 +197,8 @@ pub fn load_texture_object(
 }
 
 /// A mesh of a serialized file (the install's built-in meshes): its vertex channels (flat
-/// arrays), indices and submeshes `[firstIndex, indexCount, baseVertex, topology]`.
+/// arrays), indices, submeshes `[firstIndex, indexCount, baseVertex, topology]` and whether it
+/// is readable.
 pub fn mesh_object(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result<Json> {
     let file = serialized_file(db, unity_data, guid)?;
     let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
@@ -212,6 +222,7 @@ pub fn mesh_object(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) ->
         "uvs": m.uvs.iter().map(|uv| flat(uv.iter().flatten().copied().collect())).collect::<Vec<_>>(),
         "indices": m.indices,
         "submeshes": m.submeshes,
+        "readable": m.readable,
     }))
 }
 

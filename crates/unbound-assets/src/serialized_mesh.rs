@@ -18,6 +18,8 @@ pub struct SerializedMesh {
     pub indices: Vec<u32>,
     /// Per submesh: first index, index count, base vertex, topology (Unity's MeshTopology).
     pub submeshes: Vec<[i32; 4]>,
+    /// `m_IsReadable`: whether scripts may read the mesh's data (Mesh.isReadable).
+    pub readable: bool,
 }
 
 fn int(v: &Value, key: &str) -> i64 {
@@ -144,6 +146,8 @@ pub fn read_mesh(object: &Value) -> Result<SerializedMesh> {
             .and_then(Value::as_str)
             .unwrap_or("")
             .to_string(),
+        // Booleans read as "true"/"false".
+        readable: object.get("m_IsReadable").and_then(Value::as_str) == Some("true"),
         ..Default::default()
     };
     mesh.positions = read(0)
@@ -207,7 +211,8 @@ pub struct SerializedMeshImporter {
 impl Importer for SerializedMeshImporter {
     type Output = SerializedMesh;
     const KIND: &'static str = "serialized-mesh";
-    const VERSION: u32 = 1;
+    // 2: `readable`.
+    const VERSION: u32 = 2;
 
     fn import(&self, _source: &Path, bytes: &[u8], _meta: &Value) -> Result<SerializedMesh> {
         read_mesh(&SerializedFile::parse(bytes)?.read(self.path_id)?)
@@ -239,6 +244,12 @@ mod tests {
             .unwrap();
         assert_eq!(cube.name, "Cube");
         assert_eq!((cube.positions.len(), cube.indices.len()), (24, 36));
+        // The primitives are readable, the pyramid is not (tests/projects/builtinresources).
+        assert!(cube.readable);
+        let pyramid = SerializedMeshImporter { path_id: 10213 }
+            .import(&file, &bytes, &Value::Null)
+            .unwrap();
+        assert_eq!((pyramid.name.as_str(), pyramid.readable), ("pyramid", false));
         assert!(
             cube.positions
                 .iter()
