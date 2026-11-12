@@ -28,8 +28,9 @@ view type how many callbacks ran. Scenarios:
   (the second draws them); `swap`: SetBatchBuffer to another buffer of other colours;
 - `errors`: AddBatch windows the device refuses (`errors.add`: the IDs and the Editor's messages,
   which differ by device), then two more commands, of an unknown mesh and of `Probe/NoDots`
-  (`Assets/Shaders`, SRP Batcher compatible, without DOTS instancing): neither is drawn and nothing
-  is logged (`errors.draw`).
+  (`Assets/Shaders`, SRP Batcher compatible, without DOTS instancing): neither is drawn. The Editor
+  reports both from its rendering after the frame that drew them (a capture closed in that frame
+  saw them in one of four runs), so their messages are not recorded.
 
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
@@ -40,7 +41,7 @@ Light contexts record their receiver planes again as `receiver<i>`, compared exa
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: 586/710 values (OpenGL Core), 583/707 (Vulkan)
+the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: 585/709 values (OpenGL Core), 582/706 (Vulkan)
 match, the others are listed in `residuals-<device>.json` (the cascades' caster
 culling planes, culling matrix and spheres of the light contexts); `basic` and `cameras` match
 exactly, `shadows` has 31 isolated shadow-edge pixels over 8 (mean 0.02).

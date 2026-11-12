@@ -232,8 +232,8 @@ public unsafe class BrgProbe : MonoBehaviour
     }
 
     /// <summary>What the API refuses on the device, with the Editor's messages: AddBatch windows
-    /// against the buffer target, then commands of an unknown mesh and of a material without DOTS
-    /// instancing over two renders.</summary>
+    /// against the buffer target; then commands of an unknown mesh and of a material without DOTS
+    /// instancing over two renders (not drawn).</summary>
     void Errors()
     {
         Application.logMessageReceived += Capture;
@@ -256,9 +256,12 @@ public unsafe class BrgProbe : MonoBehaviour
             RecordLog("errors.add");
             var noDots = new Material(Shader.Find("Probe/NoDots"));
             m_NoDots = m_Brg.RegisterMaterial(noDots);
+            // The Editor reports such commands from its rendering, after the frame that drew them:
+            // a capture closed in the same frame sees them only by chance (one of four did), so
+            // nothing is recorded of them.
             Scenario("errors");
             RecordViews();
-            RecordLog("errors.draw");
+            m_Log.Clear();
         }
         finally
         {

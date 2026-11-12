@@ -75,7 +75,7 @@ def stage(label):
     settings = project/'ProjectSettings/ProjectSettings.asset'
     settings.write_text(settings.read_text().replace('allowUnsafeCode: 0', 'allowUnsafeCode: 1'))
     graphics = project/'ProjectSettings/GraphicsSettings.asset'
-    graphics.write_text(graphics.read_text().replace('m_BrgStripping: 0', 'm_BrgStripping: 1'))
+    graphics.write_text(graphics.read_text().replace('m_BrgStripping: 0', 'm_BrgStripping: 2'))
     for part in ('Scripts', 'Editor', 'Shaders'):
         shutil.copytree(ROOT/'Assets'/part, project/'Assets'/part)
         shutil.copy2(ROOT/'Assets'/(part+'.meta'), project/'Assets'/(part+'.meta'))
