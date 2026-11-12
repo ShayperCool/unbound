@@ -189,7 +189,7 @@ namespace Unbound.Runtime
         /// </summary>
         internal static void CullShadows(CullingData data, ShadowCastersCullingInfos infos)
         {
-            if (BatchRendererGroup.s_Groups.Count == 0 || data == null || !infos.perLightInfos.IsCreated) return;
+            if (data == null || !infos.perLightInfos.IsCreated || !AnyTakes(BatchCullingViewType.Light)) return;
             var parameters = data.Parameters;
             int lights = Math.Min(data.Lights.Length, infos.perLightInfos.Length);
             for (int index = 0; index < lights; index++)
@@ -247,6 +247,13 @@ namespace Unbound.Runtime
                     GameViewSceneCullingMask, (byte)info.splitExclusionMask, receiverOffset, receivers, IntPtr.Zero);
                 Invoke(data, context, index);
             }
+        }
+
+        static bool AnyTakes(BatchCullingViewType view)
+        {
+            foreach (var group in BatchRendererGroup.s_Groups)
+                if (group.Enabled(view)) return true;
+            return false;
         }
 
         /// <summary>Whether a light's shadow culling leaves out lightmapped casters
