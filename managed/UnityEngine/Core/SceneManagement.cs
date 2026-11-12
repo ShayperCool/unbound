@@ -667,6 +667,16 @@ namespace UnityEngine.SceneManagement
         internal const string NotCleanedUpHeader = "Some objects were not cleaned up when closing the scene. "
             + "(Did you spawn new GameObjects from OnDestroy?)\nThe following scene GameObjects were found:\n";
 
+        /// <summary>Editor exit destroys the playing objects before closing its scenes
+        /// (Unity 6000.0.71f1: tests/projects/editorcallbacks quit-play control).</summary>
+        internal static void CloseEditorScenes()
+        {
+            EditorSession.DestroyPlayModeObjects();
+            ResetPending();
+            foreach (var scene in SceneRegistry.Loaded.ToArray()) UnloadNow(scene);
+            SceneRegistry.Active = null;
+        }
+
         /// <summary>Loads a scene immediately: the first scene of a session.</summary>
         internal static Scene LoadFirst(int buildIndex)
         {

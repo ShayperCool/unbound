@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unbound.Runtime;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -15,8 +16,40 @@ namespace UnityEngine.Tests
         void OnDisable() => log.Add("disable");
     }
 
+    public class RecordsQuit : MonoBehaviour
+    {
+        public int calls;
+        void OnApplicationQuit() => calls++;
+    }
+
     public class LifecycleTests
     {
+        [Fact]
+        public void QuitReachesDisabledScriptsOnActiveObjectsOnly()
+        {
+            // Unity 6000.0.71f1: editorcallbacks leave-play controls, with and without domain reload.
+            using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
+            scenes.Loaded("Quit");
+            var active = new GameObject("active").AddComponent<RecordsQuit>();
+            var disabled = new GameObject("disabled").AddComponent<RecordsQuit>();
+            disabled.enabled = false;
+            var inactive = new GameObject("inactive").AddComponent<RecordsQuit>();
+            inactive.gameObject.SetActive(false);
+            try
+            {
+                Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
+                Assert.Equal(1, active.calls);
+                Assert.Equal(1, disabled.calls);
+                Assert.Equal(0, inactive.calls);
+            }
+            finally
+            {
+                Object.DestroyImmediate(active.gameObject);
+                Object.DestroyImmediate(disabled.gameObject);
+                Object.DestroyImmediate(inactive.gameObject);
+            }
+        }
+
         [Fact]
         public void BehavioursGetOnDisableOnlyAfterOnEnable()
         {

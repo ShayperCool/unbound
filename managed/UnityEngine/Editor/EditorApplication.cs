@@ -182,7 +182,7 @@ namespace UnityEditor
         public static void OpenProject(string projectPath, params string[] args) =>
             Stubs.Ignored("EditorApplication.OpenProject", "does not open another project");
         /// <summary>The Editor exits with the code (the Test Framework's run result).</summary>
-        public static void Exit(int returnValue) => PlayerLoopDriver.RequestQuit(returnValue);
+        public static void Exit(int returnValue) => PlayerLoopDriver.RequestQuit(returnValue, editorExit: true);
         [Unbound.EditorFaithful("the project is not a temporary one, so there is nothing to keep")]
         public static void SetTemporaryProjectKeepPath(string path) { }
         [Unbound.EditorFaithful("Unbound's Editor has no main window title (as the batch-mode Editor)")]

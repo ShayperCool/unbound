@@ -66,6 +66,7 @@ namespace Unbound.Runtime
         static int s_ExitCode;
         static bool s_Booted;
         static bool s_QuitDone;
+        static bool s_EditorExit;
         static bool s_EnteredPlayMode;
         static bool s_EndOfFrameAfterLoop;
         static bool s_AdvanceAfterLoop;
@@ -351,8 +352,9 @@ namespace Unbound.Runtime
             s_SigInt = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGINT, OnSignal);
         }
 
-        internal static void RequestQuit(int exitCode)
+        internal static void RequestQuit(int exitCode, bool editorExit = false)
         {
+            s_EditorExit = editorExit;
             s_QuitRequested = true;
             s_ExitCode = exitCode;
         }
@@ -661,8 +663,15 @@ namespace Unbound.Runtime
             Trace.ReportUnread();
             if (s_QuitDone) return;
             s_QuitDone = true;
-            Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
+            // Direct Editor exit omits the Play-mode quit message; stopping Play sends it.
+            if (EditorSession.IsPlaying && !s_EditorExit) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
             Application.Internal_Quitting();
+            if (s_EditorExit) SceneManagerInternal.CloseEditorScenes();
+            else
+            {
+                EditorSession.DestroyPlayModeObjects();
+                SceneRegistry.ResetToUntitled();
+            }
             PlayerPrefs.SaveOnQuit();
             Unbound.Runtime.NativePlugins.Shutdown();
         }

@@ -517,11 +517,19 @@ def recipes(release):
         R[name] = guarded(jsonl('values.jsonl'))
     # Scene-loop companions retain the original callback comparator and its raw failures.
     for profile, flags in (('additive', []), ('single', ['--single-first']), ('forced', ['--force-only']),
-                           ('starts', ['--starts-only']), ('queue', ['--queue-only'])):
+                           ('starts', ['--starts-only']), ('queue', ['--queue-only']),
+                           ('three', ['--queue-three'])):
         step = driver('scene_loop.py', 'check', '--release', '{release}',
                       '--label', '{label}-scene-' + profile, *flags)
         step.kind = 'compare'
         step.summary = r'[0-9]+/[0-9]+ receiver/driver streams match.*'
+        R['editorcallbacks'].append(step)
+    for profile, flags in [('quit', []), ('leave', ['--leave']),
+                           ('leave-no-reload', ['--leave', '--skip-domain-reload'])]:
+        step = driver('quit_control.py', 'check', '--release', '{release}',
+                      '--label', '{label}-' + profile, *flags)
+        step.kind = 'compare'
+        step.summary = r'quitcontrol: [0-9]+/[0-9]+ values match.*'
         R['editorcallbacks'].append(step)
     R['droppedparams'] = guarded(jsonl('capture.jsonl'))
     R['spriteimport'] = guarded(jsonl('sprites.jsonl'))

@@ -118,15 +118,21 @@ namespace Unbound.Runtime
             foreach (var child in t.m_Children) Collect(child, into);
         }
 
-        static void ExitPlayMode()
+        /// <summary>Destroys roots of the loaded and persistent scenes.</summary>
+        internal static void DestroyPlayModeObjects()
         {
-            EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingPlayMode);
-            // Play mode's objects go (OnDisable, OnDestroy), the scenes with them.
             var scenes = new List<SceneData>(SceneRegistry.Loaded);
             scenes.Add(SceneRegistry.DontDestroyOnLoad);
             foreach (var scene in scenes)
                 foreach (var root in scene.Roots.ToArray())
                     if (root != null) Object.DestroyImmediate(root);
+        }
+
+        static void ExitPlayMode()
+        {
+            EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingPlayMode);
+            Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
+            DestroyPlayModeObjects();
             IsPlaying = false;
             SceneRegistry.ResetToUntitled();
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.EnteredEditMode);

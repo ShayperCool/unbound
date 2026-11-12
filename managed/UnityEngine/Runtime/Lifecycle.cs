@@ -489,11 +489,11 @@ namespace Unbound.Runtime
             foreach (var (_, _, go) in objects) Send(go, pick, argument, includeDisabled: true);
         }
 
-        /// <summary>A message to the enabled behaviours of every active object.</summary>
+        /// <summary>A message to every behaviour of the active objects, including disabled scripts.</summary>
         internal static void Broadcast(Func<ScriptMessages, Delegate> pick, object argument)
         {
             foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
-                Send(go, pick, argument, includeDisabled: false);
+                Send(go, pick, argument, includeDisabled: true);
         }
 
         static void Send(GameObject go, Func<ScriptMessages, Delegate> pick, object argument, bool includeDisabled)

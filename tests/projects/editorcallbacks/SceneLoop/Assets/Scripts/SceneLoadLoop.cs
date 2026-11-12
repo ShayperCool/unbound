@@ -109,6 +109,11 @@ public sealed class SceneLoadLoop : MonoBehaviour
 
     IEnumerator Start()
     {
+        if (Environment.GetEnvironmentVariable("SCENE_LOAD_QUEUE_THREE") == "1")
+        {
+            yield return QueueThreeControl();
+            yield break;
+        }
         Recording = true;
         if (Environment.GetEnvironmentVariable("SCENE_LOAD_QUEUE_ONLY") == "1")
         {
@@ -193,6 +198,47 @@ public sealed class SceneLoadLoop : MonoBehaviour
         File.WriteAllLines(path + ".raw.txt", Diagnostics);
         Finished = true;
         if (typeof(Camera).Assembly.GetType("Unbound.Runtime.FrameBuilder") != null) Application.Quit();
+    }
+
+    // Completion frames depend on the loading budget. Keep them in Diagnostics and
+    // assert the FIFO and loaded-content invariants in this additional control.
+    IEnumerator QueueThreeControl()
+    {
+        Case = "queue.three";
+        FrameSleepMilliseconds = 500;
+        FirstFrame = Time.frameCount;
+        int order = 0, firstFrame = -1, secondFrame = -1, thirdFrame = -1;
+        var first = SceneManager.LoadSceneAsync("First", LoadSceneMode.Additive);
+        var second = SceneManager.LoadSceneAsync("Second", LoadSceneMode.Additive);
+        var third = SceneManager.LoadSceneAsync("First", LoadSceneMode.Additive);
+        Action<string, AsyncOperation> completed = (name, op) =>
+        {
+            int loaded = 0, roots = 0;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded || scene.name != "First" && scene.name != "Second") continue;
+                loaded++;
+                roots += scene.rootCount;
+            }
+            Diagnostics.Add(name + "|completed.frame=" + (Time.frameCount - FirstFrame));
+            Lines.Add("queue.three|" + name + "|order=" + (++order) + ",done=" + op.isDone
+                + ",progress=" + op.progress.ToString("0.000", CultureInfo.InvariantCulture)
+                + ",loaded=" + loaded + ",roots=" + roots);
+        };
+        first.completed += op => { firstFrame = Time.frameCount; completed("first", op); };
+        second.completed += op => { secondFrame = Time.frameCount; completed("second", op); };
+        third.completed += op => { thirdFrame = Time.frameCount; completed("third", op); };
+        while (!third.isDone)
+        {
+            yield return null;
+            Diagnostics.Add("frame=" + (Time.frameCount - FirstFrame) + "|" + State(first) + "|" + State(second) + "|" + State(third));
+            if (Time.frameCount - FirstFrame > 60) throw new Exception("three-load queue timeout");
+        }
+        Lines.Add("queue.three|separateCompletionFrames|" + (firstFrame < secondFrame && secondFrame < thirdFrame));
+        yield return null;
+        yield return null;
+        Finish();
     }
 
     IEnumerator Load(string name, string scene, LoadSceneMode mode, bool held)

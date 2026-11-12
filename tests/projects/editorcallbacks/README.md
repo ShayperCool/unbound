@@ -73,3 +73,32 @@ mock controls but did not prevent the second crash. The activation rule and the
 coupled root-order correction remain held. Receipts are under
 `validation/runs/sceneactivation-witness-20261102/` and
 `validation/runs/sceneactivation-witness2-20261102/`; their outputs are diagnostic.
+
+
+## Teardown and queued-load controls
+
+`quit_control.py` records direct `EditorApplication.Exit` from Play mode and
+`ExitPlaymode`, with both the default domain reload and disabled domain reload.
+Each profile is recorded twice on the existing GPU display. The reference records
+each object's own message sequence, including a persistent object, a second
+scene, and disabled and inactive controls. It does not prescribe callback order
+between different objects.
+
+Unity 6000.0 [OnApplicationQuit](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnApplicationQuit.html)
+promises that stopping Play sends the message, including to disabled scripts on
+active objects. In these 6000.0.71f1 captures, stopping Play sends it before object
+teardown and reports no sceneUnloaded events. Direct Editor exit omits that
+message and unloads both scenes after all three witnessed objects are destroyed;
+the event still sees a valid, unloaded scene and isPlaying true.
+[SceneManager.sceneUnloaded](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SceneManagement.SceneManager-sceneUnloaded.html)
+documents the unload notification, without prescribing its relation to every
+shutdown callback. Those details are observations for the recorded contexts.
+
+`scene_loop.py --queue-three` checks completion order, final progress, scene and
+root counts for three queued additive loads. Completion frames and intermediate
+progress are retained in its diagnostic sidecar. Two full Editor repeats finished
+at frames 2/4/6 and 2/3/4, so the profile makes no exact-duration assertion.
+[LoadSceneAsync](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html)
+promises an asynchronous operation, not a fixed number of frames. The original
+scene-queue source path, reference and strict comparator retain the two-load
+timing discrepancy.
