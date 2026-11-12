@@ -141,6 +141,11 @@ namespace UnityEngine.UIElements
 
         void OnEnable()
         {
+            // Unity warns when panel settings without a theme are enabled in Play mode (Unbound runs
+            // the game as the Editor's Play mode does); matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/uitkvector.
+            if (!m_DisableNoThemeWarning && themeUss == null)
+                Debug.LogWarning("No Theme Style Sheet set to PanelSettings " + name + ", UI will not render properly", this);
             ScreenDPI = Screen.dpi;
             if (m_Panel != null) m_Panel.targetTexture = m_TargetTexture;
         }
