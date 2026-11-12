@@ -24,6 +24,11 @@ namespace Unbound.Runtime
         /// unmeasured quaternion interpolation.</summary>
         internal static bool NavMeshOrientationMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>The current corridor reports its endpoint independently of hasPath, measured
+        /// by tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
+        /// unmeasured arrival-dependent endpoint.</summary>
+        internal static bool NavMeshCorridorReportingMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by
         /// tests/projects/quaternioneuler on 6000.0.71f1. Other releases retain their unmeasured
         /// single-precision arithmetic.</summary>

@@ -437,7 +437,8 @@ namespace UnityEngine.AI
 
         /// <summary>The end of the path being followed, also one given in the call or still
         /// followed while a new one is pending (measured).</summary>
-        public Vector3 pathEndPosition => FollowingPath ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
+        public Vector3 pathEndPosition => m_Crowd != null && (Compat.NavMeshCorridorReportingMeasured || FollowingPath)
+            ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
 
         static readonly DtStraightPath[] s_RemainingCorners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
 
