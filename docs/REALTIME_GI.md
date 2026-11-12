@@ -664,6 +664,42 @@ last digits of Max Distance, and what the Editor's own cache of earlier bakes ma
 renderer (it keeps geometries by mesh and rounded matrix across bakes, so a renderer turned by
 less than that rounding since may keep its earlier one).
 
+## Unbound's precompute
+
+For scenes without the Editor's precomputed data Unbound makes the data itself
+(`crates/unbound-gi/src/precompute`; phase 3, not used by the engine yet). Its stages follow
+what the Editor's precompute products hold and are compared stage by stage with the Editor's
+precompute of tests/projects/realtimegi `Room`. The documented input is the Lightmap
+Parameters' Cluster Resolution, "the ratio of the cluster resolution (the resolution at which
+the light bounces are calculated internally) to the final lightmap resolution"
+([Lightmap Parameters](https://docs.unity3d.com/6000.0/Documentation/Manual/class-LightmapParameters.html));
+the rest is how the Editor's products are made in the measured release, as follows.
+
+- **Clusters** (`clusters.rs`): a system's surfaces are cut by a grid of cubic voxels from the
+  corner of the system's bounds, of the cluster size (one over the realtime resolution times
+  the renderer's Scale In Lightmap times the Cluster Resolution: 1 m in the Room). Within a
+  voxel the touching pieces of one renderer whose normals are all within a right angle of each
+  other form a part. A part larger than 0.4 of a face of the smallest voxels is a cluster; a
+  smaller one first joins touching small parts of its plane until they are larger, else the
+  touching group whose normal is closest to its own. A cluster has 32 points per voxel face of
+  its surface, in groups of four, spread evenly over it (each the farthest from those taken,
+  of eight candidates per point), and none inside other geometry: a candidate more than 4 of
+  whose 16 rays over its hemisphere meet back faces is left out, and a part all of which is
+  hidden is no cluster. A point's renderer and the texel its realtime lightmap UV lies in give
+  the cluster material samples (per renderer, its texels and their points) and the bounce
+  resampling (the texels by their share of the points, most first, the first being the one
+  the runtime reads). The clusters, in the order of their voxels along a Morton curve, form a
+  tree of runs of neighbours, each child weighted by its share of its parent's area.
+- Compared with the Editor's clusters of the Room: 336 clusters (312) and 10124 points
+  (10192), the same density on each face, and on each face plane the mean direct light of an
+  unshadowed point light over the points (what a cluster's direct input is the mean of)
+  within 1.4% of the Editor's. 194 of the Editor's 312 clusters have 90% of their points in
+  one of Unbound's: the others join small parts of other planes to a large part beside them
+  (the edge faces of the room's slabs), where Unbound joins small parts of one plane first. The Editor cuts a surface that other
+  geometry covers exactly along the covering geometry's outline (the floor under the block);
+  Unbound leaves out the covered points instead. The Editor's own precompute places other
+  points in each bake of a scene (10192, 10196 and 10208 points in three bakes of the Room).
+
 ## Engine
 
 `Graphics/RealtimeGI.cs` loads a scene's systems (`realtime-gi-load`), makes the renderers'
@@ -775,4 +811,6 @@ measure):
 - Phase 3, Unbound's own precompute from scene geometry (the rest of the automatic charts,
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
-  precompute through the same probe.
+  precompute through the same probe: the clusters, their material samples and bounce
+  resampling are made ([Unbound's precompute](#unbounds-precompute)); the transport, the
+  visibility, the probe transport and their use are open.
