@@ -160,3 +160,8 @@ They remain exact-key residuals; no tolerance has changed. The full comparator r
 3577, 3567 and 3571/4334 in the three Android profiles, with 757, 767 and 763 residuals.
 Android runtime ETC encoding is unchanged by this part. Texture cache version 26 records the
 runtime encoder profile as part of the existing compression key.
+
+For this runtime change, the ordinary-project clean-cache import processed 4397 textures with
+zero failures: 16.65 s before and 18.36 s after. Two subsequent runs took 21.44 s and 26.69 s
+on the shared machine while other validation jobs were active. Import encoder selection and
+quality are unchanged in this part; these wall times do not isolate encoder cost.
