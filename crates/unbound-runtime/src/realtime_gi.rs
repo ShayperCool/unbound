@@ -131,14 +131,7 @@ fn with_scene<T>(handle: u64, f: impl FnOnce(&mut Scene) -> Result<T>) -> Result
 /// `{ handle, atlases: [size], systems: [{ atlas, offset: [x, y], width, height, renderers:
 /// [{ object, prefab, st: [4] }] }], probes: { count, error }, directionality: { error, copies } }`
 /// (`directionality.error`: why the scene has none; `copies`: whether a system copies texels).
-/// `linear_space`: the project's color space.
-pub fn load(
-    db: &AssetDb,
-    unity_data: &Path,
-    guid: &str,
-    file_id: i64,
-    linear_space: bool,
-) -> Result<Json> {
+pub fn load(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result<Json> {
     let file = crate::lighting::serialized_file(db, unity_data, guid)?;
     let bytes = std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
     let serialized = SerializedFile::parse(&bytes)?;
@@ -155,7 +148,7 @@ pub fn load(
     };
     let mut data = data;
     data.probe_errors.extend(error);
-    register(data, linear_space, &ranges)
+    register(data, &ranges)
 }
 
 /// The probe sets of a LightingData's light probes: `(hash, first probe, probe count)` in
@@ -211,7 +204,6 @@ fn light_probe_ranges(
 /// [`light_probe_ranges`] gives them); the reply of [`load`].
 fn register(
     data: unbound_gi::data::Precomputed,
-    linear_space: bool,
     ranges: &[([u8; 16], usize, usize)],
 ) -> Result<Json> {
     let systems_json = data
@@ -239,7 +231,7 @@ fn register(
         data.systems.into_iter().map(Arc::new).collect();
     let systems = scene
         .iter()
-        .map(|s| SystemSolver::new_in_scene(s.clone(), linear_space, &scene))
+        .map(|s| SystemSolver::new_in_scene(s.clone(), &scene))
         .collect::<Result<Vec<_>>>()?;
     // Each probe set lights the LightProbes range of its hash; one without a range, or of
     // another size, lights nothing (reported).
@@ -908,7 +900,7 @@ mod tests {
 
     #[test]
     fn a_scene_updates_until_converged_and_again_after_a_change() {
-        let reply = register(room(), true, &[]).unwrap();
+        let reply = register(room(), &[]).unwrap();
         let handle = reply["handle"].as_u64().unwrap();
         assert_eq!(reply["atlases"], json!([64]));
         let system = &reply["systems"][0];
@@ -1054,7 +1046,7 @@ mod tests {
         // The baked and the realtime probe sets both cover the nine probes.
         assert_eq!(ranges.len(), 2);
         assert!(ranges.iter().all(|r| (r.1, r.2) == (0, 9)));
-        let reply = register(data, true, &ranges).unwrap();
+        let reply = register(data, &ranges).unwrap();
         assert_eq!(reply["probes"], json!({ "count": 9, "error": null }));
         let handle = reply["handle"].as_u64().unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
@@ -1094,7 +1086,7 @@ mod tests {
         assert!(read_probes(handle, &mut [0f32; 26]).is_err());
         release(handle);
         // A probe set the light probes do not list lights nothing, and says so.
-        let reply = register(room(), true, &[]).unwrap();
+        let reply = register(room(), &[]).unwrap();
         assert_eq!(reply["probes"]["count"], json!(0));
         assert!(
             reply["probes"]["error"]
@@ -1108,7 +1100,7 @@ mod tests {
         data.probe_sets.clear();
         data.probe_errors
             .push("a light probe set of another version".into());
-        let reply = register(data, true, &ranges).unwrap();
+        let reply = register(data, &ranges).unwrap();
         assert_eq!(reply["systems"].as_array().unwrap().len(), 1);
         assert_eq!(reply["probes"]["count"], json!(0));
         assert_eq!(
@@ -1123,7 +1115,7 @@ mod tests {
         // DynamicGI.indirectScale 0 and updateThreshold 0 from a scene's first frame on (the
         // solvers start at 1 and 1%): the drawn texels are black, and the threshold reaches
         // the solvers.
-        let handle = register(room(), true, &[]).unwrap()["handle"]
+        let handle = register(room(), &[]).unwrap()["handle"]
             .as_u64()
             .unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
@@ -1155,7 +1147,7 @@ mod tests {
 
     #[test]
     fn a_directional_scene_fills_its_directionality_atlas() {
-        let handle = register(room(), true, &[]).unwrap()["handle"]
+        let handle = register(room(), &[]).unwrap()["handle"]
             .as_u64()
             .unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
@@ -1226,7 +1218,7 @@ mod tests {
         // A copy of a texel onto itself: the reply says that the scene has copies.
         let texel = transport.segments[0].texels[0];
         transport.segments[0].copies.push((texel, texel));
-        let reply = register(data, true, &[]).unwrap();
+        let reply = register(data, &[]).unwrap();
         assert_eq!(
             reply["directionality"],
             json!({ "error": "no blocks", "copies": true })
@@ -1253,7 +1245,7 @@ mod tests {
         let mut texels = vec![0u8; 4 * 64 * 64];
         assert_eq!(read_directionality(handle, 0, &mut texels).unwrap(), 0);
         release(handle);
-        let whole = register(room(), true, &[]).unwrap()["handle"]
+        let whole = register(room(), &[]).unwrap()["handle"]
             .as_u64()
             .unwrap();
         assert!(light.chunks_exact(4).any(|l| l[0] != 0));
@@ -1273,7 +1265,7 @@ mod tests {
         let data = unbound_gi::data::read_precomputed(&serialized.read(112000000).unwrap())
             .unwrap()
             .unwrap();
-        let reply = register(data, true, &[]).unwrap();
+        let reply = register(data, &[]).unwrap();
         assert_eq!(
             reply["directionality"],
             json!({ "error": null, "copies": false })

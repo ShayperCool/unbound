@@ -425,24 +425,19 @@ pub fn update_in(systems: &mut [SystemSolver], index: usize) -> usize {
 }
 
 impl SystemSolver {
-    /// `linear_space`: the project's color space is linear (gamma-space projects are not measured
-    /// and fail). Fails for transports that reference other systems (not supported yet).
-    pub fn new(system: Arc<System>, linear_space: bool) -> Result<Self> {
+    /// A system alone. The solve is the same in a gamma-space project as in a linear one
+    /// (tests/projects/realtimegi `--color-space gamma`, `room-base`: the lightmaps match);
+    /// only their decoding for drawing differs. Fails for transports that reference other
+    /// systems (not supported yet).
+    pub fn new(system: Arc<System>) -> Result<Self> {
         let scene = [system.clone()];
-        Self::new_in_scene(system, linear_space, &scene)
+        Self::new_in_scene(system, &scene)
     }
 
     /// A system of a scene whose systems are `scene` (in order; it is one of them): its
     /// transport may reference the others' values. A reference to a system not among them
     /// (another scene's) fails.
-    pub fn new_in_scene(
-        system: Arc<System>,
-        linear_space: bool,
-        scene: &[Arc<System>],
-    ) -> Result<Self> {
-        if !linear_space {
-            bail!("precomputed realtime GI in a gamma-space project is not supported yet");
-        }
+    pub fn new_in_scene(system: Arc<System>, scene: &[Arc<System>]) -> Result<Self> {
         let sources = system
             .transport
             .dependencies

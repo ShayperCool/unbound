@@ -156,7 +156,6 @@ namespace UnityEngine
                 {
                     guid = lightingData.Guid,
                     fileId = lightingData.FileId,
-                    linear = QualitySettings.activeColorSpace == ColorSpace.Linear,
                 }));
                 root = JsonDocument.Parse(json).RootElement;
             }

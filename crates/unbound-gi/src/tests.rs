@@ -237,7 +237,7 @@ impl Replay {
     /// One of the probe's single-system scenes (the same room in each).
     fn scene(scene: &str) -> Self {
         let data = scene_data(scene);
-        let solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
+        let solver = SystemSolver::new(Arc::new(data.systems[0].clone())).unwrap();
         let probes = ProbeSetSolver::new(
             Arc::new(data.probe_sets[0].clone()),
             std::slice::from_ref(&solver),
@@ -758,7 +758,7 @@ fn reads_the_rooms_light_probe_transport() {
     // A probe set lit by a system the scene does not have fails.
     let mut other = set.clone();
     other.dependencies[0] = [7; 16];
-    let solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
+    let solver = SystemSolver::new(Arc::new(data.systems[0].clone())).unwrap();
     assert!(ProbeSetSolver::new(Arc::new(other), std::slice::from_ref(&solver)).is_err());
 }
 
@@ -851,7 +851,7 @@ fn malformed_data_fails_without_panicking() {
             assert!(error.contains("outside 51x52"), "{error}");
             let mut system = room_data().systems[0].clone();
             system.transport = read;
-            let mut solver = SystemSolver::new(Arc::new(system), true).unwrap();
+            let mut solver = SystemSolver::new(Arc::new(system)).unwrap();
             let error = solver.set_directional(true).unwrap_err().to_string();
             assert!(error.contains("no directionality"), "{error}");
             assert!(solver.directionality().is_none());
@@ -904,7 +904,7 @@ fn cluster_albedo_follows_the_root_mean_square_model() {
         };
         texel.copy_from_slice(&[v, v, v, 255]);
     }
-    let mut solver = SystemSolver::new(system.clone(), true).unwrap();
+    let mut solver = SystemSolver::new(system.clone()).unwrap();
     solver.set_albedo(&albedo).unwrap();
     let m = &system.materials;
     for c in 0..system.input.clusters() {
@@ -949,7 +949,7 @@ fn set_emissive_keeps_a_renderers_color_over_later_textures() {
             .flat_map(|_| [rgb[0], rgb[1], rgb[2], 1.0])
             .collect::<Vec<f32>>()
     };
-    let mut solver = SystemSolver::new(system.clone(), true).unwrap();
+    let mut solver = SystemSolver::new(system.clone()).unwrap();
     solver.set_emission(&uniform([0.5, 0.25, 0.125])).unwrap();
     let panel_clusters = clusters_of(&system, panel);
     let floor_clusters = clusters_of(&system, floor);
@@ -983,19 +983,9 @@ fn set_emissive_keeps_a_renderers_color_over_later_textures() {
 }
 
 #[test]
-fn gamma_space_projects_fail() {
-    let data = room_data();
-    let error = SystemSolver::new(Arc::new(data.systems[0].clone()), false)
-        .err()
-        .unwrap()
-        .to_string();
-    assert!(error.contains("gamma-space"), "{error}");
-}
-
-#[test]
 fn material_textures_of_another_size_fail() {
     let data = room_data();
-    let mut solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
+    let mut solver = SystemSolver::new(Arc::new(data.systems[0].clone())).unwrap();
     assert!(solver.set_albedo(&[0u8; 16]).is_err());
     assert!(solver.set_emission(&[0f32; 16]).is_err());
 }
@@ -1331,7 +1321,7 @@ fn realtime_uvs_of_another_scene_match_its_layout() {
             .unwrap_or_else(|e| panic!("renderer {object}: {e:#}"));
     }
     // The solver runs on it too.
-    let mut solver = SystemSolver::new(Arc::new(system.clone()), true).unwrap();
+    let mut solver = SystemSolver::new(Arc::new(system.clone())).unwrap();
     solver
         .set_environment(&[[0.1; 3]; crate::data::ENVIRONMENT_VALUES])
         .unwrap();
@@ -1398,7 +1388,7 @@ fn a_scene_of_two_systems_converges_as_the_editors() {
     let scene: Vec<Arc<System>> = data.systems.iter().cloned().map(Arc::new).collect();
     let mut solvers: Vec<SystemSolver> = scene
         .iter()
-        .map(|s| SystemSolver::new_in_scene(s.clone(), true, &scene).unwrap())
+        .map(|s| SystemSolver::new_in_scene(s.clone(), &scene).unwrap())
         .collect();
     let white = [0.8, 0.8, 0.8];
     for (solver, system) in solvers.iter_mut().zip(&scene) {
@@ -1488,12 +1478,12 @@ fn references_to_systems_outside_the_scene_fail() {
         .unwrap();
     let scene: Vec<Arc<System>> = data.systems.iter().cloned().map(Arc::new).collect();
     let alone = std::slice::from_ref(&scene[0]);
-    let error = SystemSolver::new_in_scene(scene[0].clone(), true, alone)
+    let error = SystemSolver::new_in_scene(scene[0].clone(), alone)
         .err()
         .unwrap()
         .to_string();
     assert!(error.contains("another scene"), "{error}");
-    let error = SystemSolver::new(scene[0].clone(), true)
+    let error = SystemSolver::new(scene[0].clone())
         .err()
         .unwrap()
         .to_string();
@@ -1501,7 +1491,7 @@ fn references_to_systems_outside_the_scene_fail() {
     // With both systems the probe set resolves; with one, it fails.
     let solvers: Vec<SystemSolver> = scene
         .iter()
-        .map(|s| SystemSolver::new_in_scene(s.clone(), true, &scene).unwrap())
+        .map(|s| SystemSolver::new_in_scene(s.clone(), &scene).unwrap())
         .collect();
     let set = Arc::new(data.probe_sets[0].clone());
     assert!(ProbeSetSolver::new(set.clone(), &solvers).is_ok());
@@ -1516,7 +1506,7 @@ fn references_to_systems_outside_the_scene_fail() {
     short.input.tree_weights.clear();
     short.input.cluster_points.truncate(2);
     let shortened = vec![scene[0].clone(), Arc::new(short)];
-    let error = SystemSolver::new_in_scene(scene[0].clone(), true, &shortened)
+    let error = SystemSolver::new_in_scene(scene[0].clone(), &shortened)
         .err()
         .unwrap()
         .to_string();

@@ -443,6 +443,21 @@ LightingSettings:
                 Assert.Same(atlas, properties[Shader.PropertyToID("unity_DynamicLightmap")]);
                 Assert.Equal(new Vector4(0.25f, 0.5f, 0.125f, 0f), (Vector4)properties[Shader.PropertyToID("unity_DynamicLightmapST")]);
                 Assert.False(properties.ContainsKey(Shader.PropertyToID("unity_SHAr")));
+                // Decoded as it is in a linear project, raised to 1/2.2 in a gamma-space one
+                // (tests/projects/realtimegi --color-space gamma).
+                var decode = Shader.PropertyToID("unity_DynamicLightmap_HDR");
+                var space = QualitySettings.s_ColorSpace;
+                try
+                {
+                    QualitySettings.s_ColorSpace = ColorSpace.Linear;
+                    Assert.Equal(new Vector4(1f, 1f, 0f, 0f), (Vector4)BakedLighting.Apply(renderer, null, new List<string>())[decode]);
+                    QualitySettings.s_ColorSpace = ColorSpace.Gamma;
+                    Assert.Equal(new Vector4(1f, 1f / 2.2f, 0f, 0f), (Vector4)BakedLighting.Apply(renderer, null, new List<string>())[decode]);
+                }
+                finally
+                {
+                    QualitySettings.s_ColorSpace = space;
+                }
 
                 LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = new Texture2D(4, 4, TextureFormat.RGBAHalf, false) } };
                 renderer.lightmapIndex = 0;

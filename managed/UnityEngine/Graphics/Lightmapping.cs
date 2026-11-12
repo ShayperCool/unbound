@@ -232,6 +232,13 @@ namespace UnityEngine
         static readonly int s_LightmapST = Shader.PropertyToID("unity_LightmapST");
         static readonly int s_DynamicLightmap = Shader.PropertyToID("unity_DynamicLightmap");
         static readonly int s_DynamicLightmapST = Shader.PropertyToID("unity_DynamicLightmapST");
+        static readonly int s_DynamicLightmapHDR = Shader.PropertyToID("unity_DynamicLightmap_HDR");
+        /// <summary>How the shaders decode the realtime lightmap (unity_DynamicLightmap_HDR: a
+        /// multiplier and an exponent): its half-float irradiance as it is in a linear project,
+        /// raised to 1/2.2 in a gamma-space one (tests/projects/realtimegi `--color-space gamma`,
+        /// `room-base` and `room-moved` frames).</summary>
+        static readonly object s_LinearRealtimeDecode = new Vector4(1f, 1f, 0f, 0f);
+        static readonly object s_GammaRealtimeDecode = new Vector4(1f, 1f / 2.2f, 0f, 0f);
         static readonly int s_DynamicDirectionality = Shader.PropertyToID("unity_DynamicDirectionality");
         static Texture2D s_FlatDirection;
 
@@ -282,6 +289,7 @@ namespace UnityEngine
                 properties = DrawPropertyPool.Copy(properties);
                 properties[s_DynamicLightmap] = renderer.m_RealtimeLightmap;
                 properties[s_DynamicLightmapST] = renderer.realtimeLightmapScaleOffset;
+                properties[s_DynamicLightmapHDR] = QualitySettings.activeColorSpace == ColorSpace.Gamma ? s_GammaRealtimeDecode : s_LinearRealtimeDecode;
                 keywords.Add("DYNAMICLIGHTMAP_ON");
                 // The keyword is the baked lightmap's too: whichever of the two has no direction
                 // of its own under it gets one that changes nothing (unmeasured in the Editor).

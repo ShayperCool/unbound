@@ -16,12 +16,15 @@ frames drawn by a pipeline's own shaders are not compared). For tests/projects/r
 renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
 cases match within the comparator's tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning: automatic charts of curved parts and of
-turned renderers ([Automatic charts](#automatic-charts)),
+choices the precompute's rounding decides ([Automatic charts](#automatic-charts)),
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
 renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
-systems that reference another scene's systems, gamma-space
-projects and linear light intensity in the built-in pipeline.
+systems that reference another scene's systems and linear light intensity in the built-in
+pipeline. In a gamma-space project the systems solve as in a linear one and the shaders decode
+the realtime lightmap with an exponent of 1/2.2 (`unity_DynamicLightmap_HDR` (1, 1/2.2) instead
+of (1, 1); tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps and frames
+match, as loaded and with its point light moved; its other cases are not measured there).
 
 ## Documented contract (6000.0)
 
@@ -228,7 +231,7 @@ several systems or atlases (the probe's has one system), a renderer with a baked
 lightmap of which only one has a direction (the other then reads a direction that leaves its
 light as it is: 1/2 in every channel), frames in which the directionality matters (none of the
 probe's materials has a normal map, so its frames show the lightmap alone), directionality under
-a scriptable render pipeline, and gamma-space projects.
+a scriptable render pipeline, and directionality in gamma-space projects.
 
 ## Light probes
 
@@ -381,7 +384,7 @@ ambient source, also when the source's inputs are what they were when the cube w
 it takes a cube still kept).
 
 Not measured: sky materials other than the procedural one
-(they are drawn by the same capture), and gamma-space projects.
+(they are drawn by the same capture), and a lit scene's environment in gamma-space projects.
 
 Unbound (`Graphics/RealtimeGIEnvironment.cs`) keeps the cube and what it was made from (the
 ambient mode and colors, or the skybox material and its change count, the ambient intensity and
