@@ -133,3 +133,26 @@ The Unity 6000.0 contracts distinguish the controls:
 These contracts give no exact completion frame. Unequal priority scheduling,
 large-scene work spanning several budgets and built Player loading remain open;
 no frame-delay constant is inferred from the two-load capture.
+
+## Remaining main-record differences
+
+The main comparison retains 24 missing and 24 extra events. Every pair is an
+Awake, OnEnable or Start receiver-order difference. The exit sceneUnloaded
+notification is present, and the independent 114-value teardown controls pass.
+Unity 6000.0 [Awake](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.Awake.html)
+and [execution order](https://docs.unity3d.com/6000.0/Documentation/Manual/ExecutionOrder.html)
+do not guarantee an order between these instances. The raw sequences remain
+strictly compared; no global wake sort is added.
+
+The 21 prefab-field differences come from the SerializedObject property tree.
+Its GameObject view omits components, icon, navigation layer and static editor
+flags. Its Transform view omits proportional-scale state, children and the
+Euler-angle hint, including that hint's default overrides. BoxCollider's own
+fields are absent. This affects the engine-property bindings shared by editor
+queries, beyond the callback recorder.
+[SerializedObject](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializedObject.html)
+provides buffered reads and writes applied through ApplyModifiedProperties.
+The follow-up must bind real values and preserve authored metadata, with
+read/write and structural-array controls. A property-name-only patch would
+hide the missing behavior. This remains a functional gap, with all 21 strict
+field differences retained.
