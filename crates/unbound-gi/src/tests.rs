@@ -2451,9 +2451,10 @@ fn automatic_charts_of_turned_renderers_lie_where_the_precompute_put_them() {
 
 #[test]
 fn matrices_a_unit_in_the_last_place_apart_lay_charts_out_alike() {
-    // A cube scaled 2.1, and one scaled 0.3 under a parent of 7: the precompute shares one
-    // geometry for both, and the layouts made from either matrix agree (managed
-    // `RealtimeGI.LayoutsAgree`, within 1e-5 of the UV space).
+    // A cube scaled 2.1, and one scaled 0.3 under a parent of 7: matrices a unit in the last
+    // place apart, which the managed side takes to share one geometry (alike to thousandths;
+    // not measured for such a pair). The layouts made from either agree (managed
+    // `RealtimeGI.LayoutsAgree`, within 1e-5 of the UV space), so both are made.
     let (near, far) = (2.1f32, 0.3f32 * 7.0);
     assert_ne!(near, far);
     let uvs = |s: f32| {

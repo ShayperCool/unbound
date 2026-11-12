@@ -148,7 +148,7 @@ namespace Unbound.Tests
         public void WhatIsNotMeasuredIsRefused()
         {
             var made = new List<Object>();
-            var none = new HashSet<Renderer>();
+            var none = new Dictionary<Renderer, string>();
             try
             {
                 var plate = Plate();
@@ -170,6 +170,10 @@ namespace Unbound.Tests
 
                 var unlit = Make("Unlit", bare, Quaternion.identity, Vector3.one, made);
                 Assert.Contains("no normals", RealtimeGI.AutomaticChartsRefusal(unlit, bare, none));
+
+                var wide = Make("Wide", plate, Quaternion.identity, Vector3.one, made);
+                wide.m_AutoUVMaxAngle = 90f;
+                Assert.Contains("a right angle or more", RealtimeGI.AutomaticChartsRefusal(wide, plate, none));
 
                 // A turned renderer is made.
                 var turned = Make("Turned", plate, Quaternion.Euler(20f, 40f, 10f), new Vector3(2f, 3f, 0.5f), made);

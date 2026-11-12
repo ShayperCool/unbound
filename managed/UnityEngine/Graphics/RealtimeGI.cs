@@ -689,7 +689,7 @@ namespace UnityEngine
         /// precompute makes within its Max Distance and Max Angle, unless it is one of
         /// <paramref name="unshared"/> (renderers sharing a geometry whose layouts depend on which
         /// of their matrices it is made of). Returns why they could not be made, or null.</summary>
-        static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings, HashSet<Renderer> unshared)
+        static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings, Dictionary<Renderer, string> unshared)
         {
             float resolution = settings != null ? settings.indirectResolution : 2f;
             for (int r = 0; r < system.Renderers.Length; r++)
@@ -726,7 +726,6 @@ namespace UnityEngine
             float scale = renderer.scaleInLightmap * resolution;
             if (!(scale > 0f)) return $"'{renderer.name}' has no realtime lightmap resolution";
             var vertices = mesh.vertices;
-            if (automatic && mesh.normals.Length != vertices.Length) return $"'{renderer.name}' has Optimize Realtime UVs and no normals";
             // The input of realtime lightmap UVs is Mesh.uv3 when the mesh has it, else the
             // baked lightmap UVs (Mesh.uv2), else Mesh.uv (Unity 6000.0 Manual, "Generate
             // lightmap UVs"; tests/projects/realtimegi RoomCharts, Channels).
@@ -916,31 +915,48 @@ namespace UnityEngine
 
         const float SharedLayoutTolerance = 1e-5f;
 
-        static readonly HashSet<Renderer> s_NoRenderers = new HashSet<Renderer>();
+        static readonly Dictionary<Renderer, string> s_NoRenderers = new Dictionary<Renderer, string>();
 
-        /// <summary>The renderers of <see cref="SharedGroups"/> whose layouts differ by the
-        /// matrix they are made of (<see cref="LayoutsAgree"/>): which one the precompute used is
-        /// not known, so none of them is made.</summary>
-        static HashSet<Renderer> UnsharedRenderers(GIScene scene, IEnumerable<Renderer> renderers, float resolution)
+        /// <summary>The renderers of <see cref="SharedGroups"/> that are not made, and why: a
+        /// group whose layouts differ by the matrix they are made of (<see cref="LayoutsAgree"/>)
+        /// or one of whose renderers cannot be made, since which matrix the precompute used is
+        /// not known (a renderer that cannot be made keeps its own reason).</summary>
+        static Dictionary<Renderer, string> UnsharedRenderers(GIScene scene, IEnumerable<Renderer> renderers, float resolution)
         {
-            var unshared = new HashSet<Renderer>();
+            var unshared = new Dictionary<Renderer, string>();
             foreach (var group in SharedGroups(renderers))
             {
-                // A member that cannot be made leaves the others' geometry unknown too.
                 var layouts = new List<float[]>();
+                MeshRenderer failed = null;
+                string reason = null;
                 foreach (var renderer in group)
                 {
                     var mesh = renderer.GetComponent<MeshFilter>().sharedMesh;
-                    if (!s_Renderers.TryGetValue(renderer, out var at) || at.Scene != scene
-                        || AutomaticChartsRefusal(renderer, mesh, s_NoRenderers) != null
-                        || MakeUVs(scene, at.System, at.Index, renderer, mesh, resolution, out var output) != null)
+                    float[] output = null;
+                    if (!s_Renderers.TryGetValue(renderer, out var at) || at.Scene != scene)
+                        reason = $"'{renderer.name}' is not in the scene's systems";
+                    else
+                        reason = AutomaticChartsRefusal(renderer, mesh, s_NoRenderers)
+                            ?? MakeUVs(scene, at.System, at.Index, renderer, mesh, resolution, out output);
+                    if (reason != null)
                     {
-                        layouts = null;
+                        failed = renderer;
                         break;
                     }
                     layouts.Add(output);
                 }
-                if (layouts == null || !LayoutsAgree(layouts)) unshared.UnionWith(group);
+                if (failed != null)
+                {
+                    foreach (var renderer in group)
+                        unshared[renderer] = renderer == failed
+                            ? reason
+                            : $"'{renderer.name}' has Optimize Realtime UVs and shares one geometry of the precompute with '{failed.name}', which is not made: {reason}";
+                }
+                else if (!LayoutsAgree(layouts))
+                {
+                    foreach (var renderer in group)
+                        unshared[renderer] = $"'{renderer.name}' has Optimize Realtime UVs and shares its mesh and its rounded instance matrix with a renderer turned otherwise whose charts would be laid out otherwise (the precompute makes one set of charts for both, from the geometry of one of them: which is not known)";
+                }
             }
             return unshared;
         }
@@ -951,10 +967,11 @@ namespace UnityEngine
         /// layouts depend on which of their matrices it is made of).
         /// (Renderers with the same mesh and instance matrix share their charts:
         /// tests/projects/realtimegi RoomTurned, SharedTurned and SharedFlat.)</summary>
-        internal static string AutomaticChartsRefusal(MeshRenderer renderer, Mesh mesh, HashSet<Renderer> unshared)
+        internal static string AutomaticChartsRefusal(MeshRenderer renderer, Mesh mesh, Dictionary<Renderer, string> unshared)
         {
-            if (unshared.Contains(renderer))
-                return $"'{renderer.name}' has Optimize Realtime UVs and shares its mesh and its rounded instance matrix with a renderer turned otherwise whose charts would be laid out otherwise (the precompute makes one set of charts for both, from the geometry of one of them: which is not known)";
+            if (unshared.TryGetValue(renderer, out var shared)) return shared;
+            if (!(renderer.m_AutoUVMaxAngle < 90f))
+                return $"'{renderer.name}' has Optimize Realtime UVs with Max Angle {renderer.m_AutoUVMaxAngle} (a right angle or more is not measured)";
             var size = renderer.transform.lossyScale;
             if (!(size.x > 0f && size.y > 0f && size.z > 0f))
                 return $"'{renderer.name}' has Optimize Realtime UVs and a scale of {size} (a zero or mirrored scale is not measured)";

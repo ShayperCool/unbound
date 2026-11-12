@@ -635,8 +635,9 @@ check. Each refusal is a warning that names the renderer, and its system is then
 - A planar part left on its own on a plane that is not along the coordinate axes, whose own
   lightmap UVs are an undistorted copy of its shape and are laid out otherwise than its
   projection: both are then equally true but for rounding.
-- A zero or mirrored scale anywhere up the hierarchy and a mesh without normals: not
-  measured. (In a scratch bake a bent
+- A zero or mirrored scale anywhere up the hierarchy, a Max Angle of a right angle or more and
+  a mesh without normals: not measured. A renderer that shares a geometry with one of these is
+  refused with it. (In a scratch bake a bent
   part alone in its mesh, two quads 40 degrees apart, was laid out as its projection and its
   own UVs both would be; that does not tell the choice.)
 
