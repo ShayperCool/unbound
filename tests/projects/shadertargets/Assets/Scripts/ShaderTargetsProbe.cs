@@ -26,12 +26,14 @@ public class UitkProbe : MonoBehaviour
         "Target20", "Target30", "Target40", "Target46", "Target50",
         "ReqCube", "ReqKeyed", "ReqCompute", "ReqInts", "Target46Cube", "ReqMsaaKeyed",
         "BuiltinKeywords", "BuiltinCompute", "Aliases",
+        "BuiltinShadows", "ReqMrt4Array", "ReqInstSparse", "ReqStages", "ReqComputeTess",
     };
 
     /// <summary>The keywords the cases declare (a keyword space also holds built-in ones).</summary>
     static readonly string[] ProbeKeywords =
     {
         "KW_A", "KW_B", "INSTANCING_ON", "SHADOWS_SCREEN", "PROCEDURAL_INSTANCING_ON", "DYNAMICLIGHTMAP_ON",
+        "SHADOWS_SOFT", "DIRLIGHTMAP_COMBINED",
     };
 
     void Start()

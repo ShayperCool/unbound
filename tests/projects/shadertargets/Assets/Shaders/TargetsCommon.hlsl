@@ -100,6 +100,12 @@ float keywords()
 #ifdef DYNAMICLIGHTMAP_ON
     k += 32;
 #endif
+#ifdef SHADOWS_SOFT
+    k += 64;
+#endif
+#ifdef DIRLIGHTMAP_COMBINED
+    k += 128;
+#endif
     return k;
 }
 float4 frag(v2f i) : SV_Target

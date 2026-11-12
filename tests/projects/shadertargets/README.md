@@ -29,6 +29,9 @@ enabled keywords joined by `+`).
 | BuiltinKeywords | `multi_compile_instancing`, `multi_compile _ SHADOWS_SCREEN`, `target 2.0` |
 | BuiltinCompute | `multi_compile _ PROCEDURAL_INSTANCING_ON`, `multi_compile _ DYNAMICLIGHTMAP_ON` |
 | Aliases | `target es3.0`, `target gl4.1 KW_A`, `target es3.1 KW_B` |
+| BuiltinShadows | `multi_compile _ SHADOWS_SOFT`, `multi_compile _ DIRLIGHTMAP_COMBINED`, `target 2.0` |
+| ReqMrt4Array, ReqInstSparse | `target 2.0` + `require mrt4 : KW_A`, `require 2darray : KW_B`; `require instancing : KW_A`, `require sparsetex : KW_B` |
+| ReqStages, ReqComputeTess | `target 2.0` + `require geometry : KW_A`, `require tessellation : KW_B`; `require compute : KW_A`, `require tessellation : KW_B` |
 
 The Unity 6000.0 Manual (Targeting shader models and GPU features in HLSL) documents that a line
 with keywords applies to the variants with any of them. What the captures show on both devices
@@ -38,9 +41,14 @@ with keywords applies to the variants with any of them. What the captures show o
   `#pragma target` it is 2.5; a plain 4.0 compiles as 3.5 and a plain 4.6 or 5.0 as 4.5 (the
   geometry and tessellation stages' features are left out of a program without those stages),
   while a line with keywords keeps its target (`target 4.0 KW_A` is 4.0 for `KW_A`);
-- `#pragma require compute`, `msaatex` raise the target to 4.5, `integers` and `cubearray` raise
-  nothing; `SHADOWS_SCREEN` and `DYNAMICLIGHTMAP_ON` make it 3.0 and `PROCEDURAL_INSTANCING_ON`
-  4.5; a material's `INSTANCING_ON` selects no variant (the draw decides instancing);
+- required features raise the target on their own: `mrt4` to 3.0, `2darray` and `instancing` to
+  3.5, `geometry` to 4.0, `compute` and `msaatex` to 4.5, `tessellation` to 4.6, `compute` with
+  `tessellation` to 5.0; `integers` and `cubearray` raise nothing; `SHADOWS_SCREEN`,
+  `SHADOWS_SOFT`, `DIRLIGHTMAP_COMBINED` and `DYNAMICLIGHTMAP_ON` make it 3.0 and
+  `PROCEDURAL_INSTANCING_ON` 4.5; a material's `INSTANCING_ON` selects no variant (the draw
+  decides instancing);
+- a variant requiring `sparsetex`, which neither device has, draws with the error shader
+  (magenta);
 - the `SHADER_AVAILABLE_*` defines hold the variant's features and the device's own, 3.5's on
   OpenGL Core and 4.5's on Vulkan, never the stages' (`TESSHW`, `GEOMETRY`, `TESSELLATION`) and
   cube arrays only through `#pragma require cubearray` (4.6 and 5.0 do not bring them);
@@ -48,8 +56,16 @@ with keywords applies to the variants with any of them. What the captures show o
   `SHADER_TARGET_AVAILABLE` is those features' target (35 or 45);
 - `es3.0`, `es3.1` and `gl4.1` targets apply nothing on these devices.
 
+Where the captures differ from the Manual's pragma target reference: it gives 4.6 cube arrays
+and describes `gl4.1` as 4.0 with cube arrays, tessellation and MSAA texture reads; on these
+devices 4.6 and 5.0 bring no cube arrays and `gl4.1` applies nothing.
+
 Unmeasured: the instancing variant's target (an instanced draw of the case recorded nothing in the
-Editor), compute kernels (5.0 without the stages' features), targets Unity does not name.
+Editor; taken as the instancing feature's, 3.5), a material's `INSTANCING_ON` through a renderer's
+draw (only `Graphics.Blit` is recorded), compute kernels (5.0 without the stages' features), the
+features other than sparse textures a device may lack (wave, 64-bit, 16-bit, barycentrics, ray
+tracing: taken as present), the stereo and device capability keywords (Unbound enables none),
+targets Unity does not name (left out, as the platform ones are).
 
     python3 tests/projects/shadertargets/run.py native --label L [--device vulkan]   # two Editor captures
     python3 tests/projects/shadertargets/run.py publish L-1 L-2 [--device vulkan]
