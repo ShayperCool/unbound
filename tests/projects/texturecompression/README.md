@@ -165,7 +165,7 @@ in both quality modes. These controls extend the existing noise, gradient and ch
 Other releases retain the previous approximation, including its missing highQuality dithering.
 
 Alpha8 keeps one CPU byte per texel and samples (0,0,0,a), as the channel controls record.
-It still uses RGBA8 GPU storage. [wgpu-types 27.0.1's texture view descriptor](https://docs.rs/wgpu-types/27.0.1/wgpu_types/struct.TextureViewDescriptor.html)
+It still uses RGBA8 GPU storage. [wgpu-types 30.0.1's texture view descriptor](https://docs.rs/wgpu-types/30.0.1/wgpu_types/struct.TextureViewDescriptor.html)
 has no component mapping, and its format set has no alpha-only format. An R8 view supplies
 red and an alpha of one. Consequently, a one-channel upload cannot preserve Alpha8 sampling
 through the current view API; a shader-side component mapping is a separate renderer change.
