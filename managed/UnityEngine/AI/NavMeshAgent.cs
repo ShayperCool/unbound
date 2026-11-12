@@ -1187,7 +1187,16 @@ namespace Unbound.Runtime
             // tests/projects/navlinks resetmid through a link toggle).
             KeepMotion(agent.m_Crowd, moving, following || finishing);
             if (agent.pathPending) RestartRequest(agent);
-            else if (following) PlanAgain(agent, partialEnd);
+            else if (following)
+            {
+                PlanAgain(agent, partialEnd);
+                // Keep waiting only while the rebuilt route still approaches a connection.
+                // Disabling that connection can replace it with a partial walking route
+                // (Unity 6000.0.71f1, tests/projects/navlinks waitrebuild controls).
+                var restored = agent.m_Crowd;
+                restored.waitingForConnection = moving.waitingForConnection
+                    && restored.OverOffmeshConnection(restored.option.radius * DtCrowd.LinkTriggerRadiusScale);
+            }
             else if (finishing)
             {
                 PlanAgain(agent);
@@ -1823,12 +1832,10 @@ namespace Unbound.Runtime
             var ag = agent.m_Crowd;
             RcVec3f next;
             if (ag.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) next = ag.NextVelocity(dt);
-            else if (ag.animation.active)
-            {
-                var along = RcVec3f.Subtract(ag.animation.endPos, ag.animation.startPos);
-                float length = MathF.Sqrt(along.X * along.X + along.Z * along.Z);
-                next = length > 1e-6f ? new RcVec3f(along.X, 0f, along.Z) * (agent.speed / length) : RcVec3f.Zero;
-            }
+            // On an automatic link the simulation velocity follows the current phase:
+            // approach first, then crossing. A stationary approach has no heading
+            // (Unity 6000.0.71f1, tests/projects/navlinks startonlink and waitrebuild).
+            else if (ag.animation.active) next = ag.vel;
             else next = ag.nvel;
             var heading = new Vector3(next.X, 0f, next.Z);
             float speed = heading.magnitude;

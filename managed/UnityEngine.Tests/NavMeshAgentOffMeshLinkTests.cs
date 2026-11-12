@@ -431,6 +431,85 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AStationaryLinkApproachKeepsItsRotation()
+        {
+            var agent = Agent(autoTraverse: true);
+            agent.Warp(LinkStart);
+            agent.transform.rotation = Quaternion.Euler(0f, 30f, 0f);
+            agent.SetDestination(Destination);
+            var rotation = agent.transform.rotation;
+            Step();
+            Assert.True(agent.isOnOffMeshLink);
+            Assert.Equal(Vector3.zero, agent.desiredVelocity);
+            Assert.InRange(QuaternionMath.Angle(rotation, agent.transform.rotation), 0f, 1e-3f);
+        }
+
+        [Fact]
+        public void AnObliqueLinkApproachTurnsTowardsItsApproachVelocity()
+        {
+            var agent = Agent(autoTraverse: true);
+            agent.Warp(new Vector3(-3.7f, 0f, -0.4f));
+            agent.transform.rotation = Quaternion.Euler(0f, 60f, 0f);
+            agent.SetDestination(Destination);
+            var rotation = agent.transform.rotation;
+            Step();
+            Assert.True(agent.isOnOffMeshLink);
+            var velocity = agent.desiredVelocity;
+            Assert.True(velocity.z > 0.1f);
+            var approach = Quaternion.LookRotation(new Vector3(velocity.x, 0f, velocity.z));
+            Assert.True(QuaternionMath.Angle(agent.transform.rotation, approach) < QuaternionMath.Angle(rotation, approach));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void WaitingAfterALinkChangeFollowsTheRebuiltRoute(bool disableConnection)
+        {
+            var crossing = Agent(autoTraverse: true);
+            crossing.speed = 0.5f;
+            StepOntoLink(crossing);
+            var waiting = Agent(autoTraverse: true);
+            for (int i = 0; i < 120 && !waiting.m_Crowd.waitingForConnection; i++) Step();
+            Assert.True(waiting.m_Crowd.waitingForConnection);
+            Step();
+            Assert.Equal(Vector3.zero, waiting.desiredVelocity);
+            var previous = waiting.m_Crowd;
+            var unrelated = disableConnection ? default : NavMesh.AddLink(new NavMeshLinkData
+            {
+                startPosition = new Vector3(-7f, 0f, 1f),
+                endPosition = new Vector3(-5f, 0f, 1f),
+                bidirectional = true,
+                costModifier = -1f,
+                agentTypeID = 0,
+            });
+            try
+            {
+                if (disableConnection) NavMesh.SetLinkActive(m_Link, false);
+                // Reading the agent takes in the changed NavMesh. Its crowd state is replaced.
+                _ = waiting.nextPosition;
+                Assert.NotSame(previous, waiting.m_Crowd);
+                Assert.Equal(!disableConnection, waiting.m_Crowd.waitingForConnection);
+                Step();
+                if (disableConnection)
+                {
+                    Assert.Equal(NavMeshPathStatus.PathPartial, waiting.pathStatus);
+                    Assert.False(waiting.m_Crowd.waitingForConnection);
+                }
+                else
+                {
+                    Assert.True(crossing.isOnOffMeshLink);
+                    Assert.Equal(Vector3.zero, waiting.desiredVelocity);
+                }
+                Assert.False(waiting.isOnOffMeshLink);
+            }
+            finally
+            {
+                if (disableConnection) NavMesh.SetLinkActive(m_Link, true);
+                else NavMesh.RemoveLink(unrelated);
+            }
+        }
+
+        [Fact]
         public void WithoutAutoTraverseTheAgentWaitsOnTheLinkWithItsData()
         {
             var agent = Agent(autoTraverse: false);

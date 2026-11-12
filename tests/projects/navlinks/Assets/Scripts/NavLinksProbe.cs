@@ -697,7 +697,44 @@ public class NavLinksProbe : MonoBehaviour
             Finish(1);
             return;
         }
-        if (m_Frame >= Frames) Finish(0);
+        if (m_Frame >= Frames)
+        {
+            m_Done = true;
+            StartCoroutine(RecordWaitingRebuildControls());
+        }
+    }
+
+    IEnumerator RecordWaitingRebuildControls()
+    {
+        // Run after the original lanes so their reference records stay unchanged.
+        foreach (var lane in m_Lanes)
+            foreach (var (_, agent) in lane.Agents)
+                if (agent != null) DestroyImmediate(agent.gameObject);
+        var crossing = m_Lanes.Find(lane => lane.Name == "crosstile");
+        var other = m_Lanes.Find(lane => lane.Name == "auto");
+        foreach (string kind in new[] { "unrelated", "disabled", "alreadywait.unrelated", "alreadywait.disabled" })
+        {
+            var lane = new Lane { Name = "waitrebuild." + kind, O = crossing.O, Link = crossing.Link };
+            crossing.Link.activated = true;
+            var first = Agent(lane, "crossing", new Vector3(-2f, 0f, 0f), new Vector3(8f, 0f, 0f), a => a.speed = 0.5f);
+            var waiting = Agent(lane, "waiting", new Vector3(-3.2f, 0f, -0.3f), new Vector3(8f, 0f, 0f));
+            bool afterWaiting = kind.StartsWith("alreadywait.");
+            for (int frame = 1; frame <= (afterWaiting ? 40 : 25); frame++)
+            {
+                yield return null;
+                if (frame == (afterWaiting ? 20 : 8))
+                {
+                    Line(lane.Name, "-", frame, "\"waitingBeforeChange\":" + B(first.isOnOffMeshLink && !waiting.isOnOffMeshLink && waiting.desiredVelocity.sqrMagnitude == 0f));
+                    (kind.EndsWith("unrelated") ? other.Link : crossing.Link).activated = false;
+                }
+                foreach (var (name, agent) in lane.Agents)
+                    Line(lane.Name, name, frame, State(lane, agent));
+            }
+            foreach (var (_, agent) in lane.Agents) DestroyImmediate(agent.gameObject);
+            crossing.Link.activated = true;
+            other.Link.activated = true;
+        }
+        Finish(0);
     }
 
     string State(Lane lane, NavMeshAgent agent)
