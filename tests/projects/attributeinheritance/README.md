@@ -39,3 +39,17 @@ all missing, extra and different keys, and rejects duplicate keys or an incomple
 `managed/UnityEngine/ApiCheckAllowList.json` holds the exact lookup policies justified by these
 controls. They permit direct declaration discovery where a blanket AttributeUsage comparison
 would otherwise reject it. A new or changed lookup does not inherit an old exception.
+
+## Conditional declarations
+
+The 6000.0.71f1 assembly declarations include conditional profiler, collection-validation
+and Editor-only calls. The probe records each affected method's conditional metadata.
+A source file explicitly undefines `ENABLE_PROFILER` and `UNITY_EDITOR`: ten calls must
+skip argument side effects, including calls through a null CommandBuffer receiver.
+The CommandBuffer string overloads remain unconditional and evaluate two arguments.
+A separate file defines `ENABLE_PROFILER` and verifies one argument evaluation.
+
+Unity 6000.0 documents [frame metadata](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Profiling.Profiler.EmitFrameMetaData.html)
+as profiler capture data and [CommandBuffer samples](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.BeginSample.html)
+as profiling commands. Exact conditional names and overload selection come from the
+6000.0.71f1 release assemblies; the paired captures check compilation and reflection.

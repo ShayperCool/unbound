@@ -181,6 +181,8 @@ public class AttributeInheritanceProbe : MonoBehaviour
             using (output = new StreamWriter(path))
             {
                 Capture();
+                DeclarationConditionalControls.Record(Row);
+                ConditionalEnabledControl.Record(Row);
                 Row("complete", 1);
             }
             EditorApplication.Exit(0);

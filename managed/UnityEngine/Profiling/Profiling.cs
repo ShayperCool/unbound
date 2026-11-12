@@ -778,6 +778,7 @@ namespace UnityEngine.Profiling
         static readonly HashSet<ProfilerArea> s_DisabledAreas = new HashSet<ProfilerArea>();
         static readonly HashSet<ushort> s_DisabledCategories = new HashSet<ushort>();
 
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public static void SetAreaEnabled(ProfilerArea area, bool enabled)
         {
             lock (s_DisabledAreas)
@@ -792,6 +793,7 @@ namespace UnityEngine.Profiling
             lock (s_DisabledAreas) return !s_DisabledAreas.Contains(area);
         }
 
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public static void SetCategoryEnabled(Unity.Profiling.ProfilerCategory category, bool enabled)
         {
             lock (s_DisabledCategories)
@@ -808,17 +810,20 @@ namespace UnityEngine.Profiling
 
         public static uint GetCategoriesCount() => (uint)ProfilerCore.CategoryCount;
 
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public static void GetAllCategories(Unity.Profiling.ProfilerCategory[] categories)
         {
             for (int i = 0; i < categories.Length && i < ProfilerCore.CategoryCount; i++) categories[i] = new Unity.Profiling.ProfilerCategory((ushort)i);
         }
 
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public static void GetAllCategories(Unity.Collections.NativeArray<Unity.Profiling.ProfilerCategory> categories)
         {
             for (int i = 0; i < categories.Length && i < ProfilerCore.CategoryCount; i++) categories[i] = new Unity.Profiling.ProfilerCategory((ushort)i);
         }
 
         /// <summary>Frames of a capture file go to the Profiler window, which Unbound does not have.</summary>
+        [global::System.Diagnostics.Conditional("UNITY_EDITOR")]
         public static void AddFramesFromFile(string file) =>
             throw new NotSupportedException("Unbound has no Profiler window to load captured frames into");
 
@@ -850,10 +855,13 @@ namespace UnityEngine.Profiling
         // Frame and session metadata go into the profiler's capture stream: validated as Unity
         // validates them, then dropped (nothing captures).
 
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public static void EmitFrameMetaData(Guid id, int tag, Array data) => CheckMetaData(data);
 
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public static void EmitFrameMetaData<T>(Guid id, int tag, List<T> data) where T : struct => CheckMetaData<T>(data);
 
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public static unsafe void EmitFrameMetaData<T>(Guid id, int tag, Unity.Collections.NativeArray<T> data) where T : struct =>
             Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data);
 

@@ -2746,34 +2746,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.DrivenPropertyManager",
-    "Message": "M:static RegisterProperty`0(UnityEngine.Object,UnityEngine.Object,System.String):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UNITY_EDITOR\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.DrivenPropertyManager."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.DrivenPropertyManager",
-    "Message": "M:static TryRegisterProperty`0(UnityEngine.Object,UnityEngine.Object,System.String):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UNITY_EDITOR\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.DrivenPropertyManager."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.DrivenPropertyManager",
-    "Message": "M:static UnregisterProperties`0(UnityEngine.Object):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UNITY_EDITOR\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.DrivenPropertyManager."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.DrivenPropertyManager",
-    "Message": "M:static UnregisterProperty`0(UnityEngine.Object,UnityEngine.Object,System.String):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UNITY_EDITOR\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.DrivenPropertyManager."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.DynamicGI",
     "Message": "M:static UpdateMaterials`0(UnityEngine.Renderer):System.Void attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"DynamicGI.UpdateMaterials(Renderer) is deprecated; instead, use extension method from RendererExtensions: 'renderer.UpdateGIMaterials()' (UnityUpgradable).\"){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"DynamicGI.UpdateMaterials(Renderer) is deprecated; instead, use extension method from RendererExtensions: 'renderer.UpdateGIMaterials()' (UnityUpgradable).\",System.Boolean:True){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.DynamicGI."
@@ -3400,13 +3372,6 @@
     "Type": "UnityEngine.Input",
     "Message": "P:static isGyroAvailable():System.Boolean attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"isGyroAvailable property is deprecated. Please use SystemInfo.supportsGyroscope instead.\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Input."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Jobs.TransformAccess",
-    "Message": "M:CheckHierarchyValid`0():System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_UNITY_COLLECTIONS_CHECKS\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Jobs.TransformAccess."
   },
   {
     "Release": "6000.0.71f1",
@@ -4504,62 +4469,6 @@
     "Release": "6000.0.71f1",
     "Category": "attributes",
     "Type": "UnityEngine.Profiling.Profiler",
-    "Message": "M:static AddFramesFromFile`0(System.String):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UNITY_EDITOR\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Profiling.Profiler",
-    "Message": "M:static EmitFrameMetaData`0(System.Guid,System.Int32,System.Array):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Profiling.Profiler",
-    "Message": "M:static EmitFrameMetaData`1(System.Guid,System.Int32,System.Collections.Generic.List`1<!!0>):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Profiling.Profiler",
-    "Message": "M:static EmitFrameMetaData`1(System.Guid,System.Int32,Unity.Collections.NativeArray`1<!!0>):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Profiling.Profiler",
-    "Message": "M:static GetAllCategories`0(Unity.Collections.NativeArray`1<Unity.Profiling.ProfilerCategory>):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Profiling.Profiler",
-    "Message": "M:static GetAllCategories`0(Unity.Profiling.ProfilerCategory[]):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Profiling.Profiler",
-    "Message": "M:static SetAreaEnabled`0(UnityEngine.Profiling.ProfilerArea,System.Boolean):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Profiling.Profiler",
-    "Message": "M:static SetCategoryEnabled`0(Unity.Profiling.ProfilerCategory,System.Boolean):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Profiling.Profiler",
     "Message": "P:static usedHeapSize():System.UInt32 attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"usedHeapSize has been deprecated since it is limited to 4GB. Please use usedHeapSizeLong instead.\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.Profiler."
   },
@@ -4777,20 +4686,6 @@
     "Release": "6000.0.71f1",
     "Category": "attributes",
     "Type": "UnityEngine.Rendering.CommandBuffer",
-    "Message": "M:BeginSample`0(Unity.Profiling.ProfilerMarker):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.CommandBuffer."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.CommandBuffer",
-    "Message": "M:EndSample`0(Unity.Profiling.ProfilerMarker):System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.CommandBuffer."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.CommandBuffer",
     "Message": "M:IssuePluginCustomTextureUpdateV1`0(System.IntPtr,UnityEngine.Texture,System.UInt32):System.Void attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use IssuePluginCustomTextureUpdateV2 to register TextureUpdate callbacks instead. Callbacks will be passed event IDs kUnityRenderingExtEventUpdateTextureBeginV2 or kUnityRenderingExtEventUpdateTextureEndV2, and data parameter of type UnityRenderingExtTextureUpdateParamsV2.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.CommandBuffer."
   },
@@ -4884,13 +4779,6 @@
     "Type": "UnityEngine.Rendering.CommandBuffer",
     "Message": "M:SetBufferData`1(UnityEngine.GraphicsBuffer,Unity.Collections.NativeArray`1<!!0>,System.Int32,System.Int32,System.Int32):System.Void attributes is [], Unity's is [System.Security.SecuritySafeCriticalAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.CommandBuffer."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.CullingResults",
-    "Message": "M:Validate`0():System.Void attributes is [], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_UNITY_COLLECTIONS_CHECKS\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.CullingResults."
   },
   {
     "Release": "6000.0.71f1",

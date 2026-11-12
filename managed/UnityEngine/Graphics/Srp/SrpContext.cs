@@ -377,6 +377,7 @@ namespace UnityEngine.Rendering
             return new Vector4(center.x, center.y, center.z, r);
         }
 
+        [global::System.Diagnostics.Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
         internal void Validate() { }
 
         public bool Equals(CullingResults other) => ptr == other.ptr;

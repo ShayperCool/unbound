@@ -15,6 +15,11 @@
     "managed/UnityEngine/Runtime/Components.cs",
     "managed/UnityEngine/Runtime/Serialization.cs",
     "managed/UnityEngine/UIElements/Uxml/",
-    "managed/Unbound.ApiTools/"
+    "managed/Unbound.ApiTools/",
+    "managed/UnityEngine/Profiling/Profiling.cs",
+    "managed/UnityEngine/Graphics/Srp/Keywords.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
+    "managed/UnityEngine/Jobs/TransformJobs.cs",
+    "managed/UnityEngine/Platform/DisplayAndKeyboard.cs"
   ]
 }

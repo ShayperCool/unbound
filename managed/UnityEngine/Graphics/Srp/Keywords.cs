@@ -211,8 +211,10 @@ namespace UnityEngine.Rendering
         }
 
         [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public void BeginSample(Unity.Profiling.ProfilerMarker marker) { }
         [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
+        [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
         public void EndSample(Unity.Profiling.ProfilerMarker marker) { }
 
         /// <summary>When executed, the texture's <c>updateCount</c> goes up (only a texture object

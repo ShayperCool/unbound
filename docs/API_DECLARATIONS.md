@@ -112,3 +112,24 @@ Its 17 controls include live collision entry/exit and observable contact-array m
 so changing an invalid manual constructor does not change valid callback payloads. The
 existing exact-release Physics2D mechanism carries these observations. Polygon initialization
 and initial substep accounting remain explicit follow-ups; no variable policy was widened.
+
+## Q410 declaration migrations
+
+The conditional-call slice copies sixteen method annotations from the 6000.0.71f1
+release through the stub generator's attribute renderer. The attribute inheritance
+probe checks argument evaluation with profiler defines present and absent, plus the
+unconditional CommandBuffer string overloads. Its metadata rows include internal
+Editor and collection-validation methods.
+
+| Category | Before Q410 | After conditional slice |
+| --- | ---: | ---: |
+| Attributes | 938 | 922 |
+| Modifiers | 87 | 87 |
+| Parameters | 74 | 74 |
+| Accessors | 70 | 70 |
+| Layout | 68 | 68 |
+| Interfaces | 65 | 65 |
+| Accessibility | 18 | 18 |
+| Constraints | 1 | 1 |
+| Lookup policies | 11 | 11 |
+| Total | 1,332 | 1,316 |

@@ -80,12 +80,16 @@ namespace UnityEngine
     [Unbound.EditorFaithful("the record only keeps driven values out of saved scenes and the Inspector; Play mode does not observe it")]
     internal partial class DrivenPropertyManager
     {
+        [global::System.Diagnostics.Conditional("UNITY_EDITOR")]
         public static void RegisterProperty(Object driver, Object target, string propertyPath) { }
 
+        [global::System.Diagnostics.Conditional("UNITY_EDITOR")]
         public static void TryRegisterProperty(Object driver, Object target, string propertyPath) { }
 
+        [global::System.Diagnostics.Conditional("UNITY_EDITOR")]
         public static void UnregisterProperty(Object driver, Object target, string propertyPath) { }
 
+        [global::System.Diagnostics.Conditional("UNITY_EDITOR")]
         public static void UnregisterProperties(Object driver) { }
     }
 

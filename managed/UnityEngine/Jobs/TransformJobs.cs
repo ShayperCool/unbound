@@ -257,6 +257,7 @@ namespace UnityEngine.Jobs
             using (MainThreadCheck.Engine()) Target.GetLocalPositionAndRotation(out localPosition, out localRotation);
         }
 
+        [global::System.Diagnostics.Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
         internal void CheckHierarchyValid()
         {
             if (!isValid) throw new NullReferenceException("The TransformAccess is not valid and points to an invalid hierarchy");
