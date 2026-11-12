@@ -105,3 +105,7 @@ The paired Stereo/Prologic capture and its measured fallback scope are in
 The independent `zones` profile measures live User parameters, radii and movement,
 source sends, overlapping zones and listener-component placement. See [ZONES.md](ZONES.md)
 for contracts, reference history and remaining scope.
+
+The [Mono effect profile](MONO.md) records asymmetric Chorus routing, reverb
+folding between effects, wet boundaries and linked Mono processing separately
+from the existing output-layout controls.

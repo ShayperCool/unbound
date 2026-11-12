@@ -28,6 +28,11 @@ def verify(root, release, rate, contexts=False, selected=None):
             assert not meta[case+'.callback_device'] and not meta[case+'.callback_playing']
             assert meta[case+'.before_clip_bits'] == 1048576000 and meta[case+'.callback_clip_bits'] == 0
             continue
+        if case.startswith('context_monofx_'):
+            mode = int(case.split('_')[2])
+            assert meta[case+'.mode'] == mode and meta[case+'.render_channels'] == mode, case
+            assert meta[case+'.buffer'] == 1024 and meta[case+'.rate'] == rate, case
+            if case.endswith('_generator'): assert meta[case+'.generator_channels'] > 0, case
         if case.startswith('context_zone_'):
             phases = () if case.endswith('_listener_chorus_dry') else (8, 16) if case.endswith('_preset_control') else (4, 8, 16, 20, 24) if case.endswith('_overlap_move') else (4, 8, 16)
             for block in phases: assert isinstance(meta[f'{case}.zone_update_{block}'], dict), (case, block)
@@ -47,7 +52,7 @@ def verify(root, release, rate, contexts=False, selected=None):
             size = meta.get(case+'.buffer', 1024)
             mode = meta.get(case+'.mode', 2)
             channels = meta.get(case+'.render_channels') or {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8}[mode]
-            if case.startswith(('context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_zone_')):
+            if case.startswith(('context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_zone_', 'context_monofx_')):
                 assert channels == {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8}[mode], (case, 'inactive requested layout', channels)
             assert record == dict(file=case+suffix+'.f32', frames=blocks(case)*size, channels=channels), case+suffix
             values = samples(root, record)
