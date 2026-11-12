@@ -773,6 +773,8 @@ is how the Editor's products are made in the measured release, as follows.
   8 bits in their cluster's bounds). With Unbound's clusters, transport and visibility the
   directional light's Room cases (`room-directional`, `-turned`, `-noshadows`) put 498 to 520
   of their 5070 lightmap values outside the comparator's tolerance, as the other light cases.
+  Measured for the probe's default Lightmap Parameters only: whether the rings, the 2 bits or
+  the 0.25 behind the horizon change with other parameters is not.
 
 ## Engine
 

@@ -3391,9 +3391,9 @@ fn own_visibility_of_the_editors_points_matches_its_precompute() {
         }
     }
     eprintln!("visibility: {same} of {total} values the Editor's, {near} within one step");
-    // Measured: 93% the same.
+    // Measured: 99.5% the same, every one within one step.
     assert!(
-        same * 100 >= total * 92 && near * 100 >= total * 99,
+        same * 1000 >= total * 990 && near == total,
         "{same} {near} {total}"
     );
 }

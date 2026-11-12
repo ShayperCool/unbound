@@ -41,7 +41,8 @@ pub fn visibility(input: &InputSamples, clustering: &Clustering) -> Result<Visib
                         .filter(|&p| {
                             let (q, n) = (input.positions[p], input.normals[p]);
                             let facing = d[0] * n[0] + d[1] * n[1] + d[2] * n[2];
-                            if facing <= BEHIND {
+                            // (A point of a normal that is not finite sees nothing.)
+                            if !(facing > BEHIND) {
                                 return false;
                             }
                             // A direction a little behind the surface is taken along it.

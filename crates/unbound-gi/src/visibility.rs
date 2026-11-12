@@ -286,7 +286,13 @@ impl Visibility {
             "{} rings of directions",
             rings.len()
         );
-        let directions: u32 = rings.iter().map(|r| r.1).sum();
+        // The rings' directions follow each other in the values' order.
+        let mut next = 0u32;
+        for &(first, n) in &rings {
+            ensure!(first == next && n > 0, "rings of directions out of order");
+            next += n;
+        }
+        let directions = next;
         ensure!(
             values.len() == directions as usize,
             "{} directions of values for {directions}",
