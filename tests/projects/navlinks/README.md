@@ -127,78 +127,92 @@ waiting is established. `waitingBeforeChange` is false in the early controls
 and true in both `alreadywait` controls. Unrelated-link controls match every
 value. Disabling the occupied link retains 28 early-control and 31 established-
 waiting values: path and staleness reports, not an admitted tolerance. These
-59 values stay in the strict comparator. The reference now has 29354 records;
+59 values stay in the strict comparator. That reference had 29354 records;
 two GPU Editor repeats agree byte-for-byte, and the original 29090 records are
-an unchanged byte prefix. The full result is 637/1805662 failing values.
+an unchanged byte prefix. The Q375 result was 637/1805662 failing values.
 
 The API documents whether rotation is updated and its maximum angular speed
 ([updateRotation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-updateRotation.html),
 [angularSpeed](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-angularSpeed.html));
 the phase direction and waiting restoration are observations for 6000.0.71f1.
 
-Q375 case grouping below keeps each remaining case and its first differing
-frame visible. Counts include all fields at the existing tolerances.
+Q385 turns about the agent's local up axis from a signed heading error, including
+small angles, with the measured squared-speed threshold of 0.001. Up-axis alignment
+runs independently of heading updates, using the current NavMesh or link orientation.
+The endpoint remains the current corridor's endpoint when `hasPath` turns false.
+A stopping-distance request selects zero planned speed before automatic braking;
+braking can replace it with a braking speed. Resetting a path clears the braking
+plan and subsequent movement decelerates at the agent's acceleration limit.
 
-| Case | Before | After | First differing frame | First field |
+The previous 637 failures fall to 374. `aheadoff`, `two`, `turning` and fourteen
+other previously failing cases now match; no previously passing value fails.
+The additional controls cover both small-turn directions, heading wrap, speed below
+and above the threshold, tilted agents, disabled heading updates, quaternion sign,
+angular-speed limiting, placed surfaces, tilted links, stopping with and without
+braking, resetting during braking, resuming after a smaller stop radius, and vertical
+and inverted up-axis inputs. A singular adjustment uses identity local rotation,
+including beneath a rotated parent. Unchanged alignment leaves `transform.hasChanged`
+false; a changed alignment sets it. The flag behavior follows
+[hasChanged, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Transform-hasChanged.html):
+rotation assignments set the flag even for an equal value, so the agent skips an unchanged write. The reference appends 1,453 rows and 81,473
+values, all matching. Two GPU repeats agree and every previous reference
+record remains an unchanged byte prefix. Comparator tolerances are unchanged.
+
+These rules are selected through Compat for 6000.0.71f1. Other releases retain
+unmeasured quaternion interpolation, arrival-dependent endpoint reporting and the
+previous immediate stopping-distance cutoff. Their equivalence has not been established.
+
+[updateUpAxis, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-updateUpAxis.html)
+documents alignment to the current NavMesh or link. The tilted controls change the
+orientation before the update, and the link's up axis differs from both platforms.
+[stoppingDistance](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-stoppingDistance.html)
+specifies a stopping radius, without requiring an instantaneous halt at its boundary.
+The phase, endpoint and braking order above are measured release behavior.
+
+Q385 remaining cases and their first differing frames follow. Counts include every
+field at the existing tolerances; all remaining raw discrepancies stay visible.
+
+| Case | Before Q385 | After | First differing frame | First field |
 | --- | ---: | ---: | ---: | --- |
-| `aheadoff` | 268 | 185 | 177 | q[1] |
-| `crosstile` | 939 | 124 | 102 | hp |
+| `crosstile` | 124 | 120 | 102 | hp |
 | `endatlink` | 82 | 82 | 1 | c |
-| `areamask` | 63 | 63 | 75 | st[0], st[2] |
-| `costhigh` | 11 | 11 | 67 | q[1] |
-| `turning` | 10 | 10 | 220 | q[3] |
-| `redirectmid` | 7 | 7 | 85 | c, hp, pe[0], rd |
-| `completeauto` | 5 | 5 | 85 | dv[0], hp, n[1] |
-| `incall` | 5 | 5 | 63 | pe[0], pe[2] |
-| `drop` | 3 | 3 | 112 | hp |
-| `island` | 3 | 3 | 114 | pe[0] |
-| `offedge` | 3 | 3 | 65 | pe[0], pe[2] |
-| `radius1` | 3 | 3 | 94 | hp |
-| `staleowner` | 3 | 3 | 110 | hp |
-| `turn` | 92 | 3 | 114 | hp |
-| `two` | 65 | 3 | 208 | pe[0] |
-| `areajump` | 2 | 2 | 29 | hp |
-| `autooffmid` | 2 | 2 | 112 | hp |
-| `baseoffset` | 2 | 2 | 110 | hp |
-| `climb` | 2 | 2 | 112 | hp |
-| `costlow` | 2 | 2 | 29 | hp |
-| `deactivatemid` | 2 | 2 | 110 | hp |
-| `deactivatewait` | 2 | 2 | 112 | hp |
-| `diagonal` | 117 | 2 | 117 | hp |
+| `areamask` | 63 | 61 | 75 | st[0], st[2] |
+| `waitrebuild.alreadywait.disabled` | 31 | 31 | 20 | c, dst[0], nxt.e[0], nxt.e[2], nxt.owner, nxt.s[0], nxt.s[2], nxt.valid, pe[0], ps, rd |
+| `waitrebuild.disabled` | 28 | 28 | 8 | c, dst[0], nxt.e[0], nxt.e[2], nxt.owner, nxt.s[0], nxt.s[2], nxt.valid, pe[0], ps, rd |
+| `costhigh` | 11 | 7 | 75 | st[0], st[2] |
+| `redirectmid` | 7 | 6 | 85 | c, hp, pe[0], rd |
+| `completeauto` | 5 | 4 | 85 | dv[0], hp, n[1] |
 | `disableagent` | 2 | 2 | 102 | v[0] |
-| `inactive` | 102 | 2 | 129 | hp |
-| `legacy` | 2 | 2 | 110 | hp |
-| `low` | 2 | 2 | 110 | hp |
-| `lowmanual` | 2 | 2 | 92 | hp |
-| `manualcurve` | 2 | 2 | 108 | hp |
-| `manualtoggle` | 2 | 2 | 141 | hp |
-| `noposition` | 2 | 2 | 110 | hp |
-| `norotation` | 2 | 2 | 110 | hp |
-| `pendingold` | 2 | 2 | 109 | pe[0], pe[2] |
-| `reverse` | 2 | 2 | 110 | hp |
-| `serialized` | 2 | 2 | 110 | hp |
-| `shortafter` | 2 | 2 | 110 | hp |
-| `snap` | 2 | 2 | 108 | hp |
-| `startonlink` | 153 | 2 | 29 | hp |
-| `stopmid` | 2 | 2 | 147 | hp |
-| `auto` | 1 | 1 | 208 | pe[0] |
+| `areajump` | 2 | 1 | 29 | hp |
+| `autooffmid` | 2 | 1 | 112 | hp |
+| `baseoffset` | 2 | 1 | 110 | hp |
+| `climb` | 2 | 1 | 112 | hp |
+| `costlow` | 2 | 1 | 29 | hp |
+| `deactivatemid` | 2 | 1 | 110 | hp |
+| `deactivatewait` | 2 | 1 | 112 | hp |
+| `diagonal` | 2 | 1 | 117 | hp |
+| `drop` | 3 | 1 | 112 | hp |
 | `fast` | 1 | 1 | 50 | hp |
-| `high` | 1 | 1 | 220 | pe[0] |
-| `inactive130` | 1 | 1 | 112 | pe[0] |
-| `manualmove` | 1 | 1 | 250 | pe[0] |
-| `manualwait` | 1 | 1 | 237 | pe[0] |
+| `inactive` | 2 | 1 | 129 | hp |
+| `legacy` | 2 | 1 | 110 | hp |
+| `low` | 2 | 1 | 110 | hp |
+| `lowmanual` | 2 | 1 | 92 | hp |
+| `manualcurve` | 2 | 1 | 108 | hp |
+| `manualtoggle` | 2 | 1 | 141 | hp |
 | `nobraking` | 1 | 1 | 110 | hp |
-| `oneway` | 1 | 1 | 208 | pe[0] |
+| `noposition` | 2 | 1 | 110 | hp |
+| `norotation` | 2 | 1 | 110 | hp |
+| `radius1` | 3 | 1 | 94 | hp |
 | `resetmid` | 1 | 1 | 85 | dv[0] |
-| `reverseoneway` | 1 | 1 | 114 | pe[0] |
+| `reverse` | 2 | 1 | 110 | hp |
+| `serialized` | 2 | 1 | 110 | hp |
+| `shortafter` | 2 | 1 | 110 | hp |
 | `slow` | 1 | 1 | 234 | hp |
-| `snapfar` | 1 | 1 | 114 | pe[0] |
-| `snapnear` | 1 | 1 | 114 | pe[0] |
+| `snap` | 2 | 1 | 108 | hp |
+| `staleowner` | 3 | 1 | 110 | hp |
+| `startonlink` | 2 | 1 | 29 | hp |
+| `stopmid` | 2 | 1 | 147 | hp |
 | `targets` | 1 | 1 | 130 | stale |
+| `turn` | 3 | 1 | 114 | hp |
 | `warpauto` | 1 | 1 | 85 | stale |
 | `warpwait` | 1 | 1 | 92 | stale |
-| `wide` | 1 | 1 | 208 | pe[0] |
-| `waitrebuild.alreadywait.disabled` | 109 | 31 | 20 | c, dst[0], nxt.e[0], nxt.e[2], nxt.owner, nxt.s[0], nxt.s[2], nxt.valid, pe[0], ps, rd |
-| `waitrebuild.disabled` | 76 | 28 | 8 | c, dst[0], nxt.e[0], nxt.e[2], nxt.owner, nxt.s[0], nxt.s[2], nxt.valid, pe[0], ps, rd |
-| `waitrebuild.alreadywait.unrelated` | 236 | 0 | - | - |
-| `waitrebuild.unrelated` | 48 | 0 | - | - |

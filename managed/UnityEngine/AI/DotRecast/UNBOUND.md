@@ -145,3 +145,12 @@ Altered (marked `Unbound:` in the sources):
   of overlaps and walks through obstacles (Unity's: navpath `replan.*`, `replan.none`).
 - the engine's `remainingDistance` sums the corners found again from where the agent stands (after
   its step), not those it steered by (Unity's: navpath `replan.topo`).
+
+Q385 agent transform and path reporting controls (`tests/projects/navlinks`, Unity
+6000.0.71f1): heading uses a signed local angle, at speeds squared above 0.001;
+up-axis alignment is independent of heading updates and uses the current data or
+link rotation. Endpoint reporting retains the corridor's target after `hasPath`
+turns false. Stopping distance requests zero planned speed before braking, which
+can replace that request with the braking speed; a reset clears the braking plan.
+Each measured mechanism is selected through Compat. Other releases retain their
+previous interpolation, endpoint and immediate stopping-distance behavior, unmeasured.
