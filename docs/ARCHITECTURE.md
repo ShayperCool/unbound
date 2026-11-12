@@ -235,7 +235,7 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   the vertex color, the device's clip space turned into the renderer's, array elements padded to their HLSL
   stride), and WGSL out. Variants follow the material's and the global keywords, each compiled with
   the `SHADER_TARGET` and `SHADER_AVAILABLE_*` defines its applying `#pragma target`/`#pragma require`
-  lines and keywords give (`targets.rs`); compiled
+  lines and keywords and the device's own features give (`targets.rs`); compiled
   programs are cached in the global cache by a hash of their preprocessed sources. A program's
   cbuffers are packed in declaration order into uniform bindings of at most 64 KB each (one for
   most programs; URP's Forward+ buffers take several), ranges of one uniform data block per draw,

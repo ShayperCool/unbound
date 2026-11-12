@@ -43,7 +43,7 @@ with keywords applies to the variants with any of them. What the captures show o
   while a line with keywords keeps its target (`target 4.0 KW_A` is 4.0 for `KW_A`);
 - required features raise the target on their own: `mrt4` to 3.0, `2darray` and `instancing` to
   3.5, `geometry` to 4.0, `compute` and `msaatex` to 4.5, `tessellation` to 4.6, `compute` with
-  `tessellation` to 5.0; `integers` and `cubearray` raise nothing; `SHADOWS_SCREEN`,
+  `tessellation` to 5.0 (the stage features measured through keyed lines only); `integers` and `cubearray` raise nothing; `SHADOWS_SCREEN`,
   `SHADOWS_SOFT`, `DIRLIGHTMAP_COMBINED` and `DYNAMICLIGHTMAP_ON` make it 3.0 and
   `PROCEDURAL_INSTANCING_ON` 4.5; a material's `INSTANCING_ON` selects no variant (the draw
   decides instancing);
