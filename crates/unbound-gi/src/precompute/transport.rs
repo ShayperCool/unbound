@@ -80,6 +80,8 @@ pub struct Origin {
 /// Sub-positions per texel side whose surface points are a texel's ray origins (Unbound's
 /// choice: 16 origins, 512 of the default 8192 rays each).
 const SUB: usize = 4;
+// A texel's sub-positions are bits of a `u16`.
+const _: () = assert!(SUB * SUB <= 16);
 
 /// A texel's surface: the point at its centre and its ray origins.
 #[derive(Clone, Debug)]
@@ -96,8 +98,9 @@ pub fn footprints(instances: &[Instance], width: u32, height: u32) -> Vec<Option
     // Which renderer each texel's centre lies in (the triangle it lies deepest in), and there.
     let mut owner: Vec<Option<(usize, f32, Origin)>> = vec![None; size];
     let mut out: Vec<Vec<Origin>> = vec![Vec::new(); size];
-    // Which of a texel's sub-positions an origin was made of (one on an edge of two of its
-    // triangles counts once).
+    // Which of a texel's sub-positions an origin was made of: one on an edge of two of its
+    // triangles counts once (and where triangles of its renderer overlap in the UVs, the first
+    // gives it).
     let mut taken = vec![0u16; size];
     for pass in 0..2 {
         for (i, inst) in instances.iter().enumerate() {
@@ -646,4 +649,38 @@ pub fn transport(
         bounce_samples: clustering.bounce_samples.clone(),
         bounce: clustering.bounce.clone(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_environment_value_is_a_child_of_its_coarser_one() {
+        let refs = Refs { environment: 100 };
+        let h = Hierarchy {
+            refs,
+            tree_parent: Vec::new(),
+            tree_children: Vec::new(),
+        };
+        let mut children = Vec::new();
+        let mut seen = 0;
+        for e in 0..ENVIRONMENT_VALUES as u32 {
+            let r = refs.environment + e;
+            match coarser(r, refs, &h.tree_parent) {
+                Some(p) => {
+                    h.children(p, 0, &mut children);
+                    assert_eq!(children.len(), 4);
+                    assert!(
+                        children.iter().any(|&(c, share)| c == r && share == 0.25),
+                        "{e}"
+                    );
+                    seen += 1;
+                }
+                // The last level, one value per face.
+                None => assert!(e as usize >= ENVIRONMENT_VALUES - 6),
+            }
+        }
+        assert_eq!(seen, ENVIRONMENT_VALUES - 6);
+    }
 }
