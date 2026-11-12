@@ -24,6 +24,8 @@ using UnityEngine;
 /// types, and the decoded image; called in Update with a marker drawn at the end of that frame,
 /// at the end of a frame before the marker, with superSize 2, stereo modes, twice in one frame,
 /// with a .jpg name, without an extension, and to a relative path (the working directory).
+/// <c>mip.*</c> (last): a mipmapped texture's level of detail and anisotropic filtering in
+/// supersized captures.
 /// Every case records its log messages and exceptions. In Gamma color space the Editor crashes
 /// in CaptureScreenshotAsTexture called in Update or with a superSize below one: those calls,
 /// and the render texture capture in Update, are skipped there (<c>.skipped</c>).
@@ -439,5 +441,66 @@ public class ScreenCaptureProbe : MonoBehaviour
             ReadFile("file.relative", path);
             if (File.Exists(path)) File.Delete(path);
         }
+
+        // Mipmapped textures in supersized captures, after every other case (their quad exists
+        // only from here on, over the right half). Each mip level is one solid colour, red
+        // level / 8, so with trilinear filtering red tells the level of detail sampled. iso: a
+        // square footprint of 16 texels per pixel; anisoMax: a texture of aniso level 16 under
+        // global limits (1, 2); anisoForced: aniso level 1 forced to the limits (2, 16), both
+        // with a footprint of 64 by 4 texels. Each is captured at superSize 1, then larger, then
+        // at 1 again.
+        var mipped = new Texture2D(64, 64, TextureFormat.RGBA32, true, true)
+        {
+            filterMode = FilterMode.Trilinear,
+            wrapMode = TextureWrapMode.Repeat,
+            anisoLevel = 1,
+        };
+        for (int level = 0; level < mipped.mipmapCount; level++)
+        {
+            int side = Math.Max(1, 64 >> level);
+            var colors = new Color[side * side];
+            for (int i = 0; i < colors.Length; i++) colors[i] = new Color(level / 8f, 1f - level / 8f, 0.5f, 1f);
+            mipped.SetPixels(colors, level);
+        }
+        mipped.Apply(false);
+        Value("mip.mipmapCount", mipped.mipmapCount.ToString());
+        var quadMesh = new Mesh();
+        var quad = new GameObject("Mipped");
+        quad.AddComponent<MeshFilter>().sharedMesh = quadMesh;
+        quad.AddComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Probe/Mipped")) { mainTexture = mipped };
+        void Footprint(float u, float v)
+        {
+            quadMesh.Clear();
+            quadMesh.vertices = new[] { new Vector3(0, -1, 0), new Vector3(0, 1, 0), new Vector3(2, 1, 0), new Vector3(2, -1, 0) };
+            quadMesh.uv = new[] { new Vector2(0, 0), new Vector2(0, v), new Vector2(u, v), new Vector2(u, 0) };
+            quadMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            quadMesh.RecalculateBounds();
+        }
+        var startFiltering = QualitySettings.anisotropicFiltering;
+        var mipCases = new (string, float, float, AnisotropicFiltering, int, int, int, int[])[]
+        {
+            ("mip.iso", 8f, 8f, startFiltering, 1, -1, -1, new[] { 1, 2, 3, 1 }),
+            ("mip.anisoMax", 32f, 2f, AnisotropicFiltering.Enable, 16, 1, 2, new[] { 1, 3, 1 }),
+            ("mip.anisoForced", 32f, 2f, AnisotropicFiltering.ForceEnable, 1, 2, 16, new[] { 1, 3, 1 }),
+        };
+        foreach (var (key, u, v, filtering, aniso, forcedMin, globalMax, sizes) in mipCases)
+        {
+            Footprint(u, v);
+            QualitySettings.anisotropicFiltering = filtering;
+            Texture.SetGlobalAnisotropicFilteringLimits(forcedMin, globalMax);
+            mipped.anisoLevel = aniso;
+            for (int n = 0; n < sizes.Length; n++)
+            {
+                int size = sizes[n];
+                yield return null;
+                yield return new WaitForEndOfFrame();
+                AsTexture(key + "." + n + ".superSize" + size, () => ScreenCapture.CaptureScreenshotAsTexture(size));
+                Value(key + "." + n + ".mipMapBias", mipped.mipMapBias.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            }
+        }
+        QualitySettings.anisotropicFiltering = startFiltering;
+        Texture.SetGlobalAnisotropicFilteringLimits(-1, -1);
+        Destroy(quad);
+        Flush();
     }
 }

@@ -4,6 +4,7 @@
     run.py create  --release R --label L   makes the probe scene in a fresh copy (batchmode)
     run.py editor  --release R --label L   two independent windowed Editor captures (native1, native2)
     run.py publish --release R --label L   checks that the two captures agree, writes Reference/unity-R/<space>
+    run.py extend  --release R --label L   adds new cases of two agreeing captures to the existing reference
     run.py unbound --release R --label L   an Unbound capture (UNBOUND_CLI: the binary)
     run.py check   --release R --label L   validates the two Editor captures without publishing
 
@@ -11,7 +12,8 @@
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings under
 $XDG_CACHE_HOME/unbound/validation/runs/screencapture/<label>; nothing is written here except by
-publish, which refuses to overwrite an existing reference. Editors run through the shared
+publish, which refuses to overwrite an existing reference, and extend, which adds only rows and
+images that follow the existing ones when the captures reproduce those byte for byte. Editors run through the shared
 heavy-job launcher, windowed on a private Xvfb each, on the GPU through VirtualGL. Publishing
 requires each capture to be complete: the Editor exited with 0, the probe's last record is
 `complete: true` (and no `fatal`), and its images are exactly those it recorded, at their sizes.
@@ -166,7 +168,8 @@ def check(work):
     return 0
 
 
-def publish(work):
+def agreed(work):
+    """The first of two complete, byte-identical Editor captures (exits otherwise)."""
     a, b = work/'native1', work/'native2'
     for repeat in (a, b):
         reason = incomplete(repeat)
@@ -176,15 +179,58 @@ def publish(work):
         sys.exit('the two Editor captures differ in values; not publishing')
     if images(a) != images(b) or any((a/n).read_bytes() != (b/n).read_bytes() for n in images(a)):
         sys.exit('the two Editor captures differ in images; not publishing')
+    return a
+
+
+def gz(source, target):
+    with open(target, 'wb') as raw, gzip.GzipFile(filename='', mode='wb', fileobj=raw, mtime=0, compresslevel=9) as z:
+        z.write(source.read_bytes())
+
+
+def publish(work):
+    a = agreed(work)
     target = reference_root(PROBE)/SPACE
     if target.exists():
         sys.exit(f'refusing to overwrite reference: {target}')
     target.mkdir(parents=True)
     shutil.copyfile(a/'values.jsonl', target/'values.jsonl')
     for name in images(a):
-        with open(target/(name+'.gz'), 'wb') as raw, gzip.GzipFile(filename='', mode='wb', fileobj=raw, mtime=0, compresslevel=9) as z:
-            z.write((a/name).read_bytes())
+        gz(a/name, target/(name+'.gz'))
     print('published', target, len(images(a)), 'images')
+    return 0
+
+
+# Reads in Update: the Editor's window framebuffer (its interface greys), which differs from one
+# Editor session to the next. extend keeps the recorded images and does not require them again.
+WINDOW_FRAMEBUFFER = {'asTexture.update.rgba', 'read.update.float.rgba', 'rt.update.immediate.rgba',
+                      'rt.update.endOfFrame.rgba', 'rt.update.next.rgba'}
+
+
+def extend(work):
+    """Adds the values and images of new cases to the existing reference. The captures must
+    reproduce every existing value line in order (the new cases follow them, before the final
+    `complete`) and every existing image byte for byte but the window framebuffer reads; nothing
+    existing is rewritten."""
+    a = agreed(work)
+    target = reference_root(PROBE)/SPACE
+    old = (target/'values.jsonl').read_text().splitlines()
+    new = (a/'values.jsonl').read_text().splitlines()
+    if not old or old[-1] != new[-1] or new[:len(old)-1] != old[:-1]:
+        sys.exit('the captures do not reproduce the existing reference values; not extending')
+    existing = sorted(p.name.removesuffix('.gz') for p in target.glob('*.rgba.gz'))
+    missing = [n for n in existing if n not in images(a)]
+    changed = [n for n in existing if n not in missing and n not in WINDOW_FRAMEBUFFER
+               and gzip.decompress((target/(n+'.gz')).read_bytes()) != (a/n).read_bytes()]
+    if missing or changed:
+        sys.exit(f'the captures do not reproduce the existing reference images (missing {missing[:5]}, '
+                 f'changed {changed[:5]}); not extending')
+    added = [n for n in images(a) if n not in existing]
+    if len(new) == len(old):
+        sys.exit('the captures add no values; nothing to extend')
+    for name in added:
+        gz(a/name, target/(name+'.gz'))
+    shutil.copyfile(a/'values.jsonl', target/'values.jsonl')
+    print('extended', target, len(new)-len(old), 'values,', len(added), 'images:', ' '.join(added))
     return 0
 
 
@@ -203,7 +249,7 @@ def unbound(work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'check'))
+    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'extend', 'unbound', 'check'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     parser.add_argument('--space', choices=('Linear', 'Gamma'), required=True)
@@ -214,7 +260,7 @@ def main():
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound, 'check': check}[args.mode](work)
+    return {'create': create, 'editor': editor, 'publish': publish, 'extend': extend, 'unbound': unbound, 'check': check}[args.mode](work)
 
 
 if __name__ == '__main__':
