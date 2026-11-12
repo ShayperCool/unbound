@@ -261,6 +261,16 @@ CASES['NpotAlphaASTC6'] = ('Npot', 'type=single channel=alpha format=RGBA32 srgb
 SOURCES['HdrNpot'] = lambda: base.soft_hdr(13, 7)
 CASES['HdrNpotASTC6'] = ('HdrNpot', 'format=RGBAFloat srgb=0 npot=none android=ASTC_HDR_6x6')
 
+for source in ('Smooth', 'Noise'):
+    for compression in ('normal', 'high', 'low'):
+        CASES[f'{source}CrunchAuto{compression.title()}'] = (source, f'compression={compression} crunch=1')
+CASES['NormalsCrunchAuto'] = ('Normals', 'type=normal compression=normal crunch=1')
+CASES['HdrCrunchAuto'] = ('Hdr', 'compression=normal crunch=1')
+CASES['NoiseCrunchLinearNoMips'] = ('Noise', 'format=DXT5Crunched android=ETC2_RGBA8Crunched srgb=0 mips=0')
+CASES['NoiseCrunchSrgbNoMips'] = ('Noise', 'format=DXT5Crunched android=ETC2_RGBA8Crunched srgb=1 mips=0')
+CASES['NpotCrunchRgbMips'] = ('Npot', 'format=DXT1Crunched npot=none android=ETC_RGB4Crunched')
+CASES['NpotCrunchRgbaNoMips'] = ('Npot', 'format=DXT5Crunched npot=none mips=0 android=ETC2_RGBA8Crunched')
+
 def main():
     textures = PROBE/'Assets/Textures'
     textures.mkdir(parents=True, exist_ok=True)

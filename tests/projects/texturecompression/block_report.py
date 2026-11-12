@@ -4,6 +4,9 @@ import argparse
 import base64
 from collections import defaultdict
 import json
+import os
+import subprocess
+import tempfile
 from pathlib import Path
 
 BLOCKS = {
@@ -35,6 +38,25 @@ def read(path):
     return result
 
 
+def transcode_archive(archive, width, height, mips):
+    """Compare decoded GPU blocks when archive entropy coding differs."""
+    cli = os.environ.get('UNBOUND_CLI')
+    if not cli:
+        raise ValueError('different Crunch archives require UNBOUND_CLI for logical-block comparison')
+    cache = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache')))/'unbound'
+    cache.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='crunch-block-report-', dir=cache) as directory:
+        source, output = Path(directory)/'input.crn', Path(directory)/'blocks.bin'
+        source.write_bytes(archive)
+        launcher = Path.home()/'.cache/compat/with-heavy-job'
+        command = [str(launcher), '--kind', 'tool', cli, 'crunch-blocks', str(source), str(output)]
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        info = json.loads(result.stdout)
+        if (info['width'], info['height'], info['mips']) != (width, height, mips):
+            raise ValueError(f'Crunch header layout differs: {info}')
+        return info['format'], output.read_bytes()
+
+
 def report(reference, candidate, profile="Gamma"):
     totals = defaultdict(lambda: [0, 0])
     qualities = defaultdict(lambda: [0, 0])
@@ -64,18 +86,27 @@ def report(reference, candidate, profile="Gamma"):
         expected = base64.b64decode(reference[raw_key], validate=True)
         actual = base64.b64decode(candidate.get(raw_key, ''), validate=True)
         actual_info = candidate.get(key, '').split()
-        layout = len(actual_info) >= 4 and actual_info[:4] == fields[:4] and len(actual) == len(expected)
+        layout = len(actual_info) >= 4 and actual_info[:4] == fields[:4]
         archive = fields[3] in CRUNCHED
         if archive:
-            # Archive bytes are not GPU blocks. An identical archive verifies every logical
-            # block; absent compressed storage verifies none. Different archives need a
-            # transcoded-block comparison, so report only the verified lower bound.
-            exact = total if layout and actual == expected else 0
+            # Archive bytes are never counted as fixed-size GPU blocks.
+            if layout and actual == expected:
+                exact = total
+            elif layout and actual:
+                expected_format, expected_blocks = transcode_archive(expected, width, height, int(fields[2]))
+                actual_format, actual_blocks = transcode_archive(actual, width, height, int(fields[2]))
+                if len(expected_blocks) != total * size:
+                    raise ValueError(f'{raw_key}: transcoded reference length differs')
+                exact = sum(expected_blocks[i:i+size] == actual_blocks[i:i+size]
+                            for i in range(0, len(expected_blocks), size)) if (
+                                expected_format == actual_format and len(actual_blocks) == len(expected_blocks)) else 0
+            else:
+                exact = 0
         else:
             if len(expected) != total * size:
                 raise ValueError(f'{raw_key}: {len(expected)} bytes for {total} blocks of {size}')
             exact = sum(expected[i:i+size] == actual[i:i+size]
-                        for i in range(0, len(expected), size)) if layout else 0
+                        for i in range(0, len(expected), size)) if layout and len(actual) == len(expected) else 0
         mode = prefix.rsplit('.', 1)[-1]
         group = 'imports' if prefix.startswith('tex.') else (
             'compress' if prefix.startswith('compress.') and mode in ('fast', 'high') else 'runtime')
@@ -89,7 +120,7 @@ def report(reference, candidate, profile="Gamma"):
             runtime_modes[fields[3], mode][0] += exact
             runtime_modes[fields[3], mode][1] += total
         print(f'blocks {prefix} {fields[3]} {exact}/{total} exact'
-              + (' (archive differs; exact blocks unverified)' if archive and layout and actual != expected
+              + (' (different archives; compared transcoded GPU blocks)' if archive and layout and actual != expected
                  else '' if layout else ' (compressed storage, dimensions, mip count or byte length differs)'))
     for (group, fmt), (exact, total) in sorted(totals.items()):
         print(f'blocks total {group} {fmt} {exact}/{total} exact, {total-exact} residual')

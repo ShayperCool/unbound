@@ -471,6 +471,9 @@ public class TextureCompressionProbe : MonoBehaviour
         AdditionalCompressControls();
         AdditionalAstcCopies();
         AdditionalAstcRegions();
+        AdditionalCrunchReads();
+        AdditionalEacReads();
+        AdditionalEacValues();
     }
 
     void AdditionalCompressControls()
@@ -480,6 +483,10 @@ public class TextureCompressionProbe : MonoBehaviour
         {
             ("seed.r8", TextureFormat.R8, 8, 8, false),
             ("seed.rg16", TextureFormat.RG16, 8, 8, false),
+            ("rect.nomips.r8", TextureFormat.R8, 12, 8, false),
+            ("rect.short.rg16", TextureFormat.RG16, 12, 4, true),
+            ("rect.r8", TextureFormat.R8, 12, 8, true),
+            ("rect.rg16", TextureFormat.RG16, 12, 8, true),
             ("rect.rgba", TextureFormat.RGBA32, 20, 12, true),
             ("rect.rgb", TextureFormat.RGB24, 12, 8, true),
             ("flat.rgba", TextureFormat.RGBA32, 8, 8, false),
@@ -604,6 +611,132 @@ public class TextureCompressionProbe : MonoBehaviour
                 finally { Destroy(src); Destroy(dst); }
             });
         }
+    }
+
+    void AdditionalCrunchReads()
+    {
+        foreach (var name in new[] { "SmoothDXT1Crunched", "NoiseDXT5Crunched" })
+        {
+            string key = "crunch.read." + name;
+            Section(key, () =>
+            {
+                var t = Find(name);
+                Run(key + ".float", () => {
+                    var pixels = t.GetPixels();
+                    Add(key + ".float", pixels.Length + " / " + Floats(pixels[0]));
+                });
+                Run(key + ".generic", () => {
+                    var data = t.GetRawTextureData<byte>();
+                    Add(key + ".generic.length", data.Length.ToString());
+                    Add(key + ".generic.prefix", string.Join(" ", Enumerable.Range(0, 16).Select(i => data[i])));
+                    byte saved = data[20];
+                    try {
+                        data[20] = (byte)(saved ^ 1);
+                        Add(key + ".generic.alias", (t.GetRawTextureData()[20] == (byte)(saved ^ 1)).ToString());
+                    }
+                    finally { data[20] = saved; }
+                });
+                Run(key + ".level", () => {
+                    var data = t.GetPixelData<byte>(0);
+                    Add(key + ".level.length", data.Length.ToString());
+                    Add(key + ".level.prefix", string.Join(" ", Enumerable.Range(0, 16).Select(i => data[i])));
+                    byte saved = data[20];
+                    try {
+                        data[20] = (byte)(saved ^ 1);
+                        Add(key + ".level.alias", (t.GetRawTextureData()[20] == (byte)(saved ^ 1)).ToString());
+                    }
+                    finally { data[20] = saved; }
+                });
+                Add(key + ".restored.raw", Bytes(t.GetRawTextureData()));
+                Run(key + ".after", () => Add(key + ".after.pixel", Floats(t.GetPixel(5, 7))));
+                Run(key + ".load", () => {
+                    var loaded = new Texture2D(t.width, t.height, t.format, t.mipmapCount > 1, true);
+                    loaded.name = "LoadedCrunch";
+                    try {
+                        loaded.filterMode = FilterMode.Point;
+                        loaded.LoadRawTextureData(t.GetRawTextureData());
+                        loaded.Apply(false, false);
+                        Describe(key + ".loaded", loaded);
+                    }
+                    finally { Destroy(loaded); }
+                });
+            });
+        }
+        foreach (var format in new[] { TextureFormat.DXT1Crunched, TextureFormat.DXT5Crunched,
+            TextureFormat.ETC_RGB4Crunched, TextureFormat.ETC2_RGBA8Crunched })
+        {
+            string key = "crunch.new." + format;
+            Run(key, () => {
+                var t = new Texture2D(8, 8, format, true, true);
+                try { Add(key + ".info", t.format + " / " + t.GetRawTextureData().Length); }
+                finally { Destroy(t); }
+            });
+        }
+    }
+
+    void AdditionalEacReads()
+    {
+        foreach (var format in new[] { TextureFormat.EAC_R, TextureFormat.EAC_RG })
+        {
+            string key = "eac.manual." + format;
+            Section(key, () =>
+            {
+                var t = new Texture2D(8, 8, format, true, true);
+                try
+                {
+                    int stride = format == TextureFormat.EAC_R ? 8 : 16;
+                    var raw = new byte[t.GetRawTextureData().Length];
+                    for (int at = 0; at < raw.Length; at += stride)
+                    {
+                        // Red uses a zero multiplier with nonzero modifiers. Green uses
+                        // a nonzero multiplier, so CPU byte reads and GPU 11-bit reads diverge.
+                        raw[at] = 128; raw[at + 1] = 13;
+                        for (int i = 2; i < 8; i++) raw[at + i] = 255;
+                        if (stride == 16) { raw[at + 8] = 64; raw[at + 9] = 48; }
+                    }
+                    Run(key + ".setup", () => { t.LoadRawTextureData(raw); t.Apply(false); });
+                    Describe(key, t);
+                }
+                finally { Destroy(t); }
+            });
+        }
+    }
+
+    void AdditionalEacValues()
+    {
+        Section("eac.values", () =>
+        {
+            var t = new Texture2D(256, 128, TextureFormat.EAC_R, false, true);
+            try
+            {
+                var raw = new byte[t.GetRawTextureData().Length];
+                // Two modifier tables from the EAC specification cover every low-three-bit
+                // value with multiplier zero, so each block records one of all 2048 codes.
+                int[][] modifiers = { new[] { -2, -4, -8, -10, 1, 3, 7, 9 },
+                    new[] { -1, -2, -3, -10, 0, 1, 2, 9 } };
+                for (int value = 0; value < 2048; value++)
+                {
+                    bool found = false;
+                    for (int table = 0; table < 2 && !found; table++)
+                    for (int index = 0; index < 8 && !found; index++)
+                    {
+                        int numerator = value - 4 - modifiers[table][index];
+                        if (numerator % 8 != 0 || numerator / 8 < 0 || numerator / 8 > 255) continue;
+                        int at = value * 8;
+                        raw[at] = (byte)(numerator / 8);
+                        raw[at + 1] = (byte)(table == 0 ? 10 : 13);
+                        ulong selectors = 0;
+                        for (int i = 0; i < 16; i++) selectors = (selectors << 3) | (uint)index;
+                        for (int i = 0; i < 6; i++) raw[at + 2 + i] = (byte)(selectors >> (40 - i * 8));
+                        found = true;
+                    }
+                    if (!found) throw new Exception("EAC control cannot represent " + value);
+                }
+                Run("eac.values.setup", () => { t.LoadRawTextureData(raw); t.Apply(false); });
+                Describe("eac.values", t);
+            }
+            finally { Destroy(t); }
+        });
     }
 
 }

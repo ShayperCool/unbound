@@ -166,3 +166,15 @@ SoftASTC6Q100 format=RGBA32 srgb=0 quality=100 android=ASTC_6x6
 NpotRedASTC6 type=single channel=red format=RGBA32 srgb=0 npot=none android=ASTC_6x6
 NpotAlphaASTC6 type=single channel=alpha format=RGBA32 srgb=0 npot=none android=ASTC_6x6
 HdrNpotASTC6 format=RGBAFloat srgb=0 npot=none android=ASTC_HDR_6x6
+SmoothCrunchAutoNormal compression=normal crunch=1
+SmoothCrunchAutoHigh compression=high crunch=1
+SmoothCrunchAutoLow compression=low crunch=1
+NoiseCrunchAutoNormal compression=normal crunch=1
+NoiseCrunchAutoHigh compression=high crunch=1
+NoiseCrunchAutoLow compression=low crunch=1
+NormalsCrunchAuto type=normal compression=normal crunch=1
+HdrCrunchAuto compression=normal crunch=1
+NpotCrunchRgbMips format=DXT1Crunched npot=none android=ETC_RGB4Crunched
+NpotCrunchRgbaNoMips format=DXT5Crunched npot=none mips=0 android=ETC2_RGBA8Crunched
+NoiseCrunchLinearNoMips format=DXT5Crunched android=ETC2_RGBA8Crunched srgb=0 mips=0
+NoiseCrunchSrgbNoMips format=DXT5Crunched android=ETC2_RGBA8Crunched srgb=1 mips=0
