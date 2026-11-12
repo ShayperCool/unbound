@@ -84,6 +84,9 @@ namespace UnityEngine.TextCore.LowLevel
 
     public sealed partial class FontEngine
     {
+        /// <summary>GlyphRasterModes.RASTER_MODE_BITMAP and RASTER_MODE_COLOR.</summary>
+        const int k_RasterModeBitmap = 16;
+        const int k_RasterModeColor = 65536;
         /// <summary>The size a face loads at when none is given.</summary>
         const int k_DefaultPointSize = 90;
 
@@ -292,9 +295,10 @@ namespace UnityEngine.TextCore.LowLevel
             if (s_Face == null) return face;
             var info = s_Face.Info;
             float size = s_PointSize;
-            float scale = size / Math.Max(1, info.UnitsPerEm);
-            float ascent = info.Ascender * scale;
-            float descent = info.Descender * scale;
+            // Font units per pixel; each face value in font units is divided by it.
+            float unitsPerPixel = (float)Math.Max(1, info.UnitsPerEm) / size;
+            float ascent = info.Ascender / unitsPerPixel;
+            float descent = info.Descender / unitsPerPixel;
             float underlinePosition = info.Underline != null && info.Underline.Length == 2 ? info.Underline[0] : 0;
             float underlineThickness = info.Underline != null && info.Underline.Length == 2 ? info.Underline[1] : 0;
             float capLine = HintedMetrics('H').BearingY;
@@ -305,7 +309,7 @@ namespace UnityEngine.TextCore.LowLevel
             face.pointSize = size;
             face.scale = 1f;
             face.unitsPerEM = info.UnitsPerEm;
-            face.lineHeight = (info.Ascender - info.Descender + info.LineGap) * scale;
+            face.lineHeight = (info.Ascender - info.Descender + info.LineGap) / unitsPerPixel;
             face.ascentLine = ascent;
             face.capLine = capLine;
             face.meanLine = meanLine;
@@ -316,10 +320,9 @@ namespace UnityEngine.TextCore.LowLevel
             face.subscriptOffset = descent;
             face.subscriptSize = 0.5f;
             // FreeType's underline position is the line's center: the table's top edge minus half
-            // the thickness; scaled as units per em times the size (Inter's -560 at 90 points is
-            // -17.897728, not -560 * (90 / 2816f)).
-            face.underlineOffset = (float)((underlinePosition - (int)underlineThickness / 2) / (double)Math.Max(1, info.UnitsPerEm) * size);
-            face.underlineThickness = underlineThickness * scale;
+            // the thickness (in whole font units).
+            face.underlineOffset = (underlinePosition - (int)underlineThickness / 2) / unitsPerPixel;
+            face.underlineThickness = underlineThickness / unitsPerPixel;
             face.strikethroughOffset = meanLine / 2.5f;
             face.strikethroughThickness = face.underlineThickness;
             face.tabWidth = HintedMetrics(' ').Advance;
@@ -377,7 +380,12 @@ namespace UnityEngine.TextCore.LowLevel
 
         /// <summary>The atlas space a glyph takes: its bitmap with the padding around it, plus a
         /// one-pixel gutter on the left and bottom (where Unity places glyphs in their rect).</summary>
-        static int Packed(int size, int padding) => size + padding * 2 + 1;
+        static int Packed(int size, int padding, int gutter) => size + padding * 2 + gutter;
+
+        /// <summary>The distance field modes keep a one-pixel gutter on the left and bottom of each
+        /// glyph's atlas space; the bitmap modes (raster mode bit 16) pack glyphs with their padding
+        /// alone.</summary>
+        static int Gutter(GlyphRenderMode renderMode) => ((int)renderMode & k_RasterModeBitmap) != 0 ? 0 : 1;
 
         internal static bool TryPackGlyphInAtlas(Glyph glyph, int padding, GlyphPackingMode packingMode, GlyphRenderMode renderMode, int width, int height, List<GlyphRect> freeGlyphRects, List<GlyphRect> usedGlyphRects)
         {
@@ -388,9 +396,10 @@ namespace UnityEngine.TextCore.LowLevel
                 glyph.glyphRect = GlyphRect.zero;
                 return true;
             }
-            if (!GlyphPacker.TryPack(Packed(rect.width, padding), Packed(rect.height, padding), packingMode, freeGlyphRects, usedGlyphRects, out var placed))
+            int gutter = Gutter(renderMode);
+            if (!GlyphPacker.TryPack(Packed(rect.width, padding, gutter), Packed(rect.height, padding, gutter), packingMode, freeGlyphRects, usedGlyphRects, out var placed))
                 return false;
-            glyph.glyphRect = new GlyphRect(placed.x + padding + 1, placed.y + padding + 1, rect.width, rect.height);
+            glyph.glyphRect = new GlyphRect(placed.x + padding + gutter, placed.y + padding + gutter, rect.width, rect.height);
             return true;
         }
 
@@ -425,9 +434,7 @@ namespace UnityEngine.TextCore.LowLevel
             if (s_Face == null) return FontEngineError.Invalid_Face;
             if (texture == null) return FontEngineError.Invalid_File;
             var pixels = AtlasPixels(texture);
-            // Alpha8 reads back white with the value as alpha; RGBA atlases (color modes) get white
-            // glyphs, as color faces are rendered in coverage only.
-            var error = Render(glyph, padding, renderMode, texture.width, texture.height, (i, v) => pixels[i] = new Color32(255, 255, 255, v));
+            var error = Render(glyph, padding, renderMode, texture.width, texture.height, AtlasWriter(pixels, renderMode));
             texture.m_PixelsDirty = true;
             return error;
         }
@@ -466,7 +473,7 @@ namespace UnityEngine.TextCore.LowLevel
             if (loaded.glyphRect.width > 0)
             {
                 var atlas = AtlasPixels(texture);
-                Place(loaded.glyphRect, info, pixels, texture.width, texture.height, (i, v) => atlas[i] = new Color32(255, 255, 255, v));
+                Place(loaded.glyphRect, info, pixels, texture.width, texture.height, AtlasWriter(atlas, renderMode));
                 texture.m_PixelsDirty = true;
             }
             glyph = loaded;
@@ -498,6 +505,15 @@ namespace UnityEngine.TextCore.LowLevel
                 if (TryAddGlyphToTexture(index, padding, packingMode, freeGlyphRects, usedGlyphRects, renderMode, texture, out var glyph))
                     glyphs[added++] = glyph;
             return added == glyphIndexes.Count;
+        }
+
+        /// <summary>Writes a glyph's bytes into atlas pixels: an Alpha8 atlas reads back white with the
+        /// value as alpha; a color mode's atlas takes the gray coverage in every channel (color faces
+        /// are rendered in coverage only).</summary>
+        static Action<int, byte> AtlasWriter(Color32[] pixels, GlyphRenderMode renderMode)
+        {
+            if (((int)renderMode & k_RasterModeColor) != 0) return (i, v) => pixels[i] = new Color32(v, v, v, v);
+            return (i, v) => pixels[i] = new Color32(255, 255, 255, v);
         }
 
         static Color32[] AtlasPixels(Texture2D texture)

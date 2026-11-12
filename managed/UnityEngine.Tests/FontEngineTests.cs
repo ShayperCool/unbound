@@ -16,6 +16,22 @@ namespace UnityEngine.Tests
         static bool Overlaps(GlyphRect a, GlyphRect b) =>
             a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
+        [Theory]
+        [InlineData(GlyphRenderMode.SDFAA, 1)]
+        [InlineData(GlyphRenderMode.SDF16, 1)]
+        [InlineData(GlyphRenderMode.SMOOTH, 0)]
+        [InlineData(GlyphRenderMode.RASTER_HINTED, 0)]
+        [InlineData(GlyphRenderMode.COLOR, 0)]
+        public void OnlyDistanceFieldModesKeepAGutter(GlyphRenderMode mode, int gutter)
+        {
+            var free = Atlas(64, 64);
+            var used = new List<GlyphRect>();
+            var glyph = new Glyph(1, new GlyphMetrics(10, 10, 0, 10, 12), new GlyphRect(0, 0, 10, 12));
+            Assert.True(FontEngine.TryPackGlyphInAtlas(glyph, 3, GlyphPackingMode.BestShortSideFit, mode, 64, 64, free, used));
+            Assert.Equal(new GlyphRect(0, 0, 10 + 6 + gutter, 12 + 6 + gutter), used[0]);
+            Assert.Equal(new GlyphRect(3 + gutter, 3 + gutter, 10, 12), glyph.glyphRect);
+        }
+
         [Fact]
         public void PackedGlyphsSitInsideTheirPaddedRectsWithoutOverlapping()
         {
