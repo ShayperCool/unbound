@@ -500,8 +500,14 @@ impl<'a> Preprocessor<'a> {
                     let (args, rparen, consumed_newlines) = collect_args(&mut input)
                         .ok_or_else(|| anyhow!("unterminated call of macro {name}"))?;
                     newlines += consumed_newlines;
-                    let args = fit_args(args, params.len(), m.variadic)
-                        .ok_or_else(|| anyhow!("macro {name} takes {} arguments", params.len()))?;
+                    let args = match fit_args(args.clone(), params.len(), m.variadic) {
+                        Some(args) => args,
+                        None => self
+                            .resplit_args(&args, params.len(), m.variadic)?
+                            .ok_or_else(|| {
+                                anyhow!("macro {name} takes {} arguments", params.len())
+                            })?,
+                    };
                     if !self.in_condition && args.len() == 1 {
                         if &*name == "UNITY_INSTANCING_BUFFER_START" {
                             let buffer = self.expand(args[0].clone().into())?;
@@ -709,6 +715,34 @@ fn collect_args(input: &mut VecDeque<Tok>) -> Option<(Vec<Vec<Tok>>, Tok, usize)
         args.last_mut().unwrap().push(t);
     }
     None
+}
+
+impl Preprocessor<'_> {
+    /// A call with fewer arguments than its macro's parameters, as HLSL's preprocessor (FXC,
+    /// which Unity's follows) takes it: the arguments expanded, then split again at the commas
+    /// their expansions give. com.unity.render-pipelines.core's DOTS instancing lightmaps rely on
+    /// it (`SAMPLE_TEXTURE2D_LIGHTMAP(tex, sampler, LIGHTMAP_EXTRA_ARGS_USE)`, the last argument
+    /// `uv, slice`, into the four parameters of `SAMPLE_TEXTURE2D_ARRAY`). None when that does
+    /// not give the parameters either.
+    fn resplit_args(
+        &mut self,
+        args: &[Vec<Tok>],
+        count: usize,
+        variadic: bool,
+    ) -> Result<Option<Vec<Vec<Tok>>>> {
+        if args.len() >= count {
+            return Ok(None);
+        }
+        let mut joined = VecDeque::new();
+        for (k, arg) in args.iter().enumerate() {
+            if k > 0 {
+                joined.push_back(Tok::new(Kind::Punct, ","));
+            }
+            joined.extend(self.expand(arg.clone().into())?);
+        }
+        joined.push_back(Tok::new(Kind::Punct, ")"));
+        Ok(collect_args(&mut joined).and_then(|(split, _, _)| fit_args(split, count, variadic)))
+    }
 }
 
 /// Matches a call's arguments to the parameters (variadic ones joined with commas).
@@ -1160,6 +1194,35 @@ mod tests {
             )
             .unwrap();
         assert_eq!(words(&out.text), "_In2.Load(p) _In3.Load(q) 1");
+    }
+
+    #[test]
+    fn short_calls_split_their_expanded_arguments() {
+        // URP's DOTS lightmap sampling: an object-like macro's commas become arguments.
+        let out = run(
+            concat!(
+                "#define SAMPLE_ARRAY(t, s, uv, i) t.Sample(s, float3(uv, i))\n",
+                "#define SAMPLE_LIGHTMAP SAMPLE_ARRAY\n",
+                "#define EXTRA uv, slice\n",
+                "SAMPLE_LIGHTMAP(tex, smp, EXTRA)\n"
+            ),
+            &[],
+        )
+        .unwrap();
+        let compact: String = out.text.split_whitespace().collect();
+        assert_eq!(compact, "tex.Sample(smp,float3(uv,slice))");
+        // A call that still lacks arguments, or has too many, is an error.
+        let short = run("#define F(a, b, c) a b c\n#define TWO x, y\nF(TWO)\n", &[]);
+        assert!(short.is_err());
+        let long = run("#define F(a, b) a b\nF(x, y, z)\n", &[]);
+        assert!(long.is_err());
+        // Calls that fit are taken as they are (a comma in an expansion stays one argument).
+        let out = run(
+            "#define F(a, b) [a] [b]\n#define TWO x, y\nF(TWO, z)\n",
+            &[],
+        )
+        .unwrap();
+        assert_eq!(words(&out.text), "[x, y] [z]");
     }
 
     #[test]
