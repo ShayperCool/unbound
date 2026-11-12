@@ -93,6 +93,41 @@ namespace UnityEngine.Tests
             Assert.Equal(20f, m_Backend.LastFrame.Zone.Reverb[13]);
         }
 
+        [Theory]
+        [InlineData("6000.0.71f1", true)]
+        [InlineData("2022.3.0f1", false)]
+        public void AnInitiallyUnheardReturnRetainsDefaultsUntilItsRequestsChange(string release, bool measured)
+        {
+            ProjectInfo.UnityVersion = release;
+            var zone = Zone(20f, AudioReverbPreset.User);
+            zone.roomHF = -300;
+            zone.diffusion = 72f;
+            zone.density = 65f;
+            AudioSystem.Update();
+            Assert.Equal(measured ? 0f : -10000f, m_Backend.LastFrame.Zone.Reverb[2]);
+            Assert.Equal(measured ? 100f : 0f, m_Backend.LastFrame.Zone.Reverb[9]);
+            Assert.Equal(measured ? 100f : 0f, m_Backend.LastFrame.Zone.Reverb[10]);
+
+            zone.transform.position = Vector3.zero;
+            AudioSystem.Update();
+            Assert.Equal(Blend(Vector3.zero, zone)[2], m_Backend.LastFrame.Zone.Reverb[2]);
+            Assert.Equal(72f, m_Backend.LastFrame.Zone.Reverb[9]);
+            Assert.Equal(65f, m_Backend.LastFrame.Zone.Reverb[10]);
+            zone.transform.position = new Vector3(20f, 0, 0);
+            AudioSystem.Update();
+            Assert.Equal(-10000f, m_Backend.LastFrame.Zone.Reverb[2]);
+            Assert.Equal(0f, m_Backend.LastFrame.Zone.Reverb[9]);
+            Assert.Equal(0f, m_Backend.LastFrame.Zone.Reverb[10]);
+
+            Object.DestroyImmediate(zone.gameObject);
+            AudioSystem.Update();
+            zone = Zone(20f, AudioReverbPreset.User);
+            AudioSystem.Update();
+            Assert.Equal(measured ? 0f : -10000f, m_Backend.LastFrame.Zone.Reverb[2]);
+            Assert.Equal(measured ? 100f : 0f, m_Backend.LastFrame.Zone.Reverb[9]);
+            Assert.Equal(measured ? 100f : 0f, m_Backend.LastFrame.Zone.Reverb[10]);
+        }
+
         sealed class Errors : ILogHandler
         {
             internal readonly List<string> Messages = new List<string>();

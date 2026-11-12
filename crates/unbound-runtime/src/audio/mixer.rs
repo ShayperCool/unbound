@@ -1014,6 +1014,31 @@ impl Default for MixerConfig {
     }
 }
 
+#[derive(Default)]
+struct DeferredListenerReturn {
+    bypass: bool,
+    zone: bool,
+}
+
+fn sum_listener_return(
+    mix: &mut [f32],
+    extra: &mut [f32],
+    front: &[f32],
+    lanes: &[f32],
+    n: usize,
+    pairs: usize,
+) {
+    for (sample, value) in mix[..n * 2].iter_mut().zip(&front[..n * 2]) {
+        *sample += *value;
+    }
+    for pair in 0..pairs {
+        let range = pair * BLOCK * 2..pair * BLOCK * 2 + n * 2;
+        for (sample, value) in extra[range.clone()].iter_mut().zip(&lanes[range]) {
+            *sample += *value;
+        }
+    }
+}
+
 pub struct Mixer {
     /// Accumulated startup gains, shared by all mixers using this DSP period.
     input_fade_curve: Vec<f32>,
@@ -1050,7 +1075,7 @@ pub struct Mixer {
     zone_input: Vec<f32>,
     zone_extra: Vec<f32>,
     pub(crate) surround_effects: bool,
-    /// Unrouted sources with `bypassListenerEffects`, added after `listener_chain`.
+    /// Unrouted sources with `bypassListenerEffects`, joined after the measured listener filters.
     listener_bypass: Vec<f32>,
     /// The listener scripts' block in the output layout's channel count.
     listener_layout: Vec<f32>,
@@ -1070,6 +1095,9 @@ pub struct Mixer {
     listener_output: Ring,
     callback: Option<Callback>,
     capture_listener_batch: bool,
+    /// Post-script returns for one complete offline DSP period, reserved on the control thread.
+    capture_listener_return: Vec<f32>,
+    capture_listener_return_used: bool,
     /// Nothing listens (the virtual device): voices only advance, unless their samples are
     /// asked for (filters, output data).
     pub discard_output: bool,
@@ -1219,6 +1247,12 @@ impl Mixer {
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
+            capture_listener_return: vec![
+                0.0;
+                config.buffer_size.max(1) as usize
+                    * config.output_channels()
+            ],
+            capture_listener_return_used: false,
             discard_output: false,
             listener_output_wanted: false,
             mix: vec![0.0; BLOCK * 2],
@@ -1259,6 +1293,10 @@ impl Mixer {
         if self.config.buffer_size != config.buffer_size {
             self.input_fade_curve = Self::input_fade_curve(config.buffer_size);
         }
+        self.capture_listener_return.resize(
+            config.buffer_size.max(1) as usize * config.output_channels(),
+            0.0,
+        );
         self.config = config;
         self.speakers = SpeakerLayout::of(config.output_channels());
         // Channels of the previous layout must not reach the new one.
@@ -2245,6 +2283,12 @@ impl Mixer {
     /// the listener's borrowed buffer: its scripts see, and may write, every channel.
     pub fn render_capture_block(&mut self, block: &mut [f32]) {
         let channels = self.config.output_channels();
+        assert!(
+            block.len() <= self.capture_listener_return.len(),
+            "offline block exceeds its prepared DSP period"
+        );
+        self.capture_listener_return[..block.len()].fill(0.0);
+        self.capture_listener_return_used = false;
         self.capture_listener_batch = true;
         self.render(block, channels);
         if self.listener_filter
@@ -2259,6 +2303,11 @@ impl Mixer {
                 channels as i32,
                 0,
             );
+        }
+        if self.capture_listener_return_used {
+            for (sample, value) in block.iter_mut().zip(&self.capture_listener_return) {
+                *sample += *value;
+            }
         }
         // The output ring keeps the stereo lanes; the mixing buffer is free between blocks.
         for chunk in block.chunks(BLOCK * channels) {
@@ -2276,7 +2325,7 @@ impl Mixer {
         let mut done = 0;
         while done < frames {
             let n = (frames - done).min(BLOCK);
-            self.render_block(n);
+            let deferred = self.render_block(n);
             let mono = self.config.speaker_mode == speaker_mode::MONO;
             let extra = (self.config.extra_pairs() > 0).then(|| Extra {
                 samples: &self.mix_extra,
@@ -2289,6 +2338,42 @@ impl Mixer {
                 &mut out[done * channels..(done + n) * channels],
                 mono,
             );
+            if deferred.bypass || deferred.zone {
+                self.mix[..n * 2].fill(0.0);
+                self.mix_extra.fill(0.0);
+                if deferred.bypass {
+                    sum_listener_return(
+                        &mut self.mix,
+                        &mut self.mix_extra,
+                        &self.listener_bypass,
+                        &self.listener_bypass_extra,
+                        n,
+                        self.config.extra_pairs(),
+                    );
+                }
+                if deferred.zone {
+                    sum_listener_return(
+                        &mut self.mix,
+                        &mut self.mix_extra,
+                        &self.zone_input,
+                        &self.zone_extra,
+                        n,
+                        self.config.extra_pairs(),
+                    );
+                }
+                let extra = (self.config.extra_pairs() > 0).then(|| Extra {
+                    samples: &self.mix_extra,
+                    stride: BLOCK * 2,
+                    channels: self.config.output_channels() - 2,
+                });
+                spread(
+                    &self.mix[..n * 2],
+                    extra,
+                    &mut self.capture_listener_return[done * channels..(done + n) * channels],
+                    mono,
+                );
+                self.capture_listener_return_used = true;
+            }
             done += n;
         }
     }
@@ -2303,7 +2388,7 @@ impl Mixer {
         }
     }
 
-    fn add_zone_return(&mut self, n: usize, pairs: usize) {
+    fn process_zone_return(&mut self, n: usize, pairs: usize) {
         if let Some(zone) = &mut self.zone {
             let input = &mut self.zone_input[..n * 2];
             if self.surround_effects && (pairs > 0 || self.config.output_channels() == 1) {
@@ -2319,25 +2404,25 @@ impl Mixer {
                     &mut blocks[..pairs],
                     self.config.output_channels(),
                 );
-                for pair in 0..pairs {
-                    let start = pair * BLOCK * 2;
-                    for (m, z) in self.mix_extra[start..start + n * 2]
-                        .iter_mut()
-                        .zip(&self.zone_extra[start..start + n * 2])
-                    {
-                        *m += *z;
-                    }
-                }
             } else {
                 zone.reverb.process(input);
-            }
-            for (m, z) in self.mix.iter_mut().zip(input.iter()) {
-                *m += *z;
             }
         }
     }
 
-    fn render_block(&mut self, n: usize) {
+    fn add_zone_return(&mut self, n: usize, pairs: usize) {
+        self.process_zone_return(n, pairs);
+        sum_listener_return(
+            &mut self.mix,
+            &mut self.mix_extra,
+            &self.zone_input,
+            &self.zone_extra,
+            n,
+            pairs,
+        );
+    }
+
+    fn render_block(&mut self, n: usize) -> DeferredListenerReturn {
         let t0 = self.frames;
         let out_rate = self.config.sample_rate.max(1);
         let callback = self.callback;
@@ -2418,7 +2503,11 @@ impl Mixer {
         }
 
         let listener_components = !self.listener_chain.filters.is_empty();
-        if listener_components {
+        let script_active = self.listener_filter && has_listener && callback.is_some();
+        let measured_script_route = self.surround_effects && script_active;
+        let listener_effects = listener_components || measured_script_route;
+        let mut listener_bypass_used = false;
+        if listener_effects {
             self.listener_bypass[..n * 2].fill(0.0);
         }
         let zone_on = self.zone.is_some() && need_mix;
@@ -2847,13 +2936,14 @@ impl Mixer {
                 // The managed packet selects the release's listener-bypass rule. Mixer
                 // routing joins the final mix and cannot skip the listener's shared chain.
                 let bypass_listener =
-                    listener_components && flags & source_flags::BYPASS_LISTENER_EFFECTS != 0;
+                    listener_effects && flags & source_flags::BYPASS_LISTENER_EFFECTS != 0;
                 let unrouted = if bypass_listener {
                     &mut listener_bypass[..n * 2]
                 } else {
                     &mut mix[..n * 2]
                 };
                 let mut node = group_nodes.get_mut(&source.params.group);
+                listener_bypass_used |= bypass_listener && node.is_none();
                 if let Some(lanes) = lanes.as_mut() {
                     for pair in 0..pairs {
                         let range = pair * BLOCK * 2..pair * BLOCK * 2 + n * 2;
@@ -3017,7 +3107,7 @@ impl Mixer {
             node.buffer = buffer;
             node.lanes = lanes;
         }
-        // The measured zone return joins the mix after the listener's component chain.
+        // The measured return joins after listener components and scripts (audiopitch listener-scripts).
         // Other profiles retain the previous placement until their graph is measured.
         let zone_after_listener = self.zone.as_ref().is_some_and(|zone| zone.measured_startup);
         if zone_on && !zone_after_listener {
@@ -3040,24 +3130,16 @@ impl Mixer {
                     false,
                 );
             }
-            for (m, b) in self.mix[..n * 2]
-                .iter_mut()
-                .zip(&self.listener_bypass[..n * 2])
-            {
-                *m += *b;
-            }
-            for pair in 0..pairs {
-                let range = pair * BLOCK * 2..pair * BLOCK * 2 + n * 2;
-                for (m, b) in self.mix_extra[range.clone()]
-                    .iter_mut()
-                    .zip(&self.listener_bypass_extra[range])
-                {
-                    *m += *b;
-                }
-            }
         }
-        if zone_on && zone_after_listener {
-            self.add_zone_return(n, pairs);
+        if listener_components && !measured_script_route {
+            sum_listener_return(
+                &mut self.mix,
+                &mut self.mix_extra,
+                &self.listener_bypass,
+                &self.listener_bypass_extra,
+                n,
+                pairs,
+            );
         }
         if self.listener_filter
             && !self.capture_listener_batch
@@ -3080,10 +3162,32 @@ impl Mixer {
                 &mut self.listener_layout,
             );
         }
+        let deferred = DeferredListenerReturn {
+            bypass: measured_script_route && listener_bypass_used && self.capture_listener_batch,
+            zone: zone_on && zone_after_listener && script_active && self.capture_listener_batch,
+        };
+        if measured_script_route && listener_bypass_used && !deferred.bypass {
+            sum_listener_return(
+                &mut self.mix,
+                &mut self.mix_extra,
+                &self.listener_bypass,
+                &self.listener_bypass_extra,
+                n,
+                pairs,
+            );
+        }
+        if zone_on && zone_after_listener {
+            if deferred.zone {
+                self.process_zone_return(n, pairs);
+            } else {
+                self.add_zone_return(n, pairs);
+            }
+        }
         if !self.capture_listener_batch {
             self.listener_output.push(&self.mix[..n * 2]);
         }
         self.frames += n as u64;
+        deferred
     }
 }
 
@@ -7125,6 +7229,134 @@ mod tests {
         let measured = first(true);
         assert!(legacy[0] > measured[0] + 0.01);
         assert!(measured.iter().all(|value| value.abs() < 1e-5));
+    }
+
+    #[test]
+    fn listener_scripts_preserve_independent_zone_and_bypass_returns_in_both_render_paths() {
+        use std::cell::Cell;
+        thread_local! {
+            static GAIN: Cell<f32> = const { Cell::new(1.0) };
+            static CALLS: Cell<usize> = const { Cell::new(0) };
+        }
+        extern "C" fn script(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind == callback::LISTENER_FILTER {
+                CALLS.with(|v| v.set(v.get() + 1));
+                let gain = GAIN.with(Cell::get);
+                for value in
+                    unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) }
+                {
+                    *value *= gain;
+                }
+            }
+        }
+        for period in [97_usize, 1024] {
+            for mode in [
+                speaker_mode::MONO,
+                speaker_mode::STEREO,
+                speaker_mode::SURROUND,
+                speaker_mode::MODE_7POINT1,
+            ] {
+                for capture in [false, true] {
+                    let render = |gain, zone_on, bypass, routed, measured| {
+                        GAIN.with(|v| v.set(gain));
+                        CALLS.with(|v| v.set(0));
+                        let config = MixerConfig {
+                            buffer_size: period as u32,
+                            speaker_mode: mode,
+                            ..Default::default()
+                        };
+                        let channels = config.output_channels();
+                        let frames = 8192_usize.div_ceil(period) * period;
+                        let mut m = Mixer::new(config);
+                        m.surround_effects = measured;
+                        m.listener_filter = true;
+                        m.set_callback(Some(script));
+                        if zone_on {
+                            let mut zone = component(1, filter_kind::REVERB, 0);
+                            zone.reverb = [
+                                -10000.0, -1000.0, -99.0, 1.49, 0.83, -2601.0, 0.007, 200.0, 0.011,
+                                100.0, 100.0, 5000.0, 0.0, 250.0,
+                            ];
+                            m.update_zone(&zone, true);
+                        }
+                        if routed {
+                            let mut group = filter_group(3, 0, "Attenuation");
+                            group.mixer = 3;
+                            group.effects[0].gain = 1.0;
+                            m.configure_group(group).unwrap();
+                        }
+                        m.add_clip(1, Clip::new(1, 48000, vec![0.125; frames + period]));
+                        source_with(&mut m, 7, 1, |p| {
+                            if bypass {
+                                p.flags |= source_flags::BYPASS_LISTENER_EFFECTS;
+                            }
+                            if routed {
+                                p.group = 3;
+                            }
+                        });
+                        play(&mut m, 7, command::PLAY, 0.0);
+                        m.update_suspension();
+                        let mut output = vec![0.0; frames * channels];
+                        for (index, block) in output.chunks_mut(period * channels).enumerate() {
+                            // First activation is warm before measuring the steady audio path.
+                            if index > 0 {
+                                crate::audio::tests::allocations::start();
+                            }
+                            if capture {
+                                m.render_capture_block(block);
+                            } else {
+                                m.render(block, channels);
+                            }
+                            if index > 0 {
+                                let allocations = crate::audio::tests::allocations::finish();
+                                assert_eq!(allocations, 0, "post-listener render allocated");
+                            }
+                        }
+                        let per_block = if capture { 1 } else { period.div_ceil(BLOCK) };
+                        assert_eq!(CALLS.with(Cell::get), frames / period * per_block);
+                        output
+                    };
+                    let zero = render(0.0, true, false, false, true);
+                    let one = render(1.0, true, false, false, true);
+                    let two = render(2.0, true, false, false, true);
+                    assert!(
+                        zero.iter().any(|v| v.abs() > 1e-6),
+                        "zone return was silenced by the script"
+                    );
+                    for ((zero, one), two) in zero.iter().zip(&one).zip(&two) {
+                        assert!((zero + two - 2.0 * one).abs() < 1e-6);
+                    }
+                    assert!(
+                        render(0.0, false, false, false, true)
+                            .iter()
+                            .all(|v| *v == 0.0)
+                    );
+                    assert!(
+                        render(0.0, false, true, false, true)
+                            .iter()
+                            .any(|v| v.abs() > 0.01)
+                    );
+                    assert!(
+                        render(0.0, false, true, true, true)
+                            .iter()
+                            .all(|v| *v == 0.0)
+                    );
+                    // Other compatibility contexts retain their previous component-only route.
+                    assert!(
+                        render(0.0, false, true, false, false)
+                            .iter()
+                            .all(|v| *v == 0.0)
+                    );
+                }
+            }
+        }
     }
 
     #[test]
