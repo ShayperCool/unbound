@@ -101,6 +101,26 @@ public static class RealtimeGISetup
         }
     }
 
+    /// <summary>Adds the <c>RoomTurned</c> scene alone: the room and shapes with Preserve UVs
+    /// off that are turned, or whose limits or parts decide their charts.</summary>
+    public static void CreateTurned()
+    {
+        try
+        {
+            CreateRoom("RoomTurned", LightmapsMode.NonDirectional, 1f, 1f, turned: true);
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            scenes.Add(new EditorBuildSettingsScene($"{Scenes}/RoomTurned.unity", true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     /// <summary>Adds the <c>RoomCharts</c> scene alone: the room with the chart panels.</summary>
     public static void CreateCharts()
     {
@@ -390,7 +410,35 @@ public static class RealtimeGISetup
         };
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false)
+    /// <summary>A mesh of the given vertices (one normal and lightmap UV each) and
+    /// triangles.</summary>
+    static Renderer Custom(string scene, string name, Vector3 position, Vector3 euler, Vector3 scale, Material material,
+        List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs, List<int> triangles)
+    {
+        var mesh = new Mesh { name = name };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        mesh.SetUVs(1, uvs);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        AssetDatabase.CreateAsset(mesh, $"{Scenes}/{scene}{name}.asset");
+        return Shape(name, mesh, position, euler, scale, material);
+    }
+
+    /// <summary>Adds a quad of its own four vertices to the lists: corners in order, one
+    /// normal, its lightmap UVs the rectangle <paramref name="cell"/>.</summary>
+    static void AddQuad(List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs, List<int> triangles,
+        Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal, Rect cell)
+    {
+        var first = vertices.Count;
+        vertices.AddRange(new[] { a, b, c, d });
+        normals.AddRange(new[] { normal, normal, normal, normal });
+        uvs.AddRange(new[] { new Vector2(cell.xMin, cell.yMin), new Vector2(cell.xMax, cell.yMin), new Vector2(cell.xMax, cell.yMax), new Vector2(cell.xMin, cell.yMax) });
+        triangles.AddRange(new[] { first, first + 1, first + 2, first, first + 2, first + 3 });
+    }
+
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -488,6 +536,121 @@ public static class RealtimeGISetup
                 so.FindProperty("m_PreserveUVs").boolValue = false;
                 if (angles.TryGetValue(r.name, out var angle)) so.FindProperty("m_AutoUVMaxAngle").floatValue = angle;
                 if (distances.TryGetValue(r.name, out var distance)) so.FindProperty("m_AutoUVMaxDistance").floatValue = distance;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        if (turned)
+        {
+            var limits = new Dictionary<string, (float distance, float angle, bool ignoreNormals)>();
+            Renderer Turn(Renderer r, Vector3 euler)
+            {
+                r.transform.rotation = Quaternion.Euler(euler);
+                return r;
+            }
+            // Turned: a slab, a box turned about all three axes, the wedge, and a box under a
+            // turned, scaled parent.
+            lit.Add(Turn(Static(PrimitiveType.Cube, "SlabTurned", new Vector3(-1.8f, 0.3f, -2.2f), new Vector3(1.3f, 0.2f, 0.9f), white), new Vector3(0f, 30f, 0f)));
+            lit.Add(Turn(Static(PrimitiveType.Cube, "BoxTurned", new Vector3(2.2f, 0.6f, -2f), new Vector3(0.7f, 0.5f, 0.6f), white), new Vector3(20f, 40f, 10f)));
+            var wedge = new[] { new Vector2(0f, 0f), new Vector2(1.2f, 0f), new Vector2(0f, 0.9f) };
+            var wedgeTurned = Solid(name, "WedgeTurned", new Vector3(-2.4f, 0.01f, 0.6f), new Vector3(0f, 30f, 0f), white, new Vector3(0.4f, 0.3f, 0.4f), false, Prism(wedge, 0.8f));
+            wedgeTurned.transform.localScale = new Vector3(0.5f, 0.4f, 0.45f);
+            lit.Add(wedgeTurned);
+            var pivot = new GameObject("Pivot");
+            pivot.transform.position = new Vector3(1.8f, 2.6f, 1.8f);
+            pivot.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
+            pivot.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+            var child = Static(PrimitiveType.Cube, "Child", Vector3.zero, new Vector3(0.5f, 0.3f, 0.4f), white);
+            child.transform.SetParent(pivot.transform, false);
+            child.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
+            lit.Add(child);
+            // One mesh and scale turned and not, the rotation taken out exactly: one geometry.
+            lit.Add(Turn(Static(PrimitiveType.Cube, "SharedTurned", new Vector3(2.5f, 3.5f, -2.5f), new Vector3(0.35f, 0.35f, 0.35f), white), new Vector3(0f, 25f, 0f)));
+            lit.Add(Static(PrimitiveType.Cube, "SharedFlat", new Vector3(1.9f, 3.5f, -2.5f), new Vector3(0.35f, 0.35f, 0.35f), white));
+            // Max Distance alone: the sides of a roof 20 degrees from level, 0.7 m wide, are
+            // 0.12 m at their eaves from the plane through both and their bounds meet.
+            lit.Add(Solid(name, "RoofDistance", new Vector3(-1.2f, 2.6f, -1.6f), Vector3.zero, white, new Vector3(0f, -1f, 0.65f), false, Roof(20f, 0.7f, 1.3f)));
+            limits["RoofDistance"] = (0.1f, 89f, false);
+            // Ignore Normals: a floor and a wall at a right angle that share their edge's
+            // positions and UVs, not its normals, and a loose quad beside them.
+            for (var i = 0; i < 2; i++)
+            {
+                List<Vector3> v = new(), n = new();
+                List<Vector2> uv = new();
+                List<int> t = new();
+                // The two unfolded side by side in UV: the edge's corners at the same UVs.
+                AddQuad(v, n, uv, t, new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, 1f), new Vector3(1f, 0f, 1f), new Vector3(1f, 0f, 0f), Vector3.up, new Rect(0.5f, 0.1f, 0.4f, 0.4f));
+                uv.RemoveRange(0, 4);
+                uv.AddRange(new[] { new Vector2(0.5f, 0.1f), new Vector2(0.5f, 0.5f), new Vector2(0.9f, 0.5f), new Vector2(0.9f, 0.1f) });
+                AddQuad(v, n, uv, t, new Vector3(0f, 1f, 0f), new Vector3(0f, 1f, 1f), new Vector3(0f, 0f, 1f), new Vector3(0f, 0f, 0f), Vector3.right, new Rect(0.1f, 0.1f, 0.4f, 0.4f));
+                uv.RemoveRange(4, 4);
+                uv.AddRange(new[] { new Vector2(0.1f, 0.1f), new Vector2(0.1f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.1f) });
+                AddQuad(v, n, uv, t, new Vector3(2f, 0f, 0f), new Vector3(2f, 0f, 0.5f), new Vector3(2.5f, 0f, 0.5f), new Vector3(2.5f, 0f, 0f), Vector3.up, new Rect(0.1f, 0.6f, 0.3f, 0.3f));
+                var fold = i == 0 ? "FoldKept" : "FoldIgnored";
+                lit.Add(Custom(name, fold, new Vector3(-2.7f, 2.9f + 0.6f * i, 1.2f), Vector3.zero, Vector3.one, white, v, n, uv, t));
+                limits[fold] = (0.5f, 89f, i == 1);
+            }
+            // A Max Distance of zero: the step's section again, a chart a face.
+            var section = new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0.3f), new Vector2(0.4f, 0.3f), new Vector2(0.4f, 0.7f), new Vector2(0f, 0.7f) };
+            lit.Add(Solid(name, "StepNoDistance", new Vector3(1.7f, 0.01f, -2.4f), Vector3.zero, white, new Vector3(0.2f, 0.15f, 0.45f), false, Prism(section, 0.9f)));
+            limits["StepNoDistance"] = (0f, 89f, false);
+            // A box with a triangle of no area of its own a metre away: three points on a line,
+            // and three at one point.
+            for (var i = 0; i < 2; i++)
+            {
+                List<Vector3> v = new(), n = new();
+                List<Vector2> uv = new();
+                List<int> t = new();
+                var cells = 0;
+                Rect Cell() { var c = new Rect(0.05f + 0.15f * (cells % 6), 0.05f + 0.5f * (cells / 6), 0.12f, 0.4f); cells++; return c; }
+                for (var axis = 0; axis < 3; axis++)
+                    foreach (var side in new[] { -1f, 1f })
+                    {
+                        var normal = Vector3.zero;
+                        normal[axis] = side;
+                        Vector3 u = Vector3.zero, w = Vector3.zero;
+                        u[(axis + 1) % 3] = 0.3f;
+                        w[(axis + 2) % 3] = 0.3f;
+                        var centre = normal * 0.3f;
+                        if (side > 0)
+                            AddQuad(v, n, uv, t, centre - u - w, centre + u - w, centre + u + w, centre - u + w, normal, Cell());
+                        else
+                            AddQuad(v, n, uv, t, centre - u - w, centre - u + w, centre + u + w, centre + u - w, normal, Cell());
+                    }
+                var first = v.Count;
+                var at = new Vector3(1.3f, 0f, 0f);
+                v.AddRange(i == 0 ? new[] { at, at + new Vector3(0f, 0.2f, 0f), at + new Vector3(0f, 0.4f, 0f) } : new[] { at, at, at });
+                n.AddRange(new[] { Vector3.forward, Vector3.forward, Vector3.forward });
+                uv.AddRange(new[] { new Vector2(0.95f, 0.9f), new Vector2(0.95f, 0.92f), new Vector2(0.95f, 0.94f) });
+                t.AddRange(new[] { first, first + 1, first + 2 });
+                lit.Add(Custom(name, i == 0 ? "BoxSliver" : "BoxPoint", new Vector3(-0.4f + 1.4f * i, 3.2f, 0.4f), Vector3.zero, Vector3.one, white, v, n, uv, t));
+            }
+            // More flat parts than rounds: 11 x 10 loose quads in one plane, apart by more than
+            // their limit's reach.
+            {
+                List<Vector3> v = new(), n = new();
+                List<Vector2> uv = new();
+                List<int> t = new();
+                for (var row = 0; row < 10; row++)
+                    for (var column = 0; column < 11; column++)
+                    {
+                        var corner = new Vector3(0.25f * column, 0.25f * row, 0f);
+                        AddQuad(v, n, uv, t, corner, corner + new Vector3(0f, 0.1f, 0f), corner + new Vector3(0.1f, 0.1f, 0f), corner + new Vector3(0.1f, 0f, 0f), Vector3.back,
+                            new Rect((column + 0.1f) / 11f, (row + 0.1f) / 10f, 0.8f / 11f, 0.8f / 10f));
+                    }
+                lit.Add(Custom(name, "Many", new Vector3(-1.4f, 0.6f, 2.95f), Vector3.zero, Vector3.one, white, v, n, uv, t));
+                limits["Many"] = (0.1f, 89f, false);
+            }
+            foreach (var r in lit)
+            {
+                var so = new SerializedObject(r);
+                so.FindProperty("m_PreserveUVs").boolValue = false;
+                if (limits.TryGetValue(r.name, out var limit))
+                {
+                    so.FindProperty("m_AutoUVMaxDistance").floatValue = limit.distance;
+                    so.FindProperty("m_AutoUVMaxAngle").floatValue = limit.angle;
+                    so.FindProperty("m_IgnoreNormalsForChartDetection").boolValue = limit.ignoreNormals;
+                }
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
         }

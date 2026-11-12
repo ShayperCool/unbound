@@ -551,6 +551,19 @@ public class RealtimeGIProbe : MonoBehaviour
         s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
         yield return Converge();
         Capture("roomauto-moved", s);
+
+        // The room and turned shapes (a slab, a box turned about all three axes, a wedge, a
+        // box under a turned parent, a cube shared by a turned and an unturned renderer), and
+        // shapes whose limits or parts decide their charts (Max Distance 0.1 and 0, Ignore
+        // Normals, parts without area, more parts than rounds), every renderer with Preserve
+        // UVs off: as it loads and with the point light moved.
+        yield return Load("RoomTurned");
+        s = Scene();
+        yield return Converge();
+        Capture("roomturned-base", s);
+        s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+        yield return Converge();
+        Capture("roomturned-moved", s);
         Finish();
     }
 
