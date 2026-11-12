@@ -72,7 +72,7 @@ use std::ffi::c_void;
 /// 62: allocation-free HDR block pixel reads.
 /// 63: `font_render_glyph` loads TextCore glyphs with FreeType load flags and render modes, in
 /// whole pixel sizes, and reports `TextCoreGlyphInfo`.
-/// 64: allocation-free individual HDR ASTC/EAC texels and ASTC texture packets.
+/// 64: allocation-free individual compressed texels and ASTC texture packets.
 pub const NATIVE_API_VERSION: u32 = 64;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
@@ -327,7 +327,7 @@ pub struct NativeApi {
     /// for the marker's events (`EmitEvent` without data).
     pub plugin_marker_event: extern "C" fn(*const c_void, u16),
     /// (TextureFormat, one block, texel index, out four RGBA floats): 1 on success; 0 for
-    /// another format, an invalid index or null buffers. Supports HDR ASTC and unsigned EAC.
+    /// another format, an invalid index or null buffers. Accepts BC, ETC, unsigned EAC and ASTC.
     pub decode_block_texel: extern "C" fn(i32, *const u8, u32, *mut f32) -> i32,
 }
 
@@ -402,9 +402,7 @@ extern "C" fn decode_block_texel(
     if block.is_null() || output.is_null() {
         return 0;
     }
-    let Some(format) = unbound_assets::texture::BlockFormat::from_unity_format(format)
-        .filter(|f| f.is_astc_hdr() || f.is_eac())
-    else {
+    let Some(format) = unbound_assets::texture::BlockFormat::from_unity_format(format) else {
         return 0;
     };
     std::panic::catch_unwind(|| {

@@ -82,7 +82,7 @@ namespace UnityEngine
                 throw new UnityException("Texture2D.GetPixel of Crunch archives is unmeasured for this release.");
             }
             // While views of a compressed texture's blocks exist, a texel is read from its block.
-            if (SourceBlocks && m_Store != null) return BlockTexel(mip, i);
+            if (SourceBlocks && (m_Store != null || m_BlockCellsDirty)) return BlockTexel(mip, i);
             return m_Hdr != null ? FloatCell(mip, i) : Texture2DTexels.Pixel(m_Format, Cell(mip, i));
         }
         void Write(int i, Color c) => Write(0, i, c);

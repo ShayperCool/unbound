@@ -86,14 +86,15 @@ public class TextureCompressionProbe : MonoBehaviour
 
     /// <summary>What the GPU samples at every texel centre of level 0: a blit into a float
     /// target read back as little-endian floats.</summary>
-    static string Gpu(Texture2D t)
+    static string Gpu(Texture2D t, int mip = 0)
     {
-        var rt = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        int width = Math.Max(1, t.width >> mip), height = Math.Max(1, t.height >> mip);
+        var rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         var previous = RenderTexture.active;
         Graphics.Blit(t, rt);
         RenderTexture.active = rt;
-        var read = new Texture2D(t.width, t.height, TextureFormat.RGBAFloat, false, true);
-        read.ReadPixels(new Rect(0, 0, t.width, t.height), 0, 0, false);
+        var read = new Texture2D(width, height, TextureFormat.RGBAFloat, false, true);
+        read.ReadPixels(new Rect(0, 0, width, height), 0, 0, false);
         RenderTexture.active = previous;
         RenderTexture.ReleaseTemporary(rt);
         var colors = read.GetPixels();
@@ -474,6 +475,7 @@ public class TextureCompressionProbe : MonoBehaviour
         AdditionalCrunchReads();
         AdditionalEacReads();
         AdditionalEacValues();
+        AdditionalCommandMipCopies();
     }
 
     void AdditionalCompressControls()
@@ -737,6 +739,50 @@ public class TextureCompressionProbe : MonoBehaviour
             }
             finally { Destroy(t); }
         });
+    }
+
+    void AdditionalCommandMipCopies()
+    {
+        foreach (var format in new[] { TextureFormat.ASTC_6x6, TextureFormat.DXT1 })
+        {
+            string key = "copy.command.mip." + format;
+            Section(key, () => {
+                var src = new Texture2D(12, 12, format, true, true);
+                var dst = new Texture2D(12, 12, format, true, true);
+                byte[] Solid(Texture2D t, bool red)
+                {
+                    if (format == TextureFormat.ASTC_6x6)
+                        return AstcSolid(t, red ? new Color32(255, 0, 0, 255) : new Color32(0, 0, 255, 255));
+                    var raw = new byte[t.GetRawTextureData().Length];
+                    for (int at = 0; at < raw.Length; at += 8)
+                    {
+                        raw[at] = red ? (byte)0 : (byte)31;
+                        raw[at + 1] = red ? (byte)248 : (byte)0;
+                    }
+                    return raw;
+                }
+                try
+                {
+                    src.filterMode = dst.filterMode = FilterMode.Point;
+                    Run(key + ".setup", () => {
+                        src.LoadRawTextureData(Solid(src, true)); src.Apply(false);
+                        dst.LoadRawTextureData(Solid(dst, false)); dst.Apply(false);
+                    });
+                    Add(key + ".source.raw", Bytes(src.GetRawTextureData()));
+                    Add(key + ".source.gpu2", Gpu(src, 2));
+                    Add(key + ".before.raw", Bytes(dst.GetRawTextureData()));
+                    Add(key + ".before.gpu2", Gpu(dst, 2));
+                    Run(key, () => {
+                        var commands = new UnityEngine.Rendering.CommandBuffer();
+                        try { commands.CopyTexture(src, 0, 2, dst, 0, 2); Graphics.ExecuteCommandBuffer(commands); }
+                        finally { commands.Release(); }
+                    });
+                    Add(key + ".after.gpu2", Gpu(dst, 2));
+                    Add(key + ".after.raw", Bytes(dst.GetRawTextureData()));
+                }
+                finally { Destroy(src); Destroy(dst); }
+            });
+        }
     }
 
 }

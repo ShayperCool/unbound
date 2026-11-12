@@ -68,6 +68,46 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(texture); }
         }
 
+        [Fact]
+        public void RetainedBlockCopiesChangeCpuDataWithoutAllocatingPerExecution()
+        {
+            var source = SerializedDxt1(true);
+            var destination = SerializedDxt1(true);
+            try
+            {
+                var view = destination.GetPixelData<byte>(0);
+                view[0] = 31;
+                view[1] = 0;
+                Assert.Equal(Color.blue, destination.GetPixel(0, 0));
+                Assert.True(Texture2D.CopyBlockData(source, 0, destination, 0));
+                Assert.Equal(Color.white, destination.GetPixel(0, 0));
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 128; i++)
+                {
+                    Texture2D.CopyBlockData(source, 0, destination, 0);
+                    _ = destination.GetPixel(0, 0);
+                }
+                Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+                Assert.Equal(source.GetRawTextureData(), destination.GetRawTextureData());
+            }
+            finally { Object.DestroyImmediate(source); Object.DestroyImmediate(destination); }
+        }
+
+        [Fact]
+        public void BlockCopyRegionsUseTheirFootprintBeforeDeviceFallback()
+        {
+            var source = new Texture2D(12, 12, TextureFormat.ASTC_5x5, false, true);
+            var destination = new Texture2D(12, 12, TextureFormat.ASTC_5x5, false, true);
+            try
+            {
+                Assert.True(Texture2D.ValidateBlockCopy(source, 0, 0, 0, -1, -1, destination, 0, 0, 0));
+                Assert.True(Texture2D.ValidateBlockCopy(source, 0, 5, 0, 5, 5, destination, 0, 0, 5));
+                Assert.False(Texture2D.ValidateBlockCopy(source, 0, 4, 0, 4, 4, destination, 0, 0, 4));
+                Assert.False(Texture2D.ValidateBlockCopy(source, 1, 0, 0, -1, -1, destination, 0, 0, 0));
+            }
+            finally { Object.DestroyImmediate(source); Object.DestroyImmediate(destination); }
+        }
+
         [Theory]
         [InlineData(12, 8, 1, true)]
         [InlineData(12, 8, 4, false)]

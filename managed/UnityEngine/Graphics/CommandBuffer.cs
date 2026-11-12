@@ -592,7 +592,15 @@ namespace UnityEngine.Rendering
         public void CopyTexture(RenderTargetIdentifier src, int srcElement, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight,
             RenderTargetIdentifier dst, int dstElement, int dstMip, int dstX, int dstY) => Add(c =>
         {
-            ulong source = HandleOf(src, c), destination = HandleOf(dst, c);
+            var sourceTexture = Resolve(src, c);
+            var destinationTexture = Resolve(dst, c);
+            if (sourceTexture is Texture2D source2D && destinationTexture is Texture2D destination2D)
+            {
+                if (!Texture2D.ValidateBlockCopy(source2D, srcMip, srcX, srcY, srcWidth, srcHeight, destination2D, dstMip, dstX, dstY)) return;
+                if (srcWidth < 0 && srcElement == 0 && dstElement == 0)
+                    Texture2D.CopyBlockData(source2D, srcMip, destination2D, dstMip);
+            }
+            ulong source = TextureHandles.Of(sourceTexture), destination = TextureHandles.Of(destinationTexture);
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
         });
 

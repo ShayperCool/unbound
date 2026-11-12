@@ -204,7 +204,7 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<void*, ushort, void> PluginMarkerEvent;
         /// <summary>
         /// (TextureFormat, one block, texel index, out four RGBA floats): 1 on success; 0 for
-        /// another format, an invalid index or null buffers. Supports HDR ASTC and unsigned EAC.
+        /// another format, an invalid index or null buffers. Accepts BC, ETC, unsigned EAC and ASTC.
         /// </summary>
         internal delegate* unmanaged<int, byte*, uint, float*, int> DecodeBlockTexel;
     }

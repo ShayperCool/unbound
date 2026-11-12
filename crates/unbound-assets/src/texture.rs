@@ -2545,7 +2545,7 @@ mod astc;
 mod bcn;
 pub mod crunch;
 pub mod etc;
-/// One HDR ASTC or unsigned EAC texel, with caller-owned input and no per-read allocation.
+/// One compressed texel, with caller-owned input and no per-read allocation.
 pub fn decode_block_texel(format: BlockFormat, block: &[u8], index: usize) -> Option<[f32; 4]> {
     if block.len() < format.block_bytes()
         || index >= (format.footprint() * format.footprint()) as usize
@@ -2567,7 +2567,23 @@ pub fn decode_block_texel(format: BlockFormat, block: &[u8], index: usize) -> Op
             return Some(texels[index * 4..index * 4 + 4].try_into().unwrap());
         }
     }
-    None
+    if format.is_astc() {
+        let mut texels = [0u8; 12 * 12 * 4];
+        let count = (format.footprint() * format.footprint() * 4) as usize;
+        if !astc::decode_byte_block(
+            format,
+            block[..16].try_into().unwrap(),
+            &mut texels[..count],
+        ) {
+            return None;
+        }
+        return Some(std::array::from_fn(|c| {
+            f32::from(texels[index * 4 + c]) / 255.0
+        }));
+    }
+    let mut texels = [[0; 4]; 16];
+    bcn::decode_block_into(format, block, false, &mut texels);
+    Some(texels[index].map(|v| f32::from(v) / 255.0))
 }
 pub use astc::{decode_f32 as decode_blocks_f32, decode_hdr_block};
 pub use bcn::{

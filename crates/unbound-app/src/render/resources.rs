@@ -991,6 +991,31 @@ pub fn can_upload_blocks(code: i32, width: i32, height: i32, features: wgpu::Fea
     })
 }
 
+/// A whole compressed mip copies its physical blocks, including a partial edge. Regions
+/// keep their requested extent and must align both origins and dimensions to the footprint.
+pub fn copy_extent(
+    format: wgpu::TextureFormat,
+    whole_mip: bool,
+    source: [u32; 2],
+    destination: [u32; 2],
+    size: [u32; 2],
+) -> Option<wgpu::Extent3d> {
+    let (bw, bh) = format.block_dimensions();
+    if source[0] % bw != 0
+        || destination[0] % bw != 0
+        || source[1] % bh != 0
+        || destination[1] % bh != 0
+        || (!whole_mip && (size[0] % bw != 0 || size[1] % bh != 0))
+    {
+        return None;
+    }
+    Some(wgpu::Extent3d {
+        width: size[0].div_ceil(bw) * bw,
+        height: size[1].div_ceil(bh) * bh,
+        depth_or_array_layers: 1,
+    })
+}
+
 /// Logs a texture's format fallback, once per code and reason.
 fn report_fallback(code: i32, fallback: &FormatFallback) {
     static REPORTED: Mutex<BTreeSet<(i32, String)>> = Mutex::new(BTreeSet::new());
@@ -1873,6 +1898,39 @@ mod tests {
             ));
             assert!(!can_upload_blocks(code, 0, bh as i32, feature));
         }
+    }
+
+    #[test]
+    fn compressed_copy_extents_distinguish_whole_mips_from_regions() {
+        for code in texture_format::ASTC_COLOR_FIRST..=texture_format::ASTC_LAST {
+            let format = block_format(code).unwrap();
+            let (bw, bh) = format.block_dimensions();
+            let small = copy_extent(format, true, [0, 0], [0, 0], [3, 2]).unwrap();
+            assert_eq!((small.width, small.height), (bw, bh));
+            assert!(copy_extent(format, false, [0, 0], [0, 0], [3, 2]).is_none());
+            let region = copy_extent(format, false, [bw, bh], [0, 0], [bw * 2, bh]).unwrap();
+            assert_eq!((region.width, region.height), (bw * 2, bh));
+            assert!(copy_extent(format, false, [bw - 1, bh], [0, 0], [bw, bh]).is_none());
+            assert!(copy_extent(format, false, [0, 0], [1, 0], [bw, bh]).is_none());
+        }
+        let bc = copy_extent(
+            wgpu::TextureFormat::Bc1RgbaUnorm,
+            true,
+            [0, 0],
+            [0, 0],
+            [1, 1],
+        )
+        .unwrap();
+        assert_eq!((bc.width, bc.height), (4, 4));
+        let rgba = copy_extent(
+            wgpu::TextureFormat::Rgba8Unorm,
+            false,
+            [1, 2],
+            [3, 4],
+            [3, 2],
+        )
+        .unwrap();
+        assert_eq!((rgba.width, rgba.height), (3, 2));
     }
 
     #[test]

@@ -107,6 +107,7 @@ namespace UnityEngine
             m_SourceRaw = null;
             ResetCrunch();
             m_BlockCellHashes = null;
+            m_BlockCellsDirty = false;
             m_AssetGuid = null;
             if (BlockFormats.BlockBytes(format) > 0)
             {
@@ -800,6 +801,7 @@ namespace UnityEngine
             m_SourceFormat = null;
             m_SourceMips = 0;
             m_BlockCellHashes = null;
+            m_BlockCellsDirty = false;
             m_PixelsDirty = false;
             m_AssetGuid = m_ImportedFrom;
             m_NativeHandle = handle;
@@ -823,6 +825,7 @@ namespace UnityEngine
             m_SourceMips = body.Int("m_SourceMipCount", body.Int("m_MipCount", 1));
             string encoded = body.Str("m_SourceTextureData");
             ResetCrunch();
+            m_BlockCellsDirty = false;
             m_SourceRaw = encoded.Length > 0 ? Convert.FromHexString(encoded) : null;
             m_IsReadable = body.Bool("m_IsReadable");
             // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).

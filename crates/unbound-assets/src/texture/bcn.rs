@@ -630,61 +630,7 @@ fn decode(format: BlockFormat, blocks: &[u8], width: u32, height: u32, gpu: bool
     let mut texels = [[0u8, 0, 0, 255]; 16];
     for (i, block) in blocks.chunks_exact(size).enumerate() {
         let (bx, by) = (i % bw, i / bw);
-        match format {
-            BlockFormat::Astc4x4
-            | BlockFormat::Astc5x5
-            | BlockFormat::Astc6x6
-            | BlockFormat::Astc8x8
-            | BlockFormat::Astc10x10
-            | BlockFormat::Astc12x12
-            | BlockFormat::AstcHdr4x4
-            | BlockFormat::AstcHdr5x5
-            | BlockFormat::AstcHdr6x6
-            | BlockFormat::AstcHdr8x8
-            | BlockFormat::AstcHdr10x10
-            | BlockFormat::AstcHdr12x12 => unreachable!(),
-            BlockFormat::Bc1 => decode_colour(block, &mut texels, false),
-            BlockFormat::Bc3 => {
-                decode_colour(&block[8..], &mut texels, gpu);
-                decode_steps(&block[..8], &mut texels, 3);
-            }
-            BlockFormat::Bc4 => {
-                texels = [[0, 0, 0, 255]; 16];
-                decode_steps(block, &mut texels, 0);
-            }
-            BlockFormat::EacR | BlockFormat::EacRg => {
-                for (index, texel) in texels.iter_mut().enumerate() {
-                    *texel = super::etc::decode_eac_texel(format, block, index);
-                }
-            }
-            BlockFormat::Bc5 => {
-                texels = [[0, 0, 0, 255]; 16];
-                decode_steps(&block[..8], &mut texels, 0);
-                decode_steps(&block[8..], &mut texels, 1);
-            }
-            BlockFormat::Bc7
-            | BlockFormat::Bc6h
-            | BlockFormat::Etc1
-            | BlockFormat::Etc2Rgb
-            | BlockFormat::Etc2Rgba8 => {
-                let mut image = [0u32; 16];
-                match format {
-                    BlockFormat::Bc7 => texture2ddecoder::decode_bc7_block(block, &mut image),
-                    BlockFormat::Bc6h => {
-                        texture2ddecoder::decode_bc6_block(block, &mut image, false)
-                    }
-                    // ETC1 blocks are ETC2 blocks without the overflowing modes.
-                    BlockFormat::Etc1 | BlockFormat::Etc2Rgb => {
-                        texture2ddecoder::decode_etc2_rgb_block(block, &mut image)
-                    }
-                    _ => texture2ddecoder::decode_etc2_rgba8_block(block, &mut image),
-                }
-                for (t, p) in texels.iter_mut().zip(image) {
-                    let [b, g, r, a] = p.to_le_bytes();
-                    *t = [r, g, b, a];
-                }
-            }
-        }
+        decode_block_into(format, block, gpu, &mut texels);
         for (t, texel) in texels.iter().enumerate() {
             let (x, y) = (bx * 4 + t % 4, by * 4 + t / 4);
             if x < w && y < h {
@@ -693,6 +639,68 @@ fn decode(format: BlockFormat, blocks: &[u8], width: u32, height: u32, gpu: bool
         }
     }
     out
+}
+
+/// Decodes one ordinary 4x4 block into caller-owned storage.
+pub(super) fn decode_block_into(
+    format: BlockFormat,
+    block: &[u8],
+    gpu: bool,
+    texels: &mut [[u8; 4]; 16],
+) {
+    match format {
+        BlockFormat::Astc4x4
+        | BlockFormat::Astc5x5
+        | BlockFormat::Astc6x6
+        | BlockFormat::Astc8x8
+        | BlockFormat::Astc10x10
+        | BlockFormat::Astc12x12
+        | BlockFormat::AstcHdr4x4
+        | BlockFormat::AstcHdr5x5
+        | BlockFormat::AstcHdr6x6
+        | BlockFormat::AstcHdr8x8
+        | BlockFormat::AstcHdr10x10
+        | BlockFormat::AstcHdr12x12 => unreachable!(),
+        BlockFormat::Bc1 => decode_colour(block, texels, false),
+        BlockFormat::Bc3 => {
+            decode_colour(&block[8..], texels, gpu);
+            decode_steps(&block[..8], texels, 3);
+        }
+        BlockFormat::Bc4 => {
+            *texels = [[0, 0, 0, 255]; 16];
+            decode_steps(block, texels, 0);
+        }
+        BlockFormat::EacR | BlockFormat::EacRg => {
+            for (index, texel) in texels.iter_mut().enumerate() {
+                *texel = super::etc::decode_eac_texel(format, block, index);
+            }
+        }
+        BlockFormat::Bc5 => {
+            *texels = [[0, 0, 0, 255]; 16];
+            decode_steps(&block[..8], texels, 0);
+            decode_steps(&block[8..], texels, 1);
+        }
+        BlockFormat::Bc7
+        | BlockFormat::Bc6h
+        | BlockFormat::Etc1
+        | BlockFormat::Etc2Rgb
+        | BlockFormat::Etc2Rgba8 => {
+            let mut image = [0u32; 16];
+            match format {
+                BlockFormat::Bc7 => texture2ddecoder::decode_bc7_block(block, &mut image),
+                BlockFormat::Bc6h => texture2ddecoder::decode_bc6_block(block, &mut image, false),
+                // ETC1 blocks are ETC2 blocks without the overflowing modes.
+                BlockFormat::Etc1 | BlockFormat::Etc2Rgb => {
+                    texture2ddecoder::decode_etc2_rgb_block(block, &mut image)
+                }
+                _ => texture2ddecoder::decode_etc2_rgba8_block(block, &mut image),
+            }
+            for (t, p) in texels.iter_mut().zip(image) {
+                let [b, g, r, a] = p.to_le_bytes();
+                *t = [r, g, b, a];
+            }
+        }
+    }
 }
 
 fn expand565(c: u16) -> [u32; 3] {

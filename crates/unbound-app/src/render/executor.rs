@@ -4024,7 +4024,8 @@ impl UnityRenderer {
         let dw = (dst.width() >> dmip).max(1) as i32;
         let dh = (dst.height() >> dmip).max(1) as i32;
         let [mut x, mut y, mut w, mut h] = rect;
-        if w < 0 {
+        let whole_mip = w < 0;
+        if whole_mip {
             [x, y, w, h] = [0, 0, sw, sh];
         }
         let w = w.min(sw - x).min(dw - dx);
@@ -4044,6 +4045,18 @@ impl UnityRenderer {
             dh - dy - h
         } else {
             dy
+        };
+        let Some(size) = resources::copy_extent(
+            src.format(),
+            whole_mip,
+            [x as u32, y as u32],
+            [dx as u32, dy as u32],
+            [w as u32, h as u32],
+        ) else {
+            self.warn_once(format!("copy-blocks{source}-{destination}"), || {
+                "CopyTexture region origins and dimensions must align to the texture's block footprint: skipped".into()
+            });
+            return None;
         };
         self.mark_resolve_copied(&destination_attachment);
         let channels = channel_kind.map(|kind| ChannelCopy {
@@ -4080,11 +4093,7 @@ impl UnityRenderer {
                 y: dy as u32,
                 z: destination_slice.max(0) as u32,
             },
-            size: wgpu::Extent3d {
-                width: w as u32,
-                height: h as u32,
-                depth_or_array_layers: 1,
-            },
+            size,
         })
     }
 

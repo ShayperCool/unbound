@@ -208,12 +208,20 @@ fn with_decoder<R>(format: BlockFormat, f: impl FnOnce(&Context) -> R) -> R {
 
 /// Decodes one HDR block into caller-owned storage without allocating per pixel read.
 pub fn decode_hdr_block(format: BlockFormat, block: &[u8; 16], output: &mut [f32]) -> bool {
+    format.is_astc_hdr() && decode_block_into(format, block, output)
+}
+
+pub(super) fn decode_byte_block(format: BlockFormat, block: &[u8; 16], output: &mut [u8]) -> bool {
+    format.is_astc() && !format.is_astc_hdr() && decode_block_into(format, block, output)
+}
+
+fn decode_block_into<T: Pixel>(format: BlockFormat, block: &[u8; 16], output: &mut [T]) -> bool {
     let side = format.footprint();
-    if !format.is_astc_hdr() || output.len() != (side * side * 4) as usize {
+    if output.len() != (side * side * 4) as usize {
         return false;
     }
     with_decoder(format, |context| {
-        // The block is exactly 16 bytes and output holds every texel at this footprint.
+        // Input is one complete block and output holds its full footprint in the declared type.
         unsafe {
             unbound_astc_decode(
                 context.0.as_ptr(),
@@ -221,7 +229,7 @@ pub fn decode_hdr_block(format: BlockFormat, block: &[u8; 16], output: &mut [f32
                 block.len(),
                 side,
                 side,
-                true,
+                T::FLOATS,
                 output.as_mut_ptr().cast(),
             ) == 0
         }

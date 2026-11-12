@@ -308,11 +308,11 @@ The destination's CPU blocks stay yellow in both controls.
 ## Crunch archives, runtime EAC and ASTC uploads
 
 The additional 6000.0.71f1 controls have two identical GPU Editor recordings per profile.
-All 7467 earlier reference rows remain byte-identical. The current reference has 8209 rows.
+All 7467 earlier reference rows remain byte-identical. The current reference has 8229 rows.
 The implementation uses the public [Crunch 1.04 fork at revision 8708900](https://github.com/Unity-Technologies/crunch/tree/8708900eca8ec609d279270e72936258f81ddfb7)
 under its zlib licence, with portable compilation and checked archive transcoding.
-Texture cache v36 records archive storage and format selection; NativeApi 63 carries the
-allocation-free HDR/EAC texel decoder and ASTC packet formats.
+Texture cache v36 records archive storage and format selection; NativeApi 64 carries the
+allocation-free compressed texel decoder and ASTC packet formats.
 
 Default colour textures use perceptual Crunch fitting regardless of their authored sRGB flag;
 normal maps disable it. NoiseCrunchLinearNoMips and NoiseCrunchSrgbNoMips have identical archives,
@@ -328,6 +328,7 @@ retain diagnosed uncompressed storage for Crunch selection.
 | [GetPixels](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.GetPixels.html) | Crunch is unsupported by the float-array API; use GetPixels32. The probe records its exception independently from byte reads. |
 | [GetRawTextureData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.GetRawTextureData.html) and [GetPixelData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.GetPixelData.html) | The generic APIs expose CPU storage. The Crunch controls change a header byte through each view, observe it through the byte-array API, then restore it. Generic raw length is the archive length. GetPixelData reports decoded-block lengths but starts at the archive pointer. Only a safe prefix is sampled in the Editor. |
 | [LoadRawTextureData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.LoadRawTextureData.html) | Complete data fills the texture's mip chain. The added control loads a valid archive into a new texture, applies it and records its changed CPU/GPU pixels for all four Crunch formats. |
+| [CommandBuffer.CopyTexture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.CopyTexture.html) | Whole-mip compressed copies can include sub-block levels; regions use block-aligned coordinates and sizes. Readable source and destination textures also copy CPU data. The added ASTC6 and DXT1 controls copy mip 2 of 12x12 textures after source and destination CPU/GPU values have diverged. Destination CPU blocks and GPU pixels become the source values. |
 | Editor reference, Crunch reads | GetPixels32 decodes the archive; individual GetPixel/GetPixelBilinear return white without errors. New Crunch constructors retain their format and have zero archive bytes. |
 
 Archives and transcoded GPU blocks are separate stores. Raw views alias the archive. Unbound
@@ -383,8 +384,15 @@ checks cover all 18 packet variants, and an HDR partial-extent test preserves va
 The available NVIDIA device lacks ASTC, so the full GPU replay verifies fallbacks. Native ASTC
 hardware execution remains a follow-up for an ASTC-capable device.
 
-Strict comparisons after these changes have 8087/8209 exact values in Gamma and Linear;
-AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC have 7472, 7453, 7427 and 7822 exact.
+Whole-mip GPU copies round physical extents to the format\'s actual block footprint; regions
+retain block-alignment checks even when a device uses decoded fallback storage. Tests cover
+all 18 ASTC packet variants, and the DXT1 control exercises a native compressed sub-block copy
+on the available GPU. Retained CPU blocks copy at command execution without a GPU upload;
+individual reads decode caller-owned storage and repeated copies allocate no managed memory.
+The 20 additive copy rows preserve all earlier 8209 reference rows byte for byte.
+
+Strict comparisons after these changes have 8107/8229 exact values in Gamma and Linear;
+AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC have 7492, 7473, 7447 and 7842 exact.
 The remaining 122, 122, 737, 756, 782 and 387 values are listed individually or by existing
 residual declarations. Added ETC2 RGB automatic controls reproduce the corresponding older
 normal/quality controls in both implementations, including their existing fitting differences.

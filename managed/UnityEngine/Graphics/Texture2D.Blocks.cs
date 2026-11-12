@@ -35,6 +35,7 @@ namespace UnityEngine
         /// <summary>While views of a block-compressed texture's blocks exist: per level, the hash
         /// of the blocks its pixel cells show.</summary>
         ulong[] m_BlockCellHashes;
+        bool m_BlockCellsDirty;
 
         /// <summary>The pixel cells of a block-compressed texture are what its blocks decode to,
         /// as the Editor's pixel reads are (tests/projects/texturecompression write.*). The
@@ -42,13 +43,15 @@ namespace UnityEngine
         /// while views of the blocks exist, each read decodes the levels whose blocks changed.</summary>
         void RefreshBlockCells()
         {
-            if (!SourceBlocks || m_Store == null) return;
+            if (!SourceBlocks) return;
+            if (m_BlockCellsDirty) { EnsureBlockCells(); DecodeAllBlocks(); return; }
+            if (m_Store == null) return;
             if (SourceCrunch) { RefreshCrunchCells(); return; }
             int at = 0;
             for (int mip = 0; mip < m_SourceMips; mip++)
             {
                 int size = SourceLevelSize(mip);
-                var level = new ReadOnlySpan<byte>(m_Store, at, size);
+                var level = new ReadOnlySpan<byte>(CurrentBlocks(), at, size);
                 ulong hash = Fnv1a(level);
                 if (m_BlockCellHashes == null || m_BlockCellHashes[mip] != hash) DecodeBlockLevel(level, mip);
                 (m_BlockCellHashes ??= new ulong[m_SourceMips])[mip] = hash;
@@ -80,24 +83,18 @@ namespace UnityEngine
             int at = 0;
             for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
             at += ((y / side) * ((w + side - 1) / side) + x / side) * size;
-            var block = new ReadOnlySpan<byte>(m_Store, at, size);
+            var block = new ReadOnlySpan<byte>(CurrentBlocks(), at, size);
             int k = (y % side) * side + x % side;
-            if (BlockFormats.IsAstcHdr(format) || BlockFormats.IsEac(format))
+            if (BlockFormats.NativeDecoded(format))
             {
                 Color pixel = default;
                 fixed (byte* input = block)
                     if (!Native.DecodeBlockTexel((int)format, input, (uint)k, &pixel))
                         throw new UnityException("Compressed texel decoding failed.");
+                if (Texture2DTexels.FloatStored(m_Format) && !BlockFormats.IsAstcHdr(format)) pixel.a = 1f;
                 return pixel;
             }
-            Color32 texel;
-            if (BlockFormats.NativeDecoded(format))
-            {
-                // One block decoded at its footprint.
-                var rgba = DecodeBlockRgba(block, side, side);
-                texel = new Color32(rgba[k * 4], rgba[k * 4 + 1], rgba[k * 4 + 2], rgba[k * 4 + 3]);
-            }
-            else texel = BlockFormats.DecodeTexel(format, block, k);
+            Color32 texel = BlockFormats.DecodeTexel(format, block, k);
             if (Texture2DTexels.FloatStored(m_Format)) return new Color(texel.r / 255f, texel.g / 255f, texel.b / 255f, 1f);
             return Texture2DTexels.Pixel(m_Format, texel);
         }
@@ -223,6 +220,7 @@ namespace UnityEngine
                 at += size;
             }
             if (m_BlockCellHashes != null) HashBlockCells(blocks);
+            m_BlockCellsDirty = false;
         }
 
         /// <summary>SetPixels and SetPixels32 refuse a block-compressed texture (the Editor's
@@ -349,6 +347,7 @@ namespace UnityEngine
                 at += size;
             }
             if (m_BlockCellHashes != null) HashBlockCells(blocks);
+            m_BlockCellsDirty = false;
         }
 
         /// <summary>Texture2D.Compress: RGB24 (and RGB565) to DXT1, formats with alpha to DXT5, R8
@@ -425,25 +424,41 @@ namespace UnityEngine
         internal static void CopyBlocks(Texture2D src, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight,
             Texture2D dst, int dstMip, int dstX, int dstY, Action gpuCopy, bool allLevels = false)
         {
-            if (src.SourceCrunch || dst.SourceCrunch) throw new UnityException("Graphics.CopyTexture of Crunch archives is unsupported.");
-            int size = src.SourceBlocks ? BlockFormats.BlockBytes(src.m_SourceFormat.Value) : 0;
-            if (size == 0 || !dst.SourceBlocks || BlockFormats.BlockBytes(dst.m_SourceFormat.Value) != size
+            if (!ValidateBlockCopy(src, srcMip, srcX, srcY, srcWidth, srcHeight, dst, dstMip, dstX, dstY)) return;
+            if (srcWidth >= 0) { gpuCopy(); return; }
+            if (!CopyBlockData(src, srcMip, dst, dstMip, allLevels)) return;
+            // The renderer's copy follows the blocks.
+            dst.m_PixelsDirty = true;
+            dst.Upload();
+        }
+
+        /// <summary>Block geometry is checked before a device may decode its storage.</summary>
+        internal static bool ValidateBlockCopy(Texture2D src, int srcMip, int x, int y, int width, int height,
+            Texture2D dst, int dstMip, int dx, int dy)
+        {
+            if (!src.SourceBlocks && !dst.SourceBlocks) return true;
+            if (src.SourceCrunch || dst.SourceCrunch) throw new UnityException("CopyTexture of Crunch archives is unsupported.");
+            if (!src.SourceBlocks || !dst.SourceBlocks
+                || BlockFormats.BlockBytes(src.m_SourceFormat.Value) != BlockFormats.BlockBytes(dst.m_SourceFormat.Value)
                 || BlockFormats.Footprint(src.m_SourceFormat.Value) != BlockFormats.Footprint(dst.m_SourceFormat.Value))
             {
-                Stubs.Ignored("Graphics.CopyTexture between block sizes", "copies nothing between formats whose blocks differ (as the Editor)");
-                return;
+                Stubs.Ignored("CopyTexture between block sizes", "copies nothing between formats whose blocks differ");
+                return false;
             }
-            if (!src.ValidMip(srcMip) || !dst.ValidMip(dstMip)) return;
-            if (srcWidth >= 0)
-            {
-                // A region: block-aligned, GPU only (same formats only on Unbound's renderer).
-                int side = BlockFormats.Footprint(src.m_SourceFormat.Value);
-                bool aligned = srcX % side == 0 && srcY % side == 0 && srcWidth % side == 0 && srcHeight % side == 0 && dstX % side == 0 && dstY % side == 0;
-                if (!aligned) return;
-                if (src.m_SourceFormat == dst.m_SourceFormat) gpuCopy();
-                else Stubs.Ignored("Graphics.CopyTexture region between block formats", "does not copy a region between different block formats on Unbound's renderer (unmeasured)");
-                return;
-            }
+            if (!src.ValidMip(srcMip) || !dst.ValidMip(dstMip)) return false;
+            if (width < 0) return true;
+            int side = BlockFormats.Footprint(src.m_SourceFormat.Value);
+            return src.m_SourceFormat == dst.m_SourceFormat && x % side == 0 && y % side == 0
+                && dx % side == 0 && dy % side == 0 && width % side == 0 && height % side == 0;
+        }
+
+        /// <summary>Copies retained CPU blocks without uploading or allocating per execution.
+        /// Whole-mip command-buffer copies use this at execution time; pixel cells decode lazily.</summary>
+        internal static bool CopyBlockData(Texture2D src, int srcMip, Texture2D dst, int dstMip, bool allLevels = false)
+        {
+            if (!src.SourceBlocks || !dst.SourceBlocks) return false;
+            if (!ValidateBlockCopy(src, srcMip, 0, 0, -1, -1, dst, dstMip, 0, 0)) return false;
+            src.CheckStoreRead();
             var from = src.CurrentBlocks();
             var to = dst.CurrentBlocks();
             // Compressed textures keep their blocks on the CPU, readable or not: the copy reaches
@@ -452,17 +467,10 @@ namespace UnityEngine
             // copy.unreadabledst; the documentation's rule is about readable pixel data).
             if (from == null || to == null)
             {
-                if (src.m_SourceFormat == dst.m_SourceFormat) gpuCopy();
-                return;
+                return false;
             }
             // A whole texture: every level both have.
-            int levels = allLevels ? Math.Min(src.m_SourceMips, dst.m_SourceMips) : 1;
-            // Pixel cells the destination already has (an import's, a bundle texture's decoded
-            // ones) follow the blocks; cells not made yet are decoded when first read.
-            // An unreadable destination keeps no cells (engine reads decode its blocks).
-            dst.DecodeRaw();
-            bool cells = dst.m_Pixels != null || dst.m_Hdr != null || (dst.m_IsReadable && dst.m_AssetGuid != null);
-            if (cells) dst.EnsureBlockCells();
+            int levels = allLevels ? Math.Min(src.m_SourceMips - srcMip, dst.m_SourceMips - dstMip) : 1;
             bool copied = false;
             for (int i = 0; i < levels; i++)
             {
@@ -474,17 +482,10 @@ namespace UnityEngine
                 int bytes = src.SourceLevelSize(sm);
                 dst.CheckStoreWrite();
                 Buffer.BlockCopy(from, fromAt, to, toAt, bytes);
-                if (cells)
-                {
-                    dst.DecodeBlockLevel(new ReadOnlySpan<byte>(to, toAt, bytes), dm);
-                    if (dst.m_BlockCellHashes != null) dst.m_BlockCellHashes[dm] = Fnv1a(new ReadOnlySpan<byte>(to, toAt, bytes));
-                }
                 copied = true;
             }
-            if (!copied) return;
-            // The renderer's copy follows the blocks.
-            dst.m_PixelsDirty = true;
-            dst.Upload();
+            if (copied) dst.m_BlockCellsDirty = true;
+            return copied;
         }
 
         /// <summary>Whether a texture of `format` may have these sides: a block format's must be

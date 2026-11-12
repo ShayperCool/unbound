@@ -1762,3 +1762,25 @@ fn automatic_crunch_selection_is_scoped_even_when_high_quality_ignores_the_flag(
     assert_eq!(measured.blocks.unwrap().format, BlockFormat::Bc7);
     assert!(measured.crunched.is_none());
 }
+
+#[test]
+fn individual_block_reads_match_bulk_decoding_without_a_pixel_buffer() {
+    let payload = [0xcdu8; 16];
+    for number in [
+        10, 12, 24, 25, 26, 27, 34, 41, 43, 45, 47, 48, 49, 50, 51, 52, 53,
+    ] {
+        let format = BlockFormat::from_unity_format(number).unwrap();
+        let side = format.footprint();
+        let block = &payload[..format.block_bytes()];
+        let rgba = decode_blocks(format, block, side, side);
+        for i in 0..(side * side) as usize {
+            assert_eq!(
+                decode_block_texel(format, block, i).unwrap(),
+                std::array::from_fn(|c| f32::from(rgba[i * 4 + c]) / 255.0),
+                "format {number}, texel {i}"
+            );
+        }
+        assert!(decode_block_texel(format, block, (side * side) as usize).is_none());
+        assert!(decode_block_texel(format, &block[..block.len() - 1], 0).is_none());
+    }
+}
