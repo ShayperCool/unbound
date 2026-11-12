@@ -1557,7 +1557,7 @@ namespace Unbound.Runtime
 
         /// <summary>Unity's agents share one proximity grid whatever their agent type, its cells
         /// sized from all of them (see DtCrowd.GridCell) at the velocity this update steps them to.
-        /// NavMeshObstacles do not count here (Unbound's choice: Unity counts them too).</summary>
+        /// In the measured prediction profile obstacle-circle footprints count too.</summary>
         static void SizeGrids(float dt)
         {
             float horizon = NavMesh.avoidancePredictionTime, sx = 0f, sz = 0f;
@@ -1571,6 +1571,8 @@ namespace Unbound.Runtime
                 DtCrowd.AddToGridCell(ag, vel, horizon, ref sx, ref sz);
                 count++;
             }
+            if (Compat.NavMeshPredictionBoundsMeasured)
+                ObstacleSystem.AddToGridCellSums(horizon, ref sx, ref sz, ref count);
             if (count == 0) return;
             float x = DtCrowd.GridCell(sx, count), z = DtCrowd.GridCell(sz, count);
             foreach (var crowd in s_Crowds.Values) crowd.SetGridCellSize(x, z);

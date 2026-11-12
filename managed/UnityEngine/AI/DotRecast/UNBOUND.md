@@ -78,7 +78,10 @@ Altered (marked `Unbound:` in the sources):
   Q385, Unity 6000.0.71f1: each neighbour occupies the horizontal bounds swept by
   its current velocity over the prediction time, expanded by its radius. The
   compatibility profile selects this insertion and finite radius/velocity input
-  validation; other releases retain point insertion, unmeasured there.
+  validation. Cell sizes include both agents and obstacle-circle footprints,
+  so their storage depends on participant count rather than obstacle radius or
+  velocity magnitude. Box obstacles retain the existing circle approximation.
+  Other releases retain point insertion and agent-only sizing, unmeasured there.
 
 - crowd separation and collisions as Unity's: a push of 1.4·(1 − (d/2.5r)²) from more important
   neighbours (half from equals), overlaps resolved by the less important agent alone (half each

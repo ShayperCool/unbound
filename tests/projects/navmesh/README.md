@@ -94,11 +94,17 @@ floor: an approaching neighbour whose predicted bounds enter the query, the same
 neighbour moving away, a stationary control and a stationary neighbour with a large
 radius. Four more scenarios assign nonfinite velocity components or radius while
 the agent is already moving; the Editor logs an error and retains its previous
-motion and radius. All 552 values in these 36 scenarios match. Two GPU repeats
+motion and radius. Eight further scenarios exercise a radius-10000 obstacle and a fast diagonal
+obstacle: both retain finite simulation state. All 608 values in these 44
+scenarios match. Unit controls also require bounded grid storage and actual
+neighbour admission for both obstacles; their exact trajectories are unmeasured. Two GPU repeats
 agree byte for byte; removing just the new blocks restores the previous reference
 bytes. Other releases retain point insertion and previous input handling through
 Compat. Invalid or overflowing stored predictions also keep point insertion to
-avoid an unbounded cell traversal.
+avoid an unbounded cell traversal. Grid cell sizes include the mean diameter
+and predicted travel of both agents and the existing obstacle-circle proxies,
+so obstacle size or speed alone cannot cause an unbounded number of cells.
+Box obstacles retain their existing circle approximation, unmeasured here.
 
 The remaining full-precision trace keeps distinct causes visible. Walker changes
 its planned avoidance velocity one frame earlier, at 32 instead of 33. Blocked

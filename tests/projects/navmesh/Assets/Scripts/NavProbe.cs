@@ -462,6 +462,34 @@ public class NavProbe : MonoBehaviour
             DestroyImmediate(a.gameObject);
             m_Agents.Clear();
         }
+        foreach (string kind in new[] { "large", "fast.diagonal" })
+        {
+            var a = Agent("large.a", Vector3.zero, new Vector3(10f, 0f, 0f), 1f);
+            var go = new GameObject("prediction obstacle");
+            go.transform.position = new Vector3(2f, 1f, 2f);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = kind == "large" ? 10000f : 0.5f;
+            obstacle.height = 2f;
+            obstacle.velocity = kind == "large" ? Vector3.zero : new Vector3(-10000f, 0f, -10000f);
+            for (int frame = 1; frame <= 4; frame++)
+            {
+                yield return null;
+                ProbeLog.Begin("agents.predict.obstacle." + kind + ".f" + frame);
+                var position = a.nextPosition;
+                var velocity = a.velocity;
+                ProbeLog.Value("onMesh", a.isOnNavMesh);
+                ProbeLog.Value("finitePosition", !float.IsNaN(position.x) && !float.IsInfinity(position.x)
+                    && !float.IsNaN(position.z) && !float.IsInfinity(position.z));
+                ProbeLog.Value("finiteVelocity", !float.IsNaN(velocity.x) && !float.IsInfinity(velocity.x)
+                    && !float.IsNaN(velocity.z) && !float.IsInfinity(velocity.z));
+                ProbeLog.Value("radius", obstacle.radius);
+                ProbeLog.Value("obstacle.velocity", obstacle.velocity);
+            }
+            DestroyImmediate(go);
+            DestroyImmediate(a.gameObject);
+            m_Agents.Clear();
+        }
         NavMesh.RemoveNavMeshData(instance);
         DestroyImmediate(data);
         Finish();

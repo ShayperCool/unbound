@@ -4125,5 +4125,77 @@
     "after.position.y": 0.08333337,
     "after.position.z": 0.0119999954,
     "after.radius": 0.75
+  },
+  "agents.predict.obstacle.large.f1": {
+    "onMesh": true,
+    "finitePosition": true,
+    "finiteVelocity": true,
+    "radius": 10000,
+    "obstacle.velocity.x": 0,
+    "obstacle.velocity.y": 0,
+    "obstacle.velocity.z": 0
+  },
+  "agents.predict.obstacle.large.f2": {
+    "onMesh": true,
+    "finitePosition": true,
+    "finiteVelocity": true,
+    "radius": 10000,
+    "obstacle.velocity.x": 0,
+    "obstacle.velocity.y": 0,
+    "obstacle.velocity.z": 0
+  },
+  "agents.predict.obstacle.large.f3": {
+    "onMesh": true,
+    "finitePosition": true,
+    "finiteVelocity": true,
+    "radius": 10000,
+    "obstacle.velocity.x": 0,
+    "obstacle.velocity.y": 0,
+    "obstacle.velocity.z": 0
+  },
+  "agents.predict.obstacle.large.f4": {
+    "onMesh": true,
+    "finitePosition": true,
+    "finiteVelocity": true,
+    "radius": 10000,
+    "obstacle.velocity.x": 0,
+    "obstacle.velocity.y": 0,
+    "obstacle.velocity.z": 0
+  },
+  "agents.predict.obstacle.fast.diagonal.f1": {
+    "onMesh": true,
+    "finitePosition": true,
+    "finiteVelocity": true,
+    "radius": 0.5,
+    "obstacle.velocity.x": -10000,
+    "obstacle.velocity.y": 0,
+    "obstacle.velocity.z": -10000
+  },
+  "agents.predict.obstacle.fast.diagonal.f2": {
+    "onMesh": true,
+    "finitePosition": true,
+    "finiteVelocity": true,
+    "radius": 0.5,
+    "obstacle.velocity.x": -10000,
+    "obstacle.velocity.y": 0,
+    "obstacle.velocity.z": -10000
+  },
+  "agents.predict.obstacle.fast.diagonal.f3": {
+    "onMesh": true,
+    "finitePosition": true,
+    "finiteVelocity": true,
+    "radius": 0.5,
+    "obstacle.velocity.x": -10000,
+    "obstacle.velocity.y": 0,
+    "obstacle.velocity.z": -10000
+  },
+  "agents.predict.obstacle.fast.diagonal.f4": {
+    "onMesh": true,
+    "finitePosition": true,
+    "finiteVelocity": true,
+    "radius": 0.5,
+    "obstacle.velocity.x": -10000,
+    "obstacle.velocity.y": 0,
+    "obstacle.velocity.z": -10000
   }
 }

@@ -648,6 +648,26 @@ namespace Unbound.Runtime
         static readonly List<Circle> s_Near = new List<Circle>();
         static readonly List<RcVec3f> s_NearPositions = new List<RcVec3f>();
 
+        /// <summary>Prepare the obstacle circles once for both grid sizing and crowd insertion.
+        /// Each participant contributes its diameter and predicted travel, so a large or fast
+        /// obstacle does not span an arbitrarily large number of cells.</summary>
+        internal static void AddToGridCellSums(float horizon, ref float sx, ref float sz, ref int count)
+        {
+            CollectCircles();
+            foreach (var circle in s_Circles)
+            {
+                DtCrowd.AddToGridCell(circle.Radius, NavMesh.V(circle.Velocity), horizon, ref sx, ref sz);
+                count++;
+            }
+        }
+
+        static void CollectCircles()
+        {
+            s_Circles.Clear();
+            foreach (var obstacle in s_Obstacles)
+                if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle)) AddCircles(obstacle, s_Circles);
+        }
+
         /// <summary>Before <paramref name="crowd"/> updates: the enabled obstacles,
         /// where they are now, become its obstacle circles, those near a walking agent (C7). Without
         /// obstacles (and none fed before) the crowd is left untouched.</summary>
@@ -659,18 +679,18 @@ namespace Unbound.Runtime
                 members = new List<DtCrowdAgent>();
                 s_InCrowd.Add(crowd, members);
             }
-            s_Circles.Clear();
-            foreach (var obstacle in s_Obstacles)
-                if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle)) AddCircles(obstacle, s_Circles);
+            if (!crowd.Config().predictNeighbourBounds) CollectCircles();
             // The circle stands on the obstacle's bottom, as tall as it (C6).
             var agents = crowd.GetActiveAgents();
-            float cell = LargestGridCell(agents, s_Circles);
+            bool prediction = crowd.Config().predictNeighbourBounds;
+            crowd.GetGridCellSize(out float cellX, out float cellZ);
+            float cell = prediction ? 0f : LargestGridCell(agents, s_Circles);
             s_Near.Clear();
             s_NearPositions.Clear();
             foreach (var c in s_Circles)
             {
                 var position = new RcVec3f(c.Center.x, c.Bottom, c.Center.z);
-                if (!NearAWalkingAgent(agents, position, c, cell)) continue;
+                if (!NearAWalkingAgent(agents, position, c, cell, prediction, 1f / cellX, 1f / cellZ)) continue;
                 s_Near.Add(c);
                 s_NearPositions.Add(position);
             }
@@ -717,9 +737,10 @@ namespace Unbound.Runtime
 
         /// <summary>Whether the circle, placed at <paramref name="position"/>, can be the neighbour of
         /// a walking agent of the crowd: its extent meets the square of the agent's neighbour reach
-        /// grown by a grid cell (the crowd gathers whole cells),
-        /// with the crowd's height test passing (C6, C7).</summary>
-        static bool NearAWalkingAgent(IList<DtCrowdAgent> agents, RcVec3f position, Circle circle, float cell)
+        /// in the grid selected for this update, with the crowd's height test passing (C6, C7).
+        /// The legacy profile keeps its conservative radius-plus-cell test.</summary>
+        static bool NearAWalkingAgent(IList<DtCrowdAgent> agents, RcVec3f position, Circle circle, float cell,
+            bool prediction, float invX, float invZ)
         {
             float height = circle.Height;
             float horizon = NavMesh.avoidancePredictionTime;
@@ -730,8 +751,19 @@ namespace Unbound.Runtime
                 // for neighbours.
                 if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
                 if (!DtCrowd.HeightsOverlap(ag, position, height)) continue;
-                float reach = DtCrowd.NeighbourReach(ag, horizon) + circle.Radius + cell;
-                if (MathF.Abs(ag.npos.X - position.X) <= reach && MathF.Abs(ag.npos.Z - position.Z) <= reach) return true;
+                float reach = DtCrowd.NeighbourReach(ag, horizon);
+                if (prediction)
+                {
+                    int x0 = Cell(ag.npos.X - reach, invX), x1 = Cell(ag.npos.X + reach, invX);
+                    int z0 = Cell(ag.npos.Z - reach, invZ), z1 = Cell(ag.npos.Z + reach, invZ);
+                    if (InCells(position, NavMesh.V(circle.Velocity), circle.Radius, horizon, true,
+                        x0, x1, z0, z1, invX, invZ)) return true;
+                }
+                else
+                {
+                    reach += circle.Radius + cell;
+                    if (MathF.Abs(ag.npos.X - position.X) <= reach && MathF.Abs(ag.npos.Z - position.Z) <= reach) return true;
+                }
             }
             return false;
         }
@@ -761,7 +793,9 @@ namespace Unbound.Runtime
             // The cells the crowd last sized; include the same predicted bounds as its grid.
             bool prediction = crowd.Config().predictNeighbourBounds;
             float horizon = NavMesh.avoidancePredictionTime;
-            float invX = 1.0f / crowd.GetGrid().GetCellSizeX(), invZ = 1.0f / crowd.GetGrid().GetCellSizeY();
+            crowd.GetGridCellSize(out float cellX, out float cellZ);
+            float invX = 1.0f / (prediction ? cellX : crowd.GetGrid().GetCellSizeX());
+            float invZ = 1.0f / (prediction ? cellZ : crowd.GetGrid().GetCellSizeY());
             for (int i = 0; i < agents.Count; i++)
             {
                 var ag = agents[i];

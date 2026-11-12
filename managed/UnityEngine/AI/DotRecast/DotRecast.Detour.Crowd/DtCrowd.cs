@@ -936,12 +936,22 @@ namespace DotRecast.Detour.Crowd
             _gridCellY = z;
         }
 
+        /// The cell sizes selected for this update, including before the grid is rebuilt.
+        public void GetGridCellSize(out float x, out float z)
+        {
+            x = _gridCellX > 0f ? _gridCellX : _grid.GetCellSizeX();
+            z = _gridCellY > 0f ? _gridCellY : _grid.GetCellSizeY();
+        }
+
         /// Unbound: an agent's share in Unity's grid cell size: its diameter plus how far it goes
         /// within the prediction time along each axis, at <paramref name="vel"/>.
-        public static void AddToGridCell(DtCrowdAgent ag, RcVec3f vel, float horizon, ref float sx, ref float sz)
+        public static void AddToGridCell(DtCrowdAgent ag, RcVec3f vel, float horizon, ref float sx, ref float sz) =>
+            AddToGridCell(ag.option.radius, vel, horizon, ref sx, ref sz);
+
+        public static void AddToGridCell(float radius, RcVec3f vel, float horizon, ref float sx, ref float sz)
         {
-            sx += 2f * ag.option.radius + horizon * MathF.Abs(vel.X);
-            sz += 2f * ag.option.radius + horizon * MathF.Abs(vel.Z);
+            sx += 2f * radius + horizon * MathF.Abs(vel.X);
+            sz += 2f * radius + horizon * MathF.Abs(vel.Z);
         }
 
         /// Unbound: Unity's grid cell along an axis: the agents' mean share, at least MinGridCell.

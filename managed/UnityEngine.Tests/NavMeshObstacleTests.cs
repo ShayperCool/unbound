@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEngine.AI;
 using Xunit;
@@ -343,6 +344,30 @@ namespace UnityEngine.Tests
                 Assert.Single(warnings, w => w.Contains("times as long as it is wide"));
                 Assert.Single(warnings, w => w.Contains("neighbours its avoidance considers"));
             });
+        }
+
+        [Theory]
+        [InlineData(10000f, 0f)]
+        [InlineData(0.5f, -10000f)]
+        public void LargeAndFastObstaclesHaveBoundedGridStorageWithoutLosingCoverage(float radius, float speed)
+        {
+            string release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                var agent = Agent();
+                agent.speed = 1f;
+                var obstacle = Capsule(new Vector3(2f, 1f, 2f), radius);
+                obstacle.velocity = new Vector3(speed, 0f, speed);
+                Step();
+                var crowd = AgentSystem.CrowdOf(agent.m_Surface);
+                // Two footprints, each at most four cells per axis after sizing from both.
+                int entries = crowd.GetGrid().GetItemCounts().Sum(cell => cell.Item2);
+                Assert.InRange(entries, 1, 2 * 4 * 4);
+                var member = crowd.GetActiveAgents().Single(a => ReferenceEquals(a.option.userData, obstacle));
+                Assert.Contains(member, Enumerable.Range(0, agent.m_Crowd.nneis).Select(i => agent.m_Crowd.neis[i].agent));
+            }
+            finally { ProjectInfo.UnityVersion = release; }
         }
 
         /// <summary>Runs <paramref name="body"/> collecting the warnings logged, forwarding every call.</summary>
