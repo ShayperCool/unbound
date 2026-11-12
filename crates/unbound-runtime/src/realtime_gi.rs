@@ -865,6 +865,229 @@ fn write_cached(path: &Path, output: &unbound_gi::realtime_uv::Output) -> Result
     Ok(())
 }
 
+/// Format version of Unbound's own precompute cache entries (`bake`).
+/// 1: the systems, their layout, clusters, transport, visibility and light probes of
+/// `unbound_gi::precompute::bake`, in `unbound_gi::data::encode_precomputed`'s encoding.
+const BAKE_CACHE_VERSION: u32 = 1;
+
+/// One renderer of a scene as Unbound's own precompute takes it.
+pub struct BakeInput {
+    /// The scene mapping's ids of it (its object and prefab file IDs).
+    pub object: i64,
+    pub prefab: i64,
+    /// Its mesh in its own space (normals empty when the mesh has none).
+    pub positions: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+    /// The input of its realtime lightmap UVs (Mesh.uv3, else uv2, else uv).
+    pub uvs: Vec<[f32; 2]>,
+    pub triangles: Vec<[u32; 3]>,
+    /// Local to world, column by column.
+    pub local_to_world: [f32; 16],
+    pub pixel_size: f32,
+    pub min_chart_texels: u32,
+    /// Automatic charts (Optimize Realtime UVs): the precompute's instance matrix and limits;
+    /// `None` keeps the mesh's charts.
+    pub automatic: Option<(
+        unbound_gi::instance::Matrix,
+        unbound_gi::auto_charts::Params,
+    )>,
+    pub cluster_size: f32,
+    pub modelling_tolerance: f32,
+    /// Renderers share a system only within one group (Lightmap Parameters and System Tag).
+    pub group: u64,
+}
+
+fn point(m: &[f32; 16], p: [f32; 3]) -> [f32; 3] {
+    [0, 1, 2].map(|r| m[r] * p[0] + m[4 + r] * p[1] + m[8 + r] * p[2] + m[12 + r])
+}
+
+impl BakeInput {
+    fn hash_into(&self, key: &mut blake3::Hasher) {
+        let automatic = self.automatic.as_ref();
+        key.update(&self.object.to_le_bytes());
+        key.update(&self.prefab.to_le_bytes());
+        for list in [
+            bytes_of(&self.positions),
+            bytes_of(&self.normals),
+            bytes_of(&self.uvs),
+            bytes_of(&self.triangles),
+            bytes_of(&self.local_to_world),
+            bytes_of(automatic.map_or(&[][..], |a| &a.0[..])),
+        ] {
+            key.update(&(list.len() as u64).to_le_bytes());
+            key.update(list);
+        }
+        key.update(&[automatic.is_some() as u8]);
+        if let Some((_, p)) = automatic {
+            key.update(&p.max_distance.to_le_bytes());
+            key.update(&p.max_angle.to_le_bytes());
+            key.update(&[p.ignore_normals as u8]);
+        }
+        for v in [self.pixel_size, self.cluster_size, self.modelling_tolerance] {
+            key.update(&v.to_le_bytes());
+        }
+        key.update(&self.min_chart_texels.to_le_bytes());
+        key.update(&self.group.to_le_bytes());
+    }
+}
+
+/// A scene's realtime GI made by Unbound's own precompute from `inputs` and the light probes at
+/// `probes` (world positions), registered as a loaded scene's is (`load`'s answer); cached
+/// under `<project>/Library/Unbound/RealtimeGI` by a hash of every input and the format
+/// version.
+pub fn bake(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<Json> {
+    let mut key = blake3::Hasher::new();
+    key.update(&BAKE_CACHE_VERSION.to_le_bytes());
+    key.update(&UV_CACHE_VERSION.to_le_bytes());
+    key.update(&(inputs.len() as u64).to_le_bytes());
+    for input in inputs {
+        input.hash_into(&mut key);
+    }
+    key.update(&(probes.len() as u64).to_le_bytes());
+    key.update(bytes_of(probes));
+    let path = crate::state::state()
+        .project_root
+        .join("Library/Unbound/RealtimeGI")
+        .join(format!("{}.bin", key.finalize().to_hex()));
+    let data = match read_baked(&path) {
+        Some(data) => data,
+        None => {
+            let data = bake_fresh(inputs, probes)?;
+            if let Err(e) = write_baked(&path, &data) {
+                tracing::debug!(
+                    "caching precomputed realtime GI in {}: {e:#}",
+                    path.display()
+                );
+            }
+            data
+        }
+    };
+    let ranges: Vec<([u8; 16], usize, usize)> = data
+        .probe_sets
+        .iter()
+        .map(|set| (set.hash, 0, set.probes.len()))
+        .collect();
+    register(data, &ranges)
+}
+
+fn bake_fresh(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<unbound_gi::data::Precomputed> {
+    struct Made {
+        positions: Vec<[f32; 3]>,
+        normals: Vec<[f32; 3]>,
+        uvs: unbound_gi::realtime_uv::Output,
+        bounds: ([f32; 3], [f32; 3]),
+    }
+    let made = inputs
+        .iter()
+        .map(|input| -> Result<Made> {
+            let m = &input.local_to_world;
+            let positions: Vec<[f32; 3]> = input.positions.iter().map(|&p| point(m, p)).collect();
+            // Normals through the inverse transpose of the matrix's rotation and scale.
+            let rotation_scale = [m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10]];
+            let normals = if input.normals.len() == input.positions.len() {
+                unbound_gi::instance::apply(&rotation_scale, &input.positions, &input.normals)
+                    .ok_or_else(|| anyhow::anyhow!("a renderer of a singular matrix"))?
+                    .1
+            } else {
+                vec![[0.0; 3]; input.positions.len()]
+            };
+            let placed;
+            let uv_input = match &input.automatic {
+                None => UvInput {
+                    positions: &positions,
+                    uvs: &input.uvs,
+                    triangles: &input.triangles,
+                    pixel_size: input.pixel_size,
+                    min_chart_texels: input.min_chart_texels,
+                    charts: unbound_gi::realtime_uv::Charts::Preserved,
+                },
+                Some((matrix, params)) => {
+                    placed = unbound_gi::instance::apply(matrix, &input.positions, &input.normals)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("the instance's matrix {matrix:?} is singular")
+                        })?;
+                    UvInput {
+                        positions: &placed.0,
+                        uvs: &input.uvs,
+                        triangles: &input.triangles,
+                        pixel_size: input.pixel_size,
+                        min_chart_texels: input.min_chart_texels,
+                        charts: unbound_gi::realtime_uv::Charts::Automatic {
+                            normals: &placed.1,
+                            params: *params,
+                        },
+                    }
+                }
+            };
+            let uvs = unbound_gi::realtime_uv::realtime_uvs(&uv_input)?;
+            // The mesh's bounds through the matrix, as Renderer.bounds.
+            let (mut lo, mut hi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+            let (mut llo, mut lhi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+            for p in &input.positions {
+                for a in 0..3 {
+                    llo[a] = llo[a].min(p[a]);
+                    lhi[a] = lhi[a].max(p[a]);
+                }
+            }
+            for corner in 0..8 {
+                let p = [0, 1, 2].map(|a| if corner >> a & 1 == 0 { llo[a] } else { lhi[a] });
+                let w = point(m, p);
+                for a in 0..3 {
+                    lo[a] = lo[a].min(w[a]);
+                    hi[a] = hi[a].max(w[a]);
+                }
+            }
+            Ok(Made {
+                positions,
+                normals,
+                uvs,
+                bounds: (lo, hi),
+            })
+        })
+        .enumerate()
+        .map(|(k, made)| made.with_context(|| format!("renderer {k}")))
+        .collect::<Result<Vec<_>>>()?;
+    let renderers: Vec<unbound_gi::precompute::bake::BakeRenderer> = inputs
+        .iter()
+        .zip(&made)
+        .map(|(input, made)| unbound_gi::precompute::bake::BakeRenderer {
+            id: (input.object, input.prefab),
+            positions: &made.positions,
+            normals: &made.normals,
+            triangles: &input.triangles,
+            uvs: &made.uvs,
+            bounds: made.bounds,
+            cluster_size: input.cluster_size,
+            modelling_tolerance: input.modelling_tolerance,
+            group: input.group,
+        })
+        .collect();
+    unbound_gi::precompute::bake::bake(&renderers, probes)
+}
+
+/// The cache entry at `path`: a checksum of the rest, then the encoded data; `None` when there
+/// is none or it is damaged (it is made again).
+fn read_baked(path: &Path) -> Option<unbound_gi::data::Precomputed> {
+    let bytes = std::fs::read(path).ok()?;
+    let (sum, rest) = bytes.split_at_checked(32)?;
+    if blake3::hash(rest).as_bytes() != sum {
+        return None;
+    }
+    unbound_gi::data::decode_precomputed(rest).ok()
+}
+
+fn write_baked(path: &Path, data: &unbound_gi::data::Precomputed) -> Result<()> {
+    let encoded = unbound_gi::data::encode_precomputed(data);
+    let mut bytes = blake3::hash(&encoded).as_bytes().to_vec();
+    bytes.extend_from_slice(&encoded);
+    let dir = path.parent().context("no cache folder")?;
+    std::fs::create_dir_all(dir)?;
+    let temp = path.with_extension(format!("tmp{}", std::process::id()));
+    std::fs::write(&temp, &bytes)?;
+    std::fs::rename(&temp, path)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1115,9 +1338,7 @@ mod tests {
         // DynamicGI.indirectScale 0 and updateThreshold 0 from a scene's first frame on (the
         // solvers start at 1 and 1%): the drawn texels are black, and the threshold reaches
         // the solvers.
-        let handle = register(room(), &[]).unwrap()["handle"]
-            .as_u64()
-            .unwrap();
+        let handle = register(room(), &[]).unwrap()["handle"].as_u64().unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
         let frame = GiFrame {
             indirect_scale: 0.0,
@@ -1147,9 +1368,7 @@ mod tests {
 
     #[test]
     fn a_directional_scene_fills_its_directionality_atlas() {
-        let handle = register(room(), &[]).unwrap()["handle"]
-            .as_u64()
-            .unwrap();
+        let handle = register(room(), &[]).unwrap()["handle"].as_u64().unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
         let mut frame = GiFrame {
             indirect_scale: 1.0,
@@ -1245,9 +1464,7 @@ mod tests {
         let mut texels = vec![0u8; 4 * 64 * 64];
         assert_eq!(read_directionality(handle, 0, &mut texels).unwrap(), 0);
         release(handle);
-        let whole = register(room(), &[]).unwrap()["handle"]
-            .as_u64()
-            .unwrap();
+        let whole = register(room(), &[]).unwrap()["handle"].as_u64().unwrap();
         assert!(light.chunks_exact(4).any(|l| l[0] != 0));
         assert!(light == lightmap(whole, 0));
         release(whole);
@@ -1369,5 +1586,96 @@ mod tests {
         std::fs::write(&path, &bytes[..bytes.len() - 1]).unwrap();
         assert_eq!(read_cached(&path, 2), None);
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    /// A box of `size` at `at` (a cube's 24 vertices and 12 triangles, its lightmap UVs each
+    /// face's own square in a 3 x 2 grid) as the bake takes a renderer.
+    fn box_input(object: i64, size: [f32; 3], at: [f32; 3]) -> BakeInput {
+        let (mut positions, mut normals, mut uvs, mut triangles) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        for (f, (n, u, v)) in [
+            ([1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]),
+            ([-1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]),
+            ([0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, -1.0]),
+            ([0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]),
+            ([0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]),
+            ([0.0, 0.0, -1.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0]),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let base = positions.len() as u32;
+            for (a, b) in [(-1.0f32, -1.0f32), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)] {
+                positions.push([0, 1, 2].map(|k| 0.5 * (n[k] + a * u[k] + b * v[k])));
+                normals.push(n);
+                let cell = [(f % 3) as f32, (f / 3) as f32];
+                uvs.push([
+                    (cell[0] + 0.1 + 0.4 * (a + 1.0)) / 3.0,
+                    (cell[1] + 0.1 + 0.4 * (b + 1.0)) / 2.0,
+                ]);
+            }
+            triangles.push([base, base + 1, base + 2]);
+            triangles.push([base, base + 2, base + 3]);
+        }
+        let mut local_to_world = [0.0; 16];
+        for k in 0..3 {
+            local_to_world[5 * k] = size[k];
+            local_to_world[12 + k] = at[k];
+        }
+        local_to_world[15] = 1.0;
+        BakeInput {
+            object,
+            prefab: 0,
+            positions,
+            normals,
+            uvs,
+            triangles,
+            local_to_world,
+            pixel_size: 0.5,
+            min_chart_texels: 4,
+            automatic: None,
+            cluster_size: 1.0,
+            modelling_tolerance: 0.01,
+            group: 0,
+        }
+    }
+
+    #[test]
+    fn a_baked_scene_is_cached_and_a_damaged_entry_is_not_used() {
+        // An open box of a floor and two walls, and a block on the floor.
+        let inputs = [
+            box_input(1, [4.0, 0.2, 4.0], [0.0, -0.1, 0.0]),
+            box_input(2, [0.2, 3.0, 4.0], [-2.1, 1.5, 0.0]),
+            box_input(3, [4.0, 3.0, 0.2], [0.0, 1.5, 2.1]),
+            box_input(4, [1.0, 1.0, 1.0], [0.5, 0.5, -0.5]),
+        ];
+        let data = bake_fresh(&inputs, &[[0.0, 1.0, 0.0]]).unwrap();
+        assert_eq!(data.systems.len(), 1);
+        assert_eq!(data.renderers.len(), 4);
+        assert_eq!(data.probe_sets.len(), 1);
+        // Normals through the matrix: the floor's top faces up in world space.
+        assert!(data.systems[0].input.normals.iter().any(|n| n[1] > 0.99));
+        let dir = std::env::temp_dir().join(format!("unbound-bake-{}", std::process::id()));
+        let path = dir.join("scene.bin");
+        write_baked(&path, &data).unwrap();
+        let back = read_baked(&path).unwrap();
+        assert_eq!(
+            unbound_gi::data::encode_precomputed(&back),
+            unbound_gi::data::encode_precomputed(&data)
+        );
+        // A changed byte or a truncated entry is not used (it is made again).
+        let mut bytes = std::fs::read(&path).unwrap();
+        let last = bytes.len() - 1;
+        bytes[last] ^= 1;
+        std::fs::write(&path, &bytes).unwrap();
+        assert!(read_baked(&path).is_none());
+        std::fs::write(&path, &bytes[..40]).unwrap();
+        assert!(read_baked(&path).is_none());
+        std::fs::remove_dir_all(dir).unwrap();
+        // A renderer with a singular matrix fails the bake by name.
+        let mut flat = box_input(5, [1.0, 1.0, 1.0], [0.0; 3]);
+        flat.local_to_world[0] = 0.0;
+        let error = bake_fresh(&[flat], &[]).unwrap_err();
+        assert!(format!("{error:#}").contains("renderer 0"), "{error:#}");
     }
 }

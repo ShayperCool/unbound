@@ -4,6 +4,7 @@
 //! lightmap texels ([`transport`]) and the visibility of directional lights ([`visibility`]),
 //! traced through [`geometry`], every system of a scene through all of them ([`scene`]).
 //! See docs/REALTIME_GI.md.
+pub mod bake;
 pub mod clusters;
 pub mod geometry;
 mod math;

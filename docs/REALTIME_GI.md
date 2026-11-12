@@ -840,6 +840,17 @@ is how the Editor's products are made in the measured release, as follows.
   take nothing) and outside the system's bounds. A probe reads every system's clusters its
   rays meet (its dependencies: the environment, then the systems in order). Open: the
   Editor's own choice of 64 references.
+- **A scene's bake** (`bake.rs`, and `crates/unbound-runtime/src/realtime_gi.rs` `bake`): all of
+  the above from a scene's renderers alone (each one's mesh, matrix, realtime lightmap UV
+  settings, cluster size, Modelling Tolerance and group of Lightmap Parameters and System Tag)
+  and its light probes' positions: the systems and their layout, then per system its clusters,
+  transport and visibility through the whole scene, and one light probe set, in the form the
+  runtime reads the Editor's data in. The result is cached under
+  `Library/Unbound/RealtimeGI/` by a hash of every input and the cache's format version, with
+  a checksum: a damaged or stale entry is made again. Made from the Room's renderers alone, in
+  the scene's order, the Room is one system of 52 x 52 texels in an atlas of 64 as the
+  Editor's, and `room-base` puts 79 of its 5070 values outside the comparator's tolerance (83
+  over the Editor's layout), its light probes 15 of their 243 coefficients (14).
 
 ### When the engine would use it
 

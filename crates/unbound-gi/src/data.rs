@@ -844,3 +844,90 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         renderer_st,
     }))
 }
+
+crate::codec::codec_struct!(InputSamples {
+    positions,
+    normals,
+    cluster_points,
+    tree_children,
+    tree_weights,
+});
+crate::codec::codec_struct!(Segment {
+    references,
+    reference_weights,
+    weights,
+    texels,
+    copies,
+    block_normals,
+    block_directions,
+    block_copies,
+});
+crate::codec::codec_struct!(Transport {
+    width,
+    height,
+    dependencies,
+    segments,
+    block_neighbours,
+    block_error,
+    bounce_samples,
+    bounce,
+});
+crate::codec::codec_struct!(ClusterMaterials {
+    instance_renderers,
+    cluster_groups,
+    groups,
+    group_samples,
+    samples,
+});
+crate::codec::codec_struct!(System {
+    hash,
+    input_hash,
+    first_renderer,
+    renderer_count,
+    atlas,
+    atlas_offset,
+    input,
+    transport,
+    materials,
+    chart_mask,
+    visibility,
+});
+crate::codec::codec_struct!(Probe {
+    references,
+    weights,
+});
+crate::codec::codec_struct!(ProbeSet {
+    hash,
+    dependencies,
+    probes,
+});
+crate::codec::codec_struct!(Precomputed {
+    systems,
+    probe_sets,
+    probe_errors,
+    atlas_sizes,
+    renderers,
+    renderer_st,
+});
+
+/// The first bytes of an encoded [`Precomputed`] ([`encode_precomputed`]).
+const ENCODED_MAGIC: &[u8; 8] = b"UBGIPRE1";
+
+/// `data` in Unbound's own binary encoding (the cache of its precompute; not the Editor's).
+pub fn encode_precomputed(data: &Precomputed) -> Vec<u8> {
+    let mut w = crate::codec::Writer(ENCODED_MAGIC.to_vec());
+    crate::codec::Codec::write(data, &mut w);
+    w.0
+}
+
+/// The data [`encode_precomputed`] wrote; fails on anything else (a damaged entry).
+pub fn decode_precomputed(bytes: &[u8]) -> Result<Precomputed> {
+    ensure!(
+        bytes.starts_with(ENCODED_MAGIC),
+        "not Unbound's encoding of precomputed realtime GI"
+    );
+    let mut r = crate::codec::Reader::new(&bytes[ENCODED_MAGIC.len()..]);
+    let data: Precomputed = crate::codec::Codec::read(&mut r)?;
+    r.finished()?;
+    Ok(data)
+}

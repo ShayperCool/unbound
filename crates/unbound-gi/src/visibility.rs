@@ -548,3 +548,11 @@ mod tests {
         }
     }
 }
+
+crate::codec::codec_struct!(Visibility {
+    values_per_byte,
+    directions_per_stream,
+    streams,
+    data,
+    rings,
+});

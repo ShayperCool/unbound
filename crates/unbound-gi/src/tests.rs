@@ -4034,3 +4034,146 @@ fn systems_in_unbounds_order() {
         }
     }
 }
+
+/// The texels of `case`'s reference against a converged solver of Unbound's own precompute of a
+/// probe scene (`baked`, renderers named by the Editor's file IDs), renderer by renderer through
+/// each one's place in either layout and its charts' blocks (`outputs`, by file ID): (values
+/// outside the probe comparator's tolerance, values compared, median relative error).
+fn compare_baked(
+    baked: &Precomputed,
+    encoded: &[&[u32]],
+    editor: &Precomputed,
+    outputs: &std::collections::HashMap<i64, crate::realtime_uv::Output>,
+    case: &str,
+) -> (usize, usize, f32) {
+    let (width, texels) = reference(case);
+    let place = |data: &Precomputed, id: i64| {
+        let k = data.renderers.iter().position(|r| r.0 == id).unwrap();
+        let s = data
+            .systems
+            .iter()
+            .position(|s| (s.first_renderer..s.first_renderer + s.renderer_count).contains(&k))
+            .unwrap();
+        let system = &data.systems[s];
+        let st = data.renderer_st[k];
+        let (w, h) = (system.transport.width as f32, system.transport.height as f32);
+        (
+            s,
+            [(st[2] * w).round() as usize, (st[3] * h).round() as usize],
+            [system.atlas_offset.0 as usize, system.atlas_offset.1 as usize],
+        )
+    };
+    let (mut fails, mut total, mut relative) = (0, 0, Vec::new());
+    for &(id, _) in &baked.renderers {
+        let (s, ours, _) = place(baked, id);
+        let (_, theirs, atlas) = place(editor, id);
+        let sw = baked.systems[s].transport.width as usize;
+        for chart in &outputs[&id].charts {
+            let [left, bottom, cw, _] = chart.rect.map(|v| v as usize);
+            for (b, _) in chart.blocks.iter().enumerate().filter(|(_, used)| **used) {
+                let (bx, by) = (left + b % (cw / 2) * 2, bottom + b / (cw / 2) * 2);
+                for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+                    let (x, y) = (bx + dx, by + dy);
+                    let r = texels[(atlas[1] + theirs[1] + y) * width + atlas[0] + theirs[0] + x];
+                    if r[3] <= 0.0 {
+                        continue;
+                    }
+                    let got = crate::solver::decode_rgb9e5(
+                        encoded[s][(ours[1] + y) * sw + ours[0] + x],
+                    );
+                    for k in 0..3 {
+                        let d = (got[k] - r[k]).abs();
+                        total += 1;
+                        fails += (d > 0.02 + 0.05 * r[k].abs()) as usize;
+                        relative.push(d / r[k].abs().max(1e-3));
+                    }
+                }
+            }
+        }
+    }
+    relative.sort_by(f32::total_cmp);
+    (fails, total, relative[relative.len() / 2])
+}
+
+#[test]
+fn the_room_baked_from_its_renderers_lights_as_the_editors() {
+    // The Room made from its renderers alone by Unbound's precompute (the systems, their layout,
+    // clusters, transport and probes), its renderers in the scene file's order, lit as
+    // `room-base`: as the Room with Unbound's precompute over the Editor's layout.
+    use crate::precompute::bake::{BakeRenderer, bake};
+    let editor = room_data();
+    let names = renderer_names("Room");
+    let ids: Vec<i64> = renderer_order("Room")
+        .into_iter()
+        .filter(|id| editor.renderers.iter().any(|r| r.0 == *id))
+        .collect();
+    let meshes: Vec<(Vec<[f32; 3]>, crate::realtime_uv::Output)> = ids
+        .iter()
+        .map(|id| {
+            let &(_, scale, at) = ROOM_SHAPES.iter().find(|r| r.0 == names[id]).unwrap();
+            (
+                CUBE_POSITIONS
+                    .iter()
+                    .map(|p| std::array::from_fn(|i| p[i] * scale[i] + at[i]))
+                    .collect(),
+                cube_uvs(scale, 0.5),
+            )
+        })
+        .collect();
+    let renderers: Vec<BakeRenderer> = ids
+        .iter()
+        .zip(&meshes)
+        .map(|(&id, (positions, uvs))| {
+            let (mut lo, mut hi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+            for p in positions {
+                for a in 0..3 {
+                    lo[a] = lo[a].min(p[a]);
+                    hi[a] = hi[a].max(p[a]);
+                }
+            }
+            BakeRenderer {
+                id: (id, 0),
+                positions,
+                normals: &CUBE_NORMALS,
+                triangles: &CUBE_TRIANGLES,
+                uvs,
+                bounds: (lo, hi),
+                cluster_size: 1.0,
+                modelling_tolerance: 0.01,
+                group: 0,
+            }
+        })
+        .collect();
+    let baked = bake(&renderers, &ROOM_PROBES).unwrap();
+    assert_eq!(baked.systems.len(), 1);
+    assert_eq!(baked.atlas_sizes, vec![64]);
+    let system = &baked.systems[0];
+    assert_eq!((system.transport.width, system.transport.height), (52, 52));
+    // The encoding the cache keeps gives it back to the byte.
+    let bytes = crate::data::encode_precomputed(&baked);
+    let back = crate::data::decode_precomputed(&bytes).unwrap();
+    assert_eq!(crate::data::encode_precomputed(&back), bytes);
+    assert!(crate::data::decode_precomputed(&bytes[..bytes.len() - 1]).is_err());
+    let mut r = Replay::new();
+    r.solver = SystemSolver::new(Arc::new(back.systems[0].clone())).unwrap();
+    r.probes = ProbeSetSolver::new(
+        Arc::new(back.probe_sets[0].clone()),
+        std::slice::from_ref(&r.solver),
+    )
+    .unwrap();
+    r.data = back.clone();
+    r.set(BASE);
+    r.converge();
+    let outputs: std::collections::HashMap<i64, crate::realtime_uv::Output> = ids
+        .iter()
+        .zip(&meshes)
+        .map(|(&id, (_, uvs))| (id, uvs.clone()))
+        .collect();
+    let (fails, total, median) =
+        compare_baked(&back, &[r.solver.encoded()], &editor, &outputs, "room-base");
+    eprintln!("room-base baked: {fails} of {total} outside the tolerance, median {median}");
+    let (off, worst) = r.probes("room-base");
+    eprintln!("room-base baked probes: {off} coefficients off, worst {worst}");
+    assert!(total > 4000 && median < 0.01);
+    assert!(fails * 100 <= 83 * 115, "{fails}");
+}
