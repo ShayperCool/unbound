@@ -43,7 +43,8 @@ pub struct Charts {
 }
 
 /// Groups are neighbours when their boxes, each grown by this share of the distance limit,
-/// meet.
+/// meet. (The precompute's share for every renderer; the steps of RoomAuto bound it to between
+/// 0.4 and 2/3.)
 const NEIGHBOUR_REACH: f32 = 0.6;
 /// A group whose triangles facing away from its normal are more than this share of its area is
 /// not flat; a group smaller than this share of a joined set may be folded into it.
@@ -56,7 +57,9 @@ const TIE: f32 = 1e-5;
 /// A group left on its own is planar when its vertices are within this share of its size of
 /// its plane.
 const PLANAR: f32 = 1e-5;
-/// Pairs tried per round, and rounds at most.
+/// Pairs tried per round, and rounds at most: the precompute's own counts, which no renderer
+/// setting changes. The rounds of RoomAuto's shapes stop because fewer than two flat parts are
+/// left; a mesh that would need more rounds is refused (not measured).
 const TRIES_PER_ROUND: u32 = 300;
 const MAX_ROUNDS: usize = 100;
 /// Areas and lengths below this count as none.
@@ -64,9 +67,11 @@ const TINY: f32 = f32::EPSILON;
 /// A plane whose normal's third component is within this of zero takes its first axis from the
 /// other two.
 const BASIS_Z_EPSILON: f32 = 0.001;
-/// A triangle's corner is a right angle when its edges' cosine is below this.
+/// A triangle's corner is a right angle when its edges' cosine is below this (within about 6
+/// degrees). This and the next three are the precompute's own thresholds for turning a chart's
+/// axes; RoomAuto's charts on tilted planes, laid out along their triangles' legs, follow them.
 const RIGHT_ANGLE_COSINE: f32 = 0.1;
-/// A leg lies in a plane when its cosine to the normal is below this.
+/// A leg lies in a plane when its cosine to the normal is below this (within about 10 degrees).
 const IN_PLANE_COSINE: f32 = 0.17;
 /// Directions closer than 3 degrees to parallel or to perpendicular are one direction.
 const SAME_DIRECTION_COSINE: f32 = 0.998_629_5;
@@ -542,7 +547,7 @@ impl Neighbours {
         self.struck[group] = vec![false; self.lists[group].len()];
         self.stale[group] = false;
     }
-    #[cfg(test)]
+    /// Whether `other` is in the group's list and not struck out.
     fn linked(&self, group: usize, other: usize) -> bool {
         match self.lists[group].binary_search(&other) {
             Ok(at) => !self.struck[group][at],
@@ -598,8 +603,10 @@ fn take_connected(
     for (i, &g) in others.iter().enumerate() {
         place[g] = i;
     }
-    // The member's neighbours among `others`, lowest place first; a place may have changed
-    // since it was noted.
+    // The member's neighbours among `others`, lowest place first. The scan stands at the
+    // lowest place pending, and the group moved into a taken group's place is the next one it
+    // looks at: when that group is a neighbour too, it is noted again at its new place, and
+    // the note of its old place is dropped when it comes up.
     let mut pending = std::collections::BinaryHeap::new();
     let mut at = 0;
     while at < set.len() && !others.is_empty() {
@@ -612,18 +619,18 @@ fn take_connected(
         }
         while let Some(std::cmp::Reverse((noted, g))) = pending.pop() {
             let i = place[g];
-            if i == NONE {
-                continue;
-            }
             if i != noted {
-                pending.push(std::cmp::Reverse((i, g)));
                 continue;
             }
             set.push(g);
             place[g] = NONE;
             others.swap_remove(i);
             if i < others.len() {
-                place[others[i]] = i;
+                let moved = others[i];
+                place[moved] = i;
+                if neighbours.linked(member, moved) {
+                    pending.push(std::cmp::Reverse((i, moved)));
+                }
             }
         }
         at += 1;
@@ -656,6 +663,42 @@ fn tied(a: f32, b: f32) -> bool {
     a != b && (a - b).abs() <= TIE * a.abs().max(b.abs())
 }
 
+/// Turns a point's coordinates by a choice of signs: bit k flips coordinate k.
+fn flip(p: V3, signs: u8) -> V3 {
+    // (Adding zero makes a negative zero a zero, so that equal points sort alike.)
+    std::array::from_fn(|k| if signs >> k & 1 == 1 { -p[k] } else { p[k] } + 0.0)
+}
+
+/// The groups' vertices with their coordinates' signs chosen, in one order.
+fn flipped_points(geometry: &Geometry, groups: &[usize], signs: u8) -> Vec<V3> {
+    let mut points: Vec<V3> = groups
+        .iter()
+        .flat_map(|&g| &geometry.groups[g].vertices)
+        .map(|&v| flip(geometry.mesh.positions[v], signs))
+        .collect();
+    points.sort_unstable_by(|a, b| {
+        (0..3)
+            .map(|k| a[k].total_cmp(&b[k]))
+            .find(|o| o.is_ne())
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    points
+}
+
+/// A choice of signs of the coordinates that takes the vertices of the groups `from` onto those
+/// of `onto` exactly, and those of `fixed` onto themselves. A measure of two such sets is the
+/// same in any arithmetic that rounds as IEEE does: flipping a sign changes no magnitude and no
+/// sum's order. (A shape turned or moved off the coordinate origin in its mesh has no such
+/// image; congruent parts of it may tie here and not in the precompute.)
+fn mirrored(geometry: &Geometry, from: &[usize], onto: &[usize], fixed: &[usize]) -> bool {
+    let target = flipped_points(geometry, onto, 0);
+    let still = flipped_points(geometry, fixed, 0);
+    (0..8u8).any(|signs| {
+        flipped_points(geometry, from, signs) == target
+            && flipped_points(geometry, fixed, signs) == still
+    })
+}
+
 /// A set of groups as one number, whatever their order.
 fn set_key(set: &[usize]) -> u64 {
     set.iter().fold(set.len() as u64, |key, &g| {
@@ -665,6 +708,15 @@ fn set_key(set: &[usize]) -> u64 {
                 .rotate_left(23),
         )
     })
+}
+
+/// One pair tried in a round, and the area of the set it gathered.
+struct Try {
+    area: f32,
+    key: u64,
+    plane: Plane,
+    a: usize,
+    b: usize,
 }
 
 fn join(geometry: &Geometry) -> Result<Joined> {
@@ -686,12 +738,16 @@ fn join(geometry: &Geometry) -> Result<Joined> {
     }
     let mut neighbours = Neighbours::new(geometry, &candidates);
     // Two neighbouring groups at a right angle but for rounding: whether their normals face
-    // the same half-space, and so whether they may be joined at all, is the rounding's.
+    // the same half-space, and so whether they may be joined at all, is the rounding's. Their
+    // cosine is zero in any arithmetic only when each of its terms is: a zero that comes of
+    // terms that cancel is the rounding's too.
     for &a in &candidates {
         for &b in neighbours.lists[a].iter().filter(|&&b| b > a) {
-            let cosine = dot(geometry.groups[a].normal, geometry.groups[b].normal);
+            let (na, nb) = (geometry.groups[a].normal, geometry.groups[b].normal);
+            let cosine = dot(na, nb);
+            let exactly_zero = (0..3).all(|k| na[k] == 0.0 || nb[k] == 0.0);
             ensure!(
-                cosine == 0.0
+                exactly_zero
                     || cosine.abs() > RIGHT_ANGLE_ROUNDING
                     || !joins_at_right_angle(geometry, a, b),
                 "two faces at a right angle but for rounding are close enough to one plane to be joined: whether the precompute joins them hangs on that rounding"
@@ -701,11 +757,15 @@ fn join(geometry: &Geometry) -> Result<Joined> {
     let mut boxes: Vec<(V3, V3)> = Vec::new();
     let mut random = Random::new();
     let mut place = vec![NONE; count];
-    let mut tries: Vec<(f32, u64, bool)> = Vec::with_capacity(TRIES_PER_ROUND as usize);
-    for _ in 0..MAX_ROUNDS.min(count) {
+    let mut tries: Vec<Try> = Vec::with_capacity(TRIES_PER_ROUND as usize);
+    for round in 0.. {
         if candidates.len() < 2 {
             break;
         }
+        ensure!(
+            round < MAX_ROUNDS,
+            "a mesh whose flat parts take more than {MAX_ROUNDS} rounds to join: what the precompute does past its last round is not measured"
+        );
         let mut best: Option<(f32, Plane, usize, usize, u64)> = None;
         tries.clear();
         for _ in 0..TRIES_PER_ROUND {
@@ -737,7 +797,13 @@ fn join(geometry: &Geometry) -> Result<Joined> {
             take_connected(&neighbours, &mut set, &mut rest, &mut place);
             let area = geometry.projected_area(&set, &plane);
             let key = set_key(&set);
-            tries.push((area, key, plane.along_axes()));
+            tries.push(Try {
+                area,
+                key,
+                plane,
+                a,
+                b,
+            });
             if best.as_ref().is_none_or(|(most, ..)| area > *most) && area > 0.0 {
                 best = Some((area, plane, a, b, key));
             }
@@ -745,22 +811,43 @@ fn join(geometry: &Geometry) -> Result<Joined> {
         let Some((most, plane, a, b, key)) = best else {
             break;
         };
-        // Another set whose area is the winner's but for rounding, on planes that are not
-        // both along the coordinate axes: the precompute's own rounding decides between them.
-        // (Sets of the very same area are taken in the order they are tried: the opposite
-        // faces of a box.)
-        let exact = plane.along_axes();
-        if let Some(&(area, ..)) = tries
-            .iter()
-            .find(|&&(area, other, along)| other != key && tied(area, most) && !(exact && along))
-        {
-            bail!(
-                "two sets of faces are the largest of a round but for rounding (areas {most} and {area}): which the precompute takes hangs on that rounding"
+        let gather = |a: usize, b: usize, plane: &Plane, place: &mut [usize]| {
+            let mut rest = on_plane(geometry, &candidates, &[a, b], plane);
+            let mut set = if a == b { vec![a] } else { vec![a, b] };
+            take_connected(&neighbours, &mut set, &mut rest, place);
+            set
+        };
+        let set = gather(a, b, &plane, &mut place);
+        // Another set whose area is the winner's or is so but for rounding: along the
+        // coordinate axes the arithmetic here is the precompute's, and the first tried is
+        // taken; off them the very same area is the precompute's too only for a mirror image
+        // (the opposite faces of a box about the mesh's origin), else its own rounding decides.
+        let along = plane.along_axes();
+        let mut checked = Vec::new();
+        for other in &tries {
+            if other.key == key || checked.contains(&other.key) {
+                continue;
+            }
+            if other.area != most && !tied(other.area, most) {
+                continue;
+            }
+            checked.push(other.key);
+            if along && other.plane.along_axes() {
+                continue;
+            }
+            let image = other.area == most
+                && mirrored(
+                    geometry,
+                    &set,
+                    &gather(other.a, other.b, &other.plane, &mut place),
+                    &[],
+                );
+            ensure!(
+                image,
+                "two sets of faces are the largest of a round but for rounding (areas {most} and {}): which the precompute takes hangs on that rounding",
+                other.area
             );
         }
-        let mut rest = on_plane(geometry, &candidates, &[a, b], &plane);
-        let mut set = if a == b { vec![a] } else { vec![a, b] };
-        take_connected(&neighbours, &mut set, &mut rest, &mut place);
         let mut fitted = geometry.fit(&set);
         if dot(plane.normal(), fitted.normal()) < 0.0 {
             fitted = fitted.flipped();
@@ -804,39 +891,51 @@ fn fold(
     boxes: &[(V3, V3)],
 ) -> Result<()> {
     let mut areas = vec![0.0f32; joined.planes.len()];
+    // The groups the sets were fitted to, before any is folded into them.
+    let mut members = vec![Vec::new(); joined.planes.len()];
     for (g, &set) in joined.of_group.iter().enumerate() {
         if set != NONE {
             areas[set] += geometry.groups[g].area as f32;
+            members[set].push(g);
         }
     }
+    let mut reaches = Vec::new();
     for &g in list {
         let area = geometry.groups[g].area as f32;
         let own = geometry.grown(g);
         let mut nearest = geometry.max_distance;
         let mut into = NONE;
-        let mut reaches = Vec::new();
+        reaches.clear();
         for set in 0..joined.planes.len() {
             if area / areas[set] < SMALL_SHARE && boxes_meet(own, boxes[set]) {
                 let reach = geometry.reach(g, &joined.planes[set]);
-                reaches.push((reach, joined.planes[set].along_axes()));
+                reaches.push((reach, set));
                 if reach < nearest {
                     nearest = reach;
                     into = set;
                 }
             }
         }
-        if into != NONE {
-            // (Sets at the very same distance: the first, as for a slab's end face between
-            // its two large faces.)
-            let exact = joined.planes[into].along_axes();
+        if into == NONE {
+            continue;
+        }
+        // Sets as near or so but for rounding: as for the largest set of a round, the first is
+        // taken along the axes, and off them when the other is the first's mirror image that
+        // leaves the part where it is (a slab's end face between its two large faces).
+        let along = joined.planes[into].along_axes();
+        for &(reach, set) in &reaches {
+            if set == into || (reach != nearest && !tied(reach, nearest)) {
+                continue;
+            }
+            if along && joined.planes[set].along_axes() {
+                continue;
+            }
             ensure!(
-                !reaches
-                    .iter()
-                    .any(|&(reach, along)| tied(reach, nearest) && !(exact && along)),
+                reach == nearest && mirrored(geometry, &members[into], &members[set], &[g]),
                 "a small part is as near to two sets of faces but for rounding: which of them the precompute folds it into hangs on that rounding"
             );
-            joined.of_group[g] = into;
         }
+        joined.of_group[g] = into;
     }
     Ok(())
 }
@@ -1520,6 +1619,92 @@ mod tests {
         assert!(error.contains("bent part"), "{error}");
     }
 
+    /// A small part that is not flat, beside a large flat one, is folded into its chart.
+    #[test]
+    fn a_small_part_that_is_not_flat_is_folded_into_a_set_it_lies_by() {
+        let narrow = Params {
+            max_angle: 30.0,
+            ..LIMITS
+        };
+        // A small level quad whose second triangle faces down by its vertices' normals: a
+        // quarter of its area faces away from its normal.
+        let mut shape = Shape::default();
+        shape.positions = vec![
+            [1.0, 0.05, 1.0],
+            [1.4, 0.05, 1.0],
+            [1.4, 0.05, 1.4],
+            [1.1, 0.05, 1.3],
+        ];
+        shape.normals = vec![
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0],
+        ];
+        shape.uvs = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.2, 0.8]];
+        shape.triangles = vec![[0, 2, 1], [0, 3, 2]];
+        let mesh = shape.mesh();
+        assert!(!geometry(&mesh, &narrow).groups[0].candidate);
+        let floor = |shape: &mut Shape, x: f32, size: f32| {
+            shape.quad(
+                [
+                    [x, 0.0, 0.0],
+                    [x + size, 0.0, 0.0],
+                    [x + size, 0.0, size],
+                    [x, 0.0, size],
+                ],
+                [0.0, 1.0, 0.0],
+            )
+        };
+        floor(&mut shape, 0.0, 4.0);
+        floor(&mut shape, 10.0, 3.0);
+        let charts = auto_charts(&shape.mesh(), &narrow).unwrap();
+        assert_eq!(charts.triangles.len(), 2);
+        let mut first = charts.triangles[0].clone();
+        first.sort_unstable();
+        assert_eq!(first, [0, 1, 2, 3]);
+        // It lies in the large face's chart, where the face's plane puts it.
+        let [u0, w0] = charts.uvs[0];
+        for v in 1..4 {
+            let [u, w] = charts.uvs[v];
+            let (p, q) = (shape.positions[v], shape.positions[0]);
+            assert!(near(
+                (u - u0).abs() + (w - w0).abs(),
+                (p[0] - q[0]).abs() + (p[2] - q[2]).abs()
+            ));
+        }
+        for v in 0..8 {
+            assert!(charts.uvs[v].iter().all(|&x| (0.0..=4.0).contains(&x)));
+        }
+    }
+
+    /// Flat parts that each take a round of their own: a hundred rounds are the most.
+    #[test]
+    fn a_mesh_that_needs_more_rounds_than_there_are_fails() {
+        let row = |count: usize| {
+            let mut shape = Shape::default();
+            for i in 0..count {
+                let x = 2.0 * i as f32;
+                shape.quad(
+                    [
+                        [x, 0.0, 0.0],
+                        [x + 1.0, 0.0, 0.0],
+                        [x + 1.0, 0.0, 1.0],
+                        [x, 0.0, 1.0],
+                    ],
+                    [0.0, 1.0, 0.0],
+                );
+            }
+            shape
+        };
+        let charts = auto_charts(&row(MAX_ROUNDS + 1).mesh(), &LIMITS).unwrap();
+        assert_eq!(charts.triangles.len(), MAX_ROUNDS + 1);
+        let error = auto_charts(&row(MAX_ROUNDS + 2).mesh(), &LIMITS)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("rounds to join"), "{error}");
+    }
+
     /// Turns a shape in its own mesh: by `yaw` degrees about Y, then by `pitch` about X.
     fn turn_in_mesh(shape: &mut Shape, yaw: f32, pitch: f32) {
         let (sy, cy) = yaw.to_radians().sin_cos();
@@ -1574,6 +1759,61 @@ mod tests {
         turn_in_mesh(&mut cube, 30.0, 20.0);
         let error = auto_charts(&cube.mesh(), &LIMITS).unwrap_err().to_string();
         assert!(error.contains("right angle but for rounding"), "{error}");
+        // Turned by 45 degrees the cosine of a thin side and a large face is zero here because
+        // its terms cancel, which the precompute's own normals need not do.
+        let mut slab = solid([3.0, 0.2, 2.0]);
+        turn_in_mesh(&mut slab, 0.0, 45.0);
+        let mesh = slab.mesh();
+        let geometry = geometry(&mesh, &LIMITS);
+        assert!((0..6).any(|a| (0..a).any(|b| {
+            let (na, nb) = (geometry.groups[a].normal, geometry.groups[b].normal);
+            dot(na, nb) == 0.0 && (0..3).any(|k| na[k] != 0.0 && nb[k] != 0.0)
+        })));
+        let error = auto_charts(&mesh, &LIMITS).unwrap_err().to_string();
+        assert!(error.contains("right angle but for rounding"), "{error}");
+    }
+
+    /// Off the coordinate axes, sets of the very same area are taken in the order tried only
+    /// when one is the other's mirror image in the mesh's coordinates.
+    #[test]
+    fn congruent_sets_off_the_axes_are_taken_in_order_only_as_mirror_images() {
+        let mut centred = solid([4.0, 3.0, 5.0]);
+        turn_in_mesh(&mut centred, 45.0, 0.0);
+        assert_eq!(
+            auto_charts(&centred.mesh(), &LIMITS)
+                .unwrap()
+                .triangles
+                .len(),
+            6
+        );
+        let mut moved = solid([4.0, 3.0, 5.0]);
+        turn_in_mesh(&mut moved, 45.0, 0.0);
+        for p in &mut moved.positions {
+            *p = [p[0] + 1.3, p[1] + 0.7, p[2] - 2.1];
+        }
+        let error = auto_charts(&moved.mesh(), &LIMITS).unwrap_err().to_string();
+        assert!(
+            error.contains("largest of a round but for rounding"),
+            "{error}"
+        );
+        // Mirror images: the opposite face by the signs of all three coordinates; a face is
+        // its own with none.
+        let opposite = |geometry: &Geometry, g: usize| {
+            let n = geometry.groups[g].normal;
+            (0..6)
+                .find(|&o| dot(geometry.groups[o].normal, n) < -0.999)
+                .unwrap()
+        };
+        let mesh = centred.mesh();
+        let about_origin = geometry(&mesh, &LIMITS);
+        for g in 0..6 {
+            let o = opposite(&about_origin, g);
+            assert!(mirrored(&about_origin, &[g], &[o], &[]));
+            assert!(mirrored(&about_origin, &[g], &[g], &[]));
+        }
+        let mesh = moved.mesh();
+        let off_origin = geometry(&mesh, &LIMITS);
+        assert!((0..6).all(|g| !mirrored(&off_origin, &[g], &[opposite(&off_origin, g)], &[])));
     }
 
     /// Two rectangles of the same size that lie differently: their areas along their planes
@@ -1746,40 +1986,52 @@ mod tests {
     /// The walk over the neighbour lists gathers a set in the order of the plain scan.
     #[test]
     fn a_set_is_gathered_in_the_order_of_the_plain_scan() {
-        // A strip of 40 coplanar quads, each its own part, numbered out of order along it.
-        let mut strip = Shape::default();
-        for i in 0..40 {
-            let x = ((i * 17) % 40) as f32;
-            strip.quad(
-                [
-                    [x, 0.0, 0.0],
-                    [x + 1.0, 0.0, 0.0],
-                    [x + 1.0, 0.0, 1.0],
-                    [x, 0.0, 1.0],
-                ],
-                [0.0, 1.0, 0.0],
-            );
-        }
-        let mesh = strip.mesh();
-        let geometry = geometry(&mesh, &LIMITS);
-        let candidates: Vec<usize> = (0..geometry.groups.len()).collect();
-        let mut neighbours = Neighbours::new(&geometry, &candidates);
-        neighbours.retire(20);
-        let mut place = vec![NONE; candidates.len()];
-        for seed in [0, 13, 39] {
-            let others: Vec<usize> = candidates
-                .iter()
-                .copied()
-                .filter(|&g| g != seed && g != 20)
-                .collect();
-            let (mut walked, mut left) = (vec![seed], others.clone());
-            take_connected(&neighbours, &mut walked, &mut left, &mut place);
-            let (mut scanned, mut rest) = (vec![seed], others);
-            take_connected_plainly(&neighbours, &mut scanned, &mut rest);
-            assert_eq!(walked, scanned);
-            assert_eq!(left, rest);
-            assert!(walked.len() > 1 && !left.is_empty());
-            assert!(place.iter().all(|&p| p == NONE));
+        // A strip of 40 coplanar quads and a grid of 8 by 8, each quad its own part, numbered
+        // out of order; in the grid a part has up to eight neighbours, so a group moved into a
+        // taken one's place is often a neighbour of the same member.
+        let cells = |columns: usize, rows: usize, step: usize| {
+            let mut shape = Shape::default();
+            let count = columns * rows;
+            for i in 0..count {
+                let cell = (i * step) % count;
+                let (x, z) = ((cell % columns) as f32, (cell / columns) as f32);
+                shape.quad(
+                    [
+                        [x, 0.0, z],
+                        [x + 1.0, 0.0, z],
+                        [x + 1.0, 0.0, z + 1.0],
+                        [x, 0.0, z + 1.0],
+                    ],
+                    [0.0, 1.0, 0.0],
+                );
+            }
+            shape
+        };
+        let mut shapes = vec![cells(40, 1, 17)];
+        shapes.extend([1, 7, 9, 23, 39, 57].map(|step| cells(8, 8, step)));
+        for shape in &shapes {
+            let mesh = shape.mesh();
+            let geometry = geometry(&mesh, &LIMITS);
+            let candidates: Vec<usize> = (0..geometry.groups.len()).collect();
+            let mut neighbours = Neighbours::new(&geometry, &candidates);
+            let retired = candidates.len() / 2;
+            neighbours.retire(retired);
+            let mut place = vec![NONE; candidates.len()];
+            for seed in candidates.iter().copied().filter(|&g| g != retired) {
+                let others: Vec<usize> = candidates
+                    .iter()
+                    .copied()
+                    .filter(|&g| g != seed && g != retired)
+                    .collect();
+                let (mut walked, mut left) = (vec![seed], others.clone());
+                take_connected(&neighbours, &mut walked, &mut left, &mut place);
+                let (mut scanned, mut rest) = (vec![seed], others);
+                take_connected_plainly(&neighbours, &mut scanned, &mut rest);
+                assert_eq!(walked, scanned);
+                assert_eq!(left, rest);
+                assert!(walked.len() > 1);
+                assert!(place.iter().all(|&p| p == NONE));
+            }
         }
     }
 

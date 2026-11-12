@@ -579,11 +579,18 @@ check. Each refusal is a warning that names the renderer, and its system is then
   rounding.
 - Choices that rounding decides in an instance that is not turned, where the mesh itself is
   off the coordinate axes: two neighbouring flat parts at a right angle but for rounding that
-  one plane could hold within the limits; two different sets that are the largest of a round
-  but for rounding (within 1e-5 of each other, and not the same); a leftover as near to two
-  sets but for rounding. Along the coordinate axes the arithmetic is exact and such ties are
-  taken in order, as the Editor takes them in the scene's boxes and steps (the two charts of
-  a step's tread and riser of one size among them).
+  one plane could hold within the limits (their normals' cosine is near zero, or zero only
+  because its terms cancel, as for a slab modelled at 45 degrees); two different sets that are
+  the largest of a round, of the same area or of one but for rounding (within 1e-5 of each
+  other); a leftover as near to two sets in the same way. Along the coordinate axes the
+  arithmetic is exact and such ties are taken in order, as the Editor takes them in the scene's
+  boxes and steps (the two charts of a step's tread and riser of one size among them). Off the
+  axes the very same measure is taken in order only for a mirror image: when flipping the signs
+  of some coordinates takes the one set's vertices onto the other's (and a leftover onto
+  itself), which keeps every magnitude and sum of the precompute's as it is, as for the two
+  sides of the scene's roofs. Congruent sets of a shape turned or moved off its mesh's origin
+  are refused.
+- A mesh whose flat parts take more than the hundred rounds to join.
 - A part that is not flat within the limits and that nothing folds in: curved surfaces. Their
   charts need a measure of overlap in the projection, which is not implemented.
 - A bent part left on its own (flat within the limits, not planar): whether it keeps its own
@@ -596,8 +603,9 @@ check. Each refusal is a warning that names the renderer, and its system is then
   normals, and a part without area that lies by no chart: not measured.
 
 Not measured, and implemented as written above: scale under parents that skew it (the
-transform's `lossyScale` is used), and meshes that mix triangles wound with and against their
-normals. Not guarded: a part exactly at a limit but for rounding (its lean or its distance
+transform's `lossyScale` is used), meshes that mix triangles wound with and against their
+normals, and a small part that is not flat folded into a set it lies by (projected onto that
+set's plane, as the flat leftovers measured are). Not guarded: a part exactly at a limit but for rounding (its lean or its distance
 within the last digits of Max Angle or Max Distance, off the coordinate axes), and what the
 Editor's own cache of earlier bakes may share with a renderer (it keeps results by mesh and
 scale across bakes; a scratch bake reused one for a renderer that had since been turned).
