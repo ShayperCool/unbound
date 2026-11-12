@@ -105,11 +105,10 @@ sealed partial class StubBuilder
             {
                 // An inactive branch has no semantic binding in this compilation. Keep its explicit
                 // lookup visible until the branch has a measured policy, rather than silently losing it.
-                if (!call.ArgumentList.Arguments.Any(a => a.NameColon?.Name.Identifier.ValueText == "inherit"
-                    || a.Expression.IsKind(SyntaxKind.FalseLiteralExpression) || a.Expression.IsKind(SyntaxKind.TrueLiteralExpression))) continue;
+                if (call.ArgumentList.Arguments.Count == 0) continue;
                 var location = Path.GetRelativePath(root, tree.FilePath).Replace(Path.DirectorySeparatorChar, '/');
                 _errors.Add(new ApiCheckError { Category = "lookup", Type = "<conditional lookup>",
-                    Message = $"{location}: inactive conditional lookup {call.NormalizeWhitespace()}: bind and validate the explicit inherit argument for this configuration" });
+                    Message = $"{location}: inactive conditional lookup {call.NormalizeWhitespace()}: bind and validate the reflection overload and inherit argument for this configuration" });
             }
         }
     }

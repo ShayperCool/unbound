@@ -282,10 +282,23 @@ public class ApiCheckerTests
             Directory.CreateDirectory(source);
             File.WriteAllText(Path.Combine(source, "Client.cs"), declarations + client);
             var impl = TestAssemblies.Compile(Path.Combine(root, "impl"), "UnityEngine.CoreModule", declarations + client);
-            File.WriteAllText(Path.Combine(source, "Conditional.cs"), "#if NEVER_SELECTED\nnamespace Unbound { static class Conditional { static bool Hidden(System.Type t) => t.IsDefined(typeof(UnityEngine.Inherited), false); } }\n#endif\n");
+            File.WriteAllText(Path.Combine(source, "Conditional.cs"), """
+                #if NEVER_SELECTED
+                namespace Unbound {
+                    static class Conditional {
+                        const bool ConstantFlag = false;
+                        static bool Hidden(System.Type t) => t.IsDefined(typeof(UnityEngine.Inherited), false);
+                        static bool Computed(System.Type t, bool inheritFlag) => t.IsDefined(typeof(UnityEngine.Inherited), inheritFlag);
+                        static bool Constant(System.Type t) => t.IsDefined(typeof(UnityEngine.Inherited), ConstantFlag);
+                    }
+                }
+                #endif
+                """);
             var errors = ApiChecker.Check(unity, impl, implSourceDir: source).Errors;
-            Assert.Equal(7, errors.Count);
-            Assert.Single(errors.Where(e => e.Type == "<conditional lookup>"));
+            Assert.Equal(9, errors.Count);
+            Assert.Equal(3, errors.Count(e => e.Type == "<conditional lookup>"));
+            Assert.Contains(errors, e => e.Type == "<conditional lookup>" && e.Message.Contains("inheritFlag"));
+            Assert.Contains(errors, e => e.Type == "<conditional lookup>" && e.Message.Contains("ConstantFlag"));
             Assert.All(errors, e => Assert.Equal("lookup", e.Category));
             foreach (var name in new[] { "Wrong", "WrongExtension", "WrongDirect", "Computed", "Generic", "All" })
                 Assert.Contains(errors, e => e.Message.StartsWith("UnityEngine/Client.cs " + name + ":"));

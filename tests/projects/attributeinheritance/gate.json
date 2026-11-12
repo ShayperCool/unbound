@@ -5,6 +5,7 @@
   "summary": "\\d+/\\d+ records match; \\d+ differ",
   "engine_paths": [
     "managed/UnityEngine/Core/Attributes.cs",
+    "managed/UnityEngine/Core/JsonUtility.cs",
     "managed/UnityEngine/Editor/Editors.cs",
     "managed/UnityEngine/Editor/TypeCache.cs",
     "managed/UnityEngine/Editor/EditorInitialization.cs",
