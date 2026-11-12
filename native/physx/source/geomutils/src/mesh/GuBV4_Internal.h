@@ -181,7 +181,7 @@
 		if(code & (1<<c))	{ stack[nb++] = node[c].getChildData();	}		\
 		if(code & (1<<d))	{ stack[nb++] = node[d].getChildData();	}	}	\
 
-#if PX_INTEL_FAMILY
+#if PX_INTEL_FAMILY || GU_BV4_SIMD
 	template<class LeafTestT, class ParamsT>
 	static Ps::IntBool BV4_ProcessStreamNoOrder(const BVDataPacked* PX_RESTRICT node, PxU32 initData, ParamsT* PX_RESTRICT params)
 	{

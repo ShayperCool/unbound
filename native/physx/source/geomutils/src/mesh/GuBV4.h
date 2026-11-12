@@ -34,6 +34,7 @@
 #include "common/PxSerialFramework.h"
 #include "PsUserAllocated.h"
 #include "GuBV4Settings.h"
+#include "GuBV4_Simd.h"
 #include "GuCenterExtents.h"
 
 #define V4LoadU_Safe	V4LoadU

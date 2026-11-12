@@ -31,7 +31,7 @@
 #define GU_BV4_AABB_AABB_SWEEP_TEST_H
 
 #ifndef GU_BV4_USE_SLABS
-#if PX_INTEL_FAMILY
+#if PX_INTEL_FAMILY || GU_BV4_SIMD
 	PX_FORCE_INLINE Ps::IntBool BV4_SegmentAABBOverlap(const PxVec3& center, const PxVec3& extents, const PxVec3& extents2, const RayParams* PX_RESTRICT params)
 	{
 		const PxU32 maskI = 0x7fffffff;

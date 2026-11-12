@@ -37,6 +37,7 @@
 #include "GuSphere.h"
 #include "GuCapsule.h"
 #include "GuSIMDHelpers.h"
+#include "GuBV4_Simd.h"
 
 #define BV4_ALIGN16(x)	PX_ALIGN_PREFIX(16)	x PX_ALIGN_SUFFIX(16)
 
@@ -428,7 +429,7 @@ namespace Gu
 			LeafFunction_ClosestT::doLeafTest(params, nbTris);
 	}
 
-#if PX_INTEL_FAMILY
+#if PX_INTEL_FAMILY || GU_BV4_SIMD
 #ifndef GU_BV4_USE_SLABS
 	template<class ParamsT>
 	PX_FORCE_INLINE void setupRayData(ParamsT* PX_RESTRICT params, float max_dist, const PxVec3& origin, const PxVec3& dir)

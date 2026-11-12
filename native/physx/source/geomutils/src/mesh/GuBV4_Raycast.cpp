@@ -31,7 +31,7 @@
 using namespace physx;
 using namespace Gu;
 
-#if PX_INTEL_FAMILY  && !defined(PX_SIMD_DISABLED)
+#if GU_BV4_SIMD
 
 #include "PxQueryReport.h"
 #include "GuInternal.h"

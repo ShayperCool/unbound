@@ -34,6 +34,7 @@
 #include "GuRaycastTests.h"
 #include "GuTriangleMesh.h"
 #include "PsVecMath.h"
+#include "GuBV4_Simd.h"
 
 // PT: this file contains the common interface for all midphase implementations. Specifically the Midphase namespace contains the
 // midphase-related entry points, dispatching calls to the proper implementations depending on the triangle mesh's type. The rest of it
@@ -129,7 +130,7 @@ namespace Gu
 									PxSweepHit& sweepHit, PxHitFlags hitFlags, const PxReal inflation);
 	PX_PHYSX_COMMON_API void sweepConvex_MeshGeom_RTREE(const TriangleMesh* mesh, const Gu::Box& hullBox, const PxVec3& localDir, const PxReal distance, SweepConvexMeshHitCallback& callback, bool anyHit);
 
-#if PX_INTEL_FAMILY
+#if PX_INTEL_FAMILY || GU_BV4_SIMD
 	// BV4 forward declarations
 	PX_PHYSX_COMMON_API PxU32 raycast_triangleMesh_BV4(	const TriangleMesh* mesh, const PxTriangleMeshGeometry& meshGeom, const PxTransform& pose,
 									const PxVec3& rayOrigin, const PxVec3& rayDir, PxReal maxDist,
@@ -178,7 +179,7 @@ namespace Midphase
 	}
 }
 
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 	#else
 	static PxU32 unsupportedMidphase(	const TriangleMesh*, const PxTriangleMeshGeometry&, const PxTransform&,
 										const PxVec3&, const PxVec3&, PxReal,
@@ -219,7 +220,7 @@ namespace Midphase
 	static const MidphaseRaycastFunction	gMidphaseRaycastTable[PxMeshMidPhase::eLAST] =
 	{
 		raycast_triangleMesh_RTREE,
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 		raycast_triangleMesh_BV4,
 	#else
 		unsupportedMidphase,
@@ -229,7 +230,7 @@ namespace Midphase
 	static const MidphaseSphereOverlapFunction gMidphaseSphereOverlapTable[PxMeshMidPhase::eLAST] =
 	{
 		intersectSphereVsMesh_RTREE,
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 		intersectSphereVsMesh_BV4,
 	#else
 		unsupportedSphereOverlapMidphase,
@@ -239,7 +240,7 @@ namespace Midphase
 	static const MidphaseBoxOverlapFunction gMidphaseBoxOverlapTable[PxMeshMidPhase::eLAST] =
 	{
 		intersectBoxVsMesh_RTREE,
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 		intersectBoxVsMesh_BV4,
 	#else
 		unsupportedBoxOverlapMidphase,
@@ -249,7 +250,7 @@ namespace Midphase
 	static const MidphaseCapsuleOverlapFunction gMidphaseCapsuleOverlapTable[PxMeshMidPhase::eLAST] =
 	{
 		intersectCapsuleVsMesh_RTREE,
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 		intersectCapsuleVsMesh_BV4,
 	#else
 		unsupportedCapsuleOverlapMidphase,
@@ -259,7 +260,7 @@ namespace Midphase
 	static const MidphaseBoxCBOverlapFunction gMidphaseBoxCBOverlapTable[PxMeshMidPhase::eLAST] =
 	{
 		intersectOBB_RTREE,
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 		intersectOBB_BV4,
 	#else
 		unsupportedBoxCBOverlapMidphase,
@@ -269,7 +270,7 @@ namespace Midphase
 	static const MidphaseBoxSweepFunction gMidphaseBoxSweepTable[PxMeshMidPhase::eLAST] =
 	{
 		sweepBox_MeshGeom_RTREE,
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 		sweepBox_MeshGeom_BV4,
 	#else
 		unsupportedBoxSweepMidphase,
@@ -279,7 +280,7 @@ namespace Midphase
 	static const MidphaseCapsuleSweepFunction gMidphaseCapsuleSweepTable[PxMeshMidPhase::eLAST] =
 	{
 		sweepCapsule_MeshGeom_RTREE,
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 		sweepCapsule_MeshGeom_BV4,
 	#else
 		unsupportedCapsuleSweepMidphase,
@@ -289,7 +290,7 @@ namespace Midphase
 	static const MidphaseConvexSweepFunction gMidphaseConvexSweepTable[PxMeshMidPhase::eLAST] =
 	{
 		sweepConvex_MeshGeom_RTREE,
-	#if PX_INTEL_FAMILY && !defined(PX_SIMD_DISABLED)
+	#if GU_BV4_SIMD
 		sweepConvex_MeshGeom_BV4,
 	#else
 		unsupportedConvexSweepMidphase,

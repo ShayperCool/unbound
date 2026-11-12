@@ -30,7 +30,7 @@
 #ifndef GU_BV4_BOX_BOX_OVERLAP_TEST_H
 #define GU_BV4_BOX_BOX_OVERLAP_TEST_H
 
-#if PX_INTEL_FAMILY	
+#if PX_INTEL_FAMILY || GU_BV4_SIMD
 #ifndef GU_BV4_USE_SLABS		
 	PX_FORCE_INLINE Ps::IntBool BV4_BoxBoxOverlap(const PxVec3& extents, const PxVec3& center, const OBBTestParams* PX_RESTRICT params)
 	{
