@@ -356,6 +356,144 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A culling's shadow caster culling (CullShadowCasters) invokes the groups that
+        /// take light views once per light with splits, as the Editor gives the context
+        /// (tests/projects/brg shadows): every split's planes in order, then the camera's frustum
+        /// as receiver planes with the far one at the shadow distance; a light whose every split
+        /// is excluded is not culled, and one that does not cull by the view frustum has no
+        /// receiver planes.</summary>
+        [Fact]
+        public void ShadowCullingInvokesLightViewsWithTheSplitsAndReceiverPlanes()
+        {
+            var lightObject = new GameObject("brg shadow sun");
+            m_Objects.Add(lightObject);
+            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.shadows = LightShadows.Hard;
+            light.cullingMask = ~(1 << 3);
+            var contexts = new List<(BatchCullingViewType View, Plane[] Planes, CullingSplit[] Splits, int ReceiverOffset, int Receivers, uint Layers, int ViewId, Matrix4x4 LocalToWorld, BatchCullingFlags Flags, ushort Excluded, BatchCullingProjectionType Projection)>();
+            Group((g, c, o, u) =>
+            {
+                if (c.viewType == BatchCullingViewType.Light)
+                    contexts.Add((c.viewType, c.cullingPlanes.ToArray(), c.cullingSplits.ToArray(), c.receiverPlaneOffset, c.receiverPlaneCount, c.cullingLayerMask,
+                        c.viewID.GetInstanceID(), c.localToWorldMatrix, c.cullingFlags, c.splitExclusionMask, c.projectionType));
+                return default;
+            });
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            parameters.shadowDistance = 50f;
+            var data = Culling.Get(Culling.Cull(ref parameters));
+            int sun = Array.FindIndex(data.Lights.ToArray(), l => l.light == light);
+            Assert.True(sun >= 0);
+            ShadowSplitData Split(int planes, float offset)
+            {
+                var split = new ShadowSplitData { cullingPlaneCount = planes, cullingSphere = new Vector4(1f, 2f, 3f, 4f + offset), cullingNearPlane = 0.5f + offset, shadowCascadeBlendCullingFactor = 0.75f };
+                for (int i = 0; i < planes; i++) split.SetCullingPlane(i, new Plane(Vector3.up, offset + i));
+                return split;
+            }
+            var splits = new NativeArray<ShadowSplitData>(2, Allocator.Temp);
+            splits[0] = Split(3, 0f);
+            splits[1] = Split(2, 10f);
+            var infos = new NativeArray<LightShadowCasterCullingInfo>(data.Lights.Length, Allocator.Temp);
+            infos[sun] = new LightShadowCasterCullingInfo { splitRange = new RangeInt(0, 2), projectionType = BatchCullingProjectionType.Orthographic, splitExclusionMask = 1 };
+            try
+            {
+                new ScriptableRenderContext().CullShadowCasters(new CullingResults { ptr = Culling.Cull(ref parameters) }, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                var c = Assert.Single(contexts);
+                Assert.Equal(3 + 2 + 6, c.Planes.Length);
+                Assert.Equal(new[] { 0, 3 }, Array.ConvertAll(c.Splits, s => s.cullingPlaneOffset));
+                Assert.Equal(new[] { 3, 2 }, Array.ConvertAll(c.Splits, s => s.cullingPlaneCount));
+                Assert.Equal(new Vector3(1f, 2f, 3f), c.Splits[1].sphereCenter);
+                Assert.Equal(14f, c.Splits[1].sphereRadius);
+                Assert.Equal(10.5f, c.Splits[1].nearPlane);
+                Assert.Equal(0.75f, c.Splits[0].cascadeBlendCullingFactor);
+                Assert.Equal(11f, c.Planes[4].distance);
+                Assert.Equal((5, 6), (c.ReceiverOffset, c.Receivers));
+                // The camera's planes, the far one pulled in to the shadow distance.
+                for (int i = 0; i < 5; i++) Assert.Equal(parameters.GetCullingPlane(i), c.Planes[5 + i]);
+                var far = parameters.GetCullingPlane(5);
+                Assert.Equal(far.normal, c.Planes[10].normal);
+                Assert.Equal(far.distance - (m_Camera.farClipPlane - 50f), c.Planes[10].distance, 3);
+                Assert.Equal((uint)m_Camera.cullingMask & (uint)light.cullingMask, c.Layers);
+                Assert.Equal(light.GetInstanceID(), c.ViewId);
+                Assert.Equal(light.transform.localToWorldMatrix, c.LocalToWorld);
+                Assert.Equal(BatchCullingFlags.None, c.Flags);
+                Assert.Equal((ushort)1, c.Excluded);
+                Assert.Equal(BatchCullingProjectionType.Orthographic, c.Projection);
+
+                // Without the view frustum: no receivers. Every split excluded: no culling.
+                contexts.Clear();
+                light.useViewFrustumForShadowCasterCull = false;
+                new ScriptableRenderContext().CullShadowCasters(new CullingResults { ptr = Culling.Cull(ref parameters) }, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                Assert.Equal((0, 0, 5), (Assert.Single(contexts).ReceiverOffset, contexts[0].Receivers, contexts[0].Planes.Length));
+                contexts.Clear();
+                infos[sun] = new LightShadowCasterCullingInfo { splitRange = new RangeInt(0, 2), splitExclusionMask = 3 };
+                new ScriptableRenderContext().CullShadowCasters(new CullingResults { ptr = Culling.Cull(ref parameters) }, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                Assert.Empty(contexts);
+
+                // A light whose direct light is in the lightmaps leaves lightmapped casters out.
+                infos[sun] = new LightShadowCasterCullingInfo { splitRange = new RangeInt(0, 1) };
+                light.bakingOutput = new LightBakingOutput { isBaked = true, lightmapBakeType = LightmapBakeType.Mixed, mixedLightingMode = MixedLightingMode.Subtractive };
+                new ScriptableRenderContext().CullShadowCasters(new CullingResults { ptr = Culling.Cull(ref parameters) }, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                Assert.Equal(BatchCullingFlags.CullLightmappedShadowCasters, Assert.Single(contexts).Flags);
+            }
+            finally
+            {
+                splits.Dispose();
+                infos.Dispose();
+            }
+        }
+
+        /// <summary>A light's shadow caster list draws its light culling's commands of the ranges
+        /// that cast shadows (ShadowsOnly ones too), none of a camera culling's or another light's.</summary>
+        [Fact]
+        public void ShadowListsTakeTheirLightsCastingRanges()
+        {
+            var lightObject = new GameObject("brg caster sun");
+            m_Objects.Add(lightObject);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.shadows = LightShadows.Hard;
+            var casting = ShadowCastingMode.ShadowsOnly;
+            var group = Group((g, c, o, u) => Emit(new BatchFilterSettings { renderingLayerMask = uint.MaxValue, shadowCastingMode = casting }, 1,
+                new BatchDrawCommand { batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1 })(g, c, o, u));
+            group.RegisterMesh(m_Mesh);
+            group.RegisterMaterial(m_Material);
+            AddBatch(group);
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            var results = new CullingResults { ptr = Culling.Cull(ref parameters) };
+            var data = results.Data;
+            int sun = Array.FindIndex(data.Lights.ToArray(), l => l.light == light);
+            var splits = new NativeArray<ShadowSplitData>(1, Allocator.Temp);
+            var infos = new NativeArray<LightShadowCasterCullingInfo>(data.Lights.Length, Allocator.Temp);
+            infos[sun] = new LightShadowCasterCullingInfo { splitRange = new RangeInt(0, 1) };
+            try
+            {
+                new ScriptableRenderContext().CullShadowCasters(results, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+                var items = new List<FrameBuilder.DrawItem>();
+                long sequence = 0;
+                BatchCulling.CollectShadows(data, all, sun, items, ref sequence);
+                Assert.Single(items);
+                Assert.Equal(ShadowCastingMode.ShadowsOnly, items[0].Lighting.Cast);
+                items.Clear();
+                BatchCulling.CollectShadows(data, all, sun + 1, items, ref sequence);
+                Assert.Empty(items);
+                // The camera list leaves the shadow-only range out.
+                Assert.Empty(Collect(data, all));
+                casting = ShadowCastingMode.Off;
+                var off = new CullingResults { ptr = Culling.Cull(ref parameters) };
+                new ScriptableRenderContext().CullShadowCasters(off, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                BatchCulling.CollectShadows(off.Data, all, sun, items, ref sequence);
+                Assert.Empty(items);
+            }
+            finally
+            {
+                splits.Dispose();
+                infos.Dispose();
+            }
+        }
+
         [Fact]
         public void TheFramesEndFreesTheArraysTheCallbackAllocated()
         {

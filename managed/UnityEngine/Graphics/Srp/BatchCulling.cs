@@ -61,6 +61,9 @@ namespace Unbound.Runtime
         {
             internal BatchRendererGroup Group;
             internal BatchCullingViewType View;
+            /// <summary>A light culling's light: its index among the culling's visible lights (-1
+            /// for a camera culling).</summary>
+            internal int Light = -1;
             internal NativeArray<BatchCullingOutputDrawCommands> Commands = new NativeArray<BatchCullingOutputDrawCommands>(1, Allocator.Persistent);
             internal NativeArray<IntPtr> Custom = new NativeArray<IntPtr>(1, Allocator.Persistent);
 
@@ -81,6 +84,7 @@ namespace Unbound.Runtime
                 d = default;
                 Custom[0] = IntPtr.Zero;
                 Group = null;
+                Light = -1;
             }
 
             static void Free(void* memory)
@@ -123,8 +127,27 @@ namespace Unbound.Runtime
         const uint FlagFlipWinding = 1, FlagForceZeroMotion = 2, FlagCameraMotion = 4, FlagMainLightEnabled = 16, FlagLodCrossFadeValuePacked = 32;
 
         static readonly Stack<Output> s_Free = new Stack<Output>();
-        static NativeArray<Plane> s_Planes = new NativeArray<Plane>(10, Allocator.Persistent);
+        static NativeArray<Plane> s_Planes = new NativeArray<Plane>(ReceiverPlanes + 10, Allocator.Persistent);
         static NativeArray<CullingSplit> s_Splits = new NativeArray<CullingSplit>(1, Allocator.Persistent);
+
+        /// <summary>The receiver planes of a light culling: the camera's frustum.</summary>
+        const int ReceiverPlanes = 6;
+
+        /// <summary>Room for <paramref name="planes"/> planes and <paramref name="splits"/> splits
+        /// (the arrays are kept: they grow, never shrink).</summary>
+        static void Reserve(int planes, int splits)
+        {
+            if (s_Planes.Length < planes)
+            {
+                s_Planes.Dispose();
+                s_Planes = new NativeArray<Plane>(Math.Max(planes, s_Planes.Length * 2), Allocator.Persistent);
+            }
+            if (s_Splits.Length < splits)
+            {
+                s_Splits.Dispose();
+                s_Splits = new NativeArray<CullingSplit>(Math.Max(splits, s_Splits.Length * 2), Allocator.Persistent);
+            }
+        }
         static readonly List<BatchRendererGroup> s_Invoked = new List<BatchRendererGroup>();
 
         /// <summary>A camera's culling: the callbacks of the groups that take camera views, with
@@ -133,6 +156,7 @@ namespace Unbound.Runtime
         {
             if (BatchRendererGroup.s_Groups.Count == 0) return;
             int planes = parameters.cullingPlaneCount;
+            Reserve(planes, 1);
             for (int i = 0; i < planes; i++) s_Planes[i] = parameters.GetCullingPlane(i);
             s_Splits[0] = new CullingSplit
             {
@@ -142,16 +166,104 @@ namespace Unbound.Runtime
                 nearPlane = camera != null ? camera.nearClipPlane : 0f,
                 cullingMatrix = parameters.cullingMatrix,
             };
-            var context = new BatchCullingContext(s_Planes.GetSubArray(0, planes), s_Splits, parameters.lodParameters, Matrix4x4.identity,
+            var context = new BatchCullingContext(s_Planes.GetSubArray(0, planes), s_Splits.GetSubArray(0, 1), parameters.lodParameters, Matrix4x4.identity,
                 BatchCullingViewType.Camera, parameters.isOrthographic ? BatchCullingProjectionType.Orthographic : BatchCullingProjectionType.Perspective,
                 BatchCullingFlags.None, new BatchPackedCullingViewID(camera != null ? camera.GetInstanceID() : 0, 0).handle, parameters.cullingMask,
                 GameViewSceneCullingMask, 0, 0, 0, IntPtr.Zero);
-            Invoke(data, context);
+            Invoke(data, context, -1);
+        }
+
+        /// <summary>
+        /// A culling's shadow casters (ScriptableRenderContext.CullShadowCasters): for each of its
+        /// visible lights with splits not all excluded, the callbacks of the groups that take light
+        /// views, with every split's culling planes in order (each a CullingSplit with its sphere,
+        /// planes, blend factor, near plane and matrix), then, for a light that culls by the view
+        /// frustum (Light.useViewFrustumForShadowCasterCull), the camera's six frustum planes as
+        /// receiver planes, the far one at the shadow distance; the light's matrix, the camera's
+        /// LOD parameters, the camera's layers that the light lights, and the light as the view.
+        /// Matches the Unity 6000.0.71f1 Editor, tests/projects/brg <c>shadows</c> (a directional
+        /// light of two cascades).
+        /// </summary>
+        internal static void CullShadows(CullingData data, ShadowCastersCullingInfos infos)
+        {
+            if (BatchRendererGroup.s_Groups.Count == 0 || data == null || !infos.perLightInfos.IsCreated) return;
+            var parameters = data.Parameters;
+            int lights = Math.Min(data.Lights.Length, infos.perLightInfos.Length);
+            for (int index = 0; index < lights; index++)
+            {
+                var info = infos.perLightInfos[index];
+                int splits = info.splitRange.length;
+                if (splits <= 0 || info.splitRange.start < 0 || info.splitRange.start + splits > infos.splitBuffer.Length) continue;
+                // Every split excluded (by the mask's low byte): no culling.
+                uint all = splits >= 8 ? 0xffu : (1u << splits) - 1;
+                if ((info.splitExclusionMask & 0xffu) == all) continue;
+                var light = data.Lights[index].light;
+                if (light == null) continue;
+                int planes = 0;
+                for (int s = 0; s < splits; s++) planes += infos.splitBuffer[info.splitRange.start + s].cullingPlaneCount;
+                Reserve(planes + ReceiverPlanes, splits);
+                planes = 0;
+                for (int s = 0; s < splits; s++)
+                {
+                    var split = infos.splitBuffer[info.splitRange.start + s];
+                    var sphere = split.cullingSphere;
+                    s_Splits[s] = new CullingSplit
+                    {
+                        sphereCenter = new Vector3(sphere.x, sphere.y, sphere.z),
+                        sphereRadius = sphere.w,
+                        cullingPlaneOffset = planes,
+                        cullingPlaneCount = split.cullingPlaneCount,
+                        cascadeBlendCullingFactor = split.shadowCascadeBlendCullingFactor,
+                        nearPlane = split.cullingNearPlane,
+                        cullingMatrix = split.cullingMatrix,
+                    };
+                    for (int p = 0; p < split.cullingPlaneCount; p++) s_Planes[planes++] = split.GetCullingPlane(p);
+                }
+                int receiverOffset = 0, receivers = 0;
+                if (light.useViewFrustumForShadowCasterCull && parameters.cullingPlaneCount == ReceiverPlanes)
+                {
+                    receiverOffset = planes;
+                    receivers = ReceiverPlanes;
+                    for (int p = 0; p < ReceiverPlanes; p++) s_Planes[planes++] = parameters.GetCullingPlane(p);
+                    // The far plane at the shadow distance (shadows fall no further).
+                    if (data.Camera != null)
+                    {
+                        float pull = data.Camera.farClipPlane - Mathf.Min(parameters.shadowDistance, data.Camera.farClipPlane);
+                        var far = s_Planes[planes - 1];
+                        far.distance -= pull;
+                        s_Planes[planes - 1] = far;
+                    }
+                }
+                var context = new BatchCullingContext(s_Planes.GetSubArray(0, planes), s_Splits.GetSubArray(0, splits), parameters.lodParameters,
+                    light.transform.localToWorldMatrix, BatchCullingViewType.Light, info.projectionType,
+                    ExcludesLightmappedCasters(light) ? BatchCullingFlags.CullLightmappedShadowCasters : BatchCullingFlags.None,
+                    new BatchPackedCullingViewID(light.GetInstanceID(), 0).handle, parameters.cullingMask & (uint)light.cullingMask,
+                    GameViewSceneCullingMask, (byte)info.splitExclusionMask, receiverOffset, receivers, IntPtr.Zero);
+                Invoke(data, context, index);
+            }
+        }
+
+        /// <summary>Whether a light's shadow culling leaves out lightmapped casters
+        /// (BatchCullingFlags.CullLightmappedShadowCasters): its direct light is in the lightmaps
+        /// (<see cref="FrameBuilder.InLightmap"/>), or it is a mixed light of a Shadowmask bake whose
+        /// shadow caster mode leaves them out (NonLightmappedOnly, or Default in the quality's
+        /// Shadowmask mode). Not measured: the probe's light is realtime.</summary>
+        static bool ExcludesLightmappedCasters(Light light)
+        {
+            if (FrameBuilder.InLightmap(light)) return true;
+            var baking = light.bakingOutput;
+            if (!baking.isBaked || baking.lightmapBakeType != LightmapBakeType.Mixed || baking.mixedLightingMode != MixedLightingMode.Shadowmask) return false;
+            return light.lightShadowCasterMode switch
+            {
+                LightShadowCasterMode.NonLightmappedOnly => true,
+                LightShadowCasterMode.Everything => false,
+                _ => QualitySettings.shadowmaskMode == ShadowmaskMode.Shadowmask,
+            };
         }
 
         /// <summary>Invokes the callbacks for a culling (the groups created by a callback wait for
-        /// the next culling).</summary>
-        static void Invoke(CullingData data, in BatchCullingContext context)
+        /// the next culling); a light culling's outputs keep its light.</summary>
+        static void Invoke(CullingData data, in BatchCullingContext context, int light)
         {
             s_Invoked.Clear();
             s_Invoked.AddRange(BatchRendererGroup.s_Groups);
@@ -161,6 +273,7 @@ namespace Unbound.Runtime
                 var output = s_Free.Count > 0 ? s_Free.Pop() : new Output();
                 output.Group = group;
                 output.View = context.viewType;
+                output.Light = light;
                 data.Batches.Add(output);
                 try
                 {
@@ -231,12 +344,25 @@ namespace Unbound.Runtime
         /// material at the default sorting layer. Commands of removed batches or unregistered
         /// meshes and materials are skipped.
         /// </summary>
-        internal static void Collect(CullingData data, FilteringSettings filtering, int mainLight, List<FrameBuilder.DrawItem> into, ref long sequence)
+        internal static void Collect(CullingData data, FilteringSettings filtering, int mainLight, List<FrameBuilder.DrawItem> into, ref long sequence) =>
+            Collect(data, filtering, mainLight, -1, into, ref sequence);
+
+        /// <summary>The draw commands a light's shadow caster list draws: those of the light's
+        /// culling outputs whose ranges cast shadows (On, TwoSided, ShadowsOnly), through the
+        /// list's filters as a camera list's.</summary>
+        internal static void CollectShadows(CullingData data, FilteringSettings filtering, int light, List<FrameBuilder.DrawItem> into, ref long sequence)
+        {
+            if (light >= 0) Collect(data, filtering, -1, light, into, ref sequence);
+        }
+
+        static void Collect(CullingData data, FilteringSettings filtering, int mainLight, int shadowLight, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
             var main = mainLight >= 0 && mainLight < data.Lights.Length ? data.Lights[mainLight].light : null;
+            bool shadows = shadowLight >= 0;
             foreach (var output in data.Batches)
             {
-                if (output.View != BatchCullingViewType.Camera || output.Group == null) continue;
+                if (output.Group == null) continue;
+                if (shadows ? output.View != BatchCullingViewType.Light || output.Light != shadowLight : output.View != BatchCullingViewType.Camera) continue;
                 ref var d = ref output.Drawn;
                 if ((d.drawCommandCount > 0 && d.drawCommands == null) || (d.visibleInstanceCount > 0 && d.visibleInstances == null)
                     || (d.drawRangeCount > 0 && d.drawRanges == null))
@@ -248,7 +374,7 @@ namespace Unbound.Runtime
                 {
                     var range = d.drawRanges[r];
                     var filter = range.filterSettings;
-                    if (filter.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
+                    if (shadows ? filter.shadowCastingMode == ShadowCastingMode.Off : filter.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
                     if ((filtering.layerMask & (1 << filter.layer)) == 0) continue;
                     if ((filtering.renderingLayerMask & filter.renderingLayerMask) == 0) continue;
                     if (filtering.excludeMotionVectorObjects && filter.motionMode == MotionVectorGenerationMode.Object) continue;

@@ -765,7 +765,9 @@ namespace UnityEngine.Rendering
         public CullingResults Cull(ref ScriptableCullingParameters parameters) => new CullingResults { ptr = Culling.Cull(ref parameters) };
 
         [Unbound.EditorFaithful("no-op is equivalent: shadow renderer lists draw every caster, which gives the same shadow map")]
-        public void CullShadowCasters(CullingResults cullingResults, ShadowCastersCullingInfos infos) { }
+        /// <summary>Shadow caster culling: the BatchRendererGroups' light cullings (renderers'
+        /// casters are not culled per split).</summary>
+        public void CullShadowCasters(CullingResults cullingResults, ShadowCastersCullingInfos infos) => Unbound.Runtime.BatchCulling.CullShadows(cullingResults.Data, infos);
 
         public RendererList CreateRendererList(RendererUtils.RendererListDesc desc)
         {
@@ -1202,7 +1204,7 @@ namespace Unbound.Runtime
             if (data == null || data.Camera == null) return;
             var drawing = new DrawingSettings(s_ShadowCaster, new SortingSettings(data.Camera) { criteria = SortingCriteria.CommonOpaque });
             var filtering = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
-            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter);
+            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter, shadowLight: settings.lightIndex);
         }
 
         static void DrawRenderers(Entry e)
