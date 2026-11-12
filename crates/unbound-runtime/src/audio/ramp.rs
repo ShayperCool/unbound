@@ -58,6 +58,37 @@ impl ParameterRamp {
         }
     }
 
+    /// Connection matrices recalculate their slope at each DSP period, including when
+    /// a period ends before the connection's transition does (audiopitch wide profile).
+    pub(crate) fn gain_period(
+        &mut self,
+        target: f32,
+        frames: u32,
+        channels: usize,
+        beginning: bool,
+    ) -> f32 {
+        if target == 1.0 {
+            *self = Self::new(1.0);
+            return 1.0;
+        }
+        if beginning || target != self.target {
+            self.step = (target - self.value) / frames as f32;
+            if Self::gain_change_audible(self.value, target, frames, channels) {
+                self.position = frames;
+            }
+            self.target = target;
+        }
+        let value = self.value;
+        if self.position > 0 {
+            self.value += self.step;
+            self.position -= 1;
+            if self.position == 0 {
+                self.value = target;
+            }
+        }
+        value
+    }
+
     /// Returns the preceding value, then advances one frame. At the next boundary an unchanged
     /// target snaps to its endpoint, bounding accumulated roundoff. Repeated descriptor
     /// submissions never restart the slope. `frames` must be positive and fixed between resets.
@@ -94,6 +125,42 @@ impl ParameterRamp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn connection_gain_recalculates_from_its_current_value_at_short_periods() {
+        let mut ramp = ParameterRamp::new(0.0);
+        let mut values = Vec::new();
+        for frame in 0..160 {
+            values.push(ramp.gain_period(0.5, 64, 8, frame % 32 == 0));
+        }
+        assert_eq!(values[0], 0.0);
+        assert_eq!(values[32], 0.25);
+        assert_eq!(values[64], 0.375);
+        assert_eq!(values[96], 0.4375);
+        assert_eq!(values[128], 0.46875);
+        assert_eq!(ramp.gain_period(1.0, 64, 8, true), 1.0);
+
+        for period in [17, 32, 64, 97] {
+            let render = |chunks: &[usize]| {
+                let mut ramp = ParameterRamp::new(0.0);
+                let mut values = Vec::new();
+                let mut frame = 0;
+                while frame < period * 10 {
+                    let count = chunks[values.len() % chunks.len()].min(period * 10 - frame);
+                    for _ in 0..count {
+                        let target = if frame < period * 3 { 0.5 } else { 0.25 };
+                        values.push(ramp.gain_period(target, 64, 5, frame % period == 0));
+                        frame += 1;
+                    }
+                }
+                values
+            };
+            assert_eq!(render(&[period]), render(&[1, 7, 53, 3]));
+            if period >= 64 {
+                assert_eq!(render(&[period])[64], 0.5);
+            }
+        }
+    }
 
     #[test]
     fn wider_connections_apply_a_small_change_that_stereo_retains() {

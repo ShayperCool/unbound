@@ -164,9 +164,10 @@ const PITCH_SPEAKER_MODES: [i32; 6] = [
     speaker_mode::MODE_7POINT1,
 ];
 
-// Paired output settings measured by tests/projects/audiopitch's settings profile.
-// Other combinations of these rates and buffer lengths remain unmeasured.
-const ADDITIONAL_OUTPUT_SETTINGS: [(u32, u32); 3] = [(32000, 256), (48000, 512), (96000, 2048)];
+// Output grid measured by tests/projects/audiopitch's wide-pcm profile.
+const ADDITIONAL_OUTPUT_RATES: [u32; 4] = [32000, 44100, 48000, 96000];
+const ADDITIONAL_OUTPUT_BUFFERS: [u32; 11] =
+    [32, 64, 128, 256, 340, 480, 512, 1024, 2048, 4096, 8192];
 
 fn measured_speaker_output(mode: i32) -> bool {
     matches!(
@@ -182,12 +183,10 @@ fn measured_speaker_output(mode: i32) -> bool {
 fn additional_measured_output(config: &MixerConfig, enabled: bool) -> bool {
     enabled
         && measured_speaker_output(config.speaker_mode)
-        && (config.sample_rate != 96000
-            || matches!(
-                config.speaker_mode,
-                speaker_mode::STEREO | speaker_mode::QUAD
-            ))
-        && ADDITIONAL_OUTPUT_SETTINGS.contains(&(config.sample_rate, config.buffer_size))
+        && ADDITIONAL_OUTPUT_RATES.contains(&config.sample_rate)
+        && ADDITIONAL_OUTPUT_BUFFERS.contains(&config.buffer_size)
+        // Independent captures disagree in this configuration; it remains diagnostic only.
+        && (config.sample_rate, config.buffer_size) != (32000, 340)
 }
 
 /// The output covered by Normalize and static-wet captures (Unity 6000.0.71f1 Linux Editor,
@@ -783,6 +782,7 @@ struct SlotMix<'a> {
     audible: bool,
     age: usize,
     channels: Option<usize>,
+    period: u32,
     wet: &'a mut ParameterRamp,
     dry: &'a mut ParameterRamp,
 }
@@ -804,10 +804,18 @@ impl SlotMix<'_> {
         let (wet, dry) = if self.live {
             match self.channels {
                 Some(channels) => (
-                    self.wet
-                        .gain_channels(level, SLOT_TRANSITION_FRAMES, channels),
-                    self.dry
-                        .gain_channels(dry, SLOT_TRANSITION_FRAMES, channels),
+                    self.wet.gain_period(
+                        level,
+                        SLOT_TRANSITION_FRAMES,
+                        channels,
+                        (self.age + frame) % self.period as usize == 0,
+                    ),
+                    self.dry.gain_period(
+                        dry,
+                        SLOT_TRANSITION_FRAMES,
+                        channels,
+                        (self.age + frame) % self.period as usize == 0,
+                    ),
                 ),
                 None => (
                     self.wet.gain(level, SLOT_TRANSITION_FRAMES),
@@ -817,7 +825,11 @@ impl SlotMix<'_> {
         } else {
             (wet, dry)
         };
-        if self.channels.is_some() && (wet == 1.0 || dry == 1.0) {
+        if self.channels.is_some() && self.live {
+            for (out, input) in output.iter_mut().zip(input) {
+                *out = wet * *out + dry * input;
+            }
+        } else if self.channels.is_some() && (wet == 1.0 || dry == 1.0) {
             let startup = ((self.age + frame) as f32 / SLOT_STARTUP_FRAMES).min(1.0);
             let wet = if wet == 1.0 { wet } else { wet * startup };
             let dry = if dry == 1.0 { dry } else { dry * startup };
@@ -847,7 +859,7 @@ pub struct Effect {
     simple: SimpleFilter,
     eq: ParamEq,
     /// Frames since the effect started, for the slot's startup ramp.
-    frames: u32,
+    frames: u64,
     scratch: Vec<f32>,
     cutoff: f32,
     resonance: f32,
@@ -865,6 +877,14 @@ pub struct Effect {
     channel_offset: usize,
 }
 impl Effect {
+    fn initial_connection(spec: &EffectSpec, value: f32) -> ParameterRamp {
+        let measured = spec.surround_effects_measured
+            && spec.slot_wet_transitions_measured
+            && EffectKind::parse(&spec.kind)
+                .is_some_and(|kind| kind.static_wet() || kind == EffectKind::SfxReverb);
+        ParameterRamp::new(if measured { 0.0 } else { value })
+    }
+
     pub fn new(spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<Self> {
         let mut effect = Self {
             spec: spec.clone(),
@@ -890,12 +910,18 @@ impl Effect {
             send_ramp: ParameterRamp::new(0.0),
             send_frames: 0,
             gain_ramp: ParameterRamp::new(spec.gain),
-            wet_ramp: ParameterRamp::new(if spec.mix_audible {
-                spec.mix_level.unwrap_or(1.0)
-            } else {
-                0.0
-            }),
-            dry_ramp: ParameterRamp::new((1.0 - spec.mix_level.unwrap_or(1.0)).max(-1.0)),
+            wet_ramp: Self::initial_connection(
+                &spec,
+                if spec.mix_audible {
+                    spec.mix_level.unwrap_or(1.0)
+                } else {
+                    0.0
+                },
+            ),
+            dry_ramp: Self::initial_connection(
+                &spec,
+                (1.0 - spec.mix_level.unwrap_or(1.0)).max(-1.0),
+            ),
             buffer: buffer.max(1),
             layout: 2,
             channel_offset: 0,
@@ -1066,7 +1092,8 @@ impl Effect {
         self.send_frames = 0;
         self.gain_ramp = ParameterRamp::new(self.spec.gain);
         let level = self.spec.mix_level.unwrap_or(1.0);
-        self.wet_ramp = ParameterRamp::new(
+        self.wet_ramp = Self::initial_connection(
+            &self.spec,
             if self.spec.mix_audible
                 && (!self.measured_mono()
                     || ParameterRamp::gain_change_audible(0.0, level, SLOT_TRANSITION_FRAMES, 1))
@@ -1076,7 +1103,10 @@ impl Effect {
                 0.0
             },
         );
-        self.dry_ramp = ParameterRamp::new((1.0 - self.spec.mix_level.unwrap_or(1.0)).max(-1.0));
+        self.dry_ramp = Self::initial_connection(
+            &self.spec,
+            (1.0 - self.spec.mix_level.unwrap_or(1.0)).max(-1.0),
+        );
         if !restart {
             self.cutoff = 5000.0;
             self.resonance = 1.0;
@@ -1175,7 +1205,7 @@ impl Effect {
             }
             _ => return false,
         }
-        self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
+        self.frames = self.frames.saturating_add((samples.len() / 2) as u64);
         true
     }
     /// Effects whose histories or detector are shared by all speakers.
@@ -1291,6 +1321,7 @@ impl Effect {
                     live,
                     audible: self.spec.mix_audible,
                     age: self.frames as usize,
+                    period: self.buffer,
                     channels: self
                         .spec
                         .surround_effects_measured
@@ -1321,7 +1352,7 @@ impl Effect {
             }
             _ => return,
         }
-        self.frames = self.frames.saturating_add(frames as u32);
+        self.frames = self.frames.saturating_add(frames as u64);
     }
     /// One reverb network and one effect-slot wrapper across the complete speaker layout.
     pub(crate) fn process_shared_reverb(
@@ -1342,6 +1373,7 @@ impl Effect {
                 live,
                 audible: self.spec.mix_audible,
                 age: self.frames as usize,
+                period: self.buffer,
                 channels: self
                     .spec
                     .surround_effects_measured
@@ -1358,7 +1390,7 @@ impl Effect {
                 mix.finish(output, &input[..output.len()], frame);
             });
         }
-        self.frames = self.frames.saturating_add((front.len() / 2) as u32);
+        self.frames = self.frames.saturating_add((front.len() / 2) as u64);
     }
 
     fn send_gain_at(&self, position: u32, channel: usize) -> f32 {
@@ -1402,6 +1434,7 @@ impl Effect {
                 live,
                 audible: self.spec.mix_audible,
                 age: self.frames as usize,
+                period: self.buffer,
                 channels: self
                     .spec
                     .surround_effects_measured
@@ -1418,7 +1451,7 @@ impl Effect {
             }
         }
         if !bypass && !self.spec.bypass {
-            self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
+            self.frames = self.frames.saturating_add((samples.len() / 2) as u64);
         }
     }
     fn process_effect(&mut self, samples: &mut [f32], bypass: bool) {
@@ -1830,7 +1863,7 @@ mod tests {
     }
 
     #[test]
-    fn additional_output_admission_keeps_rate_and_buffer_pairs_together() {
+    fn wide_output_admission_is_limited_to_the_measured_grid() {
         for kind in ["Normalize", "Pitch Shifter"] {
             let mut spec: EffectSpec = serde_json::from_value(serde_json::json!({
                 "id": "output", "kind": kind, "surroundEffectsMeasured": true,
@@ -1846,30 +1879,36 @@ mod tests {
                 speaker_mode::MODE_5POINT1,
                 speaker_mode::MODE_7POINT1,
             ] {
-                for (rate, buffer) in [(32000, 256), (48000, 512), (96000, 2048)] {
-                    if rate == 96000 && !matches!(mode, speaker_mode::STEREO | speaker_mode::QUAD) {
-                        continue;
+                for rate in ADDITIONAL_OUTPUT_RATES {
+                    for buffer in ADDITIONAL_OUTPUT_BUFFERS {
+                        let config = MixerConfig {
+                            sample_rate: rate,
+                            buffer_size: buffer,
+                            speaker_mode: mode,
+                            ..Default::default()
+                        };
+                        if (rate, buffer) == (32000, 340) {
+                            assert!(spec.validate_in_group(&config, false).is_err());
+                            continue;
+                        }
+                        spec.validate_in_group(&config, false).unwrap();
+                        spec.surround_effects_measured = false;
+                        let legacy_stereo = matches!(rate, 48000 | 44100)
+                            && buffer == 1024
+                            && mode == speaker_mode::STEREO;
+                        assert_eq!(
+                            spec.validate_in_group(&config, false).is_ok(),
+                            legacy_stereo
+                        );
+                        spec.surround_effects_measured = true;
                     }
-                    let config = MixerConfig {
-                        sample_rate: rate,
-                        buffer_size: buffer,
-                        speaker_mode: mode,
-                        ..Default::default()
-                    };
-                    spec.validate_in_group(&config, false).unwrap();
-                    spec.surround_effects_measured = false;
-                    assert!(spec.validate_in_group(&config, false).is_err());
-                    spec.surround_effects_measured = true;
                 }
             }
             for (rate, buffer, mode) in [
-                (32000, 512, speaker_mode::STEREO),
-                (96000, 256, speaker_mode::QUAD),
-                (48000, 256, speaker_mode::STEREO),
+                (22050, 512, speaker_mode::STEREO),
+                (88200, 256, speaker_mode::QUAD),
+                (48000, 384, speaker_mode::STEREO),
                 (32000, 256, speaker_mode::MONO),
-                (96000, 2048, speaker_mode::SURROUND),
-                (96000, 2048, speaker_mode::MODE_5POINT1),
-                (96000, 2048, speaker_mode::MODE_7POINT1),
                 (96000, 2048, speaker_mode::PROLOGIC),
             ] {
                 let config = MixerConfig {
@@ -2013,26 +2052,60 @@ mod tests {
 
     #[test]
     fn wet_transitions_survive_partial_chunks_and_repeated_descriptors() {
-        let spec = |wet| {
-            serde_json::from_value::<EffectSpec>(serde_json::json!({
+        for surround in [false, true] {
+            for buffer in [32, 97, 1024] {
+                let spec = |wet| {
+                    serde_json::from_value::<EffectSpec>(serde_json::json!({
                 "id": "live", "kind": "Distortion", "distortion": 0.5,
                 "mixLevel": wet, "slotWetMeasured": true, "slotWetTransitionsMeasured": true,
-                "effectTransitionsMeasured": true
+                "effectTransitionsMeasured": true, "surroundEffectsMeasured": surround
             }))
             .unwrap()
-        };
-        let mut whole = Effect::new(spec(0.25), 44100, 1024).unwrap();
-        let mut chunks = Effect::new(spec(0.25), 44100, 1024).unwrap();
-        for target in [0.25, 0.5, 1.0, 0.0, 0.25] {
-            whole.update(spec(target), 44100, 1024).unwrap();
-            let mut a: Vec<f32> = (0..2048).map(|i| (i % 31) as f32 / 128.0 - 0.125).collect();
-            let mut b = a.clone();
-            whole.process(&mut a, false);
-            for part in b.chunks_mut(14) {
-                chunks.update(spec(target), 44100, 1024).unwrap();
-                chunks.process(part, false);
+                };
+                let mut whole = Effect::new(spec(0.25), 44100, buffer).unwrap();
+                let mut chunks = Effect::new(spec(0.25), 44100, buffer).unwrap();
+                for target in [0.25, 0.5, 1.0, 0.0, 0.25] {
+                    whole.update(spec(target), 44100, buffer).unwrap();
+                    let mut a: Vec<f32> =
+                        (0..2048).map(|i| (i % 31) as f32 / 128.0 - 0.125).collect();
+                    let mut b = a.clone();
+                    for part in a.chunks_mut(buffer as usize * 2) {
+                        whole.process(part, false);
+                    }
+                    for part in b.chunks_mut(14) {
+                        chunks.update(spec(target), 44100, buffer).unwrap();
+                        chunks.process(part, false);
+                    }
+                    assert_eq!(a, b, "wet {target}");
+                }
             }
-            assert_eq!(a, b, "wet {target}");
+        }
+    }
+
+    #[test]
+    fn connection_period_phase_survives_long_running_effects() {
+        for period in [32, 97] {
+            let spec = |wet| {
+                serde_json::from_value::<EffectSpec>(serde_json::json!({
+                    "id": "long", "kind": "Distortion", "distortion": 0.5,
+                    "mixLevel": wet, "slotWetMeasured": true,
+                    "slotWetTransitionsMeasured": true, "surroundEffectsMeasured": true
+                }))
+                .unwrap()
+            };
+            let mut young = Effect::new(spec(0.25), 48000, period).unwrap();
+            let mut old = Effect::new(spec(0.25), 48000, period).unwrap();
+            young.process(&mut [0.125; 256], false);
+            old.process(&mut [0.125; 256], false);
+            old.frames += u64::from(period) * (u64::from(u32::MAX) + 1);
+            young.update(spec(0.5), 48000, period).unwrap();
+            old.update(spec(0.5), 48000, period).unwrap();
+            let mut a = [0.125; 256];
+            let mut b = a;
+            young.process(&mut a, false);
+            old.process(&mut b, false);
+            assert_eq!(a, b);
+            assert!(a.iter().any(|sample| *sample > 0.0));
         }
     }
 

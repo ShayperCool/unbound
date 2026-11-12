@@ -1004,7 +1004,7 @@ namespace UnityEngine.Tests
             var quad = measured; quad.speakerMode = AudioSpeakerMode.Quad;
             var prologic = measured; prologic.speakerMode = AudioSpeakerMode.Prologic; prologic.dspBufferSize = 4096;
             var rate = measured; rate.sampleRate = 22050;
-            var buffer = measured; buffer.dspBufferSize = 4096;
+            var buffer = measured; buffer.dspBufferSize = 384;
             foreach (var config in pitch ? new[] { prologic, rate, buffer } : new[] { mono, prologic, rate, buffer })
             {
                 Assert.True(AudioSettings.Reset(config));
@@ -1154,7 +1154,7 @@ namespace UnityEngine.Tests
         [InlineData("Normalize")]
         [InlineData("Pitch Shifter")]
         [InlineData("SFX Reverb")]
-        public void AdditionalOutputSettingsKeepMeasuredRateAndBufferPairs(string kind)
+        public void WideOutputSettingsKeepMeasuredRatesBuffersAndLayouts(string kind)
         {
             var (mixer, group, effect) = Fixture();
             var parameters = kind == "Chorus" ? AudioMixerEffectController.ChorusParameters
@@ -1166,13 +1166,16 @@ namespace UnityEngine.Tests
             effect.m_EnableWetMix = true; effect.m_MixLevelGuid = "wet";
             mixer.m_Exposed["Wet"] = "wet"; mixer.SetFloat("Wet", 6f);
             var original = AudioSettings.GetConfiguration();
-            foreach (var setting in new[] { (32000, 256), (48000, 512), (96000, 2048) })
+            foreach (int rate in new[] { 32000, 44100, 48000, 96000 })
+            foreach (int buffer in new[] { 32, 64, 128, 256, 340, 480, 512, 1024, 2048, 4096, 8192 })
+            foreach (var mode in new[] { AudioSpeakerMode.Stereo, AudioSpeakerMode.Quad, AudioSpeakerMode.Surround, AudioSpeakerMode.Mode5point1, AudioSpeakerMode.Mode7point1 })
             {
-                var config = original; config.sampleRate = setting.Item1; config.dspBufferSize = setting.Item2;
+                var config = original; config.sampleRate = rate; config.dspBufferSize = buffer; config.speakerMode = mode;
                 Assert.True(AudioSettings.Reset(config));
-                group.DspConfiguration(); AudioBackend.Current.UpdateGroup(group);
+                if (rate == 32000 && buffer == 340) Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+                else { group.DspConfiguration(); AudioBackend.Current.UpdateGroup(group); }
             }
-            foreach (var setting in new[] { (32000, 512), (96000, 256), (48000, 256) })
+            foreach (var setting in new[] { (22050, 512), (88200, 256), (48000, 384) })
             {
                 var config = original; config.sampleRate = setting.Item1; config.dspBufferSize = setting.Item2;
                 Assert.True(AudioSettings.Reset(config));
@@ -1185,6 +1188,35 @@ namespace UnityEngine.Tests
                 Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
             }
             Assert.True(AudioSettings.Reset(original));
+        }
+
+        [Fact]
+        public void OutputBufferSelectionKeepsSmallRequestsAndAppliesMeasuredBounds()
+        {
+            // Unity 6000.0.71f1, audiopitch wide/configurations.json.
+            var original = AudioSettings.GetConfiguration();
+            string release = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                foreach (var pair in new[] { (0, 1024), (1, 1), (31, 31), (32, 32), (97, 97), (340, 340), (16384, 8192) })
+                {
+                    var config = original; config.dspBufferSize = pair.Item1;
+                    Assert.True(AudioSettings.Reset(config));
+                    Assert.Equal(pair.Item2, AudioSettings.GetConfiguration().dspBufferSize);
+                    AudioSettings.GetDSPBufferSize(out int frames, out _);
+                    Assert.Equal(pair.Item2, frames);
+                }
+                ProjectInfo.UnityVersion = "6000.0.70f1";
+                var legacy = original; legacy.dspBufferSize = 16384;
+                Assert.True(AudioSettings.Reset(legacy));
+                Assert.Equal(16384, AudioSettings.GetConfiguration().dspBufferSize);
+            }
+            finally
+            {
+                ProjectInfo.UnityVersion = release;
+                Assert.True(AudioSettings.Reset(original));
+            }
         }
 
         [Theory]
@@ -1217,7 +1249,7 @@ namespace UnityEngine.Tests
                 ProjectInfo.UnityVersion = "6000.0.70f1";
                 Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(submit).Message);
                 ProjectInfo.UnityVersion = "6000.0.71f1";
-                var config = AudioSettings.GetConfiguration(); config.dspBufferSize = 256;
+                var config = AudioSettings.GetConfiguration(); config.dspBufferSize = 384;
                 AudioSettings.Reset(config);
                 Assert.Contains("1024-frame stereo", Assert.Throws<NotSupportedException>(submit).Message);
                 config.dspBufferSize = 1024; AudioSettings.Reset(config);

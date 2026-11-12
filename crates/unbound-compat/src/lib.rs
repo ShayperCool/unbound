@@ -1,4 +1,5 @@
 //! Unity releases and the compatibility profiles that select per-release behaviour.
+mod audio;
 mod graphics;
 mod mtl;
 mod profile;
@@ -6,6 +7,7 @@ mod shader_keywords;
 mod texture;
 mod version;
 
+pub use audio::AudioOutputRules;
 pub use graphics::{
     Conventions, DeviceRequest, GraphicsDevice, HostOs, candidates, forced_by_option,
     parse_api_list, select as select_device,

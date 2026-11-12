@@ -127,9 +127,10 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         builtin_shaders: RwLock::new(None),
         audio_importer: RwLock::new(AudioImporter::default()),
         models: RwLock::new(HashMap::new()),
-        audio: crate::audio::Engine::new(
+        audio: crate::audio::Engine::new_with_output_rules(
             crate::audio::ProjectAudioSettings::read(&project.root),
             true,
+            unbound_compat::AudioOutputRules::for_version(project.version),
         ),
     };
     if STATE.set(state).is_err() {

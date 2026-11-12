@@ -1015,6 +1015,8 @@ impl Default for MixerConfig {
 }
 
 pub struct Mixer {
+    /// Accumulated startup gains, shared by all mixers using this DSP period.
+    input_fade_curve: Vec<f32>,
     pub config: MixerConfig,
     /// The engine submits component voices at its audio update; direct DSP users may render
     /// immediately. Full AudioMixer graphs also require update-based submission.
@@ -1168,8 +1170,17 @@ fn source_spatial(
 }
 
 impl Mixer {
+    fn input_fade_curve(buffer: u32) -> Vec<f32> {
+        let frames = buffer.max(1);
+        let mut gain = ParameterRamp::new(0.0);
+        (0..frames.min(unbound_compat::AudioOutputRules::MAXIMUM_BUFFER))
+            .map(|_| gain.next(1.0, frames))
+            .collect()
+    }
+
     pub fn new(config: MixerConfig) -> Self {
         Self {
+            input_fade_curve: Self::input_fade_curve(config.buffer_size),
             config,
             defer_voice_submission: false,
             frames: 0,
@@ -1245,6 +1256,9 @@ impl Mixer {
     pub fn reconfigure(&mut self, config: MixerConfig) -> anyhow::Result<()> {
         self.validate_configuration(&config)?;
         let seconds = self.dsp_time();
+        if self.config.buffer_size != config.buffer_size {
+            self.input_fade_curve = Self::input_fade_curve(config.buffer_size);
+        }
         self.config = config;
         self.speakers = SpeakerLayout::of(config.output_channels());
         // Channels of the previous layout must not reach the new one.
@@ -2892,8 +2906,12 @@ impl Mixer {
                 let lanes = node.lanes.iter_mut().map(|lane| &mut lane.buffer);
                 for buffer in std::iter::once(&mut node.buffer).chain(lanes) {
                     for (frame, stereo) in buffer[..n * 2].chunks_exact_mut(2).enumerate() {
-                        let gain = ((fade_start + frame) as f32 / config.buffer_size.max(1) as f32)
-                            .min(1.0);
+                        let age = fade_start + frame;
+                        let gain = if node.spec.input_fade_from_mixer {
+                            self.input_fade_curve.get(age).copied().unwrap_or(1.0)
+                        } else {
+                            (age as f32 / config.buffer_size.max(1) as f32).min(1.0)
+                        };
                         for sample in stereo {
                             *sample *= gain;
                         }
@@ -5505,6 +5523,54 @@ mod tests {
                     m.render(&mut out, 2);
                     assert_eq!(out[64 * 2], if after { 64.0 / 1024.0 } else { 1.0 });
                     assert_eq!(out[1023 * 2], if after { 1023.0 / 1024.0 } else { 1.0 });
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn measured_group_startup_accumulates_gain_across_render_chunks() {
+        for period in [97, 480, 1024] {
+            for measured in [false, true] {
+                let mut m = Mixer::new(MixerConfig {
+                    buffer_size: period,
+                    ..MixerConfig::default()
+                });
+                let spec = serde_json::from_value(serde_json::json!({
+                    "handle": 1, "parent": 0, "mixer": 1, "muted": false,
+                    "bypass": false, "inputFadeFromMixer": measured,
+                    "effects": [{"id": "att", "kind": "Attenuation", "gain": 1.0},
+                        {"id": "send", "kind": "Send", "sendLevel": 0.0}]
+                }))
+                .unwrap();
+                m.configure_group(spec).unwrap();
+                let frames = period as usize * 2;
+                m.add_clip(1, Clip::new(2, 48000, vec![1.0; frames * 2]));
+                source_with(&mut m, 2, 1, |p| p.group = 1);
+                play(&mut m, 2, command::PLAY, 0.0);
+                m.update_suspension();
+                let mut output = vec![0.0; frames * 2];
+                for chunk in output.chunks_mut(47 * 2) {
+                    m.render(chunk, 2);
+                }
+                let mut gain = 0.0_f32;
+                for frame in 0..frames {
+                    let expected = if frame >= period as usize {
+                        1.0
+                    } else if measured {
+                        gain
+                    } else {
+                        frame as f32 / period as f32
+                    };
+                    if frame >= 64 {
+                        assert_eq!(output[frame * 2], expected, "{period}/{measured}/{frame}");
+                        assert_eq!(output[frame * 2 + 1], expected);
+                    }
+                    gain += 1.0 / period as f32;
+                }
+                if period == 480 && measured {
+                    // This startup value changes the following delay's Q14 input by one step.
+                    assert_eq!((output[220 * 2] * 0.03662109375 * 16384.0) as i32, 274);
                 }
             }
         }

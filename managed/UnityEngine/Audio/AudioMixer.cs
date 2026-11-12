@@ -840,8 +840,9 @@ namespace Unbound.Runtime
             return mode;
         }
 
-        // Paired settings measured by tests/projects/audiopitch, in addition to the original profiles.
-        static readonly (int Rate, int Buffer)[] AdditionalOutputSettings = { (32000, 256), (48000, 512), (96000, 2048) };
+        // The grid measured by tests/projects/audiopitch's wide-pcm profile.
+        static readonly int[] AdditionalOutputRates = { 32000, 44100, 48000, 96000 };
+        static readonly int[] AdditionalOutputBuffers = { 32, 64, 128, 256, 340, 480, 512, 1024, 2048, 4096, 8192 };
         static bool MeasuredSpeakerOutput(AudioSpeakerMode mode) => mode == AudioSpeakerMode.Stereo
             || mode == AudioSpeakerMode.Quad || mode == AudioSpeakerMode.Surround
             || mode == AudioSpeakerMode.Mode5point1 || mode == AudioSpeakerMode.Mode7point1;
@@ -849,10 +850,9 @@ namespace Unbound.Runtime
         static bool AdditionalMeasuredOutput(AudioConfiguration config, AudioSpeakerMode mode)
         {
             if (!Compat.AudioSurroundEffectsMeasured || !MeasuredSpeakerOutput(mode)) return false;
-            if (config.sampleRate == 96000 && mode != AudioSpeakerMode.Stereo && mode != AudioSpeakerMode.Quad) return false;
-            foreach (var setting in AdditionalOutputSettings)
-                if (config.sampleRate == setting.Rate && config.dspBufferSize == setting.Buffer) return true;
-            return false;
+            return Array.IndexOf(AdditionalOutputRates, config.sampleRate) >= 0
+                && Array.IndexOf(AdditionalOutputBuffers, config.dspBufferSize) >= 0
+                && !(config.sampleRate == 32000 && config.dspBufferSize == 340);
         }
         // Native 6000.0.71f1 keeps exposed values verbatim but clamps the DSP amount.
         internal float DistortionConfiguration(UnityEngine.Audio.AudioMixer mixer)

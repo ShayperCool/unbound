@@ -289,6 +289,7 @@ pub struct Engine {
     reset_worker: Mutex<Option<ResetWorker>>,
     /// The output channels the virtual device stands for (see [`VIRTUAL_CHANNELS_VARIABLE`]).
     virtual_channels: usize,
+    output_rules: unbound_compat::AudioOutputRules,
 }
 
 /// Overrides the channel count of the virtual device that runs without an output device.
@@ -329,19 +330,42 @@ impl Engine {
     /// Starts the audio system with the project's settings; `open_device`: try the installed
     /// output device (else the virtual one).
     pub fn new(settings: ProjectAudioSettings, open_device: bool) -> Self {
+        Self::new_with_output_rules(settings, open_device, Default::default())
+    }
+
+    pub fn new_with_output_rules(
+        settings: ProjectAudioSettings,
+        open_device: bool,
+        output_rules: unbound_compat::AudioOutputRules,
+    ) -> Self {
         let virtual_channels = std::env::var(VIRTUAL_CHANNELS_VARIABLE)
             .ok()
             .and_then(|value| value.parse::<usize>().ok())
             .filter(|channels| (1..=mixer::MAX_OUTPUT_CHANNELS).contains(channels))
             .unwrap_or(VIRTUAL_CHANNELS);
-        Self::with_virtual_channels(settings, open_device, virtual_channels)
+        Self::with_virtual_channels_and_rules(settings, open_device, virtual_channels, output_rules)
     }
 
     /// [`Engine::new`] with the virtual device's channel count given.
+    #[cfg(test)]
     fn with_virtual_channels(
         settings: ProjectAudioSettings,
         open_device: bool,
         virtual_channels: usize,
+    ) -> Self {
+        Self::with_virtual_channels_and_rules(
+            settings,
+            open_device,
+            virtual_channels,
+            Default::default(),
+        )
+    }
+
+    fn with_virtual_channels_and_rules(
+        settings: ProjectAudioSettings,
+        open_device: bool,
+        virtual_channels: usize,
+        output_rules: unbound_compat::AudioOutputRules,
     ) -> Self {
         let mut mixer = Mixer::new(MixerConfig::default());
         mixer.defer_voice_submission = true;
@@ -364,6 +388,7 @@ impl Engine {
             capture_pending: Mutex::new(0.0),
             reset_worker: Mutex::new(None),
             virtual_channels,
+            output_rules,
         };
         engine
             .start(configuration, open_device)
@@ -386,7 +411,7 @@ impl Engine {
         let device_channels = device_channels.unwrap_or(self.virtual_channels);
         MixerConfig {
             sample_rate: rate,
-            buffer_size: requested.dsp_buffer_size.max(64),
+            buffer_size: self.output_rules.buffer_size(requested.dsp_buffer_size),
             speaker_mode: active_speaker_mode(requested.speaker_mode, device_channels),
             real_voices: requested.num_real_voices.max(1) as usize,
             virtual_voices: requested.num_virtual_voices.max(1) as usize,
@@ -402,7 +427,7 @@ impl Engine {
         } else {
             VIRTUAL_SAMPLE_RATE
         };
-        let buffer = requested.dsp_buffer_size.max(64);
+        let buffer = self.output_rules.buffer_size(requested.dsp_buffer_size);
         let opener = OPENER.read().unwrap().clone();
         let mut device = None;
         if open_device && !self.settings.disable_audio {
@@ -1081,6 +1106,30 @@ mod tests {
         assert_eq!(engine.mixer().source_state(9).main, voice_state::PLAYING);
         engine.frame(&packet(0.1));
         assert_eq!(engine.mixer().source_state(9).main, voice_state::NONE);
+    }
+
+    #[test]
+    fn measured_buffer_requests_survive_startup_and_reset() {
+        let settings = ProjectAudioSettings {
+            dsp_buffer_size: 32,
+            ..Default::default()
+        };
+        let legacy = Engine::new(settings.clone(), false);
+        assert_eq!(legacy.configuration().dsp_buffer_size, 64);
+        let measured = Engine::new_with_output_rules(
+            settings,
+            false,
+            unbound_compat::AudioOutputRules::for_version(unbound_compat::UnityVersion::new(
+                6000, 0, 71,
+            )),
+        );
+        assert_eq!(measured.configuration().dsp_buffer_size, 32);
+        for size in [340, 8192, 32, 97] {
+            let mut config = measured.configuration();
+            config.dsp_buffer_size = size;
+            assert!(measured.reset(config));
+            assert_eq!(measured.configuration().dsp_buffer_size, size);
+        }
     }
 
     #[test]

@@ -226,6 +226,8 @@ namespace Unbound.Runtime
     /// </summary>
     internal sealed class VirtualAudioBackend : AudioBackend
     {
+        // Unity 6000.0.71f1, tests/projects/audiopitch configuration controls.
+        const int MaximumMeasuredDspBuffer = 8192;
         sealed class Clip
         {
             internal int Channels, Frequency, Frames;
@@ -556,6 +558,7 @@ namespace Unbound.Runtime
             m_Configuration = configuration;
             if (m_Configuration.sampleRate <= 0) m_Configuration.sampleRate = 48000;
             if (m_Configuration.dspBufferSize <= 0) m_Configuration.dspBufferSize = 1024;
+            if (Compat.AudioSurroundEffectsMeasured) m_Configuration.dspBufferSize = Math.Min(m_Configuration.dspBufferSize, MaximumMeasuredDspBuffer);
             m_Frames = FrameOf(seconds);
             foreach (var source in m_Sources.Values)
             {
