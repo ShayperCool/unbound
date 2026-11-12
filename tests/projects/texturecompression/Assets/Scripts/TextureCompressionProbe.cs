@@ -440,6 +440,7 @@ public class TextureCompressionProbe : MonoBehaviour
         }
         AdditionalCompressControls();
         AdditionalAstcCopies();
+        AdditionalAstcRegions();
     }
 
     void AdditionalCompressControls()
@@ -520,6 +521,55 @@ public class TextureCompressionProbe : MonoBehaviour
                     Add(key + ".before", Bytes(dst.GetRawTextureData()));
                     Run(key, () => Graphics.CopyTexture(src, dst));
                     Add(key + ".after", Bytes(dst.GetRawTextureData()));
+                }
+                finally { Destroy(src); Destroy(dst); }
+            });
+        }
+    }
+
+    static byte[] AstcSolid(Texture2D texture, Color32 colour)
+    {
+        var raw = new byte[texture.GetRawTextureData().Length];
+        var rgba = new[] { colour.r, colour.g, colour.b, colour.a };
+        for (int at = 0; at < raw.Length; at += 16)
+        {
+            // A LDR constant-colour block, with unrestricted extent and UNorm16 channels.
+            raw[at] = 252; raw[at + 1] = 253;
+            for (int i = 2; i < 8; i++) raw[at + i] = 255;
+            for (int c = 0; c < 4; c++) raw[at + 8 + c * 2] = raw[at + 9 + c * 2] = rgba[c];
+        }
+        return raw;
+    }
+
+    void AdditionalAstcRegions()
+    {
+        foreach (int alignment in new[] { 5, 4 })
+        {
+            string key = "copy.astc.region" + alignment;
+            Section(key, () =>
+            {
+                var src = new Texture2D(20, 20, TextureFormat.ASTC_5x5, false, true);
+                var dst = new Texture2D(20, 20, TextureFormat.ASTC_5x5, false, true);
+                try
+                {
+                    src.filterMode = dst.filterMode = FilterMode.Point;
+                    Run(key + ".setup", () => {
+                        src.LoadRawTextureData(AstcSolid(src, new Color32(80, 20, 30, 255)));
+                        src.Apply(false);
+                        dst.LoadRawTextureData(AstcSolid(dst, new Color32(10, 40, 90, 255)));
+                        dst.Apply(false);
+                        // CPU green/yellow; retained GPU red/blue before the copy.
+                        src.SetPixelData(AstcSolid(src, new Color32(20, 100, 40, 255)), 0);
+                        dst.SetPixelData(AstcSolid(dst, new Color32(110, 90, 10, 255)), 0);
+                    });
+                    Add(key + ".source.raw", Bytes(src.GetRawTextureData()));
+                    Add(key + ".source.gpu", Gpu(src));
+                    Add(key + ".before.raw", Bytes(dst.GetRawTextureData()));
+                    Add(key + ".before.gpu", Gpu(dst));
+                    Run(key, () => Graphics.CopyTexture(src, 0, 0, alignment, alignment, alignment, alignment,
+                        dst, 0, 0, alignment, alignment));
+                    Add(key + ".after.raw", Bytes(dst.GetRawTextureData()));
+                    Add(key + ".after.gpu", Gpu(dst));
                 }
                 finally { Destroy(src); Destroy(dst); }
             });

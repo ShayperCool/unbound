@@ -156,8 +156,8 @@ Runtime edge blocks repeat their remaining rows and columns. The 3x2 RGB mip sti
 unresolved colour/padding difference, reaching 35/255 in a decoded channel. Other residuals
 are small-mip colour fitting and the flat-RGB fast case (GPU difference at most 2/255).
 They remain exact-key residuals; no tolerance has changed. The full comparator records
-4905/5161 exact values in each Standalone profile, with 256 listed residuals, and
-4236, 4223, 4227 and 4205/5161 in AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC,
+4925/5181 exact values in each Standalone profile, with 256 listed residuals, and
+4256, 4243, 4247 and 4225/5181 in AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC,
 with 925, 938, 934 and 956 residuals.
 Android runtime ETC encoding is unchanged by these encoder changes; direct R8/RG16 runtime
 EAC storage remains unresolved. The runtime encoder profile is part of the compression key.
@@ -233,6 +233,11 @@ raw blocks and sizes match. These are explicit decoder follow-ups, including the
 shared with AssetBundle content, rather than tolerance changes.
 
 Crunch storage is absent for 0/1029 DXT1Crunched and 0/1372 DXT5Crunched logical blocks in each
-Standalone profile, and 0/1029 ETC_RGB4Crunched and 0/1372 ETC2_RGBA8Crunched in each Android
-profile. Quality-specific counts remain in block_report.py's output. The part's ordinary-project
+Standalone profile. AndroidGamma, AndroidETC2 and AndroidASTC have 0/1029 ETC_RGB4Crunched
+and 0/1372 ETC2_RGBA8Crunched; AndroidLinear has only ETC2_RGBA8Crunched, 0/2401. Quality-specific counts remain in block_report.py's output. The part's ordinary-project
 clean-cache import was 20.58 s before and 21.52 s after, 4397 textures and zero failed imports.
+
+The ASTC_5x5 region controls distinguish 5-aligned coordinates and sizes from 4-aligned ones.
+The source has CPU green/GPU red and the destination CPU yellow/GPU blue before the call.
+The 5-aligned region changes only the destination GPU; the 4-aligned region changes nothing.
+The destination's CPU blocks stay yellow in both controls.
