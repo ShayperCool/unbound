@@ -6,7 +6,7 @@ Fonts in Assets/Resources/Fonts:
   renamed "Spacing Probe" (the same file, imported with character spacing 0 and 6).
 
 Noto Color Emoji
-Copyright 2013-2017 Google Inc.
+Copyright 2022 Google Inc. (the font's own notice)
 License: SIL-OFL-1.1 (below)
 
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/

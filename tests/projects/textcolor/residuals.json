@@ -1,5 +1,5 @@
 {
   "TextGenerator.Populate called directly (generation extents 400 x 100, pivot 0, upper left): the Editor places the first line 64 units lower than the engine; the characters, advances and preferred width match (follow-up)": ["spacing/spacing0/layout", "spacing/spacing6/layout"],
   "uv only: where the font texture packs a canvas text's characters after the TextGenerator calls above differs; the size the canvas requests and the glyph match (follow-up with the TextGenerator row)": ["canvas/scaled/info"],
-  "The engine also warns 'Unable to load font face for [] font asset.' while building the OS fallback font list: an OS face it cannot reload by its family and style names (machine-dependent; follow-up)": ["logs"]
+  "An engine defect: it also warns 'Unable to load font face for [] font asset.' while building the OS fallback font list (an OS face it cannot reload by its family and style names; the Editor on the same machine and fonts does not). The 4096 errors are compared in legacy/full (follow-up)": ["logs"]
 }

@@ -302,6 +302,7 @@ public class TextColorProbe : MonoBehaviour
     void FullTexture()
     {
         var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        int logged = s_Logs.Count;
         int rebuilt = 0;
         Action<Font> onRebuilt = f => { if (f == font) rebuilt++; };
         Font.textureRebuilt += onRebuilt;
@@ -320,6 +321,9 @@ public class TextColorProbe : MonoBehaviour
         foreach (var i in new[] { 0, 99, 400, all.Length - 100, all.Length - 1 })
             sb.Append(i == 0 ? "" : ",").Append(font.GetCharacterInfo(all[i], out var info, 300) ? "true" : "false");
         Font.textureRebuilt -= onRebuilt;
+        // The messages logged by these requests.
+        sb.Append("],\"logged\":[");
+        for (int i = logged; i < s_Logs.Count; i++) sb.Append(i == logged ? "" : ",").Append(Str(s_Logs[i]));
         Value("legacy/full", sb.Append("]}").ToString());
     }
 
