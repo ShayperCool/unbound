@@ -8,12 +8,14 @@ zone and do not certify live Mono-zone transitions.
 
 | Basis | Distinguishing control |
 | --- | --- |
-| [OnAudioFilterRead](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAudioFilterRead.html) receives interleaved audio from the preceding processing stage. | A script scales every channel by zero, one, two or minus one. Dry controls prove that it changes the signal; a no-script control records the ordinary path. |
-| [Reverb Zones](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioReverbZone.html) depend on listener position. | Continuous input stays audible during entry, departure and return. Zero-script controls distinguish an independent wet return from audio that the script already processed. |
+| [OnAudioFilterRead](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAudioFilterRead.html) receives interleaved audio from the preceding processing stage. | A script scales every channel by zero, one, two or minus one. Dry controls prove that it changes the signal; a control without the gain script records the ordinary path. |
+| [Reverb Zones](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioReverbZone.html) depend on listener position. | Continuous input stays audible during entry, departure and return. Scripts with gain zero distinguish an independent wet return from audio that the script already processed. |
 | [bypassListenerEffects](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-bypassListenerEffects.html) excludes listener effects for an unrouted source; the property does not apply to mixer-routed sources. | Stereo controls compare routed and unrouted sources with bypass off/on and a zeroing script, with and without a zone. The state has a different audible result. |
 
 Two independent GPU Editor captures agree exactly on all 17,826,478 values per
-rate. The zone return joins after the listener scripts: the zero script silences
+rate. Every control retains the identity `OutputLayoutProbe` callback; `_none`
+omits only `ProbeListenerGain`.
+The zone return joins after the listener scripts: the zeroing script silences
 dry output but leaves the zone return audible. An unrouted bypassing source also
 joins after the scripts; its routed control remains processed by the script.
 These are measured processing rules for this release and context.

@@ -35,8 +35,8 @@ surround --exact`, then publish one with `publish.py --surround --repeat REPEAT`
 Repeats and all reports stay outside Git.
 
 Independent Editor repeats agree exactly across 38,404,832 values per rate. The engine
-gate passes every value. Strict device-only reports retain 251,576 one-step differences
-at 48000 Hz and 457,984 at 44100 Hz; every Master float passes the original bounds.
+gate passes every value. The Q390 strict device-only reports retain 244,239 one-step differences
+at 48000 Hz and 450,245 at 44100 Hz; every Master float passes the original bounds.
 
 The engine-only `run.py` gate runs this profile in its own session, as recorded,
 and also checks every prior pitch/layout/device control. ATOL 2e-5 and RTOL 2e-4

@@ -51,8 +51,8 @@ every discrepancy. No residual or sample limit is added.
 
 Two independent GPU Editor captures agree exactly on 88,213,522 values per rate
 in `wet` and 6,291,602 in `wet-edges`. The engine passes all 94,505,124
-values per rate at the unchanged bounds. Strict reports retain 721/694 device
-PCM differences in `wet` and 29/33 in `wet-edges` at 48000/44100 Hz, all within
+values per rate at the unchanged bounds. The Q390 replay retains 224/200 strict
+device PCM differences in `wet` and 29/33 in `wet-edges` at 48000/44100 Hz, all within
 one PCM step. Every Master float passes the strict bounds. The existing audio
 regression suite also exercises late-created sources in stereo through
 `mixerduck`; their silent groups keep Send and parameter histories from the

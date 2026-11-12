@@ -110,8 +110,8 @@ The [Mono effect profile](MONO.md) records asymmetric Chorus routing, reverb
 folding between effects, wet boundaries and linked Mono processing separately
 from the existing output-layout controls.
 
-[Q373 closure](CLOSURE.md) lists the landed profiles, retained device differences
-and open queue work without extending their measured scope.
+[Audio scope and follow-ups](CLOSURE.md) lists the landed profiles, retained
+device differences and open queue work without extending their measured scope.
 
 Startup timing after AudioSettings.Reset has an additional
 [19-control diagnostic](RECOVERY.md) recording relative DSP frames and source
