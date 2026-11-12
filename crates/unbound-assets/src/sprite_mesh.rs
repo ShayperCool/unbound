@@ -1217,8 +1217,9 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, polygon: bool) -> Sp
     } else if s.generate_physics_shape && polygon {
         out.physics = vec![match &out.mesh {
             Some(mesh) => mesh_boundary(&mesh.vertices, &mesh.triangles),
-            // Nothing triangulated (a zero-area outline): the quad the sprite renders, its rect's
-            // corners in units from the pivot (as `Sprite.vertices` gives them).
+            // No Tight mesh: the quad the sprite renders, its rect's corners in units from the
+            // pivot (as `Sprite.vertices` gives them). Measured for a zero-area outline; a texture
+            // without traceable alpha or a rect outside the texture take the same quad, unmeasured.
             None => {
                 let (px, py) = (s.pivot[0] * rw, s.pivot[1] * rh);
                 let [left, right] = [0.0, rw].map(|x| (x - px) / ppu);
@@ -1286,9 +1287,11 @@ pub fn mesh_boundary(vertices: &[[f32; 2]], triangles: &[u16]) -> Vec<[f32; 2]> 
         .collect()
 }
 
-/// The edge table of [`mesh_boundary`]. Its slot order is the order of the boundary edges, so the
-/// table grows as measured: 64 slots at first, doubled when a new edge finds two thirds of them
-/// used; an edge's home slot is bits 4 and up of its key, collisions probe 1, 2, 3, ... slots on.
+/// The edge table of [`mesh_boundary`]. Its slot order is the order of the boundary edges, so its
+/// shape matters: 64 slots at first, doubled when a new edge finds two thirds of them used; an
+/// edge's home slot is bits 4 and up of its key, collisions probe 1, 2, 3, ... slots on. Of these
+/// variants only this one reproduces every Polygon control of tests/projects/spriteimport (the
+/// two-loop `polygon_loops` grows the table twice).
 #[derive(Default)]
 struct EdgeTable {
     slots: Vec<Option<TableEdge>>,

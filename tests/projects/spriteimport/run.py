@@ -46,7 +46,7 @@ def editor_job(project, method, out, log, env=None, quit=False):
 
 def exit_code(result):
     print(editor_runner.summary(result), flush=True)
-    return 0 if result['exit_code'] == 0 and result.get('renderer_ok') is not False else 1
+    return 0 if result['exit_code'] == 0 and result.get('renderer_ok') is True else 1
 
 
 def create(work):

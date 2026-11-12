@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &637170551
+--- !u!1 &549730344
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 637170553}
-  - component: {fileID: 637170552}
+  - component: {fileID: 549730346}
+  - component: {fileID: 549730345}
   m_Layer: 0
   m_Name: SpriteImportProbe
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &637170552
+--- !u!114 &549730345
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 637170551}
+  m_GameObject: {fileID: 549730344}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6dc28280ccef2f5f8b43b9bdce5be641, type: 3}
@@ -193,6 +193,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 3cebaf4ef2c82054489a54afb1f60c90, type: 3}
   - {fileID: 21300000, guid: d1581fffa2bc043d82015a539aa98f98, type: 3}
   - {fileID: 21300000, guid: f121dadc3d175b46119e9d7695549deb, type: 3}
+  - {fileID: 21300000, guid: 23b47e9af0ceab2ab90d642adf5096c4, type: 3}
   - {fileID: 21300000, guid: 412933e08e64170ffd973ca4fa83181b, type: 3}
   - {fileID: 21300000, guid: ce69742a1cdf5475ea79c105bf5df0e7, type: 3}
   - {fileID: 21300000, guid: 3458ea3f51e76539a7fb969b4cdd0e1a, type: 3}
@@ -213,13 +214,13 @@ MonoBehaviour:
   - {fileID: 21300000, guid: ae3341166214821206871a1ef2537fe1, type: 3}
   - {fileID: 21300000, guid: 31952e420645c9c6b5de53d84865bf65, type: 3}
   - {fileID: 21300000, guid: 0dc33986906c7ba02108aee725a3c856, type: 3}
---- !u!4 &637170553
+--- !u!4 &549730346
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 637170551}
+  m_GameObject: {fileID: 549730344}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -232,4 +233,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 637170553}
+  - {fileID: 549730346}

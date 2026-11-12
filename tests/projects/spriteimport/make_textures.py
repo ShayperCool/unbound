@@ -283,6 +283,12 @@ add('polygon_hole', circle(32, 32, 16), mode=3, alignment=0,
 add('polygon_star', circle(32, 32, 16), mode=3, alignment=0, ppu=10,
     outline=[[(round(math.cos(math.pi * i / 30) * (28 if i % 2 == 0 else 17), 2),
                round(math.sin(math.pi * i / 30) * (28 if i % 2 == 0 else 17), 2)) for i in range(60)]])
+# Two loops with 160 boundary edges between them: the edge table grows twice, and where the one
+# path moves from loop to loop depends on how full the table gets before it grows and where an
+# edge's first slot lies.
+add('polygon_loops', circle(32, 32, 16), mode=3, alignment=0, outline=[
+    [(round(cx + math.cos(2 * math.pi * i / n) * r, 3), round(math.sin(2 * math.pi * i / n) * r * 2, 3))
+     for i in range(n)] for cx, r, n in ((-16, 13, 70), (16, 13, 90))])
 add('polygon_physics', circle(32, 32, 16), mode=3, alignment=0, outline=OUTLINE, physics_shape=PHYSICS)
 add('polygon_nophys', circle(32, 32, 16), mode=3, alignment=0, outline=OUTLINE, physics=0)
 add('polygon_fullrect', circle(32, 32, 16), mode=3, mesh_type=0, alignment=0, outline=OUTLINE)
