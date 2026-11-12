@@ -35,8 +35,8 @@ if doctor.returncode:
     raise SystemExit('doctor failed: '+doctor.stderr)
 (out/'doctor.json').write_text(doctor.stdout)
 limitations = json.loads(doctor.stdout).get('renderingLimitations',[])
-if any('GPU mesh editing' in s or 'non-finite PixelPerfectRendering' in s for s in limitations):
+if any('GPU mesh editing' in s or 'non-finite PixelPerfectRendering' in s or 'active Cloth' in s for s in limitations):
     raise SystemExit('obsolete renderer limitation in doctor')
-if not any('active Cloth' in s for s in limitations) or not any('DrawIcon' in s and 'DrawGUITexture' in s and 'DrawFrustum' in s for s in limitations):
+if not any('DrawIcon' in s and 'DrawGUITexture' in s and 'DrawFrustum' in s for s in limitations):
     raise SystemExit('missing remaining renderer limitations in doctor')
 print(f"renderapi gate: {raw['keys']}/{raw['keys']} match; full report {report}")

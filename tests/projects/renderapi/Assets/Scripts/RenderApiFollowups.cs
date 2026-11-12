@@ -459,6 +459,106 @@ public sealed partial class RenderApiProbe
     }
 }
 
+public sealed partial class RenderApiProbe
+{
+    /// <summary>A skin buffer's first position and the third's position and normal (null, or
+    /// its count, stride and target).</summary>
+    void SkinRead(string key, GraphicsBuffer b, bool third = false)
+    {
+        Bool(key + ".null", b == null);
+        if (b == null) return;
+        Value(key + ".info", "[" + b.count + "," + b.stride + "," + (int)b.target + "]");
+        var f = new float[b.count * b.stride / 4]; b.GetData(f);
+        Value(key + ".v0", V(new Vector3(f[0], f[1], f[2])));
+        int s = b.stride / 4;
+        if (third) Value(key + ".v2", V(new Vector3(f[2 * s], f[2 * s + 1], f[2 * s + 2])));
+    }
+
+    /// <summary>GetPreviousVertexBuffer and GetVertexBuffer of a renderer whose bone moves each
+    /// frame, with and without skinnedMotionVectors, under a camera drawing motion vectors or not;
+    /// then a cloth's buffer against its particles.</summary>
+    IEnumerator PreviousSkinCases()
+    {
+        foreach (bool motion in new[] { true, false })
+        foreach (bool cameraMotion in new[] { false, true })
+        {
+            string p = "prevskin." + motion + "." + cameraMotion;
+            camera.depthTextureMode = cameraMotion ? DepthTextureMode.Depth | DepthTextureMode.MotionVectors : DepthTextureMode.None;
+            var go = new GameObject("previous skin");
+            var bone = new GameObject("bone").transform; bone.SetParent(go.transform, false);
+            var skin = go.AddComponent<SkinnedMeshRenderer>();
+            var mesh = Make();
+            mesh.boneWeights = new[] { new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 } };
+            mesh.bindposes = new[] { Matrix4x4.identity };
+            skin.sharedMesh = mesh; skin.bones = new[] { bone }; skin.rootBone = go.transform; skin.updateWhenOffscreen = true;
+            skin.skinnedMotionVectors = motion;
+            var material = new Material(Shader.Find("Unlit/Color"));
+            skin.sharedMaterial = material;
+            skin.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+            void Both(string k)
+            {
+                Try(k, () =>
+                {
+                    using (var b = skin.GetPreviousVertexBuffer()) SkinRead(k + ".previous", b);
+                    using (var c = skin.GetVertexBuffer()) SkinRead(k + ".current", c);
+                });
+            }
+            Both(p + ".created");
+            for (int f = 1; f <= 4; f++)
+            {
+                bone.localPosition = new Vector3(0.1f * f, 0, 0);
+                yield return null;
+                Both(p + ".frame" + f);
+            }
+            yield return null;
+            Both(p + ".still");
+            skin.enabled = false; bone.localPosition = Vector3.right; yield return null;
+            Both(p + ".disabled");
+            DestroyImmediate(go); DestroyImmediate(mesh); DestroyImmediate(material);
+        }
+        camera.depthTextureMode = DepthTextureMode.None;
+        var clothObject = new GameObject("cloth skin");
+        var clothSkin = clothObject.AddComponent<SkinnedMeshRenderer>();
+        var clothMesh = new Mesh { vertices = new[] { new Vector3(-.5f, 0, 0), new Vector3(.5f, 0, 0), new Vector3(-.5f, -1, 0), new Vector3(.5f, -1, 0) }, triangles = new[] { 0, 1, 2, 1, 3, 2 } };
+        clothMesh.RecalculateNormals();
+        var clothMaterial = new Material(Shader.Find("Unlit/Color"));
+        clothSkin.sharedMesh = clothMesh; clothSkin.sharedMaterial = clothMaterial;
+        clothSkin.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+        var cloth = clothObject.AddComponent<Cloth>();
+        cloth.coefficients = new[] { new ClothSkinningCoefficient { maxDistance = 0 }, new ClothSkinningCoefficient { maxDistance = 0 },
+            new ClothSkinningCoefficient { maxDistance = 10 }, new ClothSkinningCoefficient { maxDistance = 10 } };
+        // The first frame's buffer is not recorded: what it holds varies from run to run.
+        yield return null;
+        for (int f = 1; f <= 4; f++)
+        {
+            yield return null;
+            string k = "prevskin.cloth.frame" + f;
+            Try(k, () =>
+            {
+                using (var c = clothSkin.GetVertexBuffer())
+                using (var b = clothSkin.GetPreviousVertexBuffer())
+                {
+                    Bool(k + ".null", c == null);
+                    if (c == null) return;
+                    Value(k + ".info", "[" + c.count + "," + c.stride + "," + (int)c.target + "]");
+                    var current = new float[c.count * c.stride / 4]; c.GetData(current);
+                    int s = c.stride / 4;
+                    bool particles = true;
+                    for (int v = 0; v < c.count; v++)
+                        particles &= cloth.vertices[v] == new Vector3(current[v * s], current[v * s + 1], current[v * s + 2])
+                            && cloth.normals[v] == new Vector3(current[v * s + 3], current[v * s + 4], current[v * s + 5]);
+                    Bool(k + ".particles", particles);
+                    var before = new float[b.count * b.stride / 4]; b.GetData(before);
+                    Bool(k + ".previousSame", System.Linq.Enumerable.SequenceEqual(before, current));
+                }
+            });
+        }
+        cloth.enabled = false; yield return null;
+        Try("prevskin.cloth.disabled", () => { using (var c = clothSkin.GetVertexBuffer()) SkinRead("prevskin.cloth.disabled.current", c, true); });
+        DestroyImmediate(clothObject); DestroyImmediate(clothMesh); DestroyImmediate(clothMaterial);
+    }
+}
+
 public sealed class RenderApiGizmoControls : MonoBehaviour
 {
     public bool drew, drewSelected;

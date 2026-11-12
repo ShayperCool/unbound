@@ -80,9 +80,18 @@ Unchanged draws allocate no conversion storage and create no pipelines or GPU bu
 
 The relevant skinned-buffer contracts are [GetVertexBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SkinnedMeshRenderer.GetVertexBuffer.html)
 and [vertexBufferTarget](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SkinnedMeshRenderer-vertexBufferTarget.html).
-The current buffer may alternate with the previous frame's buffer when motion-vector rendering
-uses it. GetPreviousVertexBuffer and buffer access with active Cloth remain explicitly unsupported
-and are listed by doctor.
+[GetPreviousVertexBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SkinnedMeshRenderer.GetPreviousVertexBuffer.html)
+documents that skinned meshes with skinnedMotionVectors "alternate between two GPU vertex
+buffers" during motion vector rendering. The `prevskin.*` controls move a bone each frame,
+with skinnedMotionVectors on and off and the camera drawing motion vectors or not. Measured:
+both buffers are null in the frame the renderer is created (no skinning pass has run). A buffer
+read in Update holds the last frame's skin. The previous buffer holds the skin of the frame
+before only with skinnedMotionVectors on and a camera drawing motion vectors; otherwise it reads
+the same data as the current buffer. A disabled renderer keeps its last skin. With an active
+Cloth, GetVertexBuffer holds the cloth's particles (positions and normals equal to
+`Cloth.vertices`/`normals`, recorded from the second frame on; the first frame's contents
+vary between runs) and the previous buffer reads the same. With the cloth disabled, the
+buffer holds the ordinary skin.
 
 ## Game-view gizmos
 

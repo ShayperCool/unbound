@@ -322,6 +322,7 @@ public sealed partial class RenderApiProbe : MonoBehaviour
         AdditionalStreamCases();
         PositionlessStreamCases();
         yield return SkinNormalCases();
+        yield return PreviousSkinCases();
         VolumeCases();
         // Runtime queries and scene changes must not synthesize layer edits.
         Value("sorting.added",added.ToString());Value("sorting.removed",removed.ToString());
