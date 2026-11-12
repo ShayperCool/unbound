@@ -96,8 +96,9 @@ error a Humanoid clip's curves take.
   muscles) is reduced on its own as a float curve with the Position Error. Rotation and Scale
   Errors of 5 change nothing (`HumanReduced`), a Position Error of 5 drops more keys
   (`HumanOptimal`); Keyframe Reduction and Optimal reduce alike.
-- Kept keys keep the time, value and tangents they have with compression Off; a curve whose
-  keys all lie within the error of its first key becomes its two end keys with zero tangents.
+- Kept keys keep the time, value and tangents they have with compression Off; a curve that the
+  constant at its first key's value holds (at every frame, key and halfway between keys)
+  becomes two keys at its first and last times with that value and zero tangents.
 - The key times are whole frames in single precision (frame times 1 / frame rate).
 - A Humanoid clip ends at its last key: `HumanLong`'s 31 frames at 30 a second have a length
   of 1.03333342 (31 frames of 1/30 s in single precision), one step past the take's end. Its
@@ -183,8 +184,9 @@ elsewhere: Head's z position (0.004, 0.006 at 1.5 s, 0.003 at the end), Hips' x 
   `Reduced` set of tests/projects/modelaxis.
 
 Not measured: a rotation curve that stays within the Rotation Error of its first value and ends
-elsewhere (Spine's turn leaves it; the rule is applied to rotations as to the other curves), and
-such Humanoid curves (the two-key curves of `HumanReduced` have equal ends either way).
+elsewhere (Spine's turn leaves it), a float curve (Animator parameter or blend shape weight) that
+does so, and such Humanoid curves (the two-key curves of `HumanReduced` have equal ends either
+way); the rule is applied to them as to the measured position and scale curves.
 
 Unbound matches 3611/3611 records. The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`

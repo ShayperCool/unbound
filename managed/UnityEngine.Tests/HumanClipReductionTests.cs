@@ -67,7 +67,8 @@ namespace UnityEngine.Tests
         /// The body's height at 5 is the two end keys with their own slopes: its ends are far
         /// more than the error apart, so it is not a constant curve, although a segment with
         /// zero slopes between them would stay within the error. The body rotation's w varies
-        /// within the error of its first key and becomes two keys with zero slopes.</summary>
+        /// within the error of its first key: the constant at that value holds it, and it becomes
+        /// two keys with that value and zero slopes.</summary>
         [Theory]
         [InlineData("RootT.y", 0.5f, false, new[] { 0, 12, 25, 30 })]
         [InlineData("RootT.y", 5f, false, new[] { 0, 30 })]
