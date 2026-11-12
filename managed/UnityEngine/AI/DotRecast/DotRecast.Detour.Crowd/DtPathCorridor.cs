@@ -326,7 +326,7 @@ namespace DotRecast.Detour.Crowd
             DtNavMesh nav = navquery.GetAttachedNavMesh();
             RcDebug.Assert(null != nav);
             
-            var startEnd = nav.GetOffMeshConnectionPolyEndPoints(refs[0], refs[1], m_npath > 1 ? m_path[1] : 0, agentPos, ref startPos, ref endPos, out linkEnd);
+            var startEnd = nav.GetOffMeshConnectionPolyEndPoints(refs[0], refs[1], m_npath > 0 ? m_path[0] : 0, agentPos, ref startPos, ref endPos, out linkEnd);
             if (startEnd.Succeeded())
             {
                 m_pos = endPos;

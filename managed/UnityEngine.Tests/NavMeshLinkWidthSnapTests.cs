@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
+using DotRecast.Core.Numerics;
+using DotRecast.Detour.Crowd;
 using UnityEngine.AI;
 using Xunit;
 
@@ -190,6 +192,44 @@ namespace UnityEngine.Tests
             var narrow = Link(new Vector3(-1.7f, 0f, 6f), new Vector3(1.7f, 0f, 6f));
             var through = Path(new Vector3(-8f, 0f, 7.2f), new Vector3(8f, 0f, 7.2f)).corners;
             Assert.Equal(6f, through[1].z, 3);
+        }
+
+        [Theory]
+        [InlineData(1.5f, -1.5f)]
+        [InlineData(-1.5f, 1.5f)]
+        [InlineData(1.5f, 1.5f)]
+        public void AWideLinkUsesItsCorridorsLandingPolygon(float fromZ, float toZ)
+        {
+            var settings = NavMesh.GetSettingsByID(0);
+            settings.overrideTileSize = true;
+            settings.tileSize = 32;
+            Gap(settings);
+            const float width = 4f;
+            Link(new Vector3(-1.7f, 0f, 0f), new Vector3(1.7f, 0f, 0f), width);
+            var agent = Agent(new Vector3(-6f, 0f, fromZ), new Vector3(6f, 0f, toZ));
+            Frame();
+            var surface = NavWorld.Get(0);
+            var original = agent.m_Crowd.corridor;
+            var path = original.GetPath().Slice(0, original.GetPathCount()).ToArray();
+            int link = Array.FindIndex(path, p => surface.LinkOfPoly.ContainsKey(p));
+            Assert.InRange(link, 1, path.Length - 2);
+            long landing = path[link + 1];
+            var corridor = new DtPathCorridor();
+            corridor.Init(path.Length);
+            corridor.Reset(path[0], original.GetPos());
+            corridor.SetCorridor(original.GetTarget(), path, path.Length);
+            Span<long> refs = stackalloc long[2];
+            RcVec3f start = default, end = default;
+            Assert.True(corridor.MoveOverOffmeshConnection(path[link], refs, original.GetPos(), ref start, ref end, out _, surface.Query));
+            Assert.True(surface.Query.ClosestPointOnPoly(landing, end, out var closest, out _).Succeeded());
+            // Portal spans encode the width in 255 intervals.
+            float portalPrecision = width / 255f;
+            Assert.InRange(MathF.Abs(end.X - closest.X), 0f, portalPrecision);
+            Assert.InRange(MathF.Abs(end.Z - closest.Z), 0f, portalPrecision);
+            var straight = new RcVec3f(end.X, end.Y, original.GetPos().Z);
+            Assert.True(surface.Query.ClosestPointOnPoly(landing, straight, out var straightClosest, out _).Succeeded());
+            if (MathF.Abs(straight.Z - straightClosest.Z) < 1e-3f)
+                Assert.Equal(straight.Z, end.Z, 3);
         }
 
         [Fact]
