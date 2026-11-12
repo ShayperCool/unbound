@@ -14,6 +14,7 @@ for other releases, devices, platforms or arbitrary graph edits.
 | 4. Prologic | [42 paired controls](PROLOGIC.md) at 48000/44100 Hz, 1024 frames. The recorded device falls back to plain Stereo while retaining the requested getter. | 5,505,368 values per rate pass; strict device differences 236/250. Paired Stereo/Prologic PCM is exact in both repeats. |
 | 5. Live zones | [77 controls](ZONES.md) at 48000/44100 Hz, 1024 frames, Stereo/Quad/5.0/5.1/7.1. Movement, radii, User edits, overlap and listener components. | 24,838,909 values per rate pass; strict device differences 10,836/11,006. |
 | 6. Mono effects | [64 controls](MONO.md) at 48000/44100 Hz, 1024 frames. Chorus taps, reverb folding between effects, wet boundaries and linked processing, with Stereo-output mono-clip controls. | 4,456,925 values per rate pass; strict device differences 329/401. |
+| 7. Listener scripts | [66 controls](LISTENER_SCRIPTS.md) at both rates, 1024 frames. Moving wide zones, static Mono zones, script gains and routed/unrouted listener bypass. | 17,826,478 values per rate pass; strict device differences 2528/2902. |
 
 Every Master float in these profiles passes ATOL `2e-5` / RTOL `2e-4`.
 The retained device differences fit the existing one-step PCM gate. Reports keep
@@ -35,9 +36,9 @@ audio probes remain required validation gates.
   Reset also exposes device-only disagreements at 32000 Hz / 512 frames in
   7.1, so it is diagnostic rather than a canonical startup correction.
   Wider 96000 Hz / 2048-frame callbacks are captured by the wide profile.
-- **Q373-R3. Listener scripts on zone returns.** The measured return joins after
-  listener components. Processing relative to listener `OnAudioFilterRead`
-  scripts is unmeasured; component-only Chorus controls do not certify it.
+- **Listener component/script combinations.** The listener-script zone profile
+  certifies independent returns after scripts. Filter components interleaved
+  with those scripts remain rejected and need separate measurements.
 - **Prologic matrix encoding.** The recorded Stereo fallback does not measure an
   encoder, other devices, other setting pairs or other releases.
 - **Additional context.** Mixer-slot identity/insertion/retargeting/placement and

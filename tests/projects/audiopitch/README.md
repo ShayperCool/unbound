@@ -124,3 +124,8 @@ rate/buffer pairs excluded after repeat disagreements. Its canonical
 `wide-pcm` profile retains the original per-cell startup and has its own land
 gate. The complete 3080-control `wide` matrix and per-case Reset experiments
 remain diagnostics; their failures are not canonical residual allowances.
+
+The [listener script profile](LISTENER_SCRIPTS.md) adds 66 controls at both rates,
+including zone entry, departure and return, script gain controls, static Mono
+zones and routed/unrouted listener bypass. It has an independent canonical
+reference and engine-only gate.

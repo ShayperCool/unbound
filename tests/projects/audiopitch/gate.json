@@ -8,7 +8,8 @@
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile prologic",
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile zones",
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile mono",
-  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile wide-pcm"
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile wide-pcm",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile listener-scripts"
  ],
  "summary": "\"tested\": \\d+, \"failed\": \\d+(?=.*\"pcm_steps\": 1\\b)"
 }
