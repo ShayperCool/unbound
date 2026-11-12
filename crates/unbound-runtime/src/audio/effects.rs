@@ -948,12 +948,12 @@ impl Effect {
             let reverb = match &mut self.reverb {
                 Some(reverb)
                     if reverb.configuration() == (rate, buffer.max(1))
-                        && reverb.measured_delays() == spec.effect_transitions_measured =>
+                        && reverb.measured_response() == spec.effect_transitions_measured =>
                 {
                     reverb
                 }
                 slot => {
-                    let mut reverb = SfxReverb::with_measured_delays(
+                    let mut reverb = SfxReverb::with_measured_response(
                         rate,
                         buffer,
                         spec.effect_transitions_measured,

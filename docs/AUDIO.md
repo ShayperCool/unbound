@@ -443,9 +443,18 @@ the Manual (*Audio Reverb Filter*, *Audio Reverb Zone*):
   to cold/warm activation, Stop, natural completion and overlapping voices. The additional
   live controls cover mid-playback activation, disabling and replacement; all original
   activation PCM is required by the gate.
-- Still unmeasured: listener components processing zone reverb, disable/re-enable within one
-  frame, parameter changes while a tail runs, other output
-  layouts, sample rates and releases.
+- Q373 adds [live scripted and overlapping zones](../tests/projects/audiopitch/ZONES.md)
+  in Stereo/Quad/5.0/5.1/7.1 at 48000/44100 Hz and 1024-frame buffers. The controls
+  cover radii, zone/listener movement, source send level, User scalar edits, selected-preset
+  retention and overlapping-zone edits. Zone returns join after listener components,
+  confirmed with Chorus and dry/bypass companions. The low-frequency input shelf retains
+  its transposed state through retuning and bypass. Reference requests persist across
+  return lifetimes; unchanged requests leave a new return's default frequency in place.
+  These rules reuse `Compat.AudioZoneStartupMeasured` and `Compat.MixerEffectTransitionsMeasured`.
+  Other releases retain the previous low-frequency arithmetic and component placement.
+- Still unmeasured: listener script processing of zone returns, disable/re-enable within
+  one frame, parameter changes while only a tail runs, Mono and output settings outside
+  the measured profiles.
 
 # AudioMixer: Send, Receive and Duck Volume
 
@@ -898,7 +907,7 @@ tests/projects/audiopitch layout and device controls:
 | Measured quad/5.0/5.1/7.1 | Stereo 2D clips reach FL/FR exactly as in stereo; a mono 2D clip uses the stereo pan law on FL/FR and, in 5.1 and 7.1, feeds LFE at unity gain whatever the pan. 3D directions (listener-space lateral and forward components) pan between the two neighbouring speakers with power-normalized vector-base gains; speakers sit at (∓1, 1) and (∓1, −1), the centre at (0, 1), and in 7.1 at (∓0.5, 0.866), (0, 1), (∓0.707, −0.707) and (∓1, 0). Each 3D channel also feeds LFE at unity; a source at the listener reaches every speaker at √2/n. Spread rotates each clip channel's direction by half the spread either way, and a mono clip averages its two directions. Spatial blend mixes the 2D and 3D speaker levels; attenuation blends apart. Group effects on extra pairs, generators writing every channel and clip-source scripts writing beyond the front pair match. Engine: `spatial::surround`, `SpeakerLayout`. |
 | Measured devices | `driverCapabilities` follows the device's channel count: 4 report Quad, 6 report 5.1, 8 report 7.1, and 1, 2, 3, 5 and 7 report Stereo. A request above the capabilities runs at them (5.0/5.1/7.1 on four channels run quad, 7.1 on six runs 5.1); Prologic always runs as two channels; `GetConfiguration` keeps the request (`device_1`..`device_8`). Engine: `driver_capabilities` and `active_speaker_mode` in `audio/mod.rs`. Without an output device the virtual device stands for a stereo device; `UNBOUND_AUDIO_DEVICE_CHANNELS` sets its channel count (the probe uses the capture device's). Normalize, static Wet and Pitch Shifter check the layout the mixer runs. |
 | Measured surround effects | Q337, tests/projects/audiopitch `surround`: Compressor/Duck link every active speaker including LFE, with Duck timing scaled by channel count; SFX Reverb shares an eight-line network; Chorus cycles three wet taps across speakers; Flange shares its sweep with separate channel histories. Source/listener Chorus/Reverb and front/rear mono 3D zone sends/returns pass at 48000/44100 Hz, 1024-frame buffers, quad/5.0/5.1/7.1. `Compat.AudioSurroundEffectsMeasured` selects the rule. See [contracts and scope](../tests/projects/audiopitch/SURROUND.md). |
-| Unmeasured | Other releases retain per-pair effects and front-pair zones, with a warning for SFX Reverb. Other rates/buffers outside SETTINGS.md, Prologic outside PROLOGIC.md, surround topology changes, scripted zone sends and overlapping surround zones remain unmeasured, as do channel-asymmetric effects in mono. The separate transitions and wet profiles below cover the measured live and wet contexts. |
+| Unmeasured | Other releases retain per-pair effects and front-pair zones, with a warning for SFX Reverb. Other rates/buffers outside SETTINGS.md, Prologic outside PROLOGIC.md, surround topology changes and zone contexts outside ZONES.md remain unmeasured, as do channel-asymmetric effects in mono. The separate transitions and wet profiles below cover the measured live and wet contexts. |
 
 AudioRenderer buffers and group sinks hold the layout's channel count in every layout.
 

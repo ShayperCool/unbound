@@ -1542,7 +1542,7 @@ impl Mixer {
             }
             return;
         }
-        self.zone = match SfxReverb::with_measured_delays(
+        self.zone = match SfxReverb::with_measured_response(
             rate,
             self.config.buffer_size,
             measured_startup,
@@ -2289,6 +2289,40 @@ impl Mixer {
         }
     }
 
+    fn add_zone_return(&mut self, n: usize, pairs: usize) {
+        if let Some(zone) = &mut self.zone {
+            let input = &mut self.zone_input[..n * 2];
+            if self.surround_effects && pairs > 0 {
+                let mut lanes = Lanes {
+                    samples: &mut self.zone_extra,
+                    stride: BLOCK * 2,
+                    offset: 0,
+                    channels: self.config.output_channels() - 2,
+                };
+                let mut blocks = lanes.pairs(n);
+                zone.reverb.process_linked(
+                    input,
+                    &mut blocks[..pairs],
+                    self.config.output_channels(),
+                );
+                for pair in 0..pairs {
+                    let start = pair * BLOCK * 2;
+                    for (m, z) in self.mix_extra[start..start + n * 2]
+                        .iter_mut()
+                        .zip(&self.zone_extra[start..start + n * 2])
+                    {
+                        *m += *z;
+                    }
+                }
+            } else {
+                zone.reverb.process(input);
+            }
+            for (m, z) in self.mix.iter_mut().zip(input.iter()) {
+                *m += *z;
+            }
+        }
+    }
+
     fn render_block(&mut self, n: usize) {
         let t0 = self.frames;
         let out_rate = self.config.sample_rate.max(1);
@@ -2965,37 +2999,11 @@ impl Mixer {
             node.buffer = buffer;
             node.lanes = lanes;
         }
-        // Before the listener's components, which process it too (unmeasured).
-        if zone_on && let Some(zone) = &mut self.zone {
-            let input = &mut self.zone_input[..n * 2];
-            if self.surround_effects && pairs > 0 {
-                let mut lanes = Lanes {
-                    samples: &mut self.zone_extra,
-                    stride: BLOCK * 2,
-                    offset: 0,
-                    channels: self.config.output_channels() - 2,
-                };
-                let mut blocks = lanes.pairs(n);
-                zone.reverb.process_linked(
-                    input,
-                    &mut blocks[..pairs],
-                    self.config.output_channels(),
-                );
-                for pair in 0..pairs {
-                    let start = pair * BLOCK * 2;
-                    for (m, z) in self.mix_extra[start..start + n * 2]
-                        .iter_mut()
-                        .zip(&self.zone_extra[start..start + n * 2])
-                    {
-                        *m += *z;
-                    }
-                }
-            } else {
-                zone.reverb.process(input);
-            }
-            for (m, z) in self.mix.iter_mut().zip(input.iter()) {
-                *m += *z;
-            }
+        // The measured zone return joins the mix after the listener's component chain.
+        // Other profiles retain the previous placement until their graph is measured.
+        let zone_after_listener = self.zone.as_ref().is_some_and(|zone| zone.measured_startup);
+        if zone_on && !zone_after_listener {
+            self.add_zone_return(n, pairs);
         }
         if listener_components {
             if has_listener {
@@ -3029,6 +3037,9 @@ impl Mixer {
                     *m += *b;
                 }
             }
+        }
+        if zone_on && zone_after_listener {
+            self.add_zone_return(n, pairs);
         }
         if self.listener_filter
             && !self.capture_listener_batch
@@ -6979,6 +6990,56 @@ mod tests {
         let mut m = Mixer::new(MixerConfig::default());
         m.update_listener_filters(Err(anyhow::anyhow!("refused")), false, false);
         assert!(m.listener_chain.filters.is_empty());
+    }
+
+    #[test]
+    fn measured_zone_return_bypasses_listener_components_at_partial_periods() {
+        let render = |zone: bool, listener: bool, measured: bool| {
+            let mut mixer = Mixer::new(MixerConfig {
+                sample_rate: 32000,
+                buffer_size: 97,
+                ..MixerConfig::default()
+            });
+            let clip = Clip::new(1, 32000, vec![0.0625; 12000]);
+            mixer.add_clip(1, clip);
+            if zone {
+                let mut descriptor = component(1, filter_kind::REVERB, 0);
+                descriptor.reverb = [
+                    -10000.0, -500.0, -300.0, 0.3, 0.7, -500.0, 0.007, -500.0, 0.011, 100.0, 100.0,
+                    5000.0, 0.0, 250.0,
+                ];
+                mixer.update_zone(&descriptor, measured);
+            }
+            if listener {
+                let mut descriptor = component(2, filter_kind::DISTORTION, 0);
+                descriptor.cutoff = 0.75;
+                mixer.update_listener_filters(Ok(vec![descriptor]), false, false);
+            }
+            source_with(&mut mixer, 7, 1, |_| {});
+            play(&mut mixer, 7, command::PLAY, 0.0);
+            mixer.update_suspension();
+            let mut output = vec![0.0; 8192 * 2];
+            mixer.render(&mut output, 2);
+            output
+        };
+        let dry = render(false, false, true);
+        let filtered = render(false, true, true);
+        let zone = render(true, false, true);
+        let combined = render(true, true, true);
+        assert!(zone.iter().zip(&dry).any(|(a, b)| (a - b).abs() > 0.001));
+        for i in 0..combined.len() {
+            assert!((combined[i] - (filtered[i] + zone[i] - dry[i])).abs() < 2e-5);
+        }
+        let legacy_zone = render(true, false, false);
+        let legacy_combined = render(true, true, false);
+        assert!(
+            legacy_combined
+                .iter()
+                .enumerate()
+                .any(
+                    |(i, actual)| (actual - (filtered[i] + legacy_zone[i] - dry[i])).abs() > 0.001
+                )
+        );
     }
 
     #[test]

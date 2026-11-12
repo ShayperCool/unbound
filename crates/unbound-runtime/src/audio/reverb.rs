@@ -164,7 +164,7 @@ fn startup_coefficients(mut c: Coefficients, rate: u32) -> Coefficients {
 
 pub struct SfxReverb {
     rate: u32,
-    measured_delays: bool,
+    measured_response: bool,
     early_offsets: [[usize; 4]; 2],
     c: Coefficients,
     previous: Coefficients,
@@ -189,10 +189,10 @@ pub struct SfxReverb {
 
 impl SfxReverb {
     pub fn new(rate: u32, buffer_size: u32) -> anyhow::Result<Self> {
-        Self::with_measured_delays(rate, buffer_size, false)
+        Self::with_measured_response(rate, buffer_size, false)
     }
 
-    pub fn with_measured_delays(
+    pub fn with_measured_response(
         rate: u32,
         buffer_size: u32,
         measured: bool,
@@ -209,7 +209,7 @@ impl SfxReverb {
         let delays = allpass_delays(rate, measured);
         Ok(Self {
             rate,
-            measured_delays: measured,
+            measured_response: measured,
             early_offsets: offsets,
             c: Coefficients::default(),
             previous: Coefficients::default(),
@@ -232,8 +232,8 @@ impl SfxReverb {
         })
     }
 
-    pub fn measured_delays(&self) -> bool {
-        self.measured_delays
+    pub fn measured_response(&self) -> bool {
+        self.measured_response
     }
 
     /// Initial coefficients and input taps approach the requested settings over one DSP period.
@@ -311,23 +311,43 @@ impl SfxReverb {
             c.hf = (k - (k * k - (1.0 - g) * (1.0 - g)).max(0.0).sqrt()) / (1.0 - g);
             c.hf = c.hf.clamp(0.0, 0.99);
         }
-        // Room LF: G (s^2 + sqrt2 s + 1) / (G s^2 + sqrt(2G) s + 1), bilinear at LF Reference.
-        let g = level(p.room_lf.clamp(-10000.0, 0.0));
-        if g < 1.0 {
-            let k = 1.0 / (std::f32::consts::PI * p.lf_reference.clamp(20.0, 1000.0) / rate).tan();
-            let s = std::f32::consts::SQRT_2;
-            let digital = |n2: f32, n1: f32, n0: f32| {
-                [
-                    n2 * k * k + n1 * k + n0,
-                    2.0 * (n0 - n2 * k * k),
-                    n2 * k * k - n1 * k + n0,
-                ]
-            };
-            let b = digital(g, g * s, g);
-            let a = digital(g, g.sqrt() * s, 1.0);
+        // The low shelf uses a tangent frequency and a square-root amplitude ratio.
+        // Its transposed state also preserves the measured response across live retuning.
+        let room_lf = p.room_lf.clamp(-10000.0, 0.0);
+        if room_lf < 0.0 {
             c.lf = true;
-            c.lf_b = [b[0] / a[0], b[1] / a[0], b[2] / a[0]];
-            c.lf_a = [a[1] / a[0], a[2] / a[0]];
+            if self.measured_response {
+                let t = (p.lf_reference.clamp(20.0, 1000.0) * std::f32::consts::PI / rate).tan();
+                let root_gain = ((room_lf / 100.0) * (std::f32::consts::LN_10 / 40.0)).exp();
+                let u = t / root_gain;
+                let s = std::f32::consts::SQRT_2;
+                let inverse = 1.0 / ((u + s) * u + 1.0);
+                c.lf_b = [
+                    ((t + s) * t + 1.0) * inverse,
+                    2.0 * ((t * t - 1.0) * inverse),
+                    ((t - s) * t + 1.0) * inverse,
+                ];
+                c.lf_a = [
+                    (2.0 * (u * u - 1.0)) * inverse,
+                    ((u - s) * u + 1.0) * inverse,
+                ];
+            } else {
+                let g = level(room_lf);
+                let k =
+                    1.0 / (std::f32::consts::PI * p.lf_reference.clamp(20.0, 1000.0) / rate).tan();
+                let s = std::f32::consts::SQRT_2;
+                let digital = |n2: f32, n1: f32, n0: f32| {
+                    [
+                        n2 * k * k + n1 * k + n0,
+                        2.0 * (n0 - n2 * k * k),
+                        n2 * k * k - n1 * k + n0,
+                    ]
+                };
+                let b = digital(g, g * s, g);
+                let a = digital(g, g.sqrt() * s, 1.0);
+                c.lf_b = [b[0] / a[0], b[1] / a[0], b[2] / a[0]];
+                c.lf_a = [a[1] / a[0], a[2] / a[0]];
+            }
         }
         // The Native rounding is float32: 0.02 * 48000 must give 960.
         let reflect = p.reflect_delay.clamp(0.0, 0.3);
@@ -472,11 +492,19 @@ impl SfxReverb {
             self.hf.fill(mono);
         }
         if c.lf {
-            let [x1, x2, y1, y2] = self.lf;
-            let y = c.lf_b[0] * mono + c.lf_b[1] * x1 + c.lf_b[2] * x2
-                - c.lf_a[0] * y1
-                - c.lf_a[1] * y2;
-            self.lf = [mono, x1, y, y1];
+            let y = if self.measured_response {
+                let y = c.lf_b[0] * mono + self.lf[0];
+                self.lf[0] = (c.lf_b[1] * mono + self.lf[1]) - c.lf_a[0] * y;
+                self.lf[1] = c.lf_b[2] * mono - c.lf_a[1] * y;
+                y
+            } else {
+                let [x1, x2, y1, y2] = self.lf;
+                let y = c.lf_b[0] * mono + c.lf_b[1] * x1 + c.lf_b[2] * x2
+                    - c.lf_a[0] * y1
+                    - c.lf_a[1] * y2;
+                self.lf = [mono, x1, y, y1];
+                y
+            };
             mono = y;
         }
         let n = self.input.len();
@@ -673,6 +701,37 @@ mod tests {
         let mut reverb = SfxReverb::new(48000, 1024).unwrap();
         reverb.tune(&spec(&[("room_hf", -1200.0), ("hf_reference", 5000.0)]));
         assert!(reverb.c.hf > 0.0 && reverb.c.hf < 0.99);
+    }
+
+    #[test]
+    fn measured_low_shelf_retains_state_while_bypassed_and_across_retuning() {
+        // A nonstandard rate and partial periods exercise retained input-filter state.
+        let mut reverb = SfxReverb::with_measured_response(32000, 97, true).unwrap();
+        let mut parameters = spec(&[]);
+        parameters.room_lf = -1800.0;
+        parameters.lf_reference = 20.0;
+        reverb.tune(&parameters);
+        let mut input = vec![0.0625; 97 * 2];
+        reverb.process(&mut input);
+        let retained = reverb.lf;
+        assert!(retained[..2].iter().all(|x| x.is_finite()));
+        assert_ne!(retained[..2], [0.0; 2]);
+        assert_eq!(retained[2..], [0.0; 2]);
+        parameters.room_lf = 0.0;
+        reverb.tune(&parameters);
+        reverb.process(&mut vec![0.03125; 97 * 2]);
+        assert_eq!(reverb.lf, retained);
+        parameters.room_lf = -600.0;
+        parameters.lf_reference = 317.0;
+        reverb.tune(&parameters);
+        assert_eq!(reverb.lf, retained);
+        reverb.process(&mut vec![0.0; 97 * 2]);
+        assert_ne!(reverb.lf, retained);
+        assert!(reverb.lf.iter().all(|x| x.is_finite()));
+        reverb.clear();
+        assert_eq!(reverb.lf, [0.0; 4]);
+        reverb.process(&mut vec![0.0; 97 * 2]);
+        assert_eq!(reverb.lf, [0.0; 4]);
     }
 
     fn spec(overrides: &[(&str, f32)]) -> SfxReverbSpec {

@@ -50,6 +50,49 @@ namespace UnityEngine.Tests
             return r;
         }
 
+        [Theory]
+        [InlineData("6000.0.71f1", true)]
+        [InlineData("2022.3.0f1", false)]
+        public void ReferenceRequestsSurviveReturnRecreationUntilTheyChange(string release, bool measured)
+        {
+            ProjectInfo.UnityVersion = release;
+            AudioSystem.Update();
+            var first = Zone(12.5f, AudioReverbPreset.User);
+            AudioSystem.Update();
+            Assert.Equal(1000f, m_Backend.LastFrame.Zone.Reverb[11]);
+            Assert.Equal(20f, m_Backend.LastFrame.Zone.Reverb[13]);
+            Object.DestroyImmediate(first.gameObject);
+            AudioSystem.Update();
+            var second = Zone(12.5f, AudioReverbPreset.User);
+            AudioSystem.Update();
+            Assert.Equal(measured ? 5000f : 1000f, m_Backend.LastFrame.Zone.Reverb[11]);
+            Assert.Equal(measured ? 250f : 20f, m_Backend.LastFrame.Zone.Reverb[13]);
+            second.LFReference = 1000f;
+            AudioSystem.Update();
+            Assert.Equal(MathF.Sqrt(1000f), m_Backend.LastFrame.Zone.Reverb[13], 0.0001f);
+            second.LFReference = 250f;
+            AudioSystem.Update();
+            Assert.Equal(20f, m_Backend.LastFrame.Zone.Reverb[13]);
+            second.transform.position = new Vector3(10.5f, 0, 0);
+            AudioSystem.Update();
+            Assert.Equal(MathF.Pow(5000f, 0.9f), m_Backend.LastFrame.Zone.Reverb[11], 0.01f);
+            Assert.Equal(MathF.Pow(250f, 0.9f), m_Backend.LastFrame.Zone.Reverb[13], 0.001f);
+        }
+
+        [Fact]
+        public void ActivationPoseIsObservedBeforeTheFirstAudioFrame()
+        {
+            var initial = Zone(0f);
+            AudioSystem.Update();
+            Object.DestroyImmediate(initial.gameObject);
+            AudioSystem.Update();
+            var moved = Zone(0f);
+            moved.transform.position = new Vector3(12.5f, 0, 0);
+            AudioSystem.Update();
+            Assert.Equal(1000f, m_Backend.LastFrame.Zone.Reverb[11]);
+            Assert.Equal(20f, m_Backend.LastFrame.Zone.Reverb[13]);
+        }
+
         sealed class Errors : ILogHandler
         {
             internal readonly List<string> Messages = new List<string>();

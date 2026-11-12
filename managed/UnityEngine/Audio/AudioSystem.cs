@@ -40,6 +40,7 @@ namespace Unbound.Runtime
         {
             float m_Requested, m_Effective;
             internal InitialZoneParameter(float initial, float requested) { m_Requested = requested; m_Effective = initial; }
+            internal void Restart(float initial) => m_Effective = initial;
             internal float Observe(float requested)
             {
                 if (!float.IsFinite(requested)) return requested;
@@ -55,8 +56,19 @@ namespace Unbound.Runtime
         static InitialZoneParameter s_InitialReverbLevel = new InitialZoneParameter(InitialZoneReverbLevel, 200f);
         static InitialZoneParameter s_InitialReverbDelay = new InitialZoneParameter(InitialZoneReverbDelay, 0.011f);
 
+        // Reference controls retain their last requested values across return lifetimes.
+        // A new return starts at its defaults until a changed request reaches it.
+        const float InitialZoneHFReference = 5000f;
+        const float InitialZoneLFReference = 250f;
+        static InitialZoneParameter s_ZoneHFReference = new InitialZoneParameter(InitialZoneHFReference, InitialZoneHFReference);
+        static InitialZoneParameter s_ZoneLFReference = new InitialZoneParameter(InitialZoneLFReference, InitialZoneLFReference);
+        static ulong s_ZoneReferenceGeneration;
+
         static void ResetZoneInitialization()
         {
+            s_ZoneHFReference = new InitialZoneParameter(InitialZoneHFReference, InitialZoneHFReference);
+            s_ZoneLFReference = new InitialZoneParameter(InitialZoneLFReference, InitialZoneLFReference);
+            s_ZoneReferenceGeneration = 0;
             s_InitializedZones.Clear();
             s_InitializedZones.AddRange(s_Zones);
             s_ZoneGeneration = s_InitializedZones.Count > 0 ? 1ul : 0ul;
@@ -150,6 +162,25 @@ namespace Unbound.Runtime
                 s_InitializedZones.Add(zone);
             }
             s_Zones.Add(zone);
+            if (Compat.AudioZoneStartupMeasured)
+            {
+                // Activation observes the zone's current pose before later script edits.
+                float* parameters = stackalloc float[14];
+                AudioReverbZone.Blend(s_Zones, s_HearingPosition, parameters);
+                ApplyZoneReferences(parameters);
+            }
+        }
+
+        static void ApplyZoneReferences(float* parameters)
+        {
+            if (s_ZoneReferenceGeneration != s_ZoneGeneration)
+            {
+                s_ZoneHFReference.Restart(InitialZoneHFReference);
+                s_ZoneLFReference.Restart(InitialZoneLFReference);
+                s_ZoneReferenceGeneration = s_ZoneGeneration;
+            }
+            parameters[11] = s_ZoneHFReference.Observe(parameters[11]);
+            parameters[13] = s_ZoneLFReference.Observe(parameters[13]);
         }
 
         internal static void Remove(AudioReverbZone zone) => s_Zones.Remove(zone);
@@ -531,6 +562,7 @@ namespace Unbound.Runtime
                 frame.Zone.Id = s_ZoneGeneration;
                 if (Compat.AudioZoneStartupMeasured) frame.Flags |= AudioFrameFlags.ZoneStartup;
                 AudioReverbZone.Blend(s_Zones, frame.ListenerPosition, frame.Zone.Reverb);
+                if (Compat.AudioZoneStartupMeasured) ApplyZoneReferences(frame.Zone.Reverb);
                 if (Compat.AudioZoneStartupMeasured && s_ZoneGeneration == 1)
                 {
                     frame.Zone.Reverb[6] = s_InitialReflectionsDelay.Observe(frame.Zone.Reverb[6]);
@@ -538,6 +570,12 @@ namespace Unbound.Runtime
                     frame.Zone.Reverb[8] = s_InitialReverbDelay.Observe(frame.Zone.Reverb[8]);
                 }
 
+            }
+            else if (Compat.AudioZoneStartupMeasured && s_ZoneGeneration > 0)
+            {
+                // The absent-zone blend updates requests even while no return is connected.
+                s_ZoneHFReference.Observe(1000f);
+                s_ZoneLFReference.Observe(20f);
             }
             fixed (AudioFilterDescriptor* filters = s_ListenerFilters)
             {
