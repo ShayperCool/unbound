@@ -159,8 +159,12 @@ ambient color, and a skybox at ambient intensities 1 and 2; lightmaps, light pro
   (`pipeline-range`: a range the far walls are beyond). At the light itself the table ends at 1,
   below its innermost sample (196 / range^2 at a fourteenth of the range), so a point nearer
   than that gets less light than the curve gives (`pipeline-near`: the light a fifth of a unit
-  above the floor, range 10). `InverseSquaredNoRangeAttenuation`, `Linear` and `Undefined`
-  are not measured and fail the scene's realtime GI loudly.
+  above the floor, range 10). `InverseSquaredNoRangeAttenuation` is the same table without the
+  window, `1 / distance^2` at the same samples (still 0 from the range on), and `Undefined` the
+  legacy one (tests/projects/realtimegi `room-delegate-*`: a script's delegate in the built-in
+  pipeline gives the Room's point light each falloff type; the Editor's `undefined` lightmap
+  equals its `legacy` one byte for byte, and `norange` differs from `inversesquared` at range
+  4). `Linear` is not supported and fails the scene's realtime GI loudly.
 - **Spot lights**: the cone of step 1 with the inner angle the delegate gives
   (`pipeline-spot` and `pipeline-spot-inner`, the bright spot light alone with inner angles
   21.8 and 5: 139 of their 5070 values differ by more than the comparator's tolerance); the
@@ -178,9 +182,22 @@ the light cases (one value of one case outside the comparator's tolerance) and 0
 in the sky cases, and no light probe or ambient probe value is outside it. Not measured: other
 pipelines' delegates (the High Definition Render Pipeline's), the other falloff types, area
 lights (baked only in the Universal Render Pipeline; a light the delegate gives as one adds
-nothing, with a warning), directional lightmaps and several systems under a pipeline, and a
-delegate a script registers in the built-in pipeline (Unbound takes its lights the same way). A
-delegate that throws leaves the frame without lights, with a warning.
+nothing, with a warning), directional lightmaps and several systems under a pipeline, and the
+`Linear` falloff. A delegate a script registers in the built-in pipeline is taken the same way
+(`room-delegate-*`: within the comparator's tolerance, 2 to 4 isolated values off). A delegate
+that throws leaves the frame without lights, with a warning.
+
+Area lights add nothing to realtime GI, but `LightmapperUtils` gives a rectangle or disc light
+the range `Light.dilatedRange`: a rectangle light's range plus half its diagonal, a disc light's
+plus half its `areaSize.x`, any other light's range itself (tests/projects/realtimegi
+`lights-dilatedrange`, rectangles of 2 x 1, 3 x 3 and no size, discs whatever `areaSize.y`).
+
+A short range brings out a residual of a few texels: with the Room's point light at range 4
+and the legacy falloff, 10 values of the floor's texels next to the left wall are 10-12% above
+the Editor's (more than the gate allows; a capture outside the reference), where the same
+texels are 2-4% above it at the light's own range 10 and 8-10% with an inverse-squared falloff
+at range 4 (within the gate). Its cause is not found ([Open](#open)); the probe's legacy cases
+use the light's own range.
 
 ## Directionality
 
@@ -1000,10 +1017,9 @@ measure):
 - Packing: what giving a region up changes for later charts, the count of the region open to
   the rows above every chart, the order of equal regions made by different placements, and the
   block-search limit ([Realtime lightmap UVs](#realtime-lightmap-uvs)).
-- Lights: render pipelines other than the Universal Render Pipeline and the falloff types it
-  does not use, `Light.dilatedRange` (`LightmapperUtils` gives an area light its range), light
-  types other than point, spot and directional (area lights are baked only), and linear light
-  intensity in the built-in pipeline
+- Lights: render pipelines other than the Universal Render Pipeline, the `Linear` falloff,
+  light types other than point, spot and directional (area lights are baked only), linear light
+  intensity in the built-in pipeline, and the edge texels' residual a short range brings out
   ([Lights of a render pipeline](#lights-of-a-render-pipeline)).
 - Scenes: light probes of additive loads, probe sets that cannot be read or placed, probes
   merged from several scenes, and systems that reference another scene's systems.
