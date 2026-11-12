@@ -202,7 +202,8 @@ namespace UnityEngine
                 if (!m_GraphicsOutputRequested)
                 {
                     m_GraphicsOutputRequested = true;
-                    m_SkinnedEpoch = -1;
+                    // Skins are in the renderer's space from now on.
+                    m_SkinnedEpoch = m_NowFrame = -1;
                     m_BufferUser = s_BufferUsers.Count;
                     s_BufferUsers.Add(this);
                 }
@@ -304,9 +305,10 @@ namespace UnityEngine
             if (now)
             {
                 // Skinned into a mesh of its own: the pass's skin and its buffers stay as they are.
-                // reuse: this frame's now-skin when there is one.
+                // reuse: this frame's current pose when CurrentGeometry made the last now-skin
+                // (another, BakeMesh's or a forced draw's, may be an earlier pose).
                 if (reuse && m_SkinnedNow != null && m_NowFrame == Time.s_FrameCount && m_NowSource == m_Mesh) return m_SkinnedNow;
-                m_NowFrame = Time.s_FrameCount;
+                m_NowFrame = reuse ? Time.s_FrameCount : -1;
                 SwapNowSkin();
                 try { return Skin(); }
                 finally { SwapNowSkin(); }
@@ -678,8 +680,8 @@ namespace UnityEngine
         }
 
         /// <summary>The pose as it is now (a particle system's emission shape): the drawn
-        /// geometry skinned apart from the pass's skin, once a frame (or again after BakeMesh skins
-        /// into the same mesh). The Editor's emission takes a bone moved before it
+        /// geometry skinned apart from the pass's skin, once a frame (again after another skin was
+        /// made now, by BakeMesh or a forced draw). The Editor's emission takes a bone moved before it
         /// (tests/projects/particlemeshshape <c>skinned/bone</c>).</summary>
         internal Mesh CurrentGeometry(out Matrix4x4 model) => Geometry(out model, now: true, reuse: true);
 

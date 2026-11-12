@@ -291,7 +291,7 @@ namespace UnityEngine.Tests
                 Assert.Equal(1f, current.vertices[0].x);
                 Assert.Equal(0f, s.renderer.DrawGeometry(out _).vertices[0].x);
                 // The current pose is skinned once a frame (an emission of many particles reads it
-                // once), and again when BakeMesh skins into it.
+                // once), and again after BakeMesh skinned now, with the bones as they are then.
                 int version = current.m_PositionsVersion;
                 s.bone.localPosition = new Vector3(1.5f, 0f, 0f);
                 Assert.Same(current, s.renderer.CurrentGeometry(out _));
@@ -299,7 +299,8 @@ namespace UnityEngine.Tests
                 var baked = new Mesh();
                 s.renderer.BakeMesh(baked);
                 Object.DestroyImmediate(baked);
-                Assert.Equal(1.5f, s.renderer.CurrentGeometry(out _).vertices[0].x);
+                s.bone.localPosition = new Vector3(1.75f, 0f, 0f);
+                Assert.Equal(1.75f, s.renderer.CurrentGeometry(out _).vertices[0].x);
                 s.bone.localPosition = new Vector3(1f, 0f, 0f);
                 s.renderer.forceMatrixRecalculationPerRender = true;
                 Assert.Equal(1f, s.renderer.DrawGeometry(out _).vertices[0].x);
