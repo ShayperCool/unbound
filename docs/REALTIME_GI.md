@@ -729,10 +729,35 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   coefficients are off in `room-indirectscale` and three more probes in `room-bounce`: the
   missing corner texels of the material textures.)
 
+## Open
+
+What the runtime over Unity's precomputed data does not make yet, each failing loudly or
+recorded above with its scope:
+
+- Automatic charts: curved parts (a measure of overlap in the projection), a bent part left on
+  its own (the choice between its own UVs and its projection), choices the precompute's
+  rounding of normals decides (faces at a right angle but for it, ties, facing at the Max Angle
+  limit), a Max Angle of a right angle or more, and renderers sharing a geometry whose layouts
+  differ by the matrix it is made of ([Automatic charts](#automatic-charts)).
+- Packing: what giving a region up changes for later charts, the count of the region open to
+  the rows above every chart, the order of equal regions made by different placements, and the
+  block-search limit ([Realtime lightmap UVs](#realtime-lightmap-uvs)).
+- Lights: render pipelines other than the Universal Render Pipeline and the falloff types it
+  does not use, `Light.dilatedRange` (`LightmapperUtils` gives an area light its range), light
+  types other than point, spot and directional
+  ([Lights of a render pipeline](#lights-of-a-render-pipeline)).
+- Gamma-space projects: the sky's ambient intensity, directionality, a render pipeline, and the
+  probe's cases after the gradient.
+- Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
+  the Editor's own Vulkan captures differ from its OpenGL Core ones; no rule covers both yet
+  ([Material inputs](#material-inputs)).
+- The solver's bias in the bounce (the residuals above: the outer probes of `room-bounce`,
+  texel (45,34) and the emissive panel's nearest texels); the direct light matches.
+
 ## Unbound plan
 
 - Phase 2, runtime over Unity's precomputed data (above): unmeasured inputs fail loudly until a
-  probe case covers them.
+  probe case covers them; what is left is listed under [Open](#open).
 - Phase 3, Unbound's own precompute from scene geometry (the rest of the automatic charts,
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
