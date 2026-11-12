@@ -1,6 +1,8 @@
+using System;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using Xunit;
+using Object = UnityEngine.Object;
 
 namespace Unbound.Tests
 {
@@ -48,6 +50,36 @@ namespace Unbound.Tests
             var second = RenderTexture.GetTemporary(desc);
             try { Assert.Same(first, second); }
             finally { RenderTexture.ReleaseTemporary(second); }
+        }
+
+        static GraphicsFormat Compatible(GraphicsFormat format)
+        {
+            if (SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render)) return format;
+            var compatible = SystemInfo.GetCompatibleFormat(format, GraphicsFormatUsage.Render);
+            return compatible == GraphicsFormat.None ? format : compatible;
+        }
+
+        /// <summary>A render texture asset keeps the compatible format of one the device cannot
+        /// render unless m_EnableCompatibleFormat is 0 (on when the field is missing); the
+        /// descriptor setter converts as the constructor does.</summary>
+        [Theory]
+        [InlineData("  m_EnableCompatibleFormat: 1\n", true)]
+        [InlineData("  m_EnableCompatibleFormat: 0\n", false)]
+        [InlineData("", true)]
+        public void AssetsKeepTheCompatibleFormatUnlessTheySayNot(string flag, bool converted)
+        {
+            var format = GraphicsFormat.D16_UNorm_S8_UInt;
+            var body = UnityEngine.Tests.TestYaml.DocumentBody("RenderTexture:\n  m_Width: 8\n  m_Height: 4\n  m_ColorFormat: 8\n  m_DepthStencilFormat: "
+                + (int)format + "\n" + flag);
+            var texture = (RenderTexture)Activator.CreateInstance(typeof(RenderTexture), nonPublic: true);
+            try
+            {
+                ((Unbound.Runtime.ISerializedAsset)texture).ReadSerialized(body, null);
+                Assert.Equal(converted ? Compatible(format) : format, texture.depthStencilFormat);
+                texture.descriptor = new RenderTextureDescriptor(4, 2, GraphicsFormat.R8G8B8A8_UNorm, format);
+                Assert.Equal(Compatible(format), texture.depthStencilFormat);
+            }
+            finally { Object.DestroyImmediate(texture); }
         }
 
         [Fact]
