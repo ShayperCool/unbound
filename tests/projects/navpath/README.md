@@ -81,5 +81,9 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
 about 2e-6 apart, on either side of the line; where an agent reaching a wide link at the edge of the NavMesh under its start
 crosses it (gb1.2.cur.*); the route past a link's landing (`place.links` m.p.ab, r30.p.ab, r30.w.ab,
-m.w.ba); a path over thin strips with one corner more in Unity (`replan.topofar` given); an agent
-with avoidance passing an obstacle from frame 100 (`replan.none` avoider).
+m.w.ba); an agent with avoidance passing an obstacle from frame 100 (`replan.none` avoider).
+
+Q376's runtime raster-bounds correction resolves both initial `replan.topofar` corner-count
+failures: `a.given` and `mask.given` are now 7 in both engines. All 1687 values match the
+unchanged Unity 6000.0.71f1 reference. The existing comparator and its listed-key policy
+are unchanged; the keys no longer produce differences.
