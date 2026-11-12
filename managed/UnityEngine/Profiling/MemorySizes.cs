@@ -24,6 +24,9 @@ namespace Unbound.Runtime
         const long RenderTextureHeader = 1024, ReleasedRenderTextureHeader = 544;
         const long MeshHeader = 1448, MeshVertexDataHeader = 16, MeshExtraSubMesh = 56;
         const long AudioClipHeader = 904, AudioClipPerChannel = 32;
+        // Created streams: two 400 ms buffers, each frame count truncated independently
+        // (tests/projects/clipmemory, Unity 6000.0.71f1).
+        const int CreatedStreamBuffers = 2, CreatedStreamBufferMilliseconds = 400;
         const long GameObjectHeader = 240, GameObjectPerComponent = 24;
 
         /// <summary>The size, or null for a kind of object whose size was not measured.</summary>
@@ -140,7 +143,12 @@ namespace Unbound.Runtime
         {
             int channels = Math.Max(1, clip.channels);
             long header = AudioClipHeader + AudioClipPerChannel * channels;
-            long samples = clip.m_Stream ? clip.frequency * 4L / 5 : clip.samples;
+            bool measured = Compat.CreatedClipStreamMemoryMeasured;
+            bool stream = clip.m_Stream || (measured && clip.m_CreateStreamRequested);
+            long streamFrames = measured
+                ? CreatedStreamBuffers * (clip.frequency * (long)CreatedStreamBufferMilliseconds / 1000)
+                : clip.frequency * 4L / 5;
+            long samples = stream ? streamFrames : clip.samples;
             return header + 4L * samples * channels;
         }
 

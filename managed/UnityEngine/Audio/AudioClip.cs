@@ -45,6 +45,8 @@ namespace UnityEngine
         /// <summary>Made from an asset file (UnloadAudioData works on those only).</summary>
         internal bool m_IsAsset;
         internal bool m_Stream;
+        /// <summary>The creation option, independent of the callback playback strategy.</summary>
+        [NonSerialized] internal bool m_CreateStreamRequested;
         /// <summary><c>AudioCompressionFormat</c> of an asset's data.</summary>
         internal int m_CompressionFormat;
         // One node per streamed clip; the latest voice owns its cached buffer.
@@ -275,6 +277,7 @@ namespace UnityEngine
             m_Samples = lengthSamples;
             m_Channels = channels;
             m_Frequency = frequency;
+            m_CreateStreamRequested = stream;
             m_Stream = stream && m_PCMReaderCallback != null;
             m_LoadType = AudioClipLoadType.DecompressOnLoad;
             m_LoadState = AudioDataLoadState.Loaded;
