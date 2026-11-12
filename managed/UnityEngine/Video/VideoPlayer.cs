@@ -12,7 +12,7 @@ namespace UnityEngine.Video
     public enum VideoRenderMode { CameraFarPlane = 0, CameraNearPlane = 1, RenderTexture = 2, MaterialOverride = 3, APIOnly = 4 }
     public enum VideoSource { VideoClip = 0, Url = 1 }
     public enum VideoTimeReference { Freerun = 0, InternalTime = 1, ExternalTime = 2 }
-    [global::System.@ObsoleteAttribute("VideoTimeSource is deprecated. Use TimeUpdateMode instead. (UnityUpgradable) -> VideoTimeUpdateMode")] public enum VideoTimeSource { [global::System.@ObsoleteAttribute("AudioDSPTimeSource is deprecated. Use DSPTime instead. (UnityUpgradable) -> DSPTime")] AudioDSPTimeSource = 0, [global::System.@ObsoleteAttribute("GameTimeSource is deprecated. Use GameTime instead. (UnityUpgradable) -> GameTime")] GameTimeSource = 1 }
+    [global::System.@ObsoleteAttribute("VideoTimeSource is deprecated. Use TimeUpdateMode instead. (UnityUpgradable) -> VideoTimeUpdateMode")] public enum VideoTimeSource { [global::System.@ObsoleteAttribute("AudioDSPTimeSource is deprecated. Use D\u0053PTime instead. (UnityUpgradable) -> D\u0053PTime")] AudioDSPTimeSource = 0, [global::System.@ObsoleteAttribute("GameTimeSource is deprecated. Use GameTime instead. (UnityUpgradable) -> GameTime")] GameTimeSource = 1 }
     public enum VideoTimeUpdateMode { DSPTime = 0, GameTime = 1, UnscaledGameTime = 2 }
 
     /// <summary>A video file of the project (a VideoClipImporter's asset): its properties come from
