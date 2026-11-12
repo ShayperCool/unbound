@@ -75,8 +75,8 @@ The same images with an Android override where a case names `android=` (its qual
 - Compressor quality Fast (0), Normal (50) and Best (100) select the project's Fast, Normal and
   Best ETC compressors (EditorSettings; etcpak, ETCPACK Fast and Etc2Comp Best by default), whose
   blocks differ.
-- `Texture2D.Compress` gives ETC2_RGBA8 for formats with alpha and ETC2_RGB otherwise (R8 and RG16
-  too, on this OpenGL device).
+- `Texture2D.Compress` gives ETC2_RGBA8 for colour formats with alpha and ETC2_RGB for RGB24. Direct
+  R8/RG16 textures give EAC_R/EAC_RG; copied imports named R8/RG16 may actually be RGB24 on this target.
 - `SystemInfo.SupportsTextureFormat` is true for ETC and EAC formats, false for ASTC.
 
 ## Documented (Unity 6000.0 Scripting API)
@@ -118,7 +118,7 @@ Measured import block totals, Gamma / Linear, including every mip:
 | BC4 | 1677 / 2058 | 1677 / 2058 |
 | BC5 | 1047 / 1133 | 1047 / 1133 |
 | BC6H | 2371 / 2401 | 2387 / 2401 |
-| BC7 | 5875 / 5935 | 5875 / 5935 |
+| BC7 | 6218 / 6278 | 6218 / 6278 |
 
 BC7 residuals are in CutoutBC7, FlatBC7 and SoftHigh. The largest level-0 channel difference
 is 195/255 in CutoutBC7, and a lower FlatBC7 level reaches 109/255. These remain unresolved.
@@ -156,10 +156,11 @@ Runtime edge blocks repeat their remaining rows and columns. The 3x2 RGB mip sti
 unresolved colour/padding difference, reaching 35/255 in a decoded channel. Other residuals
 are small-mip colour fitting and the flat-RGB fast case (GPU difference at most 2/255).
 They remain exact-key residuals; no tolerance has changed. The full comparator records
-4168/4334 exact values in each Standalone profile, with 166 listed residuals, and
-3577, 3567 and 3571/4334 in the three Android profiles, with 757, 767 and 763 residuals.
-Android runtime ETC encoding is unchanged by this part. Texture cache version 26 records the
-runtime encoder profile as part of the existing compression key.
+4905/5161 exact values in each Standalone profile, with 256 listed residuals, and
+4236, 4223, 4227 and 4205/5161 in AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC,
+with 925, 938, 934 and 956 residuals.
+Android runtime ETC encoding is unchanged by these encoder changes; direct R8/RG16 runtime
+EAC storage remains unresolved. The runtime encoder profile is part of the compression key.
 
 For this runtime change, the ordinary-project clean-cache import processed 4397 textures with
 zero failures: 16.65 s before and 18.36 s after. Two subsequent runs took 21.44 s and 26.69 s
@@ -206,3 +207,32 @@ ASTC raw-data and copy operations tolerate malformed block payloads. The decoder
 before reading variable-length fields; impossible budgets produce the format's opaque magenta
 error colour. The copy control's source bytes are deliberately different from its destination.
 Regression tests also decode deterministic arbitrary payloads at every supported footprint.
+
+Measured ASTC import blocks, including every mip:
+
+| Footprint / quality | AndroidGamma, AndroidLinear, AndroidETC2 | AndroidASTC default profile |
+|---|---:|---:|
+| 4x4 Fast | 619 / 686 | 1171 / 1372 |
+| 5x5 Fast | 241 / 241 | 241 / 241 |
+| 6x6 Fast | 716 / 717 | 1201 / 1409 |
+| 8x8 Fast | 113 / 114 | 201 / 202 |
+| 4x4 Normal / Best | no cases | 0 / 1029 at each quality |
+| 6x6 Normal | 0 / 173 | 0 / 2771 |
+| 6x6 Best | no cases | 0 / 346 |
+| 8x8 Normal | no cases | 0 / 176 |
+| 8x8 Best | 0 / 88 | 0 / 88 |
+| HDR 6x6 Normal | 0 / 173 | 0 / 173 |
+
+The default profile's Fast 6x6 denominator includes 173 unresolved Single Channel blocks with
+no compressed storage. The other 35 residual blocks are gradient fitting and one Flat block;
+the ordinary Android profiles have only that Flat block left at 6x6. Fast 4x4 residuals are
+opaque gradients; Fast 8x8 has one Noise block. Flat6 reaches 88/255 decoded channel error.
+For matching valid blocks the current byte decoder still differs by 1/255 in some channels.
+Arbitrary constructor payloads can differ across the full channel range in CPU reads; their
+raw blocks and sizes match. These are explicit decoder follow-ups, including the decoder
+shared with AssetBundle content, rather than tolerance changes.
+
+Crunch storage is absent for 0/1029 DXT1Crunched and 0/1372 DXT5Crunched logical blocks in each
+Standalone profile, and 0/1029 ETC_RGB4Crunched and 0/1372 ETC2_RGBA8Crunched in each Android
+profile. Quality-specific counts remain in block_report.py's output. The part's ordinary-project
+clean-cache import was 20.58 s before and 21.52 s after, 4397 textures and zero failed imports.
