@@ -664,6 +664,40 @@ void Scale(uint3 id : SV_DispatchThreadID)
         )));
     }
 
+    /// A kernel that compares a texture and reads it with `Load` is refused for OpenGL's shading
+    /// language and compiles otherwise; one that only compares compiles for OpenGL too.
+    #[test]
+    fn a_kernel_loading_a_compared_texture_is_refused_in_opengl_shading_language() {
+        let program = |body: &str| ComputeProgram {
+            file: PathBuf::from("Depth.compute"),
+            source: format!(
+                "#pragma kernel K\nTexture2D<float> _Depth;\nSamplerComparisonState sampler_Depth;\nRWStructuredBuffer<float> _Out;\n[numthreads(1, 1, 1)] void K(uint3 id : SV_DispatchThreadID) {{ _Out[0] = {body}; }}"
+            ),
+        };
+        let compile = |body: &str, opengl_shading_language| {
+            let mut compiler = ShaderCompiler::new(Settings {
+                opengl_shading_language,
+                ..Settings::default()
+            })
+            .unwrap();
+            compiler
+                .compile_kernel(&program(body), "K", &[], &[])
+                .map(|_| ())
+        };
+        let both = "_Depth.SampleCmpLevelZero(sampler_Depth, float2(0.5, 0.5), 0.5) + _Depth.Load(int3(0, 0, 0))";
+        let refused = compile(both, true).unwrap_err();
+        assert!(
+            format!("{refused:#}").contains("compared and read with Load"),
+            "{refused:#}"
+        );
+        compile(both, false).unwrap();
+        compile(
+            "_Depth.SampleCmpLevelZero(sampler_Depth, float2(0.5, 0.5), 0.5)",
+            true,
+        )
+        .unwrap();
+    }
+
     #[test]
     fn reserved_entry_names_match_emitted_wgsl() {
         let program = ComputeProgram {

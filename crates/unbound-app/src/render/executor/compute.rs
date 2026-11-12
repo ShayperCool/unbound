@@ -871,7 +871,7 @@ fn main() {
         };
         let built = self.build_kernel(file, kernel, keywords, &key.formats);
         if let Err(e) = &built {
-            tracing::warn!("compute kernel `{kernel}` of {file} cannot run: {e}");
+            tracing::error!("compute kernel `{kernel}` of {file} cannot run: {e}");
         }
         self.kernels.insert(key, built.clone());
         built
@@ -1189,6 +1189,12 @@ fn main() {
                                 .and_then(|t| Some((t.texture.clone(), t.depth_sample.clone()?)));
                             let (source, view) = match depth {
                                 Some((texture, view)) => (Some(texture), view),
+                                // The far-plane default is 2D or a cube: an array slot without a
+                                // depth texture of its shape is skipped.
+                                None if !matches!(*dim, TextureDim::D2 | TextureDim::Cube) => {
+                                    self.warn_once(format!("kdeptharray{}{}", d.kernel, r.name), || format!("kernel `{}`: depth texture `{}` ({dim:?}) has no depth texture of its shape: the dispatch is skipped", d.kernel, r.name));
+                                    return None;
+                                }
                                 None => {
                                     if handle != 0 {
                                         self.warn_once(format!("kdepth{}{}{handle}", d.kernel, r.name), || format!("kernel `{}`: depth texture `{}` is given render texture {handle}, which has no depth buffer of the slot's shape: it reads the far plane", d.kernel, r.name));
