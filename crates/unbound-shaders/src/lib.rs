@@ -17,6 +17,7 @@ mod fit;
 mod samplers;
 mod scopes;
 mod surface;
+pub mod targets;
 
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 39;
+pub const FORMAT_VERSION: u32 = 40;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -356,42 +357,6 @@ pub enum TextureDim {
     CubeArray,
 }
 
-/// `SHADER_TARGET` of a program without `#pragma target` (Unity's default target 2.5).
-const DEFAULT_SHADER_TARGET: u32 = 25;
-
-/// The GPU features a `#pragma target` includes, as the `SHADER_AVAILABLE_<FEATURE>` names
-/// Unity's shader libraries test (the core library's GLCore API: RW textures under
-/// `RANDOMWRITE`, cube array sampling under `CUBEARRAY`). The sets are the Unity 6000.0 Manual's
-/// (HLSL pragma target command reference): each target has everything of the ones below it up to
-/// 3.5 (4.0 adds only geometry), then 4.5, 4.6 and 5.0 each add their own set to 3.5's.
-/// `geometry` and `tessellation`, which Unity drops from a program without those stages, are left
-/// out (Unbound compiles none). Compute programs compile at 5.0.
-fn target_features(target: u32) -> impl Iterator<Item = &'static str> {
-    /// The features up to 3.5, with the lowest target that has each.
-    const CUMULATIVE: [(&str, u32); 9] = [
-        ("DERIVATIVES", 25),
-        ("INTERPOLATORS10", 30),
-        ("SAMPLELOD", 30),
-        ("FRAGCOORD", 30),
-        ("INTERPOLATORS15", 35),
-        ("MRT4", 35),
-        ("INTEGERS", 35),
-        ("2DARRAY", 35),
-        ("INSTANCING", 35),
-    ];
-    let added: &'static [&'static str] = match target {
-        45 => &["COMPUTE", "RANDOMWRITE", "MSAATEX"],
-        46..50 => &["CUBEARRAY", "TESSHW", "MSAATEX"],
-        50.. => &["COMPUTE", "RANDOMWRITE", "MSAATEX", "TESSHW"],
-        _ => &[],
-    };
-    CUMULATIVE
-        .iter()
-        .filter(move |&&(_, lowest)| target >= lowest)
-        .map(|&(feature, _)| feature)
-        .chain(added.iter().copied())
-}
-
 /// A program's `#pragma`s that matter here.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Pragmas {
@@ -401,8 +366,9 @@ pub struct Pragmas {
     pub keyword_sets: Vec<(Vec<String>, bool)>,
     /// Keywords excluded from global preparation by `skip_variants`.
     pub skipped_keywords: Vec<String>,
-    /// `#pragma target`, as `SHADER_TARGET` (25 by default).
-    pub target: u32,
+    /// `#pragma target` and `#pragma require` lines: each variant's `SHADER_TARGET` and GPU
+    /// features ([`targets::Requirements::variant`]).
+    pub requirements: targets::Requirements,
     /// A surface shader's `#pragma surface` words after `surface` (its function, lighting model
     /// and options); `vertex`, `fragment` and the keyword sets are then the generated pass's.
     pub surface: Option<Vec<String>>,
@@ -413,7 +379,6 @@ pub struct Pragmas {
 impl Pragmas {
     fn read(pragmas: &[preprocess::Pragma]) -> Pragmas {
         let mut p = Pragmas {
-            target: DEFAULT_SHADER_TARGET,
             skipped_keywords: keywords::skipped_keywords(pragmas).cloned().collect(),
             ..Default::default()
         };
@@ -424,11 +389,8 @@ impl Pragmas {
             match first.as_str() {
                 "vertex" => p.vertex = rest.first().cloned(),
                 "fragment" => p.fragment = rest.first().cloned(),
-                "target" => {
-                    if let Some(t) = rest.first().and_then(|t| t.parse::<f32>().ok()) {
-                        p.target = (t * 10.0).round() as u32;
-                    }
-                }
+                "target" => p.requirements.target(rest),
+                "require" => p.requirements.require(rest),
                 "surface" => p.surface = Some(rest.to_vec()),
                 "geometry" | "hull" | "domain" | "kernel" | "raytracing" => {
                     p.unsupported = Some(format!("#pragma {first}"));
@@ -731,17 +693,21 @@ impl ShaderCompiler {
     /// `SHADER_TARGET` before the pragma (URP's FSR include under `#pragma target 4.5`) does
     /// not stop the reading; compiling the variant still fails on an active one.
     fn discover(&self, program: &Program, linear: bool) -> Result<Vec<preprocess::Pragma>> {
-        let read = |target: u32| {
-            let defines = self.defines(program, &[], target, linear, "SHADER_STAGE_VERTEX");
+        let read = |requirements: &targets::Requirements| {
+            let variant = requirements.variant(&[], self.settings.device);
+            let defines = self.defines(program, &[], &variant, linear, "SHADER_STAGE_VERTEX");
             self.preprocess_with(program, &defines, true)
                 .map(|out| out.pragmas)
         };
-        let pragmas = read(DEFAULT_SHADER_TARGET)?;
-        let target = Pragmas::read(&pragmas).target;
-        if target == DEFAULT_SHADER_TARGET {
+        let unread = targets::Requirements::default();
+        let pragmas = read(&unread)?;
+        let requirements = Pragmas::read(&pragmas).requirements;
+        if requirements.variant(&[], self.settings.device)
+            == unread.variant(&[], self.settings.device)
+        {
             return Ok(pragmas);
         }
-        read(target)
+        read(&requirements)
     }
 
     /// The variant of `program` a material with `keywords` enabled draws with.
@@ -751,10 +717,7 @@ impl ShaderCompiler {
         keywords: &[String],
         linear: bool,
     ) -> Result<Arc<Compiled>> {
-        let mut pragmas = self.pragmas(program, linear)?;
-        if keywords.iter().any(|k| k == MESH_INSTANCE_REPLAY) {
-            pragmas.target = pragmas.target.max(35);
-        }
+        let pragmas = self.pragmas(program, linear)?;
         if let Some(what) = &pragmas.unsupported {
             bail!("{what} programs are not supported (Unbound compiles vertex/fragment programs)");
         }
@@ -774,19 +737,17 @@ impl ShaderCompiler {
         if let Some(c) = self.memory.get(&key) {
             return Ok(c.clone());
         }
+        let variant = pragmas
+            .requirements
+            .variant(&selected, self.settings.device);
         let generated;
         let program = match &pragmas.surface {
             Some(words) => {
                 // The pass is generated for the variant's code, as Unity analyses each variant.
                 let surface = surface::Surface::parse(words)?;
                 let probe = surface.program(program, None);
-                let defines = self.defines(
-                    &probe,
-                    &selected,
-                    pragmas.target,
-                    linear,
-                    "SHADER_STAGE_FRAGMENT",
-                );
+                let defines =
+                    self.defines(&probe, &selected, &variant, linear, "SHADER_STAGE_FRAGMENT");
                 let text = self.preprocess(&probe, &defines)?.text;
                 let analysis = surface
                     .analyse(&text)
@@ -796,17 +757,12 @@ impl ShaderCompiler {
             }
             None => program,
         };
-        let vertex_defines = self.defines(
-            program,
-            &selected,
-            pragmas.target,
-            linear,
-            "SHADER_STAGE_VERTEX",
-        );
+        let vertex_defines =
+            self.defines(program, &selected, &variant, linear, "SHADER_STAGE_VERTEX");
         let fragment_defines = self.defines(
             program,
             &selected,
-            pragmas.target,
+            &variant,
             linear,
             "SHADER_STAGE_FRAGMENT",
         );
@@ -918,7 +874,7 @@ impl ShaderCompiler {
         &self,
         program: &Program,
         keywords: &[String],
-        target: u32,
+        variant: &targets::Variant,
         linear: bool,
         stage: &str,
     ) -> Vec<(String, String)> {
@@ -938,10 +894,7 @@ impl ShaderCompiler {
                 .iter()
                 .map(|k| (k.clone(), "1".to_string())),
         );
-        d.push(("SHADER_TARGET".into(), target.to_string()));
-        d.extend(
-            target_features(target).map(|f| (format!("SHADER_AVAILABLE_{f}"), "1".to_string())),
-        );
+        d.extend(variant.defines());
         d.push((
             "UNITY_VERSION".into(),
             self.settings.unity_version.to_string(),
@@ -2966,47 +2919,59 @@ float4 frag() : SV_Target { return 1; }
 "#;
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         let targeted = program(&format!("{body}#pragma target 4.5\n"), false);
-        assert_eq!(compiler.pragmas(&targeted, false).unwrap().target, 45);
+        assert_eq!(
+            compiler
+                .pragmas(&targeted, false)
+                .unwrap()
+                .requirements
+                .plain_target(),
+            45
+        );
         compiler.compile(&targeted, &[], false).unwrap();
         let untargeted = program(body, false);
-        assert_eq!(compiler.pragmas(&untargeted, false).unwrap().target, 25);
+        assert_eq!(
+            compiler
+                .pragmas(&untargeted, false)
+                .unwrap()
+                .requirements
+                .plain_target(),
+            25
+        );
         let error = compiler.compile(&untargeted, &[], false).unwrap_err();
         assert!(format!("{error:#}").contains("needs 4.5"), "{error:#}");
     }
 
-    /// The target's GPU features are defined (RW textures from 4.5, cube arrays from 4.6);
-    /// compute programs have 5.0's.
+    /// A variant's target and GPU features come from the lines that apply to it (the measured
+    /// rules are tested in `targets`): RW textures on OpenGL Core from 4.5, a keyword's target
+    /// for its variants only.
     #[test]
-    fn a_target_defines_its_gpu_features() {
-        let has = |target: u32, feature: &str| target_features(target).any(|f| f == feature);
-        assert!(has(25, "DERIVATIVES"));
-        assert!(!has(25, "SAMPLELOD"));
-        assert!(has(30, "SAMPLELOD"));
-        assert!(has(40, "INSTANCING"));
-        assert!(!has(35, "RANDOMWRITE"));
-        assert!(!has(40, "RANDOMWRITE"));
-        assert!(has(45, "RANDOMWRITE"));
-        assert!(has(45, "INSTANCING"));
-        assert!(!has(45, "CUBEARRAY"));
-        assert!(has(46, "CUBEARRAY"));
-        assert!(!has(46, "RANDOMWRITE"));
-        assert!(has(50, "RANDOMWRITE"));
-        assert!(has(50, "TESSHW"));
-        assert_eq!(target_features(20).count(), 0);
+    fn a_variant_defines_its_target_and_gpu_features() {
         let compiler = ShaderCompiler::new(Settings::default()).unwrap();
         let p = program("#pragma vertex v\n", false);
-        let defines = compiler.defines(&p, &[], 45, true, "SHADER_STAGE_VERTEX");
-        assert!(
-            defines
-                .iter()
-                .any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE")
-        );
-        let defines = compiler.defines(&p, &[], 35, true, "SHADER_STAGE_VERTEX");
-        assert!(
-            !defines
-                .iter()
-                .any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE")
-        );
+        let defines = |lines: &[&str], keywords: &[&str]| {
+            let mut requirements = targets::Requirements::default();
+            for line in lines {
+                let words: Vec<String> = line.split_whitespace().map(String::from).collect();
+                requirements.target(&words);
+            }
+            let keywords: Vec<String> = keywords.iter().map(|k| k.to_string()).collect();
+            let variant = requirements.variant(&keywords, compiler.settings.device);
+            compiler.defines(&p, &keywords, &variant, true, "SHADER_STAGE_VERTEX")
+        };
+        let has = |d: &[(String, String)], name: &str, value: &str| {
+            d.iter().any(|(k, v)| k == name && v == value)
+        };
+        let d = defines(&["4.5"], &[]);
+        assert!(has(&d, "SHADER_TARGET", "45"));
+        assert!(has(&d, "SHADER_AVAILABLE_RANDOMWRITE", "1"));
+        let d = defines(&["3.5"], &[]);
+        assert!(has(&d, "SHADER_TARGET", "35"));
+        assert!(!d.iter().any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE"));
+        let keyed = ["2.0", "4.5 DOTS_INSTANCING_ON"];
+        assert!(has(&defines(&keyed, &[]), "SHADER_TARGET", "20"));
+        let d = defines(&keyed, &["DOTS_INSTANCING_ON"]);
+        assert!(has(&d, "SHADER_TARGET", "45"));
+        assert!(has(&d, "SHADER_AVAILABLE_COMPUTE", "1"));
     }
 
     #[test]

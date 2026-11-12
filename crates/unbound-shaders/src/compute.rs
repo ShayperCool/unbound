@@ -2,6 +2,7 @@
 //! programs. The same pipeline as draw programs (Unity preprocessing, glslang, naga); resources
 //! keep their names and are bound in group 0 one after another, so the renderer binds a
 //! dispatch's buffers, textures and uniforms by name, as `ComputeShader.SetBuffer` names them.
+use crate::targets::Variant;
 use crate::{
     FORMAT_VERSION, Program, ShaderCompiler, TextureDim, Uniform,
     fit::{
@@ -161,7 +162,7 @@ impl ShaderCompiler {
     /// The kernels and keyword sets of a compute file.
     pub fn compute_pragmas(&mut self, program: &ComputeProgram) -> Result<ComputePragmas> {
         let p = program.as_program();
-        let defines = self.defines(&p, &[], 50, true, "SHADER_STAGE_COMPUTE");
+        let defines = self.defines(&p, &[], &Variant::COMPUTE, true, "SHADER_STAGE_COMPUTE");
         let out = self.preprocess(&p, &defines)?;
         Ok(ComputePragmas::read(&out.pragmas))
     }
@@ -174,7 +175,7 @@ impl ShaderCompiler {
         program: &ComputeProgram,
     ) -> Result<Vec<crate::keywords::Declared>> {
         let p = program.as_program();
-        let defines = self.defines(&p, &[], 50, true, "SHADER_STAGE_COMPUTE");
+        let defines = self.defines(&p, &[], &Variant::COMPUTE, true, "SHADER_STAGE_COMPUTE");
         let out = self.preprocess(&p, &defines)?;
         crate::keywords::compute_space(&out.pragmas)
     }
@@ -196,7 +197,13 @@ impl ShaderCompiler {
             .ok_or_else(|| anyhow!("no kernel `{kernel}` (#pragma kernel)"))?;
         let selected = pragmas.select(keywords);
         let p = program.as_program();
-        let mut defines = self.defines(&p, &selected, 50, true, "SHADER_STAGE_COMPUTE");
+        let mut defines = self.defines(
+            &p,
+            &selected,
+            &Variant::COMPUTE,
+            true,
+            "SHADER_STAGE_COMPUTE",
+        );
         defines.extend(declared.defines.iter().cloned());
         let source = self.preprocess(&p, &defines)?.text;
         let opengl = self.settings.opengl_shading_language;
