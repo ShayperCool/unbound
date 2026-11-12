@@ -520,16 +520,21 @@ namespace UnityEngine.AI
 
         // ------------------------------------------------------------------ queries
 
-        /// <summary>The transform goes to the position given; the agent stands on the NavMesh below
-        /// it, where the transform follows at its next early update, with no path or destination
-        /// (measured: tests/projects/navlinks warpauto, warpwait; navcost loop.*).</summary>
+        /// <summary>The transform goes to the position given, with no path or destination. The
+        /// simulation is placed on the NavMesh; when coupled it follows the requested transform
+        /// along the surface, and the transform follows at the next early update (measured:
+        /// tests/projects/navlinks warpauto, warpwait; navcost loop.*; navbaked warp.sync).</summary>
         public bool Warp(Vector3 newPosition)
         {
             transform.position = newPosition;
             // It stands at once (measured: tests/projects/navcost loop.*).
             m_Velocity = Vector3.zero;
             ForgetPath();
-            return AgentSystem.Place(this, newPosition - Vector3.up * m_BaseOffset);
+            if (!AgentSystem.Place(this, newPosition - Vector3.up * m_BaseOffset)) return false;
+            // Keep the requested transform move pending. With updatePosition enabled, the next
+            // synchronization follows it along the connected surface (navbaked warp.sync).
+            m_WrittenPosition = m_NextPosition + Vector3.up * m_BaseOffset;
+            return true;
         }
 
         /// <summary>No destination, path or request any more; a path change before is no longer this

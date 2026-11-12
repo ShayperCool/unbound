@@ -16,6 +16,7 @@ the Navigation window does: the scene's `NavMeshSettings.m_NavMeshData` referenc
 | `unloaded` | after `UnloadSceneAsync("Second")`: the first scene's NavMesh alone again |
 | `height` | the Height scene (baked with Build Height Mesh: a 15 degree ramp, five 0.2 m stairs up to a 1 m landing, a 0.1 m bump), loaded additively last: SamplePosition along the ramp and stairs and round the bump, raycasts up the stairs and the ramp (clear and into a wall), path corners and the closest edge (controls: not on the height mesh) |
 | `height.agents` | agents walking up the stairs, up the ramp and over the bump: where they are placed, their destination and path corners, position, transform height and vertical velocity every 5 frames; one warped onto a stair |
+| `warp.sync` | a Warp beneath a stair with updatePosition on and off, the requested transform before/after nextPosition and the next AI update, then re-enabling a diverged transform |
 | `resume.*` | where in the player loop asynchronous operations complete and the coroutines waiting for them resume (`Assets/Scripts/ResumeTiming.cs`; a marker before every player-loop system names the next one): the additive load and unload above (`load`, `unload`, with the second scene's agent as found and moved), the same load held by `allowSceneActivation` (`held`), `Resources.LoadAsync` with completed handlers added before and after a coroutine waits and a second waiting coroutine, then yielded again once done (`resources`), `InstantiateAsync` (`instantiate`) |
 
 The level is `ProbeSetup.Create`'s (`Assets/Editor`): a ground with a Mud strip, a step, a 1.5 m
@@ -35,11 +36,21 @@ and compares it with the reference using `tests/projects/navmesh/compare.py` (nu
 text exactly; every missing, extra or differing value is listed). It exits with the scenarios of the
 scene's NavMesh itself (`awake`, `areas`, `baked`, `paths`, `additive`, `unloaded`), the second
 scene's agent (`agent2`) and the resume points (`resume.unload`, `resume.held`,
-`resume.resources`, `resume.instantiate`), the samples (`sample`), the jump-across links (`jump`)
-and the queries over the height mesh (`height`); `raycast`, `agent`, `height.agents` and
+`resume.resources`, `resume.instantiate`), the samples (`sample`), the jump-across links (`jump`),
+the queries over the height mesh (`height`) and Warp coupling controls (`warp.sync`);
+`raycast`, `agent`, `height.agents` and
 `resume.load` (the first load's frame) measure the general queries, the agent model and scene loading time and are
 listed, not gated (their residuals: docs/COMPATIBILITY_GAPS.md, the legacy-baked NavMesh and
 asynchronous operation rows).
 
-The reference `Reference/unity-6000.0.71f1.json` holds 2302 values, SHA-256
-`529288ab8ae396a427df458714036cec5ffef78f0da0db166d7d234475b371d2`.
+The reference `Reference/unity-6000.0.71f1.json` holds 2343 values, SHA-256
+`27aef0e218f4b5ef3adf1e28f6dd30fc4e5e23cb75726224d6c7571b9483fe80`.
+
+Q377 keeps the transform request pending after Warp placement. With updatePosition enabled,
+nextPosition follows that request along the connected surface; the transform follows at the
+next early AI update. With it disabled, the placed simulation and transform stay separate;
+re-enabling moves the transform to the simulation. Two identical GPU Editor captures preserve
+every original reference row. The new `warp.sync` control matches 41/41 values.
+`height.agents` falls from 18 to 14/816 differences: 13 bump-walker X positions (frames 90 to 150)
+and the ramp walker’s final vertical velocity at frame 205 remain. The four Warp coordinates
+now match. Polygon selection, height projection and comparator tolerances are unchanged.

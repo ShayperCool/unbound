@@ -215,6 +215,29 @@ public class BakedProbe : MonoBehaviour
         ProbeLog.Value("move.next", stairs.nextPosition);
         yield return null;
         ProbeLog.Value("move.transform", stairs.transform.position);
+        // A coupled transform request can move beyond the closest polygon selected by Warp.
+        // The uncoupled control leaves that request separate from the simulated position.
+        ProbeLog.Begin("warp.sync");
+        foreach (bool coupled in new[] { true, false })
+        {
+            string key = coupled ? "coupled" : "uncoupled";
+            stairs.updatePosition = coupled;
+            ProbeLog.Value(key + ".ok", stairs.Warp(new Vector3(3.3f, 0f, 60.2f)));
+            ProbeLog.Value(key + ".transform.before", stairs.transform.position);
+            ProbeLog.Value(key + ".next", stairs.nextPosition);
+            ProbeLog.Value(key + ".transform.after", stairs.transform.position);
+            yield return null;
+            ProbeLog.Value(key + ".transform.frame", stairs.transform.position);
+            ProbeLog.Value(key + ".next.frame", stairs.nextPosition);
+            if (!coupled)
+            {
+                stairs.updatePosition = true;
+                ProbeLog.Value(key + ".reenable.before", stairs.transform.position);
+                yield return null;
+                ProbeLog.Value(key + ".reenable.frame", stairs.transform.position);
+                ProbeLog.Value(key + ".reenable.next", stairs.nextPosition);
+            }
+        }
         foreach (var (_, agent) in agents) Destroy(agent.gameObject);
 
         File.WriteAllText(Out, ProbeLog.Json());
