@@ -621,6 +621,17 @@ namespace UnityEngine
                 cameraPixelHeight = pixelHeight,
             };
             var planes = FrustumPlanes(matrix);
+            if (m_CullingMatrix == null && !m_HasCustomProjection && !m_HasCustomWorldToCamera)
+            {
+                // The camera's own frustum: its near and far planes from its position, forward and
+                // clip distances. Taken from the matrix, the far plane's normal is the difference
+                // of two nearly equal rows and keeps a few float ulps of each (0.14 units at a
+                // far plane of 1000); the Editor's is exact (tests/projects/brg plane5).
+                var forward = t.forward;
+                float along = Vector3.Dot(forward, t.position);
+                planes[4] = new Plane(forward, -(along + nearClipPlane));
+                planes[5] = new Plane(-forward, along + farClipPlane);
+            }
             cullingParameters.cullingPlaneCount = planes.Length;
             for (int i = 0; i < planes.Length; i++) cullingParameters.SetCullingPlane(i, planes[i]);
             var distances = layerCullDistances;
