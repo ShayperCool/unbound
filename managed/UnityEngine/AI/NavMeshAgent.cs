@@ -435,8 +435,8 @@ namespace UnityEngine.AI
 
         public NavMeshPathStatus pathStatus => m_PathStatus;
 
-        /// <summary>The end of the path being followed, also one given in the call or still
-        /// followed while a new one is pending (measured).</summary>
+        /// <summary>The current corridor's endpoint, including one given in the call, retained
+        /// while a new one is pending and after hasPath changes (measured).</summary>
         public Vector3 pathEndPosition => m_Crowd != null && (Compat.NavMeshCorridorReportingMeasured || FollowingPath)
             ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
 
@@ -1877,10 +1877,38 @@ namespace Unbound.Runtime
             var rotation = agent.transform.rotation;
             var forward = rotation * Vector3.forward;
             var projected = forward - up * Vector3.Dot(forward, up);
-            rotation = Quaternion.FromToRotation(rotation * Vector3.up, up) * rotation;
+            if (!TryAxisAlignment(rotation * Vector3.up, up, out var swing))
+            {
+                if (!agent.transform.localRotation.Equals(Quaternion.identity)) agent.transform.localRotation = Quaternion.identity;
+                return;
+            }
+            rotation = swing * rotation;
             if (projected.sqrMagnitude > UpAlignmentMinForwardLengthSquared)
-                rotation = Quaternion.FromToRotation(rotation * Vector3.forward, projected) * rotation;
-            agent.transform.rotation = rotation;
+            {
+                if (!TryAxisAlignment(rotation * Vector3.forward, projected, out var turn))
+                {
+                    if (!agent.transform.localRotation.Equals(Quaternion.identity)) agent.transform.localRotation = Quaternion.identity;
+                    return;
+                }
+                rotation = turn * rotation;
+            }
+            if (!agent.transform.rotation.Equals(rotation)) agent.transform.rotation = rotation;
+        }
+
+        // The shortest arc from one axis to another. A singular adjustment uses the transform's
+        // identity local rotation (Unity 6000.0.71f1, tests/projects/navlinks up-axis edge controls).
+        static bool TryAxisAlignment(Vector3 from, Vector3 to, out Quaternion rotation)
+        {
+            var cross = Vector3.Cross(from, to);
+            float w = MathF.Sqrt(from.sqrMagnitude * to.sqrMagnitude) + Vector3.Dot(from, to);
+            float length = MathF.Sqrt(cross.sqrMagnitude + w * w);
+            if (!(length > 0f) || !float.IsFinite(length))
+            {
+                rotation = Quaternion.identity;
+                return false;
+            }
+            rotation = new Quaternion(cross.x / length, cross.y / length, cross.z / length, w / length);
+            return true;
         }
 
         // Unity 6000.0.71f1, tests/projects/navlinks rotation controls: turn about the

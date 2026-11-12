@@ -500,6 +500,63 @@ namespace UnityEngine.Tests
             });
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void VerticalAndInvertedUpAxisAdjustmentsStayFinite(bool inverted)
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.updateRotation = false;
+                agent.updateUpAxis = true;
+                agent.transform.rotation = inverted ? new Quaternion(1f, 0f, 0f, 0f) : Quaternion.Euler(90f, 40f, 0f);
+                AgentSystem.Step();
+                var expected = inverted ? Quaternion.identity : Quaternion.Euler(0f, 40f, 0f);
+                var actual = agent.transform.rotation;
+                Assert.InRange(Mathf.Abs(expected.x - actual.x), 0f, 1e-4f);
+                Assert.InRange(Mathf.Abs(expected.y - actual.y), 0f, 1e-4f);
+                Assert.InRange(Mathf.Abs(expected.z - actual.z), 0f, 1e-4f);
+                Assert.InRange(Mathf.Abs(expected.w - actual.w), 0f, 1e-4f);
+            });
+        }
+
+        [Fact]
+        public void ASingularParentedUpAdjustmentUsesIdentityInParentSpace()
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var parent = new GameObject("rotation parent");
+                m_Objects.Add(parent);
+                parent.transform.rotation = Quaternion.Euler(0f, 20f, 0f);
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.updateRotation = false;
+                agent.transform.SetParent(parent.transform, true);
+                agent.transform.localRotation = new Quaternion(1f, 0f, 0f, 0f);
+                AgentSystem.Step();
+                Assert.Equal(Quaternion.identity, agent.transform.localRotation);
+                Assert.True((agent.transform.up - Vector3.up).magnitude < 1e-4f);
+            });
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void UpAlignmentWritesOnlyWhenItChangesTheRotation(bool tilted)
+        {
+            AtRelease("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-5f, 0f, -4f));
+                agent.updatePosition = false;
+                agent.updateRotation = false;
+                agent.transform.rotation = tilted ? Quaternion.Euler(25f, 40f, 15f) : Quaternion.identity;
+                agent.transform.hasChanged = false;
+                AgentSystem.Step();
+                Assert.Equal(tilted, agent.transform.hasChanged);
+                Assert.True((agent.transform.up - Vector3.up).magnitude < 1e-4f);
+            });
+        }
+
         [Fact]
         public void AStoppedAgentSlowsDownAtItsAcceleration()
         {

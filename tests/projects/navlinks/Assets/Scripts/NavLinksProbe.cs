@@ -737,6 +737,8 @@ public class NavLinksProbe : MonoBehaviour
         yield return RecordRotationControls();
         yield return RecordPathEndControls();
         yield return RecordStoppingControls();
+        yield return RecordUpAxisEdges();
+        yield return RecordRotationWrites();
         Finish(0);
     }
 
@@ -871,13 +873,75 @@ public class NavLinksProbe : MonoBehaviour
         }
     }
 
+    IEnumerator RecordUpAxisEdges()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "auto");
+        foreach (bool inverted in new[] { false, true })
+        {
+            var lane = new Lane { Name = inverted ? "rotation.up.inverted" : "rotation.up.vertical", O = source.O };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -1f), null, a =>
+            {
+                a.updateRotation = false;
+                a.updateUpAxis = true;
+                a.transform.rotation = inverted ? new Quaternion(1f, 0f, 0f, 0f) : Quaternion.Euler(90f, 40f, 0f);
+            });
+            for (int frame = 1; frame <= 4; frame++)
+            {
+                yield return null;
+                Line(lane.Name, "a", frame, "\"on\":" + B(agent.isOnNavMesh) + ",\"q\":" + Q(agent.transform.rotation)
+                    + ",\"up\":" + V(agent.transform.up));
+            }
+            DestroyImmediate(agent.gameObject);
+        }
+        var parent = new GameObject("rotation parent");
+        parent.transform.rotation = Quaternion.Euler(0f, 20f, 0f);
+        var parentLane = new Lane { Name = "rotation.up.inverted.parent", O = source.O };
+        var child = Agent(parentLane, "a", new Vector3(-8f, 0f, -1f), null, a =>
+        {
+            a.updateRotation = false;
+            a.updateUpAxis = true;
+            a.transform.SetParent(parent.transform, true);
+            a.transform.localRotation = new Quaternion(1f, 0f, 0f, 0f);
+        });
+        for (int frame = 1; frame <= 4; frame++)
+        {
+            yield return null;
+            Line(parentLane.Name, "a", frame, "\"on\":" + B(child.isOnNavMesh) + ",\"q\":" + Q(child.transform.rotation)
+                + ",\"up\":" + V(child.transform.up));
+        }
+        DestroyImmediate(parent);
+    }
+
+    IEnumerator RecordRotationWrites()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "auto");
+        foreach (bool tilted in new[] { false, true })
+        {
+            var lane = new Lane { Name = tilted ? "rotation.write.tilted" : "rotation.write.unchanged", O = source.O };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -1f), null, a =>
+            {
+                a.updatePosition = false;
+                a.updateRotation = false;
+                a.updateUpAxis = true;
+                a.transform.rotation = tilted ? Quaternion.Euler(25f, 40f, 15f) : Quaternion.identity;
+            });
+            for (int frame = 1; frame <= (tilted ? 1 : 4); frame++)
+            {
+                agent.transform.hasChanged = false;
+                yield return null;
+                Line(lane.Name, "a", frame, "\"changed\":" + B(agent.transform.hasChanged) + ",\"up\":" + V(agent.transform.up));
+            }
+            DestroyImmediate(agent.gameObject);
+        }
+    }
+
     string State(Lane lane, NavMeshAgent agent)
     {
         var s = new StringBuilder();
         s.Append("\"dt\":").Append(N(Time.deltaTime));
         s.Append(",\"p\":").Append(V(agent.transform.position));
         var q = agent.transform.rotation;
-        s.Append(",\"q\":[").Append(N(q.x)).Append(',').Append(N(q.y)).Append(',').Append(N(q.z)).Append(',').Append(N(q.w)).Append(']');
+        s.Append(",\"q\":").Append(Q(q));
         s.Append(",\"n\":").Append(V(agent.nextPosition));
         s.Append(",\"v\":").Append(V(agent.velocity));
         s.Append(",\"dv\":").Append(V(agent.desiredVelocity));
@@ -950,6 +1014,8 @@ public class NavLinksProbe : MonoBehaviour
         float.IsNaN(v) || float.IsInfinity(v) ? "\"" + v.ToString(CultureInfo.InvariantCulture) + "\"" : v.ToString("R", CultureInfo.InvariantCulture);
 
     static string V(Vector3 v) => "[" + N(v.x) + "," + N(v.y) + "," + N(v.z) + "]";
+
+    static string Q(Quaternion q) => "[" + N(q.x) + "," + N(q.y) + "," + N(q.z) + "," + N(q.w) + "]";
 
     static string B(bool b) => b ? "true" : "false";
 
