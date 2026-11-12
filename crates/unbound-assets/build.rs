@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 fn main() {
     let native = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../native");
+    build_crunch(&native);
     let astc = native.join("astcenc");
     let astc_adapter = native.join("unbound_astc.cpp");
     println!("cargo:rerun-if-changed={}", astc.display());
@@ -139,4 +140,63 @@ fn main() {
         _ => "stdc++",
     };
     println!("cargo:rustc-link-lib=dylib={cxx}");
+}
+
+fn build_crunch(native: &Path) {
+    let prepare = native.join("crunch/source.py");
+    let adapter = native.join("unbound_crunch.cpp");
+    println!("cargo:rerun-if-changed={}", prepare.display());
+    println!("cargo:rerun-if-changed={}", adapter.display());
+    for key in [
+        "XDG_CACHE_HOME",
+        "UNBOUND_CRUNCH_ARCHIVE",
+        "UNBOUND_OFFLINE",
+        "CARGO_NET_OFFLINE",
+    ] {
+        println!("cargo:rerun-if-env-changed={key}");
+    }
+    let output = std::process::Command::new("python3")
+        .arg(&prepare)
+        .output()
+        .expect("running the Crunch dependency preparation");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let root = PathBuf::from(String::from_utf8(output.stdout).unwrap().trim());
+    let source = root.join("crnlib");
+    println!("cargo:rerun-if-changed={}", root.display());
+    // Use the library's source list, without the command-line program or stale build entries.
+    let makefile = std::fs::read_to_string(source.join("Makefile")).unwrap();
+    let objects = makefile
+        .split("OBJECTS =")
+        .nth(1)
+        .unwrap()
+        .split("\n\n")
+        .next()
+        .unwrap();
+    let files: Vec<_> = objects
+        .split_whitespace()
+        .filter_map(|word| word.strip_suffix(".o"))
+        .map(|name| source.join(format!("{name}.cpp")))
+        .filter(|file| file.is_file())
+        .collect();
+    cc::Build::new()
+        .cpp(true)
+        .std("c++14")
+        .files(files)
+        .file(adapter)
+        .include(&source)
+        .include(root.join("inc"))
+        .define("CRNLIB_ANSI_CPLUSPLUS", "1")
+        .define("NDEBUG", None)
+        .flag("-include")
+        .flag("stdint.h")
+        .flag_if_supported("-fno-strict-aliasing")
+        .flag_if_supported("-fno-fast-math")
+        .flag_if_supported("-ffp-contract=off")
+        .opt_level(2)
+        .warnings(false)
+        .compile("unbound_crunch");
 }

@@ -2455,6 +2455,7 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 
 mod astc;
 mod bcn;
+pub mod crunch;
 pub mod etc;
 pub use astc::{decode_f32 as decode_blocks_f32, decode_hdr_block};
 pub use bcn::{
