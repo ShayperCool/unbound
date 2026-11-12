@@ -38,7 +38,16 @@ sealed partial class StubBuilder
                 var field = _implMetadata.GetFieldDefinition(fieldHandle);
                 var fieldName = _implMetadata.GetString(field.Name);
                 if (!fields.TryGetValue(fieldName, out var other)) continue;
-                // Compare all fields shared with the reference, including private serialized state.
+                // Public fields are handled by CheckMembers; shared private serialized state also
+                // carries observable annotations, even though it is not exposed to game code.
+                var unityField = FindUnity(owner)!.GetMembers(fieldName).OfType<IFieldSymbol>().FirstOrDefault();
+                var implField = owner.GetMembers(fieldName).OfType<IFieldSymbol>().FirstOrDefault();
+                if (unityField?.DeclaredAccessibility == Accessibility.Private && implField != null)
+                {
+                    var mine = AttributeList(implField.GetAttributes());
+                    var theirs = AttributeList(unityField.GetAttributes());
+                    if (mine != theirs) Error("attributes", owner, $"field {fieldName} attributes is {mine}, Unity's is {theirs}");
+                }
                 const FieldAttributes NotSerialized = (FieldAttributes)0x80;
                 if ((field.Attributes & NotSerialized) != (other.Attributes & NotSerialized))
                     Error("attributes", owner, $"field {fieldName} NonSerialized is {(field.Attributes & NotSerialized) != 0}, Unity's is {(other.Attributes & NotSerialized) != 0}");

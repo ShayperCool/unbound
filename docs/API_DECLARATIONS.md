@@ -6,10 +6,10 @@ execution. `--json` includes every unaccepted difference, the raw category count
 exception with its reason.
 
 The comparison covers type and member signatures, accessibility, bases, declared interfaces,
-enum values, constants, static/abstract/virtual/override/sealed and readonly modifiers, generic
+enum values, constants, static/abstract/virtual/override/sealed and readonly modifiers, extension-method status, generic
 constraints and variance, property and event accessors, optional defaults and params/ref/in/out.
-Custom attributes on types, members, generic parameters, parameters and return values include
-constructor arguments, arrays, type arguments and named arguments. Attribute order and named
+Custom attributes on types, members including shared private fields, generic parameters, parameters and return values include
+constructor identity and arguments, typed arrays, type arguments and named arguments. Attribute order and named
 argument order do not matter; duplicate attributes still count. Storage checks also read layout,
 packing, size, field offsets, marshaling descriptors, in/out flags and NonSerialized, which use metadata flags instead of custom
 attribute records. Inherited framework interfaces are excluded by comparing declared interfaces;
@@ -45,7 +45,7 @@ are not excluded.
 ## Initial declaration debt
 
 On the initial 6000.0.71f1 audit, the previous checker reported zero errors for 2,587 types.
-The extended checks found 1,305 differences: 921 attribute, 74 parameter, 70 accessor,
+The extended checks found 1,357 differences: 973 attribute, 74 parameter, 70 accessor,
 68 layout, 65 interface, 88 modifier, 18 accessibility and one generic-constraint difference.
 They are exact migration entries, not claims of matching declarations. Owning module slices
 must remove each entry when they fix the corresponding declaration. The counts remain in the

@@ -168,4 +168,78 @@ public class ApiCheckerTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Theory]
+    [InlineData("new int[0]", "new string[0]")]
+    [InlineData("(int[])null", "(string[])null")]
+    public void AttributeArraysRetainTheirTypesAndConstructorOverloads(string first, string second)
+    {
+        const string declarations = """
+            using System;
+            namespace UnityEngine {
+                public class Mark : Attribute { public Mark(int[] values) {} public Mark(string[] values) {} }
+                [Mark(ARRAY)] public class Thing {}
+            }
+            """;
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "Managed", "UnityEngine");
+            TestAssemblies.Compile(unity, "UnityEngine.CoreModule", declarations.Replace("ARRAY", first));
+            var impl = TestAssemblies.Compile(Path.Combine(root, "impl"), "UnityEngine.CoreModule", declarations.Replace("ARRAY", second));
+            Assert.Contains(ApiChecker.Check(unity, impl).Errors, e => e.Category == "attributes" && e.Type == "UnityEngine.Thing");
+            impl = TestAssemblies.Compile(Path.Combine(root, "same"), "UnityEngine.CoreModule", declarations.Replace("ARRAY", first));
+            Assert.Empty(ApiChecker.Check(unity, impl).Errors);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void SharedPrivateFieldsKeepTheirSerializationAnnotations()
+    {
+        const string declarations = """
+            using System;
+            namespace UnityEngine {
+                public class SerializeField : Attribute {}
+                public class SerializeReference : Attribute {}
+                namespace Serialization { public class FormerlySerializedAsAttribute : Attribute { public FormerlySerializedAsAttribute(string name) {} } }
+                public class Thing {
+                    [SerializeField] private int value;
+                    [SerializeReference] private object reference;
+                    [Serialization.FormerlySerializedAs("old")] private int renamed;
+                }
+            }
+            """;
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "Managed", "UnityEngine");
+            TestAssemblies.Compile(unity, "UnityEngine.CoreModule", declarations);
+            var changed = declarations.Replace("[SerializeField]", "").Replace("[SerializeReference]", "")
+                .Replace("[Serialization.FormerlySerializedAs(\"old\")]", "");
+            var impl = TestAssemblies.Compile(Path.Combine(root, "impl"), "UnityEngine.CoreModule", changed);
+            var errors = ApiChecker.Check(unity, impl).Errors;
+            foreach (var name in new[] { "value", "reference", "renamed" })
+                Assert.Contains(errors, e => e.Category == "attributes" && e.Message.StartsWith("field " + name + " attributes"));
+            Assert.Equal(3, errors.Count);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Theory]
+    [InlineData("this int", "int")]
+    [InlineData("int", "this int")]
+    public void ExtensionMethodStatusIsCheckedInBothDirections(string first, string second)
+    {
+        const string declarations = "namespace UnityEngine { public static class Extensions { public static void Foo(PARAM value) {} } }";
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "Managed", "UnityEngine");
+            TestAssemblies.Compile(unity, "UnityEngine.CoreModule", declarations.Replace("PARAM", first));
+            var impl = TestAssemblies.Compile(Path.Combine(root, "impl"), "UnityEngine.CoreModule", declarations.Replace("PARAM", second));
+            Assert.Contains(ApiChecker.Check(unity, impl).Errors, e => e.Category == "modifiers" && e.Message.Contains("extension/vararg"));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
 }

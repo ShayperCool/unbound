@@ -89,6 +89,7 @@ sealed partial class StubBuilder
             case (IMethodSymbol u, IMethodSymbol i):
                 Difference("attributes", "return attributes", AttributeList(i.GetReturnTypeAttributes()), AttributeList(u.GetReturnTypeAttributes()));
                 Difference("modifiers", "readonly", i.IsReadOnly.ToString(), u.IsReadOnly.ToString());
+                Difference("modifiers", "extension/vararg", $"{i.IsExtensionMethod}/{i.IsVararg}", $"{u.IsExtensionMethod}/{u.IsVararg}");
                 Parameters(u.Parameters, i.Parameters);
                 Generics(u.TypeParameters, i.TypeParameters);
                 break;
@@ -126,15 +127,16 @@ sealed partial class StubBuilder
     static string AttributeList(IEnumerable<AttributeData> attributes) =>
         "[" + string.Join(";", attributes.Where(a => !DeclarationMetadata.IgnoreAttribute(a.AttributeClass?.ToDisplayString() ?? ""))
             .Select(a => (a.AttributeClass == null ? "<unresolved>" : TypeKey(a.AttributeClass))
+                + ":" + (a.AttributeConstructor == null ? "<unresolved>" : FullKey(a.AttributeConstructor))
                 + "(" + string.Join(",", a.ConstructorArguments.Select(AttributeValue)) + ")"
                 + "{" + string.Join(",", a.NamedArguments.OrderBy(n => n.Key, StringComparer.Ordinal).Select(n => n.Key + "=" + AttributeValue(n.Value))) + "}")
             .Order(StringComparer.Ordinal)) + "]";
 
     static string AttributeValue(TypedConstant value) =>
-        value.Kind == TypedConstantKind.Array
+        (value.Type == null ? "?" : TypeKey(value.Type)) + ":" +
+        (value.Kind == TypedConstantKind.Array
             ? value.IsNull ? "null-array" : "[" + string.Join(",", value.Values.Select(AttributeValue)) + "]"
-            : (value.Type == null ? "?" : TypeKey(value.Type)) + ":" +
-                (value.Value is ITypeSymbol type ? TypeKey(type) : Constant(value.Value));
+            : value.Value is ITypeSymbol type ? TypeKey(type) : Constant(value.Value));
 
     static string Constant(object? value) => value switch
     {
