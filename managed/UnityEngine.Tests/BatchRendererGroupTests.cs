@@ -68,9 +68,56 @@ namespace UnityEngine.Tests
             m_Buffers.Add(buffer);
             var values = new NativeArray<MetadataValue>(metadata.Length, Allocator.Temp);
             for (int i = 0; i < metadata.Length; i++) values[i] = new MetadataValue { NameID = Shader.PropertyToID(metadata[i].Name), Value = metadata[i].Value };
-            var id = group.AddBatch(values, buffer.bufferHandle);
+            // The device's target: a constant buffer through a window of the whole buffer.
+            var id = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+                ? group.AddBatch(values, buffer.bufferHandle, 0, 256)
+                : group.AddBatch(values, buffer.bufferHandle);
             values.Dispose();
             return id;
+        }
+
+        /// <summary>AddBatch refuses, with the Editor's message and BatchID.Null, a window the
+        /// device does not take (tests/projects/brg errors.add): none for a constant buffer, one
+        /// at an offset off the alignment or larger than the device's constant buffers, any for a
+        /// raw buffer. A refused batch takes no ID.</summary>
+        [Fact]
+        public void AddBatchRefusesWindowsTheDeviceDoesNotTake()
+        {
+            var group = Group(Nothing);
+            var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 64, 4);
+            m_Buffers.Add(buffer);
+            var values = new NativeArray<MetadataValue>(0, Allocator.Temp);
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            try
+            {
+                if (BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer)
+                {
+                    Assert.Equal(BatchID.Null, group.AddBatch(values, buffer.bufferHandle));
+                    Assert.Equal(BatchID.Null, group.AddBatch(values, buffer.bufferHandle, 16, 256));
+                    Assert.Equal(BatchID.Null, group.AddBatch(values, buffer.bufferHandle, 0, 65537));
+                    Assert.Equal(new[]
+                    {
+                        "BatchRendererGroup.AddBatch requires a non-zero windowSize parameter when BufferTarget is ConstantBuffer.",
+                        $"BatchRendererGroup.AddBatch windowOffset parameter (16) is not aligned according to the constant buffer alignment requirement of the Graphics API (constantBufferOffsetAlignment: {BatchRendererGroup.GetConstantBufferOffsetAlignment()}).",
+                        "BatchRendererGroup.AddBatch windowSize parameter (65537) is over the limit allowed by the Graphics API (maxConstantBufferSize: 65536).",
+                    }, logged);
+                    // Twice the shader's window is still taken (measured: 32768).
+                    Assert.Equal(1u, group.AddBatch(values, buffer.bufferHandle, 0, 32768).value);
+                }
+                else
+                {
+                    Assert.Equal(BatchID.Null, group.AddBatch(values, buffer.bufferHandle, 0, 256));
+                    Assert.Equal("BatchRendererGroup.AddBatch had non-zero ConstantBuffer mode parameters when BufferTarget is RawBuffer. Pass zero for both windowOffset and windowSize in RawBuffer mode. (got windowOffset: 0, windowSize: 256)", Assert.Single(logged));
+                    Assert.Equal(1u, group.AddBatch(values, buffer.bufferHandle).value);
+                }
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                values.Dispose();
+            }
         }
 
         [Fact]

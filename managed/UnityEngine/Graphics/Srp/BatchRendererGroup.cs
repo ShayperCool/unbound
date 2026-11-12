@@ -360,6 +360,7 @@ namespace UnityEngine.Rendering
 
         public BatchID AddBatch(NativeArray<MetadataValue> batchMetadata, GraphicsBufferHandle buffer, uint bufferOffset, uint windowSize)
         {
+            if (!WindowAccepted(bufferOffset, windowSize)) return BatchID.Null;
             var batch = new Batch();
             foreach (var value in batchMetadata)
                 batch.Properties[Unbound.Runtime.BatchCulling.MetadataProperty(value.NameID)] = unchecked((int)value.Value);
@@ -369,6 +370,41 @@ namespace UnityEngine.Rendering
                 m_Batches.Add(batch);
                 return new BatchID { value = (uint)(m_Batches.Count - 1) };
             }
+        }
+
+        /// <summary>
+        /// Whether the device takes AddBatch's window, else the Editor's error and no batch
+        /// (BatchID.Null): a constant buffer needs a window, at an offset the device's constant
+        /// buffer alignment divides and no larger than its constant buffer limit; a raw buffer takes
+        /// none. Matches the Unity 6000.0.71f1 Editor, tests/projects/brg <c>errors.add</c> (a
+        /// 32768-byte window is taken: the limit is the device's constant buffer size).
+        /// </summary>
+        static bool WindowAccepted(uint offset, uint window)
+        {
+            if (BufferTarget == BatchBufferTarget.RawBuffer)
+            {
+                if (offset == 0 && window == 0) return true;
+                Debug.LogError($"BatchRendererGroup.AddBatch had non-zero ConstantBuffer mode parameters when BufferTarget is RawBuffer. Pass zero for both windowOffset and windowSize in RawBuffer mode. (got windowOffset: {offset}, windowSize: {window})");
+                return false;
+            }
+            if (window == 0)
+            {
+                Debug.LogError("BatchRendererGroup.AddBatch requires a non-zero windowSize parameter when BufferTarget is ConstantBuffer.");
+                return false;
+            }
+            uint alignment = (uint)GetConstantBufferOffsetAlignment();
+            if (alignment > 0 && offset % alignment != 0)
+            {
+                Debug.LogError($"BatchRendererGroup.AddBatch windowOffset parameter ({offset}) is not aligned according to the constant buffer alignment requirement of the Graphics API (constantBufferOffsetAlignment: {alignment}).");
+                return false;
+            }
+            uint limit = (uint)SystemInfo.maxConstantBufferSize;
+            if (window > limit)
+            {
+                Debug.LogError($"BatchRendererGroup.AddBatch windowSize parameter ({window}) is over the limit allowed by the Graphics API (maxConstantBufferSize: {limit}).");
+                return false;
+            }
+            return true;
         }
 
         static void SetBuffer(Batch batch, GraphicsBufferHandle handle, uint offset, uint window)
