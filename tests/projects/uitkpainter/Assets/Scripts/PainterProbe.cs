@@ -306,6 +306,16 @@ public static class PainterProbe
         new Case { meshOnly = true, name = "gradient-curve-loop-at-origin", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(0, 0)); p.BezierCurveTo(new Vector2(60, 0), new Vector2(0, 60), new Vector2(0, 0)); p.LineTo(new Vector2(40, 30)); }) },
         new Case { meshOnly = true, name = "gradient-curve-tiny-at-origin", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(0, 0)); p.BezierCurveTo(new Vector2(0.0001f, 0), new Vector2(0.0002f, 0), new Vector2(0.0003f, 0)); p.LineTo(new Vector2(40, 30)); }) },
         new Case { meshOnly = true, name = "gradient-curve-loop", draw = GradientStroke(4, LineJoin.Miter, LineCap.Butt, TwoKeys, p => { p.MoveTo(new Vector2(10, 10)); p.BezierCurveTo(new Vector2(70, 10), new Vector2(10, 70), new Vector2(10, 10)); p.LineTo(new Vector2(50, 40)); }) },
+        // Curves without length outside the gradient: another place and width, end tangents that
+        // oppose each other, a curve alone (caps at both ends), round joins and caps, a curve between
+        // two lines, a tiny curve away from the origin.
+        new Case { meshOnly = true, name = "curve-loop-plain", draw = Stroke(6, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(30, 20)); p.BezierCurveTo(new Vector2(90, 20), new Vector2(30, 80), new Vector2(30, 20)); p.LineTo(new Vector2(70, 50)); }) },
+        new Case { meshOnly = true, name = "curve-loop-opposed", draw = Stroke(4, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(20, 20)); p.BezierCurveTo(new Vector2(60, 20), new Vector2(60, 20), new Vector2(20, 20)); p.LineTo(new Vector2(20, 60)); }) },
+        new Case { meshOnly = true, name = "curve-loop-alone", draw = Stroke(4, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(20, 20)); p.BezierCurveTo(new Vector2(80, 20), new Vector2(20, 80), new Vector2(20, 20)); }) },
+        new Case { meshOnly = true, name = "curve-loop-round", draw = Stroke(4, LineJoin.Round, LineCap.Round, p => { p.MoveTo(new Vector2(20, 20)); p.BezierCurveTo(new Vector2(80, 20), new Vector2(20, 80), new Vector2(20, 20)); p.LineTo(new Vector2(60, 50)); }) },
+        new Case { meshOnly = true, name = "curve-loop-between", draw = Stroke(4, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(0, 20)); p.LineTo(new Vector2(20, 20)); p.BezierCurveTo(new Vector2(80, 20), new Vector2(20, 80), new Vector2(20, 20)); p.LineTo(new Vector2(60, 50)); }) },
+        new Case { meshOnly = true, name = "curve-tiny-elsewhere", draw = Stroke(4, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(25, 15)); p.BezierCurveTo(new Vector2(25.0001f, 15), new Vector2(25.0002f, 15), new Vector2(25.0003f, 15)); p.LineTo(new Vector2(65, 45)); }) },
+        new Case { meshOnly = true, name = "quadratic-loop", draw = Stroke(4, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(20, 20)); p.QuadraticCurveTo(new Vector2(70, 40), new Vector2(20, 20)); p.LineTo(new Vector2(60, 50)); }) },
     };
 
     public static void Run(UIDocument document, RenderTexture target)
