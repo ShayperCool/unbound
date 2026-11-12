@@ -764,9 +764,9 @@ namespace UnityEngine.Rendering
 
         public CullingResults Cull(ref ScriptableCullingParameters parameters) => new CullingResults { ptr = Culling.Cull(ref parameters) };
 
-        [Unbound.EditorFaithful("no-op is equivalent: shadow renderer lists draw every caster, which gives the same shadow map")]
         /// <summary>Shadow caster culling: the BatchRendererGroups' light cullings (renderers'
-        /// casters are not culled per split).</summary>
+        /// casters are not culled per split: shadow lists draw every caster, which gives the same
+        /// shadow map).</summary>
         public void CullShadowCasters(CullingResults cullingResults, ShadowCastersCullingInfos infos) => Unbound.Runtime.BatchCulling.CullShadows(cullingResults.Data, infos);
 
         public RendererList CreateRendererList(RendererUtils.RendererListDesc desc)

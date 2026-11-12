@@ -64,6 +64,9 @@ namespace Unbound.Runtime
             /// <summary>A light culling's light: its index among the culling's visible lights (-1
             /// for a camera culling).</summary>
             internal int Light = -1;
+            /// <summary>The culling's layer mask: a camera culling's range on a layer it leaves out
+            /// is not drawn.</summary>
+            internal uint LayerMask;
             internal NativeArray<BatchCullingOutputDrawCommands> Commands = new NativeArray<BatchCullingOutputDrawCommands>(1, Allocator.Persistent);
             internal NativeArray<IntPtr> Custom = new NativeArray<IntPtr>(1, Allocator.Persistent);
 
@@ -199,6 +202,8 @@ namespace Unbound.Runtime
                 if ((info.splitExclusionMask & 0xffu) == all) continue;
                 var light = data.Lights[index].light;
                 if (light == null) continue;
+                // Measured for directional lights; point and spot lights take the same path.
+                if (light.type != LightType.Directional) WarnOnce(UnsupportedLocalLightCulling);
                 int planes = 0;
                 for (int s = 0; s < splits; s++) planes += infos.splitBuffer[info.splitRange.start + s].cullingPlaneCount;
                 Reserve(planes + ReceiverPlanes, splits);
@@ -225,13 +230,14 @@ namespace Unbound.Runtime
                     receiverOffset = planes;
                     receivers = ReceiverPlanes;
                     for (int p = 0; p < ReceiverPlanes; p++) s_Planes[planes++] = parameters.GetCullingPlane(p);
-                    // The far plane at the shadow distance (shadows fall no further).
+                    // The far plane at the shadow distance along the camera's view (shadows fall no
+                    // further).
                     if (data.Camera != null)
                     {
-                        float pull = data.Camera.farClipPlane - Mathf.Min(parameters.shadowDistance, data.Camera.farClipPlane);
-                        var far = s_Planes[planes - 1];
-                        far.distance -= pull;
-                        s_Planes[planes - 1] = far;
+                        var view = data.Camera.transform;
+                        var forward = view.forward;
+                        float distance = Mathf.Min(parameters.shadowDistance, data.Camera.farClipPlane);
+                        s_Planes[planes - 1] = new Plane(-forward, Vector3.Dot(forward, view.position) + distance);
                     }
                 }
                 var context = new BatchCullingContext(s_Planes.GetSubArray(0, planes), s_Splits.GetSubArray(0, splits), parameters.lodParameters,
@@ -274,6 +280,7 @@ namespace Unbound.Runtime
                 output.Group = group;
                 output.View = context.viewType;
                 output.Light = light;
+                output.LayerMask = context.cullingLayerMask;
                 data.Batches.Add(output);
                 try
                 {
@@ -318,7 +325,7 @@ namespace Unbound.Runtime
 
         // Unsupported parts of draw commands (bits of s_Warned).
         const int UnsupportedIndirect = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2, UnsupportedLightmap = 3,
-            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5;
+            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5, UnsupportedLocalLightCulling = 6;
 
         static readonly string[] s_Unsupported =
         {
@@ -328,6 +335,7 @@ namespace Unbound.Runtime
             "BatchRendererGroup draw commands flagged IsLightMapped draw without their lightmaps (LIGHTMAP_ON and the lightmap of lightmapIndex are not bound yet).",
             "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
             "a BatchRendererGroup culling callback gave draw commands or visible instances without allocating their arrays; its output is not drawn.",
+            "BatchRendererGroup light cullings of point and spot lights take a directional light's context (one call with every split, view slice 0); the Editor's is not measured.",
         };
 
         static void WarnOnce(int what)
@@ -374,6 +382,13 @@ namespace Unbound.Runtime
                 {
                     var range = d.drawRanges[r];
                     var filter = range.filterSettings;
+                    // The Scripting API (BatchCullingContext.cullingLayerMask): "The draw command is
+                    // discarded by the internal culling if the expression (1 << layer) &
+                    // cullingLayerMask is false." So a camera culling's; a light culling's casters
+                    // are drawn whatever their layer, though its mask leaves the layer out (measured:
+                    // tests/projects/brg shadows, pillars on layers the sun's and the camera's culling
+                    // masks leave out still cast shadows).
+                    if (!shadows && (output.LayerMask & (1u << filter.layer)) == 0) continue;
                     if (shadows ? filter.shadowCastingMode == ShadowCastingMode.Off : filter.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
                     if ((filtering.layerMask & (1 << filter.layer)) == 0) continue;
                     if ((filtering.renderingLayerMask & filter.renderingLayerMask) == 0) continue;

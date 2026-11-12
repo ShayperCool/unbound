@@ -494,6 +494,61 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The Scripting API (BatchCullingContext.cullingLayerMask): a draw command on a
+        /// layer a camera culling's mask leaves out is discarded; a light culling's casters are
+        /// drawn whatever their layer (measured, tests/projects/brg shadows).</summary>
+        [Fact]
+        public void CameraCullingsDiscardRangesOnLayersTheyLeaveOut()
+        {
+            var lightObject = new GameObject("brg masked sun");
+            m_Objects.Add(lightObject);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.shadows = LightShadows.Hard;
+            var filter = new BatchFilterSettings { renderingLayerMask = uint.MaxValue, layer = 3, shadowCastingMode = ShadowCastingMode.On };
+            var group = Group((g, c, o, u) => Emit(filter, 1,
+                new BatchDrawCommand { batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1 })(g, c, o, u));
+            group.RegisterMesh(m_Mesh);
+            group.RegisterMaterial(m_Material);
+            AddBatch(group);
+            var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+            Assert.Single(Collect(Cull(), all));
+            m_Camera.cullingMask = ~(1 << 3);
+            Assert.Empty(Collect(Cull(), all));
+            m_Camera.cullingMask = -1;
+            light.cullingMask = ~(1 << 3);
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            var results = new CullingResults { ptr = Culling.Cull(ref parameters) };
+            int sun = Array.FindIndex(results.Data.Lights.ToArray(), l => l.light == light);
+            var splits = new NativeArray<ShadowSplitData>(1, Allocator.Temp);
+            var infos = new NativeArray<LightShadowCasterCullingInfo>(results.Data.Lights.Length, Allocator.Temp);
+            infos[sun] = new LightShadowCasterCullingInfo { splitRange = new RangeInt(0, 1) };
+            try
+            {
+                new ScriptableRenderContext().CullShadowCasters(results, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                var items = new List<FrameBuilder.DrawItem>();
+                long sequence = 0;
+                BatchCulling.CollectShadows(results.Data, all, sun, items, ref sequence);
+                Assert.Single(items);
+                // The camera draws it too; a camera culling that leaves the layer out does not, but
+                // its light culling still casts it.
+                Assert.Single(Collect(results.Data, all));
+                m_Camera.cullingMask = ~(1 << 3);
+                Assert.True(m_Camera.TryGetCullingParameters(out parameters));
+                results = new CullingResults { ptr = Culling.Cull(ref parameters) };
+                new ScriptableRenderContext().CullShadowCasters(results, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                Assert.Empty(Collect(results.Data, all));
+                items.Clear();
+                BatchCulling.CollectShadows(results.Data, all, sun, items, ref sequence);
+                Assert.Single(items);
+            }
+            finally
+            {
+                splits.Dispose();
+                infos.Dispose();
+            }
+        }
+
         [Fact]
         public void TheFramesEndFreesTheArraysTheCallbackAllocated()
         {
