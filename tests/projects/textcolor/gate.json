@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/textcolor/run.py gate"],
+  "summary": "textcolor: .*"
+}
