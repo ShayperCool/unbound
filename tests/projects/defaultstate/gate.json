@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 -m unittest discover -s tests/projects/defaultstate -p test_compare.py",
+    "python3 tests/projects/defaultstate/run.py check"
+  ],
+  "summary": "\\d+ exact rows; \\d+ queued/different; \\d+ new/stale failures; \\d+ missing; \\d+ extra",
+  "engine_paths": [
+    "managed/UnityEngine/",
+    "managed/Unbound.ApiTools/",
+    "managed/Unbound.Host/Entry.cs",
+    "crates/unbound/src/commands.rs"
+  ]
+}

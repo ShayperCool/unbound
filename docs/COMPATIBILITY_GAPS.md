@@ -295,14 +295,22 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 - [x] Q403 declaration checking: `unbound api-check` compares release metadata, including custom
       attribute arguments, AttributeUsage, optional defaults, constants, modifiers, constraints,
       interfaces, accessors and storage metadata. See [declaration policy](API_DECLARATIONS.md).
-      The current 6000.0.71f1 audit has 1,327 exact migration exceptions in
-      `managed/UnityEngine/ApiCheckAllowList.json`: attributes 943, modifiers 88, parameters 74,
+      The current 6000.0.71f1 audit has 1,321 exact migration exceptions in
+      `managed/UnityEngine/ApiCheckAllowList.json`: attributes 938, modifiers 87, parameters 74,
       accessors 70, layout 68, interfaces 65, accessibility 18 and constraints 1. These remain open
       declaration repairs, with raw counts and individual reasons retained by the checker.
       Q403 lookup checks are done (`attributeinheritance`, 215 exact Editor records): thirty
       attribute-type declarations now match the release metadata; eleven direct-discovery lookup
       policies carry individual measured reasons. TypeCache, editor registration and JSON rename/
       envelope controls match the Editor; serialized prefab renames remain supported.
+
+- [x] Q403 default-state capture and comparison: [defaultstate](../tests/projects/defaultstate/README.md)
+      covers 1,032 constructible matching types and records 11,421 rows in two GPU Editor repeats.
+      The comparison retains 2,278 differing reference rows, 541 extra implementation rows and
+      50 variable observations inside 2,821 exact, reasoned migration entries. Module row counts
+      and context/depth/cycle limitations remain explicit. Static constructor stores have 296
+      equal pairs, one queued rendering default, 924 undecided pairs and unmatched coverage counts.
+      These are open repairs, not a claim of complete default parity.
 
 - [x] `Stubs.Ignored(member)` (warn once, like `NotImplemented`) for knowingly ignored members,
       and an `[EditorFaithful("why")]` marker for real no-ops; every hand-written empty body,

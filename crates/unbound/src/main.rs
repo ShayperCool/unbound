@@ -200,6 +200,11 @@ enum Command {
         #[command(flatten)]
         project: ProjectArgs,
     },
+    /// Inventory implemented API types and compare simple constructor stores for default-state probes.
+    ApiDefaults {
+        #[command(flatten)]
+        project: ProjectArgs,
+    },
     /// Check the project's shaders: whether each pass compiles (or why not).
     Shaders {
         #[command(flatten)]
@@ -395,6 +400,7 @@ fn main() -> anyhow::Result<()> {
         Command::Facades { project } => commands::facades(&project),
         Command::GenStubs { project } => commands::gen_stubs(&project),
         Command::ApiCheck { project, json } => commands::api_check(&project, json),
+        Command::ApiDefaults { project } => commands::api_defaults(&project),
         Command::Doctor { project, all, json } => doctor::doctor(&project, all, json),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
         Command::Test {
