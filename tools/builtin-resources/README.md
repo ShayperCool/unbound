@@ -9,8 +9,8 @@ supported release family; references `{fileID: N, guid: 0000000000000000f0000000
 Each entry's `path` is the name the release registers the object under for
 `Resources.GetBuiltinResource` (default resources) and `AssetDatabase.GetBuiltinExtraResource`
 (extra), one per object. `names.py` does not produce it (the files do not store it): a new
-release's table gets its paths separately, and a table without them makes every lookup fail
-loudly. `removed` lists the paths the release no longer registers, each with the path looked up
+release's table gets its paths separately; without them every lookup answers null with Unity's
+not-found assertion and error. `removed` lists the paths the release no longer registers, each with the path looked up
 instead and the message the lookup then throws. `tests/projects/builtinresources` asks the Editor for every path with the
 object's class and records which object answers, so a release's paths are confirmed by recording
 that probe (its `Assets/Resources/BuiltinPaths.txt` lists them) against the release's Editor.
