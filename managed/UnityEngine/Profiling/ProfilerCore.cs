@@ -190,7 +190,7 @@ namespace Unbound.Runtime.Profiling
             }
         }
 
-        static bool s_SharedWithPlugins;
+        static volatile bool s_SharedWithPlugins;
 
         /// <summary>A native plugin is loaded: the markers scripts made, and every one made from
         /// now on, are markers native plugins see, with the script flag as the Unity 6000.0.71f1
@@ -309,11 +309,13 @@ namespace Unbound.Runtime.Profiling
 
         internal static void EndSample(IntPtr marker)
         {
-            var stat = StatOf(marker);
+            // Without a plugin loaded nothing is looked up before the open samples are.
+            var stat = s_SharedWithPlugins ? StatOf(marker) : null;
             if (stat != null) PluginEvent(stat, 1);
             var open = t_Open;
             if (open == null || open.Count == 0) return;
             long now = Stopwatch.GetTimestamp();
+            stat ??= StatOf(marker);
             for (int i = open.Count - 1; i >= 0; i--)
             {
                 if (open[i].Stat != stat) continue;
