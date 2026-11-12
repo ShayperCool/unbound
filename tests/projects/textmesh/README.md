@@ -45,6 +45,9 @@ measurements.
 The `atlas/*` controls (after the images) record the dynamic font texture itself: a fresh
 `Font.CreateDynamicFontFromOSFont("Liberation Sans", 16)` asked for characters at 16, 40, 64 and
 90 points over three frames, then for a few again; after each request the texture size, how often
-`Font.textureRebuilt` fired and every character's uv corners in texels and `flipped`. They were
+`Font.textureRebuilt` fired and every character's uv corners in texels and `flipped`. The
+`atlas2/*` controls take a second fresh font in a new frame: three characters at 40 points, then
+62 at 90 (one reset grows the texture several times over at once, the 40-point ones kept), then a
+character the font lacks (its cell, and whether `characterInfo` lists it). They were
 recorded twice in the Editor (identical) and appended to the reference, whose other rows stayed
 as they were.

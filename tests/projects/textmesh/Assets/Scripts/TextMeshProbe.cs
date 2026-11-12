@@ -192,6 +192,38 @@ public sealed class TextMeshProbe : MonoBehaviour
             Put("atlas/" + step.name + "/characters", "[" + string.Join(",", cells) + "]");
         }
         Font.textureRebuilt -= count;
+
+        // A second fresh font, in a new frame: three characters at 40 points, then far more at 90
+        // than its texture holds (one reset grows it several times over, the 40-point ones kept),
+        // then a character the font lacks.
+        yield return null;
+        var crowded = Font.CreateDynamicFontFromOSFont("Liberation Sans", 16);
+        int crowdedRebuilt = 0;
+        Action<Font> countCrowded = f => { if (f == crowded) crowdedRebuilt++; };
+        Font.textureRebuilt += countCrowded;
+        const string many = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        crowded.RequestCharactersInTexture("xyz", 40, FontStyle.Normal);
+        crowded.RequestCharactersInTexture(many, 90, FontStyle.Normal);
+        var crowdedTexture = crowded.material.mainTexture;
+        Put("atlas2/many/texture", $"[{crowdedTexture.width},{crowdedTexture.height}]");
+        Put("atlas2/many/rebuilt", crowdedRebuilt.ToString(Inv));
+        var crowdedCells = new List<string>();
+        foreach (var (text, size) in new[] { ("xyz", 40), (many, 90) })
+            foreach (var c in text)
+            {
+                if (!crowded.GetCharacterInfo(c, out var info, size, FontStyle.Normal)) { crowdedCells.Add($"[{(int)c},{size},0]"); continue; }
+#pragma warning disable 618
+                bool flipped = info.flipped;
+#pragma warning restore 618
+                crowdedCells.Add($"[{(int)c},{size},1,{F(info.uvBottomLeft.x * crowdedTexture.width)},{F(info.uvBottomLeft.y * crowdedTexture.height)},{F(info.uvTopRight.x * crowdedTexture.width)},{F(info.uvTopRight.y * crowdedTexture.height)},{(flipped ? 1 : 0)}]");
+            }
+        Put("atlas2/many/characters", "[" + string.Join(",", crowdedCells) + "]");
+        crowded.RequestCharactersInTexture("\ue000", 16, FontStyle.Normal);
+        bool lacked = crowded.GetCharacterInfo('\ue000', out var lackedInfo, 16, FontStyle.Normal);
+        Put("atlas2/lacking/characterInfo", lacked ? $"[{F(Mathf.Abs(lackedInfo.uvTopRight.x - lackedInfo.uvBottomLeft.x) * crowdedTexture.width)},{F(Mathf.Abs(lackedInfo.uvTopRight.y - lackedInfo.uvBottomLeft.y) * crowdedTexture.height)},{lackedInfo.advance}]" : Str("none"));
+        Put("atlas2/lacking/listed", crowded.characterInfo.Count(ci => ci.index == 0xE000).ToString(Inv));
+        Put("atlas2/lacking/rebuilt", crowdedRebuilt.ToString(Inv));
+        Font.textureRebuilt -= countCrowded;
     }
 
     /// <summary>A script-made custom (non-dynamic) font: 'A' and 'B' as rectangles of a 32x16
