@@ -1562,6 +1562,7 @@ fn write_array(u: &unbound_shaders::Uniform, components: u32, data: &[f32], out:
 #[cfg(test)]
 mod tests {
     use super::*;
+    use unbound_shaders::Uniform;
 
     /// The per-draw dynamic offsets in binding order: the first uniform binding, the per-draw
     /// uniform, then the further ones, each at its start in the draw's uniform data.
@@ -1645,7 +1646,6 @@ mod tests {
         program.uniform_bindings.pop();
         assert_eq!(uniform_bindings_refused(&program, &desktop), None);
     }
-    use unbound_shaders::Uniform;
 
     fn uniform(name: &str, offset: u32, rows: u32, columns: u32) -> Uniform {
         Uniform {
