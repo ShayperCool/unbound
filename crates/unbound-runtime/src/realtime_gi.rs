@@ -38,9 +38,12 @@ pub struct GiLight {
 }
 
 /// Experimental.GlobalIllumination.FalloffType's values ([`GiLight::falloff`]) realtime GI
-/// takes; InverseSquaredNoRangeAttenuation (1), Linear (2) and Undefined (4) are not measured.
+/// takes; Undefined is lit as Legacy (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/realtimegi `room-delegate-*`). Linear (2) is not supported.
 pub const FALLOFF_INVERSE_SQUARED: i32 = 0;
+pub const FALLOFF_INVERSE_SQUARED_NO_RANGE_ATTENUATION: i32 = 1;
 pub const FALLOFF_LEGACY: i32 = 3;
+pub const FALLOFF_UNDEFINED: i32 = 4;
 
 /// One frame's inputs (`RealtimeGI.Frame` in managed code).
 #[repr(C)]
@@ -407,7 +410,10 @@ impl Scene {
                     Ok(FalloffTable::of(
                         match light.falloff {
                             FALLOFF_INVERSE_SQUARED => Falloff::InverseSquared,
-                            FALLOFF_LEGACY => Falloff::Legacy,
+                            FALLOFF_INVERSE_SQUARED_NO_RANGE_ATTENUATION => {
+                                Falloff::InverseSquaredNoRangeAttenuation
+                            }
+                            FALLOFF_LEGACY | FALLOFF_UNDEFINED => Falloff::Legacy,
                             other => bail!(
                                 "light falloff type {other} in precomputed realtime GI is not supported"
                             ),
@@ -1391,7 +1397,8 @@ mod tests {
             0
         );
         // A render pipeline's inverse-squared falloff lights the scene, and differently from
-        // the legacy one; the other falloff types fail loudly.
+        // the legacy one; without its range attenuation differently again; Undefined as the
+        // legacy one; the other falloff types fail loudly.
         let lights = [point([0.0, 2.0, 0.0])];
         assert!((0..500).any(|_| update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED != 0));
         let mut legacy = vec![0u16; 4 * 64 * 64];
@@ -1407,7 +1414,31 @@ mod tests {
         read_atlas(handle, 0, &mut lit).unwrap();
         assert!(lit.chunks_exact(4).any(|t| t[0] != 0));
         assert!(lit != legacy);
-        for falloff in [1, 2, 4, 9] {
+        let mut lit_as = |falloff, range| {
+            let light = [GiLight {
+                falloff,
+                range,
+                ..lights[0]
+            }];
+            assert!(
+                (0..500).any(|_| update(handle, &frame, &light).unwrap() & UPDATE_CONVERGED != 0)
+            );
+            let mut atlas = vec![0u16; 4 * 64 * 64];
+            read_atlas(handle, 0, &mut atlas).unwrap();
+            atlas
+        };
+        // At a range the scene reaches into, the range attenuation shows.
+        let unattenuated = lit_as(FALLOFF_INVERSE_SQUARED_NO_RANGE_ATTENUATION, 3.0);
+        let attenuated = lit_as(FALLOFF_INVERSE_SQUARED, 3.0);
+        assert!(unattenuated.chunks_exact(4).any(|t| t[0] != 0));
+        assert!(unattenuated != attenuated && unattenuated != legacy);
+        // Undefined: as the legacy one (from the legacy one's converged state, so that only the
+        // falloff could differ).
+        let range = lights[0].range;
+        let legacy = lit_as(FALLOFF_LEGACY, range);
+        assert!(lit_as(FALLOFF_UNDEFINED, range) == legacy);
+        assert!(lit_as(FALLOFF_INVERSE_SQUARED, range) != legacy);
+        for falloff in [2, 9] {
             let error = update(
                 handle,
                 &frame,
