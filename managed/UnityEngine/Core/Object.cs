@@ -429,30 +429,42 @@ namespace UnityEngine
 
     public partial class MissingReferenceException : SystemException
     {
-        public MissingReferenceException() : base("A Unity Runtime error occurred!") { }
-        public MissingReferenceException(string message) : base(message) { }
-        public MissingReferenceException(string message, Exception innerException) : base(message, innerException) { }
+        public MissingReferenceException() : this("A Unity Runtime error occurred!", null) { }
+        public MissingReferenceException(string message) : this(message, null) { }
+        public MissingReferenceException(string message, Exception innerException) : base(message, innerException)
+        {
+            if (Compat.DefaultConstructorStateMeasured) HResult = Compat.UnityExceptionResult;
+        }
     }
 
     public partial class MissingComponentException : SystemException
     {
-        public MissingComponentException() : base("A Unity Runtime error occurred!") { }
-        public MissingComponentException(string message) : base(message) { }
-        public MissingComponentException(string message, Exception innerException) : base(message, innerException) { }
+        public MissingComponentException() : this("A Unity Runtime error occurred!", null) { }
+        public MissingComponentException(string message) : this(message, null) { }
+        public MissingComponentException(string message, Exception innerException) : base(message, innerException)
+        {
+            if (Compat.DefaultConstructorStateMeasured) HResult = Compat.UnityExceptionResult;
+        }
     }
 
     public partial class UnassignedReferenceException : SystemException
     {
-        public UnassignedReferenceException() : base("A Unity Runtime error occurred!") { }
-        public UnassignedReferenceException(string message) : base(message) { }
-        public UnassignedReferenceException(string message, Exception innerException) : base(message, innerException) { }
+        public UnassignedReferenceException() : this("A Unity Runtime error occurred!", null) { }
+        public UnassignedReferenceException(string message) : this(message, null) { }
+        public UnassignedReferenceException(string message, Exception innerException) : base(message, innerException)
+        {
+            if (Compat.DefaultConstructorStateMeasured) HResult = Compat.UnityExceptionResult;
+        }
     }
 
     public partial class UnityException : SystemException
     {
-        public UnityException() : base("A Unity Runtime error occurred!") { }
-        public UnityException(string message) : base(message) { }
-        public UnityException(string message, Exception innerException) : base(message, innerException) { }
+        public UnityException() : this("A Unity Runtime error occurred!", null) { }
+        public UnityException(string message) : this(message, null) { }
+        public UnityException(string message, Exception innerException) : base(message, innerException)
+        {
+            if (Compat.DefaultConstructorStateMeasured) HResult = Compat.UnityExceptionResult;
+        }
     }
 }
 

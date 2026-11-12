@@ -104,7 +104,7 @@ namespace JetBrains.Annotations
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)32767)]
     public sealed partial class LocalizationRequiredAttribute : global::System.Attribute
     {
-        public LocalizationRequiredAttribute() { }
+        public LocalizationRequiredAttribute() : this(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured) { }
         public LocalizationRequiredAttribute(bool required) { Required = required; }
         public bool Required { get; }
     }
@@ -119,9 +119,9 @@ namespace JetBrains.Annotations
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)18436)]
     public sealed partial class MeansImplicitUseAttribute : global::System.Attribute
     {
-        public MeansImplicitUseAttribute() { }
-        public MeansImplicitUseAttribute(global::JetBrains.Annotations.ImplicitUseKindFlags useKindFlags) { UseKindFlags = useKindFlags; }
-        public MeansImplicitUseAttribute(global::JetBrains.Annotations.ImplicitUseTargetFlags targetFlags) { TargetFlags = targetFlags; }
+        public MeansImplicitUseAttribute() : this(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? global::JetBrains.Annotations.ImplicitUseKindFlags.Default : default, global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? global::JetBrains.Annotations.ImplicitUseTargetFlags.Default : default) { }
+        public MeansImplicitUseAttribute(global::JetBrains.Annotations.ImplicitUseKindFlags useKindFlags) : this(useKindFlags, global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? global::JetBrains.Annotations.ImplicitUseTargetFlags.Default : default) { }
+        public MeansImplicitUseAttribute(global::JetBrains.Annotations.ImplicitUseTargetFlags targetFlags) : this(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? global::JetBrains.Annotations.ImplicitUseKindFlags.Default : default, targetFlags) { }
         public MeansImplicitUseAttribute(global::JetBrains.Annotations.ImplicitUseKindFlags useKindFlags, global::JetBrains.Annotations.ImplicitUseTargetFlags targetFlags) { UseKindFlags = useKindFlags; TargetFlags = targetFlags; }
         public global::JetBrains.Annotations.ImplicitUseKindFlags UseKindFlags { get; }
         public global::JetBrains.Annotations.ImplicitUseTargetFlags TargetFlags { get; }
@@ -129,7 +129,7 @@ namespace JetBrains.Annotations
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)2156)]
     public sealed partial class MustDisposeResourceAttribute : global::System.Attribute
     {
-        public MustDisposeResourceAttribute() { }
+        public MustDisposeResourceAttribute() : this(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured) { }
         public MustDisposeResourceAttribute(bool value) { Value = value; }
         public bool Value { get; }
     }
@@ -211,9 +211,9 @@ namespace JetBrains.Annotations
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)32767, Inherited = false)]
     public sealed partial class UsedImplicitlyAttribute : global::System.Attribute
     {
-        public UsedImplicitlyAttribute() { }
-        public UsedImplicitlyAttribute(global::JetBrains.Annotations.ImplicitUseKindFlags useKindFlags) { UseKindFlags = useKindFlags; }
-        public UsedImplicitlyAttribute(global::JetBrains.Annotations.ImplicitUseTargetFlags targetFlags) { TargetFlags = targetFlags; }
+        public UsedImplicitlyAttribute() : this(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? global::JetBrains.Annotations.ImplicitUseKindFlags.Default : default, global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? global::JetBrains.Annotations.ImplicitUseTargetFlags.Default : default) { }
+        public UsedImplicitlyAttribute(global::JetBrains.Annotations.ImplicitUseKindFlags useKindFlags) : this(useKindFlags, global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? global::JetBrains.Annotations.ImplicitUseTargetFlags.Default : default) { }
+        public UsedImplicitlyAttribute(global::JetBrains.Annotations.ImplicitUseTargetFlags targetFlags) : this(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? global::JetBrains.Annotations.ImplicitUseKindFlags.Default : default, targetFlags) { }
         public UsedImplicitlyAttribute(global::JetBrains.Annotations.ImplicitUseKindFlags useKindFlags, global::JetBrains.Annotations.ImplicitUseTargetFlags targetFlags) { UseKindFlags = useKindFlags; TargetFlags = targetFlags; }
         public global::JetBrains.Annotations.ImplicitUseKindFlags UseKindFlags { get; }
         public global::JetBrains.Annotations.ImplicitUseTargetFlags TargetFlags { get; }

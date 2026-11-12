@@ -373,7 +373,13 @@ namespace UnityEngine
         [Obsolete("Resolution.refreshRate is obsolete. Use refreshRateRatio instead.", false)]
         public int refreshRate
         {
-            get => (int)Math.Round(m_RefreshRate.value);
+            get
+            {
+                double rounded = Math.Round(m_RefreshRate.value);
+                if (!Compat.RefreshRateFractionsMeasured) return (int)rounded;
+                // The measured conversion uses the minimum integer for invalid or out-of-range rates.
+                return rounded >= int.MinValue && rounded <= int.MaxValue ? (int)rounded : int.MinValue;
+            }
             set => m_RefreshRate = new RefreshRate { numerator = (uint)value, denominator = 1 };
         }
 
@@ -384,10 +390,23 @@ namespace UnityEngine
     {
         public uint numerator;
         public uint denominator;
-        public double value => denominator == 0 ? 0 : (double)numerator / denominator;
-        public bool Equals(RefreshRate other) => value == other.value;
-        public int CompareTo(RefreshRate other) => value.CompareTo(other.value);
-        public override string ToString() => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        public double value => Compat.RefreshRateFractionsMeasured || denominator != 0 ? (double)numerator / denominator : 0;
+        public bool Equals(RefreshRate other)
+        {
+            if (!Compat.RefreshRateFractionsMeasured) return value == other.value;
+            if (denominator == 0 || other.denominator == 0) return denominator == other.denominator;
+            return (ulong)numerator * other.denominator == (ulong)other.numerator * denominator;
+        }
+        public int CompareTo(RefreshRate other)
+        {
+            if (!Compat.RefreshRateFractionsMeasured) return value.CompareTo(other.value);
+            if (denominator == 0 || other.denominator == 0)
+                return denominator == other.denominator ? 0 : denominator == 0 ? 1 : -1;
+            return ((ulong)numerator * other.denominator).CompareTo((ulong)other.numerator * denominator);
+        }
+        public override string ToString() => Compat.RefreshRateFractionsMeasured
+            ? value.ToString("G15", System.Globalization.CultureInfo.InvariantCulture)
+            : value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public partial struct DisplayInfo : IEquatable<DisplayInfo>

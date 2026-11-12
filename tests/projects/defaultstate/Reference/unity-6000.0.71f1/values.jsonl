@@ -11472,4 +11472,46 @@
 {"key":"RemovedGetterControl/populated/Component/renderer","status":"getter-threw","value":"System.NotSupportedException:renderer property has been deprecated"}
 {"key":"RemovedGetterControl/populated/Component/rigidbody","status":"getter-threw","value":"System.NotSupportedException:rigidbody property has been deprecated"}
 {"key":"RemovedGetterControl/populated/Component/rigidbody2D","status":"getter-threw","value":"System.NotSupportedException:rigidbody2D property has been deprecated"}
+{"key":"CoreControl/factory/derived","status":"value","value":"True"}
+{"key":"CoreControl/factory/meshRenderer","status":"value","value":"True"}
+{"key":"CoreControl/factory/Component","status":"value","value":"True"}
+{"key":"CoreControl/factory/Behaviour","status":"value","value":"True"}
+{"key":"CoreControl/factory/MonoBehaviour","status":"value","value":"True"}
+{"key":"CoreControl/factory/Renderer","status":"value","value":"True"}
+{"key":"CoreControl/factory/componentCount","status":"value","value":"3"}
+{"key":"CoreControl/localizationFalse","status":"value","value":"false"}
+{"key":"CoreControl/disposeFalse","status":"value","value":"false"}
+{"key":"CoreControl/meansExplicitKind","status":"value","value":"[2,1]"}
+{"key":"CoreControl/usedExplicitTarget","status":"value","value":"[7,2]"}
+{"key":"CoreControl/usedExplicitZero","status":"value","value":"[0,0]"}
+{"key":"CoreControl/categoryWrite","status":"value","value":"-27"}
+{"key":"CoreControl/elementWrite","status":"value","value":"14"}
+{"key":"CoreControl/spaceExplicit","status":"value","value":"[23,true]"}
+{"key":"CoreControl/UnityException/message","status":"value","value":"[-2147467261,string:changed]"}
+{"key":"CoreControl/UnityException/inner","status":"value","value":"[-2147467261,string:changed,string:inner]"}
+{"key":"CoreControl/MissingReferenceException/message","status":"value","value":"[-2147467261,string:changed]"}
+{"key":"CoreControl/MissingReferenceException/inner","status":"value","value":"[-2147467261,string:changed,string:inner]"}
+{"key":"CoreControl/MissingComponentException/message","status":"value","value":"[-2147467261,string:changed]"}
+{"key":"CoreControl/MissingComponentException/inner","status":"value","value":"[-2147467261,string:changed,string:inner]"}
+{"key":"CoreControl/UnassignedReferenceException/message","status":"value","value":"[-2147467261,string:changed]"}
+{"key":"CoreControl/UnassignedReferenceException/inner","status":"value","value":"[-2147467261,string:changed,string:inner]"}
+{"key":"CoreControl/requiredRenderer/False","status":"value","value":"[true,[string:Transform],0]"}
+{"key":"CoreControl/requiredRenderer/True","status":"value","value":"[false,[string:MeshRenderer,string:RendererRequiredControlBehaviour,string:Transform],0]"}
+{"key":"CoreControl/selfRequired","status":"value","value":"[2,0]"}
+{"key":"CoreControl/cameraTarget","status":"value","value":"[128,32,4]"}
+{"key":"CoreControl/cameraRestored","status":"value","value":"[640,480,1.33333337]"}
+{"key":"CoreControl/alias/far","status":"value","value":"[73,115]"}
+{"key":"CoreControl/alias/near","status":"value","value":"[2,3]"}
+{"key":"CoreControl/alias/fov","status":"value","value":"[43,47]"}
+{"key":"CoreControl/alias/hdr","status":"value","value":"[false,true]"}
+{"key":"CoreControl/rate/0","status":"value","value":"[NaN,-2147483648,string:NaN]"}
+{"key":"CoreControl/rate/1","status":"value","value":"[Infinity,-2147483648,string:Infinity]"}
+{"key":"CoreControl/rate/2","status":"value","value":"[59.940059940059939,60,string:59.9400599400599]"}
+{"key":"CoreControl/rate/3","status":"value","value":"[2.5,2,string:2.5]"}
+{"key":"CoreControl/rate/4","status":"value","value":"[1.5,2,string:1.5]"}
+{"key":"CoreControl/rate/5","status":"value","value":"[4294967295,-2147483648,string:4294967295]"}
+{"key":"CoreControl/rate/6","status":"value","value":"[2147483647,2147483647,string:2147483647]"}
+{"key":"CoreControl/rateComparison","status":"value","value":"[true,1,-1,0,false,-1,true]"}
+{"key":"CoreControl/rateNegativeSetter","status":"value","value":"[4294967295,-2147483648]"}
+{"key":"CoreControl/uv1AfterWrite","status":"value","value":"[null,[UnityEngine.Vector2{x=4;y=5},UnityEngine.Vector2{x=6;y=7}]]"}
 {"key":"complete","status":"value","value":"1"}

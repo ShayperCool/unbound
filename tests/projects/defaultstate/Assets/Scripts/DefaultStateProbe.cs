@@ -42,6 +42,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
         Capture(new Candidate { type=typeof(FreshStateControl).FullName, module=typeof(FreshStateControl).Assembly.GetName().Name,
             category="class", status="candidate" });
         RemovedGetterControls();
+        CoreControls();
         Emit("complete","value","1"); output.Dispose(); output=null;
         EditorApplication.Exit(0);
     }
@@ -50,6 +51,122 @@ public sealed class DefaultStateProbe : MonoBehaviour
         output.WriteLine(JsonUtility.ToJson(new Record { key=key,status=status,value=value }));
         output.Flush();
     }
+    static void CoreControls()
+    {
+        var owner = new GameObject("CoreFactoryControl");
+        try
+        {
+            owner.SetActive(false);
+            Emit("CoreControl/factory/derived", "value", (owner.AddComponent<FactoryControlBehaviour>() != null).ToString());
+            Emit("CoreControl/factory/meshRenderer", "value", (owner.AddComponent<MeshRenderer>() != null).ToString());
+            foreach (var type in new[] { typeof(Component), typeof(Behaviour), typeof(MonoBehaviour), typeof(Renderer) })
+                Emit("CoreControl/factory/" + type.Name, "value", (owner.AddComponent(type) == null).ToString());
+            Emit("CoreControl/factory/componentCount", "value", owner.GetComponents<Component>().Length.ToString());
+        }
+        finally { UnityEngine.Object.DestroyImmediate(owner); }
+        CoreValue("localizationFalse", new JetBrains.Annotations.LocalizationRequiredAttribute(false).Required);
+        CoreValue("disposeFalse", new JetBrains.Annotations.MustDisposeResourceAttribute(false).Value);
+        var means = new JetBrains.Annotations.MeansImplicitUseAttribute((JetBrains.Annotations.ImplicitUseKindFlags)2);
+        CoreValue("meansExplicitKind", new[] { (int)means.UseKindFlags, (int)means.TargetFlags });
+        var used = new JetBrains.Annotations.UsedImplicitlyAttribute((JetBrains.Annotations.ImplicitUseTargetFlags)2);
+        CoreValue("usedExplicitTarget", new[] { (int)used.UseKindFlags, (int)used.TargetFlags });
+        var both = new JetBrains.Annotations.UsedImplicitlyAttribute((JetBrains.Annotations.ImplicitUseKindFlags)0,
+            (JetBrains.Annotations.ImplicitUseTargetFlags)0);
+        CoreValue("usedExplicitZero", new[] { (int)both.UseKindFlags, (int)both.TargetFlags });
+        var category = new UnityEngine.Categorization.CategoryInfoAttribute { Order = -27 };
+        var element = new UnityEngine.Categorization.ElementInfoAttribute { Order = 14 };
+        CoreValue("categoryWrite", category.Order); CoreValue("elementWrite", element.Order);
+        var space = new SpaceAttribute(23f);
+        CoreValue("spaceExplicit", new object[] { space.height, space.applyToCollection });
+        foreach (var type in new[] { typeof(UnityException), typeof(MissingReferenceException),
+            typeof(MissingComponentException), typeof(UnassignedReferenceException) })
+        {
+            var one = (Exception)Activator.CreateInstance(type, new object[] { "changed" });
+            var two = (Exception)Activator.CreateInstance(type, new object[] { "changed", new InvalidOperationException("inner") });
+            CoreValue(type.Name + "/message", new object[] { one.HResult, one.Message });
+            CoreValue(type.Name + "/inner", new object[] { two.HResult, two.Message, two.InnerException.Message });
+        }
+        foreach (bool populated in new[] { false, true })
+        {
+            var requiredOwner = new GameObject("RequiredRendererControl");
+            var oldHandler = Debug.unityLogger.logHandler;
+            var requiredHandler = new FactoryControlLogHandler(oldHandler);
+            try
+            {
+                requiredOwner.SetActive(false);
+                if (populated) requiredOwner.AddComponent<MeshRenderer>();
+                Debug.unityLogger.logHandler = requiredHandler;
+                var script = requiredOwner.AddComponent<RendererRequiredControlBehaviour>();
+                CoreValue("requiredRenderer/" + populated, new object[] { script == null,
+                    requiredOwner.GetComponents<Component>().Select(c => c.GetType().Name).OrderBy(n => n, StringComparer.Ordinal).ToArray(),
+                    requiredHandler.errors });
+            }
+            finally { Debug.unityLogger.logHandler = oldHandler; UnityEngine.Object.DestroyImmediate(requiredOwner); }
+        }
+        var selfOwner = new GameObject("SelfRequiredControl");
+        var previousHandler = Debug.unityLogger.logHandler;
+        var handler = new FactoryControlLogHandler(previousHandler);
+        try
+        {
+            Debug.unityLogger.logHandler = handler;
+            selfOwner.AddComponent<SelfRequiredControlBehaviour>();
+            CoreValue("selfRequired", new[] { selfOwner.GetComponents<Component>().Length, handler.errors });
+        }
+        finally { Debug.unityLogger.logHandler = previousHandler; UnityEngine.Object.DestroyImmediate(selfOwner); }
+        var cameraOwner = new GameObject("CoreCameraControl");
+        var target = new RenderTexture(128, 32, 0);
+        try
+        {
+            var camera = cameraOwner.AddComponent<Camera>();
+            camera.targetTexture = target;
+            CoreValue("cameraTarget", new object[] { camera.pixelWidth, camera.pixelHeight, camera.aspect });
+            camera.targetTexture = null;
+            CoreValue("cameraRestored", new object[] { camera.pixelWidth, camera.pixelHeight, camera.aspect });
+            foreach (var pair in new object[][] {
+                new object[] { "far", "farClipPlane", 73f, 115f }, new object[] { "near", "nearClipPlane", 2f, 3f },
+                new object[] { "fov", "fieldOfView", 43f, 47f }, new object[] { "hdr", "allowHDR", false, true } })
+            {
+                var alias = typeof(Camera).GetProperty((string)pair[0]);
+                var modern = typeof(Camera).GetProperty((string)pair[1]);
+                alias.SetValue(camera, pair[2], null);
+                var first = modern.GetValue(camera, null);
+                modern.SetValue(camera, pair[3], null);
+                CoreValue("alias/" + pair[0], new object[] { first, alias.GetValue(camera, null) });
+            }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(cameraOwner); UnityEngine.Object.DestroyImmediate(target); }
+        CoreArithmeticAndUvControls();
+    }
+    static void CoreArithmeticAndUvControls()
+    {
+        var rates = new[] { default(RefreshRate), new RefreshRate { numerator = 1, denominator = 0 },
+            new RefreshRate { numerator = 60000, denominator = 1001 }, new RefreshRate { numerator = 5, denominator = 2 },
+            new RefreshRate { numerator = 3, denominator = 2 }, new RefreshRate { numerator = uint.MaxValue, denominator = 1 },
+            new RefreshRate { numerator = int.MaxValue, denominator = 1 } };
+        for (int i = 0; i < rates.Length; i++)
+        {
+            var resolution = new Resolution { refreshRateRatio = rates[i] };
+            CoreValue("rate/" + i, new object[] { rates[i].value, resolution.refreshRate, rates[i].ToString() });
+        }
+        var a = new RefreshRate { numerator = uint.MaxValue, denominator = uint.MaxValue - 1 };
+        var b = new RefreshRate { numerator = uint.MaxValue - 1, denominator = uint.MaxValue - 2 };
+        CoreValue("rateComparison", new object[] { rates[0].Equals(rates[1]), rates[0].CompareTo(rates[2]),
+            rates[2].CompareTo(rates[0]), rates[0].CompareTo(rates[1]), a.Equals(b), a.CompareTo(b),
+            new RefreshRate { numerator = 2, denominator = 1 }.Equals(new RefreshRate { numerator = 4, denominator = 2 }) });
+        var negative = new Resolution { refreshRate = -1 };
+        CoreValue("rateNegativeSetter", new object[] { negative.refreshRateRatio.numerator, negative.refreshRate });
+        var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.one } };
+        try
+        {
+            mesh.uv2 = new[] { new Vector2(4, 5), new Vector2(6, 7) };
+            var legacy = typeof(Mesh).GetProperty("uv1");
+            legacy.SetValue(mesh, new[] { Vector2.zero, Vector2.one }, null);
+            CoreValue("uv1AfterWrite", new object[] { legacy.GetValue(mesh, null), mesh.uv2 });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(mesh); }
+    }
+    static void CoreValue(string key, object value)
+    { Emit("CoreControl/" + key, "value", Format(value, value.GetType(), new HashSet<object>(identity), 0)); }
     static void RemovedGetterControls()
     {
         foreach (var populated in new[] { false, true })
@@ -252,6 +369,17 @@ public sealed class DefaultStateProbe : MonoBehaviour
         }
         finally { if(!type.IsValueType)seen.Remove(value); }
     }
+}
+
+public sealed class FactoryControlLogHandler : ILogHandler
+{
+    readonly ILogHandler previous;
+    public int errors;
+    public FactoryControlLogHandler(ILogHandler previous) { this.previous = previous; }
+    public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args)
+    { if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert) errors++; previous.LogFormat(type, context, format, args); }
+    public void LogException(Exception error, UnityEngine.Object context)
+    { errors++; previous.LogException(error, context); }
 }
 
 public sealed class FreshStateControl

@@ -328,14 +328,17 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       envelope controls match the Editor; serialized prefab renames remain supported.
 
 - [x] Q403 default-state capture and comparison: [defaultstate](../tests/projects/defaultstate/README.md)
-      covers 1,032 constructible matching types and records 11,421 rows in two GPU Editor repeats.
-      Q411 resolves the shared removed-getter mechanism, with 54 added message/context controls
-      and all original reference rows preserved. The comparison retains 1,082 differing reference
-      rows, 541 extra implementation rows and 50 variable observations inside 1,625 exact,
-      reasoned migration entries. Module row counts
-      and context/depth/cycle limitations remain explicit. Static constructor stores have 296
-      equal pairs, one queued rendering default, 924 undecided pairs and unmatched coverage counts.
-      These are open repairs, not a claim of complete default parity.
+      covers 1,032 constructible matching types. Q411's shared mechanism resolves 1,196 rows;
+      its Core slice resolves another 156. The 11,517-row reference preserves all original
+      rows and adds independently repeated message, constructor, requirement and arithmetic
+      controls. The comparison has 10,470 exact rows, 1,047 differing reference rows, 420 extra
+      implementation rows and the unchanged 50 variable observations inside 1,469 exact,
+      reasoned migration entries. CoreModule retains 116 rows; the README lists every module
+      and the unresolved payload, rendering and import contexts. Static constructor comparison
+      remains separate, including its queued rendering split-index default.
+- [ ] Q411 other-release initialization: constructor, factory eligibility and refresh-rate
+      mechanisms are measured only on 6000.0.71f1. Other releases retain their previous
+      unmeasured defaults, factory rules and invalid-rate conversion; their parity remains open.
 
 - [x] `Stubs.Ignored(member)` (warn once, like `NotImplemented`) for knowingly ignored members,
       and an `[EditorFaithful("why")]` marker for real no-ops; every hand-written empty body,

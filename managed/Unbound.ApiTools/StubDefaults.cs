@@ -11,7 +11,7 @@ namespace Unbound.ApiTools;
 /// with <c>global::</c> names.
 ///
 /// Only fixed initial answers and measured setter rules belong here, measured in
-/// Play mode by <c>tests/projects/stubdefaults</c>. A member whose answer depends on the project,
+/// Play mode by <c>tests/projects/stubdefaults</c> or <c>tests/projects/defaultstate</c>. A member whose answer depends on the project,
 /// the scene or other API state needs a real implementation instead. gen-stubs reports an entry no
 /// stub returns any more (implemented by hand, renamed) as an error. Set expressions describe
 /// measured setter storage, clamps or rejection; a missing expression leaves the value unchanged.
@@ -47,6 +47,8 @@ public static class StubDefaults
         ["UnityEngine.SystemInfo.supportsVertexPrograms"] = "true",
         ["UnityEngine.SystemInfo.graphicsPixelFillrate"] = "-1",
         ["UnityEngine.RenderTexture.enabled"] = "true",
+        // Legacy UV channel alias remains null even after writes (defaultstate).
+        ["UnityEngine.Mesh.uv1"] = "(global::UnityEngine.Vector2[])null",
     };
 
     static readonly Dictionary<string, StubDefault> None = new(StringComparer.Ordinal);

@@ -91,7 +91,7 @@ relational or initialized-context controls before a default contract can be clai
 
 The initial inventory has 1,032 candidates: 111 components, 31 ScriptableObjects,
 362 classes and 528 structs. Another 409 types carry an explicit exclusion reason.
-The Editor reference has 11,421 rows, including five local recorder-control rows.
+The original Editor reference has 11,421 rows, including five local recorder-control rows.
 Its statuses are 9,464 values, 1,455 throwing getters, 62 non-readable members, 20 rejected factories, 11 context requirements
 and 409 excluded types. The two final GPU repeats differ in 50 rows: clocks, creation dates, a random
 seed, joint reaction/obsolete joint/bounds fields observed before simulation or
@@ -105,15 +105,39 @@ The controls record exception type and message; GetComponent distinguishes the t
 contexts. Both independent GPU repeats and Unbound match all 54 controls. The original
 11,421 reference rows remain byte-identical, giving 11,475 total rows.
 
-The comparison now has 10,393 exact rows, 1,082 differing reference rows,
-zero missing rows and 541 extra implementation rows. The 1,625 queue entries
-include the same 50 variable-reference rows, two of which happen to equal the engine
-snapshot. All variable rows remain unresolved comparisons. The shared generator now
-preserves unconditional fixed NotSupportedException getters from the selected release
-assembly, including their exact messages. It does not infer behavior from obsolete
-annotations or apply this rule to conditional or computed exceptions. The generator
-format version was bumped. Of the extra rows, 247 now throw but remain extra because
-their root factory should return null. No factory or module default was fitted by this slice.
+The Core slice adds another 42 independent controls while preserving all prior rows,
+for 11,517 total rows. The comparison now has 10,470 exact rows, 1,047 differing
+reference rows, zero missing rows and 420 extra implementation rows. Its 1,469 queue
+entries retain the same 50 variable rows; two happen to equal the implementation
+snapshot. Variable rows remain unresolved comparisons.
+
+| Core cause | Resolved rows | Controls and rule |
+| --- | ---: | --- |
+| Root factory eligibility | 125 | Component, Behaviour, MonoBehaviour and Renderer reject direct creation. Valid derived components still attach to populated inactive objects. A script can satisfy its own base-type requirement; a missing abstract requirement rejects the script silently, while an existing concrete component satisfies it. |
+| Constructor initialization | 13 | Annotation defaults, category ordering, SpaceAttribute collection application and the four Unity exception result codes. Explicit arguments, writable ordering, custom messages and inner exceptions remain independent. |
+| Viewport context | 11 | The engine runner now uses the Editor's 640x480 viewport. Camera size/aspect/matrices and Canvas.pixelRect match; a target texture changes dimensions to 128x32 and removing it restores the viewport. |
+| Camera aliases | 4 | near, far, fov and hdr read and write their modern property state in both directions. Their declarations come through the selected release's stub generator. |
+| Refresh-rate arithmetic | 2 | Zero-denominator values, exact rational comparisons, integer rounding/overflow and 15-digit display formatting are recorded separately from finite normal rates. |
+| Legacy UV getter | 1 | Mesh.uv1 remains null after writes and leaves uv2 unchanged. The generated member remains a compatibility stub. |
+
+The Core slice removes 155 CoreModule rows and one Canvas row. CoreModule retains
+116 rows. The three compatibility mechanisms for constructor initialization, factory
+eligibility and refresh-rate arithmetic select exactly 6000.0.71f1. Other releases
+retain their previous, unmeasured paths; their initialization and invalid-rate behavior
+remain gaps. The generator format is now version 4 after adding the UV return rule.
+
+Outstanding Core causes include physical-camera initialization; renderer/material and
+light state; wrappers created without live operation, culling or mesh-data payloads;
+invalid bare Object state; and imported or serialized defaults such as billboard
+size. Runtime literals alone do not settle those contexts. No rendering effect,
+serialized fallback or valid-handle contract is inferred from one creation snapshot.
+Those exact rows remain queued for initialized-context and import controls.
+
+Correct factory rejection removes 121 extra member rows. Two queued TextCore instance
+IDs therefore have new exact implementation values because earlier allocations changed;
+the reference values remain untouched and no variable patterns were added. Canvas
+renderingDisplaySize still disagrees before layout, and its new 640x480 implementation
+value remains queued. The remaining rejected-factory surface rows are still explicit.
 
 The [6000.0 Component](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Component.html)
 and [GameObject](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GameObject.html)
@@ -124,11 +148,11 @@ release-independent exception contract.
 | Release module | Queued rows |
 | --- | ---: |
 | UnityEngine.ParticleSystemModule | 347 |
-| UnityEngine.CoreModule | 271 |
 | UnityEditor.CoreModule | 219 |
 | UnityEngine.AudioModule | 189 |
 | UnityEngine.Physics2DModule | 162 |
 | UnityEngine.UIElementsModule | 159 |
+| UnityEngine.CoreModule | 116 |
 | UnityEngine.PhysicsModule | 92 |
 | UnityEngine.IMGUIModule | 29 |
 | UnityEngine.GridModule | 26 |
@@ -143,7 +167,7 @@ release-independent exception contract.
 | UnityEngine.UnityWebRequestModule | 6 |
 | UnityEngine.AIModule | 5 |
 | UnityEngine.SpriteMaskModule | 5 |
-| UnityEngine.UIModule | 4 |
+| UnityEngine.UIModule | 3 |
 | UnityEngine.UnityWebRequestTextureModule | 3 |
 | UnityEngine.TerrainPhysicsModule | 3 |
 | UnityEngine.TextCoreFontEngineModule | 2 |

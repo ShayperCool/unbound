@@ -9,6 +9,21 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Managed constructor defaults measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain their previous, unmeasured initialization.</summary>
+        internal static bool DefaultConstructorStateMeasured => Release == (6000, 0, 71, 'f', 1);
+        // Shared result code of Unity exception constructors in the defaultstate 6000.0.71f1 reference.
+        internal const int UnityExceptionResult = -2147467261;
+        /// <summary>Refresh-rate fractions, invalid-rate ordering and rounded integer conversion,
+        /// measured by defaultstate on 6000.0.71f1. Other releases keep their unmeasured previous rules.</summary>
+        internal static bool RefreshRateFractionsMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Component factory eligibility measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain their previous, unmeasured creation rules.</summary>
+        internal static bool ComponentFactoryEligibilityMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NativeComponentIsAbstract(Type type) => ComponentFactoryEligibilityMeasured
+            && (type == typeof(UnityEngine.Behaviour) || type == typeof(UnityEngine.Renderer));
+
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>
         internal static bool RuntimeTextureCompressionMeasured => Release == (6000, 0, 71, 'f', 1);

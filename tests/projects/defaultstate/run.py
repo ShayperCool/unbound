@@ -71,7 +71,7 @@ def engine(label):
         raise ValueError(f'type inventory changed; capture and review new Editor rows: {out}/inventory.json')
     project = project_at(out)
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '900', cli(), 'run', '-p', str(project),
-               '--no-watch', '--frames', '4000', '--size', '96x64']
+               '--no-watch', '--frames', '4000', '--size', '640x480']
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, cwd=REPO, env=dict(os.environ, **environment(out)), stdout=log, stderr=subprocess.STDOUT).returncode
     print('engine exit', code, 'log', out/'engine.log')

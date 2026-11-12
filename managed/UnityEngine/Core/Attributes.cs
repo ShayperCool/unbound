@@ -184,8 +184,8 @@ namespace UnityEngine
     public partial class SpaceAttribute : PropertyAttribute
     {
         public readonly float height;
-        public SpaceAttribute() { height = 8f; }
-        public SpaceAttribute(float height) { this.height = height; }
+        public SpaceAttribute() : base(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured) { height = 8f; }
+        public SpaceAttribute(float height) : base(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured) { this.height = height; }
     }
 
     [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.All, Inherited = true, AllowMultiple = false)]

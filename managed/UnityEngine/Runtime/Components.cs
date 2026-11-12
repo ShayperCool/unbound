@@ -45,7 +45,17 @@ namespace Unbound.Runtime
                 throw new ArgumentNullException(nameof(type), "Type can not be null.");
             if (!typeof(Component).IsAssignableFrom(type))
                 throw new ArgumentException($"AddComponent asking for invalid type", nameof(type));
-            if (type.IsAbstract || type.IsInterface || type.ContainsGenericParameters)
+            if (Compat.ComponentFactoryEligibilityMeasured && type == typeof(MonoBehaviour))
+            {
+                Debug.LogError("AddComponent with MonoBehaviour is not allowed. Create a class that derives from MonoBehaviour and add it instead.", go);
+                return null;
+            }
+            if (Compat.ComponentFactoryEligibilityMeasured && type == typeof(Component) && go.FindComponent(type) != null)
+            {
+                Debug.LogError($"Can't add component 'Component' to {go.name} because such a component is already added to the game object!", go);
+                return null;
+            }
+            if (type.IsAbstract || type.IsInterface || type.ContainsGenericParameters || Compat.NativeComponentIsAbstract(type))
             {
                 Debug.LogError($"Cannot add component of type '{type.Name}' because it is abstract. Add component of type that is derived from '{type.Name}' instead.", go);
                 return null;
@@ -64,13 +74,17 @@ namespace Unbound.Runtime
             }
             foreach (var required in RequiredComponents(type))
             {
-                if (go.FindComponent(required) != null) continue;
+                if ((Compat.ComponentFactoryEligibilityMeasured && typeof(Component).IsAssignableFrom(required) && required.IsAssignableFrom(type))
+                    || go.FindComponent(required) != null) continue;
+                if (Compat.ComponentFactoryEligibilityMeasured
+                    && (required.IsAbstract || Compat.NativeComponentIsAbstract(required))) return null;
                 if (required.IsAbstract)
                 {
                     if (required == typeof(Collider)) Add(go, typeof(BoxCollider));
                     continue;
                 }
-                Add(go, required);
+                var dependency = Add(go, required);
+                if (Compat.ComponentFactoryEligibilityMeasured && ReferenceEquals(dependency, null)) return null;
             }
             var c = Create(type, go);
             go.m_Components.Add(c);

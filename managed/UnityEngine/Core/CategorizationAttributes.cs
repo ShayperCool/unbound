@@ -7,14 +7,14 @@ namespace UnityEngine.Categorization
     public sealed partial class CategoryInfoAttribute : global::System.Attribute
     {
         public CategoryInfoAttribute() { }
-        public int Order { get; set; }
+        public int Order { get; set; } = global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? int.MaxValue : 0;
         public string Name { get; set; }
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4, Inherited = false, AllowMultiple = false)]
     public sealed partial class ElementInfoAttribute : global::System.Attribute
     {
         public ElementInfoAttribute() { }
-        public int Order { get; set; }
+        public int Order { get; set; } = global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? int.MaxValue : 0;
         public string Name { get; set; }
     }
 }

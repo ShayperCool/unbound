@@ -87,11 +87,22 @@ Factory/context failures, variable observations and truncated nested values rema
 coverage gaps. New declarations come from the selected release through the stub generator; new
 defaults need release evidence and a control that can distinguish the behavior being implemented.
 
-Q411's shared removed-getter migration resolves 1,196 rows. The default-state probe now
-has 10,393 exact rows and 1,625 queued rows, including the unchanged 50 variable rows.
-Fifty-four added Editor controls check exception messages on empty and populated objects;
-all prior canonical rows are byte-identical. Fixed removed-getter exceptions come from
-the selected release assembly during stub generation, so a different release supplies
-its own exception text without a runtime version constant. Conditional and computed
-getters retain their existing fallback. The remaining queue is broken down by module
-in the probe README, including 247 extra member rows under rejected root factories.
+Q411's shared removed-getter migration resolves 1,196 rows. The Core slice resolves
+another 156 rows, including one Canvas viewport observation. The default-state probe
+now has 10,470 exact rows and 1,469 queued rows, including the unchanged 50 variable
+rows. Its 11,517 canonical rows preserve every original reference line. Added controls
+cover exact removed-getter messages, valid and rejected factories, requirements,
+explicit constructor arguments, aliases and refresh-rate arithmetic.
+
+Fixed removed-getter exceptions come from the selected release assembly during stub
+generation. Conditional and computed getters retain their existing fallback. Core
+constructor, factory and refresh-rate mechanisms select exactly 6000.0.71f1; other
+profiles keep their previous unmeasured paths, recorded in the compatibility gaps.
+The generator format is version 4. API declarations and lookup checks still retain
+1,332 exact release exceptions with zero errors; this slice adds no exceptions.
+
+The probe README lists remaining module counts and unresolved contexts. In particular,
+CoreModule keeps 116 rows requiring operation/payload validity, rendering initialization
+or imported/serialized state controls. Two TextCore instance IDs and one Canvas early
+layout value retain updated exact implementation payloads, without changing reference
+values or adding variable policies.
