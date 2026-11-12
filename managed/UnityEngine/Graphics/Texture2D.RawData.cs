@@ -12,7 +12,7 @@ namespace UnityEngine
             RequireReadable(pixels: !SourceBlocks);
             EnterStore();
             var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(
-                (void*)m_StorePin.AddrOfPinnedObject(), m_Store.Length / UnsafeUtility.SizeOf<T>(), Allocator.None);
+                (void*)m_StorePin.AddrOfPinnedObject(), (SourceCrunch ? m_CrunchArchiveLength : m_Store.Length) / UnsafeUtility.SizeOf<T>(), Allocator.None);
             NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_StoreSafety);
             return array;
         }

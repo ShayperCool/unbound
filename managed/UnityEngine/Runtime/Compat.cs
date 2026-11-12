@@ -9,6 +9,9 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Runtime compressed channel formats and readback controls measured by
+        /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>
+        internal static bool RuntimeTextureCompressionMeasured => Release == (6000, 0, 71, 'f', 1);
         /// <summary>Runtime NavMesh one-cell region merging, measured by tests/projects/navmesh
         /// on 6000.0.71f1. Other releases retain the previous, unmeasured zero-cell threshold.</summary>
         internal static bool NavMeshRegionMergingMeasured => Release == (6000, 0, 71, 'f', 1);

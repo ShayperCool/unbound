@@ -413,6 +413,14 @@ impl TextureSettings {
         }
     }
 
+    fn output_format(&self, source: TextureFormat) -> TextureFormat {
+        if self.astc_mip_fallback {
+            TextureFormat::Rgba8
+        } else {
+            source
+        }
+    }
+
     /// A stable hash of the settings, for callers that key derived data on them.
     pub fn hash(&self) -> u64 {
         let bytes = postcard::to_allocvec(self).expect("settings serialize");
@@ -543,6 +551,9 @@ pub struct ImportedTexture {
     /// [`ImportedTexture::mips`] holds what the blocks decode to (BC6H: the float pixels before
     /// compression).
     pub blocks: Option<Blocks>,
+    /// Encoded Crunch data; `blocks` contains its transcoded GPU blocks.
+    #[serde(default)]
+    pub crunched: Option<Crunched>,
     /// The build target stores the pixels uncompressed ([`Storage::Uncompressed`]).
     #[serde(default)]
     pub uncompressed: bool,
@@ -566,6 +577,12 @@ pub struct Blocks {
     pub mips: Vec<serde_bytes::ByteBuf>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Crunched {
+    pub format: crunch::CrunchFormat,
+    pub data: serde_bytes::ByteBuf,
+}
+
 /// How the build target stores a texture's data.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Storage {
@@ -575,6 +592,8 @@ pub enum Storage {
     UncompressedRgba,
     /// Block-compressed in this format.
     Blocks(BlockFormat),
+    /// A Crunch archive, also retained as ordinary GPU blocks after transcoding.
+    Crunched(crunch::CrunchFormat),
     /// A compressed format Unbound does not produce (the reason): the pixels stay uncompressed.
     Unsupported(String),
 }
@@ -738,10 +757,11 @@ pub fn storage(
         Some(52) => BlockFormat::Astc10x10,
         Some(53) => BlockFormat::Astc12x12,
         Some(f @ 66..=71) => BlockFormat::from_unity_format(f as i32).unwrap(),
-        Some(28 | 29 | 64 | 65) => return unsupported("crunched formats"),
+        Some(f @ (28 | 29 | 64 | 65)) => {
+            crunch::CrunchFormat::from_unity(f as i32).unwrap().blocks()
+        }
         Some(_) if s.uncompressed => return Storage::Uncompressed,
         Some(f) => return unsupported(&format!("TextureImporterFormat {f}")),
-        None if s.crunched => return unsupported("crunched formats"),
         None if android && hdr => return unsupported("HDR textures of the Android target"),
         None if hdr => BlockFormat::Bc6h,
         None => match s.texture_type {
@@ -819,6 +839,19 @@ pub fn storage(
         }
         return Storage::Blocks(format);
     }
+    let wants_crunch = s
+        .explicit_format
+        .and_then(|f| crunch::CrunchFormat::from_unity(f as i32))
+        .is_some()
+        || (s.explicit_format.is_none()
+            && s.crunched
+            && matches!(
+                format,
+                BlockFormat::Bc1 | BlockFormat::Bc3 | BlockFormat::Etc1 | BlockFormat::Etc2Rgba8
+            ));
+    if wants_crunch && !project.encoders.measured_import_encoders {
+        return unsupported("Crunch encoders of this release");
+    }
     if (format == BlockFormat::Bc6h) != hdr {
         return unsupported(&format!("{format:?} from {:?} data", texture.format));
     }
@@ -832,6 +865,11 @@ pub fn storage(
         format
     };
 
+    let format = if wants_crunch && format == BlockFormat::Etc2Rgb {
+        BlockFormat::Etc2Rgba8
+    } else {
+        format
+    };
     let mipmapped = texture.mip_count() > 1;
     let pot = format == BlockFormat::Etc1 || mipmapped;
     let compressible = |side: u32| side % 4 == 0 && (side.is_power_of_two() || !pot);
@@ -848,7 +886,21 @@ pub fn storage(
         }
         return Storage::Uncompressed;
     }
-    Storage::Blocks(format)
+    if wants_crunch {
+        if texture.width > crunch::MAX_RESOLUTION || texture.height > crunch::MAX_RESOLUTION {
+            return unsupported("Crunch dimensions above the library's 4096 limit");
+        }
+        let format = match format {
+            BlockFormat::Bc1 => crunch::CrunchFormat::Dxt1,
+            BlockFormat::Bc3 => crunch::CrunchFormat::Dxt5,
+            BlockFormat::Etc1 => crunch::CrunchFormat::Etc1,
+            BlockFormat::Etc2Rgba8 => crunch::CrunchFormat::Etc2Rgba8,
+            _ => unreachable!(),
+        };
+        Storage::Crunched(format)
+    } else {
+        Storage::Blocks(format)
+    }
 }
 
 /// Compresses `texture` to `format` and replaces its pixels by what the blocks decode to (BC6H
@@ -958,6 +1010,9 @@ impl ImportedTexture {
     /// compressed formats Unbound does not produce, HDR, normal maps and lightmaps stored
     /// uncompressed (unmeasured).
     pub fn reported_format(&self) -> Option<i32> {
+        if let Some(archive) = &self.crunched {
+            return Some(archive.format.unity_format());
+        }
         if let Some(blocks) = &self.blocks {
             return Some(blocks.format.unity_format());
         }
@@ -1029,11 +1084,13 @@ impl ImportedTexture {
         self.format == TextureFormat::Rgba8
             && self.uncompressed
             && self.settings.format_alpha == Some(false)
-            && self
-                .settings
-                .explicit_format
-                .and_then(|f| BlockFormat::from_unity_format(f as i32))
-                .is_some_and(BlockFormat::is_etc)
+            && self.settings.explicit_format.is_some_and(|f| {
+                BlockFormat::from_unity_format(f as i32).is_some_and(BlockFormat::is_etc)
+                    || matches!(
+                        crunch::CrunchFormat::from_unity(f as i32),
+                        Some(crunch::CrunchFormat::Dxt1 | crunch::CrunchFormat::Etc1)
+                    )
+            })
     }
 
     /// The format of an 8-bit import whose build target names an uncompressed byte format
@@ -1145,11 +1202,21 @@ impl Importer for TextureImporter {
     // 28: malformed ASTC mode budgets decode to the format's error colour.
     // 29: BC4/BC5 compare continuous ramp fits and preserve channel-fit rounding.
     // 30: compressed automatic Single Channel red mips retain their source colour-space filtering.
-    // 33: measured ASTC profiles, per-context quality, HDR reads and pre-filter RGBA fallback.
-    const VERSION: u32 = 33;
+    // 35: Crunch archives and transcoded blocks, runtime EAC and compressed GPU uploads.
+    const VERSION: u32 = 35;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
+        // A linear project's sRGB ETC Crunch selection needs the alpha-capable ETC2 archive.
+        if self.project.encoders.measured_import_encoders
+            && self.build_target == "Android"
+            && !self.gamma
+            && settings.srgb_flag
+            && settings.explicit_format == Some(64)
+        {
+            settings.explicit_format = Some(65);
+            settings.format_alpha = Some(true);
+        }
         // A Standalone RGB24 override of a normal map falls back to DXT5 in the measured
         // profile (texturecompression NormalsASTC6Q0); Default textures keep RGB24.
         if self.project.encoders.measured_import_encoders
@@ -1210,10 +1277,35 @@ impl Importer for TextureImporter {
                     texture.has_alpha = false;
                 }
             }
+            Storage::Crunched(format) => {
+                let archive = crunch::encode(
+                    &texture.mips,
+                    format,
+                    texture.settings.compression_quality,
+                    texture.settings.texture_type != TextureType::NormalMap,
+                )?;
+                let transcoded = crunch::transcode(&archive)?;
+                anyhow::ensure!(
+                    transcoded.width == texture.width
+                        && transcoded.height == texture.height
+                        && transcoded.format == format
+                        && transcoded.blocks.mips.len() == texture.mips.len(),
+                    "Crunch output does not match the source texture"
+                );
+                for (mip, bytes) in texture.mips.iter_mut().zip(&transcoded.blocks.mips) {
+                    mip.data =
+                        bcn::decode_level(transcoded.blocks.format, bytes, mip.width, mip.height);
+                }
+                texture.blocks = Some(transcoded.blocks);
+                texture.crunched = Some(Crunched {
+                    format,
+                    data: serde_bytes::ByteBuf::from(archive),
+                });
+            }
             Storage::Blocks(format) => {
                 compress_blocks(&mut texture, format, &self.project);
-                // ETC uses the existing BC7 fallback. ASTC uploads decoded RGBA8/RGBA32F pixels,
-                // preserving their values without a second lossy encoding.
+                // ETC uses the existing BC7 fallback. ASTC retains blocks for capable devices;
+                // the renderer decodes unsupported footprints without another lossy encoding.
                 if format.is_etc() && self.compress {
                     texture.bc7 = compress_bc7(&texture);
                 }
@@ -1383,11 +1475,7 @@ pub fn import_texture(
         image = image.resize(w, h, settings.resize_algorithm)?;
     }
     image.flip_rows();
-    let format = if settings.astc_mip_fallback {
-        TextureFormat::Rgba8
-    } else {
-        image.format
-    };
+    let format = settings.output_format(image.format);
     let mips = mip_chain(image, &settings);
     let has_alpha = match format {
         TextureFormat::Rgba8 => mips[0].data.as_chunks::<4>().0.iter().any(|p| p[3] < 255),
@@ -1443,6 +1531,7 @@ pub fn import_texture(
         settings,
         layers: 1,
         blocks: None,
+        crunched: None,
         uncompressed: false,
         approximation: None,
         bc7: None,
@@ -1506,11 +1595,7 @@ fn mip_chain_with_columns(
     } else {
         vec![top]
     };
-    let output_format = if settings.astc_mip_fallback {
-        TextureFormat::Rgba8
-    } else {
-        format
-    };
+    let output_format = settings.output_format(format);
     chain
         .iter()
         .enumerate()
@@ -1612,6 +1697,7 @@ fn import_flipbook(
         settings,
         layers,
         blocks: None,
+        crunched: None,
         uncompressed: false,
         approximation: None,
         bc7: None,
@@ -1877,6 +1963,7 @@ fn import_cubemap(
         settings,
         layers: 6,
         blocks: None,
+        crunched: None,
         uncompressed: false,
         approximation: None,
         bc7: None,
@@ -2457,6 +2544,30 @@ mod astc;
 mod bcn;
 pub mod crunch;
 pub mod etc;
+/// One HDR ASTC or unsigned EAC texel, with caller-owned input and no per-read allocation.
+pub fn decode_block_texel(format: BlockFormat, block: &[u8], index: usize) -> Option<[f32; 4]> {
+    if block.len() < format.block_bytes()
+        || index >= (format.footprint() * format.footprint()) as usize
+    {
+        return None;
+    }
+    if format.is_eac() {
+        return Some(etc::decode_eac_texel(format, block, index).map(|v| f32::from(v) / 255.0));
+    }
+    if format.is_astc_hdr() {
+        const MAX_ASTC_COMPONENTS: usize = 12 * 12 * 4;
+        let mut texels = [0.0; MAX_ASTC_COMPONENTS];
+        let count = (format.footprint() * format.footprint() * 4) as usize;
+        if astc::decode_hdr_block(
+            format,
+            block[..16].try_into().unwrap(),
+            &mut texels[..count],
+        ) {
+            return Some(texels[index * 4..index * 4 + 4].try_into().unwrap());
+        }
+    }
+    None
+}
 pub use astc::{decode_f32 as decode_blocks_f32, decode_hdr_block};
 pub use bcn::{
     BlockFormat, compress_level, compress_runtime_level, decode_level as decode_blocks,

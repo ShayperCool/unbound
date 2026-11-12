@@ -30,7 +30,7 @@ namespace UnityEngine
 
         /// <summary>The blocks the texture holds now: its pixel data store while views of it exist
         /// (writes through them land there), else its own.</summary>
-        byte[] CurrentBlocks() => m_Store ?? SourceRawData();
+        byte[] CurrentBlocks() => SourceCrunch ? CrunchBlocks() : m_Store ?? SourceRawData();
 
         /// <summary>While views of a block-compressed texture's blocks exist: per level, the hash
         /// of the blocks its pixel cells show.</summary>
@@ -43,6 +43,7 @@ namespace UnityEngine
         void RefreshBlockCells()
         {
             if (!SourceBlocks || m_Store == null) return;
+            if (SourceCrunch) { RefreshCrunchCells(); return; }
             int at = 0;
             for (int mip = 0; mip < m_SourceMips; mip++)
             {
@@ -58,6 +59,7 @@ namespace UnityEngine
         /// <summary>The level hashes of blocks whose cells are current (views are being made).</summary>
         void HashBlockCells(byte[] blocks)
         {
+            if (SourceCrunch) return;
             m_BlockCellHashes = new ulong[m_SourceMips];
             int at = 0;
             for (int mip = 0; mip < m_SourceMips; mip++)
@@ -72,7 +74,7 @@ namespace UnityEngine
         /// pixel data store.</summary>
         unsafe Color BlockTexel(int mip, int i)
         {
-            var format = m_SourceFormat.Value;
+            var format = BlockFormats.Uncrunched(m_SourceFormat.Value);
             int size = BlockFormats.BlockBytes(format), side = BlockFormats.Footprint(format);
             int w = MipWidth(mip), x = i % w, y = i / w;
             int at = 0;
@@ -80,14 +82,13 @@ namespace UnityEngine
             at += ((y / side) * ((w + side - 1) / side) + x / side) * size;
             var block = new ReadOnlySpan<byte>(m_Store, at, size);
             int k = (y % side) * side + x % side;
-            if (BlockFormats.IsAstcHdr(format))
+            if (BlockFormats.IsAstcHdr(format) || BlockFormats.IsEac(format))
             {
-                Span<Color> pixels = stackalloc Color[side * side];
+                Color pixel = default;
                 fixed (byte* input = block)
-                fixed (Color* output = pixels)
-                    if (!Native.DecodeHdrBlock((int)format, input, output))
-                        throw new UnityException("ASTC HDR block decoding failed.");
-                return pixels[k];
+                    if (!Native.DecodeBlockTexel((int)format, input, (uint)k, &pixel))
+                        throw new UnityException("Compressed texel decoding failed.");
+                return pixel;
             }
             Color32 texel;
             if (BlockFormats.NativeDecoded(format))
@@ -103,15 +104,16 @@ namespace UnityEngine
 
         /// <summary>A `width` x `height` level of blocks decoded to RGBA8 as GetPixels32 reads it
         /// (BC6H clamped to 0..1).</summary>
-        byte[] DecodeBlockRgba(ReadOnlySpan<byte> blocks, int width, int height, bool floats = false)
+        byte[] DecodeBlockRgba(ReadOnlySpan<byte> blocks, int width, int height, bool floats = false, bool eac16 = false)
         {
             var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
             {
-                format = (int)m_SourceFormat.Value,
+                format = (int)BlockFormats.Uncrunched(m_SourceFormat.Value),
                 width,
                 height,
                 data = Convert.ToBase64String(blocks),
                 floats,
+                eac16,
             }));
             using var doc = JsonDocument.Parse(json);
             return Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
@@ -124,7 +126,7 @@ namespace UnityEngine
             if (!SourceBlocks || BlockFormats.BlockBytes(m_SourceFormat.Value) == 0) return null;
             var blocks = CurrentBlocks();
             if (blocks == null) return null;
-            var format = m_SourceFormat.Value;
+            var format = BlockFormats.Uncrunched(m_SourceFormat.Value);
             var pixels = new Color32[m_Width * m_Height];
             if (BlockFormats.NativeDecoded(format))
             {
@@ -177,6 +179,7 @@ namespace UnityEngine
         /// <summary>SetPixelData of a block-compressed texture: the level's blocks.</summary>
         void SetBlockLevel(ReadOnlySpan<byte> data, int mip)
         {
+            if (SourceCrunch) throw new UnityException("SetPixelData of Crunch archives is unsupported; use LoadRawTextureData with a complete archive.");
             int size = SourceLevelSize(mip);
             if (data.Length < size) throw new ArgumentException("SetPixelData: not enough data provided.");
             DecodeRaw();
@@ -202,6 +205,7 @@ namespace UnityEngine
         /// <summary>LoadRawTextureData of a block-compressed texture: the whole chain's blocks.</summary>
         void LoadBlocks(ReadOnlySpan<byte> data)
         {
+            if (SourceCrunch) { LoadCrunch(data); return; }
             int total = 0;
             for (int mip = 0; mip < m_SourceMips; mip++) total += SourceLevelSize(mip);
             if (data.Length < total) throw new UnityException("LoadRawTextureData: not enough data provided (will result in overread).");
@@ -229,25 +233,28 @@ namespace UnityEngine
         }
 
         /// <summary>Uploads a block-compressed texture's blocks; ETC blocks as the RGBA8 texels
-        /// they decode to (Unbound's renderer samples no ETC formats).</summary>
+        /// they decode to; EAC retains normalized 16-bit channels. ASTC stays compressed where supported.</summary>
         unsafe void UploadBlocks()
         {
             var blocks = CurrentBlocks();
             m_GpuMipCount = m_SourceMips;
-            int format = BlockFormats.GpuCode(m_SourceFormat.Value, m_Linear);
+            int format = BlockFormats.GpuCode(BlockFormats.Uncrunched(m_SourceFormat.Value), m_Linear);
             if (format < 0)
             {
                 var texels = new System.IO.MemoryStream();
-                bool hdr = BlockFormats.IsAstcHdr(m_SourceFormat.Value);
+                bool floats = BlockFormats.IsAstcHdr(m_SourceFormat.Value);
+                bool eac = BlockFormats.IsEac(m_SourceFormat.Value);
                 int at = 0;
                 for (int mip = 0; mip < m_SourceMips; mip++)
                 {
                     int size = SourceLevelSize(mip);
-                    texels.Write(DecodeBlockRgba(new ReadOnlySpan<byte>(blocks, at, size), MipWidth(mip), MipHeight(mip), hdr));
+                    texels.Write(DecodeBlockRgba(new ReadOnlySpan<byte>(blocks, at, size), MipWidth(mip), MipHeight(mip), floats, eac));
                     at += size;
                 }
                 blocks = texels.ToArray();
-                format = hdr ? PixelFormats.GpuFloatFormat(TextureFormat.RGBAFloat) : m_Linear ? 1 : 0;
+                format = eac ? PixelFormats.GpuNormFormat(m_SourceFormat.Value == TextureFormat.EAC_R
+                    ? UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm : UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm)
+                    : floats ? PixelFormats.GpuFloatFormat(TextureFormat.RGBAFloat) : m_Linear ? 1 : 0;
             }
             fixed (byte* b = blocks)
             {
@@ -295,7 +302,7 @@ namespace UnityEngine
             for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
             var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
             {
-                format = (int)m_SourceFormat.Value,
+                format = (int)BlockFormats.Uncrunched(m_SourceFormat.Value),
                 width = bw,
                 height = bh,
                 data = Convert.ToBase64String(blocks, at, SourceLevelSize(mip)),
@@ -323,7 +330,7 @@ namespace UnityEngine
             m_Format = format == TextureFormat.BC6H || BlockFormats.IsAstcHdr(format) ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
             int total = 0;
             for (int mip = 0; mip < m_MipCount; mip++) total += SourceLevelSize(mip);
-            m_SourceRaw = new byte[total];
+            m_SourceRaw = new byte[SourceCrunch ? 0 : total];
             Array.Fill(m_SourceRaw, (byte)205);
             m_Pixels = null;
             m_Hdr = null;
@@ -347,8 +354,8 @@ namespace UnityEngine
         /// <summary>Texture2D.Compress: RGB24 (and RGB565) to DXT1, formats with alpha to DXT5, R8
         /// to BC4, RG16 to BC5, every level from its pixels (tests/projects/texturecompression
         /// compress.*); with the Android target active, formats with alpha to ETC2_RGBA8 and the
-        /// others to ETC2_RGB (the Editor's OpenGL device takes no EAC there: AndroidGamma
-        /// compress.*). A compressed, unreadable or not block-sized texture is left alone. The
+        /// others to ETC2_RGB; direct R8/RG16 become EAC_R/EAC_RG in the measured profile
+        /// (AndroidGamma compress.seed.*). A compressed, unreadable or not block-sized texture is left alone. The
         /// runtime encoder is selected by the compatibility profile; highQuality dithers the
         /// DXT colour fit in the measured profile. Remaining block differences are recorded by
         /// the probe.</summary>
@@ -363,6 +370,7 @@ namespace UnityEngine
                 Debug.LogWarning($"Unbound: Texture2D.Compress of a {m_Format} texture is not supported (unmeasured); the texture keeps its format.");
                 return;
             }
+            if (etc && Compat.RuntimeTextureCompressionMeasured && !BlockFormats.RuntimeMipChainFits(m_Width, m_Height, m_MipCount)) return;
             Stubs.Ignored("Texture2D.Compress blocks", "some runtime compression blocks may differ from the Editor's; see the texturecompression probe");
             RequireReadable();
             LeaveStore();
@@ -417,6 +425,7 @@ namespace UnityEngine
         internal static void CopyBlocks(Texture2D src, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight,
             Texture2D dst, int dstMip, int dstX, int dstY, Action gpuCopy, bool allLevels = false)
         {
+            if (src.SourceCrunch || dst.SourceCrunch) throw new UnityException("Graphics.CopyTexture of Crunch archives is unsupported.");
             int size = src.SourceBlocks ? BlockFormats.BlockBytes(src.m_SourceFormat.Value) : 0;
             if (size == 0 || !dst.SourceBlocks || BlockFormats.BlockBytes(dst.m_SourceFormat.Value) != size
                 || BlockFormats.Footprint(src.m_SourceFormat.Value) != BlockFormats.Footprint(dst.m_SourceFormat.Value))
@@ -494,6 +503,29 @@ namespace Unbound.Runtime
     /// <summary>Block-compressed texture formats, a level at least one block.</summary>
     internal static class BlockFormats
     {
+        // Android compression checks every level while both dimensions still span a block.
+        internal static bool RuntimeMipChainFits(int width, int height, int levels)
+        {
+            for (int mip = 0; mip < levels; mip++)
+            {
+                int w = Math.Max(1, width >> mip), h = Math.Max(1, height >> mip);
+                if (w < 3 || h < 3) break;
+                if ((w | h) % 4 != 0) return false;
+            }
+            return true;
+        }
+
+        internal static bool IsCrunch(UnityEngine.TextureFormat format) => (int)format is 28 or 29 or 64 or 65;
+        internal static UnityEngine.TextureFormat Uncrunched(UnityEngine.TextureFormat format) => (int)format switch
+        {
+            28 => UnityEngine.TextureFormat.DXT1,
+            29 => UnityEngine.TextureFormat.DXT5,
+            64 => UnityEngine.TextureFormat.ETC_RGB4,
+            65 => UnityEngine.TextureFormat.ETC2_RGBA8,
+            _ => format,
+        };
+        internal static bool IsEac(UnityEngine.TextureFormat format) =>
+            format is UnityEngine.TextureFormat.EAC_R or UnityEngine.TextureFormat.EAC_RG;
         internal static bool IsAstc(UnityEngine.TextureFormat format) =>
             (int)format >= (int)UnityEngine.TextureFormat.ASTC_4x4 && (int)format <= (int)UnityEngine.TextureFormat.ASTC_12x12
             || IsAstcHdr(format);
@@ -513,12 +545,12 @@ namespace Unbound.Runtime
 
         /// <summary>Bytes of one block, or 0 for formats that are not BC1-BC7, ETC_RGB4, ETC2_RGB
         /// or ETC2_RGBA8, and supported LDR ASTC footprints.</summary>
-        internal static int BlockBytes(UnityEngine.TextureFormat format) => format switch
+        internal static int BlockBytes(UnityEngine.TextureFormat format) => Uncrunched(format) switch
         {
             UnityEngine.TextureFormat.DXT1 or UnityEngine.TextureFormat.BC4 or UnityEngine.TextureFormat.ETC_RGB4
-                or UnityEngine.TextureFormat.ETC2_RGB => 8,
+                or UnityEngine.TextureFormat.ETC2_RGB or UnityEngine.TextureFormat.EAC_R => 8,
             UnityEngine.TextureFormat.DXT5 or UnityEngine.TextureFormat.BC5 or UnityEngine.TextureFormat.BC6H
-                or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC2_RGBA8
+                or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC2_RGBA8 or UnityEngine.TextureFormat.EAC_RG
                 => 16,
             _ when IsAstc(format) => 16,
             _ => 0,
@@ -535,8 +567,8 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.RGBA32 or UnityEngine.TextureFormat.ARGB32 or UnityEngine.TextureFormat.BGRA32
                 or UnityEngine.TextureFormat.RGBA4444 or UnityEngine.TextureFormat.ARGB4444 =>
                 etc ? UnityEngine.TextureFormat.ETC2_RGBA8 : UnityEngine.TextureFormat.DXT5,
-            UnityEngine.TextureFormat.R8 => etc ? UnityEngine.TextureFormat.ETC2_RGB : UnityEngine.TextureFormat.BC4,
-            UnityEngine.TextureFormat.RG16 => etc ? UnityEngine.TextureFormat.ETC2_RGB : UnityEngine.TextureFormat.BC5,
+            UnityEngine.TextureFormat.R8 => etc ? (Compat.RuntimeTextureCompressionMeasured ? UnityEngine.TextureFormat.EAC_R : UnityEngine.TextureFormat.ETC2_RGB) : UnityEngine.TextureFormat.BC4,
+            UnityEngine.TextureFormat.RG16 => etc ? (Compat.RuntimeTextureCompressionMeasured ? UnityEngine.TextureFormat.EAC_RG : UnityEngine.TextureFormat.ETC2_RGB) : UnityEngine.TextureFormat.BC5,
             _ => null,
         };
 
@@ -544,7 +576,7 @@ namespace Unbound.Runtime
         /// here).</summary>
         internal static bool NativeDecoded(UnityEngine.TextureFormat format) => format is UnityEngine.TextureFormat.BC6H
             or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
-            or UnityEngine.TextureFormat.ETC2_RGBA8 || IsAstc(format);
+            or UnityEngine.TextureFormat.ETC2_RGBA8 || IsAstc(format) || IsEac(format);
 
         /// <summary>The renderer's packet code of a block format: BC1, BC3 and BC7 colour (sampled
         /// through an sRGB view in linear projects) or linear data; BC4, BC5 and BC6H; -1 for ETC
@@ -560,7 +592,9 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
                 or UnityEngine.TextureFormat.ETC2_RGBA8
                 => -1,
-            _ when IsAstc(format) => -1,
+            _ when IsAstcHdr(format) => 59 + (int)format - 66,
+            _ when IsAstc(format) => (linear ? 53 : 47) + (int)format - 48,
+            _ when IsEac(format) => -1,
             _ => throw new ArgumentException($"{format} is not a block format"),
         };
 

@@ -45,6 +45,7 @@ namespace UnityEngine
         void EnterStore()
         {
             if (m_Store != null) return;
+            if (SourceCrunch) { EnterCrunchStore(); return; }
             if (SourceBlocks)
             {
                 // The views of a compressed texture are its blocks: the store is the texture's own

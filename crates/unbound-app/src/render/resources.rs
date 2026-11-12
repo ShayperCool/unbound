@@ -891,6 +891,9 @@ pub fn texture_storage(t: &owned::Texture, samples: u32, caps: &NormFormatCaps) 
 fn decode_blocks(t: &owned::Texture) -> owned::Texture {
     use unbound_assets::texture::{BlockFormat, decode_level_as_gpu};
     let format = match t.format {
+        c if texture_format::astc_unity(c).is_some() => {
+            BlockFormat::from_unity_format(texture_format::astc_unity(c).unwrap()).unwrap()
+        }
         texture_format::BC1_COLOR | texture_format::BC1_DATA => BlockFormat::Bc1,
         texture_format::BC3_COLOR | texture_format::BC3_DATA => BlockFormat::Bc3,
         texture_format::BC4 => BlockFormat::Bc4,
@@ -900,7 +903,9 @@ fn decode_blocks(t: &owned::Texture) -> owned::Texture {
     };
     report_fallback(
         t.format,
-        &FormatFallback::Unsupported(if format == BlockFormat::Bc6h {
+        &FormatFallback::Unsupported(if format.is_astc() {
+            "ASTC blocks decoded because the device lacks their format or the base extent is not a whole number of blocks".to_string()
+        } else if format == BlockFormat::Bc6h {
             "the device has no BC formats: the blocks are decoded, HDR colour clamped to 0..1"
                 .to_string()
         } else {
@@ -917,10 +922,20 @@ fn decode_blocks(t: &owned::Texture) -> owned::Texture {
             break;
         };
         offset += len;
-        data.extend(decode_level_as_gpu(format, blocks, w, h));
+        if format.is_astc_hdr() {
+            data.extend(
+                unbound_assets::texture::decode_blocks_f32(blocks, w, h, format)
+                    .into_iter()
+                    .flat_map(f32::to_le_bytes),
+            );
+        } else {
+            data.extend(decode_level_as_gpu(format, blocks, w, h));
+        }
     }
     owned::Texture {
-        format: if texture_format::block_color(t.format) {
+        format: if format.is_astc_hdr() {
+            texture_format::RGBA_HALF
+        } else if texture_format::block_color(t.format) {
             texture_format::SRGB_RGBA8
         } else {
             texture_format::LINEAR_RGBA8
@@ -941,7 +956,38 @@ pub fn block_format(code: i32) -> Option<wgpu::TextureFormat> {
         texture_format::BC4 => F::Bc4RUnorm,
         texture_format::BC5 => F::Bc5RgUnorm,
         texture_format::BC6H => F::Bc6hRgbUfloat,
+        c if texture_format::astc_unity(c).is_some() => {
+            let index = (c - texture_format::ASTC_COLOR_FIRST) % 6;
+            let block = [
+                wgpu::AstcBlock::B4x4,
+                wgpu::AstcBlock::B5x5,
+                wgpu::AstcBlock::B6x6,
+                wgpu::AstcBlock::B8x8,
+                wgpu::AstcBlock::B10x10,
+                wgpu::AstcBlock::B12x12,
+            ][index as usize];
+            F::Astc {
+                block,
+                channel: if c >= texture_format::ASTC_HDR_FIRST {
+                    wgpu::AstcChannel::Hdr
+                } else {
+                    wgpu::AstcChannel::Unorm
+                },
+            }
+        }
         _ => return None,
+    })
+}
+
+/// Whether native blocks can retain their logical dimensions on this device.
+pub fn can_upload_blocks(code: i32, width: i32, height: i32, features: wgpu::Features) -> bool {
+    block_format(code).is_some_and(|format| {
+        let (bw, bh) = format.block_dimensions();
+        width > 0
+            && height > 0
+            && width % bw as i32 == 0
+            && height % bh as i32 == 0
+            && features.contains(format.required_features())
     })
 }
 
@@ -960,6 +1006,16 @@ fn report_fallback(code: i32, fallback: &FormatFallback) {
         FormatFallback::Unknown(why) => tracing::error!(
             "texture upload rejected ({why}): the texture is made as linear RGBA8 instead"
         ),
+        FormatFallback::Unsupported(why) if texture_format::astc_unity(code).is_some() => {
+            tracing::warn!(
+                "Unbound: ASTC texture decoded to {}: {why}",
+                if code >= texture_format::ASTC_HDR_FIRST {
+                    "RGBA16F"
+                } else {
+                    "RGBA8"
+                }
+            );
+        }
         FormatFallback::Unsupported(why) if integer_format(code).is_some() => {
             tracing::warn!("Unbound: a render texture of format code {code}: {why}")
         }
@@ -1102,11 +1158,7 @@ pub fn upload_texture_with(
         // a size the GPU cannot keep in blocks (not a multiple of 4: malformed data).
         _ if block_format(t.format).is_some()
             && !t.render_target
-            && (t.width % 4 != 0
-                || t.height % 4 != 0
-                || !device
-                    .features()
-                    .contains(wgpu::Features::TEXTURE_COMPRESSION_BC)) =>
+            && !can_upload_blocks(t.format, t.width, t.height, device.features()) =>
         {
             decoded = decode_blocks(t);
             &decoded
@@ -1384,12 +1436,13 @@ pub fn upload_texture_with(
     gpu.defer_mips = t.defer_mips;
 
     if let (false, Some(block)) = (t.data.is_empty(), compressed) {
-        // Whole 4x4 blocks; levels below 4 pixels are a whole (padded) block.
+        // Whole format-specific blocks, including padded small mip levels.
+        let (block_width, block_height) = block.block_dimensions();
         let block_bytes = block.block_copy_size(None).unwrap_or(16);
         let mut offset = 0usize;
         for level in 0..mip_count {
-            let bw = (width >> level).max(1).div_ceil(4);
-            let bh = (height >> level).max(1).div_ceil(4);
+            let bw = (width >> level).max(1).div_ceil(block_width);
+            let bh = (height >> level).max(1).div_ceil(block_height);
             let len = (bw * bh * block_bytes) as usize;
             if offset + len > t.data.len() {
                 tracing::warn!(
@@ -1411,8 +1464,8 @@ pub fn upload_texture_with(
                     rows_per_image: Some(bh),
                 },
                 wgpu::Extent3d {
-                    width: bw * 4,
-                    height: bh * 4,
+                    width: bw * block_width,
+                    height: bh * block_height,
                     depth_or_array_layers: 1,
                 },
             );
@@ -1789,6 +1842,66 @@ mod tests {
         assert_eq!(stored(4, true, true, 1, &caps).format, F::Rgba16Float);
     }
 
+    #[test]
+    fn astc_upload_checks_the_actual_footprint_and_channel_feature() {
+        use wgpu::Features as F;
+        for code in texture_format::ASTC_COLOR_FIRST..=texture_format::ASTC_LAST {
+            let format = block_format(code).unwrap();
+            let (bw, bh) = format.block_dimensions();
+            let feature = if code >= texture_format::ASTC_HDR_FIRST {
+                F::TEXTURE_COMPRESSION_ASTC_HDR
+            } else {
+                F::TEXTURE_COMPRESSION_ASTC
+            };
+            assert!(can_upload_blocks(
+                code,
+                bw as i32 * 3,
+                bh as i32 * 2,
+                feature
+            ));
+            assert!(!can_upload_blocks(
+                code,
+                bw as i32 * 3 + 1,
+                bh as i32 * 2,
+                feature
+            ));
+            assert!(!can_upload_blocks(
+                code,
+                bw as i32 * 3,
+                bh as i32 * 2,
+                F::TEXTURE_COMPRESSION_BC
+            ));
+            assert!(!can_upload_blocks(code, 0, bh as i32, feature));
+        }
+    }
+
+    #[test]
+    fn astc_hdr_fallback_preserves_partial_extent_and_radiance() {
+        // texturecompression write.astchdr.loaded: one constant HDR block.
+        let t = owned::Texture {
+            width: 3,
+            height: 2,
+            format: texture_format::ASTC_HDR_FIRST + 2,
+            mip_count: 1,
+            data: vec![
+                0xfc, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x3e, 0x80, 0x40, 0x00, 0x43,
+                0x00, 0x38,
+            ],
+            ..owned::Texture::default()
+        };
+        let decoded = decode_blocks(&t);
+        assert_eq!(
+            (decoded.width, decoded.height, decoded.format),
+            (3, 2, texture_format::RGBA_HALF)
+        );
+        let pixels: Vec<f32> = decoded
+            .data
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+            .collect();
+        assert_eq!(pixels, [1.5, 2.25, 3.5, 0.5].repeat(6));
+    }
+
     /// Block-compressed imports keep their format (render targets never are), and a device
     /// without BC formats gets what the blocks decode to.
     #[test]
@@ -1853,7 +1966,7 @@ mod tests {
 
     #[test]
     fn unknown_codes_are_rejected() {
-        for code in [-1, texture_format::RG8_UNORM + 1, 99, i32::MAX] {
+        for code in [-1, texture_format::ASTC_LAST + 1, 99, i32::MAX] {
             let s = stored(code, true, false, 1, &full_caps());
             assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm);
             assert!(

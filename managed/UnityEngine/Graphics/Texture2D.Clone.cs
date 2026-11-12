@@ -11,7 +11,7 @@ namespace UnityEngine
             SyncFromStore();
             RefreshBlockCells();
             // A block-compressed texture's copy takes its blocks (written ones included).
-            var blocks = SourceBlocks ? CurrentBlocks() : m_SourceRaw;
+            var blocks = SourceCrunch ? CrunchArchive().ToArray() : SourceBlocks ? CurrentBlocks() : m_SourceRaw;
             if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null)
                 FetchImportedPixels();
 

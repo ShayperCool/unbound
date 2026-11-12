@@ -203,14 +203,32 @@ pub mod texture_format {
     /// two bytes per texel.
     pub const RG8_UNORM: i32 = 46;
 
+    /// Six ASTC footprints in order 4, 5, 6, 8, 10, 12, first colour, then linear, then HDR.
+    pub const ASTC_COLOR_FIRST: i32 = 47;
+    pub const ASTC_DATA_FIRST: i32 = 53;
+    pub const ASTC_HDR_FIRST: i32 = 59;
+    pub const ASTC_LAST: i32 = 64;
+
+    /// The corresponding public Unity ASTC format number.
+    pub const fn astc_unity(code: i32) -> Option<i32> {
+        match code {
+            ASTC_COLOR_FIRST..=58 => Some(48 + (code - ASTC_COLOR_FIRST) % 6),
+            ASTC_HDR_FIRST..=ASTC_LAST => Some(66 + code - ASTC_HDR_FIRST),
+            _ => None,
+        }
+    }
+
     /// Whether a code is block-compressed.
     pub const fn block_compressed(code: i32) -> bool {
-        matches!(code, BC7_COLOR | BC7_DATA | BC1_COLOR..=BC6H)
+        matches!(code, BC7_COLOR | BC7_DATA | BC1_COLOR..=BC6H | ASTC_COLOR_FIRST..=ASTC_LAST)
     }
 
     /// Whether a block-compressed code is sampled through an sRGB view in linear projects.
     pub const fn block_color(code: i32) -> bool {
-        matches!(code, BC7_COLOR | BC1_COLOR | BC3_COLOR)
+        matches!(
+            code,
+            BC7_COLOR | BC1_COLOR | BC3_COLOR | ASTC_COLOR_FIRST..=52
+        )
     }
 
     /// The integer code of `channels` (1, 2 or 4) channels of `bits` (8, 16 or 32) each, signed
@@ -233,7 +251,7 @@ pub mod texture_format {
     /// The packet's code, or why the renderer cannot take it: codes outside the table are
     /// rejected rather than drawn as some other format.
     pub fn validate(code: i32) -> Result<i32, String> {
-        if (SRGB_RGBA8..=RG8_UNORM).contains(&code) {
+        if (SRGB_RGBA8..=ASTC_LAST).contains(&code) {
             Ok(code)
         } else {
             Err(format!(
@@ -811,7 +829,7 @@ mod tests {
         );
         assert_eq!((R8_SNORM, RG8_SNORM, RGBA8_SNORM), (35, 36, 37));
         assert_eq!((R8_UNORM, RG8_UNORM), (45, 46));
-        for code in 0..=RG8_UNORM {
+        for code in 0..=ASTC_LAST {
             assert_eq!(validate(code), Ok(code));
         }
         assert!(!float_data(R8_UNORM) && !float_data(RG8_UNORM) && !block_compressed(R8_UNORM));
@@ -820,7 +838,7 @@ mod tests {
         // The integer codes follow the normalized ones, without upload data.
         assert_eq!((integer(1, 8, false), integer(4, 32, true)), (17, 34));
         assert!((INTEGER_FIRST..=INTEGER_LAST).all(|c| !float_data(c)));
-        for code in [-1, 47, 48, i32::MAX, i32::MIN] {
+        for code in [-1, 65, 66, i32::MAX, i32::MIN] {
             assert!(validate(code).is_err(), "{code} is accepted");
         }
         for code in [

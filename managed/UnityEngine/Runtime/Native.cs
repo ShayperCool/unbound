@@ -54,8 +54,8 @@ namespace Unbound.Runtime
 
         internal static bool IsReady => s_Ready;
 
-        internal static bool DecodeHdrBlock(int format, byte* blocks, UnityEngine.Color* pixels) =>
-            s_Ready && s_Api.DecodeHdrBlock != null && s_Api.DecodeHdrBlock(format, blocks, (float*)pixels) != 0;
+        internal static bool DecodeBlockTexel(int format, byte* block, uint index, UnityEngine.Color* pixel) =>
+            s_Ready && s_Api.DecodeBlockTexel != null && s_Api.DecodeBlockTexel(format, block, index, (float*)pixel) != 0;
 
         internal static void Log(int level, string text)
         {

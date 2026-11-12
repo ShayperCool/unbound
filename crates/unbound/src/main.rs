@@ -49,6 +49,8 @@ pub struct ProjectArgs {
 #[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 enum Command {
+    /// Validate and transcode a complete Crunch archive into ordinary GPU blocks.
+    CrunchBlocks { input: PathBuf, output: PathBuf },
     /// Show the project: release, profile, packages, assets.
     Info {
         #[command(flatten)]
@@ -299,6 +301,17 @@ fn main() -> anyhow::Result<()> {
         unsafe { std::env::set_var("UNBOUND_PACKAGES", joined) };
     }
     match cli.command {
+        Command::CrunchBlocks { input, output } => {
+            let image = unbound_assets::texture::crunch::transcode(&std::fs::read(input)?)?;
+            let data: Vec<u8> = image.blocks.mips.iter().flatten().copied().collect();
+            std::fs::write(output, data)?;
+            println!(
+                "{}",
+                serde_json::json!({"format": image.format.unity_format(), "width":image.width,
+                "height":image.height,"mips":image.blocks.mips.len()})
+            );
+            Ok(())
+        }
         Command::Info { project } => commands::info(&project),
         Command::Shaders { project, builtin } => commands::shaders(&project, builtin),
         Command::Graph {

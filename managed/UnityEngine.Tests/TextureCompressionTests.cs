@@ -37,11 +37,57 @@ namespace UnityEngine.Tests
         [InlineData(TextureFormat.ETC_RGB4, 64, 64, 2048)]
         [InlineData(TextureFormat.ETC2_RGB, 2, 2, 8)]
         [InlineData(TextureFormat.ETC2_RGBA8, 20, 12, 240)]
-        [InlineData(TextureFormat.EAC_R, 4, 4, 0)]
+        [InlineData(TextureFormat.EAC_R, 4, 4, 8)]
+        [InlineData(TextureFormat.EAC_RG, 5, 3, 32)]
         [InlineData(TextureFormat.RGBA32, 4, 4, 0)]
         public void BlockLevelsAreWholeBlocks(TextureFormat format, int width, int height, int bytes)
         {
             Assert.Equal(bytes, BlockFormats.LevelSize(format, width, height));
+        }
+
+        [Theory]
+        [InlineData(TextureFormat.DXT1Crunched)]
+        [InlineData(TextureFormat.DXT5Crunched)]
+        [InlineData(TextureFormat.ETC_RGB4Crunched)]
+        [InlineData(TextureFormat.ETC2_RGBA8Crunched)]
+        public void NewCrunchTextureKeepsAnEmptyArchive(TextureFormat format)
+        {
+            var texture = new Texture2D(8, 8, format, false) { hideFlags = HideFlags.HideAndDontSave };
+            try
+            {
+                Assert.Equal(format, texture.format);
+                Assert.NotEqual(UnityEngine.Experimental.Rendering.GraphicsFormat.None, texture.graphicsFormat);
+                Assert.Empty(texture.GetRawTextureData());
+                Assert.Equal(0, texture.GetRawTextureData<byte>().Length);
+                var view = texture.GetPixelData<byte>(0);
+                Assert.Equal(BlockFormats.LevelSize(format, 8, 8), view.Length);
+                // Unmeasured bytes beyond an empty archive are safe padding, not a decoder input.
+                Assert.Equal(0, view[view.Length - 1]);
+                Assert.Empty(texture.GetRawTextureData());
+            }
+            finally { Object.DestroyImmediate(texture); }
+        }
+
+        [Theory]
+        [InlineData(12, 8, 1, true)]
+        [InlineData(12, 8, 4, false)]
+        [InlineData(12, 4, 4, true)]
+        [InlineData(16, 8, 5, true)]
+        [InlineData(20, 12, 5, false)]
+        public void AndroidRuntimeChecksIntermediateMipDimensions(int width, int height, int levels, bool valid)
+        {
+            Assert.Equal(valid, BlockFormats.RuntimeMipChainFits(width, height, levels));
+        }
+
+        [Theory]
+        [InlineData(TextureFormat.ASTC_4x4, 47, 53)]
+        [InlineData(TextureFormat.ASTC_12x12, 52, 58)]
+        [InlineData(TextureFormat.ASTC_HDR_5x5, 60, 60)]
+        [InlineData(TextureFormat.ASTC_HDR_12x12, 64, 64)]
+        public void AstcPacketsPreserveFootprintAndChannel(TextureFormat format, int colour, int linear)
+        {
+            Assert.Equal(colour, BlockFormats.GpuCode(format, false));
+            Assert.Equal(linear, BlockFormats.GpuCode(format, true));
         }
 
         /// <summary>A serialized (AssetBundle) DXT1 texture: one white block over decoded pixels.</summary>

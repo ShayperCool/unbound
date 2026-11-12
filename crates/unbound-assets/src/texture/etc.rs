@@ -5,6 +5,7 @@
 //! (tests/projects/texturecompression Android profiles); the Editor's encoders search more
 //! modes, so the texels differ slightly from its blocks.
 
+use super::BlockFormat;
 use rayon::prelude::*;
 
 /// EAC modifier tables, each the negative half of its eight modifiers (the positive half is
@@ -227,10 +228,24 @@ pub fn encode_etc1(block: &[[u8; 4]; 16]) -> [u8; 8] {
 
 /// Compresses one RGBA8 level (rows as stored; a level smaller than a block repeats as tiles in
 /// it, as the Editor's blocks do) to ETC1/ETC2 RGB blocks, or ETC2 RGBA8 blocks with `alpha`.
-pub fn compress_level(rgba: &[u8], width: u32, height: u32, alpha: bool) -> Vec<u8> {
+pub fn compress_level(rgba: &[u8], width: u32, height: u32, format: BlockFormat) -> Vec<u8> {
+    compress(rgba, width, height, format, false)
+}
+
+pub(super) fn compress_runtime_eac(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    format: BlockFormat,
+) -> Vec<u8> {
+    assert!(format.is_eac());
+    compress(rgba, width, height, format, true)
+}
+
+fn compress(rgba: &[u8], width: u32, height: u32, format: BlockFormat, runtime: bool) -> Vec<u8> {
     let (w, h) = (width.max(1) as usize, height.max(1) as usize);
     let (bw, bh) = (w.div_ceil(4), h.div_ceil(4));
-    let size = if alpha { 16 } else { 8 };
+    let size = format.block_bytes();
     let mut out = vec![0u8; bw * bh * size];
     out.par_chunks_mut(bw * size)
         .enumerate()
@@ -238,15 +253,166 @@ pub fn compress_level(rgba: &[u8], width: u32, height: u32, alpha: bool) -> Vec<
             for bx in 0..bw {
                 let mut block = [[0u8; 4]; 16];
                 for (i, texel) in block.iter_mut().enumerate() {
-                    let (x, y) = ((bx * 4 + i % 4) % w, (by * 4 + i / 4) % h);
+                    let (x, y) = if runtime {
+                        (
+                            bx * 4 + (i % 4) % (w - bx * 4).min(4),
+                            by * 4 + (i / 4) % (h - by * 4).min(4),
+                        )
+                    } else {
+                        ((bx * 4 + i % 4) % w, (by * 4 + i / 4) % h)
+                    };
                     texel.copy_from_slice(&rgba[(y * w + x) * 4..][..4]);
                 }
                 let dst = &mut row[bx * size..][..size];
-                if alpha {
-                    dst[..8].copy_from_slice(&encode_alpha(&block.map(|t| t[3])));
+                if format.is_eac() {
+                    // The independent eight-bit source fit is shared with EAC alpha. Its
+                    // output is also a valid unsigned R11/RG11 block; fitting remains an
+                    // approximation, with exact block counts in texturecompression.
+                    for channel in 0..if format == BlockFormat::EacR { 1 } else { 2 } {
+                        dst[channel * 8..channel * 8 + 8]
+                            .copy_from_slice(&encode_alpha(&block.map(|t| t[channel])));
+                    }
+                } else {
+                    if format == BlockFormat::Etc2Rgba8 {
+                        dst[..8].copy_from_slice(&encode_alpha(&block.map(|t| t[3])));
+                    }
+                    dst[size - 8..].copy_from_slice(&encode_etc1(&block));
                 }
-                dst[size - 8..].copy_from_slice(&encode_etc1(&block));
             }
         });
     out
+}
+
+/// CPU reads use the eight-bit EAC interpretation measured in texturecompression. GPU
+/// sampling uses the unsigned eleven-bit definition, including its multiplier-zero case.
+pub(super) fn eac_texel(block: &[u8], x: usize, y: usize, eleven: bool) -> u16 {
+    let table = (block[1] & 15) as usize;
+    let multiplier = i32::from(block[1] >> 4);
+    let bits = u64::from_be_bytes([
+        0, 0, block[2], block[3], block[4], block[5], block[6], block[7],
+    ]);
+    let index = ((bits >> ((15 - (x * 4 + y)) * 3)) & 7) as usize;
+    let modifier = eac_modifiers(table)[index];
+    let base = i32::from(block[0]);
+    if eleven {
+        (base * 8 + 4 + modifier * if multiplier == 0 { 1 } else { multiplier * 8 }).clamp(0, 2047)
+            as u16
+    } else {
+        (base + modifier * multiplier).clamp(0, 255) as u16
+    }
+}
+
+pub(super) fn decode_eac_texel(format: BlockFormat, block: &[u8], index: usize) -> [u8; 4] {
+    let (x, y) = (index % 4, index / 4);
+    let mut output = [0, 0, 0, 255];
+    output[0] = eac_texel(block, x, y, false) as u8;
+    if format == BlockFormat::EacRg {
+        output[1] = eac_texel(&block[8..], x, y, false) as u8;
+    }
+    output
+}
+
+/// Fixed-point approximation of the measured OpenGL channel conversion. The complete
+/// eac.values control retains one-UNorm16-step residuals for multiplier-zero blocks;
+/// other profiles use ideal UNorm11. No byte-precision reduction is applied to GPU data.
+fn eac_gpu_value(value: u16, measured: bool) -> u16 {
+    if measured {
+        const SCALE_NUMERATOR: u32 = 65567;
+        const SCALE_DENOMINATOR: u32 = 2048;
+        let expanded =
+            (u32::from(value) * SCALE_NUMERATOR + SCALE_DENOMINATOR / 2) / SCALE_DENOMINATOR;
+        expanded as u16
+    } else {
+        ((u32::from(value) * 65535 + 1023) / 2047) as u16
+    }
+}
+
+/// Tightly packed unsigned normalized 16-bit red or red/green channels for GPU upload.
+pub fn decode_eac_gpu(
+    format: BlockFormat,
+    blocks: &[u8],
+    width: u32,
+    height: u32,
+    measured: bool,
+) -> Vec<u8> {
+    assert!(format.is_eac());
+    let (w, h) = (width.max(1) as usize, height.max(1) as usize);
+    let channels = if format == BlockFormat::EacR { 1 } else { 2 };
+    let mut output = vec![0; w * h * channels * 2];
+    let columns = w.div_ceil(4);
+    for (i, block) in blocks.chunks_exact(format.block_bytes()).enumerate() {
+        let (bx, by) = (i % columns * 4, i / columns * 4);
+        if by >= h {
+            break;
+        }
+        for y in 0..4.min(h - by) {
+            for x in 0..4.min(w - bx) {
+                for channel in 0..channels {
+                    let value = eac_texel(&block[channel * 8..], x, y, true);
+                    let at = (((by + y) * w + bx + x) * channels + channel) * 2;
+                    output[at..at + 2]
+                        .copy_from_slice(&eac_gpu_value(value, measured).to_le_bytes());
+                }
+            }
+        }
+    }
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn eac_cpu_bytes_and_gpu_channels_use_distinct_precision() {
+        let red = [128, 13, 255, 255, 255, 255, 255, 255];
+        let green = [64, 48, 0, 0, 0, 0, 0, 0];
+        let block: Vec<_> = red.into_iter().chain(green).collect();
+        for format in [BlockFormat::EacR, BlockFormat::EacRg] {
+            let bytes = &block[..format.block_bytes()];
+            for index in 0..16 {
+                assert_eq!(
+                    decode_eac_texel(format, bytes, index),
+                    [
+                        128,
+                        if format == BlockFormat::EacRg { 55 } else { 0 },
+                        0,
+                        255
+                    ]
+                );
+            }
+            let blocks = bytes.repeat(format.level_size(3, 7) / format.block_bytes());
+            let gpu = decode_eac_gpu(format, &blocks, 3, 7, true);
+            let channels = if format == BlockFormat::EacR { 1 } else { 2 };
+            assert_eq!(gpu.len(), 3 * 7 * channels * 2);
+            for pixel in gpu.chunks_exact(channels * 2) {
+                // Unity 6000.0.71f1, texturecompression eac.manual controls.
+                assert_eq!(u16::from_le_bytes(pixel[..2].try_into().unwrap()), 33200);
+                if channels == 2 {
+                    assert_eq!(u16::from_le_bytes(pixel[2..].try_into().unwrap()), 14215);
+                }
+            }
+            assert_eq!(
+                super::super::decode_block_texel(format, bytes, 0).unwrap()[0],
+                128.0 / 255.0
+            );
+            assert!(super::super::decode_block_texel(format, bytes, 16).is_none());
+            assert!(
+                super::super::decode_block_texel(format, &bytes[..bytes.len() - 1], 0).is_none()
+            );
+        }
+    }
+    #[test]
+    fn runtime_eac_partial_blocks_repeat_the_remaining_rows_and_columns() {
+        let rgba: Vec<_> = (0..5)
+            .flat_map(|y| (0..6).flat_map(move |x| [(x * 39) as u8, (y * 51) as u8, 0, 255]))
+            .collect();
+        let encoded = compress_runtime_eac(&rgba, 6, 5, BlockFormat::EacRg);
+        let mut edge = [[0; 4]; 16];
+        for (i, pixel) in edge.iter_mut().enumerate() {
+            let x = 4 + (i % 4) % 2;
+            pixel.copy_from_slice(&rgba[(4 * 6 + x) * 4..][..4]);
+        }
+        assert_eq!(&encoded[48..56], &encode_alpha(&edge.map(|p| p[0])));
+        assert_eq!(&encoded[56..64], &encode_alpha(&edge.map(|p| p[1])));
+    }
 }

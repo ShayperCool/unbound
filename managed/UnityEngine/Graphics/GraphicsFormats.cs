@@ -304,6 +304,7 @@ namespace UnityEngine.Experimental.Rendering
             TextureFormat.Alpha8 => Texture2DAlpha8,
             TextureFormat.R8 => isSRGB ? GraphicsFormat.R8_SRGB : GraphicsFormat.R8_UNorm,
             TextureFormat.RG16 => isSRGB ? GraphicsFormat.R8G8_SRGB : GraphicsFormat.R8G8_UNorm,
+            _ when Unbound.Runtime.BlockFormats.IsCrunch(format) => GetGraphicsFormat(Unbound.Runtime.BlockFormats.Uncrunched(format), isSRGB),
             _ => GetGraphicsFormat(format, isSRGB),
         };
 

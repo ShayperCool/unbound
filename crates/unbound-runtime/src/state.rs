@@ -667,8 +667,27 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 .blocks
                 .as_ref()
                 .context("the texture is not block-compressed")?;
-            let raw = crate::models::base64(&concat(&blocks.mips));
+            let raw = if let Some(crunched) = &texture.crunched {
+                crate::models::base64(&crunched.data)
+            } else {
+                crate::models::base64(&concat(&blocks.mips))
+            };
             Ok(json!({ "format": blocks.format.unity_format(), "raw": raw }).to_string())
+        }
+        "texture-crunch-blocks" => {
+            #[derive(Deserialize)]
+            struct Request {
+                data: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let data = crate::fonts::decode_base64(&r.data).context("data is not base64")?;
+            let image = unbound_assets::texture::crunch::transcode(&data)?;
+            Ok(
+                json!({ "format": image.format.unity_format(), "width": image.width,
+                "height": image.height, "mips": image.blocks.mips.len(),
+                "blocks": crate::models::base64(&concat(&image.blocks.mips)) })
+                .to_string(),
+            )
         }
         "texture-decode-blocks" => {
             // One level of BC blocks (Unity's TextureFormat `format`) as RGBA8, as GetPixels32
@@ -681,12 +700,49 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 data: String,
                 #[serde(default)]
                 floats: bool,
+                #[serde(default)]
+                eac16: bool,
             }
             let r: Request = serde_json::from_str(request)?;
             let format = unbound_assets::texture::BlockFormat::from_unity_format(r.format)
                 .with_context(|| format!("texture format {} is not a block format", r.format))?;
             let blocks = crate::fonts::decode_base64(&r.data).context("data is not base64")?;
-            let rgba = if r.floats {
+            let rgba = if r.eac16 {
+                anyhow::ensure!(
+                    format.is_eac(),
+                    "normalized channel decoding requires unsigned EAC blocks"
+                );
+                let measured = s
+                    .texture_importer
+                    .read()
+                    .unwrap()
+                    .project
+                    .encoders
+                    .measured_runtime_encoder;
+                let packed = unbound_assets::texture::etc::decode_eac_gpu(
+                    format, &blocks, r.width, r.height, measured,
+                );
+                let channels = if format == unbound_assets::texture::BlockFormat::EacR {
+                    1
+                } else {
+                    2
+                };
+                let mut rgba = Vec::with_capacity(r.width as usize * r.height as usize * 16);
+                for pixel in packed.chunks_exact(channels * 2) {
+                    let red = f32::from(u16::from_le_bytes([pixel[0], pixel[1]])) / 65535.0;
+                    let green = if channels == 2 {
+                        f32::from(u16::from_le_bytes([pixel[2], pixel[3]])) / 65535.0
+                    } else {
+                        0.0
+                    };
+                    rgba.extend(
+                        [red, green, 0.0, 1.0]
+                            .into_iter()
+                            .flat_map(f32::to_le_bytes),
+                    );
+                }
+                rgba
+            } else if r.floats {
                 anyhow::ensure!(
                     format.is_astc_hdr(),
                     "float decoding requires ASTC HDR blocks"
@@ -1361,23 +1417,19 @@ fn block_code(format: unbound_assets::texture::BlockFormat, srgb: bool) -> i32 {
         B::Bc4 => texture_format::BC4,
         B::Bc5 => texture_format::BC5,
         B::Bc6h => texture_format::BC6H,
-        B::Etc1
-        | B::Etc2Rgb
-        | B::Etc2Rgba8
-        | B::Astc4x4
-        | B::Astc5x5
-        | B::Astc6x6
-        | B::Astc8x8
-        | B::Astc10x10
-        | B::Astc12x12
-        | B::AstcHdr4x4
-        | B::AstcHdr5x5
-        | B::AstcHdr6x6
-        | B::AstcHdr8x8
-        | B::AstcHdr10x10
-        | B::AstcHdr12x12 => {
-            unreachable!("ETC and ASTC blocks upload as BC7 or pixels")
+        b if b.is_astc() => {
+            let unity = b.unity_format();
+            if b.is_astc_hdr() {
+                texture_format::ASTC_HDR_FIRST + unity - 66
+            } else {
+                colour(
+                    texture_format::ASTC_COLOR_FIRST,
+                    texture_format::ASTC_DATA_FIRST,
+                ) + unity
+                    - 48
+            }
         }
+        _ => unreachable!("ETC and EAC blocks upload as decoded pixels"),
     }
 }
 
@@ -1443,9 +1495,12 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let gpu_bc = GPU_BC.load(std::sync::atomic::Ordering::Relaxed);
     // The import's BC blocks always go up (the renderer decodes them where the device has no BC
     // formats; textures may import before the device exists). ETC uses a BC7 fallback where
-    // available; ASTC uploads its decoded pixels without another lossy encoding.
+    // available; ASTC retains native blocks or uses a decoded device fallback.
     let gpu_channel = texture.gpu_channel();
-    let blocks = texture.blocks.take().filter(|b| b.format.is_bc());
+    let blocks = texture
+        .blocks
+        .take()
+        .filter(|b| b.format.is_bc() || b.format.is_astc());
     let (gpu_format, data) = match (blocks, texture.bc7.take()) {
         (Some(blocks), _) => (
             block_code(blocks.format, texture.srgb),

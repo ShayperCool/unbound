@@ -76,6 +76,7 @@ namespace UnityEngine
         /// <summary>A texel as GetPixel reads it.</summary>
         Color Read(int mip, int i)
         {
+            if (SourceCrunch && Compat.RuntimeTextureCompressionMeasured) return Color.white;
             // While views of a compressed texture's blocks exist, a texel is read from its block.
             if (SourceBlocks && m_Store != null) return BlockTexel(mip, i);
             return m_Hdr != null ? FloatCell(mip, i) : Texture2DTexels.Pixel(m_Format, Cell(mip, i));
@@ -191,6 +192,7 @@ namespace UnityEngine
         public Color[] GetPixels() => GetPixels(0);
         public Color[] GetPixels(int miplevel)
         {
+            ThrowIfCrunchPixels();
             // An unreadable texture has no data to read (the Unity 6000.0.71f1 Editor's message,
             // tests/projects/texturecompression SmoothUnreadable, NoiseUnreadable).
             if (m_Width == 0 || !m_IsReadable) throw LayeredTextures.NotReadable("Texture2D.GetPixels", name);
@@ -211,6 +213,7 @@ namespace UnityEngine
         public Color[] GetPixels(int x, int y, int blockWidth, int blockHeight) => GetPixels(x, y, blockWidth, blockHeight, 0);
         public Color[] GetPixels(int x, int y, int blockWidth, int blockHeight, int miplevel)
         {
+            ThrowIfCrunchPixels();
             RequireReadable(true);
             CheckBlock(x, y, blockWidth, blockHeight, miplevel);
             var result = new Color[blockWidth * blockHeight];
@@ -416,6 +419,7 @@ namespace UnityEngine
             // The blocks of a compressed texture, readable or not (the Unity 6000.0.71f1 Editor
             // answers an unreadable compressed import's too: tests/projects/texturecompression
             // SmoothUnreadable.raw).
+            if (SourceCrunch) return CrunchArchive().ToArray();
             if (SourceBlocks) return (byte[])CurrentBlocks().Clone();
             if (m_SourceRaw != null) return (byte[])m_SourceRaw.Clone();
             if (!m_IsReadable)

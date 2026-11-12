@@ -1655,3 +1655,80 @@ fn non_power_of_two_astc_hdr_fallback_filters_radiance_before_clamping() {
         );
     }
 }
+
+#[test]
+fn crunch_imports_retain_archives_and_decoded_block_layouts() {
+    let bytes = png(16, 8, |x, y| [(x * 15) as u8, (y * 29) as u8, 91, 127]);
+    let measured = unbound_compat::TextureCompressionRules::for_version(
+        unbound_compat::UnityVersion::new(6000, 0, 71),
+    );
+    for (target, number) in [
+        ("Standalone", 28),
+        ("Standalone", 29),
+        ("Android", 64),
+        ("Android", 65),
+    ] {
+        let importer = TextureImporter {
+            build_target: target.into(),
+            compress: true,
+            project: ProjectCompression {
+                encoders: measured,
+                ..ProjectCompression::default()
+            },
+            ..TextureImporter::default()
+        };
+        let meta = unbound_yaml::parse_value(&format!("TextureImporter:\n  mipmaps:\n    sRGBTexture: 0\n    enableMipMap: 1\n  platformSettings:\n  - buildTarget: {target}\n    overridden: 1\n    textureFormat: {number}\n    compressionQuality: 50\n")).unwrap();
+        let texture = importer
+            .import(Path::new("Assets/t.png"), &bytes, &meta)
+            .unwrap();
+        assert_eq!(texture.reported_format(), Some(number));
+        let archive = texture.crunched.as_ref().unwrap();
+        let decoded = crunch::transcode(&archive.data).unwrap();
+        assert_eq!((decoded.width, decoded.height), (16, 8));
+        let blocks = texture.blocks.as_ref().unwrap();
+        assert_eq!(decoded.blocks.mips, blocks.mips);
+        assert_eq!(blocks.mips.len(), texture.mips.len());
+        assert!(
+            texture.bc7.is_none(),
+            "Crunch does not add another lossy encoding"
+        );
+        for (pixels, compressed) in texture.mips.iter().zip(&blocks.mips) {
+            assert_eq!(
+                pixels.data,
+                decode_blocks(blocks.format, compressed, pixels.width, pixels.height)
+            );
+        }
+    }
+}
+
+#[test]
+fn crunch_colour_fitting_is_independent_of_the_authored_srgb_flag() {
+    let bytes = png(16, 8, |x, y| {
+        [
+            (x * 15) as u8,
+            (y * 29) as u8,
+            ((x * 21 + y * 7) % 256) as u8,
+            127,
+        ]
+    });
+    let measured = unbound_compat::TextureCompressionRules::for_version(
+        unbound_compat::UnityVersion::new(6000, 0, 71),
+    );
+    let importer = TextureImporter {
+        build_target: "Standalone".into(),
+        compress: true,
+        project: ProjectCompression {
+            encoders: measured,
+            ..ProjectCompression::default()
+        },
+        ..TextureImporter::default()
+    };
+    let archives: Vec<_> = [0, 1].into_iter().map(|srgb| {
+        let meta = unbound_yaml::parse_value(&format!("TextureImporter:\n  mipmaps:\n    sRGBTexture: {srgb}\n    enableMipMap: 0\n  platformSettings:\n  - buildTarget: Standalone\n    overridden: 1\n    textureFormat: 29\n    compressionQuality: 50\n")).unwrap();
+        importer.import(Path::new("Assets/t.png"), &bytes, &meta).unwrap().crunched.unwrap().data
+    }).collect();
+    assert_eq!(
+        archives[0], archives[1],
+        "texturecompression NoiseCrunchLinearNoMips/SrgbNoMips"
+    );
+}

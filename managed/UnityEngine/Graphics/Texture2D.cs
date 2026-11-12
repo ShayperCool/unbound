@@ -105,6 +105,7 @@ namespace UnityEngine
             m_SourceFormat = null;
             m_SourceMips = 0;
             m_SourceRaw = null;
+            ResetCrunch();
             m_BlockCellHashes = null;
             m_AssetGuid = null;
             if (BlockFormats.BlockBytes(format) > 0)
@@ -792,6 +793,7 @@ namespace UnityEngine
             m_Hdr = null;
             m_Raw = null;
             m_SourceRaw = null;
+            ResetCrunch();
             m_UnreadableRaw = null;
             m_MipPixels = null;
             m_MipHdr = null;
@@ -820,6 +822,7 @@ namespace UnityEngine
             m_SourceFormat = body.Get("m_SourceTextureFormat") is YNode source ? (TextureFormat)source.AsInt() : null;
             m_SourceMips = body.Int("m_SourceMipCount", body.Int("m_MipCount", 1));
             string encoded = body.Str("m_SourceTextureData");
+            ResetCrunch();
             m_SourceRaw = encoded.Length > 0 ? Convert.FromHexString(encoded) : null;
             m_IsReadable = body.Bool("m_IsReadable");
             // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).

@@ -72,7 +72,8 @@ use std::ffi::c_void;
 /// 62: allocation-free HDR block pixel reads.
 /// 63: `font_render_glyph` loads TextCore glyphs with FreeType load flags and render modes, in
 /// whole pixel sizes, and reports `TextCoreGlyphInfo`.
-pub const NATIVE_API_VERSION: u32 = 63;
+/// 64: allocation-free individual HDR ASTC/EAC texels and ASTC texture packets.
+pub const NATIVE_API_VERSION: u32 = 64;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -325,9 +326,9 @@ pub struct NativeApi {
     /// (a marker from `plugin_script_marker`, event type: 0 begin, 1 end, 2 a single sample): the plugins' callbacks
     /// for the marker's events (`EmitEvent` without data).
     pub plugin_marker_event: extern "C" fn(*const c_void, u16),
-    /// (TextureFormat, one 16-byte ASTC HDR block, out RGBA floats at its footprint): 1 on
-    /// success; 0 for another format or null buffers. The caller owns both buffers.
-    pub decode_hdr_block: extern "C" fn(i32, *const u8, *mut f32) -> i32,
+    /// (TextureFormat, one block, texel index, out four RGBA floats): 1 on success; 0 for
+    /// another format, an invalid index or null buffers. Supports HDR ASTC and unsigned EAC.
+    pub decode_block_texel: extern "C" fn(i32, *const u8, u32, *mut f32) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -388,29 +389,35 @@ pub fn api() -> NativeApi {
         gi_automatic_uvs,
         plugin_script_marker,
         plugin_marker_event,
-        decode_hdr_block,
+        decode_block_texel,
     }
 }
 
-extern "C" fn decode_hdr_block(format: i32, block: *const u8, output: *mut f32) -> i32 {
+extern "C" fn decode_block_texel(
+    format: i32,
+    block: *const u8,
+    index: u32,
+    output: *mut f32,
+) -> i32 {
     if block.is_null() || output.is_null() {
         return 0;
     }
-    let Some(format) =
-        unbound_assets::texture::BlockFormat::from_unity_format(format).filter(|f| f.is_astc_hdr())
+    let Some(format) = unbound_assets::texture::BlockFormat::from_unity_format(format)
+        .filter(|f| f.is_astc_hdr() || f.is_eac())
     else {
         return 0;
     };
     std::panic::catch_unwind(|| {
-        let count = (format.footprint() * format.footprint() * 4) as usize;
-        // The API requires one readable block and an exclusive output buffer at its footprint.
-        let (block, output) = unsafe {
-            (
-                &*block.cast::<[u8; 16]>(),
-                std::slice::from_raw_parts_mut(output, count),
-            )
-        };
-        unbound_assets::texture::decode_hdr_block(format, block, output)
+        // The caller supplies exactly one block and four exclusive output components.
+        let block = unsafe { std::slice::from_raw_parts(block, format.block_bytes()) };
+        if let Some(pixel) =
+            unbound_assets::texture::decode_block_texel(format, block, index as usize)
+        {
+            unsafe { std::slice::from_raw_parts_mut(output, 4) }.copy_from_slice(&pixel);
+            true
+        } else {
+            false
+        }
     })
     .unwrap_or(false) as i32
 }

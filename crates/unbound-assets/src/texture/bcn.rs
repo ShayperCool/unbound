@@ -58,6 +58,10 @@ pub enum BlockFormat {
     AstcHdr10x10,
     /// HDR RGBA, 12x12 texels in 16 bytes.
     AstcHdr12x12,
+    /// Unsigned EAC red, eight bytes per 4x4 block.
+    EacR,
+    /// Unsigned EAC red/green, sixteen bytes per 4x4 block.
+    EacRg,
 }
 
 impl BlockFormat {
@@ -73,6 +77,8 @@ impl BlockFormat {
             34 => Self::Etc1,
             45 => Self::Etc2Rgb,
             47 => Self::Etc2Rgba8,
+            41 => Self::EacR,
+            43 => Self::EacRg,
             48 => Self::Astc4x4,
             49 => Self::Astc5x5,
             50 => Self::Astc6x6,
@@ -101,6 +107,8 @@ impl BlockFormat {
             Self::Etc1 => 34,
             Self::Etc2Rgb => 45,
             Self::Etc2Rgba8 => 47,
+            Self::EacR => 41,
+            Self::EacRg => 43,
             Self::Astc4x4 => 48,
             Self::Astc5x5 => 49,
             Self::Astc6x6 => 50,
@@ -118,7 +126,7 @@ impl BlockFormat {
 
     pub fn block_bytes(self) -> usize {
         match self {
-            Self::Bc1 | Self::Bc4 | Self::Etc1 | Self::Etc2Rgb => 8,
+            Self::Bc1 | Self::Bc4 | Self::Etc1 | Self::Etc2Rgb | Self::EacR => 8,
             _ => 16,
         }
     }
@@ -183,9 +191,16 @@ impl BlockFormat {
         !self.is_etc() && !self.is_astc()
     }
 
-    /// ETC1 or ETC2.
+    pub fn is_eac(self) -> bool {
+        matches!(self, Self::EacR | Self::EacRg)
+    }
+
+    /// ETC1, ETC2 or EAC.
     pub fn is_etc(self) -> bool {
-        matches!(self, Self::Etc1 | Self::Etc2Rgb | Self::Etc2Rgba8)
+        matches!(
+            self,
+            Self::Etc1 | Self::Etc2Rgb | Self::Etc2Rgba8 | Self::EacR | Self::EacRg
+        )
     }
 }
 
@@ -242,9 +257,11 @@ pub fn compress_level(format: BlockFormat, rgba: &[u8], width: u32, height: u32)
         | BlockFormat::AstcHdr12x12 => {
             super::astc::Encoder::new(format, 0, 0).compress(rgba, width, height)
         }
-        BlockFormat::Etc1 | BlockFormat::Etc2Rgb | BlockFormat::Etc2Rgba8 => {
-            super::etc::compress_level(rgba, width, height, format == BlockFormat::Etc2Rgba8)
-        }
+        BlockFormat::Etc1
+        | BlockFormat::Etc2Rgb
+        | BlockFormat::Etc2Rgba8
+        | BlockFormat::EacR
+        | BlockFormat::EacRg => super::etc::compress_level(rgba, width, height, format),
         BlockFormat::Bc1 | BlockFormat::Bc3 => {
             let size = format.block_bytes();
             let mut out = vec![0u8; bw * bh * size];
@@ -334,6 +351,9 @@ pub fn compress_runtime_level(
     height: u32,
     high_quality: bool,
 ) -> Vec<u8> {
+    if format.is_eac() {
+        return super::etc::compress_runtime_eac(rgba, width, height, format);
+    }
     if !matches!(
         format,
         BlockFormat::Bc1 | BlockFormat::Bc3 | BlockFormat::Bc4 | BlockFormat::Bc5
@@ -631,6 +651,11 @@ fn decode(format: BlockFormat, blocks: &[u8], width: u32, height: u32, gpu: bool
             BlockFormat::Bc4 => {
                 texels = [[0, 0, 0, 255]; 16];
                 decode_steps(block, &mut texels, 0);
+            }
+            BlockFormat::EacR | BlockFormat::EacRg => {
+                for (index, texel) in texels.iter_mut().enumerate() {
+                    *texel = super::etc::decode_eac_texel(format, block, index);
+                }
             }
             BlockFormat::Bc5 => {
                 texels = [[0, 0, 0, 255]; 16];
