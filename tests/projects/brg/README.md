@@ -9,10 +9,17 @@ buffer given to AddBatch with its window), a zeroed block at address 0, packed f
 The culling callback emits four draw commands in one range: eight URP Lit cubes, two URP Unlit
 spheres, and two mirrored cubes (negative x scale), one with `FlipWinding` and one without.
 
-`Assets/Scripts/BrgProbe.cs` renders the main camera twice into a 320x180 texture and writes
-`basic.png` and `values.jsonl`: the API's answers (buffer target, window size, the IDs of
-registered meshes, materials and the batch) and every callback's context (view type, projection,
-masks, planes, splits, LOD parameters, view ID).
+`Assets/Scripts/BrgProbe.cs` renders the main camera twice into a 320x180 texture per scenario
+and writes `<scenario>.png` and `values.jsonl`: the API's answers (buffer target, window size, the
+IDs of registered meshes, materials and the batch) and every callback's context (view type,
+projection, masks, planes, splits, LOD parameters, view ID, the light it is for), and per group and
+view type how many callbacks ran. Scenarios:
+
+- `basic`: the four commands above;
+- `shadows`: the sun casts hard shadows in two cascades (the URP asset's count set at run time)
+  onto a ground plane; the range casts and receives shadows, and a second group takes light views
+  alone (`SetEnabledViewTypes`) and draws nothing;
+- `cameras`: a second camera elsewhere renders the group.
 
     python3 tests/projects/brg/run.py native --label L [--device vulkan]   # two Editor captures
     python3 tests/projects/brg/run.py publish L-1 L-2 [--device vulkan]
@@ -21,4 +28,7 @@ masks, planes, splits, LOD parameters, view ID).
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the two images are identical. Unbound matches both exactly (82/82 values, no pixel differs).
+the images and values (but the buffer target) are identical on both. Unbound: 330/454 values
+match on each device, the others are listed in `residuals-<device>.json` (the cascades' caster
+culling planes, culling matrix and spheres of the light contexts); `basic` and `cameras` match
+exactly, `shadows` has 18 isolated shadow-edge pixels over 8 (mean 0.01).

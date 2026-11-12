@@ -8,6 +8,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// The BatchRendererGroup probe: in the shader graph probe's URP scene (its Lit sphere stays as an
@@ -40,6 +41,14 @@ public unsafe class BrgProbe : MonoBehaviour
     string m_Scenario = "";
     int m_Render;
     Camera m_Camera;
+    /// <summary>The camera the scenario renders (the main one, else the cameras scenario's).</summary>
+    Camera m_ViewCamera;
+    Light m_Light;
+    /// <summary>The shadows scenario: the range casts and receives shadows.</summary>
+    bool m_Shadows;
+    /// <summary>A second group that takes light views alone and draws nothing.</summary>
+    BatchRendererGroup m_LightOnly;
+    readonly SortedDictionary<string, int> m_Views = new SortedDictionary<string, int>(StringComparer.Ordinal);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("BrgProbe").AddComponent<BrgProbe>();
@@ -56,6 +65,8 @@ public unsafe class BrgProbe : MonoBehaviour
         {
             Setup();
             Scenario("basic");
+            Shadows();
+            Cameras();
         }
         catch (Exception e)
         {
@@ -181,6 +192,49 @@ public unsafe class BrgProbe : MonoBehaviour
         data[at + 9] = m.m03; data[at + 10] = m.m13; data[at + 11] = m.m23;
     }
 
+    /// <summary>The main light casts hard shadows in two cascades onto a ground plane; the range
+    /// casts and receives shadows, and a second group takes light views alone.</summary>
+    void Shadows()
+    {
+        m_Light = FindFirstObjectByType<Light>();
+        var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+        int cascades = urp.shadowCascadeCount;
+        urp.shadowCascadeCount = 2;
+        m_Light.shadows = LightShadows.Hard;
+        var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        ground.transform.position = new Vector3(0f, -0.45f, 1.5f);
+        ground.transform.localScale = new Vector3(0.8f, 1f, 0.5f);
+        m_LightOnly = new BatchRendererGroup(OnPerformCulling, (IntPtr)2);
+        m_LightOnly.SetEnabledViewTypes(new[] { BatchCullingViewType.Light });
+        m_Shadows = true;
+        Scenario("shadows");
+        RecordViews();
+        m_Shadows = false;
+        m_LightOnly.Dispose();
+        m_LightOnly = null;
+        DestroyImmediate(ground);
+        m_Light.shadows = LightShadows.None;
+        urp.shadowCascadeCount = cascades;
+    }
+
+    /// <summary>A second camera, elsewhere, renders the group: its own culling and callback.</summary>
+    void Cameras()
+    {
+        var second = new GameObject("Second Camera").AddComponent<Camera>();
+        second.CopyFrom(m_Camera);
+        second.transform.SetPositionAndRotation(new Vector3(3f, 2f, -4f), Quaternion.Euler(18f, -35f, 0f));
+        second.fieldOfView = 50f;
+        Scenario("cameras", second);
+        RecordViews();
+        DestroyImmediate(second.gameObject);
+    }
+
+    void RecordViews()
+    {
+        foreach (var pair in m_Views) Row(pair.Key, pair.Value);
+        m_Views.Clear();
+    }
+
     void Teardown()
     {
         if (m_Brg != null)
@@ -194,15 +248,16 @@ public unsafe class BrgProbe : MonoBehaviour
 
     /// <summary>Renders the main camera twice into a 320x180 texture (the second render is the
     /// one recorded) and writes it as the scenario's image.</summary>
-    void Scenario(string name)
+    void Scenario(string name, Camera camera = null)
     {
         m_Scenario = name;
+        m_ViewCamera = camera ?? m_Camera;
         var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32);
-        m_Camera.targetTexture = target;
+        m_ViewCamera.targetTexture = target;
         for (m_Render = 1; m_Render <= 2; m_Render++)
         {
             m_Calls = 0;
-            m_Camera.Render();
+            m_ViewCamera.Render();
             Row(name + ".r" + m_Render + ".calls", m_Calls);
         }
         RenderTexture.active = target;
@@ -210,7 +265,7 @@ public unsafe class BrgProbe : MonoBehaviour
         texture.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
         texture.Apply();
         RenderTexture.active = null;
-        m_Camera.targetTexture = null;
+        m_ViewCamera.targetTexture = null;
         target.Release();
         if (!string.IsNullOrEmpty(s_Out)) File.WriteAllBytes(Path.Combine(s_Out, name + ".png"), texture.EncodeToPNG());
     }
@@ -219,7 +274,13 @@ public unsafe class BrgProbe : MonoBehaviour
     {
         int call = m_Calls++;
         string key = m_Scenario + ".r" + m_Render + ".cull" + call;
-        if (call < 4) RecordContext(key, group, context, user);
+        if (call < (m_Scenario == "basic" ? 4 : 8)) RecordContext(key, group, context, user);
+        if (m_Scenario != "basic")
+        {
+            string view = m_Scenario + ".views." + (group == m_Brg ? "drawing" : "lightOnly") + "." + context.viewType;
+            m_Views[view] = m_Views.TryGetValue(view, out int n) ? n + 1 : 1;
+        }
+        if (group != m_Brg) return new JobHandle();
         var commands = (BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr();
         Row(key + ".outputCount", output.drawCommands.Length);
         Row(key + ".outputZeroed", commands->drawCommandCount == 0 && commands->drawCommands == null && commands->visibleInstances == null);
@@ -252,7 +313,9 @@ public unsafe class BrgProbe : MonoBehaviour
         commands->drawRanges[0] = new BatchDrawRange
         {
             drawCommandsType = BatchDrawCommandType.Direct, drawCommandsBegin = 0, drawCommandsCount = Commands,
-            filterSettings = new BatchFilterSettings { renderingLayerMask = 0xffffffff },
+            filterSettings = m_Shadows
+                ? new BatchFilterSettings { renderingLayerMask = 0xffffffff, shadowCastingMode = ShadowCastingMode.On, receiveShadows = true }
+                : new BatchFilterSettings { renderingLayerMask = 0xffffffff },
         };
         for (int i = 0; i < Instances; i++) commands->visibleInstances[i] = i;
         return new JobHandle();
@@ -270,7 +333,8 @@ public unsafe class BrgProbe : MonoBehaviour
         Row(key + ".splitExclusionMask", c.splitExclusionMask);
         Row(key + ".receiverPlaneOffset", c.receiverPlaneOffset);
         Row(key + ".receiverPlaneCount", c.receiverPlaneCount);
-        Row(key + ".viewIsCamera", c.viewID.GetInstanceID() == m_Camera.GetInstanceID());
+        Row(key + ".viewIsCamera", c.viewID.GetInstanceID() == m_ViewCamera.GetInstanceID());
+        if (m_Scenario != "basic") Row(key + ".viewIsLight", m_Light != null && c.viewID.GetInstanceID() == m_Light.GetInstanceID());
         Row(key + ".viewSlice", c.viewID.GetSliceIndex());
         Row(key + ".localToWorld", Floats(c.localToWorldMatrix));
         var lod = c.lodParameters;

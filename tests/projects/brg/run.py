@@ -23,9 +23,12 @@ A capture is values.jsonl (every OnPerformCulling call's context and the API's a
 every missing, extra and failing value is printed. Images print the mean of the per-pixel largest
 channel difference, the worst one and the pixels over 8; an image fails above a mean of 0.5 or
 with more than 0.5% of its pixels over 8. The exit status is nonzero when anything fails, except
-for the keys residuals-<device>.json lists with their cause, which are printed with their reason.
+for the keys residuals-<device>.json lists with their cause (a key may be a glob pattern), which are
+printed with their reason. A new capture replaces a published reference only when it keeps every
+row and image of it as they are (the probe recorded again with added scenarios).
 """
 import argparse
+import fnmatch
 import json
 import os
 from pathlib import Path
@@ -112,18 +115,35 @@ def capture_names(directory):
     return sorted(p.name for p in Path(directory).iterdir() if p.suffix in ('.png', '.jsonl'))
 
 
+def kept(old, new):
+    """Whether the capture `new` keeps every image of the reference `old` byte for byte and
+    every row of its values as it is, in its order."""
+    for name in capture_names(old):
+        if name != VALUES and (not (new/name).exists() or (new/name).read_bytes() != (old/name).read_bytes()):
+            return False
+    rest = iter((new/VALUES).read_bytes().splitlines())
+    return all(row in rest for row in (old/VALUES).read_bytes().splitlines())
+
+
 def publish(labels):
     target = reference()
-    if target.exists():
-        sys.exit(f'{target} exists: remove it in a commit with an Oracle-Change trailer first')
+    fresh = target.with_name(target.name+'.new')
+    if fresh.exists():
+        shutil.rmtree(fresh)
 
     def write(path, first):
         path.mkdir(parents=True)
         for name in capture_names(first/CAPTURE):
             shutil.copyfile(first/CAPTURE/name, path/name)
-    editor_runner.publish([run_root(ROOT, label) for label in labels], target,
+    editor_runner.publish([run_root(ROOT, label) for label in labels], fresh,
                           lambda d: [f'{CAPTURE}/{n}' for n in capture_names(Path(d)/CAPTURE)], write,
                           complete=[editor_runner.jsonl_complete(f'{CAPTURE}/{VALUES}')], gpu=True)
+    if target.exists():
+        if not kept(target, fresh):
+            shutil.rmtree(fresh)
+            sys.exit(f'the captures change rows or images of the reference; not replacing {target}')
+        shutil.rmtree(target)
+    fresh.rename(target)
     print('published', target)
     return 0
 
@@ -178,6 +198,13 @@ def read_png(path):
     return width, height, out
 
 
+def residual(known, key):
+    """The listed cause of a key's difference (a listed key or glob pattern), else None."""
+    if key in known:
+        return known[key]
+    return next((cause for pattern, cause in known.items() if fnmatch.fnmatchcase(key, pattern)), None)
+
+
 def compare(expected_dir, actual_dir):
     expected_dir, actual_dir = Path(expected_dir), Path(actual_dir)
     known = residuals()
@@ -185,6 +212,7 @@ def compare(expected_dir, actual_dir):
     want, got = rows(expected_dir/VALUES), rows(actual_dir/VALUES)
     matched = 0
     for key in sorted(set(want) | set(got)):
+        cause = residual(known, key)
         if key in want and key in got and want[key] == got[key]:
             matched += 1
             if key in known:
@@ -192,8 +220,8 @@ def compare(expected_dir, actual_dir):
             continue
         what = ('missing' if key not in got else 'extra' if key not in want else 'differs')
         line = f'{what} {key}: unity {json.dumps(want.get(key))} unbound {json.dumps(got.get(key))}'
-        if key in known:
-            print(f'residual {line} ({known[key]})')
+        if cause is not None:
+            print(f'residual {line} ({cause})')
         else:
             print(line)
             failures += 1
