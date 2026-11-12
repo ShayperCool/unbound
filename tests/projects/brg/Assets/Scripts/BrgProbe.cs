@@ -244,11 +244,13 @@ public unsafe class BrgProbe : MonoBehaviour
             {
                 Row("errors.add.noWindow", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle).value);
                 Row("errors.add.unaligned", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 16, 256).value);
-                Row("errors.add.oversized", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 0, 32768).value);
+                Row("errors.add.twiceMaxWindow", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 0, 32768).value);
+                Row("errors.add.overConstantBufferSize", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 0, 65536 + 256).value);
             }
             else
             {
                 Row("errors.add.window", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 0, 256).value);
+                Row("errors.add.offsetOnly", m_Brg.AddBatch(metadata, m_Buffer.bufferHandle, 256, 0).value);
             }
             metadata.Dispose();
             RecordLog("errors.add");
