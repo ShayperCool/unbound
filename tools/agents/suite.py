@@ -524,7 +524,7 @@ def recipes(release):
         step.kind = 'compare'
         step.summary = r'[0-9]+/[0-9]+ receiver/driver streams match.*'
         R['editorcallbacks'].append(step)
-    for profile, flags in [('quit', []), ('leave', ['--leave']),
+    for profile, flags in [('quit', []), ('quit-throw', ['--throw-unloaded']), ('leave', ['--leave']),
                            ('leave-no-reload', ['--leave', '--skip-domain-reload'])]:
         step = driver('quit_control.py', 'check', '--release', '{release}',
                       '--label', '{label}-' + profile, *flags)

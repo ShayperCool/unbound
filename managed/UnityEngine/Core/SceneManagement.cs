@@ -673,7 +673,16 @@ namespace UnityEngine.SceneManagement
         {
             EditorSession.DestroyPlayModeObjects();
             ResetPending();
-            foreach (var scene in SceneRegistry.Loaded.ToArray()) UnloadNow(scene);
+            foreach (var scene in SceneRegistry.Loaded.ToArray())
+            {
+                try { UnloadNow(scene); }
+                catch (Exception e) { Debug.LogException(e); }
+                finally
+                {
+                    // A throwing unload callback must not retain the closed scene.
+                    if (SceneRegistry.Get(scene.Handle) != null) SceneRegistry.Forget(scene);
+                }
+            }
             SceneRegistry.Active = null;
         }
 

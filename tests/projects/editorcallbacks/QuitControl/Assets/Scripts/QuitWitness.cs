@@ -40,8 +40,13 @@ public static class QuitControl
             foreach (string name in Names) state += "," + name + "Alive=" + (Objects[name] != null);
             Unloaded[scene.name] = state;
             Put("unloaded." + scene.name, state);
+            bool throws = Environment.GetEnvironmentVariable("QUIT_CONTROL_THROW") == "1";
+            if (throws) Put("throw." + scene.name, "1");
             TryFinish();
+            if (throws) throw new InvalidOperationException("Quit control unload exception");
         };
+        if (Environment.GetEnvironmentVariable("QUIT_CONTROL_THROW") == "1")
+            SceneManager.sceneUnloaded += scene => Put("afterThrow." + scene.name, "1");
         var main = new GameObject(Names[0]);
         Objects[Names[0]] = main.AddComponent<QuitWitness>();
         var extra = SceneManager.CreateScene("ExtraQuit");

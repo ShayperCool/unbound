@@ -94,6 +94,12 @@ the event still sees a valid, unloaded scene and isPlaying true.
 documents the unload notification, without prescribing its relation to every
 shutdown callback. Those details are observations for the recorded contexts.
 
+`quit_control.py --throw-unloaded` records the same direct exit with an unload
+subscriber that throws. Both scenes still notify it and the Editor exits normally;
+a later subscriber in the same event invocation is skipped. The capture records
+both exceptions independently. Shutdown continues scene cleanup, preference saving
+and plugin shutdown even when an unload callback throws.
+
 `scene_loop.py --queue-three` checks completion order, final progress, scene and
 root counts for three queued additive loads. Completion frames and intermediate
 progress are retained in its diagnostic sidecar. Two full Editor repeats finished

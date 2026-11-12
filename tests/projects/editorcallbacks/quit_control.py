@@ -25,11 +25,12 @@ def main():
     p.add_argument('--release', required=True)
     p.add_argument('--label', default='quit-' + str(time.time_ns()))
     p.add_argument('--leave', action='store_true')
+    p.add_argument('--throw-unloaded', action='store_true')
     p.add_argument('--skip-domain-reload', action='store_true')
     a = p.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
     work = run_root(PROBE, a.label)
-    reference = PROBE / 'Reference' / ('unity-' + a.release) / ('leave-play-no-reload.jsonl' if a.skip_domain_reload else 'leave-play.jsonl' if a.leave else 'quit-play.jsonl')
+    reference = PROBE / 'Reference' / ('unity-' + a.release) / ('quit-play-throw.jsonl' if a.throw_unloaded else 'leave-play-no-reload.jsonl' if a.skip_domain_reload else 'leave-play.jsonl' if a.leave else 'quit-play.jsonl')
     if a.mode == 'publish':
         captures = [work / r for r in ('native1', 'native2')]
         for capture in captures:
@@ -45,7 +46,7 @@ def main():
         project, out = work / 'projects' / repeat, work / repeat
         shared.prepare(project, a.release)
         out.mkdir(parents=True)
-        overrides = {'QUIT_CONTROL_OUT': str(out / 'values.jsonl'), 'QUIT_CONTROL_LEAVE': '1' if a.leave else '0', 'QUIT_CONTROL_NO_RELOAD': '1' if a.skip_domain_reload else '0'}
+        overrides = {'QUIT_CONTROL_OUT': str(out / 'values.jsonl'), 'QUIT_CONTROL_LEAVE': '1' if a.leave else '0', 'QUIT_CONTROL_NO_RELOAD': '1' if a.skip_domain_reload else '0', 'QUIT_CONTROL_THROW': '1' if a.throw_unloaded else '0'}
         env = dict(os.environ, **overrides)
         if a.mode == 'editor':
             result = run(EditorJob(project, out / 'editor.log', out, ['-force-glcore'],

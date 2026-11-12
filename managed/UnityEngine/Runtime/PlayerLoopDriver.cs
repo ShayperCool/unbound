@@ -663,17 +663,31 @@ namespace Unbound.Runtime
             Trace.ReportUnread();
             if (s_QuitDone) return;
             s_QuitDone = true;
-            // Direct Editor exit omits the Play-mode quit message; stopping Play sends it.
-            if (EditorSession.IsPlaying && !s_EditorExit) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
-            Application.Internal_Quitting();
-            if (s_EditorExit) SceneManagerInternal.CloseEditorScenes();
-            else
+            try
             {
-                EditorSession.DestroyPlayModeObjects();
-                SceneRegistry.ResetToUntitled();
+                // Direct Editor exit omits the Play-mode quit message; stopping Play sends it.
+                if (EditorSession.IsPlaying && !s_EditorExit) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
+                Application.Internal_Quitting();
             }
-            PlayerPrefs.SaveOnQuit();
-            Unbound.Runtime.NativePlugins.Shutdown();
+            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown); }
+        }
+
+        internal static void FinishQuit(bool editorExit, Action savePreferences, Action shutdownPlugins)
+        {
+            try
+            {
+                if (editorExit) SceneManagerInternal.CloseEditorScenes();
+                else
+                {
+                    EditorSession.DestroyPlayModeObjects();
+                    SceneRegistry.ResetToUntitled();
+                }
+            }
+            finally
+            {
+                try { savePreferences(); }
+                finally { shutdownPlugins(); }
+            }
         }
     }
 
