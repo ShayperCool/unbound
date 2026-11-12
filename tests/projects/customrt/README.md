@@ -36,6 +36,10 @@ end of PostLateUpdate. `ev.<section>` lists the manager's events as `frame:point
   (material, initialization material, color, texture, source and mode, update mode, face mask,
   shader pass, and the same material or color again), read before and in the next two frames;
   what an initialization material does to the initialization texture and color.
+* **later** (last, added later): a double-buffered volume reading itself updated in two frames
+  in a row and with `Update(2)`, both buffers read; textures updating on load and initialized
+  by request whose material is changed after the shader pass was set to the info pass (the
+  OnLoad update runs again, with that pass), or whose pass alone is set (nothing runs).
 * **variables**: the custom render texture variables a blit sees before and after an update.
 * **loading**: default textures made late in the run (untouched, created, a mode set, a
   material set): when they load and what the manager lists.
@@ -106,7 +110,7 @@ and image manifest, with the rtdepth probe's float tolerance (absolute and relat
 
 ## Unbound (2026-11-12)
 
-408 of 410 values and 192 of 192 images match. The two values left: the api section's
+446 of 448 values and 228 of 228 images match. The two values left: the api section's
 textures, made in the first frame of Play mode, load in that frame in Unbound (`ev.api`,
 `api.all.next`); the Editor never loads them (it lists none of them in the next frame and sends
 them no events), while textures made in later frames load in their first frame in both.

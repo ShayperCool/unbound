@@ -117,7 +117,8 @@ namespace UnityEngine
             get => m_InitColor;
             set
             {
-                // Component by component; a NaN is always a change.
+                // Component by component, a NaN always a change (Unbound's choice: the probe changes
+                // the color by whole steps only).
                 if (m_InitColor.r == value.r && m_InitColor.g == value.g && m_InitColor.b == value.b && m_InitColor.a == value.a) return;
                 m_InitColor = value;
                 Changed();
@@ -165,8 +166,9 @@ namespace UnityEngine
         /// face mask of a loaded texture queues it again as on its load: its OnLoad initialization
         /// and its OnLoad update run at the next update point, once however many changes come
         /// before it, by the modes the texture has then (Unity 6000.0.71f1 Editor,
-        /// tests/projects/customrt <c>changed.*</c> and <c>volumeSelf</c>). The other properties
-        /// (shader pass, initialization texture and source, zones, double buffering) do not.
+        /// tests/projects/customrt <c>changed.*</c>, <c>volumeSelf</c>, <c>later.*</c>). The shader
+        /// pass, the initialization texture and source do not; not measured, and not queued: the
+        /// zones, double buffering, the update period and zone space.
         /// </summary>
         void Changed()
         {
