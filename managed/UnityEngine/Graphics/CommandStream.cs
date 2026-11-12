@@ -648,6 +648,8 @@ namespace Unbound.Runtime
             internal string Name;
             internal byte Kind;
             internal Vector4 Vector;
+            /// <summary>An int's value, exact (a float holds 24 bits of it).</summary>
+            internal int Int;
             internal Matrix4x4 Matrix;
             internal ulong Texture;
             internal uint Components;
@@ -666,7 +668,7 @@ namespace Unbound.Runtime
             int command = s_PendingCommand;
             s_PendingCommand = -1;
             if (command >= 0)
-                s_Properties.Add(new PropertyValue { Name = "unity_BaseCommandID", Kind = IntKind, Vector = new Vector4(command, 0, 0, 0) });
+                s_Properties.Add(new PropertyValue { Name = "unity_BaseCommandID", Kind = IntKind, Int = command });
             var motion = s_PendingMotion;
             s_PendingMotion = PendingMotion.None;
             if (motion == PendingMotion.RenderPipeline)
@@ -693,7 +695,7 @@ namespace Unbound.Runtime
                 switch (p.Value)
                 {
                     case float f: value.Kind = FloatKind; value.Vector = new Vector4(f, 0, 0, 0); break;
-                    case int i: value.Kind = IntKind; value.Vector = new Vector4(i, 0, 0, 0); break;
+                    case int i: value.Kind = IntKind; value.Int = i; break;
                     case Vector4 v: value.Kind = VectorKind; value.Vector = v; break;
                     case Color c: value.Kind = VectorKind; value.Vector = c; break;
                     case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
@@ -743,7 +745,7 @@ namespace Unbound.Runtime
                 switch (p.Kind)
                 {
                     case FloatKind: F32(p.Vector.x); break;
-                    case IntKind: I32((int)p.Vector.x); break;
+                    case IntKind: I32(p.Int); break;
                     case VectorKind: Vec4(p.Vector); break;
                     case MatrixKind: Matrix(p.Matrix); break;
                     case TextureKind: U64(p.Texture); Vec4(new Vector4(1, 1, 0, 0)); break;
