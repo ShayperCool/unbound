@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.UIElements;
 using UnityEngine.UIElements;
 using Xunit;
@@ -425,6 +426,62 @@ namespace UnityEngine.Tests
         }
 
         static readonly Color Black = new Color32(0, 0, 0, 255), White = new Color32(240, 240, 240, 255);
+
+        // Editor: curve-loop-plain, gradient-curve-loop(-at-origin). A curve whose ends coincide is
+        // an arc of radius 0 around that point: the same mesh wherever the curve lies, its first
+        // corner's coverage circles the extent over +/- the half width. Control: width 10, elsewhere.
+        [Fact]
+        public void ACurveWithoutLengthIsAnArcOfRadiusZeroAroundItsPoint()
+        {
+            Saved Loop(Vector2 at) => Save(Stroke(10, LineJoin.Miter, LineCap.Butt, p =>
+            {
+                p.MoveTo(at); p.BezierCurveTo(at + new Vector2(60, 0), at + new Vector2(0, 60), at); p.LineTo(at + new Vector2(40, 30));
+            }));
+            var near = Loop(new Vector2(0, 0));
+            var far = Loop(new Vector2(100, 60));
+            Assert.Equal(near.Indices, far.Indices);
+            Assert.Equal(near.Vertices.Length, far.Vertices.Length);
+            for (int i = 0; i < near.Vertices.Length; i++)
+            {
+                Near(near.Vertices[i].position.x, far.Vertices[i].position.x);
+                Near(near.Vertices[i].position.y, far.Vertices[i].position.y);
+                Near(near.Vertices[i].circle.x, far.Vertices[i].circle.x);
+                Near(near.Vertices[i].circle.w, far.Vertices[i].circle.w);
+            }
+            // Half width 5, extent 7: 7 / 5 outside, -7 / 5 inside; the point itself 0.
+            var c = near.Vertices[0].circle;
+            Near(7f / 5f, Math.Abs(c.x) + Math.Abs(c.y));
+            Near(-7f / 5f, -(Math.Abs(c.z) + Math.Abs(c.w)));
+            Assert.Equal(Vector4.zero, near.Vertices[2].circle);
+        }
+
+        // Editor: curve-loop-opposed, quadratic-loop. A curve whose end tangents oppose shrinks to its
+        // middle point, where a dot of the line's width is drawn. Control: width 8, another curve.
+        [Fact]
+        public void ACurveWhoseEndsOpposeDrawsADotAtItsMiddle()
+        {
+            var s = Save(Stroke(8, LineJoin.Miter, LineCap.Butt, p =>
+            {
+                p.MoveTo(new Vector2(10, 10)); p.BezierCurveTo(new Vector2(50, 10), new Vector2(50, 10), new Vector2(10, 10)); p.LineTo(new Vector2(10, 50));
+            }));
+            // The piece's quad (4 vertices), then the dot: its centre and four corners 4 + 2 out.
+            var center = s.Vertices[4].position;
+            Assert.Equal(new Vector4(0f, 0f, -9999.9f, -9999.9f), s.Vertices[4].circle);
+            float[] dx = { -6, 6, 6, -6 }, dy = { -6, -6, 6, 6 };
+            for (int i = 0; i < 4; i++)
+            {
+                var v = s.Vertices[5 + i];
+                Near(dx[i], v.position.x - center.x);
+                Near(dy[i], v.position.y - center.y);
+                Near(dx[i] / 4f, v.circle.x);
+                Near(dy[i] / 4f, v.circle.y);
+            }
+            Assert.Equal(new ushort[] { 4, 5, 6, 4, 6, 7, 4, 7, 8, 4, 8, 5 }, s.Indices.Skip(6).Take(12).ToArray());
+            // The quad's circles are centred on that middle point (radius 0).
+            var q = s.Vertices[0];
+            Near((q.position.x - center.x) / 4f, q.circle.x);
+            Near((q.position.x - center.x) / -4f, q.circle.z);
+        }
 
         static Saved GradientLine(Gradient g, float length = 80f, Action<Painter2D> before = null) => Save(p =>
         {

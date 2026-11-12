@@ -16,11 +16,14 @@ A second list holds the stroke gradient cases (`gradient-*`): two, three and eig
 join and cap, closed and separate sub-paths, zero-length and very short segments, arcs both ways,
 a whole circle, ArcTo, curves (with keys inside their pieces, a straight curve, a stroke wider than
 the curve's radius), a mixed closed path, arcs whose inner side reaches or passes the centre,
-curves without length (meshes only; their stroke geometry is open, see `OPEN` in verify.py), and the
+curves without length (meshes only), and the
 rules around the property: null after a
 gradient, strokeColor set after it, a transparent strokeColor or transparent keys, the caller's
 gradient changed after it was set, Fill beside it, two strokes of one path, a gradient left set
-for the next element. Their meshes follow every other line of `painter.jsonl`, and they are
+for the next element. After them, meshes only: curves without length without a gradient (a loop
+back to its start at another place and width, alone, between two lines, with round joins and caps,
+end tangents that oppose each other, a quadratic loop, a tiny curve away from the origin). Their
+meshes follow every other line of `painter.jsonl`, and the gradient cases are
 rendered on the panel at scale 1 after the two images above (`painter-gradient.png`), so the
 earlier lines and images do not depend on them. Key colours are whole 8-bit values whose
 differences are multiples of 16, and alpha keys sit away from the middle of a colour span: no

@@ -33,14 +33,9 @@ AREA_TOLERANCE = 1e-2
 # within 8/255, none over.
 IMAGE_LIMITS = {'painter-1.png': (0.02, 11, 1), 'painter-1.25.png': (0.02, 95, 32), 'painter-gradient.png': (0.02, 8, 0)}
 # Cases recorded in the reference whose mesh is known to differ: compared and printed with their
-# difference on every run (each names its follow-up in docs/COMPATIBILITY_GAPS.md). The order of
-# their distinct tints is checked; the geometry of a curve without length (a loop back to its
-# start, a curve shorter than the path epsilon) is the open part.
-OPEN = {
-    'gradient-curve-loop': 'stroke geometry of a curve whose ends coincide',
-    'gradient-curve-loop-at-origin': 'stroke geometry of a curve whose ends coincide',
-    'gradient-curve-tiny-at-origin': 'stroke geometry of a curve shorter than the path epsilon',
-}
+# difference on every run (each names its follow-up in docs/COMPATIBILITY_GAPS.md); only the order
+# of their distinct tints is counted. None at present.
+OPEN = {}
 ORDER_FREE = {
     'fill-circle', 'fill-pie', 'fill-pie-ccw', 'fill-pie-small', 'fill-rounded-rect', 'fill-bezier',
     'fill-quadratic', 'fill-bezier-inflection', 'fill-arc-closed-nomove', 'fill-two-contours-oddeven',
