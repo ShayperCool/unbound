@@ -12,7 +12,10 @@ A probe's script writes `values.jsonl` into the directory named by its output va
 
 Values compare exactly, except numbers: |expected - actual| <= `tolerance` (the probe's own,
 named in its README). Every missing, extra and differing key is printed. Images print their
-mean and worst max-channel difference and the pixels over 8 (no verdict; the suite tracks them).
+mean and worst max-channel difference and the pixels over 8; without a limit that is no verdict
+(the suite tracks them). A probe may set limits in `image_limits.json` next to its run.py:
+`{image: {"mean": m, "worst": w, "over8": n, "reason": "..."}}`, the recorded residuals with their
+cause; an image over any of them fails.
 
 A probe may list known residuals in `residuals.json` next to its run.py: `{reason: [key, ...]}`,
 open differences with a named cause and follow-up. Such a key that differs is printed with its
@@ -167,6 +170,19 @@ def residuals(probe):
     return known
 
 
+def image_limits(probe):
+    """{image: (mean, worst, over 8, reason)} of the probe's image_limits.json (none without one)."""
+    path = Path(probe)/'image_limits.json'
+    if not path.exists():
+        return {}
+    limits = {}
+    for name, limit in json.loads(path.read_text()).items():
+        if not limit.get('reason'):
+            raise ValueError(f'{path}: {name} has no reason')
+        limits[name] = (limit['mean'], limit['worst'], limit['over8'], limit['reason'])
+    return limits
+
+
 def images(directory):
     return sorted(p.name for p in Path(directory).glob('*.png'))
 
@@ -236,6 +252,7 @@ def gate(probe, variable, label, tolerance, engine_args):
     differing = {f['key'] for f in residual}
     for key in sorted(k for k in known if k not in differing and k in expected):
         print(f'residual resolved (remove it from residuals.json): {key}')
+    limits = image_limits(probe)
     for name in images(reference):
         if not (capture/name).exists():
             print(f'{name}: missing')
@@ -247,6 +264,10 @@ def gate(probe, variable, label, tolerance, engine_args):
             failures.append({'image': name})
         else:
             print(f'{name}: mean {measured[0]:.2f}, worst {measured[1]}, over 8: {measured[2]}')
+            limit = limits.get(name)
+            if limit and (measured[0] > limit[0] or measured[1] > limit[1] or measured[2] > limit[2]):
+                print(f'{name}: over its recorded limit (mean {limit[0]}, worst {limit[1]}, over 8: {limit[2]}; {limit[3]})')
+                failures.append({'image': name})
     print(f'{probe.name}: {matched}/{len(expected)} values match, {len(failures)} failures, {len(residual)} known residuals; engine exit {code}; logs {out}')
     return 1 if failures or code else 0
 
