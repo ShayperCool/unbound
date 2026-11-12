@@ -108,3 +108,61 @@ NoiseDXT5CrunchedQ100 format=DXT5Crunched quality=100 android=ETC2_RGBA8Crunched
 SmoothDXT1CrunchedQ0 format=DXT1Crunched quality=0 android=ETC_RGB4Crunched
 SmoothDXT1CrunchedQ100 format=DXT1Crunched quality=100 android=ETC_RGB4Crunched
 FlatDXT5Crunched format=DXT5Crunched android=ETC2_RGBA8Crunched
+HeightColorRGBA32 format=RGBA32
+HdrRGBAFloat format=RGBAFloat srgb=0 android=RGBAFloat
+NoiseASTC6Q1 format=RGBA32 quality=1 android=ASTC_6x6
+NoiseASTC6Q49 format=RGBA32 quality=49 android=ASTC_6x6
+NoiseASTC6Q50 format=RGBA32 quality=50 android=ASTC_6x6
+NoiseASTC6Q51 format=RGBA32 quality=51 android=ASTC_6x6
+NoiseASTC6Q99 format=RGBA32 quality=99 android=ASTC_6x6
+NoiseASTC6Q100 format=RGBA32 quality=100 android=ASTC_6x6
+NoiseASTC5Q50 format=RGBA32 quality=50 android=ASTC_5x5
+NoiseASTC5Q100 format=RGBA32 quality=100 android=ASTC_5x5
+NoiseASTC10Q0 format=RGBA32 quality=0 android=ASTC_10x10
+NoiseASTC10Q50 format=RGBA32 quality=50 android=ASTC_10x10
+NoiseASTC10Q100 format=RGBA32 quality=100 android=ASTC_10x10
+NoiseASTC12Q0 format=RGBA32 quality=0 android=ASTC_12x12
+NoiseASTC12Q50 format=RGBA32 quality=50 android=ASTC_12x12
+NoiseASTC12Q100 format=RGBA32 quality=100 android=ASTC_12x12
+HeightRedASTC6Q0 type=single channel=red format=RGBA32 srgb=0 quality=0 android=ASTC_6x6
+HeightAlphaASTC6Q0 type=single channel=alpha format=RGBA32 srgb=0 quality=0 android=ASTC_6x6
+NormalsASTC6Q50 type=normal format=RGB24 quality=50 android=ASTC_6x6
+HeightRedASTC6Q50 type=single channel=red format=RGBA32 srgb=0 quality=50 android=ASTC_6x6
+HeightAlphaASTC6Q50 type=single channel=alpha format=RGBA32 srgb=0 quality=50 android=ASTC_6x6
+NormalsASTC6Q100 type=normal format=RGB24 quality=100 android=ASTC_6x6
+HeightRedASTC6Q100 type=single channel=red format=RGBA32 srgb=0 quality=100 android=ASTC_6x6
+HeightAlphaASTC6Q100 type=single channel=alpha format=RGBA32 srgb=0 quality=100 android=ASTC_6x6
+HeightRedASTCSrgb type=single channel=red format=RGBA32 quality=50 android=ASTC_6x6
+HdrASTC4Q0 format=RGBAFloat srgb=0 quality=0 android=ASTC_HDR_4x4
+HdrASTC4Q50 format=RGBAFloat srgb=0 quality=50 android=ASTC_HDR_4x4
+HdrASTC4Q100 format=RGBAFloat srgb=0 quality=100 android=ASTC_HDR_4x4
+HdrASTC5Q0 format=RGBAFloat srgb=0 quality=0 android=ASTC_HDR_5x5
+HdrASTC5Q50 format=RGBAFloat srgb=0 quality=50 android=ASTC_HDR_5x5
+HdrASTC5Q100 format=RGBAFloat srgb=0 quality=100 android=ASTC_HDR_5x5
+HdrASTC6Q0 format=RGBAFloat srgb=0 quality=0 android=ASTC_HDR_6x6
+HdrASTC6Q50 format=RGBAFloat srgb=0 quality=50 android=ASTC_HDR_6x6
+HdrASTC6Q100 format=RGBAFloat srgb=0 quality=100 android=ASTC_HDR_6x6
+HdrASTC8Q0 format=RGBAFloat srgb=0 quality=0 android=ASTC_HDR_8x8
+HdrASTC8Q50 format=RGBAFloat srgb=0 quality=50 android=ASTC_HDR_8x8
+HdrASTC8Q100 format=RGBAFloat srgb=0 quality=100 android=ASTC_HDR_8x8
+HdrASTC10Q0 format=RGBAFloat srgb=0 quality=0 android=ASTC_HDR_10x10
+HdrASTC10Q50 format=RGBAFloat srgb=0 quality=50 android=ASTC_HDR_10x10
+HdrASTC10Q100 format=RGBAFloat srgb=0 quality=100 android=ASTC_HDR_10x10
+HdrASTC12Q0 format=RGBAFloat srgb=0 quality=0 android=ASTC_HDR_12x12
+HdrASTC12Q50 format=RGBAFloat srgb=0 quality=50 android=ASTC_HDR_12x12
+HdrASTC12Q100 format=RGBAFloat srgb=0 quality=100 android=ASTC_HDR_12x12
+HdrSpecialASTC6 format=RGBAFloat srgb=0 mips=0 android=ASTC_HDR_6x6
+HdrSpecialRGBAFloat format=RGBAFloat srgb=0 mips=0 android=RGBAFloat
+NormalsSource type=normal format=RGBA32 srgb=0 android=RGBA32
+NoiseSingleRedASTC6Q0 type=single channel=red format=RGBA32 quality=0 android=ASTC_6x6
+NoiseSingleAlphaASTC6Q0 type=single channel=alpha format=RGBA32 quality=0 android=ASTC_6x6
+NoiseSingleRedASTC6Q50 type=single channel=red format=RGBA32 quality=50 android=ASTC_6x6
+NoiseSingleAlphaASTC6Q50 type=single channel=alpha format=RGBA32 quality=50 android=ASTC_6x6
+NoiseSingleRedASTC6Q100 type=single channel=red format=RGBA32 quality=100 android=ASTC_6x6
+NoiseSingleAlphaASTC6Q100 type=single channel=alpha format=RGBA32 quality=100 android=ASTC_6x6
+SoftSourceRGBA32 format=RGBA32 srgb=0
+SoftASTC6Q50 format=RGBA32 srgb=0 quality=50 android=ASTC_6x6
+SoftASTC6Q100 format=RGBA32 srgb=0 quality=100 android=ASTC_6x6
+NpotRedASTC6 type=single channel=red format=RGBA32 srgb=0 npot=none android=ASTC_6x6
+NpotAlphaASTC6 type=single channel=alpha format=RGBA32 srgb=0 npot=none android=ASTC_6x6
+HdrNpotASTC6 format=RGBAFloat srgb=0 npot=none android=ASTC_HDR_6x6

@@ -42,6 +42,22 @@ pub enum BlockFormat {
     Astc6x6,
     /// LDR RGBA, 8x8 texels in 16 bytes.
     Astc8x8,
+    /// LDR RGBA, 10x10 texels in 16 bytes.
+    Astc10x10,
+    /// LDR RGBA, 12x12 texels in 16 bytes.
+    Astc12x12,
+    /// HDR RGBA, 4x4 texels in 16 bytes.
+    AstcHdr4x4,
+    /// HDR RGBA, 5x5 texels in 16 bytes.
+    AstcHdr5x5,
+    /// HDR RGBA, 6x6 texels in 16 bytes.
+    AstcHdr6x6,
+    /// HDR RGBA, 8x8 texels in 16 bytes.
+    AstcHdr8x8,
+    /// HDR RGBA, 10x10 texels in 16 bytes.
+    AstcHdr10x10,
+    /// HDR RGBA, 12x12 texels in 16 bytes.
+    AstcHdr12x12,
 }
 
 impl BlockFormat {
@@ -61,6 +77,14 @@ impl BlockFormat {
             49 => Self::Astc5x5,
             50 => Self::Astc6x6,
             51 => Self::Astc8x8,
+            52 => Self::Astc10x10,
+            53 => Self::Astc12x12,
+            66 => Self::AstcHdr4x4,
+            67 => Self::AstcHdr5x5,
+            68 => Self::AstcHdr6x6,
+            69 => Self::AstcHdr8x8,
+            70 => Self::AstcHdr10x10,
+            71 => Self::AstcHdr12x12,
             _ => return None,
         })
     }
@@ -81,6 +105,14 @@ impl BlockFormat {
             Self::Astc5x5 => 49,
             Self::Astc6x6 => 50,
             Self::Astc8x8 => 51,
+            Self::Astc10x10 => 52,
+            Self::Astc12x12 => 53,
+            Self::AstcHdr4x4 => 66,
+            Self::AstcHdr5x5 => 67,
+            Self::AstcHdr6x6 => 68,
+            Self::AstcHdr8x8 => 69,
+            Self::AstcHdr10x10 => 70,
+            Self::AstcHdr12x12 => 71,
         }
     }
 
@@ -94,9 +126,11 @@ impl BlockFormat {
     /// Square block footprint in texels.
     pub fn footprint(self) -> u32 {
         match self {
-            Self::Astc5x5 => 5,
-            Self::Astc6x6 => 6,
-            Self::Astc8x8 => 8,
+            Self::Astc5x5 | Self::AstcHdr5x5 => 5,
+            Self::Astc6x6 | Self::AstcHdr6x6 => 6,
+            Self::Astc8x8 | Self::AstcHdr8x8 => 8,
+            Self::Astc10x10 | Self::AstcHdr10x10 => 10,
+            Self::Astc12x12 | Self::AstcHdr12x12 => 12,
             _ => 4,
         }
     }
@@ -104,7 +138,30 @@ impl BlockFormat {
     pub fn is_astc(self) -> bool {
         matches!(
             self,
-            Self::Astc4x4 | Self::Astc5x5 | Self::Astc6x6 | Self::Astc8x8
+            Self::Astc4x4
+                | Self::Astc5x5
+                | Self::Astc6x6
+                | Self::Astc8x8
+                | Self::Astc10x10
+                | Self::Astc12x12
+                | Self::AstcHdr4x4
+                | Self::AstcHdr5x5
+                | Self::AstcHdr6x6
+                | Self::AstcHdr8x8
+                | Self::AstcHdr10x10
+                | Self::AstcHdr12x12
+        )
+    }
+
+    pub fn is_astc_hdr(self) -> bool {
+        matches!(
+            self,
+            Self::AstcHdr4x4
+                | Self::AstcHdr5x5
+                | Self::AstcHdr6x6
+                | Self::AstcHdr8x8
+                | Self::AstcHdr10x10
+                | Self::AstcHdr12x12
         )
     }
 
@@ -174,7 +231,17 @@ pub fn compress_level(format: BlockFormat, rgba: &[u8], width: u32, height: u32)
         BlockFormat::Astc4x4
         | BlockFormat::Astc5x5
         | BlockFormat::Astc6x6
-        | BlockFormat::Astc8x8 => super::astc::compress(rgba, width, height, format),
+        | BlockFormat::Astc8x8
+        | BlockFormat::Astc10x10
+        | BlockFormat::Astc12x12
+        | BlockFormat::AstcHdr4x4
+        | BlockFormat::AstcHdr5x5
+        | BlockFormat::AstcHdr6x6
+        | BlockFormat::AstcHdr8x8
+        | BlockFormat::AstcHdr10x10
+        | BlockFormat::AstcHdr12x12 => {
+            super::astc::Encoder::new(format, 0, 0).compress(rgba, width, height)
+        }
         BlockFormat::Etc1 | BlockFormat::Etc2Rgb | BlockFormat::Etc2Rgba8 => {
             super::etc::compress_level(rgba, width, height, format == BlockFormat::Etc2Rgba8)
         }
@@ -483,7 +550,7 @@ fn compress_f32_with_settings(
 }
 
 /// An f32 as an IEEE half (round to nearest even; overflow to infinity).
-fn f32_to_f16(v: f32) -> u16 {
+pub(super) fn f32_to_f16(v: f32) -> u16 {
     let bits = v.to_bits();
     let sign = ((bits >> 16) & 0x8000) as u16;
     let exp = ((bits >> 23) & 0xff) as i32;
@@ -547,7 +614,15 @@ fn decode(format: BlockFormat, blocks: &[u8], width: u32, height: u32, gpu: bool
             BlockFormat::Astc4x4
             | BlockFormat::Astc5x5
             | BlockFormat::Astc6x6
-            | BlockFormat::Astc8x8 => unreachable!(),
+            | BlockFormat::Astc8x8
+            | BlockFormat::Astc10x10
+            | BlockFormat::Astc12x12
+            | BlockFormat::AstcHdr4x4
+            | BlockFormat::AstcHdr5x5
+            | BlockFormat::AstcHdr6x6
+            | BlockFormat::AstcHdr8x8
+            | BlockFormat::AstcHdr10x10
+            | BlockFormat::AstcHdr12x12 => unreachable!(),
             BlockFormat::Bc1 => decode_colour(block, &mut texels, false),
             BlockFormat::Bc3 => {
                 decode_colour(&block[8..], &mut texels, gpu);

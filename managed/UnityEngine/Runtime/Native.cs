@@ -55,6 +55,9 @@ namespace Unbound.Runtime
 
         internal static bool IsReady => s_Ready;
 
+        internal static bool DecodeHdrBlock(int format, byte* blocks, UnityEngine.Color* pixels) =>
+            s_Ready && s_Api.DecodeHdrBlock != null && s_Api.DecodeHdrBlock(format, blocks, (float*)pixels) != 0;
+
         internal static void Log(int level, string text)
         {
             if (!s_Ready || s_Api.Log == null)

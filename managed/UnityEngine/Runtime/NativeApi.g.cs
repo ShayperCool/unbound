@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 61;
+        internal const uint CurrentVersion = 62;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -200,5 +200,10 @@ namespace Unbound.Runtime
         /// for the marker's events (`EmitEvent` without data).
         /// </summary>
         internal delegate* unmanaged<void*, ushort, void> PluginMarkerEvent;
+        /// <summary>
+        /// (TextureFormat, one 16-byte ASTC HDR block, out RGBA floats at its footprint): 1 on
+        /// success; 0 for another format or null buffers. The caller owns both buffers.
+        /// </summary>
+        internal delegate* unmanaged<int, byte*, float*, int> DecodeHdrBlock;
     }
 }

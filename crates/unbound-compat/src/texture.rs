@@ -10,7 +10,8 @@ pub struct TextureCompressionRules {
     #[serde(default)]
     pub measured_runtime_encoder: bool,
     #[serde(default)]
-    pub measured_astc_fast: bool,
+    #[serde(alias = "measured_astc_fast")]
+    pub measured_astc_encoders: bool,
 }
 
 impl TextureCompressionRules {
@@ -19,7 +20,7 @@ impl TextureCompressionRules {
         Self {
             measured_import_encoders: measured,
             measured_runtime_encoder: measured,
-            measured_astc_fast: measured,
+            measured_astc_encoders: measured,
         }
     }
 }
@@ -40,7 +41,7 @@ mod tests {
         ] {
             assert!(!TextureCompressionRules::for_version(version).measured_import_encoders);
             assert!(!TextureCompressionRules::for_version(version).measured_runtime_encoder);
-            assert!(!TextureCompressionRules::for_version(version).measured_astc_fast);
+            assert!(!TextureCompressionRules::for_version(version).measured_astc_encoders);
         }
         assert!(
             TextureCompressionRules::for_version(UnityVersion::new(6000, 0, 71))

@@ -679,12 +679,25 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 width: u32,
                 height: u32,
                 data: String,
+                #[serde(default)]
+                floats: bool,
             }
             let r: Request = serde_json::from_str(request)?;
             let format = unbound_assets::texture::BlockFormat::from_unity_format(r.format)
                 .with_context(|| format!("texture format {} is not a block format", r.format))?;
             let blocks = crate::fonts::decode_base64(&r.data).context("data is not base64")?;
-            let rgba = unbound_assets::texture::decode_blocks(format, &blocks, r.width, r.height);
+            let rgba = if r.floats {
+                anyhow::ensure!(
+                    format.is_astc_hdr(),
+                    "float decoding requires ASTC HDR blocks"
+                );
+                unbound_assets::texture::decode_blocks_f32(&blocks, r.width, r.height, format)
+                    .into_iter()
+                    .flat_map(f32::to_le_bytes)
+                    .collect()
+            } else {
+                unbound_assets::texture::decode_blocks(format, &blocks, r.width, r.height)
+            };
             Ok(json!({ "rgba": crate::models::base64(&rgba) }).to_string())
         }
         "texture-compress-blocks" => {
@@ -701,7 +714,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             let format = unbound_assets::texture::BlockFormat::from_unity_format(r.format)
-                .filter(|f| *f != unbound_assets::texture::BlockFormat::Bc6h)
+                .filter(|f| *f != unbound_assets::texture::BlockFormat::Bc6h && !f.is_astc_hdr())
                 .with_context(|| {
                     format!("texture format {} is not an 8-bit block format", r.format)
                 })?;
@@ -1348,7 +1361,21 @@ fn block_code(format: unbound_assets::texture::BlockFormat, srgb: bool) -> i32 {
         B::Bc4 => texture_format::BC4,
         B::Bc5 => texture_format::BC5,
         B::Bc6h => texture_format::BC6H,
-        B::Etc1 | B::Etc2Rgb | B::Etc2Rgba8 | B::Astc4x4 | B::Astc5x5 | B::Astc6x6 | B::Astc8x8 => {
+        B::Etc1
+        | B::Etc2Rgb
+        | B::Etc2Rgba8
+        | B::Astc4x4
+        | B::Astc5x5
+        | B::Astc6x6
+        | B::Astc8x8
+        | B::Astc10x10
+        | B::Astc12x12
+        | B::AstcHdr4x4
+        | B::AstcHdr5x5
+        | B::AstcHdr6x6
+        | B::AstcHdr8x8
+        | B::AstcHdr10x10
+        | B::AstcHdr12x12 => {
             unreachable!("ETC and ASTC blocks upload as BC7 or pixels")
         }
     }

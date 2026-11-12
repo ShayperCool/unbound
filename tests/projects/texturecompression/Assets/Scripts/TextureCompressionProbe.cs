@@ -203,6 +203,14 @@ public class TextureCompressionProbe : MonoBehaviour
             ("new.ASTC5Odd", TextureFormat.ASTC_5x5, 7, 5, false),
             ("new.ASTC6Odd", TextureFormat.ASTC_6x6, 7, 5, false),
             ("new.ASTC8Odd", TextureFormat.ASTC_8x8, 7, 5, false),
+            ("new.ASTC10", TextureFormat.ASTC_10x10, 13, 7, true),
+            ("new.ASTC12", TextureFormat.ASTC_12x12, 13, 7, true),
+            ("new.ASTCHDR4", TextureFormat.ASTC_HDR_4x4, 13, 7, true),
+            ("new.ASTCHDR5", TextureFormat.ASTC_HDR_5x5, 13, 7, true),
+            ("new.ASTCHDR6", TextureFormat.ASTC_HDR_6x6, 13, 7, true),
+            ("new.ASTCHDR8", TextureFormat.ASTC_HDR_8x8, 13, 7, true),
+            ("new.ASTCHDR10", TextureFormat.ASTC_HDR_10x10, 13, 7, true),
+            ("new.ASTCHDR12", TextureFormat.ASTC_HDR_12x12, 13, 7, true),
         })
         Section(key, () =>
         {
@@ -213,6 +221,28 @@ public class TextureCompressionProbe : MonoBehaviour
                 Describe(key, t, false);
                 Destroy(t);
             }
+        });
+
+        // Half-float constant-colour blocks retain radiance and alpha through writes and uploads.
+        Section("write.astchdr", () =>
+        {
+            var t = new Texture2D(13, 7, TextureFormat.ASTC_HDR_6x6, true, true);
+            var block = new byte[] { 252, 255, 255, 255, 255, 255, 255, 255, 0, 62, 128, 64, 0, 67, 0, 56 };
+            var raw = t.GetRawTextureData();
+            for (int at = 0; at < raw.Length; at += 16) block.CopyTo(raw, at);
+            t.LoadRawTextureData(raw);
+            t.Apply(false);
+            Describe("write.astchdr.loaded", t);
+            var view = t.GetPixelData<byte>(0);
+            view[8] = 0; view[9] = 68;
+            Add("write.astchdr.view.pixel", Floats(t.GetPixel(0, 0)));
+            Add("write.astchdr.view.pixels", Floats(t.GetPixels(0)[0]));
+            var mip = t.GetPixelData<byte>(1);
+            mip[8] = 0; mip[9] = 70;
+            Add("write.astchdr.view1.pixel", Floats(t.GetPixel(0, 0, 1)));
+            t.Apply(false);
+            Add("write.astchdr.gpu", Gpu(t));
+            Destroy(t);
         });
 
         // LoadRawTextureData with compressed blocks.

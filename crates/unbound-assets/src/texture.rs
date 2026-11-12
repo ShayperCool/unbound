@@ -156,6 +156,9 @@ pub struct TextureSettings {
     /// colour-space flag while their GPU format stays linear.
     #[serde(default)]
     pub single_channel_mip_srgb: bool,
+    /// Enable the measured RGBA8 fallback for an ASTC mip chain with non-power-of-two sides.
+    #[serde(default)]
+    pub astc_mip_fallback: bool,
     /// Set by the importer in a gamma-space project: HDR colour is stored gamma-encoded.
     #[serde(default)]
     pub gamma_hdr: bool,
@@ -189,8 +192,9 @@ pub struct TextureSettings {
     /// `flipGreenChannel` of a normal map.
     #[serde(default)]
     pub flip_green: bool,
-    /// Whether the build target's explicit format stores alpha (`None`: automatic). With an
-    /// alpha-less "Alpha Source: None", only an automatic format drops the input alpha.
+    /// Whether the chosen target format stores alpha (`None`: automatic). A negotiated RGBA
+    /// fallback also sets this flag. With an alpha-less "Alpha Source: None", only an automatic
+    /// format drops the input alpha.
     #[serde(default)]
     pub format_alpha: Option<bool>,
     pub is_readable: bool,
@@ -355,6 +359,7 @@ impl TextureSettings {
             srgb,
             srgb_flag,
             single_channel_mip_srgb: false,
+            astc_mip_fallback: false,
             gamma_hdr: false,
             normal_maps_xyz: false,
             alpha_source,
@@ -547,7 +552,7 @@ pub struct ImportedTexture {
     #[serde(default)]
     pub approximation: Option<String>,
     /// The mips block-compressed to BC7 for the GPU alone (4x smaller than RGBA8), where the
-    /// build target compresses in a format Unbound does not produce (slow/HDR ASTC, crunch,
+    /// build target compresses in a format Unbound does not produce (crunch,
     /// unmeasured cases) and the GPU samples BC7; a 2D RGBA8 texture of a size divisible by 4.
     /// Scripts see the uncompressed [`ImportedTexture::mips`].
     pub bc7: Option<Vec<serde_bytes::ByteBuf>>,
@@ -566,6 +571,8 @@ pub struct Blocks {
 pub enum Storage {
     /// Uncompressed: its pixels as they are.
     Uncompressed,
+    /// Uncompressed RGBA8, retaining four channels even when every texel is opaque.
+    UncompressedRgba,
     /// Block-compressed in this format.
     Blocks(BlockFormat),
     /// A compressed format Unbound does not produce (the reason): the pixels stay uncompressed.
@@ -691,11 +698,11 @@ impl ProjectCompression {
 /// the `.meta`'s sRGB flag is on (normal maps too, whose flag stays on); an explicit one stays
 /// uncompressed unless both sides are powers of two (20x12 without mips: RGB24 in Gamma,
 /// ETC2_RGB in Linear). Other targets and default formats, automatic ETC_RGB4 at sizes that are
-/// not powers of two, Split Alpha Channel, crunch, HDR on Android, EAC, ASTC, cubemaps, arrays,
-/// volumes and the other texture types are unmeasured. Fast LDR ASTC at quality 0 supports
-/// 4x4, 5x5, 6x6 and 8x8 footprints; Android ASTC defaults use 4x4 at High, 8x8 at Low
-/// and 6x6 at Normal. ASTC sub-block mips clamp their edges. Other ASTC profiles remain
-/// explicit approximations, with uncompressed storage.
+/// not powers of two, Split Alpha Channel, crunch, automatic HDR on Android, EAC, cubemaps,
+/// arrays, volumes and the other texture types are unmeasured. The 6000.0.71f1 profile
+/// supports all six square LDR/HDR ASTC footprints and importer quality settings. Android
+/// ASTC defaults use 4x4 at High, 8x8 at Low and 6x6 at Normal, including Single Channel
+/// textures. ASTC sub-block mips clamp their edges; other releases keep uncompressed storage.
 pub fn storage(
     texture: &ImportedTexture,
     build_target: &str,
@@ -728,6 +735,9 @@ pub fn storage(
         Some(49) => BlockFormat::Astc5x5,
         Some(50) => BlockFormat::Astc6x6,
         Some(51) => BlockFormat::Astc8x8,
+        Some(52) => BlockFormat::Astc10x10,
+        Some(53) => BlockFormat::Astc12x12,
+        Some(f @ 66..=71) => BlockFormat::from_unity_format(f as i32).unwrap(),
         Some(28 | 29 | 64 | 65) => return unsupported("crunched formats"),
         Some(_) if s.uncompressed => return Storage::Uncompressed,
         Some(f) => return unsupported(&format!("TextureImporterFormat {f}")),
@@ -735,13 +745,13 @@ pub fn storage(
         None if android && hdr => return unsupported("HDR textures of the Android target"),
         None if hdr => BlockFormat::Bc6h,
         None => match s.texture_type {
-            TextureType::SingleChannel if s.single_channel_component == 0 => {
-                return Storage::Uncompressed;
-            }
             TextureType::SingleChannel
                 if android && project.default_format(build_target) == Some(COMPRESSION_ASTC) =>
             {
                 automatic_astc()
+            }
+            TextureType::SingleChannel if s.single_channel_component == 0 => {
+                return Storage::Uncompressed;
             }
             TextureType::SingleChannel if android => {
                 return unsupported("EAC textures of the Android target");
@@ -793,6 +803,22 @@ pub fn storage(
     if s.shape != TextureShape::Texture2D || texture.layers != 1 {
         return unsupported(&format!("compressed {:?} textures", s.shape));
     }
+    if format.is_astc() {
+        if !project.encoders.measured_astc_encoders {
+            return unsupported("ASTC encoders of this release");
+        }
+        // ASTC accepts sub-block levels, but an odd source with mips stays uncompressed.
+        // texturecompression: TinyASTC6Q0, NpotASTC6Q0 and OddASTC6Q0.
+        if texture.mip_count() > 1
+            && (!texture.width.is_power_of_two() || !texture.height.is_power_of_two())
+        {
+            return Storage::UncompressedRgba;
+        }
+        if format.is_astc_hdr() != hdr {
+            return unsupported(&format!("{format:?} from {:?} data", texture.format));
+        }
+        return Storage::Blocks(format);
+    }
     if (format == BlockFormat::Bc6h) != hdr {
         return unsupported(&format!("{format:?} from {:?} data", texture.format));
     }
@@ -806,22 +832,6 @@ pub fn storage(
         format
     };
 
-    if format.is_astc() {
-        if s.texture_type == TextureType::SingleChannel {
-            return unsupported("Single Channel ASTC encoder settings");
-        }
-        if !project.encoders.measured_astc_fast || s.compression_quality != 0 {
-            return unsupported("ASTC qualities other than the measured Fast profile");
-        }
-        // ASTC accepts sub-block levels, but an odd source with mips stays uncompressed.
-        // texturecompression: TinyASTC6Q0, NpotASTC6Q0 and OddASTC6Q0.
-        if texture.mip_count() > 1
-            && (!texture.width.is_power_of_two() || !texture.height.is_power_of_two())
-        {
-            return Storage::Uncompressed;
-        }
-        return Storage::Blocks(format);
-    }
     let mipmapped = texture.mip_count() > 1;
     let pot = format == BlockFormat::Etc1 || mipmapped;
     let compressible = |side: u32| side % 4 == 0 && (side.is_power_of_two() || !pot);
@@ -848,11 +858,25 @@ fn compress_blocks(
     format: BlockFormat,
     project: &ProjectCompression,
 ) {
+    let astc = format.is_astc().then(|| {
+        let channel = if texture.settings.texture_type == TextureType::SingleChannel {
+            if texture.settings.single_channel_component == 1 {
+                1
+            } else {
+                2
+            }
+        } else {
+            0
+        };
+        astc::Encoder::new(format, texture.settings.compression_quality, channel)
+    });
     let mips: Vec<serde_bytes::ByteBuf> = texture
         .mips
         .iter()
         .map(|m| {
-            serde_bytes::ByteBuf::from(if project.encoders.measured_import_encoders {
+            serde_bytes::ByteBuf::from(if let Some(encoder) = &astc {
+                encoder.compress(&m.data, m.width, m.height)
+            } else if project.encoders.measured_import_encoders {
                 bcn::compress_import_level(
                     format,
                     &m.data,
@@ -877,7 +901,14 @@ fn compress_blocks(
         }
     } else {
         for (mip, blocks) in texture.mips.iter_mut().zip(&mips) {
-            mip.data = bcn::decode_level(format, blocks, mip.width, mip.height);
+            mip.data = if format.is_astc_hdr() {
+                astc::decode_f32(blocks, mip.width, mip.height, format)
+                    .into_iter()
+                    .flat_map(f32::to_le_bytes)
+                    .collect()
+            } else {
+                bcn::decode_level(format, blocks, mip.width, mip.height)
+            };
         }
     }
     if format.approximates_editor() {
@@ -973,6 +1004,7 @@ impl ImportedTexture {
             Some(unity_format::R8) => return Some(GpuChannel::Red),
             Some(unity_format::RG16) => return Some(GpuChannel::RedGreen),
             Some(unity_format::RGB24) => return Some(GpuChannel::Opaque),
+            Some(unity_format::RGBA32) => return None,
             _ => {}
         }
         let s = &self.settings;
@@ -1113,7 +1145,8 @@ impl Importer for TextureImporter {
     // 28: malformed ASTC mode budgets decode to the format's error colour.
     // 29: BC4/BC5 compare continuous ramp fits and preserve channel-fit rounding.
     // 30: compressed automatic Single Channel red mips retain their source colour-space filtering.
-    const VERSION: u32 = 30;
+    // 33: measured ASTC profiles, per-context quality, HDR reads and pre-filter RGBA fallback.
+    const VERSION: u32 = 33;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -1135,11 +1168,35 @@ impl Importer for TextureImporter {
             && settings.explicit_format.is_none()
             && settings.compression != 0
             && settings.srgb_flag;
-        settings.gamma_hdr = self.gamma;
+        // Measured 2D HDR colour follows the project's colour space independently of the
+        // authored sRGB flag. Other contexts retain their previous selection.
+        settings.gamma_hdr = self.gamma
+            && (settings.srgb
+                || (self.project.encoders.measured_import_encoders
+                    && settings.shape == TextureShape::Texture2D
+                    && settings.texture_type == TextureType::Default));
+        settings.astc_mip_fallback = self.project.encoders.measured_astc_encoders
+            && settings.shape == TextureShape::Texture2D
+            && match settings.explicit_format {
+                Some(format) => {
+                    BlockFormat::from_unity_format(format as i32).is_some_and(BlockFormat::is_astc)
+                }
+                None => {
+                    !settings.uncompressed
+                        && self.build_target == "Android"
+                        && self.project.default_format(&self.build_target) == Some(COMPRESSION_ASTC)
+                }
+            };
         settings.normal_maps_xyz = self.normal_maps_xyz;
         let mut texture = import_texture(source, bytes, meta, settings)?;
         match storage(&texture, &self.build_target, &self.project, self.gamma) {
-            Storage::Uncompressed => {
+            fallback @ (Storage::Uncompressed | Storage::UncompressedRgba) => {
+                if fallback == Storage::UncompressedRgba {
+                    // ASTC's non-power-of-two mip fallback retains RGBA32, including opaque
+                    // sources (texturecompression NpotOpaqueNormal in the ASTC-default profile).
+                    texture.settings.format_alpha = Some(true);
+                    texture.import_settings_hash = texture.settings.hash();
+                }
                 texture.uncompressed = true;
                 // An explicit compressed format without alpha that the size keeps uncompressed
                 // stores RGB24: opaque texels (Unity 6000.0.71f1, tests/projects/
@@ -1155,7 +1212,7 @@ impl Importer for TextureImporter {
             }
             Storage::Blocks(format) => {
                 compress_blocks(&mut texture, format, &self.project);
-                // ETC uses the existing BC7 fallback. ASTC uploads decoded RGBA8 pixels,
+                // ETC uses the existing BC7 fallback. ASTC uploads decoded RGBA8/RGBA32F pixels,
                 // preserving their values without a second lossy encoding.
                 if format.is_etc() && self.compress {
                     texture.bc7 = compress_bc7(&texture);
@@ -1255,16 +1312,29 @@ pub fn import_texture(
     source: &Path,
     bytes: &[u8],
     meta: &Value,
-    settings: TextureSettings,
+    mut settings: TextureSettings,
 ) -> Result<ImportedTexture> {
     let mut image = decode(source, bytes, settings.remove_matte).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
+    let (w, h) = npot_size(image.width, image.height, settings.npot_scale);
+    let (w, h) = fit_max_size(w, h, settings.max_size);
+    settings.astc_mip_fallback = settings.astc_mip_fallback
+        && settings.mipmaps
+        && (!w.is_power_of_two() || !h.is_power_of_two())
+        // Automatic HDR uses the Android ETC path, even with an ASTC project default.
+        && (image.format == TextureFormat::Rgba8 || settings.explicit_format.is_some());
+    if settings.astc_mip_fallback {
+        // Filter the source precision, then clamp each level to RGBA32. An HDR source's
+        // radiance contributes to its mips, but this byte output has no HDR gamma conversion.
+        // HdrNpotASTC6 distinguishes both orders from converting the source to bytes first.
+        settings.gamma_hdr = false;
+        settings.format_alpha = Some(true);
+    }
     // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
     // filtering (measured with tests/projects/textureimport), a cubemap's here before its faces
     // are cut (unmeasured order), a glossy-convolved cubemap's mips after the convolution
     // (import_cubemap; unmeasured).
     if settings.gamma_hdr
-        && settings.srgb
         && image.format == TextureFormat::Rgba32F
         && settings.shape == TextureShape::Cube
         && !cube_convolves(&image, &settings)?
@@ -1309,13 +1379,15 @@ pub fn import_texture(
         return import_cubemap(source, image, settings, (original_width, original_height));
     }
 
-    let (w, h) = npot_size(image.width, image.height, settings.npot_scale);
-    let (w, h) = fit_max_size(w, h, settings.max_size);
     if (w, h) != (image.width, image.height) {
         image = image.resize(w, h, settings.resize_algorithm)?;
     }
     image.flip_rows();
-    let format = image.format;
+    let format = if settings.astc_mip_fallback {
+        TextureFormat::Rgba8
+    } else {
+        image.format
+    };
     let mips = mip_chain(image, &settings);
     let has_alpha = match format {
         TextureFormat::Rgba8 => mips[0].data.as_chunks::<4>().0.iter().any(|p| p[3] < 255),
@@ -1420,7 +1492,7 @@ fn mip_chain_with_columns(
         border: settings.border_mipmap,
         coverage: settings.preserve_coverage,
     };
-    let hdr_gamma = settings.gamma_hdr && settings.srgb && format == TextureFormat::Rgba32F;
+    let hdr_gamma = settings.gamma_hdr && format == TextureFormat::Rgba32F;
     let encoding = mipmaps::Encoding {
         height,
         normal_map: settings.texture_type == TextureType::NormalMap,
@@ -1434,13 +1506,18 @@ fn mip_chain_with_columns(
     } else {
         vec![top]
     };
+    let output_format = if settings.astc_mip_fallback {
+        TextureFormat::Rgba8
+    } else {
+        format
+    };
     chain
         .iter()
         .enumerate()
         .map(|(i, level)| MipLevel {
             width: level.width,
             height: level.height,
-            data: level.encode(i, format, &encoding),
+            data: level.encode(i, output_format, &encoding),
         })
         .collect()
 }
@@ -1481,7 +1558,6 @@ fn import_flipbook(
             // An array's HDR colour is gamma-encoded per level by its 2D chain; a volume's here.
             if settings.shape == TextureShape::Texture3D
                 && settings.gamma_hdr
-                && settings.srgb
                 && cell.format == TextureFormat::Rgba32F
             {
                 cell.linear_to_gamma();
@@ -1700,7 +1776,7 @@ fn import_cubemap(
     let convolve = convolves(&settings) && levels > 1;
     // A gamma project's convolved HDR cube is gamma-encoded after the convolution (the others
     // were before their faces were cut, import_texture).
-    let gamma = settings.gamma_hdr && settings.srgb && image.format == TextureFormat::Rgba32F;
+    let gamma = settings.gamma_hdr && image.format == TextureFormat::Rgba32F;
     let mut faces = cubemap::faces(&image, layout);
     if size != face {
         faces = faces
@@ -2380,6 +2456,7 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 mod astc;
 mod bcn;
 pub mod etc;
+pub use astc::{decode_f32 as decode_blocks_f32, decode_hdr_block};
 pub use bcn::{
     BlockFormat, compress_level, compress_runtime_level, decode_level as decode_blocks,
     decode_level_as_gpu,

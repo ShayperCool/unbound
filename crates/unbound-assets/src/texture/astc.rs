@@ -1,4 +1,4 @@
-//! Fast LDR ASTC through the MIT-licensed ISPCTextureCompressor C interface packaged by
+//! ASTC encoding and decoding through Arm astc-encoder 4.3.0; standard Fast LDR through the MIT-licensed ISPCTextureCompressor C interface packaged by
 //! intel_tex_2. The dependency's Rust ASTC encoder is unfinished; its C interface is complete.
 use super::BlockFormat;
 
@@ -64,132 +64,328 @@ pub(super) fn compress(rgba: &[u8], width: u32, height: u32, format: BlockFormat
     output
 }
 
-// Validate the 2D ASTC bit budget before the byte decoder reads variable-length fields.
-// The format allows at most 64 weights in 24..96 bits, and at most 18 endpoint values.
-// Void-extent blocks have a separate constant-colour payload.
-fn valid_header(block: &[u8]) -> bool {
-    const MAX_WEIGHTS: u32 = 64;
-    const MIN_WEIGHT_BITS: u32 = 24;
-    const MAX_WEIGHT_BITS: u32 = 96;
-    const MAX_ENDPOINT_VALUES: u32 = 18;
-    const BLOCK_BITS: u32 = 128;
-    let bits = u128::from_le_bytes(block.try_into().unwrap());
-    let field = |at: u32, mask: u32| ((bits >> at) as u32) & mask;
-    let mode = field(0, 2047);
-    if mode & 511 == 508 {
-        return true;
-    }
-    let mut high = field(9, 1);
-    let mut dual = field(10, 1);
-    let a = field(5, 3);
-    let base;
-    let (x, y);
-    if mode & 3 != 0 {
-        base = field(4, 1) | (mode & 3) * 2;
-        let b = field(7, 3);
-        (x, y) = match field(2, 3) {
-            0 => (b + 4, a + 2),
-            1 => (b + 8, a + 2),
-            2 => (a + 2, b + 8),
-            _ if mode & 256 != 0 => ((b & 1) + 2, a + 2),
-            _ => (a + 2, (b & 1) + 6),
+// astc-encoder contexts are exclusive to one importer or one thread's decoder cache.
+struct Context(std::ptr::NonNull<std::ffi::c_void>);
+
+unsafe extern "C" {
+    fn unbound_astc_context(
+        side: u32,
+        hdr: bool,
+        quality: f32,
+        decode: bool,
+    ) -> *mut std::ffi::c_void;
+    fn unbound_astc_free(context: *mut std::ffi::c_void);
+    fn unbound_astc_encode(
+        context: *mut std::ffi::c_void,
+        pixels: *const std::ffi::c_void,
+        hdr: bool,
+        width: u32,
+        height: u32,
+        channel: u32,
+        opaque: bool,
+        output: *mut u8,
+        size: usize,
+    ) -> i32;
+    fn unbound_astc_decode(
+        context: *mut std::ffi::c_void,
+        blocks: *const u8,
+        size: usize,
+        width: u32,
+        height: u32,
+        floats: bool,
+        output: *mut std::ffi::c_void,
+    ) -> i32;
+}
+
+impl Context {
+    fn new(format: BlockFormat, quality: f32, decode: bool) -> Self {
+        // Only supported square footprints reach this boundary. The codec reports allocation
+        // failure by null; malformed block data is handled by the decoder itself.
+        let ptr = unsafe {
+            unbound_astc_context(format.footprint(), format.is_astc_hdr(), quality, decode)
         };
-    } else {
-        base = field(4, 1) | field(2, 3) * 2;
-        (x, y) = match field(7, 3) {
-            0 => (12, a + 2),
-            1 => (a + 2, 12),
-            2 => {
-                high = 0;
-                dual = 0;
-                (a + 6, field(9, 3) + 6)
-            }
-            _ if a == 0 => (6, 10),
-            _ if a == 1 => (10, 6),
-            _ => return false,
-        };
+        Self(std::ptr::NonNull::new(ptr).expect("ASTC context allocation failed"))
     }
-    if base < 2 {
-        return false;
+}
+impl Drop for Context {
+    fn drop(&mut self) {
+        unsafe { unbound_astc_free(self.0.as_ptr()) };
     }
-    let count = x * y * (dual + 1);
-    if count > MAX_WEIGHTS {
-        return false;
-    }
-    let quant = base - 2 + high * 6;
-    // Integer sequence sizes for 2,3,4,5,6,8,10,12,16,20,24,32 weight levels.
-    let (binary, trits, quints) = match quant {
-        0 => (1, 0, 0),
-        1 => (0, 1, 0),
-        2 => (2, 0, 0),
-        3 => (0, 0, 1),
-        4 => (1, 1, 0),
-        5 => (3, 0, 0),
-        6 => (1, 0, 1),
-        7 => (2, 1, 0),
-        8 => (4, 0, 0),
-        9 => (2, 0, 1),
-        10 => (3, 1, 0),
-        11 => (5, 0, 0),
-        _ => return false,
-    };
-    let weight_bits =
-        count * binary + (count * 8).div_ceil(5) * trits + (count * 7).div_ceil(3) * quints;
-    if !(MIN_WEIGHT_BITS..=MAX_WEIGHT_BITS).contains(&weight_bits) {
-        return false;
-    }
-    let partitions = field(11, 3) + 1;
-    if partitions == 4 && dual != 0 {
-        return false;
-    }
-    let (config, endpoints) = if partitions == 1 {
-        (17, 2 + 2 * field(15, 3))
-    } else {
-        let class = field(23, 3);
-        if class == 0 {
-            (29, partitions * (2 + 2 * field(27, 3)))
+}
+
+/// One encoder for a texture's mip chain; channel 0 RGBA, 1 Single Channel red, 2 alpha.
+pub(super) struct Encoder {
+    format: BlockFormat,
+    channel: u32,
+    context: Option<Context>,
+}
+impl Encoder {
+    pub(super) fn new(format: BlockFormat, quality: i32, channel: u32) -> Self {
+        let fast = quality == 0 && channel == 0 && !format.is_astc_hdr() && format.footprint() <= 8;
+        // The measured importer quality boundaries select Arm's Fast, Thorough and Exhaustive
+        // search settings (10, 60 and 98). See texturecompression's quality controls.
+        let effort = if quality < 50 {
+            10.0
+        } else if quality == 50 {
+            60.0
         } else {
-            let endpoints = (0..partitions)
-                .map(|i| 2 + 2 * (class - 1 + field(25 + i, 1)))
-                .sum();
-            (25 + partitions * 3, endpoints)
+            98.0
+        };
+        Self {
+            format,
+            channel,
+            context: (!fast).then(|| Context::new(format, effort, false)),
         }
+    }
+
+    pub(super) fn compress(&self, pixels: &[u8], width: u32, height: u32) -> Vec<u8> {
+        let Some(context) = &self.context else {
+            return compress(pixels, width, height, self.format);
+        };
+        let hdr = self.format.is_astc_hdr();
+        let count = width.max(1) as usize * height.max(1) as usize * 4;
+        assert!(pixels.len() >= count * if hdr { 4 } else { 1 });
+        // HDR compression consumes half-float texels, including non-finite and negative inputs.
+        // A typed buffer guarantees the C interface's alignment and is shared by every block.
+        let half: Vec<u16> = if hdr {
+            pixels[..count * 4]
+                .chunks_exact(4)
+                .map(|p| super::bcn::f32_to_f16(f32::from_le_bytes(p.try_into().unwrap())))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let source = if hdr {
+            half.as_ptr().cast()
+        } else {
+            pixels.as_ptr().cast()
+        };
+        let opaque = !hdr && pixels[..count].chunks_exact(4).all(|p| p[3] == 255);
+        let mut output = vec![0; self.format.level_size(width, height)];
+        // The source contains the full level; the codec clamps partial edge blocks. It writes
+        // exactly the allocated block count and resets its image state before the next mip.
+        let status = unsafe {
+            unbound_astc_encode(
+                context.0.as_ptr(),
+                source,
+                hdr,
+                width.max(1),
+                height.max(1),
+                self.channel,
+                opaque,
+                output.as_mut_ptr(),
+                output.len(),
+            )
+        };
+        assert_eq!(status, 0, "ASTC encoding failed");
+        output
+    }
+}
+
+thread_local! {
+    // At most twelve contexts per participating thread, one per footprint and LDR/HDR profile.
+    static DECODERS: std::cell::RefCell<[Option<Context>; 12]> = const {
+        std::cell::RefCell::new([const { None }; 12])
     };
-    let config = config + dual * 2;
-    let min_endpoint_bits = endpoints + (endpoints * 8).div_ceil(5);
-    endpoints <= MAX_ENDPOINT_VALUES && config + weight_bits + min_endpoint_bits <= BLOCK_BITS
+}
+
+fn with_decoder<R>(format: BlockFormat, f: impl FnOnce(&Context) -> R) -> R {
+    let side = format.footprint() as usize;
+    let index = match side {
+        4 => 0,
+        5 => 1,
+        6 => 2,
+        8 => 3,
+        10 => 4,
+        12 => 5,
+        _ => unreachable!(),
+    } + usize::from(format.is_astc_hdr()) * 6;
+    DECODERS.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        f(cache[index].get_or_insert_with(|| Context::new(format, 0.0, true)))
+    })
+}
+
+/// Decodes one HDR block into caller-owned storage without allocating per pixel read.
+pub fn decode_hdr_block(format: BlockFormat, block: &[u8; 16], output: &mut [f32]) -> bool {
+    let side = format.footprint();
+    if !format.is_astc_hdr() || output.len() != (side * side * 4) as usize {
+        return false;
+    }
+    with_decoder(format, |context| {
+        // The block is exactly 16 bytes and output holds every texel at this footprint.
+        unsafe {
+            unbound_astc_decode(
+                context.0.as_ptr(),
+                block.as_ptr(),
+                block.len(),
+                side,
+                side,
+                true,
+                output.as_mut_ptr().cast(),
+            ) == 0
+        }
+    })
+}
+
+trait Pixel: Default + Copy {
+    const FLOATS: bool;
+}
+impl Pixel for u8 {
+    const FLOATS: bool = false;
+}
+impl Pixel for f32 {
+    const FLOATS: bool = true;
+}
+
+fn decode_into<T: Pixel>(blocks: &[u8], width: u32, height: u32, format: BlockFormat) -> Vec<T> {
+    let (w, h) = (width.max(1) as usize, height.max(1) as usize);
+    let side = format.footprint() as usize;
+    let mut output = vec![T::default(); w * h * 4];
+    with_decoder(format, |context| {
+        let decode = |bytes: &[u8], w: usize, h: usize, into: &mut [T]| {
+            // The byte and float entry points supply an output element type matching `floats`.
+            // Input and output are disjoint, and the thread owns this codec context exclusively.
+            let status = unsafe {
+                unbound_astc_decode(
+                    context.0.as_ptr(),
+                    bytes.as_ptr(),
+                    bytes.len(),
+                    w as u32,
+                    h as u32,
+                    T::FLOATS,
+                    into.as_mut_ptr().cast(),
+                )
+            };
+            assert_eq!(status, 0, "ASTC decoding failed");
+        };
+        let size = format.level_size(width, height);
+        if blocks.len() >= size {
+            decode(&blocks[..size], w, h, &mut output);
+        } else {
+            // Internal callers may provide a truncated level; retain transparent zero for
+            // missing blocks without letting the codec read beyond the supplied bytes.
+            let across = w.div_ceil(side);
+            let mut texels = [T::default(); 12 * 12 * 4];
+            for (i, block) in blocks.chunks_exact(16).enumerate() {
+                decode(block, side, side, &mut texels[..side * side * 4]);
+                let (bx, by) = (i % across * side, i / across * side);
+                for y in 0..side.min(h - by) {
+                    let len = side.min(w - bx) * 4;
+                    output[((by + y) * w + bx) * 4..][..len]
+                        .copy_from_slice(&texels[y * side * 4..][..len]);
+                }
+            }
+        }
+    });
+    output
 }
 
 pub(super) fn decode(blocks: &[u8], width: u32, height: u32, format: BlockFormat) -> Vec<u8> {
-    let (w, h) = (width.max(1) as usize, height.max(1) as usize);
-    let side = format.footprint() as usize;
-    let across = w.div_ceil(side);
-    let mut output = vec![0; w * h * 4];
-    for (i, block) in blocks
-        .chunks_exact(16)
-        .take(across * h.div_ceil(side))
-        .enumerate()
-    {
-        let mut image = [0u32; 64];
-        if valid_header(block) {
-            texture2ddecoder::decode_astc_block(block, side, side, &mut image);
-        } else {
-            image.fill(0xffff00ff); // The ASTC error colour: opaque magenta.
-        }
-        let (bx, by) = (i % across * side, i / across * side);
-        for y in 0..side.min(h - by) {
-            for x in 0..side.min(w - bx) {
-                let [b, g, r, a] = image[y * side + x].to_le_bytes();
-                output[((by + y) * w + bx + x) * 4..][..4].copy_from_slice(&[r, g, b, a]);
-            }
-        }
-    }
-    output
+    decode_into(blocks, width, height, format)
+}
+
+/// HDR texels as four full-precision floats, including alpha and values above one.
+pub fn decode_f32(blocks: &[u8], width: u32, height: u32, format: BlockFormat) -> Vec<f32> {
+    assert!(format.is_astc_hdr());
+    decode_into(blocks, width, height, format)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn mixed_quality_contexts_keep_their_own_search_settings() {
+        const CHILD: &str = "UNBOUND_ASTC_QUALITY_CONTROL";
+        if std::env::var_os(CHILD).is_none() {
+            // A separate test process makes the first encoder quality independent of the
+            // test harness's scheduling. The reference control follows a different quality.
+            let status = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "texture::astc::tests::mixed_quality_contexts_keep_their_own_search_settings",
+                ])
+                .env(CHILD, "1")
+                .status()
+                .unwrap();
+            assert!(status.success());
+            return;
+        }
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/texturecompression/Assets/Textures/SoftSourceRGBA32.png");
+        let mut image =
+            super::super::decode(&source, &std::fs::read(&source).unwrap(), false).unwrap();
+        image.flip_rows();
+        let format = BlockFormat::Astc6x6;
+        let rgba = &image.data;
+        Encoder::new(format, 100, 0).compress(rgba, 64, 64);
+        let expected = [
+            162, 130, 211, 99, 28, 132, 101, 0, 176, 229, 2, 91, 33, 240, 155, 206,
+        ];
+        for _ in 0..2 {
+            let blocks = Encoder::new(format, 50, 0).compress(rgba, 64, 64);
+            // Unity 6000.0.71f1, texturecompression SoftASTC6Q50, top-level block 111.
+            assert_eq!(&blocks[111 * 16..112 * 16], &expected);
+            Encoder::new(format, 100, 0).compress(rgba, 64, 64);
+        }
+    }
+
+    #[test]
+    fn hdr_constants_keep_radiance_and_alpha_in_partial_blocks() {
+        let block = [
+            252, 255, 255, 255, 255, 255, 255, 255, 0, 62, 128, 64, 0, 67, 0, 56,
+        ];
+        for format in [
+            BlockFormat::AstcHdr4x4,
+            BlockFormat::AstcHdr5x5,
+            BlockFormat::AstcHdr6x6,
+            BlockFormat::AstcHdr8x8,
+            BlockFormat::AstcHdr10x10,
+            BlockFormat::AstcHdr12x12,
+        ] {
+            let blocks = block.repeat(format.level_size(13, 7) / 16);
+            assert!(
+                decode_f32(&blocks, 13, 7, format)
+                    .chunks_exact(4)
+                    .all(|p| p == [1.5, 2.25, 3.5, 0.5])
+            );
+            assert!(
+                decode(&blocks, 13, 7, format)
+                    .chunks_exact(4)
+                    .all(|p| p == [255, 255, 255, 128])
+            );
+            let mut pixel_block = [0.0; 12 * 12 * 4];
+            let size = (format.footprint() * format.footprint() * 4) as usize;
+            assert!(decode_hdr_block(format, &block, &mut pixel_block[..size]));
+            assert!(
+                pixel_block[..size]
+                    .chunks_exact(4)
+                    .all(|p| p == [1.5, 2.25, 3.5, 0.5])
+            );
+            assert!(!decode_hdr_block(
+                format,
+                &block,
+                &mut pixel_block[..size - 1]
+            ));
+        }
+    }
+
+    #[test]
+    fn hdr_encoding_tolerates_non_finite_and_negative_inputs() {
+        let mut values = [1.5f32, 2.25, 3.5, 0.5].repeat(3 * 7);
+        values[..4].copy_from_slice(&[f32::NAN, f32::INFINITY, f32::NEG_INFINITY, -0.5]);
+        let pixels: Vec<_> = values.into_iter().flat_map(f32::to_le_bytes).collect();
+        for quality in [0, 50, 100] {
+            let format = BlockFormat::AstcHdr6x6;
+            let blocks = Encoder::new(format, quality, 0).compress(&pixels, 3, 7);
+            assert_eq!(blocks.len(), format.level_size(3, 7));
+            let decoded = decode_f32(&blocks, 3, 7, format);
+            assert_eq!(decoded.len(), 3 * 7 * 4);
+            assert!(decoded.iter().all(|v| v.is_finite()));
+            assert!(decoded.chunks_exact(4).any(|p| p[0] > 1.0));
+        }
+    }
+
     #[test]
     fn malformed_payloads_do_not_abort_raw_block_operations() {
         for format in [
@@ -218,7 +414,7 @@ mod tests {
         }
     }
     #[test]
-    fn encoded_rectangles_pass_the_block_budget_checks() {
+    fn encoded_rectangles_decode_without_error_colour() {
         let rgba: Vec<u8> = (0..9)
             .flat_map(|y| {
                 (0..13).flat_map(move |x| {
@@ -238,7 +434,11 @@ mod tests {
             BlockFormat::Astc8x8,
         ] {
             let encoded = compress(&rgba, 13, 9, format);
-            assert!(encoded.chunks_exact(16).all(valid_header));
+            assert!(
+                decode(&encoded, 13, 9, format)
+                    .chunks_exact(4)
+                    .any(|p| p != [255, 0, 255, 255])
+            );
         }
     }
     #[test]

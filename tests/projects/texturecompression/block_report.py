@@ -35,7 +35,7 @@ def read(path):
     return result
 
 
-def report(reference, candidate):
+def report(reference, candidate, profile="Gamma"):
     totals = defaultdict(lambda: [0, 0])
     qualities = defaultdict(lambda: [0, 0])
     runtime_modes = defaultdict(lambda: [0, 0])
@@ -44,10 +44,10 @@ def report(reference, candidate):
         fields = line.split()
         if fields:
             settings = dict(item.split('=', 1) for item in fields[1:])
+            overridden = ('android' in settings) if profile.startswith('Android') else (
+                'format' in settings and settings.get('override') != '0')
             quality = settings.get('quality', 50)
-            if settings.get('override') == '0':
-                quality = settings.get('defaultQuality', quality)
-            cases[fields[0]] = int(quality)
+            cases[fields[0]] = int(quality if overridden else settings.get('defaultQuality', quality))
     for key, info in reference.items():
         if not key.endswith('.info'):
             continue
@@ -103,5 +103,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('reference', type=Path)
     parser.add_argument('candidate', type=Path)
+    parser.add_argument('--profile', help='capture profile; defaults to the reference filename stem')
     args = parser.parse_args()
-    report(read(args.reference), read(args.candidate))
+    report(read(args.reference), read(args.candidate), args.profile or args.reference.stem)

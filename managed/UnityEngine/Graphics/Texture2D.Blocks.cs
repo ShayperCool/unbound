@@ -70,7 +70,7 @@ namespace UnityEngine
 
         /// <summary>Texel `i` of level `mip` as GetPixel reads it, decoded from its block in the
         /// pixel data store.</summary>
-        Color BlockTexel(int mip, int i)
+        unsafe Color BlockTexel(int mip, int i)
         {
             var format = m_SourceFormat.Value;
             int size = BlockFormats.BlockBytes(format), side = BlockFormats.Footprint(format);
@@ -80,6 +80,15 @@ namespace UnityEngine
             at += ((y / side) * ((w + side - 1) / side) + x / side) * size;
             var block = new ReadOnlySpan<byte>(m_Store, at, size);
             int k = (y % side) * side + x % side;
+            if (BlockFormats.IsAstcHdr(format))
+            {
+                Span<Color> pixels = stackalloc Color[side * side];
+                fixed (byte* input = block)
+                fixed (Color* output = pixels)
+                    if (!Native.DecodeHdrBlock((int)format, input, output))
+                        throw new UnityException("ASTC HDR block decoding failed.");
+                return pixels[k];
+            }
             Color32 texel;
             if (BlockFormats.NativeDecoded(format))
             {
@@ -94,7 +103,7 @@ namespace UnityEngine
 
         /// <summary>A `width` x `height` level of blocks decoded to RGBA8 as GetPixels32 reads it
         /// (BC6H clamped to 0..1).</summary>
-        byte[] DecodeBlockRgba(ReadOnlySpan<byte> blocks, int width, int height)
+        byte[] DecodeBlockRgba(ReadOnlySpan<byte> blocks, int width, int height, bool floats = false)
         {
             var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
             {
@@ -102,6 +111,7 @@ namespace UnityEngine
                 width,
                 height,
                 data = Convert.ToBase64String(blocks),
+                floats,
             }));
             using var doc = JsonDocument.Parse(json);
             return Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
@@ -135,8 +145,14 @@ namespace UnityEngine
         /// <summary>Decodes one level of blocks into the pixel cells.</summary>
         void DecodeBlockLevel(ReadOnlySpan<byte> blocks, int mip)
         {
-            var rgba = DecodeBlockRgba(blocks, MipWidth(mip), MipHeight(mip));
-            if (Texture2DTexels.FloatStored(m_Format))
+            bool hdr = BlockFormats.IsAstcHdr(m_SourceFormat.Value);
+            var rgba = DecodeBlockRgba(blocks, MipWidth(mip), MipHeight(mip), hdr);
+            if (hdr)
+            {
+                m_Hdr ??= new Color[m_Width * m_Height];
+                PixelFormats.DecodeFloat(TextureFormat.RGBAFloat, rgba, FloatLevel(mip));
+            }
+            else if (Texture2DTexels.FloatStored(m_Format))
             {
                 Stubs.Ignored("Texture2D BC6H blocks", "written BC6H blocks read back clamped to 0..1 in 8-bit steps: Unbound has no float decoding of them");
                 m_Hdr ??= new Color[m_Width * m_Height];
@@ -222,15 +238,16 @@ namespace UnityEngine
             if (format < 0)
             {
                 var texels = new System.IO.MemoryStream();
+                bool hdr = BlockFormats.IsAstcHdr(m_SourceFormat.Value);
                 int at = 0;
                 for (int mip = 0; mip < m_SourceMips; mip++)
                 {
                     int size = SourceLevelSize(mip);
-                    texels.Write(DecodeBlockRgba(new ReadOnlySpan<byte>(blocks, at, size), MipWidth(mip), MipHeight(mip)));
+                    texels.Write(DecodeBlockRgba(new ReadOnlySpan<byte>(blocks, at, size), MipWidth(mip), MipHeight(mip), hdr));
                     at += size;
                 }
                 blocks = texels.ToArray();
-                format = m_Linear ? 1 : 0;
+                format = hdr ? PixelFormats.GpuFloatFormat(TextureFormat.RGBAFloat) : m_Linear ? 1 : 0;
             }
             fixed (byte* b = blocks)
             {
@@ -303,7 +320,7 @@ namespace UnityEngine
         {
             m_SourceFormat = format;
             m_SourceMips = m_MipCount;
-            m_Format = format == TextureFormat.BC6H ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
+            m_Format = format == TextureFormat.BC6H || BlockFormats.IsAstcHdr(format) ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
             int total = 0;
             for (int mip = 0; mip < m_MipCount; mip++) total += SourceLevelSize(mip);
             m_SourceRaw = new byte[total];
@@ -477,15 +494,20 @@ namespace Unbound.Runtime
     /// <summary>Block-compressed texture formats, a level at least one block.</summary>
     internal static class BlockFormats
     {
-        internal static bool IsAstc(UnityEngine.TextureFormat format) => format is
-            UnityEngine.TextureFormat.ASTC_4x4 or UnityEngine.TextureFormat.ASTC_5x5
-            or UnityEngine.TextureFormat.ASTC_6x6 or UnityEngine.TextureFormat.ASTC_8x8;
+        internal static bool IsAstc(UnityEngine.TextureFormat format) =>
+            (int)format >= (int)UnityEngine.TextureFormat.ASTC_4x4 && (int)format <= (int)UnityEngine.TextureFormat.ASTC_12x12
+            || IsAstcHdr(format);
+
+        internal static bool IsAstcHdr(UnityEngine.TextureFormat format) =>
+            (int)format >= (int)UnityEngine.TextureFormat.ASTC_HDR_4x4 && (int)format <= (int)UnityEngine.TextureFormat.ASTC_HDR_12x12;
 
         internal static int Footprint(UnityEngine.TextureFormat format) => format switch
         {
-            UnityEngine.TextureFormat.ASTC_5x5 => 5,
-            UnityEngine.TextureFormat.ASTC_6x6 => 6,
-            UnityEngine.TextureFormat.ASTC_8x8 => 8,
+            UnityEngine.TextureFormat.ASTC_5x5 or UnityEngine.TextureFormat.ASTC_HDR_5x5 => 5,
+            UnityEngine.TextureFormat.ASTC_6x6 or UnityEngine.TextureFormat.ASTC_HDR_6x6 => 6,
+            UnityEngine.TextureFormat.ASTC_8x8 or UnityEngine.TextureFormat.ASTC_HDR_8x8 => 8,
+            UnityEngine.TextureFormat.ASTC_10x10 or UnityEngine.TextureFormat.ASTC_HDR_10x10 => 10,
+            UnityEngine.TextureFormat.ASTC_12x12 or UnityEngine.TextureFormat.ASTC_HDR_12x12 => 12,
             _ => 4,
         };
 
@@ -497,8 +519,8 @@ namespace Unbound.Runtime
                 or UnityEngine.TextureFormat.ETC2_RGB => 8,
             UnityEngine.TextureFormat.DXT5 or UnityEngine.TextureFormat.BC5 or UnityEngine.TextureFormat.BC6H
                 or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC2_RGBA8
-                or UnityEngine.TextureFormat.ASTC_4x4 or UnityEngine.TextureFormat.ASTC_5x5
-                or UnityEngine.TextureFormat.ASTC_6x6 or UnityEngine.TextureFormat.ASTC_8x8 => 16,
+                => 16,
+            _ when IsAstc(format) => 16,
             _ => 0,
         };
 
@@ -537,8 +559,8 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.BC6H => 44,
             UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
                 or UnityEngine.TextureFormat.ETC2_RGBA8
-                or UnityEngine.TextureFormat.ASTC_4x4 or UnityEngine.TextureFormat.ASTC_5x5
-                or UnityEngine.TextureFormat.ASTC_6x6 or UnityEngine.TextureFormat.ASTC_8x8 => -1,
+                => -1,
+            _ when IsAstc(format) => -1,
             _ => throw new ArgumentException($"{format} is not a block format"),
         };
 

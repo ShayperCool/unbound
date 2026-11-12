@@ -69,7 +69,8 @@ use std::ffi::c_void;
 /// 60: the `DotsDraw` render command (opcode 36, BatchRendererGroup draws).
 /// 61: `plugin_script_marker`, `plugin_marker_event` (scripts' profiler markers that native
 /// plugins hear of).
-pub const NATIVE_API_VERSION: u32 = 61;
+/// 62: allocation-free HDR block pixel reads.
+pub const NATIVE_API_VERSION: u32 = 62;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -313,6 +314,9 @@ pub struct NativeApi {
     /// (a marker from `plugin_script_marker`, event type: 0 begin, 1 end, 2 a single sample): the plugins' callbacks
     /// for the marker's events (`EmitEvent` without data).
     pub plugin_marker_event: extern "C" fn(*const c_void, u16),
+    /// (TextureFormat, one 16-byte ASTC HDR block, out RGBA floats at its footprint): 1 on
+    /// success; 0 for another format or null buffers. The caller owns both buffers.
+    pub decode_hdr_block: extern "C" fn(i32, *const u8, *mut f32) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -373,7 +377,31 @@ pub fn api() -> NativeApi {
         gi_automatic_uvs,
         plugin_script_marker,
         plugin_marker_event,
+        decode_hdr_block,
     }
+}
+
+extern "C" fn decode_hdr_block(format: i32, block: *const u8, output: *mut f32) -> i32 {
+    if block.is_null() || output.is_null() {
+        return 0;
+    }
+    let Some(format) =
+        unbound_assets::texture::BlockFormat::from_unity_format(format).filter(|f| f.is_astc_hdr())
+    else {
+        return 0;
+    };
+    std::panic::catch_unwind(|| {
+        let count = (format.footprint() * format.footprint() * 4) as usize;
+        // The API requires one readable block and an exclusive output buffer at its footprint.
+        let (block, output) = unsafe {
+            (
+                &*block.cast::<[u8; 16]>(),
+                std::slice::from_raw_parts_mut(output, count),
+            )
+        };
+        unbound_assets::texture::decode_hdr_block(format, block, output)
+    })
+    .unwrap_or(false) as i32
 }
 
 /// Runs a fallible call, writing its error (or panic) into `error`: 0 or the call's value on

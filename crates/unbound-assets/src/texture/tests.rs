@@ -1451,7 +1451,7 @@ fn compression_cache_key_includes_encoder_selection() {
 }
 
 #[test]
-fn astc_fast_storage_and_normal_override_are_scoped() {
+fn astc_profiles_and_normal_override_are_scoped() {
     let bytes = png(8, 8, |x, y| [(x * 18) as u8, (y * 19) as u8, 190, 255]);
     let measured = unbound_compat::TextureCompressionRules::for_version(
         unbound_compat::UnityVersion::new(6000, 0, 71),
@@ -1494,8 +1494,11 @@ fn astc_fast_storage_and_normal_override_are_scoped() {
     assert!(rgb.blocks.is_none());
     assert_eq!(rgb.reported_format(), Some(unity_format::RGB24));
     let slow = import("Android", 0, 50, 50, measured);
-    assert!(slow.blocks.is_none());
-    assert!(slow.approximation.as_ref().unwrap().contains("ASTC"));
+    assert_eq!(
+        slow.blocks.as_ref().map(|b| b.format),
+        Some(BlockFormat::Astc6x6)
+    );
+    assert_eq!(slow.blocks.as_ref().unwrap().mips[0].len(), 64);
     let unmeasured = import("Android", 0, 50, 0, Default::default());
     assert!(unmeasured.blocks.is_none());
 }
@@ -1538,4 +1541,117 @@ fn automatic_single_red_filters_mips_before_selecting_linear_storage() {
     assert_eq!(uncompressed.reported_format(), Some(unity_format::R8));
     assert_eq!(uncompressed.mips[1].data[0], 128);
     assert_eq!(import(1, 1, Default::default()).mips[1].data[0], 128);
+}
+
+#[test]
+fn single_channel_explicit_rgba_keeps_authored_colour_flag_and_all_channels() {
+    let bytes = png(4, 4, |x, _| {
+        [if x % 2 == 0 { 0 } else { 255 }, 73, 141, 185]
+    });
+    let meta = unbound_yaml::parse_value("TextureImporter:\n  textureType: 10\n  singleChannelComponent: 1\n  mipmaps:\n    enableMipMap: 1\n    sRGBTexture: 1\n  platformSettings:\n  - buildTarget: Standalone\n    overridden: 1\n    textureFormat: 4\n").unwrap();
+    let tex = TextureImporter {
+        compress: false,
+        project: ProjectCompression {
+            encoders: unbound_compat::TextureCompressionRules::for_version(
+                unbound_compat::UnityVersion::new(6000, 0, 71),
+            ),
+            ..ProjectCompression::default()
+        },
+        ..TextureImporter::default()
+    }
+    .import(Path::new("Assets/colour.png"), &bytes, &meta)
+    .unwrap();
+    assert!(tex.srgb);
+    assert_eq!(tex.gpu_channel(), None);
+    assert_eq!(tex.reported_format(), Some(unity_format::RGBA32));
+    assert_eq!(&tex.mips[0].data[..4], &[0, 73, 141, 185]);
+    assert_eq!(tex.mips[1].data[0], 188);
+}
+
+#[test]
+fn astc_mip_fallback_keeps_four_channels_for_opaque_non_power_of_two_sources() {
+    let bytes = png(20, 12, |x, y| [x as u8 * 7, y as u8 * 11, 123, 255]);
+    let measured = unbound_compat::TextureCompressionRules::for_version(
+        unbound_compat::UnityVersion::new(6000, 0, 71),
+    );
+    for quality in [0, 50, 100] {
+        let settings = unbound_yaml::parse_value(&format!("TextureImporter:\n  mipmaps:\n    enableMipMap: 1\n  nPOTScale: 0\n  textureCompression: 1\n  compressionQuality: {quality}\n")).unwrap();
+        let importer = TextureImporter {
+            build_target: "Android".into(),
+            compress: false,
+            project: ProjectCompression {
+                default_formats: vec![("Android".into(), COMPRESSION_ASTC)],
+                encoders: measured,
+                ..ProjectCompression::default()
+            },
+            ..TextureImporter::default()
+        };
+        let astc = importer
+            .import(Path::new("Assets/opaque.png"), &bytes, &settings)
+            .unwrap();
+        assert!(astc.blocks.is_none());
+        assert!(astc.uncompressed);
+        assert!(astc.approximation.is_none());
+        assert_eq!(astc.reported_format(), None); // Default RGBA32, never RGB24.
+        assert_eq!(astc.gpu_channel(), None);
+        assert_eq!(astc.settings.format_alpha, Some(true));
+        assert_eq!(astc.mips[0].data.len(), 20 * 12 * 4);
+        let bc = TextureImporter {
+            build_target: "Standalone".into(),
+            ..importer
+        }
+        .import(Path::new("Assets/opaque.png"), &bytes, &settings)
+        .unwrap();
+        assert_eq!(bc.reported_format(), Some(unity_format::RGB24));
+    }
+}
+
+#[test]
+fn non_power_of_two_astc_hdr_fallback_filters_radiance_before_clamping() {
+    let probe =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/texturecompression");
+    let source = probe.join("Assets/Textures/HdrNpotASTC6.exr");
+    let bytes = std::fs::read(&source).unwrap();
+    let meta = unbound_yaml::parse_value(
+        &std::fs::read_to_string(source.with_extension("exr.meta")).unwrap(),
+    )
+    .unwrap();
+    for (profile, gamma) in [("AndroidGamma", true), ("AndroidLinear", false)] {
+        let tex = TextureImporter {
+            build_target: "Android".into(),
+            gamma,
+            compress: false,
+            project: ProjectCompression {
+                encoders: unbound_compat::TextureCompressionRules::for_version(
+                    unbound_compat::UnityVersion::new(6000, 0, 71),
+                ),
+                ..ProjectCompression::default()
+            },
+            ..TextureImporter::default()
+        }
+        .import(&source, &bytes, &meta)
+        .unwrap();
+        assert_eq!(tex.format, TextureFormat::Rgba8);
+        assert!(tex.blocks.is_none());
+        assert!(tex.approximation.is_none());
+        let reference = std::fs::read_to_string(
+            probe.join(format!("Reference/unity-6000.0.71f1/{profile}.jsonl")),
+        )
+        .unwrap();
+        let row = reference
+            .lines()
+            .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+            .find(|v| v["k"] == "tex.HdrNpotASTC6.raw")
+            .unwrap();
+        let actual: Vec<u8> = tex
+            .mips
+            .iter()
+            .flat_map(|m| m.data.iter().copied())
+            .collect();
+        assert_eq!(
+            actual,
+            decode_base64(row["v"].as_str().unwrap()),
+            "{profile}"
+        );
+    }
 }

@@ -218,13 +218,56 @@ CASES = {
 }
 
 
+# Quality boundaries, all square footprints, channel swizzles and float source controls.
+CASES['HeightColorRGBA32'] = ('Height', 'format=RGBA32')
+CASES['HdrRGBAFloat'] = ('Hdr', 'format=RGBAFloat srgb=0 android=RGBAFloat')
+for quality in (1, 49, 50, 51, 99, 100):
+    CASES[f'NoiseASTC6Q{quality}'] = ('Noise', f'format=RGBA32 quality={quality} android=ASTC_6x6')
+for side in (5, 10, 12):
+    for quality in (0, 50, 100):
+        CASES[f'NoiseASTC{side}Q{quality}'] = ('Noise', f'format=RGBA32 quality={quality} android=ASTC_{side}x{side}')
+for quality in (0, 50, 100):
+    CASES[f'NormalsASTC6Q{quality}'] = ('Normals', f'type=normal format=RGB24 quality={quality} android=ASTC_6x6')
+    for component in ('red', 'alpha'):
+        CASES[f'Height{component.title()}ASTC6Q{quality}'] = ('Height', f'type=single channel={component} format=RGBA32 srgb=0 quality={quality} android=ASTC_6x6')
+CASES['HeightRedASTCSrgb'] = ('Height', 'type=single channel=red format=RGBA32 quality=50 android=ASTC_6x6')
+for side in (4, 5, 6, 8, 10, 12):
+    for quality in (0, 50, 100):
+        CASES[f'HdrASTC{side}Q{quality}'] = ('Hdr', f'format=RGBAFloat srgb=0 quality={quality} android=ASTC_HDR_{side}x{side}')
+def hdr_special():
+    w, h, rows = base.soft_hdr(8, 8)
+    rows[0][0] = (float('nan'), float('inf'), float('-inf'), -0.5)
+    rows[1][1] = (-2.0, 0.0000001, 65504.0, 1.5)
+    return w, h, rows
+SOURCES['HdrSpecial'] = hdr_special
+CASES['HdrSpecialASTC6'] = ('HdrSpecial', 'format=RGBAFloat srgb=0 mips=0 android=ASTC_HDR_6x6')
+CASES['HdrSpecialRGBAFloat'] = ('HdrSpecial', 'format=RGBAFloat srgb=0 mips=0 android=RGBAFloat')
+
+
+CASES['NormalsSource'] = ('Normals', 'type=normal format=RGBA32 srgb=0 android=RGBA32')
+for quality in (0, 50, 100):
+    for component in ('red', 'alpha'):
+        CASES[f'NoiseSingle{component.title()}ASTC6Q{quality}'] = ('Noise', f'type=single channel={component} format=RGBA32 quality={quality} android=ASTC_6x6')
+
+
+# Adjacent quality contexts must not change another texture's search thresholds.
+CASES['SoftSourceRGBA32'] = ('Soft', 'format=RGBA32 srgb=0')
+CASES['SoftASTC6Q50'] = ('Soft', 'format=RGBA32 srgb=0 quality=50 android=ASTC_6x6')
+CASES['SoftASTC6Q100'] = ('Soft', 'format=RGBA32 srgb=0 quality=100 android=ASTC_6x6')
+
+
+CASES['NpotRedASTC6'] = ('Npot', 'type=single channel=red format=RGBA32 srgb=0 npot=none android=ASTC_6x6')
+CASES['NpotAlphaASTC6'] = ('Npot', 'type=single channel=alpha format=RGBA32 srgb=0 npot=none android=ASTC_6x6')
+SOURCES['HdrNpot'] = lambda: base.soft_hdr(13, 7)
+CASES['HdrNpotASTC6'] = ('HdrNpot', 'format=RGBAFloat srgb=0 npot=none android=ASTC_HDR_6x6')
+
 def main():
     textures = PROBE/'Assets/Textures'
     textures.mkdir(parents=True, exist_ok=True)
     images = {name: make() for name, make in SOURCES.items()}
     lines = []
     for name, (source, settings) in CASES.items():
-        if source == 'Hdr':
+        if source.startswith('Hdr'):
             base.exr(textures/f'{name}.exr', *images[source])
         else:
             base.png(textures/f'{name}.png', *images[source])
