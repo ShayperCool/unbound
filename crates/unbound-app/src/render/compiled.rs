@@ -333,16 +333,19 @@ impl CompiledPrograms {
             return Some(*id);
         }
         if let Some(why) = uniform_bindings_refused(&program, &device.limits()) {
-            if purpose == VariantUse::Draw {
-                tracing::warn!(
-                    "shader `{shader}` (keywords: {}): a pass cannot be bound on this device, so it draws with the error shader: {why}",
-                    if keywords.is_empty() {
-                        "none".to_string()
-                    } else {
-                        keywords.join(" ")
-                    }
-                );
+            // As with a compile error, an optional warm-up leaves the refusal (and its warning)
+            // to the draw that needs the variant.
+            if purpose == VariantUse::OptionalWarmup {
+                return None;
             }
+            tracing::warn!(
+                "shader `{shader}` (keywords: {}): a pass cannot be bound on this device, so it draws with the error shader: {why}",
+                if keywords.is_empty() {
+                    "none".to_string()
+                } else {
+                    keywords.join(" ")
+                }
+            );
             self.failed.insert(failure);
             return None;
         }
@@ -1558,6 +1561,7 @@ fn write_array(u: &unbound_shaders::Uniform, components: u32, data: &[f32], out:
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     /// The per-draw dynamic offsets in binding order: the first uniform binding, the per-draw
     /// uniform, then the further ones, each at its start in the draw's uniform data.
@@ -1641,7 +1645,6 @@ mod tests {
         program.uniform_bindings.pop();
         assert_eq!(uniform_bindings_refused(&program, &desktop), None);
     }
-    use super::*;
     use unbound_shaders::Uniform;
 
     fn uniform(name: &str, offset: u32, rows: u32, columns: u32) -> Uniform {
