@@ -191,8 +191,16 @@ the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
 
 Then `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
 `RoomCharts` cases are. The charts the precompute made are in the scene's precomputed data, as
-there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`. Last, `RoomHoles`
-(`roomholes-base`).
+there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`. Then `RoomHoles`
+(`roomholes-base`). Then the Room loaded four more times with a script's light delegate
+(`GlobalIllumination.Lightmapping.SetDelegate`, set before the load) that extracts the lights as
+`LightmapperUtils` does but gives the point and spot lights one falloff type each:
+`room-delegate-legacy` and `room-delegate-undefined` at the point light's own range,
+`room-delegate-inversesquared` and `room-delegate-norange` (InverseSquaredNoRangeAttenuation)
+with its range 4. Last, `lights-dilatedrange`: `Light.dilatedRange` of a light of range 5 as a
+rectangle (2 x 1, 3 x 3, no size), a disc (`areaSize` 1.5 by 0.3 and by 7), a point, a spot and
+a directional light, and the range `LightmapperUtils.Extract` gives the 2 x 1 rectangle and the
+first disc.
 
 With `--color-space gamma` the same project is in the gamma color space (run.py changes the
 copy's player settings) and the probe records the scenes without lighting data, their rows
@@ -357,6 +365,12 @@ Observations (not documented guarantees):
   neither (`*-plus-*`), and `SceneManager.SetActiveScene` with the added scene switches both
   within the frame (`-active`), as the documentation says of the active scene ("from what Scene
   the lighting settings are used").
+- A script's delegate in the built-in pipeline: the `Undefined` falloff lights as the legacy one
+  (the two lightmaps are byte-identical), and InverseSquaredNoRangeAttenuation is the
+  inverse-squared falloff without its window (brighter toward the range, nothing from it on).
+  `Light.dilatedRange` is a rectangle light's range plus half its diagonal (6.118034 for 2 x 1),
+  a disc light's plus half its `areaSize.x` (5.75, whatever `areaSize.y`), any other light's
+  range; `LightmapperUtils` gives area lights that range.
 - Under the Universal Render Pipeline the lights reach realtime GI as the pipeline's delegate
   gives them (`Lightmapping.SetDelegate`): an inverse-squared falloff with the range's window
   (the lightmaps are a third to a tenth of the built-in pipeline's; with range 4 the far walls

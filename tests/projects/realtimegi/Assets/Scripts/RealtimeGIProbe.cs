@@ -8,6 +8,7 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
+using GI = UnityEngine.Experimental.GlobalIllumination;
 #endif
 
 /// <summary>
@@ -619,7 +620,95 @@ public class RealtimeGIProbe : MonoBehaviour
         s = Scene();
         yield return Converge();
         Capture("roomholes-base", s);
+
+        // The lights as a script's delegate (GlobalIllumination.Lightmapping.SetDelegate) gives
+        // them in the built-in pipeline, as LightmapperUtils extracts them but with each
+        // falloff type in turn, set before the room loads: the legacy and the undefined one at
+        // the point light's own range, the inverse-squared ones with it given a range of 4 (the
+        // far walls beyond it, so the range attenuation of the one that has it shows).
+        var falloffs = new[]
+        {
+            ("legacy", GI.FalloffType.Legacy, 0f), ("inversesquared", GI.FalloffType.InverseSquared, 4f),
+            ("norange", GI.FalloffType.InverseSquaredNoRangeAttenuation, 4f), ("undefined", GI.FalloffType.Undefined, 0f),
+        };
+        foreach (var (name, falloff, range) in falloffs)
+        {
+            GI.Lightmapping.SetDelegate(LightsWith(falloff));
+            yield return Load("Room");
+            s = Scene();
+            if (range > 0f) s.point.range = range;
+            yield return Converge();
+            Capture("room-delegate-" + name, s);
+        }
+        GI.Lightmapping.ResetDelegate();
+        Record("lights-dilatedrange", DilatedRanges());
         Finish();
+    }
+
+    /// <summary>A light delegate that extracts lights as LightmapperUtils does and gives point
+    /// and spot lights <paramref name="falloff"/>.</summary>
+    static GI.Lightmapping.RequestLightsDelegate LightsWith(GI.FalloffType falloff) => (requests, lights) =>
+    {
+        var data = new GI.LightDataGI();
+        for (int i = 0; i < requests.Length; i++)
+        {
+            var light = requests[i];
+            switch (light.type)
+            {
+                case LightType.Directional:
+                    var directional = new GI.DirectionalLight();
+                    GI.LightmapperUtils.Extract(light, ref directional);
+                    data.Init(ref directional);
+                    break;
+                case LightType.Point:
+                    var point = new GI.PointLight();
+                    GI.LightmapperUtils.Extract(light, ref point);
+                    point.falloff = falloff;
+                    data.Init(ref point);
+                    break;
+                case LightType.Spot:
+                    var spot = new GI.SpotLight();
+                    GI.LightmapperUtils.Extract(light, ref spot);
+                    spot.falloff = falloff;
+                    data.Init(ref spot);
+                    break;
+                default:
+                    data.InitNoBake(light.GetInstanceID());
+                    break;
+            }
+            lights[i] = data;
+        }
+    };
+
+    /// <summary>Light.dilatedRange of a light of range 5 by type and area size, and the range
+    /// LightmapperUtils gives a rectangle and a disc light.</summary>
+    static string DilatedRanges()
+    {
+        var go = new GameObject("DilatedRange");
+        var light = go.AddComponent<Light>();
+        light.range = 5f;
+        var sb = new StringBuilder();
+        void Add(string name, LightType type, Vector2 size)
+        {
+            light.type = type;
+            light.areaSize = size;
+            sb.Append(sb.Length == 0 ? "" : ",").Append('"').Append(name).Append("\":").Append(F(light.dilatedRange));
+        }
+        Add("rectangle", LightType.Rectangle, new Vector2(2f, 1f));
+        var rect = new GI.RectangleLight();
+        GI.LightmapperUtils.Extract(light, ref rect);
+        Add("rectangleSquare", LightType.Rectangle, new Vector2(3f, 3f));
+        Add("rectangleNone", LightType.Rectangle, Vector2.zero);
+        Add("disc", LightType.Disc, new Vector2(1.5f, 0.3f));
+        var disc = new GI.DiscLight();
+        GI.LightmapperUtils.Extract(light, ref disc);
+        Add("discWide", LightType.Disc, new Vector2(1.5f, 7f));
+        Add("point", LightType.Point, new Vector2(2f, 1f));
+        Add("spot", LightType.Spot, new Vector2(2f, 1f));
+        Add("directional", LightType.Directional, new Vector2(2f, 1f));
+        sb.Append(",\"extractedRectangle\":").Append(F(rect.range)).Append(",\"extractedDisc\":").Append(F(disc.range));
+        Destroy(go);
+        return sb.ToString();
     }
 
     static readonly string[] NoData =
