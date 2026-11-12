@@ -224,7 +224,7 @@ namespace UnityEngine.Tests
                 // Editor's, tests/projects/renderapi prevskin.*.created).
                 Assert.Null(skin.GetVertexBuffer());
                 Assert.Null(skin.GetPreviousVertexBuffer());
-                Time.s_FrameCount++;
+                SkinnedMeshTests.NextSkinningFrame();
                 using var buffer = skin.GetVertexBuffer();
                 Assert.Equal(12, buffer.stride);
                 skin.BakeMesh(after);

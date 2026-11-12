@@ -59,12 +59,12 @@ namespace UnityEngine
         /// <summary>The skinning pass the renderer was created in: none has skinned it yet.</summary>
         readonly int m_BornEpoch = SkinPass;
 
-        /// <summary>Unity skins once a frame, at PostLateUpdate.UpdateAllSkinnedMeshes, and a skin
-        /// buffer read before it in a frame holds the last pass's skin (the Unity 6000.0.71f1
-        /// Editor's, tests/projects/renderapi <c>prevskin.*</c>). A renderer whose buffer was asked
-        /// for skins at each pass and draws that skin; another skins once a frame when it is first
-        /// drawn (draws before the pass are unmeasured). A pass is named by its frame: before the
-        /// frame's UpdateAllSkinnedMeshes the last frame's pass goes on.</summary>
+        /// <summary>Unity skins once a frame, at PostLateUpdate.UpdateAllSkinnedMeshes: a skin buffer
+        /// read and a camera rendered before it in a frame both have the last pass's skin (the Unity
+        /// 6000.0.71f1 Editor's, tests/projects/renderapi <c>prevskin.*</c>,
+        /// <c>prevskin.force.*</c>). A renderer whose buffer was asked for skins at the pass; another
+        /// when it is first drawn after it. A pass is named by its frame: before the frame's
+        /// UpdateAllSkinnedMeshes the last frame's pass goes on.</summary>
         internal static int SkinPass => s_SkinPassFrame == Time.s_FrameCount ? Time.s_FrameCount : Time.s_FrameCount - 1;
 
         /// <summary>The frame whose UpdateAllSkinnedMeshes ran last.</summary>
@@ -308,8 +308,7 @@ namespace UnityEngine
                 try { return Skin(); }
                 finally { SwapNowSkin(); }
             }
-            // A renderer whose buffer was asked for skins once a pass; another once a frame.
-            int pass = m_GraphicsOutputRequested ? SkinPass : Time.s_FrameCount;
+            int pass = SkinPass;
             if (m_Skinned != null && m_SkinnedEpoch == pass && m_SkinnedSource == m_Mesh) return m_Skinned;
             if (m_Skinned != null && m_SkinnedSource != m_Mesh) DropPreviousSkin();
             // The buffers alternate: the last pass's skin becomes the previous one.
@@ -695,7 +694,8 @@ namespace UnityEngine
             }
             model = m_GraphicsOutputRequested ? transform.localToWorldMatrix : Matrix4x4.identity;
             // "Must be set ... to manually render a skinned mesh multiple times within a single
-            // update" (the Scripting API): each draw skins now, apart from the pass's skin.
+            // update" (the Scripting API): each draw skins now, apart from the pass's skin
+            // (measured: prevskin.force.forced).
             return Deform(now: forceMatrixRecalculationPerRender);
         }
 
