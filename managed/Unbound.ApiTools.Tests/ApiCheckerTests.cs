@@ -75,11 +75,97 @@ public class ApiCheckerTests
             Assert.Contains("int Count { get; } has no setter, Unity's has one", thing);
             Assert.Contains("void Do(ref int) matches none of Unity's: void Do(int)", thing);
             Assert.DoesNotContain("Do(string)", thing); // an internal helper overload is Unbound's own
-            Assert.Equal(10, report.Errors.Count);
+            Assert.Contains(report.Errors, e => e.Category == "accessors" && e.Message.Contains("setter is absent"));
+            Assert.Contains(report.Errors, e => e.Category == "enum" && e.Message.Contains("B is 3"));
+            Assert.Equal(11, report.Errors.Count);
         }
         finally
         {
             Directory.Delete(root, recursive: true);
         }
     }
+    [Fact]
+    public void ComparesDeclarationMetadataAtEveryTarget()
+    {
+        const string declarations = """
+            using System;
+            namespace UnityEngine {
+                [AttributeUsage(AttributeTargets.All, Inherited = true, AllowMultiple = true)]
+                public class Mark : Attribute { public Mark(Type t, params int[] values) {} public string Text; }
+                [Mark(typeof(System.Collections.Generic.List<>), 1, 2, Text = "expected")]
+                [Serializable] public class Thing<T> where T : class, new() {
+                    [NonSerialized] public int transient;
+                    public readonly int value;
+                    public const float Constant = 3.5f;
+                    [return: Mark(typeof(int))] public virtual int Do([Mark(typeof(string))] int v = 2) => v;
+                    public void Many(params int[] values) {}
+                    public void Interop([System.Runtime.InteropServices.In] int value) {}
+                    public event Action Changed;
+                    public int Prop { [Mark(typeof(int))] get; protected set; }
+                }
+            }
+            """;
+        var changed = declarations.Replace("Inherited = true", "Inherited = false")
+            .Replace("AllowMultiple = true", "AllowMultiple = false")
+            .Replace("Text = \"expected\"", "Text = \"wrong\"")
+            .Replace("[Serializable]", "")
+            .Replace("where T : class, new()", "where T : class")
+            .Replace("[NonSerialized]", "")
+            .Replace("[System.Runtime.InteropServices.In]", "")
+            .Replace("readonly int", "int")
+            .Replace("3.5f", "4.5f")
+            .Replace("[return: Mark(typeof(int))]", "")
+            .Replace("[Mark(typeof(string))]", "")
+            .Replace("virtual int Do", "int Do")
+            .Replace("v = 2", "v = 3")
+            .Replace("Many(params int[]", "Many(int[]")
+            .Replace("[Mark(typeof(int))] get", "get")
+            .Replace("protected set", "set");
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "Managed", "UnityEngine");
+            TestAssemblies.Compile(unity, "UnityEngine.CoreModule", declarations);
+            var impl = TestAssemblies.Compile(Path.Combine(root, "impl"), "UnityEngine.CoreModule", changed);
+            var report = ApiChecker.Check(unity, impl);
+            foreach (var category in new[] { "attributes", "parameters", "constraints", "modifiers", "constants", "accessors" })
+                Assert.Contains(report.Errors, e => e.Category == category);
+            Assert.Contains(report.Errors, e => e.Message.Contains("Inherited=System.Boolean:False"));
+            Assert.Contains(report.Errors, e => e.Message.Contains("return attributes"));
+            Assert.Contains(report.Errors, e => e.Message.Contains("Interop") && e.Message.Contains("in/out"));
+            Assert.Contains(report.Errors, e => e.Message.Contains("transient") && e.Category == "attributes");
+            Assert.Contains(report.Errors, e => e.Message.Contains("get_Prop") && e.Category == "attributes");
+            var same = ApiChecker.Check(unity, TestAssemblies.Compile(Path.Combine(root, "same"), "UnityEngine.CoreModule", declarations));
+            Assert.Empty(same.Errors);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void ExceptionsAreExactReleaseScopedAndNeedReasons()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var path = Path.Combine(root, "exceptions.json");
+            var entry = new ApiCheckException { Release = "6000.0.71f1", Category = "attributes", Type = "UnityEngine.Thing", Message = "mismatch", Reason = "Tracked declaration migration for Thing" };
+            File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(new[] { entry }));
+            ApiCheckReport Report(string message = "mismatch") => new() { Errors = { new() { Category = "attributes", Type = "UnityEngine.Thing", Message = message } } };
+            var report = Report();
+            ApiCheckAllowList.Apply(report, path, entry.Release);
+            Assert.Empty(report.Errors);
+            Assert.Single(report.Allowed);
+            report = Report();
+            ApiCheckAllowList.Apply(report, path, "other-release");
+            Assert.Single(report.Errors);
+            report = Report("new mismatch");
+            ApiCheckAllowList.Apply(report, path, entry.Release);
+            Assert.Equal(2, report.Errors.Count);
+            entry.Reason = " ";
+            File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(new[] { entry }));
+            Assert.Throws<InvalidDataException>(() => ApiCheckAllowList.Apply(Report(), path, entry.Release));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
 }

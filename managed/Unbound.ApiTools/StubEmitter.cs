@@ -1394,6 +1394,7 @@ sealed partial class StubBuilder
         IFunctionPointerTypeSymbol f => "fnptr(" + string.Join(",", f.Signature.Parameters.Select(ParameterKey)) + ")" + TypeKey(f.Signature.ReturnType),
         ITypeParameterSymbol t => (t.TypeParameterKind == TypeParameterKind.Method ? "!!" : "!") + t.Ordinal,
         INamedTypeSymbol { IsTupleType: true, TupleUnderlyingType: { } underlying } => TypeKey(underlying),
+        INamedTypeSymbol { IsUnboundGenericType: true } n => TypeKey(n.OriginalDefinition),
         INamedTypeSymbol n => (n.ContainingType != null ? TypeKey(n.ContainingType) + "+" : n.ContainingNamespace.IsGlobalNamespace ? "" : n.ContainingNamespace.ToDisplayString() + ".")
                               + n.MetadataName
                               + (n.TypeArguments.Length > 0 ? "<" + string.Join(",", n.TypeArguments.Select(TypeKey)) + ">" : ""),

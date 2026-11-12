@@ -113,6 +113,7 @@ sealed partial class StubBuilder
     readonly CSharpCompilation _unity;
     readonly CSharpCompilation _impl;
     readonly IAssemblySymbol _implAssembly;
+    readonly MetadataReader _implMetadata;
     /// <summary>Unity's modules in ownership order: real modules first, then the monolithic
     /// UnityEngine.dll/UnityEditor.dll, whose own types are only legacy leftovers.</summary>
     readonly List<(string Name, IAssemblySymbol Assembly, MetadataReader Reader)> _modules = new();
@@ -159,6 +160,8 @@ sealed partial class StubBuilder
             _unityModules.Add(assembly);
         }
 
+        var implPe = new PEReader(File.ReadAllBytes(implAssembly).ToImmutableArrayUnsafe());
+        _implMetadata = implPe.GetMetadataReader();
         var implReference = MetadataReference.CreateFromFile(implAssembly);
         _impl = CSharpCompilation.Create(
             "impl",

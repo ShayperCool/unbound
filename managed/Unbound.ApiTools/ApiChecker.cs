@@ -33,11 +33,17 @@ namespace Unbound.ApiTools;
 public static class ApiChecker
 {
     public static ApiCheckReport Check(string unityManagedEngineDir, string implAssembly, IEnumerable<string>? platformModules = null,
-        string? implSourceDir = null)
+        string? implSourceDir = null, string? release = null)
     {
         var watch = Stopwatch.StartNew();
         var builder = new StubBuilder(unityManagedEngineDir, platformModules, implAssembly, new HandWrittenSources(implSourceDir));
         var report = builder.Check();
+        report.Counts = report.Errors.GroupBy(e => e.Category).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+        if (implSourceDir != null && release != null)
+        {
+            var allowList = System.IO.Path.Combine(implSourceDir, "ApiCheckAllowList.json");
+            if (System.IO.File.Exists(allowList)) ApiCheckAllowList.Apply(report, allowList, release);
+        }
         report.Milliseconds = watch.ElapsedMilliseconds;
         return report;
     }
@@ -49,6 +55,8 @@ public sealed class ApiCheckReport
     public List<ApiCheckError> Errors { get; set; } = new();
     /// <summary>Hand-written types compared with Unity's.</summary>
     public int CheckedTypes { get; set; }
+    public Dictionary<string, int> Counts { get; set; } = new(StringComparer.Ordinal);
+    public List<ApiCheckException> Allowed { get; set; } = new();
     public long Milliseconds { get; set; }
 }
 
@@ -110,6 +118,8 @@ sealed partial class StubBuilder
             report.CheckedTypes++;
             CheckType(unity, impl);
         }
+
+        CheckStorageMetadata();
 
         foreach (var silent in _sources.Silent)
         {
@@ -206,12 +216,13 @@ sealed partial class StubBuilder
 
     void CheckType(INamedTypeSymbol unity, INamedTypeSymbol impl)
     {
+        CheckDeclaration(unity, impl, impl);
         if (unity.TypeKind != impl.TypeKind)
         {
             Error("type", impl, $"is {KindOf(impl)}, Unity's is {KindOf(unity)}");
             return;
         }
-        if (Rank(impl.DeclaredAccessibility) < Rank(unity.DeclaredAccessibility))
+        if (impl.DeclaredAccessibility != unity.DeclaredAccessibility)
             Error("access", impl, $"is {Access(impl.DeclaredAccessibility)}, Unity's is {Access(unity.DeclaredAccessibility)}");
         if (unity.TypeKind == TypeKind.Class)
         {
@@ -225,12 +236,14 @@ sealed partial class StubBuilder
         if (unity.TypeKind == TypeKind.Enum)
         {
             CheckEnumValues(unity, impl);
+            CheckMembers(unity, impl);
             return;
         }
         if (unity.TypeKind == TypeKind.Delegate)
         {
             var u = unity.DelegateInvokeMethod!;
             var i = impl.DelegateInvokeMethod!;
+            CheckDeclaration(u, i, impl);
             if (FullKey(u) != FullKey(i))
                 Error("signature", impl, $"delegate is {Show(i)}, Unity's is {Show(u)}");
             return;
@@ -281,9 +294,9 @@ sealed partial class StubBuilder
         var unityMembers = new Dictionary<string, List<ISymbol>>(StringComparer.Ordinal);
         foreach (var member in unity.GetMembers())
         {
-            if (member is INamedTypeSymbol || member.IsImplicitlyDeclared || IsAccessor(member) || IsExplicitImplementation(member))
+            if (member is INamedTypeSymbol || member.IsImplicitlyDeclared || IsAccessor(member))
                 continue;
-            if (member.DeclaredAccessibility is Accessibility.Private or Accessibility.NotApplicable)
+            if ((member.DeclaredAccessibility is Accessibility.Private or Accessibility.NotApplicable) && !IsExplicitImplementation(member))
                 continue;
             var name = MemberName(member);
             if (!unityMembers.TryGetValue(name, out var list))
@@ -293,7 +306,7 @@ sealed partial class StubBuilder
 
         foreach (var member in impl.GetMembers())
         {
-            if (member is INamedTypeSymbol || member.IsImplicitlyDeclared || IsAccessor(member) || IsExplicitImplementation(member))
+            if (member is INamedTypeSymbol || member.IsImplicitlyDeclared || IsAccessor(member))
                 continue;
             if (member is IMethodSymbol { MethodKind: MethodKind.StaticConstructor or MethodKind.Destructor })
                 continue;
@@ -313,7 +326,8 @@ sealed partial class StubBuilder
                 Error("signature", impl, $"{Show(member)} matches none of Unity's: {string.Join(" | ", candidates.Select(Show))}");
                 continue;
             }
-            if (Rank(member.DeclaredAccessibility) < Rank(match.DeclaredAccessibility))
+            CheckDeclaration(match, member, impl);
+            if (member.DeclaredAccessibility != match.DeclaredAccessibility)
                 Error("access", impl, $"{Show(member)} is {Access(member.DeclaredAccessibility)}, Unity's is {Access(match.DeclaredAccessibility)}");
             // Game code compiled against a non-virtual member may call it without virtual dispatch
             // (`call`, as Roslyn emits after `?.` and on known non-null receivers), so overrides of a

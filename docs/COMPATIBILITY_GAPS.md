@@ -290,6 +290,14 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 
 Each of these turns a class of silent gaps into a list that keeps itself up to date:
 
+- [x] Q403 declaration checking: `unbound api-check` compares release metadata, including custom
+      attribute arguments, AttributeUsage, optional defaults, constants, modifiers, constraints,
+      interfaces, accessors and storage metadata. See [declaration policy](API_DECLARATIONS.md).
+      The initial 6000.0.71f1 audit has 1,305 exact migration exceptions in
+      `managed/UnityEngine/ApiCheckAllowList.json`: attributes 921, modifiers 88, parameters 74,
+      accessors 70, layout 68, interfaces 65, accessibility 18 and constraints 1. These remain open
+      declaration repairs, with raw counts and individual reasons retained by the checker.
+
 - [x] `Stubs.Ignored(member)` (warn once, like `NotImplemented`) for knowingly ignored members,
       and an `[EditorFaithful("why")]` marker for real no-ops; every hand-written empty body,
       constant answer, dropped setter and never-raised event carries one of the two (or is

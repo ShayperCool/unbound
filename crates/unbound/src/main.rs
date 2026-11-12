@@ -194,6 +194,9 @@ enum Command {
     /// like Unity's with other signatures, misplaced types, enum values, accessibility, struct
     /// layouts. Exits non-zero when there are errors.
     ApiCheck {
+        /// Emit the complete declaration report, including exact exceptions.
+        #[arg(long)]
+        json: bool,
         #[command(flatten)]
         project: ProjectArgs,
     },
@@ -391,7 +394,7 @@ fn main() -> anyhow::Result<()> {
         )),
         Command::Facades { project } => commands::facades(&project),
         Command::GenStubs { project } => commands::gen_stubs(&project),
-        Command::ApiCheck { project } => commands::api_check(&project),
+        Command::ApiCheck { project, json } => commands::api_check(&project, json),
         Command::Doctor { project, all, json } => doctor::doctor(&project, all, json),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
         Command::Test {

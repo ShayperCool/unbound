@@ -42,6 +42,7 @@ public sealed class StubsRequest
 /// <summary>The <c>api-check</c> host method.</summary>
 public sealed class ApiCheckRequest
 {
+    public string? Release { get; set; }
     public string UnityManagedEngineDir { get; set; } = "";
     /// <summary>The implementation built without stubs (<c>-p:UnboundNoStubs=true</c>).</summary>
     public string ImplAssembly { get; set; } = "";

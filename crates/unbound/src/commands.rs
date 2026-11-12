@@ -705,7 +705,7 @@ fn build_without_stubs(family: &str) -> Result<NoStubsBuild> {
             .map(PathBuf::from),
     )?;
     let no_stubs = target.join("managed-nostubs");
-    let status = std::process::Command::new(unbound_host::dotnet_root()?.join("dotnet"))
+    let output = std::process::Command::new(unbound_host::dotnet_root()?.join("dotnet"))
         .args([
             "build",
             "-c",
@@ -727,9 +727,14 @@ fn build_without_stubs(family: &str) -> Result<NoStubsBuild> {
         .arg("-o")
         .arg(&no_stubs)
         .arg(source.join("UnityEngine.csproj"))
-        .status()
+        .output()
         .context("running dotnet build")?;
-    if !status.success() {
+    eprint!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    if !output.status.success() {
         anyhow::bail!("building the implementation without stubs failed");
     }
     Ok(NoStubsBuild {
@@ -798,15 +803,19 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
     Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(serde::Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ApiCheckReport {
+    #[serde(default)]
+    counts: BTreeMap<String, u64>,
+    #[serde(default)]
+    allowed: Vec<serde_json::Value>,
     errors: Vec<ApiCheckError>,
     checked_types: u64,
     milliseconds: u64,
 }
 
-#[derive(Deserialize)]
+#[derive(serde::Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ApiCheckError {
     category: String,
@@ -818,7 +827,7 @@ struct ApiCheckError {
 /// Checks the hand-written implementation against the release's Unity modules: members named like
 /// Unity's with other signatures, public types Unity does not have, enum values, accessibility and
 /// struct layouts. Fails (for CI) when there are errors.
-pub fn api_check(args: &ProjectArgs) -> Result<()> {
+pub fn api_check(args: &ProjectArgs, json_output: bool) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
     let NoStubsBuild { dll, source } = build_without_stubs(&project.profile.data.family)?;
@@ -830,35 +839,45 @@ pub fn api_check(args: &ProjectArgs) -> Result<()> {
             "platformModules": project.install.platform_modules(),
             "implAssembly": dll,
             "implSourceDir": source,
+            "release": project.version.to_string(),
         }),
     )?;
-    let mut by_category: BTreeMap<&str, BTreeMap<&str, Vec<&str>>> = BTreeMap::new();
-    for error in &report.errors {
-        by_category
-            .entry(&error.category)
-            .or_default()
-            .entry(&error.type_name)
-            .or_default()
-            .push(&error.message);
+    if json_output {
+        println!("{}", serde_json::to_string_pretty(&report)?);
     }
-    for (category, types) in &by_category {
-        let count: usize = types.values().map(Vec::len).sum();
-        println!("{category} ({count})");
-        for (type_name, messages) in types {
-            println!("  {type_name}");
-            for message in messages {
-                println!("    {message}");
+    if !json_output {
+        for (category, count) in &report.counts {
+            println!("{category}: {count} raw differences");
+        }
+        println!("{} exact release exceptions", report.allowed.len());
+        let mut by_category: BTreeMap<&str, BTreeMap<&str, Vec<&str>>> = BTreeMap::new();
+        for error in &report.errors {
+            by_category
+                .entry(&error.category)
+                .or_default()
+                .entry(&error.type_name)
+                .or_default()
+                .push(&error.message);
+        }
+        for (category, types) in &by_category {
+            let count: usize = types.values().map(Vec::len).sum();
+            println!("{category} ({count})");
+            for (type_name, messages) in types {
+                println!("  {type_name}");
+                for message in messages {
+                    println!("    {message}");
+                }
             }
         }
+        println!(
+            "{} errors in {} hand-written types checked against Unity {} ({}ms; total {:.2?})",
+            report.errors.len(),
+            report.checked_types,
+            project.version,
+            report.milliseconds,
+            start.elapsed()
+        );
     }
-    println!(
-        "{} errors in {} hand-written types checked against Unity {} ({}ms; total {:.2?})",
-        report.errors.len(),
-        report.checked_types,
-        project.version,
-        report.milliseconds,
-        start.elapsed()
-    );
     if !report.errors.is_empty() {
         anyhow::bail!(
             "{} hand-written API errors: fix them to match Unity's signatures exactly",
