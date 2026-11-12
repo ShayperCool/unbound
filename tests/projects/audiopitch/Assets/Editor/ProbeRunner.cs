@@ -35,6 +35,13 @@ public static class ProbeRunner
         EditorApplication.EnterPlaymode();
     }
 
+    public static void RecordPrepared()
+    {
+        T("MixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
+        EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity", OpenSceneMode.Single);
+        EditorApplication.EnterPlaymode();
+    }
+
     static void Build(string key)
     {
         var mixer = T("AudioMixerController").GetMethod("CreateMixerControllerAtPath", F).Invoke(null, new object[] { "Assets/Resources/"+key+".mixer" });

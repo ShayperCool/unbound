@@ -14,7 +14,7 @@ p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
@@ -29,15 +29,15 @@ import sys
 sys.path.insert(0, str(fixture.parents[1]))
 from editor_runner import EditorJob, run
 import time
-from common import cases, devices, header, surround_cases, transition_cases, reset_cases, scheduled_reset_cases, wet_cases, wet_edge_cases
+from common import cases, devices, header, surround_cases, transition_cases, reset_cases, scheduled_reset_cases, wet_cases, wet_edge_cases, settings_cases, settings_sessions
 
 
-def capture(work, cases, env=None):
+def capture(work, cases, env=None, prepared=False, buffer=None):
     """One Editor session recording `cases` into WORK/capture."""
     job = EditorJob(project, work/'editor.log', work/'editor-run',
-                    args=['-executeMethod', 'ProbeRunner.Record'], batch=True, graphics=True,
+                    args=['-executeMethod', 'ProbeRunner.RecordPrepared' if prepared else 'ProbeRunner.Record'], batch=True, graphics=True,
                     editor=editor, env=dict(EFFECT_PROBE_OUT=str(work/'capture'), EFFECT_PROBE_RATE=str(a.rate),
-                        EFFECT_PROBE_CASES=','.join(cases), EFFECT_PROBE_BUFFER=str(a.buffer), **(env or {})),
+                        EFFECT_PROBE_CASES=','.join(cases), EFFECT_PROBE_BUFFER=str(buffer or a.buffer), **(env or {})),
                     timeout=900)
     result = run(job)
     if result['exit_code'] != 0: raise SystemExit('Editor capture failed: '+str(result))
@@ -78,16 +78,16 @@ def kind(key):
     return 'device' if key.startswith('device_') else 'layout' if key.startswith('context_') else 'stereo'
 
 
-def part(work, selected):
+def part(work, selected, prepared=False, buffer=None):
     """One session of one set: layouts against an eight-channel device, a device control against
     a device of its own channel count, stereo controls on the session's default device."""
     if kind(selected[0]) == 'stereo':
-        capture(work, selected)
+        capture(work, selected, prepared=prepared, buffer=buffer)
         return
     channels = dict(devices()).get(selected[0], 8)
     server, address = surround_server(work/'pulse', channels)
     try:
-        capture(work, selected, dict(PULSE_SERVER=address))
+        capture(work, selected, dict(PULSE_SERVER=address), prepared=prepared, buffer=buffer)
     finally:
         try:
             modules = subprocess.check_output(['pactl', '--server', address, 'list', 'short', 'modules'], text=True)
@@ -119,6 +119,8 @@ if a.cases:
     if len({kind(key) for key in selected}) != 1 or (kind(selected[0]) == 'device' and len(selected) != 1):
         p.error('select controls of one set (one device control per session)')
     part(a.work, selected)
+    if any(key.startswith('context_settings_') for key in selected):
+        assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion; see '+str(a.work/'editor.log')
     verify(a.work/'capture', a.release, a.rate, contexts=kind(selected[0]) == 'layout', selected=selected)
     raise SystemExit
 if a.set == 'devices':
@@ -129,6 +131,27 @@ if a.set == 'devices':
 if a.set == 'layouts':
     part(a.work, cases(True))
     verify(a.work/'capture', a.release, a.rate, contexts=True)
+    raise SystemExit
+if a.set == 'settings':
+    if a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
+    merged = {}
+    for index, (session, selected) in enumerate(settings_sessions().items()):
+        work = a.work/session
+        work.mkdir()
+        buffer = int(session.split('_')[1])
+        part(work, selected, prepared=index > 0, buffer=buffer)
+        assert 'Assertion failed on expression:' not in (work/'editor.log').read_text(), 'Editor assertion; see '+str(work/'editor.log')
+        verify(work/'capture', a.release, a.rate, contexts=True, selected=selected)
+        for key, value in header(work/'capture').items():
+            if key in ('release', 'rate'):
+                assert merged.get(key, value) == value, key
+            else:
+                assert key not in merged, key
+            merged[key] = value
+        (a.work/'capture').mkdir(exist_ok=True)
+        for f in (work/'capture').glob('*.f32'): shutil.copy2(f, a.work/'capture'/f.name)
+    (a.work/'capture/capture.json').write_text(json.dumps(merged, indent=2)+'\n')
+    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=settings_cases())
     raise SystemExit
 if a.set == 'wet-edges':
     part(a.work, wet_edge_cases())

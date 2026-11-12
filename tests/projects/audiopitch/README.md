@@ -93,3 +93,8 @@ The independent `wet` and `wet-edges` profiles add 256 controls for surround
 wet slots, Send/Receive routing, all-speaker Normalize and SFX Reverb startup.
 See [WET.md](WET.md) for the contracts, exact-repeat checks and measured limits.
 Their engine-only commands are declared separately in `gate.json`.
+
+Additional rate/buffer controls and their capture limits are documented in
+[SETTINGS.md](SETTINGS.md). They use an independent reference profile and exact
+rate/buffer pairs; the original stereo, layout and surround references remain
+unchanged.

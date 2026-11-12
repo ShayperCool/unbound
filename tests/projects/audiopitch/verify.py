@@ -28,12 +28,16 @@ def verify(root, release, rate, contexts=False, selected=None):
             assert not meta[case+'.callback_device'] and not meta[case+'.callback_playing']
             assert meta[case+'.before_clip_bits'] == 1048576000 and meta[case+'.callback_clip_bits'] == 0
             continue
+        if case.startswith('context_settings_'):
+            _, _, requested_rate, requested_buffer, _ = case.split('_', 4)
+            assert meta[case+'.rate'] == int(requested_rate), (case, 'unsupported requested sample rate')
+            assert meta[case+'.buffer'] == int(requested_buffer), (case, 'unsupported requested DSP buffer')
         for suffix in SUFFIXES:
             record = meta[case+suffix]
             size = meta.get(case+'.buffer', 1024)
             mode = meta.get(case+'.mode', 2)
             channels = meta.get(case+'.render_channels') or {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8}[mode]
-            if case.startswith(('context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_')):
+            if case.startswith(('context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_')):
                 assert channels == {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8}[mode], (case, 'inactive requested layout', channels)
             assert record == dict(file=case+suffix+'.f32', frames=blocks(case)*size, channels=channels), case+suffix
             values = samples(root, record)

@@ -22,11 +22,24 @@ def all_cases():
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_')) and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_')) and key.startswith('context_') == contexts]
 
 
 def surround_cases():
     return [key for key in all_cases() if key.startswith('context_fx_')]
+
+
+def settings_cases():
+    return [key for key in all_cases() if key.startswith('context_settings_')]
+
+
+def settings_sessions():
+    """Static settings and speaker widths run in separate processes on both backends."""
+    sessions = {}
+    for key in settings_cases():
+        session = '_'.join(key.split('_')[2:5])
+        sessions.setdefault(session, []).append(key)
+    return sessions
 
 
 def wet_edge_cases():
@@ -60,6 +73,7 @@ def profile(name, rate):
     if name == 'all': return dict.fromkeys(keys)
     if name == 'layouts': return dict.fromkeys(cases(True))
     if name == 'surround': return dict.fromkeys(surround_cases())
+    if name == 'settings': return dict.fromkeys(settings_cases())
     if name == 'wet-edges': return dict.fromkeys(wet_edge_cases())
     if name == 'wet': return dict.fromkeys(wet_cases())
     if name == 'transitions': return dict.fromkeys(transition_cases())
