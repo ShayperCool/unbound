@@ -20,6 +20,13 @@
 {"k":"cold.secondReloadSameID","v":"True"}
 {"k":"cold.secondReloadSaved","v":"True"}
 {"k":"cold.secondSaved","v":"True"}
+{"k":"cold.serialized.aliasApplied","v":"False"}
+{"k":"cold.serialized.aliasModified","v":"False"}
+{"k":"cold.serialized.differentApplied","v":"True"}
+{"k":"cold.serialized.differentModified","v":"True"}
+{"k":"cold.serialized.oldWrapperRetained","v":"True"}
+{"k":"cold.serialized.sameApplied","v":"False"}
+{"k":"cold.serialized.sameModified","v":"False"}
 {"k":"cold.thirdWriteBothRead","v":"True"}
 {"k":"touched.aliveAfterUnload","v":"True"}
 {"k":"touched.cloneIndependent","v":"True"}
@@ -44,5 +51,12 @@
 {"k":"touched.secondReloadSameID","v":"True"}
 {"k":"touched.secondReloadSaved","v":"True"}
 {"k":"touched.secondSaved","v":"True"}
+{"k":"touched.serialized.aliasApplied","v":"False"}
+{"k":"touched.serialized.aliasModified","v":"False"}
+{"k":"touched.serialized.differentApplied","v":"True"}
+{"k":"touched.serialized.differentModified","v":"True"}
+{"k":"touched.serialized.oldWrapperRetained","v":"True"}
+{"k":"touched.serialized.sameApplied","v":"False"}
+{"k":"touched.serialized.sameModified","v":"False"}
 {"k":"touched.thirdWriteBothRead","v":"True"}
 {"k":"complete","v":"1"}

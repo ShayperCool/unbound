@@ -1,7 +1,7 @@
 # Material reload wrappers
 
 Two independent Unity 6000.0.71f1 Editor captures on the existing NVIDIA display
-agree on all 48 values. The cold and touched controls unload separate saved
+agree on all 62 values. The cold and touched controls unload separate saved
 materials, then check their wrapper identities and shared values.
 
 ```bash
@@ -31,3 +31,10 @@ compatibility profile selects this wrapper mechanism for 6000.0.71f1. Other
 releases retain the previous wrapper behavior and remain unmeasured. Other asset
 types, materials sharing a file, lazy UnloadUnusedAssets restoration, unusual GC
 patterns and externally changed material files remain outside this capture.
+
+Serialized-property controls retain the field's original wrapper when assigning
+an alias with the same instance ID: hasModifiedProperties and
+ApplyModifiedProperties both remain false. A different material makes both true.
+This tests the documented
+[ApplyModifiedProperties result](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializedObject.ApplyModifiedProperties.html)
+with an actual change as well as the measured same-identity case.

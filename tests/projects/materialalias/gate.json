@@ -7,7 +7,8 @@
     "managed/UnityEngine/Graphics/Material.cs",
     "managed/UnityEngine/Runtime/ObjectRegistry.cs",
     "managed/UnityEngine/Runtime/Loading.cs",
-    "managed/UnityEngine/Runtime/Compat.cs"
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "managed/UnityEngine/Editor/SerializedPropertyTree.cs"
   ],
   "summary": "materialalias: [0-9]+/[0-9]+ values match"
 }

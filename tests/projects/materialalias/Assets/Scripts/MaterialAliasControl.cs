@@ -17,6 +17,16 @@ public sealed class MaterialAliasControl:MonoBehaviour
    if(touch)Put(k+".firstAccessSaved",first.color==Color.white);
    var second=Resources.Load<Material>(touch?"UnloadMatTouched":"UnloadMat");Put(k+".sameWrapper",ReferenceEquals(first,second));Put(k+".sameID",id==second.GetInstanceID());Put(k+".equal",first==second);Put(k+".secondSaved",second.color==Color.white);
    first.color=Color.green;Put(k+".oldWriteNewReads",second.color==Color.green);
+#if UNITY_EDITOR
+   var holderGo=new GameObject("Serialized alias control");var holder=holderGo.AddComponent<MaterialAliasHolder>();holder.material=first;
+   using(var serialized=new UnityEditor.SerializedObject(holder))
+   {
+    var property=serialized.FindProperty("material");property.objectReferenceValue=first;Put(k+".serialized.sameModified",serialized.hasModifiedProperties);Put(k+".serialized.sameApplied",serialized.ApplyModifiedProperties());
+    property.objectReferenceValue=second;Put(k+".serialized.aliasModified",serialized.hasModifiedProperties);Put(k+".serialized.aliasApplied",serialized.ApplyModifiedProperties());Put(k+".serialized.oldWrapperRetained",ReferenceEquals(holder.material,first));
+    var different=new Material(second);property.objectReferenceValue=different;Put(k+".serialized.differentModified",serialized.hasModifiedProperties);Put(k+".serialized.differentApplied",serialized.ApplyModifiedProperties());DestroyImmediate(different);
+   }
+   DestroyImmediate(holderGo);
+#endif
    second.renderQueue=2450;Put(k+".newWriteOldReads",first.renderQueue);
    first.CopyPropertiesFromMaterial(second);Put(k+".copyFromAliasPreserves",second.color==Color.green&&second.renderQueue==2450);
    second.CopyMatchingPropertiesFromMaterial(first);Put(k+".matchingCopyAliasPreserves",first.color==Color.green&&first.renderQueue==2450);
@@ -37,4 +47,9 @@ public sealed class MaterialAliasControl:MonoBehaviour
   UnityEditor.EditorApplication.Exit(0);
 #endif
  }
+}
+
+public sealed class MaterialAliasHolder:MonoBehaviour
+{
+ public Material material;
 }

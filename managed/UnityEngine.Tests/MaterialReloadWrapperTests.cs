@@ -106,6 +106,34 @@ namespace Unbound.Tests
             finally { ProjectInfo.UnityVersion = previous; }
         }
 
+        public sealed class Holder : ScriptableObject
+        {
+            public Material material;
+        }
+
+        [Fact]
+        public void SerializedAliasAssignmentPreservesTheExistingFieldReference()
+        {
+            var holder = ScriptableObject.CreateInstance<Holder>();
+            using var different = new OwnedMaterial(new Material());
+            try
+            {
+                holder.material = m_First;
+                var alias = m_First.ReloadWrapper();
+                using var serialized = new UnityEditor.SerializedObject(holder);
+                var property = serialized.FindProperty(nameof(Holder.material));
+                property.objectReferenceValue = alias;
+                Assert.False(serialized.hasModifiedProperties);
+                Assert.False(serialized.ApplyModifiedProperties());
+                Assert.Same(m_First, holder.material);
+                property.objectReferenceValue = different.Value;
+                Assert.True(serialized.hasModifiedProperties);
+                Assert.True(serialized.ApplyModifiedProperties());
+                Assert.Same(different.Value, holder.material);
+            }
+            finally { Object.DestroyImmediate(holder); }
+        }
+
         sealed class OwnedMaterial : IDisposable
         {
             internal readonly Material Value;

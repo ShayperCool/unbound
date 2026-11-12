@@ -803,6 +803,7 @@ namespace Unbound.Runtime
 
         internal static bool ValueEquals(object a, object b)
         {
+            if (a is Object left && b is Object right) return left == right;
             if (a is Object || b is Object) return ReferenceEquals(a, b);
             if (a is AnimationCurve || a is Gradient || a is RectOffset)
             {
