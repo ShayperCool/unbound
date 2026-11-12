@@ -72,6 +72,8 @@ namespace UnityEngine.Tests
         [InlineData("  fileIDToRecycleName:\n    2800000: Other\n", 0L, false)]
         [InlineData("  fileIDToRecycleName:\n    2800000: MainAsset\n    11400000: MainAsset\n", 11400000L, true)]
         [InlineData("  internalIDToNameTable:\n  - first:\n      114: 7654321\n    second: MainAsset\n", 7654321L, true)]
+        [InlineData("  internalIDToNameTable:\n  - first:\n      114: 7654321\n      28: 1234567\n    second: MainAsset\n", 1234567L, false)]
+        [InlineData("  internalIDToNameTable:\n  - first:\n      28: \n    second: MainAsset\n", 0L, false)]
         public void TheMetaNameTableGivesFileIdsByIdentifierAndClass(string table, long expected, bool scriptObject)
         {
             var settings = TestYaml.DocumentBody("ScriptedImporter:\n" + table + "  externalObjects: {}\n  userData: \n");

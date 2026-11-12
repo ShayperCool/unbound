@@ -248,8 +248,10 @@ namespace Unbound.Runtime
                     if (first == null || first.Kind != YKind.Map) continue;
                     var name = entry.Get("second")?.AsString() ?? "";
                     for (int i = 0; i < first.Keys.Length; i++)
-                        if (int.TryParse(first.Keys[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var classId))
-                            (table ??= new List<(int, long, string)>()).Add((classId, first.Values[i].AsLong(), name));
+                        if (int.TryParse(first.Keys[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var classId)
+                            && first.Values[i].Kind == YKind.Scalar
+                            && long.TryParse(first.Values[i].Scalar, NumberStyles.Integer, CultureInfo.InvariantCulture, out var fileId))
+                            (table ??= new List<(int, long, string)>()).Add((classId, fileId, name));
                 }
             return table;
         }
