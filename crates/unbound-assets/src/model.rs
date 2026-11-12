@@ -3433,7 +3433,8 @@ fn frame_times(start: f64, end: f64, fps: f64) -> Vec<f64> {
     times
 }
 
-/// How close (in seconds) a time must be to a frame to count as on it.
+/// How close a time must be to a whole frame to count as on it: in frames for a frame count
+/// (`time * fps`), and the same margin in seconds where [`frame_times`] compares times.
 const FRAME_EPSILON: f64 = 1e-6;
 
 /// The last whole frame at or before `time` (a time within [`FRAME_EPSILON`] below a frame
@@ -3450,9 +3451,8 @@ fn whole_frame(time: f64, fps: f64) -> i64 {
 /// A Humanoid clip's transform keys are measured only through its converted curves
 /// (tests/projects/humanoid, humanfirstpose).
 fn frame_key_time(time: f64, start: f64, fps: f64) -> f32 {
-    const EPSILON: f64 = 1e-6;
     let frames = (time - start) * fps;
-    if (frames - frames.round()).abs() < EPSILON {
+    if (frames - frames.round()).abs() < FRAME_EPSILON {
         frames.round() as f32 * (1.0 / fps as f32)
     } else {
         (time - start) as f32
