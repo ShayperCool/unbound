@@ -291,10 +291,12 @@ raise SystemExit(int(code))
         project = self.root/'tests/projects/private'
         project.mkdir(parents=True)
         (project/'gate.json').write_text('{"exclusive":true,"commands":["custom-driver"]}')
-        self.gate.probes = ['custom-driver', 'python3 tools/agents/suite.py --only private,ordinary', 'ordinary']
+        self.gate.probes = ['custom-driver', 'python3 tools/agents/suite.py --only private,ordinary',
+                            'python3 tools/agents/suite.py --only private # --only ordinary',
+                            'python3 tools/agents/suite.py --only=`printf private`', 'ordinary']
         with mock.patch.object(self.gate, 'step', return_value=0):
             self.gate.run_probes()
-        self.assertEqual(self.gate.log.read_text().count('(exclusive)'), 2)
+        self.assertEqual(self.gate.log.read_text().count('(exclusive)'), 4)
         import suite
         (project/'gate.json').write_text('{"exclusive":true}')
         self.assertNotIsInstance(suite.declared('private', land.default_release(), self.root/'tests/projects'), suite.NoRecipe)
@@ -335,7 +337,7 @@ raise SystemExit(int(code))
         # frozen default-label clock so the original collision is deterministic.
         source.write_text(f"import sys\nsys.path.insert(0, {str(actual)!r})\n" + 'import datetime, os\nfrom pathlib import Path\nimport suite\nclass FixedTime(datetime.datetime):\n    @classmethod\n    def now(cls, tz=None): return cls(2026, 11, 12, 12)\nsuite.datetime.datetime=FixedTime\nroot=Path.cwd()\nsuite.REPO=root\nsuite.PROJECTS=root/\'tests/projects\'\nsuite.CACHE=root/\'cache\'\nsuite.AGENTS=root/\'agents\'\nsuite.default_cli=lambda: Path(sys.executable)\nsuite.managed_for=lambda cli: root\nsuite.make_runtime=lambda *args: root\nsuite.recipes=lambda release: {name:[suite.Step(\'compare\',[sys.executable,\'-c\',\'import os; print(os.environ["UNBOUND_PROBE_UNITY_VERSION"])\'])] for name in (\'a\',\'b\',\'c\')}\nraise SystemExit(suite.main())\n')
         self.gate.probes = [
-            'python3 tools/agents/suite.py --only a --release "$UNBOUND_PROBE_UNITY_VERSION" > first.log',
+            'python3 tools/agents/suite.py --only a --release "$UNBOUND_PROBE_UNITY_VERSION" > first.log # trailing comment',
             'python3 tools/agents/suite.py --only=b --jobs "$CONTROL_JOBS" > second.log',
             'python3 tools/agents/suite.py --only c --label requested > third.log']
         self.gate.env['CONTROL_JOBS'] = '3'

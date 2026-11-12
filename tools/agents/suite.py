@@ -1414,7 +1414,7 @@ def main():
     managed = managed_for(cli)
     commit = subprocess.run(['git', 'rev-parse', '--short=10', 'HEAD'], cwd=REPO, capture_output=True,
                             text=True).stdout.strip()
-    label = args.label or f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{commit}'
+    label = args.label or f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{commit}-{os.getpid()}-{time.time_ns()}'
     if Path(label).name != label:
         parser.error('label must be a single directory name')
     summary_dir = AGENTS/'suite'/label

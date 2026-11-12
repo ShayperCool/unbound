@@ -185,9 +185,9 @@ request makes the train run the full gate. Explicit probe commands run with at m
 drivers. Each driver still sends its own engine and build jobs through the heavy-job pool; do
 not wrap a whole driver in another heavy-job lease. No worker command changes are needed.
 
-Each command gets a separate `<gate-log>.probes/NNN.log`. Direct suite invocations without a
-label receive a fresh `--label`, so concurrent suites cannot share their default output paths.
-Explicit labels keep their requested paths and must be unique. The gate log lists the full command,
+Each command gets a separate `<gate-log>.probes/NNN.log`. Suite defaults include the process
+ID and current nanosecond timestamp, so concurrent suites cannot share their default output
+paths. Explicit labels keep their requested paths and must be unique. The gate log lists the full command,
 release, requesting branches and log path, then its exit code and the tail of any failed command.
 All explicit commands finish even after a command exits unsuccessfully. An interruption or
 driver-launch exception stops the other running process trees. Failures are reported in request order and

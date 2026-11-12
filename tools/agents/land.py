@@ -136,7 +136,7 @@ def tail(log, lines=30):
 def suite_arguments(command):
     """Recognize a simple suite invocation; mentioning it in another command is no coverage."""
     try:
-        argv = shlex.split(command)
+        argv = shlex.split(command, comments=True)
     except ValueError:
         return None
     if any(token in argv for token in (';', '&&', '||', '|')):
@@ -494,13 +494,9 @@ class Gate:
                         selection = argv[position+1] if position+1 < len(argv) else None
                     elif token.startswith('--only='):
                         selection = token.split('=', 1)[1]
-                names.update(selection.split(',') if selection and '$' not in selection else specs)
+                names.update(selection.split(',') if selection and re.fullmatch(r'[A-Za-z0-9_.-]+(?:,[A-Za-z0-9_.-]+)*', selection) else specs)
             exclusive = any(specs.get(name, {}).get('exclusive', False) for name in names)
-            # Preserve shell expansions, redirections and explicitly requested output labels.
-            # Unlabeled suites otherwise share a second-resolution default output directory.
-            labeled = argv is not None and any(token == '--label' or token.startswith('--label=') for token in argv)
-            command = (probe.rstrip() + f' --label land-{os.getpid()}-{time.time_ns()}-{index}'
-                       if argv is not None and not labeled else probe)
+            command = probe
             owners = self.probe_owners[index-1] if self.probe_owners else []
             name = f'probe {index} ({release})' + (f' [{", ".join(owners)}]' if owners else '')
             log = logs/f'{index:03d}.log'
