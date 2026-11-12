@@ -41,9 +41,9 @@ namespace UnityEngine.iOS
     public enum ActivityIndicatorStyle
     {
         DontShow = -1,
-        [Obsolete("WhiteLarge Activity Indicator has been deprecated by Apple. Use Large instead (UnityUpgradable) -> Large")] WhiteLarge = 0,
-        [Obsolete("White Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium")] White = 1,
-        [Obsolete("Gray Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium")] Gray = 2,
+        [global::System.@ObsoleteAttribute("WhiteLarge Activity Indicator has been deprecated by Apple. Use Large instead (UnityUpgradable) -> Large", true)] WhiteLarge = 0,
+        [global::System.@ObsoleteAttribute("White Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium", true)] White = 1,
+        [global::System.@ObsoleteAttribute("Gray Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium", true)] Gray = 2,
         Medium = 100,
         Large = 101,
     }

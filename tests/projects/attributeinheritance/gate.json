@@ -20,6 +20,18 @@
     "managed/UnityEngine/Graphics/Srp/Keywords.cs",
     "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
     "managed/UnityEngine/Jobs/TransformJobs.cs",
-    "managed/UnityEngine/Platform/DisplayAndKeyboard.cs"
+    "managed/UnityEngine/Platform/DisplayAndKeyboard.cs",
+    "managed/UnityEngine/Core/Enums.Generated.cs",
+    "managed/UnityEngine/Core/Enums.Rendering.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/EditorMisc.cs",
+    "managed/UnityEngine/Editor/EditorTypes.cs",
+    "managed/UnityEngine/Graphics/LightingSettings.cs",
+    "managed/UnityEngine/Platform/PlatformEnums.cs",
+    "managed/UnityEngine/Platform/Social.cs",
+    "managed/UnityEngine/Terrain/TerrainTypes.cs",
+    "managed/UnityEngine/UIElements/Enums.UIElements.cs",
+    "managed/UnityEngine/Video/VideoPlayer.cs",
+    "managed/UnityEngine/XR/XRNoDevice.cs"
   ]
 }

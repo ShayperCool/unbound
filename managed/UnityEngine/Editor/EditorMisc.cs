@@ -108,7 +108,7 @@ namespace UnityEditor
             int.TryParse(Text(key, ""), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : fallback;
     }
 
-    public enum ScriptingRuntimeVersion
+    [global::System.@ObsoleteAttribute("ScriptingRuntimeVersion has been deprecated in 2019.3 now that legacy mono has been removed")] public enum ScriptingRuntimeVersion
     {
         Legacy = 0,
         Latest = 1,
@@ -124,12 +124,12 @@ namespace UnityEditor
     public enum AndroidSdkVersions
     {
         AndroidApiLevelAuto = 0,
-        [Obsolete("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher")] AndroidApiLevel16 = 16,
-        [Obsolete("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher")] AndroidApiLevel17 = 17,
-        [Obsolete("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher")] AndroidApiLevel18 = 18,
-        [Obsolete("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher")] AndroidApiLevel19 = 19,
-        [Obsolete("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher")] AndroidApiLevel21 = 21,
-        [Obsolete("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher")] AndroidApiLevel22 = 22,
+        [global::System.@ObsoleteAttribute("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher", true)] AndroidApiLevel16 = 16,
+        [global::System.@ObsoleteAttribute("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher", true)] AndroidApiLevel17 = 17,
+        [global::System.@ObsoleteAttribute("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher", true)] AndroidApiLevel18 = 18,
+        [global::System.@ObsoleteAttribute("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher", true)] AndroidApiLevel19 = 19,
+        [global::System.@ObsoleteAttribute("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher", true)] AndroidApiLevel21 = 21,
+        [global::System.@ObsoleteAttribute("Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher", true)] AndroidApiLevel22 = 22,
         AndroidApiLevel23 = 23,
         AndroidApiLevel24 = 24,
         AndroidApiLevel25 = 25,
@@ -159,7 +159,7 @@ namespace UnityEditor
         CleanBuildCache = 128,
         ConnectWithProfiler = 256,
         AllowDebugging = 512,
-        [Obsolete("BuildOptions.SymlinkLibraries is obsolete. Use BuildOptions.SymlinkSources instead (UnityUpgradable) -> [UnityEditor] BuildOptions.SymlinkSources")] SymlinkLibraries = 1024,
+        [global::System.@ObsoleteAttribute("BuildOptions.SymlinkLibraries is obsolete. Use BuildOptions.SymlinkSources instead (UnityUpgradable) -> [UnityEditor] BuildOptions.SymlinkSources", false)] SymlinkLibraries = 1024,
         SymlinkSources = 1024,
         UncompressedAssetBundle = 2048,
         [Obsolete("Use BuildOptions.Development instead")] StripDebugSymbols = 0,
@@ -169,7 +169,7 @@ namespace UnityEditor
         [Obsolete("Use StandaloneBuildSubtarget.Server instead")] EnableHeadlessMode = 16384,
         BuildScriptsOnly = 32768,
         PatchPackage = 65536,
-        [Obsolete("BuildOptions.IL2CPP is deprecated and has no effect. Use PlayerSettings.SetScriptingBackend() instead.")] Il2CPP = 0,
+        [global::System.@ObsoleteAttribute("BuildOptions.IL2CPP is deprecated and has no effect. Use PlayerSettings.SetScriptingBackend() instead.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] Il2CPP = 0,
         ForceEnableAssertions = 131072,
         CompressWithLz4 = 262144,
         CompressWithLz4HC = 524288,
@@ -238,7 +238,7 @@ namespace UnityEditor
         }
     }
 
-    public enum PrefabType
+    [global::System.@ObsoleteAttribute("PrefabType no longer tells everything about Prefab instance.")] public enum PrefabType
     {
         None = 0,
         Prefab = 1,

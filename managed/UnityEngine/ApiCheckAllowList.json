@@ -863,48 +863,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEditor.AndroidSdkVersions",
-    "Message": "F:static const AndroidApiLevel16:UnityEditor.AndroidSdkVersions attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AndroidSdkVersions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.AndroidSdkVersions",
-    "Message": "F:static const AndroidApiLevel17:UnityEditor.AndroidSdkVersions attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AndroidSdkVersions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.AndroidSdkVersions",
-    "Message": "F:static const AndroidApiLevel18:UnityEditor.AndroidSdkVersions attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AndroidSdkVersions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.AndroidSdkVersions",
-    "Message": "F:static const AndroidApiLevel19:UnityEditor.AndroidSdkVersions attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AndroidSdkVersions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.AndroidSdkVersions",
-    "Message": "F:static const AndroidApiLevel21:UnityEditor.AndroidSdkVersions attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AndroidSdkVersions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.AndroidSdkVersions",
-    "Message": "F:static const AndroidApiLevel22:UnityEditor.AndroidSdkVersions attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AndroidSdkVersions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEditor.AssetDatabase",
     "Message": "M:static GetBuiltinExtraResource`0(System.Type,System.String):UnityEngine.Object attributes is [], Unity's is [UnityEngineInternal.TypeInferenceRuleAttribute:M:.ctor`0(UnityEngineInternal.TypeInferenceRules):System.Void(UnityEngineInternal.TypeInferenceRules:Int32:0){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.AssetDatabase."
@@ -943,314 +901,6 @@
     "Type": "UnityEditor.Build.Reporting.BuildReport",
     "Message": "type attributes is [], Unity's is [UnityEngine.NativeClassAttribute:M:.ctor`0(System.String):System.Void(System.String:\"BuildReporting::BuildReport\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.Build.Reporting.BuildReport."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildOptions",
-    "Message": "F:static const Il2CPP:UnityEditor.BuildOptions attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"BuildOptions.IL2CPP is deprecated and has no effect. Use PlayerSettings.SetScriptingBackend() instead.\"){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"BuildOptions.IL2CPP is deprecated and has no effect. Use PlayerSettings.SetScriptingBackend() instead.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildOptions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildOptions",
-    "Message": "F:static const SymlinkLibraries:UnityEditor.BuildOptions attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"BuildOptions.SymlinkLibraries is obsolete. Use BuildOptions.SymlinkSources instead (UnityUpgradable) -> [UnityEditor] BuildOptions.SymlinkSources\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"BuildOptions.SymlinkLibraries is obsolete. Use BuildOptions.SymlinkSources instead (UnityUpgradable) -> [UnityEditor] BuildOptions.SymlinkSources\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildOptions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const BB10:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"BlackBerry has been removed in 5.4\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const BlackBerry:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"BlackBerry has been removed in 5.4\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const CloudRendering:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const GameCoreScarlett:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const Lumin:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Lumin has been removed in 2022.2\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const MetroPlayer:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use WSAPlayer instead (UnityUpgradable) -> WSAPlayer\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const N3DS:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Nintendo 3DS support is unavailable since 2018.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const PS3:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PS3 has been removed in >=5.5\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const PSM:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PSM has been removed in >= 5.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const PSP2:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PSP2 is no longer supported as of Unity 2018.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const SamsungTV:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"SamsungTV has been removed in 2017.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const Stadia:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Stadia has been removed in 2023.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const StandaloneLinux:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"StandaloneLinux has been removed in 2019.2\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const StandaloneLinuxUniversal:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"StandaloneLinuxUniversal has been removed in 2019.2\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const StandaloneOSXIntel64:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"StandaloneOSXIntel64 has been removed in 2017.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const StandaloneOSXIntel:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"StandaloneOSXIntel has been removed in 2017.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const StandaloneOSXUniversal:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use StandaloneOSX instead (UnityUpgradable) -> StandaloneOSX\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const Tizen:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Tizen has been removed in 2017.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const WP8Player:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use WSAPlayer with Windows Phone 8.1 selected\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const WebPlayer:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"WebPlayer has been removed in 5.4\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const WebPlayerStreamed:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"WebPlayerStreamed has been removed in 5.4\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const WiiU:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Wii U support was removed in 2018.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const XBOX360:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"XBOX360 has been removed in 5.5\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTarget",
-    "Message": "F:static const iPhone:UnityEditor.BuildTarget attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use iOS instead (UnityUpgradable) -> iOS\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTarget."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const BlackBerry:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"BlackBerry has been removed as of 5.4\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const CloudRendering:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const Facebook:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Facebook support was removed in 2019.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const GameCoreScarlett:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const Lumin:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Lumin has been removed in 2022.2\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const Metro:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use WSA instead\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const N3DS:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Nintendo 3DS support is unavailable since 2018.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const PS3:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PS3 has been removed in >=5.5\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const PSM:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PSM has been removed in >= 5.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const PSP2:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PSP2 is no longer supported as of Unity 2018.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const SamsungTV:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"SamsungTV has been removed as of 2017.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const Stadia:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Stadia has been removed in 2023.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const Tizen:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Tizen has been removed in 2017.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const WP8:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use WSA instead\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const WebPlayer:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"WebPlayer was removed in 5.4, consider using WebGL\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const WiiU:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Wii U support was removed in 2018.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const XBOX360:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"XBOX360 has been removed in 5.5\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.BuildTargetGroup",
-    "Message": "F:static const iPhone:UnityEditor.BuildTargetGroup attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use iOS instead (UnityUpgradable) -> iOS\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.BuildTargetGroup."
   },
   {
     "Release": "6000.0.71f1",
@@ -1342,13 +992,6 @@
     "Type": "UnityEditor.EditorWindow",
     "Message": "type attributes is [], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.EditorWindow."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.EnterPlayModeOptions",
-    "Message": "F:static const DisableSceneBackupUnlessDirty:UnityEditor.EnterPlayModeOptions attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Option has no effect and is deprecated.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.EnterPlayModeOptions."
   },
   {
     "Release": "6000.0.71f1",
@@ -1577,20 +1220,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEditor.PrefabInstanceStatus",
-    "Message": "F:static const Disconnected:UnityEditor.PrefabInstanceStatus attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PrefabInstanceStatus.Disconnected has been deprecated and is not used. Prefabs can not be in a disconnected state.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.PrefabInstanceStatus."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.PrefabType",
-    "Message": "type attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PrefabType no longer tells everything about Prefab instance.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.PrefabType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEditor.PrefabUtility",
     "Message": "M:static GetPrefabParent`0(UnityEngine.Object):UnityEngine.Object attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use PrefabUtility.GetCorrespondingObjectFromSource.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use GetCorrespondingObjectFromSource.\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.PrefabUtility."
@@ -1601,13 +1230,6 @@
     "Type": "UnityEditor.PrefabUtility",
     "Message": "M:static GetPrefabType`0(UnityEngine.Object):UnityEditor.PrefabType attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PrefabUtility.GetPrefabType is no longer supported. Use PrefabUtility.GetPrefabAssetType and PrefabUtility.GetPrefabInstanceStatus to get the full picture about Prefab types.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use GetPrefabAssetType and GetPrefabInstanceStatus to get the full picture about Prefab types.\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.PrefabUtility."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.Rendering.ShaderCompilerPlatform",
-    "Message": "F:static const GameCore:UnityEditor.Rendering.ShaderCompilerPlatform attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"GameCore  is deprecated, please use GameCoreXboxOne (UnityUpgradable) -> GameCoreXboxOne \"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"GameCore  is deprecated, please use GameCoreXboxOne (UnityUpgradable) -> GameCoreXboxOne \",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.Rendering.ShaderCompilerPlatform."
   },
   {
     "Release": "6000.0.71f1",
@@ -1643,20 +1265,6 @@
     "Type": "UnityEditor.Scripting.ScriptCompilation.ScriptAssembly",
     "Message": "type attributes is [], Unity's is [System.Diagnostics.DebuggerDisplayAttribute:M:.ctor`0(System.String):System.Void(System.String:\"{Filename}\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.Scripting.ScriptCompilation.ScriptAssembly."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.ScriptingRuntimeVersion",
-    "Message": "type attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ScriptingRuntimeVersion has been deprecated in 2019.3 now that legacy mono has been removed\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.ScriptingRuntimeVersion."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.SelectionMode",
-    "Message": "F:static const OnlyUserModifiable:UnityEditor.SelectionMode attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"'OnlyUserModifiable' is obsolete. Use 'Editable' instead. (UnityUpgradeable) -> Editable\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"'OnlyUserModifiable' is obsolete. Use 'Editable' instead. (UnityUpgradeable) -> Editable\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.SelectionMode."
   },
   {
     "Release": "6000.0.71f1",
@@ -1794,20 +1402,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.AnimationCullingType",
-    "Message": "F:static const BasedOnClipBounds:UnityEngine.AnimationCullingType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Enum member AnimatorCullingMode.BasedOnClipBounds has been deprecated. Use AnimationCullingType.AlwaysAnimate or AnimationCullingType.BasedOnRenderers instead\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AnimationCullingType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.AnimationCullingType",
-    "Message": "F:static const BasedOnUserBounds:UnityEngine.AnimationCullingType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Enum member AnimatorCullingMode.BasedOnUserBounds has been deprecated. Use AnimationCullingType.AlwaysAnimate or AnimationCullingType.BasedOnRenderers instead\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AnimationCullingType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.AnimationInfo",
     "Message": "type attributes is [], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use AnimatorClipInfo instead (UnityUpgradable) -> AnimatorClipInfo\",System.Boolean:True){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AnimationInfo."
@@ -1934,23 +1528,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.AnimatorCullingMode",
-    "Message": "F:static const BasedOnRenderers:UnityEngine.AnimatorCullingMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member AnimatorCullingMode.BasedOnRenderers has been deprecated. Use AnimatorCullingMode.CullUpdateTransforms instead. (UnityUpgradable) -> CullUpdateTransforms\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AnimatorCullingMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.AnimatorOverrideController",
     "Message": "type attributes is [System.Reflection.DefaultMemberAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Item\"){}], Unity's is [System.Reflection.DefaultMemberAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Item\"){};UnityEngine.HelpURLAttribute:M:.ctor`0(System.String):System.Void(System.String:\"AnimatorOverrideController\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AnimatorOverrideController."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.AnimatorUpdateMode",
-    "Message": "F:static const AnimatePhysics:UnityEngine.AnimatorUpdateMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member AnimatorUpdateMode.AnimatePhysics has been deprecated. Use AnimatorUpdateMode.Fixed to evaluate in FixedUpdate time and Animator.animatePhysics to sync transforms for physics. (UnityUpgradable) -> Fixed\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AnimatorUpdateMode."
   },
   {
     "Release": "6000.0.71f1",
@@ -2133,41 +1713,6 @@
     "Type": "UnityEngine.AudioReverbFilter",
     "Message": "P:lFReference():System.Single attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"AudioReverbFilter.lFReference is obsolete. Use lfReference instead (UnityUpgradable) -> lfReference\"){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"AudioReverbFilter.lFReference is obsolete. Use lfReference instead (UnityUpgradable) -> lfReference\",System.Boolean:True){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AudioReverbFilter."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.AudioSpeakerMode",
-    "Message": "F:static const Raw:UnityEngine.AudioSpeakerMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Raw speaker mode is not supported. Do not use.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AudioSpeakerMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.BlendWeights",
-    "Message": "F:static const FourBones:UnityEngine.BlendWeights attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"BlendWeights.FourBones is obsolete. Use SkinWeights.FourBones instead (UnityUpgradable) -> SkinWeights.FourBones\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.BlendWeights."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.BlendWeights",
-    "Message": "F:static const OneBone:UnityEngine.BlendWeights attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"BlendWeights.OneBone is obsolete. Use SkinWeights.OneBone instead (UnityUpgradable) -> SkinWeights.OneBone\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.BlendWeights."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.BlendWeights",
-    "Message": "F:static const TwoBones:UnityEngine.BlendWeights attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"BlendWeights.TwoBones is obsolete. Use SkinWeights.TwoBones instead (UnityUpgradable) -> SkinWeights.TwoBones\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.BlendWeights."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.BlendWeights",
-    "Message": "type attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"BlendWeights is obsolete. Use SkinWeights instead (UnityUpgradable) -> SkinWeights\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.BlendWeights."
   },
   {
     "Release": "6000.0.71f1",
@@ -2361,13 +1906,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.CollisionDetectionMode2D",
-    "Message": "F:static const None:UnityEngine.CollisionDetectionMode2D attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member CollisionDetectionMode2D.None has been deprecated. Use CollisionDetectionMode2D.Discrete instead (UnityUpgradable) -> Discrete\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.CollisionDetectionMode2D."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Color",
     "Message": "type attributes is [System.Reflection.DefaultMemberAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Item\"){}], Unity's is [System.Reflection.DefaultMemberAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Item\"){};UnityEngine.NativeClassAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ColorRGBAf\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Color."
@@ -2497,34 +2035,6 @@
     "Type": "UnityEngine.ComputeBuffer",
     "Message": "type attributes is [], Unity's is [UnityEngine.NativeClassAttribute:M:.ctor`0(System.String):System.Void(System.String:\"GraphicsBuffer\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ComputeBuffer."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ComputeBufferMode",
-    "Message": "F:static const Circular:UnityEngine.ComputeBufferMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ComputeBufferMode.Circular is deprecated (legacy mode)\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ComputeBufferMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ComputeBufferMode",
-    "Message": "F:static const StreamOut:UnityEngine.ComputeBufferMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ComputeBufferMode.StreamOut is deprecated (internal use only)\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ComputeBufferMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ComputeBufferType",
-    "Message": "F:static const DrawIndirect:UnityEngine.ComputeBufferType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member DrawIndirect has been deprecated. Use IndirectArguments instead (UnityUpgradable) -> IndirectArguments\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ComputeBufferType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ComputeBufferType",
-    "Message": "F:static const GPUMemory:UnityEngine.ComputeBufferType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member GPUMemory has been deprecated. All compute buffers now follow the behavior previously defined by this member.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ComputeBufferType."
   },
   {
     "Release": "6000.0.71f1",
@@ -2760,156 +2270,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const dragPerform:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use DragPerform instead (UnityUpgradable) -> DragPerform\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const dragUpdated:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use DragUpdated instead (UnityUpgradable) -> DragUpdated\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const ignore:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use Ignore instead (UnityUpgradable) -> Ignore\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const keyDown:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use KeyDown instead (UnityUpgradable) -> KeyDown\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const keyUp:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use KeyUp instead (UnityUpgradable) -> KeyUp\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const layout:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use Layout instead (UnityUpgradable) -> Layout\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const mouseDown:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use MouseDown instead (UnityUpgradable) -> MouseDown\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const mouseDrag:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use MouseDrag instead (UnityUpgradable) -> MouseDrag\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const mouseMove:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use MouseMove instead (UnityUpgradable) -> MouseMove\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const mouseUp:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use MouseUp instead (UnityUpgradable) -> MouseUp\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const repaint:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use Repaint instead (UnityUpgradable) -> Repaint\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const scrollWheel:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use ScrollWheel instead (UnityUpgradable) -> ScrollWheel\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.EventType",
-    "Message": "F:static const used:UnityEngine.EventType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use Used instead (UnityUpgradable) -> Used\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.EventType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Experimental.Rendering.FormatUsage",
-    "Message": "type attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use GraphicsFormatUsage instead\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Experimental.Rendering.FormatUsage."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Experimental.Rendering.GraphicsFormat",
-    "Message": "F:static const DepthAuto:UnityEngine.Experimental.Rendering.GraphicsFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member GraphicsFormat.DepthAuto is obsolete. Use GraphicsFormat.None as a color format to indicate depth only rendering and DefaultFormat to get the default depth buffer format.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Experimental.Rendering.GraphicsFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Experimental.Rendering.GraphicsFormat",
-    "Message": "F:static const RGB_DXT1_SRGB:UnityEngine.Experimental.Rendering.GraphicsFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member GraphicsFormat.RGB_DXT1_SRGB has been deprecated. Use GraphicsFormat.RGBA_DXT1_SRGB instead (UnityUpgradable) -> RGBA_DXT1_SRGB\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Experimental.Rendering.GraphicsFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Experimental.Rendering.GraphicsFormat",
-    "Message": "F:static const RGB_DXT1_UNorm:UnityEngine.Experimental.Rendering.GraphicsFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member GraphicsFormat.RGB_DXT1_UNorm has been deprecated. Use GraphicsFormat.RGBA_DXT1_UNorm instead (UnityUpgradable) -> RGBA_DXT1_UNorm\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Experimental.Rendering.GraphicsFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Experimental.Rendering.GraphicsFormat",
-    "Message": "F:static const ShadowAuto:UnityEngine.Experimental.Rendering.GraphicsFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member GraphicsFormat.ShadowAuto is obsolete. Use GraphicsFormat.None as a color format to indicate depth only rendering, DefaultFormat to get the default shadow buffer format and ShadowSamplingMode.CompareDepths to enable shadowmap sampling.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Experimental.Rendering.GraphicsFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Experimental.Rendering.GraphicsFormat",
-    "Message": "F:static const VideoAuto:UnityEngine.Experimental.Rendering.GraphicsFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member GraphicsFormat.VideoAuto is obsolete. Use DefaultFormat instead.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Experimental.Rendering.GraphicsFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Experimental.Rendering.TextureCreationFlags",
-    "Message": "F:static const IgnoreMipmapLimit:UnityEngine.Experimental.Rendering.TextureCreationFlags attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"IgnoreMipmapLimit flag is no longer used since this is now the default behavior for all Texture shapes. Please provide mipmap limit information using a MipmapLimitDescriptor argument.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Experimental.Rendering.TextureCreationFlags."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.FixedJoint",
     "Message": "type attributes is [], Unity's is [UnityEngine.NativeClassAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Unity::FixedJoint\"){};UnityEngine.RequireComponent:M:.ctor`0(System.Type):System.Void(System.Type:UnityEngine.Rigidbody){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.FixedJoint."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.FocusType",
-    "Message": "F:static const Native:UnityEngine.FocusType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"FocusType.Native now behaves the same as FocusType.Passive in all OS cases. (UnityUpgradable) -> Passive\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.FocusType."
   },
   {
     "Release": "6000.0.71f1",
@@ -3411,13 +2774,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.JointProjectionMode",
-    "Message": "F:static const PositionOnly:UnityEngine.JointProjectionMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"JointProjectionMode.PositionOnly is no longer supported\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.JointProjectionMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.LayerMask",
     "Message": "type attributes is [], Unity's is [UnityEngine.NativeClassAttribute:M:.ctor`0(System.String,System.String):System.Void(System.String:\"BitField\",System.String:\"struct BitField;\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LayerMask."
@@ -3456,13 +2812,6 @@
     "Type": "UnityEngine.LightProbesQuery",
     "Message": "type attributes is [], Unity's is [Unity.Collections.LowLevel.Unsafe.NativeContainerAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightProbesQuery."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.LightType",
-    "Message": "F:static const Area:UnityEngine.LightType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member LightType.Area has been deprecated. Use LightType.Rectangle instead (UnityUpgradable) -> Rectangle\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightType."
   },
   {
     "Release": "6000.0.71f1",
@@ -3523,20 +2872,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.LightingSettings+DenoiserType",
-    "Message": "F:static const RadeonPro:UnityEngine.LightingSettings+DenoiserType attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"DenoiserType.RadeonPro is obsolete, use DenoiserType.OpenImage instead.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"DenoiserType.RadeonPro is obsolete, use DenoiserType.OpenImage instead.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightingSettings+DenoiserType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.LightingSettings+Lightmapper",
-    "Message": "F:static const Enlighten:UnityEngine.LightingSettings+Lightmapper attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use Lightmapper.ProgressiveCPU instead. (UnityUpgradable) -> UnityEngine.LightingSettings/Lightmapper.ProgressiveCPU\"){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use Lightmapper.ProgressiveCPU instead. (UnityUpgradable) -> UnityEngine.LightingSettings/Lightmapper.ProgressiveCPU\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightingSettings+Lightmapper."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.LightmapData",
     "Message": "P:lightmap():UnityEngine.Texture2D attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Property LightmapData.lightmap has been deprecated. Use LightmapData.lightmapColor instead (UnityUpgradable) -> lightmapColor\"){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Property LightmapData.lightmap has been deprecated. Use LightmapData.lightmapColor instead (UnityUpgradable) -> lightmapColor\",System.Boolean:True){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightmapData."
@@ -3561,41 +2896,6 @@
     "Type": "UnityEngine.LightmapData",
     "Message": "P:lightmapNear():UnityEngine.Texture2D attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Property LightmapData.lightmapNear has been deprecated. Use LightmapData.lightmapDir instead (UnityUpgradable) -> lightmapDir\"){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Property LightmapData.lightmapNear has been deprecated. Use LightmapData.lightmapDir instead (UnityUpgradable) -> lightmapDir\",System.Boolean:True){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightmapData."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.LightmapsMode",
-    "Message": "F:static const Directional:UnityEngine.LightmapsMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member LightmapsMode.Directional has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightmapsMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.LightmapsMode",
-    "Message": "F:static const Dual:UnityEngine.LightmapsMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member LightmapsMode.Dual has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightmapsMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.LightmapsMode",
-    "Message": "F:static const SeparateDirectional:UnityEngine.LightmapsMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member LightmapsMode.SeparateDirectional has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightmapsMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.LightmapsMode",
-    "Message": "F:static const Single:UnityEngine.LightmapsMode attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member LightmapsMode.Single has been removed. Use NonDirectional instead (UnityUpgradable) -> NonDirectional\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LightmapsMode."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.LineAlignment",
-    "Message": "F:static const Local:UnityEngine.LineAlignment attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member Local has been deprecated. Use TransformZ instead (UnityUpgradable) -> TransformZ\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.LineAlignment."
   },
   {
     "Release": "6000.0.71f1",
@@ -3663,13 +2963,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.MeshColliderCookingOptions",
-    "Message": "F:static const InflateConvexMesh:UnityEngine.MeshColliderCookingOptions attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"No longer used because the problem this was trying to solve is gone since Unity 2018.3\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.MeshColliderCookingOptions."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.MeshFilter",
     "Message": "type attributes is [], Unity's is [UnityEngine.RequireComponent:M:.ctor`0(System.Type):System.Void(System.Type:UnityEngine.Transform){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.MeshFilter."
@@ -3680,13 +2973,6 @@
     "Type": "UnityEngine.MonoBehaviour",
     "Message": "type attributes is [], Unity's is [UnityEngine.ExtensionOfNativeClassAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.MonoBehaviour."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.NPOTSupport",
-    "Message": "F:static const None:UnityEngine.NPOTSupport attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"NPOTSupport.None does not happen on any platforms\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.NPOTSupport."
   },
   {
     "Release": "6000.0.71f1",
@@ -3873,13 +3159,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.ParticleSystemEmissionType",
-    "Message": "type attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"ParticleSystemEmissionType no longer does anything. Time and Distance based emission are now both always active.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemEmissionType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.ParticleSystemRenderer",
     "Message": "M:AreVertexStreamsEnabled`0(UnityEngine.ParticleSystemVertexStreams):System.Boolean attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"AreVertexStreamsEnabled is deprecated.Use GetActiveVertexStreams instead.\",System.Boolean:False){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"AreVertexStreamsEnabled is deprecated. Use GetActiveVertexStreams instead.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemRenderer."
@@ -3904,48 +3183,6 @@
     "Type": "UnityEngine.ParticleSystemRenderer",
     "Message": "M:GetEnabledVertexStreams`0(UnityEngine.ParticleSystemVertexStreams):UnityEngine.ParticleSystemVertexStreams attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"GetEnabledVertexStreams is deprecated.Use GetActiveVertexStreams instead.\",System.Boolean:False){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"GetEnabledVertexStreams is deprecated. Use GetActiveVertexStreams instead.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemRenderer."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ParticleSystemShapeType",
-    "Message": "F:static const CircleEdge:UnityEngine.ParticleSystemShapeType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"CircleEdge is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemShapeType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ParticleSystemShapeType",
-    "Message": "F:static const ConeShell:UnityEngine.ParticleSystemShapeType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"ConeShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemShapeType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ParticleSystemShapeType",
-    "Message": "F:static const ConeVolumeShell:UnityEngine.ParticleSystemShapeType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"ConeVolumeShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemShapeType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ParticleSystemShapeType",
-    "Message": "F:static const HemisphereShell:UnityEngine.ParticleSystemShapeType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"HemisphereShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemShapeType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ParticleSystemShapeType",
-    "Message": "F:static const SphereShell:UnityEngine.ParticleSystemShapeType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"SphereShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemShapeType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ParticleSystemVertexStreams",
-    "Message": "type attributes is [System.FlagsAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.FlagsAttribute:M:.ctor`0():System.Void(){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"ParticleSystemVertexStreams is deprecated. Please use ParticleSystemVertexStream instead.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ParticleSystemVertexStreams."
   },
   {
     "Release": "6000.0.71f1",
@@ -4650,48 +3887,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Rendering.BuiltinRenderTextureType",
-    "Message": "F:static const PrepassLight:UnityEngine.Rendering.BuiltinRenderTextureType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Deferred Lighting has been removed, so PrepassLight built-in render texture type is never used now.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.BuiltinRenderTextureType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.BuiltinRenderTextureType",
-    "Message": "F:static const PrepassLightSpec:UnityEngine.Rendering.BuiltinRenderTextureType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Deferred Lighting has been removed, so PrepassLightSpec built-in render texture type is never used now.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.BuiltinRenderTextureType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.BuiltinRenderTextureType",
-    "Message": "F:static const PrepassNormalsSpec:UnityEngine.Rendering.BuiltinRenderTextureType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Deferred Lighting has been removed, so PrepassNormalsSpec built-in render texture type is never used now.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.BuiltinRenderTextureType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.BuiltinShaderDefine",
-    "Message": "F:static const UNITY_HALF_PRECISION_FRAGMENT_SHADER_REGISTERS:UnityEngine.Rendering.BuiltinShaderDefine attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UNITY_HALF_PRECISION_FRAGMENT_SHADER_REGISTERS is never defined since OpenGL ES 2.0 was removed.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.BuiltinShaderDefine."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.BuiltinShaderDefine",
-    "Message": "F:static const UNITY_NO_FULL_STANDARD_SHADER:UnityEngine.Rendering.BuiltinShaderDefine attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UNITY_NO_FULL_STANDARD_SHADER is never defined since OpenGL ES 2.0 was removed.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.BuiltinShaderDefine."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.BuiltinShaderDefine",
-    "Message": "F:static const UNITY_USE_NATIVE_HDR:UnityEngine.Rendering.BuiltinShaderDefine attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Shaders unconditionally support HDR decoding.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.BuiltinShaderDefine."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Rendering.CommandBuffer",
     "Message": "M:IssuePluginCustomTextureUpdateV1`0(System.IntPtr,UnityEngine.Texture,System.UInt32):System.Void attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use IssuePluginCustomTextureUpdateV2 to register TextureUpdate callbacks instead. Callbacks will be passed event IDs kUnityRenderingExtEventUpdateTextureBeginV2 or kUnityRenderingExtEventUpdateTextureEndV2, and data parameter of type UnityRenderingExtTextureUpdateParamsV2.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.CommandBuffer."
@@ -4790,69 +3985,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const Direct3D9:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Direct3D 9 is no longer supported in Unity 2017.2+\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const GameCoreScarlett:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const N3DS:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Nintendo 3DS support is unavailable since 2018.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const OpenGL2:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"OpenGL2 is no longer supported in Unity 5.5+\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const OpenGLES2:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"OpenGL ES 2.0 is no longer supported in Unity 2023.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const PlayStation3:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PS3 is no longer supported in Unity 5.5+\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const PlayStationMobile:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PlayStationMobile is no longer supported in Unity 5.3+\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const PlayStationVita:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PVita is no longer supported as of Unity 2018\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.GraphicsDeviceType",
-    "Message": "F:static const Xbox360:UnityEngine.Rendering.GraphicsDeviceType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Xbox360 is no longer supported in Unity 5.5+\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsDeviceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Rendering.GraphicsSettings",
     "Message": "M:static RegisterRenderPipelineSettings`1(UnityEngine.Rendering.RenderPipelineGlobalSettings):System.Void attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Please use EditorGraphicsSettings.SetRenderPipelineGlobalSettingsAsset<T>(settings). #from(23.2)\",System.Boolean:False){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Please use EditorGraphicsSettings.SetRenderPipelineGlobalSettingsAsset<TRenderPipelineType>(settings). #from(23.2)\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.GraphicsSettings."
@@ -4909,20 +4041,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Rendering.ShaderKeywordType",
-    "Message": "F:static const BuiltinAutoStripped:UnityEngine.Rendering.ShaderKeywordType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Shader keyword type BuiltinAutoStripped is no longer used. Use BuiltinDefault instead. (UnityUpgradable) -> BuiltinDefault\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.ShaderKeywordType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rendering.ShaderKeywordType",
-    "Message": "F:static const BuiltinExtra:UnityEngine.Rendering.ShaderKeywordType attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Shader keyword type BuiltinExtra is no longer used. Use BuiltinDefault instead. (UnityUpgradable) -> BuiltinDefault\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.ShaderKeywordType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Rendering.SortingGroup",
     "Message": "type attributes is [], Unity's is [UnityEngine.RequireComponent:M:.ctor`0(System.Type):System.Void(System.Type:UnityEngine.Transform){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.SortingGroup."
@@ -4961,13 +4079,6 @@
     "Type": "UnityEngine.RenderingLayerMask",
     "Message": "type attributes is [], Unity's is [UnityEngine.NativeClassAttribute:M:.ctor`0(System.String,System.String):System.Void(System.String:\"RenderingLayerMask\",System.String:\"struct RenderingLayerMask;\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RenderingLayerMask."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RenderingPath",
-    "Message": "F:static const DeferredLighting:UnityEngine.RenderingPath attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"DeferredLighting has been removed. Use DeferredShading, Forward or HDRP/URP instead.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RenderingPath."
   },
   {
     "Release": "6000.0.71f1",
@@ -5098,202 +4209,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const BB10Player:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"BB10Player export is no longer supported in Unity 5.4+.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const BlackBerryPlayer:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"BlackBerryPlayer export is no longer supported in Unity 5.4+.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const CloudRendering:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const EmbeddedLinuxArm32:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"32-bit embedded platforms are no longer supported\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const EmbeddedLinuxX86:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"32-bit embedded platforms are no longer supported\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const FlashPlayer:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"FlashPlayer export is no longer supported in Unity 5.0+.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const GameCoreScarlett:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const KeplerArm64:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const KeplerX64:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const Lumin:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Lumin is no longer supported in Unity 2022.2\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const MetroPlayerARM:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use WSAPlayerARM instead\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const MetroPlayerX64:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use WSAPlayerX64 instead\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const MetroPlayerX86:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use WSAPlayerX86 instead\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const NaCl:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"NaCl export is no longer supported in Unity 5.0+.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const OSXDashboardPlayer:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Dashboard widget on Mac OS X export is no longer supported in Unity 5.4+.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const OSXWebPlayer:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"WebPlayer export is no longer supported in Unity 5.4+.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const PS3:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PS3 export is no longer supported in Unity >=5.5.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const PSM:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PSM export is no longer supported in Unity >= 5.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const PSP2:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"PSP2 is no longer supported as of Unity 2018.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const QNXArm32:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"32-bit embedded platforms are no longer supported\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const QNXX86:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"32-bit embedded platforms are no longer supported\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const SamsungTVPlayer:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"SamsungTVPlayer export is no longer supported in Unity 2017.3+.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const Stadia:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Stadia is no longer supported in Unity 2023.1\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const TizenPlayer:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TizenPlayer export is no longer supported in Unity 2017.3+.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const WP8Player:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Windows Phone 8 was removed in 5.3\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const WiiU:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Wii U is no longer supported in Unity 2018.1+.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const WindowsWebPlayer:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"WebPlayer export is no longer supported in Unity 5.4+.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.RuntimePlatform",
-    "Message": "F:static const XBOX360:UnityEngine.RuntimePlatform attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Xbox360 export is no longer supported in Unity 5.5+.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimePlatform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.SceneManagement.Scene",
     "Message": "field m_Handle attributes is [], Unity's is [UnityEngine.HideInInspector:M:.ctor`0():System.Void(){};UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SceneManagement.Scene."
@@ -5318,20 +4233,6 @@
     "Type": "UnityEngine.Screen",
     "Message": "P:static lockCursor():System.Boolean attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Property lockCursor has been deprecated. Use Cursor.lockState and Cursor.visible instead.\"){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use Cursor.lockState and Cursor.visible instead.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Screen."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ScreenOrientation",
-    "Message": "F:static const Landscape:UnityEngine.ScreenOrientation attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use LandscapeLeft instead (UnityUpgradable) -> LandscapeLeft\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ScreenOrientation."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.ScreenOrientation",
-    "Message": "F:static const Unknown:UnityEngine.ScreenOrientation attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member Unknown has been deprecated.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ScreenOrientation."
   },
   {
     "Release": "6000.0.71f1",
@@ -5469,27 +4370,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.SocialPlatforms.TimeScope",
-    "Message": "type attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TimeScope is deprecated and will be removed in a future release.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"TimeScope is deprecated and will be removed in a future release.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SocialPlatforms.TimeScope."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.SocialPlatforms.UserScope",
-    "Message": "type attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UserScope is deprecated and will be removed in a future release.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"UserScope is deprecated and will be removed in a future release.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SocialPlatforms.UserScope."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.SocialPlatforms.UserState",
-    "Message": "type attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"UserState is deprecated and will be removed in a future release.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"UserState is deprecated and will be removed in a future release.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SocialPlatforms.UserState."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.SphereCollider",
     "Message": "type attributes is [], Unity's is [UnityEngine.RequireComponent:M:.ctor`0(System.Type):System.Void(System.Type:UnityEngine.Transform){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SphereCollider."
@@ -5588,13 +4468,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.SystemLanguage",
-    "Message": "F:static const Hugarian:UnityEngine.SystemLanguage attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use SystemLanguage.Hungarian instead (UnityUpgradable) -> Hungarian\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SystemLanguage."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Terrain",
     "Message": "M:ApplyDelayedHeightmapModification`0():System.Void attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Use TerrainData.SyncHeightmap to notify all Terrain instances using the TerrainData.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Use TerrainData.SyncHeightmap to notify all Terrain instances using the TerrainData.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Terrain."
@@ -5630,13 +4503,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Terrain+MaterialType",
-    "Message": "type attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Enum type MaterialType is not used any more.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum type MaterialType is not used any more.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Terrain+MaterialType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.TerrainData",
     "Message": "M:UpdateDirtyRegion`0(System.Int32,System.Int32,System.Int32,System.Int32,System.Boolean):System.Void attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Please use DirtyHeightmapRegion instead.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Please use DirtyHeightmapRegion instead.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TerrainData."
@@ -5661,34 +4527,6 @@
     "Type": "UnityEngine.TerrainData",
     "Message": "P:splatPrototypes():UnityEngine.SplatPrototype[] attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TerrainData.splatPrototypes is obsolete. Use TerrainData.terrainLayers instead.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"TerrainData.splatPrototypes is obsolete. Use TerrainData.terrainLayers instead.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TerrainData."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TerrainRenderFlags",
-    "Message": "F:static const all:UnityEngine.TerrainRenderFlags attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TerrainRenderFlags.all is obsolete, use TerrainRenderFlags.All instead. (UnityUpgradable) -> All\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TerrainRenderFlags."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TerrainRenderFlags",
-    "Message": "F:static const details:UnityEngine.TerrainRenderFlags attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TerrainRenderFlags.details is obsolete, use TerrainRenderFlags.Details instead. (UnityUpgradable) -> Details\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TerrainRenderFlags."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TerrainRenderFlags",
-    "Message": "F:static const heightmap:UnityEngine.TerrainRenderFlags attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TerrainRenderFlags.heightmap is obsolete, use TerrainRenderFlags.Heightmap instead. (UnityUpgradable) -> Heightmap\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TerrainRenderFlags."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TerrainRenderFlags",
-    "Message": "F:static const trees:UnityEngine.TerrainRenderFlags attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TerrainRenderFlags.trees is obsolete, use TerrainRenderFlags.Trees instead. (UnityUpgradable) -> Trees\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TerrainRenderFlags."
   },
   {
     "Release": "6000.0.71f1",
@@ -5829,104 +4667,6 @@
     "Type": "UnityEngine.Texture3D",
     "Message": "type attributes is [], Unity's is [UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Texture3D."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGBA_10x10:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGBA_10x10 is obsolete. Use ASTC_10x10 instead (UnityUpgradable) -> ASTC_10x10\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGBA_12x12:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGBA_12x12 is obsolete. Use ASTC_12x12 instead (UnityUpgradable) -> ASTC_12x12\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGBA_4x4:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGBA_4x4 is obsolete. Use ASTC_4x4 instead (UnityUpgradable) -> ASTC_4x4\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGBA_5x5:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGBA_5x5 is obsolete. Use ASTC_5x5 instead (UnityUpgradable) -> ASTC_5x5\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGBA_6x6:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGBA_6x6 is obsolete. Use ASTC_6x6 instead (UnityUpgradable) -> ASTC_6x6\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGBA_8x8:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGBA_8x8 is obsolete. Use ASTC_8x8 instead (UnityUpgradable) -> ASTC_8x8\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGB_10x10:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGB_10x10 is obsolete. Use ASTC_10x10 instead (UnityUpgradable) -> ASTC_10x10\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGB_12x12:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGB_12x12 is obsolete. Use ASTC_12x12 instead (UnityUpgradable) -> ASTC_12x12\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGB_4x4:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGB_4x4 is obsolete. Use ASTC_4x4 instead (UnityUpgradable) -> ASTC_4x4\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGB_5x5:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGB_5x5 is obsolete. Use ASTC_5x5 instead (UnityUpgradable) -> ASTC_5x5\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGB_6x6:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGB_6x6 is obsolete. Use ASTC_6x6 instead (UnityUpgradable) -> ASTC_6x6\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ASTC_RGB_8x8:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member TextureFormat.ASTC_RGB_8x8 is obsolete. Use ASTC_8x8 instead (UnityUpgradable) -> ASTC_8x8\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ETC_RGB4_3DS:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member ETC_RGB4_3DS is obsolete. Nintendo 3DS is no longer supported.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextureFormat",
-    "Message": "F:static const ETC_RGBA8_3DS:UnityEngine.TextureFormat attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Enum member ETC_RGB4_3DS is obsolete. Nintendo 3DS is no longer supported.\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextureFormat."
   },
   {
     "Release": "6000.0.71f1",
@@ -6484,27 +5224,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.UIElements.PropagationPhase",
-    "Message": "F:static const AtTarget:UnityEngine.UIElements.PropagationPhase attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"PropagationPhase.AtTarget has been removed as part of an event propagation simplification. Events now propagate through the TrickleDown phase followed immediately by the BubbleUp phase. Please use TrickleDown or BubbleUp. You can check if the event target is the current element by testing event.target == this in your local callback.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.PropagationPhase."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.PropagationPhase",
-    "Message": "F:static const DefaultAction:UnityEngine.UIElements.PropagationPhase attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"PropagationPhase.DefaultAction has been removed as part of an event propagation simplification. ExecuteDefaultAction now occurs as part of the BubbleUp phase. Please use BubbleUp.\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.PropagationPhase."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.PropagationPhase",
-    "Message": "F:static const DefaultActionAtTarget:UnityEngine.UIElements.PropagationPhase attributes is [System.ObsoleteAttribute:M:.ctor`0():System.Void(){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"PropagationPhase.DefaultActionAtTarget has been removed as part of an event propagation simplification. ExecuteDefaultActionAtTarget now occurs as part of the BubbleUp phase. Please use BubbleUp\",System.Boolean:False){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.PropagationPhase."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.UIElements.RadioButton",
     "Message": "M:SetSelected`0(System.Boolean):System.Void attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"[UI Toolkit] Please set the value property instead.\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"[UI Toolkit] Please set the value property instead.\",System.Boolean:False){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.RadioButton."
@@ -6925,27 +5644,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Video.VideoTimeSource",
-    "Message": "F:static const AudioDSPTimeSource:UnityEngine.Video.VideoTimeSource attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"AudioDSPTimeSource is deprecated. Use DSPTime instead. (UnityUpgradable) -> DSPTime\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Video.VideoTimeSource."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Video.VideoTimeSource",
-    "Message": "F:static const GameTimeSource:UnityEngine.Video.VideoTimeSource attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"GameTimeSource is deprecated. Use GameTime instead. (UnityUpgradable) -> GameTime\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Video.VideoTimeSource."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Video.VideoTimeSource",
-    "Message": "type attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"VideoTimeSource is deprecated. Use TimeUpdateMode instead. (UnityUpgradable) -> VideoTimeUpdateMode\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Video.VideoTimeSource."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.WWW",
     "Message": "P:data():System.String attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Please use WWW.text instead. (UnityUpgradable) -> text\",System.Boolean:False){}], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){};System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Please use WWW.text instead. (UnityUpgradable) -> text\",System.Boolean:True){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.WWW."
@@ -7016,13 +5714,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.XR.TrackingSpaceType",
-    "Message": "type attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"This is obsolete, and should no longer be used.  Please use InputTrackingModeFlags.\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.XR.TrackingSpaceType."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.XR.XRDevice",
     "Message": "M:static GetTrackingSpaceType`0():UnityEngine.XR.TrackingSpaceType attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"This is obsolete, and should no longer be used.  Please use XRInputSubsystem.GetTrackingOriginMode.\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.XR.XRDevice."
@@ -7054,27 +5745,6 @@
     "Type": "UnityEngine.XR.XRSettings",
     "Message": "M:static set_enabled`0(System.Boolean):System.Void attributes is [], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"XRSettings.enabled{set;} is deprecated and should no longer be used. Instead, call Start() and Stop() on an XRDisplaySubystem instance.\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.XR.XRSettings."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.iOS.ActivityIndicatorStyle",
-    "Message": "F:static const Gray:UnityEngine.iOS.ActivityIndicatorStyle attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Gray Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"Gray Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.iOS.ActivityIndicatorStyle."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.iOS.ActivityIndicatorStyle",
-    "Message": "F:static const White:UnityEngine.iOS.ActivityIndicatorStyle attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"White Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"White Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.iOS.ActivityIndicatorStyle."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.iOS.ActivityIndicatorStyle",
-    "Message": "F:static const WhiteLarge:UnityEngine.iOS.ActivityIndicatorStyle attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"WhiteLarge Activity Indicator has been deprecated by Apple. Use Large instead (UnityUpgradable) -> Large\"){}], Unity's is [System.ObsoleteAttribute:M:.ctor`0(System.String,System.Boolean):System.Void(System.String:\"WhiteLarge Activity Indicator has been deprecated by Apple. Use Large instead (UnityUpgradable) -> Large\",System.Boolean:True){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.iOS.ActivityIndicatorStyle."
   },
   {
     "Release": "6000.0.71f1",

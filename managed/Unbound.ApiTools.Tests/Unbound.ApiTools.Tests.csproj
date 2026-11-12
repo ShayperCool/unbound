@@ -12,6 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Unbound.ApiTools/Unbound.ApiTools.csproj" />
+    <ProjectReference Include="../UnityEngine/UnityEngine.csproj" ReferenceOutputAssembly="false" OutputItemType="EngineMetadata" />
     <ProjectReference Include="../Unbound.Compiler/Unbound.Compiler.csproj" />
   </ItemGroup>
+
+  <Target Name="CopyDeclarationReference" AfterTargets="Build">
+    <Copy SourceFiles="@(EngineMetadata)" DestinationFolder="$(TargetDir)declaration-reference/" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

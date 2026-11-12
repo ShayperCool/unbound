@@ -22,11 +22,7 @@ static class TestAssemblies
     public static string Compile(string dir, string name, string source, params string[] references)
     {
         Directory.CreateDirectory(dir);
-        var compilation = CSharpCompilation.Create(
-            name,
-            new[] { CSharpSyntaxTree.ParseText(source) },
-            Framework.Concat(references.Select(r => MetadataReference.CreateFromFile(r))),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Disable));
+        var compilation = Compilation(name, source, references);
         var path = Path.Combine(dir, name + ".dll");
         using (var stream = File.Create(path))
         {
@@ -37,6 +33,11 @@ static class TestAssemblies
         }
         return path;
     }
+
+    public static CSharpCompilation Compilation(string name, string source, params string[] references) =>
+        CSharpCompilation.Create(name, new[] { CSharpSyntaxTree.ParseText(source) },
+            Framework.Concat(references.Select(r => MetadataReference.CreateFromFile(r))),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Disable));
 
     public static string TempDir()
     {

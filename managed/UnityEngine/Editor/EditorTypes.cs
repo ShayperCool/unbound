@@ -46,7 +46,7 @@ namespace UnityEditor
         Editable = 8,
         Assets = 16,
         DeepAssets = 32,
-        [Obsolete("'OnlyUserModifiable' is obsolete. Use 'Editable' instead. (UnityUpgradeable) -> Editable")] OnlyUserModifiable = 8,
+        [global::System.@ObsoleteAttribute("'OnlyUserModifiable' is obsolete. Use 'Editable' instead. (UnityUpgradeable) -> Editable", true)] OnlyUserModifiable = 8,
     }
 
     public static partial class Progress
@@ -140,7 +140,7 @@ namespace UnityEditor.Rendering
         GameCoreXboxSeries = 22,
         PS5 = 23,
         PS5NGGC = 24,
-        [Obsolete("GameCore  is deprecated, please use GameCoreXboxOne (UnityUpgradable) -> GameCoreXboxOne ")] GameCore = 25,
+        [global::System.@ObsoleteAttribute("GameCore  is deprecated, please use GameCoreXboxOne (UnityUpgradable) -> GameCoreXboxOne ", true)] GameCore = 25,
         WebGPU = 26,
         Switch2 = 27,
     }

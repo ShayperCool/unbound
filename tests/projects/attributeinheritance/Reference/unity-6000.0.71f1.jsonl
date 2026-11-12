@@ -235,4 +235,194 @@
 {"key":"conditional.metadata.UnityEngine.DrivenPropertyManager.UnregisterProperty(UnityEngine.Object,UnityEngine.Object,System.String)","value":"UNITY_EDITOR"}
 {"key":"conditional.metadata.UnityEngine.DrivenPropertyManager.UnregisterProperties(UnityEngine.Object)","value":"UNITY_EDITOR"}
 {"key":"conditional.defined.argument-effects","value":"1"}
+{"key":"obsolete.enum.UnityEngine.AnimationCullingType.BasedOnClipBounds","value":"1:System.String:158:Enum member AnimatorCullingMode.BasedOnClipBounds has been deprecated. Use AnimationCullingType.AlwaysAnimate or AnimationCullingType.BasedOnRenderers instead"}
+{"key":"obsolete.enum.UnityEngine.AnimationCullingType.BasedOnUserBounds","value":"1:System.String:158:Enum member AnimatorCullingMode.BasedOnUserBounds has been deprecated. Use AnimationCullingType.AlwaysAnimate or AnimationCullingType.BasedOnRenderers instead"}
+{"key":"obsolete.enum.UnityEngine.AnimatorCullingMode.BasedOnRenderers","value":"2:System.String:165:Enum member AnimatorCullingMode.BasedOnRenderers has been deprecated. Use AnimatorCullingMode.CullUpdateTransforms instead. (UnityUpgradable) -> CullUpdateTransforms|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.AnimatorUpdateMode.AnimatePhysics","value":"2:System.String:214:Enum member AnimatorUpdateMode.AnimatePhysics has been deprecated. Use AnimatorUpdateMode.Fixed to evaluate in FixedUpdate time and Animator.animatePhysics to sync transforms for physics. (UnityUpgradable) -> Fixed|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.AudioSpeakerMode.Raw","value":"2:System.String:46:Raw speaker mode is not supported. Do not use.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.BlendWeights.FourBones","value":"2:System.String:112:BlendWeights.FourBones is obsolete. Use SkinWeights.FourBones instead (UnityUpgradable) -> SkinWeights.FourBones|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.BlendWeights.OneBone","value":"2:System.String:106:BlendWeights.OneBone is obsolete. Use SkinWeights.OneBone instead (UnityUpgradable) -> SkinWeights.OneBone|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.BlendWeights.TwoBones","value":"2:System.String:109:BlendWeights.TwoBones is obsolete. Use SkinWeights.TwoBones instead (UnityUpgradable) -> SkinWeights.TwoBones|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.BlendWeights.type","value":"2:System.String:82:BlendWeights is obsolete. Use SkinWeights instead (UnityUpgradable) -> SkinWeights|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.CollisionDetectionMode2D.None","value":"2:System.String:138:Enum member CollisionDetectionMode2D.None has been deprecated. Use CollisionDetectionMode2D.Discrete instead (UnityUpgradable) -> Discrete|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.ComputeBufferMode.Circular","value":"1:System.String:54:ComputeBufferMode.Circular is deprecated (legacy mode)"}
+{"key":"obsolete.enum.UnityEngine.ComputeBufferMode.StreamOut","value":"1:System.String:61:ComputeBufferMode.StreamOut is deprecated (internal use only)"}
+{"key":"obsolete.enum.UnityEngine.ComputeBufferType.DrawIndirect","value":"2:System.String:114:Enum member DrawIndirect has been deprecated. Use IndirectArguments instead (UnityUpgradable) -> IndirectArguments|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.ComputeBufferType.GPUMemory","value":"2:System.String:121:Enum member GPUMemory has been deprecated. All compute buffers now follow the behavior previously defined by this member.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.EventType.dragPerform","value":"2:System.String:56:Use DragPerform instead (UnityUpgradable) -> DragPerform|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.dragUpdated","value":"2:System.String:56:Use DragUpdated instead (UnityUpgradable) -> DragUpdated|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.ignore","value":"2:System.String:46:Use Ignore instead (UnityUpgradable) -> Ignore|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.keyDown","value":"2:System.String:48:Use KeyDown instead (UnityUpgradable) -> KeyDown|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.keyUp","value":"2:System.String:44:Use KeyUp instead (UnityUpgradable) -> KeyUp|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.layout","value":"2:System.String:46:Use Layout instead (UnityUpgradable) -> Layout|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.mouseDown","value":"2:System.String:52:Use MouseDown instead (UnityUpgradable) -> MouseDown|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.mouseDrag","value":"2:System.String:52:Use MouseDrag instead (UnityUpgradable) -> MouseDrag|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.mouseMove","value":"2:System.String:52:Use MouseMove instead (UnityUpgradable) -> MouseMove|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.mouseUp","value":"2:System.String:48:Use MouseUp instead (UnityUpgradable) -> MouseUp|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.repaint","value":"2:System.String:48:Use Repaint instead (UnityUpgradable) -> Repaint|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.scrollWheel","value":"2:System.String:56:Use ScrollWheel instead (UnityUpgradable) -> ScrollWheel|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.EventType.used","value":"2:System.String:42:Use Used instead (UnityUpgradable) -> Used|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.FocusType.Native","value":"2:System.String:104:FocusType.Native now behaves the same as FocusType.Passive in all OS cases. (UnityUpgradable) -> Passive|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.JointProjectionMode.PositionOnly","value":"2:System.String:55:JointProjectionMode.PositionOnly is no longer supported|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.LightType.Area","value":"2:System.String:110:Enum member LightType.Area has been deprecated. Use LightType.Rectangle instead (UnityUpgradable) -> Rectangle|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.LineAlignment.Local","value":"2:System.String:93:Enum member Local has been deprecated. Use TransformZ instead (UnityUpgradable) -> TransformZ|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.MeshColliderCookingOptions.InflateConvexMesh","value":"2:System.String:86:No longer used because the problem this was trying to solve is gone since Unity 2018.3|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.ParticleSystemEmissionType.type","value":"2:System.String:112:ParticleSystemEmissionType no longer does anything. Time and Distance based emission are now both always active.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.ParticleSystemShapeType.CircleEdge","value":"2:System.String:116:CircleEdge is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.ParticleSystemShapeType.ConeShell","value":"2:System.String:115:ConeShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.ParticleSystemShapeType.ConeVolumeShell","value":"2:System.String:121:ConeVolumeShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.ParticleSystemShapeType.HemisphereShell","value":"2:System.String:121:HemisphereShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.ParticleSystemShapeType.SphereShell","value":"2:System.String:117:SphereShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.ParticleSystemVertexStreams.type","value":"2:System.String:89:ParticleSystemVertexStreams is deprecated. Please use ParticleSystemVertexStream instead.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.RenderingPath.DeferredLighting","value":"2:System.String:84:DeferredLighting has been removed. Use DeferredShading, Forward or HDRP/URP instead.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.BB10Player","value":"1:System.String:55:BB10Player export is no longer supported in Unity 5.4+."}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.BlackBerryPlayer","value":"1:System.String:61:BlackBerryPlayer export is no longer supported in Unity 5.4+."}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.CloudRendering","value":"2:System.String:109:CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.EmbeddedLinuxArm32","value":"1:System.String:49:32-bit embedded platforms are no longer supported"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.EmbeddedLinuxX86","value":"1:System.String:49:32-bit embedded platforms are no longer supported"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.FlashPlayer","value":"1:System.String:56:FlashPlayer export is no longer supported in Unity 5.0+."}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.GameCoreScarlett","value":"2:System.String:101:GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.KeplerArm64","value":"0:"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.KeplerX64","value":"0:"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.Lumin","value":"1:System.String:44:Lumin is no longer supported in Unity 2022.2"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.MetroPlayerARM","value":"1:System.String:24:Use WSAPlayerARM instead"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.MetroPlayerX64","value":"1:System.String:24:Use WSAPlayerX64 instead"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.MetroPlayerX86","value":"1:System.String:24:Use WSAPlayerX86 instead"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.NaCl","value":"1:System.String:49:NaCl export is no longer supported in Unity 5.0+."}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.OSXDashboardPlayer","value":"2:System.String:73:Dashboard widget on Mac OS X export is no longer supported in Unity 5.4+.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.OSXWebPlayer","value":"2:System.String:54:WebPlayer export is no longer supported in Unity 5.4+.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.PS3","value":"1:System.String:49:PS3 export is no longer supported in Unity >=5.5."}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.PSM","value":"1:System.String:49:PSM export is no longer supported in Unity >= 5.3"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.PSP2","value":"1:System.String:46:PSP2 is no longer supported as of Unity 2018.3"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.QNXArm32","value":"1:System.String:49:32-bit embedded platforms are no longer supported"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.QNXX86","value":"1:System.String:49:32-bit embedded platforms are no longer supported"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.SamsungTVPlayer","value":"1:System.String:63:SamsungTVPlayer export is no longer supported in Unity 2017.3+."}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.Stadia","value":"1:System.String:45:Stadia is no longer supported in Unity 2023.1"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.TizenPlayer","value":"1:System.String:59:TizenPlayer export is no longer supported in Unity 2017.3+."}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.WP8Player","value":"1:System.String:34:Windows Phone 8 was removed in 5.3"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.WiiU","value":"1:System.String:46:Wii U is no longer supported in Unity 2018.1+."}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.WindowsWebPlayer","value":"2:System.String:54:WebPlayer export is no longer supported in Unity 5.4+.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.RuntimePlatform.XBOX360","value":"1:System.String:52:Xbox360 export is no longer supported in Unity 5.5+."}
+{"key":"obsolete.enum.UnityEngine.ScreenOrientation.Landscape","value":"2:System.String:60:Use LandscapeLeft instead (UnityUpgradable) -> LandscapeLeft|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.ScreenOrientation.Unknown","value":"2:System.String:40:Enum member Unknown has been deprecated.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.SystemLanguage.Hugarian","value":"2:System.String:67:Use SystemLanguage.Hungarian instead (UnityUpgradable) -> Hungarian|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TerrainRenderFlags.all","value":"1:System.String:96:TerrainRenderFlags.all is obsolete, use TerrainRenderFlags.All instead. (UnityUpgradable) -> All"}
+{"key":"obsolete.enum.UnityEngine.TerrainRenderFlags.details","value":"1:System.String:108:TerrainRenderFlags.details is obsolete, use TerrainRenderFlags.Details instead. (UnityUpgradable) -> Details"}
+{"key":"obsolete.enum.UnityEngine.TerrainRenderFlags.heightmap","value":"1:System.String:114:TerrainRenderFlags.heightmap is obsolete, use TerrainRenderFlags.Heightmap instead. (UnityUpgradable) -> Heightmap"}
+{"key":"obsolete.enum.UnityEngine.TerrainRenderFlags.trees","value":"1:System.String:102:TerrainRenderFlags.trees is obsolete, use TerrainRenderFlags.Trees instead. (UnityUpgradable) -> Trees"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGBA_10x10","value":"2:System.String:109:Enum member TextureFormat.ASTC_RGBA_10x10 is obsolete. Use ASTC_10x10 instead (UnityUpgradable) -> ASTC_10x10|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGBA_12x12","value":"2:System.String:109:Enum member TextureFormat.ASTC_RGBA_12x12 is obsolete. Use ASTC_12x12 instead (UnityUpgradable) -> ASTC_12x12|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGBA_4x4","value":"2:System.String:103:Enum member TextureFormat.ASTC_RGBA_4x4 is obsolete. Use ASTC_4x4 instead (UnityUpgradable) -> ASTC_4x4|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGBA_5x5","value":"2:System.String:103:Enum member TextureFormat.ASTC_RGBA_5x5 is obsolete. Use ASTC_5x5 instead (UnityUpgradable) -> ASTC_5x5|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGBA_6x6","value":"2:System.String:103:Enum member TextureFormat.ASTC_RGBA_6x6 is obsolete. Use ASTC_6x6 instead (UnityUpgradable) -> ASTC_6x6|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGBA_8x8","value":"2:System.String:103:Enum member TextureFormat.ASTC_RGBA_8x8 is obsolete. Use ASTC_8x8 instead (UnityUpgradable) -> ASTC_8x8|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGB_10x10","value":"2:System.String:108:Enum member TextureFormat.ASTC_RGB_10x10 is obsolete. Use ASTC_10x10 instead (UnityUpgradable) -> ASTC_10x10|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGB_12x12","value":"2:System.String:108:Enum member TextureFormat.ASTC_RGB_12x12 is obsolete. Use ASTC_12x12 instead (UnityUpgradable) -> ASTC_12x12|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGB_4x4","value":"2:System.String:102:Enum member TextureFormat.ASTC_RGB_4x4 is obsolete. Use ASTC_4x4 instead (UnityUpgradable) -> ASTC_4x4|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGB_5x5","value":"2:System.String:102:Enum member TextureFormat.ASTC_RGB_5x5 is obsolete. Use ASTC_5x5 instead (UnityUpgradable) -> ASTC_5x5|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGB_6x6","value":"2:System.String:102:Enum member TextureFormat.ASTC_RGB_6x6 is obsolete. Use ASTC_6x6 instead (UnityUpgradable) -> ASTC_6x6|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ASTC_RGB_8x8","value":"2:System.String:102:Enum member TextureFormat.ASTC_RGB_8x8 is obsolete. Use ASTC_8x8 instead (UnityUpgradable) -> ASTC_8x8|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ETC_RGB4_3DS","value":"2:System.String:74:Enum member ETC_RGB4_3DS is obsolete. Nintendo 3DS is no longer supported.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.TextureFormat.ETC_RGBA8_3DS","value":"2:System.String:74:Enum member ETC_RGB4_3DS is obsolete. Nintendo 3DS is no longer supported.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.Experimental.Rendering.FormatUsage.type","value":"2:System.String:31:Use GraphicsFormatUsage instead|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.Experimental.Rendering.GraphicsFormat.DepthAuto","value":"2:System.String:182:Enum member GraphicsFormat.DepthAuto is obsolete. Use GraphicsFormat.None as a color format to indicate depth only rendering and DefaultFormat to get the default depth buffer format.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.Experimental.Rendering.GraphicsFormat.RGB_DXT1_SRGB","value":"2:System.String:139:Enum member GraphicsFormat.RGB_DXT1_SRGB has been deprecated. Use GraphicsFormat.RGBA_DXT1_SRGB instead (UnityUpgradable) -> RGBA_DXT1_SRGB|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.Experimental.Rendering.GraphicsFormat.RGB_DXT1_UNorm","value":"2:System.String:142:Enum member GraphicsFormat.RGB_DXT1_UNorm has been deprecated. Use GraphicsFormat.RGBA_DXT1_UNorm instead (UnityUpgradable) -> RGBA_DXT1_UNorm|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.Experimental.Rendering.GraphicsFormat.ShadowAuto","value":"2:System.String:247:Enum member GraphicsFormat.ShadowAuto is obsolete. Use GraphicsFormat.None as a color format to indicate depth only rendering, DefaultFormat to get the default shadow buffer format and ShadowSamplingMode.CompareDepths to enable shadowmap sampling.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.Experimental.Rendering.GraphicsFormat.VideoAuto","value":"2:System.String:76:Enum member GraphicsFormat.VideoAuto is obsolete. Use DefaultFormat instead.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.Experimental.Rendering.TextureCreationFlags.IgnoreMipmapLimit","value":"2:System.String:183:IgnoreMipmapLimit flag is no longer used since this is now the default behavior for all Texture shapes. Please provide mipmap limit information using a MipmapLimitDescriptor argument.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.Rendering.BuiltinRenderTextureType.PrepassLight","value":"2:System.String:99:Deferred Lighting has been removed, so PrepassLight built-in render texture type is never used now.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.Rendering.BuiltinRenderTextureType.PrepassLightSpec","value":"2:System.String:103:Deferred Lighting has been removed, so PrepassLightSpec built-in render texture type is never used now.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.Rendering.BuiltinRenderTextureType.PrepassNormalsSpec","value":"2:System.String:105:Deferred Lighting has been removed, so PrepassNormalsSpec built-in render texture type is never used now.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.Direct3D9","value":"1:System.String:50:Direct3D 9 is no longer supported in Unity 2017.2+"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.GameCoreScarlett","value":"2:System.String:101:GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.N3DS","value":"1:System.String:48:Nintendo 3DS support is unavailable since 2018.1"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.OpenGL2","value":"1:System.String:44:OpenGL2 is no longer supported in Unity 5.5+"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.OpenGLES2","value":"1:System.String:52:OpenGL ES 2.0 is no longer supported in Unity 2023.1"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.PlayStation3","value":"1:System.String:40:PS3 is no longer supported in Unity 5.5+"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.PlayStationMobile","value":"1:System.String:54:PlayStationMobile is no longer supported in Unity 5.3+"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.PlayStationVita","value":"1:System.String:45:PVita is no longer supported as of Unity 2018"}
+{"key":"obsolete.enum.UnityEngine.Rendering.GraphicsDeviceType.Xbox360","value":"1:System.String:44:Xbox360 is no longer supported in Unity 5.5+"}
+{"key":"obsolete.enum.UnityEngine.NPOTSupport.None","value":"1:System.String:49:NPOTSupport.None does not happen on any platforms"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.BB10","value":"1:System.String:34:BlackBerry has been removed in 5.4"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.BlackBerry","value":"1:System.String:34:BlackBerry has been removed in 5.4"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.CloudRendering","value":"2:System.String:109:CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.GameCoreScarlett","value":"2:System.String:101:GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.Lumin","value":"1:System.String:32:Lumin has been removed in 2022.2"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.MetroPlayer","value":"2:System.String:52:Use WSAPlayer instead (UnityUpgradable) -> WSAPlayer|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.N3DS","value":"1:System.String:48:Nintendo 3DS support is unavailable since 2018.1"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.PS3","value":"1:System.String:29:PS3 has been removed in >=5.5"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.PSM","value":"1:System.String:30:PSM has been removed in >= 5.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.PSP2","value":"1:System.String:46:PSP2 is no longer supported as of Unity 2018.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.SamsungTV","value":"1:System.String:36:SamsungTV has been removed in 2017.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.Stadia","value":"1:System.String:33:Stadia has been removed in 2023.1"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.StandaloneLinux","value":"1:System.String:42:StandaloneLinux has been removed in 2019.2"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.StandaloneLinuxUniversal","value":"1:System.String:51:StandaloneLinuxUniversal has been removed in 2019.2"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.StandaloneOSXIntel64","value":"1:System.String:47:StandaloneOSXIntel64 has been removed in 2017.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.StandaloneOSXIntel","value":"1:System.String:45:StandaloneOSXIntel has been removed in 2017.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.StandaloneOSXUniversal","value":"2:System.String:60:Use StandaloneOSX instead (UnityUpgradable) -> StandaloneOSX|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.Tizen","value":"1:System.String:32:Tizen has been removed in 2017.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.WP8Player","value":"1:System.String:45:Use WSAPlayer with Windows Phone 8.1 selected"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.WebPlayer","value":"2:System.String:33:WebPlayer has been removed in 5.4|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.WebPlayerStreamed","value":"2:System.String:41:WebPlayerStreamed has been removed in 5.4|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.WiiU","value":"1:System.String:35:Wii U support was removed in 2018.1"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.XBOX360","value":"1:System.String:31:XBOX360 has been removed in 5.5"}
+{"key":"obsolete.enum.UnityEditor.BuildTarget.iPhone","value":"2:System.String:40:Use iOS instead (UnityUpgradable) -> iOS|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.BlackBerry","value":"1:System.String:37:BlackBerry has been removed as of 5.4"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.CloudRendering","value":"2:System.String:109:CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.Facebook","value":"1:System.String:38:Facebook support was removed in 2019.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.GameCoreScarlett","value":"2:System.String:101:GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.Lumin","value":"1:System.String:32:Lumin has been removed in 2022.2"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.Metro","value":"1:System.String:15:Use WSA instead"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.N3DS","value":"1:System.String:48:Nintendo 3DS support is unavailable since 2018.1"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.PS3","value":"1:System.String:29:PS3 has been removed in >=5.5"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.PSM","value":"1:System.String:30:PSM has been removed in >= 5.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.PSP2","value":"1:System.String:46:PSP2 is no longer supported as of Unity 2018.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.SamsungTV","value":"1:System.String:39:SamsungTV has been removed as of 2017.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.Stadia","value":"1:System.String:33:Stadia has been removed in 2023.1"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.Tizen","value":"1:System.String:32:Tizen has been removed in 2017.3"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.WP8","value":"1:System.String:15:Use WSA instead"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.WebPlayer","value":"2:System.String:50:WebPlayer was removed in 5.4, consider using WebGL|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.WiiU","value":"1:System.String:35:Wii U support was removed in 2018.1"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.XBOX360","value":"1:System.String:31:XBOX360 has been removed in 5.5"}
+{"key":"obsolete.enum.UnityEditor.BuildTargetGroup.iPhone","value":"2:System.String:40:Use iOS instead (UnityUpgradable) -> iOS|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.PrefabInstanceStatus.Disconnected","value":"1:System.String:114:PrefabInstanceStatus.Disconnected has been deprecated and is not used. Prefabs can not be in a disconnected state."}
+{"key":"obsolete.enum.UnityEngine.LightmapsMode.Directional","value":"2:System.String:128:Enum member LightmapsMode.Directional has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.LightmapsMode.Dual","value":"2:System.String:121:Enum member LightmapsMode.Dual has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.LightmapsMode.SeparateDirectional","value":"2:System.String:136:Enum member LightmapsMode.SeparateDirectional has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.LightmapsMode.Single","value":"2:System.String:113:Enum member LightmapsMode.Single has been removed. Use NonDirectional instead (UnityUpgradable) -> NonDirectional|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.Rendering.BuiltinShaderDefine.UNITY_HALF_PRECISION_FRAGMENT_SHADER_REGISTERS","value":"1:System.String:96:UNITY_HALF_PRECISION_FRAGMENT_SHADER_REGISTERS is never defined since OpenGL ES 2.0 was removed."}
+{"key":"obsolete.enum.UnityEngine.Rendering.BuiltinShaderDefine.UNITY_NO_FULL_STANDARD_SHADER","value":"1:System.String:79:UNITY_NO_FULL_STANDARD_SHADER is never defined since OpenGL ES 2.0 was removed."}
+{"key":"obsolete.enum.UnityEngine.Rendering.BuiltinShaderDefine.UNITY_USE_NATIVE_HDR","value":"1:System.String:45:Shaders unconditionally support HDR decoding."}
+{"key":"obsolete.enum.UnityEngine.Rendering.ShaderKeywordType.BuiltinAutoStripped","value":"1:System.String:122:Shader keyword type BuiltinAutoStripped is no longer used. Use BuiltinDefault instead. (UnityUpgradable) -> BuiltinDefault"}
+{"key":"obsolete.enum.UnityEngine.Rendering.ShaderKeywordType.BuiltinExtra","value":"1:System.String:115:Shader keyword type BuiltinExtra is no longer used. Use BuiltinDefault instead. (UnityUpgradable) -> BuiltinDefault"}
+{"key":"obsolete.enum.UnityEditor.EnterPlayModeOptions.DisableSceneBackupUnlessDirty","value":"1:System.String:39:Option has no effect and is deprecated."}
+{"key":"obsolete.enum.UnityEditor.SelectionMode.OnlyUserModifiable","value":"2:System.String:88:'OnlyUserModifiable' is obsolete. Use 'Editable' instead. (UnityUpgradeable) -> Editable|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.Rendering.ShaderCompilerPlatform.GameCore","value":"2:System.String:89:GameCore  is deprecated, please use GameCoreXboxOne (UnityUpgradable) -> GameCoreXboxOne |System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.ScriptingRuntimeVersion.type","value":"1:System.String:91:ScriptingRuntimeVersion has been deprecated in 2019.3 now that legacy mono has been removed"}
+{"key":"obsolete.enum.UnityEditor.AndroidSdkVersions.AndroidApiLevel16","value":"2:System.String:107:Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.AndroidSdkVersions.AndroidApiLevel17","value":"2:System.String:107:Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.AndroidSdkVersions.AndroidApiLevel18","value":"2:System.String:107:Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.AndroidSdkVersions.AndroidApiLevel19","value":"2:System.String:107:Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.AndroidSdkVersions.AndroidApiLevel21","value":"2:System.String:107:Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.AndroidSdkVersions.AndroidApiLevel22","value":"2:System.String:107:Minimum supported Android API level is 23 (Android 6.0 Marshmallow). Please use AndroidApiLevel23 or higher|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.BuildOptions.Il2CPP","value":"2:System.String:102:BuildOptions.IL2CPP is deprecated and has no effect. Use PlayerSettings.SetScriptingBackend() instead.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEditor.BuildOptions.SymlinkLibraries","value":"2:System.String:145:BuildOptions.SymlinkLibraries is obsolete. Use BuildOptions.SymlinkSources instead (UnityUpgradable) -> [UnityEditor] BuildOptions.SymlinkSources|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEditor.PrefabType.type","value":"1:System.String:60:PrefabType no longer tells everything about Prefab instance."}
+{"key":"obsolete.enum.UnityEngine.LightingSettings+Lightmapper.Enlighten","value":"2:System.String:116:Use Lightmapper.ProgressiveCPU instead. (UnityUpgradable) -> UnityEngine.LightingSettings/Lightmapper.ProgressiveCPU|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.LightingSettings+DenoiserType.RadeonPro","value":"2:System.String:71:DenoiserType.RadeonPro is obsolete, use DenoiserType.OpenImage instead.|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.iOS.ActivityIndicatorStyle.Gray","value":"2:System.String:100:Gray Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.iOS.ActivityIndicatorStyle.White","value":"2:System.String:101:White Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.iOS.ActivityIndicatorStyle.WhiteLarge","value":"2:System.String:104:WhiteLarge Activity Indicator has been deprecated by Apple. Use Large instead (UnityUpgradable) -> Large|System.Boolean:4:True"}
+{"key":"obsolete.enum.UnityEngine.SocialPlatforms.TimeScope.type","value":"2:System.String:64:TimeScope is deprecated and will be removed in a future release.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.SocialPlatforms.UserScope.type","value":"2:System.String:64:UserScope is deprecated and will be removed in a future release.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.SocialPlatforms.UserState.type","value":"2:System.String:64:UserState is deprecated and will be removed in a future release.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.Terrain+MaterialType.type","value":"2:System.String:44:Enum type MaterialType is not used any more.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.UIElements.PropagationPhase.AtTarget","value":"2:System.String:334:PropagationPhase.AtTarget has been removed as part of an event propagation simplification. Events now propagate through the TrickleDown phase followed immediately by the BubbleUp phase. Please use TrickleDown or BubbleUp. You can check if the event target is the current element by testing event.target == this in your local callback.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.UIElements.PropagationPhase.DefaultAction","value":"2:System.String:179:PropagationPhase.DefaultAction has been removed as part of an event propagation simplification. ExecuteDefaultAction now occurs as part of the BubbleUp phase. Please use BubbleUp.|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.UIElements.PropagationPhase.DefaultActionAtTarget","value":"2:System.String:194:PropagationPhase.DefaultActionAtTarget has been removed as part of an event propagation simplification. ExecuteDefaultActionAtTarget now occurs as part of the BubbleUp phase. Please use BubbleUp|System.Boolean:5:False"}
+{"key":"obsolete.enum.UnityEngine.Video.VideoTimeSource.AudioDSPTimeSource","value":"1:System.String:83:AudioDSPTimeSource is deprecated. Use DSPTime instead. (UnityUpgradable) -> DSPTime"}
+{"key":"obsolete.enum.UnityEngine.Video.VideoTimeSource.GameTimeSource","value":"1:System.String:81:GameTimeSource is deprecated. Use GameTime instead. (UnityUpgradable) -> GameTime"}
+{"key":"obsolete.enum.UnityEngine.Video.VideoTimeSource.type","value":"1:System.String:99:VideoTimeSource is deprecated. Use TimeUpdateMode instead. (UnityUpgradable) -> VideoTimeUpdateMode"}
+{"key":"obsolete.enum.UnityEngine.XR.TrackingSpaceType.type","value":"1:System.String:83:This is obsolete, and should no longer be used.  Please use InputTrackingModeFlags."}
 {"key":"complete","value":"1"}

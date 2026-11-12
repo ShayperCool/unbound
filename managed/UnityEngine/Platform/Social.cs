@@ -121,20 +121,20 @@ namespace UnityEngine.SocialPlatforms
         UserState state { get; }
         Texture2D image { get; }
     }
-    [Obsolete("TimeScope is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("TimeScope is deprecated and will be removed in a future release.", false)]
     public enum TimeScope
     {
         Today = 0,
         Week = 1,
         AllTime = 2,
     }
-    [Obsolete("UserScope is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("UserScope is deprecated and will be removed in a future release.", false)]
     public enum UserScope
     {
         Global = 0,
         FriendsOnly = 1,
     }
-    [Obsolete("UserState is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("UserState is deprecated and will be removed in a future release.", false)]
     public enum UserState
     {
         Online = 0,

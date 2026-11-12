@@ -26,8 +26,8 @@ namespace UnityEngine
     {
         AlwaysAnimate = 0,
         BasedOnRenderers = 1,
-        [Obsolete] BasedOnClipBounds = 2,
-        [Obsolete] BasedOnUserBounds = 3,
+        [global::System.@ObsoleteAttribute("Enum member AnimatorCullingMode.BasedOnClipBounds has been deprecated. Use AnimationCullingType.AlwaysAnimate or AnimationCullingType.BasedOnRenderers instead")] BasedOnClipBounds = 2,
+        [global::System.@ObsoleteAttribute("Enum member AnimatorCullingMode.BasedOnUserBounds has been deprecated. Use AnimationCullingType.AlwaysAnimate or AnimationCullingType.BasedOnRenderers instead")] BasedOnUserBounds = 3,
     }
 
     public enum AnimatorControllerParameterType
@@ -43,7 +43,7 @@ namespace UnityEngine
         AlwaysAnimate = 0,
         CullUpdateTransforms = 1,
         CullCompletely = 2,
-        [Obsolete] BasedOnRenderers = 1,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member AnimatorCullingMode.BasedOnRenderers has been deprecated. Use AnimatorCullingMode.CullUpdateTransforms instead. (UnityUpgradable) -> CullUpdateTransforms", true)] BasedOnRenderers = 1,
     }
 
     public enum AnimatorRecorderMode
@@ -58,7 +58,7 @@ namespace UnityEngine
         Normal = 0,
         Fixed = 1,
         UnscaledTime = 2,
-        [Obsolete] AnimatePhysics = 1,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member AnimatorUpdateMode.AnimatePhysics has been deprecated. Use AnimatorUpdateMode.Fixed to evaluate in FixedUpdate time and Animator.animatePhysics to sync transforms for physics. (UnityUpgradable) -> Fixed", true)] AnimatePhysics = 1,
     }
 
     public enum AnisotropicFiltering
@@ -173,7 +173,7 @@ namespace UnityEngine
 
     public enum AudioSpeakerMode
     {
-        [Obsolete] Raw = 0,
+        [global::System.@ObsoleteAttribute("Raw speaker mode is not supported. Do not use.", true)] Raw = 0,
         Mono = 1,
         Stereo = 2,
         Quad = 3,
@@ -249,11 +249,11 @@ namespace UnityEngine
         Full = 4,
     }
 
-    public enum BlendWeights
+    [global::System.@ObsoleteAttribute("BlendWeights is obsolete. Use SkinWeights instead (UnityUpgradable) -> SkinWeights", true)] public enum BlendWeights
     {
-        [Obsolete] OneBone = 1,
-        [Obsolete] TwoBones = 2,
-        [Obsolete] FourBones = 4,
+        [global::System.@ObsoleteAttribute("BlendWeights.OneBone is obsolete. Use SkinWeights.OneBone instead (UnityUpgradable) -> SkinWeights.OneBone", true)] OneBone = 1,
+        [global::System.@ObsoleteAttribute("BlendWeights.TwoBones is obsolete. Use SkinWeights.TwoBones instead (UnityUpgradable) -> SkinWeights.TwoBones", true)] TwoBones = 2,
+        [global::System.@ObsoleteAttribute("BlendWeights.FourBones is obsolete. Use SkinWeights.FourBones instead (UnityUpgradable) -> SkinWeights.FourBones", true)] FourBones = 4,
     }
 
     public enum CameraClearFlags
@@ -298,7 +298,7 @@ namespace UnityEngine
 
     public enum CollisionDetectionMode2D
     {
-        [Obsolete] None = 0,
+        [global::System.@ObsoleteAttribute("Enum member CollisionDetectionMode2D.None has been deprecated. Use CollisionDetectionMode2D.Discrete instead (UnityUpgradable) -> Discrete", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] None = 0,
         Discrete = 0,
         Continuous = 1,
     }
@@ -308,8 +308,8 @@ namespace UnityEngine
     {
         Immutable = 0,
         Dynamic = 1,
-        [Obsolete] Circular = 2,
-        [Obsolete] StreamOut = 3,
+        [global::System.@ObsoleteAttribute("ComputeBufferMode.Circular is deprecated (legacy mode)")] Circular = 2,
+        [global::System.@ObsoleteAttribute("ComputeBufferMode.StreamOut is deprecated (internal use only)")] StreamOut = 3,
         SubUpdates = 4,
     }
 
@@ -322,9 +322,9 @@ namespace UnityEngine
         Counter = 4,
         Constant = 8,
         Structured = 16,
-        [Obsolete] DrawIndirect = 256,
+        [global::System.@ObsoleteAttribute("Enum member DrawIndirect has been deprecated. Use IndirectArguments instead (UnityUpgradable) -> IndirectArguments", false)] DrawIndirect = 256,
         IndirectArguments = 256,
-        [Obsolete] GPUMemory = 512,
+        [global::System.@ObsoleteAttribute("Enum member GPUMemory has been deprecated. All compute buffers now follow the behavior previously defined by this member.", false)] GPUMemory = 512,
     }
 
     public enum ConfigurableJointMotion
@@ -438,19 +438,19 @@ namespace UnityEngine
         TouchEnter = 33,
         TouchLeave = 34,
         TouchStationary = 35,
-        [Obsolete] mouseDown = 0,
-        [Obsolete] mouseUp = 1,
-        [Obsolete] mouseMove = 2,
-        [Obsolete] mouseDrag = 3,
-        [Obsolete] keyDown = 4,
-        [Obsolete] keyUp = 5,
-        [Obsolete] scrollWheel = 6,
-        [Obsolete] repaint = 7,
-        [Obsolete] layout = 8,
-        [Obsolete] dragUpdated = 9,
-        [Obsolete] dragPerform = 10,
-        [Obsolete] ignore = 11,
-        [Obsolete] used = 12,
+        [global::System.@ObsoleteAttribute("Use MouseDown instead (UnityUpgradable) -> MouseDown", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] mouseDown = 0,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use MouseUp instead (UnityUpgradable) -> MouseUp", true)] mouseUp = 1,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use MouseMove instead (UnityUpgradable) -> MouseMove", true)] mouseMove = 2,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use MouseDrag instead (UnityUpgradable) -> MouseDrag", true)] mouseDrag = 3,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use KeyDown instead (UnityUpgradable) -> KeyDown", true)] keyDown = 4,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use KeyUp instead (UnityUpgradable) -> KeyUp", true)] keyUp = 5,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use ScrollWheel instead (UnityUpgradable) -> ScrollWheel", true)] scrollWheel = 6,
+        [global::System.@ObsoleteAttribute("Use Repaint instead (UnityUpgradable) -> Repaint", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] repaint = 7,
+        [global::System.@ObsoleteAttribute("Use Layout instead (UnityUpgradable) -> Layout", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] layout = 8,
+        [global::System.@ObsoleteAttribute("Use DragUpdated instead (UnityUpgradable) -> DragUpdated", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] dragUpdated = 9,
+        [global::System.@ObsoleteAttribute("Use DragPerform instead (UnityUpgradable) -> DragPerform", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] dragPerform = 10,
+        [global::System.@ObsoleteAttribute("Use Ignore instead (UnityUpgradable) -> Ignore", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] ignore = 11,
+        [global::System.@ObsoleteAttribute("Use Used instead (UnityUpgradable) -> Used", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] used = 12,
     }
 
     public enum FFTWindow
@@ -484,7 +484,7 @@ namespace UnityEngine
 
     public enum FocusType
     {
-        [Obsolete] Native = 0,
+        [global::System.@ObsoleteAttribute("FocusType.Native now behaves the same as FocusType.Passive in all OS cases. (UnityUpgradable) -> Passive", false)] Native = 0,
         Keyboard = 1,
         Passive = 2,
     }
@@ -641,7 +641,7 @@ namespace UnityEngine
     {
         None = 0,
         PositionAndRotation = 1,
-        [Obsolete] PositionOnly = 2,
+        [global::System.@ObsoleteAttribute("JointProjectionMode.PositionOnly is no longer supported", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] PositionOnly = 2,
     }
 
     public enum KeyCode
@@ -1021,7 +1021,7 @@ namespace UnityEngine
         Spot = 0,
         Directional = 1,
         Point = 2,
-        [Obsolete] Area = 3,
+        [global::System.@ObsoleteAttribute("Enum member LightType.Area has been deprecated. Use LightType.Rectangle instead (UnityUpgradable) -> Rectangle", true)] Area = 3,
         Rectangle = 3,
         Disc = 4,
         Pyramid = 5,
@@ -1032,7 +1032,7 @@ namespace UnityEngine
     public enum LineAlignment
     {
         View = 0,
-        [Obsolete] Local = 1,
+        [global::System.@ObsoleteAttribute("Enum member Local has been deprecated. Use TransformZ instead (UnityUpgradable) -> TransformZ", false)] Local = 1,
         TransformZ = 1,
     }
 
@@ -1064,7 +1064,7 @@ namespace UnityEngine
     public enum MeshColliderCookingOptions
     {
         None = 0,
-        [Obsolete] InflateConvexMesh = 1,
+        [global::System.@ObsoleteAttribute("No longer used because the problem this was trying to solve is gone since Unity 2018.3", true)] InflateConvexMesh = 1,
         CookForFasterSimulation = 2,
         EnableMeshCleaning = 4,
         WeldColocatedVertices = 8,
@@ -1183,7 +1183,7 @@ namespace UnityEngine
         Color = 2,
     }
 
-    public enum ParticleSystemEmissionType
+    [global::System.@ObsoleteAttribute("ParticleSystemEmissionType no longer does anything. Time and Distance based emission are now both always active.", false)] public enum ParticleSystemEmissionType
     {
         Time = 0,
         Distance = 1,
@@ -1305,17 +1305,17 @@ namespace UnityEngine
     public enum ParticleSystemShapeType
     {
         Sphere = 0,
-        [Obsolete] SphereShell = 1,
+        [global::System.@ObsoleteAttribute("SphereShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.", false)] SphereShell = 1,
         Hemisphere = 2,
-        [Obsolete] HemisphereShell = 3,
+        [global::System.@ObsoleteAttribute("HemisphereShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.", false)] HemisphereShell = 3,
         Cone = 4,
         Box = 5,
         Mesh = 6,
-        [Obsolete] ConeShell = 7,
+        [global::System.@ObsoleteAttribute("ConeShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.", false)] ConeShell = 7,
         ConeVolume = 8,
-        [Obsolete] ConeVolumeShell = 9,
+        [global::System.@ObsoleteAttribute("ConeVolumeShell is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.", false)] ConeVolumeShell = 9,
         Circle = 10,
-        [Obsolete] CircleEdge = 11,
+        [global::System.@ObsoleteAttribute("CircleEdge is deprecated and does nothing. Please use ShapeModule.radiusThickness instead, to control edge emission.", false)] CircleEdge = 11,
         SingleSidedEdge = 12,
         MeshRenderer = 13,
         SkinnedMeshRenderer = 14,
@@ -1460,7 +1460,7 @@ namespace UnityEngine
         TrailWidth = 52,
     }
 
-    [Flags]
+    [global::System.@FlagsAttribute] [global::System.@ObsoleteAttribute("ParticleSystemVertexStreams is deprecated. Please use ParticleSystemVertexStream instead.", false)]
     public enum ParticleSystemVertexStreams
     {
         Position = 1,
@@ -1539,7 +1539,7 @@ namespace UnityEngine
         UsePlayerSettings = -1,
         VertexLit = 0,
         Forward = 1,
-        [Obsolete] DeferredLighting = 2,
+        [global::System.@ObsoleteAttribute("DeferredLighting has been removed. Use DeferredShading, Forward or HDRP/URP instead.", false)] DeferredLighting = 2,
         DeferredShading = 3,
     }
 
@@ -1662,60 +1662,60 @@ namespace UnityEngine
         OSXEditor = 0,
         OSXPlayer = 1,
         WindowsPlayer = 2,
-        [Obsolete] OSXWebPlayer = 3,
-        [Obsolete] OSXDashboardPlayer = 4,
-        [Obsolete] WindowsWebPlayer = 5,
+        [global::System.@ObsoleteAttribute("WebPlayer export is no longer supported in Unity 5.4+.", true)] OSXWebPlayer = 3,
+        [global::System.@ObsoleteAttribute("Dashboard widget on Mac OS X export is no longer supported in Unity 5.4+.", true)] OSXDashboardPlayer = 4,
+        [global::System.@ObsoleteAttribute("WebPlayer export is no longer supported in Unity 5.4+.", true)] WindowsWebPlayer = 5,
         WindowsEditor = 7,
         IPhonePlayer = 8,
-        [Obsolete] XBOX360 = 10,
-        [Obsolete] PS3 = 9,
+        [global::System.@ObsoleteAttribute("Xbox360 export is no longer supported in Unity 5.5+.")] XBOX360 = 10,
+        [global::System.@ObsoleteAttribute("PS3 export is no longer supported in Unity >=5.5.")] PS3 = 9,
         Android = 11,
-        [Obsolete] NaCl = 12,
-        [Obsolete] FlashPlayer = 15,
+        [global::System.@ObsoleteAttribute("NaCl export is no longer supported in Unity 5.0+.")] NaCl = 12,
+        [global::System.@ObsoleteAttribute("FlashPlayer export is no longer supported in Unity 5.0+.")] FlashPlayer = 15,
         LinuxPlayer = 13,
         LinuxEditor = 16,
         WebGLPlayer = 17,
-        [Obsolete] MetroPlayerX86 = 18,
+        [global::System.@ObsoleteAttribute("Use WSAPlayerX86 instead")] MetroPlayerX86 = 18,
         WSAPlayerX86 = 18,
-        [Obsolete] MetroPlayerX64 = 19,
+        [global::System.@ObsoleteAttribute("Use WSAPlayerX64 instead")] MetroPlayerX64 = 19,
         WSAPlayerX64 = 19,
-        [Obsolete] MetroPlayerARM = 20,
+        [global::System.@ObsoleteAttribute("Use WSAPlayerARM instead")] MetroPlayerARM = 20,
         WSAPlayerARM = 20,
-        [Obsolete] WP8Player = 21,
-        [Obsolete] BB10Player = 22,
-        [Obsolete] BlackBerryPlayer = 22,
-        [Obsolete] TizenPlayer = 23,
-        [Obsolete] PSP2 = 24,
+        [global::System.@ObsoleteAttribute("Windows Phone 8 was removed in 5.3")] WP8Player = 21,
+        [global::System.@ObsoleteAttribute("BB10Player export is no longer supported in Unity 5.4+.")] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] BB10Player = 22,
+        [global::System.@ObsoleteAttribute("BlackBerryPlayer export is no longer supported in Unity 5.4+.")] BlackBerryPlayer = 22,
+        [global::System.@ObsoleteAttribute("TizenPlayer export is no longer supported in Unity 2017.3+.")] TizenPlayer = 23,
+        [global::System.@ObsoleteAttribute("PSP2 is no longer supported as of Unity 2018.3")] PSP2 = 24,
         PS4 = 25,
-        [Obsolete] PSM = 26,
+        [global::System.@ObsoleteAttribute("PSM export is no longer supported in Unity >= 5.3")] PSM = 26,
         XboxOne = 27,
-        [Obsolete] SamsungTVPlayer = 28,
-        [Obsolete] WiiU = 30,
+        [global::System.@ObsoleteAttribute("SamsungTVPlayer export is no longer supported in Unity 2017.3+.")] SamsungTVPlayer = 28,
+        [global::System.@ObsoleteAttribute("Wii U is no longer supported in Unity 2018.1+.")] WiiU = 30,
         tvOS = 31,
         Switch = 32,
-        [Obsolete] Lumin = 33,
-        [Obsolete] Stadia = 34,
-        [Obsolete] CloudRendering = -1,
+        [global::System.@ObsoleteAttribute("Lumin is no longer supported in Unity 2022.2")] Lumin = 33,
+        [global::System.@ObsoleteAttribute("Stadia is no longer supported in Unity 2023.1")] Stadia = 34,
+        [global::System.@ObsoleteAttribute("CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation", false)] CloudRendering = -1,
         LinuxHeadlessSimulation = 35,
-        [Obsolete] GameCoreScarlett = -1,
+        [global::System.@ObsoleteAttribute("GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries", false)] GameCoreScarlett = -1,
         GameCoreXboxSeries = 36,
         GameCoreXboxOne = 37,
         PS5 = 38,
         EmbeddedLinuxArm64 = 39,
-        [Obsolete] EmbeddedLinuxArm32 = 40,
+        [global::System.@ObsoleteAttribute("32-bit embedded platforms are no longer supported")] EmbeddedLinuxArm32 = 40,
         EmbeddedLinuxX64 = 41,
-        [Obsolete] EmbeddedLinuxX86 = 42,
+        [global::System.@ObsoleteAttribute("32-bit embedded platforms are no longer supported")] EmbeddedLinuxX86 = 42,
         LinuxServer = 43,
         WindowsServer = 44,
         OSXServer = 45,
-        [Obsolete] QNXArm32 = 46,
+        [global::System.@ObsoleteAttribute("32-bit embedded platforms are no longer supported")] QNXArm32 = 46,
         QNXArm64 = 47,
         QNXX64 = 48,
-        [Obsolete] QNXX86 = 49,
+        [global::System.@ObsoleteAttribute("32-bit embedded platforms are no longer supported")] QNXX86 = 49,
         VisionOS = 50,
         Switch2 = 51,
-        [Obsolete] KeplerArm64 = 52,
-        [Obsolete] KeplerX64 = 53,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute] KeplerArm64 = 52,
+        [global::System.@ObsoleteAttribute] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] KeplerX64 = 53,
     }
 
     public enum ScaleMode
@@ -1732,8 +1732,8 @@ namespace UnityEngine
         LandscapeLeft = 3,
         LandscapeRight = 4,
         AutoRotation = 5,
-        [Obsolete] Unknown = 0,
-        [Obsolete] Landscape = 3,
+        [global::System.@ObsoleteAttribute("Enum member Unknown has been deprecated.", false)] Unknown = 0,
+        [global::System.@ObsoleteAttribute("Use LandscapeLeft instead (UnityUpgradable) -> LandscapeLeft", true)] Landscape = 3,
     }
 
     public enum SendMessageOptions
@@ -1892,7 +1892,7 @@ namespace UnityEngine
         German = 15,
         Greek = 16,
         Hebrew = 17,
-        [Obsolete] Hugarian = 18,
+        [global::System.@ObsoleteAttribute("Use SystemLanguage.Hungarian instead (UnityUpgradable) -> Hungarian", true)] Hugarian = 18,
         Icelandic = 19,
         Indonesian = 20,
         Italian = 21,
@@ -1924,10 +1924,10 @@ namespace UnityEngine
     [Flags]
     public enum TerrainRenderFlags
     {
-        [Obsolete] heightmap = 1,
-        [Obsolete] trees = 2,
-        [Obsolete] details = 4,
-        [Obsolete] all = 7,
+        [global::System.@ObsoleteAttribute("TerrainRenderFlags.heightmap is obsolete, use TerrainRenderFlags.Heightmap instead. (UnityUpgradable) -> Heightmap")] heightmap = 1,
+        [global::System.@ObsoleteAttribute("TerrainRenderFlags.trees is obsolete, use TerrainRenderFlags.Trees instead. (UnityUpgradable) -> Trees")] trees = 2,
+        [global::System.@ObsoleteAttribute("TerrainRenderFlags.details is obsolete, use TerrainRenderFlags.Details instead. (UnityUpgradable) -> Details")] details = 4,
+        [global::System.@ObsoleteAttribute("TerrainRenderFlags.all is obsolete, use TerrainRenderFlags.All instead. (UnityUpgradable) -> All")] all = 7,
         Heightmap = 1,
         Trees = 2,
         Details = 4,
@@ -2006,8 +2006,8 @@ namespace UnityEngine
         ASTC_8x8 = 51,
         ASTC_10x10 = 52,
         ASTC_12x12 = 53,
-        [Obsolete] ETC_RGB4_3DS = -60,
-        [Obsolete] ETC_RGBA8_3DS = -61,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member ETC_RGB4_3DS is obsolete. Nintendo 3DS is no longer supported.", true)] ETC_RGB4_3DS = -60,
+        [global::System.@ObsoleteAttribute("Enum member ETC_RGB4_3DS is obsolete. Nintendo 3DS is no longer supported.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] ETC_RGBA8_3DS = -61,
         RG16 = 62,
         R8 = 63,
         ETC_RGB4Crunched = 64,
@@ -2029,18 +2029,18 @@ namespace UnityEngine
         RG32_SIGNED = 80,
         RGB48_SIGNED = 81,
         RGBA64_SIGNED = 82,
-        [Obsolete] ASTC_RGB_4x4 = -48,
-        [Obsolete] ASTC_RGB_5x5 = -49,
-        [Obsolete] ASTC_RGB_6x6 = -50,
-        [Obsolete] ASTC_RGB_8x8 = -51,
-        [Obsolete] ASTC_RGB_10x10 = -52,
-        [Obsolete] ASTC_RGB_12x12 = -53,
-        [Obsolete] ASTC_RGBA_4x4 = -54,
-        [Obsolete] ASTC_RGBA_5x5 = -55,
-        [Obsolete] ASTC_RGBA_6x6 = -56,
-        [Obsolete] ASTC_RGBA_8x8 = -57,
-        [Obsolete] ASTC_RGBA_10x10 = -58,
-        [Obsolete] ASTC_RGBA_12x12 = -59,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGB_4x4 is obsolete. Use ASTC_4x4 instead (UnityUpgradable) -> ASTC_4x4", true)] ASTC_RGB_4x4 = -48,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGB_5x5 is obsolete. Use ASTC_5x5 instead (UnityUpgradable) -> ASTC_5x5", true)] ASTC_RGB_5x5 = -49,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGB_6x6 is obsolete. Use ASTC_6x6 instead (UnityUpgradable) -> ASTC_6x6", true)] ASTC_RGB_6x6 = -50,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGB_8x8 is obsolete. Use ASTC_8x8 instead (UnityUpgradable) -> ASTC_8x8", true)] ASTC_RGB_8x8 = -51,
+        [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGB_10x10 is obsolete. Use ASTC_10x10 instead (UnityUpgradable) -> ASTC_10x10", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] ASTC_RGB_10x10 = -52,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGB_12x12 is obsolete. Use ASTC_12x12 instead (UnityUpgradable) -> ASTC_12x12", true)] ASTC_RGB_12x12 = -53,
+        [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGBA_4x4 is obsolete. Use ASTC_4x4 instead (UnityUpgradable) -> ASTC_4x4", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] ASTC_RGBA_4x4 = -54,
+        [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGBA_5x5 is obsolete. Use ASTC_5x5 instead (UnityUpgradable) -> ASTC_5x5", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] ASTC_RGBA_5x5 = -55,
+        [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGBA_6x6 is obsolete. Use ASTC_6x6 instead (UnityUpgradable) -> ASTC_6x6", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] ASTC_RGBA_6x6 = -56,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGBA_8x8 is obsolete. Use ASTC_8x8 instead (UnityUpgradable) -> ASTC_8x8", true)] ASTC_RGBA_8x8 = -57,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGBA_10x10 is obsolete. Use ASTC_10x10 instead (UnityUpgradable) -> ASTC_10x10", true)] ASTC_RGBA_10x10 = -58,
+        [global::System.@ObsoleteAttribute("Enum member TextureFormat.ASTC_RGBA_12x12 is obsolete. Use ASTC_12x12 instead (UnityUpgradable) -> ASTC_12x12", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] ASTC_RGBA_12x12 = -59,
     }
 
     public enum TextureWrapMode
@@ -2148,7 +2148,7 @@ namespace UnityEngine.Experimental.Rendering
         Video = 4,
     }
 
-    public enum FormatUsage
+    [global::System.@ObsoleteAttribute("Use GraphicsFormatUsage instead", false)] public enum FormatUsage
     {
         Sample = 0,
         Linear = 1,
@@ -2258,9 +2258,9 @@ namespace UnityEngine.Experimental.Rendering
         D32_SFloat = 93,
         D32_SFloat_S8_UInt = 94,
         S8_UInt = 95,
-        [Obsolete] RGB_DXT1_SRGB = 96,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member GraphicsFormat.RGB_DXT1_SRGB has been deprecated. Use GraphicsFormat.RGBA_DXT1_SRGB instead (UnityUpgradable) -> RGBA_DXT1_SRGB", true)] RGB_DXT1_SRGB = 96,
         RGBA_DXT1_SRGB = 96,
-        [Obsolete] RGB_DXT1_UNorm = 97,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member GraphicsFormat.RGB_DXT1_UNorm has been deprecated. Use GraphicsFormat.RGBA_DXT1_UNorm instead (UnityUpgradable) -> RGBA_DXT1_UNorm", true)] RGB_DXT1_UNorm = 97,
         RGBA_DXT1_UNorm = 97,
         RGBA_DXT3_SRGB = 98,
         RGBA_DXT3_UNorm = 99,
@@ -2306,9 +2306,9 @@ namespace UnityEngine.Experimental.Rendering
         RGBA_ASTC12X12_SRGB = 139,
         RGBA_ASTC12X12_UNorm = 140,
         YUV2 = 141,
-        [Obsolete] DepthAuto = 142,
-        [Obsolete] ShadowAuto = 143,
-        [Obsolete] VideoAuto = 144,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member GraphicsFormat.DepthAuto is obsolete. Use GraphicsFormat.None as a color format to indicate depth only rendering and DefaultFormat to get the default depth buffer format.", true)] DepthAuto = 142,
+        [global::System.@ObsoleteAttribute("Enum member GraphicsFormat.ShadowAuto is obsolete. Use GraphicsFormat.None as a color format to indicate depth only rendering, DefaultFormat to get the default shadow buffer format and ShadowSamplingMode.CompareDepths to enable shadowmap sampling.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] ShadowAuto = 143,
+        [global::System.@ObsoleteAttribute("Enum member GraphicsFormat.VideoAuto is obsolete. Use DefaultFormat instead.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] VideoAuto = 144,
         RGBA_ASTC4X4_UFloat = 145,
         RGBA_ASTC5X5_UFloat = 146,
         RGBA_ASTC6X6_UFloat = 147,
@@ -2326,7 +2326,7 @@ namespace UnityEngine.Experimental.Rendering
         DontInitializePixels = 4,
         Crunch = 64,
         DontUploadUponCreate = 1024,
-        [Obsolete] IgnoreMipmapLimit = 2048,
+        [global::System.@ObsoleteAttribute("IgnoreMipmapLimit flag is no longer used since this is now the default behavior for all Texture shapes. Please provide mipmap limit information using a MipmapLimitDescriptor argument.", false)] IgnoreMipmapLimit = 2048,
     }
 
 }
@@ -2417,9 +2417,9 @@ namespace UnityEngine.Rendering
         Depth = 3,
         DepthNormals = 4,
         ResolvedDepth = 5,
-        [Obsolete] PrepassNormalsSpec = 7,
-        [Obsolete] PrepassLight = 8,
-        [Obsolete] PrepassLightSpec = 9,
+        [global::System.@ObsoleteAttribute("Deferred Lighting has been removed, so PrepassNormalsSpec built-in render texture type is never used now.", false)] PrepassNormalsSpec = 7,
+        [global::System.@ObsoleteAttribute("Deferred Lighting has been removed, so PrepassLight built-in render texture type is never used now.", false)] PrepassLight = 8,
+        [global::System.@ObsoleteAttribute("Deferred Lighting has been removed, so PrepassLightSpec built-in render texture type is never used now.", false)] PrepassLightSpec = 9,
         GBuffer0 = 10,
         GBuffer1 = 11,
         GBuffer2 = 12,
@@ -2510,27 +2510,27 @@ namespace UnityEngine.Rendering
 
     public enum GraphicsDeviceType
     {
-        [Obsolete] OpenGL2 = 0,
-        [Obsolete] Direct3D9 = 1,
+        [global::System.@ObsoleteAttribute("OpenGL2 is no longer supported in Unity 5.5+")] OpenGL2 = 0,
+        [global::System.@ObsoleteAttribute("Direct3D 9 is no longer supported in Unity 2017.2+")] Direct3D9 = 1,
         Direct3D11 = 2,
-        [Obsolete] PlayStation3 = 3,
+        [global::System.@ObsoleteAttribute("PS3 is no longer supported in Unity 5.5+")] PlayStation3 = 3,
         Null = 4,
-        [Obsolete] Xbox360 = 6,
-        [Obsolete] OpenGLES2 = 8,
+        [global::System.@ObsoleteAttribute("Xbox360 is no longer supported in Unity 5.5+")] Xbox360 = 6,
+        [global::System.@ObsoleteAttribute("OpenGL ES 2.0 is no longer supported in Unity 2023.1")] OpenGLES2 = 8,
         OpenGLES3 = 11,
-        [Obsolete] PlayStationVita = 12,
+        [global::System.@ObsoleteAttribute("PVita is no longer supported as of Unity 2018")] PlayStationVita = 12,
         PlayStation4 = 13,
         XboxOne = 14,
-        [Obsolete] PlayStationMobile = 15,
+        [global::System.@ObsoleteAttribute("PlayStationMobile is no longer supported in Unity 5.3+")] PlayStationMobile = 15,
         Metal = 16,
         OpenGLCore = 17,
         Direct3D12 = 18,
-        [Obsolete] N3DS = 19,
+        [global::System.@ObsoleteAttribute("Nintendo 3DS support is unavailable since 2018.1")] N3DS = 19,
         Vulkan = 21,
         Switch = 22,
         XboxOneD3D12 = 23,
         GameCoreXboxOne = 24,
-        [Obsolete] GameCoreScarlett = -1,
+        [global::System.@ObsoleteAttribute("GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries", false)] GameCoreScarlett = -1,
         GameCoreXboxSeries = 25,
         PlayStation5 = 26,
         PlayStation5NGGC = 27,
@@ -2761,7 +2761,7 @@ namespace UnityEngine
 {
     public enum NPOTSupport
     {
-        [Obsolete] None = 0,
+        [global::System.@ObsoleteAttribute("NPOTSupport.None does not happen on any platforms")] None = 0,
         Restricted = 1,
         Full = 2,
     }
@@ -2774,39 +2774,39 @@ namespace UnityEditor
     public enum BuildTarget
     {
         StandaloneOSX = 2,
-        [Obsolete] StandaloneOSXUniversal = 3,
-        [Obsolete] StandaloneOSXIntel = 4,
+        [global::System.@ObsoleteAttribute("Use StandaloneOSX instead (UnityUpgradable) -> StandaloneOSX", true)] StandaloneOSXUniversal = 3,
+        [global::System.@ObsoleteAttribute("StandaloneOSXIntel has been removed in 2017.3")] StandaloneOSXIntel = 4,
         StandaloneWindows = 5,
-        [Obsolete] WebPlayer = 6,
-        [Obsolete] WebPlayerStreamed = 7,
+        [global::System.@ObsoleteAttribute("WebPlayer has been removed in 5.4", true)] WebPlayer = 6,
+        [global::System.@ObsoleteAttribute("WebPlayerStreamed has been removed in 5.4", true)] WebPlayerStreamed = 7,
         iOS = 9,
-        [Obsolete] PS3 = 10,
-        [Obsolete] XBOX360 = 11,
+        [global::System.@ObsoleteAttribute("PS3 has been removed in >=5.5")] PS3 = 10,
+        [global::System.@ObsoleteAttribute("XBOX360 has been removed in 5.5")] XBOX360 = 11,
         Android = 13,
-        [Obsolete] StandaloneLinux = 17,
+        [global::System.@ObsoleteAttribute("StandaloneLinux has been removed in 2019.2")] StandaloneLinux = 17,
         StandaloneWindows64 = 19,
         WebGL = 20,
         WSAPlayer = 21,
         StandaloneLinux64 = 24,
-        [Obsolete] StandaloneLinuxUniversal = 25,
-        [Obsolete] WP8Player = 26,
-        [Obsolete] StandaloneOSXIntel64 = 27,
-        [Obsolete] BlackBerry = 28,
-        [Obsolete] Tizen = 29,
-        [Obsolete] PSP2 = 30,
+        [global::System.@ObsoleteAttribute("StandaloneLinuxUniversal has been removed in 2019.2")] StandaloneLinuxUniversal = 25,
+        [global::System.@ObsoleteAttribute("Use WSAPlayer with Windows Phone 8.1 selected")] WP8Player = 26,
+        [global::System.@ObsoleteAttribute("StandaloneOSXIntel64 has been removed in 2017.3")] StandaloneOSXIntel64 = 27,
+        [global::System.@ObsoleteAttribute("BlackBerry has been removed in 5.4")] BlackBerry = 28,
+        [global::System.@ObsoleteAttribute("Tizen has been removed in 2017.3")] Tizen = 29,
+        [global::System.@ObsoleteAttribute("PSP2 is no longer supported as of Unity 2018.3")] PSP2 = 30,
         PS4 = 31,
-        [Obsolete] PSM = 32,
+        [global::System.@ObsoleteAttribute("PSM has been removed in >= 5.3")] PSM = 32,
         XboxOne = 33,
-        [Obsolete] SamsungTV = 34,
-        [Obsolete] N3DS = 35,
-        [Obsolete] WiiU = 36,
+        [global::System.@ObsoleteAttribute("SamsungTV has been removed in 2017.3")] SamsungTV = 34,
+        [global::System.@ObsoleteAttribute("Nintendo 3DS support is unavailable since 2018.1")] N3DS = 35,
+        [global::System.@ObsoleteAttribute("Wii U support was removed in 2018.1")] WiiU = 36,
         tvOS = 37,
         Switch = 38,
-        [Obsolete] Lumin = 39,
-        [Obsolete] Stadia = 40,
-        [Obsolete] CloudRendering = 41,
+        [global::System.@ObsoleteAttribute("Lumin has been removed in 2022.2")] Lumin = 39,
+        [global::System.@ObsoleteAttribute("Stadia has been removed in 2023.1")] Stadia = 40,
+        [global::System.@ObsoleteAttribute("CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation", false)] CloudRendering = 41,
         LinuxHeadlessSimulation = 41,
-        [Obsolete] GameCoreScarlett = 42,
+        [global::System.@ObsoleteAttribute("GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries", false)] GameCoreScarlett = 42,
         GameCoreXboxSeries = 42,
         GameCoreXboxOne = 43,
         PS5 = 44,
@@ -2815,9 +2815,9 @@ namespace UnityEditor
         VisionOS = 47,
         Switch2 = 48,
         Kepler = 49,
-        [Obsolete] iPhone = -1,
-        [Obsolete] BB10 = -1,
-        [Obsolete] MetroPlayer = -1,
+        [global::System.@ObsoleteAttribute("Use iOS instead (UnityUpgradable) -> iOS", true)] iPhone = -1,
+        [global::System.@ObsoleteAttribute("BlackBerry has been removed in 5.4")] BB10 = -1,
+        [global::System.@ObsoleteAttribute("Use WSAPlayer instead (UnityUpgradable) -> WSAPlayer", true)] MetroPlayer = -1,
         NoTarget = -2,
     }
 
@@ -2825,33 +2825,33 @@ namespace UnityEditor
     {
         Unknown = 0,
         Standalone = 1,
-        [Obsolete] WebPlayer = 2,
-        [Obsolete] iPhone = 4,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("WebPlayer was removed in 5.4, consider using WebGL", true)] WebPlayer = 2,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use iOS instead (UnityUpgradable) -> iOS", true)] iPhone = 4,
         iOS = 4,
-        [Obsolete] PS3 = 5,
-        [Obsolete] XBOX360 = 6,
+        [global::System.@ObsoleteAttribute("PS3 has been removed in >=5.5")] PS3 = 5,
+        [global::System.@ObsoleteAttribute("XBOX360 has been removed in 5.5")] XBOX360 = 6,
         Android = 7,
         WebGL = 13,
         WSA = 14,
-        [Obsolete] Metro = 14,
-        [Obsolete] WP8 = 15,
-        [Obsolete] BlackBerry = 16,
-        [Obsolete] Tizen = 17,
-        [Obsolete] PSP2 = 18,
+        [global::System.@ObsoleteAttribute("Use WSA instead")] Metro = 14,
+        [global::System.@ObsoleteAttribute("Use WSA instead")] WP8 = 15,
+        [global::System.@ObsoleteAttribute("BlackBerry has been removed as of 5.4")] BlackBerry = 16,
+        [global::System.@ObsoleteAttribute("Tizen has been removed in 2017.3")] Tizen = 17,
+        [global::System.@ObsoleteAttribute("PSP2 is no longer supported as of Unity 2018.3")] PSP2 = 18,
         PS4 = 19,
-        [Obsolete] PSM = 20,
+        [global::System.@ObsoleteAttribute("PSM has been removed in >= 5.3")] PSM = 20,
         XboxOne = 21,
-        [Obsolete] SamsungTV = 22,
-        [Obsolete] N3DS = 23,
-        [Obsolete] WiiU = 24,
+        [global::System.@ObsoleteAttribute("SamsungTV has been removed as of 2017.3")] SamsungTV = 22,
+        [global::System.@ObsoleteAttribute("Nintendo 3DS support is unavailable since 2018.1")] N3DS = 23,
+        [global::System.@ObsoleteAttribute("Wii U support was removed in 2018.1")] WiiU = 24,
         tvOS = 25,
-        [Obsolete] Facebook = 26,
+        [global::System.@ObsoleteAttribute("Facebook support was removed in 2019.3")] Facebook = 26,
         Switch = 27,
-        [Obsolete] Lumin = 28,
-        [Obsolete] Stadia = 29,
-        [Obsolete] CloudRendering = 30,
+        [global::System.@ObsoleteAttribute("Lumin has been removed in 2022.2")] Lumin = 28,
+        [global::System.@ObsoleteAttribute("Stadia has been removed in 2023.1")] Stadia = 29,
+        [global::System.@ObsoleteAttribute("CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation", false)] CloudRendering = 30,
         LinuxHeadlessSimulation = 30,
-        [Obsolete] GameCoreScarlett = 31,
+        [global::System.@ObsoleteAttribute("GameCoreScarlett is deprecated, please use GameCoreXboxSeries (UnityUpgradable) -> GameCoreXboxSeries", false)] GameCoreScarlett = 31,
         GameCoreXboxSeries = 31,
         GameCoreXboxOne = 32,
         PS5 = 33,
@@ -2889,7 +2889,7 @@ namespace UnityEditor
     {
         NotAPrefab = 0,
         Connected = 1,
-        [Obsolete] Disconnected = 2,
+        [global::System.@ObsoleteAttribute("PrefabInstanceStatus.Disconnected has been deprecated and is not used. Prefabs can not be in a disconnected state.")] Disconnected = 2,
         MissingAsset = 3,
     }
 

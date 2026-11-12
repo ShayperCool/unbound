@@ -349,7 +349,7 @@ namespace UnityEngine
 
         public enum Lightmapper
         {
-            [Obsolete("Use Lightmapper.ProgressiveCPU instead. (UnityUpgradable) -> UnityEngine.LightingSettings/Lightmapper.ProgressiveCPU")] Enlighten = 0,
+            [global::System.@ObsoleteAttribute("Use Lightmapper.ProgressiveCPU instead. (UnityUpgradable) -> UnityEngine.LightingSettings/Lightmapper.ProgressiveCPU", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] Enlighten = 0,
             ProgressiveCPU = 1,
             ProgressiveGPU = 2,
         }
@@ -372,7 +372,7 @@ namespace UnityEngine
             None = 0,
             Optix = 1,
             OpenImage = 2,
-            [Obsolete("DenoiserType.RadeonPro is obsolete, use DenoiserType.OpenImage instead.")] RadeonPro = 3,
+            [global::System.@ObsoleteAttribute("DenoiserType.RadeonPro is obsolete, use DenoiserType.OpenImage instead.", true)] RadeonPro = 3,
         }
 
         public enum FilterType

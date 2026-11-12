@@ -344,7 +344,7 @@ namespace UnityEngine.XR
         OcclusionMesh = 4,
         MotionVectors = 5,
     }
-    public enum TrackingSpaceType
+    [global::System.@ObsoleteAttribute("This is obsolete, and should no longer be used.  Please use InputTrackingModeFlags.")] public enum TrackingSpaceType
     {
         Stationary = 0,
         RoomScale = 1,

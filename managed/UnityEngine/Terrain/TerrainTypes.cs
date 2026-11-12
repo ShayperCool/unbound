@@ -75,7 +75,7 @@ namespace UnityEngine
 
     public sealed partial class Terrain
     {
-        [Obsolete("Enum type MaterialType is not used any more.")]
+        [global::System.@ObsoleteAttribute("Enum type MaterialType is not used any more.", false)]
         public enum MaterialType
         {
             BuiltInStandard = 0,

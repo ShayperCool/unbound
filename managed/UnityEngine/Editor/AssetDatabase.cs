@@ -421,6 +421,6 @@ namespace UnityEditor
         None = 0,
         DisableDomainReload = 1,
         DisableSceneReload = 2,
-        DisableSceneBackupUnlessDirty = 4,
+        [global::System.@ObsoleteAttribute("Option has no effect and is deprecated.")] DisableSceneBackupUnlessDirty = 4,
     }
 }

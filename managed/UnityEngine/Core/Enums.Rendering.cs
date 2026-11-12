@@ -31,10 +31,10 @@ namespace UnityEngine
     {
         NonDirectional = 0,
         CombinedDirectional = 1,
-        [Obsolete] SeparateDirectional = 2,
-        [Obsolete] Single = 0,
-        [Obsolete] Dual = 1,
-        [Obsolete] Directional = 2,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member LightmapsMode.SeparateDirectional has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional", true)] SeparateDirectional = 2,
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Enum member LightmapsMode.Single has been removed. Use NonDirectional instead (UnityUpgradable) -> NonDirectional", true)] Single = 0,
+        [global::System.@ObsoleteAttribute("Enum member LightmapsMode.Dual has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] Dual = 1,
+        [global::System.@ObsoleteAttribute("Enum member LightmapsMode.Directional has been removed. Use CombinedDirectional instead (UnityUpgradable) -> CombinedDirectional", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] Directional = 2,
     }
 
     public enum LODFadeMode
@@ -169,7 +169,7 @@ namespace UnityEngine.Rendering
     {
         UNITY_NO_DXT5nm = 0,
         UNITY_NO_RGBM = 1,
-        [Obsolete] UNITY_USE_NATIVE_HDR = 2,
+        [global::System.@ObsoleteAttribute("Shaders unconditionally support HDR decoding.")] UNITY_USE_NATIVE_HDR = 2,
         UNITY_ENABLE_REFLECTION_BUFFERS = 3,
         UNITY_FRAMEBUFFER_FETCH_AVAILABLE = 4,
         UNITY_ENABLE_NATIVE_SHADOW_LOOKUPS = 5,
@@ -180,7 +180,7 @@ namespace UnityEngine.Rendering
         UNITY_PBS_USE_BRDF1 = 10,
         UNITY_PBS_USE_BRDF2 = 11,
         UNITY_PBS_USE_BRDF3 = 12,
-        [Obsolete] UNITY_NO_FULL_STANDARD_SHADER = 13,
+        [global::System.@ObsoleteAttribute("UNITY_NO_FULL_STANDARD_SHADER is never defined since OpenGL ES 2.0 was removed.")] UNITY_NO_FULL_STANDARD_SHADER = 13,
         UNITY_SPECCUBE_BOX_PROJECTION = 14,
         UNITY_SPECCUBE_BLENDING = 15,
         UNITY_ENABLE_DETAIL_NORMALMAP = 16,
@@ -191,7 +191,7 @@ namespace UnityEngine.Rendering
         UNITY_HARDWARE_TIER3 = 21,
         UNITY_COLORSPACE_GAMMA = 22,
         UNITY_LIGHT_PROBE_PROXY_VOLUME = 23,
-        [Obsolete] UNITY_HALF_PRECISION_FRAGMENT_SHADER_REGISTERS = 24,
+        [global::System.@ObsoleteAttribute("UNITY_HALF_PRECISION_FRAGMENT_SHADER_REGISTERS is never defined since OpenGL ES 2.0 was removed.")] UNITY_HALF_PRECISION_FRAGMENT_SHADER_REGISTERS = 24,
         UNITY_LIGHTMAP_DLDR_ENCODING = 25,
         UNITY_LIGHTMAP_RGBM_ENCODING = 26,
         UNITY_LIGHTMAP_FULL_HDR = 27,
@@ -415,8 +415,8 @@ namespace UnityEngine.Rendering
     {
         None = 0,
         BuiltinDefault = 2,
-        [Obsolete] BuiltinExtra = 6,
-        [Obsolete] BuiltinAutoStripped = 10,
+        [global::System.@ObsoleteAttribute("Shader keyword type BuiltinExtra is no longer used. Use BuiltinDefault instead. (UnityUpgradable) -> BuiltinDefault")] BuiltinExtra = 6,
+        [global::System.@ObsoleteAttribute("Shader keyword type BuiltinAutoStripped is no longer used. Use BuiltinDefault instead. (UnityUpgradable) -> BuiltinDefault")] BuiltinAutoStripped = 10,
         UserDefined = 16,
         Plugin = 32,
     }

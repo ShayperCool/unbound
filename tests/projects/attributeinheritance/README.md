@@ -57,3 +57,25 @@ as profiling commands. Exact conditional names and overload selection come from 
 The conditional expansion adds 23 rows from two identical GPU Editor captures,
 bringing the canonical reference to 238 rows. All 215 earlier reference rows remain
 byte-identical; the comparator still rejects every missing, extra or changed value.
+
+## Obsolete enum declarations
+
+The enum slice records 190 obsolete declarations from Unity 6000.0.71f1. Each row
+contains the constructor arity and typed, length-prefixed arguments, including the
+message and error flag. Enum and field names are stored as strings for reflection.
+The stub generator's attribute renderer supplies the source annotations.
+
+API tooling tests compile consumer code against a metadata copy of the engine.
+`BuildTarget.MetroPlayer` and the `BlendWeights` type must produce errors,
+`BuildTarget.BB10` must produce the release's warning and message, and
+`RuntimePlatform.WindowsPlayer` must compile without diagnostics.
+
+[ObsoleteAttribute](https://learn.microsoft.com/en-us/dotnet/api/system.obsoleteattribute?view=net-10.0)
+distinguishes warnings from errors. Unity 6000.0's
+[API updater](https://docs.unity3d.com/6000.0/Documentation/Manual/APIUpdater.html)
+handles only diagnostics marked UnityUpgradable; the consumer controls check the
+compiler diagnostics before any updater processing.
+
+Two identical GPU Editor captures extend the canonical reference from 238 to 428
+rows. Every earlier row remains byte-identical. The exact comparator covers all
+190 added obsolete declarations as well as the earlier controls.
