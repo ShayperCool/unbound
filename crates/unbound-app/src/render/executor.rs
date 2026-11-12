@@ -3322,15 +3322,9 @@ impl UnityRenderer {
         layout: &wgpu::BindGroupLayout,
     ) -> (Option<u32>, bool) {
         let device = self.device.clone();
-        let id = self.compiled.variant(
-            &device,
-            shader,
-            source,
-            keywords,
-            linear,
-            layout,
-            compiled::VariantUse::Draw,
-        );
+        let id = self
+            .compiled
+            .variant(&device, shader, source, keywords, linear, layout);
         if id.is_some() {
             return (id, false);
         }
@@ -3343,7 +3337,6 @@ impl UnityRenderer {
                 &[],
                 linear,
                 layout,
-                compiled::VariantUse::Draw,
             ),
             true,
         )

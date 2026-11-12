@@ -9,13 +9,6 @@ use unbound_assets::color::gamma_to_linear;
 use unbound_runtime::render_protocol::owned::{Material, PropertyValue};
 use unbound_shaders::{Compiled, Program, Scalar, Settings, ShaderCompiler, TextureDim};
 
-/// A logical instancing variant has an optional raw-buffer form and a mesh replay form.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum VariantUse {
-    Draw,
-    OptionalWarmup,
-}
-
 struct ProgramGpu {
     shader: String,
     program: Arc<Compiled>,
@@ -303,7 +296,6 @@ impl CompiledPrograms {
         keywords: &[String],
         linear: bool,
         main_texture_layout: &wgpu::BindGroupLayout,
-        purpose: VariantUse,
     ) -> Option<u32> {
         let compiler = self.compiler.as_mut()?;
         let failure = (source.clone(), keywords.to_vec(), linear);
@@ -313,9 +305,6 @@ impl CompiledPrograms {
         let program = match compiler.compile(source, keywords, linear) {
             Ok(p) => p,
             Err(e) => {
-                if purpose == VariantUse::OptionalWarmup {
-                    return None;
-                }
                 tracing::warn!(
                     "shader `{shader}` (keywords: {}): a pass does not compile for Unbound, so it draws with the error shader: {e:#}",
                     if keywords.is_empty() {
@@ -333,11 +322,6 @@ impl CompiledPrograms {
             return Some(*id);
         }
         if let Some(why) = uniform_bindings_refused(&program, &device.limits()) {
-            // As with a compile error, an optional warm-up leaves the refusal (and its warning)
-            // to the draw that needs the variant.
-            if purpose == VariantUse::OptionalWarmup {
-                return None;
-            }
             tracing::warn!(
                 "shader `{shader}` (keywords: {}): a pass cannot be bound on this device, so it draws with the error shader: {why}",
                 if keywords.is_empty() {

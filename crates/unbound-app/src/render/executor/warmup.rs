@@ -62,49 +62,36 @@ impl UnityRenderer {
                     Box::new(std::iter::once(material.keywords.clone()))
                 };
                 for variant in variants {
-                    // Mesh calls use replay; raw procedural shaders can also use the literal keyword.
-                    // A raw Unity instance buffer is not needed by replay, so its unavailable form
-                    // must not make preparation of a supported mesh variant fail or log a warning.
-                    let instancing = variant.iter().any(|k| k == "INSTANCING_ON");
+                    // The variants draws take ([`Executor::plan_draw`]): the draw decides
+                    // instancing, so a variant's INSTANCING_ON is left out, and an instanced
+                    // mesh call draws the replay variant.
+                    let instancing = variant.iter().any(|k| k == super::INSTANCING_KEYWORD);
                     for replay in [false, true] {
                         if replay && !instancing {
                             continue;
                         }
-                        let mut keywords = variant.clone();
+                        let mut keywords: Vec<String> = variant
+                            .iter()
+                            .filter(|k| *k != super::INSTANCING_KEYWORD)
+                            .cloned()
+                            .collect();
                         if replay {
+                            keywords.push(super::INSTANCING_KEYWORD.into());
                             keywords.push(unbound_shaders::MESH_INSTANCE_REPLAY.into());
                         }
-                        let (id, errored) = if instancing && !replay {
-                            let Some(id) = self.compiled.variant(
-                                &self.device,
-                                &resolved.shader,
-                                &pass.program,
-                                &keywords,
-                                self.color_space == 1,
-                                &layout,
-                                compiled::VariantUse::OptionalWarmup,
-                            ) else {
-                                continue;
-                            };
-                            (id, false)
-                        } else {
-                            let (id, errored) = self.variant_or_error(
-                                &resolved.shader,
-                                &pass.program,
-                                &keywords,
-                                self.color_space == 1,
-                                &layout,
-                            );
-                            (
-                                id.ok_or_else(|| {
-                                    format!(
-                                        "shader `{}` pass {index} could not be warmed up",
-                                        resolved.shader
-                                    )
-                                })?,
-                                errored,
+                        let (id, errored) = self.variant_or_error(
+                            &resolved.shader,
+                            &pass.program,
+                            &keywords,
+                            self.color_space == 1,
+                            &layout,
+                        );
+                        let id = id.ok_or_else(|| {
+                            format!(
+                                "shader `{}` pass {index} could not be warmed up",
+                                resolved.shader
                             )
-                        };
+                        })?;
                         // Program preparation does not require this attachment configuration.
                         // As with other later target changes, an incompatible scalar type can
                         // require a pipeline on the first draw into the appropriate target.
