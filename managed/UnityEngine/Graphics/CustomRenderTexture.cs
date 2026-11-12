@@ -222,6 +222,7 @@ namespace UnityEngine
 
         static readonly int s_SelfTexture2D = Shader.PropertyToID("_SelfTexture2D");
         static readonly int s_SelfTextureCube = Shader.PropertyToID("_SelfTextureCube");
+        static readonly int s_SelfTexture3D = Shader.PropertyToID("_SelfTexture3D");
         static readonly int s_Info = Shader.PropertyToID("_CustomRenderTextureInfo");
         static readonly int s_Parameters = Shader.PropertyToID("CustomRenderTextureParameters");
         static readonly int s_Centers = Shader.PropertyToID("CustomRenderTextureCenters");
@@ -233,22 +234,24 @@ namespace UnityEngine
         const int VerticesPerZone = 6;
 
         static Material s_InitBlit;
-        bool m_ReportedVolume, m_ReportedInitTexture, m_ReportedPass;
+        bool m_ReportedInitTexture, m_ReportedPass;
 
-        int Faces => dimension == TextureDimension.Cube ? 6 : 1;
-
-        /// <summary>Volume update zones are unsupported: the texture is left as it is,
-        /// with an error.</summary>
-        bool Unsupported()
+        /// <summary>The faces of a cubemap, the slices of a volume at a mip level, else one.</summary>
+        int Elements(int mip = 0) => dimension switch
         {
-            if (dimension != TextureDimension.Tex3D) return false;
-            if (!m_ReportedVolume)
-            {
-                m_ReportedVolume = true;
-                Debug.LogError($"CustomRenderTexture '{name}' is a 3D texture: volume update zones are not supported, so it is neither initialized nor updated.");
-            }
-            return true;
-        }
+            TextureDimension.Cube => 6,
+            TextureDimension.Tex3D => Math.Max(1, volumeDepth >> mip),
+            _ => 1,
+        };
+
+        /// <summary>The self texture of the dimension (a double-buffered texture reads its
+        /// other buffer through it).</summary>
+        int SelfTexture => dimension switch
+        {
+            TextureDimension.Cube => s_SelfTextureCube,
+            TextureDimension.Tex3D => s_SelfTexture3D,
+            _ => s_SelfTexture2D,
+        };
 
         /// <summary>Creates the texture when it is first seen (the second buffer comes with the
         /// first initialization or update: measured, a double-buffered texture never initialized
@@ -259,13 +262,12 @@ namespace UnityEngine
         internal void RunInitialization()
         {
             m_UpdatedSinceInit = false;
-            if (Unsupported()) return;
             EnsureCreated();
             EnsureDoubleBufferConsistency();
             ulong target = EnsureCreated();
             var saved = GfxStream.Current;
-            for (int face = 0; face < Faces; face++)
-                InitializeFace(target, face);
+            for (int element = 0; element < Elements(); element++)
+                InitializeElement(target, element);
             if (m_DoubleBuffered && m_Other != null)
             {
                 CopyLevels(target, m_Other.EnsureCreated());
@@ -273,7 +275,7 @@ namespace UnityEngine
             Restore(saved);
         }
 
-        void InitializeFace(ulong target, int face)
+        void InitializeElement(ulong target, int face)
         {
             var properties = Variables(face, 0f);
             if (m_InitSource == CustomRenderTextureInitializationSource.Material && m_InitMaterial != null)
@@ -288,12 +290,14 @@ namespace UnityEngine
                 GfxStream.Clear(1, m_InitColor);
                 return;
             }
-            if (m_InitTexture.dimension != TextureDimension.Tex2D)
+            if (m_InitTexture.dimension != TextureDimension.Tex2D || dimension == TextureDimension.Tex3D)
             {
                 if (!m_ReportedInitTexture)
                 {
                     m_ReportedInitTexture = true;
-                    Debug.LogError($"CustomRenderTexture '{name}': initialization from a {m_InitTexture.dimension} texture is not supported; it is initialized with its color.");
+                    Debug.LogError(dimension == TextureDimension.Tex3D
+                        ? $"CustomRenderTexture '{name}': initialization of a 3D texture from a texture is not supported; it is initialized with its color."
+                        : $"CustomRenderTexture '{name}': initialization from a {m_InitTexture.dimension} texture is not supported; it is initialized with its color.");
                 }
                 GfxStream.SetTarget(target, 0, 0, face);
                 GfxStream.Clear(1, m_InitColor);
@@ -323,22 +327,31 @@ namespace UnityEngine
             GfxStream.SetTarget(active != null ? active.EnsureCreated() : 0);
         }
 
-        /// <summary>The variables Unity's include reads, for a face: _CustomRenderTextureInfo
-        /// (width, height, depth 1, face) and CustomRenderTextureParameters (pixel space, the
-        /// face as the third texcoord, not 3D) (measured for 2D textures and cubemaps).</summary>
-        Dictionary<int, object> Variables(int face, float space)
+        /// <summary>The variables Unity's include reads, for a face or slice: _CustomRenderTextureInfo
+        /// (width, height, depth, face or slice; depth 1 but for volumes) and
+        /// CustomRenderTextureParameters (pixel space, the face for cubemaps or slice / depth for
+        /// volumes, 1 for volumes, 0) (measured for 2D textures, cubemaps and volumes).</summary>
+        Dictionary<int, object> Variables(int element, float space)
         {
+            if (dimension == TextureDimension.Tex3D)
+            {
+                return new Dictionary<int, object>
+                {
+                    [s_Info] = new Vector4(width, height, volumeDepth, element),
+                    [s_Parameters] = new Vector4(space, (float)element / volumeDepth, 1, 0),
+                };
+            }
             return new Dictionary<int, object>
             {
-                [s_Info] = new Vector4(width, height, 1, face),
-                [s_Parameters] = new Vector4(space, face, 0, 0),
+                [s_Info] = new Vector4(width, height, 1, element),
+                [s_Parameters] = new Vector4(space, element, 0, 0),
             };
         }
 
         /// <summary>Runs <paramref name="count"/> updates.</summary>
         internal void RunUpdates(int count)
         {
-            if (count <= 0 || m_Material == null || Unsupported()) return;
+            if (count <= 0 || m_Material == null) return;
             EnsureCreated();
             EnsureDoubleBufferConsistency();
             var saved = GfxStream.Current;
@@ -455,14 +468,16 @@ namespace UnityEngine
             ulong material = m_Material.Sync();
             bool selfBound = m_DoubleBuffered && m_Other != null;
             ulong target = selfBound ? m_Other.EnsureCreated() : EnsureCreated();
-            for (int face = 0; face < Faces; face++)
+            // Every slice of a volume draws the batch; the include drops the zones whose slices
+            // it is not in.
+            for (int face = 0; face < Elements(); face++)
             {
                 if (dimension == TextureDimension.Cube && (m_CubemapFaceMask & (1u << face)) == 0) continue;
                 var properties = Variables(face, space);
                 properties[s_Centers] = centers;
                 properties[s_SizesAndRotations] = sizes;
                 properties[s_PrimitiveIds] = ids;
-                if (selfBound) properties[dimension == TextureDimension.Cube ? s_SelfTextureCube : s_SelfTexture2D] = (Texture)this;
+                if (selfBound) properties[SelfTexture] = (Texture)this;
                 GfxStream.SetTarget(target, 0, 0, face);
                 GfxStream.Camera(Matrix4x4.identity, Matrix4x4.identity);
                 GfxStream.Draw(mesh, 0, material, pass, Matrix4x4.identity, Color.white, properties: properties);
@@ -492,17 +507,18 @@ namespace UnityEngine
             CopyLevels(t, b);
         }
 
-        /// <summary>Copies every face and every mip of this texture's description between two
-        /// textures of that description. Updates draw into mip 0 only (the renderer regenerates an
+        /// <summary>Copies every face or slice and every mip of this texture's description between
+        /// two textures of that description. Updates draw into mip 0 only (the renderer regenerates an
         /// auto-generated chain after the pass), so the whole chain is copied: a copy of mip 0 alone
         /// would leave the other buffer's lower mips with older content.</summary>
         void CopyLevels(ulong from, ulong to)
         {
             var whole = new RectInt(0, 0, -1, -1);
             int mips = mipmapCount;
-            for (int face = 0; face < Faces; face++)
-                for (int mip = 0; mip < mips; mip++)
-                    GfxStream.CopyTexture(from, face, mip, whole, to, face, mip, 0, 0);
+            // A volume's mips have fewer slices: half the depth per level.
+            for (int element = 0; element < Elements(); element++)
+                for (int mip = 0; mip < mips && element < Elements(mip); mip++)
+                    GfxStream.CopyTexture(from, element, mip, whole, to, element, mip, 0, 0);
         }
 
         /// <summary>The custom render textures and render textures this one's materials read.</summary>

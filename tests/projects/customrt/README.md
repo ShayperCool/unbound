@@ -88,14 +88,15 @@ and image manifest, with the rtdepth probe's float tolerance (absolute and relat
   variables is visible to other draws after an update.
 * Textures update after the textures their materials read, whichever was made first.
 * 3D custom render textures work in the Editor (a depth buffer makes their creation fail with
-  "3D textures with depth are not supported"); Unbound does not render into 3D render textures
-  yet and reports that with an error instead.
+  "3D textures with depth are not supported"): every slice is initialized and updated, with the
+  slice in `_CustomRenderTextureInfo.w` and slice / depth as the third texcoord; a zone's z
+  (scaled by the depth in normalized space) selects the slices it updates.
 
-## Unbound (2026-11-01)
+## Unbound (2026-11-12)
 
-349 of 352 values and 100 of 140 images match (13,888 of 14,896 image channels). The three
-values left: the api section's textures, made in the first frame of Play mode, load in that
-frame (`ev.api`, `api.all.next`), and the volume section logs Unbound's error for 3D custom
-render textures (`log.volume`); its 40 slice images differ because Unbound does not render into
-3D render textures. Before the implementation the probe ran into the generated stubs and
-stopped with a GPU validation error copying 3D render texture slices, writing no values.
+350 of 352 values and 140 of 140 images match. The two values left: the api section's
+textures, made in the first frame of Play mode, load in that frame in Unbound (`ev.api`,
+`api.all.next`); the Editor never loads them (it lists none of them in the next frame and sends
+them no events), while textures made in later frames load in their first frame in both.
+Initializing a 3D custom render texture from a texture is not supported (an error, and the
+initialization color instead); the probe does not record it in the Editor.

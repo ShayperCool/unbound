@@ -74,6 +74,40 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>A volume's swap copies every slice of every mip: the mips have half the depth
+        /// per level (16x16x8: 8, 4, 2, 1 and 1 slices).</summary>
+        [Fact]
+        public void DoubleBufferSwapCopiesEverySliceOfEveryMipOfAVolume()
+        {
+            var crt = new CustomRenderTexture(16, 16) { dimension = TextureDimension.Tex3D, volumeDepth = 8, depth = 0, useMipMap = true, autoGenerateMips = true, doubleBuffered = true };
+            try
+            {
+                crt.EnsureDoubleBufferConsistency();
+                crt.Swap();
+                GfxStream.Flush();
+                crt.Swap();
+                var copies = Copies(GfxStream.Recorded);
+                GfxStream.Flush();
+                Assert.Equal(5, crt.mipmapCount);
+                ulong a = crt.EnsureCreated();
+                var fromThis = copies.FindAll(c => c.Source == a);
+                var expected = new List<(int, int)>();
+                for (int slice = 0; slice < 8; slice++)
+                    for (int mip = 0; mip < 5 && slice < Math.Max(1, 8 >> mip); mip++)
+                        expected.Add((slice, mip));
+                Assert.Equal(expected, fromThis.ConvertAll(c => (c.SourceSlice, c.SourceMip)));
+                Assert.Equal(3 * (8 + 4 + 2 + 1 + 1), copies.Count);
+                Assert.All(copies, c => Assert.Equal(c.SourceSlice, c.DestinationSlice));
+            }
+            finally
+            {
+                GfxStream.Flush();
+                var other = crt.GetDoubleBufferRenderTexture();
+                if (other != null) Object.DestroyImmediate(other);
+                Object.DestroyImmediate(crt);
+            }
+        }
+
         [Fact]
         public void DoubleBufferWithoutMipsCopiesOneLevel()
         {
