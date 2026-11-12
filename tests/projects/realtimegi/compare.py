@@ -9,8 +9,9 @@ Two classes of values:
   each renderer's realtime lightmap index and scale/offset, the lightmaps mode, the light probe
   count and baked coefficients, DynamicGI.isConverged, the recorded API defaults, what
   DynamicGI.SetEnvironmentData throws, the default reflection (ReflectionProbe.defaultTexture's
-  name, dimension and size, its decode values) and which atlas texels renderers cover (their
-  realtime lightmap UVs).
+  name, dimension and size, its decode values), every value of the cases that record API answers
+  alone (API_CASES: Light.dilatedRange) and which atlas texels renderers cover (their realtime
+  lightmap UVs).
 - Lighting: light probe SH (each sample point, 27 coefficients; gated where a case records them
   as `interpolated`) and the ambient probe
   (RenderSettings.ambientProbe, gated) within ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
@@ -61,6 +62,8 @@ OWN_SHARE = 0.04
 FRAME_MEAN = 2.0
 STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode', 'wrongLength', 'noArray',
               'defaultTexture', 'dimension', 'reflectionSize', 'decode')
+# Cases that hold API answers alone (numbers a script reads): every value is state.
+API_CASES = ('lights-dilatedrange',)
 
 
 def records(path):
@@ -108,6 +111,12 @@ def compare_values(ref, cap, result, own_layout=False):
         for key in STATE_KEYS:
             if key in r and r[key] != c.get(key):
                 result.fail('state', f'{name}: {key} {c.get(key)} != {r[key]}')
+        if name in API_CASES:
+            for key in sorted((set(r) | set(c)) - {'case'}):
+                a, b = c.get(key), r.get(key)
+                numbers = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (a, b))
+                if not (numbers and abs(a - b) <= 1e-6 * max(1.0, abs(b))) and a != b:
+                    result.fail('state', f'{name}: {key} {a} != {b}')
         if 'renderers' in r:
             if [(x['name'], x['index']) for x in r['renderers']] != [(x['name'], x['index']) for x in c.get('renderers', [])]:
                 result.fail('state', f'{name}: renderers/indices {c.get("renderers")} != {r["renderers"]}')
