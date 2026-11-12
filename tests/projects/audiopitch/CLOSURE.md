@@ -9,7 +9,8 @@ for other releases, devices, platforms or arbitrary graph edits.
 |---|---|---|
 | 1. Live surround | [45 controls](TRANSITIONS.md) at 48000/44100 Hz, 1024 frames, Quad/5.0/5.1/7.1 plus a Stereo control. Live parameters, component enabled states and zone presets. | 16,712,055 values per rate pass; current strict device differences 494/841. Reset PCM remains Q373-R1. |
 | 2. Wet and linked paths | [238 wet and 18 placement controls](WET.md) at those rates/buffer and surround layouts. Six wet kinds, Send/Receive, Normalize and reverb startup. | 94,505,124 values per rate pass; strict device differences 721/694 in wet and 29/33 in wet-edges. Silent groups retain their actual history before sources arrive. |
-| 3. Rate/buffer pairs | [168 controls](SETTINGS.md): 32000/256 and 48000/512 in Stereo/Quad/5.0/5.1/7.1; 96000/2048 in Stereo/Quad. | 54,134,190 values pass; 3921 strict device differences. Wider 96000/2048 captures remain Q373-R2. |
+| 3. Rate/buffer pairs | [168 controls](SETTINGS.md): 32000/256 and 48000/512 in Stereo/Quad/5.0/5.1/7.1; 96000/2048 in Stereo/Quad. | 54,134,190 values pass; 3921 strict device differences. Further output settings are covered by row 3b. |
+| 3b. Wide settings | [2940 controls](WIDE.md): four rates, eleven requested buffer sizes, Stereo/Quad/5.0/5.1/7.1; two entire rate/buffer pairs excluded. | 964,835,412 values pass; 85,136 strict device differences. Complete 3080-control diagnostics retain all failures. |
 | 4. Prologic | [42 paired controls](PROLOGIC.md) at 48000/44100 Hz, 1024 frames. The recorded device falls back to plain Stereo while retaining the requested getter. | 5,505,368 values per rate pass; strict device differences 236/250. Paired Stereo/Prologic PCM is exact in both repeats. |
 | 5. Live zones | [77 controls](ZONES.md) at 48000/44100 Hz, 1024 frames, Stereo/Quad/5.0/5.1/7.1. Movement, radii, User edits, overlap and listener components. | 24,838,909 values per rate pass; strict device differences 10,836/11,006. |
 | 6. Mono effects | [64 controls](MONO.md) at 48000/44100 Hz, 1024 frames. Chorus taps, reverb folding between effects, wet boundaries and linked processing, with Stereo-output mono-clip controls. | 4,456,925 values per rate pass; strict device differences 329/401. |
@@ -28,9 +29,12 @@ audio probes remain required validation gates.
   rates. API callback flags, requested state and generated-clip loss agree.
   Both diagnostic sessions remain runnable. No canonical reset PCM, alignment
   correction or scheduling change is certified by this task.
-- **Q373-R2. Wider 96000 Hz / 2048-frame callback captures.** Fresh Surround
-  captures assert and can crash; 5.1/7.1 at this pair are also outside admission.
-  Existing clean Stereo/Quad captures do not establish wider behavior.
+- **Q390-R2. Excluded settings and retained histories.** The 32000 Hz /
+  340-frame and 48000 Hz / 256-frame pairs remain outside new Normalize/static
+  wet admission. Full original repeats disagree in those contexts. Per-case
+  Reset also exposes device-only disagreements at 32000 Hz / 512 frames in
+  7.1, so it is diagnostic rather than a canonical startup correction.
+  Wider 96000 Hz / 2048-frame callbacks are captured by the wide profile.
 - **Q373-R3. Listener scripts on zone returns.** The measured return joins after
   listener components. Processing relative to listener `OnAudioFilterRead`
   scripts is unmeasured; component-only Chorus controls do not certify it.

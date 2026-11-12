@@ -26,9 +26,9 @@ def wide_rows():
 
 
 def wide_pcm_rows():
-    """Certified settings; the full wide diagnostic retains the unrepeatable pair."""
+    """Certified settings; the full wide diagnostic retains the unrepeatable pairs."""
     return {key: row for key, row in wide_rows().items()
-            if not key.startswith('context_wide_32000_340_')}
+            if not key.startswith(('context_wide_32000_340_', 'context_wide_48000_256_'))}
 
 
 def all_cases():

@@ -49,8 +49,7 @@ for rate in a.rate or ((48000,) if a.profile in ('settings', 'wide', 'wide-pcm')
         subprocess.run([sys.executable, str(fixture/'engine.py'), '--release', a.release, '--rate', str(rate),
                         '--native-project', str(work/'project'), '--runtime', str(runtime), '--cases', ','.join(selected),
                         '--device-channels', '8', '--work', str(target),
-                        *(['--buffer', '8192'] if a.profile in ('wide', 'wide-pcm') else []),
-                        *(['--reset-cases'] if a.profile == 'wide-pcm' else [])], check=True)
+                        *(['--buffer', '8192'] if a.profile in ('wide', 'wide-pcm') else [])], check=True)
         if session:
             for key, value in json.loads((target/'capture/capture.json').read_text()).items():
                 if key in ('release', 'rate', 'reset_cases'):

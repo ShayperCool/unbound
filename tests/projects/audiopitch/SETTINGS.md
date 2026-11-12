@@ -36,13 +36,13 @@ gives the same delays at 48000/44100 Hz but different delays at the added rates.
 The existing transition compatibility flag selects these measured delays; other
 releases retain the previous unmeasured approximation.
 
-Q373-R2 remains open for 96000 Hz / 2048-frame Surround, 5.1 and 7.1. Independent
-diagnostic sessions produced managed audio callback buffer assertions, including
-a crash in a fresh Surround session. Those sessions are excluded from the
-reference, and the newly extended mixer admission rejects these layouts at this
-pair. A clip-backed diagnostic also could not establish active width through
-AudioRenderer.GetSampleCountForCaptureFrame in this offline capture setup.
-The raw diagnostics remain outside Git; no comparator bounds were changed.
+Q390 adds the [wide settings profile](WIDE.md), including 96000 Hz /
+2048-frame Surround, 5.1 and 7.1. The private capture project starts with an
+8192-frame callback capacity before its first callback. Earlier assertions and
+the clip-backed width diagnostic remain recorded outside Git; they do not
+supply reference PCM. The original 168-control reference stays unchanged.
+The wider profile explicitly excludes two unrepeatable rate/buffer pairs and
+does not certify post-reset recovery or arbitrary retained mixer histories.
 
 Independent clean repeats agree exactly on 54,134,190 values. The engine passes
 all values under the existing gate. The strict comparison retains 3,921

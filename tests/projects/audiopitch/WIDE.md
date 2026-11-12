@@ -27,15 +27,20 @@ source Chorus output at 48000 Hz / 256 frames in 5.1 and 7.1. Current-case Maste
 floats in the latter controls agree. These failures remain in the complete raw
 repeat and engine reports; no original reference or tolerance is changed.
 
-`wide-pcm` declares a different startup context: reset the output before each
-case, then run its normal preflight. It retains the same signals and relative
-control order. Paired 48000 Hz / 256-frame 5.1 and 7.1 captures then agree exactly
-and the engine passes the existing gate. The 32000 Hz / 340-frame configuration
-still has repeat differences after per-case resets, including device output in
-later controls. The entire pair, across all five layouts, stays diagnostic and
-is excluded from additional effect admission. The PCM profile therefore has
-3010 controls in 215 cells. It does not certify retained mixer histories across
-cases or recovery timing following Reset.
+`wide-pcm` keeps the original per-cell startup and control order. It excludes
+the complete 32000 Hz / 340-frame and 48000 Hz / 256-frame pairs across all five
+layouts: 2940 controls in 210 independent cells. Neither whole pair is added to
+Normalize/static-wet admission. Previously supported output contexts remain
+available. Every sample and metadata field in each retained cell is compared;
+there are no sample masks, frame limits or effect-specific exclusions.
+
+Per-case Reset is a separate diagnostic, not a canonical startup correction.
+It removed the two device-only source Chorus disagreements in paired 48000 Hz /
+256-frame controls, but the wider diagnostic still disagreed at 32000 Hz / 340
+frames and introduced device-only repeat differences at 32000 Hz / 512 frames
+in 7.1. It was stopped with partial captures and coverage recorded outside Git.
+This does not establish a general reset or retained-history rule. The original
+full 3080-control repeats and engine comparisons remain complete and unfiltered.
 
 Record two independent projects with `native.py --release 6000.0.71f1 --rate
 48000 --set wide-pcm --work FRESH_CACHE_DIRECTORY`. Verify every GPU renderer
@@ -46,7 +51,7 @@ The 48000 session header is independent of each case's recorded output rate.
 Original float tolerances and the one-step device PCM allowance remain unchanged;
 Master floats receive no additional allowance. Mono and Prologic outside their
 existing profiles, other rates and other buffer lengths remain outside this grid.
-Full `wide` captures, including the excluded pair, remain available with and
+Full `wide` captures, including the excluded pairs, remain available with and
 without `--reset-cases` for diagnosis.
 
 The separate `configurations` capture records buffer-selection metadata at
@@ -74,3 +79,12 @@ by the buffer length gives a different rounded value and can change a later
 Q14 delay sample. One precomputed gain curve supplies every group in a mixer;
 render chunk boundaries do not restart it. Other releases retain their previous,
 unmeasured startup arithmetic until measured separately.
+
+Two independent original-context captures agree exactly on all 964,835,412
+values in the 2940-control PCM scope. The engine passes every value under the
+existing gate. The strict report retains 85,136 device-only differences;
+every Master float passes the original bounds. The complete 3080-control
+engine diagnostic retains nine gate failures across the excluded pairs, down
+from 85 before the shared ramp corrections. The full original Native repeat
+retains eight differences. No excluded diagnostic is treated as an accepted
+residual or substituted into the canonical reference.

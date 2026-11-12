@@ -185,8 +185,11 @@ fn additional_measured_output(config: &MixerConfig, enabled: bool) -> bool {
         && measured_speaker_output(config.speaker_mode)
         && ADDITIONAL_OUTPUT_RATES.contains(&config.sample_rate)
         && ADDITIONAL_OUTPUT_BUFFERS.contains(&config.buffer_size)
-        // Independent captures disagree in this configuration; it remains diagnostic only.
-        && (config.sample_rate, config.buffer_size) != (32000, 340)
+        // Independent captures disagree in these configurations; it remains diagnostic only.
+        && !matches!(
+            (config.sample_rate, config.buffer_size),
+            (32000, 340) | (48000, 256)
+        )
 }
 
 /// The output covered by Normalize and static-wet captures (Unity 6000.0.71f1 Linux Editor,
@@ -1887,7 +1890,7 @@ mod tests {
                             speaker_mode: mode,
                             ..Default::default()
                         };
-                        if (rate, buffer) == (32000, 340) {
+                        if matches!((rate, buffer), (32000, 340) | (48000, 256)) {
                             assert!(spec.validate_in_group(&config, false).is_err());
                             continue;
                         }

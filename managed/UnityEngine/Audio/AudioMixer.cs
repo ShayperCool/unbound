@@ -852,7 +852,8 @@ namespace Unbound.Runtime
             if (!Compat.AudioSurroundEffectsMeasured || !MeasuredSpeakerOutput(mode)) return false;
             return Array.IndexOf(AdditionalOutputRates, config.sampleRate) >= 0
                 && Array.IndexOf(AdditionalOutputBuffers, config.dspBufferSize) >= 0
-                && !(config.sampleRate == 32000 && config.dspBufferSize == 340);
+                && !(config.sampleRate == 32000 && config.dspBufferSize == 340)
+                && !(config.sampleRate == 48000 && config.dspBufferSize == 256);
         }
         // Native 6000.0.71f1 keeps exposed values verbatim but clamps the DSP amount.
         internal float DistortionConfiguration(UnityEngine.Audio.AudioMixer mixer)

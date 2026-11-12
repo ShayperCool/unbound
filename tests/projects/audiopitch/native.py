@@ -18,7 +18,8 @@ p.add_argument('--reset-cases', action='store_true', help='Reset output before e
 p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
-if a.set == 'wide-pcm': a.reset_cases = True
+if a.set == 'wide-pcm' and a.reset_cases:
+    p.error('wide-pcm uses per-cell startup; --reset-cases is diagnostic with --set wide')
 fixture = Path(__file__).resolve().parent
 if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] != 'm_EditorVersion: '+a.release:
     p.error('release does not match fixture')

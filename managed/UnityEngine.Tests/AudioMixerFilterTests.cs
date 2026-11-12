@@ -1172,7 +1172,7 @@ namespace UnityEngine.Tests
             {
                 var config = original; config.sampleRate = rate; config.dspBufferSize = buffer; config.speakerMode = mode;
                 Assert.True(AudioSettings.Reset(config));
-                if (rate == 32000 && buffer == 340) Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+                if ((rate == 32000 && buffer == 340) || (rate == 48000 && buffer == 256)) Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
                 else { group.DspConfiguration(); AudioBackend.Current.UpdateGroup(group); }
             }
             foreach (var setting in new[] { (22050, 512), (88200, 256), (48000, 384) })

@@ -117,3 +117,10 @@ Startup timing after AudioSettings.Reset has an additional
 [19-control diagnostic](RECOVERY.md) recording relative DSP frames and source
 positions. It and the earlier immediate/scheduled recovery diagnostics remain
 uncertified; they do not run in the engine land gate.
+
+The [wide output profile](WIDE.md) adds 2940 controls over four sample rates,
+eleven requested DSP buffer lengths and five layouts, with two whole
+rate/buffer pairs excluded after repeat disagreements. Its canonical
+`wide-pcm` profile retains the original per-cell startup and has its own land
+gate. The complete 3080-control `wide` matrix and per-case Reset experiments
+remain diagnostics; their failures are not canonical residual allowances.
