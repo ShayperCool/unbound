@@ -6,6 +6,24 @@ namespace UnityEngine.Tests
 {
     public class UIElementsRenderingTests
     {
+        // Text whose atlas is not Alpha8 (a colour font asset's) is drawn as a textured mesh: the
+        // glyphs' colours times the tint (tests/projects/textcolor emoji-panel.png); Alpha8 atlases
+        // stay text.
+        [Fact]
+        public void ColourAtlasTextIsDrawnTextured()
+        {
+            foreach (var (format, type) in new[] { (TextureFormat.RGBA32, UaPainter.VertTexture), (TextureFormat.Alpha8, UaPainter.VertText) })
+            {
+                var painter = new UaPainter();
+                var vertices = new Unity.Collections.NativeArray<Vertex>(4, Unity.Collections.Allocator.Temp);
+                for (int i = 0; i < 4; i++) vertices[i] = new Vertex { position = new Vector3(i, i, 0), tint = Color.white, uv = new Vector2(0.5f, 0.5f) };
+                painter.DrawText(new Unity.Collections.NativeSlice<Vertex>(vertices), new Texture2D(4, 4, format, false), 0f, 0f, default);
+                vertices.Dispose();
+                Assert.Equal(4, painter.Uvs[3].Count);
+                Assert.All(painter.Uvs[3], f => Assert.Equal(type, (byte)Mathf.RoundToInt(f.x * 255f)));
+            }
+        }
+
         [Fact]
         public void Radii_that_overlap_scale_down_together()
         {
