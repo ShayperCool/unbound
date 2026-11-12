@@ -73,14 +73,14 @@ pub struct Output {
 
 /// A packing mask: `width * height` cells, row-major from the bottom row; `true` is used.
 #[derive(Debug, Clone)]
-struct Mask {
-    width: usize,
-    height: usize,
-    cells: Vec<bool>,
+pub(crate) struct Mask {
+    pub(crate) width: usize,
+    pub(crate) height: usize,
+    pub(crate) cells: Vec<bool>,
 }
 
 impl Mask {
-    fn new(width: usize, height: usize) -> Self {
+    pub(crate) fn new(width: usize, height: usize) -> Self {
         Self {
             width,
             height,
@@ -90,7 +90,7 @@ impl Mask {
     fn get(&self, x: usize, y: usize) -> bool {
         self.cells[y * self.width + x]
     }
-    fn usage(&self) -> usize {
+    pub(crate) fn usage(&self) -> usize {
         self.cells.iter().filter(|&&c| c).count()
     }
 }
@@ -870,10 +870,19 @@ impl Pass {
 /// fit; then crops it to what is used. A shape goes where the skylines put it, else into a hole
 /// between the shapes placed before it. Returns each mask's position and the target's size.
 fn pack(masks: &[&Mask]) -> Result<(Vec<(usize, usize)>, usize, usize)> {
-    let max = (MAX_TEXELS / BLOCK_TEXELS) as usize;
     let mut order: Vec<usize> = (0..masks.len()).collect();
     let usage: Vec<usize> = masks.iter().map(|m| m.usage()).collect();
     order.sort_by(|&a, &b| usage[b].cmp(&usage[a]).then(a.cmp(&b)));
+    pack_in_order(masks, &order)
+}
+
+/// [`pack`] with the masks taken in `order` (each index once).
+pub(crate) fn pack_in_order(
+    masks: &[&Mask],
+    order: &[usize],
+) -> Result<(Vec<(usize, usize)>, usize, usize)> {
+    let max = (MAX_TEXELS / BLOCK_TEXELS) as usize;
+    let usage: Vec<usize> = masks.iter().map(|m| m.usage()).collect();
     let least = |of: fn(&Mask) -> usize| masks.iter().map(|m| of(m)).min().unwrap_or(0) as i32;
     let smallest = Smallest {
         usage: usage.iter().copied().min().unwrap_or(0) as i32,
@@ -885,7 +894,7 @@ fn pack(masks: &[&Mask]) -> Result<(Vec<(usize, usize)>, usize, usize)> {
         let mut pass = Pass::new(width, height, smallest);
         let mut positions = vec![(0, 0); masks.len()];
         let (mut need_w, mut need_h) = (0usize, 0usize);
-        for &i in &order {
+        for &i in order {
             let mask = masks[i];
             match pass.best(mask) {
                 Some((x, y)) => {

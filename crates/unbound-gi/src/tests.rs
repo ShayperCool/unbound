@@ -2377,59 +2377,63 @@ fn turned_shape(name: &str) -> Option<(Option<&str>, [u32; 9], f32)> {
 /// The instance matrix of a renderer neither turned nor scaled, as bits.
 const ONE: [u32; 9] = [0x3f800000, 0, 0, 0, 0x3f800000, 0, 0, 0, 0x3f800000];
 
+/// A renderer of RoomTurned: its realtime lightmap UVs (the precompute's geometry of it, to the
+/// last bit, from the instance matrix).
+fn turned_uvs(name: &str) -> Option<crate::realtime_uv::Output> {
+    let params = DEFAULT_LIMITS;
+    let (asset, matrix, max_distance) = match turned_shape(name) {
+        Some(shape) => shape,
+        None => {
+            let &(_, asset, scale, _, _) = AUTO_SHAPES.iter().find(|s| s.0 == name)?;
+            assert!(asset.is_none(), "{name}");
+            (None, scaled(scale).map(f32::to_bits), 0.5)
+        }
+    };
+    let params = crate::auto_charts::Params {
+        max_distance,
+        ignore_normals: name == "FoldIgnored",
+        ..params
+    };
+    let matrix = matrix.map(f32::from_bits);
+    if max_distance == 0.0 {
+        // With a limit of zero the precompute keeps the mesh's charts.
+        let (positions, _, uvs, triangles) = turned_mesh(asset.unwrap());
+        return Some(
+            crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
+                positions: &positions,
+                uvs: &uvs,
+                triangles: &triangles,
+                pixel_size: 0.5,
+                min_chart_texels: 4,
+                charts: crate::realtime_uv::Charts::Preserved,
+            })
+            .unwrap_or_else(|e| panic!("{name}: {e:#}")),
+        );
+    }
+    Some(
+        match asset {
+            None => automatic_uvs(
+                &CUBE_POSITIONS,
+                &CUBE_NORMALS,
+                &CUBE_UV2,
+                &CUBE_TRIANGLES,
+                matrix,
+                params,
+            ),
+            Some(asset) => {
+                let (positions, normals, uvs, triangles) = turned_mesh(asset);
+                automatic_uvs(&positions, &normals, &uvs, &triangles, matrix, params)
+            }
+        }
+        .unwrap_or_else(|e| panic!("{name}: {e:#}")),
+    )
+}
+
 #[test]
 fn automatic_charts_of_turned_renderers_lie_where_the_precompute_put_them() {
     // RoomTurned: the Room and shapes that are turned (the precompute's geometry of them, to
     // the last bit, from the instance matrix), or whose limits or parts decide their charts.
-    let uvs_of = |name: &str| {
-        let params = DEFAULT_LIMITS;
-        let (asset, matrix, max_distance) = match turned_shape(name) {
-            Some(shape) => shape,
-            None => {
-                let &(_, asset, scale, _, _) = AUTO_SHAPES.iter().find(|s| s.0 == name)?;
-                assert!(asset.is_none(), "{name}");
-                (None, scaled(scale).map(f32::to_bits), 0.5)
-            }
-        };
-        let params = crate::auto_charts::Params {
-            max_distance,
-            ignore_normals: name == "FoldIgnored",
-            ..params
-        };
-        let matrix = matrix.map(f32::from_bits);
-        if max_distance == 0.0 {
-            // With a limit of zero the precompute keeps the mesh's charts.
-            let (positions, _, uvs, triangles) = turned_mesh(asset.unwrap());
-            return Some(
-                crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
-                    positions: &positions,
-                    uvs: &uvs,
-                    triangles: &triangles,
-                    pixel_size: 0.5,
-                    min_chart_texels: 4,
-                    charts: crate::realtime_uv::Charts::Preserved,
-                })
-                .unwrap_or_else(|e| panic!("{name}: {e:#}")),
-            );
-        }
-        Some(
-            match asset {
-                None => automatic_uvs(
-                    &CUBE_POSITIONS,
-                    &CUBE_NORMALS,
-                    &CUBE_UV2,
-                    &CUBE_TRIANGLES,
-                    matrix,
-                    params,
-                ),
-                Some(asset) => {
-                    let (positions, normals, uvs, triangles) = turned_mesh(asset);
-                    automatic_uvs(&positions, &normals, &uvs, &triangles, matrix, params)
-                }
-            }
-            .unwrap_or_else(|e| panic!("{name}: {e:#}")),
-        )
-    };
+    let uvs_of = turned_uvs;
     // A box turned about all three axes, and one under a turned parent, have two pairs of
     // faces at a right angle but for the rounding of the rotation's removal joined; Ignore
     // Normals makes the fold's floor and wall one part; a Max Distance of 0.1 keeps a roof's
@@ -3446,3 +3450,334 @@ const ROOM_PROBES: [[f32; 3]; 9] = [
     [2.0, 3.5, 2.0],
     [0.0, 2.0, 0.0],
 ];
+
+/// Per renderer of a probe scene (in its mapping order): Unbound's realtime lightmap UVs where
+/// these tests make them, else (the built-in quad and plane and the grid of RoomAuto, single flat
+/// charts) a rectangle of the precomputed size whose blocks are all used.
+fn scene_outputs(scene: &str, data: &Precomputed) -> Vec<crate::realtime_uv::Output> {
+    let names = renderer_names(scene);
+    (0..data.renderers.len())
+        .map(|k| {
+            let name = names[&data.renderers[k].0].as_str();
+            let made = match scene {
+                "RoomAuto" => AUTO_SHAPES
+                    .iter()
+                    .any(|s| s.0 == name)
+                    .then(|| auto_shape_uvs(name)),
+                "RoomTurned" => turned_uvs(name),
+                "RoomCharts" if PANELS.iter().any(|p| p.0 == name) => Some(panel_uvs(name)),
+                "RoomHoles" if HOLE_PANELS.iter().any(|p| p.0 == name) => hole_panel_uvs(name),
+                _ => None,
+            };
+            let room = match name {
+                "Floor" | "Ceiling" => Some([6.0, 0.2, 6.0]),
+                "Back" => Some([6.0, 4.0, 0.2]),
+                "Left" | "Right" => Some([0.2, 4.0, 6.0]),
+                "Block" => Some([1.2, 1.5, 1.2]),
+                "Panel" => Some([1.0, 1.2, 0.1]),
+                _ => None,
+            };
+            made.or_else(|| room.map(|scale| cube_uvs(scale, 0.5)))
+                .unwrap_or_else(|| {
+                    let system = data
+                        .systems
+                        .iter()
+                        .find(|s| {
+                            (s.first_renderer..s.first_renderer + s.renderer_count).contains(&k)
+                        })
+                        .unwrap();
+                    let st = data.renderer_st[k];
+                    let (w, h) = (
+                        (st[0] * system.transport.width as f32).round() as u32,
+                        (st[1] * system.transport.height as f32).round() as u32,
+                    );
+                    crate::realtime_uv::Output {
+                        width: w,
+                        height: h,
+                        uvs: Vec::new(),
+                        charts: vec![crate::realtime_uv::PlacedChart {
+                            rect: [0, 0, w, h],
+                            blocks: vec![true; (w / 2 * (h / 2)) as usize],
+                        }],
+                    }
+                })
+        })
+        .collect()
+}
+
+/// The probe's scenes whose systems Unbound lays out.
+const LAYOUT_SCENES: [&str; 9] = [
+    "Room",
+    "RoomScaled",
+    "RoomDirectional",
+    "RoomSystems",
+    "RoomCharts",
+    "RoomAuto",
+    "RoomTurned",
+    "RoomHoles",
+    "RoomBakedEnvironment",
+];
+
+#[test]
+fn systems_and_atlases_are_laid_out_as_the_precomputes() {
+    // Each system of the Editor's packed from its renderers (in its order) as Unbound packs
+    // them: the system's size, where each renderer lies in it, the chart mask, and the atlases.
+    use crate::precompute::systems::{chart_mask, pack_atlases, pack_system};
+    for scene in LAYOUT_SCENES {
+        let data = scene_data(scene);
+        let outputs = scene_outputs(scene, &data);
+        let mut sizes = Vec::new();
+        for (s, system) in data.systems.iter().enumerate() {
+            let range = system.first_renderer..system.first_renderer + system.renderer_count;
+            let mine: Vec<&crate::realtime_uv::Output> = outputs[range.clone()].iter().collect();
+            let layout = pack_system(&mine).unwrap();
+            let (sw, sh) = (system.transport.width, system.transport.height);
+            assert_eq!(
+                (layout.width, layout.height),
+                (sw, sh),
+                "{scene} system {s}"
+            );
+            for (i, k) in range.enumerate() {
+                let st = layout.scale_offset(i, mine[i]);
+                let editor = data.renderer_st[k];
+                assert!(
+                    (0..4).all(|c| (st[c] - editor[c]).abs() < 1e-6),
+                    "{scene} system {s} renderer {k}: {st:?} where the Editor has {editor:?}"
+                );
+            }
+            // RoomAuto (21 renderers) needs the order the sort leaves equal shapes in.
+            assert!(
+                chart_mask(&layout, &mine) == system.chart_mask,
+                "{scene} system {s}: the chart mask"
+            );
+            sizes.push([sw, sh]);
+        }
+        let atlases = pack_atlases(&sizes).unwrap();
+        assert_eq!(atlases.sizes, data.atlas_sizes, "{scene}");
+        let editor: Vec<(usize, [u32; 2])> = data
+            .systems
+            .iter()
+            .map(|s| (s.atlas, [s.atlas_offset.0, s.atlas_offset.1]))
+            .collect();
+        assert_eq!(atlases.placements, editor, "{scene}");
+    }
+}
+
+/// Each renderer's (scene file ID) local-to-world matrix (3 rows of 4), through its parents.
+fn renderer_matrices(scene: &str) -> std::collections::HashMap<i64, [[f32; 4]; 3]> {
+    let text =
+        std::fs::read_to_string(probe().join(format!("Assets/Scenes/{scene}.unity"))).unwrap();
+    let numbers = |line: &str| -> Vec<f32> {
+        line.split(|c| c == '{' || c == '}' || c == ',')
+            .filter_map(|part| part.split(':').nth(1).and_then(|v| v.trim().parse().ok()))
+            .collect()
+    };
+    let (mut owners, mut transforms) = (
+        std::collections::HashMap::new(),
+        std::collections::HashMap::new(),
+    );
+    let mut by_object = std::collections::HashMap::new();
+    for doc in text.split("--- !u!").skip(1) {
+        let class = doc.split(' ').next().unwrap();
+        let own: i64 = doc
+            .split(" &")
+            .nth(1)
+            .unwrap()
+            .split_whitespace()
+            .next()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let field = |key: &str| {
+            doc.lines()
+                .find_map(|l| l.trim().strip_prefix(key))
+                .map(str::trim)
+        };
+        let id_of = |key: &str| {
+            field(key)
+                .unwrap()
+                .trim_start_matches("{fileID:")
+                .trim_end_matches('}')
+                .trim()
+                .parse::<i64>()
+                .unwrap()
+        };
+        match class {
+            "23" => {
+                owners.insert(own, id_of("m_GameObject:"));
+            }
+            "4" => {
+                let v = |key: &str| numbers(field(key).unwrap());
+                let (p, q, k) = (
+                    v("m_LocalPosition:"),
+                    v("m_LocalRotation:"),
+                    v("m_LocalScale:"),
+                );
+                transforms.insert(
+                    own,
+                    (
+                        id_of("m_Father:"),
+                        [p[0], p[1], p[2]],
+                        [q[0], q[1], q[2], q[3]],
+                        [k[0], k[1], k[2]],
+                    ),
+                );
+                by_object.insert(id_of("m_GameObject:"), own);
+            }
+            _ => {}
+        }
+    }
+    let local = |t: &(i64, [f32; 3], [f32; 4], [f32; 3])| -> [[f32; 4]; 3] {
+        let columns =
+            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]].map(|e: [f32; 3]| rotated(t.2, e));
+        std::array::from_fn(|r| {
+            [
+                columns[0][r] * t.3[0],
+                columns[1][r] * t.3[1],
+                columns[2][r] * t.3[2],
+                t.1[r],
+            ]
+        })
+    };
+    let product = |a: [[f32; 4]; 3], b: [[f32; 4]; 3]| -> [[f32; 4]; 3] {
+        std::array::from_fn(|r| {
+            std::array::from_fn(|c| {
+                (0..3).map(|k| a[r][k] * b[k][c]).sum::<f32>() + if c == 3 { a[r][3] } else { 0.0 }
+            })
+        })
+    };
+    owners
+        .into_iter()
+        .map(|(renderer, object)| {
+            let mut id = by_object[&object];
+            let mut m = local(&transforms[&id]);
+            while transforms[&id].0 != 0 {
+                id = transforms[&id].0;
+                m = product(local(&transforms[&id]), m);
+            }
+            (renderer, m)
+        })
+        .collect()
+}
+
+/// The positions of a renderer's mesh in a probe scene (a unit cube for the built-in quad and
+/// plane and RoomAuto's grid: no scene of the probe is split where they are).
+fn local_positions(scene: &str, name: &str) -> Vec<[f32; 3]> {
+    if scene == "RoomTurned" {
+        if let Some((Some(asset), _, _)) = turned_shape(name) {
+            return turned_mesh(asset).0;
+        }
+    }
+    if let Some(&(_, Some(asset), ..)) = AUTO_SHAPES.iter().find(|s| s.0 == name) {
+        return auto_mesh(asset).0;
+    }
+    if let Some(&(_, xs, ys, rows, plates, _)) = PANELS.iter().find(|p| p.0 == name) {
+        return panel(xs, ys, rows, plates).0;
+    }
+    if let Some(&(_, xs, ys, rows, plates)) = HOLE_PANELS.iter().find(|p| p.0 == name) {
+        return panel(xs, ys, rows, plates).0;
+    }
+    CUBE_POSITIONS.to_vec()
+}
+
+/// Each renderer's (scene file ID) Lightmap Parameters reference, as the scene has it.
+fn renderer_parameters(scene: &str) -> std::collections::HashMap<i64, String> {
+    let text =
+        std::fs::read_to_string(probe().join(format!("Assets/Scenes/{scene}.unity"))).unwrap();
+    text.split("--- !u!")
+        .skip(1)
+        .filter(|doc| doc.starts_with("23 "))
+        .map(|doc| {
+            let id = doc
+                .split(" &")
+                .nth(1)
+                .unwrap()
+                .split_whitespace()
+                .next()
+                .unwrap();
+            let parameters = doc
+                .lines()
+                .find_map(|l| l.trim().strip_prefix("m_LightmapParameters:"))
+                .unwrap()
+                .trim()
+                .to_string();
+            (id.parse().unwrap(), parameters)
+        })
+        .collect()
+}
+
+fn sorted_names<'a>(names: impl Iterator<Item = &'a str>) -> Vec<&'a str> {
+    let mut v: Vec<&str> = names.collect();
+    v.sort();
+    v
+}
+
+#[test]
+fn renderers_split_into_systems_as_the_precomputes() {
+    // RoomSystems: the walls and the panel with Lightmap Parameters of their own (System Tag
+    // 1) are a system of their own. RoomTurned: its renderers take more texels than a system
+    // holds and split in two by their places, as the Editor's. The others are one system each.
+    use crate::precompute::systems::{Member, pack_system, scene_systems};
+    for scene in LAYOUT_SCENES {
+        let data = scene_data(scene);
+        let outputs = scene_outputs(scene, &data);
+        let names = renderer_names(scene);
+        let matrices = renderer_matrices(scene);
+        let parameters = renderer_parameters(scene);
+        let members: Vec<Member> = (0..data.renderers.len())
+            .map(|k| {
+                let name = names[&data.renderers[k].0].as_str();
+                let (mut lo, mut hi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+                for p in local_positions(scene, name) {
+                    for a in 0..3 {
+                        lo[a] = lo[a].min(p[a]);
+                        hi[a] = hi[a].max(p[a]);
+                    }
+                }
+                // The mesh's bounds through the renderer's matrix, as Renderer.bounds.
+                let m = matrices[&data.renderers[k].0];
+                let (mut wlo, mut whi) = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+                for corner in 0..8 {
+                    let p = [0, 1, 2].map(|a| if corner >> a & 1 == 0 { lo[a] } else { hi[a] });
+                    for r in 0..3 {
+                        let w = m[r][0] * p[0] + m[r][1] * p[1] + m[r][2] * p[2] + m[r][3];
+                        wlo[r] = wlo[r].min(w);
+                        whi[r] = whi[r].max(w);
+                    }
+                }
+                Member::new(wlo, whi, &outputs[k])
+            })
+            .collect();
+        let keys: Vec<&String> = data.renderers.iter().map(|r| &parameters[&r.0]).collect();
+        let systems = scene_systems(&members, &keys, |group| {
+            let mine: Vec<&crate::realtime_uv::Output> =
+                group.iter().map(|&i| &outputs[i]).collect();
+            pack_system(&mine).is_ok()
+        });
+        let mut ours: Vec<Vec<&str>> = systems
+            .iter()
+            .map(|s| sorted_names(s.iter().map(|&k| names[&data.renderers[k].0].as_str())))
+            .collect();
+        let mut editor: Vec<Vec<&str>> = data
+            .systems
+            .iter()
+            .map(|s| {
+                sorted_names(
+                    (s.first_renderer..s.first_renderer + s.renderer_count)
+                        .map(|k| names[&data.renderers[k].0].as_str()),
+                )
+            })
+            .collect();
+        ours.sort();
+        editor.sort();
+        assert_eq!(ours, editor, "{scene}");
+        assert_eq!(
+            ours.len(),
+            match scene {
+                "RoomSystems" | "RoomTurned" => 2,
+                _ => 1,
+            },
+            "{scene}"
+        );
+    }
+}

@@ -902,3 +902,133 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
     let band = |k: usize| p.weights.iter().map(|w| w[k]).sum::<f32>();
     assert!((band(0) - 0.5).abs() < 0.01 && (band(1) + 0.5).abs() < 0.01);
 }
+
+/// Realtime lightmap UVs of `w` x `h` texels, one chart of all their blocks.
+fn uv_space(w: u32, h: u32) -> crate::realtime_uv::Output {
+    crate::realtime_uv::Output {
+        width: w,
+        height: h,
+        uvs: Vec::new(),
+        charts: vec![crate::realtime_uv::PlacedChart {
+            rect: [0, 0, w, h],
+            blocks: vec![true; (w / 2 * (h / 2)) as usize],
+        }],
+    }
+}
+
+#[test]
+fn a_system_packs_its_instances_and_rounds_its_width() {
+    use super::systems::{chart_mask, pack_system};
+    // One instance of 6 x 4 texels: a system 8 texels wide (whole multiples of 4), its texels
+    // beyond the instance no chart's.
+    let one = uv_space(6, 4);
+    let layout = pack_system(&[&one]).unwrap();
+    assert_eq!(
+        (layout.width, layout.height, &layout.origins[..]),
+        (8, 4, &[[0, 0]][..])
+    );
+    let mask = chart_mask(&layout, &[&one]);
+    assert_eq!(mask.iter().filter(|&&c| c == 0).count(), 24);
+    assert_eq!(mask[6], crate::data::NO_CHART);
+    // The larger instance first, whatever the order; their charts numbered in the system's
+    // order.
+    let small = uv_space(2, 2);
+    let layout = pack_system(&[&small, &one]).unwrap();
+    assert_eq!(layout.origins[1], [0, 0]);
+    let mask = chart_mask(&layout, &[&small, &one]);
+    let at = |o: [u32; 2]| mask[(o[1] * layout.width + o[0]) as usize];
+    assert_eq!((at(layout.origins[0]), at(layout.origins[1])), (0, 1));
+    // A ring's hole takes another instance's charts.
+    let ring = crate::realtime_uv::Output {
+        width: 6,
+        height: 6,
+        uvs: Vec::new(),
+        charts: vec![crate::realtime_uv::PlacedChart {
+            rect: [0, 0, 6, 6],
+            blocks: (0..9).map(|b| b != 4).collect(),
+        }],
+    };
+    let layout = pack_system(&[&ring, &small]).unwrap();
+    assert_eq!((layout.width, layout.height), (8, 6));
+    assert_eq!(layout.origins, vec![[0, 0], [2, 2]]);
+    // Instances that do not fit the largest output fail.
+    let big = uv_space(400, 400);
+    assert!(pack_system(&[&big, &big]).is_err());
+    assert!(pack_system(&[]).is_err());
+}
+
+#[test]
+fn systems_split_by_place_until_each_holds_its_budget() {
+    use super::systems::{MAX_SYSTEM_TEXELS, Member, scene_systems};
+    let fits = |_: &[usize]| true;
+    let at = |x: f32, z: f32, texels: u32| {
+        Member::new(
+            [x, 0.0, z],
+            [x + 1.0, 0.1, z + 1.0],
+            &uv_space(texels, texels),
+        )
+    };
+    // Four floors of 40 x 40 texels in a row along x (1600 each, 6400 in all) split in the
+    // middle of the row, then fit: two systems.
+    let row: Vec<Member> = (0..4).map(|i| at(i as f32 * 10.0, 0.0, 40)).collect();
+    let systems = scene_systems(&row, &[0; 4], fits);
+    assert_eq!(systems, vec![vec![0, 1], vec![2, 3]]);
+    // Eight: each half is split again, the last one made first.
+    let long: Vec<Member> = (0..8).map(|i| at(i as f32 * 10.0, 0.0, 40)).collect();
+    assert_eq!(
+        scene_systems(&long, &[0; 8], fits),
+        vec![vec![4, 5], vec![6, 7], vec![0, 1], vec![2, 3]]
+    );
+    // Within the budget: one system, in order.
+    let few: Vec<Member> = (0..4).map(|i| at(i as f32 * 10.0, 0.0, 30)).collect();
+    assert!(few.iter().map(|m| m.texels).sum::<u64>() <= MAX_SYSTEM_TEXELS);
+    assert_eq!(scene_systems(&few, &[0; 4], fits), vec![vec![0, 1, 2, 3]]);
+    // Along z when z is the longest axis; an axis less than half as long is not tried.
+    let column: Vec<Member> = (0..4).map(|i| at(0.0, i as f32 * 10.0, 40)).collect();
+    assert_eq!(
+        scene_systems(&column, &[0; 4], fits),
+        vec![vec![0, 1], vec![2, 3]]
+    );
+    // All in one place: halves by their order.
+    let heap: Vec<Member> = (0..4).map(|_| at(0.0, 0.0, 40)).collect();
+    assert_eq!(
+        scene_systems(&heap, &[0; 4], fits),
+        vec![vec![0, 1], vec![2, 3]]
+    );
+    // One instance over the budget is a system of its own.
+    let huge = [at(0.0, 0.0, 80)];
+    assert_eq!(scene_systems(&huge, &[0], fits), vec![vec![0]]);
+    // Instances that do not fit one system's output split even within the budget.
+    let packs = |group: &[usize]| group.len() < 3;
+    assert_eq!(
+        scene_systems(&few, &[0; 4], packs),
+        vec![vec![0, 1], vec![2, 3]]
+    );
+    // Keys (Lightmap Parameters and System Tag) part them first, in the order they appear.
+    assert_eq!(
+        scene_systems(&few, &['b', 'a', 'b', 'a'], fits),
+        vec![vec![0, 2], vec![1, 3]]
+    );
+}
+
+#[test]
+fn atlases_take_the_largest_systems_first_and_shrink_the_last() {
+    use super::systems::pack_atlases;
+    // One system: the last atlas halved while it holds it (52 x 52 in 64).
+    let one = pack_atlases(&[[52, 52]]).unwrap();
+    assert_eq!((one.sizes, one.placements), (vec![64], vec![(0, [0, 0])]));
+    // The two of RoomSystems: the taller row first, the other above it.
+    let two = pack_atlases(&[[36, 52], [32, 36]]).unwrap();
+    assert_eq!(two.sizes, vec![128]);
+    assert_eq!(two.placements, vec![(0, [0, 0]), (0, [0, 52])]);
+    // 800 x 800 leaves no room for 300 x 300: a second atlas, which shrinks to 512; a smaller
+    // one after it goes beside the first.
+    let three = pack_atlases(&[[200, 100], [300, 300], [800, 800]]).unwrap();
+    assert_eq!(three.sizes, vec![1024, 512]);
+    assert_eq!(
+        three.placements,
+        vec![(0, [800, 0]), (1, [0, 0]), (0, [0, 0])]
+    );
+    assert!(pack_atlases(&[[1025, 4]]).is_err());
+    assert_eq!(pack_atlases(&[]).unwrap().sizes, Vec::<u32>::new());
+}
