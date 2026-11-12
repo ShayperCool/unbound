@@ -290,7 +290,7 @@ impl Visibility {
         let mut next = 0u32;
         for &(first, n) in &rings {
             ensure!(first == next && n > 0, "rings of directions out of order");
-            next += n;
+            next = next.checked_add(n).context("too many directions")?;
         }
         let directions = next;
         ensure!(
