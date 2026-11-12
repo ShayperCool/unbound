@@ -527,3 +527,175 @@ fn a_dense_tilted_mesh_gathers_into_parts() {
     );
     assert!(c.input.clusters() >= 2);
 }
+
+/// The transport of `meshes` (cluster size 1) into an output of `size` x `size` texels whose
+/// every texel is its own chart.
+fn transport_of(meshes: &[&Mesh], size: u32, budget: usize) -> crate::data::Transport {
+    use super::transport::{DEFAULT_SETTINGS, Settings, transport};
+    let instances: Vec<Instance> = meshes.iter().map(|m| m.instance(1.0)).collect();
+    let c = cluster(&instances, size, size).unwrap();
+    let mask: Vec<u32> = (0..size * size).collect();
+    let settings = Settings {
+        budget,
+        ..DEFAULT_SETTINGS
+    };
+    transport(&instances, &c, size, size, &mask, [7; 16], settings).unwrap()
+}
+
+/// Per texel: its weights by reference (dependency, index), decoded.
+fn texel_weights(
+    t: &crate::data::Transport,
+) -> std::collections::HashMap<(u16, u16), Vec<((u16, u32), f32)>> {
+    let mut out: std::collections::HashMap<(u16, u16), Vec<((u16, u32), f32)>> = Default::default();
+    for s in &t.segments {
+        let n = s.references.len();
+        for (k, &texel) in s.texels.iter().enumerate() {
+            let list = out.entry(texel).or_default();
+            for (r, &reference) in s.references.iter().enumerate() {
+                let w =
+                    s.reference_weights[r] as f32 * s.weights[k * n + r] as f32 / (65535.0 * 255.0);
+                if w > 0.0 {
+                    list.push((reference, w));
+                }
+            }
+        }
+    }
+    out
+}
+
+#[test]
+fn a_texel_under_the_open_sky_sees_the_environment_by_its_cosine() {
+    // A floor alone: every texel takes all of its light from the environment, 0.554 through
+    // the cube face it faces and 0.111 through each of the four beside it (as the Unity
+    // 6000.0.71f1 Editor's transport of an outward face of tests/projects/realtimegi `Room`).
+    let m = floor(1.0, 1.0);
+    let t = transport_of(&[&m], 8, 1000);
+    assert_eq!(t.dependencies[0], crate::data::ENVIRONMENT_ID);
+    let weights = texel_weights(&t);
+    assert!(!weights.is_empty());
+    for list in weights.values() {
+        let mut faces = [0f32; 6];
+        for &((dep, index), w) in list {
+            assert_eq!(dep, 0, "a cluster reference under the open sky");
+            assert!(index < 384, "{index}");
+            faces[index as usize / 64] += w;
+        }
+        assert!((faces.iter().sum::<f32>() - 1.0).abs() < 0.01, "{faces:?}");
+        assert!(
+            (faces[2] - 0.554).abs() < 0.006 && faces[3] == 0.0,
+            "{faces:?}"
+        );
+        for f in [0, 1, 4, 5] {
+            assert!((faces[f] - 0.111).abs() < 0.004, "{faces:?}");
+        }
+    }
+}
+
+#[test]
+fn a_texel_facing_a_near_surface_takes_its_light_from_its_clusters() {
+    // Two quads 5 cm apart facing each other: most of a texel's light is the other's, but at
+    // the edges, where rays leave between them.
+    let mut m = floor(1.0, 1.0);
+    m.quad(
+        [0.0, 0.05, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [0.0, 10.0],
+    );
+    let t = transport_of(&[&m], 32, 1000);
+    let weights = texel_weights(&t);
+    assert!(weights.len() >= 2 * 64);
+    for (texel, list) in &weights {
+        let clusters: f32 = list.iter().filter(|r| r.0.0 == 1).map(|r| r.1).sum();
+        let all: f32 = list.iter().map(|r| r.1).sum();
+        assert!((all - 1.0).abs() < 0.01, "{texel:?}: {all}");
+        // The floor's texels run 8 a unit from (0, 0), the quad's from (0, 10): those more
+        // than a quarter from the edges.
+        let inner = |v: u16| (2..6).contains(&v);
+        if inner(texel.0) && (inner(texel.1) || inner(texel.1.wrapping_sub(10))) {
+            assert!(clusters > 0.9, "{texel:?}: {clusters} of {all}");
+        }
+    }
+}
+
+#[test]
+fn the_budget_bounds_a_texels_references() {
+    // A floor under a lid of many small clusters: the references of each texel fit the budget
+    // and still add up to all of its light.
+    let ground = floor(8.0, 8.0);
+    let mut lid = Mesh::default();
+    lid.quad(
+        [0.0, 2.0, 0.0],
+        [8.0, 0.0, 0.0],
+        [0.0, 0.0, 8.0],
+        [0.0, 40.0],
+    );
+    let unlimited = texel_weights(&transport_of(&[&ground, &lid], 64, 100_000));
+    let limited = texel_weights(&transport_of(&[&ground, &lid], 64, 16));
+    assert!(unlimited.values().any(|l| l.len() > 32));
+    for (texel, list) in &limited {
+        assert!(list.len() <= 16, "{texel:?}: {}", list.len());
+        let (a, b): (f32, f32) = (
+            list.iter().map(|r| r.1).sum(),
+            unlimited[texel].iter().map(|r| r.1).sum(),
+        );
+        assert!((a - b).abs() < 0.01, "{texel:?}: {a} {b}");
+    }
+}
+
+#[test]
+fn a_texel_inside_other_geometry_takes_a_neighbours_light() {
+    // The floor under a box: the texels whose footprint the box covers take the light of the
+    // nearest texel of their chart that is not covered, rather than none.
+    let ground = floor(4.0, 4.0);
+    let mut block = Mesh::default();
+    block.open_box([1.0, 0.0, 1.0], [3.0, 1.0, 3.0]);
+    let instances = [ground.instance(1.0), block.instance(1.0)];
+    let c = cluster(&instances, 64, 64).unwrap();
+    // One chart for the floor's texels (0..8 x 0..8 at 2 texels a unit), one for the rest.
+    let mask: Vec<u32> = (0..64 * 64)
+        .map(|i| (i % 64 >= 8 || i / 64 >= 8) as u32)
+        .collect();
+    let mut floor_texels = Mesh::default();
+    floor_texels.quad([0.0; 3], [0.0, 0.0, 4.0], [4.0, 0.0, 0.0], [0.0, 0.0]);
+    let t = super::transport::transport(
+        &instances,
+        &c,
+        64,
+        64,
+        &mask,
+        [7; 16],
+        super::transport::DEFAULT_SETTINGS,
+    )
+    .unwrap();
+    let w = texel_weights(&t);
+    // The floor's texels: its quad's texels run 8 per unit edge here; those under the box
+    // (texels 3..4 on either axis at 2 per unit) still receive.
+    for (texel, list) in &w {
+        if texel.0 < 8 && texel.1 < 8 {
+            assert!(list.iter().map(|r| r.1).sum::<f32>() > 0.5, "{texel:?}");
+        }
+    }
+}
+
+#[test]
+fn transports_that_cannot_be_made_fail() {
+    use super::transport::{DEFAULT_SETTINGS, Settings, transport};
+    let m = floor(1.0, 1.0);
+    let instances = [m.instance(1.0)];
+    let c = cluster(&instances, 8, 8).unwrap();
+    let mask: Vec<u32> = (0..64).collect();
+    assert!(transport(&instances, &c, 8, 8, &mask[..63], [0; 16], DEFAULT_SETTINGS).is_err());
+    for settings in [
+        Settings {
+            rays: 0,
+            ..DEFAULT_SETTINGS
+        },
+        Settings {
+            budget: 0,
+            ..DEFAULT_SETTINGS
+        },
+    ] {
+        assert!(transport(&instances, &c, 8, 8, &mask, [0; 16], settings).is_err());
+    }
+}

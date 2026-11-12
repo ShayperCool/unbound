@@ -1,0 +1,635 @@
+//! The transport: what each output texel receives from the clusters and the environment.
+//! Rays leave a texel's surface point over its hemisphere, cosine distributed, so that each
+//! ray counts the same: a ray that meets a cluster's surface adds its share to that cluster's
+//! weight, one that leaves the scene to the environment texel it leaves through. The texels are
+//! solved in segments of a block of 2x2 texels each, their weights quantized as the runtime
+//! reads them, with each reference's direction for the directionality.
+use super::clusters::{Clustering, Instance, NO_CLUSTER, around, hemisphere, hidden, push_off};
+use super::math::{V3, add, dot, normalized, scale};
+use crate::data::{ENVIRONMENT_ID, Segment, Transport};
+use crate::directionality::{
+    DIRECTIONS, NEIGHBOUR_ABOVE, NEIGHBOUR_ABOVE_LEFT, NEIGHBOUR_ABOVE_RIGHT, NEIGHBOUR_BELOW,
+    NEIGHBOUR_BELOW_LEFT, NEIGHBOUR_BELOW_RIGHT, NEIGHBOUR_LEFT, NEIGHBOUR_RIGHT,
+};
+use crate::environment::RESOLUTION;
+use anyhow::{Result, ensure};
+use rayon::prelude::*;
+
+/// Rays that test whether an origin lies inside other geometry.
+const HIDDEN_RAYS: usize = 16;
+/// How far (texels) a texel whose footprint is hidden looks for one of its chart that is not.
+const FILL_RADIUS: i64 = 8;
+/// The cube faces' axes (+X, -X, +Y, -Y, +Z, -Z): where each face's columns and rows run (from
+/// its top left) and where it looks, as a cube map stores them.
+const FACES: [(V3, V3, V3); 6] = [
+    ([0.0, 0.0, -1.0], [0.0, -1.0, 0.0], [1.0, 0.0, 0.0]),
+    ([0.0, 0.0, 1.0], [0.0, -1.0, 0.0], [-1.0, 0.0, 0.0]),
+    ([1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]),
+    ([1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, -1.0, 0.0]),
+    ([1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]),
+    ([-1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]),
+];
+
+/// The environment texel (finest level) the direction `d` leaves through.
+pub fn environment_texel(d: V3) -> u32 {
+    let a = d.map(f32::abs);
+    let face = if a[0] >= a[1] && a[0] >= a[2] {
+        if d[0] >= 0.0 { 0 } else { 1 }
+    } else if a[1] >= a[2] {
+        if d[1] >= 0.0 { 2 } else { 3 }
+    } else if d[2] >= 0.0 {
+        4
+    } else {
+        5
+    };
+    let (across, down, view) = FACES[face];
+    let major = dot(d, view);
+    let cell = |axis: V3| {
+        let t = (dot(d, axis) / major + 1.0) * 0.5 * RESOLUTION as f32;
+        (t.floor().max(0.0) as usize).min(RESOLUTION - 1)
+    };
+    (face * RESOLUTION * RESOLUTION + cell(down) * RESOLUTION + cell(across)) as u32
+}
+
+/// The direction through the centre of the environment texel `t` (finest level).
+pub fn environment_direction(t: u32) -> V3 {
+    let t = t as usize;
+    let (face, rest) = (t / (RESOLUTION * RESOLUTION), t % (RESOLUTION * RESOLUTION));
+    let (across, down, view) = FACES[face];
+    let at = |i: usize| (i as f32 + 0.5) / RESOLUTION as f32 * 2.0 - 1.0;
+    normalized(add(
+        view,
+        add(
+            scale(across, at(rest % RESOLUTION)),
+            scale(down, at(rest / RESOLUTION)),
+        ),
+    ))
+}
+
+/// A texel's surface point.
+#[derive(Clone, Copy, Debug)]
+pub struct Origin {
+    pub p: V3,
+    pub n: V3,
+    /// Its renderer.
+    pub instance: usize,
+    /// Units per texel there (for offsets).
+    pub texel_size: f32,
+}
+
+/// Sub-positions per texel side whose surface points are a texel's ray origins.
+const SUB: usize = 4;
+
+/// Per texel of the output: its ray origins, the surface points of a grid of positions over
+/// the texel within its renderer's triangles; `None` where the texel's centre lies in no
+/// triangle (no output there).
+pub fn footprints(instances: &[Instance], width: u32, height: u32) -> Vec<Option<Vec<Origin>>> {
+    let size = (width * height) as usize;
+    // Which renderer each texel's centre lies in (the triangle it lies deepest in).
+    let mut owner: Vec<Option<(usize, f32)>> = vec![None; size];
+    let mut out: Vec<Option<Vec<Origin>>> = vec![None; size];
+    for pass in 0..2 {
+        for (i, inst) in instances.iter().enumerate() {
+            for t in inst.triangles {
+                let uv = t.map(|v| inst.texels[v as usize]);
+                let p = t.map(|v| inst.positions[v as usize]);
+                let n = t.map(|v| inst.normals[v as usize]);
+                let det = (uv[1][0] - uv[0][0]) * (uv[2][1] - uv[0][1])
+                    - (uv[2][0] - uv[0][0]) * (uv[1][1] - uv[0][1]);
+                if det.abs() < 1e-12 {
+                    continue;
+                }
+                let bary = |q: [f32; 2]| {
+                    let b1 = ((q[0] - uv[0][0]) * (uv[2][1] - uv[0][1])
+                        - (uv[2][0] - uv[0][0]) * (q[1] - uv[0][1]))
+                        / det;
+                    let b2 = ((uv[1][0] - uv[0][0]) * (q[1] - uv[0][1])
+                        - (q[0] - uv[0][0]) * (uv[1][1] - uv[0][1]))
+                        / det;
+                    [1.0 - b1 - b2, b1, b2]
+                };
+                let lo = [0, 1].map(|k| uv.iter().map(|v| v[k]).fold(f32::INFINITY, f32::min));
+                let hi = [0, 1].map(|k| uv.iter().map(|v| v[k]).fold(f32::NEG_INFINITY, f32::max));
+                let world_area = super::math::length(super::math::cross(
+                    super::math::sub(p[1], p[0]),
+                    super::math::sub(p[2], p[0]),
+                ));
+                let texel_size = (world_area / det.abs()).sqrt();
+                let xs = (lo[0] - 1.0).floor().max(0.0) as u32..((hi[0] + 1.0) as u32).min(width);
+                for y in (lo[1] - 1.0).floor().max(0.0) as u32..((hi[1] + 1.0) as u32).min(height) {
+                    for x in xs.clone() {
+                        let at = (y * width + x) as usize;
+                        if pass == 0 {
+                            let b = bary([x as f32 + 0.5, y as f32 + 0.5]);
+                            let inside = b.iter().copied().fold(f32::INFINITY, f32::min);
+                            if inside >= -1e-4 && owner[at].is_none_or(|(_, best)| inside > best) {
+                                owner[at] = Some((i, inside));
+                            }
+                            continue;
+                        }
+                        if owner[at].is_none_or(|(o, _)| o != i) {
+                            continue;
+                        }
+                        let list = out[at].get_or_insert_with(Vec::new);
+                        for sy in 0..SUB {
+                            for sx in 0..SUB {
+                                let q = [
+                                    x as f32 + (sx as f32 + 0.5) / SUB as f32,
+                                    y as f32 + (sy as f32 + 0.5) / SUB as f32,
+                                ];
+                                let b = bary(q);
+                                if b.iter().any(|&v| v < -1e-5) {
+                                    continue;
+                                }
+                                list.push(Origin {
+                                    instance: i,
+                                    p: add(
+                                        add(scale(p[0], b[0]), scale(p[1], b[1])),
+                                        scale(p[2], b[2]),
+                                    ),
+                                    n: normalized(add(
+                                        add(scale(n[0], b[0]), scale(n[1], b[1])),
+                                        scale(n[2], b[2]),
+                                    )),
+                                    texel_size,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // A covered texel whose sub-positions all missed its triangles (a sliver) keeps its centre.
+    for at in 0..size {
+        if owner[at].is_some() && out[at].as_ref().is_none_or(Vec::is_empty) {
+            out[at] = Some(Vec::new());
+        }
+    }
+    out
+}
+
+/// What one texel receives: per reference its weight and the sum of the directions its rays
+/// arrive from. References are the system's values (clusters, then the tree's parents), then
+/// the environment's values from [`Refs::environment`].
+#[derive(Default, Clone)]
+struct Gathered {
+    refs: Vec<(u32, f32, V3)>,
+}
+
+/// How the references of a texel are numbered: the system's values first.
+#[derive(Clone, Copy)]
+struct Refs {
+    /// The first environment reference.
+    environment: u32,
+}
+
+fn gather(origins: &[Origin], clustering: &Clustering, rays: &[V3], refs: Refs) -> Gathered {
+    let mut acc: std::collections::HashMap<u32, (f32, V3)> = std::collections::HashMap::new();
+    let share = 1.0 / rays.len() as f32;
+    for (k, &d) in rays.iter().enumerate() {
+        // The rays take the origins in turn.
+        let origin = &origins[k % origins.len()];
+        let start = add(
+            origin.p,
+            scale(origin.n, push_off(origin.p, origin.texel_size)),
+        );
+        let dir = around(origin.n, d);
+        let reference = match clustering.bvh.intersect(start, dir, f32::INFINITY) {
+            Some(hit) => {
+                let cluster = clustering.triangle_cluster[hit.triangle as usize];
+                // A back face (inside other geometry) or a part no cluster holds: no light.
+                if !hit.front || cluster == NO_CLUSTER {
+                    continue;
+                }
+                cluster
+            }
+            None => refs.environment + environment_texel(dir),
+        };
+        let e = acc.entry(reference).or_default();
+        e.0 += share;
+        e.1 = add(e.1, dir);
+    }
+    let mut refs: Vec<(u32, f32, V3)> = acc.into_iter().map(|(r, (w, d))| (r, w, d)).collect();
+    refs.sort_unstable_by_key(|r| r.0);
+    Gathered { refs }
+}
+
+/// The value one coarser than `r`: a cluster's or parent's parent in the tree, an
+/// environment value's in the next level (each the mean of the 2x2 under it); `None` at the top.
+fn coarser(r: u32, refs: Refs, tree_parent: &[u32]) -> Option<u32> {
+    if r < refs.environment {
+        return tree_parent
+            .get(r as usize)
+            .copied()
+            .filter(|&p| p != u32::MAX);
+    }
+    let mut e = (r - refs.environment) as usize;
+    let (mut size, mut at) = (RESOLUTION, 0usize);
+    while size > 1 {
+        let level = 6 * size * size;
+        if e < level {
+            let (face, rest) = (e / (size * size), e % (size * size));
+            let (x, y) = (rest % size, rest / size);
+            let half = size / 2;
+            return Some(
+                refs.environment
+                    + (at + level + face * half * half + (y / 2) * half + x / 2) as u32,
+            );
+        }
+        e -= level;
+        at += level;
+        size /= 2;
+    }
+    None
+}
+
+/// The values one coarser value stands for, and the share of it each child has: a tree parent's
+/// children (their weights), a coarser environment value's 2x2 finer ones (a quarter each).
+struct Hierarchy {
+    refs: Refs,
+    tree_parent: Vec<u32>,
+    tree_children: Vec<Vec<(u32, f32)>>,
+}
+
+impl Hierarchy {
+    fn new(input: &crate::data::InputSamples, refs: Refs) -> Self {
+        let clusters = input.clusters();
+        let mut tree_parent = vec![u32::MAX; input.values()];
+        let mut tree_children = vec![Vec::new(); input.tree_children.len()];
+        let mut child = 0usize;
+        for (p, &count) in input.tree_children.iter().enumerate() {
+            for c in child..child + count as usize {
+                tree_parent[c] = (clusters + p) as u32;
+                tree_children[p].push((c as u32, input.tree_weights[c] as f32 / 255.0));
+            }
+            child += count as usize;
+        }
+        Hierarchy {
+            refs,
+            tree_parent,
+            tree_children,
+        }
+    }
+
+    /// The children of `p` (a reference one coarser) and their shares.
+    fn children(&self, p: u32, clusters: usize, out: &mut Vec<(u32, f32)>) {
+        out.clear();
+        if p < self.refs.environment {
+            if let Some(list) = (p as usize)
+                .checked_sub(clusters)
+                .and_then(|k| self.tree_children.get(k))
+            {
+                out.extend_from_slice(list);
+            }
+            return;
+        }
+        // The environment value's level and place, and the four under it.
+        let mut e = (p - self.refs.environment) as usize;
+        let (mut size, mut at) = (RESOLUTION, 0usize);
+        while size > 1 {
+            let level = 6 * size * size;
+            let half = size / 2;
+            let coarse = 6 * half * half;
+            if e >= level && e < level + coarse {
+                let k = e - level;
+                let (face, rest) = (k / (half * half), k % (half * half));
+                let (x, y) = (rest % half, rest / half);
+                for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+                    let fine = at + face * size * size + (2 * y + dy) * size + 2 * x + dx;
+                    out.push((self.refs.environment + fine as u32, 0.25));
+                }
+                return;
+            }
+            e -= level;
+            at += level;
+            size = half;
+        }
+    }
+}
+
+/// Cuts a texel's references down to `budget` (Lightmap Parameters' Irradiance Budget): groups
+/// of references that share a coarser value are replaced by it with their summed weight, those
+/// first whose weights are nearest the coarser value's own shares of its children (where the
+/// replacement changes least), until few enough are left or nothing more can be joined.
+fn reduce(g: &mut Gathered, budget: usize, h: &Hierarchy, clusters: usize) {
+    let mut children = Vec::new();
+    while g.refs.len() > budget {
+        let mut groups: std::collections::BTreeMap<u32, usize> = Default::default();
+        for &(r, _, _) in &g.refs {
+            if let Some(p) = coarser(r, h.refs, &h.tree_parent) {
+                *groups.entry(p).or_default() += 1;
+            }
+        }
+        // Each joinable group's change: how far its weights are from the coarser value's
+        // shares of their sum, over all its children.
+        let weight = |r: u32| {
+            g.refs
+                .binary_search_by_key(&r, |x| x.0)
+                .map_or(0.0, |i| g.refs[i].1)
+        };
+        let mut joinable: Vec<(f32, u32, usize)> = Vec::new();
+        for (&p, &n) in &groups {
+            if n < 2 {
+                continue;
+            }
+            h.children(p, clusters, &mut children);
+            let total: f32 = children.iter().map(|&(c, _)| weight(c)).sum();
+            let change: f32 = children
+                .iter()
+                .map(|&(c, share)| (weight(c) - total * share).abs())
+                .sum();
+            joinable.push((change, p, n));
+        }
+        if joinable.is_empty() {
+            return;
+        }
+        joinable.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+        let mut excess = g.refs.len() - budget;
+        let mut chosen = std::collections::HashSet::new();
+        for (_, p, n) in joinable {
+            if excess == 0 {
+                break;
+            }
+            chosen.insert(p);
+            excess = excess.saturating_sub(n - 1);
+        }
+        let mut merged: std::collections::BTreeMap<u32, (f32, V3)> = Default::default();
+        for &(r, w, d) in &g.refs {
+            let key = match coarser(r, h.refs, &h.tree_parent) {
+                Some(p) if chosen.contains(&p) => p,
+                _ => r,
+            };
+            let e = merged.entry(key).or_default();
+            e.0 += w;
+            e.1 = add(e.1, d);
+        }
+        g.refs = merged.into_iter().map(|(r, (w, d))| (r, w, d)).collect();
+    }
+}
+
+/// The index of the direction of [`DIRECTIONS`] closest to `d` (0: none).
+fn direction_index(d: V3) -> u8 {
+    if dot(d, d) <= 0.0 {
+        return 0;
+    }
+    let d = normalized(d);
+    let mut best = (0u8, f32::NEG_INFINITY);
+    for (i, v) in DIRECTIONS.iter().enumerate().skip(1) {
+        let c = dot(*v, d);
+        if c > best.1 {
+            best = (i as u8, c);
+        }
+    }
+    best.0
+}
+
+/// The precompute's settings of a system (its Lightmap Parameters).
+#[derive(Debug, Clone, Copy)]
+pub struct Settings {
+    /// Rays per texel: Irradiance Quality.
+    pub rays: usize,
+    /// References per texel at most: Irradiance Budget.
+    pub budget: usize,
+}
+
+/// Lightmap Parameters' defaults.
+pub const DEFAULT_SETTINGS: Settings = Settings {
+    rays: 8192,
+    budget: 128,
+};
+
+/// The system's transport. `hash`: the system's own dependency id; `chart_mask`: per output
+/// texel its chart (the directionality is interpolated within charts).
+pub fn transport(
+    instances: &[Instance],
+    clustering: &Clustering,
+    width: u32,
+    height: u32,
+    chart_mask: &[u32],
+    hash: [u8; 16],
+    settings: Settings,
+) -> Result<Transport> {
+    ensure!(
+        chart_mask.len() == (width * height) as usize,
+        "a chart mask of {} texels for {width}x{height}",
+        chart_mask.len()
+    );
+    ensure!(
+        settings.rays > 0 && settings.budget > 0,
+        "an irradiance quality of {} and budget of {}",
+        settings.rays,
+        settings.budget
+    );
+    let input = &clustering.input;
+    let numbering = Refs {
+        environment: input.values() as u32,
+    };
+    let hierarchy = Hierarchy::new(input, numbering);
+    let footprints = footprints(instances, width, height);
+    let rays = hemisphere(settings.rays);
+    let test = hemisphere(HIDDEN_RAYS);
+    // A texel's origins that other geometry does not hide (also in a gap its renderer's
+    // Modelling Tolerance ignores).
+    let visible: Vec<Option<Vec<Origin>>> = footprints
+        .par_iter()
+        .map(|f| {
+            f.as_ref().map(|list| {
+                list.iter()
+                    .filter(|o| {
+                        let push = push_off(o.p, o.texel_size);
+                        let gap = instances[o.instance].modelling_tolerance;
+                        !hidden(&clustering.bvh, &test, o.p, o.n, push, gap)
+                    })
+                    .cloned()
+                    .collect()
+            })
+        })
+        .collect();
+    let mut gathered: Vec<Option<Gathered>> = visible
+        .par_iter()
+        .map(|o| match o {
+            Some(list) if !list.is_empty() => {
+                let mut g = gather(list, clustering, &rays, numbering);
+                reduce(&mut g, settings.budget, &hierarchy, input.clusters());
+                Some(g)
+            }
+            Some(_) => Some(Gathered::default()),
+            None => None,
+        })
+        .collect();
+    // A texel all of whose footprint is hidden takes what the nearest texel of its chart with
+    // a visible one receives.
+    let empty: Vec<usize> = (0..gathered.len())
+        .filter(|&at| visible[at].as_ref().is_some_and(Vec::is_empty))
+        .collect();
+    for at in empty {
+        let (x, y) = ((at as u32 % width) as i64, (at as u32 / width) as i64);
+        let chart = chart_mask[at];
+        let mut best: Option<(i64, usize)> = None;
+        for radius in 1..=FILL_RADIUS {
+            for dy in -radius..=radius {
+                for dx in -radius..=radius {
+                    let (nx, ny) = (x + dx, y + dy);
+                    if dx.abs().max(dy.abs()) != radius
+                        || nx < 0
+                        || ny < 0
+                        || nx >= width as i64
+                        || ny >= height as i64
+                    {
+                        continue;
+                    }
+                    let n = (ny * width as i64 + nx) as usize;
+                    if chart_mask[n] == chart && visible[n].as_ref().is_some_and(|v| !v.is_empty())
+                    {
+                        let d = dx * dx + dy * dy;
+                        if best.is_none_or(|(bd, _)| d < bd) {
+                            best = Some((d, n));
+                        }
+                    }
+                }
+            }
+            if best.is_some() {
+                break;
+            }
+        }
+        if let Some((_, n)) = best {
+            gathered[at] = gathered[n].clone();
+        }
+    }
+
+    // One segment per block of 2x2 texels; its first texel stands for the block.
+    let mut segments = Vec::new();
+    for by in 0..height.div_ceil(2) {
+        for bx in 0..width.div_ceil(2) {
+            let texels: Vec<(u16, u16)> = [(0, 0), (1, 0), (0, 1), (1, 1)]
+                .iter()
+                .map(|&(dx, dy)| (2 * bx + dx, 2 * by + dy))
+                .filter(|&(x, y)| {
+                    x < width && y < height && gathered[(y * width + x) as usize].is_some()
+                })
+                .map(|(x, y)| (x as u16, y as u16))
+                .collect();
+            if texels.is_empty() {
+                continue;
+            }
+            let of = |t: (u16, u16)| {
+                gathered[t.1 as usize * width as usize + t.0 as usize]
+                    .as_ref()
+                    .unwrap()
+            };
+            let mut refs: Vec<u32> = texels
+                .iter()
+                .flat_map(|&t| of(t).refs.iter().map(|r| r.0))
+                .collect();
+            refs.sort_unstable();
+            refs.dedup();
+            let mut max = vec![0f32; refs.len()];
+            let mut dense = vec![0f32; texels.len() * refs.len()];
+            for (t, &texel) in texels.iter().enumerate() {
+                for &(r, w, _) in &of(texel).refs {
+                    let k = refs.binary_search(&r).unwrap();
+                    dense[t * refs.len() + k] = w;
+                    max[k] = max[k].max(w);
+                }
+            }
+            let reference_weights: Vec<u16> = max
+                .iter()
+                .map(|&m| (m * 65535.0).round().clamp(1.0, 65535.0) as u16)
+                .collect();
+            let weights: Vec<u8> = dense
+                .iter()
+                .enumerate()
+                .map(|(i, &w)| {
+                    let rw = reference_weights[i % refs.len()] as f32 / 65535.0;
+                    (w / rw * 255.0).round().clamp(0.0, 255.0) as u8
+                })
+                .collect();
+            let references: Vec<(u16, u32)> = refs
+                .iter()
+                .map(|&r| {
+                    if r < numbering.environment {
+                        (1, r)
+                    } else {
+                        (0, r - numbering.environment)
+                    }
+                })
+                .collect();
+            // The block's normal and each reference's direction, at its first texel.
+            let first = of(texels[0]);
+            let block_directions: Vec<u8> = refs
+                .iter()
+                .map(|&r| match first.refs.binary_search_by_key(&r, |x| x.0) {
+                    Ok(i) => direction_index(first.refs[i].2),
+                    Err(_) => 0,
+                })
+                .collect();
+            let normal = footprints[texels[0].1 as usize * width as usize + texels[0].0 as usize]
+                .as_ref()
+                .and_then(|f| f.first())
+                .map_or([0.0, 0.0, 1.0], |o| o.n);
+            // Environment references come first, as the dependencies are ordered.
+            let mut order: Vec<usize> = (0..refs.len()).collect();
+            order.sort_by_key(|&k| references[k]);
+            segments.push(Segment {
+                references: order.iter().map(|&k| references[k]).collect(),
+                reference_weights: order.iter().map(|&k| reference_weights[k]).collect(),
+                weights: (0..texels.len())
+                    .flat_map(|t| order.iter().map(move |&k| (t, k)))
+                    .map(|(t, k)| weights[t * refs.len() + k])
+                    .collect(),
+                texels,
+                copies: Vec::new(),
+                block_normals: vec![normal],
+                block_directions: order.iter().map(|&k| block_directions[k]).collect(),
+                block_copies: 0,
+            });
+        }
+    }
+
+    // Per block, which neighbouring blocks share its chart.
+    let (bw, bh) = (width / 2, height / 2);
+    let chart_of_block = |x: i64, y: i64| -> Option<u32> {
+        if x < 0 || y < 0 || x >= bw as i64 || y >= bh as i64 {
+            return None;
+        }
+        (0..4)
+            .map(|k| chart_mask[((2 * y + k / 2) * width as i64 + 2 * x + k % 2) as usize])
+            .find(|&c| c != crate::data::NO_CHART)
+    };
+    let mut block_neighbours = vec![0u8; (bw * bh) as usize];
+    for y in 0..bh as i64 {
+        for x in 0..bw as i64 {
+            let Some(own) = chart_of_block(x, y) else {
+                continue;
+            };
+            let mut bits = 0;
+            for (dx, dy, bit) in [
+                (-1, 0, NEIGHBOUR_LEFT),
+                (1, 0, NEIGHBOUR_RIGHT),
+                (0, -1, NEIGHBOUR_BELOW),
+                (0, 1, NEIGHBOUR_ABOVE),
+                (-1, -1, NEIGHBOUR_BELOW_LEFT),
+                (-1, 1, NEIGHBOUR_ABOVE_LEFT),
+                (1, -1, NEIGHBOUR_BELOW_RIGHT),
+                (1, 1, NEIGHBOUR_ABOVE_RIGHT),
+            ] {
+                if chart_of_block(x + dx, y + dy) == Some(own) {
+                    bits |= bit;
+                }
+            }
+            block_neighbours[(y * bw as i64 + x) as usize] = bits;
+        }
+    }
+
+    Ok(Transport {
+        width,
+        height,
+        dependencies: vec![ENVIRONMENT_ID, hash],
+        segments,
+        block_neighbours,
+        block_error: None,
+        bounce_samples: clustering.bounce_samples.clone(),
+        bounce: clustering.bounce.clone(),
+    })
+}
