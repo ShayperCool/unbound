@@ -715,11 +715,13 @@ namespace UnityEngine
             get => m_GraphicsFormat == GraphicsFormat.None && m_DepthStencilFormat != GraphicsFormat.None
                 ? (shadowSamplingMode == ShadowSamplingMode.CompareDepths ? RenderTextureFormat.Shadowmap : RenderTextureFormat.Depth)
                 : GraphicsFormatUtility.GetRenderTextureFormat(m_GraphicsFormat);
+            // The format in the descriptor's own encoding, as the device can render it; only a
+            // Shadowmap compares (Unity 6000.0.71f1's RenderTextureDescriptor.colorFormat).
             set
             {
-                graphicsFormat = GraphicsFormatUtility.GetGraphicsFormat(value, sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Default);
-                if (value == RenderTextureFormat.Shadowmap) shadowSamplingMode = ShadowSamplingMode.CompareDepths;
-                else if (value == RenderTextureFormat.Depth) shadowSamplingMode = ShadowSamplingMode.None;
+                shadowSamplingMode = value == RenderTextureFormat.Shadowmap ? ShadowSamplingMode.CompareDepths : ShadowSamplingMode.None;
+                var format = GraphicsFormatUtility.GetGraphicsFormat(value, sRGB);
+                graphicsFormat = SystemInfo.GetCompatibleFormat(format, GraphicsFormatUsage.Render);
             }
         }
 

@@ -107,6 +107,10 @@ and image manifest, with the rtdepth probe's float tolerance (absolute and relat
   second material re-initializes the volume, so its update reads the initialization color). The
   same value again, the shader pass, the initialization texture and source do not. Setting an
   initialization material clears the initialization texture and makes the color white.
+  The OnLoad update queued again runs with the shader pass the texture has then
+  (`later.materialUpdate`; setting the pass alone runs nothing, `later.passOnly`).
+* A double-buffered volume's update reads, through `_SelfTexture3D`, the buffer written last,
+  also between the updates of one `Update(2)` (`later.volumeFrames`, `later.volumeTwice`).
 
 ## Unbound (2026-11-12)
 

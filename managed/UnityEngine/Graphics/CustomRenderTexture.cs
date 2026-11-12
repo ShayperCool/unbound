@@ -168,7 +168,7 @@ namespace UnityEngine
         /// before it, by the modes the texture has then (Unity 6000.0.71f1 Editor,
         /// tests/projects/customrt <c>changed.*</c>, <c>volumeSelf</c>, <c>later.*</c>). The shader
         /// pass, the initialization texture and source do not; not measured, and not queued: the
-        /// zones, double buffering, the update period and zone space.
+        /// zones, zone wrapping, double buffering, the update period and zone space.
         /// </summary>
         void Changed()
         {
