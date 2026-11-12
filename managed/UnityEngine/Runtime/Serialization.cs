@@ -61,6 +61,9 @@ namespace Unbound.Runtime
         internal FieldInfo Field;
         internal string Name;
         internal string[] FormerNames;
+        /// <summary>The names in an importer's .meta settings (see <see cref="SerializationRules.MetaName"/>).</summary>
+        internal string MetaName;
+        internal string[] FormerMetaNames;
         internal Shape Shape;
         internal Type ElementType;
         internal Shape ElementShape;
@@ -79,6 +82,15 @@ namespace Unbound.Runtime
 
         /// <summary>The serialized fields of a type, base class fields first, in declaration order.</summary>
         internal static SerializedMember[] Members(Type type) => s_Members.GetOrAdd(type, Build);
+
+        /// <summary>A field's name in the settings an importer keeps in its asset's .meta file: a
+        /// leading <c>m_</c> dropped and the next letter lower-cased (<c>m_SvgType</c> is written
+        /// <c>svgType</c>, at every nesting level; other names unchanged), as the Unity 6000.0.71f1
+        /// Editor writes a ScriptedImporter's fields (tests/projects/uitkvector).</summary>
+        internal static string MetaName(string name) =>
+            name.Length > 2 && name.StartsWith("m_", StringComparison.Ordinal)
+                ? char.ToLowerInvariant(name[2]) + name.Substring(3)
+                : name;
 
         static SerializedMember[] Build(Type type)
         {
@@ -102,6 +114,8 @@ namespace Unbound.Runtime
                     var names = new List<string>();
                     foreach (var f in former) names.Add(f.oldName);
                     member.FormerNames = names.ToArray();
+                    member.MetaName = MetaName(field.Name);
+                    member.FormerMetaNames = Array.ConvertAll(member.FormerNames, MetaName);
                     if (managedReference)
                     {
                         member.Shape = ManagedReferenceShape(field.FieldType, out member.ElementType);
@@ -243,9 +257,14 @@ namespace Unbound.Runtime
         YNode m_ReferenceTable;
         readonly List<ISerializationCallbackReceiver> m_Callbacks = new List<ISerializationCallbackReceiver>();
 
-        internal YamlReader(IReferenceResolver resolver)
+        /// <summary>Whether the data is an importer's .meta settings, whose field names are
+        /// written in their meta form (<see cref="SerializationRules.MetaName"/>).</summary>
+        readonly bool m_MetaNames;
+
+        internal YamlReader(IReferenceResolver resolver, bool metaNames = false)
         {
             m_Resolver = resolver;
+            m_MetaNames = metaNames;
         }
 
         /// <summary>Fills the serialized fields of a script object (MonoBehaviour, ScriptableObject)
@@ -264,11 +283,11 @@ namespace Unbound.Runtime
             }
         }
 
-        static YNode MemberNode(YNode map, SerializedMember member)
+        YNode MemberNode(YNode map, SerializedMember member)
         {
-            var node = map.Get(member.Name);
+            var node = map.Get(m_MetaNames ? member.MetaName : member.Name);
             if (node == null)
-                foreach (var former in member.FormerNames)
+                foreach (var former in m_MetaNames ? member.FormerMetaNames : member.FormerNames)
                 {
                     node = map.Get(former);
                     if (node != null) break;

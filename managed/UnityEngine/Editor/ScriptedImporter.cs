@@ -168,7 +168,7 @@ namespace Unbound.Runtime
             importer.m_AssetPath = path;
             if (settings != null)
             {
-                new YamlReader(new LoadedFile { Guid = guid, Path = path }).ReadScriptObject(importer, settings);
+                new YamlReader(new LoadedFile { Guid = guid, Path = path }, metaNames: true).ReadScriptObject(importer, settings);
                 importer.userData = settings.Get("userData")?.Scalar ?? "";
                 importer.assetBundleName = settings.Get("assetBundleName")?.Scalar ?? "";
                 importer.assetBundleVariant = settings.Get("assetBundleVariant")?.Scalar ?? "";
