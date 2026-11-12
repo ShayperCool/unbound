@@ -702,6 +702,57 @@ namespace UnityEngine.Tests
             });
         }
 
+        /// <summary>An update with zero deltaTime (time scale 0) takes no step, but the measured
+        /// profile refreshes the reports from where the agents stand, so a path applied in it is
+        /// reported (Unbound's choice, unmeasured); other releases keep the steering target of
+        /// the last step.</summary>
+        [Theory]
+        [InlineData("6000.0.71f1")]
+        [InlineData("6000.0.72f1")]
+        public void APausedUpdateReportsThePathsAppliedInIt(string release)
+        {
+            NavigationTestRelease.At(release, () =>
+            {
+                bool measured = release == "6000.0.71f1";
+                var go = new GameObject("paused");
+                m_Objects.Add(go);
+                go.transform.position = new Vector3(-7f, 0f, -1f);
+                var agent = go.AddComponent<NavMeshAgent>();
+                Step();
+                var path = new NavMeshPath();
+                var target = Vector3.zero;
+                foreach (var offset in new[] { new Vector3(0.5f, 0f, 0.5f), new Vector3(-0.5f, 0f, 0.5f), new Vector3(0.5f, 0f, -0.5f), new Vector3(-0.5f, 0f, -0.5f) })
+                {
+                    target = agent.nextPosition + offset;
+                    if (agent.CalculatePath(target, path) && path.m_Polygons.Length == 1) break;
+                }
+                Assert.Single(path.m_Polygons);
+                Time.s_DeltaTime = 0f;
+                // A destination on its own polygon: the path is given in the call, reported from
+                // the next update.
+                Assert.True(agent.SetDestination(target));
+                Assert.False(agent.hasPath);
+                Step();
+                Assert.True(agent.hasPath);
+                Assert.True(Dist2D(agent.steeringTarget, target) < 1e-3f);
+
+                // Walking, a new route given while paused.
+                Time.s_DeltaTime = Dt;
+                Assert.True(agent.SetDestination(Destination));
+                for (int i = 0; i < 10; i++) Step();
+                var before = agent.steeringTarget;
+                Time.s_DeltaTime = 0f;
+                var back = new Vector3(-7f, 0f, 1.5f);
+                Assert.True(agent.SetDestination(back));
+                Step();
+                Assert.False(agent.pathPending);
+                Assert.True(agent.hasPath);
+                Assert.True(agent.CalculatePath(back, path));
+                Assert.True(Dist2D(before, path.corners[1]) > 0.1f);
+                Assert.True(Dist2D(agent.steeringTarget, measured ? path.corners[1] : before) < 1e-3f);
+            });
+        }
+
         /// <summary>Within a centimetre of its destination on its last polygon the agent reports no
         /// path, also while it still closes in (the end is dropped like any corner).</summary>
         [Fact]
