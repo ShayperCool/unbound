@@ -15,6 +15,10 @@ text exactly). The exit status is the number of scenarios with a difference that
 0 when all others match; `--scenario PREFIX` limits the comparison (and the Unbound run,
 NAVPATH_PROBE_ONLY) to scenarios whose name starts with it.
 
+The optional `--profile layers` runs the stacked-link diagnostic. It has its own canonical
+Reference/unity-<release>/layers.json and nested capture directory. Every difference fails;
+there are no listed keys for this profile. Its currently failing scope is in README.md.
+
 Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
                           apart, on either side of the line: Unity keeps the corner there, Unbound
@@ -53,7 +57,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import reference_file, run_root, unity_version
+from probe_paths import reference_file, reference_root, run_root, unity_version
 from editor_runner import EditorJob, result_problem, run_parallel, summary
 
 PROBE = Path(__file__).resolve().parent
@@ -72,6 +76,15 @@ LISTED = {
 }
 
 
+def profile_reference(args):
+    return reference_file(PROBE) if args.profile == 'main' else reference_root(PROBE)/'layers.json'
+
+
+def capture_root(args):
+    root = run_root(PROBE, args.label)
+    return root if args.profile == 'main' else root/'layers'
+
+
 def copy_project(dest):
     if dest.exists():
         sys.exit(f'refusing to overwrite project: {dest}')
@@ -81,7 +94,7 @@ def copy_project(dest):
 
 
 def editor(args):
-    root = run_root(PROBE, args.label)
+    root = capture_root(args)
     jobs = []
     for name in REPEATS:
         out = root/name
@@ -89,7 +102,7 @@ def editor(args):
             sys.exit(f'refusing to overwrite capture: {out}')
         project = copy_project(out/'project')
         jobs.append(EditorJob(project, out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'], batch=True,
-                              env={'NAVPATH_PROBE_OUT': str(out/OUTPUT), 'NAVPATH_PROBE_ONLY': args.scenario}, timeout=1200, label='navpath-'+name))
+                              env={'NAVPATH_PROBE_OUT': str(out/OUTPUT), 'NAVPATH_PROBE_ONLY': args.scenario, 'NAVPATH_PROBE_PROFILE': args.profile}, timeout=1200, label='navpath-'+name))
     failed = False
     for result, name in zip(run_parallel(jobs), REPEATS):
         print(summary(result))
@@ -101,7 +114,7 @@ def editor(args):
 
 
 def publish(args):
-    root = run_root(PROBE, args.label)
+    root = capture_root(args)
     for name in REPEATS:
         problem = result_problem(root/name)
         if problem:
@@ -109,7 +122,8 @@ def publish(args):
     first, second = ((root/name/OUTPUT).read_bytes() for name in REPEATS)
     if first != second:
         sys.exit('the two captures differ; nothing published')
-    target = reference_file(PROBE)
+    target = profile_reference(args)
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(first)
     print(f'published {target}')
     return 0
@@ -155,7 +169,7 @@ def unbound(args):
     binary = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI')
     if not binary:
         sys.exit('set UNBOUND to the unbound binary')
-    out = run_root(PROBE, args.label)/'unbound'
+    out = capture_root(args)/'unbound'
     out.mkdir(parents=True, exist_ok=True)
     result = out/OUTPUT
     result.unlink(missing_ok=True)
@@ -163,12 +177,12 @@ def unbound(args):
     command = [binary, 'run', '-p', str(PROBE), '--no-watch', '--frames', str(FRAMES)]
     if launcher.exists():
         command = [str(launcher), '--kind', 'engine-cpu', *command]
-    env = dict(os.environ, NAVPATH_PROBE_OUT=str(result), NAVPATH_PROBE_ONLY=args.scenario)
+    env = dict(os.environ, NAVPATH_PROBE_OUT=str(result), NAVPATH_PROBE_ONLY=args.scenario, NAVPATH_PROBE_PROFILE=args.profile)
     with open(out/'run.log', 'w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
     if code != 0 or not result.exists():
         sys.exit(f'Unbound failed (exit {code}); see {out/"run.log"}')
-    bad = compare(json.loads(reference_file(PROBE).read_text()), json.loads(result.read_text()), args.scenario, args.details)
+    bad = compare(json.loads(profile_reference(args).read_text()), json.loads(result.read_text()), args.scenario, args.details)
     print(f'gated: {bad} scenario(s) differ')
     return min(bad, 100)
 
@@ -177,9 +191,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('command', choices=('editor', 'publish', 'unbound'))
     parser.add_argument('--label', default='current')
+    parser.add_argument('--profile', choices=('main', 'layers'), default='main',
+                        help='main regression set, or strict stacked-link diagnostic')
     parser.add_argument('--scenario', default='')
     parser.add_argument('--details', type=int, default=6)
     args = parser.parse_args()
+    if args.profile == 'layers' and args.scenario:
+        parser.error('--scenario is supported only by the main profile')
     print(f'Unity {unity_version()}', file=sys.stderr)
     return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.command](args)
 

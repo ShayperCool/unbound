@@ -25,7 +25,8 @@ public class PathProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Create()
     {
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NAVPATH_PROBE_OUT"))) return;
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NAVPATH_PROBE_OUT")) ||
+            Environment.GetEnvironmentVariable("NAVPATH_PROBE_PROFILE") == "layers") return;
         new GameObject("PathProbe").AddComponent<PathProbe>();
     }
 

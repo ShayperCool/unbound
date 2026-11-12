@@ -87,3 +87,62 @@ Q376's runtime raster-bounds correction resolves both initial `replan.topofar` c
 failures: `a.given` and `mask.given` are now 7 in both engines. All 1687 values match the
 unchanged Unity 6000.0.71f1 reference. The existing comparator and its listed-key policy
 are unchanged; the keys no longer produce differences.
+
+
+The `layers` diagnostic profile records stacked data separately from the main regression
+reference. Run it with an explicit release and keep its failing output for the follow-up:
+
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile layers --label L
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py publish --profile layers --label L
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 UNBOUND=<binary> python3 tests/projects/navpath/run.py unbound --profile layers --label L --details 100000
+
+Its canonical reference is `Reference/unity-6000.0.71f1/layers.json`. Two independent
+GPU Editor captures agree byte for byte. All 30 scenarios and 5826 values are compared
+with the existing tolerance. Every missing, extra or differing value fails this profile;
+there are no listed-key exceptions. The default gate continues to run the main profile.
+The current engine differs in 523 values across 18 scenarios; 12 scenarios match.
+The comparison reports every missing and extra corner coordinate as well as differing
+values. This diagnostic currently fails and does not establish multilayer support.
+
+| diagnostic group | differing values |
+| --- | ---: |
+| Two/four/eight-layer point links, one/three copies | 406 |
+| Eight-layer wide links, one/three copies | 28 |
+| Remove, restore and recreate lifetime controls | 49 |
+| Source-bake climb controls | 18 |
+| Add a closer floor to a valid upper connection | 22 |
+
+
+`LayerProbe` varies one, two, four and eight overlapping floor pairs, point and 4 m wide
+links, and one or three coincident links per layer. It records every source/target layer
+pair, the path status and every corner. One-layer controls match. With point links, the
+Editor connects only the chosen source and landing layer, while Unbound can connect
+several stacked layers. With eight layers, wide links retain complete reachability but
+some corner heights differ. These results distinguish connection ownership from route
+selection; they do not establish a universal fixed connection budget.
+
+Lifetime controls remove the selected lower floor, restore it, then recreate the link.
+The Editor's lower route becomes partial on removal, remains partial after restoration,
+and completes after the link is recreated. An existing upper connection stays on the
+upper floor after a closer lower floor is added. Rebuilding all connections at each
+world refresh would contradict those controls. The implementation follow-up needs
+persistent point-end ownership and selective reconnection before changing capacity.
+Additional controls vary the source bake's climb between 0.1 and 1.2 m while holding
+the registered agent type fixed. An endpoint 0.25 m above the floor connects and one
+1 m above it does not, for both bakes. Wider ranges, carving, data updates and other
+releases remain unmeasured.
+
+The [Unity 6000.0 AddLink API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMesh.AddLink.html)
+documents link creation and validity, not a stacked-layer selection or rebinding order.
+The [CalculatePath API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMesh.CalculatePath.html)
+returns true for complete and partial paths. The diagnostic records both the Boolean
+and status so partial paths cannot be counted as successful crossings.
+
+Q385 leaves the original query scope unchanged: 23 `place.links` values and two
+`link.wide` approach offsets. Landing polygon selection alone does not resolve these
+routes, and a blanket portal reset at a link has no measured general rule. The height
+agent scope also stays at 14/816 in navbaked. Imported height sampling still matches
+103/103; runtime height generation is a separate unsupported feature, with its warning
+retained. Source triangles alone would not supply a reduced walkable height surface
+and its per-tile query structure. No funnel, arrival or height correction is fitted to
+these fixtures.
