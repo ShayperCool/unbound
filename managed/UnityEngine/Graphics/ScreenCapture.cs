@@ -325,6 +325,8 @@ namespace UnityEngine
             internal void Apply(int superSize)
             {
                 // Forced on, with the forced minimum and the maximum both at the capture's level.
+                // A script changing the anisotropic settings during the capture sends them again
+                // and ends this for the remaining tiles (not measured in the Editor).
                 GfxStream.Anisotropy((int)AnisotropicFiltering.ForceEnable, CaptureAnisotropy, CaptureAnisotropy);
                 float shift = -1f - MathF.Log2(superSize);
                 for (int k = 0; k < m_Textures.Length; k++) m_Textures[k].mipMapBias = m_Biases[k] + shift;
