@@ -15,6 +15,7 @@ namespace UnityEngine
         internal int m_Layer;
         internal string m_Tag = "Untagged";
         internal bool m_IsActive = true;
+        [NonSerialized] internal int m_ActivationTransitionDepth;
         // Scene-authored objects are loaded but inactive during BeforeSceneLoad.
         internal bool m_AwaitingSceneAwake;
         internal SceneHandle m_Scene;
@@ -72,6 +73,18 @@ namespace UnityEngine
             m_Transform = t;
             m_Components.Insert(0, t);
             return t;
+        }
+
+        internal override void OnHideFlagsChanged(HideFlags previous)
+        {
+            if (!Compat.HideFlagsRootOwnershipMeasured) return;
+            var flags = hideFlags;
+            // The Transform can send callbacks before later components receive their flags.
+            for (int i = 0; i < m_Components.Count; i++)
+            {
+                var component = m_Components[i];
+                if (!component.m_Destroyed) component.hideFlags = flags;
+            }
         }
 
         public Transform transform
@@ -182,6 +195,11 @@ namespace UnityEngine
             MainThreadCheck.Check("SetActive");
             ThrowIfDestroyed();
             if (m_IsActive == value) return;
+            if (Compat.DestroyPhasesMeasured && m_ActivationTransitionDepth != 0)
+            {
+                Debug.LogError("GameObject is already being activated or deactivated.", this);
+                return;
+            }
             bool wasActive = ActiveInHierarchyNoThrow;
             m_IsActive = value;
             bool isActive = ActiveInHierarchyNoThrow;

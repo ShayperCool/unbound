@@ -68,9 +68,13 @@ namespace UnityEngine
             set
             {
                 MainThreadCheck.Check("set_hideFlags");
+                var previous = m_HideFlags;
                 m_HideFlags = value;
+                OnHideFlagsChanged(previous);
             }
         }
+
+        internal virtual void OnHideFlagsChanged(HideFlags previous) { }
 
         public int GetInstanceID()
         {

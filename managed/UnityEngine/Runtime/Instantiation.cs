@@ -450,6 +450,14 @@ namespace Unbound.Runtime
                 obj.m_PendingDestroy = false;
                 return;
             }
+            var owner = obj as GameObject ?? (obj as Component)?.m_GameObject;
+            if (Compat.DestroyPhasesMeasured && !ReferenceEquals(owner, null) && owner.m_ActivationTransitionDepth != 0)
+            {
+                Debug.LogError(obj is GameObject
+                    ? "Cannot destroy GameObject while it is being activated or deactivated."
+                    : "Cannot destroy Component while GameObject is being activated or deactivated.", obj);
+                return;
+            }
             switch (obj)
             {
                 case GameObject go:

@@ -22,8 +22,9 @@ ownership or Play-exit lifetime of internal rendering helpers; these are measure
 observations for this release and context.
 
 A separate diagnostic sidecar retains the ordinary scripted HideAndDontSave
-root's scene validity and lifetime. That public flag transition is an open gap
-in COMPATIBILITY_GAPS, distinct from the internal creation paths checked here.
+root's scene validity and lifetime. Public flag transitions now have their own
+`tests/projects/hiddenflags` controls, distinct from the internal creation paths
+checked here.
 No prior reference or tolerance is changed.
 
 ```

@@ -71,8 +71,8 @@ realtime reflection and particle-light holders consume no scene root or later
 sibling index. With domain reload disabled, the Editor's reflection camera
 survives stopping Play. Detached holders therefore remain registered in Edit mode
 and are destroyed at final process shutdown; particle systems destroy the light
-holders they own. The ordinary public HideAndDontSave flag transition is a
-separate open gap, recorded in COMPATIBILITY_GAPS.
+holders they own. Public HideAndDontSave transitions are covered separately by
+`tests/projects/hiddenflags`, including flag combinations, callbacks and restoration.
 
 ## Teardown and queued-load controls
 

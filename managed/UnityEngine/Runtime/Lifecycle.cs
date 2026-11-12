@@ -130,6 +130,20 @@ namespace Unbound.Runtime
             else Deactivate(components);
         }
 
+        internal static void OnSceneOwnershipDetached(GameObject go)
+        {
+            if (!go.ActiveInHierarchyNoThrow) return;
+            using var lease = UnityEngine.Pool.ListPool<Component>.Get(out var components);
+            CollectActive(go.m_Transform, components, includeRoot: true);
+            Deactivate(components);
+            if (!go.m_Destroyed && go.ActiveInHierarchyNoThrow)
+            {
+                components.Clear();
+                CollectActive(go.m_Transform, components, includeRoot: true);
+                Activate(components);
+            }
+        }
+
         /// <summary>Components of the subtree whose GameObjects are active themselves (activeSelf).</summary>
         static void CollectActive(Transform t, List<Component> into, bool includeRoot)
         {
@@ -175,10 +189,11 @@ namespace Unbound.Runtime
         /// Scripts go in script execution order (stable), each one's Awake right before its OnEnable.</summary>
         internal static void Activate(List<Component> components)
         {
-            var scripts = new List<MonoBehaviour>();
+            using var lease = UnityEngine.Pool.ListPool<MonoBehaviour>.Get(out var scripts);
             bool physics = false;
             foreach (var c in components)
             {
+                if (c.m_Destroyed) continue;
                 if (c is MonoBehaviour mb) { Gizmos.Track(mb); scripts.Add(mb); }
                 else
                 {
@@ -194,7 +209,9 @@ namespace Unbound.Runtime
             foreach (var mb in scripts)
             {
                 if (mb.m_Destroyed || !mb.m_GameObject.activeInHierarchy || !EditorSession.Runs(mb)) continue;
-                if (!mb.m_DidAwake) CallAwake(mb);
+                bool wasAwake = mb.m_DidAwake;
+                if (!wasAwake) CallAwake(mb);
+                using var transition = new ActivationTransition(mb.m_GameObject, wasAwake);
                 if (mb.m_Enabled && !mb.m_EnabledState && !mb.m_Destroyed && mb.m_GameObject.activeInHierarchy) Enable(mb);
             }
         }
@@ -207,11 +224,27 @@ namespace Unbound.Runtime
 
         static void StableSortByOrder(List<MonoBehaviour> scripts)
         {
-            var keyed = new List<(int Order, int Index, MonoBehaviour B)>(scripts.Count);
+            using var lease = UnityEngine.Pool.ListPool<(int Order, int Index, MonoBehaviour B)>.Get(out var keyed);
             for (int i = 0; i < scripts.Count; i++)
                 keyed.Add((ScriptMessages.For(scripts[i].GetType()).ExecutionOrder, i, scripts[i]));
             keyed.Sort((a, b) => a.Order != b.Order ? a.Order.CompareTo(b.Order) : a.Index.CompareTo(b.Index));
             for (int i = 0; i < keyed.Count; i++) scripts[i] = keyed[i].B;
+        }
+
+        // A hierarchy transition protects only the owner whose callbacks are running.
+        // Disabling a Behaviour directly does not enter this scope.
+        readonly struct ActivationTransition : IDisposable
+        {
+            readonly GameObject m_Owner;
+            internal ActivationTransition(GameObject owner, bool enabled)
+            {
+                m_Owner = enabled && Compat.DestroyPhasesMeasured ? owner : null;
+                if (!ReferenceEquals(m_Owner, null)) m_Owner.m_ActivationTransitionDepth++;
+            }
+            public void Dispose()
+            {
+                if (!ReferenceEquals(m_Owner, null)) m_Owner.m_ActivationTransitionDepth--;
+            }
         }
 
         internal static void Deactivate(List<Component> components, bool destroying = false)
@@ -219,6 +252,7 @@ namespace Unbound.Runtime
             foreach (var c in components)
             {
                 if (c.m_Destroyed) continue;
+                using var transition = new ActivationTransition(c.m_GameObject, true);
                 if (c is MonoBehaviour mb)
                 {
                     if (mb.m_Enabled) Disable(mb, includeAwakened: destroying);

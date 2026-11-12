@@ -28,6 +28,14 @@ namespace UnityEngine
         {
         }
 
+        internal override void OnHideFlagsChanged(HideFlags previous)
+        {
+            if (!Compat.HideFlagsRootOwnershipMeasured || previous == hideFlags) return;
+            var go = m_GameObject;
+            if (go == null || go.m_Transform != this || m_Parent != null) return;
+            SceneRegistry.UpdateRootHideFlags(go, previous, hideFlags);
+        }
+
         // ------------------------------------------------------------------ local state
 
         public Vector3 localPosition

@@ -24,6 +24,10 @@ namespace Unbound.Runtime
         /// tests/projects/editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
         internal static bool SceneAsyncPreparationMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Public root hide flag ownership and component propagation measured by
+        /// tests/projects/hiddenflags on Unity 6000.0.71f1.</summary>
+        internal static bool HideFlagsRootOwnershipMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Pending Starts without an earlier callback visit run at the PostLateUpdate
         /// scripting point, measured by editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
         internal static bool PendingStartsAfterLateUpdate => Release == (6000, 0, 71, 'f', 1);
@@ -34,7 +38,8 @@ namespace Unbound.Runtime
         internal static bool FlareCameraRepairMeasuredFor(string release) => Parse(release ?? "") == (6000, 0, 71, 'f', 1);
 
         /// <summary>Deferred object lifetime at delayed scripting points, measured in
-        /// tests/projects/destroyphases on Unity 6000.0.71f1.</summary>
+        /// tests/projects/destroyphases, plus activation destruction guards in hiddenflags,
+        /// on Unity 6000.0.71f1.</summary>
         internal static bool DestroyPhasesMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Scene objects read from files use positive instance IDs, independently of asset

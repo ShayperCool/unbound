@@ -300,6 +300,26 @@ namespace Unbound.Runtime
             scene.Roots.Add(go);
         }
 
+        // Measured root ownership combination, tests/projects/hiddenflags on 6000.0.71f1.
+        const HideFlags DetachedRootFlags = HideFlags.HideInHierarchy
+            | HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+
+        internal static void UpdateRootHideFlags(GameObject go, HideFlags previous, HideFlags current)
+        {
+            if (go.m_Destroyed || go.m_IsPrefabAsset || go.IsPersistentAsset) return;
+            if ((current & DetachedRootFlags) == DetachedRootFlags)
+            {
+                if (Get(go.m_Scene) == null) return;
+                MoveToScene(go, Detached);
+                Lifecycle.OnSceneOwnershipDetached(go);
+            }
+            else if ((previous & DetachedRootFlags) == DetachedRootFlags
+                && s_Detached != null && go.m_Scene == s_Detached.Handle)
+            {
+                MoveToScene(go, DefaultCreationScene());
+            }
+        }
+
         internal static void SetSceneRecursive(Transform t, SceneHandle handle)
         {
             t.m_GameObject.m_Scene = handle;
