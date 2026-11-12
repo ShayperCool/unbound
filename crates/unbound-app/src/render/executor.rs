@@ -455,6 +455,8 @@ enum InstancingMode {
 
 /// The keyword a BatchRendererGroup draw compiles its material's variant with.
 const DOTS_INSTANCING_KEYWORD: &str = "DOTS_INSTANCING_ON";
+/// The keyword of the instancing variant (GPU instancing, mesh-instance replays).
+const INSTANCING_KEYWORD: &str = "INSTANCING_ON";
 /// The draw property (and byte address buffer) of a BatchRendererGroup batch's instance data.
 const DOTS_INSTANCE_DATA: &str = "unity_DOTSInstanceData";
 
@@ -3549,9 +3551,13 @@ impl UnityRenderer {
                 None => {
                     let mut keywords = resolved.material.keywords.clone();
                     keywords.extend(self.keywords.iter().cloned());
+                    // The draw decides the instancing variant: a material's INSTANCING_ON
+                    // selects nothing (tests/projects/shadertargets `BuiltinKeywords`; a global
+                    // one is taken alike, unmeasured).
+                    keywords.retain(|k| k != INSTANCING_KEYWORD);
                     match mode {
                         InstancingMode::MeshReplay => {
-                            keywords.push("INSTANCING_ON".into());
+                            keywords.push(INSTANCING_KEYWORD.into());
                             keywords.push(unbound_shaders::MESH_INSTANCE_REPLAY.into());
                         }
                         InstancingMode::Dots => keywords.push(DOTS_INSTANCING_KEYWORD.into()),
