@@ -49,27 +49,31 @@ type, vertices, then the links as `neighbour:edge`) to `<path>.<agent type>.txt`
 target and next position in full precision for the first frames (in both engines, for working on
 the agents; the reference does not have them).
 
-Q361 build and movement isolation, Unity 6000.0.71f1:
+Q375 runtime-build correction, Unity 6000.0.71f1:
 
-- `build.sources` matches all 101 values on the starting base, with 193 vertices
-  and 249 indices. This improvement predates Q361.
-- `build.surface` still differs in 13 of 110 values. Both recordings have
-  241 vertices and 321 indices, but 11 triangles on each side differ. A floor
-  contour moves from x = -3.833 to -3.667, and ramp/landing triangles also differ.
-  These are geometric differences, beyond the choice of a polygon's first vertex.
-  The generating rule remains open; no surface correction is inferred from the
-  matching source build.
+- Clip the horizontal build footprint to the source geometry before rounding to
+  voxels. Padding beyond the sources previously allocated an extra voxel around
+  `build.surface`, shifting its contour vertices and triangles. All 110 values
+  now match, including the 241 vertices and 321 indices. `build.sources` remains
+  101/101, including 193 vertices and 249 indices.
+- `build.bounds.*` adds padded, tight, clipped and translated source controls,
+  an oversized modifier and a zero-area mesh. Five controls match. The translated
+  control retains 36 differing values, including 70 versus 73 vertices and
+  96 versus 99 indices. It already differs with the previous implementation;
+  the footprint correction does not resolve its geometry. This discrepancy stays
+  visible in the full comparator.
 - `BuildSurface` restores the committed baked data before creating the agents.
-  Its mesh construction residual therefore does not explain the 238 differing
-  agent-frame scenarios. The first differing serialized movement record is frame 13: the climber
-  velocity is -1.732 versus -1.736 m/s. These movement fields are strings
-  rounded to three decimals and compared exactly. Path status agrees; corner
-  counts differ in seven records: blocked on frames 191 through 195 (4 versus
-  5), climber on 208 (1 versus 2), and right on 241 (1 versus 2).
+  All existing agent records are unchanged by the correction. The 238 differing
+  frame scenarios have distinct first divergences: climber at 13, right at 17,
+  walker at 33, blocked at 191. The blocked agent first differs in corner count,
+  4 versus 5, rather than position. Left differs only in `hasPath` at frame 222.
+  Movement fields are strings rounded to three decimals and compared exactly.
+  Path status agrees; corner counts differ in seven records: blocked on frames
+  191 through 195, climber on 208, and right on 241.
 
-Two new GPU Editor captures are byte-identical to the committed reference.
-The full comparator still reports 239 differing scenarios, down from the
-sheriff-S19 count of 240 because the source-build scenario now matches.
-The existing comparators, raw differences and tolerances are unchanged.
+Two new GPU Editor captures are byte-identical, including six added controls;
+every pre-existing reference record is unchanged. The full comparator reports
+239 differing scenarios: 238 baked-agent frames and the new translated build
+control. No comparator or tolerance changed.
 [BuildNavMeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshBuilder.BuildNavMeshData.html)
 documents sources and local build bounds; it does not specify polygon layout.

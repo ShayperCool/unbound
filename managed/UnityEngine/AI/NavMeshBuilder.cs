@@ -352,30 +352,33 @@ namespace Unbound.Runtime
                 // Either side up: meshes wind their faces either way (built-in planes and cubes differ).
                 if (MathF.Abs(n.Y) <= slopeCos) areas[i] = RcRecast.RC_NULL_AREA;
             }
-            var bmin = localBounds.min;
-            var bmax = localBounds.max;
+            // Clip the raster footprint before rounding to voxels. Padding beyond the source
+            // geometry can otherwise shift the grid and its contours (Unity 6000.0.71f1,
+            // tests/projects/navmesh build.surface and build.bounds controls).
+            var bmin = Vector3.Max(localBounds.min, g.Min);
+            var bmax = Vector3.Min(localBounds.max, g.Max);
             int tx0 = Mathf.FloorToInt(bmin.x / tileWorld), tx1 = Mathf.FloorToInt(bmax.x / tileWorld);
             int tz0 = Mathf.FloorToInt(bmin.z / tileWorld), tz1 = Mathf.FloorToInt(bmax.z / tileWorld);
             for (int tz = tz0; tz <= tz1; tz++)
                 for (int tx = tx0; tx <= tx1; tx++)
                 {
-                    var tile = BuildTile(ctx, settings, verts, tris, areas, g, tx, tz, tileWorld, tileSize, cs, ch, border, walkableHeight, walkableClimb, walkableRadius, localBounds);
+                    var tile = BuildTile(ctx, settings, verts, tris, areas, g, tx, tz, tileWorld, tileSize, cs, ch, border, walkableHeight, walkableClimb, walkableRadius, bmin, bmax);
                     if (tile != null) data.m_Tiles.Add(tile);
                 }
         }
 
         static DtMeshData BuildTile(RcContext ctx, NavMeshBuildSettings settings, float[] verts, int[] tris, int[] areas, Geometry g,
-            int tx, int tz, float tileWorld, int tileSize, float cs, float ch, int border, int walkableHeight, int walkableClimb, int walkableRadius, Bounds localBounds)
+            int tx, int tz, float tileWorld, int tileSize, float cs, float ch, int border, int walkableHeight, int walkableClimb, int walkableRadius, Vector3 buildMin, Vector3 buildMax)
         {
             // The tile holds the voxels of the build bounds, rounded out to whole voxels, that lie in
             // it (a tile the bounds reach by less than a voxel holds that voxel; none: no tile), so
             // the NavMesh ends within a voxel past the bounds (Unity 6000.0.71f1:
             // tests/projects/navpath `place.adjacent`).
             float perVoxel = 1f / cs;
-            int vx0 = Math.Max((int)MathF.Floor(localBounds.min.x * perVoxel), tx * tileSize);
-            int vz0 = Math.Max((int)MathF.Floor(localBounds.min.z * perVoxel), tz * tileSize);
-            int vx1 = Math.Min((int)MathF.Ceiling(localBounds.max.x * perVoxel), (tx + 1) * tileSize);
-            int vz1 = Math.Min((int)MathF.Ceiling(localBounds.max.z * perVoxel), (tz + 1) * tileSize);
+            int vx0 = Math.Max((int)MathF.Floor(buildMin.x * perVoxel), tx * tileSize);
+            int vz0 = Math.Max((int)MathF.Floor(buildMin.z * perVoxel), tz * tileSize);
+            int vx1 = Math.Min((int)MathF.Ceiling(buildMax.x * perVoxel), (tx + 1) * tileSize);
+            int vz1 = Math.Min((int)MathF.Ceiling(buildMax.z * perVoxel), (tz + 1) * tileSize);
             if (vx0 >= vx1 || vz0 >= vz1) return null;
             var hmin = new RcVec3f((vx0 - border) * cs, g.Min.y, (vz0 - border) * cs);
             var hmax = new RcVec3f((vx1 + border) * cs, g.Max.y + walkableHeight * ch, (vz1 + border) * cs);

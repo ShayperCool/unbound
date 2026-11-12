@@ -63,6 +63,7 @@ public class NavProbe : MonoBehaviour
         Scenario("paths", Paths);
         Scenario("build.sources", BuildFromSources);
         Scenario("build.surface", BuildSurface);
+        BuildBoundsControls();
         if ("agents".StartsWith(Only) || Only.StartsWith("agents")) StartAgents();
         else Finish();
     }
@@ -209,6 +210,48 @@ public class NavProbe : MonoBehaviour
         surface.RemoveData();
         surface.navMeshData = baked;
         surface.AddData();
+    }
+
+    static void BuildBoundsControls()
+    {
+        foreach (string kind in new[] { "padded", "tight", "clipped", "translated", "modifier", "degenerate" })
+            Scenario("build.bounds." + kind, () => BuildBoundsControl(kind));
+    }
+
+    static void BuildBoundsControl(string kind)
+    {
+        var surface = FindFirstObjectByType<NavMeshSurface>();
+        surface.RemoveData();
+        var offset = kind == "translated" ? new Vector3(1.37f, 0f, -2.19f) : Vector3.zero;
+        var sources = new List<NavMeshBuildSource>
+        {
+            new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(12f, 0.4f, 10f), transform = Matrix4x4.Translate(offset + new Vector3(-2f, -0.2f, -1f)), area = 0 },
+            new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(2f, 3f, 4f), transform = Matrix4x4.TRS(offset + new Vector3(-2f, 1.5f, -1f), Quaternion.Euler(0f, 23f, 0f), Vector3.one), area = 0 },
+        };
+        Mesh mesh = null;
+        if (kind == "modifier")
+            sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.ModifierBox, size = new Vector3(18.1f, 1f, 16.1f), transform = Matrix4x4.Translate(new Vector3(-2f, 0.5f, -1f)), area = 0 });
+        if (kind == "degenerate")
+        {
+            mesh = new Mesh();
+            mesh.vertices = new[] { new Vector3(-2f, 0f, -1f), new Vector3(-2f, 0f, -1f), new Vector3(-2f, 0f, -1f) };
+            mesh.triangles = new[] { 0, 1, 2 };
+            sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Mesh, sourceObject = mesh, transform = Matrix4x4.identity, area = 0 });
+        }
+        var bounds = new Bounds(offset + new Vector3(-2f, 0f, -1f), kind == "tight" ? new Vector3(12f, 8f, 10f) : kind == "clipped" ? new Vector3(7f, 8f, 6f) : new Vector3(24f, 8f, 20f));
+        var settings = NavMesh.GetSettingsByID(0);
+        settings.overrideTileSize = true;
+        settings.tileSize = 64;
+        var data = NavMeshBuilder.BuildNavMeshData(settings, sources, bounds, Vector3.zero, Quaternion.identity);
+        var instance = NavMesh.AddNavMeshData(data);
+        try { Triangulation("mesh"); }
+        finally
+        {
+            NavMesh.RemoveNavMeshData(instance);
+            DestroyImmediate(data);
+            if (mesh != null) DestroyImmediate(mesh);
+            surface.AddData();
+        }
     }
 
     // ------------------------------------------------------------------ agents over frames
