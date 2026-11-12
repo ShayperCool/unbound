@@ -8,7 +8,7 @@
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings in the
 validation cache; only `create` copies files back (the scene, its build settings entry and the metas
-the Editor made for new files). Editors run through the shared heavy-job launcher.
+the Editor made for new files). Editors run on the GPU through tests/editor_runner.py.
 """
 import argparse
 import filecmp
@@ -20,7 +20,8 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_file, run_root, unity_version
+import editor_runner
+from probe_paths import reference_file, run_root, unity_version
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -36,18 +37,22 @@ def copy_project(dest):
     return dest
 
 
-def run_editor(project, method, log, env=None, quit=False):
-    return subprocess.Popen(
-        [str(LAUNCHER), 'timeout', '-s', 'KILL', '1200', str(editor_path()), '-batchmode', '-nographics',
-         *(['-quit'] if quit else []),
-         '-projectPath', str(project), '-executeMethod', method, '-logFile', str(log)],
-        env=dict(os.environ, **(env or {})))
+def editor_job(project, method, out, log, env=None, quit=False):
+    """A batch-mode Editor on the GPU (the shared runner checks the renderer)."""
+    return editor_runner.EditorJob(project, log, out, [*(['-quit'] if quit else []), '-executeMethod', method],
+                                   batch=True, graphics=True, env=env, timeout=1200,
+                                   label='spriteimport-'+out.name)
+
+
+def exit_code(result):
+    print(editor_runner.summary(result), flush=True)
+    return 0 if result['exit_code'] == 0 and result.get('renderer_ok') is not False else 1
 
 
 def create(work):
     project = copy_project(work/'projects'/'create')
-    code = run_editor(project, 'ProbeRunner.Create', work/'create.log', quit=True).wait()
-    print('editor exit', code)
+    code = exit_code(editor_runner.run(editor_job(project, 'ProbeRunner.Create', work/'create',
+                                                  work/'create.log', quit=True)))
     if code:
         return code
     copied = []
@@ -77,11 +82,9 @@ def editor(work):
         project = copy_project(work/'projects'/repeat)
         out = work/repeat/'sprites.jsonl'
         out.parent.mkdir(parents=True, exist_ok=True)
-        jobs.append(run_editor(project, 'ProbeRunner.Record', work/repeat/'editor.log',
+        jobs.append(editor_job(project, 'ProbeRunner.Record', work/repeat, work/repeat/'editor.log',
                                {'SPRITE_IMPORT_PROBE_OUT': str(out)}))
-    codes = [job.wait() for job in jobs]
-    print('editor exits', codes)
-    return int(any(codes))
+    return int(any([exit_code(result) for result in editor_runner.run_parallel(jobs)]))
 
 
 def publish(work):

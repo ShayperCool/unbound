@@ -6,8 +6,8 @@ uvs, triangles) and physics shapes (`GetPhysicsShape`). The textures (`make_text
 shapes with holes and islands, extrude 0 to 32, tessellation detail -1 to 1, alpha tolerance
 (alpha 100 is in the mesh but not the physics shape), rects under 32 pixels, pivots and pixels per
 unit, a soft edge raw and DXT-compressed, a texture downscaled by the max size, custom outlines and
-physics shapes in Single, Polygon and Multiple modes, Full Rect with an outline, and fractional
-sprite rects.
+physics shapes in Single, Polygon and Multiple modes, Full Rect with an outline, Polygon-mode default
+physics shapes, and fractional sprite rects.
 
     python3 tests/projects/spriteimport/make_textures.py      # after changing a case
     python3 tests/projects/spriteimport/run.py create --release 6000.0.71f1 --label <L>
@@ -29,13 +29,14 @@ quad), or triangulated from the custom outline; the default physics shape traced
 from alpha above 200 (extrude does not matter); `textureRect` is the traced outline's bounds;
 `bounds` is the rect's, also for Tight meshes.
 
-The combined texture/sprite importer matches 519/520 fields, or 7637/7654 flattened
-observations, exactly as f32. Its comparison with the parent resolves 5989 observations
-and introduces none. The four `downscaled` fields retained by the separate sprite branch
-now match. The remaining field is a Polygon-mode sprite's default physics shape, which
-Unity takes from its mesh's boundary edges and Unbound does not make; it warns explicitly.
-The 17 missing/differing flattened observations all describe that one shape. Runtime
-`Sprite.Create` Tight meshes remain outside this import probe.
+The combined texture/sprite importer matches all 640 fields of 64 sprites exactly as f32 (519 of
+the first 520 before Polygon-mode physics shapes). A Polygon-mode sprite's mesh is always Tight,
+whatever its mesh type and rect size, and its default physics shape is one path through its mesh's
+boundary edges (`mesh_boundary` in `sprite_mesh.rs`); a zero-area outline renders the quad and
+takes the quad's boundary. Twelve Polygon controls cover a concave path with an off-centre pivot,
+islands, a hole, a 60-vertex path, custom and disabled physics shapes, Full Rect, rects under 32
+pixels, no outline and a zero-area outline. Runtime `Sprite.Create` Tight meshes remain outside
+this import probe.
 
 Add `--report <cache-path.json>` to the comparator to retain every field and nested value,
 including missing and extra values. Reports do not overwrite earlier files.

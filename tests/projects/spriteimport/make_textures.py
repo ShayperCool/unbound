@@ -270,6 +270,28 @@ PHYSICS = [[(-18, -18), (18, -18), (18, 18), (-18, 18)], [(-4.5, 22), (4, 22), (
 add('outline_single', circle(32, 32, 16), alignment=0, ppu=100, outline=OUTLINE, physics_shape=PHYSICS)
 add('outline_fullrect', circle(32, 32, 16), mesh_type=0, outline=OUTLINE)
 add('outline_polygon', circle(32, 32, 16), mode=3, alignment=0, outline=OUTLINE)
+# Polygon-mode default physics shapes beyond one convex path: a concave path with an off-centre
+# pivot, separate islands, a hole, a path long enough to grow the boundary edge table, custom and
+# disabled physics shapes, Full Rect, a rect under 32 pixels, no outline (also with Full Rect and
+# under 32 pixels) and a zero-area outline.
+add('polygon_concave', circle(32, 32, 16), mode=3, alignment=9, pivot=(0.3, 0.6), ppu=50,
+    outline=[[(-24, -20), (20, -22), (26, 4), (4, 6), (2, 26), (-22, 22)]])
+add('polygon_islands', circle(32, 32, 16), mode=3, alignment=0,
+    outline=[[(-26, -26), (-6, -26), (-16, -6)], [(4, 4), (26, 4), (26, 26), (4, 26)]])
+add('polygon_hole', circle(32, 32, 16), mode=3, alignment=0,
+    outline=[[(-26, -26), (26, -26), (26, 26), (-26, 26)], [(-10, -10), (-10, 10), (10, 10), (10, -10)]])
+add('polygon_star', circle(32, 32, 16), mode=3, alignment=0, ppu=10,
+    outline=[[(round(math.cos(math.pi * i / 30) * (28 if i % 2 == 0 else 17), 2),
+               round(math.sin(math.pi * i / 30) * (28 if i % 2 == 0 else 17), 2)) for i in range(60)]])
+add('polygon_physics', circle(32, 32, 16), mode=3, alignment=0, outline=OUTLINE, physics_shape=PHYSICS)
+add('polygon_nophys', circle(32, 32, 16), mode=3, alignment=0, outline=OUTLINE, physics=0)
+add('polygon_fullrect', circle(32, 32, 16), mode=3, mesh_type=0, alignment=0, outline=OUTLINE)
+add('polygon_small', box(0, 0, 16, 16), w=16, h=16, mode=3, alignment=0,
+    outline=[[(-6, -6), (6, -6), (0, 7)]])
+add('polygon_traced', circle(32, 32, 16), mode=3, alignment=0)
+add('polygon_traced_fullrect', circle(32, 32, 16), mode=3, mesh_type=0, alignment=0)
+add('polygon_traced_small', box(2, 2, 14, 12), w=16, h=16, mode=3, alignment=0)
+add('polygon_degenerate', circle(32, 32, 16), mode=3, alignment=0, outline=[[(-10, 0), (0, 0), (10, 0)]])
 SHEET = [
     dict(name='sheet_circle', rect=(0, 0, 64, 64), internalID=1001),
     dict(name='sheet_islands', rect=(64, 0, 64, 64), alignment=9, pivot=(0.25, 0.6), internalID=1002),
