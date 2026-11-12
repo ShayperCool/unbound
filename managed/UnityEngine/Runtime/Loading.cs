@@ -18,8 +18,9 @@ namespace Unbound.Runtime
         // construction traversal: Unity does not specify relative callbacks across objects.
         internal IReadOnlyList<GameObject> SceneRoots;
         internal Object MainObject;
-        /// <summary>The file ids are Unbound's, not Unity's (a ScriptedImporter's objects): references
-        /// resolve by the objects themselves (<see cref="AssetDatabaseRuntime.Load"/>).</summary>
+        /// <summary>A ScriptedImporter's objects: their file ids are derived from their identifiers
+        /// (ScriptedImports.FileId); a reference no object answers to resolves by the objects
+        /// themselves (<see cref="AssetDatabaseRuntime.Load"/>).</summary>
         internal bool UnknownFileIds;
         /// <summary>The identifiers a ScriptedImporter gave its objects.</summary>
         internal readonly Dictionary<Object, string> Identifiers = new Dictionary<Object, string>();
@@ -678,9 +679,15 @@ namespace Unbound.Runtime
             return obj;
         }
 
-        /// <summary>The object a reference into a ScriptedImporter's asset means, when only one fits:
-        /// the asset's only object, or its only object of the expected type.</summary>
-        static Object ByProducedObjects(LoadedFile file, Type expected)
+        /// <summary>The object a reference into a ScriptedImporter's asset means when no object has its
+        /// file id. Unity resolves such references by file id alone: one naming no object of the
+        /// asset is empty, silently, also when several objects (or none) of the expected type exist
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/uxmlattributes arrayScripted*).
+        /// Unbound's choice, unmeasured: when exactly one object fits (the asset's only object, or its
+        /// only object of the expected type) the reference takes it, since Unbound derives file ids
+        /// only for the objects the importer added (not, for example, for the components under an
+        /// imported GameObject).</summary>
+        internal static Object ByProducedObjects(LoadedFile file, Type expected)
         {
             Object match = null;
             int count = 0;
@@ -693,8 +700,6 @@ namespace Unbound.Runtime
             if (count == 1) return match;
             if (file.Objects.Count == 1)
                 foreach (var o in file.Objects.Values) return o;
-            Debug.LogError($"Unbound: a reference into {file.Path} matches {count} of the objects its importer made " +
-                $"({string.Join(", ", file.Identifiers.Values)}); Unbound cannot tell which one Unity's file id names.");
             return null;
         }
 
