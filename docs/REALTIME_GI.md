@@ -15,8 +15,9 @@ lights (the Universal Render Pipeline: [Lights of a render pipeline](#lights-of-
 frames drawn by a pipeline's own shaders are not compared). For tests/projects/realtimegi every
 renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
 cases match within the comparator's tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
-drawn only in part. Not supported yet, each with a warning: automatic charts of curved parts and of
-choices the precompute's rounding decides ([Automatic charts](#automatic-charts)),
+drawn only in part. Not supported yet, each with a warning ([Open](#open) lists the main ones):
+automatic charts of curved parts and of choices the precompute's rounding decides
+([Automatic charts](#automatic-charts)),
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
 renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
@@ -731,33 +732,45 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
 
 ## Open
 
-What the runtime over Unity's precomputed data does not make yet, each failing loudly or
-recorded above with its scope:
+The main things the runtime over Unity's precomputed data does not make yet, each failing
+loudly or recorded above with its scope (each section lists the rest of what it does not
+measure):
 
 - Automatic charts: curved parts (a measure of overlap in the projection), a bent part left on
-  its own (the choice between its own UVs and its projection), choices the precompute's
-  rounding of normals decides (faces at a right angle but for it, ties, facing at the Max Angle
-  limit), a Max Angle of a right angle or more, and renderers sharing a geometry whose layouts
-  differ by the matrix it is made of ([Automatic charts](#automatic-charts)).
+  its own and a planar one off the axes whose own UVs are an undistorted copy of it (the choice
+  between its own UVs and its projection), choices the precompute's rounding of normals decides
+  (faces at a right angle but for it, ties, facing at the Max Angle limit), a Max Angle of a
+  right angle or more, renderers sharing a geometry whose layouts differ by the matrix it is
+  made of, a zero or mirrored scale up the hierarchy and meshes without normals
+  ([Automatic charts](#automatic-charts)).
 - Packing: what giving a region up changes for later charts, the count of the region open to
   the rows above every chart, the order of equal regions made by different placements, and the
   block-search limit ([Realtime lightmap UVs](#realtime-lightmap-uvs)).
 - Lights: render pipelines other than the Universal Render Pipeline and the falloff types it
   does not use, `Light.dilatedRange` (`LightmapperUtils` gives an area light its range), light
-  types other than point, spot and directional
+  types other than point, spot and directional (area lights are baked only), and linear light
+  intensity in the built-in pipeline
   ([Lights of a render pipeline](#lights-of-a-render-pipeline)).
-- Gamma-space projects: the sky's ambient intensity, directionality, a render pipeline, and the
-  probe's cases after the gradient.
+- Scenes: light probes of additive loads, probe sets that cannot be read or placed, probes
+  merged from several scenes, and systems that reference another scene's systems.
+- Directionality: texel copies, several directional systems, a lightmaps mode a script changes
+  ([Directionality](#directionality)).
+- Gamma-space projects: what the gamma sequence of the probe does not record (it has the Room as
+  loaded, with its point light moved, the three emission cases, the ambient color, a procedural
+  sky and a gradient: not the light intensity, bounce intensity, indirect scale, albedo, update
+  threshold, spot and directional cases, nor the sky's ambient intensity), directionality, and a
+  render pipeline.
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
-  the Editor's own Vulkan captures differ from its OpenGL Core ones; no rule covers both yet
+  the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).
-- The solver's bias in the bounce (the residuals above: the outer probes of `room-bounce`,
-  texel (45,34) and the emissive panel's nearest texels); the direct light matches.
+- The solver's residuals, cause open (above): the outer probes of `room-bounce` about 0.5% of
+  band 0 low, texel (45,34) 7 to 8% low and the emissive panel's nearest texels; the direct
+  light matches.
 
 ## Unbound plan
 
 - Phase 2, runtime over Unity's precomputed data (above): unmeasured inputs fail loudly until a
-  probe case covers them; what is left is listed under [Open](#open).
+  probe case covers them; the main open items are under [Open](#open).
 - Phase 3, Unbound's own precompute from scene geometry (the rest of the automatic charts,
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
