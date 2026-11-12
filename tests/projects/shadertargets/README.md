@@ -47,8 +47,8 @@ with keywords applies to the variants with any of them. What the captures show o
   `SHADOWS_SOFT`, `DIRLIGHTMAP_COMBINED` and `DYNAMICLIGHTMAP_ON` make it 3.0 and
   `PROCEDURAL_INSTANCING_ON` 4.5; a material's `INSTANCING_ON` selects no variant (the draw
   decides instancing);
-- a variant requiring `sparsetex`, which neither device has, draws with the error shader
-  (magenta);
+- a variant requiring `sparsetex` draws with the error shader (magenta) on both devices, though
+  `SystemInfo.supportsSparseTextures` answers true on them;
 - the `SHADER_AVAILABLE_*` defines hold the variant's features and the device's own, 3.5's on
   OpenGL Core and 4.5's on Vulkan, never the stages' (`TESSHW`, `GEOMETRY`, `TESSELLATION`) and
   cube arrays only through `#pragma require cubearray` (4.6 and 5.0 do not bring them);
@@ -58,13 +58,14 @@ with keywords applies to the variants with any of them. What the captures show o
 
 Where the captures differ from the Manual's pragma target reference: it gives 4.6 cube arrays
 and describes `gl4.1` as 4.0 with cube arrays, tessellation and MSAA texture reads; on these
-devices 4.6 and 5.0 bring no cube arrays and `gl4.1` applies nothing.
+devices 4.6 brings no cube arrays and `gl4.1` applies nothing.
 
 Unmeasured: the instancing variant's target (an instanced draw of the case recorded nothing in the
 Editor; taken as the instancing feature's, 3.5), a material's `INSTANCING_ON` through a renderer's
-draw (only `Graphics.Blit` is recorded), compute kernels (5.0 without the stages' features), the
-features other than sparse textures a device may lack (wave, 64-bit, 16-bit, barycentrics, ray
-tracing: taken as present), the stereo and device capability keywords (Unbound enables none),
+draw (only `Graphics.Blit` is recorded), compute kernels (5.0 without the stages' features), a
+sparse texture variant in a shader with a Fallback or a further SubShader (Unity may draw those
+instead of the error shader), the other features whose variants may be refused (wave, 64-bit,
+16-bit, barycentrics, ray tracing: taken as compiled), the stereo and device capability keywords (Unbound enables none),
 targets Unity does not name (left out, as the platform ones are).
 
     python3 tests/projects/shadertargets/run.py native --label L [--device vulkan]   # two Editor captures

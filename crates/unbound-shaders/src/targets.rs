@@ -19,11 +19,10 @@
 //!   features alone ([`shader_target`]);
 //! - the `SHADER_AVAILABLE_*` defines are the requirements' features and the device's own
 //!   ([`device_floor`]), without the stage features, and `SHADER_TARGET_AVAILABLE` their target;
-//! - a variant requiring a feature the device does not have draws with the error shader
-//!   ([`device_lacks`]).
+//! - a variant requiring sparse textures draws with the error shader ([`refused`]).
 //!
-//! Where this differs from the Manual's pragma target reference: 4.6 and 5.0 bring no cube
-//! arrays, and the `es3.0`, `es3.1` and `gl4.1` targets apply nothing on these devices.
+//! Where this differs from the Manual's pragma target reference: 4.6 brings no cube arrays, and
+//! the `es3.0`, `es3.1` and `gl4.1` targets apply nothing on these devices.
 
 use unbound_compat::GraphicsDevice;
 
@@ -154,10 +153,11 @@ const KEYWORD_REQUIREMENTS: [(&str, u64); 7] = [
     (crate::MESH_INSTANCE_REPLAY, INSTANCING),
 ];
 
-/// The features a device does not have: a variant requiring one draws with the error shader
-/// (measured: sparse textures on OpenGL Core and Vulkan; the wave, 64-bit, 16-bit, barycentric
-/// and ray tracing features are unmeasured and taken as present).
-fn device_lacks(_device: GraphicsDevice) -> u64 {
+/// The features whose variants draw with the error shader on a device (measured: sparse
+/// textures on OpenGL Core and Vulkan, in a shader of one SubShader without a Fallback, though
+/// `SystemInfo.supportsSparseTextures` answers true there; the wave, 64-bit, 16-bit, barycentric
+/// and ray tracing features are unmeasured and taken as compiled).
+fn refused(_device: GraphicsDevice) -> u64 {
     SPARSETEX
 }
 
@@ -258,7 +258,7 @@ pub struct Requirements {
 pub struct Variant {
     pub target: u32,
     pub available: Features,
-    /// A required feature the device does not have ([`device_lacks`]).
+    /// A required feature whose variants draw with the error shader ([`refused`]).
     pub missing: Option<&'static str>,
 }
 
@@ -360,7 +360,7 @@ impl Requirements {
         Variant {
             target: shader_target(required),
             available: Features((required | device_floor(device)).0 & !STAGES),
-            missing: Features(required.0 & device_lacks(device)).names().next(),
+            missing: Features(required.0 & refused(device)).names().next(),
         }
     }
 
@@ -476,6 +476,11 @@ mod tests {
             r.variant(&keywords(&["E", "F"]), GraphicsDevice::Vulkan)
                 .missing,
             None
+        );
+        let plain = lines(&["require sparsetex"]);
+        assert_eq!(
+            plain.variant(&[], GraphicsDevice::OpenGLCore).missing,
+            Some("sparsetex")
         );
     }
 

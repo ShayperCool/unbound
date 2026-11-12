@@ -742,7 +742,7 @@ impl ShaderCompiler {
             .variant(&selected, self.settings.device);
         if let Some(feature) = variant.missing {
             bail!(
-                "the variant requires `{feature}`, which the device does not support (Unity draws it with the error shader)"
+                "the variant requires `{feature}`: the Unity Editor draws such a variant with the error shader"
             );
         }
         let generated;
