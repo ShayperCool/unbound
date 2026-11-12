@@ -669,8 +669,8 @@ fn a_texel_inside_other_geometry_takes_a_neighbours_light() {
     )
     .unwrap();
     let w = texel_weights(&t);
-    // The floor's texels: its quad's texels run 8 per unit edge here; those under the box
-    // (texels 3..4 on either axis at 2 per unit) still receive.
+    // The floor's texels run 2 a unit here (its quad's 8 texels over 4 units): those under the
+    // box (2..6 on either axis) still receive.
     for (texel, list) in &w {
         if texel.0 < 8 && texel.1 < 8 {
             assert!(list.iter().map(|r| r.1).sum::<f32>() > 0.5, "{texel:?}");
@@ -698,4 +698,71 @@ fn transports_that_cannot_be_made_fail() {
     ] {
         assert!(transport(&instances, &c, 8, 8, &mask, [0; 16], settings).is_err());
     }
+}
+
+#[test]
+fn a_sliver_texel_takes_its_light_at_its_centre() {
+    // A triangle thinner than a quarter texel: no position of the texel's grid lies on it, its
+    // centre does.
+    let mut m = Mesh::default();
+    m.positions
+        .extend([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 0.05]]);
+    m.normals.extend([[0.0, 1.0, 0.0]; 3]);
+    m.texels.extend([[0.3, 0.45], [0.8, 0.45], [0.3, 0.6]]);
+    m.triangles.push([0, 2, 1]);
+    let w = texel_weights(&transport_of(&[&m], 4, 1000));
+    let list = &w[&(0, 0)];
+    assert!(
+        (list.iter().map(|r| r.1).sum::<f32>() - 1.0).abs() < 0.01,
+        "{list:?}"
+    );
+}
+
+#[test]
+fn an_odd_output_solves_its_directionality_on_whole_blocks() {
+    // A 9 x 9 output: the last column and row have no block of 2x2; the solver's directionality
+    // takes the others.
+    let m = floor(1.0, 1.0);
+    let instances = [m.instance(1.0)];
+    let c = cluster(&instances, 9, 9).unwrap();
+    let mask = vec![0u32; 81];
+    let t = super::transport::transport(
+        &instances,
+        &c,
+        9,
+        9,
+        &mask,
+        [7; 16],
+        super::transport::DEFAULT_SETTINGS,
+    )
+    .unwrap();
+    for s in &t.segments {
+        let whole = s.texels.iter().all(|&(x, y)| x < 8 && y < 8);
+        assert_eq!(s.block_normals.len(), whole as usize, "{:?}", s.texels);
+    }
+    let system = crate::data::System {
+        hash: [7; 16],
+        input_hash: [7; 16],
+        first_renderer: 0,
+        renderer_count: 1,
+        atlas: 0,
+        atlas_offset: (0, 0),
+        input: c.input,
+        transport: t,
+        materials: c.materials,
+        chart_mask: mask,
+        visibility: Err("none".into()),
+    };
+    let mut solver = crate::solver::SystemSolver::new(std::sync::Arc::new(system)).unwrap();
+    solver.set_directional(true).unwrap();
+    solver
+        .set_environment(&vec![[0.5; 3]; crate::data::ENVIRONMENT_VALUES])
+        .unwrap();
+    for _ in 0..3 {
+        solver.update();
+    }
+    let d = solver.directionality().unwrap();
+    // A floor under a uniform sky: the light comes from straight up, blue (z, in the tangent
+    // frame's up) high, in every whole block's texels.
+    assert!(d[0][3] > 0, "{:?}", d[0]);
 }

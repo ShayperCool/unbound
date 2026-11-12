@@ -3119,7 +3119,51 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         "environment share: median difference {median}, {far} of {} texels more than 0.05 apart",
         differences.len()
     );
-    // Measured: 185 of 2160 texels, the edge texels of thin faces and those under the block
+    // The direction the environment's light arrives from (each reference's direction by its
+    // weight) against the Editor's, where at least a fifth of a texel's light is the
+    // environment's: a face or a face's rows or columns the wrong way round turn it.
+    let directions = |s: &System| {
+        let mut out = std::collections::HashMap::new();
+        for g in &s.transport.segments {
+            let n = g.references.len();
+            for (k, &texel) in g.texels.iter().enumerate() {
+                let mut sum = [0f32; 3];
+                for r in 0..n {
+                    let (dep, index) = g.references[r];
+                    if s.transport.dependencies[dep as usize] != crate::data::ENVIRONMENT_ID {
+                        continue;
+                    }
+                    let w = g.reference_weights[r] as f32 * g.weights[k * n + r] as f32;
+                    let d = crate::precompute::transport::environment_direction(index);
+                    (0..3).for_each(|i| sum[i] += w * d[i]);
+                }
+                out.insert(texel, sum);
+            }
+        }
+        out
+    };
+    let (da, db) = (directions(&own), directions(editor));
+    let mut angles: Vec<f32> = b
+        .iter()
+        .filter(|&(t, &e)| e > 0.2 && a[t] > 0.2)
+        .map(|(t, _)| {
+            let (x, y) = (da[t], db[t]);
+            let dot = (0..3).map(|i| x[i] * y[i]).sum::<f32>();
+            let len = |v: [f32; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+            (dot / (len(x) * len(y)))
+                .clamp(-1.0, 1.0)
+                .acos()
+                .to_degrees()
+        })
+        .collect();
+    angles.sort_by(f32::total_cmp);
+    let (median_angle, p90) = (angles[angles.len() / 2], angles[angles.len() * 9 / 10]);
+    eprintln!(
+        "environment direction: {} texels, median {median_angle} degrees, 90% within {p90}",
+        angles.len()
+    );
+    assert!(angles.len() > 1000 && median_angle < 3.0 && p90 < 10.0);
+    // Measured: 182 of 2160 texels, the edge texels of thin faces and those under the block
     // and the panel.
     assert!(
         median < 0.005 && far * 100 <= differences.len() * 10,
@@ -3192,36 +3236,36 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
     // clusters and transport; with the Editor's clusters and Unbound's transport the first four
     // are 31, 34, 83 and 212 (docs/REALTIME_GI.md, Unbound's precompute).
     let cases = [
-        (BASE, "room-base", 89),
-        (moved, "room-moved", 145),
-        (lit, "room-intensity", 354),
-        (Room { bounce: 3.0, ..lit }, "room-bounce", 584),
+        (BASE, "room-base", 80),
+        (moved, "room-moved", 123),
+        (lit, "room-intensity", 323),
+        (Room { bounce: 3.0, ..lit }, "room-bounce", 554),
         (
             Room {
                 indirect_scale: 2.0,
                 ..lit
             },
             "room-indirectscale",
-            443,
+            422,
         ),
-        (call, "room-emission-call", 375),
-        (set, "room-setemissive", 455),
-        (then, "room-setemissive-then-call", 455),
-        (blue_called, "room-albedo-call", 427),
-        (ambient, "room-env-call", 506),
+        (call, "room-emission-call", 361),
+        (set, "room-setemissive", 374),
+        (then, "room-setemissive-then-call", 374),
+        (blue_called, "room-albedo-call", 361),
+        (ambient, "room-env-call", 456),
         (
             Room {
                 point_light: false,
                 ..ambient
             },
             "room-pointoff",
-            559,
+            457,
         ),
-        (spot, "room-spot", 522),
-        (behind, "room-spot-behind", 551),
-        (gradient, "room-gradient", 90),
-        (cube, "room-envdata", 158),
-        (flat, "room-sky-none", 153),
+        (spot, "room-spot", 436),
+        (behind, "room-spot-behind", 446),
+        (gradient, "room-gradient", 87),
+        (cube, "room-envdata", 156),
+        (flat, "room-sky-none", 158),
     ];
     for (room, case, measured) in cases {
         if case == "room-emission-call" {
@@ -3287,11 +3331,11 @@ fn own_transport_gives_the_directionality_of_the_editors() {
             channel.map(|c| c / (count / 4) as f32),
             signed.map(|c| c / (count / 4) as f32)
         );
-        // Measured: 68 and 136 lightmap values outside the tolerance; the directionality 4.9/255
+        // Measured: 63 and 114 lightmap values outside the tolerance; the directionality 4.9/255
         // off on average (0.2/255 from the Editor's transport), a third of its values more than
         // 2.5/255 (docs/REALTIME_GI.md).
         assert!(
-            fails * 100 <= [68, 136][(case != "roomdirectional-base") as usize] * 115,
+            fails * 100 <= [63, 114][(case != "roomdirectional-base") as usize] * 115,
             "{case}"
         );
         assert!(count > 6000 && mean < 5.5, "{case}: {mean}");
