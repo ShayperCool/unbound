@@ -284,7 +284,15 @@ public static class CollectionsProbe
 
         var temp = new NativeArray<int>(4, Allocator.Temp);
         ProbeLog.Value("tempHandle.isTemp", AtomicSafetyHandle.IsTempMemoryHandle(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(temp)));
-        temp.Dispose();
+        temp[1] = 42;
+        unsafe
+        {
+            int* tempMemory = (int*)NativeArrayUnsafeUtility.GetUnsafeBufferPointerWithoutChecks(temp);
+            temp.Dispose();
+            // Temp memory belongs to its scope: what a pointer taken before Dispose reads after it.
+            ProbeLog.Value("tempAfterDispose.value", tempMemory[1]);
+        }
+        ProbeLog.Try("tempAfterDispose.index", () => ProbeLog.Value("tempAfterDispose.indexValue", temp[1]));
     }
 
     static void Strings()

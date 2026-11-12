@@ -371,7 +371,9 @@
     "rewindable.length": 1000,
     "rewindable.afterRewind": "System.ObjectDisposedException: The Unity.Collections.NativeList`1[System.Int32] has been deallocated, it is not allowed to access it",
     "collectionHelper.length": 4,
-    "tempHandle.isTemp": true
+    "tempHandle.isTemp": true,
+    "tempAfterDispose.value": 42,
+    "tempAfterDispose.index": "System.ObjectDisposedException: The Unity.Collections.NativeArray`1[System.Int32] has been deallocated, it is not allowed to access it"
   },
   "collections.strings": {
     "fixedString": "job 42 1.5",
