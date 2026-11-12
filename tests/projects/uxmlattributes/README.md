@@ -43,5 +43,9 @@ python3 tests/projects/uxmlattributes/run.py publish native-a native-b
 python3 tests/projects/uxmlattributes/run.py gate
 ```
 
+The icons document also points list and array items into an asset of a project ScriptedImporter
+(`Assets/Editor/ProbeDataImporter.cs`: a `.probedata` file imported as two ProbeData objects) by
+its main object's file id and by a file id naming none of them, as Texture2D and ProbeData items.
+
 Values compare exactly. Font references use the built-in legacy font. VectorImage references are
 not covered (they need an SVG importer package).

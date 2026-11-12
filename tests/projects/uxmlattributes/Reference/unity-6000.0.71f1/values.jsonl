@@ -963,7 +963,7 @@
 {"k":"element/presetListWrongType/itemTemplate","v":"VisualTreeAsset:Preset"}
 {"k":"logs","v":["Error: Type: Invalid type \"System.String\". Type must derive from UnityEngine.UIElements.VisualElement.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Font'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Sprite'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.StyleSheet'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: TypeLoadException: Could not load type 'No.Such.Type' from assembly 'Nowhere'.","Warning:  (30,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (46,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (51,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.ttf","Warning:  (52,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (57,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (61,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (63,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (65,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (68,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uss","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Missing.png\" for referenced asset GUID \"0123456789abcdef0123456789abcdef\"","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : project://database/Assets/UI/Missing.png?fileID=2800000&guid=0123456789abcdef0123456789abcdef&type=3#Missing"]}
 {"k":"icons/asset","v":"UxmlIconsProbe"}
-{"k":"icons/rootChildren","v":"18"}
+{"k":"icons/rootChildren","v":"20"}
 {"k":"icons/element/tabs/class","v":"UnityEngine.UIElements.TabView"}
 {"k":"icons/element/tabNone/class","v":"UnityEngine.UIElements.Tab"}
 {"k":"icons/element/tabNone/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
@@ -1007,69 +1007,94 @@
 {"k":"icons/element/presetIconRenderTexture/iconImage","v":"texture=null sprite=null renderTexture=RenderTexture:ProbeRT vectorImage=null"}
 {"k":"icons/element/arrayNone/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayNone/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayNone/myDataList","v":"null"}
 {"k":"icons/element/arrayNone/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayNone/mySpriteArray","v":"null"}
 {"k":"icons/element/arrayNone/myTextureArray","v":"null"}
 {"k":"icons/element/arrayNone/myTextureList","v":"null"}
 {"k":"icons/element/arrayTextures/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayTextures/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayTextures/myDataList","v":"null"}
 {"k":"icons/element/arrayTextures/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayTextures/mySpriteArray","v":"[Sprite:ProbeSprite]"}
 {"k":"icons/element/arrayTextures/myTextureArray","v":"[Texture2D:Probe|Texture2D:Probe]"}
 {"k":"icons/element/arrayTextures/myTextureList","v":"[Texture2D:Probe|Texture2D:Probe]"}
 {"k":"icons/element/arrayPaths/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayPaths/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayPaths/myDataList","v":"null"}
 {"k":"icons/element/arrayPaths/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayPaths/mySpriteArray","v":"[null]"}
 {"k":"icons/element/arrayPaths/myTextureArray","v":"[null]"}
 {"k":"icons/element/arrayPaths/myTextureList","v":"[null]"}
 {"k":"icons/element/arrayMissing/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayMissing/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayMissing/myDataList","v":"null"}
 {"k":"icons/element/arrayMissing/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayMissing/mySpriteArray","v":"null"}
 {"k":"icons/element/arrayMissing/myTextureArray","v":"[null]"}
 {"k":"icons/element/arrayMissing/myTextureList","v":"null"}
 {"k":"icons/element/arrayEmpty/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayEmpty/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayEmpty/myDataList","v":"null"}
 {"k":"icons/element/arrayEmpty/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayEmpty/mySpriteArray","v":"[]"}
 {"k":"icons/element/arrayEmpty/myTextureArray","v":"[]"}
 {"k":"icons/element/arrayEmpty/myTextureList","v":"[]"}
 {"k":"icons/element/arrayWrongType/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayWrongType/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayWrongType/myDataList","v":"null"}
 {"k":"icons/element/arrayWrongType/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayWrongType/mySpriteArray","v":"null"}
 {"k":"icons/element/arrayWrongType/myTextureArray","v":"[null]"}
 {"k":"icons/element/arrayWrongType/myTextureList","v":"null"}
 {"k":"icons/element/arrayMixed/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayMixed/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayMixed/myDataList","v":"null"}
 {"k":"icons/element/arrayMixed/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayMixed/mySpriteArray","v":"[Sprite:ProbeSprite|null]"}
 {"k":"icons/element/arrayMixed/myTextureArray","v":"[Texture2D:Probe|null|Texture2D:Probe]"}
 {"k":"icons/element/arrayMixed/myTextureList","v":"[Texture2D:Probe|null|Texture2D:Probe]"}
 {"k":"icons/element/arrayProjectPath/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayProjectPath/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayProjectPath/myDataList","v":"null"}
 {"k":"icons/element/arrayProjectPath/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayProjectPath/mySpriteArray","v":"[null]"}
 {"k":"icons/element/arrayProjectPath/myTextureArray","v":"[null]"}
 {"k":"icons/element/arrayProjectPath/myTextureList","v":"[null]"}
 {"k":"icons/element/arraySpriteAsTexture/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arraySpriteAsTexture/myBackgroundArray","v":"null"}
+{"k":"icons/element/arraySpriteAsTexture/myDataList","v":"null"}
 {"k":"icons/element/arraySpriteAsTexture/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arraySpriteAsTexture/mySpriteArray","v":"null"}
 {"k":"icons/element/arraySpriteAsTexture/myTextureArray","v":"[null]"}
 {"k":"icons/element/arraySpriteAsTexture/myTextureList","v":"[null]"}
 {"k":"icons/element/arrayUnknownGuid/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayUnknownGuid/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayUnknownGuid/myDataList","v":"null"}
 {"k":"icons/element/arrayUnknownGuid/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayUnknownGuid/mySpriteArray","v":"null"}
 {"k":"icons/element/arrayUnknownGuid/myTextureArray","v":"[null]"}
 {"k":"icons/element/arrayUnknownGuid/myTextureList","v":"[null]"}
 {"k":"icons/element/arrayGuidWithoutFileId/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
 {"k":"icons/element/arrayGuidWithoutFileId/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayGuidWithoutFileId/myDataList","v":"null"}
 {"k":"icons/element/arrayGuidWithoutFileId/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
 {"k":"icons/element/arrayGuidWithoutFileId/mySpriteArray","v":"null"}
 {"k":"icons/element/arrayGuidWithoutFileId/myTextureArray","v":"[null]"}
 {"k":"icons/element/arrayGuidWithoutFileId/myTextureList","v":"[null]"}
+{"k":"icons/element/arrayScripted/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayScripted/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayScripted/myDataList","v":"[ProbeData:Probe]"}
+{"k":"icons/element/arrayScripted/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayScripted/mySpriteArray","v":"null"}
+{"k":"icons/element/arrayScripted/myTextureArray","v":"[null]"}
+{"k":"icons/element/arrayScripted/myTextureList","v":"[null]"}
+{"k":"icons/element/arrayScriptedUnknownId/class","v":"UxmlAttributesProbes.ArrayRefProbe"}
+{"k":"icons/element/arrayScriptedUnknownId/myBackgroundArray","v":"null"}
+{"k":"icons/element/arrayScriptedUnknownId/myDataList","v":"[null]"}
+{"k":"icons/element/arrayScriptedUnknownId/myPresetArray","v":"[texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null]"}
+{"k":"icons/element/arrayScriptedUnknownId/mySpriteArray","v":"null"}
+{"k":"icons/element/arrayScriptedUnknownId/myTextureArray","v":"[null]"}
+{"k":"icons/element/arrayScriptedUnknownId/myTextureList","v":"[null]"}
 {"k":"icons/logs","v":["Warning:  (14,10): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (8,10): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (9,10): Semantic - The specified URL is empty or invalid : ''"]}
 {"k":"complete","v":true}

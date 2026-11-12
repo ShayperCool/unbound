@@ -169,6 +169,7 @@ namespace UxmlAttributesProbes
         [UxmlAttribute] public Texture2D[] myTextureArray { get; set; }
         [UxmlAttribute] public List<Texture2D> myTextureList { get; set; }
         [UxmlAttribute] public Sprite[] mySpriteArray { get; set; }
+        [UxmlAttribute] public List<ProbeData> myDataList { get; set; }
     }
 
     /// <summary>A ListView whose item template is set before its UXML attributes are read.</summary>
