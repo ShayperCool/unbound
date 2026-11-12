@@ -310,7 +310,7 @@ pub struct NativeApi {
     /// same marker; plugins' marker callbacks hear of a new one); null for a name that is not
     /// text.
     pub plugin_script_marker: extern "C" fn(*const u8, i32, u16, u16) -> *const c_void,
-    /// (a marker from `plugin_script_marker`, event type: 0 begin, 1 end): the plugins' callbacks
+    /// (a marker from `plugin_script_marker`, event type: 0 begin, 1 end, 2 a single sample): the plugins' callbacks
     /// for the marker's events (`EmitEvent` without data).
     pub plugin_marker_event: extern "C" fn(*const c_void, u16),
 }

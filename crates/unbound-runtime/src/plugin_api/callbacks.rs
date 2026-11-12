@@ -330,19 +330,32 @@ pub(super) fn marker_event(marker: *const MarkerDesc, kind: u16, count: u16, dat
     if marker.is_null() || listening(marker).load(Ordering::Acquire).is_null() {
         return;
     }
-    let callbacks: Vec<Registered> = with(|state| {
-        state
-            .event_callbacks
-            .iter()
-            .filter(|(m, _)| *m == marker as usize)
-            .map(|(_, registered)| *registered)
-            .collect()
+    // The marker's callbacks are copied out of the lock (a callback may register another) into
+    // a buffer on the stack: scripts' samples emit every frame. More than it holds go to the heap.
+    let mut held = [Registered(0, 0); EVENTS_ON_STACK];
+    let mut count_held = 0;
+    let mut more = Vec::new();
+    with(|state| {
+        for (m, registered) in &state.event_callbacks {
+            if *m != marker as usize {
+                continue;
+            }
+            if count_held < EVENTS_ON_STACK {
+                held[count_held] = *registered;
+                count_held += 1;
+            } else {
+                more.push(*registered);
+            }
+        }
     });
-    for Registered(callback, user) in callbacks {
+    for &Registered(callback, user) in held[..count_held].iter().chain(&more) {
         let callback: MarkerEventCallback = unsafe { std::mem::transmute(callback) };
         callback(marker, kind, count, data, user as *mut c_void);
     }
 }
+
+/// The event callbacks of one marker that an event calls without allocating.
+const EVENTS_ON_STACK: usize = 8;
 
 /// A frame ended: every frame callback, in registration order.
 pub(super) fn frame() {

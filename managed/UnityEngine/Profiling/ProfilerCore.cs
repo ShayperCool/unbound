@@ -142,6 +142,9 @@ namespace Unbound.Runtime.Profiling
             /// <summary>The recorders attached; samples are only taken while there are running ones.</summary>
             public volatile Recorder[] Recorders = Array.Empty<Recorder>();
             public string[] MetadataNames;
+            /// <summary>A marker a script asked for (CreateMarker: ProfilerMarker,
+            /// Profiler.BeginSample, CustomSampler): native plugins see it.</summary>
+            public bool FromScript;
             /// <summary>The marker native plugins see (its first field is non-null while one
             /// listens to its events), once a plugin was loaded.</summary>
             public IntPtr PluginMarker;
@@ -169,7 +172,6 @@ namespace Unbound.Runtime.Profiling
             };
             s_Stats.Add(stat);
             s_StatsByName[name] = stat;
-            if (s_SharedWithPlugins) SharePluginMarker(stat);
             // Recorders made before the stat existed start receiving its samples now.
             foreach (var recorder in s_Recorders.Values)
                 if (recorder.Stat == null && recorder.PendingName == name && (recorder.PendingCategory == ushort.MaxValue || recorder.PendingCategory == category))
@@ -181,13 +183,19 @@ namespace Unbound.Runtime.Profiling
         internal static IntPtr CreateMarker(string name, ushort category, MarkerFlags flags, int metadataCount)
         {
             if (name == null) throw new ArgumentNullException(nameof(name));
+            Stat stat;
             lock (s_Lock)
             {
-                if (s_StatsByName.TryGetValue(name, out var existing)) return existing.Handle;
-                var stat = NewStat(name, category, flags);
-                if (metadataCount > 0) stat.MetadataNames = new string[metadataCount];
-                return stat.Handle;
+                if (!s_StatsByName.TryGetValue(name, out stat))
+                {
+                    stat = NewStat(name, category, flags);
+                    if (metadataCount > 0) stat.MetadataNames = new string[metadataCount];
+                }
+                stat.FromScript |= !stat.IsCounter;
             }
+            // Outside the lock: the plugins' marker callbacks run in it.
+            if (s_SharedWithPlugins && stat.PluginMarker == IntPtr.Zero) SharePluginMarker(stat);
+            return stat.Handle;
         }
 
         static volatile bool s_SharedWithPlugins;
@@ -198,22 +206,26 @@ namespace Unbound.Runtime.Profiling
         internal static void ShareMarkersWithPlugins()
         {
             if (!Native.IsReady) return;
+            List<Stat> made;
             lock (s_Lock)
             {
                 if (s_SharedWithPlugins) return;
                 s_SharedWithPlugins = true;
-                foreach (var stat in s_Stats) SharePluginMarker(stat);
+                made = new List<Stat>(s_Stats);
             }
+            // Outside the lock: the plugins' marker callbacks run in it.
+            foreach (var stat in made) SharePluginMarker(stat);
         }
 
         static void SharePluginMarker(Stat stat)
         {
-            if (stat.IsCounter || stat.PluginMarker != IntPtr.Zero) return;
+            // Unbound's own stats (frame times, memory) are not script markers.
+            if (!stat.FromScript || stat.PluginMarker != IntPtr.Zero) return;
             stat.PluginMarker = (IntPtr)Native.Api.PluginScriptMarker(stat.NameUtf8, stat.NameUtf8Length, stat.Category,
                 (ushort)(stat.Flags | MarkerFlags.Script));
         }
 
-        /// <summary>A sample began (0) or ended (1): the native plugins listening to the marker
+        /// <summary>A sample began (0), ended (1) or had no duration (2): the native plugins listening to the marker
         /// hear of it; nothing is called while none listens.</summary>
         static void PluginEvent(Stat stat, ushort kind)
         {
@@ -330,7 +342,9 @@ namespace Unbound.Runtime.Profiling
         internal static void SingleSample(IntPtr marker)
         {
             var stat = StatOf(marker);
-            if (stat != null && stat.Recorders.Length != 0) Record(stat, 0);
+            if (stat == null) return;
+            PluginEvent(stat, 2);
+            if (stat.Recorders.Length != 0) Record(stat, 0);
         }
 
         static void Record(Stat stat, long value)

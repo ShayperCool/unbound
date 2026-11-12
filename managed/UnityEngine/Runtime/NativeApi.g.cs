@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 60;
+        internal const uint CurrentVersion = 61;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -196,7 +196,7 @@ namespace Unbound.Runtime
         /// </summary>
         internal delegate* unmanaged<byte*, int, ushort, ushort, void*> PluginScriptMarker;
         /// <summary>
-        /// (a marker from `plugin_script_marker`, event type: 0 begin, 1 end): the plugins' callbacks
+        /// (a marker from `plugin_script_marker`, event type: 0 begin, 1 end, 2 a single sample): the plugins' callbacks
         /// for the marker's events (`EmitEvent` without data).
         /// </summary>
         internal delegate* unmanaged<void*, ushort, void> PluginMarkerEvent;
