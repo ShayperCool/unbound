@@ -17,13 +17,77 @@
 //!   `uint And(uint)` is "no matching overloaded function"): they are qualified with `this.`.
 //!
 //! core's Threading library (STP's compute kernels) uses all three.
+//!
+//! - `static` declarations in a cbuffer (`cbuffer UnityDOTSInstancing_X { uint M; static const
+//!   int Mode = 1; }`): HLSL's compilers keep them out of the constant buffer, glslang makes them
+//!   members of the block, which read zero. They move after the block, in their order. core's
+//!   DOTS instancing macros declare each property's override mode so.
 
 use std::collections::{BTreeSet, HashSet};
 use std::ops::Range;
 
 /// The source with namespaces and out-of-line member function definitions rewritten.
 pub(crate) fn flatten_scopes(source: &str) -> String {
-    qualify_member_calls(&inline_member_definitions(&flatten_namespaces(source)))
+    qualify_member_calls(&inline_member_definitions(&flatten_namespaces(
+        &hoist_cbuffer_statics(source),
+    )))
+}
+
+/// `static` declarations of cbuffers moved out of them, right after each block.
+fn hoist_cbuffer_statics(source: &str) -> String {
+    if !source.contains("cbuffer") || !source.contains("static") {
+        return source.to_string();
+    }
+    let toks = tokens(source);
+    let is = |k: usize, s: &str| toks.get(k).is_some_and(|t| text(source, t) == s);
+    let mut removed = Vec::new();
+    let mut inserts = Vec::new();
+    let mut k = 0;
+    while k < toks.len() {
+        if !(is(k, "cbuffer") && toks.get(k + 1).is_some_and(|t| t.kind == Kind::Word)) {
+            k += 1;
+            continue;
+        }
+        // The block's `{`, after any register binding.
+        let mut open = k + 2;
+        while open < toks.len() && !is(open, "{") && !is(open, ";") {
+            open += 1;
+        }
+        let Some(close) = is(open, "{")
+            .then(|| matching(source, &toks, open))
+            .flatten()
+        else {
+            k = open + 1;
+            continue;
+        };
+        let depth = toks[open].depth + 1;
+        let mut moved = String::new();
+        let mut m = open + 1;
+        while m < close {
+            // A member: its tokens up to its `;` at the block's depth.
+            let mut end = m;
+            while end < close && !(is(end, ";") && toks[end].depth == depth) {
+                end += 1;
+            }
+            if is(m, "static") && end < close {
+                removed.push(toks[m].start..toks[end].end);
+                moved.push('\n');
+                moved.push_str(&source[toks[m].start..toks[end].end]);
+            }
+            m = end + 1;
+        }
+        if !moved.is_empty() {
+            // After the block and its optional `;`.
+            let after = if is(close + 1, ";") { close + 1 } else { close };
+            moved.push('\n');
+            inserts.push((toks[after].end, moved));
+        }
+        k = close + 1;
+    }
+    if removed.is_empty() {
+        return source.to_string();
+    }
+    edit(source, removed, inserts)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -671,6 +735,62 @@ fn top_items<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cbuffer_statics_move_after_the_block() {
+        let source = "cbuffer UnityDOTSInstancing_Props : register(b2) {\n    uint Meta_A;\n    static const int Mode_A = 1;\n    uint Meta_B;\n    static const int Mode_B = Mode_A + 1;\n};\nfloat4 f() { return Mode_B; }\n";
+        let fixed = hoist_cbuffer_statics(source);
+        let block = &fixed[..fixed.find('}').unwrap()];
+        assert!(
+            block.contains("uint Meta_A;") && block.contains("uint Meta_B;"),
+            "{fixed}"
+        );
+        assert!(!block.contains("static"), "{fixed}");
+        let after = &fixed[fixed.find("};").unwrap()..];
+        let (a, b) = (
+            after.find("Mode_A = 1").unwrap(),
+            after.find("Mode_B = Mode_A + 1").unwrap(),
+        );
+        assert!(a < b, "{fixed}");
+        // glslang then reads the constant (2), not a block member (0): the fragment program
+        // compiles to a constant colour.
+        let members = |source: &str| -> Vec<String> {
+            let program = format!("{source}float4 frag() : SV_Target {{ return f() + Meta_A; }}\n");
+            let compiler = shaderc::Compiler::new().unwrap();
+            let mut o = shaderc::CompileOptions::new().unwrap();
+            o.set_source_language(shaderc::SourceLanguage::HLSL);
+            let spirv = compiler
+                .compile_into_spirv(
+                    &program,
+                    shaderc::ShaderKind::Fragment,
+                    "t",
+                    "frag",
+                    Some(&o),
+                )
+                .unwrap();
+            let module =
+                naga::front::spv::parse_u8_slice(spirv.as_binary_u8(), &Default::default())
+                    .unwrap();
+            let block = module
+                .global_variables
+                .iter()
+                .find_map(|(_, v)| match &module.types[v.ty].inner {
+                    naga::TypeInner::Struct { members, .. } => Some(members.clone()),
+                    _ => None,
+                })
+                .unwrap();
+            block.iter().filter_map(|m| m.name.clone()).collect()
+        };
+        let simple = "cbuffer P { uint Meta_A; static const int Mode_A = 1; };\nfloat4 f() { return Mode_A; }\n";
+        assert!(
+            members(simple).iter().any(|m| m == "Mode_A"),
+            "glslang now keeps statics out of cbuffers: the rewrite may be unnecessary"
+        );
+        assert_eq!(members(&fixed), ["Meta_A", "Meta_B"]);
+        // Unchanged: a source without statics in a block.
+        let plain = "cbuffer C { float4 x; };\nstatic const float k = 1;\n";
+        assert_eq!(hoist_cbuffer_statics(plain), plain);
+    }
 
     fn squash(s: &str) -> String {
         s.split_whitespace().collect::<Vec<_>>().join(" ")
