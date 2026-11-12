@@ -337,6 +337,10 @@ namespace UnityEngine
         /// <summary>Per vertex skin weights (null when the sprite is not skinned).</summary>
         internal BoneWeight[] m_BoneWeights;
         internal Matrix4x4[] m_BindPoses = Array.Empty<Matrix4x4>();
+        /// <summary>Per vertex normals, tangents and colours (null when the sprite has no such channel).</summary>
+        internal Vector3[] m_Normals;
+        internal Vector4[] m_Tangents;
+        internal Color32[] m_Colors;
         SpriteMeshData m_MeshData;
 
         /// <summary>The authored mesh and skin of an imported sprite: vertices in pixels from the
@@ -346,6 +350,12 @@ namespace UnityEngine
             if (pixelVertices != null && pixelVertices.Length > 0 && triangles != null && triangles.Length > 0)
                 OverrideGeometry(pixelVertices, triangles);
             if (weights != null && weights.Length == m_Vertices.Length) m_BoneWeights = (BoneWeight[])weights.Clone();
+            // Imported skinned sprites carry tangents (1, 0, 0, -1).
+            if (m_BoneWeights != null || pixelBones != null && pixelBones.Length > 0)
+            {
+                m_Tangents = new Vector4[m_Vertices.Length];
+                Array.Fill(m_Tangents, new Vector4(1f, 0f, 0f, -1f));
+            }
             if (pixelBones == null || pixelBones.Length == 0) return;
             var bones = new SpriteBone[pixelBones.Length];
             var world = new Matrix4x4[bones.Length];
@@ -371,8 +381,8 @@ namespace UnityEngine
             m_Bones = bones;
         }
 
-        /// <summary>The data access view of the mesh, made from the sprite's geometry when first asked
-        /// for. Skinned sprites carry tangents (1, 0, 0, -1) and their weights, as Unity imports them.</summary>
+        /// <summary>The data access view of the mesh, made from the sprite's geometry and channels
+        /// when first asked for.</summary>
         internal unsafe SpriteMeshData MeshData()
         {
             if (m_MeshData != null) return m_MeshData;
@@ -384,21 +394,30 @@ namespace UnityEngine
                 positions[i] = m_Vertices[i];
                 uvs[i] = i < m_UV.Length ? m_UV[i] : default;
             }
-            bool skinned = m_Bones.Length > 0 || m_BoneWeights != null;
-            if (skinned)
-            {
-                var tangents = (Vector4*)data.EnsureChannel(Rendering.VertexAttribute.Tangent);
-                for (int i = 0; i < m_Vertices.Length; i++) tangents[i] = new Vector4(1f, 0f, 0f, -1f);
-            }
-            if (m_BoneWeights != null)
-            {
-                var weights = (BoneWeight*)data.EnsureChannel(Rendering.VertexAttribute.BlendWeight);
-                for (int i = 0; i < m_Vertices.Length; i++) weights[i] = m_BoneWeights[i];
-            }
+            CopyChannel(data, Rendering.VertexAttribute.Normal, m_Normals);
+            CopyChannel(data, Rendering.VertexAttribute.Tangent, m_Tangents);
+            CopyChannel(data, Rendering.VertexAttribute.Color, m_Colors);
+            CopyChannel(data, Rendering.VertexAttribute.BlendWeight, m_BoneWeights);
             fixed (ushort* t = m_Triangles) data.SetIndices(t, m_Triangles.Length);
             fixed (Matrix4x4* b = m_BindPoses) data.SetBindPoses(b, m_BindPoses.Length);
             m_MeshData = data;
             return data;
+        }
+
+        static unsafe void CopyChannel<T>(SpriteMeshData data, Rendering.VertexAttribute channel, T[] values) where T : unmanaged
+        {
+            if (values == null) return;
+            var target = (T*)data.EnsureChannel(channel);
+            for (int i = 0; i < data.VertexCount && i < values.Length; i++) target[i] = values[i];
+        }
+
+        static unsafe T[] ChannelValues<T>(SpriteMeshData data, Rendering.VertexAttribute channel) where T : unmanaged
+        {
+            var source = (T*)data.Channel(channel);
+            if (source == null) return null;
+            var values = new T[data.VertexCount];
+            for (int i = 0; i < values.Length; i++) values[i] = source[i];
+            return values;
         }
 
         /// <summary>Takes what was set through the data access API as the sprite's geometry.</summary>
@@ -416,12 +435,10 @@ namespace UnityEngine
             }
             m_Triangles = new ushort[data.IndexCount];
             for (int i = 0; i < data.IndexCount; i++) m_Triangles[i] = data.Indices[i];
-            var weights = (BoneWeight*)data.Channel(Rendering.VertexAttribute.BlendWeight);
-            if (weights != null)
-            {
-                m_BoneWeights = new BoneWeight[data.VertexCount];
-                for (int i = 0; i < data.VertexCount; i++) m_BoneWeights[i] = weights[i];
-            }
+            m_BoneWeights = ChannelValues<BoneWeight>(data, Rendering.VertexAttribute.BlendWeight);
+            m_Normals = ChannelValues<Vector3>(data, Rendering.VertexAttribute.Normal);
+            m_Tangents = ChannelValues<Vector4>(data, Rendering.VertexAttribute.Tangent);
+            m_Colors = ChannelValues<Color32>(data, Rendering.VertexAttribute.Color);
             m_BindPoses = new Matrix4x4[data.BindPoseCount];
             for (int i = 0; i < data.BindPoseCount; i++) m_BindPoses[i] = data.BindPoses[i];
             m_Mesh = null;
@@ -485,6 +502,7 @@ namespace UnityEngine
             m_DeformMesh.Clear();
             m_DeformMesh.vertices = positions;
             m_DeformMesh.uv = m_Sprite.m_UV;
+            if (m_Sprite.m_Colors != null && m_Sprite.m_Colors.Length == count) m_DeformMesh.colors32 = m_Sprite.m_Colors;
             var triangles = new int[m_Sprite.m_Triangles.Length];
             for (int i = 0; i < triangles.Length; i++) triangles[i] = m_Sprite.m_Triangles[i];
             m_DeformMesh.triangles = triangles;

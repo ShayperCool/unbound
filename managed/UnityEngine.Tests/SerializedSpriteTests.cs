@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Unbound.Runtime;
+using UnityEngine.U2D;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -14,6 +15,7 @@ namespace UnityEngine.Tests
         readonly Texture2D m_Texture = new Texture2D(64, 64) { name = "Imported", IsPersistentAsset = true };
         readonly string m_Guid;
         readonly List<LoadedFile> m_Loaded = new List<LoadedFile>();
+        readonly List<(string Guid, Texture2D Texture)> m_Extra = new List<(string, Texture2D)>();
 
         static List<YDocument> Documents(string name) => UnityYamlText.Parse(File.ReadAllText(
             Path.Combine(AppContext.BaseDirectory, "SpriteFixtures", name + ".asset")))
@@ -33,6 +35,11 @@ namespace UnityEngine.Tests
                 foreach (var asset in file.Objects.Values) Object.DestroyImmediate(asset, true);
             AssetDatabaseRuntime.Invalidate(m_Guid);
             Object.DestroyImmediate(m_Texture, true);
+            foreach (var (guid, texture) in m_Extra)
+            {
+                AssetDatabaseRuntime.Invalidate(guid);
+                Object.DestroyImmediate(texture, true);
+            }
         }
 
         LoadedFile Load(List<YDocument> docs)
@@ -113,6 +120,128 @@ namespace UnityEngine.Tests
             Assert.Equal(64, sprite.texture.width);
         }
 
+        /// <summary>Registers a texture for the GUID a layout fixture's render data references.</summary>
+        Texture2D TextureFor(YNode reference, int width, int height, string name)
+        {
+            var texture = new Texture2D(width, height) { name = name, IsPersistentAsset = true };
+            var file = new LoadedFile { Guid = reference.AsRef().Guid, MainObject = texture, Path = "Assets/" + name + ".png" };
+            file.Objects[2800000] = texture;
+            AssetDatabaseRuntime.AddLoaded(file);
+            m_Extra.Add((file.Guid, texture));
+            return texture;
+        }
+
+        [Fact]
+        public void SkinnedSpritesKeepTheirBonesBindPosesAndBlendChannels()
+        {
+            var sprite = Assert.IsType<Sprite>(Load(Documents("Layouts/Skinned")).MainObject);
+            Assert.Same(m_Texture, sprite.texture);
+            var bones = sprite.GetBones();
+            Assert.Equal(new[] { "root", "tip" }, bones.Select(b => b.name));
+            Assert.Equal(new[] { "b0", "b1" }, bones.Select(b => b.guid));
+            Assert.Equal(new[] { -1, 0 }, bones.Select(b => b.parentId));
+            Assert.Equal(new Vector3(-.2f, -.1f, 0), bones[0].position);
+            Assert.Equal(new Quaternion(0, 0, .25881904f, .9659258f), bones[1].rotation);
+            Assert.Equal(.2f, bones[1].length);
+            Assert.Equal(new Color32(0, 255, 0, 255), bones[1].color);
+            var poses = sprite.GetBindPoses();
+            Assert.Equal(2, poses.Length);
+            Assert.Equal(.2f, poses[0].m03);
+            Assert.Equal(.9848077f, poses[0].m00);
+            Assert.True(sprite.HasVertexAttribute(Rendering.VertexAttribute.BlendWeight));
+            Assert.True(sprite.HasVertexAttribute(Rendering.VertexAttribute.BlendIndices));
+            // A saved skinned Sprite has the channels it was saved with: no tangents.
+            Assert.False(sprite.HasVertexAttribute(Rendering.VertexAttribute.Tangent));
+            var weights = sprite.GetVertexAttribute<BoneWeight>(Rendering.VertexAttribute.BlendWeight).ToArray();
+            Assert.Equal(7, weights.Length);
+            Assert.Equal((1f, 0f, 0, 1), (weights[0].weight0, weights[0].weight1, weights[0].boneIndex0, weights[0].boneIndex1));
+            Assert.Equal((1, 0), (weights[3].boneIndex0, weights[3].boneIndex1));
+        }
+
+        [Fact]
+        public void SavedVertexColoursNormalsAndTangentsAreReadAndColoursAreDrawn()
+        {
+            var sprite = Assert.IsType<Sprite>(Load(Documents("Layouts/Attributes")).MainObject);
+            foreach (var channel in new[] { Rendering.VertexAttribute.Normal, Rendering.VertexAttribute.Tangent, Rendering.VertexAttribute.Color })
+                Assert.True(sprite.HasVertexAttribute(channel), channel.ToString());
+            Assert.False(sprite.HasVertexAttribute(Rendering.VertexAttribute.BlendWeight));
+            var colors = sprite.GetVertexAttribute<Color32>(Rendering.VertexAttribute.Color).ToArray();
+            Assert.Equal(new Color32(40, 255, 90, 255), colors[0]);
+            Assert.Equal(new Color32(61, 242, 90, 246), colors[1]);
+            Assert.Equal(new Vector3(.1f, -.5f, -1f), sprite.GetVertexAttribute<Vector3>(Rendering.VertexAttribute.Normal)[1]);
+            Assert.Equal(new Vector4(1f, .05f, 0f, 1f), sprite.GetVertexAttribute<Vector4>(Rendering.VertexAttribute.Tangent)[1]);
+            var mesh = sprite.RenderMesh();
+            Assert.Equal(colors, mesh.colors32);
+            Object.DestroyImmediate(mesh);
+            // A copy's data access view is its own.
+            var copy = Object.Instantiate(sprite);
+            var white = new Unity.Collections.NativeArray<Color32>(copy.GetVertexCount(), Unity.Collections.Allocator.Temp);
+            for (int i = 0; i < white.Length; i++) white[i] = new Color32(255, 255, 255, 255);
+            copy.SetVertexAttribute(Rendering.VertexAttribute.Color, white);
+            Assert.Equal(new Color32(255, 255, 255, 255), copy.GetVertexAttribute<Color32>(Rendering.VertexAttribute.Color)[0]);
+            Assert.Equal(new Color32(40, 255, 90, 255), sprite.GetVertexAttribute<Color32>(Rendering.VertexAttribute.Color)[0]);
+            Object.DestroyImmediate(copy);
+        }
+
+        [Fact]
+        public void AtlasMembersAndSecondaryTexturesAreReadFromTheSpritesOwnRenderData()
+        {
+            var atlasDocs = Documents("Layouts/AtlasTight");
+            var atlased = TextureFor(atlasDocs[0].Body.Get("m_RD").Get("texture"), 64, 64, "Atlased");
+            var sprite = Assert.IsType<Sprite>(Load(atlasDocs).MainObject);
+            Assert.Same(atlased, sprite.texture);
+            Assert.False(sprite.packed);
+            Assert.Equal(10, sprite.vertices.Length);
+            Assert.Equal(new Vector2(.984375f, .890625f), sprite.uv[0]);
+
+            var litDocs = Documents("Layouts/Secondary");
+            var rd = litDocs[0].Body.Get("m_RD");
+            var lit = TextureFor(rd.Get("texture"), 32, 32, "Lit");
+            var normal = TextureFor(rd.Get("secondaryTextures").Items[0].Get("texture"), 32, 32, "LitNormal");
+            var secondary = Assert.IsType<Sprite>(Load(litDocs).MainObject);
+            Assert.Same(lit, secondary.texture);
+            var textures = new SecondarySpriteTexture[secondary.GetSecondaryTextureCount()];
+            Assert.Equal(1, secondary.GetSecondaryTextures(textures));
+            Assert.Equal("_NormalMap", textures[0].name);
+            Assert.Same(normal, textures[0].texture);
+        }
+
+        [Fact]
+        public void EarlierVertexDataAndSpritesSavedWithoutATextureLoad()
+        {
+            var v2 = Assert.IsType<Sprite>(Load(Documents("Layouts/VertexV2")).MainObject);
+            Assert.Equal(new Rect(8, 12, 40, 32), v2.rect);
+            Assert.Equal(new Vector2(.125f, .6875f), v2.uv[0]);
+
+            var docs = Documents("Rectangle");
+            Set(docs[0].Body.Get("m_RD"), "texture", YNode.MakeMap(("fileID", YNode.MakeScalar("0"))));
+            var untextured = Assert.IsType<Sprite>(Load(docs).MainObject);
+            Assert.Null(untextured.texture);
+            Assert.Equal(new Rect(8, 12, 40, 32), untextured.rect);
+            Assert.All(untextured.uv, uv => Assert.Equal(Vector2.zero, uv));
+            // An earlier Editor's document has no secondary textures or scriptable objects fields.
+            var earlier = Documents("Rectangle");
+            Remove(earlier[0].Body, "m_ScriptableObjects");
+            Remove(earlier[0].Body.Get("m_RD"), "secondaryTextures");
+            Set(earlier[0].Body.Get("m_RD").Get("m_VertexData"), "serializedVersion", YNode.MakeScalar("2"));
+            var old = Assert.IsType<Sprite>(Load(earlier).MainObject);
+            Assert.Equal(0, old.GetSecondaryTextureCount());
+            Assert.Equal(v2.uv, old.uv);
+            var go = new GameObject("untextured");
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = untextured;
+            Assert.False(renderer.MaskShape(out _, out _, out _));
+            Object.DestroyImmediate(go);
+        }
+
+        static void Remove(YNode node, string key)
+        {
+            int at = Array.IndexOf(node.Keys, key);
+            Assert.True(at >= 0, key);
+            node.Keys = node.Keys.Where((_, i) => i != at).ToArray();
+            node.Values = node.Values.Where((_, i) => i != at).ToArray();
+        }
+
         static void Set(YNode node, string key, YNode value)
         {
             int at = Array.IndexOf(node.Keys, key);
@@ -123,14 +252,13 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData("packed", "settingsRaw")]
         [InlineData("rotated", "settingsRaw")]
-        [InlineData("atlas", "SpriteAtlas")]
+        [InlineData("legacy-atlas", "legacy Sprite Packer")]
         [InlineData("alpha", "alpha")]
-        [InlineData("secondary", "secondaryTextures")]
-        [InlineData("bones", "m_Bones")]
         [InlineData("downscale", "downscaled")]
         [InlineData("version", "serializedVersion")]
+        [InlineData("vertex-version", "vertex data serializedVersion 4")]
+        [InlineData("channel", "TexCoord1")]
         [InlineData("unknown-field", "unfamiliar")]
-        [InlineData("missing-texture", "Texture2D")]
         [InlineData("wrong-fileid", "Texture2D")]
         [InlineData("indices", "index 65535")]
         [InlineData("vertices", "m_DataSize")]
@@ -144,14 +272,13 @@ namespace UnityEngine.Tests
             {
                 case "packed": Set(rd, "settingsRaw", YNode.MakeScalar("65")); break;
                 case "rotated": Set(rd, "settingsRaw", YNode.MakeScalar("16")); break;
-                case "atlas": Set(body, "m_SpriteAtlas", YNode.MakeMap(("fileID", YNode.MakeScalar("687078895")))); break;
+                case "legacy-atlas": Set(body, "m_AtlasName", YNode.MakeScalar("Legacy")); break;
                 case "alpha": Set(rd, "alphaTexture", rd.Get("texture")); break;
-                case "secondary": Set(rd, "secondaryTextures", new YNode { Kind = YKind.Seq, Items = new[] { YNode.MakeMap() } }); break;
-                case "bones": Set(body, "m_Bones", new YNode { Kind = YKind.Seq, Items = new[] { YNode.MakeMap() } }); break;
                 case "downscale": Set(rd, "downscaleMultiplier", YNode.MakeScalar(".5")); break;
                 case "version": Set(rd, "serializedVersion", YNode.MakeScalar("99")); break;
+                case "vertex-version": Set(rd.Get("m_VertexData"), "serializedVersion", YNode.MakeScalar("4")); break;
+                case "channel": Set(rd.Get("m_VertexData").Get("m_Channels").Items[5], "dimension", YNode.MakeScalar("2")); break;
                 case "unknown-field": rd.Keys = rd.Keys.Append("futureMesh").ToArray(); rd.Values = rd.Values.Append(YNode.MakeMap()).ToArray(); break;
-                case "missing-texture": Set(rd, "texture", YNode.MakeMap(("fileID", YNode.MakeScalar("0")))); break;
                 case "wrong-fileid": Set(rd.Get("texture"), "fileID", YNode.MakeScalar("2800001")); break;
                 case "indices": Set(rd, "m_IndexBuffer", YNode.MakeScalar("ffff01000200020001000300")); break;
                 case "vertices": Set(rd.Get("m_VertexData"), "_typelessdata", YNode.MakeScalar("00")); break;

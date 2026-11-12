@@ -42,6 +42,8 @@ namespace UnityEngine
                          | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly))
                 field.SetValue(copy, field.GetValue(this));
             copy.m_Mesh = null;
+            // The copy builds its own data access view: writing through it must not change this one.
+            copy.m_MeshData = null;
             return copy;
         }
 
@@ -325,7 +327,9 @@ namespace UnityEngine
             return m_ShapeMesh;
         }
 
-        /// <summary>A mesh of the sprite's vertices (units from the pivot), UVs (channel 0) and triangles.</summary>
+        /// <summary>A mesh of the sprite's vertices (units from the pivot), UVs (channel 0), colours
+        /// (when the sprite has them; a sprite renderer multiplies them in, as measured in
+        /// tests/projects/spriteassets) and triangles.</summary>
         Mesh GeometryMesh(string name)
         {
             var mesh = new Mesh { name = name };
@@ -333,6 +337,7 @@ namespace UnityEngine
             for (int i = 0; i < positions.Length; i++) positions[i] = m_Vertices[i];
             mesh.vertices = positions;
             mesh.uv = m_UV;
+            if (m_Colors != null && m_Colors.Length == positions.Length) mesh.colors32 = m_Colors;
             var tris = new int[m_Triangles.Length];
             for (int i = 0; i < tris.Length; i++) tris[i] = m_Triangles[i];
             mesh.triangles = tris;

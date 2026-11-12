@@ -21,6 +21,7 @@
   <ItemGroup>
     <Compile Include="../../tests/projects/appfacts/Assets/Scripts/AppFactsUrlRecording.cs" Link="AppFactsUrlRecording.cs" />
     <None Include="../../tests/projects/spriteassets/Authored/unity-6000.0.71f1/sprites/Assets/Resources/*.asset" Link="SpriteFixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../tests/projects/spriteassets/Authored/unity-6000.0.71f1/sprites/Assets/Resources/Layouts/*.asset" Link="SpriteFixtures/Layouts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- The native libraries the engine calls, as `cargo build` puts them next to it. -->
