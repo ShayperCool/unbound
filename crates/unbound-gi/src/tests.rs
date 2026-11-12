@@ -2886,7 +2886,7 @@ fn check_cluster_comparison(label: &str, c: &ClusterComparison, points: f32, lig
     }
     // A matched cluster is of the Editor's cluster's renderer, and nearly always reads its
     // bounce from a texel of the Editor's cluster's points (the texel of most points differs
-    // between two sets of points; 187 of 194 in the Room, 207 of 225 in RoomAuto).
+    // between two sets of points; 187 of 194 in the Room, 211 of 225 in RoomAuto).
     assert_eq!(c.same_renderer, c.within.0, "{label}");
     assert!(c.same_bounce * 10 >= c.within.0 * 9, "{label}");
 }
@@ -3015,6 +3015,10 @@ fn cluster_containing(triangles: &[(usize, [[f32; 3]; 3])], p: [f32; 3]) -> Opti
     let dot = |a: [f32; 3], b: [f32; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     let mut best: Option<(f32, usize)> = None;
     for &(c, t) in triangles {
+        // Parts Unbound leaves out are no cluster.
+        if c == crate::precompute::clusters::NO_CLUSTER as usize {
+            continue;
+        }
         let n = cross(sub(t[1], t[0]), sub(t[2], t[0]));
         let len = dot(n, n).sqrt();
         if len == 0.0 {

@@ -714,7 +714,9 @@ is how the Editor's products are made in the measured release, as follows.
   than Unbound's, and where the Editor leaves out a surface that other geometry covers, it cuts
   it exactly along the covering geometry's outline (the floor under the block), where Unbound
   leaves out the covered points. Systems of renderers of several cluster sizes keep each
-  renderer's grid and density and take the smallest voxels' limit; they are not measured. The
+  renderer's grid and density and take the smallest voxels' limit; they are not measured, nor
+  are materials with Double Sided Global Illumination (`Material.doublesidedGI`, whose back
+  faces other surfaces see as valid: Unbound takes every back face as the inside of geometry). The
   Editor's own precompute places other points in each bake of a scene (10192, 10196 and 10208
   points in three bakes of the Room).
 
