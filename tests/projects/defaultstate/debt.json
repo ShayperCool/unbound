@@ -7391,19 +7391,6 @@
       }
     },
     {
-      "key": "UnityEngine.Light/Property/UnityEngine.Light/dilatedRange",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "10"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
       "key": "UnityEngine.Light/Property/UnityEngine.Light/enableSpotReflector",
       "module": "UnityEngine.CoreModule",
       "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
