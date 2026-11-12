@@ -22,7 +22,7 @@ pub mod targets;
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -652,6 +652,15 @@ pub struct ShaderCompiler {
     /// Compiled variants by program and keywords.
     memory: HashMap<(Program, Vec<String>, bool), Arc<Compiled>>,
     pragmas: HashMap<(Program, bool), Pragmas>,
+    /// The shader files and requirement names warned of ([`ShaderCompiler::pragmas`]): each
+    /// once per file, however many of its passes and variants read them.
+    warned: HashSet<(PathBuf, String)>,
+}
+
+/// The warning for a requirement name Unity does not know ([`targets::Requirements::unknown`]),
+/// naming the shader file it was read from.
+fn left_out_warning(file: &Path, what: &str) -> String {
+    format!("{}: {what}: left out", file.display())
 }
 
 impl ShaderCompiler {
@@ -661,6 +670,7 @@ impl ShaderCompiler {
             compiler: shaderc::Compiler::new().context("starting glslang (shaderc)")?,
             memory: HashMap::new(),
             pragmas: HashMap::new(),
+            warned: HashSet::new(),
         })
     }
 
@@ -676,6 +686,11 @@ impl ShaderCompiler {
             let pass = surface::Surface::parse(&words)?.program(program, None);
             pragmas = Pragmas::read(&self.discover(&pass, linear)?);
             pragmas.surface = Some(words);
+        }
+        for what in &pragmas.requirements.unknown {
+            if self.warned.insert((program.file.clone(), what.clone())) {
+                tracing::warn!("{}", left_out_warning(&program.file, what));
+            }
         }
         self.pragmas.insert(key, pragmas.clone());
         Ok(pragmas)
@@ -2992,6 +3007,55 @@ float4 frag() : SV_Target { return 1; }
         );
         let error = compiler.compile(&untargeted, &[], false).unwrap_err();
         assert!(format!("{error:#}").contains("needs 4.5"), "{error:#}");
+    }
+
+    /// A target or feature name Unity does not know is warned of once per shader file, naming
+    /// the file, however many passes, variants and repeated lines read it; it is left out.
+    #[test]
+    fn unknown_requirement_names_are_warned_of_once_per_shader_file() {
+        let body = "#pragma vertex vert\n#pragma fragment frag\n#pragma target 9.9\n#pragma target 9.9\n\
+                    #pragma require mrt4 nonsense\n#pragma require nonsense\n\
+                    float4 vert(float4 v : POSITION) : SV_POSITION { return v; }\n\
+                    float4 frag() : SV_Target { return 1; }\n";
+        let pass = |file: &str, n: u32| Program {
+            file: PathBuf::from(file),
+            source: format!("// pass {n}\n{body}"),
+            cg: false,
+            light_mode: None,
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let first = compiler
+            .pragmas(&pass("Assets/A.shader", 0), false)
+            .unwrap();
+        assert_eq!(
+            first.requirements.unknown,
+            [
+                "`#pragma target 9.9` names no shader target",
+                "`#pragma require nonsense` names no GPU feature"
+            ]
+        );
+        // Left out: the plain target is mrt4's alone.
+        assert_eq!(first.requirements.plain_target(), 30);
+        for p in [pass("Assets/A.shader", 1), pass("Assets/B.shader", 0)] {
+            compiler.pragmas(&p, false).unwrap();
+            compiler.pragmas(&p, true).unwrap();
+            compiler.compile(&p, &[], false).unwrap();
+        }
+        let mut warned: Vec<String> = compiler
+            .warned
+            .iter()
+            .map(|(file, what)| left_out_warning(file, what))
+            .collect();
+        warned.sort();
+        assert_eq!(
+            warned,
+            [
+                "Assets/A.shader: `#pragma require nonsense` names no GPU feature: left out",
+                "Assets/A.shader: `#pragma target 9.9` names no shader target: left out",
+                "Assets/B.shader: `#pragma require nonsense` names no GPU feature: left out",
+                "Assets/B.shader: `#pragma target 9.9` names no shader target: left out",
+            ]
+        );
     }
 
     /// A variant's target and GPU features come from the lines that apply to it (the measured

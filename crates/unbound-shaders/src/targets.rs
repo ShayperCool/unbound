@@ -250,6 +250,9 @@ pub struct Requirements {
     lines: Vec<Line>,
     /// Whether a line without keywords names a target (else the program requires 2.5's).
     targeted: bool,
+    /// What the lines name that Unity does not know, each once, in reading order: left out of
+    /// every variant; the compiler warns of them once per shader file.
+    pub unknown: Vec<String>,
 }
 
 /// What a variant compiles with: `SHADER_TARGET` and the features of its `SHADER_AVAILABLE_*`
@@ -290,15 +293,22 @@ impl Variant {
 }
 
 impl Requirements {
+    fn left_out(&mut self, what: String) {
+        if !self.unknown.contains(&what) {
+            self.unknown.push(what);
+        }
+    }
+
     /// Reads `#pragma target <value> [keywords]` (its words after `target`); another value is
-    /// left out, with a warning unless it is a platform's ([`PLATFORM_TARGETS`]).
+    /// left out, and listed in [`Requirements::unknown`] unless it is a platform's
+    /// ([`PLATFORM_TARGETS`]).
     pub fn target(&mut self, words: &[String]) {
         let Some((value, keywords)) = words.split_first() else {
             return;
         };
         let Some(features) = Features::of_target(value) else {
             if !PLATFORM_TARGETS.contains(&value.as_str()) {
-                tracing::warn!("`#pragma target {value}` names no shader target: left out");
+                self.left_out(format!("`#pragma target {value}` names no shader target"));
             }
             return;
         };
@@ -310,7 +320,7 @@ impl Requirements {
     }
 
     /// Reads `#pragma require <features> [: keywords]` (its words after `require`); a name Unity
-    /// does not know is left out.
+    /// does not know is left out and listed in [`Requirements::unknown`].
     pub fn require(&mut self, words: &[String]) {
         let mut features = Features::default();
         let mut keywords = Vec::new();
@@ -329,7 +339,7 @@ impl Requirements {
                 } else if let Some(f) = Features::of_name(part) {
                     features |= f;
                 } else {
-                    tracing::warn!("`#pragma require {part}` names no GPU feature: left out");
+                    self.left_out(format!("`#pragma require {part}` names no GPU feature"));
                 }
             }
         }
