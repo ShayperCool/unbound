@@ -120,10 +120,13 @@ pub fn apply(
     for &[x, y, z] in normals {
         let n = [0, 1, 2].map(|r| (t[r] * x + t[3 + r] * y) + t[6 + r] * z);
         let length = ((n[1] * n[1] + n[0] * n[0]) + n[2] * n[2]).sqrt();
-        turned.push(if length > 0.0 {
+        // (A length that is not finite gives a normal that is not, which the charts refuse.)
+        turned.push(if length == 0.0 {
+            [0.0; 3]
+        } else if length.is_finite() {
             n.map(|c| c / length)
         } else {
-            [0.0; 3]
+            [f32::NAN; 3]
         });
     }
     Some((placed, turned))
@@ -220,8 +223,15 @@ mod tests {
         let n = [0.6f32 * 0.5, 0.8 * (1.0 / 3.0), 0.0];
         let length = (n[1] * n[1] + n[0] * n[0]).sqrt();
         assert_eq!(turned, [[n[0] / length, n[1] / length, 0.0]]);
-        // A singular matrix is not made; a normal of no length stays zero.
+        // A singular matrix is not made; a normal of no length stays zero, and one that is not
+        // finite or whose length is not stays so.
         assert!(apply(&[0.0; 9], &[[0.0; 3]], &[[0.0, 1.0, 0.0]]).is_none());
         assert_eq!(apply(&m, &[[0.0; 3]], &[[0.0; 3]]).unwrap().1, [[0.0; 3]]);
+        let odd = [[f32::NAN, 0.0, 1.0], [f32::MAX, f32::MAX, 0.0]];
+        let (_, turned) = apply(&m, &[[0.0; 3]; 2], &odd).unwrap();
+        assert!(
+            turned.iter().all(|n| n.iter().any(|c| c.is_nan())),
+            "{turned:?}"
+        );
     }
 }

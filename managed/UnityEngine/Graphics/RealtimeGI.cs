@@ -726,6 +726,7 @@ namespace UnityEngine
             float scale = renderer.scaleInLightmap * resolution;
             if (!(scale > 0f)) return $"'{renderer.name}' has no realtime lightmap resolution";
             var vertices = mesh.vertices;
+            if (automatic && mesh.normals.Length != vertices.Length) return $"'{renderer.name}' has Optimize Realtime UVs and no normals";
             // The input of realtime lightmap UVs is Mesh.uv3 when the mesh has it, else the
             // baked lightmap UVs (Mesh.uv2), else Mesh.uv (Unity 6000.0 Manual, "Generate
             // lightmap UVs"; tests/projects/realtimegi RoomCharts, Channels).
@@ -915,6 +916,8 @@ namespace UnityEngine
 
         const float SharedLayoutTolerance = 1e-5f;
 
+        static readonly HashSet<Renderer> s_NoRenderers = new HashSet<Renderer>();
+
         /// <summary>The renderers of <see cref="SharedGroups"/> whose layouts differ by the
         /// matrix they are made of (<see cref="LayoutsAgree"/>): which one the precompute used is
         /// not known, so none of them is made.</summary>
@@ -923,12 +926,13 @@ namespace UnityEngine
             var unshared = new HashSet<Renderer>();
             foreach (var group in SharedGroups(renderers))
             {
+                // A member that cannot be made leaves the others' geometry unknown too.
                 var layouts = new List<float[]>();
                 foreach (var renderer in group)
                 {
                     var mesh = renderer.GetComponent<MeshFilter>().sharedMesh;
-                    // A renderer that cannot be made says why in its own system.
                     if (!s_Renderers.TryGetValue(renderer, out var at) || at.Scene != scene
+                        || AutomaticChartsRefusal(renderer, mesh, s_NoRenderers) != null
                         || MakeUVs(scene, at.System, at.Index, renderer, mesh, resolution, out var output) != null)
                     {
                         layouts = null;
@@ -936,7 +940,7 @@ namespace UnityEngine
                     }
                     layouts.Add(output);
                 }
-                if (layouts != null && !LayoutsAgree(layouts)) unshared.UnionWith(group);
+                if (layouts == null || !LayoutsAgree(layouts)) unshared.UnionWith(group);
             }
             return unshared;
         }

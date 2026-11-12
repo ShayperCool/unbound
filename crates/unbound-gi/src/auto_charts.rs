@@ -280,25 +280,13 @@ impl Geometry<'_> {
             && (d - cosine).abs() <= COSINE_ROUNDING * terms + 2.0 * f32::EPSILON * cosine.abs();
         (d >= cosine, near)
     }
-    /// `facing` where it decides alone: the geometry is marked ambiguous when the test is
-    /// near its limit.
-    fn faces(&self, plane: &Plane, normal: V3, cosine: f32) -> bool {
-        let (passes, near) = self.facing(plane, normal, cosine);
-        if near {
-            self.ambiguous.set(true);
-        }
-        passes
-    }
-    /// The plane turned to face as `normal` does. A plane nearly across the normal fails the
-    /// Max Angle test on either side, unless Max Angle is near or past a right angle: only then
-    /// is a side that rounding could choose ambiguous.
-    fn oriented(&self, plane: Plane, normal: V3) -> Plane {
-        let flipped = if self.cosine > COSINE_ROUNDING {
-            dot(plane.normal(), normal) < 0.0
-        } else {
-            !self.faces(&plane, normal, 0.0)
-        };
-        if flipped { plane.flipped() } else { plane }
+    /// The plane turned to face as `normal` does, and whether the side is one that rounding
+    /// could choose and that matters: a plane nearly across the normal fails the Max Angle test
+    /// on either side, unless Max Angle is near or past a right angle.
+    fn oriented(&self, plane: Plane, normal: V3) -> (Plane, bool) {
+        let (faces, near) = self.facing(&plane, normal, 0.0);
+        let plane = if faces { plane } else { plane.flipped() };
+        (plane, near && self.cosine <= COSINE_ROUNDING)
     }
     fn corners(&self, triangle: usize) -> [V3; 3] {
         self.triangles[triangle].map(|v| self.mesh.positions[v as usize])
@@ -849,7 +837,7 @@ fn join(geometry: &Geometry) -> Result<Joined> {
             if dot(na, nb) <= 0.0 {
                 continue;
             }
-            let plane = geometry.oriented(geometry.fit(&[a, b]), na);
+            let (plane, near_side) = geometry.oriented(geometry.fit(&[a, b]), na);
             let (fa, near_a) = geometry.facing(&plane, na, geometry.cosine);
             let (fb, near_b) = geometry.facing(&plane, nb, geometry.cosine);
             if !(fa || near_a) || !(fb || near_b) {
@@ -861,7 +849,7 @@ fn join(geometry: &Geometry) -> Result<Joined> {
                 continue;
             }
             // Within reach, a test near its limit decides whether the pair is tried.
-            if near_a || near_b {
+            if near_a || near_b || near_side {
                 geometry.ambiguous.set(true);
             }
             if !(fa && fb) {

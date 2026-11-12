@@ -2448,3 +2448,31 @@ fn automatic_charts_of_turned_renderers_lie_where_the_precompute_put_them() {
     let checked = check_automatic_layouts("RoomTurned", &uvs_of, &expected);
     assert_eq!(checked, 7 + 14);
 }
+
+#[test]
+fn matrices_a_unit_in_the_last_place_apart_lay_charts_out_alike() {
+    // A cube scaled 2.1, and one scaled 0.3 under a parent of 7: the precompute shares one
+    // geometry for both, and the layouts made from either matrix agree (managed
+    // `RealtimeGI.LayoutsAgree`, within 1e-5 of the UV space).
+    let (near, far) = (2.1f32, 0.3f32 * 7.0);
+    assert_ne!(near, far);
+    let uvs = |s: f32| {
+        automatic_uvs(
+            &CUBE_POSITIONS,
+            &CUBE_NORMALS,
+            &CUBE_UV2,
+            &CUBE_TRIANGLES,
+            scaled([s; 3]),
+            DEFAULT_LIMITS,
+        )
+        .unwrap()
+    };
+    let (a, b) = (uvs(near), uvs(far));
+    assert_eq!((a.width, a.height), (b.width, b.height));
+    for (p, q) in a.uvs.iter().zip(&b.uvs) {
+        assert!(
+            (p[0] - q[0]).abs() <= 1e-5 && (p[1] - q[1]).abs() <= 1e-5,
+            "{p:?} {q:?}"
+        );
+    }
+}
