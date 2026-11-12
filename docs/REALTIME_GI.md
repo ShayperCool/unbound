@@ -389,8 +389,8 @@ ambient source, also when the source's inputs are what they were when the cube w
 it takes a cube still kept).
 
 Not measured: sky materials other than the procedural one
-(they are drawn by the same capture), and in gamma-space projects the sky's ambient intensity
-and the cases after the gradient.
+(they are drawn by the same capture), and in gamma-space projects every environment case but
+the ambient color, a procedural sky and a gradient ([Open](#open)).
 
 Unbound (`Graphics/RealtimeGIEnvironment.cs`) keeps the cube and what it was made from (the
 ambient mode and colors, or the skybox material and its change count, the ambient intensity and
@@ -758,14 +758,15 @@ measure):
 - Gamma-space projects: what the gamma sequence of the probe does not record (it has the Room as
   loaded, with its point light moved, the three emission cases, the ambient color, a procedural
   sky and a gradient: not the light intensity, bounce intensity, indirect scale, albedo, update
-  threshold, spot and directional cases, nor the sky's ambient intensity), directionality, and a
-  render pipeline.
+  threshold, spot and directional cases, the sky's ambient intensity, a script's cube, nor any
+  other case or scene of the linear sequence), directionality, and a render pipeline.
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
   the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).
-- The solver's residuals, cause open (above): the outer probes of `room-bounce` about 0.5% of
-  band 0 low, texel (45,34) 7 to 8% low and the emissive panel's nearest texels; the direct
-  light matches.
+- The solver's residuals, cause open (above): texels 0.5% below the Editor's on average in the
+  point-lit cases, higher-band coefficients of five of the eight outer probes of `room-bounce`
+  up to about 0.5% of band 0 apart, texel (45,34) 7 to 8% low and the emissive panel's nearest
+  texels; the direct light matches.
 
 ## Unbound plan
 
