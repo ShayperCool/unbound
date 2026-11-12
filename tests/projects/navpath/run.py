@@ -35,14 +35,12 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
                           tile corner there (moved or turned alike), Unbound's runs straight; over a
                           wide end lying over two tiles, Unity's crosses the part over the other tile
                           (docs/COMPATIBILITY_GAPS.md, the placed NavMesh data row);
-  link.wide gb1.2.cur.*   an agent reaching a wide link where the NavMesh under the link's start
-                          ends (z 6): Unity's reaches it 6 cm further from that end and crosses from
-                          5.98 to 5.82, Unbound's straight across from where it reaches it, 5.80
+  link.wide gb1.2.cur.*   an agent reaching a wide link at a NavMesh edge has approach and crossing
+                          offsets differing by 16.7 and 4.6 cm in the current capture
                           (docs/COMPATIBILITY_GAPS.md, the link rows).
   replan.topofar a.given, mask.given
-                          NavMesh.CalculatePath over a floor cut by thin water strips: Unity's path
-                          has one more corner, at a strip's end (7 against 6; the agents then walk
-                          alike) (docs/COMPATIBILITY_GAPS.md, the path-cost row);
+                          retained listed keys, currently matching: the runtime raster-bounds
+                          correction resolves both corner counts; all 1687 values match;
   replan.none avoider.f100 to f150
                           an agent with avoidance passing a NavMeshObstacle capsule: Unity's runs
                           1.4 to 4.7 cm off Unbound's from frame 100, as it passes the obstacle
