@@ -1532,17 +1532,51 @@ fn own_systems_of_a_scene_reference_each_other() {
         system.materials = clusterings[s].materials.clone();
         systems.push(Arc::new(system));
     }
-    let set =
-        own_probes::probe_set(&ROOM_PROBES, &scene, data.probe_sets[0].hash, 4096, 512).unwrap();
+    // The directional lights' visibility of the Editor's own points through both systems'
+    // surfaces against the Editor's stored values (through a system's own surfaces alone 82%
+    // and 69% are).
+    for s in 0..2 {
+        let editor = &data.systems[s];
+        let ours = visibility::visibility(&editor.input, &scene).unwrap();
+        let (same, near, total) = visibility_agreement(
+            &ours,
+            editor.visibility.as_ref().unwrap(),
+            editor.input.clusters(),
+        );
+        eprintln!("system {s} visibility: {same} of {total} the Editor's, {near} within one step");
+        // Measured: 99.2% and 99.0%.
+        assert!(same * 1000 >= total * 985, "system {s}: {same} of {total}");
+    }
+    let set = own_probes::probe_set(
+        &ROOM_PROBES,
+        &scene,
+        data.probe_sets[0].hash,
+        own_probes::DEFAULT_PROBE_RAYS,
+        own_probes::PROBE_BUDGET,
+    )
+    .unwrap();
     assert_eq!(set.dependencies.len(), 3);
-    for (d, p) in set.probes.iter().enumerate() {
-        for dep in [1u8, 2] {
-            assert!(
-                p.references.iter().any(|r| r.0 == dep),
-                "probe {d} reads nothing of dependency {dep}"
-            );
+    // Per probe the share of its light (band 0) each source gives, against the Editor's (the
+    // sources by their ids: the Editor lists them in another order).
+    let shares = |set: &crate::data::ProbeSet, p: usize| -> Vec<([u8; 16], f32)> {
+        let mut out: Vec<([u8; 16], f32)> = set.dependencies.iter().map(|&id| (id, 0.0)).collect();
+        for (r, w) in set.probes[p].references.iter().zip(&set.probes[p].weights) {
+            out[r.0 as usize].1 += w[0];
+        }
+        out
+    };
+    let mut worst = 0f32;
+    for p in 0..ROOM_PROBES.len() {
+        let theirs = shares(&data.probe_sets[0], p);
+        for (id, share) in shares(&set, p) {
+            assert!(share > 0.0, "probe {p} reads nothing of {id:?}");
+            let editor = theirs.iter().find(|t| t.0 == id).unwrap().1;
+            worst = worst.max((share - editor).abs());
         }
     }
+    eprintln!("probe sources: shares within {worst} of the Editor's");
+    // Measured: within 0.003.
+    assert!(worst < 0.005, "{worst}");
     let solvers: Vec<SystemSolver> = systems
         .iter()
         .map(|s| SystemSolver::new_in_scene(s.clone(), &systems).unwrap())
@@ -3523,7 +3557,23 @@ fn own_visibility_of_the_editors_points_matches_its_precompute() {
     let scene = crate::precompute::scene::Scene::new(vec![&surfaces], vec![[7; 16]]).unwrap();
     let ours = crate::precompute::visibility::visibility(&editor.input, &scene).unwrap();
     assert_eq!(ours.rings(), stored.rings());
-    let n = editor.input.clusters();
+    let (same, near, total) = visibility_agreement(&ours, stored, editor.input.clusters());
+    eprintln!("visibility: {same} of {total} values the Editor's, {near} within one step");
+    // Measured: 99.5% the same, every one within one step.
+    assert!(
+        same * 1000 >= total * 990 && near == total,
+        "{same} {near} {total}"
+    );
+}
+
+/// How many of the visibility values of `n` clusters are `stored`'s, how many within one step,
+/// and how many there are.
+fn visibility_agreement(
+    ours: &crate::visibility::Visibility,
+    stored: &crate::visibility::Visibility,
+    n: usize,
+) -> (usize, usize, usize) {
+    assert_eq!(ours.rings(), stored.rings());
     let directions: u32 = stored.rings().iter().map(|r| r.1).sum();
     let (mut same, mut near, mut total) = (0, 0, 0);
     for d in 0..directions as usize {
@@ -3534,12 +3584,7 @@ fn own_visibility_of_the_editors_points_matches_its_precompute() {
             total += 1;
         }
     }
-    eprintln!("visibility: {same} of {total} values the Editor's, {near} within one step");
-    // Measured: 99.5% the same, every one within one step.
-    assert!(
-        same * 1000 >= total * 990 && near == total,
-        "{same} {near} {total}"
-    );
+    (same, near, total)
 }
 
 /// The Room's light probes (its light probe group, in its order).

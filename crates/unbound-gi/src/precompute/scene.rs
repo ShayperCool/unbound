@@ -33,6 +33,9 @@ impl<'a> Scene<'a> {
             hashes.iter().all(|h| *h != ENVIRONMENT_ID),
             "a system hash equal to the environment's"
         );
+        for (i, h) in hashes.iter().enumerate() {
+            ensure!(!hashes[..i].contains(h), "two systems of one hash");
+        }
         let (mut triangles, mut facing, mut owner) = (Vec::new(), Vec::new(), Vec::new());
         let mut bases = Vec::with_capacity(systems.len());
         let mut base = 0u32;
@@ -73,7 +76,8 @@ impl<'a> Scene<'a> {
     }
 
     /// The dependencies of a transport (`own`: its system) or of a light probe set (`None`):
-    /// the environment, then the system's own values, then the other systems in order.
+    /// the environment, then the system's own values, then the other systems in order
+    /// (Unbound's order: the runtime finds each by its id, and the Editor's lists differ).
     pub(super) fn dependencies(&self, own: Option<usize>) -> Vec<[u8; 16]> {
         let mut out = vec![ENVIRONMENT_ID];
         out.extend(own.map(|o| self.hashes[o]));

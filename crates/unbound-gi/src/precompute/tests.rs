@@ -700,6 +700,9 @@ fn transports_that_cannot_be_made_fail() {
         )
         .is_err()
     );
+    // Two systems of one id, or of the environment's, make no scene.
+    assert!(super::scene::Scene::new(vec![&c, &c], vec![[7; 16], [7; 16]]).is_err());
+    assert!(super::scene::Scene::new(vec![&c], vec![crate::data::ENVIRONMENT_ID]).is_err());
     // A system the scene does not have.
     assert!(transport(&instances, &scene(&c), 1, 8, 8, &mask, DEFAULT_SETTINGS).is_err());
     for settings in [

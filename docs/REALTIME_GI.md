@@ -796,10 +796,14 @@ is how the Editor's products are made in the measured release, as follows.
   the half Lambert term 2.4/255 above it. In a scene of several systems (`scene.rs`) every
   system's rays (and the hidden-origin tests, the visibility's and the light probes') meet
   every system's surfaces, and a texel references the clusters of whichever system its rays
-  meet: the transport's dependencies are the environment, its own system and the others in
-  order (the Editor's `RoomSystems` reference each other too). With Unbound's precompute of
+  meet (the Editor's `RoomSystems` reference each other too): the transport's dependencies are
+  the environment, its own system and the others in order (Unbound's order; the runtime finds
+  each by its id, and the Editor lists them in another). With Unbound's precompute of
   `RoomSystems`' two systems (the Editor's layout of them) `roomsystems-base` puts 24 of its
-  5070 values outside the comparator's tolerance (the Editor's own data: none). Each system's
+  5070 values outside the comparator's tolerance (the Editor's own data: none), the visibility
+  of the Editor's points through both systems is the Editor's in 99.2% and 99.0% of the values
+  (through a system's own surfaces alone in 82% and 69%), and each light probe takes the share
+  of its light each system and the environment give it within 0.003 of the Editor's. Each system's
   clusters still leave out only the points its own surfaces hide. Not measured: whether the
   Editor's systems see only the systems near them (its parameters have a distance for which
   systems are included), and scenes of more than two systems.

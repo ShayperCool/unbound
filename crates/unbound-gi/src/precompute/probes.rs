@@ -104,7 +104,7 @@ pub fn probe_set(
         "{rays} rays and {budget} references per probe"
     );
     ensure!(
-        scene.systems.len() < u8::MAX as usize,
+        scene.systems.len() <= u8::MAX as usize,
         "light probes lit by {} systems",
         scene.systems.len()
     );
