@@ -187,6 +187,7 @@ public class UitkProbe : MonoBehaviour
             Graphics.Blit(a, target, only);
             Row(rows, "DepthOnly.color", Read(target, readback));
             foreach (var name in LateCases) Draw(name, name, shadow, true);
+            Stencils(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -200,6 +201,50 @@ public class UitkProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    /// <summary>Recorded last: what a stencil test does in a target of 16 depth bits (no stencil
+    /// buffer, as documented for RenderTexture.depth), of 24, and of the D16_UNorm_S8_UInt
+    /// depth-stencil format. Each target of two texels is cleared, its left texel drawn with
+    /// stencil 1, then the whole target drawn red where the stencil is 1.</summary>
+    static void Stencils(StringBuilder rows)
+    {
+        var write = new Material(Shader.Find("Probe/SamplerStates/StencilWrite"));
+        var test = new Material(Shader.Find("Probe/SamplerStates/StencilTest"));
+        var readback = new Texture2D(2, 1, TextureFormat.RGBAFloat, false, true);
+        var targets = new (string, RenderTexture)[]
+        {
+            ("depth16", new RenderTexture(2, 1, 16, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear)),
+            ("depth24", new RenderTexture(2, 1, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear)),
+            ("d16s8", new RenderTexture(2, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SFloat,
+                UnityEngine.Experimental.Rendering.GraphicsFormat.D16_UNorm_S8_UInt)),
+        };
+        void Quad(Material material, float right)
+        {
+            material.SetPass(0);
+            GL.PushMatrix();
+            GL.LoadOrtho();
+            GL.Begin(GL.QUADS);
+            GL.Vertex3(0, 0, 0); GL.Vertex3(0, 1, 0); GL.Vertex3(right, 1, 0); GL.Vertex3(right, 0, 0);
+            GL.End();
+            GL.PopMatrix();
+        }
+        foreach (var (name, target) in targets)
+        {
+            target.filterMode = FilterMode.Point;
+            target.Create();
+            var previous = RenderTexture.active;
+            RenderTexture.active = target;
+            GL.Clear(true, true, new Color(0, 0, 0, 1));
+            Quad(write, 0.5f);
+            Quad(test, 1f);
+            readback.ReadPixels(new Rect(0, 0, 2, 1), 0, 0);
+            readback.Apply();
+            RenderTexture.active = previous;
+            Row(rows, "Stencil." + name + ".left", readback.GetPixel(0, 0));
+            Row(rows, "Stencil." + name + ".right", readback.GetPixel(1, 0));
+            rows.Append("{\"k\":\"Stencil.").Append(name).Append(".format\",\"v\":\"").Append(target.depthStencilFormat).Append("\"}\n");
+        }
     }
 
     static Color Read(RenderTexture texture, Texture2D readback)

@@ -63,4 +63,13 @@
 {"k":"BadAniso","v":[1,0,1,1]}
 {"k":"BadAnisoTail","v":[1,0,1,1]}
 {"k":"BadBare","v":[1,0,1,1]}
+{"k":"Stencil.depth16.left","v":[1,0,0,1]}
+{"k":"Stencil.depth16.right","v":[1,0,0,1]}
+{"k":"Stencil.depth16.format","v":"D16_UNorm"}
+{"k":"Stencil.depth24.left","v":[1,0,0,1]}
+{"k":"Stencil.depth24.right","v":[0,0,0,1]}
+{"k":"Stencil.depth24.format","v":"D32_SFloat_S8_UInt"}
+{"k":"Stencil.d16s8.left","v":[1,0,0,1]}
+{"k":"Stencil.d16s8.right","v":[0,0,0,1]}
+{"k":"Stencil.d16s8.format","v":"D24_UNorm_S8_UInt"}
 {"k":"complete","v":true}
