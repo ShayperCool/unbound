@@ -155,12 +155,14 @@ namespace UnityEngine
             bool baked = lightingData.IsNull || lightingData.Guid == null;
             if (baked)
             {
+                if (!bake) return;
+                NoteBakeParts(file, settings);
                 // A scene without Lighting Settings has the defaults', which leave realtime GI off.
-                if (!bake || settings == null || !settings.realtimeGI) return;
+                if (settings == null || !settings.realtimeGI) return;
                 if (!(Bake(scene, file, settings) is JsonElement made)) return;
                 root = made;
-                // As the bake's lighting data would give it.
-                LightmapSettings.lightmapsMode = settings.directionalityMode;
+                // As the bake's lighting data would give it (additive opens are not measured).
+                if (first) LightmapSettings.lightmapsMode = settings.directionalityMode;
             }
             else
             {

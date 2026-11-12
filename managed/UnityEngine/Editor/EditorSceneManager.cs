@@ -193,7 +193,7 @@ namespace UnityEditor.SceneManagement
         public static Scene LoadSceneInPlayMode(string path, LoadSceneParameters parameters)
         {
             if (!UnityEngine.Application.isPlaying) throw new InvalidOperationException("This can only be used during play mode, please use EditorSceneManager.OpenScene() instead.");
-            return SceneManagerInternal.OpenPath(path, parameters.loadSceneMode == LoadSceneMode.Additive);
+            return SceneManagerInternal.OpenPath(path, parameters.loadSceneMode == LoadSceneMode.Additive, opened: false);
         }
 
         public static AsyncOperation LoadSceneAsyncInPlayMode(string path, LoadSceneParameters parameters)

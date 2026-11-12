@@ -877,28 +877,37 @@ realtime GI (the Room's: within 0.7% of `room-base`); a scene loaded at runtime 
 whatever it asks for (`roombakeloaded-base`: no realtime GI).
 
 Unbound uses its precompute there: a scene the Editor opens (the first scene, the one Play
-mode starts with, `EditorSceneManager.OpenScene`; `SceneData.OpenedInEditor`) whose
+mode starts with, `EditorSceneManager.OpenScene` in Edit mode; `SceneData.OpenedInEditor`; not
+one loaded in Play mode, also through `EditorSceneManager.LoadSceneInPlayMode`) whose
 LightmapSettings ask for a bake on load, which has no lighting data and whose Lighting Settings
 have realtime GI on, gets the realtime GI [Unbound's precompute](#unbounds-precompute) makes
 of its renderers (`Graphics/RealtimeGIBake.cs`, `realtime-gi-bake`), as if the Editor's bake
 were done before Play mode: every enabled, active MeshRenderer with Contribute GI and Receive
-Global Illumination Lightmaps, its realtime lightmap UVs as for the Editor's data, its Lightmap
+Global Illumination Lightmaps but those of a LOD Group's lower levels (the Manual, "Lightmapping
+LODs": "the system lights the most detailed model out of the LOD Group as if it has the
+Contribute Global Illumination setting enabled"; lower LODs take their indirect light from light
+probes), its realtime lightmap UVs as for the Editor's data, its Lightmap
 Parameters' Cluster Resolution, Irradiance Quality and Budget, Modelling Tolerance and System
 Tag, and the light probes of its LightProbeGroups (their positions, tetrahedralized, with no
 baked lighting, as the Editor's bake gives a scene without baked global illumination). The
 bake is cached under `Library/Unbound/RealtimeGI/` ([A scene's bake](#unbounds-precompute));
 nothing is written to the project's files (the Editor writes `LightingData.asset` beside the
 scene). With it the probe's `roombake-base` puts 81 of its 5070 lightmap values outside the
-comparator's tolerance and `roombake-moved` 139 (reported, not gated; each renderer compared in
+comparator's tolerance and `roombake-moved` 122 (gated on 4% of them; each renderer compared in
 its own UV space, since where the renderers lie in the atlas is each precompute's choice), and
 everything else (which renderers draw realtime GI, their UVs, the light probes' count, the
 lightmaps mode, the runtime-loaded scene without it) as the Editor's. Said once, not made:
 Lightmap Parameters other than the Default-Medium's in their other realtime fields (Resolution,
 Backface Tolerance, Is Transparent, Edge Stitching, Pushoff; such a renderer is left out), a
-renderer the bake cannot take (left out, named), and what the Editor's bake also makes: baked
+renderer the bake cannot take (left out, named), a Terrain with Contribute GI (left out,
+named), and what the Editor's bake also makes: baked
 lightmaps and the light probes' baked lighting (with baked global illumination on), and the
 environment lighting it makes from a sky (the ambient probe and the default reflection; zero
-and black without lighting data). Not measured: data the Editor finds invalid (moved geometry,
+and black without lighting data) and baked reflection probes, each said once for every scene
+that asks for the bake, also when realtime GI is off. The Editor also sets a Standard material's
+keywords from its properties when it loads it (its emission's `_EMISSION`), Unbound takes the
+keywords the file has: a material saved without that keyword emits for realtime GI in the
+Editor, not in Unbound (the probe's setup saves its keyword). Not measured: data the Editor finds invalid (moved geometry,
 changed settings; Unbound bakes only for missing data), a scene that references the built-in
 default lighting data, a scene saved by an earlier release with Auto Generate on (it has no
 bake-on-load setting of its own), additive opens of several scenes, and requests to bake from

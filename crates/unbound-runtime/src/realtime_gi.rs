@@ -1959,4 +1959,28 @@ mod tests {
         assert_ne!(key, bake_key(&[grouped], &[]));
         assert_ne!(key, bake_key(&inputs, &[[0.0, 1.0, 0.0]]));
     }
+
+    #[test]
+    fn a_bake_request_names_its_renderers_by_flat_lists() {
+        let json = |positions: &str, uvs: &str| {
+            format!(
+                r#"{{"renderers":[{{"object":5,"positions":{positions},"uvs":{uvs},"triangles":[0,1,2],
+                "localToWorld":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"pixelSize":0.5,"minChartTexels":4,
+                "automatic":null,"clusterSize":1,"modellingTolerance":0.01,"group":7,"rays":64,"budget":8}}],
+                "probes":[0,1,0]}}"#
+            )
+        };
+        let request: BakeRequest =
+            serde_json::from_str(&json("[0,0,0,1,0,0,0,0,1]", "[0,0,1,0,0,1]")).unwrap();
+        assert_eq!(request.renderers[0].object, 5);
+        assert_eq!(request.renderers[0].prefab, 0);
+        // Lists that are not whole triples or pairs fail by name.
+        let r: BakeRequest = serde_json::from_str(&json("[0,0,0,1,0]", "[0,0,1,0,0,1]")).unwrap();
+        let e = bake_request(r).unwrap_err().to_string();
+        assert!(e.contains("position"), "{e}");
+        let r: BakeRequest =
+            serde_json::from_str(&json("[0,0,0,1,0,0,0,0,1]", "[0,0,1,0,0]")).unwrap();
+        let e = bake_request(r).unwrap_err().to_string();
+        assert!(e.contains("UV"), "{e}");
+    }
 }

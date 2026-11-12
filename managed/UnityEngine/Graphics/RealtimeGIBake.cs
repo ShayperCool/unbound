@@ -19,12 +19,57 @@ namespace UnityEngine
         /// <summary>StaticEditorFlags.ContributeGI.</summary>
         const uint ContributeGI = 1;
 
+        /// <summary>Says once what the Editor's bake of a scene it opens without lighting data
+        /// would make and Unbound does not: baked lightmaps and the light probes' baked lighting
+        /// (baked global illumination on; a scene without Lighting Settings has the defaults',
+        /// which have it on), the environment lighting from a sky (the ambient probe and the
+        /// default reflection), baked reflection probes. Unbound makes the realtime GI alone
+        /// (<see cref="Bake"/>).</summary>
+        internal static void NoteBakeParts(LoadedFile file, LightingSettings settings)
+        {
+            string path = file?.Path ?? "a scene";
+            if (settings == null || settings.bakedGI)
+                Warn("bake-baked:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would make baked lightmaps and the light probes' baked lighting, which Unbound does not make.");
+            if (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox)
+                Warn("bake-environment:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would make the environment lighting from the sky (the ambient probe and the default reflection), which Unbound does not make.");
+            if (file != null)
+                foreach (var obj in file.Objects.Values)
+                    if (obj is ReflectionProbe probe && probe.mode == Rendering.ReflectionProbeMode.Baked)
+                    {
+                        Warn("bake-reflection:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would bake its reflection probes, which Unbound does not make.");
+                        break;
+                    }
+        }
+
+        /// <summary>The renderers of the scene's LOD Groups below their most detailed level: realtime
+        /// GI lights only the most detailed one (Unity 6000.0 Manual, "Lightmapping LODs": "the
+        /// system lights the most detailed model out of the LOD Group as if it has the Contribute
+        /// Global Illumination setting enabled", lower LODs take their indirect light from light
+        /// probes).</summary>
+        static HashSet<Renderer> LowerLods(LoadedFile file)
+        {
+            var lower = new HashSet<Renderer>();
+            foreach (var obj in file.Objects.Values)
+            {
+                if (!(obj is LODGroup group)) continue;
+                var lods = group.GetLODs();
+                for (int level = 1; level < lods.Length; level++)
+                    foreach (var r in lods[level].renderers)
+                        if (r != null) lower.Add(r);
+                // A renderer at the most detailed level as well stays in.
+                if (lods.Length > 0)
+                    foreach (var r in lods[0].renderers)
+                        if (r != null) lower.Remove(r);
+            }
+            return lower;
+        }
+
         /// <summary>The Lightmap Parameters the bake takes: the realtime fields of the built-in
         /// Default-Medium asset (tests/projects/realtimegi's scenes use it, and its
         /// RoomSystemsSystemTag1 copy of it); of these the bake takes the Cluster Resolution, the
         /// Irradiance Budget and Quality, the Modelling Tolerance and the System Tag as they are
         /// and refuses other values of the rest.</summary>
-        struct BakeParameters
+        internal struct BakeParameters
         {
             internal float Resolution, ClusterResolution, BackFaceTolerance, ModellingTolerance, Pushoff;
             internal int IrradianceBudget, IrradianceQuality, SystemTag;
@@ -78,6 +123,8 @@ namespace UnityEngine
         {
             if (reference.IsNull && settings != null) reference = settings.DefaultLightmapParameters;
             if (!OwnParameters(reference)) return BakeParameters.DefaultMedium;
+            // The other built-in assets (Default-HighResolution and the lower ones) are not measured.
+            if (reference.Guid == BuiltinExtraGuid) return null;
             var key = (reference.Guid, reference.FileId);
             if (s_Parameters.TryGetValue(key, out var known)) return known;
             BakeParameters? read = null;
@@ -118,8 +165,12 @@ namespace UnityEngine
             var refused = new List<string>();
             var probes = new List<float>();
             var probePositions = new List<Vector3>();
+            var lowerLods = LowerLods(file);
             foreach (var pair in file.Objects)
             {
+                if (pair.Value is Terrain terrain && terrain.enabled && terrain.gameObject.activeInHierarchy
+                    && (terrain.gameObject.m_StaticEditorFlags & ContributeGI) != 0)
+                    refused.Add($"'{terrain.name}': a Terrain (not made by Unbound's precompute)");
                 if (pair.Value is LightProbeGroup group && group.enabled && group.gameObject.activeInHierarchy)
                     foreach (var local in group.probePositions)
                     {
@@ -128,17 +179,19 @@ namespace UnityEngine
                         probes.Add(p.x); probes.Add(p.y); probes.Add(p.z);
                     }
                 if (!(pair.Value is MeshRenderer renderer) || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
-                if ((renderer.gameObject.m_StaticEditorFlags & ContributeGI) == 0 || renderer.receiveGI != ReceiveGI.Lightmaps) continue;
+                if ((renderer.gameObject.m_StaticEditorFlags & ContributeGI) == 0 || renderer.receiveGI != ReceiveGI.Lightmaps
+                    || lowerLods.Contains(renderer)) continue;
                 if (BakeRequestOf(pair.Key, renderer, resolution, settings, out var why) is object request) renderers.Add(request);
                 else refused.Add($"'{renderer.name}': {why}");
             }
             foreach (var why in refused)
                 Warn("bake:" + file.Path + why, $"{file.Path}: a renderer is left out of Unbound's realtime GI bake: {why}");
-            if (renderers.Count == 0) return null;
-            if (settings.bakedGI)
-                Warn("bake-baked:" + file.Path, $"{file.Path}: its bake on load (Lightmapping.bakeOnSceneLoad) would also make baked lightmaps and the light probes' baked lighting, which Unbound does not make: only its realtime GI is made.");
-            if (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox)
-                Warn("bake-environment:" + file.Path, $"{file.Path}: its bake on load (Lightmapping.bakeOnSceneLoad) would also make the environment lighting from the sky (the ambient probe and the default reflection), which Unbound does not make.");
+            if (renderers.Count == 0)
+            {
+                if (probePositions.Count > 0)
+                    Warn("bake-probes:" + file.Path, $"{file.Path}: its bake on load would light its light probes from realtime GI; it has no renderer Unbound's precompute takes, so they are not lit.");
+                return null;
+            }
             JsonElement root;
             try
             {
@@ -184,7 +237,13 @@ namespace UnityEngine
                 if (mesh.GetTopology(sub) != MeshTopology.Triangles) { why = $"a submesh of {mesh.GetTopology(sub)}"; return null; }
             float scale = renderer.scaleInLightmap * resolution;
             if (!(scale > 0f)) { why = "it has no realtime lightmap resolution"; return null; }
-            if (!(ParametersOf(renderer.m_LightmapParameters, settings) is BakeParameters parameters)) { why = "its Lightmap Parameters cannot be read"; return null; }
+            if (!(ParametersOf(renderer.m_LightmapParameters, settings) is BakeParameters parameters))
+            {
+                why = renderer.m_LightmapParameters.Guid == BuiltinExtraGuid
+                    ? "its built-in Lightmap Parameters are not Default-Medium (not measured)"
+                    : "its Lightmap Parameters cannot be read";
+                return null;
+            }
             if (parameters.Refusal() is string refusal) { why = "its Lightmap Parameters have " + refusal; return null; }
             bool automatic = MakesAutomaticCharts(renderer);
             if (automatic && AutomaticChartsRefusal(renderer, mesh, s_NoRenderers) is string charts) { why = charts; return null; }

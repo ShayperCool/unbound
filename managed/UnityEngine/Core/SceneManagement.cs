@@ -721,12 +721,14 @@ namespace UnityEngine.SceneManagement
             return new Scene(data.Handle);
         }
 
-        /// <summary>EditorSceneManager.OpenScene: the scene file loads now, alone or added.</summary>
-        internal static Scene OpenPath(string path, bool additive)
+        /// <summary>EditorSceneManager.OpenScene: the scene file loads now, alone or added.
+        /// <paramref name="opened"/>: the Editor opens it (Edit mode), as opposed to a load in
+        /// Play mode (EditorSceneManager.LoadSceneInPlayMode), which no bake follows.</summary>
+        internal static Scene OpenPath(string path, bool additive, bool opened = true)
         {
             int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
-            data.OpenedInEditor = true;
+            data.OpenedInEditor = opened;
             Perform(data, new LoadSceneParameters(additive ? LoadSceneMode.Additive : LoadSceneMode.Single));
             return new Scene(data.Handle);
         }

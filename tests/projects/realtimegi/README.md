@@ -470,7 +470,8 @@ Unbound bakes with its own precompute as the Editor opens it, and compares with 
 (the renderers lie where each precompute put them, so their places are not compared; each
 renderer's own lightmap is): no state or gated value failing (the opened scene's renderers draw
 realtime GI, the scene loaded at runtime's do not, every renderer covers the Editor's texels of
-its own UV space, the light probes' count), the lighting reported (81 of the 5070 values of
-`roombake-base` and 139 of `roombake-moved` outside the comparator's tolerance, and the light
-probes, from Unbound's precompute: docs/REALTIME_GI.md). Run output goes to
+its own UV space, the light probes' count), the renderers' lightmaps gated on a share of 4% of
+each case's values outside the comparator's tolerance (81 of the 5070 values of `roombake-base`
+and 122 of `roombake-moved` from Unbound's precompute), the light probes reported
+(docs/REALTIME_GI.md). Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/realtimegi/<label>/`.

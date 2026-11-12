@@ -29,7 +29,9 @@ Two classes of values:
 With --own-layout (a capture whose realtime GI the engine precomputed itself, `run.py --bake`) the
 renderers' places in the atlas (their scale/offset, the atlas files) are the engine's own and not
 compared; each renderer's lightmap in its own realtime lightmap UV space (`.rlm`) is: which of its
-texels it covers is state (its realtime lightmap UVs), their values are reported.
+texels it covers is state (its realtime lightmap UVs); their values are gated per case on a share
+of them outside the tolerance (OWN_SHARE: the engine's own precompute differs from the Editor's,
+docs/REALTIME_GI.md), each one listed.
 
 Every failing value is written to CAPTURE/compare-details.txt; the output lists one line per
 failing case, atlas or frame.
@@ -51,6 +53,10 @@ ISOLATED = 0.005
 ISOLATED_REL = 0.10
 # A directionality's values (8 bits each): 2.5 steps.
 DIRECTION = 2.5 / 255
+# The share of a case's `.rlm` values (an engine's own precompute, --own-layout) that may be
+# outside the tolerance: above what Unbound's precompute gives the probe's bake cases (1.6% and
+# 2.7%, docs/REALTIME_GI.md), far below what a bake that lights nothing would.
+OWN_SHARE = 0.04
 # A frame's mean per-pixel max-channel difference (of 255), the image probes' bound.
 FRAME_MEAN = 2.0
 STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode', 'wrongLength', 'noArray',
@@ -140,7 +146,7 @@ def compare_values(ref, cap, result, own_layout=False):
                                 [f'[{k}] {cs[k]!r} vs {rs[k]!r}' for k in bad])
 
 
-def compare_atlas(name, ref_path, cap_path, result):
+def compare_atlas(name, ref_path, cap_path, result, tally=None):
     # A renderer's own lightmap (`.rlm`) is a lightmap, reported.
     lightmap = name.endswith('.atlas') or name.endswith('.rlm')
     gate = name.endswith('.atlas') or name.endswith('.dir')
@@ -176,11 +182,19 @@ def compare_atlas(name, ref_path, cap_path, result):
             if d > near(b):
                 bad.append(f'texel ({t % rw},{t // rw}) channel {k}: {a!r} vs {b!r}')
                 far += d > furthest(b)
+    if tally is not None:
+        # An own precompute's renderer lightmap: counted toward its case's share.
+        case = tally.setdefault(name.rsplit('-', 1)[0], [0, 0, []])
+        case[0] += compared
+        case[1] += len(bad)
+        case[2].extend(f'{name}: {d}' for d in bad)
     result.lines.append(f'{name}: coverage differs at {len(coverage)} texels, {len(bad)} values off, '
                         f'mean |d| {total / max(1, rw * rh):.5f}, max |d| {worst:.5f}')
     if coverage:
         # Which texels renderers cover (their realtime lightmap UVs) matches: gated.
         result.fail('state', f'{name}: coverage differs at {len(coverage)} texels', coverage)
+    if tally is not None:
+        return
     if gate and not far and len(bad) <= ISOLATED * compared:
         if bad:
             result.details.append(f'{name}: {len(bad)} isolated texel values off (allowed '
@@ -206,11 +220,21 @@ def main():
         return 1
     compare_values(records(ref/'values.jsonl'), records(cap/'values.jsonl'), result, args.own_layout)
     laid_out = ('.atlas', '.dir')
+    own = {}
     for path in sorted(ref.iterdir()):
         if path.suffix in laid_out and args.own_layout:
             result.lines.append(f'{path.name}: not compared (the renderers lie where each precompute put them)')
-        elif path.suffix in laid_out or path.suffix == '.rlm':
+        elif path.suffix in laid_out:
             compare_atlas(path.name, path, cap/path.name, result)
+        elif path.suffix == '.rlm':
+            compare_atlas(path.name, path, cap/path.name, result, own)
+    for case, (compared, off, details) in sorted(own.items()):
+        result.lines.append(f'{case} (renderers): {off} of {compared} values off (allowed {int(OWN_SHARE * compared)})')
+        if off > OWN_SHARE * compared:
+            result.fail('gated', f'{case}: {off} of {compared} renderer lightmap values off', details)
+        elif off:
+            result.details.append(f'{case}: {off} renderer lightmap values off (allowed {int(OWN_SHARE * compared)})')
+            result.details.extend('  ' + d for d in details)
         elif path.suffix == '.png':
             if not (cap/path.name).is_file():
                 result.fail('gated', f'{path.name}: missing')
