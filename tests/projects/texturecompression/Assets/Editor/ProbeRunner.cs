@@ -45,7 +45,7 @@ public static class ProbeRunner
         foreach (var setting in settings)
         {
             var key = setting.Split('=')[0];
-            if (!new[] { "compression", "quality", "format", "type", "channel", "srgb", "mips", "readable", "alpha", "npot", "android" }.Contains(key))
+            if (!new[] { "compression", "quality", "defaultQuality", "override", "format", "type", "channel", "srgb", "mips", "readable", "alpha", "npot", "android" }.Contains(key))
                 throw new ArgumentException("unknown texture case setting " + setting);
         }
         importer.textureType = Get("type") == "normal" ? TextureImporterType.NormalMap
@@ -72,7 +72,7 @@ public static class ProbeRunner
             : compression == "low" ? TextureImporterCompression.CompressedLQ
             : compression == "normal" ? TextureImporterCompression.Compressed
             : TextureImporterCompression.Uncompressed;
-        standard.compressionQuality = quality;
+        standard.compressionQuality = Get("defaultQuality") != null ? int.Parse(Get("defaultQuality")) : quality;
         standard.crunchedCompression = false;
         importer.SetPlatformTextureSettings(standard);
         var format = Get("format");
@@ -81,7 +81,7 @@ public static class ProbeRunner
             importer.SetPlatformTextureSettings(new TextureImporterPlatformSettings
             {
                 name = "Standalone",
-                overridden = true,
+                overridden = Get("override") != "0",
                 maxTextureSize = 2048,
                 format = (TextureImporterFormat)Enum.Parse(typeof(TextureImporterFormat), format),
                 compressionQuality = quality,

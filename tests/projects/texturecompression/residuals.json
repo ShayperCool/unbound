@@ -566,7 +566,17 @@
     "write.view1.copy": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
     "write.view1.pixel": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
     "write.view1.pixels": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
-    "write.view1.raw": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)"
+    "write.view1.raw": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
+    "tex.NoiseHighDisabledOverride.gpu": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixel": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels0": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels1": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels2": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels3": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels4": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels5": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels6": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.raw": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override"
   },
   "AndroidLinear": {
     "tex.SmoothDXT1Crunched.*": "crunched formats are not produced: the import keeps uncompressed RGBA32 pixels (follow-up)",
@@ -822,7 +832,17 @@
     "write.view1.copy": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
     "write.view1.pixel": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
     "write.view1.pixels": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
-    "write.view1.raw": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)"
+    "write.view1.raw": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
+    "tex.NoiseHighDisabledOverride.gpu": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixel": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels0": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels1": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels2": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels3": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels4": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels5": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels6": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.raw": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override"
   },
   "AndroidETC2": {
     "tex.SmoothDXT1Crunched.*": "crunched formats are not produced: the import keeps uncompressed RGBA32 pixels (follow-up)",
@@ -1074,6 +1094,16 @@
     "write.view1.copy": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
     "write.view1.pixel": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
     "write.view1.pixels": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
-    "write.view1.raw": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)"
+    "write.view1.raw": "made from an ETC import's blocks or texels (Unbound's own ETC encoder): the Editor's texels differ slightly (follow-up)",
+    "tex.NoiseHighDisabledOverride.gpu": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixel": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels0": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels1": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels2": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels3": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels4": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels5": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.pixels6": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override",
+    "tex.NoiseHighDisabledOverride.raw": "ETC import encoding at default quality 100: the existing ETC encoder residual, also recorded by NoiseHighQ100; this control disables a quality-49 platform override"
   }
 }

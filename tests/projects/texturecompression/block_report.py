@@ -33,7 +33,11 @@ def report(reference, candidate):
     for line in (Path(__file__).parent/'Assets/Editor/TextureCases.txt').read_text().splitlines():
         fields = line.split()
         if fields:
-            cases[fields[0]] = int(dict(item.split('=', 1) for item in fields[1:]).get('quality', 50))
+            settings = dict(item.split('=', 1) for item in fields[1:])
+            quality = settings.get('quality', 50)
+            if settings.get('override') == '0':
+                quality = settings.get('defaultQuality', quality)
+            cases[fields[0]] = int(quality)
     for key, info in reference.items():
         if not key.endswith('.info'):
             continue

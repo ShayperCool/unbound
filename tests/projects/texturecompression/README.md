@@ -102,7 +102,7 @@ counts as zero matching blocks and is identified explicitly.
 
 | Source, Unity 6000.0 | Contract or observation |
 |---|---|
-| [TextureImporterPlatformSettings](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureImporterPlatformSettings.html) | An enabled platform override replaces the default platform parameters. The quality override controls use different default and target values. |
+| [TextureImporterPlatformSettings](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureImporterPlatformSettings.html) | An enabled platform override replaces the default platform parameters. `NoiseBC7Q49` has default quality 100 and an enabled Standalone override of 49; `NoiseHighDisabledOverride` disables the same override and uses default quality 100. Their blocks differ, and the disabled case matches NoiseHighQ100. |
 | [SetPlatformTextureSettings](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureImporter.SetPlatformTextureSettings.html) | Quality 0, 50 and 100 name Fast, Normal and Best. No compressed-block identity is promised. |
 | Editor reference, added BC controls | BC7 changes at qualities 50 and 100; BC6H uses its Fast setting at 0, Best at 100 and Normal for intermediate values. These encoder choices are measured for 6000.0.71f1 only. |
 
@@ -118,7 +118,7 @@ Measured import block totals, Gamma / Linear, including every mip:
 | BC4 | 1677 / 2058 | 1677 / 2058 |
 | BC5 | 1047 / 1133 | 1047 / 1133 |
 | BC6H | 2371 / 2401 | 2387 / 2401 |
-| BC7 | 5532 / 5592 | 5532 / 5592 |
+| BC7 | 5875 / 5935 | 5875 / 5935 |
 
 BC7 residuals are in CutoutBC7, FlatBC7 and SoftHigh. The largest level-0 channel difference
 is 195/255 in CutoutBC7, and a lower FlatBC7 level reaches 109/255. These remain unresolved.

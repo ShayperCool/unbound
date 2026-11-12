@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &430470120
+--- !u!1 &1276740346
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 430470122}
-  - component: {fileID: 430470121}
+  - component: {fileID: 1276740348}
+  - component: {fileID: 1276740347}
   m_Layer: 0
   m_Name: TextureCompressionProbe
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &430470121
+--- !u!114 &1276740347
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 430470120}
+  m_GameObject: {fileID: 1276740346}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 50b3960969ba1ce99ba6e03ca7d533a2, type: 3}
@@ -184,6 +184,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 96c0a223d6a321659977821528d3014f, type: 3}
   - {fileID: 2800000, guid: 1d498e1f474a29251aec90872c9df226, type: 3}
   - {fileID: 2800000, guid: d2e2b3695dfad31549a8fb34c8356363, type: 3}
+  - {fileID: 2800000, guid: 0d7fc0435e98ff905b6906c420c4a645, type: 3}
   - {fileID: 2800000, guid: 129533975d21cc5c29dce9a7efb50bef, type: 3}
   - {fileID: 2800000, guid: 3ccc3eeee7c97e2a9ba58f86ea28edb5, type: 3}
   - {fileID: 2800000, guid: 85fe9ad128c0658b780bc2437127f384, type: 3}
@@ -231,13 +232,13 @@ MonoBehaviour:
   - {fileID: 2800000, guid: b28072392b87c05ed8f36c8d45fe993e, type: 3}
   - {fileID: 2800000, guid: c55c4584c0deb1ec59998c727f1370b0, type: 3}
   - {fileID: 2800000, guid: b0a50a016e452972e9b739e7822a9570, type: 3}
---- !u!4 &430470122
+--- !u!4 &1276740348
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 430470120}
+  m_GameObject: {fileID: 1276740346}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -250,4 +251,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 430470122}
+  - {fileID: 1276740348}

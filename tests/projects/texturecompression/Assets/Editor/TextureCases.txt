@@ -67,7 +67,8 @@ OddRGBA32 format=RGBA32 npot=none mips=0
 FlatBC7 format=BC7
 CutoutBC7 format=BC7 quality=100
 NoiseLinearBC7 format=BC7 srgb=0
-NoiseBC7Q49 format=BC7 quality=49
+NoiseBC7Q49 format=BC7 quality=49 defaultQuality=100
+NoiseHighDisabledOverride compression=high format=BC7 quality=49 defaultQuality=100 override=0
 NoiseBC7Q99 format=BC7 quality=99
 NpotBC7 format=BC7 npot=none mips=0
 OddBC7 format=BC7 npot=none
