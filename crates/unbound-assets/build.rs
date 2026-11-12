@@ -14,6 +14,14 @@ fn main() {
     println!("cargo:rerun-if-changed={}", native.join("bc7e").display());
     println!(
         "cargo:rerun-if-changed={}",
+        native.join("stb_dxt").display()
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
+        native.join("unbound_runtime_dxt.cpp").display()
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
         native.join("unbound_bc7e.cpp").display()
     );
     cc::Build::new()
@@ -22,6 +30,7 @@ fn main() {
         .file(native.join("bc7e/basisu_bc7e_scalar.cpp"))
         .file(native.join("unbound_bc7e.cpp"))
         .file(native.join("amd_bc4/encode.cpp"))
+        .file(native.join("unbound_runtime_dxt.cpp"))
         .define("NDEBUG", None)
         .opt_level(2)
         .flag_if_supported("-ffp-contract=off")

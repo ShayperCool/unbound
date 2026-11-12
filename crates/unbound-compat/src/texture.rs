@@ -1,18 +1,22 @@
-//! Import encoders measured in tests/projects/texturecompression.
+//! Texture encoders measured in tests/projects/texturecompression.
 use crate::UnityVersion;
 use serde::{Deserialize, Serialize};
 
-/// A release's measured import-encoder selection. Other releases retain the existing ISPC
-/// approximation until their settings are measured.
+/// A release's measured encoders for imports and Texture2D.Compress. Other releases retain
+/// their existing approximations until their settings are measured.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TextureCompressionRules {
     pub measured_import_encoders: bool,
+    #[serde(default)]
+    pub measured_runtime_encoder: bool,
 }
 
 impl TextureCompressionRules {
     pub fn for_version(version: UnityVersion) -> Self {
+        let measured = version == UnityVersion::new(6000, 0, 71);
         Self {
-            measured_import_encoders: version == UnityVersion::new(6000, 0, 71),
+            measured_import_encoders: measured,
+            measured_runtime_encoder: measured,
         }
     }
 }
@@ -32,6 +36,11 @@ mod tests {
             UnityVersion::new(2022, 3, 71),
         ] {
             assert!(!TextureCompressionRules::for_version(version).measured_import_encoders);
+            assert!(!TextureCompressionRules::for_version(version).measured_runtime_encoder);
         }
+        assert!(
+            TextureCompressionRules::for_version(UnityVersion::new(6000, 0, 71))
+                .measured_runtime_encoder
+        );
     }
 }

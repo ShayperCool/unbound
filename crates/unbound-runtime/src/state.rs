@@ -700,6 +700,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 width: u32,
                 height: u32,
                 data: String,
+                #[serde(default, rename = "highQuality")]
+                high_quality: bool,
             }
             let r: Request = serde_json::from_str(request)?;
             let format = unbound_assets::texture::BlockFormat::from_unity_format(r.format)
@@ -715,7 +717,24 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 r.width,
                 r.height
             );
-            let blocks = unbound_assets::texture::compress_level(format, &rgba, r.width, r.height);
+            let measured = s
+                .texture_importer
+                .read()
+                .unwrap()
+                .project
+                .encoders
+                .measured_runtime_encoder;
+            let blocks = if measured {
+                unbound_assets::texture::compress_runtime_level(
+                    format,
+                    &rgba,
+                    r.width,
+                    r.height,
+                    r.high_quality,
+                )
+            } else {
+                unbound_assets::texture::compress_level(format, &rgba, r.width, r.height)
+            };
             Ok(json!({ "blocks": crate::models::base64(&blocks) }).to_string())
         }
         "texture-layers" => {

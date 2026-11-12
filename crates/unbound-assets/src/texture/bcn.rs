@@ -7,8 +7,8 @@
 //! and texels take the nearest of the four colours; a block of one colour takes the endpoint pair
 //! whose interpolated colour is nearest ([`solid_tables`]); BC3's alpha spans the block's alpha
 //! range in eight steps. The measured import profile uses bc7e for BC7, scalar endpoint fitting
-//! for BC4/BC5 and quality-dependent ISPC BC6H settings. Other profiles and runtime compression
-//! use the ISPC approximations. Exact block counts and remaining differences are recorded by
+//! for BC4/BC5 and quality-dependent ISPC BC6H settings. The measured runtime profile uses
+//! its channel quantizer and a dithered colour fit. Other profiles retain approximations. Exact block counts and remaining differences are recorded by
 //! tests/projects/texturecompression.
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
@@ -104,10 +104,26 @@ type Block = [[u8; 4]; 16];
 /// a level smaller than a block repeats as tiles (the 2x2 and 1x1 levels of the Unity 6000.0.71f1
 /// Editor's blocks, tests/projects/texturecompression).
 fn gather(rgba: &[u8], width: usize, height: usize, bx: usize, by: usize) -> Block {
+    gather_tiled(rgba, width, height, bx, by, false)
+}
+
+fn gather_tiled(
+    rgba: &[u8],
+    width: usize,
+    height: usize,
+    bx: usize,
+    by: usize,
+    partial_tile: bool,
+) -> Block {
     let mut block = [[0u8; 4]; 16];
     for (i, texel) in block.iter_mut().enumerate() {
-        let x = (bx * 4 + i % 4) % width;
-        let y = (by * 4 + i / 4) % height;
+        let (tw, th) = if partial_tile {
+            ((width - bx * 4).min(4), (height - by * 4).min(4))
+        } else {
+            (width, height)
+        };
+        let x = (bx * 4 + (i % 4) % tw) % width;
+        let y = (by * 4 + (i / 4) % th) % height;
         texel.copy_from_slice(&rgba[(y * width + x) * 4..][..4]);
     }
     block
@@ -200,6 +216,96 @@ pub fn compress_level(format: BlockFormat, rgba: &[u8], width: u32, height: u32)
         }
         BlockFormat::Bc6h => panic!("BC6H compresses float levels (compress_level_f32)"),
     }
+}
+
+/// Texture2D.Compress's encoder in the measured compatibility profile. Channel bounds start
+/// with texel zero's alpha, then use the remaining texels of the selected channel. Colour
+/// fits use rounded thirds, with optional dithering (tests/projects/texturecompression).
+pub fn compress_runtime_level(
+    format: BlockFormat,
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    high_quality: bool,
+) -> Vec<u8> {
+    if !matches!(
+        format,
+        BlockFormat::Bc1 | BlockFormat::Bc3 | BlockFormat::Bc4 | BlockFormat::Bc5
+    ) {
+        return compress_level(format, rgba, width, height);
+    }
+    use rayon::prelude::*;
+    unsafe extern "C" {
+        fn unbound_runtime_dxt_init();
+        fn unbound_runtime_dxt_colour(pixels: *const u8, block: *mut u8, high_quality: bool);
+    }
+    let colour = matches!(format, BlockFormat::Bc1 | BlockFormat::Bc3);
+    if colour {
+        static INIT: OnceLock<()> = OnceLock::new();
+        INIT.get_or_init(|| unsafe { unbound_runtime_dxt_init() });
+    }
+    let channels: &[usize] = match format {
+        BlockFormat::Bc3 => &[3],
+        BlockFormat::Bc4 => &[0],
+        BlockFormat::Bc5 => &[0, 1],
+        _ => &[],
+    };
+    let (w, h) = (width.max(1) as usize, height.max(1) as usize);
+    let bw = w.div_ceil(4);
+    let size = format.block_bytes();
+    let mut blocks = vec![0; bw * h.div_ceil(4) * size];
+    blocks
+        .par_chunks_mut(bw * size)
+        .enumerate()
+        .for_each(|(by, row)| {
+            for bx in 0..bw {
+                // Runtime edge blocks repeat their remaining rows/columns.
+                let pixels = gather_tiled(rgba, w, h, bx, by, true);
+                let dst = &mut row[bx * size..][..size];
+                for (i, &channel) in channels.iter().enumerate() {
+                    dst[i * 8..][..8].copy_from_slice(&encode_runtime_channel(&pixels, channel));
+                }
+                if colour {
+                    let at = channels.len() * 8;
+                    // Initialization has completed; the native function reads 64 bytes, writes 8,
+                    // and uses only local working storage. Other block destinations are disjoint.
+                    unsafe {
+                        unbound_runtime_dxt_colour(
+                            pixels.as_ptr().cast(),
+                            dst[at..].as_mut_ptr(),
+                            high_quality,
+                        );
+                    }
+                }
+            }
+        });
+    blocks
+}
+
+fn encode_runtime_channel(block: &Block, channel: usize) -> [u8; 8] {
+    const INTERVALS: i32 = 7;
+    let (mut lo, mut hi) = (block[0][3], block[0][3]);
+    for texel in &block[1..] {
+        lo = lo.min(texel[channel]);
+        hi = hi.max(texel[channel]);
+    }
+    let distance = i32::from(hi) - i32::from(lo);
+    let mut bits = u64::from(hi) | (u64::from(lo) << 8);
+    for (i, texel) in block.iter().enumerate() {
+        let mut position = (i32::from(texel[channel]) - i32::from(lo)) * INTERVALS + distance / 2;
+        let mut level = 0;
+        // A tie at an interval boundary takes its lower level.
+        for step in [4, 2, 1] {
+            if position > step * distance {
+                level |= step;
+                position -= step * distance;
+            }
+        }
+        let mut index = (-level) & INTERVALS;
+        index ^= i32::from(index < 2);
+        bits |= (index as u64) << (16 + i * 3);
+    }
+    bits.to_le_bytes()
 }
 
 /// Import settings measured in Unity 6000.0.71f1, tests/projects/texturecompression. Runtime
@@ -802,6 +908,82 @@ fn encode_alpha(block: &Block, channel: usize) -> [u8; 8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn runtime_partial_edge_blocks_repeat_the_remaining_texels() {
+        // The 10x6 level has a two-column and a two-row partial block.
+        let rgba: Vec<u8> = (0..6)
+            .flat_map(|y| {
+                (0..10).flat_map(move |x| {
+                    [
+                        (x * 19 + y * 7 + 32) as u8,
+                        (x * 11 + y * 31 + 18) as u8,
+                        (x * 37 + y * 5 + 24) as u8,
+                        if (x + y + 1) % 3 == 0 {
+                            0
+                        } else if (x + y) % 2 == 0 {
+                            83
+                        } else {
+                            255
+                        },
+                    ]
+                })
+            })
+            .collect();
+        let blocks = compress_runtime_level(BlockFormat::Bc3, &rgba, 10, 6, false);
+        assert_eq!(
+            &blocks[32..48],
+            &[
+                255, 0, 65, 0, 195, 142, 19, 199, 141, 222, 8, 179, 221, 187, 170, 34
+            ]
+        );
+    }
+
+    #[test]
+    fn runtime_channels_keep_the_reference_endpoint_seed() {
+        // Unity 6000.0.71f1, texturecompression compress.seed.r8/rg16: texel zero is the
+        // smallest component. Its alpha starts the bounds, before the other component values.
+        let mut pixels = [[78, 130, 0, 255]; 16];
+        pixels[0] = [0, 1, 0, 255];
+        let rgba = pixels.concat();
+        let red = [255, 78, 0x49, 0x92, 0x24, 0x49, 0x92, 0x24];
+        let green = [255, 130, 0x49, 0x92, 0x24, 0x49, 0x92, 0x24];
+        for high in [false, true] {
+            assert_eq!(
+                compress_runtime_level(BlockFormat::Bc4, &rgba, 4, 4, high),
+                red
+            );
+            assert_eq!(
+                compress_runtime_level(BlockFormat::Bc5, &rgba, 4, 4, high),
+                [red, green].concat()
+            );
+        }
+    }
+
+    #[test]
+    fn runtime_dxt_colour_dithering_and_alpha_match_the_reference() {
+        // Unity 6000.0.71f1, texturecompression compress.rgba32, first block.
+        let rgba = [
+            81, 234, 124, 196, 213, 15, 76, 226, 113, 35, 178, 174, 17, 227, 79, 39, 134, 230, 98,
+            198, 92, 118, 21, 216, 31, 168, 187, 47, 11, 70, 196, 92, 198, 253, 52, 69, 174, 186,
+            137, 9, 89, 201, 47, 172, 82, 5, 102, 77, 19, 49, 242, 64, 205, 218, 170, 118, 31, 134,
+            16, 37, 228, 32, 51, 251,
+        ];
+        let fast = [
+            251, 9, 211, 62, 221, 206, 236, 30, 227, 190, 26, 17, 186, 122, 232, 169,
+        ];
+        let high = [
+            251, 9, 211, 62, 221, 206, 236, 30, 226, 190, 26, 17, 186, 122, 232, 169,
+        ];
+        assert_eq!(
+            compress_runtime_level(BlockFormat::Bc3, &rgba, 4, 4, false),
+            fast
+        );
+        assert_eq!(
+            compress_runtime_level(BlockFormat::Bc3, &rgba, 4, 4, true),
+            high
+        );
+    }
 
     /// The endpoint tables of one-colour blocks (spot values worked out by hand from the rule).
     #[test]

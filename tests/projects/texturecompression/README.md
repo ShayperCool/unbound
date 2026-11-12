@@ -125,3 +125,38 @@ is 195/255 in CutoutBC7, and a lower FlatBC7 level reaches 109/255. These remain
 BC4/BC5 retain differences in endpoint fitting and six-/eight-step selection; BC6H retains
 encoding differences and its existing CPU float-read limitation. The comparator lists every
 raw discrepancy; residual declarations for these imports name exact keys rather than globs.
+
+
+## Runtime encoder and Alpha8 storage
+
+The 6000.0.71f1 profile uses a runtime channel quantizer shared by DXT5 alpha, BC4 and BC5,
+and a colour fit with rounded thirds. `highQuality` enables colour dithering. The seed controls
+put the first red/green component below the rest of its block, so the bounds' first alpha
+sample affects the result. Rectangular RGB24/RGBA32 controls fill each mip independently,
+including partial blocks. A constant RGB field with changing alpha exercises the colour fit
+in both quality modes. These controls extend the existing noise, gradient and channel cases.
+Other releases retain the previous approximation, including its missing highQuality dithering.
+
+Alpha8 keeps one CPU byte per texel and samples (0,0,0,a), as the channel controls record.
+It still uses RGBA8 GPU storage. [wgpu-types 27.0.1's texture view descriptor](https://docs.rs/wgpu-types/27.0.1/wgpu_types/struct.TextureViewDescriptor.html)
+has no component mapping, and its format set has no alpha-only format. An R8 view supplies
+red and an alpha of one. Consequently, a one-channel upload cannot preserve Alpha8 sampling
+through the current view API; a shader-side component mapping is a separate renderer change.
+
+Measured runtime blocks (Gamma and Linear are identical):
+
+| Format | Fast exact / total | High quality exact / total |
+|---|---:|---:|
+| BC4 | 347 / 347 | 347 / 347 |
+| BC5 | 347 / 347 | 347 / 347 |
+| DXT1 | 350 / 353 | 350 / 353 |
+| DXT5 | 621 / 628 | 626 / 628 |
+
+Runtime edge blocks repeat their remaining rows and columns. The 3x2 RGB mip still has an
+unresolved colour/padding difference, reaching 35/255 in a decoded channel. Other residuals
+are small-mip colour fitting and the flat-RGB fast case (GPU difference at most 2/255).
+They remain exact-key residuals; no tolerance has changed. The full comparator records
+4168/4334 exact values in each Standalone profile, with 166 listed residuals, and
+3577, 3567 and 3571/4334 in the three Android profiles, with 757, 767 and 763 residuals.
+Android runtime ETC encoding is unchanged by this part. Texture cache version 26 records the
+runtime encoder profile as part of the existing compression key.

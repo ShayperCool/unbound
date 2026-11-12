@@ -332,8 +332,9 @@ namespace UnityEngine
         /// compress.*); with the Android target active, formats with alpha to ETC2_RGBA8 and the
         /// others to ETC2_RGB (the Editor's OpenGL device takes no EAC there: AndroidGamma
         /// compress.*). A compressed, unreadable or not block-sized texture is left alone. The
-        /// blocks are Unbound's encoder's, not the Editor's runtime compressor's, and
-        /// `highQuality` (dithering) is not applied.</summary>
+        /// runtime encoder is selected by the compatibility profile; highQuality dithers the
+        /// DXT colour fit in the measured profile. Remaining block differences are recorded by
+        /// the probe.</summary>
         void CompressToBlocks(bool highQuality)
         {
             // Any compressed texture is left alone (an AssetBundle's ETC or ASTC texture too), as
@@ -345,7 +346,7 @@ namespace UnityEngine
                 Debug.LogWarning($"Unbound: Texture2D.Compress of a {m_Format} texture is not supported (unmeasured); the texture keeps its format.");
                 return;
             }
-            Stubs.Ignored("Texture2D.Compress blocks", "compresses with Unbound's encoder: the blocks differ slightly from the Editor's and highQuality dithering is not applied");
+            Stubs.Ignored("Texture2D.Compress blocks", "some runtime compression blocks may differ from the Editor's; see the texturecompression probe");
             RequireReadable();
             LeaveStore();
             int total = 0;
@@ -370,6 +371,7 @@ namespace UnityEngine
                     format = (int)target,
                     width = w,
                     height = h,
+                    highQuality,
                     data = Convert.ToBase64String(rgba),
                 }));
                 using var doc = JsonDocument.Parse(json);

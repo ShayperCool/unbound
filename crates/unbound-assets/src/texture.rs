@@ -1064,7 +1064,8 @@ impl Importer for TextureImporter {
     // 22: Photoshop gray reads opaque, Remove Matte applies.
     // 23: Android imports are ETC1/ETC2-compressed in the Editor's formats (`blocks`).
     // 25: measured BC import encoders and per-platform compressor quality.
-    const VERSION: u32 = 25;
+    // 26: the compression cache key also records the runtime encoder profile.
+    const VERSION: u32 = 26;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -2309,7 +2310,10 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 
 mod bcn;
 pub mod etc;
-pub use bcn::{BlockFormat, compress_level, decode_level as decode_blocks, decode_level_as_gpu};
+pub use bcn::{
+    BlockFormat, compress_level, compress_runtime_level, decode_level as decode_blocks,
+    decode_level_as_gpu,
+};
 mod cubemap;
 mod mipmaps;
 mod psd;

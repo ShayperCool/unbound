@@ -29,6 +29,7 @@ def read(path):
 def report(reference, candidate):
     totals = defaultdict(lambda: [0, 0])
     qualities = defaultdict(lambda: [0, 0])
+    runtime_modes = defaultdict(lambda: [0, 0])
     cases = {}
     for line in (Path(__file__).parent/'Assets/Editor/TextureCases.txt').read_text().splitlines():
         fields = line.split()
@@ -58,19 +59,26 @@ def report(reference, candidate):
         exact = sum(expected[i:i+size] == actual[i:i+size]
                     for i in range(0, len(expected), size)) if layout else 0
         total = len(expected) // size
-        group = 'imports' if prefix.startswith('tex.') else 'runtime'
+        mode = prefix.rsplit('.', 1)[-1]
+        group = 'imports' if prefix.startswith('tex.') else (
+            'compress' if prefix.startswith('compress.') and mode in ('fast', 'high') else 'runtime')
         totals[group, fields[3]][0] += exact
         totals[group, fields[3]][1] += total
         if group == 'imports':
             quality = cases[prefix.split('.')[1]]
             qualities[fields[3], quality][0] += exact
             qualities[fields[3], quality][1] += total
+        elif group == 'compress':
+            runtime_modes[fields[3], mode][0] += exact
+            runtime_modes[fields[3], mode][1] += total
         print(f'blocks {prefix} {fields[3]} {exact}/{total} exact'
               + ('' if layout else ' (format, dimensions, mip count or byte length differs)'))
     for (group, fmt), (exact, total) in sorted(totals.items()):
         print(f'blocks total {group} {fmt} {exact}/{total} exact, {total-exact} residual')
     for (fmt, quality), (exact, total) in sorted(qualities.items()):
         print(f'blocks quality {fmt} q{quality} {exact}/{total} exact, {total-exact} residual')
+    for (fmt, mode), (exact, total) in sorted(runtime_modes.items()):
+        print(f'blocks runtime-quality {fmt} {mode} {exact}/{total} exact, {total-exact} residual')
 
 
 if __name__ == '__main__':

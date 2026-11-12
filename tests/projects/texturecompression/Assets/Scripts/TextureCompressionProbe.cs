@@ -430,5 +430,66 @@ public class TextureCompressionProbe : MonoBehaviour
                 foreach (var t in new[] { linear, srgb, linear2, srgb2, srgb3 }) Destroy(t);
             });
         }
+        AdditionalCompressControls();
+    }
+
+    void AdditionalCompressControls()
+    {
+        // Independent channel extrema and rectangular, non-power-of-two mip chains.
+        foreach (var item in new[]
+        {
+            ("seed.r8", TextureFormat.R8, 8, 8, false),
+            ("seed.rg16", TextureFormat.RG16, 8, 8, false),
+            ("rect.rgba", TextureFormat.RGBA32, 20, 12, true),
+            ("rect.rgb", TextureFormat.RGB24, 12, 8, true),
+            ("flat.rgba", TextureFormat.RGBA32, 8, 8, false),
+        })
+        foreach (bool high in new[] { false, true })
+        {
+            string key = "compress." + item.Item1 + (high ? ".high" : ".fast");
+            Section(key, () =>
+            {
+                var t = new Texture2D(item.Item3, item.Item4, item.Item2, item.Item5, true);
+                try
+                {
+                    int bpp = item.Item2 == TextureFormat.R8 ? 1 : item.Item2 == TextureFormat.RG16 ? 2
+                        : item.Item2 == TextureFormat.RGB24 ? 3 : 4;
+                    for (int mip = 0; mip < t.mipmapCount; mip++)
+                    {
+                        int w = Math.Max(1, t.width >> mip), h = Math.Max(1, t.height >> mip);
+                        var raw = new byte[w * h * bpp];
+                        for (int y = 0; y < h; y++)
+                        for (int x = 0; x < w; x++)
+                        {
+                            int at = (y * w + x) * bpp;
+                            bool first = x % 4 == 0 && y % 4 == 0;
+                            if (bpp <= 2)
+                            {
+                                raw[at] = first ? (byte)0 : (byte)(78 + x / 4 * 27 + y / 4 * 13);
+                                if (bpp == 2) raw[at + 1] = first ? (byte)1 : (byte)(130 + x / 4 * 9 + y / 4 * 17);
+                            }
+                            else
+                            {
+                                raw[at] = (byte)(x * 19 + y * 7 + mip * 29 + 3);
+                                raw[at + 1] = (byte)(x * 11 + y * 31 + mip * 13 + 5);
+                                raw[at + 2] = (byte)(x * 37 + y * 5 + mip * 17 + 7);
+                                if (item.Item1 == "flat.rgba")
+                                {
+                                    raw[at] = 127; raw[at + 1] = 65; raw[at + 2] = 33;
+                                }
+                                if (bpp == 4) raw[at + 3] = (x + y + mip) % 3 == 0 ? (byte)0
+                                    : (x + y) % 2 == 0 ? (byte)83 : (byte)255;
+                            }
+                        }
+                        t.SetPixelData(raw, mip);
+                    }
+                    t.Apply(false);
+                    Add(key + ".input", Bytes(t.GetRawTextureData()));
+                    Run(key, () => t.Compress(high));
+                    Describe(key, t);
+                }
+                finally { Destroy(t); }
+            });
+        }
     }
 }
