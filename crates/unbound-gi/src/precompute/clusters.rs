@@ -945,6 +945,6 @@ mod tests {
         dice(v, [-0.37; 3], 1.0, 0, &mut pieces);
         let bound = parts_bound(p, [-0.37; 3], 1.0);
         assert!(bound >= pieces.len() as f64, "{bound} < {}", pieces.len());
-        assert!((pieces.len() as f64) > 0.5 * 1800.0 * 3f64.sqrt());
+        assert!((pieces.len() as f64) > 1800.0 * 3f64.sqrt());
     }
 }

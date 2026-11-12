@@ -495,9 +495,9 @@ fn a_mesh_without_normals_faces_its_winding() {
 }
 
 #[test]
-fn a_dense_tilted_mesh_is_cut_in_time() {
+fn a_dense_tilted_mesh_gathers_into_parts() {
     // A grid of 160 000 triangles turned 30 degrees, of slightly different normals, in a few
-    // voxels: its parts gather without comparing every pair of normals.
+    // voxels: each voxel's piece of it is one part, its clusters cover all of it.
     let mut m = Mesh::default();
     let n = 200u32;
     let (c, s) = (30f32.to_radians().cos(), 30f32.to_radians().sin());
