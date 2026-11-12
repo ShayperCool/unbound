@@ -23,9 +23,11 @@ lightmaps are drawn), light probes of a scene that are not the current ones (add
 systems that reference another scene's systems and linear light intensity in the built-in
 pipeline. In a gamma-space project the systems solve as in a linear one and the shaders decode
 the realtime lightmap with an exponent of 1/2.2 (`unity_DynamicLightmap_HDR` (1, 1/2.2) instead
-of (1, 1)), and `DynamicGI.SetEmissive` takes its color as a gamma color in both
-(tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps and frames match, as
-loaded, with its point light moved and in the three emission cases; its other cases are not
+of (1, 1)), `DynamicGI.SetEmissive` takes its color as a gamma color in both, and the sky the
+environment and the ambient probe are drawn from writes gamma-encoded colors, which are taken
+as such (tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps, frames and
+probes match, as loaded, with its point light moved, in the three emission cases and with the
+ambient color, a procedural sky and a gradient as the environment; its other cases are not
 measured there).
 
 ## Documented contract (6000.0)
@@ -386,7 +388,8 @@ ambient source, also when the source's inputs are what they were when the cube w
 it takes a cube still kept).
 
 Not measured: sky materials other than the procedural one
-(they are drawn by the same capture), and a lit scene's environment in gamma-space projects.
+(they are drawn by the same capture), and in gamma-space projects the sky's ambient intensity
+and the cases after the gradient.
 
 Unbound (`Graphics/RealtimeGIEnvironment.cs`) keeps the cube and what it was made from (the
 ambient mode and colors, or the skybox material and its change count, the ambient intensity and

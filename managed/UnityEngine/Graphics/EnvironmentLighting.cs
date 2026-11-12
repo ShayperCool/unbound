@@ -89,6 +89,9 @@ namespace UnityEngine
             var sky = RenderSettings.skybox;
             if (sky == null) return null;
             int n = EnvironmentSize;
+            // A gamma-space project's sky draws gamma-encoded colors (tests/projects/realtimegi
+            // `--color-space gamma`, `room-sky`).
+            bool gamma = QualitySettings.activeColorSpace == ColorSpace.Gamma;
             var readback = new Texture2D(n, n, TextureFormat.RGBAFloat, false, true);
             var coefficients = new double[3, 9];
             var faces = new (Vector3 forward, Vector3 up)[]
@@ -113,7 +116,8 @@ namespace UnityEngine
                             double length2 = 1.0 + u * u + v * v;
                             double weight = (2.0 / n) * (2.0 / n) / (length2 * Math.Sqrt(length2));
                             direction.Normalize();
-                            Accumulate(coefficients, pixels[y * n + x], direction, weight);
+                            var radiance = pixels[y * n + x];
+                            Accumulate(coefficients, gamma ? radiance.linear : radiance, direction, weight);
                         }
                 }
             }

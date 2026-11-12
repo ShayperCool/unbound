@@ -188,9 +188,12 @@ namespace UnityEngine
 
         /// <summary>Draws the skybox into the faces as the ambient probe's capture draws it
         /// (<see cref="DynamicGI.RenderSky"/>: without the sun's color), one texel per pixel. The
-        /// ambient intensity scales the gamma-encoded colors.</summary>
+        /// ambient intensity scales the gamma-encoded colors. In a gamma-space project the sky
+        /// draws gamma-encoded colors, which are taken as such (tests/projects/realtimegi
+        /// `--color-space gamma`, `room-sky`).</summary>
         static void RenderSkyFaces(float intensity)
         {
+            bool gamma = QualitySettings.activeColorSpace == ColorSpace.Gamma;
             if (s_SkyReadback == null)
                 s_SkyReadback = new Texture2D(FaceSize, FaceSize, TextureFormat.RGBAFloat, false, true) { hideFlags = HideFlags.HideAndDontSave };
             for (int face = 0; face < 6; face++)
@@ -205,16 +208,17 @@ namespace UnityEngine
                         // The image reads back from its bottom row, the face from its top.
                         var c = pixels[(FaceSize - 1 - y) * FaceSize + x];
                         int i = at + 3 * (y * FaceSize + x);
-                        s_Faces[i] = Scaled(c.r, intensity);
-                        s_Faces[i + 1] = Scaled(c.g, intensity);
-                        s_Faces[i + 2] = Scaled(c.b, intensity);
+                        s_Faces[i] = Scaled(c.r, intensity, gamma);
+                        s_Faces[i + 1] = Scaled(c.g, intensity, gamma);
+                        s_Faces[i + 2] = Scaled(c.b, intensity, gamma);
                     }
             }
         }
 
-        /// <summary>A sky texel times the ambient intensity; a texel that is not above zero
-        /// (also not a number) is black.</summary>
-        static float Scaled(float linear, float intensity) =>
-            linear > 0f ? Mathf.GammaToLinearSpace(Mathf.LinearToGammaSpace(linear) * intensity) : 0f;
+        /// <summary>A sky texel (linear, or gamma-encoded with <paramref name="gamma"/>) times the
+        /// ambient intensity, linear; a texel that is not above zero (also not a number) is
+        /// black.</summary>
+        static float Scaled(float texel, float intensity, bool gamma) =>
+            texel > 0f ? Mathf.GammaToLinearSpace((gamma ? texel : Mathf.LinearToGammaSpace(texel)) * intensity) : 0f;
     }
 }
