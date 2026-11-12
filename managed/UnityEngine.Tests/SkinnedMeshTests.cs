@@ -104,7 +104,8 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(mesh);
             }
         }
-            /// <summary>A renderer skins once a skinning pass (before a frame's UpdateAllSkinnedMeshes
+
+        /// <summary>A renderer skins once a skinning pass (before a frame's UpdateAllSkinnedMeshes
         /// the last frame's goes on, so a bone moved since is drawn from the next pass); its previous
         /// buffer is the current one unless a camera drew its motion vectors in the last pass, then
         /// the last pass's skin (tests/projects/renderapi prevskin.*).</summary>
@@ -171,6 +172,22 @@ namespace UnityEngine.Tests
                     Assert.Equal(2f, renderer.m_SkinnedPrevious.vertices[0].x);
                     Assert.NotEqual(current.Handle, previous.Handle);
                 }
+                // Skinning now (BakeMesh) between a read and the next pass leaves the pass's skin.
+                var baked = new Mesh();
+                renderer.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
+                bone.localPosition = new Vector3(3.5f, 0f, 0f);
+                renderer.BakeMesh(baked);
+                Assert.Equal(3.5f, baked.vertices[0].x);
+                Assert.Equal(3f, Current());
+                Object.DestroyImmediate(baked);
+                Time.s_FrameCount++;
+                using (var current = renderer.GetVertexBuffer())
+                using (var previous = renderer.GetPreviousVertexBuffer())
+                {
+                    Assert.Equal(3.5f, Current());
+                    Assert.Equal(3f, renderer.m_SkinnedPrevious.vertices[0].x);
+                    Assert.NotEqual(current.Handle, previous.Handle);
+                }
                 // Without skinnedMotionVectors the buffers do not alternate.
                 renderer.skinnedMotionVectors = false;
                 renderer.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
@@ -194,5 +211,5 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(mesh);
             }
         }
-}
+    }
 }

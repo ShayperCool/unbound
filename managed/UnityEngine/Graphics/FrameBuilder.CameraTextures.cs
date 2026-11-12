@@ -238,12 +238,13 @@ namespace Unbound.Runtime
             {
                 var cloth = skin.GetComponent<Cloth>();
                 if (cloth != null && cloth.enabled && cloth.m_Active) return false;
-                // Its motion vectors are drawn in this skinning pass: its buffers alternate.
-                skin.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
             }
             else if (renderer is not MeshRenderer) return false;
             var mode = renderer.motionVectorGenerationMode;
             if (mode == MotionVectorGenerationMode.Camera) return false;
+            // A skin's object motion is drawn in this skinning pass: its buffers alternate (with
+            // Camera motion only, unmeasured, they do not).
+            if (skin != null) skin.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
             bool boned = skin != null && skin.IsBoneSkinned;
             var model = boned ? skin.MotionMatrix : item.Model;
             if (!renderer.m_HasPreviousModel)

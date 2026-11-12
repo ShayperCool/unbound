@@ -72,7 +72,24 @@ namespace UnityEngine
         static int s_SkinPassFrame = -1;
 
         static SkinnedMeshRenderer() =>
-            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.UpdateAllSkinnedMeshes), () => s_SkinPassFrame = Time.s_FrameCount);
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.UpdateAllSkinnedMeshes), SkinningPass);
+
+        /// <summary>The renderers whose buffers were asked for: they skin at the pass itself
+        /// (others when they are drawn, which comes after it).</summary>
+        static readonly List<SkinnedMeshRenderer> s_BufferUsers = new List<SkinnedMeshRenderer>();
+
+        static void SkinningPass()
+        {
+            s_SkinPassFrame = Time.s_FrameCount;
+            for (int i = 0; i < s_BufferUsers.Count; i++)
+            {
+                var r = s_BufferUsers[i];
+                if (r.Skinning) r.Deform();
+            }
+        }
+
+        /// <summary>The pass skins enabled renderers that are visible or update offscreen.</summary>
+        bool Skinning => enabled && m_GameObject != null && m_GameObject.ActiveInHierarchyNoThrow && (m_UpdateWhenOffscreen || isVisible);
         Matrix4x4[] m_Matrices = Array.Empty<Matrix4x4>();
 
         public SkinnedMeshRenderer() { }
@@ -162,11 +179,14 @@ namespace UnityEngine
             if (output == null)
             {
                 if (m_SkinnedEpoch < 0 && SkinPass == m_BornEpoch) return null;
-                if (!m_GraphicsOutputRequested) { m_GraphicsOutputRequested = true; m_SkinnedEpoch = -1; }
-                // The skinning pass skins enabled renderers that are visible or update offscreen;
-                // another keeps its last skin (measured: prevskin.*.disabled).
-                bool skinning = enabled && m_GameObject != null && m_GameObject.ActiveInHierarchyNoThrow && (m_UpdateWhenOffscreen || isVisible);
-                output = skinning || m_Skinned == null || m_SkinnedEpoch < 0 ? Deform() : m_Skinned;
+                if (!m_GraphicsOutputRequested)
+                {
+                    m_GraphicsOutputRequested = true;
+                    m_SkinnedEpoch = -1;
+                    s_BufferUsers.Add(this);
+                }
+                // A renderer the pass does not skin keeps its last skin (measured: prevskin.*.disabled).
+                output = Skinning || m_Skinned == null || m_SkinnedEpoch < 0 || m_SkinnedSource != m_Mesh ? Deform() : m_Skinned;
                 if (previous && m_SkinnedPrevious != null && m_PreviousEpoch == m_SkinnedEpoch) output = m_SkinnedPrevious;
             }
             output.vertexBufferTarget = m_VertexBufferTarget;
@@ -260,17 +280,46 @@ namespace UnityEngine
         /// has bones (the renderer's space once its buffer is asked for).</summary>
         Mesh Deform(bool now = false)
         {
+            if (now)
+            {
+                // Skinned into a mesh of its own: the pass's skin and its buffers stay as they are.
+                SwapNowSkin();
+                try { return Skin(); }
+                finally { SwapNowSkin(); }
+            }
             int pass = SkinPass;
-            if (!now && m_Skinned != null && m_SkinnedEpoch == pass && m_SkinnedSource == m_Mesh) return m_Skinned;
-            var mesh = m_Mesh;
+            if (m_Skinned != null && m_SkinnedEpoch == pass && m_SkinnedSource == m_Mesh) return m_Skinned;
+            if (m_Skinned != null && m_SkinnedSource != m_Mesh) DropPreviousSkin();
             // The buffers alternate: the last pass's skin becomes the previous one.
-            if (!now && m_Skinned != null && m_SkinnedSource == mesh && m_GraphicsOutputRequested && m_SkinnedMotionVectors
+            if (m_Skinned != null && m_SkinnedSource == m_Mesh && m_GraphicsOutputRequested && m_SkinnedMotionVectors
                 && m_SkinnedEpoch >= 0 && m_MotionEpoch == m_SkinnedEpoch)
                 AlternateSkin();
-            m_SkinnedEpoch = now ? -1 : pass;
+            m_SkinnedEpoch = pass;
+            return Skin();
+        }
+
+        /// <summary>A skin computed now (<see cref="BakeMesh(Mesh, bool)"/>, cloth targets) and its
+        /// arrays, apart from the pass's.</summary>
+        Mesh m_SkinnedNow, m_NowSource;
+        Vector3[] m_NowPositions, m_NowNormals;
+        Vector4[] m_NowTangents;
+
+        void SwapNowSkin()
+        {
+            (m_Skinned, m_SkinnedNow) = (m_SkinnedNow, m_Skinned);
+            (m_SkinnedSource, m_NowSource) = (m_NowSource, m_SkinnedSource);
+            (m_DeformedPositions, m_NowPositions) = (m_NowPositions, m_DeformedPositions);
+            (m_DeformedNormals, m_NowNormals) = (m_NowNormals, m_DeformedNormals);
+            (m_DeformedTangents, m_NowTangents) = (m_NowTangents, m_DeformedTangents);
+        }
+
+        /// <summary>Deforms the mesh into <see cref="m_Skinned"/> (made for its source the first
+        /// time) and its arrays.</summary>
+        Mesh Skin()
+        {
+            var mesh = m_Mesh;
             if (m_Skinned == null || m_SkinnedSource != mesh)
             {
-                DropPreviousSkin();
                 // The deformed copy shares everything but positions, normals and tangents with its source.
                 if (m_Skinned != null) DestroyImmediate(m_Skinned);
                 m_Skinned = (Mesh)((Instantiation.ICloneable)mesh).CloneObject();
@@ -671,8 +720,10 @@ namespace UnityEngine
         {
             base.OnEngineDestroy();
             if (m_Skinned != null) DestroyImmediate(m_Skinned);
-            m_Skinned = null;
+            if (m_SkinnedNow != null) DestroyImmediate(m_SkinnedNow);
+            m_Skinned = m_SkinnedNow = null;
             DropPreviousSkin();
+            s_BufferUsers.Remove(this);
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
