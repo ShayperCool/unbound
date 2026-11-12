@@ -447,8 +447,8 @@ Unbound draws precomputed realtime GI for these scenes (docs/REALTIME_GI.md): it
 renderers' realtime lightmap UVs, renders their meta passes and updates the systems each frame.
 The gate fails on state values (cases, realtime lightmap indices and scale/offset, lightmaps mode,
 probe count and baked coefficients, `isConverged`, API defaults, what `SetEnvironmentData`
-throws, the default reflection, the baked light probe coefficients, and which atlas texels the
-renderers cover), on `RenderSettings.ambientProbe` and the interpolated probes recorded around
+throws, the default reflection, the baked light probe coefficients, the `Light.dilatedRange`
+answers, and which atlas texels the renderers cover), on `RenderSettings.ambientProbe` and the interpolated probes recorded around
 a script's baked coefficients, on the frames (a mean difference of at most 2 of 255; the
 engine's: 0.75 at most, 0.4 on average) and on the realtime lightmaps of every case
 (at most 0.5% of their values outside the tolerance, for
