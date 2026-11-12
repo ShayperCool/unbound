@@ -136,3 +136,17 @@ device's plain Stereo fallback from matrix encoding with six-channel impulses
 and noise. Its Native mode-pair relationship is checked in the existing Prologic
 gate. The complete six-input engine diagnostic remains open and is not a PCM
 admission; `context_run.py --profile encoding` returns its unfiltered failures.
+
+## Capture scheduling
+
+`context_run.py` runs up to four independent engine sessions concurrently. Each
+session keeps its own project, capture and engine log and obtains its own heavy-job
+lease. The prepared parent project is read-only during capture. `--jobs N` changes
+the driver bound; `--jobs 1` preserves serial execution. Rates remain sequential.
+
+Driver output is in `drivers/<rate>-<index>.log` under the private work directory.
+A failed or interrupted driver stops the active process trees and leaves queued
+sessions unstarted. Successful sessions merge in the declared order before the
+unchanged strict and one-step PCM comparisons. References and capture formats do
+not change. Scheduling controls run with
+`python3 -m unittest tools.agents.test_audio_context`.
