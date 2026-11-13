@@ -48,7 +48,6 @@ Light contexts record their receiver planes again as `receiver<i>`, compared exa
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: 727/851 values (OpenGL Core), 724/848 (Vulkan)
-match, the others are listed in `residuals-<device>.json` (the cascades' caster
-culling planes, culling matrix and spheres of the light contexts); `basic`, `cameras`, `forward_plus` and
-`forward_plus_plain` match exactly, `shadows` has 31 isolated shadow-edge pixels over 8 (mean 0.02).
+the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (851 on OpenGL Core, 848 on Vulkan), the cascades'
+caster culling planes, culling matrices and conservative culling spheres of the light contexts
+included; every image matches exactly.

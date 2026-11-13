@@ -276,7 +276,9 @@ namespace UnityEngine.Rendering
         /// is the bounding sphere of its slice from the camera's near plane, centered on the view
         /// axis. The light's camera looks along the light from 1.2 radii before the sphere's center,
         /// snapped to whole texels across, with an orthographic size of the radius (plus 5 texels
-        /// each side with several cascades), far at 2.3 radii and near at 0.1 radii minus 30.
+        /// each side with several cascades), far at 2.3 radii and near at 0.1 radii minus ten times
+        /// the near plane offset (none when negative; measured: tests/projects/urp with an offset of
+        /// 3, tests/projects/brg with URP's 0.2, through the cascades' culling matrices).
         /// </summary>
         public bool ComputeDirectionalShadowMatricesAndCullingPrimitives(int activeLightIndex, int splitIndex, int splitCount, Vector3 splitRatio, int shadowResolution,
             float shadowNearPlaneOffset, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData)
@@ -287,13 +289,93 @@ namespace UnityEngine.Rendering
             if (data == null || data.Camera == null || activeLightIndex < 0 || activeLightIndex >= data.Lights.Length) return false;
             var visible = data.Lights[activeLightIndex];
             if (visible.lightType != LightType.Directional) return false;
+            var parameters = data.Parameters;
             if (!DirectionalShadowSlice(data.Camera, visible.localToWorldMatrix, splitIndex, splitCount, splitRatio, shadowResolution,
-                data.Parameters.shadowDistance, out viewMatrix, out projMatrix, out var sphere, out float cullingNear,
-                conservative: data.Parameters.conservativeEnclosingSphere)) return false;
+                parameters.shadowDistance, out viewMatrix, out projMatrix, out var sphere, out float cullingNear,
+                conservative: parameters.conservativeEnclosingSphere, iterations: parameters.numIterationsEnclosingSphere,
+                nearPlaneOffset: shadowNearPlaneOffset)) return false;
             shadowSplitData.cullingSphere = sphere;
             shadowSplitData.cullingNearPlane = cullingNear;
-            shadowSplitData.cullingPlaneCount = 0;
+            shadowSplitData.cullingMatrix = projMatrix * viewMatrix;
+            CasterCullingPlanes(ref parameters, data.Camera, cullingNear, sphere, ((Vector3)visible.localToWorldMatrix.GetColumn(2)).normalized, ref shadowSplitData);
             return true;
+        }
+
+        /// <summary>
+        /// A directional cascade's caster culling planes: of the view slice's six planes (the
+        /// culling planes, left, right, bottom, top, near and far), the ones facing against the
+        /// light, then for each edge between one of those and one facing the light the plane
+        /// through the edge along the light, turned towards the slice's middle, at most
+        /// <see cref="ShadowSplitData.maximumCullingPlaneCount"/>. The slice reaches the culling
+        /// sphere's far side or the shadow distance, whichever is nearer; its near plane is the
+        /// culling plane moved back by the cascade's near plane (so from the second cascade on it
+        /// lies behind the camera). Matches the Unity 6000.0.71f1 Editor, tests/projects/brg
+        /// shadows (two cascades, eight planes each).
+        /// </summary>
+        internal static void CasterCullingPlanes(ref ScriptableCullingParameters parameters, Camera camera, float cullingNear, Vector4 sphere, Vector3 light,
+            ref ShadowSplitData split)
+        {
+            Span<Plane> planes = stackalloc Plane[6];
+            for (int i = 0; i < planes.Length; i++) planes[i] = parameters.GetCullingPlane(i);
+            var eye = camera.transform.position;
+            var center = new Vector3(sphere.x, sphere.y, sphere.z);
+            float depth = Math.Abs(Vector3.Dot(center - eye, planes[FarPlane].normal));
+            float far = Math.Min(parameters.shadowDistance, depth + sphere.w);
+            planes[NearPlane].distance += cullingNear - camera.nearClipPlane;
+            planes[FarPlane].distance = -Vector3.Dot(planes[FarPlane].normal, eye) + far;
+            Span<Vector3> corners = stackalloc Vector3[8];
+            Span<bool> kept = stackalloc bool[6];
+            var middle = Vector3.zero;
+            for (int i = 0; i < 8; i++)
+            {
+                int c = s_SliceCorners[i];
+                corners[i] = Intersection(planes[c & 0xf], planes[(c >> 4) & 0xf], planes[c >> 8]);
+                middle += corners[i];
+            }
+            middle *= 0.125f;
+            Span<Plane> result = stackalloc Plane[ShadowSplitData.maximumCullingPlaneCount];
+            int count = 0;
+            for (int i = 0; i < planes.Length; i++)
+            {
+                kept[i] = Vector3.Dot(planes[i].normal, light) < 0f;
+                if (kept[i]) result[count++] = planes[i];
+            }
+            for (int e = 0; e < s_SliceEdges.Length && count < result.Length; e++)
+            {
+                int edge = s_SliceEdges[e];
+                if (kept[(edge >> 8) & 0xf] == kept[edge >> 12]) continue;
+                var a = corners[edge & 0xf];
+                var normal = Vector3.Cross(corners[(edge >> 4) & 0xf] - a, light);
+                float length = normal.sqrMagnitude;
+                // A degenerate edge (along the light) gives no plane.
+                if (length <= 1.1920929e-07f) continue;
+                normal *= 1f / Mathf.Sqrt(length);
+                if (Vector3.Dot(middle - a, normal) < 0f) normal = -normal;
+                result[count++] = new Plane(normal, -Vector3.Dot(normal, a));
+            }
+            split.cullingPlaneCount = count;
+            for (int i = 0; i < count; i++) split.SetCullingPlane(i, result[i]);
+        }
+
+        const int NearPlane = 4, FarPlane = 5;
+
+        /// <summary>The slice's corners, each the three planes it lies on (4 bits each: near or far,
+        /// right or left, bottom or top): the near ones, then the far ones, round the slice.</summary>
+        static readonly int[] s_SliceCorners = { 0x214, 0x314, 0x304, 0x204, 0x215, 0x315, 0x305, 0x205 };
+
+        /// <summary>The slice's edges, each its two corners and its two planes (4 bits each), in the
+        /// Editor's order: round the near face, round the far face, then from near to far.</summary>
+        static readonly int[] s_SliceEdges =
+        {
+            0x1410, 0x3421, 0x0432, 0x2403, 0x1554, 0x3565, 0x0576, 0x2547, 0x1240, 0x3151, 0x0362, 0x2073,
+        };
+
+        /// <summary>The point on three planes.</summary>
+        static Vector3 Intersection(in Plane a, in Plane b, in Plane c)
+        {
+            var bc = Vector3.Cross(b.normal, c.normal);
+            float det = Vector3.Dot(a.normal, bc);
+            return -(a.distance * bc + b.distance * Vector3.Cross(c.normal, a.normal) + c.distance * Vector3.Cross(a.normal, b.normal)) / det;
         }
 
         /// <summary>A directional light's shadow cascade (see
@@ -301,7 +383,7 @@ namespace UnityEngine.Rendering
         /// cascades are the same, measured): its view and projection, culling sphere and near plane.</summary>
         internal static bool DirectionalShadowSlice(Camera camera, Matrix4x4 lightLocalToWorld, int splitIndex, int splitCount, Vector3 splitRatio,
             int shadowResolution, float distance, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Vector4 cullingSphere, out float cullingNear,
-            bool sliceFromPreviousSplit = false, bool conservative = false)
+            bool sliceFromPreviousSplit = false, bool conservative = false, int iterations = 0, float nearPlaneOffset = BuiltInNearPlaneOffset)
         {
             viewMatrix = projMatrix = Matrix4x4.identity;
             cullingSphere = default;
@@ -310,8 +392,7 @@ namespace UnityEngine.Rendering
             float near = camera.nearClipPlane;
             if (distance <= near) return false;
             // Conservative enclosing spheres (ScriptableCullingParameters, URP's asset asks for them)
-            // bound the view out to the shadow distance itself: the Editor's iterations land within
-            // 0.3% of the exact sphere taken here (measured, conservative-shadow-matrices.jsonl).
+            // bound the view out to the shadow distance itself.
             float far = conservative ? distance : ShadowSliceFar(camera, near, distance);
             float Ratio(int i) => i >= splitCount - 1 ? 1f : i switch { 0 => splitRatio.x, 1 => splitRatio.y, _ => splitRatio.z };
             // A scriptable pipeline's cascades slice the view from the near plane; the built-in
@@ -319,7 +400,9 @@ namespace UnityEngine.Rendering
             // Conservative spheres bound each cascade's own slice, which the culling starts at (measured).
             float previous = splitIndex > 0 ? near + Ratio(splitIndex - 1) * (far - near) : near;
             float sliceNear = (sliceFromPreviousSplit || conservative) && splitIndex > 0 ? previous : near;
-            var sphere = SliceSphere(camera, sliceNear, near + Ratio(splitIndex) * (far - near));
+            var sphere = conservative
+                ? ConservativeSliceSphere(camera, splitIndex > 0 ? Ratio(splitIndex - 1) : 0f, Ratio(splitIndex), distance, iterations)
+                : SliceSphere(camera, sliceNear, near + Ratio(splitIndex) * (far - near));
             float radius = sphere.w;
             float half = splitCount > 1 ? radius * (1f + 10f / shadowResolution) : radius;
             float texel = 2f * half / shadowResolution;
@@ -335,12 +418,17 @@ namespace UnityEngine.Rendering
                 new Vector4(right.y, up.y, -forward.y, 0f),
                 new Vector4(right.z, up.z, -forward.z, 0f),
                 new Vector4(-Vector3.Dot(right, eye), -Vector3.Dot(up, eye), Vector3.Dot(forward, eye), 1f));
-            float zNear = 0.1f * radius - 30f, zFar = 2.3f * radius;
+            float zNear = 0.1f * radius - 10f * Math.Max(nearPlaneOffset, 0f), zFar = 2.3f * radius;
             projMatrix = Matrix4x4.Ortho(-half, half, -half, half, zNear, zFar);
             cullingSphere = sphere;
             cullingNear = splitIndex == 0 ? near : conservative ? previous : SliceSphereDepth(camera, near, previous);
             return true;
         }
+
+        /// <summary>The near plane offset the built-in pipeline's cascades keep: 0.1 radii minus 30, as
+        /// a scriptable pipeline's with an offset of 3 (whether the built-in pipeline derives it from
+        /// Light.shadowNearPlane is not measured).</summary>
+        internal const float BuiltInNearPlaneOffset = 3f;
 
         /// <summary>The view depth where the shadow distance's slice ends: n + (d − n)·s, s the
         /// Editor's (measured for fields of view 30–90 and aspects 0.5–1.8; this fit is within 1% for
@@ -363,6 +451,69 @@ namespace UnityEngine.Rendering
         {
             float k = SliceCornerFactor(camera);
             return Mathf.Min((far + near) * (1f + k) * 0.5f, far);
+        }
+
+        /// <summary>
+        /// A conservative enclosing sphere of a cascade's view slice, from the split ratios
+        /// <paramref name="from"/> to <paramref name="to"/> of the view up to the shadow distance:
+        /// the slice's corners lie between the view frustum's (from its projection inverted in
+        /// single precision), near ones then far ones, each left-bottom, right-bottom, right-top,
+        /// left-top. The sphere starts around their mean through the farthest; each of
+        /// <paramref name="iterations"/> rounds shrinks it (from 0.7 of the size up to the whole)
+        /// and grows it again over the corners from a corner one further on, and the smallest is
+        /// kept. Matches the Unity 6000.0.71f1 Editor, tests/projects/brg shadows.
+        /// </summary>
+        internal static Vector4 ConservativeSliceSphere(Camera camera, float from, float to, float distance, int iterations)
+        {
+            var inverse = Matrix4x4.InverseSingle(camera.projectionMatrix);
+            Span<Vector3> frustum = stackalloc Vector3[8];
+            for (int i = 0; i < 8; i++)
+            {
+                int corner = i & 3;
+                var clip = new Vector4(corner == 0 || corner == 3 ? -1f : 1f, corner < 2 ? -1f : 1f, i < 4 ? -1f : 1f, 1f);
+                var v = inverse * clip;
+                frustum[i] = new Vector3(v.x, v.y, v.z) / v.w;
+            }
+            float near = camera.nearClipPlane;
+            float share = (distance - near) / (camera.farClipPlane - near);
+            Span<Vector3> points = stackalloc Vector3[8];
+            float t0 = from * share, t1 = to * share;
+            for (int i = 0; i < 4; i++)
+            {
+                points[i] = frustum[i] * (1f - t0) + frustum[i + 4] * t0;
+                points[i + 4] = frustum[i] * (1f - t1) + frustum[i + 4] * t1;
+            }
+            var center = (points[0] + points[1] + points[2] + points[3] + points[4] + points[5] + points[6] + points[7]) * 0.125f;
+            float radius = 0f;
+            for (int i = 0; i < 8; i++) radius = Math.Max(radius, (points[i] - center).magnitude);
+            var best = center;
+            float bestRadius = radius;
+            float scale = 0.7f, step = 0.3f / (iterations - 1);
+            for (int round = 0; round < iterations; round++)
+            {
+                radius *= scale;
+                for (int i = 0; i < 8; i++)
+                {
+                    var offset = points[(round + i) & 7] - center;
+                    float d = offset.magnitude;
+                    if (radius < d)
+                    {
+                        float grown = (radius + d) * 0.5f;
+                        center += offset * ((grown - radius) / d);
+                        radius = grown;
+                    }
+                }
+                if (radius < bestRadius)
+                {
+                    bestRadius = radius;
+                    best = center;
+                }
+                scale += step;
+            }
+            const float Bound = 1e6f;
+            best = new Vector3(Mathf.Clamp(best.x, -Bound, Bound), Mathf.Clamp(best.y, -Bound, Bound), Mathf.Clamp(best.z, -Bound, Bound));
+            var world = camera.cameraToWorldMatrix.MultiplyPoint(best);
+            return new Vector4(world.x, world.y, world.z, bestRadius);
         }
 
         /// <summary>The bounding sphere of the view slice [near, far]: on the view axis, through
