@@ -378,7 +378,7 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       implementation rows and the unchanged 50 variable observations inside 269 exact,
       reasoned migration entries. UIElements retains 98 rows, Editor 87, ParticleSystem five, CoreModule 32, Physics2D five, Physics five and Audio four; the README lists every module
       and the unresolved payload, rendering and import contexts. Static constructor comparison
-      remains separate, including its queued rendering split-index default. Small adds 187
+      remains separate, including its queued rendering split-index default. Small adds 192
       independent controls, with 189 exact matches. GUI event acceptance and two full-range
       animation loop-window durations remain exact gaps with their raw values visible.
       Tilemap sprite geometry, SpriteShape preparation and navigation shape/query contexts
