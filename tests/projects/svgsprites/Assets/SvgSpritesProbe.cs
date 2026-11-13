@@ -17,7 +17,12 @@ public sealed class SvgSpritesProbe : MonoBehaviour
         public bool complete;
         public Asset[] assets;
         public string image;
+        public SpriteId[] spriteIds;
     }
+
+    /// <summary>A texture-imported sprite's ID (the 2D Sprite package reads it through
+    /// SpriteEditorExtension.GetSpriteID).</summary>
+    [Serializable] public sealed class SpriteId { public string name, id; }
 
     [Serializable] public sealed class Asset
     {
@@ -61,8 +66,20 @@ public sealed class SvgSpritesProbe : MonoBehaviour
     public void Record()
     {
         var assets = Names.Select(Describe).ToArray();
-        var capture = new Capture { complete = true, assets = assets, image = Render() };
+        var capture = new Capture { complete = true, assets = assets, image = Render(), spriteIds = SpriteIds() };
         File.WriteAllText(Environment.GetEnvironmentVariable("SVG_SPRITES_OUT"), JsonUtility.ToJson(capture, true));
+    }
+
+    static SpriteId[] SpriteIds()
+    {
+#if UNITY_EDITOR
+        return new[] { "box_a", "sheet" }
+            .SelectMany(n => Resources.LoadAll<Sprite>("Textures/" + n).OrderBy(s => s.name, StringComparer.Ordinal))
+            .Select(s => new SpriteId { name = s.name, id = UnityEditor.U2D.SpriteEditorExtension.GetSpriteID(s).ToString() })
+            .ToArray();
+#else
+        return Array.Empty<SpriteId>();
+#endif
     }
 
     static Asset Describe(string name)

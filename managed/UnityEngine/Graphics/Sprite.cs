@@ -312,6 +312,8 @@ namespace UnityEngine
             m_Colors = null;
             m_BoneWeights = null;
             m_TexCoords = null;
+            // A new data access view is made when next asked for. Freeing the old one releases its
+            // safety handle: slices taken from it throw instead of reading freed memory.
             m_MeshData?.Free();
             m_MeshData = null;
             m_Triangles = (ushort[])triangles.Clone();

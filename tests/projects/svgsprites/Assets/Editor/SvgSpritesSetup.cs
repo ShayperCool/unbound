@@ -11,6 +11,7 @@ public static class SvgSpritesSetup
         {
             EditorSettings.serializationMode = SerializationMode.ForceText;
             AssetDatabase.ImportAsset("Assets/Resources/Svg", ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset("Assets/Resources/Textures", ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             new GameObject("Probe").AddComponent<SvgSpritesProbe>();
             EditorSceneManager.SaveScene(scene, "Assets/Probe.unity");

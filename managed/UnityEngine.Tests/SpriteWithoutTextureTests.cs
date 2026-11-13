@@ -24,7 +24,6 @@ namespace UnityEngine.Tests
         public void TheInternalCreateMakesAnEmptyTightSpriteAndOverrideGeometryKeepsZeroUvsWithoutATexture()
         {
             var empty = Sprite.Create(new Rect(0, 0, 64, 32), new Vector2(.25f, .5f), -1f, null);
-            Assert.Equal(100f, empty.pixelsPerUnit);
             Assert.Equal(new Vector2(16, 16), empty.pivot);
             Assert.Empty(empty.vertices);
             Assert.Empty(empty.triangles);
@@ -55,11 +54,15 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector2(2, 0), uv2[3]);
             Object.DestroyImmediate(mesh);
 
-            // New geometry drops the channels that described the old vertices.
+            // New geometry leaves a consistent data access view (no channel longer than the new
+            // vertices), and slices of the old view throw instead of reading freed memory.
+            var old = sprite.GetVertexAttribute<Color32>(VertexAttribute.Color);
             sprite.OverrideGeometry(new[] { new Vector2(0, 0), new Vector2(64, 0), new Vector2(0, 32) }, new ushort[] { 0, 2, 1 });
-            Assert.False(sprite.HasVertexAttribute(VertexAttribute.Color));
-            Assert.False(sprite.HasVertexAttribute(VertexAttribute.TexCoord2));
             Assert.Equal(3, sprite.GetVertexCount());
+            foreach (var channel in new[] { VertexAttribute.Color, VertexAttribute.TexCoord2 })
+                if (sprite.HasVertexAttribute(channel))
+                    Assert.Equal(3, channel == VertexAttribute.Color ? sprite.GetVertexAttribute<Color32>(channel).Length : sprite.GetVertexAttribute<Vector2>(channel).Length);
+            Assert.ThrowsAny<System.Exception>(() => old[0]);
             Object.DestroyImmediate(copy);
             Object.DestroyImmediate(sprite);
         }

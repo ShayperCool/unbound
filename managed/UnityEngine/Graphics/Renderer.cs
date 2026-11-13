@@ -911,9 +911,9 @@ namespace UnityEngine
             FrameBuilder.AddMeshDraws(this, mesh, model, m_Color, camera, into, texture, m_Sprite.SecondaryProperties());
         }
 
-        /// <summary>The geometry the renderer draws (also what a mask beside it masks with).</summary>
         bool m_WarnedTexturelessLayout;
 
+        /// <summary>The geometry the renderer draws (also what a mask beside it masks with).</summary>
         internal bool MaskShape(out Mesh mesh, out Matrix4x4 model, out Texture texture)
         {
             mesh = null;

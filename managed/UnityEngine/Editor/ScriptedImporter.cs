@@ -159,6 +159,18 @@ namespace Unbound.Runtime
         [ThreadStatic] static int s_Importing;
         internal static bool Importing => s_Importing > 0;
 
+        /// <summary>Marks the code inside as a project importer's (objects it makes belong to the asset).</summary>
+        internal static ImportScope Scope()
+        {
+            s_Importing++;
+            return default;
+        }
+
+        internal readonly struct ImportScope : IDisposable
+        {
+            public void Dispose() => s_Importing--;
+        }
+
         /// <summary>An instance of a ScriptedImporter class with the settings its .meta stores.</summary>
         internal static ScriptedImporter CreateImporter(string script, string path, string guid, YNode settings)
         {
@@ -184,16 +196,9 @@ namespace Unbound.Runtime
             var settings = Native.LoadDocuments("meta:" + info.Guid);
             var importer = CreateImporter(info.Importer, info.Path, info.Guid, settings.Count > 0 ? settings[0].Body : null);
             var ctx = new AssetImportContext(info.Path);
-            s_Importing++;
-            try
-            {
-                using (ObjectRegistry.AsAssets())
-                    importer.OnImportAsset(ctx);
-            }
-            finally
-            {
-                s_Importing--;
-            }
+            using (Scope())
+            using (ObjectRegistry.AsAssets())
+                importer.OnImportAsset(ctx);
             // The main object takes the asset's file name, whatever the importer named it
             // (measured: tests/projects/svgsprites, a GameObject the importer names "transform"). A
             // Shader keeps the name its source declares, which Shader.Find looks up

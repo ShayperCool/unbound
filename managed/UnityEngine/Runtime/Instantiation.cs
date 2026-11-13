@@ -160,13 +160,24 @@ namespace Unbound.Runtime
             Vector3? position, Quaternion? rotation)
         {
             var rootClone = clone.Root;
+            // A copy a project's importer makes (on its own or under one of the importer's GameObjects)
+            // is part of the asset, as GameObjects the importer creates are: in no scene, never awake.
+            bool asset = ScriptedImports.Importing && (parent == null || parent.m_GameObject.m_IsPrefabAsset);
+            if (asset) scene = default;
             foreach (var (_, dst) in clone.Pairs)
-                if (dst is Transform moved) moved.m_GameObject.m_Scene = scene;
+                if (dst is Transform moved)
+                {
+                    moved.m_GameObject.m_Scene = scene;
+                    if (asset) moved.m_GameObject.m_IsPrefabAsset = true;
+                }
             if (parent == null || localPose)
             {
                 // With no parent, Native keeps the copied local pose unless explicit world
                 // coordinates were supplied. A null parent behaves the same for either flag.
-                if (parent == null) SceneRegistry.Get(scene)?.Roots.Add(clone.RootGo);
+                if (parent == null)
+                {
+                    if (!asset) SceneRegistry.Get(scene)?.Roots.Add(clone.RootGo);
+                }
                 else
                 {
                     rootClone.m_Parent = parent;

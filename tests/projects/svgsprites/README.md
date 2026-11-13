@@ -8,7 +8,9 @@ code runs on both sides; nothing of it is ported.
 `pivot` (the same file as a Vector Sprite with 50 pixels per unit and a bottom-left pivot),
 `gradients` (Vector Sprite with gradients: an atlas texture and setting indices),
 `frame` (UI SVGImage, aspect preserved), `strokes` (Textured Sprite, 64 pixels) and `clip`
-(Texture2D, 48 pixels, point filtering, one sample, clamped). The capture records each asset's
+(Texture2D, 48 pixels, point filtering, one sample, clamped); `Assets/Resources/Textures/` holds
+two texture-imported sprites' textures (Single and Multiple mode, from spriteimport), whose
+`SpriteEditorExtension.GetSpriteID` the capture records (the .meta's spriteIDs). The capture records each asset's
 main object and objects, every sprite's rect, pivot, pixels per unit, bounds, vertices, UVs,
 triangles, channels (`HasVertexAttribute`), colours and setting indices, every texture's size,
 format, filtering, wrapping and texels (read through a render texture), the GameObject outputs'
@@ -34,7 +36,7 @@ pixels at the focus of a radial gradient, by at most 5/255); they stay printed i
 | --- | --- | --- |
 | [Vector Graphics 2.0 manual](https://docs.unity3d.com/Packages/com.unity.vectorgraphics@2.0/manual/index.html) | Documented: the importer's output types (vector sprite, UI SVGImage, textured sprite, Texture2D). | Run the package's importer unchanged. |
 | [6000.0 Sprite API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Sprite.html), [OverrideGeometry](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Sprite.OverrideGeometry.html) | Documented: vertices in pixels within the rect; vertex attributes through the data access API. | Keep colour and texture coordinate channels with the sprite and in its render mesh. |
-| Native repeats, 6000.0.71f1 | Observed: the sprites the importer makes without a texture are drawn (vertex colours, `Unlit/Vector`), their UVs are zero; a sprite whose texture is missing is not drawn (tests/projects/spriteassets). The main object of each import is named after the file, although the importer names its GameObject `transform`. The importer's GameObjects are part of the asset, in no scene. | Draw sprites made without a texture; name the main object after the file (Shaders keep their declared name); make an importer's GameObjects assets. |
+| Native repeats, 6000.0.71f1 | Observed: the sprites the importer makes without a texture are drawn (vertex colours, `Unlit/Vector`), their UVs are zero; a sprite whose texture is missing is not drawn (tests/projects/spriteassets). The main object of each import is named after the file, although the importer names its GameObject `transform`. An imported sprite's ID is its .meta's spriteID. | Draw sprites made without a texture; name the main object after the file (Shaders keep their declared name); keep imported sprite IDs. Unbound's model, not recorded: an importer's GameObjects (made or instantiated) belong to the asset, in no scene and never awake (the render shows no second copy at the origin). |
 
 Unbound's choices, unmeasured: a sprite without a texture in Sliced or Tiled mode is not drawn
 (with a warning) and does not mask; OverrideGeometry drops the colour, normal, tangent, blend and
