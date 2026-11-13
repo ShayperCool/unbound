@@ -549,7 +549,8 @@ public sealed class DefaultStateProbe : MonoBehaviour
         finally { UnityEngine.Object.DestroyImmediate(basicWindow); UnityEngine.Object.DestroyImmediate(customWindow); }
 
         foreach (var type in new[] { typeof(UnityEditor.AssetImporter), typeof(UnityEditor.TextureImporter),
-            typeof(UnityEditor.MonoImporter), typeof(UnityEditor.PluginImporter), scriptedType })
+            typeof(UnityEditor.MonoImporter), typeof(UnityEditor.PluginImporter), scriptedType,
+            typeof(UnityEditor.AudioImporter), typeof(UnityEditor.VideoClipImporter) })
         {
             var importer = (UnityEditor.AssetImporter)Activator.CreateInstance(type);
             CoreValue("Editor/importer/bare/" + type.Name + "/identity", new object[] { importer == null, importer.GetInstanceID() });
@@ -567,6 +568,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
                 CoreValue("Editor/importer/manualFieldInitializer", type.GetField("fieldInitializerState").GetValue(importer));
             }
             if (type == typeof(UnityEditor.TextureImporter)) RemovedTextureSettings(importer, "bare");
+            if (type == typeof(UnityEditor.AudioImporter) || type == typeof(UnityEditor.VideoClipImporter)) RemovedMediaImporterSettings(importer);
             UnityEngine.Object.DestroyImmediate(importer);
         }
         foreach (var path in new[] { "Assets/Scripts/FactoryControlBehaviour.cs", "Assets/DefaultStateControl.png", "Assets/DefaultStateControl.defaultstate" })
@@ -618,6 +620,29 @@ public sealed class DefaultStateProbe : MonoBehaviour
         CoreValue("Editor/identifier/default", path.GetValue(identifier, null));
         path.SetValue(identifier, "explicit-path", null); CoreValue("Editor/identifier/written", path.GetValue(identifier, null));
         path.SetValue(identifier, null, null); CoreValue("Editor/identifier/null", path.GetValue(identifier, null));
+    }
+    static void RemovedMediaImporterSettings(UnityEditor.AssetImporter importer)
+    {
+        var names = importer is UnityEditor.AudioImporter
+            ? new[] { "hardware", "channels", "compressionBitrate", "loopable", "threeD" }
+            : new[] { "linearColor", "useLegacyImporter" };
+        foreach (var name in names)
+        {
+            var property = importer.GetType().GetProperty(name);
+            foreach (var changed in new[] { false, true })
+            {
+                object value = property.PropertyType == typeof(bool) ? (object)changed
+                    : property.PropertyType.IsEnum ? Enum.ToObject(property.PropertyType, changed ? 77 : -42) : (object)(changed ? 77 : -42);
+                property.SetValue(importer, value, null);
+                CoreValue("Editor/importer/removed/" + importer.GetType().Name + "/" + name + "/" + changed, property.GetValue(importer, null));
+            }
+        }
+        if (importer is UnityEditor.AudioImporter)
+            foreach (var name in new[] { "durationMS", "frequency", "origChannelCount", "origIsCompressible", "origIsMonoForcable", "defaultBitrate", "origType" })
+            {
+                var property = importer.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                CoreValue("Editor/importer/removed/internal/" + name, property.GetValue(importer, null));
+            }
     }
     static void RemovedTextureSettings(UnityEditor.AssetImporter importer, string context)
     {

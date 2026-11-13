@@ -10,14 +10,7 @@ sealed partial class StubBuilder
     // fixed exception, rather than inferring its text from the Obsolete attribute.
     string? FixedGetterThrow(IMethodSymbol getter)
     {
-        if (!_moduleImages.TryGetValue(getter.ContainingAssembly, out var pe) || getter.MetadataToken == 0)
-            return null;
-        var md = pe.GetMetadataReader();
-        var method = md.GetMethodDefinition((MethodDefinitionHandle)MetadataTokens.EntityHandle(getter.MetadataToken));
-        if (method.RelativeVirtualAddress == 0) return null;
-        var body = pe.GetMethodBody(method.RelativeVirtualAddress);
-        if (body.ExceptionRegions.Length != 0) return null;
-        var il = body.GetILReader();
+        if (!AccessorBody(getter, out var il, out var md)) return null;
         if (!Instruction(ref il, 0x72) || il.RemainingBytes < 4) return null; // ldstr
         var messageToken = MetadataTokens.Handle(il.ReadInt32());
         if (messageToken.Kind != HandleKind.UserString) return null;

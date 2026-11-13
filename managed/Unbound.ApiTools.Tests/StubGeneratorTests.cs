@@ -105,6 +105,7 @@ public class StubGeneratorTests
         namespace Unbound { [System.AttributeUsage(System.AttributeTargets.All)] internal sealed class StubAttribute : System.Attribute {} }
         namespace Unbound.Runtime
         {
+            internal static class Compat { public static bool RemovedEditorSettingsMeasured = true; }
             internal static class Stubs
             {
                 public static int Calls;
@@ -244,7 +245,14 @@ public class StubGeneratorTests
                         public int count { get; set; }
                         public static int staticCount => 0;
                         public int removed => throw new System.NotSupportedException("removed");
+                        public bool fixedTrue { get { return true; } set {} }
+                        public bool fixedFalse { get => false; set {} }
+                        public string fixedString { get { return "removed"; } set {} }
+                        public Channels fixedEnum { get { return Channels.Automatic; } set {} }
+                        public int fixedNumber { get { return -7; } }
+                        public float fixedFloat { get { return 3.5f; } }
                     }
+                    public enum Channels { Automatic, Mono }
                     public class TextureImporter : AssetImporter { public bool isReadable { get; set; } }
                 }
                 """;
@@ -291,6 +299,24 @@ public class StubGeneratorTests
                 }
                 Assert.Equal(0, type.BaseType!.GetProperty("staticCount")!.GetValue(null));
                 Assert.IsType<NotSupportedException>(Assert.Throws<TargetInvocationException>(() => type.GetProperty("removed")!.GetValue(instance)).InnerException);
+                foreach (var name in new[] { "fixedTrue", "fixedFalse", "fixedString", "fixedEnum" })
+                {
+                    var property = type.GetProperty(name)!;
+                    var expected = property.GetValue(instance);
+                    object changed = property.PropertyType == typeof(bool) ? !(bool)expected!
+                        : property.PropertyType == typeof(string) ? "changed" : Enum.ToObject(property.PropertyType, 77);
+                    property.SetValue(instance, changed);
+                    Assert.Equal(expected, property.GetValue(instance));
+                }
+                Assert.Equal(true, type.GetProperty("fixedTrue")!.GetValue(instance));
+                Assert.Equal(false, type.GetProperty("fixedFalse")!.GetValue(instance));
+                Assert.Equal("removed", type.GetProperty("fixedString")!.GetValue(instance));
+                Assert.Equal(0, Convert.ToInt32(type.GetProperty("fixedEnum")!.GetValue(instance)));
+                Assert.Equal(-7, type.GetProperty("fixedNumber")!.GetValue(instance));
+                Assert.Equal(3.5f, type.GetProperty("fixedFloat")!.GetValue(instance));
+                assembly.GetType("Unbound.Runtime.Compat")!.GetField("RemovedEditorSettingsMeasured")!.SetValue(null, false);
+                Assert.Equal(false, type.GetProperty("fixedTrue")!.GetValue(instance));
+                assembly.GetType("Unbound.Runtime.Compat")!.GetField("RemovedEditorSettingsMeasured")!.SetValue(null, true);
                 type.GetField("bound")!.SetValue(instance, true);
                 Assert.Equal(0, type.GetProperty("count")!.GetValue(instance));
                 Assert.Equal(false, type.GetProperty("isReadable")!.GetValue(instance));

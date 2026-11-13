@@ -51,6 +51,39 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Theory]
+        [InlineData(typeof(AudioImporter))]
+        [InlineData(typeof(VideoClipImporter))]
+        public void RemovedMediaSettingsKeepTheirConstantsOnBareWrappers(Type type)
+        {
+            using var engine = MainThreadCheck.Engine();
+            var importer = (AssetImporter)Activator.CreateInstance(type);
+            var audio = type == typeof(AudioImporter);
+            var names = audio ? new[] { "hardware", "channels", "compressionBitrate", "loopable", "threeD" }
+                : new[] { "linearColor", "useLegacyImporter" };
+            foreach (var name in names)
+            {
+                var property = type.GetProperty(name);
+                object expected = name is "loopable" or "threeD" ? true : property.PropertyType == typeof(bool) ? false : 0;
+                foreach (var changed in new[] { false, true })
+                {
+                    object value = property.PropertyType == typeof(bool) ? (object)changed
+                        : property.PropertyType.IsEnum ? Enum.ToObject(property.PropertyType, changed ? 77 : -42) : changed ? 77 : -42;
+                    property.SetValue(importer, value);
+                    var actual = property.GetValue(importer);
+                    Assert.Equal(expected, property.PropertyType.IsEnum ? Convert.ToInt32(actual) : actual);
+                }
+            }
+            if (audio)
+                foreach (var name in new[] { "durationMS", "frequency", "origChannelCount", "origIsCompressible", "origIsMonoForcable", "defaultBitrate", "origType" })
+                {
+                    var property = type.GetProperty(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    var actual = property.GetValue(importer);
+                    Assert.Equal(property.PropertyType == typeof(bool) ? (object)false : 0,
+                        property.PropertyType.IsEnum ? Convert.ToInt32(actual) : actual);
+                }
+        }
+
         sealed class ConstructorImporter : ScriptedImporter
         {
             static bool makingNested;

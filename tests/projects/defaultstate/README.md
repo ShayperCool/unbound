@@ -109,8 +109,8 @@ The Core slice adds another 42 independent controls while preserving all prior r
 for 11,517 rows at that stage. Physics2D adds 17 controls and Physics adds 31,
 for 11,565 rows before Audio. Audio adds 25 controls, giving 11,590 rows before ParticleSystem.
 The ParticleSystem slice adds 362 controls. Declaration slices add five inventory rows.
-The Editor slice adds 154 controls while preserving all 11,957 previous rows,
-giving 12,111 current rows. The comparison now has 11,575 exact rows, 536 differing
+The Editor slice adds 223 controls while preserving all 11,957 previous rows,
+giving 12,180 current rows. The comparison now has 11,644 exact rows, 536 differing
 reference rows, zero missing rows and 30 extra implementation rows. Its 568 queue
 entries retain the same 50 variable rows; two happen to equal the implementation
 snapshot. Variable rows remain unresolved comparisons.
@@ -285,7 +285,7 @@ policies and all earlier canonical rows remain unchanged.
 
 The Editor slice resolves 132 rows: 91 importer-wrapper reads, three removed
 texture settings, 32 window scalar/flag observations, three default collection counts
-and three unset paths. Both independent NVIDIA captures and Unbound match all 154
+and three unset paths. Both independent NVIDIA captures and Unbound match all 223
 new controls; all 531 earlier controls remain unchanged.
 
 The Editor slice records [AssetImporter.GetAtPath](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetImporter.GetAtPath.html)
@@ -304,8 +304,13 @@ the managed log handler.
 Three removed TextureImporter settings bypass backing checks: correctGamma and
 generateMipsInLinearSpace return true, and spritePackingTag returns empty. Writes
 of both boolean values, a nonempty tag and null leave these answers unchanged on
-bare and factory-created importers. AssetBundle-setting validation diagnostics and
-other importer methods are outside these value controls.
+bare and factory-created importers. The generator preserves simple literal getters and empty setters through one
+release-selected rule, including AudioImporter and VideoClipImporter legacy settings.
+Controls cover all public bare-wrapper properties of both types, both writes to each
+removed setting, and seven internal legacy audio information getters. The same rule
+handles expression getters and block getters that return through a local variable.
+AssetBundle-setting validation diagnostics and other importer methods are outside
+these value controls.
 
 Default TypeCache collection Count reads throw without storage, while empty query
 results return zero and populated results return positive counts. The
@@ -331,7 +336,7 @@ describes initialization; the precise flag phase here is a release observation.
 Importer backing and removed window settings select measured Compat mechanisms;
 window constructor values reuse the initialization mechanism. Other releases retain
 the prior unmeasured wrapper, constructor and antiAlias paths. Importer property
-stub output changes bump generator format to 6. Scripted import objects are retained
+stub output changes bump generator format to 8. Scripted import objects are retained
 in memory; this slice changes no persistent importer cache format.
 
 Editor keeps 87 rows: targetless inspectors and serialized state; window UI trees,

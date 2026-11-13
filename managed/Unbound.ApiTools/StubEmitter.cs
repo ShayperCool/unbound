@@ -815,7 +815,8 @@ sealed partial class StubBuilder
                 continue;
             }
             string body;
-            var importerGuard = !property.IsStatic && HasImporterStateGuard(ctx.Unity)
+            var importer = !property.IsStatic && HasImporterStateGuard(ctx.Unity);
+            var importerGuard = importer
                 ? $"this.CheckImporterState({Quote(keyword + "_" + property.Name)}); " : "";
             if (keyword == "get")
             {
@@ -823,10 +824,15 @@ sealed partial class StubBuilder
                 var ret = property.ReturnsByRef || property.ReturnsByRefReadonly
                     ? $"return ref global::Unbound.Runtime.Stubs.Ref<{Render(property.Type)}>();"
                     : stored ? $"return {backing};" : ReturnDefault(property.Type, id);
-                body = fixedThrow != null ? $"{{ {fixedThrow} }}" : $"{{ {importerGuard}{NotImplemented}({Quote(id)}); {ret} }}";
+                var literal = importer ? LiteralAccessor(accessor) : null;
+                body = fixedThrow != null ? $"{{ {fixedThrow} }}"
+                    : literal != null ? $"{{ if (global::Unbound.Runtime.Compat.RemovedEditorSettingsMeasured) return {literal}; {NotImplemented}({Quote(id)}); {ret} }}"
+                    : $"{{ {importerGuard}{NotImplemented}({Quote(id)}); {ret} }}";
             }
             else
             {
+                if (importer && EmptyAccessor(accessor))
+                    importerGuard = "if (global::Unbound.Runtime.Compat.RemovedEditorSettingsMeasured) return; ";
                 body = $"{{ {importerGuard}{NotImplemented}({Quote(id)});{(stored ? $" {backing} = {configured!.SetExpression};" : "")} }}";
             }
             accessors.Add($"{Stub} {accessorAccess}{keyword} {body}");
