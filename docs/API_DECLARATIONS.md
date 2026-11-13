@@ -76,18 +76,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After member obsolete slice |
+| Category | Before Q410 | After parameter slice |
 | --- | ---: | ---: |
 | Attributes | 938 | 306 |
 | Modifiers | 87 | 72 |
-| Parameters | 74 | 73 |
+| Parameters | 74 | 0 |
 | Accessors | 70 | 60 |
 | Layout | 68 | 68 |
 | Interfaces | 65 | 65 |
 | Accessibility | 18 | 18 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 674 |
+| Total | 1,332 | 601 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -123,6 +123,10 @@ Animator.animatePhysics remains queued as Q410-Animator-animatePhysics: its curr
 changes updateMode, while the [Unity 6000.0 contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-animatePhysics.html)
 covers animated kinematic Rigidbody transforms influencing other bodies. That migration
 needs divergent-state and moving-platform controls with the runtime adaptation.
+
+The parameter slice fixes 73 exact optional-default and array direction entries.
+Metadata controls cover each changed parameter; invocation controls exercise omitted
+arguments and the existing three-argument mesh overload.
 
 ## Landing checks and default state
 

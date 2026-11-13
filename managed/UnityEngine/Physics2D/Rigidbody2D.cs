@@ -847,11 +847,11 @@ namespace UnityEngine
             return list;
         }
 
-        public int GetAttachedColliders(Collider2D[] results) => GetAttachedColliders(results, true);
+        public int GetAttachedColliders([global::System.Runtime.InteropServices.Out] Collider2D[] results) => GetAttachedColliders(results, true);
 
         public int GetAttachedColliders(List<Collider2D> results) => GetAttachedColliders(results, true);
 
-        public int GetAttachedColliders(Collider2D[] results, bool findTriggers = true)
+        public int GetAttachedColliders([global::System.Runtime.InteropServices.Out] Collider2D[] results, bool findTriggers = true)
         {
             if (results == null) throw new ArgumentNullException(nameof(results));
             var list = AttachedColliders(findTriggers);
@@ -985,7 +985,7 @@ namespace UnityEngine
             return Physics2DQueries.CopyHits(hits, results);
         }
 
-        public int Overlap(ContactFilter2D contactFilter, Collider2D[] results) =>
+        public int Overlap(ContactFilter2D contactFilter, [global::System.Runtime.InteropServices.Out] Collider2D[] results) =>
             Physics2DQueries.CopyColliders(Physics2DQueries.OverlapColliders(AttachedColliders(true), null, contactFilter, this), results);
 
         public int Overlap(List<Collider2D> results) => Overlap(new ContactFilter2D().NoFilter(), results);
@@ -1001,7 +1001,7 @@ namespace UnityEngine
             return Physics2DQueries.CopyColliders(Physics2DQueries.OverlapColliders(AttachedColliders(true), pose, contactFilter, this), results);
         }
 
-        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("OverlapCollider has been renamed to Overlap (UnityUpgradable) -> Overlap(*)", false)] public int OverlapCollider(ContactFilter2D contactFilter, Collider2D[] results) => Overlap(contactFilter, results);
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("OverlapCollider has been renamed to Overlap (UnityUpgradable) -> Overlap(*)", false)] public int OverlapCollider(ContactFilter2D contactFilter, [global::System.Runtime.InteropServices.Out] Collider2D[] results) => Overlap(contactFilter, results);
 
         [global::System.@ObsoleteAttribute("OverlapCollider has been renamed to Overlap (UnityUpgradable) -> Overlap(*)", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public int OverlapCollider(ContactFilter2D contactFilter, List<Collider2D> results) => Overlap(contactFilter, results);
 

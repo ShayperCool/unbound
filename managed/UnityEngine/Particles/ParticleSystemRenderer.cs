@@ -134,7 +134,7 @@ namespace UnityEngine
             }
         }
 
-        public int GetMeshes(Mesh[] meshes)
+        public int GetMeshes([global::System.Runtime.InteropServices.Out] Mesh[] meshes)
         {
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
             int n = Math.Min(meshes.Length, m_Meshes.Count);
@@ -151,7 +151,7 @@ namespace UnityEngine
 
         public void SetMeshes(Mesh[] meshes) => SetMeshes(meshes, meshes?.Length ?? 0);
 
-        public int GetMeshWeightings(float[] weightings)
+        public int GetMeshWeightings([global::System.Runtime.InteropServices.Out] float[] weightings)
         {
             if (weightings == null) throw new ArgumentNullException(nameof(weightings));
             int n = Math.Min(weightings.Length, m_MeshWeightings.Count);

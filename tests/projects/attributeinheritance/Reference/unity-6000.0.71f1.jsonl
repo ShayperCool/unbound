@@ -818,4 +818,84 @@
 {"key":"textEditor.focus.True.legacy","value":"False"}
 {"key":"textEditor.focus.True.lost-show","value":"True"}
 {"key":"textEditor.focus.True.lost-legacy","value":"False"}
+{"key":"parameter.UnityEditor.GlobalObjectId.M:static GetGlobalObjectIdsSlow`0(System.Int32[],UnityEditor.GlobalObjectId[]):System.Void.1","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEditor.GlobalObjectId.M:static GetGlobalObjectIdsSlow`0(UnityEngine.Object[],UnityEditor.GlobalObjectId[]):System.Void.1","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEditor.GlobalObjectId.M:static GlobalObjectIdentifiersToInstanceIDsSlow`0(UnityEditor.GlobalObjectId[],System.Int32[]):System.Void.1","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEditor.GlobalObjectId.M:static GlobalObjectIdentifiersToObjectsSlow`0(UnityEditor.GlobalObjectId[],UnityEngine.Object[]):System.Void.1","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.AI.NavMeshPath.M:GetCornersNonAlloc`0(UnityEngine.Vector3[]):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.Animations.MuscleHandle.M:static GetMuscleHandles`0(UnityEngine.Animations.MuscleHandle[]):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.Experimental.Rendering.GraphicsFormatUtility.M:static ComputeMipChainSize`0(System.Int32,System.Int32,System.Int32,UnityEngine.Experimental.Rendering.GraphicsFormat,System.Int32):System.UInt32.4","value":"False:False:True:True:System.Int32:-1"}
+{"key":"parameter.UnityEngine.Experimental.Rendering.GraphicsFormatUtility.M:static ComputeMipChainSize`0(System.Int32,System.Int32,UnityEngine.Experimental.Rendering.GraphicsFormat,System.Int32):System.UInt32.3","value":"False:False:True:True:System.Int32:-1"}
+{"key":"parameter.UnityEngine.LineRenderer.M:GetPositions`0(Unity.Collections.NativeArray`1<UnityEngine.Vector3>):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.LineRenderer.M:GetPositions`0(Unity.Collections.NativeSlice`1<UnityEngine.Vector3>):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.LineRenderer.M:GetPositions`0(UnityEngine.Vector3[]):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetColors`0(System.Collections.Generic.List`1<UnityEngine.Color32>,System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetColors`0(System.Collections.Generic.List`1<UnityEngine.Color>,System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetColors`0(UnityEngine.Color32[],System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetColors`0(UnityEngine.Color[],System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetNormals`0(System.Collections.Generic.List`1<UnityEngine.Vector3>,System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetNormals`0(UnityEngine.Vector3[],System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetTangents`0(System.Collections.Generic.List`1<UnityEngine.Vector4>,System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetTangents`0(UnityEngine.Vector4[],System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetUVs`0(System.Int32,System.Collections.Generic.List`1<UnityEngine.Vector2>,System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.4","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetUVs`0(System.Int32,System.Collections.Generic.List`1<UnityEngine.Vector3>,System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.4","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetUVs`0(System.Int32,System.Collections.Generic.List`1<UnityEngine.Vector4>,System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.4","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetUVs`0(System.Int32,UnityEngine.Vector2[],System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.4","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetUVs`0(System.Int32,UnityEngine.Vector3[],System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.4","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetUVs`0(System.Int32,UnityEngine.Vector4[],System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.4","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetVertices`0(System.Collections.Generic.List`1<UnityEngine.Vector3>,System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.Mesh.M:SetVertices`0(UnityEngine.Vector3[],System.Int32,System.Int32,UnityEngine.Rendering.MeshUpdateFlags):System.Void.3","value":"False:False:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:GetParticles`0(Unity.Collections.NativeArray`1<UnityEngine.ParticleSystem+Particle>):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:GetParticles`0(Unity.Collections.NativeArray`1<UnityEngine.ParticleSystem+Particle>,System.Int32):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:GetParticles`0(Unity.Collections.NativeArray`1<UnityEngine.ParticleSystem+Particle>,System.Int32,System.Int32):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:GetParticles`0(UnityEngine.ParticleSystem+Particle[]):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:GetParticles`0(UnityEngine.ParticleSystem+Particle[],System.Int32):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:GetParticles`0(UnityEngine.ParticleSystem+Particle[],System.Int32,System.Int32):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:SetParticles`0(Unity.Collections.NativeArray`1<UnityEngine.ParticleSystem+Particle>):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:SetParticles`0(Unity.Collections.NativeArray`1<UnityEngine.ParticleSystem+Particle>,System.Int32):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:SetParticles`0(Unity.Collections.NativeArray`1<UnityEngine.ParticleSystem+Particle>,System.Int32,System.Int32):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:SetParticles`0(UnityEngine.ParticleSystem+Particle[]):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:SetParticles`0(UnityEngine.ParticleSystem+Particle[],System.Int32):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystem.M:SetParticles`0(UnityEngine.ParticleSystem+Particle[],System.Int32,System.Int32):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystemRenderer.M:GetMeshWeightings`0(System.Single[]):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.ParticleSystemRenderer.M:GetMeshes`0(UnityEngine.Mesh[]):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.Rendering.CommandBuffer.M:ClearRenderTarget`0(System.Boolean,System.Boolean,UnityEngine.Color,System.Single,System.UInt32):System.Void.3","value":"False:False:True:True:System.Single:1"}
+{"key":"parameter.UnityEngine.Rendering.CommandBuffer.M:ClearRenderTarget`0(System.Boolean,System.Boolean,UnityEngine.Color,System.Single,System.UInt32):System.Void.4","value":"False:False:True:True:System.UInt32:0"}
+{"key":"parameter.UnityEngine.Rendering.CommandBuffer.M:ClearRenderTarget`0(UnityEngine.Rendering.RTClearFlags,UnityEngine.Color,System.Single,System.UInt32):System.Void.2","value":"False:False:True:True:System.Single:1"}
+{"key":"parameter.UnityEngine.Rendering.CommandBuffer.M:ClearRenderTarget`0(UnityEngine.Rendering.RTClearFlags,UnityEngine.Color,System.Single,System.UInt32):System.Void.3","value":"False:False:True:True:System.UInt32:0"}
+{"key":"parameter.UnityEngine.Rendering.CommandBuffer.M:ClearRenderTarget`0(UnityEngine.Rendering.RTClearFlags,UnityEngine.Color[],System.Single,System.UInt32):System.Void.2","value":"False:False:True:True:System.Single:1"}
+{"key":"parameter.UnityEngine.Rendering.CommandBuffer.M:ClearRenderTarget`0(UnityEngine.Rendering.RTClearFlags,UnityEngine.Color[],System.Single,System.UInt32):System.Void.3","value":"False:False:True:True:System.UInt32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(System.Int32,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.1","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(System.Int32,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.2","value":"False:False:True:True:System.Int32:-1"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(System.Int32,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.3","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(System.String,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.1","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(System.String,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.2","value":"False:False:True:True:System.Int32:-1"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(System.String,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.3","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(UnityEngine.Rendering.BuiltinRenderTextureType,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.1","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(UnityEngine.Rendering.BuiltinRenderTextureType,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.2","value":"False:False:True:True:System.Int32:-1"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(UnityEngine.Rendering.BuiltinRenderTextureType,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.3","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(UnityEngine.Rendering.RenderTargetIdentifier,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.2","value":"False:False:True:True:System.Int32:-1"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(UnityEngine.Rendering.RenderTargetIdentifier,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.3","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(UnityEngine.Texture,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.1","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(UnityEngine.Texture,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.2","value":"False:False:True:True:System.Int32:-1"}
+{"key":"parameter.UnityEngine.Rendering.RenderTargetIdentifier.M:.ctor`0(UnityEngine.Texture,System.Int32,UnityEngine.CubemapFace,System.Int32):System.Void.3","value":"False:False:True:True:System.Int32:0"}
+{"key":"parameter.UnityEngine.Rigidbody2D.M:GetAttachedColliders`0(UnityEngine.Collider2D[]):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.Rigidbody2D.M:GetAttachedColliders`0(UnityEngine.Collider2D[],System.Boolean):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.Rigidbody2D.M:OverlapCollider`0(UnityEngine.ContactFilter2D,UnityEngine.Collider2D[]):System.Int32.1","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.Rigidbody2D.M:Overlap`0(UnityEngine.ContactFilter2D,UnityEngine.Collider2D[]):System.Int32.1","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.TrailRenderer.M:AddPositions`0(Unity.Collections.NativeArray`1<UnityEngine.Vector3>):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.TrailRenderer.M:AddPositions`0(Unity.Collections.NativeSlice`1<UnityEngine.Vector3>):System.Void.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.TrailRenderer.M:GetPositions`0(Unity.Collections.NativeArray`1<UnityEngine.Vector3>):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.TrailRenderer.M:GetPositions`0(Unity.Collections.NativeSlice`1<UnityEngine.Vector3>):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.TrailRenderer.M:GetPositions`0(UnityEngine.Vector3[]):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.TrailRenderer.M:GetVisiblePositions`0(Unity.Collections.NativeArray`1<UnityEngine.Vector3>):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.TrailRenderer.M:GetVisiblePositions`0(Unity.Collections.NativeSlice`1<UnityEngine.Vector3>):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.UnityEngine.TrailRenderer.M:GetVisiblePositions`0(UnityEngine.Vector3[]):System.Int32.0","value":"False:True:False:False:absent"}
+{"key":"parameter.mips.2d.default","value":"224"}
+{"key":"parameter.mips.2d.explicit","value":"224"}
+{"key":"parameter.mips.3d.default","value":"584"}
+{"key":"parameter.mips.3d.control","value":"572"}
+{"key":"parameter.target.default-equals-explicit","value":"True"}
+{"key":"parameter.mesh.required-flags","value":"System.ArgumentException"}
+{"key":"parameter.mesh.three-argument-colors","value":"1:1"}
 {"key":"complete","value":"1"}

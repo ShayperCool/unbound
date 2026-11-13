@@ -265,7 +265,7 @@ namespace UnityEngine
             return Math.Min(length, m_Positions.Count);
         }
 
-        public int GetPositions(Vector3[] positions)
+        public int GetPositions([global::System.Runtime.InteropServices.Out] Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
             int n = CopyCount(positions.Length);
@@ -284,14 +284,14 @@ namespace UnityEngine
 
         public void SetPositions(NativeSlice<Vector3> positions) => SetPositions(positions.ToArray());
 
-        public int GetPositions(NativeArray<Vector3> positions)
+        public int GetPositions([global::System.Runtime.InteropServices.Out] NativeArray<Vector3> positions)
         {
             int n = CopyCount(positions.Length);
             for (int i = 0; i < n; i++) positions[i] = m_Positions[i];
             return n;
         }
 
-        public int GetPositions(NativeSlice<Vector3> positions)
+        public int GetPositions([global::System.Runtime.InteropServices.Out] NativeSlice<Vector3> positions)
         {
             int n = CopyCount(positions.Length);
             for (int i = 0; i < n; i++) positions[i] = m_Positions[i];
@@ -617,7 +617,7 @@ namespace UnityEngine
             return m_Points[index].Position;
         }
 
-        public int GetPositions(Vector3[] positions)
+        public int GetPositions([global::System.Runtime.InteropServices.Out] Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
             TrackMovement();
@@ -627,7 +627,7 @@ namespace UnityEngine
         }
 
         /// <summary>The points recorded while emitting, oldest first.</summary>
-        public int GetVisiblePositions(Vector3[] positions)
+        public int GetVisiblePositions([global::System.Runtime.InteropServices.Out] Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
             TrackMovement();
@@ -671,10 +671,10 @@ namespace UnityEngine
 
         public void SetPositions(NativeArray<Vector3> positions) => SetPositions(positions.ToArray());
         public void SetPositions(NativeSlice<Vector3> positions) => SetPositions(positions.ToArray());
-        public void AddPositions(NativeArray<Vector3> positions) => AddPositions(positions.ToArray());
-        public void AddPositions(NativeSlice<Vector3> positions) => AddPositions(positions.ToArray());
+        public void AddPositions([global::System.Runtime.InteropServices.Out] NativeArray<Vector3> positions) => AddPositions(positions.ToArray());
+        public void AddPositions([global::System.Runtime.InteropServices.Out] NativeSlice<Vector3> positions) => AddPositions(positions.ToArray());
 
-        public int GetPositions(NativeArray<Vector3> positions)
+        public int GetPositions([global::System.Runtime.InteropServices.Out] NativeArray<Vector3> positions)
         {
             var copy = new Vector3[positions.Length];
             int n = GetPositions(copy);
@@ -682,7 +682,7 @@ namespace UnityEngine
             return n;
         }
 
-        public int GetPositions(NativeSlice<Vector3> positions)
+        public int GetPositions([global::System.Runtime.InteropServices.Out] NativeSlice<Vector3> positions)
         {
             var copy = new Vector3[positions.Length];
             int n = GetPositions(copy);
@@ -690,7 +690,7 @@ namespace UnityEngine
             return n;
         }
 
-        public int GetVisiblePositions(NativeArray<Vector3> positions)
+        public int GetVisiblePositions([global::System.Runtime.InteropServices.Out] NativeArray<Vector3> positions)
         {
             var copy = new Vector3[positions.Length];
             int n = GetVisiblePositions(copy);
@@ -698,7 +698,7 @@ namespace UnityEngine
             return n;
         }
 
-        public int GetVisiblePositions(NativeSlice<Vector3> positions)
+        public int GetVisiblePositions([global::System.Runtime.InteropServices.Out] NativeSlice<Vector3> positions)
         {
             var copy = new Vector3[positions.Length];
             int n = GetVisiblePositions(copy);

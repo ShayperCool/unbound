@@ -670,7 +670,7 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ particle access
 
-        public void SetParticles(Particle[] particles, int size, int offset)
+        public void SetParticles([global::System.Runtime.InteropServices.Out] Particle[] particles, int size, int offset)
         {
             ParticleSystemManager.Sync();
             if (particles == null) throw new ArgumentNullException(nameof(particles));
@@ -899,17 +899,17 @@ namespace UnityEngine
             if (dead.Count > 0) FreeUnheldTrails();
         }
 
-        public void SetParticles(Particle[] particles, int size) => SetParticles(particles, size, 0);
+        public void SetParticles([global::System.Runtime.InteropServices.Out] Particle[] particles, int size) => SetParticles(particles, size, 0);
 
-        public void SetParticles(Particle[] particles) => SetParticles(particles, -1, 0);
+        public void SetParticles([global::System.Runtime.InteropServices.Out] Particle[] particles) => SetParticles(particles, -1, 0);
 
-        public void SetParticles(NativeArray<Particle> particles, int size, int offset) => SetParticles(particles.ToArray(), size, offset);
+        public void SetParticles([global::System.Runtime.InteropServices.Out] NativeArray<Particle> particles, int size, int offset) => SetParticles(particles.ToArray(), size, offset);
 
-        public void SetParticles(NativeArray<Particle> particles, int size) => SetParticles(particles.ToArray(), size, 0);
+        public void SetParticles([global::System.Runtime.InteropServices.Out] NativeArray<Particle> particles, int size) => SetParticles(particles.ToArray(), size, 0);
 
-        public void SetParticles(NativeArray<Particle> particles) => SetParticles(particles.ToArray(), -1, 0);
+        public void SetParticles([global::System.Runtime.InteropServices.Out] NativeArray<Particle> particles) => SetParticles(particles.ToArray(), -1, 0);
 
-        public int GetParticles(Particle[] particles, int size, int offset)
+        public int GetParticles([global::System.Runtime.InteropServices.Out] Particle[] particles, int size, int offset)
         {
             ParticleSystemManager.Sync();
             if (particles == null) throw new ArgumentNullException(nameof(particles));
@@ -922,11 +922,11 @@ namespace UnityEngine
             return n;
         }
 
-        public int GetParticles(Particle[] particles, int size) => GetParticles(particles, size, 0);
+        public int GetParticles([global::System.Runtime.InteropServices.Out] Particle[] particles, int size) => GetParticles(particles, size, 0);
 
-        public int GetParticles(Particle[] particles) => GetParticles(particles, -1, 0);
+        public int GetParticles([global::System.Runtime.InteropServices.Out] Particle[] particles) => GetParticles(particles, -1, 0);
 
-        public int GetParticles(NativeArray<Particle> particles, int size, int offset)
+        public int GetParticles([global::System.Runtime.InteropServices.Out] NativeArray<Particle> particles, int size, int offset)
         {
             var copy = new Particle[particles.Length];
             int n = GetParticles(copy, size, offset);
@@ -934,9 +934,9 @@ namespace UnityEngine
             return n;
         }
 
-        public int GetParticles(NativeArray<Particle> particles, int size) => GetParticles(particles, size, 0);
+        public int GetParticles([global::System.Runtime.InteropServices.Out] NativeArray<Particle> particles, int size) => GetParticles(particles, size, 0);
 
-        public int GetParticles(NativeArray<Particle> particles) => GetParticles(particles, -1, 0);
+        public int GetParticles([global::System.Runtime.InteropServices.Out] NativeArray<Particle> particles) => GetParticles(particles, -1, 0);
 
         public void SetCustomParticleData(List<Vector4> customData, ParticleSystemCustomData streamIndex)
         {

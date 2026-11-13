@@ -123,3 +123,30 @@ cursor. Moving the cursor alone does not reveal it, and losing focus does not
 clear the reveal state. These focus answers are release measurements. Other
 releases retain the previous unmeasured field linkage through the compatibility
 profile, pending equivalent controls for those releases.
+
+## Parameter declarations
+
+The parameter expansion adds 73 metadata rows and seven invocation controls,
+bringing the reference from 821 to 901 rows. Two GPU Editor captures match and
+every earlier raw row remains unchanged. Each parameter records its direction
+flags, optional/default presence and typed raw default value. Overload lookup uses
+the shared signature helper.
+
+Missing arguments invoke full mip-chain defaults for odd 2D and 3D dimensions;
+an explicit partial mip count provides a control. A render-target constructor
+with omitted arguments equals its explicit-default form. The four-argument mesh
+color overload rejects a missing required flags argument, while the existing
+three-argument overload still writes two distinct colors. Compiler controls cover
+named render-target constructor arguments and the array clear overload with
+omitted depth/stencil values. These are 6000.0.71f1 declaration and invocation
+observations, without new rendering or mesh algorithm rules.
+
+The Unity 6000.0 [mip-chain documentation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Experimental.Rendering.GraphicsFormatUtility.ComputeMipChainSize.html)
+defines -1 as the full chain; the 3D partial-count control changes the result.
+The [clear-target documentation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.ClearRenderTarget.html)
+lists depth 1 and stencil 0, checked here as typed parameter defaults and by
+compiler omission controls. No framebuffer clearing behavior changes in this slice.
+[Mesh.SetColors](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.SetColors.html)
+lists flags as required on the four-argument overload. Its existing three-argument
+overload is tested separately. Direction flags are selected-release metadata
+observations; these controls make no additional marshaling guarantee.

@@ -97,6 +97,12 @@
     "managed/UnityEngine/Terrain/Terrain.cs",
     "managed/UnityEngine/Terrain/TerrainData.cs",
     "managed/UnityEngine/IMGUI/GUI.cs",
-    "managed/UnityEngine/Runtime/GuiCompat.cs"
+    "managed/UnityEngine/Runtime/GuiCompat.cs",
+    "managed/UnityEngine/AI/NavMeshTypes.cs",
+    "managed/UnityEngine/Animation/Playables/AnimationHumanStream.cs",
+    "managed/UnityEngine/Editor/GlobalObjectId.cs",
+    "managed/UnityEngine/Graphics/GraphicsFormats.cs",
+    "managed/UnityEngine/Graphics/LineRenderers.cs",
+    "managed/UnityEngine/Graphics/Mesh.cs"
   ]
 }

@@ -52,7 +52,7 @@ namespace UnityEditor
 
         public static GlobalObjectId GetGlobalObjectIdSlow(int instanceId) => GetGlobalObjectIdSlow(ObjectRegistry.FindById(instanceId));
 
-        public static void GetGlobalObjectIdsSlow(Object[] objects, GlobalObjectId[] outputIdentifiers)
+        public static void GetGlobalObjectIdsSlow(Object[] objects, [global::System.Runtime.InteropServices.Out] GlobalObjectId[] outputIdentifiers)
         {
             if (objects == null) throw new ArgumentNullException(nameof(objects));
             if (outputIdentifiers == null) throw new ArgumentNullException(nameof(outputIdentifiers));
@@ -60,7 +60,7 @@ namespace UnityEditor
             for (int i = 0; i < objects.Length; i++) outputIdentifiers[i] = GetGlobalObjectIdSlow(objects[i]);
         }
 
-        public static void GetGlobalObjectIdsSlow(int[] instanceIds, GlobalObjectId[] outputIdentifiers)
+        public static void GetGlobalObjectIdsSlow(int[] instanceIds, [global::System.Runtime.InteropServices.Out] GlobalObjectId[] outputIdentifiers)
         {
             if (instanceIds == null) throw new ArgumentNullException(nameof(instanceIds));
             if (outputIdentifiers == null) throw new ArgumentNullException(nameof(outputIdentifiers));
@@ -133,7 +133,7 @@ namespace UnityEditor
             }
         }
 
-        public static void GlobalObjectIdentifiersToObjectsSlow(GlobalObjectId[] identifiers, Object[] outputObjects)
+        public static void GlobalObjectIdentifiersToObjectsSlow(GlobalObjectId[] identifiers, [global::System.Runtime.InteropServices.Out] Object[] outputObjects)
         {
             if (identifiers == null) throw new ArgumentNullException(nameof(identifiers));
             if (outputObjects == null) throw new ArgumentNullException(nameof(outputObjects));
@@ -147,7 +147,7 @@ namespace UnityEditor
             return o != null ? o.GetInstanceID() : 0;
         }
 
-        public static void GlobalObjectIdentifiersToInstanceIDsSlow(GlobalObjectId[] identifiers, int[] outputInstanceIDs)
+        public static void GlobalObjectIdentifiersToInstanceIDsSlow(GlobalObjectId[] identifiers, [global::System.Runtime.InteropServices.Out] int[] outputInstanceIDs)
         {
             if (identifiers == null) throw new ArgumentNullException(nameof(identifiers));
             if (outputInstanceIDs == null) throw new ArgumentNullException(nameof(outputInstanceIDs));

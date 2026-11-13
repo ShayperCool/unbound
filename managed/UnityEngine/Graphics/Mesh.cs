@@ -359,9 +359,9 @@ namespace UnityEngine
 
         public void SetVertices(List<Vector3> inVertices) => vertices = inVertices.ToArray();
         public void SetVertices(Vector3[] inVertices) => vertices = inVertices;
-        public void SetVertices(List<Vector3> inVertices, int start, int length, [Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags = MeshUpdateFlags.Default) =>
+        public void SetVertices(List<Vector3> inVertices, int start, int length, [Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags ) =>
             vertices = inVertices.GetRange(start, length).ToArray();
-        public void SetVertices(Vector3[] inVertices, int start, int length, [Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags = MeshUpdateFlags.Default) =>
+        public void SetVertices(Vector3[] inVertices, int start, int length, [Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags ) =>
             vertices = new ArraySegment<Vector3>(inVertices, start, length).ToArray();
 
         public void GetVertices(List<Vector3> vertices)
@@ -372,8 +372,8 @@ namespace UnityEngine
 
         public void SetNormals(List<Vector3> inNormals) => normals = inNormals.ToArray();
         public void SetNormals(Vector3[] inNormals) => normals = inNormals;
-        public void SetNormals(List<Vector3> inNormals, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => normals = inNormals.GetRange(start, length).ToArray();
-        public void SetNormals(Vector3[] inNormals, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => normals = new ArraySegment<Vector3>(inNormals, start, length).ToArray();
+        public void SetNormals(List<Vector3> inNormals, int start, int length, MeshUpdateFlags flags ) => normals = inNormals.GetRange(start, length).ToArray();
+        public void SetNormals(Vector3[] inNormals, int start, int length, MeshUpdateFlags flags ) => normals = new ArraySegment<Vector3>(inNormals, start, length).ToArray();
 
         public void GetNormals(List<Vector3> normals)
         {
@@ -383,8 +383,8 @@ namespace UnityEngine
 
         public void SetTangents(List<Vector4> inTangents) => tangents = inTangents.ToArray();
         public void SetTangents(Vector4[] inTangents) => tangents = inTangents;
-        public void SetTangents(List<Vector4> inTangents, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => tangents = inTangents.GetRange(start, length).ToArray();
-        public void SetTangents(Vector4[] inTangents, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => tangents = new ArraySegment<Vector4>(inTangents, start, length).ToArray();
+        public void SetTangents(List<Vector4> inTangents, int start, int length, MeshUpdateFlags flags ) => tangents = inTangents.GetRange(start, length).ToArray();
+        public void SetTangents(Vector4[] inTangents, int start, int length, MeshUpdateFlags flags ) => tangents = new ArraySegment<Vector4>(inTangents, start, length).ToArray();
 
         public void GetTangents(List<Vector4> tangents)
         {
@@ -396,10 +396,10 @@ namespace UnityEngine
         public void SetColors(Color[] inColors) => colors = inColors;
         public void SetColors(List<Color32> inColors) => colors32 = inColors.ToArray();
         public void SetColors(Color32[] inColors) => colors32 = inColors;
-        public void SetColors(List<Color> inColors, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => colors = inColors.GetRange(start, length).ToArray();
-        public void SetColors(Color[] inColors, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => colors = new ArraySegment<Color>(inColors, start, length).ToArray();
-        public void SetColors(List<Color32> inColors, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => colors32 = inColors.GetRange(start, length).ToArray();
-        public void SetColors(Color32[] inColors, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => colors32 = new ArraySegment<Color32>(inColors, start, length).ToArray();
+        public void SetColors(List<Color> inColors, int start, int length, MeshUpdateFlags flags ) => colors = inColors.GetRange(start, length).ToArray();
+        public void SetColors(Color[] inColors, int start, int length, MeshUpdateFlags flags ) => colors = new ArraySegment<Color>(inColors, start, length).ToArray();
+        public void SetColors(List<Color32> inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = inColors.GetRange(start, length).ToArray();
+        public void SetColors(Color32[] inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = new ArraySegment<Color32>(inColors, start, length).ToArray();
 
         public void GetColors(List<Color> colors)
         {
@@ -466,12 +466,12 @@ namespace UnityEngine
         public void SetUVs(int channel, Vector2[] uvs) => SetUVsInternal(channel, Widen(uvs, 0, uvs.Length), 2);
         public void SetUVs(int channel, Vector3[] uvs) => SetUVsInternal(channel, Widen(uvs, 0, uvs.Length), 3);
         public void SetUVs(int channel, Vector4[] uvs) => SetUVsInternal(channel, Copy(uvs, 0, uvs.Length), 4);
-        public void SetUVs(int channel, List<Vector2> uvs, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => SetUVsInternal(channel, Widen(uvs, start, length), 2);
-        public void SetUVs(int channel, List<Vector3> uvs, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => SetUVsInternal(channel, Widen(uvs, start, length), 3);
-        public void SetUVs(int channel, List<Vector4> uvs, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => SetUVsInternal(channel, Copy(uvs, start, length), 4);
-        public void SetUVs(int channel, Vector2[] uvs, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => SetUVsInternal(channel, Widen(uvs, start, length), 2);
-        public void SetUVs(int channel, Vector3[] uvs, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => SetUVsInternal(channel, Widen(uvs, start, length), 3);
-        public void SetUVs(int channel, Vector4[] uvs, int start, int length, MeshUpdateFlags flags = MeshUpdateFlags.Default) => SetUVsInternal(channel, Copy(uvs, start, length), 4);
+        public void SetUVs(int channel, List<Vector2> uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Widen(uvs, start, length), 2);
+        public void SetUVs(int channel, List<Vector3> uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Widen(uvs, start, length), 3);
+        public void SetUVs(int channel, List<Vector4> uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Copy(uvs, start, length), 4);
+        public void SetUVs(int channel, Vector2[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Widen(uvs, start, length), 2);
+        public void SetUVs(int channel, Vector3[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Widen(uvs, start, length), 3);
+        public void SetUVs(int channel, Vector4[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Copy(uvs, start, length), 4);
 
         public void GetUVs(int channel, List<Vector2> uvs)
         {

@@ -209,10 +209,10 @@ namespace UnityEngine.Experimental.Rendering
             return w * h * (uint)Math.Max(1, depth) * info.BlockSize;
         }
 
-        public static uint ComputeMipChainSize(int width, int height, GraphicsFormat format, [Internal.DefaultValue("-1")] int mipCount) =>
+        public static uint ComputeMipChainSize(int width, int height, GraphicsFormat format, [Internal.DefaultValue("-1")] int mipCount = -1) =>
             ComputeMipChainSize(width, height, 1, format, mipCount);
 
-        public static uint ComputeMipChainSize(int width, int height, int depth, GraphicsFormat format, [Internal.DefaultValue("-1")] int mipCount)
+        public static uint ComputeMipChainSize(int width, int height, int depth, GraphicsFormat format, [Internal.DefaultValue("-1")] int mipCount = -1)
         {
             int levels = mipCount <= 0 ? 1 + (int)Math.Floor(Math.Log(Math.Max(width, Math.Max(height, depth)), 2)) : mipCount;
             uint total = 0;

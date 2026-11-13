@@ -31,7 +31,7 @@ namespace UnityEngine.Rendering
             m_DepthSlice = 0;
         }
 
-        public RenderTargetIdentifier(BuiltinRenderTextureType type, [Internal.DefaultValue("0")] int mipLevel, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace, [Internal.DefaultValue("0")] int depthSlice)
+        public RenderTargetIdentifier(BuiltinRenderTextureType type, [Internal.DefaultValue("0")] int mipLevel = 0, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace = (global::UnityEngine.CubemapFace)(-1), [Internal.DefaultValue("0")] int depthSlice = 0)
             : this(type)
         {
             m_MipLevel = mipLevel;
@@ -41,12 +41,12 @@ namespace UnityEngine.Rendering
 
         public RenderTargetIdentifier(string name) : this(Shader.PropertyToID(name)) { }
 
-        public RenderTargetIdentifier(string name, [Internal.DefaultValue("0")] int mipLevel, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace, [Internal.DefaultValue("0")] int depthSlice)
+        public RenderTargetIdentifier(string name, [Internal.DefaultValue("0")] int mipLevel = 0, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace = (global::UnityEngine.CubemapFace)(-1), [Internal.DefaultValue("0")] int depthSlice = 0)
             : this(Shader.PropertyToID(name), mipLevel, cubeFace, depthSlice) { }
 
         public RenderTargetIdentifier(int nameID) : this(BuiltinRenderTextureType.PropertyName) => m_NameID = nameID;
 
-        public RenderTargetIdentifier(int nameID, [Internal.DefaultValue("0")] int mipLevel, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace, [Internal.DefaultValue("0")] int depthSlice)
+        public RenderTargetIdentifier(int nameID, [Internal.DefaultValue("0")] int mipLevel = 0, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace = (global::UnityEngine.CubemapFace)(-1), [Internal.DefaultValue("0")] int depthSlice = 0)
             : this(nameID)
         {
             m_MipLevel = mipLevel;
@@ -54,7 +54,7 @@ namespace UnityEngine.Rendering
             m_DepthSlice = depthSlice;
         }
 
-        public RenderTargetIdentifier(RenderTargetIdentifier renderTargetIdentifier, int mipLevel, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace, [Internal.DefaultValue("0")] int depthSlice)
+        public RenderTargetIdentifier(RenderTargetIdentifier renderTargetIdentifier, int mipLevel, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace = (global::UnityEngine.CubemapFace)(-1), [Internal.DefaultValue("0")] int depthSlice = 0)
         {
             this = renderTargetIdentifier;
             m_MipLevel = mipLevel;
@@ -68,7 +68,7 @@ namespace UnityEngine.Rendering
             m_InstanceID = tex != null ? tex.GetInstanceID() : 0;
         }
 
-        public RenderTargetIdentifier(Texture tex, [Internal.DefaultValue("0")] int mipLevel, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace, [Internal.DefaultValue("0")] int depthSlice)
+        public RenderTargetIdentifier(Texture tex, [Internal.DefaultValue("0")] int mipLevel = 0, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace cubeFace = (global::UnityEngine.CubemapFace)(-1), [Internal.DefaultValue("0")] int depthSlice = 0)
             : this(tex)
         {
             m_MipLevel = mipLevel;
@@ -290,10 +290,10 @@ namespace UnityEngine.Rendering
         public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor) => ClearRenderTarget(clearDepth, clearColor, backgroundColor, 1f, 0);
         public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor, float depth) => ClearRenderTarget(clearDepth, clearColor, backgroundColor, depth, 0);
 
-        public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil) =>
+        public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth = 1f, [Internal.DefaultValue("0")] uint stencil = 0U) =>
             ClearRenderTarget((clearColor ? RTClearFlags.Color : 0) | (clearDepth ? RTClearFlags.DepthStencil : 0), backgroundColor, depth, stencil);
 
-        public void ClearRenderTarget(RTClearFlags clearFlags, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil)
+        public void ClearRenderTarget(RTClearFlags clearFlags, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth = 1f, [Internal.DefaultValue("0")] uint stencil = 0U)
         {
             if (clearFlags == RTClearFlags.Color) m_ColorClears++;
             else if (clearFlags != 0) m_OtherClears++;
@@ -306,7 +306,7 @@ namespace UnityEngine.Rendering
             });
         }
 
-        public void ClearRenderTarget(RTClearFlags clearFlags, Color[] backgroundColors, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil)
+        public void ClearRenderTarget(RTClearFlags clearFlags, Color[] backgroundColors, [Internal.DefaultValue("1.0f")] float depth = 1f, [Internal.DefaultValue("0")] uint stencil = 0U)
         {
             // The Editor dereferences null and accepts one through eight colors at record time.
             if (backgroundColors.Length < 1 || backgroundColors.Length > 8)

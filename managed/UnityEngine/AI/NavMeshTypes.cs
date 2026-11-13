@@ -385,7 +385,7 @@ namespace UnityEngine.AI
             m_Corners = Array.Empty<Vector3>();
         }
 
-        public int GetCornersNonAlloc(Vector3[] results)
+        public int GetCornersNonAlloc([global::System.Runtime.InteropServices.Out] Vector3[] results)
         {
             if (results == null) throw new ArgumentNullException(nameof(results));
             int n = Math.Min(results.Length, m_Corners.Length);

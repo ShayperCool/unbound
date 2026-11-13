@@ -864,7 +864,7 @@ namespace UnityEngine.Animations
 
         /// <summary>Every muscle, part by part; an array shorter than <see cref="muscleHandleCount"/>
         /// is left as it is.</summary>
-        public static void GetMuscleHandles(MuscleHandle[] muscleHandles)
+        public static void GetMuscleHandles([global::System.Runtime.InteropServices.Out] MuscleHandle[] muscleHandles)
         {
             if (muscleHandles == null) throw new ArgumentNullException(nameof(muscleHandles));
             if (muscleHandles.Length < Count) return;
