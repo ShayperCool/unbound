@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 74;
+        internal const uint CurrentVersion = 75;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -120,18 +120,17 @@ namespace Unbound.Runtime
         /// <summary>The application's end: the plugins' device Shutdown events.</summary>
         internal delegate* unmanaged<void> PluginShutdown;
         /// <summary>
-        /// (texture handle, depth buffer): the OpenGL texture name that native plugins see for the
-        /// texture (or its depth buffer), sharing its memory with the renderer; 0 when there is no
-        /// plugin OpenGL interop or the texture cannot be shared.
+        /// (texture handle, depth buffer): the device's native texture pointer, sharing renderer
+        /// storage. OpenGL uses the texture name; Vulkan uses the address of its image handle.
+        /// Zero when the texture cannot be shared.
         /// </summary>
         internal delegate* unmanaged<ulong, int, ulong> NativeTexture;
         /// <summary>
-        /// (texture handle, OpenGL texture name, mip levels, out error): makes the texture show the
-        /// named native texture through that many of its levels (`Texture2D.CreateExternalTexture`,
-        /// `UpdateExternalTexture`; version 55: the levels, where the declared size and color space
-        /// were, which the native texture decides); 0 on success, else the buffer holds the reason.
+        /// (texture handle, native texture pointer, image metadata, out error): borrows matching
+        /// 2D, cube or volume storage for CreateExternalTexture/UpdateExternalTexture. The owner
+        /// keeps its storage alive through the wrapper's last GPU use. 0 on success, else error.
         /// </summary>
-        internal delegate* unmanaged<ulong, ulong, int, NativeBuffer*, int> ExternalTexture;
+        internal delegate* unmanaged<ulong, ulong, ExternalTextureInfo*, NativeBuffer*, int> ExternalTexture;
         /// <summary>
         /// (scene, frame, lights, count, out error): one frame's update; `realtime_gi::UPDATE_*`
         /// bits, or -1 with the reason in the buffer.

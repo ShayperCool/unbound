@@ -272,18 +272,20 @@ namespace UnityEngine
             return m_Created;
         }
 
-        public void Release()
+        public void Release() => ReleaseWithWarning(true);
+
+        void ReleaseWithWarning(bool warn)
         {
-            if (s_Active == this && this != ScreenStandIn)
+            // Destruction already marks the wrapper as destroyed, so use object identity here.
+            if (warn && ReferenceEquals(s_Active, this) && !ReferenceEquals(this, s_ScreenStandIn))
                 Debug.LogWarning("Releasing render texture that is set to be RenderTexture.active!");
             ReleaseQuietly();
         }
 
-        /// <summary>Frees the GPU texture (destruction, internal buffers) without the warning about
-        /// the active target.</summary>
+        /// <summary>Frees the GPU texture for internal callers without an active-target warning.</summary>
         internal void ReleaseQuietly()
         {
-            if (s_Active == this) active = null;
+            if (ReferenceEquals(s_Active, this)) active = null;
             if (m_NativeHandle != 0) Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
             m_Created = false;
@@ -636,7 +638,7 @@ namespace UnityEngine
         internal static GraphicsFormat GetCompatibleFormat(RenderTextureFormat renderTextureFormat, RenderTextureReadWrite readWrite) =>
             GraphicsFormatUtility.GetGraphicsFormat(renderTextureFormat, readWrite);
 
-        internal override void OnEngineDestroy() => ReleaseQuietly();
+        internal override void OnEngineDestroy() => ReleaseWithWarning(Compat.RenderingMeasured);
     }
 
     public partial struct RenderTextureDescriptor

@@ -98,6 +98,8 @@ pub(super) struct PluginState {
     refused: HashMap<u64, (wgpu::Texture, String)>,
     /// Textures showing another texture's storage (`CreateExternalTexture` of its pointer).
     pub aliases: HashSet<u64>,
+    /// External OpenGL 2D and cube wrappers use a unit extent for whole-image copies.
+    pub external_copy_layouts: HashSet<u64>,
     /// The current target's mip and slice (`SetTarget`).
     pub target: (i32, i32),
     /// The callback running found a multisampled target's samples bound: they are resolved
@@ -462,115 +464,116 @@ impl UnityRenderer {
     /// own).
     pub(super) fn release_plugin_texture(&mut self, handle: u64) {
         #[cfg(target_os = "linux")]
+        self.restore_external_vulkan(handle);
+        #[cfg(target_os = "linux")]
         if let Some(plugins) = self.vulkan_plugins.as_mut() {
             plugins.release(handle);
         }
         self.plugins.refused.remove(&handle);
         self.plugins.aliases.remove(&handle);
+        self.plugins.external_copy_layouts.remove(&handle);
         if let Some(native) = self.plugins.natives.remove(&handle) {
             forget(native);
         }
     }
 
-    /// Makes `texture` show `native`: another texture's OpenGL name (the same storage), or a
-    /// plugin's own 2D texture, sampled as OpenGL samples it: in its own format whatever the
-    /// external texture declares (sRGB texels are decoded, 8-bit ones declared sRGB are not),
-    /// and through `mips` of its levels (a texture declared without a mip chain shows its first
-    /// level only). Matches tests/projects/nativegfx `external.*`, `ext.*`.
-    pub fn external_texture(&mut self, handle: u64, native: u64, mips: u32) -> Result<(), String> {
+    /// Shows borrowed native storage. Its owner retains responsibility for its lifetime.
+    pub fn external_texture(
+        &mut self,
+        handle: u64,
+        native: u64,
+        info: &unbound_runtime::render_protocol::ExternalTextureInfo,
+    ) -> Result<(), String> {
+        info.validate()?;
         #[cfg(target_os = "linux")]
         if self.vulkan_plugins.is_some() {
-            return Err(
-                "external textures are not supported on the Vulkan device (unmeasured)".into(),
-            );
+            return self.external_texture_vulkan(handle, native, info);
         }
-        let name =
-            u32::try_from(native).map_err(|_| format!("{native} is not an OpenGL texture name"))?;
-        // What plugins saw of the texture goes; while it showed another's storage it stays an
-        // alias until that storage is replaced below.
-        let was_alias = self.plugins.aliases.contains(&handle);
-        self.release_plugin_texture(handle);
-        if was_alias {
-            self.plugins.aliases.insert(handle);
-        }
+        let basic_copy_layout = info.flags
+            & unbound_runtime::render_protocol::ExternalTextureInfo::MEASURED_LAYOUT
+            != 0
+            && info.dimension != 3;
+        let name = u32::try_from(native)
+            .ok()
+            .filter(|n| *n != 0)
+            .ok_or_else(|| format!("{native} is not an OpenGL texture name"))?;
         let device = self.device.clone();
-        // Another texture's name: the same storage.
         let source = self
             .plugins
             .natives
             .iter()
-            .find(|(_, native)| native.names.color == name)
-            .map(|(&source, native)| (source, native.named.clone()));
-        if let Some((source, texture)) = source {
+            .find(|(_, resource)| resource.names.color == name)
+            .map(|(&source, resource)| (source, resource.named.clone()));
+        if let Some((source, named)) = source {
             let shown = &self.textures[&source];
-            if Shape::of(shown).layered() {
-                return Err(format!(
-                    "texture {name} is not shown: a 2D texture cannot show a cube, array or 3D texture"
-                ));
+            let mut packet = descriptor(shown);
+            if packet.dimension != info.dimension {
+                return Err(
+                    "the external texture dimension does not match its native storage".into(),
+                );
             }
-            // A sampled texture over the source's storage: none of its target state (depth,
-            // multisampling, automatic mips), which stays the source's.
-            let packet = owned::Texture {
-                render_target: false,
-                random_write: false,
-                auto_generate_mips: false,
-                defer_mips: false,
-                depth_bits: 0,
-                samples: 1,
-                ..descriptor(shown)
+            // A cube's public OpenGL name can be a view over its array storage.
+            let storage = if Shape::of(shown).layered() {
+                shown.texture.clone()
+            } else {
+                named
             };
-            self.generation += 1;
-            let gpu = resources::upload_texture_with(
-                &device,
-                &self.queue,
-                None,
-                &packet,
-                self.generation,
-                &mut |_| texture.clone(),
-            );
-            let previous = self
-                .textures
-                .remove(&handle)
-                .map(|old| (old.texture.clone(), old.sampler_key));
-            self.plugins.aliases.insert(handle);
-            self.install_texture(handle, gpu, previous, &packet);
+            packet.render_target = false;
+            packet.random_write = false;
+            packet.auto_generate_mips = false;
+            packet.defer_mips = false;
+            packet.depth_bits = 0;
+            packet.samples = 1;
+            self.install_external_texture(handle, &packet, storage, true, basic_copy_layout);
             return Ok(());
         }
-        // A plugin's texture: the renderer samples the texture itself.
-        let info = gl_interop::with(|interop| interop.texture_info(name))?
+        let actual = gl_interop::with(|interop| interop.texture_info(name))?
             .ok_or_else(|| format!("{name} is not an OpenGL texture of the plugins' context"))?;
-        if info.target != gl_interop::TEXTURE_2D {
-            return Err(format!("texture {name} is not shown: only 2D textures are"));
+        let expected = match info.dimension {
+            2 => gl_interop::TEXTURE_2D,
+            3 => gl_interop::TEXTURE_3D,
+            4 => gl_interop::TEXTURE_CUBE_MAP,
+            _ => unreachable!("validated"),
+        };
+        if actual.target != expected {
+            return Err("the external texture dimension does not match its OpenGL target".into());
         }
-        let format = external_format(info.format).ok_or_else(|| {
+        let format = external_format(actual.format).ok_or_else(|| {
             format!(
-                "texture {name} is not shown: its format (OpenGL internal format {:#x}) is an integer or depth format, or one the renderer has no description for",
-                info.format
+                "texture {name} is not shown: its OpenGL internal format {:#x} is not supported",
+                actual.format
             )
         })?;
         if texture_format::block_compressed(format)
-            && (info.width % 4 != 0
-                || info.height % 4 != 0
+            && (actual.width % 4 != 0
+                || actual.height % 4 != 0
                 || !device
                     .features()
                     .contains(wgpu::Features::TEXTURE_COMPRESSION_BC))
         {
-            return Err(format!(
-                "texture {name} is not shown: a block-compressed texture needs a size in whole blocks and a device with these formats"
-            ));
+            return Err(
+                "a borrowed block-compressed texture needs whole blocks and device format support"
+                    .into(),
+            );
         }
         let packet = owned::Texture {
-            width: info.width.max(1) as i32,
-            height: info.height.max(1) as i32,
+            width: actual.width.max(1) as i32,
+            height: actual.height.max(1) as i32,
+            layers: if info.dimension == 4 {
+                6
+            } else if info.dimension == 3 {
+                actual.depth.max(1) as i32
+            } else {
+                1
+            },
+            dimension: info.dimension,
             format,
-            mip_count: mips.clamp(1, info.levels) as i32,
+            mip_count: info.mip_count.clamp(1, actual.levels as i32),
             filter_mode: 1,
             wrap_u: 1,
             wrap_v: 1,
             wrap_w: 1,
             samples: 1,
-            layers: 1,
-            dimension: 2,
             ..Default::default()
         };
         self.generation += 1;
@@ -580,15 +583,53 @@ impl UnityRenderer {
             None,
             &packet,
             self.generation,
-            &mut |desc| plugin_texture(&device, name, desc),
+            &mut |desc| plugin_texture(&device, name, actual.target, desc),
         );
+        self.install_external_gpu(handle, &packet, gpu, false, basic_copy_layout);
+        Ok(())
+    }
+
+    pub(super) fn install_external_texture(
+        &mut self,
+        handle: u64,
+        packet: &owned::Texture,
+        storage: wgpu::Texture,
+        alias: bool,
+        basic_copy_layout: bool,
+    ) {
+        self.generation += 1;
+        let gpu = resources::upload_texture_with(
+            &self.device,
+            &self.queue,
+            None,
+            packet,
+            self.generation,
+            &mut |_| storage.clone(),
+        );
+        self.install_external_gpu(handle, packet, gpu, alias, basic_copy_layout);
+    }
+
+    pub(super) fn install_external_gpu(
+        &mut self,
+        handle: u64,
+        packet: &owned::Texture,
+        mut gpu: GpuTexture,
+        alias: bool,
+        basic_copy_layout: bool,
+    ) {
+        self.release_plugin_texture(handle);
+        gpu.sampler_key.base_level_only = basic_copy_layout && gpu.cube;
         let previous = self
             .textures
             .remove(&handle)
             .map(|old| (old.texture.clone(), old.sampler_key));
-        self.install_texture(handle, gpu, previous, &packet);
-        self.plugins.aliases.remove(&handle);
-        Ok(())
+        if alias {
+            self.plugins.aliases.insert(handle);
+        }
+        self.install_texture(handle, gpu, previous, packet);
+        if basic_copy_layout {
+            self.plugins.external_copy_layouts.insert(handle);
+        }
     }
 
     /// Runs a plugin's callback (`Command::Plugin`): the work before it has been submitted.
@@ -944,6 +985,7 @@ fn gl_name(_: &wgpu::Texture) -> Result<u32, String> {
 fn plugin_texture(
     device: &wgpu::Device,
     name: u32,
+    target: u32,
     desc: &wgpu::TextureDescriptor,
 ) -> wgpu::Texture {
     use wgpu::hal::api::Gles;
@@ -959,10 +1001,12 @@ fn plugin_texture(
         view_formats: desc.view_formats.to_vec(),
     };
     let wrapped = std::num::NonZeroU32::new(name).and_then(|name| {
-        // SAFETY: `name` is a 2D texture of the share group (checked by the caller) of `desc`'s
+        // SAFETY: `name` has the checked target in the share group and matches `desc`'s
         // shape; the plugin owns it (the drop callback leaves it to the plugin).
         let hal = unsafe { device.as_hal::<Gles>() }?;
-        Some(unsafe { hal.texture_from_raw(name, &hal_desc, Some(Box::new(|| {}))) })
+        Some(unsafe {
+            hal.texture_from_raw_with_target(name, target, &hal_desc, Some(Box::new(|| {})))
+        })
     });
     match wrapped {
         Some(hal_texture) => unsafe {
@@ -977,12 +1021,17 @@ fn plugin_texture(
 }
 
 #[cfg(not(target_os = "linux"))]
-fn plugin_texture(device: &wgpu::Device, _: u32, desc: &wgpu::TextureDescriptor) -> wgpu::Texture {
+fn plugin_texture(
+    device: &wgpu::Device,
+    _: u32,
+    _: u32,
+    desc: &wgpu::TextureDescriptor,
+) -> wgpu::Texture {
     device.create_texture(desc)
 }
 
 /// The packet that makes a texture of the same shape again (without texels).
-fn descriptor(gpu: &GpuTexture) -> owned::Texture {
+pub(super) fn descriptor(gpu: &GpuTexture) -> owned::Texture {
     owned::Texture {
         width: gpu.width as i32,
         height: gpu.height as i32,
@@ -1007,8 +1056,18 @@ fn descriptor(gpu: &GpuTexture) -> owned::Texture {
             Some(_) => 24,
             None => 0,
         },
-        layers: 1,
-        dimension: 2,
+        layers: gpu.layers as i32,
+        dimension: if gpu.volume {
+            3
+        } else if gpu.cube {
+            4
+        } else if gpu.cube_array {
+            6
+        } else if gpu.array {
+            5
+        } else {
+            2
+        },
         ..Default::default()
     }
 }

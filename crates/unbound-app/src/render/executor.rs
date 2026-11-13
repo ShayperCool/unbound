@@ -930,6 +930,8 @@ impl UnityRenderer {
                 self.install_texture(handle, gpu, previous, &texture);
             }
             Upload::ReleaseTexture(handle) => {
+                #[cfg(target_os = "linux")]
+                self.restore_external_vulkan(handle);
                 self.generation += 1;
                 // Before the plugins forget it: an external texture's storage stays its source's.
                 if let Some(texture) = self.textures.remove(&handle)
@@ -1715,6 +1717,7 @@ impl UnityRenderer {
                     aniso: 1,
                     compare: 0,
                     lod_bias_bits: 0,
+                    base_level_only: false,
                 }));
                 let view = match integer_views[k].take() {
                     Some(view) => view,
@@ -4336,7 +4339,12 @@ impl UnityRenderer {
         let [mut x, mut y, mut w, mut h] = rect;
         let whole_mip = w < 0;
         if whole_mip {
-            [x, y, w, h] = [0, 0, sw, sh];
+            let extent = if self.plugins.external_copy_layouts.contains(&source) {
+                [1, 1]
+            } else {
+                [sw, sh]
+            };
+            [x, y, w, h] = [0, 0, extent[0], extent[1]];
         }
         let w = w.min(sw - x).min(dw - dx);
         let h = h.min(sh - y).min(dh - dy);

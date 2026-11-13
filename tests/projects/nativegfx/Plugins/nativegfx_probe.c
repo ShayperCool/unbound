@@ -1399,3 +1399,39 @@ EXPORT int NativeGfx_Record(char* buffer, int capacity)
     pthread_mutex_unlock(&s_lock);
     return length;
 }
+
+
+#ifndef NATIVEGFX_PRELOAD
+// Plugin-owned immutable cube and volume textures, initialized without changing bindings.
+static GLuint external_owned_gl[2];
+static void external_owned_gl_event(int id)
+{
+    void* lib = dlopen("libGL.so.1", RTLD_LAZY | RTLD_LOCAL);
+    if (!lib) return;
+    void (*create)(GLenum, GLsizei, GLuint*) = dlsym(lib, "glCreateTextures");
+    void (*storage2)(GLuint, GLsizei, GLenum, GLsizei, GLsizei) = dlsym(lib, "glTextureStorage2D");
+    void (*storage3)(GLuint, GLsizei, GLenum, GLsizei, GLsizei, GLsizei) = dlsym(lib, "glTextureStorage3D");
+    void (*clear)(GLuint, GLint, GLenum, GLenum, const void*) = dlsym(lib, "glClearTexImage");
+    void (*remove)(GLsizei, const GLuint*) = dlsym(lib, "glDeleteTextures");
+    void (*finish)(void) = dlsym(lib, "glFinish");
+    if (create && storage2 && storage3 && clear && remove && finish) {
+        if (id == 1) {
+            const float color[4] = {.25f, .5f, .75f, 1.f};
+            create(0x8513, 1, &external_owned_gl[0]);
+            storage2(external_owned_gl[0], 1, GL_RGBA8, 4, 4);
+            clear(external_owned_gl[0], 0, GL_RGBA, GL_FLOAT, color);
+            create(0x806F, 1, &external_owned_gl[1]);
+            storage3(external_owned_gl[1], 1, GL_RGBA8, 4, 2, 2);
+            clear(external_owned_gl[1], 0, GL_RGBA, GL_FLOAT, color);
+        } else {
+            remove(2, external_owned_gl);
+            memset(external_owned_gl, 0, sizeof(external_owned_gl));
+        }
+        finish();
+    }
+    dlclose(lib);
+}
+EXPORT void* NativeGfx_ExternalOwnedEvent(void) { return (void*)external_owned_gl_event; }
+EXPORT void* NativeGfx_ExternalOwnedPtr(int kind) { return (void*)(uintptr_t)external_owned_gl[kind]; }
+
+#endif

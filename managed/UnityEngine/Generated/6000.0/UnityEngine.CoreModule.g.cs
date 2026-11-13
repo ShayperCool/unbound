@@ -947,11 +947,9 @@ namespace UnityEngine
     }
     unsafe partial class Cubemap
     {
-        [global::Unbound.Stub] public void UpdateExternalTexture(global::System.IntPtr nativeTexture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Cubemap.UpdateExternalTexture"); }
         [global::Unbound.Stub] internal bool ValidateFormat(global::UnityEngine.TextureFormat format, int width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Cubemap.ValidateFormat"); return default; }
         [global::Unbound.Stub] internal bool ValidateFormat(global::UnityEngine.Experimental.Rendering.GraphicsFormat format, int width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Cubemap.ValidateFormat"); return default; }
         [global::Unbound.Stub] internal Cubemap(int width, global::UnityEngine.TextureFormat textureFormat, int mipCount, global::System.IntPtr nativeTex, bool createUninitialized) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Cubemap.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Cubemap CreateExternalTexture(int width, global::UnityEngine.TextureFormat format, bool mipmap, global::System.IntPtr nativeTex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Cubemap.CreateExternalTexture"); return default; }
         [global::Unbound.Stub] public void SetPixelData<T>(T[] data, int mipLevel, global::UnityEngine.CubemapFace face, int sourceDataStartIndex = 0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Cubemap.SetPixelData"); }
         [global::Unbound.Stub] public void SetPixelData<T>(global::Unity.Collections.NativeArray<T> data, int mipLevel, global::UnityEngine.CubemapFace face, int sourceDataStartIndex = 0) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Cubemap.SetPixelData"); }
         [global::Unbound.Stub] public void CopyPixels(global::UnityEngine.Texture src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Cubemap.CopyPixels"); }
@@ -2486,11 +2484,9 @@ namespace UnityEngine
     }
     unsafe partial class Texture3D
     {
-        [global::Unbound.Stub] public void UpdateExternalTexture(global::System.IntPtr nativeTex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture3D.UpdateExternalTexture"); }
         [global::Unbound.Stub] public Texture3D(int width, int height, int depth, global::UnityEngine.TextureFormat textureFormat, int mipCount, global::System.IntPtr nativeTex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture3D.ctor"); }
         [global::Unbound.Stub] public Texture3D(int width, int height, int depth, global::UnityEngine.TextureFormat textureFormat, int mipCount, global::System.IntPtr nativeTex, bool createUninitialized) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture3D.ctor"); }
         [global::Unbound.Stub] public Texture3D(int width, int height, int depth, global::UnityEngine.TextureFormat textureFormat, bool mipChain, global::System.IntPtr nativeTex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture3D.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Texture3D CreateExternalTexture(int width, int height, int depth, global::UnityEngine.TextureFormat format, bool mipChain, global::System.IntPtr nativeTex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture3D.CreateExternalTexture"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Color GetPixelBilinear(float u, float v, float w) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture3D.GetPixelBilinear"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Color GetPixelBilinear(float u, float v, float w, int mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture3D.GetPixelBilinear"); return default; }
         [global::Unbound.Stub] public void CopyPixels(global::UnityEngine.Texture src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture3D.CopyPixels"); }

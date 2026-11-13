@@ -11,7 +11,8 @@ use crate::{
     plugin_api,
     realtime_gi::{GiFrame, GiLight},
     render_protocol::{
-        ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, commands, handle, owned,
+        ExternalTextureInfo, ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket,
+        commands, handle, owned,
     },
     state,
 };
@@ -82,7 +83,8 @@ use std::ffi::c_void;
 /// 72: source updates and playback commands report unsupported input contexts.
 /// 73: DOTS draw commands carry their indirect visible-instance offset.
 /// 74: texture packet bits 64/128 carry the texture-owned depth comparison state.
-pub const NATIVE_API_VERSION: u32 = 74;
+/// 75: external texture binding carries the native image metadata.
+pub const NATIVE_API_VERSION: u32 = 75;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -237,15 +239,15 @@ pub struct NativeApi {
     pub plugin_set_log: extern "C" fn(Option<extern "C" fn(i32, *const u8, i32)>),
     /// The application's end: the plugins' device Shutdown events.
     pub plugin_shutdown: extern "C" fn(),
-    /// (texture handle, depth buffer): the OpenGL texture name that native plugins see for the
-    /// texture (or its depth buffer), sharing its memory with the renderer; 0 when there is no
-    /// plugin OpenGL interop or the texture cannot be shared.
+    /// (texture handle, depth buffer): the device's native texture pointer, sharing renderer
+    /// storage. OpenGL uses the texture name; Vulkan uses the address of its image handle.
+    /// Zero when the texture cannot be shared.
     pub native_texture: extern "C" fn(u64, i32) -> u64,
-    /// (texture handle, OpenGL texture name, mip levels, out error): makes the texture show the
-    /// named native texture through that many of its levels (`Texture2D.CreateExternalTexture`,
-    /// `UpdateExternalTexture`; version 55: the levels, where the declared size and color space
-    /// were, which the native texture decides); 0 on success, else the buffer holds the reason.
-    pub external_texture: extern "C" fn(u64, u64, i32, *mut NativeBuffer) -> i32,
+    /// (texture handle, native texture pointer, image metadata, out error): borrows matching
+    /// 2D, cube or volume storage for CreateExternalTexture/UpdateExternalTexture. The owner
+    /// keeps its storage alive through the wrapper's last GPU use. 0 on success, else error.
+    pub external_texture:
+        extern "C" fn(u64, u64, *const ExternalTextureInfo, *mut NativeBuffer) -> i32,
     // Version 43: precomputed realtime GI (`realtime_gi`; loaded with the `realtime-gi-load`
     // control call).
     /// (scene, frame, lights, count, out error): one frame's update; `realtime_gi::UPDATE_*`
@@ -1340,11 +1342,15 @@ extern "C" fn native_texture(texture: u64, depth: i32) -> u64 {
 extern "C" fn external_texture(
     texture: u64,
     native: u64,
-    mips: i32,
+    info: *const ExternalTextureInfo,
     out: *mut NativeBuffer,
 ) -> i32 {
-    let result = handle::plain(texture, "external_texture")
-        .and_then(|texture| state::backend().external_texture(texture, native, mips.max(1) as u32));
+    let result = handle::plain(texture, "external_texture").and_then(|texture| {
+        // SAFETY: managed passes one initialized packet for the duration of this call.
+        let info = unsafe { info.as_ref() }.ok_or("external texture metadata is null")?;
+        info.validate()?;
+        state::backend().external_texture(texture, native, info)
+    });
     match result {
         Ok(()) => 0,
         Err(error) => {

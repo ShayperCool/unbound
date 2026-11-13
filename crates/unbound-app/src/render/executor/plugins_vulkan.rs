@@ -28,7 +28,7 @@ use super::UnityRenderer;
 use ash::vk;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use unbound_runtime::plugin_api;
 use unbound_runtime::render_commands::PluginCall;
 use wgpu::hal::api::Vulkan;
@@ -1083,7 +1083,8 @@ pub(super) struct VulkanPlugins {
     pool: vk::CommandPool,
     pipeline_cache: vk::PipelineCache,
     /// Native texture pointers: the image of each (handle, depth buffer) lives here.
-    slots: HashMap<(u64, bool), Box<vk::Image>>,
+    slots: HashMap<(u64, bool), Arc<vk::Image>>,
+    external: std::collections::HashSet<u64>,
     /// Plugin render passes, kept for the renderer's lifetime: a plugin may keep pipelines made
     /// for one, as Unity's own render passes stay.
     passes: HashMap<PassKey, vk::RenderPass>,
@@ -1160,6 +1161,7 @@ impl VulkanPlugins {
             pool,
             pipeline_cache,
             slots: HashMap::new(),
+            external: std::collections::HashSet::new(),
             passes: HashMap::new(),
             framebuffers: HashMap::new(),
             retired: Vec::new(),
@@ -1169,6 +1171,7 @@ impl VulkanPlugins {
     /// A released texture's native pointers stop naming an image, and framebuffers over it go
     /// once the GPU is done with them.
     pub fn release(&mut self, handle: u64) {
+        self.external.remove(&handle);
         self.slots.remove(&(handle, false));
         self.slots.remove(&(handle, true));
         let released: Vec<(u64, u64)> = self
@@ -1451,9 +1454,170 @@ impl UnityRenderer {
         let slot = plugins
             .slots
             .entry((handle, depth))
-            .or_insert_with(|| Box::new(image));
-        **slot = image;
-        &**slot as *const vk::Image as u64
+            .or_insert_with(|| Arc::new(image));
+        if **slot != image {
+            *slot = Arc::new(image);
+        }
+        Arc::as_ptr(slot) as u64
+    }
+
+    /// Imports an initialized GENERAL-layout image, or reuses renderer-owned storage.
+    pub(super) fn external_texture_vulkan(
+        &mut self,
+        handle: u64,
+        native: u64,
+        info: &unbound_runtime::render_protocol::ExternalTextureInfo,
+    ) -> Result<(), String> {
+        use super::plugins::descriptor;
+        use unbound_runtime::render_protocol::{owned, texture_format};
+        if native == 0 {
+            return Err("the external Vulkan image pointer is null".into());
+        }
+        let plugins = self
+            .vulkan_plugins
+            .as_ref()
+            .ok_or("the renderer does not use Vulkan")?;
+        // SAFETY: the caller supplies a valid address of its VkImage for this native API.
+        let image = unsafe { *(native as *const vk::Image) };
+        if image == vk::Image::null() {
+            return Err("the external Vulkan image is null".into());
+        }
+        let source = plugins
+            .slots
+            .iter()
+            .find(|(_, known)| ***known == image)
+            .map(|(&(source, depth), slot)| {
+                (
+                    source,
+                    depth,
+                    slot.clone(),
+                    plugins.external.contains(&source),
+                )
+            });
+        if let Some((source, depth, slot, external)) = source {
+            if depth {
+                return Err("external depth images are not supported".into());
+            }
+            let shown = self
+                .textures
+                .get(&source)
+                .ok_or("the external image owner has been released")?;
+            let mut packet = descriptor(shown);
+            if packet.dimension != info.dimension || shown.bind_ms {
+                return Err(
+                    "the external image must have the matching dimension and a single sample"
+                        .into(),
+                );
+            }
+            let storage = shown.texture.clone();
+            packet.render_target = false;
+            packet.random_write = false;
+            packet.auto_generate_mips = false;
+            packet.defer_mips = false;
+            packet.depth_bits = 0;
+            packet.samples = 1;
+            self.install_external_texture(handle, &packet, storage, true, false);
+            let plugins = self.vulkan_plugins.as_mut().unwrap();
+            plugins.slots.insert((handle, false), slot);
+            if external {
+                plugins.external.insert(handle);
+            }
+            return Ok(());
+        }
+        // The API supplies the image address, not a queryable image descriptor. The measured
+        // foreign-image contract is RGBA32 linear, initialized in GENERAL by its owner.
+        const RGBA32: i32 = 4; // UnityEngine.TextureFormat.RGBA32.
+        if info.format != RGBA32 || info.linear == 0 {
+            return Err("plugin-owned Vulkan external images currently require linear RGBA32 storage in GENERAL layout".into());
+        }
+        let packet = owned::Texture {
+            width: info.width,
+            height: info.height,
+            layers: if info.dimension == 4 { 6 } else { info.depth },
+            dimension: info.dimension,
+            format: texture_format::LINEAR_RGBA8,
+            mip_count: info.mip_count,
+            filter_mode: 1,
+            wrap_u: 1,
+            wrap_v: 1,
+            wrap_w: 1,
+            samples: 1,
+            ..Default::default()
+        };
+        let device = self.device.clone();
+        self.generation += 1;
+        let gpu = crate::render::resources::upload_texture_with(
+            &device,
+            &self.queue,
+            None,
+            &packet,
+            self.generation,
+            &mut |desc| {
+                let hal_desc = wgpu::hal::TextureDescriptor {
+                    label: None,
+                    size: desc.size,
+                    mip_level_count: desc.mip_level_count,
+                    sample_count: 1,
+                    dimension: desc.dimension,
+                    format: desc.format,
+                    usage: wgpu::TextureUses::RESOURCE | wgpu::TextureUses::COPY_SRC,
+                    memory_flags: wgpu::hal::MemoryFlags::empty(),
+                    view_formats: Vec::new(),
+                };
+                // SAFETY: the plugin owns matching storage and keeps it alive through the
+                // wrapper's last GPU use. The callback and External memory never free it.
+                unsafe {
+                    let hal = device.as_hal::<Vulkan>().expect("Vulkan device checked");
+                    let raw = hal.texture_from_raw(
+                        image,
+                        &hal_desc,
+                        Some(Box::new(|| {})),
+                        wgpu::hal::vulkan::TextureMemory::External,
+                    );
+                    device.create_texture_from_hal::<Vulkan>(
+                        raw,
+                        desc,
+                        wgpu::TextureUses::RESOURCE | wgpu::TextureUses::COPY_SRC,
+                    )
+                }
+            },
+        );
+        self.install_external_gpu(handle, &packet, gpu, false, false);
+        let plugins = self.vulkan_plugins.as_mut().unwrap();
+        plugins.slots.insert((handle, false), Arc::new(image));
+        plugins.external.insert(handle);
+        Ok(())
+    }
+
+    /// Returns borrowed storage to its import layout before the wrapper stops using it.
+    pub(super) fn restore_external_vulkan(&mut self, handle: u64) {
+        if !self
+            .vulkan_plugins
+            .as_ref()
+            .is_some_and(|p| p.external.contains(&handle))
+        {
+            return;
+        }
+        let Some(texture) = self.textures.get(&handle).map(|gpu| &gpu.texture) else {
+            return;
+        };
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("unbound external image release"),
+            });
+        encoder.transition_resources(
+            std::iter::empty(),
+            std::iter::once(wgpu::TextureTransition {
+                texture,
+                selector: None,
+                state: wgpu::TextureUses::RESOURCE | wgpu::TextureUses::COPY_SRC,
+            }),
+        );
+        self.queue.submit(std::iter::once(encoder.finish()));
+        if let Err(error) = self.device.poll(wgpu::PollType::wait_indefinitely()) {
+            tracing::error!("waiting for an external image release failed: {error}");
+        }
     }
 
     /// Runs a plugin callback on the Vulkan device (see the module's documentation).
@@ -1547,8 +1711,10 @@ impl UnityRenderer {
                 if let (Some(entry), Some(slot)) =
                     (entry, plugins.slots.get_mut(&(handle, is_depth)))
                 {
-                    **slot = entry.image;
-                    by_pointer.insert(&**slot as *const vk::Image as usize, entry);
+                    if **slot != entry.image {
+                        *slot = Arc::new(entry.image);
+                    }
+                    by_pointer.insert(Arc::as_ptr(slot) as usize, entry);
                 }
             }
             by_handle.insert(

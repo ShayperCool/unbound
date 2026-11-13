@@ -133,3 +133,16 @@ and carries render-texture state through the release compatibility profile.
 References: tests/projects/samplerstates `DepthState.*` and existing `Cmp*`/`Compute.*`
 controls, captured twice on each device, NVIDIA only. OpenGL compute histories remain
 unresolved and do not use this opt-in.
+
+## Native external texture targets
+
+`native-external-texture.patch` adds `wgpu-hal` GLES
+`Device::texture_from_raw_with_target`, which accepts a checked native OpenGL target
+separately from the texture shape. A plugin cube texture has target CUBE_MAP, while an
+ordinary six-layer allocation can use ARRAY. The existing raw import delegates with its
+usual inferred target. Both paths retain the same optional drop callback and ownership
+rules. Unbound uses a callback that leaves plugin-owned storage alive.
+
+References: tests/projects/nativegfx `externalOwnedGL.*`, recorded twice with the Unity
+6000.0.71f1 GPU Editor on NVIDIA. Cube and volume sampling, copies and wrapper destruction
+are covered alongside renderer-owned aliases and existing 2D imports.

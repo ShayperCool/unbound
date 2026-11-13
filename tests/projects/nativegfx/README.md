@@ -170,3 +170,46 @@ throws `ArgumentException`, so the scripts stop in their second frame (`complete
 records after it are missing). `IUnityGraphicsVulkan`/`V2` are null on macOS (Linux answers them
 on OpenGL Core). Nothing re-checks this run: the count is a measurement, not a gate. Open: the Metal device and `IUnityGraphicsMetal` (device, command buffer and
 encoder, textures as Metal textures), and the macOS Editor's answers to the other interfaces.
+
+### External cube, volume and Vulkan storage
+
+`externalShapes.*`, `externalOwned.*` and `externalOwnedGL.*` extend the earlier controls
+without changing their reference rows. Both captures for each device use the Unity
+6000.0.71f1 GPU Editor on NVIDIA. They cover cube faces and mip levels, non-square volume
+slices, metadata passed to shaders, pointer identity, rebinding to different texels, CPU
+access, and destroying a wrapper while its storage owner remains alive. The plugin also
+creates independent cube and volume storage on OpenGL and 2D, cube and volume images on
+Vulkan. Sampling them again through a newly created wrapper checks that destroying the
+first wrapper leaves the plugin's image alive.
+
+The documented factories require metadata matching the native object's shape, format and
+mip chain. The pointer is a GLuint on OpenGL and an address of VkImage on Vulkan. See the
+Unity 6000.0 contracts for [Cubemap.CreateExternalTexture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Cubemap.CreateExternalTexture.html)
+and [Texture3D.CreateExternalTexture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture3D.CreateExternalTexture.html).
+The update controls rebind each wrapper after its image has diverged from the first one.
+The owner remains responsible for storage lifetime through the wrapper's last GPU use.
+
+The measured wrappers report isReadable as true while GetPixels throws ArgumentException
+because native textures have no CPU pixel storage. Renderer-owned Vulkan aliases retain
+the source's stable image address. A wrapper around a plugin's VkImage has its own stable
+address containing the same image handle. Plugin-owned Vulkan imports currently require
+linear RGBA32 storage initialized in GENERAL layout with sampled and transfer usage.
+Other foreign formats, layouts and drivers remain unmeasured.
+
+OpenGL's whole-image copies from external 2D and cube wrappers write one texel; untouched
+pixels in these controls retain a defined sentinel color. Volume copies cover the slices.
+External OpenGL cube samplers stay on level zero while their mip levels remain visible
+to dimension queries and explicit copies. Compat.RenderingMeasured selects these copy and
+sampling rules. `externalBounds.*` repeats them at 7x3 and 8x8, checks explicit regions, and
+copies normal textures into external destinations. `externalMips.*` initializes distinct
+colors in each mip and checks sampling, copies and dimension queries. Logical dimensions
+and full mip visibility are preserved.
+
+`activeRelease.*` distinguishes uncreated and inactive targets from a target still bound as
+RenderTexture.active. Both explicit Release and DestroyImmediate emit the measured warning
+and clear the active target. These are diagnostic observations, recorded on both devices,
+rather than a documented warning guarantee. The [Release contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.Release.html)
+releases hardware resources without destroying the object; [DestroyImmediate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Object.DestroyImmediate.html)
+destroys the object immediately. Each control records the created state and the active
+state before and after the call, and all log messages in its own row. Other profiles retain
+the previous unmeasured destruction diagnostic.

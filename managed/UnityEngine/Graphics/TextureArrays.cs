@@ -750,6 +750,19 @@ namespace UnityEngine
         /// <summary>An imported texture whose CPU copy the importer gives on first access.</summary>
         string m_AssetGuid;
 
+        public static Texture3D CreateExternalTexture(int width, int height, int depth, TextureFormat format, bool mipChain, IntPtr nativeTex)
+        {
+            if (nativeTex == IntPtr.Zero) throw new ArgumentException("nativeTex may not be zero");
+            if (width <= 0 || height <= 0 || depth <= 0)
+                throw new UnityException($"Failed to create 3D texture because of invalid parameters. Width {width}, height {height}, depth {depth}.");
+            var texture = new Texture3D { m_Width = width, m_Height = height, m_Depth = depth, m_Format = format,
+                m_MipCount = mipChain ? LayeredPixels.FullMipCount(width, height, depth) : 1 };
+            texture.UpdateExternalTexture(nativeTex);
+            return texture;
+        }
+
+        public void UpdateExternalTexture(IntPtr nativeTex) => BindExternalTexture(nativeTex, m_Format, m_Linear, m_Depth);
+
         Texture3D() { }
 
         public Texture3D(int width, int height, int depth, TextureFormat textureFormat, bool mipChain) : this(width, height, depth, textureFormat, mipChain ? -1 : 1) { }
@@ -785,6 +798,7 @@ namespace UnityEngine
 
         LayeredPixels Level(string api, int mip)
         {
+            CheckExternalCpu(api ?? "Texture3D pixel data");
             if (m_Readable && m_Pixels == null && m_AssetGuid != null)
                 m_Pixels = LayeredTextures.FetchImported(m_AssetGuid, name, m_Width, m_Height, m_Depth, m_MipCount, true, m_Format);
             if (!m_Readable || m_Pixels == null)

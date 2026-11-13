@@ -229,8 +229,9 @@ namespace UnityEngine
         /// <summary>Throws unless the texture is readable; makes its pixel cells available unless
         /// `pixels` is false (raw-data calls of a compressed texture made by code need its blocks
         /// alone).</summary>
-        void RequireReadable(bool pixelArray = false, bool pixels = true)
+        void RequireReadable(bool pixelArray = false, bool pixels = true, [System.Runtime.CompilerServices.CallerMemberName] string caller = null)
         {
+            CheckExternalCpu(caller, "Texture2D");
             if (pixelArray && m_Width == 0 && m_Height == 0)
                 throw new ArgumentException("Texture contains no pixel data.");
             if (!m_IsReadable)
@@ -527,11 +528,6 @@ namespace UnityEngine
 
         public Rect[] PackTextures(Texture2D[] textures, int padding) => PackTextures(textures, padding, 2048, false);
 
-        /// <summary>The native texture an external texture shows (CreateExternalTexture,
-        /// UpdateExternalTexture); zero for other textures. Its texels are the native texture's:
-        /// nothing is uploaded from here.</summary>
-        IntPtr m_ExternalTexture;
-
         /// <summary>A texture showing a native texture: one a plugin made, or another texture's
         /// <see cref="Texture.GetNativeTexturePtr"/> (the same texels). The format and color
         /// space given here describe this texture (<c>format</c>, <c>graphicsFormat</c>); the
@@ -540,33 +536,20 @@ namespace UnityEngine
         public static Texture2D CreateExternalTexture(int width, int height, TextureFormat format, bool mipChain, bool linear, IntPtr nativeTex)
         {
             if (nativeTex == IntPtr.Zero) throw new ArgumentException("nativeTex can not be null");
-            var texture = new Texture2D(width, height, format, mipChain, linear);
+            if (width <= 0 || height <= 0) throw new ArgumentException("Texture dimensions must be positive.");
+            var texture = new Texture2D();
+            texture.InitEmpty(format, linear);
+            texture.m_Width = width; texture.m_Height = height;
+            texture.m_MipCount = mipChain ? 32 - System.Numerics.BitOperations.LeadingZeroCount((uint)Math.Max(width, height)) : 1;
             texture.UpdateExternalTexture(nativeTex);
             return texture;
         }
 
-        public unsafe void UpdateExternalTexture(IntPtr nativeTex)
+        public void UpdateExternalTexture(IntPtr nativeTex)
         {
-            if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            m_ExternalTexture = nativeTex;
             m_PixelsDirty = false;
-            if (!Native.IsReady) return;
-            GfxStream.Flush();
-            // The native texture decides the size, the format and whether its texels are sRGB;
-            // this texture, through how many of its levels it is sampled.
-            var error = new NativeBuffer();
-            if (Native.Api.ExternalTexture(m_NativeHandle, (ulong)nativeTex, mipmapCount, &error) != 0)
-            {
-                var reason = error.Length == 0 ? "unknown error" : System.Text.Encoding.UTF8.GetString(error.Data, (int)error.Length);
-                Native.Free(error);
-                Debug.LogError($"Unbound: the external texture {nativeTex} cannot be shown: {reason}");
-                return;
-            }
-            EmitSamplingProperties();
+            BindExternalTexture(nativeTex, format, m_Linear);
         }
-
-        internal override IntPtr NativePointer() =>
-            m_ExternalTexture != IntPtr.Zero ? m_ExternalTexture : NativePlugins.TexturePointer(EnsureUploaded(), false);
 
         internal override void OnSamplerChanged() => EmitSamplingProperties();
 
@@ -585,6 +568,7 @@ namespace UnityEngine
         /// <summary>The renderer handle, uploading pending pixels first.</summary>
         internal ulong EnsureUploaded()
         {
+            if (IsExternalTexture) return EnsureExternalUploaded();
             if (m_NativeHandle == 0 && (m_Pixels != null || m_Raw != null || m_Hdr != null || SourceBlocks)) m_PixelsDirty = true;
             if (m_PixelsDirty) Upload();
             return m_NativeHandle;
@@ -592,7 +576,7 @@ namespace UnityEngine
 
         unsafe void Upload()
         {
-            if (m_ExternalTexture != IntPtr.Zero)
+            if (IsExternalTexture)
             {
                 // The native texture holds the texels.
                 m_PixelsDirty = false;
@@ -936,6 +920,7 @@ namespace Unbound.Runtime
         internal static ulong Of(UnityEngine.Texture texture)
         {
             if (texture == null) return 0;
+            if (texture.IsExternalTexture) return texture.EnsureExternalUploaded();
             if (texture is UnityEngine.Texture2D t2d) return t2d.EnsureUploaded();
             if (texture is UnityEngine.RenderTexture rt) return rt.EnsureCreated();
             return texture.m_NativeHandle;

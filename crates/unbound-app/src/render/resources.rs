@@ -237,6 +237,8 @@ pub struct SamplerKey {
     pub compare: i32,
     /// Native sampler LOD bias, as bits so cache identity includes its exact value.
     pub lod_bias_bits: u32,
+    /// A measured external cube sampler reads level zero without restricting image queries.
+    pub base_level_only: bool,
 }
 
 impl SamplerKey {
@@ -250,6 +252,7 @@ impl SamplerKey {
         aniso: 1,
         compare: 0,
         lod_bias_bits: 0,
+        base_level_only: false,
     };
 
     /// The state an inline sampler's name spells: its filter, its wrap mode along each axis
@@ -307,7 +310,7 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey, reversed_z: bool) 
     } else {
         mip
     };
-    let descriptor = wgpu::SamplerDescriptor {
+    let mut descriptor = wgpu::SamplerDescriptor {
         label: Some("unbound texture sampler"),
         address_mode_u: wrap(key.wrap_u),
         address_mode_v: wrap(key.wrap_v),
@@ -325,6 +328,9 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey, reversed_z: bool) 
         }),
         ..Default::default()
     };
+    if key.base_level_only {
+        descriptor.lod_max_clamp = 0.0;
+    }
     let bias = f32::from_bits(key.lod_bias_bits);
     let native_mirror_clamp = device.native_sampler_mirror_clamp() == Some(true);
     let mirror_clamp =
@@ -1453,6 +1459,7 @@ pub fn upload_texture_with(
         aniso: t.aniso_level,
         compare: 0,
         lod_bias_bits: 0,
+        base_level_only: false,
     };
     let reuse = existing.filter(|e| {
         e.width == width

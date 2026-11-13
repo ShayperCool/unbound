@@ -186,6 +186,99 @@
 {"k":"profiler.script","v":["marker name=NativeGfx.Script flags=2 category.own=0 callback=0 user=2 thread=main","register.event.script=0 (NativeGfx.Script)","event marker=NativeGfx.Script type=0 count=0 data=0 user=8 thread=main","event marker=NativeGfx.Script type=1 count=0 data=0 user=8 thread=main"]}
 {"k":"profiler.finish","v":["finish frame=0 marker=0 thread=0 flow=0 frames=3"]}
 {"k":"screen.target","v":["screen framebuffer=own color=none depth=none viewport=screen"]}
+{"k":"externalShapes.cube.zero","v":"ArgumentException:nativeTex can not be null"}
+{"k":"externalShapes.volume.zero","v":"ArgumentException:nativeTex may not be zero"}
+{"k":"externalShapes.cube.source.sample.0","v":"6e1e3cff"}
+{"k":"externalShapes.cube.source.sample.1","v":"6e463cff"}
+{"k":"externalShapes.cube.info","v":"0.25,0.25,4,4"}
+{"k":"externalShapes.cube.meta","v":"4x4:3:RGBA32:R8G8B8A8_UNorm"}
+{"k":"externalShapes.cube.readable","v":true}
+{"k":"externalShapes.cube.cpu","v":"ArgumentException:Cubemap.GetPixels: not allowed on native textures. (Texture 'external.cube')"}
+{"k":"externalShapes.cube.pointerSame","v":true}
+{"k":"externalShapes.cube.face.0","v":"141e3cff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalShapes.cube.face.3","v":"6e1e3cff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalShapes.cube.face.5","v":"aa1e3cff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalShapes.cube.sample.0","v":"6e1e3cff"}
+{"k":"externalShapes.cube.sample.1","v":"6e1e3cff"}
+{"k":"externalShapes.cube.single.meta","v":"4:1"}
+{"k":"externalShapes.cube.single.copy","v":"ffeb04ff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalShapes.cube.single.sample","v":"ffeb04ff"}
+{"k":"externalShapes.twoD.readable","v":true}
+{"k":"externalShapes.twoD.cpu","v":"ArgumentException:Texture2D.GetPixels: not allowed on native textures. (Texture 'external.twoD')"}
+{"k":"externalShapes.twoD.gpu","v":"00ff00ff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalShapes.volume.info","v":"0.25,0.5,4,2"}
+{"k":"externalShapes.volume.meta","v":"4x2x2:1:RGBA32:R8G8B8A8_UNorm"}
+{"k":"externalShapes.volume.readable","v":true}
+{"k":"externalShapes.volume.cpu","v":"ArgumentException:Texture3D.GetPixels: not allowed on native textures. (Texture 'external.volume')"}
+{"k":"externalShapes.volume.pointerSame","v":true}
+{"k":"externalShapes.volume.slice.0","v":"0a5a82ff,125a82ff,1a5a82ff,225a82ff,2a5a82ff,325a82ff,3a5a82ff,425a82ff"}
+{"k":"externalShapes.volume.slice.1","v":"4a5a82ff,525a82ff,5a5a82ff,625a82ff,6a5a82ff,725a82ff,7a5a82ff,825a82ff"}
+{"k":"externalShapes.cube.sampler","v":"Bilinear:Repeat:1"}
+{"k":"externalShapes.volume.sampler","v":"Bilinear:Repeat:1"}
+{"k":"externalShapes.cube.updated.pointerSame","v":true}
+{"k":"externalShapes.cube.updated.face","v":"00ffffff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalShapes.volume.updated.pointerSame","v":true}
+{"k":"externalShapes.volume.updated.slice","v":"ff00ffff,ff00ffff,ff00ffff,ff00ffff,ff00ffff,ff00ffff,ff00ffff,ff00ffff"}
+{"k":"externalShapes.cube.ownerAfter","v":"6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff,6e1e3cff"}
+{"k":"externalShapes.volume.ownerAfter","v":"4a5a82ff,525a82ff,5a5a82ff,625a82ff,6a5a82ff,725a82ff,7a5a82ff,825a82ff"}
+{"k":"externalOwnedGL.0.created","v":true}
+{"k":"externalOwnedGL.0.pointerSame","v":true}
+{"k":"externalOwnedGL.0.pixels","v":"4080bfff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalOwnedGL.0.sample","v":"0.250980407,0.501960814,0.749019623,1"}
+{"k":"externalOwnedGL.0.after","v":"0.250980407,0.501960814,0.749019623,1"}
+{"k":"externalOwnedGL.1.created","v":true}
+{"k":"externalOwnedGL.1.pointerSame","v":true}
+{"k":"externalOwnedGL.1.pixels","v":"4080bfff,4080bfff,4080bfff,4080bfff,4080bfff,4080bfff,4080bfff,4080bfff"}
+{"k":"externalOwnedGL.1.sample","v":"0.250980407,0.501960814,0.749019623,1"}
+{"k":"externalOwnedGL.1.after","v":"0.250980407,0.501960814,0.749019623,1"}
+{"k":"activeRelease.uncreated.created","v":false}
+{"k":"activeRelease.uncreated.activeBefore","v":false}
+{"k":"activeRelease.uncreated.activeAfter","v":true}
+{"k":"activeRelease.uncreated.logs","v":[]}
+{"k":"activeRelease.inactive.created","v":true}
+{"k":"activeRelease.inactive.activeBefore","v":false}
+{"k":"activeRelease.inactive.activeAfter","v":true}
+{"k":"activeRelease.inactive.logs","v":[]}
+{"k":"activeRelease.active.created","v":true}
+{"k":"activeRelease.active.activeBefore","v":true}
+{"k":"activeRelease.active.activeAfter","v":true}
+{"k":"activeRelease.active.logs","v":["Warning: Releasing render texture that is set to be RenderTexture.active!"]}
+{"k":"activeRelease.release.created","v":true}
+{"k":"activeRelease.release.activeBefore","v":true}
+{"k":"activeRelease.release.activeAfter","v":true}
+{"k":"activeRelease.release.logs","v":["Warning: Releasing render texture that is set to be RenderTexture.active!"]}
+{"k":"externalShapes.twoD.source.info","v":"0.25,0.25,4,4"}
+{"k":"externalShapes.twoD.source.mip1","v":"0.376470596,0.250980407,0.501960814,1"}
+{"k":"externalBounds.0.whole","v":"6f49c7ff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalBounds.0.region","v":"6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff"}
+{"k":"externalBounds.0.destination","v":"00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff"}
+{"k":"externalBounds.1.whole","v":"6f49c7ff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalBounds.1.region","v":"6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff"}
+{"k":"externalBounds.1.destination","v":"00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff"}
+{"k":"externalBounds.2.whole","v":"6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff"}
+{"k":"externalBounds.2.region","v":"6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff,6f49c7ff"}
+{"k":"externalBounds.2.destination","v":"00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff,00ff00ff"}
+{"k":"externalMips.0.source1","v":"0.274509817,0.278431386,0.356862754,1"}
+{"k":"externalMips.0.sourceDimensions","v":"8,8,1,4"}
+{"k":"externalMips.0.sample0","v":"0.0784313753,0.278431386,0.356862754,1"}
+{"k":"externalMips.0.sample1","v":"0.274509817,0.278431386,0.356862754,1"}
+{"k":"externalMips.0.whole1","v":"46475bff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalMips.0.region1","v":"46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff"}
+{"k":"externalMips.0.dimensions","v":"8,8,1,4"}
+{"k":"externalMips.1.source1","v":"0.274509817,0.278431386,0.356862754,1"}
+{"k":"externalMips.1.sourceDimensions","v":"8,8,1,4"}
+{"k":"externalMips.1.sample0","v":"0.0784313753,0.278431386,0.356862754,1"}
+{"k":"externalMips.1.sample1","v":"0.0784313753,0.278431386,0.356862754,1"}
+{"k":"externalMips.1.whole1","v":"46475bff,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf,20407fbf"}
+{"k":"externalMips.1.region1","v":"46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff"}
+{"k":"externalMips.1.dimensions","v":"8,8,1,4"}
+{"k":"externalMips.2.source1","v":"0.274509817,0.278431386,0.356862754,1"}
+{"k":"externalMips.2.sourceDimensions","v":"8,4,2,4"}
+{"k":"externalMips.2.sample0","v":"0.0784313753,0.278431386,0.356862754,1"}
+{"k":"externalMips.2.sample1","v":"0.274509817,0.278431386,0.356862754,1"}
+{"k":"externalMips.2.whole1","v":"46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff"}
+{"k":"externalMips.2.region1","v":"46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff,46475bff"}
+{"k":"externalMips.2.dimensions","v":"8,4,2,4"}
 {"k":"device.msaa.1.0.False.created","v":true}
 {"k":"device.msaa.1.0.False.equal","v":true}
 {"k":"device.msaa.1.0.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x4x1 format=0x8058 levels=1 samples=0"]}

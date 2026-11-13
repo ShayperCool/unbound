@@ -51,6 +51,18 @@ namespace UnityEngine
         public Cubemap(int width, DefaultFormat format, TextureCreationFlags flags) : this(width, SystemInfo.GetGraphicsFormat(format), flags) { }
         public Cubemap(int width, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
 
+        public static Cubemap CreateExternalTexture(int width, TextureFormat format, bool mipmap, IntPtr nativeTex)
+        {
+            if (nativeTex == IntPtr.Zero) throw new ArgumentException("nativeTex can not be null");
+            if (width <= 0) throw new ArgumentException("Cubemap width must be positive.", nameof(width));
+            var texture = new Cubemap { m_Width = width, m_Height = width, m_Format = format,
+                m_MipCount = mipmap ? FullMipCount(width) : 1, m_Linear = true };
+            texture.UpdateExternalTexture(nativeTex);
+            return texture;
+        }
+
+        public void UpdateExternalTexture(IntPtr nativeTexture) => BindExternalTexture(nativeTexture, m_Format, m_Linear);
+
         Cubemap() { }
 
         static int FullMipCount(int width) => 32 - System.Numerics.BitOperations.LeadingZeroCount((uint)Math.Max(1, width));
@@ -138,15 +150,16 @@ namespace UnityEngine
         }
 
         /// <summary>A face's level, current with the pixel data store while one exists.</summary>
-        Color[] Level(CubemapFace face, int mip)
+        Color[] Level(CubemapFace face, int mip, [System.Runtime.CompilerServices.CallerMemberName] string caller = null)
         {
-            var level = CheckedLevel(face, mip);
+            var level = CheckedLevel(face, mip, caller);
             if (m_Store != null) DecodeStored((int)face, mip, level);
             return level;
         }
 
-        Color[] CheckedLevel(CubemapFace face, int mip)
+        Color[] CheckedLevel(CubemapFace face, int mip, [System.Runtime.CompilerServices.CallerMemberName] string caller = null)
         {
+            CheckExternalCpu(caller, "Cubemap");
             CheckStoreRead();
             if (m_Readable && m_Pixels == null && m_AssetGuid != null) FetchImported();
             if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");

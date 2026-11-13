@@ -428,3 +428,8 @@ features at upload time, including imports made before device initialization. It
 uses the retained BC7 bytes when supported, or decoded RGBA pixels. Runtime ETC packets
 have no retained BC7 stream and use the decoded fallback. EAC keeps normalized channel
 uploads. NativeApi 66 admits these packet codes.
+
+NativeApi 75 changes the external-texture FFI to take an eight-int image description: width, height, depth, Unity
+TextureFormat, mip count, TextureDimension, linear-data flag and compatibility flags. Its native pointer names
+borrowed storage. Vulkan foreign imports require initialized linear RGBA32 images in GENERAL
+layout with sampled and transfer usage; renderer-owned aliases reuse their tracked storage.

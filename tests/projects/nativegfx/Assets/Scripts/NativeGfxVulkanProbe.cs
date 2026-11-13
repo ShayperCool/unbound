@@ -281,6 +281,12 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
         }
         DeviceControls();
+        ExternalControls.Run(Value, action =>
+        {
+            Application.logMessageReceived -= OnLog;
+            try { action(); }
+            finally { Application.logMessageReceived += OnLog; }
+        });
         PluginRecord();
         if (logs.Count > 0) Value("logs", L(logs));
         Value("complete", B(code == 0));

@@ -95,7 +95,7 @@ def copy_project(target):
     # The event queue is a C++ interface: that part of the plugin the scripts call is C++
     # (`c++`, else $CXX), linked into it.
     events = plugins/'nativegfx_events.o'
-    subprocess.run([*shlex.split(os.environ.get('CXX') or 'c++'), '-c', '-fPIC', '-O2', '-fvisibility=hidden', '-fno-exceptions',
+    subprocess.run([str(HEAVY), '--kind', 'build', *shlex.split(os.environ.get('CXX') or 'c++'), '-c', '-fPIC', '-O2', '-fvisibility=hidden', '-fno-exceptions',
                     '-fno-rtti', '-o', str(events), str(ROOT/'Plugins/nativegfx_events.cpp')], check=True)
     for library, prefix in LIBRARIES:
         defines = [f'-DNATIVEGFX_PRELOAD="{prefix} "'] if prefix else []
@@ -105,13 +105,13 @@ def copy_project(target):
         else:
             libraries = ['-ldl']
         file = library_file(library)
-        subprocess.run([*compiler, *defines, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/file),
+        subprocess.run([str(HEAVY), '--kind', 'build', *compiler, *defines, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/file),
                         str(ROOT/'Plugins/nativegfx_probe.c'), *([] if prefix else [str(events)]), *libraries, '-lpthread'],
                        check=True)
         (plugins/(file + '.meta')).write_text(plugin_meta(library))
     events.unlink()
     if DEVICE == 'vulkan':
-        subprocess.run([*compiler, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/VULKAN_LIBRARY),
+        subprocess.run([str(HEAVY), '--kind', 'build', *compiler, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/VULKAN_LIBRARY),
                         str(ROOT/'Plugins/nativegfx_vulkan.c'), '-lpthread'], check=True)
         shutil.copyfile(ROOT/'Plugins'/(VULKAN_LIBRARY + '.meta'), plugins/(VULKAN_LIBRARY + '.meta'))
 

@@ -141,10 +141,34 @@ impl super::Device {
         desc: &crate::TextureDescriptor,
         drop_callback: Option<crate::DropCallback>,
     ) -> super::Texture {
+        unsafe {
+            self.texture_from_raw_with_target(
+                name,
+                super::Texture::get_info_from_desc(desc),
+                desc,
+                drop_callback,
+            )
+        }
+    }
+
+    /// Wraps a native texture whose target is supplied separately from its shape.
+    ///
+    /// # Safety
+    ///
+    /// The texture must match `desc` and `target`, and remain valid until the drop callback.
+    /// The ordinary raw-texture ownership rules apply.
+    #[cfg(any(native, Emscripten))]
+    pub unsafe fn texture_from_raw_with_target(
+        &self,
+        name: NonZeroU32,
+        target: u32,
+        desc: &crate::TextureDescriptor,
+        drop_callback: Option<crate::DropCallback>,
+    ) -> super::Texture {
         super::Texture {
             inner: super::TextureInner::Texture {
                 raw: glow::NativeTexture(name),
-                target: super::Texture::get_info_from_desc(desc),
+                target,
             },
             drop_guard: crate::DropGuard::from_option(drop_callback),
             mip_level_count: desc.mip_level_count,

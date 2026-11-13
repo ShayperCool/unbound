@@ -350,6 +350,49 @@ pub struct TexturePacket {
     pub wrap_w: i32,
 }
 
+/// Metadata accompanying an externally owned native texture. Native storage must match it.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct ExternalTextureInfo {
+    pub width: i32,
+    pub height: i32,
+    pub depth: i32,
+    pub format: i32,
+    pub mip_count: i32,
+    /// Unity TextureDimension: 2 for 2D, 3 for volume, 4 for cube.
+    pub dimension: i32,
+    pub linear: i32,
+    pub flags: i32,
+}
+
+impl ExternalTextureInfo {
+    /// The measured device layout is selected by the managed compatibility profile.
+    pub const MEASURED_LAYOUT: i32 = 1;
+    pub fn validate(&self) -> Result<(), String> {
+        if self.flags & !Self::MEASURED_LAYOUT != 0 {
+            return Err("unknown external texture layout flags".into());
+        }
+        if self.width <= 0 || self.height <= 0 || self.depth <= 0 || self.mip_count <= 0 {
+            return Err("external texture dimensions and mip count must be positive".into());
+        }
+        match self.dimension {
+            2 if self.depth == 1 => (),
+            3 => (),
+            4 if self.width == self.height && self.depth == 1 => (),
+            _ => {
+                return Err(
+                    "external textures require matching 2D, cube or volume metadata".into(),
+                );
+            }
+        }
+        let max_dimension = self.width.max(self.height).max(self.depth) as u32;
+        if self.mip_count as u32 > u32::BITS - max_dimension.leading_zeros() {
+            return Err("external texture mip count exceeds its dimensions".into());
+        }
+        Ok(())
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ImportedTextureInfo {
@@ -817,9 +860,13 @@ pub trait RenderBackend: Send + Sync {
     fn native_texture(&self, _texture: u64, _depth: bool) -> u64 {
         0
     }
-    /// Makes `texture` show the native texture `native` through `mips` of its levels
-    /// (`Texture2D.CreateExternalTexture`).
-    fn external_texture(&self, _texture: u64, _native: u64, _mips: u32) -> Result<(), String> {
+    /// Makes `texture` borrow the native 2D, cube or volume storage described by `info`.
+    fn external_texture(
+        &self,
+        _texture: u64,
+        _native: u64,
+        _info: &ExternalTextureInfo,
+    ) -> Result<(), String> {
         Err("native textures need the renderer".into())
     }
     /// A compute kernel's thread group size: (file, kernel, keywords).
@@ -917,5 +964,45 @@ mod tests {
         assert_eq!(offset_of!(TexturePacket, format), 8);
         assert_eq!(offset_of!(TexturePacket, wrap_w), 64);
         assert_eq!(size_of::<TexturePacket>(), 72);
+    }
+}
+
+#[cfg(test)]
+mod external_texture_info_tests {
+    use super::ExternalTextureInfo;
+
+    #[test]
+    fn external_texture_metadata_keeps_its_wire_layout_and_shape() {
+        assert_eq!(std::mem::size_of::<ExternalTextureInfo>(), 32);
+        assert_eq!(std::mem::offset_of!(ExternalTextureInfo, dimension), 20);
+        assert_eq!(std::mem::offset_of!(ExternalTextureInfo, linear), 24);
+        let mut info = ExternalTextureInfo {
+            width: 7,
+            height: 3,
+            depth: 2,
+            format: 4,
+            mip_count: 3,
+            dimension: 3,
+            linear: 1,
+            flags: 1,
+        };
+        assert!(info.validate().is_ok());
+        info.dimension = 2;
+        assert!(info.validate().is_err());
+        info.depth = 1;
+        assert!(info.validate().is_ok());
+        info.dimension = 4;
+        assert!(info.validate().is_err());
+        info.width = 8;
+        info.height = 8;
+        info.mip_count = 4;
+        assert!(info.validate().is_ok());
+        info.mip_count = 5;
+        assert!(info.validate().is_err());
+        info.mip_count = 1;
+        info.width = 0;
+        assert!(info.validate().is_err());
+        info.width = -1;
+        assert!(info.validate().is_err());
     }
 }

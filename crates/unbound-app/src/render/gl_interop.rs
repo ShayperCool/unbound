@@ -92,6 +92,7 @@ pub struct TextureInfo {
     /// Level 0's size.
     pub width: u32,
     pub height: u32,
+    pub depth: u32,
     /// Its storage is immutable (`glTexStorage*`): it can have views.
     pub immutable: bool,
     /// Its levels: an immutable storage's, else the levels that have texels, from the first.
@@ -280,6 +281,7 @@ mod linux {
     const GL_TEXTURE_INTERNAL_FORMAT: u32 = 0x1003;
     const GL_TEXTURE_WIDTH: u32 = 0x1000;
     const GL_TEXTURE_HEIGHT: u32 = 0x1001;
+    const GL_TEXTURE_DEPTH: u32 = 0x8071;
     /// More levels than any texture has.
     const MAX_LEVELS: i32 = 32;
     const GL_TEXTURE_IMMUTABLE_FORMAT: u32 = 0x912F;
@@ -659,6 +661,7 @@ mod linux {
                 format: level(0, GL_TEXTURE_INTERNAL_FORMAT) as u32,
                 width: level(0, GL_TEXTURE_WIDTH).max(0) as u32,
                 height: level(0, GL_TEXTURE_HEIGHT).max(0) as u32,
+                depth: level(0, GL_TEXTURE_DEPTH).max(1) as u32,
                 immutable,
                 levels: levels.max(1) as u32,
             })

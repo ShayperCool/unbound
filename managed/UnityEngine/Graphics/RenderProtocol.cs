@@ -7,6 +7,13 @@ namespace Unbound.Runtime
     // The structures of docs/RENDER_PROTOCOL.md, laid out as crates/unbound-runtime/src/render_protocol.rs.
 
     [StructLayout(LayoutKind.Sequential)]
+    internal struct ExternalTextureInfo
+    {
+        internal const int MeasuredDeviceLayout = 1;
+        internal int Width, Height, Depth, Format, MipCount, Dimension, Linear, Flags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal struct SubMeshPacket
     {
         internal int IndexStart;
