@@ -2999,3 +2999,16 @@ from one sincos: tests/projects/solverpairorder `--transform-inputs` equals the 
 Linux results do not change (x86_64 keeps its order; glibc's
 sincosf equals its sinf and cosf for every float). Queued: Unity's native math algorithms
 (11 `native/` rows), 147 Physics2D shape fields and 3 fields of a near-zero scale's inverse on macOS.
+
+### Mono float evaluation becomes an opt-in
+
+User decision 2026-11-13: the Editor's Mono evaluation of game-code float arithmetic (Q429, Q435) is
+an artefact of the Editor's runtime that IL2CPP builds do not share, so it is no longer a parity
+target by default. The conversion stays in the code behind `UNBOUND_MONO_FLOATS=1`, still only for
+the measured release (`Compat.MonoFloats`, `Compat.ScriptFloatsWide`); by default game code keeps
+CoreCLR's float32 evaluation. tests/projects/floatrounding's gate opts in and still matches every
+control (Release 206/268, Debug 215/268 values, 0 failures, the same residuals). With it off,
+texturepixels' VolumeRGFloat rows and humanoid's rotateThenSolve step 17 differ again as before
+Q429 (the latter listed in its known residual), twod's spriteshape.render matches again, and four
+2D probes move by rounding without failures. The hot-reload
+delta conversion and the Burst Mono phase (Q436) are dropped with it.

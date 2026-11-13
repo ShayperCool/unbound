@@ -64,7 +64,7 @@ The methods bound to native code do not follow this rule (`native/` rows).
 
 ## Engine
 
-For releases whose compatibility profile has this rule (`Compat.ScriptFloatsWide`, 6000.0.71f1),
+The rule is an opt-in of the engine, off by default (user decision 2026-11-13: an artefact of the Editor's Mono runtime that IL2CPP builds do not share): `UNBOUND_MONO_FLOATS=1` when the engine starts, and `run.py gate` sets it. Opted in, for releases whose compatibility profile has this rule (`Compat.ScriptFloatsWide`, 6000.0.71f1),
 `managed/Unbound.Host/WideFloats.cs` converts the float loads of script, package and plugin
 assemblies to double when they load, under the expressions whose result the double evaluation can
 change: an operation on another operation's result, or a result that is compared, converted or

@@ -96,9 +96,12 @@ but CoreCLR rounds intermediate arithmetic where the Editor's Mono keeps it wide
 Its 62-value reference includes cast, storage, call, optimized-local and large-input
 controls. Without the script float rule the three VolumeRGFloat rows per color space
 kept 366 differing bytes and the control matched 55/62. With it
-(tests/projects/floatrounding) the VolumeRGFloat rows match in both color spaces on
+(tests/projects/floatrounding, an opt-in of the engine since the user decision of 2026-11-13:
+`UNBOUND_MONO_FLOATS=1`) the VolumeRGFloat rows match in both color spaces on
 macOS and the control matches every numeric value (59/62, the rest being method
-bodies that now carry the inserted conversions). The parent reference, zero
+bodies that now carry the inserted conversions). With the opt-in off, the default, the gate
+reports the three VolumeRGFloat rows per color space again (366 differing bytes each, `3 differences
+over tolerance 0` on Linux): IL2CPP builds evaluate as CoreCLR does. The parent reference, zero
 tolerance and strict comparisons stay unchanged.
 
 [C# floating-point types](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/types#837-floating-point-types)
