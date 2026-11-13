@@ -19,6 +19,40 @@ namespace Unbound.Tests
         /// <summary>Unity's own descriptor takes an sRGB format from <c>sRGB = true</c> only in a
         /// Linear project; the flag follows the format.</summary>
         [Theory]
+        [InlineData(ShadowSamplingMode.None, ShadowSamplingMode.CompareDepths)]
+        [InlineData(ShadowSamplingMode.CompareDepths, ShadowSamplingMode.None)]
+        [InlineData(ShadowSamplingMode.None, ShadowSamplingMode.RawDepth)]
+        public void TemporaryDepthSamplerStateMatchesTheRequestedDescriptor(ShadowSamplingMode first, ShadowSamplingMode next)
+        {
+            var descriptor = new RenderTextureDescriptor(7, 3) { graphicsFormat = GraphicsFormat.None,
+                depthStencilFormat = GraphicsFormat.D24_UNorm_S8_UInt, shadowSamplingMode = first };
+            var old = RenderTexture.GetTemporary(descriptor);
+            old.Create();
+            var observedFirst = old.descriptor.shadowSamplingMode;
+            RenderTexture.ReleaseTemporary(old);
+            descriptor.shadowSamplingMode = next;
+            var current = RenderTexture.GetTemporary(descriptor);
+            try { Assert.Equal((first, next), (observedFirst, current.descriptor.shadowSamplingMode)); }
+            finally { RenderTexture.ReleaseTemporary(current); }
+        }
+
+        [Theory]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        public void TemporaryMultisampleBindingMatchesTheRequestedDescriptor(bool first, bool next)
+        {
+            var descriptor = new RenderTextureDescriptor(7, 3, RenderTextureFormat.ARGB32, 0) { msaaSamples = 4, bindMS = first };
+            var old = RenderTexture.GetTemporary(descriptor);
+            old.Create();
+            var observedFirst = old.descriptor.bindMS;
+            RenderTexture.ReleaseTemporary(old);
+            descriptor.bindMS = next;
+            var current = RenderTexture.GetTemporary(descriptor);
+            try { Assert.Equal((first, next), (observedFirst, current.descriptor.bindMS)); }
+            finally { RenderTexture.ReleaseTemporary(current); }
+        }
+
+        [Theory]
         [InlineData(ColorSpace.Linear, true)]
         [InlineData(ColorSpace.Gamma, false)]
         public void TheSrgbSwitchFollowsTheColorSpace(ColorSpace space, bool srgb)

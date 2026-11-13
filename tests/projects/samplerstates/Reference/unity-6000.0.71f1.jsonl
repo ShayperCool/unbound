@@ -546,4 +546,12 @@
 {"k":"DepthState.D32_SFloat.Bilinear.1.CompareDepths","v":[0.30078125,0.30078125,0.30078125,1]}
 {"k":"DepthState.D32_SFloat.Bilinear.2.None","v":[0.400390625,0.400390625,0.400390625,1]}
 {"k":"DepthState.D32_SFloat.Bilinear.3.RawDepth","v":[0.400390625,0.400390625,0.400390625,1]}
+{"k":"DepthState.pool.0.None","v":[0.400390625,0.400390625,0.400390625,1]}
+{"k":"DepthState.pool.1.CompareDepths","v":[0.30078125,0.30078125,0.30078125,1]}
+{"k":"DepthState.pool.2.None","v":[0.400390625,0.400390625,0.400390625,1]}
+{"k":"DepthState.pool.3.RawDepth","v":[0.400390625,0.400390625,0.400390625,1]}
+{"k":"DepthState.pool.bind.0","v":[0,4,0,1]}
+{"k":"DepthState.pool.bind.1","v":[1,4,0,1]}
+{"k":"DepthState.pool.bind.2","v":[0,4,0,1]}
+{"k":"DepthState.pool.bind.3","v":[1,4,0,1]}
 {"k":"complete","v":true}

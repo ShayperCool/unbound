@@ -519,7 +519,8 @@ namespace UnityEngine
             && a.depthStencilFormat == b.depthStencilFormat && a.msaaSamples == b.msaaSamples
             && a.dimension == b.dimension && a.volumeDepth == b.volumeDepth && a.useMipMap == b.useMipMap
             && (!a.useMipMap || (MipLevels(a) == MipLevels(b) && a.autoGenerateMips == b.autoGenerateMips))
-            && a.enableRandomWrite == b.enableRandomWrite && a.memoryless == b.memoryless;
+            && a.enableRandomWrite == b.enableRandomWrite && a.memoryless == b.memoryless
+            && a.shadowSamplingMode == b.shadowSamplingMode && a.bindMS == b.bindMS;
 
         /// <summary>The mip levels a descriptor with mips gets (its mip count, the full chain when
         /// that is 0 or less or more than the chain).</summary>
