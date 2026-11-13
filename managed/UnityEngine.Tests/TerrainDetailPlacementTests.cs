@@ -70,6 +70,95 @@ namespace UnityEngine.Tests
             return error;
         }
 
+        /// <summary>A patch keeps its layers in the order they got values there; a layer whose values
+        /// there all return to zero leaves, and comes back at the end. Writes clamp counts to 16.</summary>
+        [Fact]
+        public void PatchesKeepTheirLayersInTheOrderTheyGotValues()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var data = Data(DetailScatterMode.InstanceCountMode,
+                new DetailPrototype { prototypeTexture = texture }, new DetailPrototype { prototypeTexture = texture }, new DetailPrototype { prototypeTexture = texture });
+            data.SetDetailLayer(2, 2, 2, new int[,] { { 3 } });
+            data.SetDetailLayer(3, 1, 0, new int[,] { { 40 } });
+            Assert.Equal(new byte[] { 2, 0 }, data.PatchLayers(0, 0));
+            Assert.Null(data.PatchLayers(1, 0));
+            Assert.Equal(16, data.GetDetailLayer(3, 1, 1, 1, 0)[0, 0]);
+            data.SetDetailLayer(2, 2, 2, new int[,] { { 0 } });
+            Assert.Equal(new byte[] { 0 }, data.PatchLayers(0, 0));
+            data.SetDetailLayer(7, 7, 2, new int[,] { { 1 } });
+            Assert.Equal(new byte[] { 0, 2 }, data.PatchLayers(0, 0));
+            // An area over two patches adds the layer to both.
+            data.SetDetailLayer(7, 0, 1, new int[,] { { 1, 1 } });
+            Assert.Equal(new byte[] { 0, 2, 1 }, data.PatchLayers(0, 0));
+            Assert.Equal(new byte[] { 1 }, data.PatchLayers(1, 0));
+            data.RemoveDetailPrototype(0);
+            Assert.Equal(new byte[] { 1, 0 }, data.PatchLayers(0, 0));
+        }
+
+        /// <summary>A zero noiseSeed seeds a layer by its place in the patch: the second layer of a
+        /// patch of 8 × 8 samples gets the seed 64.</summary>
+        [Fact]
+        public void AZeroNoiseSeedSeedsByTheLayersPlaceInThePatch()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var data = Data(DetailScatterMode.InstanceCountMode,
+                new DetailPrototype { prototypeTexture = texture, noiseSeed = 5 }, new DetailPrototype { prototypeTexture = texture },
+                new DetailPrototype { prototypeTexture = texture, noiseSeed = 64 });
+            Fill(data, 0, 2);
+            Fill(data, 1, 2);
+            Fill(data, 2, 2);
+            var second = data.ComputeDetailInstanceTransforms(1, 1, 1, 1f, out _);
+            var seeded = data.ComputeDetailInstanceTransforms(1, 1, 2, 1f, out _);
+            Assert.Equal(seeded.Length, second.Length);
+            for (int i = 0; i < second.Length; i++)
+            {
+                Assert.Equal(seeded[i].posX, second[i].posX);
+                Assert.Equal(seeded[i].rotationY, second[i].rotationY);
+            }
+        }
+
+        /// <summary>Patch meshes place their instances by their own numbering, within their
+        /// sample; billboards draw no turn; the mesh holds at most 65536 vertices.</summary>
+        [Fact]
+        public void PatchMeshesPlaceByTheirOwnRules()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var grass = new DetailPrototype { prototypeTexture = texture, noiseSeed = 9, positionJitter = 0.7f };
+            var billboard = new DetailPrototype { prototypeTexture = texture, noiseSeed = 9, positionJitter = 0.7f, renderMode = DetailRenderMode.GrassBillboard };
+            var data = Data(DetailScatterMode.InstanceCountMode, grass, billboard);
+            Fill(data, 0, 3);
+            Fill(data, 1, 3);
+            var reported = new List<Matrix4x4>();
+            var drawn = new List<Matrix4x4>();
+            var billboards = new List<Matrix4x4>();
+            data.PlaceDetails(data.PrepareDetailLayer(0), 1, 2, 1f, reported, out _);
+            int used = 0;
+            Assert.True(data.PlacePatchMeshDetails(data.PrepareDetailLayer(0), 1, 2, 1f, 0, 4, ref used, drawn));
+            Assert.Equal(8 * 8 * 3 * 4, used);
+            used = 0;
+            Assert.True(data.PlacePatchMeshDetails(data.PrepareDetailLayer(1), 1, 2, 1f, 0, 4, ref used, billboards));
+            Assert.Equal(reported.Count, drawn.Count);
+            Assert.NotEqual(reported[0].GetColumn(3), drawn[0].GetColumn(3));
+            for (int i = 0; i < drawn.Count; i++)
+            {
+                // Sample i / 3 of the patch (8 × 8 samples of 0.5 units, the patch at (4, 8)).
+                int sample = i / 3, lx = sample % 8, ly = sample / 8;
+                Vector3 p = drawn[i].GetColumn(3);
+                Assert.InRange(p.x, 4f + lx * 0.5f, 4f + (lx + 1) * 0.5f);
+                Assert.InRange(p.z, 8f + ly * 0.5f, 8f + (ly + 1) * 0.5f);
+                // Billboards are not turned.
+                Assert.Equal(0f, billboards[i].m02, 6);
+            }
+            // The first billboard's draws match the grass's (no turn drawn yet); later ones drift.
+            Assert.Equal(drawn[0].GetColumn(3), billboards[0].GetColumn(3));
+            Assert.NotEqual(drawn[1].GetColumn(3), billboards[1].GetColumn(3));
+            // A budget for two instances: two, then the layer stops.
+            used = 0x10000 - 2 * 20000;
+            Assert.False(data.PlacePatchMeshDetails(data.PrepareDetailLayer(0), 1, 2, 1f, 0, 20000, ref used, drawn));
+            Assert.Equal(2, drawn.Count);
+            Assert.Equal(0x10000, used);
+        }
+
         [Fact]
         public void PrototypesAreCheckedInTheEditorsOrder()
         {
