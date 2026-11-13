@@ -240,12 +240,14 @@ namespace Unbound.Tests
             {
                 go.transform.Rotate(Vector3.up, 0.1f, Space.World);
                 Assert.Equal(QuaternionMath.AngleAxis(0.1f, Vector3.up), go.transform.rotation);
+                // 8.5 degrees: the two turns of this point differ too.
                 go.transform.rotation = Quaternion.identity;
                 var start = new Vector3(2f, 0.5f, -1f);
                 go.transform.position = start;
-                go.transform.RotateAround(Vector3.zero, Vector3.up, 0.1f);
-                Assert.Equal(Quaternion.AngleAxis(0.1f, Vector3.up) * start, go.transform.position);
-                Assert.Equal(QuaternionMath.AngleAxis(0.1f, Vector3.up), go.transform.rotation);
+                go.transform.RotateAround(Vector3.zero, Vector3.up, 8.5f);
+                Assert.NotEqual(QuaternionMath.AngleAxis(8.5f, Vector3.up) * start, Quaternion.AngleAxis(8.5f, Vector3.up) * start);
+                Assert.Equal(Quaternion.AngleAxis(8.5f, Vector3.up) * start, go.transform.position);
+                Assert.Equal(QuaternionMath.AngleAxis(8.5f, Vector3.up), go.transform.rotation);
             }
             finally
             {
