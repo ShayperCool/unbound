@@ -38,9 +38,12 @@
 {"k":"f8.visible.NoDots","v":true}
 {"k":"f8.visible.Spinner","v":true}
 {"k":"f8.visible.TwoMat","v":true}
+{"k":"f8.visible.Ungrouped.lod0","v":true}
+{"k":"f8.visible.Ungrouped.lod1","v":true}
+{"k":"f8.visible.Ungrouped.lod2","v":true}
 {"k":"f8.visible.Wall","v":true}
 {"k":"f8.willRenderCalled","v":true}
-{"k":"f8.drawer.renderers","v":"Cube0,Cube1,Cube2,Cube3,Cube4,Cube5,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Wall"}
+{"k":"f8.drawer.renderers","v":"Cube0,Cube1,Cube2,Cube3,Cube4,Cube5,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
 {"k":"f14.drawer.enabled","v":true}
 {"k":"f14.visible.Callback","v":true}
 {"k":"f14.visible.Cube0","v":true}
@@ -76,9 +79,12 @@
 {"k":"f14.visible.NoDots","v":true}
 {"k":"f14.visible.Spinner","v":true}
 {"k":"f14.visible.TwoMat","v":true}
+{"k":"f14.visible.Ungrouped.lod0","v":true}
+{"k":"f14.visible.Ungrouped.lod1","v":true}
+{"k":"f14.visible.Ungrouped.lod2","v":true}
 {"k":"f14.visible.Wall","v":true}
 {"k":"f14.willRenderCalled","v":true}
-{"k":"f14.drawer.renderers","v":"Cube0,Cube1,Cube2,Cube3,Cube4,Cube5,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Wall"}
+{"k":"f14.drawer.renderers","v":"Cube0,Cube1,Cube2,Cube3,Cube4,Cube5,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
 {"k":"f20.drawer.enabled","v":true}
 {"k":"f20.visible.Callback","v":true}
 {"k":"f20.visible.Cube0","v":true}
@@ -114,9 +120,12 @@
 {"k":"f20.visible.NoDots","v":true}
 {"k":"f20.visible.Spinner","v":true}
 {"k":"f20.visible.TwoMat","v":true}
+{"k":"f20.visible.Ungrouped.lod0","v":true}
+{"k":"f20.visible.Ungrouped.lod1","v":true}
+{"k":"f20.visible.Ungrouped.lod2","v":true}
 {"k":"f20.visible.Wall","v":true}
 {"k":"f20.willRenderCalled","v":true}
-{"k":"f20.drawer.renderers","v":"Cube0,Cube1,Cube2,Cube3,Cube4,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Wall"}
+{"k":"f20.drawer.renderers","v":"Cube0,Cube1,Cube2,Cube3,Cube4,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
 {"k":"f26.drawer.enabled","v":true}
 {"k":"f26.visible.Callback","v":true}
 {"k":"f26.visible.Cube0","v":true}
@@ -151,9 +160,12 @@
 {"k":"f26.visible.NoDots","v":true}
 {"k":"f26.visible.Spinner","v":true}
 {"k":"f26.visible.TwoMat","v":true}
+{"k":"f26.visible.Ungrouped.lod0","v":true}
+{"k":"f26.visible.Ungrouped.lod1","v":true}
+{"k":"f26.visible.Ungrouped.lod2","v":true}
 {"k":"f26.visible.Wall","v":true}
 {"k":"f26.willRenderCalled","v":true}
-{"k":"f26.drawer.renderers","v":"Cube0,Cube1,Cube2,Cube4,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Wall"}
+{"k":"f26.drawer.renderers","v":"Cube0,Cube1,Cube2,Cube4,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
 {"k":"f32.drawer.enabled","v":true}
 {"k":"f32.visible.Callback","v":true}
 {"k":"f32.visible.Cube0","v":false}
@@ -188,9 +200,12 @@
 {"k":"f32.visible.NoDots","v":true}
 {"k":"f32.visible.Spinner","v":true}
 {"k":"f32.visible.TwoMat","v":true}
+{"k":"f32.visible.Ungrouped.lod0","v":true}
+{"k":"f32.visible.Ungrouped.lod1","v":true}
+{"k":"f32.visible.Ungrouped.lod2","v":true}
 {"k":"f32.visible.Wall","v":true}
 {"k":"f32.willRenderCalled","v":true}
-{"k":"f32.drawer.renderers","v":"Cube1,Cube4,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Wall"}
+{"k":"f32.drawer.renderers","v":"Cube1,Cube4,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
 {"k":"f38.drawer.enabled","v":true}
 {"k":"f38.visible.Callback","v":true}
 {"k":"f38.visible.Cube0","v":true}
@@ -225,9 +240,12 @@
 {"k":"f38.visible.NoDots","v":true}
 {"k":"f38.visible.Spinner","v":true}
 {"k":"f38.visible.TwoMat","v":true}
+{"k":"f38.visible.Ungrouped.lod0","v":true}
+{"k":"f38.visible.Ungrouped.lod1","v":true}
+{"k":"f38.visible.Ungrouped.lod2","v":true}
 {"k":"f38.visible.Wall","v":true}
 {"k":"f38.willRenderCalled","v":true}
-{"k":"f38.drawer.renderers","v":"Cube0,Cube1,Cube4,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Mpb,Spinner,TwoMat,Wall"}
+{"k":"f38.drawer.renderers","v":"Cube0,Cube1,Cube4,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Mpb,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
 {"k":"f44.drawer.enabled","v":true}
 {"k":"f44.visible.Callback","v":true}
 {"k":"f44.visible.Cube0","v":true}
@@ -263,7 +281,92 @@
 {"k":"f44.visible.NoDots","v":true}
 {"k":"f44.visible.Spinner","v":true}
 {"k":"f44.visible.TwoMat","v":true}
+{"k":"f44.visible.Ungrouped.lod0","v":true}
+{"k":"f44.visible.Ungrouped.lod1","v":true}
+{"k":"f44.visible.Ungrouped.lod2","v":true}
 {"k":"f44.visible.Wall","v":true}
 {"k":"f44.willRenderCalled","v":true}
-{"k":"f44.drawer.renderers","v":"Cube0,Cube1,Cube4,Glass,Ground,Hidden,Late,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Mpb,Spinner,TwoMat,Wall"}
+{"k":"f44.drawer.renderers","v":"Cube0,Cube1,Cube4,Glass,Ground,Hidden,Late,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Mpb,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
+{"k":"f50.drawer.enabled","v":true}
+{"k":"f50.visible.Callback","v":true}
+{"k":"f50.visible.Cube0","v":true}
+{"k":"f50.visible.Cube1","v":true}
+{"k":"f50.visible.Cube2","v":true}
+{"k":"f50.visible.Cube4","v":true}
+{"k":"f50.visible.Cube5","v":false}
+{"k":"f50.visible.Disallowed","v":true}
+{"k":"f50.visible.Glass","v":true}
+{"k":"f50.visible.Ground","v":true}
+{"k":"f50.visible.Hidden","v":true}
+{"k":"f50.visible.Late","v":true}
+{"k":"f50.visible.LodAnimated.lod0","v":true}
+{"k":"f50.visible.LodAnimated.lod1","v":false}
+{"k":"f50.visible.LodAnimated.lod2","v":false}
+{"k":"f50.visible.LodFade.lod0","v":true}
+{"k":"f50.visible.LodFade.lod1","v":true}
+{"k":"f50.visible.LodFade.lod2","v":true}
+{"k":"f50.visible.LodFar.lod0","v":true}
+{"k":"f50.visible.LodFar.lod1","v":true}
+{"k":"f50.visible.LodFar.lod2","v":true}
+{"k":"f50.visible.LodMid.lod0","v":true}
+{"k":"f50.visible.LodMid.lod1","v":true}
+{"k":"f50.visible.LodMid.lod2","v":true}
+{"k":"f50.visible.LodMover.lod0","v":true}
+{"k":"f50.visible.LodMover.lod1","v":true}
+{"k":"f50.visible.LodMover.lod2","v":true}
+{"k":"f50.visible.LodNear.lod0","v":true}
+{"k":"f50.visible.LodNear.lod1","v":true}
+{"k":"f50.visible.LodNear.lod2","v":true}
+{"k":"f50.visible.Mover","v":true}
+{"k":"f50.visible.Mpb","v":true}
+{"k":"f50.visible.NoDots","v":true}
+{"k":"f50.visible.Spinner","v":true}
+{"k":"f50.visible.TwoMat","v":true}
+{"k":"f50.visible.Ungrouped.lod0","v":true}
+{"k":"f50.visible.Ungrouped.lod1","v":true}
+{"k":"f50.visible.Ungrouped.lod2","v":true}
+{"k":"f50.visible.Wall","v":true}
+{"k":"f50.willRenderCalled","v":true}
+{"k":"f50.drawer.renderers","v":"Cube0,Cube1,Cube4,Glass,Ground,Hidden,Late,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Mpb,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
+{"k":"f56.drawer.enabled","v":true}
+{"k":"f56.visible.Callback","v":true}
+{"k":"f56.visible.Cube0","v":true}
+{"k":"f56.visible.Cube1","v":true}
+{"k":"f56.visible.Cube2","v":true}
+{"k":"f56.visible.Cube4","v":true}
+{"k":"f56.visible.Cube5","v":false}
+{"k":"f56.visible.Disallowed","v":true}
+{"k":"f56.visible.Glass","v":true}
+{"k":"f56.visible.Ground","v":true}
+{"k":"f56.visible.Hidden","v":true}
+{"k":"f56.visible.Late","v":true}
+{"k":"f56.visible.LodAnimated.lod0","v":true}
+{"k":"f56.visible.LodAnimated.lod1","v":false}
+{"k":"f56.visible.LodAnimated.lod2","v":false}
+{"k":"f56.visible.LodFade.lod0","v":true}
+{"k":"f56.visible.LodFade.lod1","v":true}
+{"k":"f56.visible.LodFade.lod2","v":true}
+{"k":"f56.visible.LodFar.lod0","v":true}
+{"k":"f56.visible.LodFar.lod1","v":true}
+{"k":"f56.visible.LodFar.lod2","v":true}
+{"k":"f56.visible.LodMid.lod0","v":true}
+{"k":"f56.visible.LodMid.lod1","v":true}
+{"k":"f56.visible.LodMid.lod2","v":true}
+{"k":"f56.visible.LodMover.lod0","v":true}
+{"k":"f56.visible.LodMover.lod1","v":true}
+{"k":"f56.visible.LodMover.lod2","v":true}
+{"k":"f56.visible.LodNear.lod0","v":true}
+{"k":"f56.visible.LodNear.lod1","v":true}
+{"k":"f56.visible.LodNear.lod2","v":true}
+{"k":"f56.visible.Mover","v":true}
+{"k":"f56.visible.Mpb","v":true}
+{"k":"f56.visible.NoDots","v":true}
+{"k":"f56.visible.Spinner","v":true}
+{"k":"f56.visible.TwoMat","v":true}
+{"k":"f56.visible.Ungrouped.lod0","v":true}
+{"k":"f56.visible.Ungrouped.lod1","v":true}
+{"k":"f56.visible.Ungrouped.lod2","v":true}
+{"k":"f56.visible.Wall","v":true}
+{"k":"f56.willRenderCalled","v":true}
+{"k":"f56.drawer.renderers","v":"Cube0,Cube1,Cube4,Glass,Ground,Hidden,Late,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,Mover,Mpb,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,Wall"}
 {"k":"complete","v":true}

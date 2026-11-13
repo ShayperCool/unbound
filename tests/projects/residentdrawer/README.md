@@ -12,11 +12,13 @@ moving and a turning cube, LOD groups at several distances (one moving away thro
 one cross-fading, one with animated cross-fading, which the drawer leaves out), a transparent
 sphere, a wall with a cube behind it, and renderers the drawer leaves to the ordinary path (a
 material property block, a shader without DOTS instancing, an OnWillRenderObject script, the
-package's DisallowGPUDrivenRendering). Between frames it changes a material's colour (frame 12),
-a renderer's material and disables another (18), destroys a renderer and edits a mesh (24), sets a
-property block and deactivates an object (30), reactivates it and clears the first block (36), and
-adds a renderer (40). The main camera renders into a 320x180 texture; frames 8, 14, ..., 44 are
-recorded as `f<frame>.png`, and `values.jsonl` holds per frame the drawer's state, the renderers it
+package's DisallowGPUDrivenRendering), and three levels drawn without a group. Between frames it
+changes a material's colour (frame 12), a renderer's material and disables another (18), destroys a
+renderer and edits a mesh (24), sets a property block and deactivates an object (30), reactivates it
+and clears the first block (36), adds a renderer (40), stretches a cube through its filter's own
+mesh instance (MeshFilter.mesh, 42), puts the three levels drawn since the start into a new LOD
+group (46) and moves a cube to a layer the camera does not draw (52). The main camera renders into
+a 320x180 texture; frames 8, 14, ..., 56 are recorded as `f<frame>.png`, and `values.jsonl` holds per frame the drawer's state, the renderers it
 holds (its CPU instance data, by name) and every renderer's isVisible, the BatchRendererGroup
 variants setting and a new ObjectDispatcher's history length.
 
@@ -40,6 +42,8 @@ drawer's types (in the Editor, one of the probe's read every frame left the draw
 the renderers made before it; why is not studied). The references are two identical captures
 each, measured on the NVIDIA driver only.
 
-Unbound: 269/269 values on both profiles; images within the comparator's bounds (mean 0.10, at
-most 149 of 57600 pixels over 8: the edges of shadows and of a sphere, and the transparent
-sphere's highlight, which differs the same way with the drawer off, so it is not the drawer's).
+Unbound: 371/372 values on both profiles, the one left a residual (`residuals-<profile>.json`: the
+cube moved to the hidden layer stays visible in the Editor through its light's shadow culling);
+images within the comparator's bounds (mean 0.13, at most 175 of 57600 pixels over 8: the edges
+of shadows and of a sphere, and the transparent sphere's highlight, which differs the same way with
+the drawer off, so it is not the drawer's).

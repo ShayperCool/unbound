@@ -17,7 +17,9 @@ using UnityEngine.Rendering;
 /// property block, a shader without DOTS instancing, an OnWillRenderObject script, the package's
 /// DisallowGPUDrivenRendering), a wall and a cube behind it. Between frames it changes a material's
 /// colour, a renderer's material, disables, destroys, deactivates and reactivates renderers, edits
-/// a mesh, sets and clears a property block and adds a renderer. The main camera renders into a
+/// a mesh, sets and clears a property block, adds a renderer, edits a filter's own mesh instance,
+/// groups renderers drawn since the start into a new LOD group and moves a renderer to a layer the
+/// camera does not draw. The main camera renders into a
 /// 320x180 texture; the image of each capture frame goes to <c>$RESIDENT_DRAWER_OUT/f&lt;frame&gt;.png</c>
 /// and the drawer's state, the renderers it holds and the renderers' isVisible to
 /// <c>$RESIDENT_DRAWER_OUT/values.jsonl</c>, then the Editor quits.
@@ -27,8 +29,10 @@ public class ResidentDrawerProbe : MonoBehaviour
 {
     const int Width = 320, Height = 180;
     /// <summary>The frames whose image is recorded (read back in the following frame's Update).</summary>
-    static readonly int[] Captures = { 8, 14, 20, 26, 32, 38, 44 };
-    const int LastFrame = 46;
+    static readonly int[] Captures = { 8, 14, 20, 26, 32, 38, 44, 50, 56 };
+    const int LastFrame = 58;
+    /// <summary>A layer the main camera does not draw.</summary>
+    const int HiddenLayer = 30;
     /// <summary>The seconds without a compiling shader the warm-up waits for (the Editor only).</summary>
     const float QuietSeconds = 3f;
 
@@ -42,7 +46,7 @@ public class ResidentDrawerProbe : MonoBehaviour
     RenderTexture m_Target;
     Texture2D m_Readback;
     Material m_Red, m_Green, m_Blue, m_Yellow, m_Grey, m_Glass, m_NoDots;
-    Transform m_Mover, m_Spinner, m_LodMover;
+    Transform m_Mover, m_Spinner, m_LodMover, m_Ungrouped;
     Mesh m_TwoMat;
     int m_Frame;
     /// <summary>Frames of the warm-up so far without a shader compiling (the Editor compiles
@@ -71,6 +75,7 @@ public class ResidentDrawerProbe : MonoBehaviour
         m_Camera = Camera.main;
         m_Target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32);
         m_Camera.targetTexture = m_Target;
+        m_Camera.cullingMask &= ~(1 << HiddenLayer);
         m_Readback = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
         m_Light = FindAnyObjectByType<Light>();
         m_Light.shadows = LightShadows.Hard;
@@ -164,6 +169,20 @@ public class ResidentDrawerProbe : MonoBehaviour
         var far = new[] { 0.15f, 0.05f, 0.01f };
         MakeLod("LodFade", new Vector3(-1, 2.6f, -0.2f), far, LODFadeMode.CrossFade, false);
         MakeLod("LodAnimated", new Vector3(3.5f, 2.6f, 2), far, LODFadeMode.CrossFade, true);
+
+        // Levels without a group until frame 46: all three draw.
+        m_Ungrouped = new GameObject("Ungrouped").transform;
+        m_Ungrouped.position = new Vector3(1.9f, 0.7f, -3.2f);
+        m_Ungrouped.localScale = Vector3.one * 2;
+        var types = new[] { PrimitiveType.Sphere, PrimitiveType.Cube, PrimitiveType.Capsule };
+        var materials = new[] { m_Red, m_Green, m_Blue };
+        for (int i = 0; i < types.Length; i++)
+        {
+            var level = Make("Ungrouped.lod" + i, types[i], Vector3.zero, materials[i]).transform;
+            level.SetParent(m_Ungrouped, false);
+            level.localPosition = new Vector3(0.25f * (i - 1), 0, 0);
+            level.localScale = new Vector3(0.4f, 0.4f, 0.4f);
+        }
 
         Make("Glass", PrimitiveType.Sphere, new Vector3(2.2f, 0.8f, 0.4f), m_Glass);
 
@@ -297,6 +316,28 @@ public class ResidentDrawerProbe : MonoBehaviour
                 break;
             case 40:
                 Make("Late", PrimitiveType.Sphere, new Vector3(-0.8f, 0.5f, 0.5f), m_Yellow);
+                break;
+            case 42:
+                // The filter's own instance of its mesh, then edited.
+                var mesh = m_Renderers["Cube4"].GetComponent<MeshFilter>().mesh;
+                var stretched = mesh.vertices;
+                for (int i = 0; i < stretched.Length; i++) stretched[i].y = stretched[i].y * 2 + 0.5f;
+                mesh.vertices = stretched;
+                mesh.RecalculateBounds();
+                break;
+            case 46:
+                // A group made for renderers drawn since the start.
+                var lods = new LOD[m_Ungrouped.childCount];
+                var heights = new[] { 0.5f, 0.2f, 0.05f };
+                for (int i = 0; i < lods.Length; i++)
+                    lods[i] = new LOD(heights[i], new Renderer[] { m_Ungrouped.GetChild(i).GetComponent<MeshRenderer>() });
+                var group = m_Ungrouped.gameObject.AddComponent<LODGroup>();
+                m_Names[group.GetInstanceID()] = "Ungrouped";
+                group.SetLODs(lods);
+                group.RecalculateBounds();
+                break;
+            case 52:
+                m_Renderers["Cube1"].gameObject.layer = HiddenLayer;
                 break;
         }
     }
