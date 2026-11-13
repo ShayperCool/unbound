@@ -2,7 +2,7 @@
 """compare.py REFERENCE CANDIDATE: the grass probe's records side by side (grass.jsonl in each
 directory), numbers within a tolerance; per case: how many records match and the largest
 difference."""
-import json, os, sys
+import json, math, os, sys
 
 TOLERANCE = 1e-4
 # Known differences: (case, name) -> why.
@@ -46,7 +46,12 @@ def compare(a, b):
     fa, fb = dict(numbers(a)), dict(numbers(b))
     for key in fa.keys() | fb.keys():
         x, y = fa.get(key, "<missing>"), fb.get(key, "<missing>")
-        if isinstance(x, float) and isinstance(y, float):
+        if isinstance(x, float) and isinstance(y, float) and (math.isnan(x) or math.isnan(y)):
+            # NaN matches only NaN.
+            if math.isnan(x) != math.isnan(y):
+                problems.append(f"{key}: {x} vs {y}")
+                worst = float("inf")
+        elif isinstance(x, float) and isinstance(y, float):
             d = abs(x - y)
             worst = max(worst, d)
             if d > (tolerance if tolerance is not None else TOLERANCE * max(1.0, abs(x))):

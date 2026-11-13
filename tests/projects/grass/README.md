@@ -6,7 +6,8 @@ drawn without and with instancing) and painted layers: `Counts` scatters by inst
 nothing of it reaches those images): `DensityCounts` and `DensityCoverage` hold prototypes scaled by
 detailObjectDensity (also recorded at a third density), a lopsided slab mesh fully and partly
 ground-aligned, and two prototypes the Editor refuses; `Refusals` holds one refused prototype per
-check; these three terrains have one terrain layer. What `Validate` says of each prototype is
+check; these three terrains have one terrain layer. Last the probe loads the scene `Aligned`: `Tilted`
+is steep, with grass textures fully and half aligned to the ground and one of zero width. What `Validate` says of each prototype is
 recorded, the density terrains' instances again with QualitySettings.useLegacyDetailDistribution,
 and the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each
 terrain's detail data (resolution, patches, prototypes, layers read back, coverage), every patch's
@@ -26,6 +27,7 @@ committed rows are unchanged:
 
     python3 tests/projects/grass/record.py create --method CreateDensity --release 6000.0.71f1
     python3 tests/projects/grass/record.py create --method CreateRefusals --release 6000.0.71f1
+    python3 tests/projects/grass/record.py create --method CreateAligned --release 6000.0.71f1
     python3 tests/projects/grass/record.py record --release 6000.0.71f1
     python3 tests/projects/grass/record.py publish --release 6000.0.71f1
 

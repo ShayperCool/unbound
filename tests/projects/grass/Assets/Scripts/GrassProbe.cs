@@ -13,7 +13,8 @@ using UnityEngine.SceneManagement;
 /// data (resolution, patches, prototypes, layers read back), every patch's and layer's instances
 /// from ComputeDetailInstanceTransforms at two densities, the coverage; then images of the grass
 /// from a camera. Then the same for the terrains of the scene `Density`, loaded additively, with
-/// their prototypes' validation, a third density, the legacy distribution and the logged messages. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
+/// their prototypes' validation, a third density, the legacy distribution and the logged messages;
+/// then for the scene `Aligned`. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GrassProbe : MonoBehaviour
 {
@@ -74,6 +75,16 @@ public class GrassProbe : MonoBehaviour
             Record("log", $"\"message\":\"{group.Key}\",\"count\":{group.Count()}");
         yield return null;
         foreach (var terrain in added)
+            Render(camera, target, terrain, dir);
+
+        // The scene `Aligned`: grass textures aligned to steep ground, and one of zero width.
+        var before = FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+        yield return SceneManager.LoadSceneAsync("Aligned", LoadSceneMode.Additive);
+        var aligned = FindObjectsByType<Terrain>(FindObjectsSortMode.None).Where(t => !before.Contains(t)).OrderBy(t => t.name).ToArray();
+        foreach (var terrain in aligned)
+            RecordTerrain(terrain, true);
+        yield return null;
+        foreach (var terrain in aligned)
             Render(camera, target, terrain, dir);
 
         File.WriteAllText(Path.Combine(dir, "grass.jsonl"), m_Out.ToString());

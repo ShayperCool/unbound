@@ -11,5 +11,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Density.unity
     guid: 2d6d99c6ba10357d78595225c3a6882c
+  - enabled: 1
+    path: Assets/Scenes/Aligned.unity
+    guid: 9643bc8c669ebb3d183148d908c8a2df
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

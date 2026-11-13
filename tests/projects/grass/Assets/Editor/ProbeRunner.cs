@@ -56,6 +56,7 @@ public static class ProbeRunner
         AssetDatabase.SaveAssets();
         CreateDensity();
         CreateRefusals();
+        CreateAligned();
     }
 
     /// <summary>
@@ -159,6 +160,60 @@ public static class ProbeRunner
         terrain.name = "Refusals";
         terrain.transform.position = new Vector3(-400f, 0f, 0f);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Density.unity");
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>
+    /// `-executeMethod ProbeRunner.CreateAligned` adds, without touching the other assets, the
+    /// scene `Aligned` with a steep terrain `Tilted` (instance counts) whose grass textures are
+    /// fully and half aligned to the ground, and a grass texture of zero width.
+    /// </summary>
+    public static void CreateAligned()
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var blade = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Blade.png");
+        var data = new TerrainData();
+        AssetDatabase.CreateAsset(data, "Assets/Grass/Tilted.asset");
+        SmallMaps(data);
+        data.terrainLayers = new[] { AssetDatabase.LoadAssetAtPath<TerrainLayer>("Assets/Grass/Ground.terrainlayer") };
+        data.heightmapResolution = 33;
+        data.size = new Vector3(32f, 8f, 32f);
+        var heights = new float[33, 33];
+        for (int y = 0; y < 33; y++)
+            for (int x = 0; x < 33; x++)
+                heights[y, x] = 0.5f + 0.4f * Mathf.Sin(x * 0.25f) * Mathf.Cos(y * 0.2f);
+        data.SetHeights(0, 0, heights);
+        data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+        data.SetDetailResolution(32, 16);
+        DetailPrototype Grass(float align, float width, int seed) => new DetailPrototype
+        {
+            prototypeTexture = blade, renderMode = DetailRenderMode.Grass, alignToGround = align,
+            minWidth = width, maxWidth = width * 1.5f, minHeight = 0.8f, maxHeight = 1.3f, noiseSeed = seed, noiseSpread = 0.3f,
+            healthyColor = new Color(0.3f, 0.9f, 0.2f), dryColor = new Color(0.8f, 0.7f, 0.1f),
+        };
+        data.detailPrototypes = new[] { Grass(1f, 0.6f, 31), Grass(0.5f, 0.6f, 32), Grass(1f, 0f, 33) };
+        for (int layer = 0; layer < 3; layer++)
+        {
+            var values = new int[32, 32];
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                    values[y, x] = (x * 3 + y + layer) % 4 == 0 ? 1 + (x + y) % 2 : 0;
+            data.SetDetailLayer(0, 0, layer, values);
+        }
+        data.wavingGrassAmount = 0f;
+        data.wavingGrassStrength = 0f;
+        data.wavingGrassSpeed = 0f;
+        EditorUtility.SetDirty(data);
+        var terrain = Terrain.CreateTerrainGameObject(data);
+        terrain.name = "Tilted";
+        terrain.transform.position = new Vector3(-500f, 0f, 0f);
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Aligned.unity");
+        EditorBuildSettings.scenes = new[]
+        {
+            new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Density.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Aligned.unity", true),
+        };
         AssetDatabase.SaveAssets();
     }
 
