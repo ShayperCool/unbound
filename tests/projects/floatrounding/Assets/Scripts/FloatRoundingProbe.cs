@@ -394,6 +394,29 @@ public sealed class FloatRoundingProbe : MonoBehaviour
             return new[] { Rect.NormalizedToPoint(rect, point).x, Rect.PointToNormalized(rect, point).y, rect.center.x, rect.xMax };
         });
 
+        Api("api/matrixRotate", 4, f => F(Matrix4x4.Rotate(Q(f, 0).normalized)));
+        Api("api/quaternionRotateTowards", 9, f => F(Quaternion.RotateTowards(Q(f, 0).normalized, Q(f, 4).normalized, Mathf.Abs(f[8]) * 40f)));
+        Api("api/pose", 14, f =>
+        {
+            var pose = new Pose(V3(f, 0), Q(f, 3).normalized).GetTransformedBy(new Pose(V3(f, 7), Q(f, 10).normalized));
+            var result = new List<float>();
+            result.AddRange(F(pose.position));
+            result.AddRange(F(pose.rotation));
+            result.AddRange(F(pose.forward));
+            return result.ToArray();
+        });
+        Api("api/color32", 4, f =>
+        {
+            Color32 c = C(f, 0) * 0.25f + new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            Color back = c;
+            return new[] { (float)c.r, c.g, c.b, c.a, back.r, back.a };
+        });
+        Api("api/polygonPlane", 9, f =>
+        {
+            bool made = GeometryUtility.TryCreatePlaneFromPolygon(new[] { V3(f, 0), V3(f, 3), V3(f, 6) }, out var plane);
+            return made ? F(plane) : new[] { -1f };
+        });
+
         Api("native/quaternionSlerp", 9, f => F(Quaternion.Slerp(Q(f, 0).normalized, Q(f, 4).normalized, Unit(f[8]))));
         Api("native/quaternionLerp", 9, f => F(Quaternion.Lerp(Q(f, 0), Q(f, 4), Unit(f[8]))));
         Api("native/quaternionEuler", 3, f => F(Quaternion.Euler(f[0] * 40f, f[1] * 40f, f[2] * 40f)));
