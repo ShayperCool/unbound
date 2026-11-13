@@ -212,36 +212,38 @@ namespace UnityEngine
             enableSpotReflector = body.Bool("m_EnableSpotReflector", enableSpotReflector);
         }
 
-        /// <summary>The light's color times its intensity (and color temperature), in the project's
-        /// color space.</summary>
-        /// <summary>A scriptable pipeline's light color: color times intensity, in linear space
-        /// with GraphicsSettings.lightsUseLinearIntensity, else in gamma space (converted to
-        /// linear in linear projects).</summary>
+        /// <summary>A scriptable pipeline's light color (VisibleLight.finalColor): color times
+        /// intensity, in the project's color space.</summary>
         internal Color SrpFinalColor(bool linear) => ScaledColor(m_Intensity, linear);
 
-        /// <summary>The light's color (and color temperature) times <paramref name="scale"/> as
-        /// <see cref="SrpFinalColor"/> scales it by the intensity.</summary>
+        /// <summary>
+        /// The light's color times <paramref name="scale"/>, as Unity 6000.0.71f1 computes a light's
+        /// final color (tests/projects/lightcolor, a linear project). With
+        /// GraphicsSettings.lightsUseLinearIntensity, each linear color channel times the color
+        /// temperature's tint (when the light uses one) times the scale; without it, the color
+        /// times the scale, converted to linear, and the color temperature is not applied.
+        /// GraphicsSettings.lightsUseColorTemperature does not enter. Alpha is the color's alpha
+        /// times the scale. A gamma project gets the linear-intensity color converted back to gamma.
+        /// </summary>
         internal Color ScaledColor(float scale, bool linear)
         {
             var c = m_Color;
-            if (m_UseColorTemperature && UnityEngine.Rendering.GraphicsSettings.lightsUseColorTemperature)
-            {
-                var t = Mathf.CorrelatedColorTemperatureToRGB(m_ColorTemperature);
-                c *= t.gamma;
-            }
             Color result;
             if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity)
             {
-                var l = c.linear;
-                result = new Color(l.r * scale, l.g * scale, l.b * scale, 1f);
+                var tint = m_UseColorTemperature ? Mathf.CorrelatedColorTemperatureToRGB(m_ColorTemperature) : Color.white;
+                result = new Color(
+                    Mathf.GammaToLinearSpace(c.r) * tint.r * scale,
+                    Mathf.GammaToLinearSpace(c.g) * tint.g * scale,
+                    Mathf.GammaToLinearSpace(c.b) * tint.b * scale,
+                    c.a * tint.a * scale);
                 if (!linear) result = result.gamma;
             }
             else
             {
-                result = new Color(c.r * scale, c.g * scale, c.b * scale, 1f);
+                result = new Color(c.r * scale, c.g * scale, c.b * scale, c.a * scale);
                 if (linear) result = result.linear;
             }
-            result.a = 1f;
             return result;
         }
 
