@@ -39,10 +39,8 @@ Run Unbound and compare:
     python3 tests/projects/particles/compare_images.py tests/projects/grass/Reference /tmp/grass
 
 Instance counts and coverage match exactly (positions, sizes, turns, bounds) but for prototypes
-scaled by detailObjectDensity (the listed expected differences). The images of the first two
-terrains differ mostly in the layerless terrains' shading: the Editor's checker comes out bluer and
-a little darker than Unbound's (the ambient probe is the same; how the Editor lights a terrain
-without layers is not known yet). The Editor draws grass textures (Tilted) and a mesh in the Grass
-mode drawn without instancing (Refusals) at other places than ComputeDetailInstanceTransforms
-reports, while Unbound draws them at the reported places; the Counts, Coverage and density images
-differ in placement too, their dense grass only masks it.
+scaled by detailObjectDensity (the listed expected differences). The Editor draws grass, billboards
+and meshes drawn without instancing at other places than ComputeDetailInstanceTransforms reports
+(its patch meshes have their own placement), and Unbound draws them the same way. The images of the
+first two terrains differ mostly in the layerless terrains' checker, which the Editor draws darker
+and with more contrast than Unbound.
