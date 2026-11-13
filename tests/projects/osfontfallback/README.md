@@ -13,7 +13,7 @@ Observations, for the built-in LegacyRuntime font and a project font (Liberation
   Microsoft YaHei, Malgun Gothic, Gulim, MS Gothic, Nirmala UI), then Apple Color Emoji and
   LastResort.
 - `legacy/<font>/<size>/<char>`: `Font.GetCharacterInfo` metrics at 16 and 32 pixels for Latin,
-  symbols, CJK, Indic, Hebrew, Arabic, Thai, Hangul and scripts no fallback family has (Khmer,
+  mathematical and technical signs, CJK, Indic, Hebrew, Arabic, Thai, Hangul and scripts no fallback family has (Khmer,
   Ethiopic, Mongolian, Tibetan, Sinhala, Myanmar, Cherokee, Canadian syllabics, Yi, Thaana, Ogham,
   Runic, Tifinagh, N'Ko, Vai) and U+FFFE. A character no fallback face has gets an empty glyph (no
   advance, a 2 x 2 padded rectangle), as U+FFFE does; ⏰, ☕ and ⭐ do too, so Apple Color Emoji does
