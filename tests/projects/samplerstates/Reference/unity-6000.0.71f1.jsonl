@@ -334,6 +334,8 @@
 {"k":"RendererFaces.commandMultiple.zero.twoSided.inverted.transformed","v":[0,0,0,1]}
 {"k":"RendererFaces.commandMultiple.zero.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.commandMultiple.zero.cullBack.inverted.transformed","v":[0,0,0,1]}
+{"k":"RendererFaces.skinnedRendererGpu.x.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.skinnedRendererGpu.x.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.skinnedRendererGpu.x.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.x.twoSided.plain.transformed","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.x.cullBack.plain.normal","v":[1,0,0,1]}
@@ -342,6 +344,8 @@
 {"k":"RendererFaces.skinnedRendererGpu.x.twoSided.inverted.transformed","v":[0,1,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.x.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.x.cullBack.inverted.transformed","v":[0,0,0,1]}
+{"k":"RendererFaces.skinnedRendererGpu.y.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.skinnedRendererGpu.y.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.skinnedRendererGpu.y.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.y.twoSided.plain.transformed","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.y.cullBack.plain.normal","v":[1,0,0,1]}
@@ -350,6 +354,8 @@
 {"k":"RendererFaces.skinnedRendererGpu.y.twoSided.inverted.transformed","v":[0,1,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.y.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.y.cullBack.inverted.transformed","v":[0,0,0,1]}
+{"k":"RendererFaces.skinnedRendererGpu.z.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.skinnedRendererGpu.z.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.skinnedRendererGpu.z.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.z.twoSided.plain.transformed","v":[0,1,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.z.cullBack.plain.normal","v":[1,0,0,1]}
@@ -358,6 +364,8 @@
 {"k":"RendererFaces.skinnedRendererGpu.z.twoSided.inverted.transformed","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.z.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.z.cullBack.inverted.transformed","v":[1,0,0,1]}
+{"k":"RendererFaces.skinnedRendererGpu.xy.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.skinnedRendererGpu.xy.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.skinnedRendererGpu.xy.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.xy.twoSided.plain.transformed","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.xy.cullBack.plain.normal","v":[1,0,0,1]}
@@ -366,6 +374,8 @@
 {"k":"RendererFaces.skinnedRendererGpu.xy.twoSided.inverted.transformed","v":[0,1,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.xy.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.xy.cullBack.inverted.transformed","v":[0,0,0,1]}
+{"k":"RendererFaces.skinnedRendererGpu.zero.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.skinnedRendererGpu.zero.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.skinnedRendererGpu.zero.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.zero.twoSided.plain.transformed","v":[0,0,0,1]}
 {"k":"RendererFaces.skinnedRendererGpu.zero.cullBack.plain.normal","v":[1,0,0,1]}
@@ -414,6 +424,8 @@
 {"k":"RendererFaces.commandSkinned.zero.twoSided.inverted.transformed","v":[0,0,0,1]}
 {"k":"RendererFaces.commandSkinned.zero.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.commandSkinned.zero.cullBack.inverted.transformed","v":[0,0,0,1]}
+{"k":"RendererFaces.commandSkinnedGpu.x.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.commandSkinnedGpu.x.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.commandSkinnedGpu.x.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.x.twoSided.plain.transformed","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.x.cullBack.plain.normal","v":[1,0,0,1]}
@@ -422,6 +434,8 @@
 {"k":"RendererFaces.commandSkinnedGpu.x.twoSided.inverted.transformed","v":[0,1,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.x.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.x.cullBack.inverted.transformed","v":[0,0,0,1]}
+{"k":"RendererFaces.commandSkinnedGpu.y.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.commandSkinnedGpu.y.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.commandSkinnedGpu.y.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.y.twoSided.plain.transformed","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.y.cullBack.plain.normal","v":[1,0,0,1]}
@@ -430,6 +444,8 @@
 {"k":"RendererFaces.commandSkinnedGpu.y.twoSided.inverted.transformed","v":[0,1,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.y.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.y.cullBack.inverted.transformed","v":[0,0,0,1]}
+{"k":"RendererFaces.commandSkinnedGpu.z.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.commandSkinnedGpu.z.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.commandSkinnedGpu.z.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.z.twoSided.plain.transformed","v":[0,1,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.z.cullBack.plain.normal","v":[1,0,0,1]}
@@ -438,6 +454,8 @@
 {"k":"RendererFaces.commandSkinnedGpu.z.twoSided.inverted.transformed","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.z.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.z.cullBack.inverted.transformed","v":[1,0,0,1]}
+{"k":"RendererFaces.commandSkinnedGpu.xy.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.commandSkinnedGpu.xy.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.commandSkinnedGpu.xy.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.xy.twoSided.plain.transformed","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.xy.cullBack.plain.normal","v":[1,0,0,1]}
@@ -446,6 +464,8 @@
 {"k":"RendererFaces.commandSkinnedGpu.xy.twoSided.inverted.transformed","v":[0,1,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.xy.cullBack.inverted.normal","v":[0,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.xy.cullBack.inverted.transformed","v":[0,0,0,1]}
+{"k":"RendererFaces.commandSkinnedGpu.zero.bufferAvailable.0","v":[1,1,1,1]}
+{"k":"RendererFaces.commandSkinnedGpu.zero.bufferAvailable.1","v":[1,1,1,1]}
 {"k":"RendererFaces.commandSkinnedGpu.zero.twoSided.plain.normal","v":[1,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.zero.twoSided.plain.transformed","v":[0,0,0,1]}
 {"k":"RendererFaces.commandSkinnedGpu.zero.cullBack.plain.normal","v":[1,0,0,1]}

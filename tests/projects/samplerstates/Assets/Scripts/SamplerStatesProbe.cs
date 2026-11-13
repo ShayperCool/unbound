@@ -392,7 +392,6 @@ public class UitkProbe : MonoBehaviour
                     skin.bones = new[] { go.transform }; skin.rootBone = go.transform;
                     skin.localBounds = new Bounds(new Vector3(.25f, .5f, 0), new Vector3(2, 2, 2));
                     skin.updateWhenOffscreen = true; renderers[i] = skin;
-                    if (path.EndsWith("Gpu", StringComparison.Ordinal)) skin.GetVertexBuffer()?.Dispose();
                 }
                 else
                 {
@@ -404,6 +403,17 @@ public class UitkProbe : MonoBehaviour
                     go.transform.SetParent(parent.transform, false);
                     parent.transform.localScale = scale;
                     parent.transform.position = new Vector3(scale.x < 0 ? 1 : .5f, scale.y < 0 ? 1 : 0, 0);
+                }
+            }
+            if (path.EndsWith("Gpu", StringComparison.Ordinal))
+            {
+                foreach (var renderer in renderers) renderer.sharedMaterial = faces;
+                camera.Render();
+                for (int i = 0; i < renderers.Length; i++)
+                {
+                    var buffer = ((SkinnedMeshRenderer)renderers[i]).GetVertexBuffer();
+                    Row(rows, "RendererFaces." + path + "." + axis + ".bufferAvailable." + i, buffer != null ? Color.white : Color.black);
+                    buffer?.Dispose();
                 }
             }
             foreach (bool invert in new[] { false, true })
