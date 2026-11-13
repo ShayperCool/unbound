@@ -1513,7 +1513,8 @@ impl<'a> Builder<'a> {
             // A clip of the meta whose range has no frames (its last frame is its first) imports
             // as an empty clip, whatever the rig, with the Editor's warning (6000.0.71f1,
             // tests/projects/modelclips HumanSingle, GenericSingle, LegacySingle: no curves,
-            // length 1). A range ending before it starts is unmeasured and taken the same way;
+            // length 1; its events, parameter curves and root node motion curves are
+            // unmeasured). A range ending before it starts is unmeasured and taken the same way;
             // a take's own clip keeps its span's rule (`Take::new`).
             let no_frames = !range.preview && !take_clips && range.last <= range.first;
             if no_frames && range.last == range.first {
