@@ -29,7 +29,7 @@ namespace Unbound.ApiTools;
 public static class StubGenerator
 {
     /// <summary>Bump when the output for the same inputs would differ.</summary>
-    public const string FormatVersion = "unbound-stubs-11";
+    public const string FormatVersion = "unbound-stubs-12";
 
     /// <param name="implSourceDir">The implementation's sources (<c>managed/UnityEngine</c>): the
     /// generator reads which hand-written types are partial and declare constructors.</param>
@@ -120,6 +120,8 @@ sealed partial class StubBuilder
     readonly List<(string Name, IAssemblySymbol Assembly, MetadataReader Reader)> _modules = new();
     readonly HashSet<IAssemblySymbol> _unityModules = new(SymbolEqualityComparer.Default);
     readonly Dictionary<IAssemblySymbol, PEReader> _moduleImages = new(SymbolEqualityComparer.Default);
+    /// <summary>Unity's assemblies read, in reading order: file name and module version id.</summary>
+    readonly List<(string File, Guid Mvid)> _inputs = new();
     /// <summary>Each top-level Unity type by metadata name, and the module that owns it.</summary>
     readonly Dictionary<string, (string Module, INamedTypeSymbol Type)> _owners = new(StringComparer.Ordinal);
 
@@ -148,6 +150,8 @@ sealed partial class StubBuilder
         var classLibrary = File.Exists(netstandard)
             ? new[] { MetadataReference.CreateFromFile(netstandard) }
             : FrameworkReferences(implementation: true).ToArray();
+        if (File.Exists(netstandard))
+            _inputs.Add((Path.GetFileName(netstandard), ModuleVersionId(netstandard)));
 
         var moduleReferences = moduleFiles.Select(f => MetadataReference.CreateFromFile(f)).ToList();
         _unity = CSharpCompilation.Create(
@@ -158,7 +162,9 @@ sealed partial class StubBuilder
         {
             var assembly = (IAssemblySymbol)_unity.GetAssemblyOrModuleSymbol(moduleReferences[i])!;
             var pe = new PEReader(File.ReadAllBytes(moduleFiles[i]).ToImmutableArrayUnsafe());
-            _modules.Add((assembly.Name, assembly, pe.GetMetadataReader()));
+            var reader = pe.GetMetadataReader();
+            _modules.Add((assembly.Name, assembly, reader));
+            _inputs.Add((Path.GetFileName(moduleFiles[i]), reader.GetGuid(reader.GetModuleDefinition().Mvid)));
             _moduleImages.Add(assembly, pe);
             _unityModules.Add(assembly);
         }
@@ -276,7 +282,7 @@ sealed partial class StubBuilder
             Report.Members += moduleReport.Members;
             files.Add((moduleReport.File, Header("module API") + body));
         }
-        files.Add(("Unbound.Assembly.g.cs", Header("assembly-level attributes of the modules") + AssemblyAttributes()));
+        files.Add(("Unbound.Assembly.g.cs", Header("assembly-level attributes of the modules") + Inputs() + AssemblyAttributes()));
         foreach (var (id, entry) in _returns.OrderBy(r => r.Key, StringComparer.Ordinal))
         {
             if (!_usedReturns.Contains(id))
@@ -295,6 +301,24 @@ sealed partial class StubBuilder
         .Append("// next generation drops the stub.\n")
         .Append("#pragma warning disable\n\n")
         .ToString();
+
+    /// <summary>The list of Unity's assemblies the stubs come from, with their module version ids, so
+    /// that generating from other files than the release's API reference (another OS's Editor build,
+    /// other platform modules) shows as a change of this list.</summary>
+    string Inputs()
+    {
+        var text = new StringBuilder("// Generated from these Unity assemblies (file, module version id):\n");
+        foreach (var (file, mvid) in _inputs)
+            text.Append($"//   {file} {mvid:D}\n");
+        return text.Append('\n').ToString();
+    }
+
+    static Guid ModuleVersionId(string path)
+    {
+        using var pe = new PEReader(File.OpenRead(path));
+        var reader = pe.GetMetadataReader();
+        return reader.GetGuid(reader.GetModuleDefinition().Mvid);
+    }
 
     /// <summary>The union of the modules' InternalsVisibleTo (internals of every module now live in
     /// the one implementation assembly) and forwarders for the class library types Unity's modules

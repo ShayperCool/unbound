@@ -185,14 +185,17 @@ enum Command {
     },
     /// Generate the compatibility stubs of the project's Unity release into
     /// managed/UnityEngine/Generated/<family>/: every type and member Unity has that the
-    /// hand-written implementation lacks. Rebuild (cargo build) afterwards.
+    /// hand-written implementation lacks. Unity's declarations come from the release's Linux
+    /// Editor with the android and ios modules (downloaded once on other machines), so the output
+    /// is the same everywhere. Rebuild (cargo build) afterwards.
     GenStubs {
         #[command(flatten)]
         project: ProjectArgs,
     },
     /// Check the hand-written engine API against the project's Unity release: members named
     /// like Unity's with other signatures, misplaced types, enum values, accessibility, struct
-    /// layouts. Exits non-zero when there are errors.
+    /// layouts. Reads the same Unity declarations as gen-stubs. Exits non-zero when there are
+    /// errors.
     ApiCheck {
         /// Emit the complete declaration report, including exact exceptions.
         #[arg(long)]

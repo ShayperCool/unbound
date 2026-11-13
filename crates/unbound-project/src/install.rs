@@ -89,8 +89,84 @@ impl UnityInstall {
         out
     }
 
+    /// The release's API reference: the files `gen-stubs` and `api-check` read Unity's declarations
+    /// from. The stubs are committed, so they must not depend on the machine generating them, but
+    /// Editor builds for different OSes list the same members and attributes in different metadata
+    /// orders and ship different players (`LinuxStandaloneSupport`, `MacStandaloneSupport`), and an
+    /// installation has whichever modules its owner chose. The reference is therefore always the
+    /// release's Linux Editor with the default modules (android, ios): this installation when it is
+    /// one with those modules, else the release's downloads ([`crate::editor_archive`]).
+    pub fn api_reference(&self) -> Result<ApiReference> {
+        let data = if cfg!(target_os = "linux") && has_api_reference_platforms(&self.data) {
+            self.data.clone()
+        } else {
+            tracing::info!(
+                "{} is not a Linux Editor with the {API_REFERENCE_PLATFORMS:?} modules: reading \
+                 Unity {}'s API from its Linux Editor downloads",
+                self.data.display(),
+                self.version
+            );
+            let data = crate::editor_archive::fetch_api_reference(self.version)?;
+            if !has_api_reference_platforms(&data) {
+                bail!(
+                    "Unity {}'s Linux Editor files in {} lack one of {API_REFERENCE_PLATFORMS:?}",
+                    self.version,
+                    data.display()
+                );
+            }
+            data
+        };
+        let install = UnityInstall {
+            data,
+            version: self.version,
+        };
+        let platform_modules = install
+            .platform_modules()
+            .into_iter()
+            .filter(|module| is_api_reference_module(&install.data, module))
+            .collect();
+        Ok(ApiReference {
+            managed_engine_dir: install.managed_engine_dir(),
+            platform_modules,
+        })
+    }
+
     pub fn builtin_packages_dir(&self) -> PathBuf {
         self.data.join("Resources/PackageManager/BuiltInPackages")
+    }
+}
+
+/// The `PlaybackEngines` folders of the API reference ([`UnityInstall::api_reference`]): the Linux
+/// Editor's own player and the folders of the default modules (`editor_archive`'s android, ios).
+pub const API_REFERENCE_PLATFORMS: &[&str] =
+    &["AndroidPlayer", "LinuxStandaloneSupport", "iOSSupport"];
+
+/// Unity's declarations as `gen-stubs` and `api-check` read them, the same on every machine.
+#[derive(Debug, Clone)]
+pub struct ApiReference {
+    /// `Editor/Data/Managed/UnityEngine`
+    pub managed_engine_dir: PathBuf,
+    /// [`UnityInstall::platform_modules`] of the [`API_REFERENCE_PLATFORMS`] only.
+    pub platform_modules: Vec<PathBuf>,
+}
+
+fn has_api_reference_platforms(data: &Path) -> bool {
+    data.ends_with("Editor/Data")
+        && API_REFERENCE_PLATFORMS
+            .iter()
+            .all(|platform| data.join("PlaybackEngines").join(platform).is_dir())
+}
+
+/// Whether a platform module of the installation in `data` is part of the API reference: outside
+/// `PlaybackEngines` (`Managed/UnityEditor.Graphs.dll`) or in one of [`API_REFERENCE_PLATFORMS`].
+fn is_api_reference_module(data: &Path, module: &Path) -> bool {
+    match module.strip_prefix(data.join("PlaybackEngines")) {
+        Ok(rel) => rel.components().next().is_some_and(|platform| {
+            API_REFERENCE_PLATFORMS
+                .iter()
+                .any(|p| platform.as_os_str() == *p)
+        }),
+        Err(_) => true,
     }
 }
 
@@ -148,4 +224,76 @@ pub fn home() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| "/".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn touch(path: &Path) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, b"").unwrap();
+    }
+
+    #[test]
+    fn api_reference_modules_are_the_reference_platforms_only() {
+        let root = std::env::temp_dir().join(format!("unbound-apiref-{}", std::process::id()));
+        let data = root.join("Editor/Data");
+        for rel in [
+            "Managed/UnityEditor.Graphs.dll",
+            "PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll",
+            "PlaybackEngines/AndroidPlayer/Unity.Android.Gradle.dll",
+            "PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll",
+            "PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll",
+            "PlaybackEngines/WebGLSupport/UnityEditor.WebGL.Extensions.dll",
+            "PlaybackEngines/MacStandaloneSupport/UnityEditor.OSXStandalone.Extensions.dll",
+        ] {
+            touch(&data.join(rel));
+        }
+        assert!(has_api_reference_platforms(&data));
+        let install = UnityInstall {
+            data: data.clone(),
+            version: "6000.0.71f1".parse().unwrap(),
+        };
+        let kept: Vec<String> = install
+            .platform_modules()
+            .iter()
+            .filter(|module| is_api_reference_module(&data, module))
+            .map(|module| {
+                module
+                    .strip_prefix(&data)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+        assert_eq!(
+            kept,
+            [
+                "Managed/UnityEditor.Graphs.dll",
+                "PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll",
+                "PlaybackEngines/AndroidPlayer/Unity.Android.Gradle.dll",
+                "PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll",
+                "PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll",
+            ]
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn an_install_without_a_reference_platform_or_of_another_os_is_not_the_reference() {
+        let root = std::env::temp_dir().join(format!("unbound-notref-{}", std::process::id()));
+        let data = root.join("Editor/Data");
+        for platform in ["AndroidPlayer", "LinuxStandaloneSupport"] {
+            std::fs::create_dir_all(data.join("PlaybackEngines").join(platform)).unwrap();
+        }
+        assert!(!has_api_reference_platforms(&data));
+        // A macOS installation's data directory, even with every reference platform folder.
+        let mac = root.join("Unity.app/Contents");
+        for platform in API_REFERENCE_PLATFORMS {
+            std::fs::create_dir_all(mac.join("PlaybackEngines").join(platform)).unwrap();
+        }
+        assert!(!has_api_reference_platforms(&mac));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 }

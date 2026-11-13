@@ -100,8 +100,20 @@ fn module_marker(root: &Path, id: &str) -> PathBuf {
 /// unpacked first when they are not cached. `UNBOUND_OFFLINE` forbids downloading; a module that
 /// cannot be had is reported and left out.
 pub fn fetch(release: UnityVersion) -> Result<PathBuf> {
+    fetch_with(release, &modules_wanted(), false)
+}
+
+/// `Editor/Data` of the release's Linux Editor files with exactly the default modules
+/// ([`DEFAULT_MODULES`], whatever `UNBOUND_EDITOR_MODULES` says), downloaded first when they are not
+/// cached: the API reference (`UnityInstall::api_reference`). A module that cannot be had is an
+/// error, as the stubs generated without it would lose its API.
+pub fn fetch_api_reference(release: UnityVersion) -> Result<PathBuf> {
+    let modules: Vec<String> = DEFAULT_MODULES.iter().map(|m| m.to_string()).collect();
+    fetch_with(release, &modules, true)
+}
+
+fn fetch_with(release: UnityVersion, modules: &[String], required: bool) -> Result<PathBuf> {
     let root = root(release);
-    let modules = modules_wanted();
     let missing: Vec<&String> = modules
         .iter()
         .filter(|id| !module_marker(&root, id).is_file())
@@ -112,6 +124,13 @@ pub fn fetch(release: UnityVersion) -> Result<PathBuf> {
         return Ok(data);
     }
     if std::env::var_os("UNBOUND_OFFLINE").is_some() {
+        if required && let Some(data) = cached(release) {
+            bail!(
+                "Unity {release}'s modules {missing:?} are not cached in {} and UNBOUND_OFFLINE \
+                 forbids downloading them",
+                data.display()
+            );
+        }
         if let Some(data) = cached(release) {
             tracing::warn!(
                 "Unity {release}'s modules {missing:?} are not cached and UNBOUND_OFFLINE forbids \
@@ -132,10 +151,16 @@ pub fn fetch(release: UnityVersion) -> Result<PathBuf> {
     }
     for id in missing {
         let Some(module) = editor.modules.iter().find(|m| m.id == *id) else {
+            if required {
+                bail!("Unity {release}'s Linux Editor has no module `{id}`");
+            }
             tracing::warn!("Unity {release} has no module `{id}`");
             continue;
         };
-        if let Err(e) = fetch_module(release, &root, module) {
+        if required {
+            fetch_module(release, &root, module)
+                .with_context(|| format!("fetching Unity {release}'s {id} module"))?;
+        } else if let Err(e) = fetch_module(release, &root, module) {
             tracing::warn!(
                 "Unity {release}'s {id} module is not available, so code using its editor \
                  assemblies does not compile: {e:#}"

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Runtime.Loader;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -182,6 +184,25 @@ public class StubGeneratorTests
 
             // A second run with the same inputs changes nothing.
             Assert.Equal(0, StubGenerator.Generate(unity, impl, output, sourceDir, returns: NoReturns).ChangedFiles);
+
+            // The assembly file names every Unity assembly read with its module version id, so stubs
+            // generated from other files (another OS's Editor build) differ visibly.
+            static string Mvid(string path)
+            {
+                using var pe = new PEReader(File.OpenRead(path));
+                var md = pe.GetMetadataReader();
+                return md.GetGuid(md.GetModuleDefinition().Mvid).ToString("D");
+            }
+            var assemblyFile = File.ReadAllText(Path.Combine(output, "Unbound.Assembly.g.cs"));
+            Assert.Contains("// Generated from these Unity assemblies (file, module version id):\n"
+                + $"//   UnityEngine.CoreModule.dll {Mvid(core)}\n"
+                + $"//   UnityEngine.PhysicsModule.dll {Mvid(Path.Combine(unity, "UnityEngine.PhysicsModule.dll"))}\n\n",
+                assemblyFile);
+            var (otherBuild, otherErrors) = Compile("UnityEngine.PhysicsModule", new[] { UnityPhysics + "\n// another build" }, core);
+            Assert.Empty(otherErrors);
+            Write(unity, "UnityEngine.PhysicsModule", otherBuild);
+            Assert.Equal(1, StubGenerator.Generate(unity, impl, output, sourceDir, returns: NoReturns).ChangedFiles);
+            Assert.NotEqual(assemblyFile, File.ReadAllText(Path.Combine(output, "Unbound.Assembly.g.cs")));
 
             var context = new AssemblyLoadContext("stubs", isCollectible: true);
             try

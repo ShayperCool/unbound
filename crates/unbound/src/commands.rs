@@ -667,9 +667,6 @@ struct StubModuleReport {
     members: u64,
 }
 
-/// Regenerates the release's compatibility stubs: builds the hand-written implementation alone
-/// (`-p:UnboundNoStubs=true`, into `target/managed-nostubs`), then has the managed generator write
-/// what Unity's modules have and it lacks into `managed/UnityEngine/Generated/<family>/`.
 /// The hand-written implementation built alone, for `gen-stubs` and `api-check`.
 struct NoStubsBuild {
     /// `managed/UnityEngine`
@@ -743,19 +740,26 @@ fn build_without_stubs(family: &str) -> Result<NoStubsBuild> {
     })
 }
 
+/// Regenerates the release's compatibility stubs: builds the hand-written implementation alone
+/// (`-p:UnboundNoStubs=true`, into `target/managed-nostubs`), then has the managed generator write
+/// what Unity's modules have and it lacks into `managed/UnityEngine/Generated/<family>/`. Unity's
+/// modules are the release's API reference (`UnityInstall::api_reference`), so the output is the
+/// same on every machine.
 pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
     let family = project.profile.data.family.clone();
+    let reference = project.install.api_reference()?;
+    let build_start = Instant::now();
     let NoStubsBuild { source, dll } = build_without_stubs(&family)?;
-    let built = start.elapsed();
+    let built = build_start.elapsed();
 
     let runtime = unbound_host::ManagedRuntime::start()?;
     let report: StubReport = runtime.call(
         "gen-stubs",
         &json!({
-            "unityManagedEngineDir": project.install.managed_engine_dir(),
-            "platformModules": project.install.platform_modules(),
+            "unityManagedEngineDir": reference.managed_engine_dir,
+            "platformModules": reference.platform_modules,
             "implAssembly": dll,
             "outputDir": source.join("Generated").join(&family),
             "releaseFamily": family,
@@ -830,13 +834,14 @@ struct ApiCheckError {
 pub fn api_check(args: &ProjectArgs, json_output: bool) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
+    let reference = project.install.api_reference()?;
     let NoStubsBuild { dll, source } = build_without_stubs(&project.profile.data.family)?;
     let runtime = unbound_host::ManagedRuntime::start()?;
     let report: ApiCheckReport = runtime.call(
         "api-check",
         &json!({
-            "unityManagedEngineDir": project.install.managed_engine_dir(),
-            "platformModules": project.install.platform_modules(),
+            "unityManagedEngineDir": reference.managed_engine_dir,
+            "platformModules": reference.platform_modules,
             "implAssembly": dll,
             "implSourceDir": source,
             "release": project.version.to_string(),
