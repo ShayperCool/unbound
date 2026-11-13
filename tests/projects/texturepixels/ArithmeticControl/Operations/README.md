@@ -30,6 +30,11 @@ Subtraction and remainder controls agree on these inputs, which does not establi
 their width for all operands. NaN, infinity, denormals, inlining decisions,
 exception paths, generic methods and other platforms remain unmeasured.
 
+Those counts describe CoreCLR's float evaluation. With the script float rule
+(tests/projects/floatrounding) every numeric and boolean record matches in both modes on macOS;
+the remaining records (Release 6, Debug 5) are `gameIL/` bodies of converted methods, which show
+the IL as loaded, with its conversions.
+
 The original 62-record arithmetic reference remains unchanged. This supplement
 keeps raw discrepancies visible and does not replace the texturepixels gate.
 

@@ -24,8 +24,10 @@ For input 20, Red produces BFBACF91 in the Editor and BFBACF92 in Unbound. The c
 field and call controls produce BFBACF92 in both. This is a game runtime precision
 gap. Changing Texture3D storage or readback would corrupt correctly supplied data.
 
-The check command reports every raw difference and currently returns failure at
-55/62 values. All four game-method bodies and the Release mode key match.
+The check command reports every raw difference. Before the script float rule
+(tests/projects/floatrounding) it matched 55/62 values, with all four game-method bodies and the
+Release mode key. With the rule every numeric value and the mode key match (59/62 on macOS); the
+`gameIL.*` bodies of the three converted methods show the IL as loaded, with its conversions.
 This causal supplement does not replace the parent parity gate, whose three
 strict VolumeRGFloat rows per color space remain open. A general compatibility
 implementation must preserve input conversions, casts, stores, call boundaries

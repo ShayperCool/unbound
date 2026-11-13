@@ -2968,3 +2968,15 @@ records and all 44 differences in the new 136-record leaf-identity control.
 The original input, lifecycle, scripted-import and float oracles/tolerances stay
 strict. See the Q402/Q417 residual-scope table in COMPATIBILITY_GAPS.md; each open
 mechanism is M-sized and has a reproducer, rather than a fixed-value workaround.
+
+### Q429: script float arithmetic as the Editor's Mono evaluates it
+
+tests/projects/floatrounding records 226 values per code optimization mode (Release and Debug)
+from two Linux x86_64 and two macOS arm64 Editor captures each, all identical per mode: float
+values on the evaluation stack are doubles and round where the IL stores them, and the modes differ
+only where the compiled IL keeps a local. Unbound converts game, package and plugin assemblies at
+load (`Compat.ScriptFloatsWide`, 6000.0.71f1) and matches every control in both modes; before it,
+Release matched 112/221 and Debug 121/221 of the first version's values. texturepixels'
+VolumeRGFloat rows match on macOS. Residuals: converted method bodies seen through reflection, and
+Unity's managed math types, which are engine code (queued).
+
