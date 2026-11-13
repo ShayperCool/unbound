@@ -263,7 +263,7 @@ API declarations and lookup checks retain the exact release exceptions listed ab
 with zero errors; no new exceptions are added by these default-state changes.
 
 The probe README lists remaining module counts and unresolved contexts. In particular,
-CoreModule keeps 115 rows requiring operation/payload validity, rendering initialization
+CoreModule keeps 112 rows requiring operation/payload validity, rendering initialization
 or imported/serialized state controls. Two TextCore instance IDs and one Canvas early
 layout value retain updated exact implementation payloads, without changing reference
 values or adding variable policies.
