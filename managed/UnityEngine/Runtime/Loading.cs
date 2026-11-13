@@ -891,7 +891,24 @@ namespace Unbound.Runtime
             finally
             {
                 s_Loading.Remove(guid);
+                if (s_WhenLoaded.Remove(guid, out var pending))
+                    foreach (var action in pending) action();
             }
+        }
+
+        /// <summary>Actions waiting for a file being loaded to be read whole, by its GUID.</summary>
+        static readonly Dictionary<string, List<Action>> s_WhenLoaded = new Dictionary<string, List<Action>>();
+
+        /// <summary>When the file of <paramref name="asset"/> is still being read (an asset that
+        /// references, through other assets, back into the file being loaded), runs
+        /// <paramref name="action"/> once it is read whole and answers true; false, running
+        /// nothing, for an asset already read (or not from a file).</summary>
+        internal static bool WhenLoaded(Object asset, Action action)
+        {
+            if (!TryGetLocation(asset, out var guid, out _) || !s_Loading.Contains(guid)) return false;
+            if (!s_WhenLoaded.TryGetValue(guid, out var pending)) s_WhenLoaded[guid] = pending = new List<Action>();
+            pending.Add(action);
+            return true;
         }
 
         /// <summary>

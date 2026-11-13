@@ -36,10 +36,20 @@ namespace Unbound.Runtime
 
         /// <summary>A model's slots without a material of its own get the render pipeline's default
         /// material (URP's Lit.mat), Default-Material without one (measured:
-        /// tests/projects/modelimport).</summary>
+        /// tests/projects/modelimport). A model loaded while the pipeline asset itself is being read
+        /// (URP's global settings reference core's ProbeSamplingDebugMesh.fbx, and the asset's
+        /// renderer loads them) gets it once the pipeline asset is read whole, as the Editor's
+        /// models have it from their import (tests/projects/rpglobalsettings).</summary>
         internal static void UsePipelineDefault(LoadedFile file)
         {
             var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+            if (pipeline != null && AssetDatabaseRuntime.WhenLoaded(pipeline, () => ReplaceBuiltinDefault(file, pipeline)))
+                return;
+            ReplaceBuiltinDefault(file, pipeline);
+        }
+
+        static void ReplaceBuiltinDefault(LoadedFile file, UnityEngine.Rendering.RenderPipelineAsset pipeline)
+        {
             var replacement = pipeline != null ? pipeline.defaultMaterial : null;
             if (replacement == null) return;
             var builtin = BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, BuiltinShaders.DefaultMaterialFileId) as Material;
