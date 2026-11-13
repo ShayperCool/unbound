@@ -67,16 +67,17 @@ namespace UnityEngine
             var frustum = camera.Projection * camera.View;
             if (!LodCurrent(camera.Camera, camera.Position, frustum, height, Settings(terrain)))
                 UpdateGroupLod(terrain, camera, frustum, height);
-            var model = Matrix4x4.Translate(terrain.GetPosition());
-            for (int level = 0; level <= tree.Levels; level++)
-            {
-                int side = tree.Side(level);
-                var state = tree.State[level];
-                for (int z = 0; z < side; z++)
-                    for (int x = 0; x < side; x++)
-                        if (state[z * side + x] == Drawn)
-                            FrameBuilder.AddMeshDraws(this, PatchMesh(tree, data, level, x, z, EdgeMask(tree, level, x, z)), model, Color.white, camera, into);
-            }
+            CollectNode(tree, data, Matrix4x4.Translate(terrain.GetPosition()), tree.Levels, 0, 0, camera, into);
+        }
+
+        /// <summary>Adds the drawn nodes under a node, walking down only through split ones.</summary>
+        void CollectNode(PatchTree tree, TerrainData data, Matrix4x4 model, int level, int x, int z, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
+        {
+            byte state = tree.State[level][z * tree.Side(level) + x];
+            if (state == Drawn)
+                FrameBuilder.AddMeshDraws(this, PatchMesh(tree, data, level, x, z, EdgeMask(tree, level, x, z)), model, Color.white, camera, into);
+            else if (state == Split)
+                for (int c = 0; c < 4; c++) CollectNode(tree, data, model, level - 1, x * 2 + (c & 1), z * 2 + (c >> 1), camera, into);
         }
 
         bool LodCurrent(Camera camera, Vector3 position, Matrix4x4 frustum, float height, Vector3 settings) =>
