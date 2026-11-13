@@ -119,7 +119,7 @@ namespace UnityEditor
         {
             if (SettingsAssets.AtPath(assetPath) is SettingsFile settings) return new[] { settings.Object };
             var guid = AssetPathToGUID(assetPath);
-            return string.IsNullOrEmpty(guid) ? Array.Empty<Object>() : AssetDatabaseRuntime.LoadAll(guid).ToArray();
+            return string.IsNullOrEmpty(guid) ? Array.Empty<Object>() : AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).ToArray();
         }
 
         public static Object[] LoadAllAssetRepresentationsAtPath(string assetPath)

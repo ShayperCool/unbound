@@ -766,18 +766,19 @@ namespace Unbound.Runtime
             return null;
         }
 
-        /// <summary>The objects of an asset file as Resources.LoadAll and AssetDatabase list them:
-        /// the main object and its sub-assets; for a prefab, its root only.</summary>
-        internal static IEnumerable<Object> LoadAll(string guid)
+        /// <summary>The objects of an asset file as Resources.LoadAll lists them: the main object and
+        /// its sub-assets; for a prefab, its root only. <paramref name="hierarchy"/> adds every
+        /// GameObject and component of a prefab or model, as AssetDatabase.LoadAllAssetsAtPath
+        /// lists them (measured for models: tests/projects/modelfileids; prefabs and the order
+        /// of the list are not measured).</summary>
+        internal static IEnumerable<Object> LoadAll(string guid, bool hierarchy = false)
         {
             var file = LoadFile(guid);
             if (file == null) return Array.Empty<Object>();
-            // The main object and the file's other assets (a model's meshes, materials, clips), not
-            // the GameObjects and components under a prefab's root.
             var list = new List<Object>();
             if (file.MainObject != null) list.Add(file.MainObject);
             foreach (var o in file.Objects.Values)
-                if (o != file.MainObject && !(o is Component) && !(o is GameObject)) list.Add(o);
+                if (o != file.MainObject && (hierarchy || !(o is Component) && !(o is GameObject))) list.Add(o);
             return list;
         }
 
