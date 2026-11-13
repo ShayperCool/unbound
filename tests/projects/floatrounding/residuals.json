@@ -89,35 +89,5 @@
   "release/il/Vector3Dot",
   "release/il/Vector3Magnitude",
   "release/il/Vector3SqrMagnitude"
- ],
- "Unity's native math (Quaternion Slerp, Lerp, eulerAngles, LookRotation, AngleAxis, FromToRotation, Vector3 Slerp and RotateTowards, Matrix4x4 inverse, rotation and lossyScale, Bounds SqrDistance and ClosestPoint) rounds in float32 in an order or with an algorithm Unbound's float32 implementations do not match bit for bit (queued follow-up)": [
-  "debug/native/boundsPoint",
-  "debug/native/matrixDecompose",
-  "debug/native/matrixInverse",
-  "debug/native/quaternionAngleAxis",
-  "debug/native/quaternionEulerAngles",
-  "debug/native/quaternionFromToRotation",
-  "debug/native/quaternionLerp",
-  "debug/native/quaternionLookRotation",
-  "debug/native/quaternionSlerp",
-  "debug/native/vector3RotateTowards",
-  "debug/native/vector3Slerp",
-  "release/native/boundsPoint",
-  "release/native/matrixDecompose",
-  "release/native/matrixInverse",
-  "release/native/quaternionAngleAxis",
-  "release/native/quaternionEulerAngles",
-  "release/native/quaternionFromToRotation",
-  "release/native/quaternionLerp",
-  "release/native/quaternionLookRotation",
-  "release/native/quaternionSlerp",
-  "release/native/vector3RotateTowards",
-  "release/native/vector3Slerp"
- ],
- "C# math that takes a native result: Matrix4x4.TransformPlane uses the native inverse, Quaternion.RotateTowards the native SlerpUnclamped (the native/ rows above)": [
-  "debug/api/matrixVector",
-  "debug/api/quaternionRotateTowards",
-  "release/api/matrixVector",
-  "release/api/quaternionRotateTowards"
  ]
 }

@@ -13,7 +13,9 @@ Vector2/3/4, Quaternion, Matrix4x4, Color, Color32, Plane, Rect, Pose, GeometryU
 rows of the math methods Unity binds to native code (Quaternion Slerp, Lerp, Euler, eulerAngles,
 LookRotation, AngleAxis, FromToRotation, Inverse; Vector3 Slerp, RotateTowards, OrthoNormalize;
 Matrix4x4 TRS, inverse, determinant, rotation, lossyScale; Bounds SqrDistance, Contains,
-ClosestPoint). `il/` rows record each control's compiled instructions, with tokens shown as the names
+ClosestPoint), and five `native/` rows of the branches random operands rarely reach (nearly equal and
+opposite rotations and directions, degenerate lengths, gimbal lock, singular and pivoting matrices,
+mirroring and degenerate scales, Matrix4x4.Perspective, points on a box's faces). `il/` rows record each control's compiled instructions, with tokens shown as the names
 they resolve to.
 
 ```bash
@@ -26,10 +28,10 @@ python3 tests/projects/floatrounding/run.py gate --profile release              
 Editor, `UNBOUND_CODE_OPTIMIZATION=debug` in the engine). The Linux x86_64 Editor and the macOS arm64
 Editor (both in batch mode without a graphics device) each recorded two captures per mode, the two
 of a host byte-identical. All rows but the `native/` ones are the same on both hosts and form one
-reference per mode (`Reference/unity-<release>/<mode>.jsonl`). The `native/` rows give the same
-values on both hosts for the recorded operands, but with other operands tried while recording a few
-samples of Quaternion.Euler, eulerAngles and Vector3.RotateTowards differed between them, so each
-host keeps its own (`<mode>.linux.jsonl`, `<mode>.macos.jsonl`, the same in both modes). `publish --host linux`
+reference per mode (`Reference/unity-<release>/<mode>.jsonl`). The `native/` rows differ between
+the hosts where a result passes through the platform's sine, cosine, arcsine, arccosine or
+arctangent (in the recorded rows: Slerp, AngleAxis, eulerAngles, Vector3 Slerp and Perspective on
+some operands; the other arithmetic gave the same values on both), so each host keeps its own (`<mode>.linux.jsonl`, `<mode>.macos.jsonl`, the same in both modes). `publish --host linux`
 publishes captures copied from the Linux machine.
 
 ## Measured rule
@@ -82,7 +84,12 @@ methods in one generated assembly, `Unbound.EngineMath` (`managed/Unbound.Host/W
 built once per engine and cached with the adapted assemblies; the runtime optimizes it whatever the
 game's code optimization mode); the engine's own calls keep float32. The copies come from a second build of the engine's math
 sources without IL optimization (`managed/Unbound.ScriptMath`), where every declared local is a
-store as in the Editor. Methods Unity binds to native code keep the engine's float32 implementation.
+store as in the Editor. The engine's implementations of the methods Unity binds to native code
+compute in single precision with the Editor's algorithms and order of operations
+(`managed/UnityEngine/Math/RotationMatrix.cs`, `PolarRotation.cs`, and the Quaternion, Vector3,
+Matrix4x4 and Bounds sources); their sines, cosines and inverse trigonometric functions come from
+the platform's C library, as the Editor's do, which is where the hosts differ. They match every
+`native/` row on both hosts in both modes.
 
 The gate matches every control in both modes. Its residuals (`residuals.json`):
 
@@ -91,9 +98,6 @@ The gate matches every control in both modes. Its residuals (`residuals.json`):
   shifted branch offsets) were the Editor's; the gate lists these rows as residuals and does not
   compare them further.
 - `il/` rows of controls that call converted math: their calls name the converted copies.
-- `native/` rows: Unbound's float32 implementations of Unity's native math do not round in the
-  Editor's order (queued), and the two C# methods that use a native result (`TransformPlane` uses
-  the inverse, `Quaternion.RotateTowards` uses `SlerpUnclamped`).
 
 A float-heavy benchmark on macOS arm64 (best of 7 runs, tiered JIT warm): a particle-style loop over
 a three-float struct with operators, `Dot` and `sqrMagnitude` takes 16 ms instead of 10.4 ms; a
@@ -103,6 +107,6 @@ update loop over Unity's math API (normalize, Lerp, quaternion products, TRS, Mu
 Dot, Distance, Cross) takes 33.6 ms with the converted copies instead of 25.4 ms when the game code is
 compiled in Release, and 72.2 ms instead of 70.4 ms in Debug.
 
-Not measured: other Unity releases, NaN payloads, code Burst compiles in the Editor (and the
+Not measured: other Unity releases, NaN payloads and NaN operands of the natively bound methods, code Burst compiles in the Editor (and the
 methods such code calls, which are converted like any other), and Unity's managed code outside its
 math structs (RectTransformUtility, UI Toolkit, ...), which stays engine code in float32.
