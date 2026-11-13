@@ -32,21 +32,21 @@ SpriteAtlas:
     secondaryTextureSettings: {}
     variantMultiplier: 1
     packables:
-    - {fileID: 2800000, guid: bfd2473008369482bbf5c69c471ea66e, type: 3}
-    - {fileID: 2800000, guid: a02b2342308f017a1841758fe4b298ac, type: 3}
+    - {fileID: 2800000, guid: 4983908953fb605cfbdcbe9ee426923c, type: 3}
+    - {fileID: 2800000, guid: dc12fc239bb24e9fd80627ce604da4b4, type: 3}
     bindAsDefault: 1
     isAtlasV2: 0
     cachedData: {fileID: 0}
     packedSpriteRenderDataKeys:
-    - bfd2473008369482bbf5c69c471ea66e: 21300000
-    - a02b2342308f017a1841758fe4b298ac: 21300000
+    - dc12fc239bb24e9fd80627ce604da4b4: 21300000
+    - 4983908953fb605cfbdcbe9ee426923c: 21300000
   m_MasterAtlas: {fileID: 0}
   m_PackedSprites:
-  - {fileID: 21300000, guid: bfd2473008369482bbf5c69c471ea66e, type: 3}
-  - {fileID: 21300000, guid: a02b2342308f017a1841758fe4b298ac, type: 3}
+  - {fileID: 21300000, guid: dc12fc239bb24e9fd80627ce604da4b4, type: 3}
+  - {fileID: 21300000, guid: 4983908953fb605cfbdcbe9ee426923c, type: 3}
   m_PackedSpriteNamesToIndex:
-  - Atlased
   - Strip
+  - Atlased
   m_RenderDataMap: {}
   m_Tag: Layouts
   m_IsVariant: 0
