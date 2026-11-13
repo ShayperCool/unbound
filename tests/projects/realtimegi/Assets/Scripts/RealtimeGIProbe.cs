@@ -109,11 +109,11 @@ public class RealtimeGIProbe : MonoBehaviour
             Capture("room-gradient", lit);
             // The linear sequence's other light and input cases, the Room loaded again (the
             // panel's material keeps the emission set above, so the panel glows until it is made
-            // dark): the point light brighter, then with bounce intensity 3, the indirect scale 2 (and its
-            // default recorded), the red wall's albedo turned blue with UpdateGIMaterials, the
-            // spot light alone, a directional light alone; then, the panel dark and no light,
-            // the procedural sky at ambient intensities 1 and 2 and a cube a script gives
-            // (DynamicGI.SetEnvironmentData).
+            // dark): the point light brighter, then with bounce intensity 3, the indirect scale 2
+            // (and its default recorded), the red wall's albedo turned blue with
+            // UpdateGIMaterials, the spot light alone, a directional light alone; then, the panel
+            // dark and no light, the procedural sky at ambient intensities 1 and 2 and a cube a
+            // script gives (DynamicGI.SetEnvironmentData).
             yield return Load("Room");
             lit = Scene();
             yield return Converge();

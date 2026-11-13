@@ -1035,9 +1035,12 @@ measure):
   ([Directionality](#directionality)).
 - Gamma-space projects: what the gamma sequence of the probe does not record (of the linear
   sequence's Room cases not `room-moved-next-frame`, `room-pointoff`, `room-spot-behind`,
-  `room-directional-turned`, `room-directional-noshadows`, `room-sky-sun` and its turn, the cases
-  without UpdateGIMaterials or UpdateEnvironment, the other skybox, environment-data and
-  ambient-probe cases, nor the other scenes), directionality, and a render pipeline.
+  `room-directional-turned`, `room-directional-noshadows`, `room-sky-sun` and its turn,
+  `room-gradient-intensity`, the light delegate cases (`room-delegate-*`, `lights-dilatedrange`),
+  the baked light probes record (`room-lightprobes`), the cases without UpdateGIMaterials or
+  UpdateEnvironment, the other skybox, environment-data and ambient-probe cases, nor the other
+  scenes), directionality, and a render pipeline; and a device other than the NVIDIA OpenGL Core
+  one both the Editor and Unbound ran on.
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
   the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).
