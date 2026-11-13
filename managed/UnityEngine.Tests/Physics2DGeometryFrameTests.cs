@@ -92,7 +92,8 @@ namespace UnityEngine.Tests
         }
 
         // tests/projects/solverpairorder --transform-inputs frame/box/23/2 (static, rotated-child) and
-        // frame/capsuleH/23/2 (rotated-child) at (0.3, -0.2): the static frame is the same on both hosts.
+        // frame/capsuleH/23/2 (rotated-child, body on its own object) at (0.3, -0.2): the static frame is
+        // the same on both hosts.
         [Theory]
         [InlineData("box", "static", new[] { 2.45359445f, -0.1549417f, 1.82842493f, 1.31786609f, -1.85359454f, -0.245058313f, -1.22842479f, -1.71786618f, 0f },
             new[] { 2.45359445f, -0.1549417f, 1.82842493f, 1.31786609f, -1.85359454f, -0.245058313f, -1.22842479f, -1.71786618f, 0f })]
@@ -100,12 +101,16 @@ namespace UnityEngine.Tests
             new[] { 2.12262464f, -0.3666947f, 1.78996587f, 1.19834137f, -2.12262464f, 0.3666947f, -1.78996587f, -1.19834137f, 0f })]
         [InlineData("capsuleH", "rotated-child", new[] { -2.15192485f, -0.4574057f, 2.15192485f, 0.4574057f, 0.8f },
             new[] { -2.151925f, -0.4574057f, 2.151925f, 0.4574057f, 0.799999952f })]
+        [InlineData("capsuleH", "body", new[] { -2.2f, -2.64607785e-08f, 2.2f, 2.64607785e-08f, 0.8f },
+            new[] { -2.2f, 0f, 2.2f, 0f, 0.8f })]
         public void BoxAndCapsuleFramesFollowTheHostEditor(string kind, string frame, float[] arm64, float[] x86)
         {
             var go = Make("target");
             go.transform.position = new Vector3(.3f, -.2f, 2);
             go.transform.rotation = Quaternion.Euler(0, 0, 23);
             go.transform.localScale = new Vector3(2, 1.6f, 1);
+            if (frame == "body")
+                go.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
             if (frame == "rotated-child")
             {
                 var parent = Make("body");

@@ -119,5 +119,19 @@ namespace UnityEngine.Tests
             foreach (var value in objects) if (value) Object.DestroyImmediate(value);
             release.Dispose();
         }
+
+        // A tilemap on its own body under a rotated, scaled grid keeps the x86_64 body frame on every
+        // host: the macOS Editor's tilemaps (tests/projects/geometryframe2d tilemap/True) match it, not
+        // the fused sums of the other collider kinds on arm64.
+        [Fact]
+        public void TilemapOnItsOwnBodyKeepsTheUnfusedFrame()
+        {
+            var (map, collider) = Map();
+            map.SetTile(new Vector3Int(0, 0, 0), MakeTile(new[] { new Vector2(-.5f, -.5f), new Vector2(.5f, -.5f), new Vector2(.5f, .5f), new Vector2(-.5f, .5f) }));
+            Shapes(collider);
+            var t = collider.transform;
+            Physics2DWorld.PoseOf(t, out var position, out var angle);
+            Assert.Equal(Physics2DWorld.ToBodyMatrix(t, t, position, angle, fusedOnArm64: false), collider.m_ShapeMatrix);
+        }
     }
 }
