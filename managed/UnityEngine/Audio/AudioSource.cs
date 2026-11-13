@@ -68,6 +68,7 @@ namespace UnityEngine
         internal bool m_ResetComponents;
         internal bool m_ReconnectionPending;
         internal ulong m_FilterIdentity;
+        internal HashSet<int> m_FilterScripts, m_NextFilterScripts;
         internal bool m_HasAudioFrame;
         internal double m_PlaybackDspTime;
         internal Vector3 m_LastPosition;

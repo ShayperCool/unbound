@@ -21,6 +21,8 @@ namespace UnityEngine
         internal bool m_HasLastPosition;
         internal Dictionary<ulong, AudioFilterDescriptor> m_FilterDescriptors;
         internal AudioFilterDescriptor[] m_FilterTable;
+        internal HashSet<int> m_FilterMembers, m_NextFilterMembers;
+        internal bool m_HasFilterFrame, m_FilterLifetimeChanged;
         // The loop the last position was sampled in (false: the frame loop).
         internal bool m_MotionInFixedStep;
 
@@ -115,7 +117,11 @@ namespace UnityEngine
             AudioSystem.Add(this);
         }
 
-        internal override void OnEngineDisable() => AudioSystem.Remove(this);
+        internal override void OnEngineDisable()
+        {
+            m_FilterLifetimeChanged = true;
+            AudioSystem.Remove(this);
+        }
 
         internal override void OnEngineDestroy() => AudioSystem.Remove(this);
 

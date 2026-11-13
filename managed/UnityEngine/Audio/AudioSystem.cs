@@ -689,7 +689,10 @@ namespace Unbound.Runtime
 
         /// <summary>Whether <see cref="Update"/> collects this component's OnAudioFilterRead.</summary>
         internal static bool IsFilterScript(Component c) =>
-            c is MonoBehaviour mb && !mb.m_Destroyed && mb.isActiveAndEnabled && MethodOf(mb.GetType()) != null;
+            HasFilterScript(c) && ((MonoBehaviour)c).isActiveAndEnabled;
+
+        internal static bool HasFilterScript(Component c) =>
+            c is MonoBehaviour mb && !mb.m_Destroyed && MethodOf(mb.GetType()) != null;
 
         /// <summary>Rebuilds the filters of one key from its GameObject; true when there are some.</summary>
         static void AppendScripts(GameObject go, ref List<Action<float[], int>> list)

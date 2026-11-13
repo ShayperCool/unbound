@@ -173,8 +173,7 @@ unsafe fn decode_descriptors(
     for (i, f) in filters.iter().enumerate() {
         if listener && i > 0 {
             anyhow::ensure!(
-                (filters[i - 1].stage & !filter_stage::BYPASSED)
-                    <= (f.stage & !filter_stage::BYPASSED),
+                filter_stage::position(filters[i - 1].stage) <= filter_stage::position(f.stage),
                 "listener filter script positions are out of order"
             );
         }
@@ -363,6 +362,11 @@ impl FilterChain {
                 Some(index) => {
                     let mut effect = old.remove(index).effect;
                     effect.update(spec, rate, buffer)?;
+                    if d.stage & filter_stage::RECREATED != 0 {
+                        effect.reset();
+                    } else if d.stage & filter_stage::RECONNECTED != 0 {
+                        effect.restart();
+                    }
                     effect
                 }
                 None => Effect::new(spec, rate, buffer)?,
@@ -370,7 +374,7 @@ impl FilterChain {
             chain.push(SourceFilter {
                 id: d.id,
                 kind: d.kind,
-                stage: d.stage & !filter_stage::BYPASSED,
+                stage: filter_stage::position(d.stage),
                 effect,
             });
         }
@@ -1601,6 +1605,9 @@ impl Mixer {
             surround,
         );
         self.listener_filters = filters;
+        for filter in &mut self.listener_filters {
+            filter.stage &= !filter_stage::HISTORY_COMMANDS;
+        }
     }
 
     /// The reverb zones from the frame packet: none (kind 0) removes the zone reverb; the same
@@ -6883,6 +6890,89 @@ mod tests {
                 0.0, 0.0, 0.0, 1.0, 0.5, -10000.0, 0.0, 0.0, 0.04, 100.0, 100.0, 5000.0, 0.0, 250.0,
             ],
         }
+    }
+
+    #[test]
+    fn listener_history_commands_reset_only_the_selected_owner_and_are_not_cached() {
+        let mut mixer = Mixer::new(MixerConfig {
+            sample_rate: 32000,
+            buffer_size: 97,
+            ..MixerConfig::default()
+        });
+        let original = [
+            component(7, filter_kind::ECHO, 0),
+            component(13, filter_kind::ECHO, filter_stage::AFTER_SCRIPTS),
+        ];
+        mixer.update_listener_filters(Ok(original.to_vec()), true, false);
+        for filter in &mut mixer.listener_chain.filters {
+            let mut input = vec![0.25; 2048];
+            for block in input.chunks_mut(97 * 2) {
+                filter.effect.process(block, false);
+            }
+        }
+        let mut reconnect = original;
+        reconnect[0].stage |= filter_stage::RECONNECTED;
+        let packet = AudioFramePacket {
+            filters: reconnect.as_ptr(),
+            filter_count: reconnect.len() as i32,
+            ..Default::default()
+        };
+        // Command bits do not participate in the Inspector-position ordering check.
+        let decoded = unsafe { decode_listener_filters(&packet) }.unwrap();
+        mixer.update_listener_filters(Ok(decoded), true, false);
+        let mut changed = [0.0; 194];
+        let mut retained = [0.0; 194];
+        mixer.listener_chain.filters[0]
+            .effect
+            .process(&mut changed, false);
+        mixer.listener_chain.filters[1]
+            .effect
+            .process(&mut retained, false);
+        assert!(changed.iter().all(|sample| *sample == 0.0));
+        assert!(retained.iter().any(|sample| sample.abs() > 0.1));
+        assert_eq!(mixer.listener_filters, original);
+
+        let mut input = vec![0.25; 2048];
+        mixer.listener_chain.filters[0]
+            .effect
+            .process(&mut input, false);
+        mixer.update_listener_filters(Ok(original.to_vec()), true, false);
+        mixer.listener_chain.filters[0]
+            .effect
+            .process(&mut changed, false);
+        assert!(changed.iter().any(|sample| sample.abs() > 0.1));
+    }
+
+    #[test]
+    fn listener_reconnection_preserves_lowpass_state_but_owner_recreation_clears_it() {
+        let descriptor = component(7, filter_kind::LOWPASS, 0);
+        let mut mixer = Mixer::new(MixerConfig {
+            sample_rate: 32000,
+            buffer_size: 97,
+            ..MixerConfig::default()
+        });
+        mixer.update_listener_filters(Ok(vec![descriptor]), true, false);
+        let mut input = vec![0.25; 2048];
+        mixer.listener_chain.filters[0]
+            .effect
+            .process(&mut input, false);
+        let command = |stage| AudioFilterDescriptor {
+            stage,
+            ..descriptor
+        };
+        mixer.update_listener_filters(Ok(vec![command(filter_stage::RECONNECTED)]), true, false);
+        let mut tail = [0.0; 194];
+        mixer.listener_chain.filters[0]
+            .effect
+            .process(&mut tail, false);
+        assert!(tail.iter().any(|sample| sample.abs() > 0.1));
+
+        mixer.update_listener_filters(Ok(vec![command(filter_stage::RECREATED)]), true, false);
+        tail.fill(0.0);
+        mixer.listener_chain.filters[0]
+            .effect
+            .process(&mut tail, false);
+        assert!(tail.iter().all(|sample| *sample == 0.0));
     }
 
     #[test]

@@ -162,3 +162,11 @@ components. Its `listener-chain` recipe is independent of the earlier
 controls record disabled, switched and simultaneous listeners. They retain full
 comparisons without promising an order for the unsupported simultaneous-listener
 configuration.
+
+
+[Live Mono and topology](MONO_LIVE.md) adds a 135-control diagnostic and a
+separate six-control simultaneous-listener diagnostic at both rates. Its
+independently captured 74-control `topology-pcm` recipe qualifies Echo/Chorus
+history changes and live zones in Mono, Stereo and Quad. The full diagnostic
+commands retain the startup, composition, callback and simultaneous-listener
+differences outside that PCM scope.

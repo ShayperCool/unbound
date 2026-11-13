@@ -107,6 +107,9 @@ namespace Unbound.Runtime
         internal const int AfterScripts = 1;
         // The disabled unit stays connected and retains its history.
         internal const int Bypassed = 2;
+        internal const int Reconnected = 1 << 29;
+        internal const int Recreated = 1 << 30;
+        internal const int HistoryCommands = Reconnected | Recreated;
 
         // Listener components carry how many preceding scripts have already processed the mix.
         // Preserve the source chain's existing stage and bypass bits.

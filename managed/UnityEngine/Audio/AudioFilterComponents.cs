@@ -474,7 +474,29 @@ namespace Unbound.Runtime
             source.m_ActivationPending = false;
         }
 
-        static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter || c is AudioDistortionFilter || c is AudioChorusFilter;
+        internal static bool IsFilterType(Type type) => type == typeof(AudioLowPassFilter)
+            || type == typeof(AudioHighPassFilter) || type == typeof(AudioEchoFilter)
+            || type == typeof(AudioReverbFilter) || type == typeof(AudioDistortionFilter)
+            || type == typeof(AudioChorusFilter);
+
+        static bool IsFilterComponent(Component c) => c != null && IsFilterType(c.GetType());
+
+        static bool TrackMember(HashSet<int> previous, ref HashSet<int> next, Component component)
+        {
+            int id = component.GetInstanceID();
+            (next ??= new HashSet<int>()).Add(id);
+            return previous == null || !previous.Contains(id);
+        }
+
+        static bool ScriptIsRetained(Component component, HashSet<int> previous) =>
+            ((MonoBehaviour)component).isActiveAndEnabled
+            || (Compat.AudioComponentActivationMeasured && previous != null && previous.Contains(component.GetInstanceID()));
+
+        static ulong AppendIdentity(ulong identity, Component component)
+        {
+            const ulong IdentityMultiplier = 1000003;
+            return unchecked(identity * IdentityMultiplier + (ulong)(long)component.GetInstanceID());
+        }
 
         /// <summary>Why a component's DSP does not run on the project's release: the kernels it
         /// shares with the mixer effects are measured on one release (Compat); null when it runs.</summary>
@@ -557,6 +579,9 @@ namespace Unbound.Runtime
             var go = source.m_GameObject;
             if (go == null) return 0;
             Retain(ref source.m_FilterDescriptors, table);
+            var previousScripts = source.m_FilterScripts;
+            var nextScripts = source.m_NextFilterScripts;
+            nextScripts?.Clear();
             int count = 0;
             bool scripts = false, below = false;
             bool spatial = !source.bypassEffects && source.UsesSpatialBlend;
@@ -564,9 +589,15 @@ namespace Unbound.Runtime
             ulong identity = 0;
             foreach (var c in go.m_Components)
             {
-                if (AudioFilters.IsFilterScript(c))
+                if (AudioFilters.HasFilterScript(c))
                 {
-                    identity = unchecked(identity * 1000003 + (ulong)(long)c.GetInstanceID());
+                    bool activeScript = ((MonoBehaviour)c).isActiveAndEnabled;
+                    if (ScriptIsRetained(c, previousScripts))
+                    {
+                        TrackMember(previousScripts, ref nextScripts, c);
+                        identity = AppendIdentity(identity, c);
+                    }
+                    if (!activeScript) continue;
                     if (below) error ??= "a filter component between two OnAudioFilterRead scripts is not supported";
                     scripts = true;
                     continue;
@@ -574,7 +605,7 @@ namespace Unbound.Runtime
                 if (!IsFilterComponent(c)) continue;
                 var behaviour = (Behaviour)c;
                 if (behaviour.m_Destroyed) continue;
-                identity = unchecked(identity * 1000003 + (ulong)(long)c.GetInstanceID());
+                identity = AppendIdentity(identity, c);
                 bool active = behaviour.isActiveAndEnabled;
                 if (!active && !Compat.AudioComponentActivationMeasured) continue;
                 bool ok = DescribeRetained(c, active, source.m_FilterDescriptors, out var d);
@@ -599,6 +630,8 @@ namespace Unbound.Runtime
                 table[count++] = d;
             }
             if (table != null) Array.Clear(table, count, table.Length - count);
+            source.m_FilterScripts = nextScripts;
+            source.m_NextFilterScripts = previousScripts;
             UpdateActivation(source, identity);
             source.ReportFilterChain(error);
             return error == null ? count : 0;
@@ -614,10 +647,23 @@ namespace Unbound.Runtime
             Retain(ref listener.m_FilterDescriptors, table);
             int count = 0, precedingScripts = scriptOffset;
             string error = null;
+            var previousMembers = listener.m_FilterMembers;
+            var nextMembers = listener.m_NextFilterMembers;
+            nextMembers?.Clear();
+            bool addedMember = false;
             foreach (var c in go.m_Components)
             {
-                if (AudioFilters.IsFilterScript(c)) { precedingScripts++; continue; }
+                if (AudioFilters.HasFilterScript(c))
+                {
+                    bool activeScript = ((MonoBehaviour)c).isActiveAndEnabled;
+                    if (ScriptIsRetained(c, previousMembers))
+                        addedMember |= TrackMember(previousMembers, ref nextMembers, c);
+                    if (!activeScript) continue;
+                    precedingScripts++;
+                    continue;
+                }
                 if (!IsFilterComponent(c) || ((Behaviour)c).m_Destroyed) continue;
+                addedMember |= TrackMember(previousMembers, ref nextMembers, c);
                 bool active = ((Behaviour)c).isActiveAndEnabled;
                 if (!active && !Compat.AudioComponentActivationMeasured) continue;
                 if (!DescribeRetained(c, active, listener.m_FilterDescriptors, out var d)) continue;
@@ -650,6 +696,16 @@ namespace Unbound.Runtime
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }
+            if (Compat.AudioComponentActivationMeasured && listener.m_HasFilterFrame)
+            {
+                int command = listener.m_FilterLifetimeChanged ? AudioFilterStage.Recreated
+                    : addedMember ? AudioFilterStage.Reconnected : 0;
+                for (int i = 0; i < count; i++) table[i].Stage |= command;
+            }
+            listener.m_FilterMembers = nextMembers;
+            listener.m_NextFilterMembers = previousMembers;
+            listener.m_HasFilterFrame = true;
+            listener.m_FilterLifetimeChanged = false;
             if (table != null) Array.Clear(table, count, table.Length - count);
             if (error != null && s_ReportedListeners.Add(listener.GetInstanceID()))
                 Debug.LogError("Unbound: " + error, listener);

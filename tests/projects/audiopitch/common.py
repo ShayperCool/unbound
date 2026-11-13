@@ -125,6 +125,13 @@ def devices():
     return [(key, int(key.split('_')[1])) for key in all_cases() if key.startswith('device_')]
 
 
+def topology_pcm_cases():
+    """Echo/Chorus live histories and live zone PCM; other kernels remain diagnostic."""
+    source = (FIXTURE/'Assets/Scripts/EffectProbe.cs').read_text()
+    return [match[1] for match in re.finditer(r'new\[\] \{ "(context_monolive_[^"]+)"[^\n]*', source)
+            if '"initial_chain=echo,chorus"' in match[0] or '"zone_control=' in match[0]]
+
+
 def profile(name, rate):
     """Maps each selected case to the number of frames compared (None: all)."""
     keys = cases()
@@ -138,6 +145,7 @@ def profile(name, rate):
     if name == 'encoding': return dict.fromkeys(encoding_cases())
     if name == 'topology-diagnostics': return dict.fromkeys(key for key in all_cases() if key.startswith('context_topologydiag_'))
     if name == 'mono-live': return dict.fromkeys(key for key in all_cases() if key.startswith('context_monolive_'))
+    if name == 'topology-pcm': return dict.fromkeys(topology_pcm_cases())
     if name in ('listener-chain', 'listener-diagnostics'):
         prefix = 'context_listenerchain_' if name == 'listener-chain' else 'context_listenerdiag_'
         return dict.fromkeys(key for key in all_cases() if key.startswith(prefix))

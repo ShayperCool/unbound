@@ -1265,6 +1265,12 @@ public partial class EffectProbe : MonoBehaviour
         new[] { "context_monolive_4_listener_echo_only", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=listener", "initial_chain=echo", "topology=steady" },
         new[] { "context_monolive_4_listener_low_only", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=listener", "initial_chain=low", "topology=steady" },
         new[] { "context_monolive_4_listener_chorus_only", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=listener", "initial_chain=chorus", "topology=steady" },
+        new[] { "context_monolive_1_source_script_enabled", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=source", "initial_chain=echo,chorus", "topology=script_enabled" },
+        new[] { "context_monolive_1_listener_script_enabled", "asset=context_zone_2_listener_dry", "mode=Mono", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=listener", "initial_chain=echo,chorus", "topology=script_enabled" },
+        new[] { "context_monolive_2_source_script_enabled", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=source", "initial_chain=echo,chorus", "topology=script_enabled" },
+        new[] { "context_monolive_2_listener_script_enabled", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=listener", "initial_chain=echo,chorus", "topology=script_enabled" },
+        new[] { "context_monolive_4_source_script_enabled", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=source", "initial_chain=echo,chorus", "topology=script_enabled" },
+        new[] { "context_monolive_4_listener_script_enabled", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "topology_target=listener", "initial_chain=echo,chorus", "topology=script_enabled" },
 };
     static readonly Dictionary<string, string[]> CaseTokens = new Dictionary<string, string[]>();
     static EffectProbe()

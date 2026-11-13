@@ -140,7 +140,10 @@ namespace Unbound.Runtime
                 existing = go.FindComponent<ConstantForce>();
                 return existing != null;
             }
-            if (type == typeof(AudioDistortionFilter))
+            // Unity 6000.0.71f1, audiopitch: AddComponent permits one of each audio filter type per object,
+            // including a disabled instance. Removing it permits a replacement.
+            if (type == typeof(AudioDistortionFilter)
+                || Compat.ComponentFactoryEligibilityMeasured && AudioFilterChain.IsFilterType(type))
             {
                 existing = go.FindComponent(type);
                 return existing != null;

@@ -27,6 +27,9 @@ public partial class EffectProbe
             if (operation == "identity") {
                 identity = target.AddComponent<AudioDistortionFilter>(); identity.distortionLevel = 0;
             }
+            if (operation == "script_enabled") {
+                script = target.AddComponent<ProbeListenerAffine>(); script.Gain = 1; script.Offset = 0;
+            }
             bool other = Option(key, "other_listener=", "0") == "1";
             if (operation == "owner" || other) {
                 alternateObject = new GameObject("Plain alternate listener");
@@ -55,6 +58,10 @@ public partial class EffectProbe
                 case "scripts":
                     if (block == 16) { UnityEngine.Object.DestroyImmediate(script); script = null; }
                     else { script = target.AddComponent<ProbeListenerAffine>(); script.Gain = 1; script.Offset = 0; }
+                    break;
+                case "script_enabled":
+                    script.enabled = block == 16;
+                    records.Add("\"" + key + ".script_enabled_" + block + "\":" + (script.enabled ? "true" : "false"));
                     break;
                 case "enabled":
                     ((Behaviour)units[0]).enabled = block == 16;

@@ -33,6 +33,7 @@ p.add_argument('--listener-chain', action='store_true', help='Publish listener c
 p.add_argument('--listener-diagnostics', action='store_true', help='Publish separate listener topology diagnostics without engine admission')
 p.add_argument('--mono-live', action='store_true', help='Publish live Mono and component topology controls')
 p.add_argument('--topology-diagnostics', action='store_true', help='Publish separate multiple-listener topology diagnostics')
+p.add_argument('--topology-pcm', action='store_true', help='Publish live Echo/Chorus and zone PCM controls')
 a = p.parse_args()
 if a.settings and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
 selected = mono_cases() if a.mono else zone_cases() if a.zones else prologic_cases() if a.prologic else settings_cases() if a.settings else wet_edge_cases() if a.wet_edges else wet_cases() if a.wet else transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
@@ -42,6 +43,9 @@ if a.listener_chain or a.listener_diagnostics:
 if a.topology_diagnostics:
     from common import profile
     selected = list(profile('topology-diagnostics', a.rate))
+if a.topology_pcm:
+    from common import profile
+    selected = list(profile('topology-pcm', a.rate))
 if a.mono_live:
     from common import profile
     selected = list(profile('mono-live', a.rate))
@@ -65,6 +69,14 @@ assert header(a.capture) == header(a.repeat), 'independent capture metadata diff
 for key, record in header(a.capture).items():
     if isinstance(record, dict) and 'file' in record:
         assert samples(a.capture, record).tobytes() == samples(a.repeat, header(a.repeat)[key]).tobytes(), 'independent capture differs: '+key
+if a.topology_pcm:
+    # Store one canonical PCM stream; this profile adds a separately captured case manifest.
+    parent = FIXTURE/'Reference'/('unity-'+a.release)/'mono-live'/('rate-'+str(a.rate))
+    original = header(parent)
+    for key, record in header(a.capture).items():
+        assert original.get(key) == record, 'parent metadata differs: '+key
+        if isinstance(record, dict) and 'file' in record:
+            assert samples(parent, record).tobytes() == samples(a.capture, record).tobytes(), key
 target = FIXTURE/'Reference'/('unity-'+a.release)
 if a.contexts: target = target/'layouts'
 if a.devices: target = target/'devices'
@@ -80,6 +92,7 @@ if a.listener_scripts: target = target/'listener-scripts'
 if a.schedule: target = target/'schedule'
 if a.mono_live: target = target/'mono-live'
 if a.topology_diagnostics: target = target/'topology-diagnostics'
+if a.topology_pcm: target = target/'topology-pcm'
 if a.listener_chain: target = target/'listener-chain'
 if a.listener_diagnostics: target = target/'listener-diagnostics'
 if a.encoding: target = target/'encoding'
@@ -97,6 +110,10 @@ else:
     target.mkdir(parents=True)
 shutil.copy2(a.capture/'capture.json', target/'capture.json')
 for f in sorted(a.capture.glob('*.f32')):
+    if a.topology_pcm:
+        packed = target/(f.name+'.gz')
+        if not packed.exists(): packed.symlink_to(Path('../../mono-live')/('rate-'+str(a.rate))/(f.name+'.gz'))
+        continue
     if not (target/(f.name+'.gz')).exists():
         with gzip.GzipFile(target/(f.name+'.gz'), 'wb', mtime=0) as out: out.write(f.read_bytes())
 verify(target, a.release, a.rate, contexts=a.contexts, selected=selected)

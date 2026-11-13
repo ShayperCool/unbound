@@ -433,6 +433,34 @@ namespace UnityEngine.Tests
             Assert.Single(Errors("already contains the same component"));
         }
 
+        [Theory]
+        [InlineData(typeof(AudioLowPassFilter))]
+        [InlineData(typeof(AudioHighPassFilter))]
+        [InlineData(typeof(AudioEchoFilter))]
+        [InlineData(typeof(AudioChorusFilter))]
+        [InlineData(typeof(AudioReverbFilter))]
+        [InlineData(typeof(AudioDistortionFilter))]
+        public void FilterUniquenessIncludesDisabledInstancesAndAllowsReplacement(Type type)
+        {
+            foreach (bool enabled in new[] { true, false })
+            {
+                var source = Source("filter uniqueness");
+                var first = (Behaviour)source.gameObject.AddComponent(type);
+                first.enabled = enabled;
+                int errors = Errors("already contains the same component").Count;
+                Assert.Null(source.gameObject.AddComponent(type));
+                Assert.Same(first, source.gameObject.GetComponent(type));
+                Assert.Single(source.gameObject.GetComponents(type));
+                Assert.Equal(errors + 1, Errors("already contains the same component").Count);
+
+                Object.DestroyImmediate(first);
+                Assert.NotNull(source.gameObject.AddComponent(type));
+                Assert.Single(source.gameObject.GetComponents(type));
+                var other = type == typeof(AudioHighPassFilter) ? typeof(AudioLowPassFilter) : typeof(AudioHighPassFilter);
+                Assert.NotNull(source.gameObject.AddComponent(other));
+            }
+        }
+
         [Fact]
         public void StaticBypassKeepsComponentsActiveUntilStopAndPlay()
         {
@@ -572,7 +600,9 @@ namespace UnityEngine.Tests
             Assert.Equal(AudioFilterStage.BeforeScripts, Assert.Single(Collected(above)).Stage);
 
             var many = Source("many");
-            for (int i = 0; i <= AudioFilterDescriptor.MaxPerSource; i++) many.gameObject.AddComponent<AudioEchoFilter>();
+            // Construct a synthetic oversized chain: AddComponent permits one of each filter type.
+            for (int i = 0; i <= AudioFilterDescriptor.MaxPerSource; i++)
+                many.gameObject.m_Components.Add(ComponentFactory.Create(typeof(AudioEchoFilter), many.gameObject));
             Assert.Empty(Collected(many));
             Assert.Contains("more than 64", Assert.Single(Errors("AudioSource on 'many'")));
         }
@@ -835,6 +865,155 @@ namespace UnityEngine.Tests
             Assert.Equal(3, AudioFilterChain.CollectListener(listener, true, ref table, scriptOffset: 3));
             Assert.Equal(new[] { 11, 9, 13 }, table.Take(3).Select(d => d.Stage));
             Assert.Empty(m_Errors);
+        }
+
+        [Fact]
+        public void AnInitiallyInactiveScriptJoinsTheChainOnItsFirstActivation()
+        {
+            var source = Source("inactive script source");
+            source.gameObject.AddComponent<AudioEchoFilter>();
+            Collected(source);
+            source.m_HasAudioFrame = true;
+            var script = source.gameObject.AddComponent<FilterScript>(); script.enabled = false;
+            Collected(source);
+            Assert.False(source.m_ResetComponents);
+            script.enabled = true;
+            Collected(source);
+            Assert.True(source.m_ResetComponents);
+            source.m_ResetComponents = false;
+            script.enabled = false;
+            Collected(source);
+            Assert.False(source.m_ResetComponents);
+
+            var owner = new GameObject("inactive script listener"); m_Objects.Add(owner);
+            var listener = owner.AddComponent<AudioListener>();
+            owner.AddComponent<AudioEchoFilter>();
+            AudioFilterDescriptor[] table = null;
+            AudioFilterChain.CollectListener(listener, false, ref table);
+            script = owner.AddComponent<FilterScript>(); script.enabled = false;
+            AudioFilterChain.CollectListener(listener, false, ref table);
+            Assert.Equal(0, table[0].Stage);
+            script.enabled = true;
+            AudioFilterChain.CollectListener(listener, true, ref table);
+            Assert.Equal(AudioFilterStage.Reconnected, table[0].Stage);
+            script.enabled = false;
+            AudioFilterChain.CollectListener(listener, false, ref table);
+            Assert.Equal(0, table[0].Stage);
+        }
+
+        [Fact]
+        public void ScriptActivationKeepsMembershipAndRemovalDependsOnTheOwner()
+        {
+            var source = Source("script activation source");
+            source.gameObject.AddComponent<AudioEchoFilter>();
+            Collected(source);
+            source.m_HasAudioFrame = true;
+            var script = source.gameObject.AddComponent<FilterScript>();
+            Collected(source);
+            Assert.True(source.m_ResetComponents);
+            source.m_ResetComponents = false;
+            ulong identity = source.m_FilterIdentity;
+            foreach (bool enabled in new[] { false, true, false })
+            {
+                script.enabled = enabled;
+                Collected(source);
+                Assert.Equal(identity, source.m_FilterIdentity);
+                Assert.False(source.m_ResetComponents);
+            }
+            Object.DestroyImmediate(script);
+            Collected(source);
+            Assert.True(source.m_ResetComponents);
+
+            var owner = new GameObject("script activation listener"); m_Objects.Add(owner);
+            var listener = owner.AddComponent<AudioListener>();
+            owner.AddComponent<AudioEchoFilter>();
+            AudioFilterDescriptor[] table = null;
+            AudioFilterChain.CollectListener(listener, false, ref table);
+            script = owner.AddComponent<FilterScript>();
+            AudioFilterChain.CollectListener(listener, true, ref table);
+            Assert.Equal(AudioFilterStage.Reconnected, table[0].Stage);
+            foreach (bool enabled in new[] { false, true, false })
+            {
+                script.enabled = enabled;
+                AudioFilterChain.CollectListener(listener, enabled, ref table);
+                Assert.Equal(0, table[0].Stage);
+            }
+            Object.DestroyImmediate(script);
+            AudioFilterChain.CollectListener(listener, false, ref table);
+            Assert.Equal(0, table[0].Stage);
+        }
+
+        [Fact]
+        public void UnchangedScriptMembershipReusesItsStorage()
+        {
+            var source = Source("stable script source");
+            source.gameObject.AddComponent<AudioEchoFilter>();
+            source.gameObject.AddComponent<FilterScript>();
+            var owner = new GameObject("stable script listener"); m_Objects.Add(owner);
+            var listener = owner.AddComponent<AudioListener>();
+            owner.AddComponent<AudioEchoFilter>();
+            owner.AddComponent<FilterScript>();
+            AudioFilterDescriptor[] sourceTable = null, listenerTable = null;
+            for (int i = 0; i < 8; i++)
+            {
+                AudioFilterChain.Collect(source, false, ref sourceTable);
+                AudioFilterChain.CollectListener(listener, true, ref listenerTable);
+            }
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 32; i++)
+            {
+                AudioFilterChain.Collect(source, false, ref sourceTable);
+                AudioFilterChain.CollectListener(listener, true, ref listenerTable);
+            }
+            Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
+            Assert.Single(source.m_FilterScripts);
+            Assert.Equal(2, listener.m_FilterMembers.Count);
+            Assert.Empty(m_Errors);
+        }
+
+        [Fact]
+        public void ListenerHistoryCommandsBelongToTheEditedOwnerAndPublishOnce()
+        {
+            var primary = new GameObject("edited listener"); m_Objects.Add(primary);
+            var other = new GameObject("unchanged listener"); m_Objects.Add(other);
+            var listener = primary.AddComponent<AudioListener>();
+            var alternate = other.AddComponent<AudioListener>();
+            var echo = primary.AddComponent<AudioEchoFilter>();
+            primary.AddComponent<AudioChorusFilter>();
+            other.AddComponent<AudioEchoFilter>();
+            AudioFilterDescriptor[] table = null, otherTable = null;
+            int Collect() => AudioFilterChain.CollectListener(listener, false, ref table);
+            Assert.Equal(2, Collect());
+            Assert.Equal(1, AudioFilterChain.CollectListener(alternate, false, ref otherTable));
+
+            // A never-enabled unit still changes the connected component list.
+            var added = primary.AddComponent<AudioDistortionFilter>(); added.enabled = false;
+            Assert.Equal(2, Collect());
+            Assert.All(table.Take(2), d => Assert.Equal(AudioFilterStage.Reconnected, d.Stage));
+            Assert.Equal(1, AudioFilterChain.CollectListener(alternate, false, ref otherTable));
+            Assert.Equal(0, otherTable[0].Stage);
+            Assert.Equal(2, Collect());
+            Assert.All(table.Take(2), d => Assert.Equal(0, d.Stage));
+
+            Object.DestroyImmediate(added);
+            Assert.Equal(2, Collect());
+            Assert.All(table.Take(2), d => Assert.Equal(0, d.Stage));
+            Collect();
+            echo.delay = 17;
+            echo.enabled = false;
+            Assert.Equal(2, Collect());
+            Assert.Equal(AudioFilterStage.Bypassed, table[0].Stage);
+            Assert.Equal(0, table[1].Stage);
+            echo.enabled = true;
+            Collect();
+
+            // The lifetime changes even when no audio frame observes the disabled owner.
+            listener.enabled = false;
+            listener.enabled = true;
+            Assert.Equal(2, Collect());
+            Assert.All(table.Take(2), d => Assert.Equal(AudioFilterStage.Recreated, d.Stage));
+            Assert.Equal(2, Collect());
+            Assert.All(table.Take(2), d => Assert.Equal(0, d.Stage));
         }
 
         [Fact]

@@ -136,6 +136,15 @@ pub mod filter_stage {
     pub const AFTER_SCRIPTS: i32 = 1;
     /// A disabled component remains in the chain with frozen history.
     pub const BYPASSED: i32 = 2;
+    /// Existing units restart their histories after their owner's component list changes.
+    pub const RECONNECTED: i32 = 1 << 29;
+    /// An owner disabled and re-enabled before publication creates fresh unit state.
+    pub const RECREATED: i32 = 1 << 30;
+    pub const HISTORY_COMMANDS: i32 = RECONNECTED | RECREATED;
+
+    pub fn position(stage: i32) -> i32 {
+        stage & !(BYPASSED | HISTORY_COMMANDS)
+    }
 
     /// A listener component's position among Inspector-ordered scripts.
     pub fn listener(preceding_scripts: usize) -> i32 {
@@ -147,11 +156,12 @@ pub mod filter_stage {
     }
 
     pub fn valid_listener(stage: i32) -> bool {
-        let position = stage & !BYPASSED;
+        let position = position(stage);
         position == BEFORE_SCRIPTS || (position >= 0 && position & 1 != 0)
     }
 
     pub fn preceding_scripts(stage: i32) -> usize {
+        let stage = position(stage);
         if stage == BEFORE_SCRIPTS {
             0
         } else {
