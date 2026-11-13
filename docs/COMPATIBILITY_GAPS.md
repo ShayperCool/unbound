@@ -243,11 +243,26 @@ open before, and seven such meshes are added. Uxmlattributes matches 1099 of 109
 asset is null without a message, as in the Editor. The image limits keep two residuals
 visible (a gradient-stroked line whose gradient coordinates the package computes as NaN, and seam pixels
 the Editor samples from its UI Toolkit dynamic atlas). Open, in the rows `UI Toolkit
-VectorImage drawing and SVG import` and `UI Toolkit runtime stubs`: the importer's sprite and
-texture outputs (the import fails with a warning), the 2D Sprite package's Editor hooks, the
-dynamic atlas, UXML `VectorImage` references, and, unmeasured, arc pieces of radius above 0
+VectorImage drawing and SVG import` and `UI Toolkit runtime stubs`: the 2D Sprite package's
+sprite editor window registration (a warning stub; the importer's sprite and texture outputs are
+done, see below), the dynamic atlas, UXML `VectorImage` references, and, unmeasured, arc pieces of radius above 0
 whose end tangents oppose and pieces cut at the subdivision depth limit. Measured on
 6000.0.71f1 only.
+
+The Q93, Q380 and Q412 sprite work: spriteimport passes 650 of 650 fields over 65 sprites (519 of
+520 before; a Polygon-mode sprite is always Tight and takes its mesh's boundary as its default
+physics shape, with thirteen Polygon controls). Spriteassets matches 120,888 values (46,318 before):
+the Sprite layouts the Editor saves load (clones of SpriteAtlas members, read unpacked from their
+own render data; skinned clones; colour, normal and tangent channels, colours drawn; secondary
+textures; vertex data version 2; Sprites saved without a texture, not drawn). Svgsprites is new
+(101,024 values; four pixels at a radial gradient's focus listed as a residual): the SVG importer's
+vector sprite, UI SVGImage, textured sprite and Texture2D outputs, run by the package's own code,
+and imported sprite IDs. Still open, with their rows: packed or rotated m_RD, legacy Sprite Packer
+atlas names, split alpha, downscale multipliers other than 1, scriptable objects and texture
+coordinates 1 to 7 in saved Sprites stay rejected (none produced by the Editor in these probes);
+SpriteAtlas packing in Editor Play mode (row `SpriteAtlas packing in Editor Play mode`); runtime
+`Sprite.Create` Tight geometry (still a quad); the SVG importer's generated physics shape and the
+SVGImage drawn on a canvas. Measured on 6000.0.71f1 with the NVIDIA driver only.
 
 Seen beside these, tracked elsewhere and not classified again: coreapis, humanfirstpose,
 humanoid, indirectspec, modelimport, particles, shaderkeywords and terrain have open tasks, deferred
@@ -584,6 +599,7 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | Gap | Where | | Impact |
 |---|---|---|---|
 | YAML Sprite documents (ClassId213) default-constructed | `Graphics/Sprite.Serialized.cs`, `SpriteRenderGeometry.cs`, `U2D/SpriteDataAccess.cs`, `Runtime/ClassCoverage.cs`, `crates/unbound/src/doctor.rs` | S | done for the layouts the 6000.0.71f1 Editor saves (tests/projects/spriteassets, 120,888 API/image values, zero differences within fixed tolerances; 46,318 before; independent Native repeats identical). Authored GUID/fileID textures, subrectangles, pivot, pixels per unit, borders, Tight render mesh/UV transform and physics shapes; scene and Resources loading; imported Sprite control unchanged. Saved layouts: clones of SpriteAtlas members (atlas reference and packed m_AtlasRD saved; the Editor reports and draws m_RD, unpacked: recorded in Edit mode, and seen in one Play-mode capture with atlases always enabled outside the reference), skinned clones (bones, bind poses, blend weights and indices, no added tangents), colour/normal/tangent channels (colours multiply the render), a downscaled texture's clone, secondary textures, vertex data version 2, and Sprites saved without a texture (zero UVs, not drawn). Still rejected with asset/fileID errors and doctor layout diagnostics, none produced by the Editor in this probe: packed or rotated m_RD, legacy Sprite Packer atlas names, split alpha, downscale multipliers other than 1, scriptable objects, texture coordinates 1 to 7 and other channel formats, nonempty stored UV streams. Sprite normals and tangents are kept for the data access API but not used when drawing (unmeasured); a skinned clone is drawn in its bind pose. No release difference was established. |
+| SpriteAtlas packing in Editor Play mode | `U2D/SpriteAtlas.cs`, `Graphics/Sprite.cs` | S | open. With the Sprite Packer mode Sprite Atlas V1 Always Enabled or Sprite Atlas V2 Enabled (EditorSettings `m_SpritePackerMode` 4 or 5) the Editor packs a SpriteAtlas's member sprites when entering Play mode: `packed` is true and `texture`, `textureRect` and the UVs are the atlas's (seen in one 6000.0.71f1 capture, tight packing allowed). Unbound never packs: such sprites are drawn and reported from their own texture, as with the packer disabled for Play mode. Saved Sprite assets of atlas members are read unpacked, as the Editor reads them (row above). Needs the atlas packer's layout (padding, tight packing, rotation) measured before it can be implemented. |
 | SpriteMask stencil masking; `maskInteraction` | `Graphics/SpriteMask.cs` | W once | done for measured stencil ranges, sorting groups, alpha cutoffs and URP 2D (tests/projects/resources and urp2d). Imported Tight sprites now supply their render mesh to the stencil pass; runtime `Sprite.Create` Tight geometry still uses a quad. |
 | SpriteRenderer Tiled mode drawn as Sliced | `Graphics/Renderer.cs` | S | done (Continuous/Adaptive, borders, thresholds, sizes and flips: tests/projects/resources) |
 | `spriteChangeEvent` / `RegisterSpriteChangeCallback` never raised | `Graphics/Renderer.cs` | S | done (raised on a sprite change through the setter; no probe yet) |
