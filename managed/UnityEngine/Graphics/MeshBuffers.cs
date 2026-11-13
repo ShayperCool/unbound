@@ -59,7 +59,6 @@ namespace UnityEngine
 
         bool ChannelPresent(VertexAttribute attr)
         {
-            if (m_Layout != null) return LayoutHas(attr);
             switch (attr)
             {
                 case VertexAttribute.Position: return m_Layout != null ? LayoutHas(attr) : m_HasPositionChannel || m_Vertices.Length > 0;

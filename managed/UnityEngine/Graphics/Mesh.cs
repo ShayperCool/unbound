@@ -678,19 +678,26 @@ namespace UnityEngine
 
         public void Clear([Internal.DefaultValue("true")] bool keepVertexLayout)
         {
-            if (keepVertexLayout) m_Layout = Layout();
+            if (keepVertexLayout)
+            {
+                Span<VertexAttributeDescriptor> attributes = stackalloc VertexAttributeDescriptor[MaxVertexAttributes];
+                int count = FillLayout(attributes);
+                if (m_Layout == null || !attributes.Slice(0, count).SequenceEqual(m_Layout))
+                    m_Layout = attributes.Slice(0, count).ToArray();
+            }
             else m_HasPositionChannel = false;
             m_PackedChannels = null;
             m_Vertices = Array.Empty<Vector3>();
-            m_Normals = null;
-            m_Tangents = null;
-            m_Colors = null;
+            bool Keep(VertexAttribute attribute) => keepVertexLayout && LayoutHas(attribute);
+            m_Normals = Keep(VertexAttribute.Normal) ? Array.Empty<Vector3>() : null;
+            m_Tangents = Keep(VertexAttribute.Tangent) ? Array.Empty<Vector4>() : null;
+            m_Colors = Keep(VertexAttribute.Color) ? Array.Empty<Color32>() : null;
             for (int i = 0; i < 8; i++)
             {
-                m_UVs[i] = null;
+                m_UVs[i] = Keep(VertexAttribute.TexCoord0 + i) ? Array.Empty<Vector4>() : null;
                 if (!keepVertexLayout) m_UVDimensions[i] = 0;
             }
-            m_BoneWeights = null;
+            m_BoneWeights = Keep(VertexAttribute.BlendWeight) || Keep(VertexAttribute.BlendIndices) ? Array.Empty<BoneWeight>() : null;
             m_BlendShapes.Clear();
             foreach (var s in m_SubMeshes)
             {

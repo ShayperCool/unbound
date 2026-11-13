@@ -61,6 +61,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ExplicitLayoutsAndClearedMeshesAcceptNewChannels()
+        {
+            var mesh = new Mesh();
+            try
+            {
+                mesh.SetVertexBufferParams(3, new VertexAttributeDescriptor(VertexAttribute.Position));
+                mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+                mesh.triangles = new[] { 0, 1, 2 };
+                mesh.RecalculateNormals();
+                Assert.True(mesh.HasVertexAttribute(VertexAttribute.Normal));
+                Assert.Equal(Vector3.forward, mesh.normals[0]);
+                mesh.Clear(true);
+                Assert.True(mesh.HasVertexAttribute(VertexAttribute.Normal));
+                mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+                Assert.Equal(3, mesh.normals.Length);
+                mesh.uv = new[] { Vector2.zero, Vector2.right, Vector2.up };
+                Assert.True(mesh.HasVertexAttribute(VertexAttribute.TexCoord0));
+                mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up };
+                Assert.True(mesh.HasVertexAttribute(VertexAttribute.Normal));
+                mesh.normals = null;
+                Assert.False(mesh.HasVertexAttribute(VertexAttribute.Normal));
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
         public void MeshDataChecksDefaultDisposedAndReadOnlyViews()
         {
             Mesh.MeshData empty = default;

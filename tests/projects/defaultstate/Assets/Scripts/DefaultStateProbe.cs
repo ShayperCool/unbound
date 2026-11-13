@@ -57,7 +57,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
             PhysicsPayloadControls();
             EditorImporterControls();
             UiControls();
-            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls();
+            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls(); Core2LayoutMutationControls();
             Emit("complete","value","1"); output.Dispose(); output=null;
             EditorApplication.Exit(0);
         }
@@ -747,6 +747,8 @@ public sealed class DefaultStateProbe : MonoBehaviour
             mesh.vertices = new[] { Vector3.zero, Vector3.one }; CoreValue("Core2/mesh/populated", Core2MeshState(mesh));
             var read = Mesh.AcquireReadOnlyMeshData(mesh); var data = read[0];
             CoreValue("Core2/mesh/dataRead", new object[] { data.vertexCount, data.vertexBufferCount, data.subMeshCount, data.indexFormat });
+            CoreValue("Core2/mesh/readOnlyWriteRejected", Core2Write(() => data.SetVertexBufferParams(3,
+                new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position))));
             read.Dispose();
             CoreValue("Core2/mesh/dataDisposed", Core2Read(() => data.vertexCount));
             mesh.Clear(); CoreValue("Core2/mesh/clearRetainingLayout", Core2MeshState(mesh));
@@ -890,6 +892,30 @@ public sealed class DefaultStateProbe : MonoBehaviour
             finally { UnityEngine.Object.DestroyImmediate(other); }
         }
         finally { UnityEngine.Object.DestroyImmediate(go); }
+    }
+    static void Core2LayoutMutationControls()
+    {
+        var mesh = new Mesh();
+        try
+        {
+            mesh.SetVertexBufferParams(3, new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position));
+            mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up };
+            CoreValue("Core2/meshLayout/addedNormals", new object[] { mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Normal), mesh.vertexAttributeCount, mesh.GetVertexBufferStride(0) });
+            mesh.normals = null; mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up }; mesh.triangles = new[] { 0, 1, 2 }; mesh.RecalculateNormals();
+            CoreValue("Core2/meshLayout/recalculated", new object[] { mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Normal), mesh.normals });
+            mesh.tangents = new Vector4[3]; mesh.colors32 = new Color32[3]; mesh.uv = new Vector2[3]; mesh.Clear(true);
+            CoreValue("Core2/meshLayout/retained", new object[] { mesh.vertexAttributeCount, mesh.vertexBufferCount, mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Normal), mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Color), mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.TexCoord0) });
+            mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+            CoreValue("Core2/meshLayout/repopulated", new object[] { mesh.vertexAttributeCount, mesh.normals.Length, mesh.colors32.Length, mesh.uv.Length });
+            mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up };
+            mesh.colors32 = new[] { new Color32(1, 2, 3, 4), new Color32(5, 6, 7, 8), new Color32(9, 10, 11, 12) };
+            mesh.uv = new[] { Vector2.zero, Vector2.right, Vector2.up };
+            CoreValue("Core2/meshLayout/repopulatedValues", new object[] { mesh.normals, mesh.colors32, mesh.uv });
+            mesh.uv2 = new Vector2[3]; CoreValue("Core2/meshLayout/addedUV", new object[] { mesh.vertexAttributeCount, mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.TexCoord1) });
+            mesh.normals = null; CoreValue("Core2/meshLayout/removedNormals", new object[] { mesh.vertexAttributeCount, mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Normal) });
+            mesh.Clear(false); CoreValue("Core2/meshLayout/removedLayout", new object[] { mesh.vertexAttributeCount, mesh.vertexBufferCount });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(mesh); }
     }
     static void UiControls()
     {

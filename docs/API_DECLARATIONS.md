@@ -264,8 +264,8 @@ and Physics resolves 89. Audio resolves 185 more; an independently integrated li
 fix resolves one additional row. The ParticleSystem slice resolves another 337 rows and the Editor slice resolves 132.
 UIElements resolves 59 values and shared JSON string transfer resolves two record strings.
 The remaining Core mechanisms resolve another 127 rows across their shared operation,
-component and renderer state. The default-state probe now has 12,153 exact rows and 373 queued rows, including
-the unchanged 50 variable rows. Its 12,499 canonical rows
+component and renderer state. The default-state probe now has 12,162 exact rows and 373 queued rows, including
+the unchanged 50 variable rows. Its 12,508 canonical rows
 preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases, refresh-rate arithmetic, drive input ranges,

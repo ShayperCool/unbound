@@ -12496,4 +12496,13 @@
 {"key":"CoreControl/Core2/renderer/TilemapRenderer/castShadows","status":"value","value":"[false,false,true]"}
 {"key":"CoreControl/Core2/renderer/TilemapRenderer/motionVectors","status":"value","value":"[true,false,true]"}
 {"key":"CoreControl/Core2/renderer/TilemapRenderer/useLightProbes","status":"value","value":"[false,false,true]"}
+{"key":"CoreControl/Core2/mesh/readOnlyWriteRejected","status":"value","value":"string:System.InvalidOperationException"}
+{"key":"CoreControl/Core2/meshLayout/addedNormals","status":"value","value":"[true,2,24]"}
+{"key":"CoreControl/Core2/meshLayout/recalculated","status":"value","value":"[true,[UnityEngine.Vector3{x=0;y=0;z=1},UnityEngine.Vector3{x=0;y=0;z=1},UnityEngine.Vector3{x=0;y=0;z=1}]]"}
+{"key":"CoreControl/Core2/meshLayout/retained","status":"value","value":"[5,0,true,true,true]"}
+{"key":"CoreControl/Core2/meshLayout/repopulated","status":"value","value":"[5,3,3,3]"}
+{"key":"CoreControl/Core2/meshLayout/repopulatedValues","status":"value","value":"[[UnityEngine.Vector3{x=0;y=1;z=0},UnityEngine.Vector3{x=0;y=1;z=0},UnityEngine.Vector3{x=0;y=1;z=0}],[UnityEngine.Color32{a=4;b=3;g=2;r=1},UnityEngine.Color32{a=8;b=7;g=6;r=5},UnityEngine.Color32{a=12;b=11;g=10;r=9}],[UnityEngine.Vector2{x=0;y=0},UnityEngine.Vector2{x=1;y=0},UnityEngine.Vector2{x=0;y=1}]]"}
+{"key":"CoreControl/Core2/meshLayout/addedUV","status":"value","value":"[6,true]"}
+{"key":"CoreControl/Core2/meshLayout/removedNormals","status":"value","value":"[5,false]"}
+{"key":"CoreControl/Core2/meshLayout/removedLayout","status":"value","value":"[0,0]"}
 {"key":"complete","status":"value","value":"1"}
