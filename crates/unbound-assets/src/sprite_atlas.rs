@@ -20,6 +20,8 @@
 //!   colour of the nearest sprite texel (a jump flood of steps 4, 2, 1).
 use std::cmp::Ordering;
 
+pub mod definition;
+
 /// The largest jump of the border fill.
 const FILL_MAX_STEP: usize = 4;
 /// Random positions tried in each search region.

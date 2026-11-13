@@ -1201,40 +1201,9 @@ impl Default for TextureImporter {
     }
 }
 
-impl Importer for TextureImporter {
-    type Output = ImportedTexture;
-    const KIND: &'static str = "textures";
-    // 12: Texture2DArray and Texture3D shapes import their flipbook cells (were a 2D texture).
-    // 13: single-cell arrays and volumes are no longer BC7-compressed.
-    // 14: Cookie textures keep their alpha in every channel and are not sRGB.
-    // 15: Lightmap and Shadowmask textures keep their input alpha under "Alpha Source: None".
-    // 16: Single Channel textures are linear and, as one-channel imports, not BC7-compressed.
-    // 17: a Single Channel texture of an explicit format keeps its sRGB setting.
-    // 18: glossy-convolved cubemaps follow the Editor's specular convolution; byte faces stay
-    //     gamma-encoded bytes.
-    // 19: Standalone imports are block-compressed in the Editor's format (`blocks`); BC7 for the
-    //     GPU only where the target's format is not produced.
-    // 20: mipless textures of multiple-of-4 sizes are compressed; Cursor textures keep their
-    //     pixels; the import records why it is not stored as the target stores it.
-    // 21: Photoshop files are read by Unbound's own reader (16-bit channels round to bytes).
-    // 22: Photoshop gray reads opaque, Remove Matte applies.
-    // 23: Android imports are ETC1/ETC2-compressed in the Editor's formats (`blocks`).
-    // 25: measured BC import encoders and per-platform compressor quality.
-    // 26: the compression cache key also records the runtime encoder profile.
-    // 27: Fast LDR ASTC storage, clamped edges and the normal-map RGB24 fallback.
-    // 28: malformed ASTC mode budgets decode to the format's error colour.
-    // 29: BC4/BC5 compare continuous ramp fits and preserve channel-fit rounding.
-    // 30: compressed automatic Single Channel red mips retain their source colour-space filtering.
-    // 36: release-scoped Crunch archives and transcoded blocks, runtime EAC and compressed GPU uploads.
-    // 37: Polygon-mode sprites are always Tight and get their mesh's boundary as the default
-    //     physics shape.
-    // 38: runtime three-column block padding repeats the middle texel.
-    // 39: Android HDR colour sources and their uncompressed fallbacks retain RGBM bytes.
-    // 40: RGBM retains high/nonfinite radiance and the authored colour-flag transform.
-    // 41: RGBM multiplier normalization preserves division rounding.
-    const VERSION: u32 = 41;
-
-    fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
+impl TextureImporter {
+    /// The settings a `.meta` imports with for this importer's build target and project.
+    pub fn settings(&self, meta: &Value) -> TextureSettings {
         let mut settings = TextureSettings::read(meta, &self.build_target);
         // A linear project's sRGB ETC Crunch selection needs the alpha-capable ETC2 archive.
         if self.project.encoders.measured_import_encoders
@@ -1304,8 +1273,13 @@ impl Importer for TextureImporter {
             && (settings.explicit_format == Some(65)
                 || (settings.explicit_format.is_none() && !settings.uncompressed));
         settings.normal_maps_xyz = self.normal_maps_xyz;
-        let mut texture = import_texture(source, bytes, meta, settings)?;
-        let selected = storage(&texture, &self.build_target, &self.project, self.gamma);
+        settings
+    }
+
+    /// Stores an imported texture as the build target stores it: compressed to the target's
+    /// format (its mips then hold the decoded blocks), or kept uncompressed.
+    pub fn store(&self, texture: &mut ImportedTexture) -> Result<()> {
+        let selected = storage(texture, &self.build_target, &self.project, self.gamma);
         if texture.format == TextureFormat::Rgba32F
             && texture.settings.rgbm_encoding
             && matches!(
@@ -1371,11 +1345,11 @@ impl Importer for TextureImporter {
                 });
             }
             Storage::Blocks(format) => {
-                compress_blocks(&mut texture, format, &self.project);
+                compress_blocks(texture, format, &self.project);
                 // ETC uses the existing BC7 fallback. ASTC retains blocks for capable devices;
                 // the renderer decodes unsupported footprints without another lossy encoding.
                 if format.is_etc() && self.compress {
-                    texture.bc7 = compress_bc7(&texture);
+                    texture.bc7 = compress_bc7(texture);
                 }
             }
             Storage::Unsupported(why) => {
@@ -1384,10 +1358,51 @@ impl Importer for TextureImporter {
                      format reads RGBA32 or RGB24)"
                 ));
                 if self.compress {
-                    texture.bc7 = compress_bc7(&texture);
+                    texture.bc7 = compress_bc7(texture);
                 }
             }
         }
+        Ok(())
+    }
+}
+
+impl Importer for TextureImporter {
+    type Output = ImportedTexture;
+    const KIND: &'static str = "textures";
+    // 12: Texture2DArray and Texture3D shapes import their flipbook cells (were a 2D texture).
+    // 13: single-cell arrays and volumes are no longer BC7-compressed.
+    // 14: Cookie textures keep their alpha in every channel and are not sRGB.
+    // 15: Lightmap and Shadowmask textures keep their input alpha under "Alpha Source: None".
+    // 16: Single Channel textures are linear and, as one-channel imports, not BC7-compressed.
+    // 17: a Single Channel texture of an explicit format keeps its sRGB setting.
+    // 18: glossy-convolved cubemaps follow the Editor's specular convolution; byte faces stay
+    //     gamma-encoded bytes.
+    // 19: Standalone imports are block-compressed in the Editor's format (`blocks`); BC7 for the
+    //     GPU only where the target's format is not produced.
+    // 20: mipless textures of multiple-of-4 sizes are compressed; Cursor textures keep their
+    //     pixels; the import records why it is not stored as the target stores it.
+    // 21: Photoshop files are read by Unbound's own reader (16-bit channels round to bytes).
+    // 22: Photoshop gray reads opaque, Remove Matte applies.
+    // 23: Android imports are ETC1/ETC2-compressed in the Editor's formats (`blocks`).
+    // 25: measured BC import encoders and per-platform compressor quality.
+    // 26: the compression cache key also records the runtime encoder profile.
+    // 27: Fast LDR ASTC storage, clamped edges and the normal-map RGB24 fallback.
+    // 28: malformed ASTC mode budgets decode to the format's error colour.
+    // 29: BC4/BC5 compare continuous ramp fits and preserve channel-fit rounding.
+    // 30: compressed automatic Single Channel red mips retain their source colour-space filtering.
+    // 36: release-scoped Crunch archives and transcoded blocks, runtime EAC and compressed GPU uploads.
+    // 37: Polygon-mode sprites are always Tight and get their mesh's boundary as the default
+    //     physics shape.
+    // 38: runtime three-column block padding repeats the middle texel.
+    // 39: Android HDR colour sources and their uncompressed fallbacks retain RGBM bytes.
+    // 40: RGBM retains high/nonfinite radiance and the authored colour-flag transform.
+    // 41: RGBM multiplier normalization preserves division rounding.
+    const VERSION: u32 = 41;
+
+    fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
+        let settings = self.settings(meta);
+        let mut texture = import_texture(source, bytes, meta, settings)?;
+        self.store(&mut texture)?;
         Ok(texture)
     }
 
@@ -1616,6 +1631,53 @@ pub fn import_texture(
         approximation: None,
         bc7: None,
     })
+}
+
+/// A 2D texture made of RGBA8 texels (rows bottom-up) instead of a file, such as a sprite atlas
+/// page: its mip chain and sampler state from `settings` (no resizing, dilation or sprites).
+/// [`TextureImporter::store`] then stores it as the build target does.
+pub fn import_pixels(
+    name: &str,
+    width: u32,
+    height: u32,
+    texels: Vec<u8>,
+    settings: TextureSettings,
+) -> ImportedTexture {
+    let image = Image {
+        width,
+        height,
+        format: TextureFormat::Rgba8,
+        data: texels,
+    };
+    let mips = mip_chain(image, &settings);
+    let has_alpha = mips[0].data.as_chunks::<4>().0.iter().any(|p| p[3] < 255);
+    ImportedTexture {
+        name: name.to_string(),
+        width,
+        height,
+        original_width: width,
+        original_height: height,
+        format: TextureFormat::Rgba8,
+        srgb: settings.srgb,
+        mips,
+        wrap_u: settings.wrap_u,
+        wrap_v: settings.wrap_v,
+        wrap_w: settings.wrap_w,
+        filter: settings.filter,
+        aniso: settings.aniso,
+        mip_bias: settings.mip_bias,
+        is_readable: settings.is_readable,
+        has_alpha,
+        sprites: Vec::new(),
+        import_settings_hash: settings.hash(),
+        settings,
+        layers: 1,
+        blocks: None,
+        crunched: None,
+        uncompressed: false,
+        approximation: None,
+        bc7: None,
+    }
 }
 
 /// The imported mip chain of a 2D texture (just its top level without mipmaps).
