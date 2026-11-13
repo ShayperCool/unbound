@@ -812,6 +812,28 @@ public static class TexFormatsProbe
         var grab = Own(new Material(Shader.Find("Probe/TexFormatsGrab")));
         Graphics.Blit(null, rgb, grab);
         Try("rt.padding.grab", () => Sampled(rgb, false));
+        using (var cmd = new CommandBuffer())
+        {
+            cmd.Blit(null, rgb, grab);
+            Graphics.ExecuteCommandBuffer(cmd);
+        }
+        Try("rt.padding.grab.command", () => Sampled(rgb, false));
+        var go = Own(new GameObject("PaddingCamera"));
+        var camera = go.AddComponent<Camera>(); camera.enabled = false;
+        camera.orthographic = true; camera.orthographicSize = .5f; camera.aspect = 2f;
+        camera.nearClipPlane = .1f; camera.farClipPlane = 10f;
+        camera.transform.position = new Vector3(0, 0, -2);
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(.5f, .25f, -.5f, .25f);
+        camera.cullingMask = 1 << 30; camera.targetTexture = rgb;
+        var quad = Own(GameObject.CreatePrimitive(PrimitiveType.Quad)); quad.layer = 30;
+        quad.transform.localScale = new Vector3(2f, 1f, 1f);
+        quad.GetComponent<Renderer>().sharedMaterial = grab;
+        camera.Render();
+        Try("rt.padding.grab.renderer", () => Sampled(rgb, false));
+        quad.SetActive(false);
+        camera.targetTexture = null;
+
     }
 
     public static void Record()

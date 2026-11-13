@@ -562,7 +562,7 @@ namespace Unbound.Runtime
 
         /// <summary>Pass numbers of <see cref="Draw"/> besides a shader pass index: the built-in
         /// forward passes, every pass, or the passes whose LightMode is one of <see cref="PassTags"/>.</summary>
-        internal const int ForwardPasses = -1, AllPasses = -2, TaggedPasses = -3;
+        internal const int ForwardPasses = -1, AllPasses = -2, TaggedPasses = -3, BlitPasses = -4;
 
         /// <summary>The active pipeline's tag (Shader.globalRenderPipeline): which SubShader draws.</summary>
         internal static void RenderPipeline(string tag)

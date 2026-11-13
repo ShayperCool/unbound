@@ -3574,6 +3574,18 @@ impl UnityRenderer {
                 }
                 chosen
             }
+            // A blit executes shader passes without capturing framebuffer grabs.
+            -4 => resolved
+                .all
+                .iter()
+                .enumerate()
+                .filter_map(|(i, p)| {
+                    p.as_ref()
+                        .ok()
+                        .filter(|p| p.grab.is_none())
+                        .map(|p| (forward + i, p))
+                })
+                .collect(),
             -2 => resolved
                 .all
                 .iter()
