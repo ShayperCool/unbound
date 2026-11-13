@@ -231,6 +231,29 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void TransformTurnsWithTheEngineAxisAngleAndRotateAroundMovesWithTheScriptingOne()
+        {
+            // 0.1 degrees: the double and single-precision half angles differ in the last bit.
+            Assert.NotEqual(QuaternionMath.AngleAxis(0.1f, Vector3.up), Quaternion.AngleAxis(0.1f, Vector3.up));
+            var go = new GameObject("turned");
+            try
+            {
+                go.transform.Rotate(Vector3.up, 0.1f, Space.World);
+                Assert.Equal(QuaternionMath.AngleAxis(0.1f, Vector3.up), go.transform.rotation);
+                go.transform.rotation = Quaternion.identity;
+                var start = new Vector3(2f, 0.5f, -1f);
+                go.transform.position = start;
+                go.transform.RotateAround(Vector3.zero, Vector3.up, 0.1f);
+                Assert.Equal(Quaternion.AngleAxis(0.1f, Vector3.up) * start, go.transform.position);
+                Assert.Equal(QuaternionMath.AngleAxis(0.1f, Vector3.up), go.transform.rotation);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
         public void LogsTheEditorsDiagnosticsForDegenerateOperands()
         {
             var logs = new List<string>();
