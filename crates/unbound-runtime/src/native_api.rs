@@ -78,7 +78,7 @@ use std::ffi::c_void;
 /// 68: the Draw render command flags distinguish raw winding and baked renderer reflections.
 /// 69: packed unsigned and signed 16-bit normalized texture packet formats.
 /// 70: listener filter reconnection and recreation commands travel with their frame.
-pub const NATIVE_API_VERSION: u32 = 69;
+pub const NATIVE_API_VERSION: u32 = 70;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

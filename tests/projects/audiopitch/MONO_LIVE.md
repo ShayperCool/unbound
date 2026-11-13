@@ -63,7 +63,7 @@ when it happens before the next audio update. Component enabled-state changes
 retain each bypassed unit's history. These are measurements in this release and
 context, selected by `Compat.AudioComponentActivationMeasured`. Other releases
 retain their previous unmeasured listener history and script activation paths.
-NativeApi 69 carries one-frame reconnection and recreation commands with the
+NativeApi 70 carries one-frame reconnection and recreation commands with the
 matching frame. Reused membership sets avoid rebuilding allocations on unchanged
 frames. Existing LowPass state and Chorus sweep span survive a reconnection;
 owner recreation clears both.
