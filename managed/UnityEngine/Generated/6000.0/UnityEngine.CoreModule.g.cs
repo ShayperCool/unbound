@@ -1349,38 +1349,6 @@ namespace UnityEngine
         BitDepth10 = 0,
         BitDepth16 = 1,
     }
-    unsafe partial struct Hash128
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(global::Unity.Collections.NativeArray<T> data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(T[] data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(global::System.Collections.Generic.List<T> data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(ref T val) where T : unmanaged { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute(void* data, ulong size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
-        [global::Unbound.Stub] public void Append<T>(global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
-        [global::Unbound.Stub] public void Append<T>(global::Unity.Collections.NativeArray<T> data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
-        [global::Unbound.Stub] public void Append<T>(T[] data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
-        [global::Unbound.Stub] public void Append<T>(global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
-        [global::Unbound.Stub] public void Append<T>(global::System.Collections.Generic.List<T> data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
-        [global::Unbound.Stub] public void Append<T>(ref T val) where T : unmanaged { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
-        [global::Unbound.Stub] public void Append(void* data, ulong size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class HashUnsafeUtilities
-    {
-        [global::Unbound.Stub] public static void ComputeHash128(void* data, ulong dataSize, ulong* hash1, ulong* hash2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HashUnsafeUtilities.ComputeHash128"); }
-        [global::Unbound.Stub] public static void ComputeHash128(void* data, ulong dataSize, global::UnityEngine.Hash128* hash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HashUnsafeUtilities.ComputeHash128"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class HashUtilities
-    {
-        [global::Unbound.Stub] public static void AppendHash(ref global::UnityEngine.Hash128 inHash, ref global::UnityEngine.Hash128 outHash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HashUtilities.AppendHash"); }
-        [global::Unbound.Stub] public static void QuantisedMatrixHash(ref global::UnityEngine.Matrix4x4 value, ref global::UnityEngine.Hash128 hash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HashUtilities.QuantisedMatrixHash"); }
-        [global::Unbound.Stub] public static void QuantisedVectorHash(ref global::UnityEngine.Vector3 value, ref global::UnityEngine.Hash128 hash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HashUtilities.QuantisedVectorHash"); }
-        [global::Unbound.Stub] public static void ComputeHash128<T>(ref T value, ref global::UnityEngine.Hash128 hash) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HashUtilities.ComputeHash128"); }
-        [global::Unbound.Stub] public static void ComputeHash128(byte[] value, ref global::UnityEngine.Hash128 hash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HashUtilities.ComputeHash128"); }
-    }
     unsafe partial class HelpURLAttribute
     {
         [global::Unbound.Stub] internal readonly string m_Url;
@@ -2284,11 +2252,6 @@ namespace UnityEngine
         public int tileWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SparseTexture.tileWidth"); return default; } }
         public int tileHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SparseTexture.tileHeight"); return default; } }
         public bool isCreated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SparseTexture.isCreated"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class SpookyHash
-    {
-        [global::Unbound.Stub] public static void Hash(void* message, ulong length, ulong* hash1, ulong* hash2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpookyHash.Hash"); }
     }
     unsafe partial class Sprite
     {

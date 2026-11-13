@@ -1,6 +1,11 @@
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace UnityEngine
 {
@@ -54,55 +59,76 @@ namespace UnityEngine
             return new Hash128(a, b);
         }
 
-        public static Hash128 Compute(string data)
+        // Every overload hashes the bytes of its input with SpookyHash V2 (SpookyHash.cs),
+        // continuing from the current value; Compute starts from the zero hash. Strings hash as
+        // UTF-8, values and blittable elements as their in-memory bytes.
+
+        public static Hash128 Compute(string data) { var h = new Hash128(); h.Append(data); return h; }
+        public static Hash128 Compute(int val) { var h = new Hash128(); h.Append(val); return h; }
+        public static Hash128 Compute(float val) { var h = new Hash128(); h.Append(val); return h; }
+        public static Hash128 Compute<T>(T[] data) where T : struct { var h = new Hash128(); h.AppendArray(data, 0, data.Length, "Compute", checkRange: false); return h; }
+        public static Hash128 Compute<T>(T[] data, int start, int count) where T : struct { var h = new Hash128(); h.AppendArray(data, start, count, "Compute", checkRange: true); return h; }
+        public static Hash128 Compute<T>(List<T> data) where T : struct { var h = new Hash128(); h.AppendList(data, 0, data.Count, "Compute", checkRange: false); return h; }
+        public static Hash128 Compute<T>(List<T> data, int start, int count) where T : struct { var h = new Hash128(); h.AppendList(data, start, count, "Compute", checkRange: true); return h; }
+        public static Hash128 Compute<T>(NativeArray<T> data) where T : struct { var h = new Hash128(); h.Append(data); return h; }
+        public static Hash128 Compute<T>(NativeArray<T> data, int start, int count) where T : struct { var h = new Hash128(); h.Append(data, start, count); return h; }
+        public static Hash128 Compute<T>(ref T val) where T : unmanaged { var h = new Hash128(); h.Append(ref val); return h; }
+        public static unsafe Hash128 Compute(void* data, ulong size) { var h = new Hash128(); h.Append(data, size); return h; }
+
+        public void Append(string data)
         {
-            var h = new Hash128();
-            h.Append(data);
-            return h;
+            data ??= "";
+            int max = Encoding.UTF8.GetMaxByteCount(data.Length);
+            byte[] rented = max > StackLimit ? ArrayPool<byte>.Shared.Rent(max) : null;
+            Span<byte> buffer = rented ?? stackalloc byte[StackLimit];
+            int length = Encoding.UTF8.GetBytes(data, buffer);
+            AppendBytes(buffer.Slice(0, length));
+            if (rented != null) ArrayPool<byte>.Shared.Return(rented);
         }
 
-        public static Hash128 Compute(int val)
+        public void Append(int val) => Append(ref val);
+        public void Append(float val) => Append(ref val);
+        public void Append<T>(T[] data) where T : struct => AppendArray(data, 0, data.Length, "Append", checkRange: false);
+        public void Append<T>(T[] data, int start, int count) where T : struct => AppendArray(data, start, count, "Append", checkRange: true);
+        public void Append<T>(List<T> data) where T : struct => AppendList(data, 0, data.Count, "Append", checkRange: false);
+        public void Append<T>(List<T> data, int start, int count) where T : struct => AppendList(data, start, count, "Append", checkRange: true);
+        public void Append<T>(NativeArray<T> data) where T : struct => AppendBytes(MemoryMarshal.AsBytes(data.AsReadOnlySpan()));
+
+        public void Append<T>(NativeArray<T> data, int start, int count) where T : struct
         {
-            var h = new Hash128();
-            h.Append(val);
-            return h;
+            CheckRange(start, count, data.Length);
+            AppendBytes(MemoryMarshal.AsBytes(data.AsReadOnlySpan().Slice(start, count)));
         }
 
-        public static Hash128 Compute(float val)
+        public void Append<T>(ref T val) where T : unmanaged => AppendBytes(MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref val, 1)));
+        public unsafe void Append(void* data, ulong size) => AppendBytes(new ReadOnlySpan<byte>(data, checked((int)size)));
+
+        /// <summary>Strings up to this many UTF-8 bytes are encoded on the stack.</summary>
+        const int StackLimit = 256;
+
+        void AppendArray<T>(T[] data, int start, int count, string method, bool checkRange) where T : struct
         {
-            var h = new Hash128();
-            h.Append(val);
-            return h;
+            if (!UnsafeUtility.IsArrayBlittable(data))
+                throw new ArgumentException($"Array passed to {method} must be blittable.\n" + UnsafeUtility.GetReasonForArrayNonBlittable(data));
+            if (checkRange) CheckRange(start, count, data.Length);
+            AppendBytes(MemoryMarshal.AsBytes(new ReadOnlySpan<T>(data, start, count)));
         }
 
-        public static Hash128 Compute<T>(T[] data) where T : struct
+        void AppendList<T>(List<T> data, int start, int count, string method, bool checkRange) where T : struct
         {
-            var h = new Hash128();
-            h.Append(data);
-            return h;
+            if (!UnsafeUtility.IsGenericListBlittable<T>())
+                throw new ArgumentException(string.Format("List<{0}> passed to {1} must be blittable.\n{2}", typeof(T), method, UnsafeUtility.GetReasonForGenericListNonBlittable<T>()));
+            if (checkRange) CheckRange(start, count, data.Count);
+            AppendBytes(MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(data).Slice(start, count)));
         }
 
-        public void Append(string data) => AppendBytes(Encoding.UTF8.GetBytes(data ?? ""));
-        public void Append(int val) => AppendBytes(BitConverter.GetBytes(val));
-        public void Append(float val) => AppendBytes(BitConverter.GetBytes(val));
-
-        /// <summary>Hashes the elements' bytes (Unity's T[] overload; byte arrays bind here).</summary>
-        public void Append<T>(T[] data) where T : struct =>
-            AppendBytes(data == null ? ReadOnlySpan<byte>.Empty : System.Runtime.InteropServices.MemoryMarshal.AsBytes(data.AsSpan()));
-
-        void AppendBytes(ReadOnlySpan<byte> data)
+        static void CheckRange(int start, int count, int length)
         {
-            // A 128-bit FNV-style mix: stable and well distributed (not SpookyHash; values differ from Unity's).
-            ulong a = u64_0 == 0 && u64_1 == 0 ? 14695981039346656037UL : u64_0;
-            ulong b = u64_1 == 0 && u64_0 == 0 ? 1099511628211UL : u64_1;
-            foreach (var x in data)
-            {
-                a = (a ^ x) * 1099511628211UL;
-                b = (b ^ (a >> 29)) * 0x9E3779B97F4A7C15UL;
-            }
-            u64_0 = a;
-            u64_1 = b;
+            if (start < 0 || count < 0 || start + count > length)
+                throw new ArgumentOutOfRangeException($"Bad start/count arguments (start:{start} count:{count})");
         }
+
+        internal void AppendBytes(ReadOnlySpan<byte> data) => SpookyHash.Hash(data, ref u64_0, ref u64_1);
 
         public override bool Equals(object obj) => obj is Hash128 h && h == this;
         public bool Equals(Hash128 obj) => this == obj;
