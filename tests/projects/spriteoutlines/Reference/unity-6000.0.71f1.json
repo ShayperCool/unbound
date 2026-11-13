@@ -10424,6 +10424,98 @@
             ]
         },
         {
+            "name": "nullPath ArgumentNullException: physicsShape",
+            "vertices": [
+                {
+                    "x": -0.15625,
+                    "y": 0.1640625
+                },
+                {
+                    "x": 0.46875,
+                    "y": 0.1640625
+                },
+                {
+                    "x": -0.15625,
+                    "y": -0.4921875
+                },
+                {
+                    "x": 0.46875,
+                    "y": -0.4921875
+                }
+            ],
+            "uv": [
+                {
+                    "x": 0.0416666679084301,
+                    "y": 0.9375
+                },
+                {
+                    "x": 0.875,
+                    "y": 0.9375
+                },
+                {
+                    "x": 0.0416666679084301,
+                    "y": 0.0625
+                },
+                {
+                    "x": 0.875,
+                    "y": 0.0625
+                }
+            ],
+            "triangles": [
+                0,
+                1,
+                2,
+                2,
+                1,
+                3
+            ],
+            "textureRect": {
+                "serializedVersion": "2",
+                "x": 2.0,
+                "y": 3.0,
+                "width": 40.0,
+                "height": 42.0
+            },
+            "physics": [
+                {
+                    "points": [
+                        {
+                            "x": -0.15625,
+                            "y": -0.4921875
+                        },
+                        {
+                            "x": 0.46875,
+                            "y": -0.4921875
+                        },
+                        {
+                            "x": 0.15625,
+                            "y": 0.1640625
+                        }
+                    ]
+                },
+                {
+                    "points": [
+                        {
+                            "x": -0.234375,
+                            "y": -0.3359375
+                        },
+                        {
+                            "x": 0.5546875,
+                            "y": -0.3359375
+                        },
+                        {
+                            "x": 0.5546875,
+                            "y": 0.2890625
+                        },
+                        {
+                            "x": -0.13671875,
+                            "y": 0.2890625
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "name": "empty ok",
             "vertices": [
                 {
@@ -10607,6 +10699,48 @@
             "tilemap": []
         },
         {
+            "sprite": "nullPath",
+            "polygon": [
+                {
+                    "points": [
+                        {
+                            "x": -0.15625,
+                            "y": -0.4921875
+                        },
+                        {
+                            "x": 0.46875,
+                            "y": -0.4921875
+                        },
+                        {
+                            "x": 0.15625,
+                            "y": 0.1640625
+                        }
+                    ]
+                },
+                {
+                    "points": [
+                        {
+                            "x": -0.234375,
+                            "y": -0.3359375
+                        },
+                        {
+                            "x": 0.5546875,
+                            "y": -0.3359375
+                        },
+                        {
+                            "x": 0.5546875,
+                            "y": 0.2890625
+                        },
+                        {
+                            "x": -0.13671875,
+                            "y": 0.2890625
+                        }
+                    ]
+                }
+            ],
+            "tilemap": []
+        },
+        {
             "sprite": "empty",
             "polygon": [
                 {
@@ -10645,7 +10779,9 @@
         "override two",
         "override short",
         "override mixed",
+        "override nullPath",
         "override empty",
-        "override null ArgumentNullException physicsShapes"
+        "override null ArgumentNullException: physicsShapes",
+        "outline of no texture ArgumentNullException: texture"
     ]
 }

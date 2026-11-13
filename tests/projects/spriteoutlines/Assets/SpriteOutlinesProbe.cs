@@ -69,7 +69,12 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
     static string Try(Action action)
     {
         try { action(); return "ok"; }
-        catch (Exception e) { return e.GetType().Name + ": " + e.Message; }
+        // A null argument's message is the runtime's wording: its parameter name only.
+        catch (Exception thrown)
+        {
+            var e = thrown is TargetInvocationException { InnerException: { } inner } ? inner : thrown;
+            return e.GetType().Name + ": " + (e is ArgumentNullException n ? n.ParamName : e.Message);
+        }
     }
 
     static Path[] Physics(Sprite s)
@@ -202,6 +207,7 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
                 ("two", new List<Vector2[]> { new[] { new Vector2(0, 0), new Vector2(40, 0), new Vector2(20, 42) }, new[] { new Vector2(-5, 10), new Vector2(45.5f, 10), new Vector2(45.5f, 50), new Vector2(1.25f, 50) } }),
                 ("short", new List<Vector2[]> { new[] { new Vector2(1, 1), new Vector2(30, 30) } }),
                 ("mixed", new List<Vector2[]> { new[] { new Vector2(0, 0), new Vector2(10, 0), new Vector2(0, 10) }, new[] { new Vector2(1, 1) } }),
+                ("nullPath", new List<Vector2[]> { new[] { new Vector2(0, 0), new Vector2(10, 0), new Vector2(0, 10) }, null }),
                 ("empty", new List<Vector2[]>()),
             };
             foreach (var (label, list) in overrides)
@@ -214,9 +220,10 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
                 var polygon = go.AddComponent<PolygonCollider2D>();
                 overriddenColliders.Add(new Collider { sprite = label, polygon = Enumerable.Range(0, polygon.pathCount).Select(i => new Path { points = polygon.GetPath(i) }).ToArray() });
             }
-            // The exception type only: its message is the runtime's wording.
-            try { target.OverridePhysicsShape(null); s_Logs.Add("override null ok"); }
-            catch (Exception e) { s_Logs.Add("override null " + e.GetType().Name + " " + ((ArgumentException)e).ParamName); }
+            s_Logs.Add("override null " + Try(() => target.OverridePhysicsShape(null)));
+#if UNITY_EDITOR
+            s_Logs.Add("outline of no texture " + Try(() => generate.Invoke(null, new object[] { null, new Rect(0, 0, 8, 8), .25f, (byte)0, true, null })));
+#endif
             capture.overridden = overridden.ToArray();
             capture.overriddenColliders = overriddenColliders.ToArray();
             capture.logs = s_Logs.ToArray();

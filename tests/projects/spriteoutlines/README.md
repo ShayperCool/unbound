@@ -19,9 +19,11 @@ Rect without one (`NoPhysFull`). In Play mode the probe records:
   `Apply`. Each traces the texels the CPU holds at that moment.
 - `Sprite.OverridePhysicsShape` on a Full Rect sprite with an off-centre pivot: two paths (one
   with points outside the rect), a path of two points and a list with a one-point path (each
-  throws `ArgumentException` and keeps the shape), an empty list (clears it) and null
-  (`ArgumentNullException`, its type and parameter only); the physics shape and the paths of a
-  PolygonCollider2D added after each.
+  throws `ArgumentException` and keeps the shape), a list with a null path and a null list
+  (`ArgumentNullException`), an empty list (clears it); the physics shape and the paths of a
+  PolygonCollider2D added after each. `GenerateOutline` of no texture (`ArgumentNullException`).
+  A null argument's exception is recorded by type and parameter name only (its message is the
+  runtime's wording).
 
 The comparator compares every value exactly (floats within 1e-5 relative). The gate assembles
 the committed `Authored/` set and runs only the engine; outputs stay under
