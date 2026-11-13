@@ -31,8 +31,10 @@ On macOS the same chain was measured with the Unity 6000.0.71f1 macOS arm64 Edit
 mode on macOS 26's own fonts (not a reference: the Linux faces the reference needs are not
 installed there): Unbound's 9672 glyph metrics and raw values match the Editor's, the fallback
 characters included. Arial Unicode MS, one of the common families, has all three of them there,
-so this does not reach the platform part of the list; a run with ⌚, ⏰, ☕ and ⭐ added (outside
-the probe, not recorded) found the same faces in both, past the common families. The alpha bytes come from a
+so this does not reach the platform part of the list. A run with ⌚, ⏰, ☕ and ⭐ added (outside
+the probe, not recorded) gave the same glyphs in both: ⌚ from Arial Unicode MS, the others from
+LastResort. Characters no common family has but other macOS faces do (Khmer, Ethiopic,
+Mongolian, CJK extension B) are unmeasured; Unbound draws them with LastResort. The alpha bytes come from a
 screen read-back that neither the batch-mode Editor without a graphics device nor a headless
 Unbound run has, so they were not compared. A Mac with the Linux families installed is
 unmeasured.
