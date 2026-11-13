@@ -53,6 +53,20 @@ namespace UnityEngine.SceneManagement
 
         internal static bool IsLoadedData(SceneData data) =>
             data != null && data.IsLoaded && data.LoadingState != LoadingState.Loading && !SceneRegistry.IsTeardownClosing(data);
+        /// <summary>The GUID of the scene's asset (what URP's probe volume system finds a scene's
+        /// baking set by); 32 zeros for a scene without one (made at runtime, DontDestroyOnLoad,
+        /// invalid). Matches the Unity 6000.0.71f1 Editor, tests/projects/sceneguid.</summary>
+        internal string guid
+        {
+            get
+            {
+                const string none = "00000000000000000000000000000000";
+                var data = PublicData;
+                if (data == null || SceneRegistry.IsDontDestroyOnLoad(data) || string.IsNullOrEmpty(data.Path)) return none;
+                var assetGuid = UnityEditor.AssetDatabase.AssetPathToGUID(data.Path);
+                return string.IsNullOrEmpty(assetGuid) ? none : assetGuid;
+            }
+        }
         public int buildIndex => PublicData?.BuildIndex ?? -1;
         public bool isDirty => Data?.IsDirty ?? false;
         public int dirtyID => 0;

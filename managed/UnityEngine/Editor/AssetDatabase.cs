@@ -84,6 +84,15 @@ namespace UnityEditor
 
         public static string[] GetAllAssetPaths() => Entries.Select(e => e.Path).ToArray();
 
+        /// <summary>Whether the asset's main object is in memory: loaded (a scene that references it
+        /// loaded it too) and not unloaded since (Resources.UnloadAsset). Matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/assetloaded.</summary>
+        public static bool IsMainAssetAtPathLoaded(string assetPath)
+        {
+            var guid = AssetPathToGUID(assetPath);
+            return !string.IsNullOrEmpty(guid) && AssetDatabaseRuntime.IsMainLoaded(guid);
+        }
+
         public static Object GetBuiltinExtraResource(Type type, string path) => BuiltinResources.GetExtra(type, path);
 
         public static T GetBuiltinExtraResource<T>(string path) where T : Object => (T)GetBuiltinExtraResource(typeof(T), path);

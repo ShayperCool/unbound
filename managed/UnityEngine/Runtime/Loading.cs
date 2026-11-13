@@ -805,6 +805,11 @@ namespace Unbound.Runtime
 
         internal static string PathOf(string guid) => s_Files.TryGetValue(guid, out var f) && f != null ? f.Path : null;
 
+        /// <summary>Whether the asset's file has been read and its main object is still alive (not
+        /// unloaded or destroyed).</summary>
+        internal static bool IsMainLoaded(string guid) =>
+            s_Files.TryGetValue(guid, out var f) && f != null && f.MainObject != null;
+
         static LoadedFile LoadFile(string guid)
         {
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;

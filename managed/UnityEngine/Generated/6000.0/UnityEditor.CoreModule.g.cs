@@ -2430,7 +2430,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static int ReserveMonoScriptInstanceID(global::UnityEditor.GUID guid) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.ReserveMonoScriptInstanceID"); return default; }
         [global::Unbound.Stub] public static global::System.Type GetMainAssetTypeFromGUID(global::UnityEditor.GUID guid) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.GetMainAssetTypeFromGUID"); return default; }
         [global::Unbound.Stub] public static global::System.Type GetTypeFromPathAndFileID(string assetPath, long localIdentifierInFile) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.GetTypeFromPathAndFileID"); return default; }
-        [global::Unbound.Stub] public static bool IsMainAssetAtPathLoaded(string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.IsMainAssetAtPathLoaded"); return default; }
         [global::Unbound.Stub] public static bool CanOpenAssetInEditor(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.CanOpenAssetInEditor"); return default; }
         [global::Unbound.Stub] public static bool OpenAsset(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.OpenAsset"); return default; }
         [global::Unbound.Stub] public static bool OpenAsset(int instanceID, int lineNumber) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.OpenAsset"); return default; }

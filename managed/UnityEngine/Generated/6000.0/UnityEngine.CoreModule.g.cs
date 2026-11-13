@@ -5467,7 +5467,6 @@ namespace UnityEngine.SceneManagement
     {
         [global::Unbound.Stub] internal Scene(int handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SceneManagement.Scene.ctor"); }
         [global::Unbound.Stub] internal void SetPathAndGuid(string path, string guid) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SceneManagement.Scene.SetPathAndGuid"); }
-        internal string guid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SceneManagement.Scene.guid"); return default; } }
     }
     unsafe partial class SceneManager
     {
