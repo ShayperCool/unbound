@@ -45,7 +45,7 @@ namespace UnityEngine
         public Cubemap(int width, GraphicsFormat format, TextureCreationFlags flags) : this(width, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
 
         public Cubemap(int width, GraphicsFormat format, TextureCreationFlags flags, int mipCount)
-            : this(width, GraphicsFormatUtility.GetTextureFormat(format), mipCount, false) =>
+            : this(width, GraphicsFormatUtility.StoredTextureFormat(format), mipCount, false) =>
             m_Linear = !GraphicsFormatUtility.IsSRGBFormat(format);
 
         public Cubemap(int width, DefaultFormat format, TextureCreationFlags flags) : this(width, SystemInfo.GetGraphicsFormat(format), flags) { }

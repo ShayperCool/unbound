@@ -189,7 +189,7 @@ namespace UnityEngine.Experimental.Rendering
         public static bool IsEACFormat(GraphicsFormat format) => Of(format).Name?.Contains("_EAC") == true;
         public static bool IsASTCFormat(GraphicsFormat format) => Of(format).Name?.Contains("ASTC") == true;
         public static bool HasAlphaChannel(GraphicsFormat format) => Of(format).AlphaComponents > 0;
-        [Unbound.EditorFaithful("6000.0's GraphicsFormat has no alpha-only format (Alpha8 is R8_UNorm), so no format is")]
+        [Unbound.EditorFaithful("6000.0's GraphicsFormat enum names no alpha-only format (Alpha8's is the unnamed 54), so no named format is")]
         public static bool IsAlphaOnlyFormat(GraphicsFormat format) => false;
         public static uint GetColorComponentCount(GraphicsFormat format) => Of(format).Components - Of(format).AlphaComponents;
         public static uint GetAlphaComponentCount(GraphicsFormat format) => Of(format).AlphaComponents;
@@ -314,14 +314,12 @@ namespace UnityEngine.Experimental.Rendering
             _ => false,
         };
 
-        /// <summary>A Texture2D's graphicsFormat: ARGB32 and Alpha8 report the unnamed values above, R8
-        /// and RG16 their sRGB formats for sRGB data; other formats as <see cref="GetGraphicsFormat(TextureFormat, bool)"/>.</summary>
+        /// <summary>A Texture2D's graphicsFormat: ARGB32 and Alpha8 report the unnamed values above;
+        /// other formats as <see cref="GetGraphicsFormat(TextureFormat, bool)"/>.</summary>
         internal static GraphicsFormat Texture2DGraphicsFormat(TextureFormat format, bool isSRGB) => format switch
         {
             TextureFormat.ARGB32 => isSRGB ? Texture2DARGB32SRGB : Texture2DARGB32UNorm,
             TextureFormat.Alpha8 => Texture2DAlpha8,
-            TextureFormat.R8 => isSRGB ? GraphicsFormat.R8_SRGB : GraphicsFormat.R8_UNorm,
-            TextureFormat.RG16 => isSRGB ? GraphicsFormat.R8G8_SRGB : GraphicsFormat.R8G8_UNorm,
             _ when Unbound.Runtime.BlockFormats.IsCrunch(format) => GetGraphicsFormat(Unbound.Runtime.BlockFormats.Uncrunched(format), isSRGB),
             _ => GetGraphicsFormat(format, isSRGB),
         };
@@ -340,13 +338,26 @@ namespace UnityEngine.Experimental.Rendering
             return 0;
         }
 
+        /// <summary>The texture formats 6000.0's enum does not name that GetTextureFormat answers for
+        /// B8G8R8 and DXT3 graphics formats (tests/projects/formatmapping).</summary>
+        const TextureFormat UnnamedBGR24 = (TextureFormat)8, UnnamedDXT3 = (TextureFormat)11;
+
+        /// <summary>The texture format a texture created from <paramref name="format"/> stores its
+        /// pixels in: <see cref="GetTextureFormat"/>'s, except the unnamed ones Unbound has no storage
+        /// for (0: the caller's fallback).</summary>
+        internal static TextureFormat StoredTextureFormat(GraphicsFormat format)
+        {
+            var t = GetTextureFormat(format);
+            return t == UnnamedBGR24 || t == UnnamedDXT3 ? 0 : t;
+        }
+
         /// <summary>Graphics formats whose texture format the forward table does not give back.</summary>
         static readonly (GraphicsFormat Graphics, TextureFormat Texture)[] s_TextureFormatsOfGraphicsOnly =
         {
-            (GraphicsFormat.B8G8R8_UNorm, (TextureFormat)8),
-            (GraphicsFormat.B8G8R8_SRGB, (TextureFormat)8),
-            (GraphicsFormat.RGBA_DXT3_UNorm, (TextureFormat)11),
-            (GraphicsFormat.RGBA_DXT3_SRGB, (TextureFormat)11),
+            (GraphicsFormat.B8G8R8_UNorm, UnnamedBGR24),
+            (GraphicsFormat.B8G8R8_SRGB, UnnamedBGR24),
+            (GraphicsFormat.RGBA_DXT3_UNorm, UnnamedDXT3),
+            (GraphicsFormat.RGBA_DXT3_SRGB, UnnamedDXT3),
             (GraphicsFormat.RGB_PVRTC_2Bpp_UNorm, TextureFormat.PVRTC_RGB2),
             (GraphicsFormat.RGB_PVRTC_2Bpp_SRGB, TextureFormat.PVRTC_RGB2),
             (GraphicsFormat.RGBA_PVRTC_2Bpp_UNorm, TextureFormat.PVRTC_RGBA2),

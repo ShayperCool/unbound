@@ -91,7 +91,7 @@ namespace UnityEngine
         /// no texture format).</summary>
         static TextureFormat TextureFormatOf(GraphicsFormat format)
         {
-            var t = GraphicsFormatUtility.GetTextureFormat(format);
+            var t = GraphicsFormatUtility.StoredTextureFormat(format);
             return t == 0 ? TextureFormat.RGBA32 : t;
         }
 

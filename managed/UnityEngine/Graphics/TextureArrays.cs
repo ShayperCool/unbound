@@ -337,14 +337,12 @@ namespace UnityEngine
         internal static Serialized Read(Texture texture, YNode body)
         {
             var graphics = (GraphicsFormat)body.Int("m_Format");
-            // The stored bytes follow the GraphicsFormat. R8_UNorm is also Alpha8's GraphicsFormat;
-            // these assets read as R8 (tests/projects/texturearrays). B8G8R8A8 bytes are BGRA32's
+            // The stored bytes follow the GraphicsFormat. B8G8R8A8 bytes are BGRA32's
             // (tests/projects/texturepixels), not ARGB32's, which the table also maps to it.
             var format = graphics switch
             {
-                GraphicsFormat.R8_UNorm => TextureFormat.R8,
                 GraphicsFormat.B8G8R8A8_UNorm or GraphicsFormat.B8G8R8A8_SRGB => TextureFormat.BGRA32,
-                _ => GraphicsFormatUtility.GetTextureFormat(graphics),
+                _ => GraphicsFormatUtility.StoredTextureFormat(graphics),
             };
             bool srgb = body.Int("m_ColorSpace") == 1 || GraphicsFormatUtility.IsSRGBFormat(graphics);
             var settings = body.Get("m_TextureSettings");
@@ -478,7 +476,7 @@ namespace UnityEngine
         public Texture2DArray(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags) : this(width, height, depth, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
 
         public Texture2DArray(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags, int mipCount)
-            : this(width, height, depth, GraphicsFormatUtility.GetTextureFormat(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format)) { }
+            : this(width, height, depth, GraphicsFormatUtility.StoredTextureFormat(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format)) { }
 
         public Texture2DArray(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags) { }
         public Texture2DArray(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
@@ -646,7 +644,7 @@ namespace UnityEngine
         public CubemapArray(int width, int cubemapCount, GraphicsFormat format, TextureCreationFlags flags) : this(width, cubemapCount, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
 
         public CubemapArray(int width, int cubemapCount, GraphicsFormat format, TextureCreationFlags flags, int mipCount)
-            : this(width, cubemapCount, GraphicsFormatUtility.GetTextureFormat(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format)) { }
+            : this(width, cubemapCount, GraphicsFormatUtility.StoredTextureFormat(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format)) { }
 
         public CubemapArray(int width, int cubemapCount, DefaultFormat format, TextureCreationFlags flags) : this(width, cubemapCount, SystemInfo.GetGraphicsFormat(format), flags) { }
         public CubemapArray(int width, int cubemapCount, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, cubemapCount, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
@@ -773,7 +771,7 @@ namespace UnityEngine
         public Texture3D(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags) : this(width, height, depth, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
 
         public Texture3D(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags, int mipCount)
-            : this(width, height, depth, GraphicsFormatUtility.GetTextureFormat(format), mipCount) => m_Linear = !GraphicsFormatUtility.IsSRGBFormat(format);
+            : this(width, height, depth, GraphicsFormatUtility.StoredTextureFormat(format), mipCount) => m_Linear = !GraphicsFormatUtility.IsSRGBFormat(format);
 
         public Texture3D(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags) { }
         public Texture3D(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
