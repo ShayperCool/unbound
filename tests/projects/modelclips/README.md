@@ -191,6 +191,6 @@ elsewhere (Spine's turn leaves it), a float curve (Animator parameter or blend s
 does so, and such Humanoid curves (the two-key curves of `HumanReduced` have equal ends either
 way); the rule is applied to them as to the measured position and scale curves.
 
-Unbound matches 3611/3611 records. The generic reducing compression modes are compared by their
+Unbound matches 3617/3617 records. The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
 set).

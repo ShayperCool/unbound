@@ -1510,20 +1510,29 @@ impl<'a> Builder<'a> {
             else {
                 continue;
             };
-            // A clip of the meta whose range has no frames (its last frame not after its first)
-            // imports as an empty clip, whatever the rig, with the Editor's warning
-            // (6000.0.71f1, tests/projects/modelclips HumanSingle, GenericSingle, LegacySingle:
-            // no curves, length 1). A range ending before it starts is unmeasured and taken the
-            // same way; a take's own clip keeps its span's rule (`Take::new`).
+            // A clip of the meta whose range has no frames (its last frame is its first) imports
+            // as an empty clip, whatever the rig, with the Editor's warning (6000.0.71f1,
+            // tests/projects/modelclips HumanSingle, GenericSingle, LegacySingle: no curves,
+            // length 1). A range ending before it starts is unmeasured and taken the same way;
+            // a take's own clip keeps its span's rule (`Take::new`).
             let no_frames = !range.preview && !take_clips && range.last <= range.first;
-            if no_frames {
+            if no_frames && range.last == range.first {
                 warnings.push(format!(
-                    "Model '{}' contains animation clip '{}' which has length of {} frames (start={}, end={}). It will result in empty animation.",
-                    self.name,
-                    range.name,
-                    range.last - range.first,
-                    range.first,
-                    range.last
+                    "Model '{}' contains animation clip '{}' which has length of 0 frames (start={}, end={}). It will result in empty animation.",
+                    self.name, range.name, range.first, range.last
+                ));
+            } else if no_frames {
+                warnings.push(format!(
+                    "clip '{}' ends before it starts (first frame {}, last frame {}): imported as an empty clip (not measured)",
+                    range.name, range.first, range.last
+                ));
+            }
+            // A Humanoid take's own clip of no frames keeps its transform curves, which are not
+            // converted (not supported; unmeasured in the Editor).
+            if take_clips && human && !range.preview && !empty && range.last <= range.first {
+                warnings.push(format!(
+                    "humanoid clip '{}' of its take has no frames: its transform curves are not converted to muscle curves (not supported)",
+                    range.name
                 ));
             }
             let empty = empty || no_frames;
@@ -1756,7 +1765,7 @@ impl<'a> Builder<'a> {
                     time: frame.map_or(0.0, |f| (f / fps) as f32),
                 },
             };
-            if let Some(node) = motion_node.filter(|_| !empty) {
+            if let Some(node) = motion_node.filter(|_| !no_frames) {
                 floats.extend(self.motion_curves(node, &stack.anim, start, end, fps));
             }
             clips.push(ModelClip {

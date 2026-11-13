@@ -1662,6 +1662,15 @@ fn a_clip_range_of_no_frames_is_an_empty_clip() {
             "{name}: {:?}",
             model.warnings
         );
+        // A range ending before it starts: also empty, with a warning that it is not measured.
+        let reversed = import(name, &text.replace("lastFrame: 5", "lastFrame: 4"));
+        let clip = reversed.clips.iter().find(|c| !c.preview).unwrap();
+        assert!(clip.curves.is_empty(), "{name}");
+        assert!(
+            reversed.warnings.iter().any(|w| w.contains("ends before it starts")),
+            "{name}: {:?}",
+            reversed.warnings
+        );
         let longer = import(name, &text.replace("lastFrame: 5", "lastFrame: 6"));
         let clip = longer.clips.iter().find(|c| !c.preview).unwrap();
         assert!(!clip.curves.is_empty(), "{name}");
