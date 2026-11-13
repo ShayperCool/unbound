@@ -299,20 +299,23 @@ public static class S { public static float Scale(float a, float t) { float r = 
         const string Edited = @"
 public static class Game
 {
+    public static int Count(int a, int b) => a - b;
     public static float Speed(float a, float b) => a + b;
-    public static int Count(int a, int b) => a + b;
     public static string Name() => ""game"";
+    public static class Inner { public static float Mix(float a, float b) => b + a; }
 }";
 
-        /// <summary>Whether a hot-reload edit of <see cref="Edited"/> needs the conversions (a restart).</summary>
-        static bool EditNeedsWidening(string before, string after)
+        /// <summary>Whether hot-reload edits of <see cref="Edited"/> (one delta) need the conversions (a restart).</summary>
+        static bool EditNeedsWidening(params (string Before, string After)[] edits)
         {
             var original = Compilation(Edited, OptimizationLevel.Debug, "EditedGame");
             var (image, pdb) = Emit(original);
             var loaded = WideFloats.Widen(image);
             var session = new Unbound.Compiler.EditAndContinue();
             session.Begin("EditedGame", original, loaded, pdb);
-            var current = Compilation(Edited.Replace(before, after), OptimizationLevel.Debug, "EditedGame");
+            var source = Edited;
+            foreach (var (before, after) in edits) source = source.Replace(before, after);
+            var current = Compilation(source, OptimizationLevel.Debug, "EditedGame");
             var delta = session.Emit("EditedGame", current);
             Assert.NotNull(delta);
             return WideFloats.DeltaNeedsWidening(loaded, new[] { delta!.Metadata }, delta.IL, () => Emit(current).Image);
@@ -322,12 +325,19 @@ public static class Game
         public void HotReloadRestartsOnlyForEditsThatNeedConversions()
         {
             // A float edit whose single operation is rounded straight away is patched in place.
-            Assert.False(EditNeedsWidening("a + b;\n    public static int", "a * b;\n    public static int"));
-            // One that chains operations needs the conversions.
-            Assert.True(EditNeedsWidening("a + b;\n    public static int", "a * b + a;\n    public static int"));
-            Assert.True(EditNeedsWidening("a + b;\n    public static int", "a + b > a ? 1f : 0f;\n    public static int"));
-            Assert.False(EditNeedsWidening("=> a + b;\n    public static string", "=> a * b;\n    public static string"));
-            Assert.False(EditNeedsWidening("\"game\"", "\"edited\""));
+            Assert.False(EditNeedsWidening(("a + b", "a * b")));
+            // One that chains operations, or compares a result, needs the conversions.
+            Assert.True(EditNeedsWidening(("a + b", "a * b + a")));
+            Assert.True(EditNeedsWidening(("a + b", "a + b > a ? 1f : 0f")));
+            Assert.False(EditNeedsWidening(("a - b", "a * b")));
+            Assert.False(EditNeedsWidening(("\"game\"", "\"edited\"")));
+            // Several methods in one delta: each body is matched to its own method (the integer
+            // method comes first, so a body matched to its neighbour would answer wrongly).
+            Assert.True(EditNeedsWidening(("a - b", "a * b"), ("a + b", "a * b + a")));
+            Assert.False(EditNeedsWidening(("a - b", "a * b"), ("a + b", "a * b")));
+            // A nested type's method.
+            Assert.True(EditNeedsWidening(("b + a", "b * a + a")));
+            Assert.False(EditNeedsWidening(("b + a", "b * a")));
         }
     }
 }

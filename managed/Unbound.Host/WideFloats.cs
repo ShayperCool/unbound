@@ -245,7 +245,7 @@ static partial class WideFloats
     /// edit cannot be patched in place, as the conversions change the size of the delta's bodies.
     /// A body that handles no float32 value (in its signature, locals, opcodes or the members and
     /// types it references) needs none; the others are looked up by type, name and parameter count
-    /// in <paramref name="edited"/> (the edited compilation's image, made when first needed) and
+    /// in <paramref name="edited"/> (the edited compilation's image, read when first needed) and
     /// analysed as <see cref="Widen"/> does. A method that cannot be looked up counts as needing
     /// conversions. <paramref name="baseline"/> is the loaded image and <paramref name="deltas"/>
     /// the metadata of every delta applied to it, this one last.
