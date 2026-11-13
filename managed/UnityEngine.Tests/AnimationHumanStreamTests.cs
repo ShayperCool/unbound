@@ -220,9 +220,10 @@ namespace UnityEngine.Tests
 
         /// <summary>A solve after the job read the pose back works on the skeleton re-based under
         /// the root without its scale: on a root scaled by 2 the body ends half as far from the
-        /// root as before the solve (the Editor displaces it the same way on the probe's root
-        /// scaled by 100, tests/projects/humanoid bone.solveTwice); on an unscaled root (the
-        /// control) it stays where it was.</summary>
+        /// root as before the solve; on an unscaled root (the control) it stays where it was. The
+        /// Editor displaces it the same way on the probe's root at the origin scaled by 100 with a
+        /// goal set (tests/projects/humanoid bone.solveTwice); a root moved from the origin and a
+        /// solve without goals, as here, are Unbound's rule, unmeasured.</summary>
         [Theory]
         [InlineData(1f)]
         [InlineData(2f)]

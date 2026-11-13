@@ -71,9 +71,10 @@ public partial class HumanoidProbe
     /// the transforms' locals every fourth step. RotateThenHuman turns the lower arm, reads the
     /// human stream and the bones again (humanBetween, between), then turns the head. Prop only
     /// reads, also the handle of an object added under the left hand (<see cref="PropRecord"/>).
-    /// Solve moves the left hand's goal and solves the IK; RotateThenSolve turns the lower arm, reads the human stream, then moves the left hand's
-    /// goal and solves the IK; SolveTwice moves the goal and solves, reads the human stream and
-    /// solves again: a solve after the pose was read back on the rig's root scaled by 100.</summary>
+    /// Solve moves the left hand's goal and solves the IK; RotateThenSolve turns the lower arm,
+    /// reads the human stream, then moves the left hand's goal and solves the IK; SolveTwice
+    /// moves the goal and solves, reads the human stream and solves again: a solve after the
+    /// pose was read back on the rig's root scaled by 100.</summary>
     static void BoneHandles()
     {
         foreach (HumanBoneJob.Mode mode in System.Enum.GetValues(typeof(HumanBoneJob.Mode)))
