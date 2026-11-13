@@ -344,6 +344,8 @@ class JanitorTests(unittest.TestCase):
         run, source, destination = self.movable_relative_link()
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)
+        watcher.add(source.parent)
+        watcher.add(destination.parent)
         original = janitor.DirectoryIndex.entries
         moved = False
         def moving_entries(index, directory, info):
