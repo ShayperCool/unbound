@@ -13,6 +13,7 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
 {
     public Texture2D[] textures;
     public Sprite[] sprites;
+    public Sprite[] sheet;
 
     [Serializable] public sealed class Path { public Vector2[] points; }
     [Serializable] public sealed class Shape { public string type; public Vector2[] vertices; }
@@ -35,6 +36,18 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
 
     [Serializable] public sealed class Outline { public string name; public Path[] paths; }
 
+    /// <summary>The shapes colliders take when added to an object: each kind on its own object.</summary>
+    [Serializable] public sealed class Fitted
+    {
+        public string name;
+        public Vector2 boxSize, boxOffset, circleOffset, capsuleSize, capsuleOffset, polygonOffset, edgeOffset;
+        public float boxEdgeRadius, circleRadius, edgeRadius;
+        public string capsuleDirection;
+        public Path[] polygon;
+        public Vector2[] edge;
+        public Vector3 localCenter, localExtents, worldCenter, worldExtents;
+    }
+
     [Serializable] public sealed class Capture
     {
         public bool complete;
@@ -45,6 +58,10 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
         public Outline[] runtimeOutlines;
         public Created[] overridden;
         public Collider[] overriddenColliders;
+        public Outline[] fromSprite;
+        public Fitted[] fitted;
+        public Path[] primitives;
+        public Vector2[] setters;
         public string[] logs;
     }
 
@@ -93,6 +110,21 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
 #if UNITY_EDITOR
             var generate = typeof(UnityEditor.EditorApplication).Assembly.GetType("UnityEditor.Sprites.SpriteUtility")
                 .GetMethod("GenerateOutline", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            var fromSprite = typeof(UnityEditor.EditorApplication).Assembly.GetType("UnityEditor.Sprites.SpriteUtility")
+                .GetMethod("GenerateOutlineFromSprite", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            var fromSpriteOutlines = new List<Outline>();
+            // SpriteUtility.GenerateOutlineFromSprite (internal): the importers' arguments, then
+            // without holes, full detail, no simplification and a half alpha tolerance.
+            void FromSprite(string label, Sprite sprite)
+            {
+                foreach (var (detail, tolerance, holes) in new[] { (0.25f, (byte)200, true), (0.25f, (byte)200, false), (1f, (byte)0, true), (-1f, (byte)0, true), (0.5f, (byte)128, false) })
+                {
+                    var args = new object[] { sprite, detail, tolerance, holes, null };
+                    string result = Try(() => fromSprite.Invoke(null, args));
+                    fromSpriteOutlines.Add(new Outline { name = $"{label}-detail{detail}-tolerance{tolerance}-holes{holes} {result}",
+                        paths = (args[4] as Vector2[][] ?? new Vector2[0][]).Select(p => new Path { points = p }).ToArray() });
+                }
+            }
 #endif
             var created = new List<Created>();
             foreach (var t in textures.Where(t => t.name.EndsWith("R") || t.name.EndsWith("N")))
@@ -146,6 +178,104 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
             }
             capture.colliders = colliders.ToArray();
 
+            // Colliders added to objects with renderers: sprites with and without flips, sliced and
+            // tiled drawing, an off-centre pivot at 64 pixels per unit, a transformed object, set
+            // local bounds, a disabled renderer, no sprite, no renderer, a transformed mesh renderer,
+            // a sprite without traceable texels and a renderer added after the colliders.
+            var fitted = new List<Fitted>();
+            var triTexture = textures.First(t => t.name == "TriR");
+            var offCentre = Sprite.Create(triTexture, new Rect(4, 2, 38, 42), new Vector2(.25f, .75f), 64, 1, SpriteMeshType.Tight, Vector4.zero, true);
+            offCentre.name = "TriR-offcentre";
+            var fitSprites = sprites.Where(s => s.name.EndsWith("R") || s.name == "EllipseNoPhysFull" || s.name == "PolyShape").Concat(sheet).Append(offCentre).ToArray();
+            foreach (var sprite in fitSprites)
+                foreach (var (flipX, flipY) in new[] { (false, false), (true, false), (false, true), (true, true) })
+                    fitted.Add(Fit($"{sprite.name}-flip{(flipX ? "X" : "")}{(flipY ? "Y" : "")}", go =>
+                    {
+                        var r = go.AddComponent<SpriteRenderer>();
+                        r.sprite = sprite; r.flipX = flipX; r.flipY = flipY;
+                    }));
+            var ellipse = sprites.First(s => s.name == "EllipseR");
+            foreach (var (mode, size, flipX) in new[] { (SpriteDrawMode.Sliced, new Vector2(3, 2), false), (SpriteDrawMode.Sliced, new Vector2(3, 2), true), (SpriteDrawMode.Tiled, new Vector2(2.5f, 1.5f), false) })
+                fitted.Add(Fit($"EllipseR-{mode}-flip{(flipX ? "X" : "")}", go =>
+                {
+                    var r = go.AddComponent<SpriteRenderer>();
+                    r.sprite = ellipse; r.drawMode = mode; r.size = size; r.flipX = flipX;
+                }));
+            fitted.Add(Fit("SheetA-Sliced-flipX", go =>
+            {
+                var r = go.AddComponent<SpriteRenderer>();
+                r.sprite = sheet[0]; r.drawMode = SpriteDrawMode.Sliced; r.size = new Vector2(2, 1); r.flipX = true;
+            }));
+            fitted.Add(Fit("SheetA-transformed-flipX", go =>
+            {
+                go.transform.SetPositionAndRotation(new Vector3(1, 2, 0), Quaternion.Euler(0, 0, 30));
+                go.transform.localScale = new Vector3(2, .5f, 1);
+                var r = go.AddComponent<SpriteRenderer>();
+                r.sprite = sheet[0]; r.flipX = true;
+            }));
+            fitted.Add(Fit("EllipseR-localBounds", go =>
+            {
+                var r = go.AddComponent<SpriteRenderer>();
+                r.sprite = ellipse; r.localBounds = new Bounds(new Vector3(1, -.5f, .25f), new Vector3(3, 1, .5f));
+            }));
+            fitted.Add(Fit("EllipseR-disabled", go =>
+            {
+                var r = go.AddComponent<SpriteRenderer>();
+                r.sprite = ellipse; r.enabled = false;
+            }));
+            fitted.Add(Fit("noSprite", go => go.AddComponent<SpriteRenderer>()));
+            fitted.Add(Fit("noRenderer", go => { }));
+            var mesh = new Mesh { name = "Panel", vertices = new[] { new Vector3(-1, -.5f, 0), new Vector3(2, -.5f, 0), new Vector3(2, 1.5f, .2f), new Vector3(-1, 1.5f, 0) }, triangles = new[] { 0, 2, 1, 0, 3, 2 } };
+            fitted.Add(Fit("meshRenderer-transformed", go =>
+            {
+                go.transform.SetPositionAndRotation(new Vector3(-2, 1, 3), Quaternion.Euler(10, 20, 30));
+                go.transform.localScale = new Vector3(2, 3, 1);
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                go.AddComponent<MeshRenderer>();
+            }));
+            // A sprite without traceable texels: the polygon takes its bounds.
+            var clear = new Texture2D(40, 24, TextureFormat.RGBA32, false) { name = "Clear" };
+            clear.SetPixels32(new Color32[40 * 24]);
+            clear.Apply();
+            var transparent = Sprite.Create(clear, new Rect(0, 0, 40, 24), new Vector2(.3f, .6f), 16, 1, SpriteMeshType.FullRect, Vector4.zero, false);
+            fitted.Add(Fit("transparent-flipX", go =>
+            {
+                var r = go.AddComponent<SpriteRenderer>();
+                r.sprite = transparent; r.flipX = true;
+            }));
+            fitted.Add(Fit("rendererAfter", go => { }, go =>
+            {
+                var r = go.AddComponent<SpriteRenderer>();
+                r.sprite = ellipse;
+            }));
+            capture.fitted = fitted.ToArray();
+            // PolygonCollider2D.CreatePrimitive, and what the shape setters keep of degenerate values.
+            var shaped = new GameObject("Shaped");
+            var primitive = shaped.AddComponent<PolygonCollider2D>();
+            var primitives = new List<Path>();
+            foreach (var (sides, scale, offset) in new[] { (5, Vector2.one, Vector2.zero), (3, new Vector2(2, 1), Vector2.zero), (6, new Vector2(.5f, .25f), new Vector2(1, -1)), (40, new Vector2(3, 3), new Vector2(.5f, 0)) })
+            {
+                primitive.CreatePrimitive(sides, scale, offset);
+                primitives.Add(new Path { points = primitive.GetPath(0) });
+            }
+            capture.primitives = primitives.ToArray();
+            var setBox = shaped.AddComponent<BoxCollider2D>();
+            var setCapsule = shaped.AddComponent<CapsuleCollider2D>();
+            var setCircle = shaped.AddComponent<CircleCollider2D>();
+            var setters = new List<Vector2>();
+            foreach (var value in new[] { new Vector2(0, -1), new Vector2(-3, 2), new Vector2(1e-6f, 1e7f) })
+            {
+                setBox.size = value; setCapsule.size = value; setCircle.radius = value.x;
+                setters.Add(setBox.size); setters.Add(setCapsule.size); setters.Add(new Vector2(setCircle.radius, 0));
+            }
+            capture.setters = setters.ToArray();
+#if UNITY_EDITOR
+            foreach (var sprite in sprites.Concat(sheet.Skip(1)).Append(offCentre))
+                FromSprite(sprite.name, sprite);
+            FromSprite("fullRect", Sprite.Create(triTexture, new Rect(2, 3, 40, 42), new Vector2(.6f, .3f), 50, 1, SpriteMeshType.FullRect, Vector4.zero, false));
+            s_Logs.Add("outline of no sprite " + Try(() => fromSprite.Invoke(null, new object[] { null, .25f, (byte)200, true, null })));
+#endif
+
 #if UNITY_EDITOR
             var outlines = new List<Outline>();
             foreach (var t in textures.Where(t => t.name.EndsWith("R")))
@@ -178,6 +308,7 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
                     var args = new object[] { t, rect, .25f, (byte)0, true, null };
                     result = Try(() => generate.Invoke(null, args));
                     runtimeOutlines.Add(new Outline { name = name + " " + result, paths = (args[5] as Vector2[][] ?? new Vector2[0][]).Select(p => new Path { points = p }).ToArray() });
+                    if (sprite != null) FromSprite(name, sprite);
 #endif
                 }
             }
@@ -225,6 +356,9 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
             s_Logs.Add("outline of no texture " + Try(() => generate.Invoke(null, new object[] { null, new Rect(0, 0, 8, 8), .25f, (byte)0, true, null })));
 #endif
             capture.overridden = overridden.ToArray();
+#if UNITY_EDITOR
+            capture.fromSprite = fromSpriteOutlines.ToArray();
+#endif
             capture.overriddenColliders = overriddenColliders.ToArray();
             capture.logs = s_Logs.ToArray();
             capture.complete = true;
@@ -236,6 +370,38 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    /// <summary>Each collider kind added to its own new object after `setup`; `after` runs once
+    /// they are added.</summary>
+    static Fitted Fit(string name, Action<GameObject> setup, Action<GameObject> after = null)
+    {
+        GameObject Make(string kind)
+        {
+            var go = new GameObject(name + "-" + kind);
+            setup(go);
+            return go;
+        }
+        var box = Make("box").AddComponent<BoxCollider2D>();
+        var circle = Make("circle").AddComponent<CircleCollider2D>();
+        var capsule = Make("capsule").AddComponent<CapsuleCollider2D>();
+        var polygon = Make("polygon").AddComponent<PolygonCollider2D>();
+        var edge = Make("edge").AddComponent<EdgeCollider2D>();
+        if (after != null) foreach (var c in new Collider2D[] { box, circle, capsule, polygon, edge }) after(c.gameObject);
+        var renderer = box.GetComponent<Renderer>();
+        return new Fitted
+        {
+            name = name,
+            boxSize = box.size, boxOffset = box.offset, boxEdgeRadius = box.edgeRadius,
+            circleRadius = circle.radius, circleOffset = circle.offset,
+            capsuleSize = capsule.size, capsuleOffset = capsule.offset, capsuleDirection = capsule.direction.ToString(),
+            polygon = Enumerable.Range(0, polygon.pathCount).Select(i => new Path { points = polygon.GetPath(i) }).ToArray(), polygonOffset = polygon.offset,
+            edge = edge.points, edgeOffset = edge.offset, edgeRadius = edge.edgeRadius,
+            localCenter = renderer != null ? renderer.localBounds.center : Vector3.zero,
+            localExtents = renderer != null ? renderer.localBounds.extents : Vector3.zero,
+            worldCenter = renderer != null ? renderer.bounds.center : Vector3.zero,
+            worldExtents = renderer != null ? renderer.bounds.extents : Vector3.zero,
+        };
     }
 
     static Created Describe(string name, Sprite s) => s == null ? new Created { name = name + " <null>" } :

@@ -32,6 +32,19 @@ public static class SpriteOutlinesSetup
         File.WriteAllBytes(path, t.EncodeToPNG());
     }
 
+    static void WriteSprite(string path, int w, int h, int shape, Action<TextureImporter> configure)
+    {
+        Write(path, w, h, shape);
+        AssetDatabase.ImportAsset(path);
+        var imp = (TextureImporter)AssetImporter.GetAtPath(path);
+        imp.textureType = TextureImporterType.Sprite;
+        imp.isReadable = true;
+        imp.mipmapEnabled = false;
+        imp.textureCompression = TextureImporterCompression.Uncompressed;
+        configure(imp);
+        imp.SaveAndReimport();
+    }
+
     public static void Author()
     {
         try
@@ -57,11 +70,28 @@ public static class SpriteOutlinesSetup
                     imp.SetTextureSettings(st);
                     imp.SaveAndReimport();
                 }
+            // A Polygon-mode sprite (its outline is its mesh's boundary) and a sheet of two
+            // sprites with off-centre pivots, one at fractional coordinates, at 64 pixels per unit.
+            WriteSprite("Assets/Textures/PolyShape.png", 48, 48, 2, imp => imp.spriteImportMode = SpriteImportMode.Polygon);
+            WriteSprite("Assets/Textures/SheetGrid.png", 64, 64, 3, imp =>
+            {
+                imp.spriteImportMode = SpriteImportMode.Multiple;
+                imp.spritePixelsPerUnit = 64;
+#pragma warning disable 618
+                imp.spritesheet = new[]
+                {
+                    new SpriteMetaData { name = "SheetA", rect = new Rect(3, 5, 40, 34), alignment = (int)SpriteAlignment.Custom, pivot = new Vector2(.2f, .8f) },
+                    new SpriteMetaData { name = "SheetB", rect = new Rect(20.5f, 24, 43.5f, 40), alignment = (int)SpriteAlignment.Custom, pivot = new Vector2(.7f, .3f) },
+                };
+#pragma warning restore 618
+            });
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var probe = new GameObject("Probe").AddComponent<SpriteOutlinesProbe>();
             probe.textures = AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/Textures" }).Select(AssetDatabase.GUIDToAssetPath)
                 .OrderBy(p => p, StringComparer.Ordinal).Select(AssetDatabase.LoadAssetAtPath<Texture2D>).ToArray();
-            probe.sprites = probe.textures.Select(t => AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(t)).OfType<Sprite>().First()).ToArray();
+            probe.sprites = probe.textures.Select(t => AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(t)).OfType<Sprite>()
+                .OrderBy(s => s.name, StringComparer.Ordinal).First()).ToArray();
+            probe.sheet = AssetDatabase.LoadAllAssetsAtPath("Assets/Textures/SheetGrid.png").OfType<Sprite>().OrderBy(s => s.name, StringComparer.Ordinal).ToArray();
             EditorSceneManager.SaveScene(scene, "Assets/Probe.unity");
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Probe.unity", true) };
             AssetDatabase.SaveAssets();
