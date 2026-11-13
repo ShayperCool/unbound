@@ -177,9 +177,13 @@ def unbound(work):
 
 
 def gate(work):
+    overlay = []
+    if MACOS:
+        if not (reference_root(PROBE)/OVERLAY).exists():
+            sys.exit(f'no macOS Editor values recorded for this release: {reference_root(PROBE)/OVERLAY}')
+        overlay = ['--overlay', str(reference_root(PROBE)/OVERLAY)]
     code = unbound(work)
     for space in profiles():
-        overlay = ['--overlay', str(reference_root(PROBE)/OVERLAY)] if MACOS else []
         code |= subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)/f'{space}.jsonl'),
                                 str(work/'unbound'/f'{space}.jsonl'), *overlay]).returncode
     return code
