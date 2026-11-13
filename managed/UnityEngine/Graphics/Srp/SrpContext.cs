@@ -916,6 +916,16 @@ namespace Unbound.Runtime
                 var go = renderer.m_GameObject;
                 if (!go.ActiveInHierarchyNoThrow) continue;
                 if ((mask & (1u << go.m_Layer)) == 0) continue;
+                if (renderer.m_GpuDriven)
+                {
+                    // GPU-driven rendering draws it (its LOD levels included): the culling only
+                    // marks it visible inside the planes, whatever its LOD level (measured:
+                    // tests/projects/residentdrawer, every level of a drawer's LOD group in view
+                    // is visible).
+                    renderer.PrepareCullingBounds();
+                    if (renderer.shadowCastingMode != ShadowCastingMode.ShadowsOnly && InsidePlanes(ref parameters, renderer.bounds)) renderer.MarkRendered();
+                    continue;
+                }
                 // The camera's position (read anew, scripts may move it meanwhile) only for a
                 // renderer in an LOD group.
                 if (camera != null && renderer.m_LODGroup is not null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;

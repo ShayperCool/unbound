@@ -74,6 +74,7 @@ namespace UnityEngine
         public Object()
         {
             m_InstanceID = ObjectRegistry.Register(this);
+            ObjectDispatch.Created(this);
         }
 
         public string name
@@ -422,6 +423,7 @@ namespace UnityEngine
         {
             if (m_Destroyed) return;
             m_Destroyed = true;
+            ObjectDispatch.Destroyed(this);
             OnEngineDestroy();
             ObjectRegistry.Unregister(this);
         }

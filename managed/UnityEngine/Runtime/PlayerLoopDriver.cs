@@ -206,6 +206,7 @@ namespace Unbound.Runtime
             // (measured: tests/projects/coreapis). GUIClearEvents is the first node after the
             // end-of-frame callbacks; the exact point between them and the next Update is not measured.
             Register(typeof(PL.PostLateUpdate.GUIClearEvents), AdvanceRenderedFrameCount);
+            Register(typeof(PL.PostLateUpdate.ObjectDispatcherPostLateUpdate), ObjectDispatch.PostLateUpdate);
         }
 
         static void AdvanceRenderedFrameCount()

@@ -204,6 +204,7 @@ namespace UnityEngine
         {
             m_Dirty = true;
             m_Version++;
+            ObjectDispatch.Changed(this);
         }
 
         /// <summary>Counts changes, for copies made from this material (property blocks).</summary>

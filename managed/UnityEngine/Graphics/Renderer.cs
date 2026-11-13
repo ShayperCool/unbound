@@ -47,6 +47,7 @@ namespace UnityEngine
             if (!m_Enabled || m_Registered) return;
             m_Registered = true;
             RenderRegistry.Renderers.Add(this);
+            Dirty();
         }
 
         /// <summary>The object-to-world matrix of the last frame a player-loop camera drew motion
@@ -67,6 +68,7 @@ namespace UnityEngine
             m_Registered = false;
             RenderRegistry.Renderers.Remove(this);
             SetVisible(false);
+            Dirty();
         }
 
         internal override void OnEngineDestroy()
@@ -81,53 +83,88 @@ namespace UnityEngine
         }
 
         public bool isVisible { get { MainThreadCheck.Check("get_isVisible"); return m_IsVisible; } }
+
+        /// <summary>Records a change of the renderer's state for the ObjectDispatchers tracking
+        /// its type.</summary>
+        internal void Dirty() => ObjectDispatch.Changed(this);
+
+        bool m_AllowGPUDrivenRendering = true;
+        /// <summary>Whether GPU-driven rendering may take the renderer (the render pipelines'
+        /// DisallowGPUDrivenRendering turns it off); on by default, as the Editor's GPU Resident
+        /// Drawer takes new renderers (tests/projects/residentdrawer).</summary>
+        internal bool allowGPUDrivenRendering
+        {
+            get => m_AllowGPUDrivenRendering;
+            set
+            {
+                if (m_AllowGPUDrivenRendering == value) return;
+                m_AllowGPUDrivenRendering = value;
+                Dirty();
+            }
+        }
+
+        bool m_SmallMeshCulling = true;
+        internal bool smallMeshCulling
+        {
+            get => m_SmallMeshCulling;
+            set
+            {
+                if (m_SmallMeshCulling == value) return;
+                m_SmallMeshCulling = value;
+                Dirty();
+            }
+        }
+
+        /// <summary>Whether GPU-driven rendering draws all of the renderer's materials
+        /// (GPUDrivenProcessor): the ordinary cullings then leave it out of what they draw.</summary>
+        internal bool m_GpuDriven;
         bool m_ForceRenderingOff;
         public bool forceRenderingOff
         {
             get { MainThreadCheck.Check("get_forceRenderingOff"); return m_ForceRenderingOff; }
-            set { MainThreadCheck.Check("set_forceRenderingOff"); m_ForceRenderingOff = value; }
+            set { MainThreadCheck.Check("set_forceRenderingOff"); m_ForceRenderingOff = value; Dirty(); }
         }
         public ShadowCastingMode shadowCastingMode
-        { get { MainThreadCheck.Check("get_shadowCastingMode"); return m_CastShadows; } set { MainThreadCheck.Check("set_shadowCastingMode"); m_CastShadows = value; } }
+        { get { MainThreadCheck.Check("get_shadowCastingMode"); return m_CastShadows; } set { MainThreadCheck.Check("set_shadowCastingMode"); m_CastShadows = value; Dirty(); } }
         public bool receiveShadows
-        { get { MainThreadCheck.Check("get_receiveShadows"); return m_ReceiveShadows; } set { MainThreadCheck.Check("set_receiveShadows"); m_ReceiveShadows = value; } }
+        { get { MainThreadCheck.Check("get_receiveShadows"); return m_ReceiveShadows; } set { MainThreadCheck.Check("set_receiveShadows"); m_ReceiveShadows = value; Dirty(); } }
         bool m_StaticShadowCaster;
         public bool staticShadowCaster
         {
             get { MainThreadCheck.Check("GetIsStaticShadowCaster"); return m_StaticShadowCaster; }
-            set { MainThreadCheck.Check("SetIsStaticShadowCaster"); m_StaticShadowCaster = value; }
+            set { MainThreadCheck.Check("SetIsStaticShadowCaster"); m_StaticShadowCaster = value; Dirty(); }
         }
         MotionVectorGenerationMode m_MotionVectorGenerationMode = MotionVectorGenerationMode.Object;
         public MotionVectorGenerationMode motionVectorGenerationMode
         {
             get { MainThreadCheck.Check("get_motionVectorGenerationMode"); return m_MotionVectorGenerationMode; }
-            set { MainThreadCheck.Check("set_motionVectorGenerationMode"); m_MotionVectorGenerationMode = value; }
+            set { MainThreadCheck.Check("set_motionVectorGenerationMode"); m_MotionVectorGenerationMode = value; Dirty(); }
         }
         LightProbeUsage m_LightProbeUsage = LightProbeUsage.BlendProbes;
         public LightProbeUsage lightProbeUsage
         {
             get { MainThreadCheck.Check("get_lightProbeUsage"); return m_LightProbeUsage; }
-            set { MainThreadCheck.Check("set_lightProbeUsage"); m_LightProbeUsage = value; }
+            set { MainThreadCheck.Check("set_lightProbeUsage"); m_LightProbeUsage = value; Dirty(); }
         }
         ReflectionProbeUsage m_ReflectionProbeUsage = ReflectionProbeUsage.BlendProbes;
         public ReflectionProbeUsage reflectionProbeUsage
         {
             get { MainThreadCheck.Check("get_reflectionProbeUsage"); return m_ReflectionProbeUsage; }
-            set { MainThreadCheck.Check("set_reflectionProbeUsage"); m_ReflectionProbeUsage = value; }
+            set { MainThreadCheck.Check("set_reflectionProbeUsage"); m_ReflectionProbeUsage = value; Dirty(); }
         }
         public uint renderingLayerMask
-        { get { MainThreadCheck.Check("get_renderingLayerMask"); return m_RenderingLayerMask; } set { MainThreadCheck.Check("set_renderingLayerMask"); m_RenderingLayerMask = value; } }
+        { get { MainThreadCheck.Check("get_renderingLayerMask"); return m_RenderingLayerMask; } set { MainThreadCheck.Check("set_renderingLayerMask"); m_RenderingLayerMask = value; Dirty(); } }
         int m_RendererPriority;
         public int rendererPriority
         {
             get { MainThreadCheck.Check("get_rendererPriority"); return m_RendererPriority; }
-            set { MainThreadCheck.Check("set_rendererPriority"); m_RendererPriority = value; }
+            set { MainThreadCheck.Check("set_rendererPriority"); m_RendererPriority = value; Dirty(); }
         }
         bool m_AllowOcclusionWhenDynamic = true;
         public bool allowOcclusionWhenDynamic
         {
             get { MainThreadCheck.Check("get_allowOcclusionWhenDynamic"); return m_AllowOcclusionWhenDynamic; }
-            set { MainThreadCheck.Check("set_allowOcclusionWhenDynamic"); m_AllowOcclusionWhenDynamic = value; }
+            set { MainThreadCheck.Check("set_allowOcclusionWhenDynamic"); m_AllowOcclusionWhenDynamic = value; Dirty(); }
         }
         /// <summary>Whether StaticBatchingUtility combined the renderer.</summary>
         public bool isPartOfStaticBatch
@@ -156,19 +193,19 @@ namespace UnityEngine
         public int lightmapIndex
         {
             get { MainThreadCheck.Check("GetLightmapIndex"); return m_LightmapIndex; }
-            set { MainThreadCheck.Check("SetLightmapIndex"); m_LightmapIndex = value; }
+            set { MainThreadCheck.Check("SetLightmapIndex"); m_LightmapIndex = value; Dirty(); }
         }
         int m_RealtimeLightmapIndex = -1;
         public int realtimeLightmapIndex
         {
             get { MainThreadCheck.Check("GetLightmapIndex"); return m_RealtimeLightmapIndex; }
-            set { MainThreadCheck.Check("SetLightmapIndex"); m_RealtimeLightmapIndex = value; }
+            set { MainThreadCheck.Check("SetLightmapIndex"); m_RealtimeLightmapIndex = value; Dirty(); }
         }
         Vector4 m_LightmapScaleOffset = new Vector4(1, 1, 0, 0);
         public Vector4 lightmapScaleOffset
         {
             get { MainThreadCheck.Check("GetLightmapST"); return m_LightmapScaleOffset; }
-            set { MainThreadCheck.Check("SetStaticLightmapST"); m_LightmapScaleOffset = value; }
+            set { MainThreadCheck.Check("SetStaticLightmapST"); m_LightmapScaleOffset = value; Dirty(); }
         }
         Vector4 m_RealtimeLightmapScaleOffset = new Vector4(1, 1, 0, 0);
         /// <summary>The realtime lightmap atlas precomputed realtime GI updates for this renderer
@@ -179,13 +216,13 @@ namespace UnityEngine
         public Vector4 realtimeLightmapScaleOffset
         {
             get { MainThreadCheck.Check("GetLightmapST"); return m_RealtimeLightmapScaleOffset; }
-            set { MainThreadCheck.Check("SetLightmapST"); m_RealtimeLightmapScaleOffset = value; }
+            set { MainThreadCheck.Check("SetLightmapST"); m_RealtimeLightmapScaleOffset = value; Dirty(); }
         }
         Transform m_ProbeAnchor;
         public Transform probeAnchor
         {
             get { MainThreadCheck.Check("get_probeAnchor"); return m_ProbeAnchor; }
-            set { MainThreadCheck.Check("set_probeAnchor"); m_ProbeAnchor = value; }
+            set { MainThreadCheck.Check("set_probeAnchor"); m_ProbeAnchor = value; Dirty(); }
         }
         /// <summary>The light probe cell the renderer was last in (where the next lookup starts).</summary>
         internal int m_ProbeCell = -1;
@@ -197,7 +234,7 @@ namespace UnityEngine
         public GameObject lightProbeProxyVolumeOverride
         {
             get { MainThreadCheck.Check("get_lightProbeProxyVolumeOverride"); return m_LightProbeProxyVolumeOverride; }
-            set { MainThreadCheck.Check("set_lightProbeProxyVolumeOverride"); m_LightProbeProxyVolumeOverride = value; }
+            set { MainThreadCheck.Check("set_lightProbeProxyVolumeOverride"); m_LightProbeProxyVolumeOverride = value; Dirty(); }
         }
         public Matrix4x4 localToWorldMatrix
         { get { MainThreadCheck.Check("get_localToWorldMatrix"); return transform.localToWorldMatrix; } }
@@ -207,19 +244,19 @@ namespace UnityEngine
         public int sortingLayerID
         {
             get { MainThreadCheck.Check("get_sortingLayerID"); return m_SortingLayerID; }
-            set { MainThreadCheck.Check("set_sortingLayerID"); m_SortingLayerID = value; }
+            set { MainThreadCheck.Check("set_sortingLayerID"); m_SortingLayerID = value; Dirty(); }
         }
 
         public string sortingLayerName
         {
             get { MainThreadCheck.Check("get_sortingLayerName"); return SortingLayer.IDToName(m_SortingLayerID); }
-            set { MainThreadCheck.Check("set_sortingLayerName"); m_SortingLayerID = SortingLayer.NameToID(value); }
+            set { MainThreadCheck.Check("set_sortingLayerName"); m_SortingLayerID = SortingLayer.NameToID(value); Dirty(); }
         }
 
         public int sortingOrder
         {
             get { MainThreadCheck.Check("get_sortingOrder"); return m_SortingOrder; }
-            set { MainThreadCheck.Check("set_sortingOrder"); m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue); }
+            set { MainThreadCheck.Check("set_sortingOrder"); m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue); Dirty(); }
         }
 
         internal int sortingGroupID { get; set; }
@@ -234,13 +271,14 @@ namespace UnityEngine
             { MainThreadCheck.Check("SetMaterial");
                 if (m_Materials.Length == 0) m_Materials = new Material[1];
                 m_Materials[0] = value;
+                Dirty();
             }
         }
 
         public Material[] sharedMaterials
         {
             get { MainThreadCheck.Check("GetSharedMaterialArray"); return (Material[])m_Materials.Clone(); }
-            set { MainThreadCheck.Check("SetMaterialArray"); m_Materials = value != null ? (Material[])value.Clone() : Array.Empty<Material>(); }
+            set { MainThreadCheck.Check("SetMaterialArray"); m_Materials = value != null ? (Material[])value.Clone() : Array.Empty<Material>(); Dirty(); }
         }
 
         /// <summary>The first material, instantiated for this renderer on first access.</summary>
@@ -249,7 +287,9 @@ namespace UnityEngine
             get
             { MainThreadCheck.Check("IsPersistent");
                 if (m_Materials.Length == 0) m_Materials = new Material[1];
-                m_Materials[0] = Own(m_Materials[0]);
+                var owned = Own(m_Materials[0]);
+                if (!ReferenceEquals(owned, m_Materials[0])) Dirty();
+                m_Materials[0] = owned;
                 return m_Materials[0];
             }
             set { MainThreadCheck.Check("SetMaterial"); sharedMaterial = value; }
@@ -259,7 +299,12 @@ namespace UnityEngine
         {
             get
             { MainThreadCheck.Check("IsPersistent");
-                for (int i = 0; i < m_Materials.Length; i++) m_Materials[i] = Own(m_Materials[i]);
+                for (int i = 0; i < m_Materials.Length; i++)
+                {
+                    var owned = Own(m_Materials[i]);
+                    if (!ReferenceEquals(owned, m_Materials[i])) Dirty();
+                    m_Materials[i] = owned;
+                }
                 return (Material[])m_Materials.Clone();
             }
             set { MainThreadCheck.Check("SetMaterialArray"); sharedMaterials = value; }
@@ -360,16 +405,19 @@ namespace UnityEngine
             return drawn;
         }
 
-        public void SetPropertyBlock(MaterialPropertyBlock properties) => m_PropertyBlock = properties?.Copy();
+        public void SetPropertyBlock(MaterialPropertyBlock properties)
+        {
+            m_PropertyBlock = properties?.Copy();
+            Dirty();
+        }
 
         public void SetPropertyBlock(MaterialPropertyBlock properties, int materialIndex)
         {
             if (properties == null || properties.isEmpty)
-            {
                 m_MaterialBlocks?.Remove(materialIndex);
-                return;
-            }
-            (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[materialIndex] = properties.Copy();
+            else
+                (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[materialIndex] = properties.Copy();
+            Dirty();
         }
 
         public void GetPropertyBlock(MaterialPropertyBlock properties)
@@ -646,6 +694,8 @@ namespace UnityEngine
             set
             {
                 m_Mesh = value;
+                // The renderer draws the filter's mesh: its change is the renderer's.
+                if (m_GameObject != null && m_GameObject.GetComponent<MeshRenderer>() is MeshRenderer renderer) renderer.Dirty();
             }
         }
 
@@ -695,7 +745,16 @@ namespace UnityEngine
 
         /// <summary>A mesh whose channels (colors, normals, tangents, uvs) replace the mesh's for
         /// this renderer (vertex painting; measured: tests/projects/builtinfx vertex_streams).</summary>
-        public Mesh additionalVertexStreams { get; set; }
+        Mesh m_AdditionalVertexStreams;
+        public Mesh additionalVertexStreams
+        {
+            get => m_AdditionalVertexStreams;
+            set
+            {
+                m_AdditionalVertexStreams = value;
+                Dirty();
+            }
+        }
         public Mesh enlightenVertexStream { get; set; }
         /// <summary>A statically batched renderer keeps drawing its own mesh (Unbound combines no
         /// meshes): its submeshes start at 0.</summary>

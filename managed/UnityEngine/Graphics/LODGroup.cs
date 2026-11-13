@@ -40,9 +40,12 @@ namespace UnityEngine
         bool m_AnimateCrossFading;
         bool m_LastLODIsBillboard;
         bool m_Enabled = true;
-        LOD[] m_LODs = Array.Empty<LOD>();
+        internal LOD[] m_LODs = Array.Empty<LOD>();
         int m_Forced = -1;
         static float s_CrossFadeAnimationDuration = 0.5f;
+        /// <summary>The groups alive, attached to their GameObjects (ObjectDispatcher's transform
+        /// tracking reads them).</summary>
+        internal static readonly List<LODGroup> s_Live = new List<LODGroup>();
 
         public LODGroup()
         {
@@ -50,17 +53,21 @@ namespace UnityEngine
                 m_LODs = new[] { new LOD(0.6f, Array.Empty<Renderer>()), new LOD(0.3f, Array.Empty<Renderer>()), new LOD(0.1f, Array.Empty<Renderer>()) };
         }
 
-        public Vector3 localReferencePoint { get => m_LocalReferencePoint; set => m_LocalReferencePoint = value; }
-        public float size { get => m_Size; set => m_Size = value; }
+        public Vector3 localReferencePoint { get => m_LocalReferencePoint; set { m_LocalReferencePoint = value; ObjectDispatch.Changed(this); } }
+        public float size { get => m_Size; set { m_Size = value; ObjectDispatch.Changed(this); } }
         public int lodCount => m_LODs.Length;
-        public bool lastLODBillboard { get => m_LastLODIsBillboard; set => m_LastLODIsBillboard = value; }
-        public LODFadeMode fadeMode { get => m_FadeMode; set => m_FadeMode = value; }
-        public bool animateCrossFading { get => m_AnimateCrossFading; set => m_AnimateCrossFading = value; }
+        public bool lastLODBillboard { get => m_LastLODIsBillboard; set { m_LastLODIsBillboard = value; ObjectDispatch.Changed(this); } }
+        public LODFadeMode fadeMode { get => m_FadeMode; set { m_FadeMode = value; ObjectDispatch.Changed(this); } }
+        public bool animateCrossFading { get => m_AnimateCrossFading; set { m_AnimateCrossFading = value; ObjectDispatch.Changed(this); } }
 
         public bool enabled
         {
             get => m_Enabled;
-            set => m_Enabled = value;
+            set
+            {
+                m_Enabled = value;
+                ObjectDispatch.Changed(this);
+            }
         }
 
         public static float crossFadeAnimationDuration
@@ -74,6 +81,37 @@ namespace UnityEngine
         }
 
         internal Vector3 worldReferencePoint => transform.TransformPoint(m_LocalReferencePoint);
+
+        /// <summary>The group's size in the world: its size times its largest absolute scale.</summary>
+        internal float WorldSize
+        {
+            get
+            {
+                var scale = transform.lossyScale;
+                return m_Size * Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+            }
+        }
+
+        /// <summary>The forced level as a mask of one bit (0: no level forced).</summary>
+        internal byte ForcedMask => m_Forced >= 0 && m_Forced < 8 ? (byte)(1 << m_Forced) : (byte)0;
+
+        /// <summary>The levels that list a renderer, one bit per level (of the first eight).</summary>
+        internal byte LevelMask(Renderer renderer)
+        {
+            int mask = 0;
+            for (int level = 0; level < m_LODs.Length && level < 8; level++)
+            {
+                var renderers = m_LODs[level].renderers;
+                if (renderers == null) continue;
+                foreach (var r in renderers)
+                    if (ReferenceEquals(r, renderer))
+                    {
+                        mask |= 1 << level;
+                        break;
+                    }
+            }
+            return (byte)mask;
+        }
 
         public LOD[] GetLODs()
         {
@@ -101,6 +139,7 @@ namespace UnityEngine
             }
             for (int level = m_LODs.Length - 1; level >= 0; level--)
                 Attach(m_LODs[level].renderers, this, level == 0);
+            ObjectDispatch.Changed(this);
         }
 
         void Attach(Renderer[] renderers, LODGroup group, bool first = true)
@@ -114,7 +153,11 @@ namespace UnityEngine
                 }
         }
 
-        public void ForceLOD(int index) => m_Forced = index;
+        public void ForceLOD(int index)
+        {
+            m_Forced = index;
+            ObjectDispatch.Changed(this);
+        }
 
         /// <summary>The size and reference point of the levels' renderers: their bounds in the
         /// group's space, the size their largest side.</summary>
@@ -140,15 +183,11 @@ namespace UnityEngine
             if (!any) return;
             m_LocalReferencePoint = bounds.center;
             m_Size = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+            ObjectDispatch.Changed(this);
         }
 
         /// <summary>The level a camera draws (-1: none).</summary>
-        internal int LevelFor(Camera camera, Vector3 cameraPosition)
-        {
-            var scale = transform.lossyScale;
-            float worldSize = m_Size * Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
-            return LevelFor(camera, cameraPosition, worldReferencePoint, worldSize);
-        }
+        internal int LevelFor(Camera camera, Vector3 cameraPosition) => LevelFor(camera, cameraPosition, worldReferencePoint, WorldSize);
 
         /// <summary>The level a camera draws of the group placed with a world reference point and
         /// size (a terrain's trees place their prefab's group).</summary>
@@ -251,8 +290,15 @@ namespace UnityEngine
             SetLODs(lods);
         }
 
+        internal override void OnAttached() => s_Live.Add(this);
+
+        internal override void OnEngineEnable() => ObjectDispatch.Changed(this);
+
+        internal override void OnEngineDisable() => ObjectDispatch.Changed(this);
+
         internal override void OnEngineDestroy()
         {
+            s_Live.Remove(this);
             foreach (var lod in m_LODs) Attach(lod.renderers, null);
         }
     }

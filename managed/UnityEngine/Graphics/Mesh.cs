@@ -176,6 +176,7 @@ namespace UnityEngine
             m_StreamVertexCount = m_StreamIndexCount = -1;
             m_Dirty = true; m_GraphicsBuffersDirty = true;
             m_GraphicsVerticesDirty |= vertices; m_GraphicsDirtyIndices |= indices;
+            ObjectDispatch.Changed(this);
         }
 
         public bool isReadable => m_IsReadable;

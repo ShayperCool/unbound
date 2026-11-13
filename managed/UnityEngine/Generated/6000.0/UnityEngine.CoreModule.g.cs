@@ -1717,55 +1717,6 @@ namespace UnityEngine
         }
     }
     [global::Unbound.Stub]
-    internal unsafe sealed partial class ObjectDispatcher : global::System.IDisposable
-    {
-        [global::Unbound.Stub] public ObjectDispatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.Dispose"); }
-        [global::Unbound.Stub] public void DispatchTypeChangesAndClear(global::System.Type type, global::System.Action<global::UnityEngine.TypeDispatchData> callback, bool sortByInstanceID = false, bool noScriptingArray = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DispatchTypeChangesAndClear"); }
-        [global::Unbound.Stub] public void DispatchTransformChangesAndClear(global::System.Type type, global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, global::System.Action<global::UnityEngine.Component[]> callback, bool sortByInstanceID = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DispatchTransformChangesAndClear"); }
-        [global::Unbound.Stub] public void DispatchTransformChangesAndClear(global::System.Type type, global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, global::System.Action<global::UnityEngine.TransformDispatchData> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DispatchTransformChangesAndClear"); }
-        [global::Unbound.Stub] public void ClearTypeChanges(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.ClearTypeChanges"); }
-        [global::Unbound.Stub] public global::UnityEngine.TypeDispatchData GetTypeChangesAndClear(global::System.Type type, global::Unity.Collections.Allocator allocator, bool sortByInstanceID = false, bool noScriptingArray = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.GetTypeChangesAndClear"); return default; }
-        [global::Unbound.Stub] public void GetTypeChangesAndClear(global::System.Type type, global::System.Collections.Generic.List<global::UnityEngine.Object> changed, out global::Unity.Collections.NativeArray<int> changedID, out global::Unity.Collections.NativeArray<int> destroyedID, global::Unity.Collections.Allocator allocator, bool sortByInstanceID = false) { changedID = default; destroyedID = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.GetTypeChangesAndClear"); }
-        [global::Unbound.Stub] public global::UnityEngine.Component[] GetTransformChangesAndClear(global::System.Type type, global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, bool sortByInstanceID = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.GetTransformChangesAndClear"); return global::System.Array.Empty<global::UnityEngine.Component>(); }
-        [global::Unbound.Stub] public global::UnityEngine.TransformDispatchData GetTransformChangesAndClear(global::System.Type type, global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, global::Unity.Collections.Allocator allocator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.GetTransformChangesAndClear"); return default; }
-        [global::Unbound.Stub] public void EnableTypeTracking(global::UnityEngine.ObjectDispatcher.TypeTrackingFlags typeTrackingMask, params global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.EnableTypeTracking"); }
-        [global::Unbound.Stub] public void EnableTypeTracking(params global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.EnableTypeTracking"); }
-        [global::System.Obsolete("EnableTypeTrackingIncludingAssets is deprecated, please use EnableTypeTracking and provide the flag that specifies whether you need assets or not.")] [global::Unbound.Stub] public void EnableTypeTrackingIncludingAssets(params global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.EnableTypeTrackingIncludingAssets"); }
-        [global::Unbound.Stub] public void DisableTypeTracking(params global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DisableTypeTracking"); }
-        [global::Unbound.Stub] public void EnableTransformTracking(global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, params global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.EnableTransformTracking"); }
-        [global::Unbound.Stub] public void DisableTransformTracking(global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, params global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DisableTransformTracking"); }
-        [global::Unbound.Stub] public void DispatchTypeChangesAndClear<T>(global::System.Action<global::UnityEngine.TypeDispatchData> callback, bool sortByInstanceID = false, bool noScriptingArray = false) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DispatchTypeChangesAndClear"); }
-        [global::Unbound.Stub] public void DispatchTransformChangesAndClear<T>(global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, global::System.Action<global::UnityEngine.Component[]> callback, bool sortByInstanceID = false) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DispatchTransformChangesAndClear"); }
-        [global::Unbound.Stub] public void DispatchTransformChangesAndClear<T>(global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, global::System.Action<global::UnityEngine.TransformDispatchData> callback) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DispatchTransformChangesAndClear"); }
-        [global::Unbound.Stub] public void ClearTypeChanges<T>() where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.ClearTypeChanges"); }
-        [global::Unbound.Stub] public global::UnityEngine.TypeDispatchData GetTypeChangesAndClear<T>(global::Unity.Collections.Allocator allocator, bool sortByInstanceID = false, bool noScriptingArray = false) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.GetTypeChangesAndClear"); return default; }
-        [global::Unbound.Stub] public void GetTypeChangesAndClear<T>(global::System.Collections.Generic.List<global::UnityEngine.Object> changed, out global::Unity.Collections.NativeArray<int> changedID, out global::Unity.Collections.NativeArray<int> destroyedID, global::Unity.Collections.Allocator allocator, bool sortByInstanceID = false) where T : global::UnityEngine.Object { changedID = default; destroyedID = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.GetTypeChangesAndClear"); }
-        [global::Unbound.Stub] public global::UnityEngine.Component[] GetTransformChangesAndClear<T>(global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, bool sortByInstanceID = false) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.GetTransformChangesAndClear"); return global::System.Array.Empty<global::UnityEngine.Component>(); }
-        [global::Unbound.Stub] public global::UnityEngine.TransformDispatchData GetTransformChangesAndClear<T>(global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType, global::Unity.Collections.Allocator allocator) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.GetTransformChangesAndClear"); return default; }
-        [global::Unbound.Stub] public void EnableTypeTracking<T>(global::UnityEngine.ObjectDispatcher.TypeTrackingFlags typeTrackingMask = (global::UnityEngine.ObjectDispatcher.TypeTrackingFlags)3) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.EnableTypeTracking"); }
-        [global::Unbound.Stub] public void DisableTypeTracking<T>() where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DisableTypeTracking"); }
-        [global::Unbound.Stub] public void EnableTransformTracking<T>(global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.EnableTransformTracking"); }
-        [global::Unbound.Stub] public void DisableTransformTracking<T>(global::UnityEngine.ObjectDispatcher.TransformTrackingType trackingType) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.DisableTransformTracking"); }
-        public bool valid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.valid"); return default; } }
-        public int maxDispatchHistoryFramesCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.maxDispatchHistoryFramesCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ObjectDispatcher.maxDispatchHistoryFramesCount"); } }
-        public enum TransformTrackingType
-        {
-            GlobalTRS = 0,
-            LocalTRS = 1,
-            Hierarchy = 2,
-        }
-        [global::System.Flags]
-        public enum TypeTrackingFlags
-        {
-            SceneObjects = 1,
-            Assets = 2,
-            EditorOnlyObjects = 4,
-            Default = 3,
-            All = 7,
-        }
-    }
-    [global::Unbound.Stub]
     public unsafe sealed partial class Ping
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
@@ -1960,8 +1911,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal bool IsPersistent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.IsPersistent"); return default; }
         [global::System.Obsolete("Property lightmapTilingOffset has been deprecated. Use lightmapScaleOffset (UnityUpgradable) -> lightmapScaleOffset")] public global::UnityEngine.Vector4 lightmapTilingOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.lightmapTilingOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.lightmapTilingOffset"); } }
         [global::System.Obsolete("Use probeAnchor instead (UnityUpgradable) -> probeAnchor")] public global::UnityEngine.Transform lightProbeAnchor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.lightProbeAnchor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.lightProbeAnchor"); } }
-        internal bool allowGPUDrivenRendering { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.allowGPUDrivenRendering"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.allowGPUDrivenRendering"); } }
-        internal bool smallMeshCulling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.smallMeshCulling"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.smallMeshCulling"); } }
         internal uint sortingKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.sortingKey"); return default; } }
         internal uint sortingGroupKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.sortingGroupKey"); return default; } }
         internal byte stagePriority { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.stagePriority"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.stagePriority"); } }
@@ -2640,25 +2589,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal bool IsNonUniformScaleTransform() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.IsNonUniformScaleTransform"); return default; }
         internal global::UnityEngine.RotationOrder rotationOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.rotationOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.rotationOrder"); } }
         internal bool constrainProportionsScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.constrainProportionsScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.constrainProportionsScale"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct TransformDispatchData : global::System.IDisposable
-    {
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> transformedID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> parentID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Matrix4x4> localToWorldMatrices;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Vector3> positions;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Quaternion> rotations;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Vector3> scales;
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TransformDispatchData.Dispose"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct TypeDispatchData : global::System.IDisposable
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Object[] changed;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> changedID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> destroyedID;
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TypeDispatchData.Dispose"); }
     }
     [global::Unbound.Stub]
     public unsafe static partial class Types
@@ -4513,35 +4443,12 @@ namespace UnityEngine.Rendering
         SpillTop = 1,
         SpillBottom = 2,
     }
-    internal enum GPUDrivenBitOpType
-    {
-        And = 0,
-        Or = 1,
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class GPUDrivenCallbacks
     {
         [global::Unbound.Stub] public static void InvokeGPUDrivenLODGroupDataNativeCallback(global::UnityEngine.Rendering.GPUDrivenLODGroupDataNativeCallback callback, in global::UnityEngine.Rendering.GPUDrivenLODGroupDataNative lodGroupDataNative, global::UnityEngine.Rendering.GPUDrivenLODGroupDataCallback target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenCallbacks.InvokeGPUDrivenLODGroupDataNativeCallback"); }
         [global::Unbound.Stub] public static void InvokeGPUDrivenRendererDataNativeCallback(global::UnityEngine.Rendering.GPUDrivenRendererDataNativeCallback callback, in global::UnityEngine.Rendering.GPUDrivenRendererGroupDataNative rendererDataNative, global::System.Collections.Generic.List<global::UnityEngine.Mesh> meshes, global::System.Collections.Generic.List<global::UnityEngine.Material> materials, global::UnityEngine.Rendering.GPUDrivenRendererDataCallback target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenCallbacks.InvokeGPUDrivenRendererDataNativeCallback"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial struct GPUDrivenLODGroupData
-    {
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> lodGroupID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> lodOffset;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> lodCount;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.LODFadeMode> fadeMode;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Vector3> worldSpaceReferencePoint;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<float> worldSpaceSize;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<short> renderersCount;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<bool> lastLODIsBillboard;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<byte> forceLODMask;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> invalidLODGroupID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<short> lodRenderersCount;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<float> lodScreenRelativeTransitionHeight;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<float> lodFadeTransitionWidth;
-    }
-    internal unsafe delegate void GPUDrivenLODGroupDataCallback(in global::UnityEngine.Rendering.GPUDrivenLODGroupData lodGroupData);
     [global::Unbound.Stub]
     internal unsafe partial struct GPUDrivenLODGroupDataNative
     {
@@ -4563,106 +4470,15 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public int lodDataCount;
     }
     internal unsafe delegate void GPUDrivenLODGroupDataNativeCallback(in global::UnityEngine.Rendering.GPUDrivenLODGroupDataNative lodGroupDataNative, global::UnityEngine.Rendering.GPUDrivenLODGroupDataCallback callback);
-    [global::Unbound.Stub]
-    internal unsafe partial struct GPUDrivenMaterialFilterEntry
+    unsafe partial class GPUDrivenProcessor
     {
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.GPUDrivenBitOpType op;
-        [global::Unbound.Stub] public int minQueueValue;
-        [global::Unbound.Stub] public int maxQueueValue;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.ShaderTagId keyTag;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.ShaderTagId valueTag;
-        [global::Unbound.Stub] public int flags;
-        [global::Unbound.Stub] public string keyword;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct GPUDrivenPackedMaterialData
-    {
-        [global::Unbound.Stub] public GPUDrivenPackedMaterialData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedMaterialData.ctor"); }
-        [global::Unbound.Stub] public GPUDrivenPackedMaterialData(bool isTransparent, bool isMotionVectorsPassEnabled, bool isIndirectSupported) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedMaterialData.ctor"); }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Rendering.GPUDrivenPackedMaterialData other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedMaterialData.Equals"); return default; }
-        public bool isTransparent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedMaterialData.isTransparent"); return default; } }
-        public bool isMotionVectorsPassEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedMaterialData.isMotionVectorsPassEnabled"); return default; } }
-        public bool isIndirectSupported { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedMaterialData.isIndirectSupported"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct GPUDrivenPackedRendererData
-    {
-        [global::Unbound.Stub] public GPUDrivenPackedRendererData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.ctor"); }
-        [global::Unbound.Stub] public GPUDrivenPackedRendererData(bool receiveShadows, bool staticShadowCaster, byte lodMask, global::UnityEngine.Rendering.ShadowCastingMode shadowCastingMode, global::UnityEngine.Rendering.LightProbeUsage lightProbeUsage, global::UnityEngine.MotionVectorGenerationMode motionVecGenMode, bool isPartOfStaticBatch, bool movedCurrentFrame, bool hasTree, bool smallMeshCulling, bool supportsIndirect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.ctor"); }
-        public bool receiveShadows { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.receiveShadows"); return default; } }
-        public bool staticShadowCaster { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.staticShadowCaster"); return default; } }
-        public byte lodMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.lodMask"); return default; } }
-        public global::UnityEngine.Rendering.ShadowCastingMode shadowCastingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.shadowCastingMode"); return default; } }
-        public global::UnityEngine.Rendering.LightProbeUsage lightProbeUsage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.lightProbeUsage"); return default; } }
-        public global::UnityEngine.MotionVectorGenerationMode motionVecGenMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.motionVecGenMode"); return default; } }
-        public bool isPartOfStaticBatch { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.isPartOfStaticBatch"); return default; } }
-        public bool movedCurrentFrame { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.movedCurrentFrame"); return default; } }
-        public bool hasTree { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.hasTree"); return default; } }
-        public bool smallMeshCulling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.smallMeshCulling"); return default; } }
-        public bool supportsIndirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenPackedRendererData.supportsIndirect"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class GPUDrivenProcessor
-    {
-        [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public GPUDrivenProcessor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.Dispose"); }
-        [global::Unbound.Stub] public void EnableGPUDrivenRenderingAndDispatchRendererData(global::System.ReadOnlySpan<int> renderersID, global::UnityEngine.Rendering.GPUDrivenRendererDataCallback callback, bool materialUpdateOnly = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.EnableGPUDrivenRenderingAndDispatchRendererData"); }
-        [global::Unbound.Stub] public void DisableGPUDrivenRendering(global::System.ReadOnlySpan<int> renderersID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.DisableGPUDrivenRendering"); }
-        [global::Unbound.Stub] public void DispatchLODGroupData(global::System.ReadOnlySpan<int> lodGroupID, global::UnityEngine.Rendering.GPUDrivenLODGroupDataCallback callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.DispatchLODGroupData"); }
-        [global::Unbound.Stub] public void AddMaterialFilters(global::UnityEngine.Rendering.GPUDrivenMaterialFilterEntry[] filters) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.AddMaterialFilters"); }
-        [global::Unbound.Stub] public void ClearMaterialFilters() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.ClearMaterialFilters"); }
-        [global::Unbound.Stub] public int GetMaterialFilterFlags(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.GetMaterialFilterFlags"); return default; }
-        [global::Unbound.Stub] public static int ClassifyMaterials(global::Unity.Collections.NativeArray<int> materialIDs, global::Unity.Collections.NativeArray<int> unsupportedMaterialIDs, global::Unity.Collections.NativeArray<int> supportedMaterialIDs, global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.GPUDrivenPackedMaterialData> supportedPackedMaterialDatas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.ClassifyMaterials"); return default; }
-        internal global::System.Collections.Generic.List<global::UnityEngine.Mesh> scratchMeshes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.scratchMeshes"); return new global::System.Collections.Generic.List<global::UnityEngine.Mesh>(); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.Material> scratchMaterials { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.scratchMaterials"); return new global::System.Collections.Generic.List<global::UnityEngine.Material>(); } }
-        public bool enablePartialRendering { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.enablePartialRendering"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.enablePartialRendering"); } }
-        public bool enableMaterialFilters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.enableMaterialFilters"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.enableMaterialFilters"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Rendering.GPUDrivenProcessor obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GPUDrivenProcessor.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    internal unsafe delegate void GPUDrivenRendererDataCallback(in global::UnityEngine.Rendering.GPUDrivenRendererGroupData rendererData, global::System.Collections.Generic.IList<global::UnityEngine.Mesh> meshes, global::System.Collections.Generic.IList<global::UnityEngine.Material> materials);
     internal unsafe delegate void GPUDrivenRendererDataNativeCallback(in global::UnityEngine.Rendering.GPUDrivenRendererGroupDataNative rendererDataNative, global::System.Collections.Generic.List<global::UnityEngine.Mesh> meshes, global::System.Collections.Generic.List<global::UnityEngine.Material> materials, global::UnityEngine.Rendering.GPUDrivenRendererDataCallback callback);
-    [global::Unbound.Stub]
-    internal unsafe partial struct GPUDrivenRendererEditorData
-    {
-        [global::Unbound.Stub] public ulong sceneCullingMask;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct GPUDrivenRendererGroupData
-    {
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> rendererGroupID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Bounds> localBounds;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Vector4> lightmapScaleOffset;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> gameObjectLayer;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<uint> renderingLayerMask;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> lodGroupID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> lightmapIndex;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.GPUDrivenPackedRendererData> packedRendererData;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> rendererPriority;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> meshIndex;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<short> subMeshStartIndex;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> materialsOffset;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<short> materialsCount;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> instancesOffset;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> instancesCount;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.GPUDrivenRendererEditorData> editorData;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> invalidRendererGroupID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Matrix4x4> localToWorldMatrix;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Matrix4x4> prevLocalToWorldMatrix;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> rendererGroupIndex;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> meshID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<short> subMeshCount;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> subMeshDescOffset;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.SubMeshDescriptor> subMeshDesc;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> materialIndex;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> materialID;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.GPUDrivenPackedMaterialData> packedMaterialData;
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> materialFilterFlags;
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct GPUDrivenRendererGroupDataNative
     {
