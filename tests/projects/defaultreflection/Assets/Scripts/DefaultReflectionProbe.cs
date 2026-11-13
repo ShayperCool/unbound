@@ -7,12 +7,14 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// What smooth surfaces reflect without a reflection probe: in <c>Data</c> (the built-in lighting
-/// data a new scene of this release points at) and in <c>NoData</c> (no lighting data). Each scene
-/// gets a row of spheres (the Standard shader, metallic at smoothness 0.95 and 0.5; a Standard
-/// surface shader, metallic at 0.95 and 0.5 and dielectric at 0.95; a StandardSpecular surface
-/// shader) in front of two flat terrains with one metallic, smooth layer, the left one drawn with
-/// its splat material, the right one with its base map. No light: what the surfaces show is the
+/// What smooth and rough surfaces reflect without a reflection probe: in <c>Data</c> (the built-in
+/// lighting data a new scene of this release points at) and in <c>NoData</c> (no lighting data).
+/// Each scene gets a row of spheres (the Standard shader, metallic at smoothness 0.95 and 0.5; a
+/// Standard surface shader, metallic at 0.95 and 0.5 and dielectric at 0.95; a StandardSpecular
+/// surface shader), a nearer row of rough ones (the Standard shader, metallic at smoothness 0 and
+/// 0.25 and dielectric at 0; the surface shader, metallic at 0 and dielectric at 0.25), and behind
+/// them two flat terrains with one metallic, smooth layer, the left one drawn with its splat
+/// material, the right one with its base map. No light: what the surfaces show is the
 /// environment's. Writes <c>defaultreflection.jsonl</c> (per scene the default reflection, its
 /// decode values and the ambient probe's first coefficients) and one PNG per scene into
 /// <c>DEFAULT_REFLECTION_PROBE_OUT</c>, then quits.
@@ -68,6 +70,12 @@ public class DefaultReflectionProbe : MonoBehaviour
         Sphere(3, metallic, 1f, 0.5f);
         Sphere(4, metallic, 0f, 0.95f);
         Sphere(5, specular, -1f, 0.95f);
+        // Rough surfaces, nearer the camera: the reflection's last mips.
+        Sphere(6, standard, 1f, 0f);
+        Sphere(7, standard, 1f, 0.25f);
+        Sphere(8, standard, 0f, 0f);
+        Sphere(9, metallic, 1f, 0f);
+        Sphere(10, metallic, 0f, 0.25f);
         MakeTerrain(new Vector3(-40f, -0.01f, -15f), 1000f);
         // Base map distance 0: every patch draws the base map.
         MakeTerrain(new Vector3(0f, -0.01f, -15f), 0f);
@@ -76,8 +84,9 @@ public class DefaultReflectionProbe : MonoBehaviour
     static void Sphere(int index, Shader shader, float metallic, float smoothness)
     {
         var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        sphere.transform.position = new Vector3(-6f + 2.4f * index, 0.8f, 0f);
-        sphere.transform.localScale = Vector3.one * 1.6f;
+        bool near = index >= 6;
+        sphere.transform.position = near ? new Vector3(-4f + 2f * (index - 6), 0.5f, -4f) : new Vector3(-6f + 2.4f * index, 0.8f, 0f);
+        sphere.transform.localScale = Vector3.one * (near ? 1f : 1.6f);
         var material = new Material(shader);
         if (metallic >= 0f)
         {

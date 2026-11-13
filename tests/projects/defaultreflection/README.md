@@ -6,7 +6,9 @@ built-in lighting data a new scene of this release gets (`unity_builtin_extra`, 
 has none (`m_LightingDataAsset` empty, written by hand). Each scene gets a row of spheres (the
 Standard shader, metallic at smoothness 0.95 and 0.5; `Probe/SurfaceMetallic`, a surface shader
 lit by the Standard model, metallic at 0.95 and 0.5 and dielectric at 0.95; `Probe/SurfaceSpecular`,
-the StandardSpecular model) in front of two flat terrains whose one layer is metallic and smooth,
+the StandardSpecular model), a nearer row of rough ones (the Standard shader, metallic at
+smoothness 0 and 0.25 and dielectric at 0; the surface shader, metallic at 0 and dielectric at
+0.25: the reflection's last mips), and behind them two flat terrains whose one layer is metallic and smooth,
 the left drawn with its splat material (`Nature/Terrain/Standard`, a surface shader), the right
 with its base map (base map distance 0). `defaultreflection.jsonl` records per scene
 `ReflectionProbe.defaultTexture` (name, size), its decode values and the ambient probe's first
