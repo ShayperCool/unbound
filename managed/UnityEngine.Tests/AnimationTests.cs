@@ -502,17 +502,20 @@ namespace UnityEngine.Tests
             overrides[overrides.animationClips[0]] = clip; // the looping 1.5 s clip with an event at 0.5
 
             var root = Hierarchy("Badge", "Circle 1");
-            root.transform.Find("Circle 1").gameObject.AddComponent<SpriteRenderer>();
-            var receiver = root.AddComponent<AnimationEventReceiver>();
-            var animator = root.AddComponent<Animator>();
-            animator.runtimeAnimatorController = overrides;
-            for (int i = 0; i < 30; i++) animator.Update(0.1f); // 3 s: two loops
-            Assert.Equal(2, receiver.Calls.Count);
-            Assert.Equal("OnPulse(half,2.5,7,0.5)", receiver.Calls[0]);
-            animator.fireEvents = false;
-            for (int i = 0; i < 15; i++) animator.Update(0.1f);
-            Assert.Equal(2, receiver.Calls.Count);
-            Object.DestroyImmediate(root);
+            try
+            {
+                root.transform.Find("Circle 1").gameObject.AddComponent<SpriteRenderer>();
+                var receiver = root.AddComponent<AnimationEventReceiver>();
+                var animator = root.AddComponent<Animator>();
+                animator.runtimeAnimatorController = overrides;
+                for (int i = 0; i < 30; i++) animator.Update(0.1f); // 3 s: two loops
+                Assert.Equal(2, receiver.Calls.Count);
+                Assert.Equal("OnPulse(half,2.5,7,0.5)", receiver.Calls[0]);
+                animator.fireEvents = false;
+                for (int i = 0; i < 15; i++) animator.Update(0.1f);
+                Assert.Equal(2, receiver.Calls.Count);
+            }
+            finally { Object.DestroyImmediate(root); }
         }
     
         [Fact]
