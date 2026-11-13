@@ -355,11 +355,13 @@ def lzw(data):
     return bytes(out)
 
 
-def tiff(path, width, height, pixels, depth=8, extra=(), photometric=2, compression=1, predictor=1):
+def tiff(path, width, height, pixels, depth=8, extra=(), photometric=2, compression=1, predictor=1,
+         rows_per_strip=None, sample_formats=False):
     """A little-endian baseline TIFF of one strip: pixels rows top-down of sample tuples, 8 or 16
     bits, `extra` the ExtraSamples values (0 unspecified, 1 associated alpha, 2 unassociated),
     photometric 2 (RGB) or 1 (gray), uncompressed (1) or LZW (5) with the horizontal differencing
-    predictor (2) or none (1)."""
+    predictor (2) or none (1); `rows_per_strip` rows in each strip (all by default); `sample_formats`
+    writes SampleFormat once per sample, as some writers other than Photoshop do."""
     samples = len(pixels[0][0])
     fmt = '<H' if depth == 16 else 'B'
     mask = 0xffff if depth == 16 else 0xff
@@ -370,36 +372,42 @@ def tiff(path, width, height, pixels, depth=8, extra=(), photometric=2, compress
             for x in range(width - 1, 0, -1):
                 values[x] = [(a - b) & mask for a, b in zip(values[x], values[x - 1])]
         rows.append(b''.join(struct.pack(fmt, v) for p in values for v in p))
-    data = b''.join(rows)
+    per = height if rows_per_strip is None else rows_per_strip
+    strips = [b''.join(rows[i:i + per]) for i in range(0, height, per)]
     if compression == 5:
-        data = lzw(data)
+        strips = [lzw(strip) for strip in strips]
+    data = b''
+    offsets = []
+    for strip in strips:
+        offsets.append(8 + len(data))
+        data += strip
+    short = 3
     entries = []
     def entry(tag, kind, values):
         entries.append((tag, kind, values if isinstance(values, (list, tuple)) else [values]))
-    entry(256, 3, width)
-    entry(257, 3, height)
-    entry(258, 3, [depth] * samples)
-    entry(259, 3, compression)
-    entry(262, 3, photometric)
-    entry(273, 4, 0)
-    entry(277, 3, samples)
-    entry(278, 3, height)
-    entry(279, 4, len(data))
-    entry(284, 3, 1)
+    entry(256, short, width)
+    entry(257, short, height)
+    entry(258, short, [depth] * samples)
+    entry(259, short, compression)
+    entry(262, short, photometric)
+    entry(273, 4, offsets)
+    entry(277, short, samples)
+    entry(278, short, per)
+    entry(279, 4, [len(strip) for strip in strips])
+    entry(284, short, 1)
     if predictor != 1:
-        entry(317, 3, predictor)
+        entry(317, short, predictor)
     if extra:
-        entry(338, 3, list(extra))
+        entry(338, short, list(extra))
+    if sample_formats:
+        entry(339, short, [1] * samples)
     entries.sort()
     ifd_offset = 8 + len(data) + (len(data) & 1)
     extra_area = ifd_offset + 2 + 12 * len(entries) + 4
     blobs = b''
     ifd = struct.pack('<H', len(entries))
     for tag, kind, values in entries:
-        size = 2 if kind == 3 else 4
         packed = b''.join(struct.pack('<H' if kind == 3 else '<I', v) for v in values)
-        if tag == 273:
-            packed = struct.pack('<I', 8)
         if len(packed) <= 4:
             ifd += struct.pack('<HHI', tag, kind, len(values)) + packed.ljust(4, b'\0')
         else:
@@ -465,6 +473,7 @@ FILE_SOURCES = {
     'TiffTwoExtra': ('tiff', dict(extra=(0, 0))),
     'TiffDeepExtra': ('tiff', dict(depth=16, extra=(0,))),
     'TiffGrayExtra': ('tiff', dict(photometric=1, extra=(0,))),
+    'TiffSampleFormats': ('tiff', dict(extra=(0,), compression=5, predictor=2, rows_per_strip=1, sample_formats=True)),
 }
 SOURCES.update({
     'Matte': lambda: matted(32, 32, 25, 4),
@@ -487,6 +496,7 @@ SOURCES.update({
     'TiffTwoExtra': lambda: (32, 32, [[p + (p[0] ^ 0x5a,) for p in row] for row in noise(32, 32, 30)[2]]),
     'TiffDeepExtra': lambda: deep(32, 32, 31, 4),
     'TiffGrayExtra': lambda: (32, 32, [[p[:1] + p[3:] for p in row] for row in noise(32, 32, 30)[2]]),
+    'TiffSampleFormats': lambda: noise(32, 32, 30),
 })
 
 # name: (source, settings). Settings default to a Default-type, sRGB, box-filtered texture with
@@ -609,6 +619,8 @@ CASES = {
     'TiffTwoExtra': ('TiffTwoExtra', 'mips=0 srgb=0'),
     'TiffDeepExtra': ('TiffDeepExtra', 'mips=0 srgb=0'),
     'TiffGrayExtra': ('TiffGrayExtra', 'mips=0 srgb=0'),
+    # SampleFormat once per sample and one row per strip (LZW), as some other writers store them.
+    'TiffSampleFormats': ('TiffSampleFormats', 'mips=0 srgb=0'),
 }
 
 

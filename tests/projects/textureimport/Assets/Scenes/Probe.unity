@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &496130200
+--- !u!1 &373618262
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 496130202}
-  - component: {fileID: 496130201}
+  - component: {fileID: 373618264}
+  - component: {fileID: 373618263}
   m_Layer: 0
   m_Name: TextureImportProbe
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &496130201
+--- !u!114 &373618263
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 496130200}
+  m_GameObject: {fileID: 373618262}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a1e834fd82135ecf8b7b097e0c446933, type: 3}
@@ -252,15 +252,16 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 444457f94acbd5505b349b9e069f201f, type: 3}
   - {fileID: 2800000, guid: 064d064c4d8e03c2c82a7bf03639899e, type: 3}
   - {fileID: 2800000, guid: 4e9999b2b02a4408d87d1523f695f7f1, type: 3}
+  - {fileID: 2800000, guid: 91876024e579d1fa3bbe5b65a4c44014, type: 3}
   - {fileID: 2800000, guid: dd5bec8f5340f3d50af5c61e386dd340, type: 3}
   - {fileID: 2800000, guid: 48be0d987284b6c25918b7fa7b3d8154, type: 3}
---- !u!4 &496130202
+--- !u!4 &373618264
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 496130200}
+  m_GameObject: {fileID: 373618262}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -273,4 +274,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 496130202}
+  - {fileID: 373618264}

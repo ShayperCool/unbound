@@ -103,3 +103,4 @@ TiffRgb mips=0 srgb=0
 TiffTwoExtra mips=0 srgb=0
 TiffDeepExtra mips=0 srgb=0
 TiffGrayExtra mips=0 srgb=0
+TiffSampleFormats mips=0 srgb=0

@@ -19,7 +19,8 @@ mark, with 5 channels (the first extra channel is alpha), with colour below the 
 16 bits, and gray with alpha (read opaque). TIFF files (`make_textures.py` writes them; 32x32 noise)
 cover RGB with an extra sample of unspecified meaning (LZW with the horizontal differencing
 predictor, with and without mipmaps, and uncompressed), unassociated and associated alpha, plain
-RGB, two unspecified extra samples, 16 bits, and gray with an extra sample.
+RGB, two unspecified extra samples, 16 bits, gray with an extra sample, and SampleFormat written
+once per sample with one row per strip (as writers other than Photoshop store them).
 Every case is readable and
 stored as RGBA32, the float case as RGBAFloat (platform overrides; uncompressed default platform),
 so compression hides nothing.
