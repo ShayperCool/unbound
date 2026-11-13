@@ -2307,7 +2307,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public bool AddScriptableObject(global::UnityEngine.ScriptableObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.AddScriptableObject"); return default; }
         [global::Unbound.Stub] public bool RemoveScriptableObjectAt(uint i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.RemoveScriptableObjectAt"); return default; }
         [global::Unbound.Stub] public bool SetScriptableObjectAt(global::UnityEngine.ScriptableObject obj, uint i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.SetScriptableObjectAt"); return default; }
-        [global::Unbound.Stub] public void OverridePhysicsShape(global::System.Collections.Generic.IList<global::UnityEngine.Vector2[]> physicsShapes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.OverridePhysicsShape"); }
         internal uint extrude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.extrude"); return default; } }
     }
     unsafe partial class SpriteRenderer

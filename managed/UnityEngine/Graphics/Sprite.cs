@@ -494,6 +494,22 @@ namespace UnityEngine
             return physicsShape.Count;
         }
 
+        /// <summary>Replaces the physics shape: points in rect space (Rect.zero to the rect's size,
+        /// values outside it allowed), moved to units from the pivot (the 6000.0 Scripting API); no
+        /// paths clear it (colliders then take the traced outline).</summary>
+        public void OverridePhysicsShape(System.Collections.Generic.IList<Vector2[]> physicsShapes)
+        {
+            // Every path is checked before any replaces the shape (tests/projects/spriteoutlines).
+            if (physicsShapes == null) throw new ArgumentNullException(nameof(physicsShapes));
+            for (int i = 0; i < physicsShapes.Count; i++)
+                if ((physicsShapes[i]?.Length ?? 0) < 3)
+                    throw new ArgumentException($"Physics Shape at {i} has less than 3 vertices ({physicsShapes[i]?.Length ?? 0}).");
+            var shapes = new Vector2[physicsShapes.Count][];
+            for (int i = 0; i < shapes.Length; i++)
+                shapes[i] = Array.ConvertAll(physicsShapes[i], p => new Vector2((p.x - m_Pivot.x) / m_PixelsPerUnit, (p.y - m_Pivot.y) / m_PixelsPerUnit));
+            m_PhysicsShape = shapes;
+        }
+
         public void OverrideGeometry(Vector2[] vertices, ushort[] triangles)
         {
             foreach (var vertex in vertices)
