@@ -35,9 +35,8 @@ Run Unbound and compare:
     python3 tests/projects/grass/compare.py tests/projects/grass/Reference /tmp/grass
     python3 tests/projects/particles/compare_images.py tests/projects/grass/Reference /tmp/grass
 
-Instance counts and coverage match exactly (positions, sizes, turns, bounds) but for ground-aligned
-meshes' turns and bounds, the bounds of meshes drawn without instancing, and prototypes scaled by
-detailObjectDensity (the listed expected differences). The images of the first two terrains differ
-mostly in the layerless terrains' shading: the Editor's checker comes out bluer and a little darker
-than Unbound's (the ambient probe is the same; how the Editor lights a terrain without layers is not
-known yet).
+Instance counts and coverage match exactly (positions, sizes, turns, bounds) but for prototypes
+scaled by detailObjectDensity (the listed expected differences). The images of the first two
+terrains differ mostly in the layerless terrains' shading: the Editor's checker comes out bluer and
+a little darker than Unbound's (the ambient probe is the same; how the Editor lights a terrain
+without layers is not known yet).
