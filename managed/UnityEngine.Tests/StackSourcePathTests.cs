@@ -7,12 +7,28 @@ namespace Unbound.Tests
 {
     public sealed class StackSourcePathTests
     {
+        /// <summary>The temporary directory with every link resolved, as the compiler's paths
+        /// are (the project root is canonical). On macOS it lies under a link itself:
+        /// /var is /private/var.</summary>
+        static string PhysicalTemp()
+        {
+            string path = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
+            string physical = Path.GetPathRoot(path);
+            foreach (string part in path.Substring(physical.Length).Split(Path.DirectorySeparatorChar))
+            {
+                physical = Path.Combine(physical, part);
+                var target = new DirectoryInfo(physical).ResolveLinkTarget(true);
+                if (target != null) physical = target.FullName;
+            }
+            return physical;
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public void ACompilerPathUnderASymlinkedAncestorMapsToTheProject(bool nestedTarget)
         {
-            string root = Path.Combine(Path.GetTempPath(), "unbound-stack-" + Guid.NewGuid().ToString("N"));
+            string root = Path.Combine(PhysicalTemp(), "unbound-stack-" + Guid.NewGuid().ToString("N"));
             string physical = Path.Combine(root, "physical");
             string project = Path.Combine(physical, "project");
             Directory.CreateDirectory(project);
@@ -42,7 +58,7 @@ namespace Unbound.Tests
         [InlineData("Packages")]
         public void AProjectViewMapsItsLinkedSourceRoots(string sourceRoot)
         {
-            string root = Path.Combine(Path.GetTempPath(), "unbound-stack-" + Guid.NewGuid().ToString("N"));
+            string root = Path.Combine(PhysicalTemp(), "unbound-stack-" + Guid.NewGuid().ToString("N"));
             string authored = Path.Combine(root, "authored");
             string view = Path.Combine(root, "view");
             Directory.CreateDirectory(Path.Combine(authored, sourceRoot));
