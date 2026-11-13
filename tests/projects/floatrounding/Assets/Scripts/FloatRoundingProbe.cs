@@ -179,7 +179,7 @@ public sealed class FloatRoundingProbe : MonoBehaviour
         foreach (var method in typeof(Controls).GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
         {
             var body = method.GetMethodBody();
-            if (body != null) Value("il/" + method.Name, Disassemble(method, body.GetILAsByteArray()));
+            if (body != null) Value("il/" + method.Name, InstructionText(method, body.GetILAsByteArray()));
         }
         Value("codeOptimization", UnityEditor.Compilation.CompilationPipeline.codeOptimization.ToString());
     }
@@ -188,7 +188,7 @@ public sealed class FloatRoundingProbe : MonoBehaviour
 
     /// <summary>A method body as opcodes with their operands, metadata tokens replaced by the
     /// names they resolve to (token values depend on the compilation, the instructions do not).</summary>
-    static string Disassemble(MethodBase method, byte[] il)
+    static string InstructionText(MethodBase method, byte[] il)
     {
         if (s_OpCodes == null)
         {
