@@ -288,6 +288,18 @@ public class ClipProbe : MonoBehaviour
                 Keys(model);
                 TransformCurves(model);
             }
+            // Then HumanTwist's clip with body parts off: in a mask made from the model (the
+            // head, the left arm, the left fingers and the left hand's goal) and in an AvatarMask
+            // asset the clip copies (the root, the body, the right leg, the right fingers and the
+            // right foot's goal; the copy in the .meta has every part on), and that asset again
+            // with the head off in the copy (HumanMaskStale), the head off with mask type None
+            // (HumanMaskNone), and in masks made from the model the other parts but the root
+            // (HumanMaskRest) and the root alone (HumanMaskRoot).
+            foreach (var model in new[] { "HumanMaskBody", "HumanMaskAsset", "HumanMaskStale", "HumanMaskNone", "HumanMaskRest", "HumanMaskRoot" })
+            {
+                Keys(model);
+                TransformCurves(model);
+            }
         }
         catch (Exception e)
         {
