@@ -1,0 +1,227 @@
+{"k":"op/add","v":"3F800000"}
+{"k":"op/sub","v":"3F800000"}
+{"k":"op/mul","v":"3F800000"}
+{"k":"op/div","v":"BFBACF91"}
+{"k":"op/rem","v":"40000000"}
+{"k":"op/neg","v":"BF800000"}
+{"k":"op/overflow","v":"7149F2CA"}
+{"k":"op/underflow","v":"0DA24260"}
+{"k":"convert/toDouble","v":"3FF0000000000000"}
+{"k":"convert/toInt","v":"1"}
+{"k":"convert/checkedInt","v":"1"}
+{"k":"convert/toLong","v":"1"}
+{"k":"convert/mixedDouble","v":"3FF0000000000000"}
+{"k":"convert/intToFloat","v":"00000000"}
+{"k":"convert/longToFloat","v":"00000000"}
+{"k":"convert/uintToFloat","v":"00000000"}
+{"k":"convert/doubleToFloat","v":"00000000"}
+{"k":"convert/cast","v":"00000000"}
+{"k":"compare/equal","v":"False"}
+{"k":"compare/greater","v":"True"}
+{"k":"compare/castEqual","v":"True"}
+{"k":"compare/localEqual","v":"False"}
+{"k":"compare/branch","v":"3F800000"}
+{"k":"ternary/value","v":"3F800000"}
+{"k":"ternary/local","v":"3F800000"}
+{"k":"local/single","v":"3F800000"}
+{"k":"local/twice","v":"00000000"}
+{"k":"local/call","v":"3F800000"}
+{"k":"local/inlinedCall","v":"3F800000"}
+{"k":"local/branch","v":"3F800000"}
+{"k":"local/compound","v":"3F800000"}
+{"k":"local/increment","v":"3F800000"}
+{"k":"local/loopBody","v":"00000000"}
+{"k":"local/loopExit","v":"00000000"}
+{"k":"local/addressTaken","v":"00000000"}
+{"k":"local/copied","v":"00000000"}
+{"k":"arg/store","v":"00000000"}
+{"k":"arg/storeCall","v":"00000000"}
+{"k":"store/staticField","v":"00000000"}
+{"k":"store/volatileField","v":"00000000"}
+{"k":"store/instanceField","v":"00000000"}
+{"k":"store/array","v":"00000000"}
+{"k":"store/refLocal","v":"00000000"}
+{"k":"store/span","v":"00000000"}
+{"k":"store/stackalloc","v":"00000000"}
+{"k":"store/box","v":"3F800000"}
+{"k":"store/boxField","v":"00000000"}
+{"k":"store/boxApart","v":"00000000"}
+{"k":"store/property","v":"00000000"}
+{"k":"store/fieldCompound","v":"00000000"}
+{"k":"store/arrayCompound","v":"00000000"}
+{"k":"store/structLocal","v":"00000000"}
+{"k":"store/structConstructor","v":"00000000"}
+{"k":"store/structInitializer","v":"00000000"}
+{"k":"call/noInliningArgument","v":"00000000"}
+{"k":"call/noInliningReturn","v":"00000000"}
+{"k":"call/argument","v":"00000000"}
+{"k":"call/return","v":"00000000"}
+{"k":"call/aggressiveArgument","v":"00000000"}
+{"k":"call/aggressiveReturn","v":"00000000"}
+{"k":"call/localReturn","v":"00000000"}
+{"k":"call/body","v":"3F800000"}
+{"k":"call/instance","v":"00000000"}
+{"k":"call/virtual","v":"00000000"}
+{"k":"call/interface","v":"00000000"}
+{"k":"call/delegate","v":"00000000"}
+{"k":"generic/noInliningMethod","v":"00000000"}
+{"k":"generic/method","v":"00000000"}
+{"k":"generic/classField","v":"00000000"}
+{"k":"generic/classMethod","v":"00000000"}
+{"k":"generic/nullable","v":"00000000"}
+{"k":"state/closure","v":"00000000"}
+{"k":"state/lambdaBody","v":"3F800000"}
+{"k":"state/iterator","v":"00000000"}
+{"k":"state/async","v":"00000000"}
+{"k":"state/tryFinally","v":"00000000"}
+{"k":"math/mathfAbs","v":"00000000"}
+{"k":"math/mathfMax","v":"00000000"}
+{"k":"math/mathfMin","v":"00000000"}
+{"k":"math/mathfClamp","v":"00000000"}
+{"k":"math/mathfFloor","v":"00000000"}
+{"k":"math/mathfSqrt","v":"00000000"}
+{"k":"math/mathSqrt","v":"3A000000"}
+{"k":"math/mathAbs","v":"00000000"}
+{"k":"math/mathMax","v":"00000000"}
+{"k":"math/mathFAbs","v":"00000000"}
+{"k":"math/mathFSqrt","v":"00000000"}
+{"k":"api/vector3Dot","v":"3F800000"}
+{"k":"api/vector3SqrMagnitude","v":"4B801001"}
+{"k":"api/vector3Magnitude","v":"45800800"}
+{"k":"api/vector3AddChain","v":"00000000"}
+{"k":"api/vector3Components","v":"3F800000"}
+{"k":"fuzz/products","v":"4796A407 C0B7F42C BF608D80 444EF19B C29620C9 3E30A282 45EE6711 44A90928 C0921673 4112A81A C1BBF6D9 C1516F27 3F14ABD7 C053B30C C474E040 BDAD37D6 C24E7051 40F5B567 C3737678 C47F1F4D C26508C2 43A8DF52 C0ECA498 C025D29C"}
+{"k":"fuzz/sum4","v":"43EAC6C7 4285A889 40D6AFB4 4286D6D2 430B8AA9 3F90EB31 C30ADAA7 43580ACC 439C714D 438012CA 41CC57BE 441E43FF C1FDD5AE 43E3DA8C C3B542F4 BEDE1400 43988C20 41087000 C3983F2B C3C60292 C1D1E6BC 43D0847A 41E0E68B C311146B"}
+{"k":"fuzz/mulDiv","v":"C43CA2B7 C05835FE 421A0BFD 36072A87 3C1F37A9 3FB216FF C1985DE8 BBB8ABC1 C465144E C257AF2D B93D10D9 C49845EC C0B4139C C32F6AE9 3871C437 3ECE233B C2F07805 3CAEB4B6 3FB5CB50 C23DE5FA C1A17C69 C4BD3F07 3ED9954B 42224A00"}
+{"k":"fuzz/mixed","v":"46553349 447BBDD7 3FD05C11 BE2CBF2D 43B72C3C BD98EC92 C7947378 C636167B C4DFFEDB C4B57C13 C06CFFE3 478BB9E7 403564B0 C617B1C9 C38BD0D0 3E16E4F8 466A42DB 418263CF C6A41775 C6EC5A42 C2B81E0B C62551AD 433AFAAF 45100B3F"}
+{"k":"fuzz/horner","v":"4182760B 4907092A 3DDACC19 C30CCB01 C2999BA4 3AB5A8E1 427C693E 46A4754A CCE8B27C CADA53BA C1BB14BE 507BBE43 BAC5FB90 CA76FE76 C4761405 3B6ED71C 4C4D740F 42BFF20D 42459921 CA93CD5D BD80059B 48988A2A 46C7D907 C702BEB6"}
+{"k":"fuzz/lerp","v":"C6528262 4261D2C7 40D80B6F 3D085730 C3B65DDD 3E93C463 4794D4B7 461FB6BA C077645B BE50A5C5 406F35A0 43105A7F C20B9007 43EA0800 438CDE45 BF0CA2D7 42049B58 C08814B4 46A3E8A7 C4F1685D 4277961A C2AE8BBE 41E2353A 40F09E31"}
+{"k":"fuzz/localChain","v":"4B80BF6A C37BD941 C0B93B48 C0BBBF0C C36A2415 3D1B52ED 49D1714B C0E66A89 418EC0B8 C08A780F 400D31C8 C4F07F35 C192E95B C4C4DB8C C1DD165E 3D0ED1C2 C644F4D4 41B52285 C43D8666 C486268F 44DD2872 4395611A C300823B BCFDFD30"}
+{"k":"fuzz/distance","v":"43EE55CF 42476F9E 40D44686 42571D22 430570D9 3F4635A1 441BC3A9 43056CB1 439CA024 4375F67D 41D4AB6C 43FE09CA 41FC2476 43EE432D 43B644E5 3E99E86B 437ADE1C 4048009F 436AB705 433A1EEC 420723CE 43B4B16E 41AA721B 432E076F"}
+{"k":"fuzz/greater","v":"3F800000 00000000 00000000 00000000 3F800000 3F800000 3F800000 00000000 00000000 00000000 3F800000 00000000 3F800000 00000000 3F800000 3F800000 00000000 00000000 00000000 3F800000 00000000 3F800000 00000000 00000000"}
+{"k":"fuzz/mathfLerp","v":"437E55A0 41F95356 40CE4CB5 BBDCED7F 3FCF6988 3E93C463 43337AD8 41E1075F C077645B BE50A5C5 BCD01A93 43105A7F C1E2D08C 43EA0800 BEB4FBAA BE8CDFF7 42049B58 3FCE0395 C06CFBE1 C31C05EA C066B049 42B2158A 40CF5528 C0EFDA22"}
+{"k":"fuzz/mathfInverseLerp","v":"00000000 3F800000 3F7BD6ED 3F800000 00000000 00000000 3F800000 3F71DF71 3F303E76 3DB7D1D7 3F800000 3F7FB605 3F7F4FA5 3F7FFCD1 3F800000 3E9E0C0D 3F7EA723 3E2BD4F4 3F800000 00000000 3F800000 00000000 3F800000 39C1F180"}
+{"k":"fuzz/mathfSmoothStep","v":"437216BC 420BDC20 40D2D8B2 BBE3FDBD 3FC5D026 3E78F9E3 4345AA07 4195A7EE C07A17EA BEDF2856 BCDFEB93 4312D85C C1F56989 43EDD9D5 BEB3C503 BEABB080 4142250A 3FD6081A 3FE33DCA C3209325 BF1291F1 424F7E92 40AE5C1C BF81DC37"}
+{"k":"fuzz/mathfMoveTowards","v":"43A087B8 422E1684 40D272C2 BB964600 3ED9D322 3EAF8E56 42068F6C 42C487C2 C079AB8F BED9ED5F 3D5038F9 4312F77C C1FC246E 43EE0B3F BF3EA21A BE45E920 437360DC 3EFBD1F0 C2C08B3C C0AF55D6 C1E08772 3F8E4EDB 418601FA BD0FB7A8"}
+{"k":"fuzz/mathfRepeat","v":"435ACB7A 3C227E3A 3E059449 3B089720 3E1087F4 3E611D21 41B87ED8 42D002A9 3FB724E2 409AA7C1 3BFEBD20 3DE254EA 3C0AC1AC 39C35240 3CE72179 3C7D69C0 3CDC3F40 3C89F4BF 404748E0 3F869CB6 3F113810 3F627323 3A397BA0 3C440E6D"}
+{"k":"fuzz/mathfPingPong","v":"435ACB7A 3C4A57E0 3ACD2F00 3B089720 3E918F28 3E611D20 41B87ED8 3BAE8000 3EB2B2D8 3EF1B540 3BFEBD20 3D1A6580 3C0AC1AC 39C35240 3CE72180 3C7D69C0 3ECBB100 3A7385C0 404748E0 3F869D00 3FA45130 3F627400 3A397BA0 3C440000"}
+{"k":"fuzz/mathfSmoothDamp","v":"435B267F 41D96EB5 C311610D BB964600 402321C8 400775A5 4360BD75 41606AB8 42FBB938 42DC8895 BF7F0B14 C56383FA 42D80853 C63A0FEA 403130CF 3EC613D0 4389D65C 40BF3B80 4035DD17 C2DA3EE2 C1F4CB4D 43F5D2B8 41C2C918 C4F5BB0A"}
+{"k":"fuzz/vector3Cross","v":"C39DEACF,C3D3C1FA,BEDEB4C4 C1A6485D,400A39EE,C491B7F1 C5899401,C12026E1,44559C9A BD038039,BDC9FA34,3A8CD0A1 460F377F,C6845F40,44ABCD49 423E94C8,BDE33441,C0E16D50 43B01172,BE0A80B9,40CC9651 431CFB3E,C2C55A1B,4753F9E2 C017EB9B,C202AB4C,C62F7B9E 43DE5272,469EAF4A,BFACFB13 C73340E7,C46ECA29,C41C03F4 BD283998,C04FE940,BB3BC69D 42582573,BF07545B,3E883E46 C1F38455,BDFE9C6E,BD340BDB BC603905,417FE4F0,BCC4002D 3FE54C58,3DFDC08E,41774274 C6324487,4426C166,40A60FFF 40633163,430A445F,41AD3FCB 3F01B005,C1893464,44CA9A16 C74B5A0C,473B1859,C21C123E C2983108,3EE3441D,C0830F4C 405F7C7C,431F3CFB,BFAD2C4E 46C6A2FA,C6BA59D8,40CFEDD0 C27027DC,C309B61B,465FB03E"}
+{"k":"fuzz/vector3Normalize","v":"BF4D37EC,3F190A5A,3A156FC0 BF7FF0FA,BC42E03C,3C91D983 3E431B74,BC9A8D00,3F7B4388 BF50279D,3E8A65F3,3F03FB3E B9EA5E09,BDA6135C,BF7F2829 BE15B566,3C940DAD,BF7D3500 3A843931,3F7FD923,BD0CFB06 3F139B74,3F512914,B93F26E5 BBA9BDB6,3F7FFED8,BB3E8C95 3B0CFAAF,B8EE4A14,BF7FFFD9 B86DCBDF,BF0B889F,3F56A178 3CD67FD1,BA9EF3F3,3F7FE97C 3C246081,3F7F9E0E,BD5C0D26 BB315A41,3F596991,BF072828 3F7FFFBD,3A5F42CF,BB300DCF BF7E4C17,39881092,3DEBD204 B9FF6113,BA1096CB,BF7FFFFB 3F7D16A3,BAEFB786,BE19FD11 BF7FE36F,3CF1C85C,3A23C482 3EDAFAD7,3EEDAEF5,BF468E6B BD599245,3DA1833F,3F7ED713 BE9EE3DA,BAA6A328,BF735C50 3997F384,38192E4E,BF7FFFFF 3F7FFEC1,3B92CE69,3B8AD521"}
+{"k":"fuzz/vector3Lerp","v":"C089D7FE,404F136C,C1B48A4D C18EA1C7,4176C583,3EB16407 40B860DD,4202E775,41F0913E BD85D16D,3C910125,BEA7C9B8 4149A7A4,C1CA17E0,C3C5BCAD BE61C055,40F26DD5,BFCE2069 BC89054C,42113AC7,3FD83D23 42CF6856,43628331,3DE5263F 4295F12B,41F3468F,BDD59A02 C2829CAB,3FB65F09,C2919EC5 C02558A4,C19514D9,435A7F0A BE86BFFC,3AA4AF40,401644A7 BDB196B2,3F2C12B6,41978D61 3B37DE2A,3FB35B9F,C0BCFD7B 41039492,3BD1A523,BEDAC28A C1356C14,BEA1F75D,3FA89168 C021D648,C2286A0A,C313AB5F C12CDA5D,40071C21,C13B52C9 C2E6585D,3DD016A8,3D17D99F 428A9711,429629D6,C38FD87A 3DD82B90,41CDD4EE,3F53CD1D BF7E7B42,3EA064C2,42093958 41B24D0F,41BD81EE,C37BA956 41933121,43369252,3FEAAC52"}
+{"k":"fuzz/vector3Project","v":"B935C574,38B1AF71,3D31A9EA BBE068F2,3E9AAF5C,3A32BDDD 3C93CF0D,C0184D9D,3D854D1A 39F5168F,3A0C2C72,3D81236A 4292298F,3DD1756B,C3F30E5C B7A28E88,3DAC9CC8,BABF26E0 BE617C6B,4220EC44,414FABEC 437FC763,3C209D92,BF3D6A5E C06E92F8,3E6B053C,38FC4D65 3DBEB324,BB059667,39041AFC C00322A4,41F1C9CF,42D0D15B 3D8499B5,BA5671FB,BA17DF65 3993A6F8,B7779AA4,BD6A5DCB 3B05E28C,BB8FFE73,BFB37DE2 414D22F3,3C9765B7,40A0A5EF BB619A58,3E7B817B,BACDCE62 C01ACC20,C222F399,C2A2C181 3FF5B58C,BE9D2817,3FD29229 3D05FA7D,407917B4,3D28A59A 3C75AADE,BE16F03C,C348F297 3A08278B,3DBF7709,39FCC18F BA3088A0,BD2A5D7C,C09CB63E 3DA85F9A,3DB37951,B7142895 371BAE35,3E0A4015,3AAA3ACE"}
+{"k":"fuzz/vector3Reflect","v":"C0B8F9F7,40944615,C39D21F4 C084C5EB,C4835729,BFEFB4A2 C389C3D8,4712E87E,C474C5AB BDCF058E,3D043797,BD6BBB73 CAE908CC,C6279B85,4C41C1B7 BEAB22BD,C288922A,BF97B76D 436A6EE0,C72719B2,C657E4EC CB2F0197,C29A545A,47019A35 4892C2D4,C690231D,C11DD06D C5B16C77,42F88F36,C2F812B9 490512A2,CAF55D08,CBD3E6E4 3AA0B623,BB59F128,40702FED BFB75193,3F9255A4,43928CF7 BF3DABF4,407619C8,43FB18FF C34F5036,BE9D794C,C2AE064A C19127B3,BEB3F5E8,4006CA87 489472D7,4A9C44B4,4B1C1445 C6035CA4,44A81DAE,C5E14658 C33D4B29,C4153703,C0C83511 C5AB8920,4757829F,4C8F24BC C09DB789,C45B184C,C05A18AF 413C6734,444E810E,47BDF250 C49A1087,C4A43C41,C3C942D5 41C82EF9,C779CEFC,C419C403"}
+{"k":"fuzz/vector3Scalars","v":"C027160B,410C717E,42737974 4149989F,41DFBA1E,4247CF79 C353A0BA,424A063B,42D093D3 BD7D1569,3DFC5880,3F862D0D 47DB7361,43F96455,438A1F6B 3FD93C8A,4019327D,41A187AE 4473CEE1,4233C822,41C44270 C7159B49,43DDCAD9,4407F736 C43B791A,42603CD9,4354082E C18219CD,42E8B59D,4351E70A 471AE09A,432650A2,438EA0FE BD659E27,407036D4,4077736D C039593F,3F88DC44,424ABA9D 419653F4,402ADA10,414360AD C2221889,416CD6B9,418C962C BE5633C7,41922AD1,41926ADB 46B24D44,42CBA09D,432609F6 C2EE65E1,407B692C,4245C622 C208F4C1,43384FE7,4338B516 47A999CF,438197DC,438DA2D6 40CCD4AB,3F8EF987,4288C33A C3F402A6,40A4DA88,42D11DC1 4126763F,43C953C9,43CDEA9F 42836A08,41EB59DA,43F3B4FC"}
+{"k":"fuzz/quaternionRotate","v":"C3180831,C3552675,460FF990 444AEDFA,C77E927E,45014752 45A57B71,C8DD1AA8,C61820F0 3BBE3048,BC2FF46C,BF7537F2 CB794077,CB1C9F2F,494D9DCB BFCA4DCB,C3526890,C08A7DC8 43F4988C,C48582D5,C6F71B14 4C15DE7B,CBD38ECD,CB7A7A01 C999CCFC,C6995797,CA895DBA 4A8B812C,CADB9267,46266D41 4976ABA9,CB43121D,CAFD9FD0 41BCAAED,40AA7A37,BF204E9B C1D55042,C0BDFDF0,C281D311 BFDBFF36,42AB8345,42F93F31 BFB274E1,C2ADE966,43EC44EA BEA3E36A,440DE8F6,C0847C7D 488C86DE,4A0D3F98,C4CD190E C2F5736A,C61B0D3A,C3F22D9D 4689CBBE,4911CD53,45BDD123 4B92D269,4B9FC644,4BB096A0 C26CDCE1,C2C9D251,412975F6 44C2F9E6,C205460D,C3CCC091 CB7723C0,CBB1C67C,C5AD4955 456DC1B4,C94D8764,C5DEA280"}
+{"k":"fuzz/matrixPoint","v":"C10ABD7D,40949E47,45626598 BF2609A8,44D768BC,3F0DB826 406600A9,45F41049,C281FF27 BDCB95C2,3D07926A,3F76135A 448F5C8B,C229793B,481F240C BEB256C5,43CB1268,BFB5F69B 3D5E8BDB,44BD247B,4216AC2C C67413B6,43B42BF9,3D92E468 471CA860,C3F1B20A,BE25C8F9 46EDBC04,4168A24D,C2B1A243 423D3695,44799155,4827A316 3F433358,BB92DCF6,4071FED4 3D8F9744,3F8A7631,451FEBA2 BBE4DC13,400B1E5F,43450A90 C1920768,3C4DFD6C,3F93C507 C192ED39,3F39C8A1,40076155 42329328,4644BCAC,478E7287 448AF4CA,41FE3C35,4468DF27 C32A9BAD,420BD153,3DE79AB4 42E4DB3C,42A4906D,48857FBA 3D808F15,4592AB41,3FD08783 BFCF6ADF,3F3441DB,461370D8 455BC4F4,45794314,C3C80BD2 41F33A1F,4867542B,41B4FB03"}
+{"k":"il/get_Property","v":"ldsfld:Controls::<Property>k__BackingField ret"}
+{"k":"il/set_Property","v":"ldarg.0 stsfld:Controls::<Property>k__BackingField ret"}
+{"k":"il/Add","v":"ldarg.0 ldarg.1 add ldarg.2 add ret"}
+{"k":"il/Subtract","v":"ldarg.0 ldarg.1 sub ldarg.2 add ret"}
+{"k":"il/Multiply","v":"ldarg.0 ldarg.1 mul ldarg.2 add ret"}
+{"k":"il/Divide","v":"ldarg.0 ldarg.1 div ldarg.2 sub ret"}
+{"k":"il/Remainder","v":"ldarg.0 ldarg.1 add ldarg.2 rem ret"}
+{"k":"il/Negate","v":"ldarg.0 ldarg.1 add neg ldarg.2 sub ret"}
+{"k":"il/Product3","v":"ldarg.0 ldarg.1 mul ldarg.2 mul ret"}
+{"k":"il/ToDouble","v":"ldarg.0 ldarg.1 add conv.r8 ldc.r8:4170000000000000 sub ret"}
+{"k":"il/ToInt","v":"ldarg.0 ldarg.1 add conv.i4 ldc.i4:16777216 sub ret"}
+{"k":"il/CheckedInt","v":"ldarg.0 ldarg.1 add conv.ovf.i4 ldc.i4:16777216 sub.ovf ret"}
+{"k":"il/ToLong","v":"ldarg.0 ldarg.1 add conv.i8 ldc.i4:16777216 conv.i8 sub ret"}
+{"k":"il/MixedDouble","v":"ldarg.0 ldarg.1 add conv.r8 ldarg.2 conv.r8 add ret"}
+{"k":"il/IntToFloat","v":"ldarg.0 conv.r4 ldarg.1 add ret"}
+{"k":"il/LongToFloat","v":"ldarg.0 conv.r4 ldarg.1 add ret"}
+{"k":"il/UIntToFloat","v":"ldarg.0 conv.r.un conv.r4 ldarg.1 add ret"}
+{"k":"il/DoubleToFloat","v":"ldarg.0 conv.r4 ldarg.1 add ret"}
+{"k":"il/Cast","v":"ldarg.0 ldarg.1 add conv.r4 ldarg.2 add ret"}
+{"k":"il/Equal","v":"ldarg.0 ldarg.1 add ldarg.0 ceq ret"}
+{"k":"il/Greater","v":"ldarg.0 ldarg.1 add ldarg.0 cgt ret"}
+{"k":"il/CastEqual","v":"ldarg.0 ldarg.1 add conv.r4 ldarg.0 ceq ret"}
+{"k":"il/LocalEqual","v":"ldarg.0 ldarg.1 add ldarg.0 ceq ret"}
+{"k":"il/Branch","v":"ldarg.0 ldarg.1 add ldarg.0 ble.un.s:12 ldc.r4:3F800000 ret ldc.r4:00000000 ret"}
+{"k":"il/TernaryValue","v":"ldsfld:Controls::Flag brtrue.s:12 ldarg.0 ldarg.1 sub br.s:15 ldarg.0 ldarg.1 add ldarg.2 add ret"}
+{"k":"il/TernaryLocal","v":"ldsfld:Controls::Flag brtrue.s:12 ldarg.0 ldarg.1 sub br.s:15 ldarg.0 ldarg.1 add ldarg.2 add ret"}
+{"k":"il/LocalSingle","v":"ldarg.0 ldarg.1 add ldarg.2 add ret"}
+{"k":"il/LocalTwice","v":"ldarg.0 ldarg.1 add stloc.0 ldloc.0 ldarg.2 add ldloc.0 ldloc.0 sub add ret"}
+{"k":"il/LocalCall","v":"ldarg.0 ldarg.1 add call:Controls::Call ldarg.2 add ret"}
+{"k":"il/LocalInlinedCall","v":"ldarg.0 ldarg.1 add call:Controls::SmallCall ldarg.2 add ret"}
+{"k":"il/LocalBranch","v":"ldarg.0 ldarg.1 add ldsfld:Controls::Flag brfalse.s:22 ldsfld:Controls::Count ldc.i4.1 add stsfld:Controls::Count ldarg.2 add ret"}
+{"k":"il/LocalCompound","v":"ldarg.0 ldarg.1 add ldarg.2 add ret"}
+{"k":"il/LocalIncrement","v":"ldarg.0 ldc.r4:3F800000 add ldarg.2 add ret"}
+{"k":"il/LocalLoopBody","v":"ldarg.0 stloc.0 ldc.i4.0 stloc.1 br.s:18 ldloc.0 ldarg.1 add stloc.0 ldloc.0 ldarg.2 add stloc.0 ldloc.1 ldc.i4.1 add stloc.1 ldloc.1 ldsfld:Controls::Iterations blt.s:6 ldloc.0 ret"}
+{"k":"il/LocalLoopExit","v":"ldarg.0 stloc.0 ldc.i4.0 stloc.1 br.s:14 ldloc.0 ldarg.1 add stloc.0 ldloc.1 ldc.i4.1 add stloc.1 ldloc.1 ldsfld:Controls::Iterations blt.s:6 ldloc.0 ldarg.2 add ret"}
+{"k":"il/LocalAddressTaken","v":"ldarg.0 ldarg.1 add stloc.0 ldloca.s:0 ldind.r4 ldarg.2 add ret"}
+{"k":"il/LocalCopied","v":"ldarg.0 ldarg.1 add stloc.0 ldloc.0 stloc.1 ldloc.1 ldarg.2 add ldloc.0 ldloc.1 sub add ret"}
+{"k":"il/ArgumentStore","v":"ldarg.0 ldarg.1 add starg.s:0 ldarg.0 ldarg.2 add ret"}
+{"k":"il/ArgumentStoreCall","v":"ldarg.0 ldarg.1 add starg.s:0 call:Controls::Call ldarg.0 ldarg.2 add ret"}
+{"k":"il/StaticField","v":"ldarg.0 ldarg.1 add stsfld:Controls::Static ldsfld:Controls::Static ldarg.2 add ret"}
+{"k":"il/VolatileField","v":"ldarg.0 ldarg.1 add volatile. stsfld:Controls::Volatile volatile. ldsfld:Controls::Volatile ldarg.2 add ret"}
+{"k":"il/InstanceField","v":"ldsfld:FloatHolder::Instance dup ldarg.0 ldarg.1 add stfld:FloatHolder::Field ldfld:FloatHolder::Field ldarg.2 add ret"}
+{"k":"il/ArrayElement","v":"ldsfld:Controls::Array ldc.i4.0 ldarg.0 ldarg.1 add stelem.r4 ldsfld:Controls::Array ldc.i4.0 ldelem.r4 ldarg.2 add ret"}
+{"k":"il/RefLocal","v":"ldsfld:Controls::Array ldc.i4.0 ldelema:Single dup ldarg.0 ldarg.1 add stind.r4 ldind.r4 ldarg.2 add ret"}
+{"k":"il/SpanElement","v":"ldsfld:Controls::Array call:Span`1::op_Implicit stloc.0 ldloca.s:0 ldc.i4.0 call:Span`1::get_Item ldarg.0 ldarg.1 add stind.r4 ldloca.s:0 ldc.i4.0 call:Span`1::get_Item ldind.r4 ldarg.2 add ret"}
+{"k":"il/StackSpan","v":"ldc.i4.4 conv.u localloc ldc.i4.1 newobj:Span`1::.ctor stloc.0 ldloca.s:0 ldc.i4.0 call:Span`1::get_Item ldarg.0 ldarg.1 add stind.r4 ldloca.s:0 ldc.i4.0 call:Span`1::get_Item ldind.r4 ldarg.2 add ret"}
+{"k":"il/Box","v":"ldarg.0 ldarg.1 add box:Single unbox.any:Single ldarg.2 add ret"}
+{"k":"il/BoxField","v":"ldarg.0 ldarg.1 add box:Single stsfld:Controls::s_Object ldsfld:Controls::s_Object unbox.any:Single ldarg.2 add ret"}
+{"k":"il/BoxApart","v":"ldarg.0 ldarg.1 add box:Single ldsfld:Controls::Count ldc.i4.1 add stsfld:Controls::Count unbox.any:Single ldarg.2 add ret"}
+{"k":"il/FieldCompound","v":"ldarg.0 stsfld:Controls::Static ldsfld:Controls::Static ldarg.1 add stsfld:Controls::Static ldsfld:Controls::Static ldarg.2 add ret"}
+{"k":"il/ArrayCompound","v":"ldsfld:Controls::Array ldc.i4.0 ldarg.0 stelem.r4 ldsfld:Controls::Array ldc.i4.0 ldelema:Single dup ldind.r4 ldarg.1 add stind.r4 ldsfld:Controls::Array ldc.i4.0 ldelem.r4 ldarg.2 add ret"}
+{"k":"il/PropertyStore","v":"ldarg.0 ldarg.1 add call:Controls::set_Property call:Controls::get_Property ldarg.2 add ret"}
+{"k":"il/StructLocal","v":"ldloca.s:0 initobj:Vector3 ldloca.s:0 ldarg.0 ldarg.1 add stfld:Vector3::x ldloc.0 ldfld:Vector3::x ldarg.2 add ret"}
+{"k":"il/StructConstructor","v":"ldarg.0 ldarg.1 add ldc.r4:00000000 ldc.r4:00000000 newobj:Vector3::.ctor ldfld:Vector3::x ldarg.2 add ret"}
+{"k":"il/StructInitializer","v":"ldloca.s:0 initobj:FloatPair ldloca.s:0 ldarg.0 ldarg.1 add stfld:FloatPair::X ldloc.0 ldfld:FloatPair::X ldarg.2 add ret"}
+{"k":"il/NoInliningArgument","v":"ldarg.0 ldarg.1 add call:Controls::EchoNoInlining ldarg.2 add ret"}
+{"k":"il/NoInliningReturn","v":"ldarg.0 ldarg.1 call:Controls::AddNoInlining ldarg.2 add ret"}
+{"k":"il/SmallArgument","v":"ldarg.0 ldarg.1 add call:Controls::Echo ldarg.2 add ret"}
+{"k":"il/SmallReturn","v":"ldarg.0 ldarg.1 call:Controls::AddSmall ldarg.2 add ret"}
+{"k":"il/AggressiveArgument","v":"ldarg.0 ldarg.1 add call:Controls::EchoAggressive ldarg.2 add ret"}
+{"k":"il/AggressiveReturn","v":"ldarg.0 ldarg.1 call:Controls::AddAggressive ldarg.2 add ret"}
+{"k":"il/LocalReturn","v":"ldarg.0 ldarg.1 call:Controls::AddThroughLocal ldarg.2 add ret"}
+{"k":"il/Body","v":"ldarg.0 ldarg.1 ldarg.2 call:Controls::Add3 ret"}
+{"k":"il/Instance","v":"ldsfld:FloatHolder::Instance ldarg.0 ldarg.1 callvirt:FloatHolder::AddInstance ldarg.2 add ret"}
+{"k":"il/Virtual","v":"ldsfld:FloatHolder::Instance ldarg.0 ldarg.1 add callvirt:FloatHolder::Echo ldarg.2 add ret"}
+{"k":"il/Interface","v":"ldsfld:FloatHolder::Instance ldarg.0 ldarg.1 callvirt:IFloatAdder::Add ldarg.2 add ret"}
+{"k":"il/DelegateCall","v":"ldsfld:Controls::s_Add ldarg.0 ldarg.1 callvirt:Func`3::Invoke ldarg.2 add ret"}
+{"k":"il/GenericNoInlining","v":"ldarg.0 ldarg.1 add call:Controls::PassNoInlining ldarg.2 add ret"}
+{"k":"il/GenericMethod","v":"ldarg.0 ldarg.1 add call:Controls::Pass ldarg.2 add ret"}
+{"k":"il/GenericField","v":"ldarg.0 ldarg.1 add stsfld:FloatBox`1::Value ldsfld:FloatBox`1::Value ldarg.2 add ret"}
+{"k":"il/Nullable","v":"ldloca.s:0 ldarg.0 ldarg.1 add call:Nullable`1::.ctor ldloca.s:0 call:Nullable`1::get_Value ldarg.2 add ret"}
+{"k":"il/GenericClassMethod","v":"ldarg.0 ldarg.1 add call:FloatBox`1::Echo ldarg.2 add ret"}
+{"k":"il/Closure","v":"newobj:<>c__DisplayClass94_0::.ctor dup ldarg.0 ldarg.1 add stfld:<>c__DisplayClass94_0::t dup ldftn:<>c__DisplayClass94_0::<Closure>b__0 newobj:Func`1::.ctor stloc.0 ldfld:<>c__DisplayClass94_0::t ldarg.2 add ldloc.0 callvirt:Func`1::Invoke ldc.r4:00000000 mul add ret"}
+{"k":"il/LambdaBody","v":"ldsfld:<>c::<>9__95_0 dup brtrue.s:31 pop ldsfld:<>c::<>9 ldftn:<>c::<LambdaBody>b__95_0 newobj:Func`4::.ctor dup stsfld:<>c::<>9__95_0 ldarg.0 ldarg.1 ldarg.2 callvirt:Func`4::Invoke ret"}
+{"k":"il/Iterator","v":"ldarg.0 ldarg.1 ldarg.2 call:Controls::Sequence callvirt:IEnumerable`1::GetEnumerator dup callvirt:IEnumerator::MoveNext pop dup callvirt:IEnumerator::MoveNext pop callvirt:IEnumerator`1::get_Current ret"}
+{"k":"il/Async","v":"ldarg.0 ldarg.1 ldarg.2 call:Controls::Later callvirt:Task`1::get_Result ret"}
+{"k":"il/TryFinally","v":"ldarg.0 ldarg.1 add stloc.0 leave.s:19 ldsfld:Controls::Count ldc.i4.1 add stsfld:Controls::Count endfinally ldloc.0 ldarg.2 add ret"}
+{"k":"il/MathfAbs","v":"ldarg.0 ldarg.1 add call:Mathf::Abs ldarg.2 add ret"}
+{"k":"il/MathfMax","v":"ldarg.0 ldarg.1 add ldc.r4:00000000 call:Mathf::Max ldarg.2 add ret"}
+{"k":"il/MathfMin","v":"ldarg.0 ldarg.1 add ldc.r4:7149F2CA call:Mathf::Min ldarg.2 add ret"}
+{"k":"il/MathfClamp","v":"ldarg.0 ldarg.1 add ldc.r4:00000000 ldc.r4:7149F2CA call:Mathf::Clamp ldarg.2 add ret"}
+{"k":"il/MathfFloor","v":"ldarg.0 ldarg.1 add call:Mathf::Floor ldarg.2 add ret"}
+{"k":"il/MathfSqrt","v":"ldarg.0 ldarg.1 add call:Mathf::Sqrt ldarg.2 add ret"}
+{"k":"il/MathSqrt","v":"ldarg.0 ldarg.1 add conv.r8 call:Math::Sqrt conv.r4 ldarg.2 add ret"}
+{"k":"il/MathAbs","v":"ldarg.0 ldarg.1 add call:Math::Abs ldarg.2 add ret"}
+{"k":"il/MathMax","v":"ldarg.0 ldarg.1 add ldc.r4:00000000 call:Math::Max ldarg.2 add ret"}
+{"k":"il/MathFAbs","v":"ldarg.0 ldarg.1 add call:MathF::Abs ldarg.2 add ret"}
+{"k":"il/MathFSqrt","v":"ldarg.0 ldarg.1 add call:MathF::Sqrt ldarg.2 add ret"}
+{"k":"il/Vector3Dot","v":"ldarg.0 ldarg.1 ldc.r4:00000000 newobj:Vector3::.ctor ldarg.0 ldarg.2 ldc.r4:00000000 newobj:Vector3::.ctor call:Vector3::Dot ret"}
+{"k":"il/Vector3SqrMagnitude","v":"ldarg.0 ldarg.1 ldc.r4:00000000 newobj:Vector3::.ctor stloc.0 ldloca.s:0 call:Vector3::get_sqrMagnitude ret"}
+{"k":"il/Vector3Magnitude","v":"ldarg.0 ldarg.1 ldc.r4:00000000 newobj:Vector3::.ctor stloc.0 ldloca.s:0 call:Vector3::get_magnitude ret"}
+{"k":"il/Vector3AddChain","v":"ldarg.0 ldc.r4:00000000 ldc.r4:00000000 newobj:Vector3::.ctor ldarg.1 ldc.r4:00000000 ldc.r4:00000000 newobj:Vector3::.ctor call:Vector3::op_Addition ldarg.2 ldc.r4:00000000 ldc.r4:00000000 newobj:Vector3::.ctor call:Vector3::op_Addition ldfld:Vector3::x ret"}
+{"k":"il/Vector3Components","v":"ldloca.s:0 ldarg.0 ldarg.1 ldarg.2 call:Vector3::.ctor ldloc.0 ldfld:Vector3::x ldloc.0 ldfld:Vector3::y add ldloc.0 ldfld:Vector3::z add ret"}
+{"k":"il/Products","v":"ldarg.0 ldarg.1 mul ldarg.2 ldarg.3 mul add ret"}
+{"k":"il/Sum4","v":"ldarg.0 ldarg.1 add ldarg.2 add ldarg.3 add ret"}
+{"k":"il/MulDiv","v":"ldarg.0 ldarg.1 mul ldarg.2 div ret"}
+{"k":"il/Mixed","v":"ldarg.0 ldarg.1 sub ldarg.2 ldarg.3 add mul ret"}
+{"k":"il/Horner","v":"ldarg.0 ldarg.3 mul ldarg.1 add ldarg.3 mul ldarg.2 add ldarg.3 mul ret"}
+{"k":"il/Lerp","v":"ldarg.0 ldarg.1 ldarg.0 sub ldarg.2 mul add ret"}
+{"k":"il/LocalChain","v":"ldarg.0 ldarg.1 mul ldarg.2 ldarg.3 mul add ldarg.0 mul ret"}
+{"k":"il/Distance","v":"ldarg.0 ldarg.2 sub ldarg.0 ldarg.2 sub mul ldarg.1 ldarg.3 sub ldarg.1 ldarg.3 sub mul add call:Mathf::Sqrt ret"}
+{"k":"il/ProductGreater","v":"ldarg.0 ldarg.1 mul ldarg.2 add ldarg.2 ldarg.3 mul ldarg.0 add bgt.s:18 ldc.r4:00000000 ret ldc.r4:3F800000 ret"}
+{"k":"il/MathfLerp","v":"ldarg.0 ldarg.1 ldarg.2 call:Mathf::Abs ldc.r4:3F800000 rem call:Mathf::Lerp ret"}
+{"k":"il/MathfInverseLerp","v":"ldarg.0 ldarg.1 ldarg.2 call:Mathf::InverseLerp ret"}
+{"k":"il/MathfSmoothStep","v":"ldarg.0 ldarg.1 ldarg.2 call:Mathf::Abs ldc.r4:3F800000 rem call:Mathf::SmoothStep ret"}
+{"k":"il/MathfMoveTowards","v":"ldarg.0 ldarg.1 ldarg.2 call:Mathf::Abs call:Mathf::MoveTowards ret"}
+{"k":"il/MathfRepeat","v":"ldarg.0 ldarg.1 call:Mathf::Abs call:Mathf::Repeat ret"}
+{"k":"il/MathfPingPong","v":"ldarg.0 ldarg.1 call:Mathf::Abs call:Mathf::PingPong ret"}
+{"k":"il/MathfSmoothDamp","v":"ldarg.3 stloc.0 ldarg.0 ldarg.1 ldloca.s:0 ldarg.2 call:Mathf::Abs ldc.r4:3C23D70A add ldc.r4:7F800000 ldc.r4:3CA3D70A call:Mathf::SmoothDamp ldloc.0 add ret"}
+{"k":"codeOptimization","v":"Release"}
+{"k":"complete","v":true}

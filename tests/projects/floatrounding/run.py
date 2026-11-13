@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """Record and compare where game code's float arithmetic keeps a wider intermediate.
 
-    run.py record --profile P --label L     one Editor capture of this host's Editor (batch mode,
-                                            no graphics device), code optimization P
-    run.py publish --profile P A B          two byte-identical captures -> Reference/unity-<release>/<host>/P.jsonl
+    run.py record --profile P --label L     one capture with this host's Editor (Linux x86_64 or
+                                            macOS arm64; batch mode, no graphics device)
+    run.py publish A B --profile P          two byte-identical captures -> Reference/unity-<release>/P.jsonl
     run.py gate --profile P [--label L]     the engine on a fresh copy with code optimization P,
-                                            compared with this host's reference
+                                            compared with Reference/
 
 P is `release` or `debug`, the Editor's Code Optimization mode (`-releaseCodeOptimization`,
-`-debugCodeOptimization`; `UNBOUND_CODE_OPTIMIZATION` for the engine). <host> is `linux` (x86_64)
-or `macos` (arm64): the script runtime's code generator differs by CPU, so each host is compared
-with its own Editor. Every missing, extra and differing key is printed; values compare exactly.
-Known residuals are listed in residuals.json as {"<profile>/<key>": ...} under their cause.
+`-debugCodeOptimization`; `UNBOUND_CODE_OPTIMIZATION` for the engine). The Linux x86_64 and macOS
+arm64 Editors record the same values, so both hosts compare with one reference per mode. Every
+missing, extra and differing key is printed; values compare exactly. residuals.json lists known
+residuals under their cause as "<profile>/<key>".
 """
 import argparse
 import json
@@ -36,11 +36,11 @@ def host():
         return 'macos'
     if sys.platform.startswith('linux') and platform.machine() in ('x86_64', 'AMD64'):
         return 'linux'
-    raise SystemExit(f'floatrounding: no reference for {sys.platform}/{platform.machine()}')
+    raise SystemExit(f'floatrounding: no Editor measured on {sys.platform}/{platform.machine()}')
 
 
 def reference(profile):
-    return reference_root(PROBE)/host()/(profile+'.jsonl')
+    return reference_root(PROBE)/(profile+'.jsonl')
 
 
 def macos_editor():
@@ -121,9 +121,9 @@ def gate(profile, label):
     for failure in residual:
         print(json.dumps({**failure, 'residual': known[failure['key']]}))
     differing = {f['key'] for f in residual}
-    for key in sorted(k for k in known if k not in differing and k in expected):
+    for key in sorted(k for k in known if k not in differing):
         print(f'residual resolved (remove it from residuals.json): {profile}/{key}')
-    print(f'floatrounding {host()} {profile}: {matched}/{len(expected)} values match, {len(failures)} failures, '
+    print(f'floatrounding {profile}: {matched}/{len(expected)} values match, {len(failures)} failures, '
           f'{len(residual)} known residuals; engine exit {code}; logs {out}')
     return 1 if failures or code else 0
 
