@@ -120,6 +120,10 @@ Small resolves 107 existing queue entries and adds three exact initialized-conte
 giving 269 entries with the same 50 variable policies. Two variable observations happen
 to equal this implementation snapshot; their policies remain unresolved.
 
+The five Q411 part 2 slices remove 764 existing queue entries and add 1,107
+independent controls. Concurrent declaration work removes seven more entries;
+three new exact contextual gaps remain queued. The total falls from 1,037 to 269.
+
 | Core cause | Resolved rows | Controls and rule |
 | --- | ---: | --- |
 | Root factory eligibility | 125 | Component, Behaviour, MonoBehaviour and Renderer reject direct creation. Valid derived components still attach to populated inactive objects. A script can satisfy its own base-type requirement; a missing abstract requirement rejects the script silently, while an existing concrete component satisfies it. |
