@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 6382c4c90582a46d257abab0dde84d8f
+ScriptedImporter:
+  internalIDToNameTable:
+  - first: {2147483000: 1234567}
+    second: Lighting
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: c39d116e75b348d6a89be48915742cc8, type: 3}

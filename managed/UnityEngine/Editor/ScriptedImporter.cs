@@ -209,14 +209,13 @@ namespace Unbound.Runtime
             var table = settings.Count > 0 ? NameTable(settings[0].Body) : null;
             foreach (var (identifier, obj) in ctx.m_Objects)
             {
-                if (string.IsNullOrEmpty(obj.m_Name) && obj != ctx.mainObject) obj.m_Name = identifier;
                 file.Objects[FileId(identifier, obj, table)] = obj;
                 file.Identifiers[obj] = identifier;
             }
             return file;
         }
 
-        /// <summary>The file id Unity gives an object a ScriptedImporter adds under an identifier.</summary>
+        /// <summary>The derived leaf-asset file id for an import identifier; hierarchy ids remain separate.</summary>
         internal static long FileId(string identifier, Object obj)
         {
             // The native class name: scripts' objects are MonoBehaviours to the serializer.
@@ -241,16 +240,11 @@ namespace Unbound.Runtime
 
         /// <summary>The .meta's names of an importer's objects: <c>fileIDToRecycleName</c>
         /// (<c>fileID: name</c>, the class being <c>fileID / 100000</c>) and
-        /// <c>internalIDToNameTable</c> (<c>- first: {classID: fileID}, second: name</c>), read as the
-        /// native importers' table is (FileIdTable in crates/unbound-assets/src/meta.rs).</summary>
+        /// <c>internalIDToNameTable</c> (<c>- first: {classID: fileID}, second: name</c>).
+        /// Matches the measured schema precedence in tests/projects/scriptedidentity (Unity 6000.0.71f1).</summary>
         internal static List<(int ClassId, long FileId, string Name)> NameTable(YNode settings)
         {
             List<(int, long, string)> table = null;
-            var legacy = settings?.Get("fileIDToRecycleName");
-            if (legacy != null && legacy.Kind == YKind.Map)
-                for (int i = 0; i < legacy.Keys.Length; i++)
-                    if (long.TryParse(legacy.Keys[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
-                        (table ??= new List<(int, long, string)>()).Add(((int)(id / LegacyClassStride), id, legacy.Values[i].AsString()));
             var named = settings?.Get("internalIDToNameTable");
             if (named != null && named.Kind == YKind.Seq)
                 foreach (var entry in named.Items)
@@ -264,6 +258,19 @@ namespace Unbound.Runtime
                             && long.TryParse(first.Values[i].Scalar, NumberStyles.Integer, CultureInfo.InvariantCulture, out var fileId))
                             (table ??= new List<(int, long, string)>()).Add((classId, fileId, name));
                 }
+            // Current entries take precedence. Old schemas fill missing class/name pairs in
+            // numeric file-id order (tests/projects/scriptedidentity, Unity 6000.0.71f1).
+            var legacy = settings?.Get("fileIDToRecycleName");
+            var version = settings?.Get("serializedVersion")?.AsInt() ?? 1;
+            if (version <= 1 && legacy != null && legacy.Kind == YKind.Map)
+            {
+                var ordered = new SortedDictionary<long, string>();
+                for (int i = 0; i < legacy.Keys.Length; i++)
+                    if (long.TryParse(legacy.Keys[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+                        ordered[id] = legacy.Values[i].AsString();
+                foreach (var pair in ordered)
+                    (table ??= new List<(int, long, string)>()).Add(((int)(pair.Key / LegacyClassStride), pair.Key, pair.Value));
+            }
             return table;
         }
 
@@ -276,8 +283,28 @@ namespace Unbound.Runtime
         {
             if (IsScriptObject(obj)) return classId == EngineTypes.MonoBehaviourId;
             var type = EngineTypes.ForClassId(classId, "", warn: false);
-            return type != null && obj.GetType() == type;
+            if (type != null) return obj.GetType() == type;
+            // A class can have a public managed type before its serialized fields are supported.
+            // Leaf asset identity uses the release's existing class catalog independently of loaders.
+            var concrete = obj.GetType();
+            if (obj is GameObject || obj is Component || concrete.Assembly != typeof(Object).Assembly) return false;
+            lock (s_ClassTableLock)
+            {
+                var release = ProjectInfo.UnityVersion;
+                if (!s_ClassTableLoaded || s_ClassTableRelease != release)
+                {
+                    s_ClassTable = ClassCoverage.UnityTable(release);
+                    s_ClassTableRelease = release;
+                    s_ClassTableLoaded = true;
+                }
+                return s_ClassTable != null && s_ClassTable.TryGetValue(classId, out var entry) && entry.Name == concrete.Name;
+            }
         }
+
+        static readonly object s_ClassTableLock = new object();
+        static bool s_ClassTableLoaded;
+        static string s_ClassTableRelease;
+        static SortedDictionary<int, ClassCoverage.UnityClass> s_ClassTable;
 
         /// <summary>xxHash64 with seed 0.</summary>
         internal static ulong XxHash64(byte[] data)

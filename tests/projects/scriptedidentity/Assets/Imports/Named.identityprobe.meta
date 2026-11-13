@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f5ae6e0bd003fcddec409be2a18a692d
+ScriptedImporter:
+  internalIDToNameTable:
+  - first: {1113: 1234567}
+    second: Lighting
+  - first: {28: 7654321}
+    second: BlankTexture
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: c39d116e75b348d6a89be48915742cc8, type: 3}

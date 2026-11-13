@@ -2950,3 +2950,12 @@ local stores and explicit cast/field/array/call boundaries discriminate rounding
 The original 62 records and texturepixels gate stay unchanged. Same-IL runtime
 controls rule out a simple compiler-mode correction in the tested contexts;
 a general typed-IL/runtime policy spanning precompiled assemblies remains M.
+
+Q417 scriptedidentity: 136/136 values match the repeated Unity 6000.0.71f1
+Editor GPU reference, previously 92/136. A builtin leaf type can take its
+class/identifier table ID without registering its unsupported field loader;
+unnamed subobjects stay unnamed. Modern entries precede schema-1 legacy
+entries, whose fallback order is numeric ID; schema 2 ignores legacy entries.
+Original scriptedfileids 184/184 and its reference remain unchanged. The separate
+four-record HierarchyControl retains one root-ID difference (3/4) and records
+the M-sized hierarchy-identity follow-up rather than applying the leaf rule.

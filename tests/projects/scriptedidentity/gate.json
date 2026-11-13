@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/scriptedidentity/run.py check --release 6000.0.71f1"
+  ],
+  "summary": "scriptedidentity: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ScriptedImporter.cs"
+  ]
+}

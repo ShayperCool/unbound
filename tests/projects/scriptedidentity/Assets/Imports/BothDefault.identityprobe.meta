@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 3e6a6c82f7dde3acccc50cc13a1954d9
+ScriptedImporter:
+  fileIDToRecycleName:
+    111300000: Lighting
+    2800000: BlankTexture
+  internalIDToNameTable:
+  - first: {1113: 1234567}
+    second: Lighting
+  - first: {28: 7654321}
+    second: BlankTexture
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: c39d116e75b348d6a89be48915742cc8, type: 3}
