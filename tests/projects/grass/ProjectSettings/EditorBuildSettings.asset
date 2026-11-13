@@ -14,5 +14,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Aligned.unity
     guid: 9643bc8c669ebb3d183148d908c8a2df
+  - enabled: 1
+    path: Assets/Scenes/Instanced.unity
+    guid: 2f682c712bfda806e93c3ea9d9db7dd2
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

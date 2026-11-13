@@ -9,7 +9,8 @@ ground-aligned, and two prototypes the Editor refuses; `Refusals` holds one refu
 check; these three terrains have one terrain layer. Last the probe loads the scene `Aligned`: `Tilted`
 is steep, with grass textures fully and half aligned to the ground and one of zero width. Then it
 makes a terrain itself (no image): two grass textures of noiseSeed 0 written in different orders
-per patch, a count over 16, and a scatter mode switch after coverage values. What `Validate` says of each prototype is
+per patch, a count over 16, and a scatter mode switch after coverage values. Last it loads the scene
+`Instanced`: two instanced slab layers share their patches. What `Validate` says of each prototype is
 recorded, the density terrains' instances again with QualitySettings.useLegacyDetailDistribution,
 and the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each
 terrain's detail data (resolution, patches, prototypes, layers read back, coverage), every patch's
@@ -23,14 +24,15 @@ shaders (`Hidden/TerrainEngine/Details/*`) by shaders that write every vertex th
 random-write buffer.
 
 Make the assets once (they are committed; `ProbeRunner.CreateDensity`, then `CreateRefusals`, make
-the scene `Density`, and `CreateAligned` the scene `Aligned`, without touching the others) and
-record Unity's reference: `record.py` runs the Editor on the GPU in copies of the project under the
-validation cache, twice, and publishes only identical captures whose committed rows and images are
-unchanged:
+the scene `Density`, and `CreateAligned` and `CreateInstanced` the scenes `Aligned` and `Instanced`,
+without touching the others) and record Unity's reference: `record.py` runs the Editor on the GPU in
+copies of the project under the validation cache, twice, and publishes only identical captures whose
+committed rows and images are unchanged:
 
     python3 tests/projects/grass/record.py create --method CreateDensity --release 6000.0.71f1
     python3 tests/projects/grass/record.py create --method CreateRefusals --release 6000.0.71f1
     python3 tests/projects/grass/record.py create --method CreateAligned --release 6000.0.71f1
+    python3 tests/projects/grass/record.py create --method CreateInstanced --release 6000.0.71f1
     python3 tests/projects/grass/record.py record --release 6000.0.71f1
     python3 tests/projects/grass/record.py publish --release 6000.0.71f1
 

@@ -57,6 +57,7 @@ public static class ProbeRunner
         CreateDensity();
         CreateRefusals();
         CreateAligned();
+        CreateInstanced();
     }
 
     /// <summary>
@@ -213,6 +214,52 @@ public static class ProbeRunner
             new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true),
             new EditorBuildSettingsScene("Assets/Scenes/Density.unity", true),
             new EditorBuildSettingsScene("Assets/Scenes/Aligned.unity", true),
+        };
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>
+    /// `-executeMethod ProbeRunner.CreateInstanced` adds, without touching the other assets, the
+    /// scene `Instanced` with a terrain `Instanced` (instance counts) whose two instanced slab
+    /// prototypes share their patches.
+    /// </summary>
+    public static void CreateInstanced()
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var slab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Grass/Slab.prefab");
+        var data = new TerrainData();
+        AssetDatabase.CreateAsset(data, "Assets/Grass/Instanced.asset");
+        SmallMaps(data);
+        data.terrainLayers = new[] { AssetDatabase.LoadAssetAtPath<TerrainLayer>("Assets/Grass/Ground.terrainlayer") };
+        data.heightmapResolution = 33;
+        data.size = new Vector3(32f, 2f, 32f);
+        data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+        data.SetDetailResolution(32, 16);
+        DetailPrototype Slab(float width, int seed) => new DetailPrototype
+        {
+            prototype = slab, usePrototypeMesh = true, useInstancing = true, renderMode = DetailRenderMode.VertexLit,
+            minWidth = width, maxWidth = width, minHeight = width, maxHeight = width, noiseSeed = seed, positionJitter = 0.6f,
+        };
+        data.detailPrototypes = new[] { Slab(0.5f, 71), Slab(0.35f, 72) };
+        for (int layer = 0; layer < 2; layer++)
+        {
+            var values = new int[32, 32];
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                    values[y, x] = (x + 3 * y + layer) % 7 == 0 ? 1 : 0;
+            data.SetDetailLayer(0, 0, layer, values);
+        }
+        EditorUtility.SetDirty(data);
+        var terrain = Terrain.CreateTerrainGameObject(data);
+        terrain.name = "Instanced";
+        terrain.transform.position = new Vector3(-700f, 0f, 0f);
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Instanced.unity");
+        EditorBuildSettings.scenes = new[]
+        {
+            new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Density.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Aligned.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Instanced.unity", true),
         };
         AssetDatabase.SaveAssets();
     }

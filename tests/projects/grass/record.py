@@ -20,12 +20,13 @@ sys.path.insert(0, str(PROBE.parents[1]))
 from probe_paths import cache_artifact_path, run_root  # noqa: E402
 from editor_runner import EditorJob, differences, result_problem, run  # noqa: E402
 
-# What ProbeRunner.CreateDensity, CreateRefusals and CreateAligned add or change.
+# What ProbeRunner.CreateDensity, CreateRefusals, CreateAligned and CreateInstanced add or change.
 CREATED = ['Assets/Grass/Ground.png', 'Assets/Grass/Ground.terrainlayer', 'Assets/Grass/Slab.asset', 'Assets/Grass/Slab.prefab', 'Assets/Grass/SlabBare.asset',
            'Assets/Grass/SlabBare.prefab', 'Assets/Grass/DensityCounts.asset',
            'Assets/Grass/DensityCoverage.asset', 'Assets/Grass/SlabTwoMaterials.prefab', 'Assets/Grass/SlabLOD.prefab',
            'Assets/Grass/SlabNoMesh.prefab', 'Assets/Grass/Refusals.asset', 'Assets/Scenes/Density.unity',
-           'ProjectSettings/EditorBuildSettings.asset', 'Assets/Grass/Tilted.asset', 'Assets/Scenes/Aligned.unity']
+           'ProjectSettings/EditorBuildSettings.asset', 'Assets/Grass/Tilted.asset', 'Assets/Scenes/Aligned.unity',
+           'Assets/Grass/Instanced.asset', 'Assets/Scenes/Instanced.unity']
 
 
 def copy_project(destination, release):
@@ -46,7 +47,7 @@ def complete(directory):
     if not path.is_file():
         return 'missing grass.jsonl'
     lines = path.read_text().splitlines()
-    if not lines or not any('"case":"mode_switch"' in line for line in lines):
+    if not lines or not any('"terrain":"Instanced"' in line for line in lines):
         return 'incomplete grass.jsonl'
     return None
 
@@ -56,7 +57,7 @@ def main():
     parser.add_argument('command', choices=['create', 'record', 'publish'])
     parser.add_argument('--release', required=True)
     parser.add_argument('--label', default='record')
-    parser.add_argument('--method', default='CreateDensity', choices=['CreateDensity', 'CreateRefusals', 'CreateAligned'],
+    parser.add_argument('--method', default='CreateDensity', choices=['CreateDensity', 'CreateRefusals', 'CreateAligned', 'CreateInstanced'],
                         help='the ProbeRunner method `create` runs')
     parser.add_argument('--base', type=Path, help='publish: the reference rows that must stay (default: Reference/grass.jsonl)')
     args = parser.parse_args()

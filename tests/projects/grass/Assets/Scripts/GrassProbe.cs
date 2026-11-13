@@ -15,7 +15,7 @@ using UnityEngine.SceneManagement;
 /// from a camera. Then the same for the terrains of the scene `Density`, loaded additively, with
 /// their prototypes' validation, a third density, the legacy distribution and the logged messages;
 /// then for the scene `Aligned`; then a terrain made here (zero noise seeds, a count over 16, a
-/// scatter mode switch). Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
+/// scatter mode switch); then the scene `Instanced`. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GrassProbe : MonoBehaviour
 {
@@ -132,6 +132,16 @@ public class GrassProbe : MonoBehaviour
         foreach (var v in modes.GetDetailLayer(0, 0, 32, 32, 0)) left += v;
         Record("mode_switch", $"\"sum\":{left},\"supported\":[{string.Join(",", modes.GetSupportedLayers(0, 0, 32, 32))}]");
         // No image of it: a terrain made here does not render byte-identically from run to run.
+
+        // The scene `Instanced`: two instanced mesh layers in the same patches.
+        before = FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+        yield return SceneManager.LoadSceneAsync("Instanced", LoadSceneMode.Additive);
+        var instanced = FindObjectsByType<Terrain>(FindObjectsSortMode.None).Where(t => !before.Contains(t)).OrderBy(t => t.name).ToArray();
+        foreach (var terrain in instanced)
+            RecordTerrain(terrain, true);
+        yield return null;
+        foreach (var terrain in instanced)
+            Render(camera, target, terrain, dir);
 
         File.WriteAllText(Path.Combine(dir, "grass.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
