@@ -264,7 +264,15 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     let database_seconds = start.elapsed().as_secs_f64() - project_seconds;
     let mut found = BTreeMap::new();
     let mut files = 0usize;
+    // Assets of the Editor's own importers that Unbound does not implement.
+    let mut builtin_imports: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
     for asset in db.iter().filter(|a| !a.is_folder) {
+        if let Some(importer) = unbound_assets::meta::unsupported_importer_of(&asset.file) {
+            builtin_imports
+                .entry(importer)
+                .or_default()
+                .insert(asset.path.clone());
+        }
         // Unity YAML only (scenes, prefabs, YAML assets); imported files are not objects here.
         if let Some(bytes) = read_yaml(&asset.file) {
             files += 1;
@@ -342,6 +350,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "audioLimitations": AUDIO_LIMITATIONS,
             "playModeSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
             "unsupportedMessages": messages.messages,
+            "builtinImporterAssets": builtin_imports,
             "messageAnalysisFailedAssemblies": messages.failed_assemblies,
         });
         println!("{}", serde_json::to_string_pretty(&report)?);
@@ -420,6 +429,16 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     println!("\nRendering limitations:");
     for limitation in RENDERING_LIMITATIONS {
         println!("  {limitation}");
+    }
+    if !builtin_imports.is_empty() {
+        println!("\nAssets of Editor importers Unbound does not implement (not imported):");
+        for (importer, assets) in &builtin_imports {
+            println!(
+                "  {importer}: {} assets: {}",
+                assets.len(),
+                some_files(assets, 3)
+            );
+        }
     }
     if let Some(atlases) = &play_mode_atlases {
         println!("\nSprite atlases:\n  {}", atlases.doctor_message());

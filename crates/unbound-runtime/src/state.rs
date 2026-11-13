@@ -115,7 +115,14 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                 .extension()
                 .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
             if !is_asset {
-                return None;
+                // Assets of the Editor's own scripted importers (SpeedTree 9 trees) are not
+                // imported: say so instead of reading the file as a serialized one.
+                return unbound_assets::meta::unsupported_importer_of(file).map(|importer| {
+                    Err(anyhow::anyhow!(
+                        "{} is imported by Unity's {importer}, which Unbound does not implement (`unbound doctor` lists such assets)",
+                        file.display()
+                    ))
+                });
             }
             let data = std::fs::read(file).ok()?;
             unbound_assets::serialized::is_binary(&data)

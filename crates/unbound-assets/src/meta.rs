@@ -41,6 +41,40 @@ pub fn legacy_file_id(class_id: i32, index: usize) -> i64 {
     class_id as i64 * 100_000 + 2 * index as i64
 }
 
+/// The GUID `.meta` files give the Editor's own (built-in) scripts.
+pub const BUILTIN_SCRIPT_GUID: &str = "0000000000000000e000000000000000";
+
+/// The Editor's own scripted importers Unbound does not implement, by their script's file ID
+/// (others, such as the style sheet importers of `.uss` and `.tss` files, are reproduced by
+/// Unbound's own importers).
+const UNSUPPORTED_BUILTIN_IMPORTERS: &[(i64, &str)] = &[(12405, "SpeedTree9Importer")];
+
+/// When a `.meta` names one of the Editor's own scripted importers that Unbound does not
+/// implement (SpeedTree 9 trees are imported by one): its name.
+pub fn unsupported_builtin_importer(meta: &Value) -> Option<&'static str> {
+    let script = importer(meta, "ScriptedImporter").get("script")?;
+    if script.get("guid")?.as_str()? != BUILTIN_SCRIPT_GUID {
+        return None;
+    }
+    let id = script.get("fileID")?.as_i64()?;
+    UNSUPPORTED_BUILTIN_IMPORTERS
+        .iter()
+        .find(|(script, _)| *script == id)
+        .map(|(_, name)| *name)
+}
+
+/// The unsupported built-in importer an asset file's `.meta` names, if any
+/// ([`unsupported_builtin_importer`]); `None` without a readable `.meta`.
+pub fn unsupported_importer_of(file: &std::path::Path) -> Option<&'static str> {
+    let mut meta = file.as_os_str().to_owned();
+    meta.push(".meta");
+    let text = std::fs::read_to_string(meta).ok()?;
+    if !text.contains(BUILTIN_SCRIPT_GUID) {
+        return None;
+    }
+    unsupported_builtin_importer(&unbound_yaml::parse_value(&text).ok()?)
+}
+
 /// The importer section of a parsed `.meta` (`TextureImporter`, ...), or [`Value::Null`].
 pub fn importer<'a>(meta: &'a Value, name: &str) -> &'a Value {
     static NULL: Value = Value::Null;
@@ -260,6 +294,36 @@ impl<'a> FileIdAllocator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn names_the_editors_own_importers_unbound_does_not_implement() {
+        let meta = |guid: &str, id: i64| {
+            unbound_yaml::parse_value(&format!(
+                "fileFormatVersion: 2\nScriptedImporter:\n  script: {{fileID: {id}, guid: {guid}, type: 0}}\n"
+            ))
+            .unwrap()
+        };
+        assert_eq!(
+            unsupported_builtin_importer(&meta(BUILTIN_SCRIPT_GUID, 12405)),
+            Some("SpeedTree9Importer")
+        );
+        // The Editor's style sheet importer (`.uss`): Unbound imports those itself.
+        assert_eq!(
+            unsupported_builtin_importer(&meta(BUILTIN_SCRIPT_GUID, 12385)),
+            None
+        );
+        // A project's or package's importer is run by Unbound.
+        assert_eq!(
+            unsupported_builtin_importer(&meta("4dd1a3e1c2b5a4b4aa7e8b1c3b1e5d00", 11500000)),
+            None
+        );
+        assert_eq!(
+            unsupported_builtin_importer(
+                &unbound_yaml::parse_value("TextureImporter:\n  a: 1\n").unwrap()
+            ),
+            None
+        );
+    }
 
     fn importer_of(text: &str) -> Value {
         let meta = unbound_yaml::parse_value(text).unwrap();
