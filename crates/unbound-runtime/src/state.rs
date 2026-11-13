@@ -936,7 +936,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             let path = unbound_assets::sprite_mesh::mesh_boundary(&r.vertices, &r.triangles);
-            Ok(json!({ "paths": [path] }).to_string())
+            let paths: Vec<_> = Some(path).filter(|p| !p.is_empty()).into_iter().collect();
+            Ok(json!({ "paths": paths }).to_string())
         }
         "texture-sprites" => {
             #[derive(Deserialize)]

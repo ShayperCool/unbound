@@ -93,7 +93,6 @@ namespace UnityEngine
         /// the collider's transform space there (offset not applied).</summary>
         internal virtual void BuildShapes(Matrix4x4 toBody, List<Shape> shapes) { }
 
-        /// <summary>The shapes must be rebuilt (a geometry or contact property changed).</summary>
         /// <summary>The smallest size component or radius the shape setters keep (measured: setting
         /// 0, -3 or 1e-6 keeps 0.0001; tests/projects/spriteoutlines).</summary>
         internal const float MinimumExtent = 0.0001f;
@@ -114,6 +113,12 @@ namespace UnityEngine
             return true;
         }
 
+        /// <summary>The offset an added collider takes from fitted bounds: their centre, zero when it
+        /// is not finite (measured with a set local bounds centre that is not a number).</summary>
+        internal static Vector2 FittedOffset(Vector3 centre) =>
+            float.IsFinite(centre.x) && float.IsFinite(centre.y) ? new Vector2(centre.x, centre.y) : Vector2.zero;
+
+        /// <summary>The shapes must be rebuilt (a geometry or contact property changed).</summary>
         internal void ShapeChanged()
         {
             CaptureMaterial();
@@ -657,7 +662,8 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The largest radius an added circle takes from its renderer's bounds.</summary>
+        /// <summary>The largest radius an added circle takes from its renderer's bounds (measured with
+        /// bounds 4e6 wide; tests/projects/spriteoutlines).</summary>
         const float MaximumFittedRadius = 1e6f;
 
         /// <summary>Added to an object with a renderer: the circle around its bounds (the larger
@@ -668,7 +674,7 @@ namespace UnityEngine
             if (!RendererLocalBounds(out var b)) return;
             float r = b.extents.y <= b.extents.x ? b.extents.x : b.extents.y;
             m_Radius = r < MinimumExtent ? MinimumExtent : Mathf.Min(r, MaximumFittedRadius);
-            offset = b.center;
+            offset = FittedOffset(b.center);
         }
 
         [global::System.@ObsoleteAttribute("CircleCollider2D.center has been deprecated. Use CircleCollider2D.offset instead (UnityUpgradable) -> offset", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public Vector2 center
@@ -746,7 +752,7 @@ namespace UnityEngine
             if (sprite != null) b = sprite.SimpleSpriteBounds();
             else if (!RendererLocalBounds(out b)) return;
             size = new Vector2(b.extents.x + b.extents.x, b.extents.y + b.extents.y);
-            offset = b.center;
+            offset = FittedOffset(b.center);
         }
 
         public float edgeRadius
@@ -835,7 +841,7 @@ namespace UnityEngine
         {
             if (!RendererLocalBounds(out var b)) return;
             size = new Vector2(b.extents.x + b.extents.x, b.extents.y + b.extents.y);
-            offset = b.center;
+            offset = FittedOffset(b.center);
         }
 
         public CapsuleDirection2D direction
@@ -1144,12 +1150,14 @@ namespace UnityEngine
 
         public int edgeCount => Math.Max(0, m_Points.Length - 1);
 
-        /// <summary>The narrowest renderer bounds (half width) an added edge spans.</summary>
+        /// <summary>The narrowest renderer bounds (half width) an added edge spans: bounds 1.004e-4
+        /// wide give the default edge, 1.006e-4 wide a level one (tests/projects/spriteoutlines).</summary>
         const float MinimumFittedHalfWidth = 5.025e-5f;
 
         /// <summary>Added to an object with a renderer: a level edge across its bounds at their
-        /// centre, or the default edge when they are narrower than 0.0001 (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/spriteoutlines).</summary>
+        /// centre, or the default edge when they are narrower than about 1.005e-4; an end that is
+        /// not finite is the origin (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteoutlines).</summary>
         internal override void OnAddedByScript()
         {
             if (!RendererLocalBounds(out var b)) return;

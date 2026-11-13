@@ -164,10 +164,14 @@ namespace UnityEngine
             if (physics) m_PhysicsShape = Paths(geometry.Physics);
         }
 
+        /// <summary>The pivot as a fraction of the rect (zero along an empty side).</summary>
+        internal float[] NormalizedPivot() =>
+            new[] { m_Rect.width > 0 ? m_Pivot.x / m_Rect.width : 0f, m_Rect.height > 0 ? m_Pivot.y / m_Rect.height : 0f };
+
         GeometryJson TraceRequest(Dictionary<string, object> request, bool tight, bool physics)
         {
             request["rect"] = new[] { m_Rect.x, m_Rect.y, m_Rect.width, m_Rect.height };
-            request["pivot"] = new[] { m_Rect.width > 0 ? m_Pivot.x / m_Rect.width : 0f, m_Rect.height > 0 ? m_Pivot.y / m_Rect.height : 0f };
+            request["pivot"] = NormalizedPivot();
             request["pixelsPerUnit"] = m_PixelsPerUnit;
             request["extrude"] = m_Extrude;
             request["tight"] = tight;

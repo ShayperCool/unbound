@@ -22,12 +22,14 @@ namespace UnityEditor.Sprites
         /// tests/projects/spriteoutlines): a Polygon-mode sprite's is its mesh's boundary (the
         /// arguments are not used), any other sprite's rect is traced from its texture as
         /// <see cref="GenerateOutline"/> traces it. The PSD and Aseprite importers make their
-        /// generated physics shapes with it. Without texels to trace, no paths.</summary>
+        /// generated physics shapes with it. Without texels to trace or an empty mesh, no paths.</summary>
         internal static void GenerateOutlineFromSprite(Sprite sprite, float detail, byte alphaTolerance, bool holeDetection, out Vector2[][] paths)
         {
             if (sprite == null) throw new ArgumentNullException(nameof(sprite));
             if (sprite.m_IsPolygon)
             {
+                paths = Array.Empty<Vector2[]>();
+                if (!Native.IsReady) return;
                 var request = new Dictionary<string, object>
                 {
                     ["vertices"] = Array.ConvertAll(sprite.m_Vertices ?? Array.Empty<Vector2>(), v => new[] { v.x, v.y }),
@@ -36,10 +38,8 @@ namespace UnityEditor.Sprites
                 paths = Paths(Native.Call("sprite-mesh-boundary", System.Text.Json.JsonSerializer.Serialize(request)));
                 return;
             }
-            var rect = sprite.m_Rect;
-            var pivot = new[] { rect.width > 0 ? sprite.m_Pivot.x / rect.width : 0f, rect.height > 0 ? sprite.m_Pivot.y / rect.height : 0f };
-            paths = Trace(sprite.m_SourceTexture ?? sprite.m_Texture, rect, detail, alphaTolerance, holeDetection,
-                new Dictionary<string, object> { ["pivot"] = pivot, ["pixelsPerUnit"] = sprite.m_PixelsPerUnit });
+            paths = Trace(sprite.m_SourceTexture ?? sprite.m_Texture, sprite.m_Rect, detail, alphaTolerance, holeDetection,
+                new Dictionary<string, object> { ["pivot"] = sprite.NormalizedPivot(), ["pixelsPerUnit"] = sprite.m_PixelsPerUnit });
         }
 
         static Vector2[][] Trace(Texture2D texture, Rect rect, float detail, byte alphaTolerance, bool holeDetection, Dictionary<string, object> sprite)

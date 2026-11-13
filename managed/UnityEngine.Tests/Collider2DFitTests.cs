@@ -102,6 +102,30 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void FittedShapesKeepTheirLimits()
+        {
+            GameObject Bounded(Vector3 centre, Vector3 size)
+            {
+                var go = Sprited(OffCentre(), false, false);
+                go.GetComponent<SpriteRenderer>().localBounds = new Bounds(centre, size);
+                return go;
+            }
+            // An edge spans bounds from about 1.005e-4 wide; narrower ones keep the default edge.
+            var narrow = Bounded(new Vector3(.5f, .25f, 0), new Vector3(1.004e-4f, 2, 0)).AddComponent<EdgeCollider2D>();
+            Near(new Vector2(-.5f, 0), narrow.points[0]); Near(new Vector2(.5f, 0), narrow.points[1]);
+            var spanned = Bounded(new Vector3(.5f, .25f, 0), new Vector3(1.006e-4f, 2, 0)).AddComponent<EdgeCollider2D>();
+            Assert.Equal(.5f - 1.006e-4f / 2, spanned.points[0].x, 6); Assert.Equal(.25f, spanned.points[0].y, 5);
+            Assert.Equal(.5f + 1.006e-4f / 2, spanned.points[1].x, 6);
+            // A circle's radius stops at 1e6.
+            Assert.Equal(1e6f, Bounded(new Vector3(3, -1, 0), new Vector3(4e6f, 1, 0)).AddComponent<CircleCollider2D>().radius);
+            // A centre that is not a number: zero offsets, edge ends at the origin.
+            var nan = Bounded(new Vector3(float.NaN, .5f, 0), new Vector3(2, 1, 0));
+            Near(Vector2.zero, nan.AddComponent<BoxCollider2D>().offset);
+            Near(Vector2.zero, nan.AddComponent<CircleCollider2D>().offset);
+            Near(Vector2.zero, nan.AddComponent<EdgeCollider2D>().points[1]);
+        }
+
+        [Fact]
         public void PrimitivesAndSizesAreThoseUnityKeeps()
         {
             var go = new GameObject("shaped"); objects.Add(go);

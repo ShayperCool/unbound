@@ -46,6 +46,9 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
         public Path[] polygon;
         public Vector2[] edge;
         public Vector3 localCenter, localExtents, worldCenter, worldExtents;
+        /// <summary>The renderer's bounds are not finite (then recorded as zero: the comparator
+        /// takes numbers only).</summary>
+        public bool boundsNotFinite;
     }
 
     [Serializable] public sealed class Capture
@@ -218,6 +221,23 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
                 var r = go.AddComponent<SpriteRenderer>();
                 r.sprite = ellipse; r.localBounds = new Bounds(new Vector3(1, -.5f, .25f), new Vector3(3, 1, .5f));
             }));
+            // Set local bounds at the limits the fitted shapes keep: narrow ones around the edge's
+            // narrowest width, a huge one for the circle's largest radius, and a centre that is not
+            // a number.
+            foreach (var (label, centre, size) in new[]
+            {
+                ("narrow1.000e-4", new Vector3(.5f, .25f, 0), new Vector3(1e-4f, 2, 0)),
+                ("narrow1.004e-4", new Vector3(.5f, .25f, 0), new Vector3(1.004e-4f, 2, 0)),
+                ("narrow1.006e-4", new Vector3(.5f, .25f, 0), new Vector3(1.006e-4f, 2, 0)),
+                ("narrow1.010e-4", new Vector3(.5f, .25f, 0), new Vector3(1.01e-4f, 2, 0)),
+                ("huge", new Vector3(3, -1, 0), new Vector3(4e6f, 1, 0)),
+                ("nanCentre", new Vector3(float.NaN, .5f, 0), new Vector3(2, 1, 0)),
+            })
+                fitted.Add(Fit("EllipseR-localBounds-" + label, go =>
+                {
+                    var r = go.AddComponent<SpriteRenderer>();
+                    r.sprite = ellipse; r.localBounds = new Bounds(centre, size);
+                }));
             fitted.Add(Fit("EllipseR-disabled", go =>
             {
                 var r = go.AddComponent<SpriteRenderer>();
@@ -389,6 +409,10 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
         var edge = Make("edge").AddComponent<EdgeCollider2D>();
         if (after != null) foreach (var c in new Collider2D[] { box, circle, capsule, polygon, edge }) after(c.gameObject);
         var renderer = box.GetComponent<Renderer>();
+        Bounds local = renderer != null ? renderer.localBounds : default, world = renderer != null ? renderer.bounds : default;
+        bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+        bool finite = Finite(local.center) && Finite(local.extents) && Finite(world.center) && Finite(world.extents);
+        if (!finite) local = world = default;
         return new Fitted
         {
             name = name,
@@ -397,10 +421,8 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
             capsuleSize = capsule.size, capsuleOffset = capsule.offset, capsuleDirection = capsule.direction.ToString(),
             polygon = Enumerable.Range(0, polygon.pathCount).Select(i => new Path { points = polygon.GetPath(i) }).ToArray(), polygonOffset = polygon.offset,
             edge = edge.points, edgeOffset = edge.offset, edgeRadius = edge.edgeRadius,
-            localCenter = renderer != null ? renderer.localBounds.center : Vector3.zero,
-            localExtents = renderer != null ? renderer.localBounds.extents : Vector3.zero,
-            worldCenter = renderer != null ? renderer.bounds.center : Vector3.zero,
-            worldExtents = renderer != null ? renderer.bounds.extents : Vector3.zero,
+            localCenter = local.center, localExtents = local.extents, worldCenter = world.center, worldExtents = world.extents,
+            boundsNotFinite = !finite,
         };
     }
 

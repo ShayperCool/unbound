@@ -33,7 +33,8 @@ mode the probe records:
   (`ArgumentNullException`).
 - Box, Circle, Capsule, Polygon and Edge colliders each added to a new object: sprites without
   and with each flip, Sliced and Tiled drawing (also flipped, also with an off-centre pivot), a
-  rotated and scaled object, set local bounds, a disabled renderer, a sprite renderer without a
+  rotated and scaled object, set local bounds (also 1.000e-4 to 1.010e-4 wide, 4e6 wide and with a
+  centre that is not a number), a disabled renderer, a sprite renderer without a
   sprite, no renderer, a rotated and scaled mesh renderer, a sprite without traceable texels and
   a renderer added after the colliders: their sizes, offsets, radii, paths and points, with the
   renderer's local and world bounds.
