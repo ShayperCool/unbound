@@ -547,7 +547,7 @@ namespace Unbound.Runtime.Playables
         {
             if (channel < 0) return true;
             for (int i = 0; i < width; i++)
-                if (!Stream.Animated[channel + i]) return true;
+                if (!Stream.IsSet(channel + i)) return true;
             return false;
         }
 
@@ -556,16 +556,16 @@ namespace Unbound.Runtime.Playables
         {
             if (channel < 0) return false;
             for (int i = 0; i < width; i++)
-                if (Stream.Animated[channel + i]) return true;
+                if (Stream.IsSet(channel + i)) return true;
             return false;
         }
 
         /// <summary>A vector with the default pose's components where the stream has not set them.</summary>
         Vector3 Defaulted(Vector3 v, int channel, Unbound.Runtime.Humanoid.F4 pose)
         {
-            if (channel < 0 || !Stream.Animated[channel]) v.x = pose.x;
-            if (channel < 0 || !Stream.Animated[channel + 1]) v.y = pose.y;
-            if (channel < 0 || !Stream.Animated[channel + 2]) v.z = pose.z;
+            if (channel < 0 || !Stream.IsSet(channel)) v.x = pose.x;
+            if (channel < 0 || !Stream.IsSet(channel + 1)) v.y = pose.y;
+            if (channel < 0 || !Stream.IsSet(channel + 2)) v.z = pose.z;
             return v;
         }
 
@@ -783,14 +783,14 @@ namespace Unbound.Runtime.Playables
         {
             if (channel < 0) return;
             Stream.Values[channel] = v.x; Stream.Values[channel + 1] = v.y; Stream.Values[channel + 2] = v.z;
-            Stream.Animated[channel] = Stream.Animated[channel + 1] = Stream.Animated[channel + 2] = true;
+            for (int i = 0; i < 3; i++) Stream.Set(channel + i);
         }
 
         internal void Write(int channel, Quaternion q)
         {
             if (channel < 0) return;
             AnimationEvaluation.SetQ(Stream.Values, channel, q);
-            for (int i = 0; i < 4; i++) Stream.Animated[channel + i] = true;
+            for (int i = 0; i < 4; i++) Stream.Set(channel + i);
         }
     }
 
@@ -1464,7 +1464,7 @@ namespace UnityEngine.Animations
         {
             if (!Channel(stream, out var c, out int ch)) return;
             c.Stream.Values[ch] = value;
-            c.Stream.Animated[ch] = true;
+            c.Stream.Set(ch);
         }
 
         public int GetInt(AnimationStream stream) => (int)Math.Round(GetFloat(stream));

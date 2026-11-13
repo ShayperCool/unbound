@@ -205,7 +205,7 @@ namespace Unbound.Runtime.Playables
             int ch = b.HumanChannel(curve);
             if (ch < 0 || ch >= s.FloatCount) return;
             s.Values[ch] = value;
-            s.Animated[ch] = true;
+            s.Set(ch);
         }
 
         // ---------------------------------------------------------------- pose and skeleton

@@ -19,6 +19,9 @@ namespace Unbound.Runtime.Playables
         internal AnimationBindings Bindings;
         internal float[] Values = Array.Empty<float>();
         internal bool[] Animated = Array.Empty<bool>();
+        /// <summary>An animated channel that only default values fill: one that only inputs of
+        /// weight 0 animate, or that the output keeps bound (<see cref="IsSet"/>).</summary>
+        internal bool[] DefaultOnly = Array.Empty<bool>();
         internal Object[] Objects = Array.Empty<Object>();
         internal bool[] ObjectAnimated = Array.Empty<bool>();
         internal int FloatCount;
@@ -92,6 +95,7 @@ namespace Unbound.Runtime.Playables
             {
                 Values = new float[Math.Max(FloatCount, 16)];
                 Animated = new bool[Values.Length];
+                DefaultOnly = new bool[Values.Length];
             }
             if (Objects.Length < ObjectCount)
             {
@@ -100,8 +104,24 @@ namespace Unbound.Runtime.Playables
             }
             Array.Copy(b.Defaults, Values, FloatCount);
             Array.Clear(Animated, 0, FloatCount);
+            Array.Clear(DefaultOnly, 0, FloatCount);
             Array.Copy(b.ObjectDefaults, Objects, ObjectCount);
             Array.Clear(ObjectAnimated, 0, ObjectCount);
+        }
+
+        /// <summary>Whether a clip of weight above 0 or a job set a channel in this stream: what a
+        /// job's stream handle reads as the stream's value. A channel nothing set, or only default
+        /// values fill, reads what the stream holds for it unset (6000.0.71f1,
+        /// tests/projects/animoptimize jobUnanimatedMixer.Rig, jobUnanimatedIdle.Rig: a mixer
+        /// input of weight 0 leaves the job the avatar's default pose while the output writes
+        /// the bound value to the transform).</summary>
+        internal bool IsSet(int c) => Animated[c] && !DefaultOnly[c];
+
+        /// <summary>Marks a channel animated with real values (a clip's, a job's).</summary>
+        internal void Set(int c)
+        {
+            Animated[c] = true;
+            DefaultOnly[c] = false;
         }
 
         internal void CopyFrom(AnimStream o)
@@ -119,6 +139,7 @@ namespace Unbound.Runtime.Playables
             }
             Array.Copy(o.Values, Values, FloatCount);
             Array.Copy(o.Animated, Animated, FloatCount);
+            Array.Copy(o.DefaultOnly, DefaultOnly, FloatCount);
             Array.Copy(o.Objects, Objects, ObjectCount);
             Array.Copy(o.ObjectAnimated, ObjectAnimated, ObjectCount);
         }
@@ -478,13 +499,19 @@ namespace Unbound.Runtime.Playables
                 {
                     if (c + 3 < n && from.Animated[c] && (mask == null || mask[c]))
                     {
+                        bool defaultOnly = !(from.IsSet(c) && w > 0f) && !(to.IsSet(c) && w < 1f);
                         Nlerp(to.Values, c, from.Values, c, w);
-                        to.Animated[c] = to.Animated[c + 1] = to.Animated[c + 2] = to.Animated[c + 3] = true;
+                        for (int i = 0; i < 4; i++)
+                        {
+                            to.Animated[c + i] = true;
+                            to.DefaultOnly[c + i] = defaultOnly;
+                        }
                     }
                     c += 3;
                     continue;
                 }
                 if (!from.Animated[c] || (mask != null && !mask[c])) continue;
+                to.DefaultOnly[c] = !(from.IsSet(c) && w > 0f) && !(to.IsSet(c) && w < 1f);
                 to.Values[c] = w >= 1f ? from.Values[c] : to.Values[c] + (from.Values[c] - to.Values[c]) * w;
                 to.Animated[c] = true;
             }
@@ -513,12 +540,18 @@ namespace Unbound.Runtime.Playables
                         var delta = Quaternion.Inverse(Q(reference.Values, c)) * Q(from.Values, c);
                         var r = q * Quaternion.Slerp(Quaternion.identity, delta, w);
                         SetQ(to.Values, c, r);
-                        to.Animated[c] = to.Animated[c + 1] = to.Animated[c + 2] = to.Animated[c + 3] = true;
+                        bool defaultOnly = !(from.IsSet(c) && w > 0f) && !to.IsSet(c);
+                        for (int i = 0; i < 4; i++)
+                        {
+                            to.Animated[c + i] = true;
+                            to.DefaultOnly[c + i] = defaultOnly;
+                        }
                     }
                     c += 3;
                     continue;
                 }
                 if (!from.Animated[c] || (mask != null && !mask[c])) continue;
+                to.DefaultOnly[c] = !(from.IsSet(c) && w > 0f) && !to.IsSet(c);
                 to.Values[c] += w * (from.Values[c] - reference.Values[c]);
                 to.Animated[c] = true;
             }
@@ -618,10 +651,8 @@ namespace Unbound.Runtime.Playables
         }
 
         /// <summary>The mixer rule over input streams: per channel, the weighted sum of the inputs
-        /// of weight above 0 that animate it, completed to weight one with the default value; a
-        /// channel only inputs of weight 0 animate is not set in the stream (a job above reads
-        /// what an unset channel holds; the output writes its default value once it animated it:
-        /// 6000.0.71f1, tests/projects/animoptimize jobUnanimatedMixer.Rig.2).</summary>
+        /// that animate it, completed to weight one with the default value; a channel that only
+        /// inputs of weight 0 set holds only default values (AnimStream.IsSet).</summary>
         internal static void MixInto(AnimStream into, List<(AnimStream Stream, float Weight)> inputs)
         {
             into.GoalsInMotion = AlignGoalFrames(inputs);
@@ -652,11 +683,13 @@ namespace Unbound.Runtime.Playables
                 if (IsQuaternionStart(b, c, out _) && c + 3 < n)
                 {
                     float x = 0, y = 0, z = 0, w = 0, total = 0;
-                    bool any = false;
+                    bool any = false, set = false;
                     foreach (var (s, weight) in inputs)
                     {
-                        if (!s.Animated[c] || !(weight > 0f)) continue;
+                        if (!s.Animated[c]) continue;
                         any = true;
+                        if (weight <= 0f) continue;
+                        set |= s.IsSet(c);
                         float sx = s.Values[c], sy = s.Values[c + 1], sz = s.Values[c + 2], sw = s.Values[c + 3];
                         if (total > 0f && x * sx + y * sy + z * sz + w * sw < 0f) { sx = -sx; sy = -sy; sz = -sz; sw = -sw; }
                         x += weight * sx; y += weight * sy; z += weight * sz; w += weight * sw;
@@ -676,17 +709,22 @@ namespace Unbound.Runtime.Playables
                         {
                             into.Values[c] = x / m; into.Values[c + 1] = y / m; into.Values[c + 2] = z / m; into.Values[c + 3] = w / m;
                         }
-                        into.Animated[c] = into.Animated[c + 1] = into.Animated[c + 2] = into.Animated[c + 3] = true;
+                        for (int i = 0; i < 4; i++)
+                        {
+                            into.Animated[c + i] = true;
+                            into.DefaultOnly[c + i] = !set;
+                        }
                     }
                     c += 3;
                     continue;
                 }
                 float acc = 0f, sum = 0f;
-                bool animated = false;
+                bool animated = false, isSet = false;
                 foreach (var (s, weight) in inputs)
                 {
-                    if (!s.Animated[c] || !(weight > 0f)) continue;
+                    if (!s.Animated[c]) continue;
                     animated = true;
+                    isSet |= weight > 0f && s.IsSet(c);
                     acc += weight * s.Values[c];
                     sum += weight;
                 }
@@ -694,6 +732,7 @@ namespace Unbound.Runtime.Playables
                 if (sum < 1f) acc += (1f - sum) * defaults[c];
                 into.Values[c] = acc;
                 into.Animated[c] = true;
+                into.DefaultOnly[c] = !isSet;
             }
             for (int c = 0; c < into.ObjectCount; c++)
             {
@@ -1123,6 +1162,7 @@ namespace Unbound.Runtime.Playables
                 {
                     s.Values[c] = defaults[c];
                     s.Animated[c] = true;
+                    s.DefaultOnly[c] = true;
                 }
             }
             for (int c = 0; c < s.ObjectCount; c++)

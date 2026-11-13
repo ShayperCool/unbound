@@ -590,6 +590,47 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A mixer input animating an unanimated skeleton node: at weight 0.5 the
+        /// stream blends the clip with the value bound from the scene; where only an input of
+        /// weight 0 animates it the job reads the avatar's default pose while the output writes
+        /// the bound value to the transform, undoing a script's move (6000.0.71f1,
+        /// tests/projects/animoptimize jobUnanimatedMixer.Rig, jobUnanimatedIdle.Rig).</summary>
+        [Theory]
+        [InlineData(0.5f)]
+        [InlineData(0f)]
+        public void AMixerInputOfWeightZeroLeavesTheStreamTheDefaultPose(float weight)
+        {
+            var root = Rig(out var animator, out _);
+            var leg = root.transform.Find("Rig/Hips/Leg");
+            leg.localPosition = new Vector3(0f, 0f, 1f);
+            var clip = new AnimationClip();
+            foreach (var (axis, value) in new[] { ("x", 0.5f), ("y", -1f), ("z", -0.5f) })
+                clip.SetCurve("Rig/Hips/Leg", typeof(Transform), "m_LocalPosition." + axis, AnimationCurve.Constant(0f, 1f, value));
+            var graph = PlayableGraph.Create("mixer");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var mixer = AnimationMixerPlayable.Create(graph, 1);
+            mixer.ConnectInput(0, AnimationClipPlayable.Create(graph, clip), 0, weight);
+            var playable = AnimationScriptPlayable.Create(graph, new HandJob { Hand = animator.BindStreamTransform(leg) }, 1);
+            playable.ConnectInput(0, mixer, 0, 1f);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+            try
+            {
+                var blended = new Vector3(0.25f, -0.5f, 0.25f);
+                graph.Evaluate(0f);
+                Assert.Equal(weight > 0f ? blended : Vector3.zero, HandJob.Read);
+                Assert.Equal(weight > 0f ? blended : new Vector3(0f, 0f, 1f), leg.localPosition);
+                leg.localPosition = new Vector3(0f, 0f, 2f);
+                graph.Evaluate(0.25f);
+                Assert.Equal(weight > 0f ? blended : Vector3.zero, HandJob.Read);
+                Assert.Equal(weight > 0f ? blended : new Vector3(0f, 0f, 1f), leg.localPosition);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
         struct PropertyJob : IAnimationJob
         {
             public PropertyStreamHandle Property;
