@@ -126,11 +126,11 @@ def process_paths(proc=Path('/proc'), *, uid=None, privileged=True, exclude_pid=
 class ReferenceWatch:
     """Keep link discovery current while workers create outputs concurrently.
 
-    Watch before reading each directory. A queue overflow or a moved watched
-    directory invalidates discovery and stops cleanup. Existing destinations stay
+    Watch before reading each directory. A queue overflow or a directory moved
+    outside watched roots invalidates discovery and stops cleanup. Existing destinations stay
     protected even if their original link disappears during this run.
     """
-    CREATE, MOVED_TO = 0x100, 0x80
+    CREATE, MOVED_FROM, MOVED_TO, ISDIR = 0x100, 0x40, 0x80, 0x40000000
     DELETE_SELF, MOVE_SELF, OVERFLOW, IGNORED = 0x400, 0x800, 0x4000, 0x8000
     ONLYDIR, NOFOLLOW = 0x1000000, 0x2000000
 
@@ -140,6 +140,7 @@ class ReferenceWatch:
         if self.fd < 0:
             raise OSError(ctypes.get_errno(), 'cannot monitor reference directories')
         self.directories, self.references, self.retired = {}, set(), set()
+        self.moves, self.handled_moves, self.invalidated = {}, set(), set()
         self.excluded = tuple(p.resolve() for p in excluded)
 
     def close(self):
@@ -148,7 +149,7 @@ class ReferenceWatch:
             self.fd = -1
 
     def add(self, directory):
-        mask = self.CREATE | self.MOVED_TO | self.DELETE_SELF | self.MOVE_SELF | self.ONLYDIR | self.NOFOLLOW
+        mask = self.CREATE | self.MOVED_FROM | self.MOVED_TO | self.DELETE_SELF | self.MOVE_SELF | self.ONLYDIR | self.NOFOLLOW
         descriptor = self.libc.inotify_add_watch(self.fd, os.fsencode(directory), mask)
         if descriptor < 0:
             number = ctypes.get_errno()
@@ -156,6 +157,16 @@ class ReferenceWatch:
                 return
             raise OSError(number, f'cannot monitor reference directory {directory}; cleanup deferred')
         self.directories[descriptor] = directory
+
+    def relocate(self, source, destination):
+        # A parent rename changes the location of every descendant watch. Rescan
+        # the moved tree too: existing relative links may now name new targets.
+        for descriptor, previous in self.directories.items():
+            if inside(previous, source):
+                self.directories[descriptor] = destination/previous.relative_to(source)
+                if previous == source:
+                    self.handled_moves.add(descriptor)
+        self.invalidated.update((source, destination))
 
     def poll(self):
         pending = set()
@@ -166,7 +177,7 @@ class ReferenceWatch:
                 break
             offset = 0
             while offset < len(data):
-                descriptor, mask, _, length = struct.unpack_from('iIII', data, offset)
+                descriptor, mask, cookie, length = struct.unpack_from('iIII', data, offset)
                 name = os.fsdecode(data[offset+16:offset+16+length].split(b'\0', 1)[0])
                 offset += 16+length
                 if mask & self.OVERFLOW:
@@ -180,11 +191,18 @@ class ReferenceWatch:
                     self.directories.pop(descriptor, None)
                     continue
                 if mask & self.MOVE_SELF:
+                    if descriptor in self.handled_moves:
+                        self.handled_moves.remove(descriptor)
+                        continue
                     raise OSError(f'reference directory moved: {directory}; cleanup deferred')
                 if mask & self.IGNORED:
                     self.directories.pop(descriptor, None)
                     continue
                 path = directory/name
+                if mask & self.MOVED_FROM:
+                    if mask & self.ISDIR:
+                        self.moves[cookie] = path
+                    continue
                 try:
                     if path.is_symlink():
                         raw = path.readlink()
@@ -193,6 +211,9 @@ class ReferenceWatch:
                         if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
                             pending.add(target.resolve())
                     elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
+                        source = self.moves.pop(cookie, None) if mask & self.MOVED_TO else None
+                        if source is not None:
+                            self.relocate(source, path)
                         self.add(path)
                         pending.add(path)
                 except OSError as error:
@@ -208,7 +229,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     inspect configured caches and all checkouts; installations and compiler stores
     are excluded. An incomplete index walk permits no deletion.
     """
-    found, visited = set(), set()
+    found, visited = set(), {}
     excluded = set(p.resolve() for p in excluded)
     roots = list(dict.fromkeys(Path(p).absolute() for p in roots))
     # One shared cache index for every scan root. No index files in checkouts.
@@ -227,8 +248,18 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                         continue
                     raise info
                 identity = (info.st_dev, info.st_ino)
-                if identity in visited:
-                    continue
+                previous = visited.get(identity)
+                if previous is not None:
+                    if previous == directory:
+                        continue
+                    try:
+                        previous_info = previous.stat()
+                    except OSError as error:
+                        if not gone(error):
+                            raise
+                    else:
+                        if (previous_info.st_dev, previous_info.st_ino) == identity:
+                            continue
                 try:
                     entries = index.entries(directory, info)
                 except OSError as error:
@@ -238,7 +269,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                         pending.append(directory)
                         continue
                     raise
-                visited.add(identity)
+                visited[identity] = directory
                 for entry in entries:
                     path = directory/entry.name
                     if entry.is_symlink():
@@ -258,6 +289,12 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                         pending.append(path)
             if watcher:
                 pending.extend(watcher.poll())
+                if watcher.invalidated:
+                    stale = [key for key, path in visited.items()
+                             if any(inside(path, root) for root in watcher.invalidated)]
+                    for key in stale:
+                        del visited[key]
+                    watcher.invalidated.clear()
         if watcher:
             found.update(watcher.references)
         if prune:

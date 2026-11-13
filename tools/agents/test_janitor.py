@@ -317,6 +317,75 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(removed)
         self.assertIn(run/'output', references)
 
+    def movable_relative_link(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        source = self.cache/'old-parent/tree'
+        source.mkdir(parents=True)
+        harmless = self.cache/run.name/'output'
+        harmless.parent.mkdir()
+        harmless.write_text('unrelated target')
+        (source/'relative-link').symlink_to(Path('../..')/run.name/'output')
+        destination = run.parent/'retained/tree'
+        destination.parent.mkdir()
+        return run, source, destination
+
+    def test_directory_move_resolves_existing_relative_links_in_new_context(self):
+        run, source, destination = self.movable_relative_link()
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.assertNotIn(run/'output', self.j.links)
+            source.rename(destination)
+            self.j.refresh_links()
+            self.assertIn(run/'output', self.j.links)
+            self.assertEqual(self.j.protection_reason(run), 'symlink reference')
+
+    def test_directory_move_during_initial_scan_rescans_relative_links(self):
+        run, source, destination = self.movable_relative_link()
+        watcher = janitor.ReferenceWatch()
+        self.addCleanup(watcher.close)
+        original = janitor.DirectoryIndex.entries
+        moved = False
+        def moving_entries(index, directory, info):
+            nonlocal moved
+            entries = original(index, directory, info)
+            if directory == source and not moved:
+                moved = True
+                source.rename(destination)
+            return entries
+        with patch.object(janitor.DirectoryIndex, 'entries', moving_entries):
+            references = janitor.reference_paths([self.cache, self.volume], watcher=watcher)
+        self.assertTrue(moved)
+        self.assertIn(run/'output', references)
+
+    def test_directory_move_updates_descendant_watch_paths(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        source = self.cache/'source'
+        (source/'nested').mkdir(parents=True)
+        destination = self.cache/'destination'
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            source.rename(destination)
+            self.j.refresh_links()
+            (destination/'nested/new-reference').symlink_to(run/'output')
+            self.j.apply = True
+            self.assertFalse(self.j.remove(run, kind='run', hours=72))
+        self.assertTrue(run.is_dir())
+
+    def test_directory_move_outside_watched_roots_defers_cleanup(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        source = self.cache/'source'
+        source.mkdir()
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            source.rename(self.root/'outside-watched-roots')
+            self.j.apply = True
+            with self.assertRaisesRegex(OSError, 'reference directory moved'):
+                self.j.remove(run, kind='run', hours=72)
+        self.assertTrue(run.is_dir())
+
     def test_reference_watch_overflow_fails_closed(self):
         run = self.directory('unbound-validation/runs/probe-20261101-old')
         with self.guards():
