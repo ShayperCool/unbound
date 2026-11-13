@@ -121,3 +121,15 @@ documents manual velocity control and that its effect appears on the next update
 defines the agent's avoidance space. Neither specifies proximity-grid insertion
 or nonfinite-input handling; those rules above are observations for the measured
 release, with controls where the agent is moving before the invalid assignment.
+
+Q401 (Unity 6000.0.71f1 reference, Unbound on macOS arm64) leaves these scenarios
+unchanged; its post-step corner reports change no navmesh value. Walker's divergence
+is a tie. At frame 32 Unbound's walker steers straight at the corner
+(-3.667, -8.5), which is also where the next NavMesh edge it avoids begins. Its
+desired velocity's ray therefore meets that edge at the edge's end point, and
+rounding places the meeting just inside the edge. The time to impact falls just below
+the prediction time, and a ring sample wins over the desired velocity. The reference
+keeps the desired velocity for one more update (frame 33 still moves at 3.499, 0.099).
+No constant or tolerance is changed for this, and the sampling weights are unchanged.
+The other agents' residuals (blocked corners from 191, left hasPath at 222, right
+arrival at 241, climber rounding) remain as described above.

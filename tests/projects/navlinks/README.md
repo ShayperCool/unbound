@@ -257,3 +257,22 @@ and their first differing frames:
 | `targets` | 1 | 130 | stale |
 | `warpauto` | 1 | 85 | stale |
 | `warpwait` | 1 | 92 | stale |
+
+Remaining causes after Q401, by case:
+
+- `endatlink` (81, every frame's corners): the reference's straight path keeps the
+  link's end at z = 40.0000038 and the path's end at z = 40 as two corners. Unbound's
+  crossing point is exactly the path's end and merges into it. Merging only exactly
+  equal points was tried and changes nothing, because Unbound's crossing is exact.
+- `crosstile` (118): from frame 103, when the occupied link frees and the waiting
+  agent starts its approach, the approach direction differs by about 1e-4.
+- `areamask` (54): the trajectory differs below a millimetre from frame 6 and an
+  avoidance sample choice flips at frame 102.
+- `waitrebuild.*` (59): path, endpoint and staleness reports after disabling the
+  occupied link, as described above.
+- `redirectmid`, `completeauto`, `disableagent`, `resetmid` and three staleness values
+  remain as listed in the table above.
+
+An arrival rule tested on the remaining arrival cases (a braking agent arriving when the
+straight distance to the end is below its previous step) adds failures (325 -> 501,
+and two configurations each in avoidance arrival, arrival-start and runs), so it was not kept.

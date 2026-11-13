@@ -134,10 +134,10 @@ completion frames and cross-object callback order retain their scoped records.
 | lightprobes | 246 of 625 keys, previously 250 | 228 numeric-only keys, maximum absolute component delta 1.1920928955078125e-7; 12 combined-mesh query-index keys, four hull/shared-count keys and two combined occlusion-at-probe keys | residual (228, strict); gap (18). Q406 reconstructs the query bounds through center and half-size, fixing four occlusion rows with no lost matches. The combined visualization mesh has 87 inner cells versus 86; the current finite enclosure suppresses one valid cell. Construction/order and combined boundary-cell selection remain open, row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery` |
 | lines | 1 of 2201 keys, previously 16 | `line.color.PerceptualBlend.c[101]`, one colour byte; all 15 trail-time values now match | residual (1), existing perceptual-gradient precision scope; Q374 closes the trail-time discrepancy |
 | lod | 0 of 17 records (11 before) | The level rule now ends a level where the camera's scaled distance equals the level's reach (a tie draws the next level), and the probe was re-recorded in a windowed Editor (the previous reference was a batch-mode capture whose renders came within the Editor's level hold, row below) with sample positions that are the same float in every scripting runtime and a 2 ms real-time wait between renders. The former 0.8 near-plane residual was a sample position computed at double precision by the Editor's scripting runtime, not a clipping difference | closed, row `LODGroup transition distance` |
-| navbaked (height agents) | 14 of 816 values after Q377, previously 18; new coupling control 41/41 | Retaining the requested transform move after Warp fixes all four under-stair coordinates. Thirteen bump X positions (frames 90 to 150) and ramp vertical velocity at frame 205 remain | partial, row `Height-mesh agent arrival and under-stair Warp`; imported height queries 103/103; runtime height-mesh generation unsupported |
+| navbaked (height agents) | 14 of 816 values after Q377, previously 18; new coupling control 41/41; unchanged by Q401 | Retaining the requested transform move after Warp fixes all four under-stair coordinates. Thirteen bump X positions (frames 90 to 150) and ramp vertical velocity at frame 205 remain. Q401 ruled out steering from the polygon height instead of the height-mesh height (14 -> 195 values) | partial, row `Height-mesh agent arrival and under-stair Warp`; imported height queries 103/103; runtime height-mesh generation unsupported |
 | navlinks | 325 values after Q401, previously 374 (637 before Q385) | hasPath and steeringTarget now report the corners found after each step: the landing-frame hasPath of 29 lanes, `costhigh` and seven `areamask` steering-target values match. No previously passing value regresses. `crosstile` 118, first position at 103; `endatlink` 81, first corners at 1; `areamask` 54, first desired velocity at 102. Disabling the occupied link retains 59 path/staleness values | all remaining cases and first frames in tests/projects/navlinks/README.md; strict reference and tolerances retained |
-| navmesh | 212 restored-baked-mesh agent frames; runtime builds and nine bounds controls match | Q385 prediction bounds cover each neighbour's radius and travel: climber records 196 -> 3, right 225 -> 1; all 44 added prediction, finite-input and large-obstacle scenarios match. Walker still differs from 33, blocked from 191, left hasPath at 222 and right arrival at 241. Three climber rounding records remain from 21 | open distinct steering, corner and arrival causes; translated-build differences resolved; current controls and scope in tests/projects/navmesh/README.md |
-| navpath (Q385 query and steering scope) | 23 placed-link route values, 2 wide-link offsets and 17 post-avoidance values; replan.topofar now 1687/1687 | Bent landing routes, wide-link approach offsets of 16.7/4.6 cm, post coordinate errors of 1.4 to 4.7 cm (position distance up to 5.7 cm) remain unchanged; Q376 resolved both initial replan.topofar corner counts | open, rows `Navigation link query residuals` and `Navigation post avoidance and replanning checks`; no fixture-specific corrections |
+| navmesh | 212 restored-baked-mesh agent frames; runtime builds and nine bounds controls match | Q385 prediction bounds cover each neighbour's radius and travel: climber records 196 -> 3, right 225 -> 1; all 44 added prediction, finite-input and large-obstacle scenarios match. Walker still differs from 33 (211 frames): at 32 Unbound's desired velocity aims exactly at its steering corner, which also starts the next NavMesh edge, so its ray meets that edge's end point within rounding and its sampling picks another velocity; Unity keeps the desired one. Blocked differs from 191, left hasPath at 222 and right arrival at 241. Three climber rounding records remain from 21 | open distinct steering, corner and arrival causes; translated-build differences resolved; current controls and scope in tests/projects/navmesh/README.md |
+| navpath (Q385/Q401 query and steering scope) | 23 placed-link route values, 2 wide-link offsets and 17 post-avoidance values; replan.topofar now 1687/1687; unchanged by Q401 | Bent landing routes, wide-link approach offsets of 16.7/4.6 cm, post coordinate errors of 1.4 to 4.7 cm (position distance up to 5.7 cm) remain unchanged; Q376 resolved both initial replan.topofar corner counts | open, rows `Navigation link query residuals` and `Navigation post avoidance and replanning checks`; no fixture-specific corrections |
 | navpath layers diagnostic | 523 of 5826 values, in 18 of 30 scenarios; 12 scenarios match | Point-link endpoints join extra stacked floors; connection lifetime, source-bake climb and eight-layer wide-link corner heights also differ | open, row `Stacked runtime link ownership and lifetime`; separate strict `--profile layers` reproducer, no listed-key exceptions or fixed layer-budget claim |
 | oroorder | 86 missing and 86 extra lines of 1171 after Q374, previously 91 pairs; 24 of 34 order renders differ | The five scene-object ID sign and numeric-sort lines now match. Remaining raw lines: 48 OnRenderObject receiver orders, 11 SetGameObjectsActive callback orders, 4 exception-text lines, 21 pose lines and 2 JSON digit lines. The Q363 recorder repair and all existing reference rows are unchanged | order (59), rows `OnRenderObject initial handler order` and `GameObject.SetGameObjectsActive/InstantiateGameObjects`; retained exception text (4), numerical residuals (23); identity discrepancy closed in `LazyLoadReference<T> and instance-id lookup helpers` |
 | particleemission | passes (17171 records; 26 values in 4 of 16573 before) | — | closed: row `Simulate without restart on a stopped system` |
@@ -173,30 +173,44 @@ the map. Edge controls cover nonfinite segment metadata and queries, not arbitra
 nonfinite dynamic contacts or malformed adjacent endpoints. The measured results
 do not establish universal parity outside the recorded contexts.
 
-The Q385 navigation work took runtime mesh regions first, then neighbour prediction,
-link movement and reporting, query/height scope, and this closure. Each item has a
-separate reviewed landing. The original translated-build differences fall from 36
-to zero, with all nine bounds controls matching. Restored-baked-mesh agent failures
-fall from 238 to 212 distinct frame scenarios. The expanded navlinks reference falls
-from 637 to 374 differing values with no previously passing value lost; all 1453
-added orientation, endpoint, stopping and transform-write records match. Avoidance
-falls from 41 configurations in five groups to 34 in four groups. All 608 values in
-44 added prediction, finite-input and large-obstacle scenarios match.
+The Q401 navigation work reports `hasPath` and `steeringTarget` from the corners
+found after each step (reviewed landing on main 05d1946874). The navlinks reference
+falls from 374 to 325 differing values and avoidance from 34 configurations in four
+groups to 3 in two, with no previously passing value or record lost. The navmesh,
+navbaked, navcost and navpath outputs are unchanged. The engine runs were made on
+macOS arm64 against the existing Linux Editor references; the Linux land gate gives
+the same counts. No new Editor capture was recorded.
 
-The six-probe regression gate passes against the unchanged sheriff baseline. This
-retains strict raw failures: navmesh 212 frame scenarios, navlinks 374 values, the
-34 avoidance configurations, navpath placed routes 23/163, wide-link offsets 2/167
-and post avoidance 17/578, and navbaked height agents 14/816. Imported height queries
-remain 103/103; runtime height generation remains unsupported with its warning.
-`replan.topofar` is closed at 1687/1687. The separate new stacked-link diagnostic
-fails strictly in 523 values across 18 scenarios and remains a topology follow-up.
-Its reference does not replace the main navpath reference or admit any failures in
-that comparator.
+Earlier work (Q385) took runtime mesh regions first, then neighbour prediction, link
+movement and reporting, query/height scope and closure, each in its own reviewed landing.
+The original translated-build differences fell from 36 to zero, with all nine bounds
+controls matching, and the restored-baked-mesh agent failures from 238 to 212 frame
+scenarios. All 1453 added navlinks orientation, endpoint, stopping and transform-write
+records and all 608 values in 44 added navmesh prediction, finite-input and
+large-obstacle scenarios match.
 
-Remaining work is split by observable cause: baked-agent steering and corner timing;
-arrival/path reports and occupied-link changes; bent and wide-link query routes;
-persistent point-link layer ownership and selective reconnection; bump/ramp arrival;
-runtime height generation; and post/avoidance sampling. The three climber rounding
+The six-probe regression gate retains strict raw failures: navmesh 212 frame
+scenarios, navlinks 325 values, 3 avoidance configurations, navpath placed routes
+23/163, wide-link offsets 2/167 and post avoidance 17/578, and navbaked height agents
+14/816. Imported height queries remain 103/103; runtime height generation remains
+unsupported with its warning. `replan.topofar` is closed at 1687/1687. The separate
+stacked-link diagnostic fails strictly in 523 values across 18 scenarios and remains a
+topology follow-up. Its reference does not replace the main navpath reference or admit
+any failures in that comparator.
+
+Remaining work is split by observable cause. Several residuals turn on ties that
+rounding decides: walker's desired ray through the vertex that starts the next edge
+(navmesh, 211 frames); the `endatlink` link end one float step from the path's end
+(navlinks, 81 corner values); `areamask` desired velocity from 102 after a sub-millimetre
+trajectory drift (54); the three avoidance configurations' second-frame steering
+target at an intermediate corner. The others are the `crosstile` approach direction
+after the occupied link frees (118); the disabled occupied link's path reports (59);
+baked-agent corners (blocked), arrival (right) and hasPath (left); bent and wide-link
+query routes; persistent point-link layer ownership and selective reconnection; bump/ramp
+arrival; runtime height generation; and post avoidance. Q401 rejected two candidate
+rules that regressed measured cases: merging only exactly equal straight-path points
+(no change) and an arrival test against the previous step's straight distance (navlinks
+325 -> 501, avoidance arrival configurations regress). The three climber rounding
 records stay in the raw count and the numerical-residual table, without a corrective
 constant. Other releases retain the previous unmeasured navigation mechanisms
 through Compat. No capture establishes universal parity outside its recorded context.
