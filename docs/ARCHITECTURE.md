@@ -271,11 +271,11 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (`v2f_surf`/`vert_surf`/`frag_surf`, built per variant from an analysis of the preprocessed
   code: input and output structs, vertex modifier, lighting function form), lit by the main
   directional light, unshadowed, with spherical-harmonics ambient and vertex-lit point lights; no
-  lightmaps, forward-add passes or reflection probes (specular reflections are
-  `unity_IndirectSpecColor`). The lighting variables come from the scene: the main directional
-  light (the RenderSettings sun, else the brightest enabled one), the RenderSettings ambient
-  (flat/trilight as spherical harmonics; skybox ambient approximated by the sky color) and fog
-  (`FOG_*` keyword), sent with each frame as global properties. A renderer's
+  lightmaps or forward-add passes; the Standard models reflect the renderer's reflection probes or
+  the default reflection, as Unity's generated pass does. The lighting variables come from the
+  scene: the main directional light (the RenderSettings sun, else the brightest enabled one), the
+  RenderSettings ambient (flat/trilight as spherical harmonics; skybox ambient approximated by the
+  sky color) and fog (`FOG_*` keyword), sent with each frame as global properties. A renderer's
   `MaterialPropertyBlock` draws with a copy of its material carrying the block. `unbound shaders
   [--builtin]` compiles every pass of every shader.
 * **Remote play** (`unbound run --remote [ADDRESS:PORT]`, `unbound-remote`): the window's presented
