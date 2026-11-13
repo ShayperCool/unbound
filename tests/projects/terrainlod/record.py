@@ -32,7 +32,7 @@ def outputs(directory):
 
 def complete(directory):
     path = directory/'terrainlod.jsonl'
-    if not path.is_file() or len(path.read_text().splitlines()) != 10:
+    if not path.is_file() or len(path.read_text().splitlines()) != 13:
         return 'missing or incomplete terrainlod.jsonl'
     return None
 

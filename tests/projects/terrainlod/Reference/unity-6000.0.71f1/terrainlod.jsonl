@@ -4,7 +4,10 @@
 {"image":"pe200","pixelError":200,"basemapDistance":1000,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":false}
 {"image":"maxlod2","pixelError":1,"basemapDistance":1000,"maximumLOD":2,"minimumLODSimplification":0,"orthographic":false}
 {"image":"minsimpl","pixelError":200,"basemapDistance":1000,"maximumLOD":0,"minimumLODSimplification":2,"orthographic":false}
+{"image":"minsimpl1","pixelError":200,"basemapDistance":1000,"maximumLOD":0,"minimumLODSimplification":1,"orthographic":false}
+{"image":"maxlod3minsimpl2","pixelError":200,"basemapDistance":1000,"maximumLOD":3,"minimumLODSimplification":1,"orthographic":false}
 {"image":"low","pixelError":8,"basemapDistance":1000,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":false}
 {"image":"ortho","pixelError":20,"basemapDistance":1000,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":true}
+{"image":"tiles","pixelError":30,"basemapDistance":1000,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":false}
 {"image":"base150","pixelError":5,"basemapDistance":150,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":false}
 {"image":"base0","pixelError":5,"basemapDistance":0,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":false}
