@@ -91,6 +91,54 @@ namespace UnityEngine.Tests
             Assert.Equal(arm64 ? armY : x86Y, center.y);
         }
 
+        // tests/projects/solverpairorder --transform-inputs frame/box/23/2 (static, rotated-child) and
+        // frame/capsuleH/23/2 (rotated-child) at (0.3, -0.2): the static frame is the same on both hosts.
+        [Theory]
+        [InlineData("box", "static", new[] { 2.45359445f, -0.1549417f, 1.82842493f, 1.31786609f, -1.85359454f, -0.245058313f, -1.22842479f, -1.71786618f, 0f },
+            new[] { 2.45359445f, -0.1549417f, 1.82842493f, 1.31786609f, -1.85359454f, -0.245058313f, -1.22842479f, -1.71786618f, 0f })]
+        [InlineData("box", "rotated-child", new[] { 2.12262464f, -0.366694748f, 1.78996587f, 1.19834137f, -2.12262464f, 0.366694748f, -1.78996587f, -1.19834137f, 0f },
+            new[] { 2.12262464f, -0.3666947f, 1.78996587f, 1.19834137f, -2.12262464f, 0.3666947f, -1.78996587f, -1.19834137f, 0f })]
+        [InlineData("capsuleH", "rotated-child", new[] { -2.15192485f, -0.4574057f, 2.15192485f, 0.4574057f, 0.8f },
+            new[] { -2.151925f, -0.4574057f, 2.151925f, 0.4574057f, 0.799999952f })]
+        public void BoxAndCapsuleFramesFollowTheHostEditor(string kind, string frame, float[] arm64, float[] x86)
+        {
+            var go = Make("target");
+            go.transform.position = new Vector3(.3f, -.2f, 2);
+            go.transform.rotation = Quaternion.Euler(0, 0, 23);
+            go.transform.localScale = new Vector3(2, 1.6f, 1);
+            if (frame == "rotated-child")
+            {
+                var parent = Make("body");
+                parent.transform.position = new Vector3(.3f, -.2f, 2);
+                parent.transform.rotation = Quaternion.Euler(0, 0, 11);
+                parent.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+                go.transform.SetParent(parent.transform, true);
+            }
+            Collider2D collider;
+            if (kind == "box")
+            {
+                var box = go.AddComponent<BoxCollider2D>();
+                box.size = new Vector2(2, 1);
+                collider = box;
+            }
+            else
+            {
+                var capsule = go.AddComponent<CapsuleCollider2D>();
+                capsule.direction = CapsuleDirection2D.Horizontal;
+                capsule.size = new Vector2(3, 1);
+                collider = capsule;
+            }
+            Physics2D.SyncTransforms();
+            var group = new PhysicsShapeGroup2D();
+            collider.GetShapes(group);
+            var vertices = new List<Vector2>();
+            group.GetShapeVertices(0, vertices);
+            var actual = new List<float>();
+            foreach (var v in vertices) { actual.Add(v.x); actual.Add(v.y); }
+            actual.Add(group.GetShape(0).radius);
+            Assert.Equal(System.Runtime.Intrinsics.Arm.AdvSimd.IsSupported ? arm64 : x86, actual.ToArray());
+        }
+
         // The independent geometryframe2d Native pair records these four displacements.
         // A tolerance smaller than the displacement prevents a zero center from passing.
         [Theory]

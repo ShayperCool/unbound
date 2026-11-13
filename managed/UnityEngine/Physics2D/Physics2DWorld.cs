@@ -156,7 +156,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Maps points of a collider's transform space into the frame of the body at the given
-        /// pose; <paramref name="body"/> is the body's transform, null for the static frame.</summary>
+        /// pose; <paramref name="body"/> is the body's transform, null for the static frame, whose pose
+        /// is the world origin.</summary>
         internal static Matrix4x4 ToBodyMatrix(Transform collider, Transform body, Vector2 bodyPosition, float bodyAngle)
         {
             // Native uses the conjugate of the pose quaternion. A general
@@ -166,8 +167,11 @@ namespace Unbound.Runtime
             var world = collider.localToWorldMatrix;
             Matrix4x4 m;
             if (Compat.TransformArithmeticArm64)
-                m = ToBodyMatrixArm64(world, inverse, rotation, body == null ? null : (bool?)ReferenceEquals(body, collider),
-                    bodyPosition, body == null ? 0f : body.position.z);
+            {
+                System.Diagnostics.Debug.Assert(body != null || (bodyPosition == Vector2.zero && bodyAngle == 0f));
+                bool? onCollider = body == null ? null : ReferenceEquals(body, collider);
+                m = ToBodyMatrixArm64(world, inverse, rotation, onCollider, bodyPosition, onCollider == false ? body.position.z : 0f);
+            }
             else
             {
                 m = inverse * world;
