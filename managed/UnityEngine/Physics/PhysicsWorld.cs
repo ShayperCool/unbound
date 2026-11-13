@@ -1558,7 +1558,7 @@ namespace Unbound.Runtime
                 {
                     float alpha = Mathf.Clamp01(elapsed / dt);
                     position = Vector3.LerpUnclamped(rb.m_PreviousPosition, rb.m_CurrentPosition, alpha);
-                    rotation = Quaternion.Slerp(rb.m_PreviousRotation, rb.m_CurrentRotation, alpha);
+                    rotation = QuaternionMath.Slerp(rb.m_PreviousRotation, rb.m_CurrentRotation, Mathf.Clamp01(alpha));
                 }
                 else
                 {

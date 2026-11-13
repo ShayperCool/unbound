@@ -241,7 +241,7 @@ namespace Unbound.Runtime.Playables
             {
                 Known = to.Known && from.Known,
                 Delta = to.Delta + (from.Delta - to.Delta) * w,
-                Turn = Quaternion.Slerp(to.Turn, from.Turn, w),
+                Turn = QuaternionMath.Slerp(to.Turn, from.Turn, Mathf.Clamp01(w)),
             };
         }
 
@@ -549,7 +549,7 @@ namespace Unbound.Runtime.Playables
                     {
                         var q = Q(to.Values, c);
                         var delta = Quaternion.Inverse(Q(reference.Values, c)) * Q(from.Values, c);
-                        var r = q * Quaternion.Slerp(Quaternion.identity, delta, w);
+                        var r = q * QuaternionMath.Slerp(Quaternion.identity, delta, Mathf.Clamp01(w));
                         SetQ(to.Values, c, r);
                         bool defaultOnly = DefaultOnlyOver(to, from, c);
                         for (int i = 0; i < 4; i++)

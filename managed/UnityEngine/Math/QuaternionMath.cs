@@ -45,6 +45,57 @@ namespace UnityEngine
             return dot > 1f - Quaternion.kEpsilon ? 0f : (float)Math.Acos(dot) * 2f * Mathf.Rad2Deg;
         }
 
+        /// <summary>
+        /// Spherical interpolation along the shorter arc in double precision, normalized: the engine's
+        /// own blending of rotations (root motion, layer turns, body interpolation), which the
+        /// animation and physics probes measure. Unity's scripting Quaternion.Slerp is
+        /// Quaternion.SlerpUnclamped, with its own single-precision order.
+        /// </summary>
+        internal static Quaternion Slerp(Quaternion a, Quaternion b, float t)
+        {
+            double dot = (double)a.x * b.x + (double)a.y * b.y + (double)a.z * b.z + (double)a.w * b.w;
+            double bx = b.x, by = b.y, bz = b.z, bw = b.w;
+            if (dot < 0.0)
+            {
+                dot = -dot;
+                bx = -bx;
+                by = -by;
+                bz = -bz;
+                bw = -bw;
+            }
+            double wa, wb;
+            if (dot > 0.9999)
+            {
+                wa = 1.0 - t;
+                wb = t;
+            }
+            else
+            {
+                double theta = Math.Acos(Math.Min(dot, 1.0));
+                double sinTheta = Math.Sin(theta);
+                wa = Math.Sin((1.0 - t) * theta) / sinTheta;
+                wb = Math.Sin(t * theta) / sinTheta;
+            }
+            double rx = wa * a.x + wb * bx;
+            double ry = wa * a.y + wb * by;
+            double rz = wa * a.z + wb * bz;
+            double rw = wa * a.w + wb * bw;
+            double n = Math.Sqrt(rx * rx + ry * ry + rz * rz + rw * rw);
+            if (n < 1e-30)
+                return Quaternion.identity;
+            return new Quaternion((float)(rx / n), (float)(ry / n), (float)(rz / n), (float)(rw / n));
+        }
+
+        /// <summary>Normalized linear interpolation along the shorter arc with the weights summed in
+        /// single precision: the engine's constraint blending, which tests/projects/constraints measures.</summary>
+        internal static Quaternion LerpUnclamped(Quaternion a, Quaternion b, float t)
+        {
+            float sign = Dot(a, b) < 0F ? -1F : 1F;
+            float u = 1F - t;
+            float st = sign * t;
+            return Normalize(new Quaternion(a.x * u + b.x * st, a.y * u + b.y * st, a.z * u + b.z * st, a.w * u + b.w * st));
+        }
+
         internal static Quaternion RotateTowards(Quaternion from, Quaternion to, float maxDegreesDelta)
         {
             float angle = Angle(from, to);

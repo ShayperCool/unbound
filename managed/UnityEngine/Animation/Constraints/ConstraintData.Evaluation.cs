@@ -170,7 +170,7 @@ namespace Unbound.Runtime
                 if (Mathf.Abs(SourceTotal()) < 1e-6f)
                 { t.localRotation = Quaternion.Euler(RotationRest); return; }
                 var candidate = Kind == ConstraintKind.Aim || Kind == ConstraintKind.LookAt ? SourceAim() : SourceRotation(Kind == ConstraintKind.Parent);
-                candidate = Quaternion.LerpUnclamped(Quaternion.Euler(RotationRest), candidate, weight);
+                candidate = QuaternionMath.LerpUnclamped(Quaternion.Euler(RotationRest), candidate, weight);
                 var axes = Kind == ConstraintKind.LookAt ? (Axis)7 : RotationAxis;
                 var angles = Quaternion.ToEulerRad(candidate) * Mathf.Rad2Deg;
                 var current = Quaternion.ToEulerRad(t.localRotation) * Mathf.Rad2Deg;

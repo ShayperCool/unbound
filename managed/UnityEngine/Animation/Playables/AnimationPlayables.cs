@@ -605,7 +605,7 @@ namespace Unbound.Runtime.Playables
             {
                 Known = below.Known,
                 Delta = below.Delta + layer.Delta * w,
-                Turn = below.Turn * Quaternion.Slerp(Quaternion.identity, layer.Turn, Math.Min(w, 1f)),
+                Turn = below.Turn * QuaternionMath.Slerp(Quaternion.identity, layer.Turn, Mathf.Clamp01(w)),
             };
         }
 

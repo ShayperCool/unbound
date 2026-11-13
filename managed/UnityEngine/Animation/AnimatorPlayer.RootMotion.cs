@@ -235,7 +235,7 @@ namespace Unbound.Runtime
                 float layerWeight = i == 0 ? 1f : layer.Evaluated;
                 if (layerWeight <= 0f) continue;
                 delta += m_RootDeltas[i] * layerWeight;
-                turn *= Quaternion.Slerp(Quaternion.identity, own, i == 0 ? 1 : layerWeight);
+                turn *= QuaternionMath.Slerp(Quaternion.identity, own, i == 0 ? 1f : Mathf.Clamp01(layerWeight));
             }
             return (delta, turn);
         }
@@ -432,7 +432,7 @@ namespace Unbound.Runtime
                 var (d, q) = MotionDelta(Bindings.Bind(clip), clip, ClipSampling.StateClipNormalized(from, clip.length) + offset,
                     ClipSampling.StateClipNormalized(match.Finish || match.PredictCurrentPose ? to : match.End, clip.length) + offset, pos, rot);
                 toEnd += d * weight;
-                turnToEnd *= Quaternion.Slerp(Quaternion.identity, q, weight);
+                turnToEnd *= QuaternionMath.Slerp(Quaternion.identity, q, Mathf.Clamp01(weight));
             }
             var rotation = animator.m_MotionRootRotation;
             // A goal target keeps the goals' orientation offset (tests/projects/humanoid match.genericLeftHand).
