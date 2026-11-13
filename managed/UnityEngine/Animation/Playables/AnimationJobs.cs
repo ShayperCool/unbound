@@ -18,10 +18,11 @@ namespace Unbound.Runtime.Playables
         internal struct StreamTransform
         {
             internal Transform Transform;
-            /// <summary>The parent <see cref="Transform"/> had when the handle was bound or the
-            /// hierarchy last changed: what the handle's world values are read under once its
-            /// transform is destroyed.</summary>
-            internal Transform Parent;
+            /// <summary>The ancestors <see cref="Transform"/> had when the handle was bound or
+            /// the hierarchy last changed, its parent first, up to the Animator's transform: what
+            /// the handle's world values are read under once its transform is destroyed, the
+            /// destroyed ones among them through their stream values.</summary>
+            internal Transform[] Ancestors;
             /// <summary>The path <see cref="Transform"/> had below the Animator then (null:
             /// none): what tells a destroyed transform's handle from the skeleton's paths and
             /// the avatar's bones.</summary>
@@ -42,7 +43,9 @@ namespace Unbound.Runtime.Playables
             /// <summary>The handle's transform is destroyed and its channels go on in the
             /// stream: the handle reads and writes them as before (6000.0.71f1,
             /// tests/projects/animoptimize jobDestroyedRead.Rig: the handle stays valid and
-            /// resolved and reads what the clip gives its path, local and world; writes
+            /// resolved and reads what the clip gives its path, local and world, also once its
+            /// parent, an animated ancestor or the unanimated top node is destroyed too,
+            /// jobParentDestroyed, jobBranchDestroyed, jobRootDestroyed; writes
             /// unmeasured).</summary>
             internal bool Departed => Node < 0 && Transform == null && Position >= 0 && Rotation >= 0 && Scale >= 0;
         }
@@ -90,12 +93,78 @@ namespace Unbound.Runtime.Playables
             if (handle.Node < 0 && owner != null && handle.Transform != null) StreamOwned.Add(handle.Transform);
             if (handle.Transform != null)
             {
-                handle.Parent = handle.Transform.m_Parent;
+                handle.Ancestors = AncestorsOf(handle.Transform);
                 handle.Path = PathOf(handle.Transform);
+                // Found while they are alive: a destroyed one keeps its node.
+                DefaultNode(handle.Transform);
+                foreach (var ancestor in handle.Ancestors) DefaultNode(ancestor);
             }
             handle.Human = 0;
             handle.HumanFor = null;
             return handle;
+        }
+
+        /// <summary>A transform's ancestors, its parent first, up to the Animator's transform.</summary>
+        Transform[] AncestorsOf(Transform transform)
+        {
+            int count = 0;
+            for (var p = transform.m_Parent; p != null; p = p.m_Parent)
+            {
+                count++;
+                if (p == Animator.transform) break;
+            }
+            var ancestors = count == 0 ? Array.Empty<Transform>() : new Transform[count];
+            count = 0;
+            for (var p = transform.m_Parent; count < ancestors.Length; p = p.m_Parent) ancestors[count++] = p;
+            return ancestors;
+        }
+
+        readonly Dictionary<Transform, int> m_DefaultNodes = new Dictionary<Transform, int>(ReferenceEqualityComparer.Instance);
+        Unbound.Runtime.Humanoid.AvatarConstant m_DefaultNodesFor;
+
+        /// <summary>The generic avatar skeleton whose default pose the stream gives the nodes
+        /// nothing animates (null: none; humanoid avatars are unmeasured and keep the scene's
+        /// values).</summary>
+        Unbound.Runtime.Humanoid.AvatarConstant DefaultSkeleton()
+        {
+            var avatar = Animator.m_Avatar;
+            if (avatar == null || avatar.m_Human) return null;
+            var skeleton = avatar.Skeleton;
+            if (!ReferenceEquals(m_DefaultNodesFor, skeleton))
+            {
+                m_DefaultNodes.Clear();
+                m_DefaultNodesFor = skeleton;
+            }
+            return skeleton;
+        }
+
+        /// <summary>The node of the generic avatar's skeleton at a transform's path below the
+        /// Animator (-1: none, or the Animator's own transform), found once per transform and
+        /// avatar while the transform is alive.</summary>
+        int DefaultNode(Transform transform)
+        {
+            var skeleton = DefaultSkeleton();
+            if (skeleton == null || (object)transform == null) return -1;
+            if (m_DefaultNodes.TryGetValue(transform, out int node)) return node;
+            var path = transform != null ? PathOf(transform) : null;
+            node = string.IsNullOrEmpty(path) ? -1 : skeleton.NodeOfPath(HashedBindings.Crc32(path));
+            m_DefaultNodes[transform] = node;
+            return node;
+        }
+
+        /// <summary>The local pose a stream holds for a transform of the Animator's generic
+        /// avatar skeleton that no clip or job has set in it: the avatar's default pose (the
+        /// model's), not the transform's scene values, which the stream leaves alone. Measured in
+        /// 6000.0.71f1, tests/projects/animoptimize: an unanimated bone moved before its handle
+        /// is bound reads its default local and world values (jobUnanimated), and the world
+        /// values below an unanimated top node moved before the handles are bound, before the
+        /// Animator is first enabled or before Animator.Rebind leave the move out
+        /// (jobRootDestroyed, jobRootInactive, jobRootRebound).</summary>
+        internal bool DefaultLocal(Transform transform, out Unbound.Runtime.Humanoid.Trs local)
+        {
+            int node = DefaultNode(transform);
+            local = node > 0 ? m_DefaultNodesFor.DefaultPose.X[node] : default;
+            return node > 0;
         }
 
         internal void Bound(StreamTransform handle)
@@ -147,6 +216,7 @@ namespace Unbound.Runtime.Playables
         internal void HierarchyChanged()
         {
             StreamOwned.Clear();
+            m_DefaultNodes.Clear();
             m_NodeChannelsFor = -1;
             m_OffSkeletonFor = null;
             for (int i = 0; i < Transforms.Count; i++)
@@ -415,11 +485,32 @@ namespace Unbound.Runtime.Playables
 
         // ------------------------------------------------------------------ transforms in the stream
 
-        internal Vector3 LocalPosition(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localPosition; }
+        /// <summary>A transform's local position in the stream: its channel's value once a clip
+        /// or a job set it, else the generic avatar's default pose for a node of its skeleton
+        /// (AnimatorHandles.DefaultLocal), else the channel's bound value or the scene's. A null
+        /// <paramref name="t"/> reads the channel alone.</summary>
+        internal Vector3 LocalPosition(Transform t, int channel)
+        {
+            using var engine = MainThreadCheck.Engine();
+            if ((channel < 0 || !Stream.Animated[channel]) && Handles.DefaultLocal(t, out var x)) return new Vector3(x.t.x, x.t.y, x.t.z);
+            return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localPosition;
+        }
 
-        internal Quaternion LocalRotation(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? QuaternionMath.Normalize(AnimationEvaluation.Q(Stream.Values, channel)) : t.localRotation; }
+        /// <summary>A transform's local rotation in the stream (see <see cref="LocalPosition"/>).</summary>
+        internal Quaternion LocalRotation(Transform t, int channel)
+        {
+            using var engine = MainThreadCheck.Engine();
+            if ((channel < 0 || !Stream.Animated[channel]) && Handles.DefaultLocal(t, out var x)) return Unbound.Runtime.Humanoid.AnimatorHuman.Rotation(x.q);
+            return channel >= 0 ? QuaternionMath.Normalize(AnimationEvaluation.Q(Stream.Values, channel)) : t.localRotation;
+        }
 
-        internal Vector3 LocalScale(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localScale; }
+        /// <summary>A transform's local scale in the stream (see <see cref="LocalPosition"/>).</summary>
+        internal Vector3 LocalScale(Transform t, int channel)
+        {
+            using var engine = MainThreadCheck.Engine();
+            if ((channel < 0 || !Stream.Animated[channel]) && Handles.DefaultLocal(t, out var x)) return new Vector3(x.s.x, x.s.y, x.s.z);
+            return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localScale;
+        }
 
         /// <summary>A transform's local TRS as the stream has it (scene values where it does not).</summary>
         internal void Local(Transform t, out Vector3 p, out Quaternion r, out Vector3 s)
@@ -532,8 +623,8 @@ namespace Unbound.Runtime.Playables
             else
             {
                 ParentGlobal(handle, out var pp, out var pr, out var ps);
-                position = pp + pr * Vector3.Scale(ps, LocalPosition(null, handle.Position));
-                rotation = pr * LocalRotation(null, handle.Rotation);
+                position = pp + pr * Vector3.Scale(ps, LocalPosition(handle.Transform, handle.Position));
+                rotation = pr * LocalRotation(handle.Transform, handle.Rotation);
             }
         }
 
@@ -541,44 +632,74 @@ namespace Unbound.Runtime.Playables
         {
             if (NodeOf(handle, out var skeleton)) return NodeToWorld(skeleton, handle.Node);
             if (handle.Transform != null) return LocalToWorld(handle.Transform);
-            var local = Matrix4x4.TRS(LocalPosition(null, handle.Position), LocalRotation(null, handle.Rotation), LocalScale(null, handle.Scale));
-            return DepartedParent(handle) is Transform parent ? LocalToWorld(parent) * local : local;
+            int gone = DepartedBase(handle, out var bottom);
+            var m = bottom != null ? LocalToWorld(bottom) : Matrix4x4.identity;
+            for (int i = gone - 1; i >= 0; i--)
+            {
+                Local(handle.Ancestors[i], out var p, out var r, out var s);
+                m = m * Matrix4x4.TRS(p, r, s);
+            }
+            return m * Matrix4x4.TRS(LocalPosition(handle.Transform, handle.Position), LocalRotation(handle.Transform, handle.Rotation), LocalScale(handle.Transform, handle.Scale));
         }
 
-        /// <summary>The parent a destroyed transform's handle is read under (null when that is
-        /// destroyed too: the handle's values are then taken as the world's, reported once;
-        /// the Editor is unmeasured there).</summary>
-        Transform DepartedParent(in AnimatorHandles.StreamTransform handle)
+        /// <summary>How many of a destroyed transform's remembered ancestors, from its parent up,
+        /// are destroyed too, and the lowest one that is not (null when none is left). The
+        /// handle's world values are read under that one through the stream, and under the
+        /// destroyed ones by their stream values (the clip's for animated paths, else what they
+        /// held): what the clip gives the handle's path whichever of its ancestors are gone
+        /// (6000.0.71f1, tests/projects/animoptimize jobParentDestroyed, jobBranchDestroyed,
+        /// jobRootDestroyed).</summary>
+        int DepartedBase(in AnimatorHandles.StreamTransform handle, out Transform bottom)
         {
             using var engine = MainThreadCheck.Engine();
-            if (handle.Parent != null) return handle.Parent;
-            Stubs.Ignored("TransformStreamHandle world value after its transform and the transform's parent were destroyed",
-                "gives the handle's local values (not measured)");
-            return null;
+            var ancestors = handle.Ancestors ?? Array.Empty<Transform>();
+            int gone = 0;
+            while (gone < ancestors.Length && ancestors[gone] == null) gone++;
+            bottom = gone < ancestors.Length ? ancestors[gone] : null;
+            return gone;
         }
 
         /// <summary>The world position, rotation and scale of what the handle's target is
-        /// below: a skeleton node's parent node, a transform's parent, or the parent a
+        /// below: a skeleton node's parent node, a transform's parent, or the ancestors a
         /// destroyed transform had; all through the stream's values up to the Animator.</summary>
         internal void ParentGlobal(in AnimatorHandles.StreamTransform handle, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
             if (NodeParentGlobal(handle, out position, out rotation, out scale)) return;
             using var engine = MainThreadCheck.Engine();
-            var animator = Handles.Animator.transform;
-            var parent = handle.Transform != null ? handle.Transform.m_Parent : DepartedParent(handle);
+            if (handle.Transform != null)
+            {
+                var parent = handle.Transform.m_Parent;
+                if (parent != null && handle.Transform == Handles.Animator.transform)
+                {
+                    position = parent.position;
+                    rotation = parent.rotation;
+                    scale = parent.lossyScale;
+                }
+                else Global(parent, out position, out rotation, out scale);
+                return;
+            }
+            int gone = DepartedBase(handle, out var bottom);
+            Global(bottom, out position, out rotation, out scale);
+            for (int i = gone - 1; i >= 0; i--)
+            {
+                Local(handle.Ancestors[i], out var lp, out var lr, out var ls);
+                position = position + rotation * Vector3.Scale(scale, lp);
+                rotation = rotation * lr;
+                scale = Vector3.Scale(scale, ls);
+            }
+        }
+
+        /// <summary>A transform's world position, rotation and scale through the stream's values
+        /// up to the Animator, the scene above (identity for none).</summary>
+        void Global(Transform t, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
             position = Vector3.zero;
             rotation = Quaternion.identity;
             scale = Vector3.one;
-            if (parent == null) return;
-            if (handle.Transform == animator)
-            {
-                position = parent.position;
-                rotation = parent.rotation;
-                scale = parent.lossyScale;
-                return;
-            }
-            GlobalTR(parent, out position, out rotation);
-            for (var p = parent; p != null; p = p.m_Parent)
+            if (t == null) return;
+            var animator = Handles.Animator.transform;
+            GlobalTR(t, out position, out rotation);
+            for (var p = t; p != null; p = p.m_Parent)
             {
                 Local(p, out _, out _, out var s);
                 scale = Vector3.Scale(scale, s);

@@ -501,15 +501,17 @@ namespace UnityEngine.Tests
 
         /// <summary>After its transform is destroyed a stream handle goes on reading the
         /// stream's values of its path: the local values the clip gives it and the world values
-        /// under the parent it had (6000.0.71f1, tests/projects/animoptimize
-        /// jobDestroyedRead.Rig). Control: a second rig whose hand stays reads the same in every
-        /// evaluation, and the values change between the evaluations. Unbound's choice,
-        /// unmeasured in the Editor: with the parent destroyed too the handle gives its local
-        /// values as the world's.</summary>
+        /// under the ancestors it had, also when its parent, an animated ancestor or the
+        /// unanimated top node is destroyed with it (6000.0.71f1, tests/projects/animoptimize
+        /// jobDestroyedRead.Rig, jobParentDestroyed.Rig, jobBranchDestroyed.Rig,
+        /// jobRootDestroyed.Rig). Control: a second rig whose hand stays reads the same in every
+        /// evaluation, and the values change between the evaluations.</summary>
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void ADestroyedTransformsStreamHandleReadsItsPathsValues(bool withItsParent)
+        [InlineData("Rig/Hips/Spine/Hand")]
+        [InlineData("Rig/Hips/Spine")]
+        [InlineData("Rig/Hips")]
+        [InlineData("Rig")]
+        public void ADestroyedTransformsStreamHandleReadsItsPathsValues(string destroyed)
         {
             var root = Rig(out var animator, out _);
             var whole = Rig(out var wholeAnimator, out _);
@@ -523,7 +525,7 @@ namespace UnityEngine.Tests
                 Vector3 before = default;
                 for (int step = 0; step < 3; step++)
                 {
-                    if (step == 1) Object.DestroyImmediate((withItsParent ? hand.parent : hand).gameObject);
+                    if (step == 1) Object.DestroyImmediate(root.transform.Find(destroyed).gameObject);
                     float time = step == 0 ? 0f : step == 1 ? 0.5f : 0.25f;
                     wholeGraph.Evaluate(time);
                     Vector3 local = HandJob.Read, world = HandJob.World;
@@ -531,9 +533,7 @@ namespace UnityEngine.Tests
                     graph.Evaluate(time);
                     Assert.True(HandJob.Valid);
                     Assert.Equal(local, HandJob.Read);
-                    // With the parent gone too the local values stand for the world's: Unbound's
-                    // choice, the Editor is unmeasured there.
-                    Assert.Equal(withItsParent && step > 0 ? local : world, HandJob.World);
+                    Near(world, HandJob.World);
                     Assert.NotEqual(local, world);
                     if (step == 0) before = local;
                     else Assert.NotEqual(before, local);
@@ -545,6 +545,46 @@ namespace UnityEngine.Tests
                 wholeGraph.Destroy();
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(whole);
+            }
+        }
+
+        /// <summary>A node of a generic avatar's skeleton that nothing animates holds the
+        /// avatar's default pose in the stream, not its scene values (6000.0.71f1,
+        /// tests/projects/animoptimize jobUnanimated.Rig, jobRootDestroyed.Rig): the
+        /// unanimated Leg moved after the avatar was built reads its default local position
+        /// and a world position without the move of the unanimated Rig above it, while the
+        /// scene transforms keep their moves. Controls: a clip animating Leg gives its value;
+        /// the hand, animated, reads the clip under the moved Rig left out too.</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void UnanimatedSkeletonNodesReadTheAvatarsDefaultPose(bool legAnimated)
+        {
+            var root = Rig(out var animator, out _);
+            var rig = root.transform.Find("Rig");
+            var leg = root.transform.Find("Rig/Hips/Leg");
+            rig.localPosition = new Vector3(0f, 3f, 0f);
+            leg.localPosition = new Vector3(0f, 0f, 1f);
+            var clip = Clip();
+            if (legAnimated)
+                foreach (var (axis, value) in new[] { ("x", 0.5f), ("y", 0f), ("z", 0f) })
+                    clip.SetCurve("Rig/Hips/Leg", typeof(Transform), "m_LocalPosition." + axis, AnimationCurve.Constant(0f, 1f, value));
+            var graph = PlayJob(animator, clip, new HandJob { Hand = animator.BindStreamTransform(leg) });
+            try
+            {
+                graph.Evaluate(0f);
+                // Hips at (0, 1, 0) turned 10 degrees about z, under Rig at its default origin.
+                var hips = Matrix4x4.TRS(new Vector3(0f, 1f, 0f), Quaternion.Euler(0f, 0f, 10f), Vector3.one);
+                var expected = legAnimated ? new Vector3(0.5f, 0f, 0f) : Vector3.zero;
+                Assert.Equal(expected, HandJob.Read);
+                Near(hips.MultiplyPoint3x4(expected), HandJob.World);
+                Assert.Equal(new Vector3(0f, 3f, 0f), rig.localPosition);
+                Assert.Equal(legAnimated ? expected : new Vector3(0f, 0f, 1f), leg.localPosition);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
             }
         }
 
