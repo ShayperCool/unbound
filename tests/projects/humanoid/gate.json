@@ -1,0 +1,5 @@
+{
+  "fast_commands": [
+    "python3 -W ignore -m unittest discover -s tests/projects/humanoid -p test_compare.py"
+  ]
+}
