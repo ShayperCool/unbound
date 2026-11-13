@@ -199,7 +199,7 @@ fn definition(source: &Path, bytes: &[u8], meta: &Value) -> Result<AtlasDefiniti
 impl AtlasImporter<'_> {
     /// Packables Unbound does not pack: neither textures nor folders (scripted importers'
     /// sprites, `.psb`, `.svg`, ...), and such files inside folder packables.
-    fn skipped(&self, packables: &[(Guid, i64)]) -> Vec<String> {
+    fn skipped(&self, packables: &[(Guid, i64)]) -> Vec<(String, PathBuf)> {
         let mut out = Vec::new();
         for &(guid, _) in packables {
             let Some(asset) = self.db.by_guid(guid) else {
@@ -220,10 +220,10 @@ impl AtlasImporter<'_> {
                                         .contains(&e.to_ascii_lowercase().as_str())
                                 })
                         })
-                        .map(|a| a.path.clone()),
+                        .map(|a| (a.path.clone(), a.file.clone())),
                 );
             } else if AssetKind::from_path(&asset.file) != Some(AssetKind::Texture) {
-                out.push(asset.path.clone());
+                out.push((asset.path.clone(), asset.file.clone()));
             }
         }
         out
@@ -395,6 +395,12 @@ impl Importer for AtlasImporter<'_> {
             files.push(meta_path(&file));
             files.push(file);
         }
+        // The skipped packables are reported: adding or removing one changes the result.
+        files.extend(
+            self.skipped(&def.packables)
+                .into_iter()
+                .map(|(_, file)| file),
+        );
         Ok(files)
     }
 
@@ -431,7 +437,11 @@ impl Importer for AtlasImporter<'_> {
                 "atlas {}: packables that are not textures are not packed (their sprites keep their \
                  own textures, and the other sprites are laid out without them): {}",
                 def.name,
-                skipped.join(", ")
+                skipped
+                    .iter()
+                    .map(|(path, _)| path.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ));
         }
         if def.alpha_splitting {
@@ -636,5 +646,66 @@ mod tests {
             cancelled: Some("Packing Error".into()),
         });
         assert_eq!(json["cancelled"], "Packing Error");
+    }
+
+    #[test]
+    fn skipped_packables_are_reported_and_keyed() {
+        let root =
+            std::env::temp_dir().join(format!("unbound-atlas-skipped-{}", std::process::id()));
+        let assets = root.join("Assets");
+        std::fs::create_dir_all(assets.join("F/Nested")).unwrap();
+        let meta = |path: &Path, guid: &str| {
+            std::fs::write(
+                format!("{}.meta", path.display()),
+                format!("fileFormatVersion: 2\nguid: {guid}\n"),
+            )
+            .unwrap()
+        };
+        meta(&assets.join("F"), "f0000000000000000000000000000000");
+        meta(&assets.join("F/Nested"), "f1000000000000000000000000000000");
+        std::fs::write(assets.join("F/a.png"), b"").unwrap();
+        meta(&assets.join("F/a.png"), "a0000000000000000000000000000000");
+        let atlas = assets.join("A.spriteatlas");
+        std::fs::write(&atlas, "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!687078895 &1\nSpriteAtlas:\n  m_Name: A\n  m_EditorData:\n    packables:\n    - {fileID: 102900000, guid: f0000000000000000000000000000000, type: 3}\n").unwrap();
+        meta(&atlas, "c0000000000000000000000000000000");
+        let textures = TextureImporter::default();
+        let cache = AssetCache::new(root.join("cache"));
+        let scan = || {
+            AssetDb::scan(&[unbound_project::assetdb::Root {
+                dir: &assets,
+                virtual_path: "Assets".into(),
+            }])
+        };
+        let db = scan();
+        let importer = AtlasImporter {
+            db: &db,
+            textures: &textures,
+            cache: &cache,
+        };
+        let before = importer.dependencies(&atlas).unwrap();
+        assert!(before.iter().any(|p| p.ends_with("a.png")));
+        // A scripted importer's file in the folder: reported, and part of the key.
+        std::fs::write(assets.join("F/Nested/b.psb"), b"").unwrap();
+        meta(
+            &assets.join("F/Nested/b.psb"),
+            "b0000000000000000000000000000000",
+        );
+        let db = scan();
+        let importer = AtlasImporter {
+            db: &db,
+            textures: &textures,
+            cache: &cache,
+        };
+        let skipped = importer.skipped(&[(
+            Guid::parse("f0000000000000000000000000000000").unwrap(),
+            102900000,
+        )]);
+        assert_eq!(
+            skipped.iter().map(|(p, _)| p.as_str()).collect::<Vec<_>>(),
+            ["Assets/F/Nested/b.psb"]
+        );
+        let after = importer.dependencies(&atlas).unwrap();
+        assert!(after.iter().any(|p| p.ends_with("b.psb")) && after.len() == before.len() + 1);
+        std::fs::remove_dir_all(&root).ok();
     }
 }
