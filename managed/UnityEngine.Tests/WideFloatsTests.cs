@@ -290,12 +290,16 @@ public static class S { public static float Scale(float a, float t) { float r = 
         }
 
         [Fact]
-        public void OnlyTheMeasuredReleaseEvaluatesWide()
+        public void OnlyTheOptInAndTheMeasuredReleaseEvaluateWide()
         {
             var release = ProjectInfo.UnityVersion;
+            bool optIn = Unbound.Runtime.Compat.MonoFloats;
             try
             {
                 ProjectInfo.UnityVersion = "6000.0.71f1";
+                Unbound.Runtime.Compat.MonoFloats = false;
+                Assert.False(Unbound.Runtime.Compat.ScriptFloatsWide);
+                Unbound.Runtime.Compat.MonoFloats = true;
                 Assert.True(Unbound.Runtime.Compat.ScriptFloatsWide);
                 ProjectInfo.UnityVersion = "6000.0.72f1";
                 Assert.False(Unbound.Runtime.Compat.ScriptFloatsWide);
@@ -303,8 +307,19 @@ public static class S { public static float Scale(float a, float t) { float r = 
             finally
             {
                 ProjectInfo.UnityVersion = release;
+                Unbound.Runtime.Compat.MonoFloats = optIn;
             }
         }
+
+        [Theory]
+        [InlineData(null, false)]
+        [InlineData("", false)]
+        [InlineData("0", false)]
+        [InlineData("1", true)]
+        [InlineData("true", true)]
+        [InlineData("ON", true)]
+        public void TheEnvironmentVariableOptsIn(string value, bool expected) =>
+            Assert.Equal(expected, Unbound.Runtime.Compat.OptedIn(value));
 
         const string Edited = @"
 public static class Game

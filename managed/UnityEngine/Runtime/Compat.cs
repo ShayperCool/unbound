@@ -101,9 +101,18 @@ namespace Unbound.Runtime
         /// <summary>Script code evaluates float32 expressions with double intermediates and rounds them
         /// where its IL stores a float32 (locals, arguments, fields, array elements, boxes, call
         /// arguments and returns), as the Editor's Mono does: measured by tests/projects/floatrounding
-        /// on 6000.0.71f1 in both code optimization modes. Other releases keep CoreCLR's float32
-        /// evaluation, unmeasured.</summary>
-        internal static bool ScriptFloatsWide => Release == (6000, 0, 71, 'f', 1);
+        /// on 6000.0.71f1 in both code optimization modes. Off unless <see cref="MonoFloats"/> opts in
+        /// (user decision 2026-11-13: an artefact of the Editor's Mono runtime that IL2CPP builds do not
+        /// share), and then only for the measured release; otherwise game code keeps CoreCLR's float32
+        /// evaluation.</summary>
+        internal static bool ScriptFloatsWide => MonoFloats && Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>The opt-in to the Editor's Mono float evaluation of game code: the environment
+        /// variable UNBOUND_MONO_FLOATS set to 1, true or on when the engine starts.</summary>
+        internal static bool MonoFloats = OptedIn(Environment.GetEnvironmentVariable("UNBOUND_MONO_FLOATS"));
+
+        internal static bool OptedIn(string value) =>
+            value != null && (value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("on", StringComparison.OrdinalIgnoreCase));
 
         /// <summary>On arm64 hosts transform arithmetic follows the macOS arm64 Editor: a set rotation is
         /// normalized with one sum (x² + y²) + (z² + w²) for every component, and a scale's reciprocal

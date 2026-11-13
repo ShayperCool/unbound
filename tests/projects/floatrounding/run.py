@@ -6,7 +6,8 @@
     run.py publish A B --profile P [--host H]
                                             two byte-identical captures of host H (default: this one)
                                             -> Reference/unity-<release>/P.jsonl and P.H.jsonl
-    run.py gate --profile P [--label L]     the engine on a fresh copy with code optimization P,
+    run.py gate --profile P [--label L]     the engine on a fresh copy with code optimization P and the
+                                            Mono float opt-in (UNBOUND_MONO_FLOATS=1),
                                             compared with Reference/
 
 P is `release` or `debug`, the Editor's Code Optimization mode (`-releaseCodeOptimization`,
@@ -139,7 +140,8 @@ def gate(profile, label):
     capture = out/'engine'
     capture.mkdir(parents=True)
     cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(value_probe.REPO/'target/release/unbound')
-    env = {**os.environ, VARIABLE: str(capture), 'UNBOUND_CODE_OPTIMIZATION': profile}
+    # The probe measures the Editor's Mono float evaluation, an opt-in of the engine (off by default).
+    env = {**os.environ, VARIABLE: str(capture), 'UNBOUND_CODE_OPTIMIZATION': profile, 'UNBOUND_MONO_FLOATS': '1'}
     with (out/'engine.log').open('w') as log:
         code = subprocess.run([str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p',
                                str(project), '--no-watch', '--headless', '600'],
