@@ -228,10 +228,7 @@ namespace Unbound.Runtime
             var table = settings.Count > 0 ? NameTable(settings[0].Body) : null;
             var inHierarchy = HierarchyFileIds(ctx.m_Objects, file.Objects);
             foreach (var (identifier, obj) in ctx.m_Objects)
-            {
                 if (!inHierarchy.Contains(obj)) file.Objects[FileId(identifier, obj, table)] = obj;
-                file.Identifiers[obj] = identifier;
-            }
             // The main object takes the asset's file name, whatever the importer named it
             // (measured: tests/projects/svgsprites, a GameObject the importer names "transform"), after
             // its hierarchy's file ids are derived from the importer's names. A Shader keeps the name
@@ -245,7 +242,8 @@ namespace Unbound.Runtime
         /// File ids of the hierarchies of the added GameObjects, into <paramref name="into"/>; returns
         /// the objects given one. Each added GameObject without an added ancestor roots a hierarchy
         /// whose path is its identifier and name (<c>"Top/Tree"</c>); a child's path adds its name, a
-        /// component's its class name (<c>"Top/Tree/LOD0/MeshRenderer"</c>). An object's id is xxHash64
+        /// component's its class name (<c>"Top/Tree/LOD0/MeshRenderer"</c>; a script component's
+        /// <c>"MonoBehaviour-"</c> and its script class, <c>"Top/Holder/MonoBehaviour-Marker"</c>). An object's id is xxHash64
         /// of <c>"Type:" + class + "->" + path + index</c>, the index the first one (from 0) not taken
         /// yet, in depth-first order: the GameObject, its components, then its children. Names are
         /// those when the importer returns (before the main object takes the asset's name); a child
@@ -280,7 +278,9 @@ namespace Unbound.Runtime
             {
                 if (component == null) continue;
                 var type = NativeClassName(component);
-                Assign(component, type, path + "/" + type, into, given);
+                // A script names its class: "MonoBehaviour-Namespace.Class".
+                var segment = IsScriptObject(component) ? type + "-" + component.GetType().FullName : type;
+                Assign(component, type, path + "/" + segment, into, given);
             }
             for (int i = 0; i < t.childCount; i++)
             {

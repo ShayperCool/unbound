@@ -21,8 +21,6 @@ namespace Unbound.Runtime
         /// <summary>A ScriptedImporter's objects: their file ids are derived (ScriptedImports.Import),
         /// no document of the file holds them; a reference no object answers to is empty.</summary>
         internal bool UnknownFileIds;
-        /// <summary>The identifiers a ScriptedImporter gave its objects.</summary>
-        internal readonly Dictionary<Object, string> Identifiers = new Dictionary<Object, string>(ReferenceEqualityComparer.Instance);
 
         public Object Resolve(ObjectRef reference, Type expected)
         {
