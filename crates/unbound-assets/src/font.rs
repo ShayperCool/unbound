@@ -311,22 +311,7 @@ fn read_metrics(face: &Face) -> FaceMetrics {
         }
     }
     let bbox = face.global_bounding_box();
-    let name = |id: u16| {
-        face.names()
-            .into_iter()
-            .filter(|n| n.name_id == id && n.is_unicode())
-            .find_map(|n| n.to_string())
-            .unwrap_or_default()
-    };
-    // FreeType's family_name and style_name: the typographic names first.
-    let mut family = name(ttf_parser::name_id::TYPOGRAPHIC_FAMILY);
-    if family.is_empty() {
-        family = name(ttf_parser::name_id::FAMILY);
-    }
-    let mut style = name(ttf_parser::name_id::TYPOGRAPHIC_SUBFAMILY);
-    if style.is_empty() {
-        style = name(ttf_parser::name_id::SUBFAMILY);
-    }
+    let (family, style) = face_names(face);
     FaceMetrics {
         units_per_em: face.units_per_em(),
         ascender,
@@ -336,6 +321,99 @@ fn read_metrics(face: &Face) -> FaceMetrics {
         y_min: bbox.y_min,
         family,
         style,
+    }
+}
+
+/// Bit 8 of the OS/2 table's `fsSelection` (at byte 62): the face's names are WWS-conformant.
+const FS_SELECTION_WWS: u16 = 1 << 8;
+const OS2_FS_SELECTION_OFFSET: usize = 62;
+/// The `name` table's WWS family and subfamily ids.
+const WWS_FAMILY: u16 = 21;
+const WWS_SUBFAMILY: u16 = 22;
+
+/// FreeType's `family_name` and `style_name` (`sfnt_load_face`): for a WWS-conformant face the
+/// typographic names, else the WWS names first, then the typographic ones, then the plain
+/// family and subfamily.
+fn face_names(face: &Face) -> (String, String) {
+    use ttf_parser::name_id::{FAMILY, SUBFAMILY, TYPOGRAPHIC_FAMILY, TYPOGRAPHIC_SUBFAMILY};
+    let wws = face
+        .raw_face()
+        .table(ttf_parser::Tag::from_bytes(b"OS/2"))
+        .and_then(|os2| os2.get(OS2_FS_SELECTION_OFFSET..OS2_FS_SELECTION_OFFSET + 2))
+        .is_some_and(|b| u16::from_be_bytes([b[0], b[1]]) & FS_SELECTION_WWS != 0);
+    let first = |ids: &[u16]| ids.iter().find_map(|&id| sfnt_name(face, id));
+    if wws {
+        (
+            first(&[TYPOGRAPHIC_FAMILY, FAMILY]).unwrap_or_default(),
+            first(&[TYPOGRAPHIC_SUBFAMILY, SUBFAMILY]).unwrap_or_default(),
+        )
+    } else {
+        (
+            first(&[WWS_FAMILY, TYPOGRAPHIC_FAMILY, FAMILY]).unwrap_or_default(),
+            first(&[WWS_SUBFAMILY, TYPOGRAPHIC_SUBFAMILY, SUBFAMILY]).unwrap_or_default(),
+        )
+    }
+}
+
+/// The name record FreeType takes for `id` (`tt_face_get_name`): the last English Windows name,
+/// else the first Windows name, unless a Macintosh name in English (else in Roman) exists and
+/// the Windows one is not English; else the Macintosh name; else the last Unicode-platform one.
+/// It is converted to ASCII as FreeType's names are, other characters becoming `?`.
+fn sfnt_name(face: &Face, id: u16) -> Option<String> {
+    use ttf_parser::PlatformId;
+    const MAC_ENGLISH: u16 = 0;
+    const MAC_ROMAN: u16 = 0;
+    const WINDOWS_SYMBOL: u16 = 0;
+    const WINDOWS_UNICODE_BMP: u16 = 1;
+    const WINDOWS_UCS4: u16 = 10;
+    let english = |language: u16| language & 0x3FF == 0x009;
+    let (mut unicode, mut apple_english, mut apple_roman, mut windows) = (None, None, None, None);
+    let mut windows_english = false;
+    for name in face.names() {
+        if name.name_id != id || name.name.is_empty() {
+            continue;
+        }
+        match name.platform_id {
+            PlatformId::Unicode | PlatformId::Iso => unicode = Some(name),
+            PlatformId::Macintosh if name.language_id == MAC_ENGLISH => apple_english = Some(name),
+            PlatformId::Macintosh if name.encoding_id == MAC_ROMAN => apple_roman = Some(name),
+            PlatformId::Windows
+                if (windows.is_none() || english(name.language_id))
+                    && matches!(
+                        name.encoding_id,
+                        WINDOWS_SYMBOL | WINDOWS_UNICODE_BMP | WINDOWS_UCS4
+                    ) =>
+            {
+                windows_english = english(name.language_id);
+                windows = Some(name);
+            }
+            _ => {}
+        }
+    }
+    let apple = apple_english.or(apple_roman);
+    let ascii = |code: u32| match code {
+        32..=127 => code as u8 as char,
+        _ => '?',
+    };
+    let utf16 = |bytes: &[u8]| -> String {
+        bytes
+            .chunks_exact(2)
+            .map(|pair| u16::from_be_bytes([pair[0], pair[1]]) as u32)
+            .take_while(|&code| code != 0)
+            .map(ascii)
+            .collect()
+    };
+    match (windows, apple) {
+        (Some(record), apple) if apple.is_none() || windows_english => Some(utf16(record.name)),
+        (_, Some(record)) => Some(
+            record
+                .name
+                .iter()
+                .take_while(|&&b| b != 0)
+                .map(|&b| ascii(b as u32))
+                .collect(),
+        ),
+        _ => unicode.map(|record| utf16(record.name)),
     }
 }
 
@@ -470,9 +548,167 @@ pub fn extract_font_data(file: &[u8], path_id: i64) -> Result<Vec<u8>> {
     bail!("the font object {path_id} has no font data")
 }
 
+/// The family and style FreeType gives face `index` of a font file (see [`FaceMetrics`]), or
+/// None when it is not a font. Reads only the tables it needs, so a mapped file is not paged in.
+pub fn face_family_style(data: &[u8], index: u32) -> Option<(String, String)> {
+    Face::parse(data, index).ok().map(|face| face_names(&face))
+}
+
+/// The number of faces in a font file: those of a collection, else one.
+pub fn face_count(data: &[u8]) -> u32 {
+    ttf_parser::fonts_in_collection(data).unwrap_or(1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A minimal sfnt with `name` records (platform, encoding, language, id, bytes) and, when
+    /// given, an OS/2 table with that fsSelection.
+    fn named_face(records: &[(u16, u16, u16, u16, Vec<u8>)], fs_selection: Option<u16>) -> Vec<u8> {
+        let mut head = vec![0u8; 54];
+        head[0..4].copy_from_slice(&0x0001_0000u32.to_be_bytes());
+        head[12..16].copy_from_slice(&0x5F0F_3CF5u32.to_be_bytes());
+        head[18..20].copy_from_slice(&1000u16.to_be_bytes());
+        let mut hhea = vec![0u8; 36];
+        hhea[0..4].copy_from_slice(&0x0001_0000u32.to_be_bytes());
+        let mut maxp = vec![0u8; 6];
+        maxp[0..4].copy_from_slice(&0x0000_5000u32.to_be_bytes());
+        maxp[4..6].copy_from_slice(&1u16.to_be_bytes());
+        let mut name = Vec::new();
+        let mut strings = Vec::new();
+        name.extend_from_slice(&0u16.to_be_bytes());
+        name.extend_from_slice(&(records.len() as u16).to_be_bytes());
+        name.extend_from_slice(&(6 + 12 * records.len() as u16).to_be_bytes());
+        for (platform, encoding, language, id, bytes) in records {
+            for v in [
+                *platform,
+                *encoding,
+                *language,
+                *id,
+                bytes.len() as u16,
+                strings.len() as u16,
+            ] {
+                name.extend_from_slice(&v.to_be_bytes());
+            }
+            strings.extend_from_slice(bytes);
+        }
+        name.extend_from_slice(&strings);
+        let mut tables: Vec<(&[u8; 4], Vec<u8>)> = vec![
+            (b"head", head),
+            (b"hhea", hhea),
+            (b"maxp", maxp),
+            (b"name", name),
+        ];
+        if let Some(fs) = fs_selection {
+            let mut os2 = vec![0u8; 78];
+            os2[62..64].copy_from_slice(&fs.to_be_bytes());
+            tables.push((b"OS/2", os2));
+        }
+        tables.sort_by_key(|(tag, _)| **tag);
+        let mut font = Vec::new();
+        font.extend_from_slice(&0x0001_0000u32.to_be_bytes());
+        font.extend_from_slice(&(tables.len() as u16).to_be_bytes());
+        font.extend_from_slice(&[0u8; 6]);
+        let mut offset = 12 + 16 * tables.len();
+        let mut body = Vec::new();
+        for (tag, data) in &tables {
+            font.extend_from_slice(*tag);
+            font.extend_from_slice(&0u32.to_be_bytes());
+            font.extend_from_slice(&(offset as u32).to_be_bytes());
+            font.extend_from_slice(&(data.len() as u32).to_be_bytes());
+            let mut padded = data.clone();
+            padded.resize(data.len().div_ceil(4) * 4, 0);
+            offset += padded.len();
+            body.extend_from_slice(&padded);
+        }
+        font.extend_from_slice(&body);
+        font
+    }
+
+    fn utf16(text: &str) -> Vec<u8> {
+        text.encode_utf16().flat_map(u16::to_be_bytes).collect()
+    }
+
+    const WINDOWS: u16 = 3;
+    const MAC: u16 = 1;
+    const UNICODE: u16 = 0;
+
+    /// FreeType's name choice: an English Windows name; a Macintosh English name before a
+    /// Windows name in another language (an Arabic-only Windows family keeps its English
+    /// Macintosh name, as the macOS Editor lists it); a non-English Windows name when nothing
+    /// else exists, in ASCII with `?`; the Unicode platform last.
+    #[test]
+    fn face_names_follow_freetype() {
+        let names = |records: &[(u16, u16, u16, u16, Vec<u8>)]| {
+            face_family_style(&named_face(records, None), 0).unwrap()
+        };
+        let arabic = (WINDOWS, 1, 0x0C01, 1, utf16("النيل"));
+        let mac = (MAC, 0, 0, 1, b"Al Nile".to_vec());
+        assert_eq!(
+            names(&[
+                (UNICODE, 0, 0, 1, utf16("Al Nile U")),
+                mac.clone(),
+                arabic.clone()
+            ])
+            .0,
+            "Al Nile"
+        );
+        assert_eq!(names(&[arabic.clone()]).0, "?????");
+        assert_eq!(
+            names(&[
+                mac.clone(),
+                arabic.clone(),
+                (WINDOWS, 1, 0x0409, 1, utf16("Al Nile W"))
+            ])
+            .0,
+            "Al Nile W"
+        );
+        assert_eq!(
+            names(&[
+                (WINDOWS, 1, 0x0409, 1, utf16("First")),
+                (WINDOWS, 1, 0x0809, 1, utf16("Last"))
+            ])
+            .0,
+            "Last"
+        );
+        assert_eq!(
+            names(&[
+                (UNICODE, 3, 0, 1, utf16("Plain")),
+                (UNICODE, 3, 0, 1, utf16("Later"))
+            ])
+            .0,
+            "Later"
+        );
+        assert_eq!(names(&[(MAC, 0, 0, 1, b"Caf\x8e".to_vec())]).0, "Caf?");
+        // A Windows name in an unknown encoding is not taken.
+        assert_eq!(
+            names(&[
+                (WINDOWS, 3, 0x0804, 1, utf16("PRC")),
+                (UNICODE, 3, 0, 1, utf16("Fallback"))
+            ])
+            .0,
+            "Fallback"
+        );
+    }
+
+    /// The typographic family before the plain one; the WWS names first unless OS/2 says the
+    /// names are WWS-conformant (fsSelection bit 8).
+    #[test]
+    fn face_names_take_typographic_and_wws_names_in_freetype_order() {
+        let records = [
+            (WINDOWS, 1, 0x0409, 1, utf16("Sans W3")),
+            (WINDOWS, 1, 0x0409, 2, utf16("Regular")),
+            (WINDOWS, 1, 0x0409, 16, utf16("Sans")),
+            (WINDOWS, 1, 0x0409, 17, utf16("W3")),
+            (WINDOWS, 1, 0x0409, 21, utf16("Sans WWS")),
+        ];
+        let names = |fs| face_family_style(&named_face(&records, fs), 0).unwrap();
+        assert_eq!(names(None), ("Sans WWS".into(), "W3".into()));
+        assert_eq!(names(Some(0)), ("Sans WWS".into(), "W3".into()));
+        assert_eq!(names(Some(FS_SELECTION_WWS)), ("Sans".into(), "W3".into()));
+        assert_eq!(face_count(&named_face(&records, None)), 1);
+    }
 
     /// A test face: DejaVu or Liberation from the system, when present.
     fn system_face() -> Option<FontFace> {
