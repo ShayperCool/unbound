@@ -3581,8 +3581,8 @@
 {"key":"UnityEngine.Handheld/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.Hash128/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.Hash128/Property/UnityEngine.Hash128/isValid","status":"value","value":"false"}
-{"key":"UnityEngine.HashUtilities/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.HashUnsafeUtilities/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.HashUtilities/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.HeaderAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.HelpURLAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.HideInInspector/@factory","status":"value","value":"class"}
