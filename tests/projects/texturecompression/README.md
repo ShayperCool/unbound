@@ -39,21 +39,21 @@ the known differences (`{profile: {key or glob: why}}`).
 
 ## Current results
 
-The canonical reference contains 8429 values per profile for Unity 6000.0.71f1. Both independent
+The canonical reference contains 8663 values per profile for Unity 6000.0.71f1. Both independent
 GPU Editor recordings match it. The strict gate passes with these explicitly listed residuals;
 exact values, exact compressed blocks and visually close values are separate measurements.
 
 | Profile | Exact values / total | Listed residual values |
 |---|---:|---:|
-| Gamma | 8321 / 8429 | 108 |
-| Linear | 8321 / 8429 | 108 |
-| AndroidGamma | 7664 / 8429 | 765 |
-| AndroidLinear | 7645 / 8429 | 784 |
-| AndroidETC2 | 7619 / 8429 | 810 |
-| AndroidASTC | 8014 / 8429 | 415 |
+| Gamma | 8511 / 8663 | 152 |
+| Linear | 8513 / 8663 | 150 |
+| AndroidGamma | 7921 / 8663 | 742 |
+| AndroidLinear | 7902 / 8663 | 761 |
+| AndroidETC2 | 7876 / 8663 | 787 |
+| AndroidASTC | 8271 / 8663 | 392 |
 
-Texture cache v38 includes the encoder, source-processing, archive and runtime padding changes. NativeApi 65
-provides the compressed-texel callback and ASTC packet formats. The sections below retain
+Texture cache v41 includes HDR RGBM source preparation and multiplier rounding. NativeApi 66
+provides the compressed-texel callback and ASTC/ETC packet formats. The sections below retain
 per-format and per-quality block counts, ordinary-content controls and each part's import timings.
 Raw discrepancies and comparator tolerances are unchanged.
 
@@ -139,7 +139,7 @@ Measured import block totals, Gamma / Linear, including every mip:
 | DXT5 | 5591 / 5592 | 5591 / 5592 |
 | BC4 | 2417 / 2417 | 2417 / 2417 |
 | BC5 | 1149 / 1149 | 1149 / 1149 |
-| BC6H | 2712 / 2744 | 2729 / 2744 |
+| BC6H | 4317 / 4376 | 4349 / 4376 |
 | BC7 | 6904 / 6964 | 6904 / 6964 |
 
 The one DXT5 residual is WideNormal's 2x1 mip, whose source filtering differs.
@@ -381,22 +381,20 @@ those extra bytes are an explicit memory-safety choice, not a measured Editor va
 views and byte-array reads retain the actual archive length. Invalid archives are rejected before
 transcoding. Partial SetPixelData and CopyTexture involving Crunch remain diagnosed unsupported;
 archive variants other than the measured fork, shapes other than 2D and dimensions above the
-codec's 4096 limit remain outside this implementation. HDR-to-Crunch source preparation is
-unresolved, so Android HDR keeps its previous diagnosed float fallback. It is counted as missing
-compressed storage, without claiming its colour differences are harmless.
+codec's 4096 limit remain outside this implementation. Android 2D HDR source preparation uses
+RGBM bytes, including the measured non-Crunch and size-fallback paths, as detailed below.
 
 Measured import blocks, including all mip levels:
 
 | Profile | DXT1Crunched | DXT5Crunched | ETC_RGB4Crunched | ETC2_RGBA8Crunched |
 |---|---:|---:|---:|---:|
 | Gamma / Linear | 1715 / 1715 | 2928 / 2928 | none | none |
-| AndroidGamma | none | none | 2401 / 2401 | 2928 / 3271 |
-| AndroidLinear | none | none | none | 5329 / 5672 |
-| AndroidETC2 | none | none | 1029 / 1029 | 2928 / 3271 |
-| AndroidASTC | none | none | 1029 / 1029 | 1899 / 2242 |
+| AndroidGamma | none | none | 2401 / 2401 | 4903 / 4903 |
+| AndroidLinear | none | none | none | 7304 / 7304 |
+| AndroidETC2 | none | none | 1029 / 1029 | 4903 / 4903 |
+| AndroidASTC | none | none | 1029 / 1029 | 3874 / 3874 |
 
-Every produced 8-bit Crunch archive matches byte for byte. The 343 missing ETC2 Crunch blocks
-per Android profile are the HDR source. Valid archive-load controls add 343/343 blocks per
+Every produced Crunch archive in this corpus matches byte for byte, including HDR source controls. Valid archive-load controls add 343/343 blocks per
 format, or 686/686 ETC2 RGBA blocks in AndroidLinear. Different archives are compared after
 transcoding by `block_report.py`, preserving the strict archive comparison separately.
 Two ordinary UI/effect images, three qualities and four codecs add 8202/8202 exact blocks for
@@ -456,20 +454,19 @@ a missing compressed representation counts as zero exact blocks rather than disa
 |---|---:|---:|---:|---:|
 | ETC_RGB4 | 1258 / 6773 | 22 / 343 | 133 / 686 | 133 / 686 |
 | ETC2_RGB | 22 / 1372 | 78 / 7817 | 80 / 8831 | 22 / 1372 |
-| ETC2_RGBA8 | 8 / 6263 | 8 / 6263 | 8 / 6263 | 2 / 2744 |
+| ETC2_RGBA8 | 113 / 6263 | 113 / 6263 | 113 / 6263 | 107 / 2744 |
 | ETC2_RGBA1 | 0 / 343 | 0 / 343 | 0 / 343 | 0 / 343 |
 | EAC_R | 0 / 1715 | 0 / 1715 | 0 / 1715 | 0 / 343 |
 | EAC_RG | 0 / 343 | 0 / 343 | 0 / 343 | 0 / 343 |
 
 Runtime ETC2_RGB compression is 53/1029 blocks exact in each quality; ETC2_RGBA8 is 0/603
 in each quality, in all four Android profiles. Runtime EAC counts and its CPU/GPU precision
-scope are recorded above. Import EAC/ETC2_RGBA1 and Android HDR outside explicit ASTC HDR
-still use diagnosed uncompressed storage. Ordinary ETC remains a second lossy BC7 upload on
-devices with BC support, or RGBA8 otherwise. Native ETC uploads are still open.
+scope are recorded above. Import EAC/ETC2_RGBA1 still use diagnosed uncompressed storage. Native ETC uploads select
+enabled device capabilities at upload time. Devices without ETC2 retain the prior BC7 fallback
+when BC is available, or decoded RGBA8 otherwise. Native hardware execution remains unverified.
 
 The unresolved work includes BC6H fitting/CPU float reads, BC7 alpha-heavy fitting, runtime
-partial-mip colour fitting, the old ISPC Fast ASTC slice, Android HDR-to-Crunch source
-preparation, exact distributable ETC/EAC fitting, and EAC's 45 one-step normalized-GPU differences.
+partial-mip colour fitting, the old ISPC Fast ASTC slice, exact distributable ETC/EAC fitting, and EAC's 45 one-step normalized-GPU differences.
 Split Alpha Channel, mipless automatic ETC1 at non-power-of-two sizes, native ASTC hardware
 execution, macOS compilation and other-release profiles remain outside the measured claim.
 DXT1's three-colour fourth entry also differs between the measured OpenGL Editor and wgpu.
@@ -513,3 +510,48 @@ DXT5 remains 621/628 at Fast and 626/628 at High. Across both qualities, unsigne
 is 0/46 and red/green 0/60. The strict results are 8321/8429 in Gamma and Linear, 7664/8429
 in AndroidGamma, 7645/8429 in AndroidLinear, 7619/8429 in AndroidETC2 and 8014/8429 in
 AndroidASTC. All 108/108/765/784/810/415 residual values remain declared and printed.
+
+## HDR RGBM and ETC uploads, Q404
+
+Nine added HDR controls distinguish quality 0/100, a linear source flag, no mips, discarded
+source alpha, nonfinite radiance, compression-independent size fallback and multiplier rounding.
+Each has two identical GPU Editor recordings in all six profiles. All earlier 8429 values
+remain byte-identical; the reference now has 8663 values per profile.
+
+The measured Android Default 2D colour path filters float radiance, then converts each mip to
+RGBM before ETC2 RGBA encoding. A linear-flagged source applies gamma decoding before RGBM.
+The shared multiplier uses range 5 and gamma 2.2, rounds upward to a byte step, and divides by
+255 before normalizing RGB. This division matters at half-channel boundaries: HdrMultiplier
+records RGBM (255,128,48,51) from radiance (1,0.5,0.1875). Source alpha is replaced, and radiance
+has no upper clamp before encoding. Nonfinite values are tolerated; HdrSpecialCrunch records
+the resulting archive and pixels. These rules reuse the measured Compat profile. Other
+releases retain their previous diagnosed HDR fallback.
+
+A size ineligible for block storage retains RGBM RGBA32 on Android. Standalone's automatic
+BC6H size fallback filters radiance before narrowing to linear RGB24 and discards alpha.
+HdrNpotNormal and HdrNpotCrunch have identical raw data in every profile, so these conversions
+do not depend on the Crunch flag. The 3x3 multiplier control also checks both byte fallbacks.
+
+Two ordinary UI/effect sources converted to 128x128 HDR add three Crunch qualities per image
+in AndroidGamma and AndroidLinear. Each profile has two identical GPU Editor captures.
+Their float source controls match at every mip. The corrected source conversion is checked
+against all six archives and their 8202 logical ETC2 RGBA blocks per profile; private images,
+repeat recordings and run outputs remain outside Git.
+
+ETC1/ETC2 RGB and ETC2 RGBA packets retain native blocks until the render device is available.
+An enabled ETC2 feature and a base extent of whole 4x4 blocks permit native upload. Imported
+packets also retain their existing BC7 mip chain for devices without ETC2; runtime packets
+retain decoded RGBA fallback behavior. Unsupported or partial extents keep logical dimensions.
+Tests distinguish native ETC bytes, a deliberately different retained BC7 payload and decoded
+RGBA, in colour/data variants. The available NVIDIA device lacks ETC2, so GPU captures verify
+fallbacks; executing native ETC on supported hardware remains a follow-up.
+
+EAC keeps eleven-bit channel precision through normalized 16-bit GPU storage. Its exhaustive
+2048-value control still counts 45 one-UNorm16-step differences. Raw blocks and CPU bytes match;
+no tolerance or oracle changed, and these last-step differences were not chased.
+
+The part's clean-cache import processes 4397 ordinary-project textures with zero failures.
+First-pass time is 22.52 s before and 19.87 s after; total process CPU including the cached
+second pass is 97.49/101.73 s. An earlier after-run took 15.64 s and 93.73 s CPU. These
+shared-machine runs show no noticeable wall-time regression and do not isolate encoder cost.
+The Standalone workload does not measure newly enabled Android HDR compression cost.
