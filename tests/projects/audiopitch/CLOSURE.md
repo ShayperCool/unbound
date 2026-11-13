@@ -1,71 +1,37 @@
 # Audio scope and follow-ups
 
-Q373 and Q390 measure Unity 6000.0.71f1 on Linux using an isolated
-eight-channel device.
-Each published profile has two independent GPU Editor captures with exact
-metadata and raw PCM agreement. The table lists measured contexts, not a promise
-for other releases, devices, platforms or arbitrary graph edits.
+Q373, Q390 and Q416 measure Unity 6000.0.71f1 on Linux. Published PCM references have two independent GPU Editor captures with exact metadata and raw sample agreement. Unless a row says otherwise, captures use a private eight-channel PulseAudio device. Scope is limited to the listed release, rates, layouts, startup histories and graph edits.
 
-| Item | Landed measurement | Engine result at the existing bounds |
+| Profile | Measured scope | Engine result at the existing bounds |
 |---|---|---|
-| 1. Live surround | [45 controls](TRANSITIONS.md) at 48000/44100 Hz, 1024 frames, Quad/5.0/5.1/7.1 plus a Stereo control. Live parameters, component enabled states and zone presets. | 16,712,055 values per rate pass; current strict device differences 494/841. Reset PCM remains Q373-R1. |
-| 2. Wet and linked paths | [238 wet and 18 placement controls](WET.md) at those rates/buffer and surround layouts. Six wet kinds, Send/Receive, Normalize and reverb startup. | 94,505,124 values per rate pass; strict device differences 224/200 in wet and 29/33 in wet-edges. Silent groups retain their actual history before sources arrive. |
-| 3. Rate/buffer pairs | [168 controls](SETTINGS.md): 32000/256 and 48000/512 in Stereo/Quad/5.0/5.1/7.1; 96000/2048 in Stereo/Quad. | 54,134,190 values pass; 3921 strict device differences. Further output settings are covered by row 3b. |
-| 3b. Wide settings | [2940 controls](WIDE.md): four rates, eleven requested buffer sizes, Stereo/Quad/5.0/5.1/7.1; two entire rate/buffer pairs excluded. | 964,835,412 values pass; 85,136 strict device differences. Complete 3080-control diagnostics retain all failures. |
-| 4. Prologic | [42 paired mono/stereo-input controls](PROLOGIC.md) at 48000/44100 Hz, 1024 frames. Four additional [six-input Native controls](ENCODING.md) qualify Stereo fallback on the reference device. | 5,505,368 values per rate pass; strict device differences 236/250. Paired Stereo/Prologic PCM is exact in both repeats. |
-| 5. Live zones | [77 controls](ZONES.md) at 48000/44100 Hz, 1024 frames, Stereo/Quad/5.0/5.1/7.1. Movement, radii, User edits, overlap and listener components. | 24,838,909 values per rate pass; strict device differences 10,836/11,006. |
-| 6. Mono effects | [64 controls](MONO.md) at 48000/44100 Hz, 1024 frames. Chorus taps, reverb folding between effects, wet boundaries and linked processing, with Stereo-output mono-clip controls. | 4,456,925 values per rate pass; strict device differences 329/401. |
-| 7. Listener scripts | [66 controls](LISTENER_SCRIPTS.md) at both rates, 1024 frames. Moving wide zones, static Mono zones, script gains and routed/unrouted listener bypass. | 17,826,478 values per rate pass; strict device differences 2528/2902. |
+| [Live surround](TRANSITIONS.md) | 45 controls per rate, 48000/44100 Hz, 1024 frames, Quad/5.0/5.1/7.1 and Stereo control. Parameters, enabled states and zone presets. | All 16,712,055 values per rate pass; strict device differences 494/841. Reset diagnostics remain separate. |
+| [Wet and linked paths](WET.md) | 238 wet and 18 placement controls per rate in those surround layouts. Six wet kinds, Send/Receive, Normalize and reverb startup. | All 94,505,124 values per rate pass; strict device differences 224/200 in wet and 29/33 in wet-edges. |
+| [Rate/buffer pairs](SETTINGS.md) | 168 controls: 32000/256 and 48000/512 across five layouts; 96000/2048 in Stereo/Quad. | All 54,134,190 values pass; strict device differences 3921. |
+| [Wide settings](WIDE.md) | 2940 controls across four rates, eleven requested periods and five layouts, with two entire pairs excluded. | All 964,835,412 values pass; strict device differences 85,136. Full 3080-control diagnostics preserve excluded failures. |
+| [Prologic fallback](PROLOGIC.md) | 42 paired mono/stereo-input controls per rate at 48000/44100 Hz, 1024 frames. Six-input availability is separate in [ENCODING.md](ENCODING.md). | All 5,505,368 values per rate pass; strict device differences 236/250. |
+| [Live zones](ZONES.md) | 77 controls per rate, Stereo/Quad/5.0/5.1/7.1. Movement, radii, User edits, overlap and listener components. | All 24,838,909 values per rate pass; strict device differences 10,836/11,006. |
+| [Mono effects](MONO.md) | 64 controls per rate. Chorus taps, reverb folding, wet boundaries and linked processing, with Stereo-output mono-clip controls. | All 4,456,925 values per rate pass; strict device differences 329/401. |
+| [Listener scripts](LISTENER_SCRIPTS.md) | 66 controls per rate. Wide moving zones, static Mono zones, script gains and routed/unrouted bypass. | All 17,826,478 values per rate pass; strict device differences 2528/2902. |
+| [Sample scheduling](SCHEDULE.md), Q416 item 1 | 21 controls per rate. Fractional absolute/relative starts, initial and later scheduled edits, double Play, end edits, ordinary and post-reset layouts. | All 4,063,955 values per rate are bit-identical. Whole-frame conversion and pending-start publication use Compat. |
+| [Listener components/scripts](LISTENER_CHAINS.md), Q416 item 3 | 36 controls per rate, Stereo/Quad, all six filters before/after and between scripts, bypass controls. Ten separate disabled/switched/simultaneous-listener diagnostics. | All 6,816,040 values per rate pass; strict device differences 174/53. The separate static diagnostic agrees strictly on 1,966,172 values per rate. No general simultaneous-listener ordering is promised. |
+| [Live Mono and topology](MONO_LIVE.md), Q416 item 4 | 74 independently repeated Echo/Chorus and live-zone controls per rate in Mono/Stereo/Quad. The complete 135-control and six-case simultaneous-listener profiles remain diagnostics. | All 10,093,276 values per rate pass; strict device differences 1557/1609. Listener additions, retained removals, script activation and owner recreation use Compat; all six built-in filters reject duplicates. Full-profile residuals remain below. |
+| [Six-input voice and other devices](VOICE_INPUT.md), Q416 item 5 | 36 non-streamed 2D Stereo/Prologic source-processing controls per rate and four encoding controls on each private 2/4/6/8-channel PulseAudio device. | All 11,665,952 source-profile values and 1,310,770 encoding values per device/rate pass strictly. Unsupported six-input contexts fail clearly on the measured release. |
 
-Every Master float in the admitted engine PCM profiles passes ATOL `2e-5` /
-RTOL `2e-4`.
-The retained device differences fit the existing one-step PCM gate. Reports keep
-all raw differences, with no added residual allowance, alignment or sample limit.
-All earlier canonical references and authored inputs remain unchanged. The
-original Pitch/layout/device/surround recipe, each admitted PCM profile and the
-ten prior audio probes remain in the sheriff's full suite. Individual landings
-check affected profiles and follow the complete-recipe rule in `land.py`.
-The table reports completed comparisons; it does not claim that the final
-Prologic landing repeated every profile. That landing used a user-approved,
-one-time Prologic-only audio gate. Reset and six-input engine diagnostics are
-not PCM admissions.
+Every Master float in admitted PCM profiles passes ATOL `2e-5` / RTOL `2e-4`. Device differences fit the existing one-step PCM gate. Source callback floats use the same strict float bounds. Reports preserve every discrepancy, with no new allowance, alignment correction or sample limit. New profiles preserve all earlier canonical references and authored inputs.
+
+Q416 implementation landings run all declared audiopitch recipes and fourteen other audio probes through the normal gate, along with managed and Rust tests. Documentation-only landings retain their normal exemption and do not claim a fresh PCM replay. The original Pitch/layout/device/surround recipe and every admitted profile remain in the sheriff suite. Diagnostic profiles return their actual failures and are not PCM admissions.
+
+The complete 135-control topology diagnostic retains 29,650/31,060 gate failures, including 10,604/11,040 Master values and twelve duplicate-add callback counts. These include the Mono Echo and source-composition failures below. The separate six-case live simultaneous-listener diagnostic retains 123,337/123,586 failures. Neither diagnostic is included in the admitted 74-control PCM profile.
 
 ## Open queue work
 
-- **Q373-R1 / Q390-R1. Post-reset playback publication and device timing.**
-  Earlier immediate and scheduled sessions differ between independent Editor
-  repeats at both rates. Fresh unchanged immediate 48000 Hz repeats agree on
-  24,543,998 values, while scheduled 44100 Hz repeats retain 421,351 differences
-  across six controls. The new [19-control callback-recovery profile](RECOVERY.md)
-  retains 404,561 repeat differences at 48000 Hz and agrees exactly at 44100 Hz.
-  Its engine gate has 382,753 failures at 48000 Hz and passes at 44100 Hz.
-  These are distinct startup contexts; matching pairs do not remove the
-  counterexamples. Callback flags, requested state and generated-clip loss agree.
-  All diagnostic profiles remain runnable and their raw captures are retained.
-  No canonical reset PCM, alignment correction or scheduling change is certified.
-- **Q390-R2. Excluded settings and retained histories.** The 32000 Hz /
-  340-frame and 48000 Hz / 256-frame pairs remain outside new Normalize/static
-  wet admission. Full original repeats disagree in those contexts. Per-case
-  Reset also exposes device-only disagreements at 32000 Hz / 512 frames in
-  7.1, so it is diagnostic rather than a canonical startup correction.
-  Wider 96000 Hz / 2048-frame callbacks are captured by the wide profile.
-- **Listener component/script combinations.** The listener-script zone profile
-  certifies independent returns after scripts. Filter components interleaved
-  with those scripts remain rejected and need separate measurements.
-- **Prologic matrix encoding.** The six-input availability profile and earlier
-  spatial controls qualify Stereo fallback on this Linux PulseAudio reference
-  device. They supply no encoded-output reference; other drivers, devices,
-  setting pairs and releases remain unmeasured.
-- **Six-channel clip rendering.** Generated six-channel clips retain all input
-  samples through SetData/GetData, but the current voice path reads only the
-  first two channels. The complete diagnostic retains 262,014 engine gate
-  failures per rate. Multichannel voice input, source processing and routing
-  remain a separate implementation; the fallback's admitted PCM scope uses
-  mono/stereo input. See [ENCODING.md](ENCODING.md).
-- **Additional context.** Mixer-slot identity/insertion/retargeting/placement and
-  bypass edits, surround component membership edits, additional parameter
-  combinations and wet-effect kinds, live/overlapping Mono zones, tail-only zone
-  edits, same-frame zone toggles, and rate/buffer pairs outside the listed
-  profiles remain unmeasured. Newly admitted Normalize/static wet settings fail
-  clearly outside their measured contexts. Other releases retain the documented
-  previous paths until measured.
+- **Q416-R1, earlier Q373-R1/Q390-R1. Reset publication and real-device timing.** Fresh unchanged 19-control recovery pairs agree exactly on 8,160,617 values per rate; the engine gate passes with 182/237 strict device differences and no Master failures. Earlier immediate and scheduled counterexamples remain unresolved. Q416's 21-control scheduling correction establishes whole-frame start conversion and initial/later edits, not a universal post-reset startup offset. See [RECOVERY.md](RECOVERY.md) and [SCHEDULE.md](SCHEDULE.md).
+- **Q416-R2, earlier Q390-R2. Excluded settings histories.** Both whole excluded pairs, 32000/340 and 48000/256, were repeated across all 140 controls. Original histories retain four exact differences out of 46,024,812 values, including a large Flange Master spike. Per-case Reset retains 15,872 out of 46,024,813, including seven Master floats. The two pairs remain excluded from additional Normalize/static-wet admission. No disagreeing repeat is published as a canonical correction. See [WIDE.md](WIDE.md).
+- **Q416-R4a. Initial Mono Echo history.** Isolated Echo and Reverb/Echo composition retain Master failures. A single Reverb control passes; these results do not establish a general reverb-folding defect. Initialization and parameter publication need controls that distinguish graph-construction histories. No effect-name-dependent correction is admitted.
+- **Q416-R4b. Source composition precision.** Sparse Stereo/Quad LowPass/Chorus and Reverb/Echo Master differences remain outside the float bounds. These remain failures rather than device-only residuals.
+- **Q416-R4c. Duplicate-add diagnostic publication.** All six filter kinds agree on rejection, retained identity/count and replacement after destruction. Twelve immediate Application log-callback counts remain Native 0 versus engine 1. Generic diagnostic publication is separate from the audio membership correction.
+- **Q416-R4d. Simultaneous-listener live histories.** The separate six-case live simultaneous-listener diagnostic has 123,337/123,586 failures. Static multiple-listener controls passing does not certify arbitrary live graph histories. Unity documents one active listener; no additional global order is imposed. See [MONO_LIVE.md](MONO_LIVE.md).
+- **Q416-R5a. Additional input and device contexts.** Six-input spatial sources, streamed clips and active output layouts outside Stereo/Prologic remain unsupported on the measured release. Starts fail clearly; live context changes stop only six-input voices and report once on the control thread. Other input widths, arbitrary graph histories, physical-device PCM, other backends and releases remain unmeasured. Four private PulseAudio device widths all retain the ordinary Stereo response in Prologic; those captures provide no encoded-output reference for other drivers. See [VOICE_INPUT.md](VOICE_INPUT.md) and [ENCODING.md](ENCODING.md).
+- **Additional contexts.** Mixer-slot insertion, identity, retargeting, placement and bypass edits; other effect combinations and wet kinds; tail-only/same-frame zone edits; surround layouts outside the measured topology controls; other rates, periods, releases and drivers remain unmeasured. Prior paths on other releases remain explicitly unqualified. Newly admitted Normalize/static-wet settings continue to reject unmeasured contexts.
+
+Fresh independent Q416 Native repeats, diagnostic PCM and complete discrepancy reports are retained outside Git, with older Native runs losslessly archived. Redundant completed engine gate PCM caches were removed at the user's request after retaining their complete reports and logs. Earlier Q373 counterexample captures remain available. Q390 raw captures were removed by earlier cache cleanup; historical counts remain documented and are not reconstructed from the new sessions.
