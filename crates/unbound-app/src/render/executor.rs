@@ -1484,7 +1484,10 @@ impl UnityRenderer {
             .collect();
         for k in 0..slots.len() {
             let (h, slot) = (slots[k].0, slots[k].3);
-            if !slot.integer() && self.unreadable_as_float(h, &program.textures[k]) {
+            if !slot.integer()
+                && !handle::split(raw[k]).1
+                && self.unreadable_as_float(h, &program.textures[k])
+            {
                 slots[k].0 = 0;
             }
         }
