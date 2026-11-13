@@ -192,14 +192,13 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
             _ => None,
         };
         // A Humanoid clip's asset mask is measured with every transform on
-        // (tests/projects/modelclips HumanMaskAsset).
-        if clip.human_transforms.is_some()
-            && mask
-                .as_ref()
-                .is_some_and(|m| m.iter().any(|(p, _)| !mask_keeps(m, p)))
+        // (tests/projects/modelclips HumanMaskAsset): warn when it takes out transform curves
+        // the clip has.
+        if let (Some(listed), Some(m)) = (&clip.human_transforms, &mask)
+            && human_transforms_kept(listed, Some(m)).len() != listed.len()
         {
             tracing::warn!(
-                "{path}: humanoid clip '{}' copies its mask from an AvatarMask that turns transforms off: the transform curves it keeps are not measured (the asset's transform list is applied as the model's own is)",
+                "{path}: humanoid clip '{}' copies its mask from an AvatarMask that turns off transforms whose curves it has: the curves it keeps are not measured (the asset's transform list is applied as the model's own is)",
                 clip.name
             );
         }
