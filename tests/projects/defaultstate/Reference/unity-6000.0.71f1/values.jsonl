@@ -12505,4 +12505,7 @@
 {"key":"CoreControl/Core2/meshLayout/addedUV","status":"value","value":"[6,true]"}
 {"key":"CoreControl/Core2/meshLayout/removedNormals","status":"value","value":"[5,false]"}
 {"key":"CoreControl/Core2/meshLayout/removedLayout","status":"value","value":"[0,0]"}
+{"key":"CoreControl/Core2/meshLayout/addedSkinWeights","status":"value","value":"[true,true,[UnityEngine.BoneWeight{boneIndex0=0;boneIndex1=0;boneIndex2=0;boneIndex3=0;weight0=1;weight1=0;weight2=0;weight3=0},UnityEngine.BoneWeight{boneIndex0=0;boneIndex1=0;boneIndex2=0;boneIndex3=0;weight0=1;weight1=0;weight2=0;weight3=0},UnityEngine.BoneWeight{boneIndex0=0;boneIndex1=0;boneIndex2=0;boneIndex3=0;weight0=1;weight1=0;weight2=0;weight3=0}]]"}
+{"key":"CoreControl/Core2/meshLayout/changedUvDimension","status":"value","value":"[4,true,true,[UnityEngine.Vector4{x=1;y=2;z=3;w=4},UnityEngine.Vector4{x=-1;y=-2;z=-3;w=-4},UnityEngine.Vector4{x=0.125;y=0.25;z=0.5;w=1}]]"}
+{"key":"CoreControl/Core2/meshLayout/retainedColorFormat","status":"value","value":"[enum:0,enum:0,[UnityEngine.Color{r=6;g=7;b=8;a=9}]]"}
 {"key":"complete","status":"value","value":"1"}

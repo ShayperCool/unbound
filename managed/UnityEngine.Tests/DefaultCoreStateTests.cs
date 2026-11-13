@@ -87,6 +87,48 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ClearedDefaultLayoutsAcceptSkinWeightsAndChangedUvDimensions()
+        {
+            var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up },
+                uv = new[] { Vector2.zero, Vector2.right, Vector2.up } };
+            try
+            {
+                mesh.Clear();
+                mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+                mesh.boneWeights = new[] { new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 } };
+                var values = new[] { new Vector4(1, 2, 3, 4), new Vector4(-1, -2, -3, -4), new Vector4(.125f, .25f, .5f, 1) };
+                mesh.SetUVs(0, values);
+                Assert.True(mesh.HasVertexAttribute(VertexAttribute.BlendWeight));
+                Assert.True(mesh.HasVertexAttribute(VertexAttribute.BlendIndices));
+                Assert.Equal(4, mesh.GetVertexAttributeDimension(VertexAttribute.TexCoord0));
+                using var data = Mesh.AcquireReadOnlyMeshData(mesh);
+                Assert.True(data[0].HasVertexAttribute(VertexAttribute.BlendWeight));
+                Assert.True(data[0].HasVertexAttribute(VertexAttribute.BlendIndices));
+                using var read = new Unity.Collections.NativeArray<Vector4>(3, Unity.Collections.Allocator.Temp);
+                data[0].GetUVs(0, read);
+                Assert.Equal(values, read.ToArray());
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void ClearRetainsFloatColorFormatWithoutRetainingOldData()
+        {
+            var mesh = new Mesh { vertices = new[] { Vector3.zero },
+                colors = new[] { new Color(2, 3, 4, 5) } };
+            try
+            {
+                Assert.Equal(VertexAttributeFormat.Float32, mesh.GetVertexAttributeFormat(VertexAttribute.Color));
+                mesh.Clear();
+                Assert.Equal(VertexAttributeFormat.Float32, mesh.GetVertexAttributeFormat(VertexAttribute.Color));
+                mesh.vertices = new[] { Vector3.one };
+                mesh.colors = new[] { new Color(6, 7, 8, 9) };
+                Assert.Equal(new Color(6, 7, 8, 9), mesh.colors[0]);
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
         public void MeshDataChecksDefaultDisposedAndReadOnlyViews()
         {
             Mesh.MeshData empty = default;

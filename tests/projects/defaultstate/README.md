@@ -112,7 +112,7 @@ The ParticleSystem slice adds 362 controls. Declaration slices add five inventor
 The Editor slice adds 223 controls while preserving all 11,957 previous rows,
 giving 12,180 rows before UIElements. UIElements adds 95 controls and six atlas-settings
 rows, preserving all earlier raw rows, for 12,281 rows before the remaining Core work.
-Declaration work adds one more factory row. Core adds 226 controls, giving 12,508 current rows. The comparison now has 12,162 exact
+Declaration work adds one more factory row. Core adds 229 controls, giving 12,511 current rows. The comparison now has 12,165 exact
 rows, 346 differing reference rows, zero missing rows and 25 extra implementation rows.
 Its 373 queue entries retain the same 50 variable rows; two
 happen to equal the implementation snapshot. Variable rows remain unresolved comparisons.
@@ -135,7 +135,7 @@ remain gaps. The generator format is now version 4 after adding the UV return ru
 The remaining Core work resolves 127 more queue entries, including 76 CoreModule,
 24 AssetBundle, five each ParticleSystem, SpriteMask and SpriteShape, seven Tilemap,
 four web-request and one UIElements entry. Two independent NVIDIA Editor captures
-and Unbound match all 226 added controls. All 12,281 previous reference lines are
+and Unbound match all 229 added controls. All 12,281 previous reference lines are
 preserved byte for byte. Generator format 10 suppresses the newly implemented
 members and moves their required enum declarations into the implementation.
 

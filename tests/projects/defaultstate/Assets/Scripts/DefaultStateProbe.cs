@@ -57,7 +57,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
             PhysicsPayloadControls();
             EditorImporterControls();
             UiControls();
-            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls(); Core2LayoutMutationControls();
+            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls(); Core2LayoutMutationControls(); Core2DefaultLayoutControls();
             Emit("complete","value","1"); output.Dispose(); output=null;
             EditorApplication.Exit(0);
         }
@@ -914,6 +914,34 @@ public sealed class DefaultStateProbe : MonoBehaviour
             mesh.uv2 = new Vector2[3]; CoreValue("Core2/meshLayout/addedUV", new object[] { mesh.vertexAttributeCount, mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.TexCoord1) });
             mesh.normals = null; CoreValue("Core2/meshLayout/removedNormals", new object[] { mesh.vertexAttributeCount, mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Normal) });
             mesh.Clear(false); CoreValue("Core2/meshLayout/removedLayout", new object[] { mesh.vertexAttributeCount, mesh.vertexBufferCount });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(mesh); }
+    }
+    static void Core2DefaultLayoutControls()
+    {
+        var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up },
+            uv = new[] { Vector2.zero, Vector2.right, Vector2.up } };
+        try
+        {
+            mesh.Clear(); mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+            mesh.boneWeights = new[] { new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 } };
+            CoreValue("Core2/meshLayout/addedSkinWeights", new object[] { mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.BlendWeight), mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.BlendIndices), mesh.boneWeights });
+            mesh.SetUVs(0, new[] { new Vector4(1, 2, 3, 4), new Vector4(-1, -2, -3, -4), new Vector4(.125f, .25f, .5f, 1) });
+            var data = Mesh.AcquireReadOnlyMeshData(mesh);
+            var uv = new Unity.Collections.NativeArray<Vector4>(3, Unity.Collections.Allocator.Temp);
+            try
+            {
+                data[0].GetUVs(0, uv);
+                CoreValue("Core2/meshLayout/changedUvDimension", new object[] { mesh.GetVertexAttributeDimension(UnityEngine.Rendering.VertexAttribute.TexCoord0), data[0].HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.BlendWeight), data[0].HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.BlendIndices), uv.ToArray() });
+            }
+            finally { uv.Dispose(); data.Dispose(); }
+            mesh.colors = new[] { new Color(2, 3, 4, 5), new Color(2, 3, 4, 5), new Color(2, 3, 4, 5) };
+            var before = mesh.GetVertexAttributeFormat(UnityEngine.Rendering.VertexAttribute.Color);
+            mesh.Clear();
+            var after = mesh.GetVertexAttributeFormat(UnityEngine.Rendering.VertexAttribute.Color);
+            mesh.vertices = new[] { Vector3.one };
+            mesh.colors = new[] { new Color(6, 7, 8, 9) };
+            CoreValue("Core2/meshLayout/retainedColorFormat", new object[] { before, after, mesh.colors });
         }
         finally { UnityEngine.Object.DestroyImmediate(mesh); }
     }

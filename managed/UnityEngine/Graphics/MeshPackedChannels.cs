@@ -16,6 +16,19 @@ namespace UnityEngine
 
         PackedChannel[] m_PackedChannels;
 
+        void ClearPackedChannels(bool keepLayout)
+        {
+            if (!keepLayout) { m_PackedChannels = null; return; }
+            if (m_PackedChannels == null) return;
+            // Retain format metadata without retaining data or freezing the default layout.
+            foreach (var channel in m_PackedChannels)
+                if (channel != null)
+                {
+                    channel.Count = 0;
+                    channel.Bytes = Array.Empty<byte>();
+                }
+        }
+
         void InvalidatePackedChannel(VertexAttribute attribute)
         {
             if (m_PackedChannels != null) m_PackedChannels[(int)attribute] = null;

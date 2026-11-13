@@ -678,17 +678,10 @@ namespace UnityEngine
 
         public void Clear([Internal.DefaultValue("true")] bool keepVertexLayout)
         {
-            if (keepVertexLayout)
-            {
-                Span<VertexAttributeDescriptor> attributes = stackalloc VertexAttributeDescriptor[MaxVertexAttributes];
-                int count = FillLayout(attributes);
-                if (m_Layout == null || !attributes.Slice(0, count).SequenceEqual(m_Layout))
-                    m_Layout = attributes.Slice(0, count).ToArray();
-            }
-            else m_HasPositionChannel = false;
-            m_PackedChannels = null;
+            m_HasPositionChannel = keepVertexLayout && ChannelPresent(VertexAttribute.Position);
+            ClearPackedChannels(keepVertexLayout);
             m_Vertices = Array.Empty<Vector3>();
-            bool Keep(VertexAttribute attribute) => keepVertexLayout && LayoutHas(attribute);
+            bool Keep(VertexAttribute attribute) => keepVertexLayout && ChannelPresent(attribute);
             m_Normals = Keep(VertexAttribute.Normal) ? Array.Empty<Vector3>() : null;
             m_Tangents = Keep(VertexAttribute.Tangent) ? Array.Empty<Vector4>() : null;
             m_Colors = Keep(VertexAttribute.Color) ? Array.Empty<Color32>() : null;
