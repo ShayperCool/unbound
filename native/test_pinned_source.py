@@ -93,11 +93,17 @@ class PinnedSourceTests(unittest.TestCase):
 
     def test_offline_without_an_archive_fails_before_downloading(self):
         os.environ.pop('TEST_ARCHIVE')
-        with mock.patch.dict(os.environ, {'UNBOUND_OFFLINE': '1'}), \
-                mock.patch.object(pinned_source, 'download') as download:
-            with self.assertRaisesRegex(RuntimeError, 'archive is unavailable'):
-                self.prepare('0' * 64)
-            download.assert_not_called()
+        # Any value of UNBOUND_OFFLINE forbids downloading, as for the engine.
+        for value in ('1', '0', ''):
+            with mock.patch.dict(os.environ, {'UNBOUND_OFFLINE': value}), \
+                    mock.patch.object(pinned_source, 'download') as download:
+                with self.assertRaisesRegex(RuntimeError, 'archive is unavailable'):
+                    self.prepare('0' * 64)
+                download.assert_not_called()
+
+    def test_an_empty_cache_home_means_the_default(self):
+        with mock.patch.dict(os.environ, {'XDG_CACHE_HOME': ''}):
+            self.assertEqual(pinned_source.cache_root('test'), Path.home() / '.cache/unbound/dependencies/test')
 
 
 if __name__ == '__main__':

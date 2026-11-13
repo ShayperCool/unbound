@@ -17,11 +17,12 @@ import urllib.request
 
 
 def cache_root(name):
-    return Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'unbound/dependencies' / name
+    return Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'unbound/dependencies' / name
 
 
 def offline():
-    return (os.environ.get('UNBOUND_OFFLINE', '').lower() in ('1', 'true', 'yes')
+    # UNBOUND_OFFLINE: any value, as the engine reads it; CARGO_NET_OFFLINE as Cargo reads it.
+    return ('UNBOUND_OFFLINE' in os.environ
             or os.environ.get('CARGO_NET_OFFLINE', '').lower() in ('1', 'true'))
 
 

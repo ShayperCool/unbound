@@ -5,5 +5,10 @@
   "summary": "[0-9]+/[0-9]+ values match, [0-9]+ failing, [0-9]+ residuals",
   "fast_commands": [
     "python3 -m unittest discover -s native -p test_pinned_source.py"
+  ],
+  "engine_paths": [
+    "native/crunch/",
+    "native/pinned_source.py",
+    "native/unbound_crunch.cpp"
   ]
 }

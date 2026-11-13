@@ -30,7 +30,9 @@ face has it or not (`fallback/*/has/*`; U+FFFE is in no installed face).
 On macOS the same chain was measured with the Unity 6000.0.71f1 macOS arm64 Editor in batch
 mode on macOS 26's own fonts (not a reference: the Linux faces the reference needs are not
 installed there): Unbound's 9672 glyph metrics and raw values match the Editor's, the fallback
-characters included, which come from the common families there. The alpha bytes come from a
+characters included. Arial Unicode MS, one of the common families, has all three of them there,
+so this does not reach the platform part of the list; a run with ⌚, ⏰, ☕ and ⭐ added (outside
+the probe, not recorded) found the same faces in both, past the common families. The alpha bytes come from a
 screen read-back that neither the batch-mode Editor without a graphics device nor a headless
 Unbound run has, so they were not compared. A Mac with the Linux families installed is
 unmeasured.
