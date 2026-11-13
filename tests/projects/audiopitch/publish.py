@@ -29,9 +29,14 @@ p.add_argument('--wide', action='store_true', help='Publish the independent wide
 p.add_argument('--wide-pcm', action='store_true', help='Publish the certified wide settings')
 p.add_argument('--schedule', action='store_true', help='Publish fractional scheduling and audio-update controls')
 p.add_argument('--encoding', action='store_true', help='Publish six-input encoder availability diagnostics, without engine PCM admission')
+p.add_argument('--listener-chain', action='store_true', help='Publish listener component and contiguous script controls')
+p.add_argument('--listener-diagnostics', action='store_true', help='Publish separate listener topology diagnostics without engine admission')
 a = p.parse_args()
 if a.settings and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
 selected = mono_cases() if a.mono else zone_cases() if a.zones else prologic_cases() if a.prologic else settings_cases() if a.settings else wet_edge_cases() if a.wet_edges else wet_cases() if a.wet else transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
+if a.listener_chain or a.listener_diagnostics:
+    from common import profile
+    selected = list(profile('listener-chain' if a.listener_chain else 'listener-diagnostics', a.rate))
 if a.schedule:
     from common import schedule_cases
     selected = schedule_cases()
@@ -65,6 +70,8 @@ if a.zones: target = target/'zones'
 if a.mono: target = target/'mono'
 if a.listener_scripts: target = target/'listener-scripts'
 if a.schedule: target = target/'schedule'
+if a.listener_chain: target = target/'listener-chain'
+if a.listener_diagnostics: target = target/'listener-diagnostics'
 if a.encoding: target = target/'encoding'
 if a.wide: target = target/'wide'
 if a.wide_pcm: target = target/'wide-pcm'

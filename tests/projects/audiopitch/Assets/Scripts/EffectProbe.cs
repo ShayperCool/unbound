@@ -9,6 +9,49 @@ using Unity.Collections;
 public partial class EffectProbe : MonoBehaviour
 {
     public static readonly string[][] Cases = {
+        new[] { "context_listenerchain_2_low_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=low,gain" },
+        new[] { "context_listenerchain_2_low_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,low" },
+        new[] { "context_listenerchain_2_high_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=high,gain" },
+        new[] { "context_listenerchain_2_high_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,high" },
+        new[] { "context_listenerchain_2_dist_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=dist,gain" },
+        new[] { "context_listenerchain_2_dist_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,dist" },
+        new[] { "context_listenerchain_2_echo_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=echo,gain" },
+        new[] { "context_listenerchain_2_echo_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,echo" },
+        new[] { "context_listenerchain_2_chorus_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=chorus,gain" },
+        new[] { "context_listenerchain_2_chorus_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,chorus" },
+        new[] { "context_listenerchain_2_reverb_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=reverb,gain" },
+        new[] { "context_listenerchain_2_reverb_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,reverb" },
+        new[] { "context_listenerchain_2_dry", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain" },
+        new[] { "context_listenerchain_2_double_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=echo,gain,gain2" },
+        new[] { "context_listenerchain_2_double_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,gain2,echo" },
+        new[] { "context_listenerdiag_2_disabled", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain", "listener_pair=disabled" },
+        new[] { "context_listenerdiag_2_swap", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain", "listener_pair=swap" },
+        new[] { "context_listenerdiag_2_both", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain", "listener_pair=both" },
+        new[] { "context_listenerchain_2_interleaved", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,echo,gain2" },
+        new[] { "context_listenerchain_4_low_before", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=low,gain" },
+        new[] { "context_listenerchain_4_low_after", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,low" },
+        new[] { "context_listenerchain_4_high_before", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=high,gain" },
+        new[] { "context_listenerchain_4_high_after", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,high" },
+        new[] { "context_listenerchain_4_dist_before", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=dist,gain" },
+        new[] { "context_listenerchain_4_dist_after", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,dist" },
+        new[] { "context_listenerchain_4_echo_before", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=echo,gain" },
+        new[] { "context_listenerchain_4_echo_after", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,echo" },
+        new[] { "context_listenerchain_4_chorus_before", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=chorus,gain" },
+        new[] { "context_listenerchain_4_chorus_after", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,chorus" },
+        new[] { "context_listenerchain_4_reverb_before", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=reverb,gain" },
+        new[] { "context_listenerchain_4_reverb_after", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,reverb" },
+        new[] { "context_listenerchain_4_dry", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain" },
+        new[] { "context_listenerchain_4_double_before", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=echo,gain,gain2" },
+        new[] { "context_listenerchain_4_double_after", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,gain2,echo" },
+        new[] { "context_listenerdiag_4_disabled", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain", "listener_pair=disabled" },
+        new[] { "context_listenerdiag_4_swap", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain", "listener_pair=swap" },
+        new[] { "context_listenerdiag_4_both", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain", "listener_pair=both" },
+        new[] { "context_listenerchain_4_interleaved", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,echo,gain2" },
+        new[] { "context_listenerchain_2_bypass_routed_0", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,echo", "listener_bypass=0" },
+        new[] { "context_listenerchain_2_bypass_routed_1", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,echo", "listener_bypass=1" },
+        new[] { "context_listenerchain_2_bypass_unrouted_0", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,echo", "listener_bypass=0", "unrouted=1" },
+        new[] { "context_listenerchain_2_bypass_unrouted_1", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,echo", "listener_bypass=1", "unrouted=1" },
+
         new[] { "context_encoding_2_impulses", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=impulses" },
         new[] { "context_encoding_2_noise", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise" },
         new[] { "context_encoding_7_impulses", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=impulses" },
@@ -1083,7 +1126,11 @@ public partial class EffectProbe : MonoBehaviour
         new[] { "context_scriptzone_2_bypass_zone_routed_1", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=1", "zone=1", "zone_profile=user" },
         new[] { "context_scriptzone_2_bypass_zone_unrouted_0", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=0", "unrouted=1", "zone=1", "zone_profile=user" },
         new[] { "context_scriptzone_2_bypass_zone_unrouted_1", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "mono=1", "Music:Att", "blend=1", "pos=3:0:4", "listener_start=20", "zone_control=script_return", "listener_gain=0", "listener_bypass=1", "unrouted=1", "zone=1", "zone_profile=user" },
-    };
+            new[] { "context_listenerdiag_2_both_filters", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,dist", "listener_pair=both", "alternate_chain=echo,gain2" },
+        new[] { "context_listenerdiag_2_swap_filters", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,dist", "listener_pair=swap", "alternate_chain=echo,gain2" },
+        new[] { "context_listenerdiag_4_both_filters", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,dist", "listener_pair=both", "alternate_chain=echo,gain2" },
+        new[] { "context_listenerdiag_4_swap_filters", "asset=context_zone_2_listener_dry", "mode=Quad", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,dist", "listener_pair=swap", "alternate_chain=echo,gain2" },
+};
     static readonly Dictionary<string, string[]> CaseTokens = new Dictionary<string, string[]>();
     static EffectProbe()
     {
@@ -1387,6 +1434,9 @@ public partial class EffectProbe : MonoBehaviour
                 // The engine's configured layout is its active layout; the Editor's is measured above.
                 if (key.StartsWith("context_")) records.Add("\""+key+".render_channels\":"+outputChannels);
             }
+            bool listenerChainCase = key.StartsWith("context_listenerchain_") || key.StartsWith("context_listenerdiag_");
+            if (listenerChainCase && layoutProbe != null) { DestroyImmediate(layoutProbe); layoutProbe = null; }
+            ListenerChainControl listenerControl = listenerChainCase ? new ListenerChainControl(key, gameObject) : null;
             BlockCount = int.Parse(Option(key, "blocks=", "32")); ClipFrames = int.Parse(Option(key, "clip=", (BlockCount * actualBuffer).ToString()));
             Debug.Log("Effect case " + key);
             if (Option(key, "reset=", "0") == "1") {
@@ -1536,6 +1586,7 @@ public partial class EffectProbe : MonoBehaviour
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
                     EditSampleSchedule(key, source, block, records);
+                    if (listenerControl != null && listenerControl.Change(block) && Engine) FlushEngine();
                     foreach (var token in Tokens(key)) if (token.StartsWith("live:"+block+":")) {
                         var pair = token.Substring(token.IndexOf(':', 5)+1).Split('=');
                         bool ok = mixer.SetFloat(pair[0], float.Parse(pair[1], System.Globalization.CultureInfo.InvariantCulture));
@@ -1570,11 +1621,13 @@ public partial class EffectProbe : MonoBehaviour
             }
             if (Option(key, "music=", "") == "generator") records.Add("\""+key+".generator_channels\":"+ProbeGenerator.Channels);
             if (listenerWrite != "") records.Add("\""+key+".listener_channels\":"+OutputLayoutProbe.Channels);
+            if (listenerControl != null) listenerControl.Record(key, records);
             if (gainProbe != null) records.Add("\""+key+".listener_gain_channels\":"+gainProbe.Channels);
             foreach (string suffix in new[] { "", ".master" })
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*actualBuffer)+",\"channels\":"+outputChannels+"}");
             Save(); buffer.Dispose();
             }
+            listenerControl?.Dispose();
             OutputLayoutProbe.WriteChannel = -1;
             if (layoutProbe != null) DestroyImmediate(layoutProbe);
             if (gainProbe != null) DestroyImmediate(gainProbe);
