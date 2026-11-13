@@ -82,30 +82,49 @@ namespace UnityEngine
             return bounds;
         }
 
-        /// <summary>The plane of a polygon: Newell's normal through the vertices' centroid; false for
-        /// fewer than three vertices or a degenerate polygon. The normal's side is assumed (not
-        /// measured): for a triangle a, b, c it is Cross(b - a, c - a), as <see cref="Plane.Set3Points"/>.</summary>
+        /// <summary>
+        /// A plane through a polygon: fewer than three vertices give no plane (up, through the origin);
+        /// three, the plane of the triangle; more, the normal of Newell's method (the sum over the edges
+        /// of the cross terms), normalized, at the vertices' mean distance. True when the normal is not
+        /// zero.
+        /// </summary>
         public static bool TryCreatePlaneFromPolygon(Vector3[] vertices, out Plane plane)
         {
-            plane = default;
-            if (vertices == null || vertices.Length < 3) return false;
-            var normal = Vector3.zero;
-            var centroid = Vector3.zero;
+            if (vertices == null || vertices.Length < 3)
+            {
+                plane = new Plane(Vector3.up, 0f);
+                return false;
+            }
+            if (vertices.Length == 3)
+            {
+                Vector3 a = vertices[0];
+                Vector3 b = vertices[1];
+                Vector3 c = vertices[2];
+                plane = new Plane(a, b, c);
+                return plane.normal.sqrMagnitude > 0f;
+            }
+            Vector3 normal = Vector3.zero;
+            int last = vertices.Length - 1;
+            Vector3 previous = vertices[last];
+            float distance;
             for (int i = 0; i < vertices.Length; i++)
             {
-                var a = vertices[i];
-                var b = vertices[(i + 1) % vertices.Length];
-                normal.x += (a.y - b.y) * (a.z + b.z);
-                normal.y += (a.z - b.z) * (a.x + b.x);
-                normal.z += (a.x - b.x) * (a.y + b.y);
-                centroid += a;
+                Vector3 current = vertices[i];
+                normal.x = normal.x + (previous.y - current.y) * (previous.z + current.z);
+                normal.y = normal.y + (previous.z - current.z) * (previous.x + current.x);
+                normal.z = normal.z + (previous.x - current.x) * (previous.y + current.y);
+                previous = current;
             }
-            float length = normal.magnitude;
-            if (length < 1e-12f || float.IsNaN(length)) return false;
-            normal /= length;
-            centroid /= vertices.Length;
-            plane = new Plane { normal = normal, distance = -Vector3.Dot(normal, centroid) };
-            return true;
+            normal.Normalize();
+            distance = 0f;
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Vector3 vertex = vertices[i];
+                distance -= Vector3.Dot(normal, vertex);
+            }
+            distance /= vertices.Length;
+            plane = new Plane(normal, distance);
+            return plane.normal.sqrMagnitude > 0f;
         }
     }
 }

@@ -492,7 +492,7 @@ namespace UnityEngine
             float angle = Angle(from, to);
             if (angle == 0.0f)
                 return to;
-            return SlerpUnclamped(from, to, Math.Min(1.0f, maxDegreesDelta / angle));
+            return SlerpUnclamped(from, to, Mathf.Min(1.0f, maxDegreesDelta / angle));
         }
 
         // ---- Object overrides --------------------------------------------------------------

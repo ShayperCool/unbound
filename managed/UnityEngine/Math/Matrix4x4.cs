@@ -272,8 +272,34 @@ namespace UnityEngine
             return m;
         }
 
-        /// <summary>The rotation matrix of a unit quaternion.</summary>
-        public static Matrix4x4 Rotate(Quaternion q) => TRS(Vector3.zero, q, Vector3.one);
+        /// <summary>The rotation matrix of a unit quaternion: TRS's rotation part, each element rounded
+        /// as Unity's C# rounds it (in float32 it is TRS with a unit scale exactly).</summary>
+        public static Matrix4x4 Rotate(Quaternion q)
+        {
+            float x2 = q.x * 2F, y2 = q.y * 2F, z2 = q.z * 2F;
+            float xx = q.x * x2, yy = q.y * y2, zz = q.z * z2;
+            float xy = q.x * y2, xz = q.x * z2, yz = q.y * z2;
+            float wx = q.w * x2, wy = q.w * y2, wz = q.w * z2;
+
+            Matrix4x4 m;
+            m.m00 = 1F - (yy + zz);
+            m.m10 = xy + wz;
+            m.m20 = xz - wy;
+            m.m30 = 0F;
+            m.m01 = xy - wz;
+            m.m11 = 1F - (xx + zz);
+            m.m21 = yz + wx;
+            m.m31 = 0F;
+            m.m02 = xz + wy;
+            m.m12 = yz - wx;
+            m.m22 = 1F - (xx + yy);
+            m.m32 = 0F;
+            m.m03 = 0F;
+            m.m13 = 0F;
+            m.m23 = 0F;
+            m.m33 = 1F;
+            return m;
+        }
 
         public static Matrix4x4 TRS(Vector3 pos, Quaternion q, Vector3 s)
         {
