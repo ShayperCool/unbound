@@ -56,7 +56,11 @@ def host_reference(profile, name):
 
 def references(profile):
     """The values this host's Editor records: the shared rows and this host's native rows."""
-    return {**value_probe.read_values(reference(profile)), **value_probe.read_values(host_reference(profile, host()))}
+    shared = value_probe.read_values(reference(profile))
+    native = value_probe.read_values(host_reference(profile, host()))
+    if any(key.startswith(NATIVE) for key in shared) or any(not key.startswith(NATIVE) for key in native):
+        raise SystemExit(f'floatrounding: {profile} references mix shared and {NATIVE} rows')
+    return {**shared, **native}
 
 
 def split(capture):

@@ -26,9 +26,10 @@ python3 tests/projects/floatrounding/run.py gate --profile release              
 Editor, `UNBOUND_CODE_OPTIMIZATION=debug` in the engine). The Linux x86_64 Editor and the macOS arm64
 Editor (both in batch mode without a graphics device) each recorded two captures per mode, the two
 of a host byte-identical. All rows but the `native/` ones are the same on both hosts and form one
-reference per mode (`Reference/unity-<release>/<mode>.jsonl`); the `native/` rows differ between
-the hosts in a few samples (Quaternion.Euler, eulerAngles, Vector3.RotateTowards) and each host has
-its own (`<mode>.linux.jsonl`, `<mode>.macos.jsonl`, the same in both modes). `publish --host linux`
+reference per mode (`Reference/unity-<release>/<mode>.jsonl`). The `native/` rows give the same
+values on both hosts for the recorded operands, but with other operands tried while recording a few
+samples of Quaternion.Euler, eulerAngles and Vector3.RotateTowards differed between them, so each
+host keeps its own (`<mode>.linux.jsonl`, `<mode>.macos.jsonl`, the same in both modes). `publish --host linux`
 publishes captures copied from the Linux machine.
 
 ## Measured rule
