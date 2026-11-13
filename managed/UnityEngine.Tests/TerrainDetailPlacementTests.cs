@@ -233,6 +233,24 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector3(1f, 2f, 3f), new Vector3(i.posX, i.posY, i.posZ));
         }
 
+        /// <summary>A zero-width instance reports a zero width and a NaN turn (as the Editor does),
+        /// and its transform stays finite for drawing.</summary>
+        [Fact]
+        public void ZeroWidthInstancesReportANaNTurn()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype { prototypeTexture = texture, minWidth = 0f, maxWidth = 0f, alignToGround = 1f, noiseSeed = 2 });
+            Fill(data, 0, 2);
+            var placements = new List<Matrix4x4>();
+            data.PlaceDetails(data.PrepareDetailLayer(0), 0, 0, 1f, placements, out var bounds);
+            Assert.Equal(128, placements.Count);
+            foreach (var model in placements)
+                for (int k = 0; k < 16; k++) Assert.False(float.IsNaN(model[k]));
+            Assert.False(float.IsNaN(bounds.extents.x));
+            var reported = data.ComputeDetailInstanceTransforms(0, 0, 0, 1f, out _);
+            Assert.All(reported, i => { Assert.Equal(0f, i.scaleXZ); Assert.True(float.IsNaN(i.rotationY)); });
+        }
+
         /// <summary>alignToGround tilts an instance's up axis from up to the terrain's normal; the
         /// bounds hold every instance's transformed mesh bounds.</summary>
         [Theory]
@@ -261,7 +279,6 @@ namespace UnityEngine.Tests
                 var expected = Vector3.Slerp(Vector3.up, normal, align).normalized;
                 var up = ((Vector3)model.GetColumn(1)).normalized;
                 Assert.True(Vector3.Angle(expected, up) < 0.05f, $"{expected} vs {up}");
-                var corners = new Bounds(model.MultiplyPoint3x4(mesh.bounds.center), Vector3.zero);
                 for (int c = 0; c < 8; c++)
                 {
                     var e = mesh.bounds.extents;
