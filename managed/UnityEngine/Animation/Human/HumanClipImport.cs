@@ -227,13 +227,11 @@ namespace Unbound.Runtime.Humanoid
         /// The Editor takes the parts from the clip's own body mask (the model meta's, also with a
         /// mask copied from another asset) whatever the mask type (matches the Unity 6000.0.71f1
         /// Editor, tests/projects/modelclips HumanMask*, every part off once). Translation DoF
-        /// curves follow their bone's part, unmeasured.</summary>
-        internal static void DropPartsOff(float[][] values, float[][] slopes, int partsOff, bool translationDoF)
+        /// curves follow their bone's part too: the neck's with the head, a shoulder's with its arm
+        /// (tests/projects/modelclips HumanMaskTDoF, the body, the left leg and the right arm off).</summary>
+        internal static void DropPartsOff(float[][] values, float[][] slopes, int partsOff)
         {
             if (partsOff == 0) return;
-            if (translationDoF)
-                Stubs.Ignored("Humanoid clip with body parts off on an avatar with translation DoF",
-                    "drops the translation DoF curves of those parts with their bone's part (unmeasured)");
             for (int c = 0; c < CurveCount; c++)
             {
                 if ((partsOff & (1 << BodyPart(c))) == 0) continue;
@@ -400,7 +398,7 @@ namespace Unbound.Runtime.Humanoid
                 MuscleRange(h, c - MuscleFirst, out float min, out float max);
                 Offset(values[c], min, max);
             }
-            DropPartsOff(values, slopes, settings.PartsOff, h.HasTDoF);
+            DropPartsOff(values, slopes, settings.PartsOff);
             return new HumanClipCurves { Times = times, Values = values, Slopes = slopes };
         }
 

@@ -28,7 +28,7 @@ namespace UnityEngine.Tests
         {
             var (values, slopes) = Curves();
             // Head, LeftArm, LeftFingers and LeftHandIK off (HumanMaskBody).
-            HumanClipImport.DropPartsOff(values, slopes, 1 << 2 | 1 << 5 | 1 << 7 | 1 << 11, false);
+            HumanClipImport.DropPartsOff(values, slopes, 1 << 2 | 1 << 5 | 1 << 7 | 1 << 11);
             Assert.False(Has(values, "Neck Nod Down-Up"));
             Assert.False(Has(values, "Jaw Close"));
             Assert.False(Has(values, "Left Arm Down-Up"));
@@ -59,14 +59,14 @@ namespace UnityEngine.Tests
         public void TheRootAndTheBodyAreParts()
         {
             var (values, slopes) = Curves();
-            HumanClipImport.DropPartsOff(values, slopes, 1 << 0, false);
+            HumanClipImport.DropPartsOff(values, slopes, 1 << 0);
             Assert.False(Has(values, "RootT.x"));
             Assert.False(Has(values, "RootQ.w"));
             Assert.True(Has(values, "Spine Front-Back"));
             Assert.True(Has(values, "LeftFootT.x"));
 
             (values, slopes) = Curves();
-            HumanClipImport.DropPartsOff(values, slopes, 1 << 1 | 1 << 9, false);
+            HumanClipImport.DropPartsOff(values, slopes, 1 << 1 | 1 << 9);
             Assert.True(Has(values, "RootT.x"));
             Assert.False(Has(values, "Spine Front-Back"));
             Assert.False(Has(values, "UpperChest Twist Left-Right"));
@@ -75,11 +75,31 @@ namespace UnityEngine.Tests
             Assert.True(Has(values, "Neck Nod Down-Up"));
         }
 
+        /// <summary>Translation DoF curves go with their bone's part: with the body, the left leg
+        /// and the right arm off, HumanT's clip keeps NeckTDOF.x (Head) and LeftShoulderTDOF.x
+        /// (LeftArm) and has no SpineTDOF, LeftUpperLegTDOF or RightUpperArmTDOF curves
+        /// (6000.0.71f1 Editor, tests/projects/modelclips HumanMaskTDoF).</summary>
+        [Fact]
+        public void TranslationDoFCurvesGoWithTheirBonesPart()
+        {
+            var (values, slopes) = Curves();
+            HumanClipImport.DropPartsOff(values, slopes, 1 << 1 | 1 << 3 | 1 << 6);
+            Assert.True(Has(values, "NeckTDOF.x"));
+            Assert.True(Has(values, "LeftShoulderTDOF.x"));
+            Assert.True(Has(values, "RightUpperLegTDOF.z"));
+            Assert.False(Has(values, "SpineTDOF.y"));
+            Assert.False(Has(values, "UpperChestTDOF.x"));
+            Assert.False(Has(values, "LeftUpperLegTDOF.z"));
+            Assert.False(Has(values, "LeftFootTDOF.x"));
+            Assert.False(Has(values, "RightUpperArmTDOF.x"));
+            Assert.False(Has(values, "RightShoulderTDOF.y"));
+        }
+
         [Fact]
         public void NoPartOffKeepsEveryCurve()
         {
             var (values, slopes) = Curves();
-            HumanClipImport.DropPartsOff(values, slopes, 0, true);
+            HumanClipImport.DropPartsOff(values, slopes, 0);
             for (int c = 0; c < HumanClipImport.CurveCount; c++) Assert.NotNull(values[c]);
         }
     }

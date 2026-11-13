@@ -300,6 +300,10 @@ public class ClipProbe : MonoBehaviour
                 Keys(model);
                 TransformCurves(model);
             }
+            // Then the translation DoF curves of a clip with body parts off: tests/projects/humanoid's
+            // HumanT (an avatar with translation DoF, seven bones moved) whose Scene clip has the
+            // body, the left leg and the right arm off, beside its Mirror clip with every part on.
+            Imported("HumanMaskTDoF", false);
             // Then the rotation signs of the HumanTwist rig imported as Legacy and of static
             // models whose axes are converted (modelaxis' Signed set: Z-up and Y-up files with a
             // reversed front axis, with and without Bake Axis Conversion and Preserve
