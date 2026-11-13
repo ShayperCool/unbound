@@ -6,6 +6,7 @@ public sealed class HierarchyIdImporter : ScriptedImporter
     public override void OnImportAsset(AssetImportContext ctx)
     {
         if (ctx.assetPath.EndsWith("Deep.hierarchyid")) { ImportDeep(ctx); return; }
+        if (ctx.assetPath.EndsWith("Script.hierarchyid")) { ImportScript(ctx); return; }
         var main=new Texture2D(2,2) { name="main" };
         ctx.AddObjectToAsset("Main",main);
         ctx.AddObjectToAsset("Root",new GameObject("root"));
@@ -32,6 +33,17 @@ public sealed class HierarchyIdImporter : ScriptedImporter
         ctx.AddObjectToAsset("Extra",extra);
         ctx.AddObjectToAsset("Second",new GameObject("Second"));
         ctx.AddObjectToAsset("Mesh",new Mesh { name="Mesh" });
+    }
+
+    // Script components on an added GameObject and on its child.
+    static void ImportScript(AssetImportContext ctx)
+    {
+        var holder=new GameObject("Holder");
+        holder.AddComponent<HierarchyMarker>();
+        holder.AddComponent<HierarchyMarker>();
+        Child(holder,"Inner").AddComponent<HierarchyMarker>();
+        ctx.AddObjectToAsset("Top",holder);
+        ctx.SetMainObject(holder);
     }
 
     static GameObject Child(GameObject parent,string name)

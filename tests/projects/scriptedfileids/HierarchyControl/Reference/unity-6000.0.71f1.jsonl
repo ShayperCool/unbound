@@ -25,4 +25,13 @@
 {"k":"deep//Second/Transform","v":"4593882995610042022 listed"}
 {"k":"deep/asset/Mesh/Mesh","v":"-5523277661179574252 listed"}
 {"k":"deep/listed","v":"22"}
+{"k":"script/main","v":"GameObject Script"}
+{"k":"script//Script/GameObject","v":"7909739142241987197 listed"}
+{"k":"script//Script/HierarchyMarker","v":"-5616122765638109850 listed"}
+{"k":"script//Script/HierarchyMarker#1","v":"-2571162535578764494 listed"}
+{"k":"script//Script/Inner/GameObject","v":"-5197281121832568775 listed"}
+{"k":"script//Script/Inner/HierarchyMarker","v":"1390733239066584640 listed"}
+{"k":"script//Script/Inner/Transform","v":"4021376234247763723 listed"}
+{"k":"script//Script/Transform","v":"283525029844229991 listed"}
+{"k":"script/listed","v":"7"}
 {"k":"complete","v":"1"}
