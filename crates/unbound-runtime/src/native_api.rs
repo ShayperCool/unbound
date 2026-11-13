@@ -74,7 +74,7 @@ use std::ffi::c_void;
 /// whole pixel sizes, and reports `TextCoreGlyphInfo`.
 /// 64: allocation-free individual compressed texels and ASTC texture packets.
 /// 65: the `MeshInstance` render command carries its call's instance count.
-pub const NATIVE_API_VERSION: u32 = 65;
+pub const NATIVE_API_VERSION: u32 = 66;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

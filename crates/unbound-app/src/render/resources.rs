@@ -899,12 +899,17 @@ fn decode_blocks(t: &owned::Texture) -> owned::Texture {
         texture_format::BC4 => BlockFormat::Bc4,
         texture_format::BC5 => BlockFormat::Bc5,
         texture_format::BC6H => BlockFormat::Bc6h,
+        c if texture_format::etc_unity(c).is_some() => {
+            BlockFormat::from_unity_format(texture_format::etc_unity(c).unwrap()).unwrap()
+        }
         _ => BlockFormat::Bc7,
     };
     report_fallback(
         t.format,
         &FormatFallback::Unsupported(if format.is_astc() {
             "ASTC blocks decoded because the device lacks their format or the base extent is not a whole number of blocks".to_string()
+        } else if format.is_etc() {
+            "ETC blocks decoded because the device lacks ETC2 or the base extent is not a whole number of blocks".to_string()
         } else if format == BlockFormat::Bc6h {
             "the device has no BC formats: the blocks are decoded, HDR colour clamped to 0..1"
                 .to_string()
@@ -956,6 +961,13 @@ pub fn block_format(code: i32) -> Option<wgpu::TextureFormat> {
         texture_format::BC4 => F::Bc4RUnorm,
         texture_format::BC5 => F::Bc5RgUnorm,
         texture_format::BC6H => F::Bc6hRgbUfloat,
+        c if texture_format::etc_unity(c).is_some() => {
+            if texture_format::etc_unity(c) == Some(45) {
+                F::Etc2Rgb8Unorm
+            } else {
+                F::Etc2Rgba8Unorm
+            }
+        }
         c if texture_format::astc_unity(c).is_some() => {
             let index = (c - texture_format::ASTC_COLOR_FIRST) % 6;
             let block = [
@@ -989,6 +1001,51 @@ pub fn can_upload_blocks(code: i32, width: i32, height: i32, features: wgpu::Fea
             && height % bh as i32 == 0
             && features.contains(format.required_features())
     })
+}
+
+/// Selects compressed storage only after the render device exists. Imported ETC packets
+/// retain the prior BC7 fallback; runtime ETC packets use their decoded RGBA pixels instead.
+fn resolve_block_packet(t: &owned::Texture, features: wgpu::Features) -> Option<owned::Texture> {
+    if texture_format::etc_bc7_fallback(t.format) {
+        use unbound_assets::texture::BlockFormat;
+        let format =
+            BlockFormat::from_unity_format(texture_format::etc_unity(t.format).unwrap()).unwrap();
+        let size = |format: BlockFormat| {
+            (0..t.mip_count.max(1) as u32)
+                .map(|level| {
+                    format.level_size(
+                        (t.width.max(1) as u32 >> level).max(1),
+                        (t.height.max(1) as u32 >> level).max(1),
+                    )
+                })
+                .sum::<usize>()
+        };
+        let native_size = size(format);
+        if can_upload_blocks(t.format, t.width, t.height, features) {
+            let mut packet = t.clone();
+            packet.format -= texture_format::ETC_BC7_OFFSET;
+            packet.data.truncate(native_size);
+            return Some(packet);
+        }
+        let bc7 = if texture_format::block_color(t.format) {
+            texture_format::BC7_COLOR
+        } else {
+            texture_format::BC7_DATA
+        };
+        if let Some(fallback) = t.data.get(native_size..)
+            && fallback.len() == size(BlockFormat::Bc7)
+            && can_upload_blocks(bc7, t.width, t.height, features)
+        {
+            return Some(owned::Texture {
+                format: bc7,
+                data: fallback.to_vec(),
+                ..t.clone()
+            });
+        }
+    } else if can_upload_blocks(t.format, t.width, t.height, features) {
+        return None;
+    }
+    Some(decode_blocks(t))
 }
 
 /// A whole compressed mip copies its physical blocks, including a partial edge. Regions
@@ -1166,7 +1223,7 @@ pub fn upload_texture_with(
     // A packet without pixels only changes the sampler state: a block-compressed import (whose
     // managed side knows it by its pixels' format) keeps its format and blocks.
     let keep_compressed;
-    let decoded;
+    let resolved;
     let t = match &existing {
         Some(e)
             if t.data.is_empty()
@@ -1179,14 +1236,9 @@ pub fn upload_texture_with(
             };
             &keep_compressed
         }
-        // A device without BC formats takes what the blocks decode to, as Unity does; so does
-        // a size the GPU cannot keep in blocks (not a multiple of 4: malformed data).
-        _ if block_format(t.format).is_some()
-            && !t.render_target
-            && !can_upload_blocks(t.format, t.width, t.height, device.features()) =>
-        {
-            decoded = decode_blocks(t);
-            &decoded
+        _ if block_format(t.format).is_some() && !t.render_target => {
+            resolved = resolve_block_packet(t, device.features());
+            resolved.as_ref().unwrap_or(t)
         }
         _ => t,
     };
@@ -1868,6 +1920,133 @@ mod tests {
     }
 
     #[test]
+    fn imported_etc_selects_device_storage_and_keeps_the_retained_fallback() {
+        for colour in [true, false] {
+            let bc7 = [0x40u8].into_iter().chain([0; 15]).collect::<Vec<_>>();
+            let mut data = vec![0; 8];
+            data.extend_from_slice(&bc7);
+            let packet = owned::Texture {
+                format: texture_format::ETC_BC7_FIRST + i32::from(!colour),
+                width: 4,
+                height: 4,
+                mip_count: 1,
+                data,
+                ..Default::default()
+            };
+            let native = resolve_block_packet(
+                &packet,
+                wgpu::Features::TEXTURE_COMPRESSION_ETC2 | wgpu::Features::TEXTURE_COMPRESSION_BC,
+            )
+            .unwrap();
+            assert_eq!(
+                native.format,
+                if colour {
+                    texture_format::ETC_RGB_COLOR
+                } else {
+                    texture_format::ETC_RGB_DATA
+                }
+            );
+            assert_eq!(native.data, [0; 8]);
+            let fallback =
+                resolve_block_packet(&packet, wgpu::Features::TEXTURE_COMPRESSION_BC).unwrap();
+            assert_eq!(
+                fallback.format,
+                if colour {
+                    texture_format::BC7_COLOR
+                } else {
+                    texture_format::BC7_DATA
+                }
+            );
+            assert_eq!(fallback.data, bc7);
+            let decoded = resolve_block_packet(&packet, wgpu::Features::empty()).unwrap();
+            assert_eq!(decoded.data, [2, 2, 2, 255].repeat(16));
+            let odd = owned::Texture {
+                width: 3,
+                height: 2,
+                ..packet
+            };
+            assert_eq!(
+                resolve_block_packet(
+                    &odd,
+                    wgpu::Features::TEXTURE_COMPRESSION_ETC2
+                        | wgpu::Features::TEXTURE_COMPRESSION_BC
+                )
+                .unwrap()
+                .data,
+                [2, 2, 2, 255].repeat(6)
+            );
+        }
+    }
+
+    #[test]
+    fn etc_packet_fallback_decodes_valid_blocks_at_logical_dimensions() {
+        for code in texture_format::ETC_RGB_COLOR..=texture_format::ETC_LAST {
+            let alpha = texture_format::etc_unity(code) == Some(47);
+            let mut block = vec![0; if alpha { 16 } else { 8 }];
+            if alpha {
+                block[0] = 64;
+            }
+            let packet = owned::Texture {
+                format: code,
+                width: 3,
+                height: 2,
+                mip_count: 1,
+                data: block,
+                ..Default::default()
+            };
+            let decoded = decode_blocks(&packet);
+            assert_eq!(
+                decoded.format,
+                if texture_format::block_color(code) {
+                    texture_format::SRGB_RGBA8
+                } else {
+                    texture_format::LINEAR_RGBA8
+                }
+            );
+            assert_eq!(
+                decoded.data,
+                [2, 2, 2, if alpha { 64 } else { 255 }].repeat(6)
+            );
+        }
+    }
+
+    #[test]
+    fn etc_upload_requires_etc2_and_retains_its_actual_block_size() {
+        for code in texture_format::ETC_RGB_COLOR..=texture_format::ETC_LAST {
+            let format = block_format(code).unwrap();
+            assert_eq!(format.block_dimensions(), (4, 4));
+            assert_eq!(
+                format.block_copy_size(None),
+                Some(if texture_format::etc_unity(code) == Some(45) {
+                    8
+                } else {
+                    16
+                })
+            );
+            assert!(can_upload_blocks(
+                code,
+                20,
+                12,
+                wgpu::Features::TEXTURE_COMPRESSION_ETC2
+            ));
+            assert!(!can_upload_blocks(
+                code,
+                20,
+                12,
+                wgpu::Features::TEXTURE_COMPRESSION_BC
+            ));
+            assert!(!can_upload_blocks(
+                code,
+                7,
+                5,
+                wgpu::Features::TEXTURE_COMPRESSION_ETC2
+            ));
+            let physical = copy_extent(format, true, [0, 0], [0, 0], [3, 1]).unwrap();
+            assert_eq!((physical.width, physical.height), (4, 4));
+        }
+    }
+
+    #[test]
     fn astc_upload_checks_the_actual_footprint_and_channel_feature() {
         use wgpu::Features as F;
         for code in texture_format::ASTC_COLOR_FIRST..=texture_format::ASTC_LAST {
@@ -2024,7 +2203,7 @@ mod tests {
 
     #[test]
     fn unknown_codes_are_rejected() {
-        for code in [-1, texture_format::ASTC_LAST + 1, 99, i32::MAX] {
+        for code in [-1, texture_format::ETC_LAST + 1, 99, i32::MAX] {
             let s = stored(code, true, false, 1, &full_caps());
             assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm);
             assert!(

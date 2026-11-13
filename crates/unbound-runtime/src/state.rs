@@ -1444,7 +1444,12 @@ fn block_code(format: unbound_assets::texture::BlockFormat, srgb: bool) -> i32 {
                     - 48
             }
         }
-        _ => unreachable!("ETC and EAC blocks upload as decoded pixels"),
+        B::Etc1 | B::Etc2Rgb => colour(texture_format::ETC_RGB_COLOR, texture_format::ETC_RGB_DATA),
+        B::Etc2Rgba8 => colour(
+            texture_format::ETC_RGBA_COLOR,
+            texture_format::ETC_RGBA_DATA,
+        ),
+        _ => unreachable!("EAC blocks upload as normalized channel pixels"),
     }
 }
 
@@ -1508,19 +1513,27 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     // The import's blocks, else BC7 blocks made for the GPU when it samples them, else the
     // pixels.
     let gpu_bc = GPU_BC.load(std::sync::atomic::Ordering::Relaxed);
-    // The import's BC blocks always go up (the renderer decodes them where the device has no BC
-    // formats; textures may import before the device exists). ETC uses a BC7 fallback where
-    // available; ASTC retains native blocks or uses a decoded device fallback.
+    // Keep compressed blocks until the renderer chooses a device representation. ETC can
+    // carry its cached BC7 fallback too, preserving imports that precede device initialization.
     let gpu_channel = texture.gpu_channel();
-    let blocks = texture
-        .blocks
-        .take()
-        .filter(|b| b.format.is_bc() || b.format.is_astc());
+    let blocks = texture.blocks.take().filter(|b| {
+        b.format.is_bc() || b.format.is_astc() || (b.format.is_etc() && !b.format.is_eac())
+    });
     let (gpu_format, data) = match (blocks, texture.bc7.take()) {
-        (Some(blocks), _) => (
-            block_code(blocks.format, texture.srgb),
-            concat(&blocks.mips),
-        ),
+        (Some(blocks), fallback) => {
+            let mut code = block_code(blocks.format, texture.srgb);
+            let mut data = concat(&blocks.mips);
+            if blocks.format.is_etc()
+                && let Some(fallback) = fallback
+            {
+                code += texture_format::ETC_BC7_OFFSET;
+                data.reserve(fallback.iter().map(|m| m.len()).sum());
+                for mip in fallback {
+                    data.extend_from_slice(&mip);
+                }
+            }
+            (code, data)
+        }
         (None, Some(blocks)) if gpu_bc => (format + texture_format::BC7_COLOR, concat(&blocks)),
         _ => {
             // Mip 0 keeps its buffer; the smaller levels are appended to it.
@@ -1651,6 +1664,24 @@ fn bundle_cache_form(request: &str) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn etc_block_codes_keep_colour_and_data_distinct() {
+        use unbound_assets::texture::BlockFormat as B;
+        for format in [B::Etc1, B::Etc2Rgb, B::Etc2Rgba8] {
+            let colour = if format == B::Etc2Rgba8 {
+                super::texture_format::ETC_RGBA_COLOR
+            } else {
+                super::texture_format::ETC_RGB_COLOR
+            };
+            assert_eq!(super::block_code(format, true), colour);
+            assert_eq!(super::block_code(format, false), colour + 1);
+        }
+        assert_eq!(
+            super::block_code(B::Bc1, true),
+            super::texture_format::BC1_COLOR
+        );
+    }
+
     use super::*;
 
     /// Alpha channel imports go up alpha-only, red and red-green ones in one and two channels

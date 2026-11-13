@@ -209,6 +209,31 @@ pub mod texture_format {
     pub const ASTC_HDR_FIRST: i32 = 59;
     pub const ASTC_LAST: i32 = 64;
 
+    /// ETC1/ETC2 RGB and ETC2 RGBA8, colour then linear. ETC1 blocks are valid ETC2 RGB.
+    pub const ETC_RGB_COLOR: i32 = 65;
+    pub const ETC_RGB_DATA: i32 = 66;
+    pub const ETC_RGBA_COLOR: i32 = 67;
+    pub const ETC_RGBA_DATA: i32 = 68;
+    /// Imported ETC packets may append their retained BC7 mip chain after the ETC bytes.
+    pub const ETC_BC7_FIRST: i32 = 69;
+    pub const ETC_BC7_OFFSET: i32 = ETC_BC7_FIRST - ETC_RGB_COLOR;
+    pub const ETC_LAST: i32 = 72;
+
+    pub const fn etc_bc7_fallback(code: i32) -> bool {
+        code >= ETC_BC7_FIRST && code <= ETC_LAST
+    }
+
+    pub const fn etc_unity(code: i32) -> Option<i32> {
+        match code {
+            ETC_RGB_COLOR..=ETC_LAST => Some(if (code - ETC_RGB_COLOR) % ETC_BC7_OFFSET < 2 {
+                45
+            } else {
+                47
+            }),
+            _ => None,
+        }
+    }
+
     /// The corresponding public Unity ASTC format number.
     pub const fn astc_unity(code: i32) -> Option<i32> {
         match code {
@@ -220,15 +245,16 @@ pub mod texture_format {
 
     /// Whether a code is block-compressed.
     pub const fn block_compressed(code: i32) -> bool {
-        matches!(code, BC7_COLOR | BC7_DATA | BC1_COLOR..=BC6H | ASTC_COLOR_FIRST..=ASTC_LAST)
+        matches!(code, BC7_COLOR | BC7_DATA | BC1_COLOR..=BC6H | ASTC_COLOR_FIRST..=ETC_LAST)
     }
 
     /// Whether a block-compressed code is sampled through an sRGB view in linear projects.
     pub const fn block_color(code: i32) -> bool {
         matches!(
             code,
-            BC7_COLOR | BC1_COLOR | BC3_COLOR | ASTC_COLOR_FIRST..=52
-        )
+            BC7_COLOR | BC1_COLOR | BC3_COLOR | ASTC_COLOR_FIRST
+                ..=52 | ETC_RGB_COLOR | ETC_RGBA_COLOR
+        ) || (etc_bc7_fallback(code) && code % 2 == 1)
     }
 
     /// The integer code of `channels` (1, 2 or 4) channels of `bits` (8, 16 or 32) each, signed
@@ -251,7 +277,7 @@ pub mod texture_format {
     /// The packet's code, or why the renderer cannot take it: codes outside the table are
     /// rejected rather than drawn as some other format.
     pub fn validate(code: i32) -> Result<i32, String> {
-        if (SRGB_RGBA8..=ASTC_LAST).contains(&code) {
+        if (SRGB_RGBA8..=ETC_LAST).contains(&code) {
             Ok(code)
         } else {
             Err(format!(
@@ -829,7 +855,7 @@ mod tests {
         );
         assert_eq!((R8_SNORM, RG8_SNORM, RGBA8_SNORM), (35, 36, 37));
         assert_eq!((R8_UNORM, RG8_UNORM), (45, 46));
-        for code in 0..=ASTC_LAST {
+        for code in 0..=ETC_LAST {
             assert_eq!(validate(code), Ok(code));
         }
         assert!(!float_data(R8_UNORM) && !float_data(RG8_UNORM) && !block_compressed(R8_UNORM));
@@ -838,7 +864,7 @@ mod tests {
         // The integer codes follow the normalized ones, without upload data.
         assert_eq!((integer(1, 8, false), integer(4, 32, true)), (17, 34));
         assert!((INTEGER_FIRST..=INTEGER_LAST).all(|c| !float_data(c)));
-        for code in [-1, 65, 66, i32::MAX, i32::MIN] {
+        for code in [-1, 73, 74, i32::MAX, i32::MIN] {
             assert!(validate(code).is_err(), "{code} is accepted");
         }
         for code in [

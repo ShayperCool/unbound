@@ -250,7 +250,7 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>ETC formats keep their blocks like BC ones, decode natively and go to the
-        /// renderer decoded (it samples no ETC).</summary>
+        /// renderer as native packets, with decoding on devices without ETC2.</summary>
         [Theory]
         [InlineData(TextureFormat.ETC_RGB4, 8)]
         [InlineData(TextureFormat.ETC2_RGB, 8)]
@@ -259,7 +259,9 @@ namespace UnityEngine.Tests
         {
             Assert.Equal(blockBytes, BlockFormats.BlockBytes(format));
             Assert.True(BlockFormats.NativeDecoded(format));
-            Assert.Equal(-1, BlockFormats.GpuCode(format, false));
+            int colour = format == TextureFormat.ETC2_RGBA8 ? 67 : 65;
+            Assert.Equal(colour, BlockFormats.GpuCode(format, false));
+            Assert.Equal(colour + 1, BlockFormats.GpuCode(format, true));
             Assert.False(BlockFormats.NativeDecoded(TextureFormat.DXT1));
         }
 

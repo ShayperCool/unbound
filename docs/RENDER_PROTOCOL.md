@@ -399,3 +399,13 @@ Unity's error shader (logged once).
 
 A draw's `color` multiplies the vertex color (as the canvas does); `clip` becomes a scissor
 rectangle.
+
+
+ETC texture packets use codes 65/66 for RGB colour/data and 67/68 for RGBA colour/data.
+ETC1 bytes use the compatible ETC2 RGB representation. Codes 69 through 72 carry the same
+ETC mip chain followed by a retained BC7 mip chain of the same logical dimensions. The ETC
+format and mip count determine the split. The renderer selects ETC2 from enabled device
+features at upload time, including imports made before device initialization. It otherwise
+uses the retained BC7 bytes when supported, or decoded RGBA pixels. Runtime ETC packets
+have no retained BC7 stream and use the decoded fallback. EAC keeps normalized channel
+uploads. NativeApi 66 admits these packet codes.

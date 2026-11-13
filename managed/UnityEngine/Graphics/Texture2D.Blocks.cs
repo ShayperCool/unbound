@@ -231,7 +231,7 @@ namespace UnityEngine
         }
 
         /// <summary>Uploads a block-compressed texture's blocks; ETC blocks as the RGBA8 texels
-        /// they decode to; EAC retains normalized 16-bit channels. ASTC stays compressed where supported.</summary>
+        /// they decode to where unsupported; EAC retains normalized 16-bit channels. ETC and ASTC stay compressed where supported.</summary>
         unsafe void UploadBlocks()
         {
             var blocks = CurrentBlocks();
@@ -580,8 +580,8 @@ namespace Unbound.Runtime
             or UnityEngine.TextureFormat.ETC2_RGBA8 || IsAstc(format) || IsEac(format);
 
         /// <summary>The renderer's packet code of a block format: BC1, BC3 and BC7 colour (sampled
-        /// through an sRGB view in linear projects) or linear data; BC4, BC5 and BC6H; -1 for ETC
-        /// and ASTC (uploaded decoded).</summary>
+        /// through an sRGB view in linear projects) or linear data; BC4, BC5 and BC6H, ETC and ASTC.
+        /// EAC uses normalized channel pixels.</summary>
         internal static int GpuCode(UnityEngine.TextureFormat format, bool linear) => format switch
         {
             UnityEngine.TextureFormat.DXT1 => linear ? 39 : 38,
@@ -590,9 +590,8 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.BC4 => 42,
             UnityEngine.TextureFormat.BC5 => 43,
             UnityEngine.TextureFormat.BC6H => 44,
-            UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
-                or UnityEngine.TextureFormat.ETC2_RGBA8
-                => -1,
+            UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB => linear ? 66 : 65,
+            UnityEngine.TextureFormat.ETC2_RGBA8 => linear ? 68 : 67,
             _ when IsAstcHdr(format) => 59 + (int)format - 66,
             _ when IsAstc(format) => (linear ? 53 : 47) + (int)format - 48,
             _ when IsEac(format) => -1,

@@ -119,7 +119,7 @@ namespace UnityEngine.Tests
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects, 28 render protocol 12, 29
             // frame input versions, 30 the decoded-resampling flag and 31 the imported texture
             // format, 32 mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 source-loop listener poses 37 the downloaded audio decoder 38 prepared callback buffers and 39 retained MSAA resolves and 40 parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins, 42 legacy glyph bearings, 43 the zone startup frame flag, 44 Pitch Shifter Max channels, 45 realtime GI, 46 driver capabilities, 47 component activation flags, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment and 52 directional realtime lightmaps; 60 BatchRendererGroup draws; 61 scripts' profiler markers for native plugins; 63 TextCore glyph loads; 65 mesh instances' call counts.
-            Assert.Equal(65u, NativeApi.CurrentVersion);
+            Assert.Equal(66u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
