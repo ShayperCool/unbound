@@ -284,6 +284,9 @@ for name, source, settings in [
 
 CASES['HdrNpotNormal'] = ('HdrNpot', 'compression=normal npot=none')
 
+SOURCES['HdrMultiplier'] = lambda: (3, 3, [[(1.0, 0.5, 0.1875, 0.25)] * 3 for _ in range(3)])
+CASES['HdrMultiplier'] = ('HdrMultiplier', 'compression=normal crunch=1 srgb=0 npot=none mips=0')
+
 def main():
     textures = PROBE/'Assets/Textures'
     textures.mkdir(parents=True, exist_ok=True)

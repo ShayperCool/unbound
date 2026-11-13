@@ -1,4 +1,4 @@
-//! RGBM source processing for measured 2D HDR Crunch imports.
+//! RGBM source processing for measured Android 2D HDR imports.
 
 use super::mipmaps::{linear_to_gamma, quantize};
 
@@ -27,7 +27,7 @@ pub(super) fn encode(pixels: &[u8], decode_gamma: bool) -> Vec<u8> {
             }
         });
         let maximum = maximum(maximum(MINIMUM_RADIANCE, rgb[2]), maximum(rgb[1], rgb[0]));
-        let multiplier = (maximum.powf(1.0 / GAMMA) * (1.0 / RANGE) * 255.0).ceil() * (1.0 / 255.0);
+        let multiplier = (maximum.powf(1.0 / GAMMA) * (1.0 / RANGE) * 255.0).ceil() / 255.0;
         let scale = (multiplier * RANGE).powf(GAMMA);
         for value in rgb {
             encoded.push(quantize(
@@ -41,6 +41,15 @@ pub(super) fn encode(pixels: &[u8], decode_gamma: bool) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn multiplier_division_preserves_the_half_channel() {
+        let pixel: Vec<u8> = [1.0_f32, 0.5, 0.1875, 0.25]
+            .into_iter()
+            .flat_map(f32::to_le_bytes)
+            .collect();
+        assert_eq!(super::encode(&pixel, true), [255, 128, 48, 51]);
+    }
+
     #[test]
     fn nonfinite_pixels_are_tolerated_and_source_alpha_is_replaced() {
         let bytes = |values: [f32; 4]| {

@@ -1231,7 +1231,8 @@ impl Importer for TextureImporter {
     // 38: runtime three-column block padding repeats the middle texel.
     // 39: Android HDR colour sources and their uncompressed fallbacks retain RGBM bytes.
     // 40: RGBM retains high/nonfinite radiance and the authored colour-flag transform.
-    const VERSION: u32 = 40;
+    // 41: RGBM multiplier normalization preserves division rounding.
+    const VERSION: u32 = 41;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);

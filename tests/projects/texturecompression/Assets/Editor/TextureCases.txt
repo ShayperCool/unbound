@@ -186,3 +186,4 @@ HdrCrunchOpaque compression=normal crunch=1 alpha=none
 HdrSpecialCrunch compression=normal crunch=1 mips=0
 HdrNpotCrunch compression=normal crunch=1 npot=none
 HdrNpotNormal compression=normal npot=none
+HdrMultiplier compression=normal crunch=1 srgb=0 npot=none mips=0

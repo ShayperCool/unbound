@@ -1849,7 +1849,11 @@ fn hdr_crunch_uses_rgbm_in_both_project_colour_spaces() {
 fn hdr_size_fallbacks_filter_before_encoding_rgb_or_rgbm_bytes() {
     let probe =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/texturecompression");
-    for case in ["HdrNpotCrunch", "HdrNpotNormal"] {
+    for (case, srgb_flag) in [
+        ("HdrNpotCrunch", true),
+        ("HdrNpotNormal", true),
+        ("HdrMultiplier", false),
+    ] {
         let source = probe.join(format!("Assets/Textures/{case}.exr"));
         let bytes = std::fs::read(&source).unwrap();
         let meta = unbound_yaml::parse_value(
@@ -1875,7 +1879,11 @@ fn hdr_size_fallbacks_filter_before_encoding_rgb_or_rgbm_bytes() {
             };
             let texture = importer.import(&source, &bytes, &meta).unwrap();
             assert_eq!(texture.format, TextureFormat::Rgba8);
-            assert_eq!(texture.srgb, target == "Android", "{profile} {case}");
+            assert_eq!(
+                texture.srgb,
+                target == "Android" && srgb_flag,
+                "{profile} {case}"
+            );
             assert!(texture.blocks.is_none() && texture.crunched.is_none());
             if channels == 3 {
                 assert!(!texture.has_alpha);
