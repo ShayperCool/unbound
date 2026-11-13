@@ -15,6 +15,7 @@ pub mod preprocess;
 
 mod buffer_members;
 mod fit;
+mod matrix_swizzles;
 mod samplers;
 mod scopes;
 mod surface;
@@ -1158,11 +1159,14 @@ const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
 /// `half`/minimum precision types (one stays), empty member declarations (`;;` in a struct or
 /// cbuffer, left by macros), namespaces and member functions defined outside their struct
 /// ([`scopes`]), half literals (`1.0h`, which glslang types as 16-bit floats that mix with no
-/// integer; `half` is `float` on desktop), buffers held in structs ([`buffer_members`]).
+/// integer; `half` is `float` on desktop), buffers held in structs ([`buffer_members`]), matrix
+/// swizzles of several elements ([`matrix_swizzles`]).
 fn fxc_compatible(source: &str) -> String {
     buffer_members::buffer_members(&writable_globals(&constructor_statements(
         &flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
-            &drop_duplicate_overloads(&half_literals(&scopes::flatten_scopes(source))),
+            &drop_duplicate_overloads(&half_literals(&matrix_swizzles::matrix_swizzles(
+                &scopes::flatten_scopes(source),
+            ))),
         ))),
     )))
 }
