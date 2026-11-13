@@ -278,7 +278,7 @@ Captures go to `$XDG_CACHE_HOME/unbound/validation/runs/humanoid/<label>`. The c
 every missing, extra and differing value with a per-section summary; numbers match within 2e-4
 (absolute or relative), a quaternion also matches its negation.
 
-Known differences (`known.json`, by class with its cause and the exact `<key> <field>` entries; only
+Known differences (`known.json`, by class with its cause and either the exact `<key> <field>` entries or bounds, see compare.py; only
 keys of the human stream controls are listed): each is printed as `known <class>: ...` and counted
 in the summary's `known` number instead of its differences, and an entry that matches again is
 printed as `NOW MATCHES`. `feet-pivot-velocity`: Animator.velocity at steps 5 and 17 of HumanA's
