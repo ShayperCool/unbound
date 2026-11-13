@@ -1,0 +1,18 @@
+{
+ "commands": [
+  "python3 tests/projects/textureformats/run.py verify --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label \"gate-opengl-$(date +%s%N)\"",
+  "python3 tests/projects/textureformats/run.py verify --release \"$UNBOUND_PROBE_UNITY_VERSION\" --device vulkan --label \"gate-vulkan-$(date +%s%N)\""
+ ],
+ "summary": "\\{\"reference_count\":.*\\}",
+ "engine_paths": [
+  "crates/unbound-runtime/src/render_protocol.rs",
+  "crates/unbound-app/src/render/resources.rs",
+  "crates/unbound-app/src/render/executor.rs",
+  "crates/unbound-app/src/render/pipelines.rs",
+  "crates/unbound-app/src/shaders/clear.wgsl",
+  "managed/UnityEngine/Graphics/RenderTexture.cs",
+  "managed/UnityEngine/Graphics/Texture2D.cs",
+  "managed/UnityEngine/Graphics/AsyncReadback.cs",
+  "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs"
+ ]
+}

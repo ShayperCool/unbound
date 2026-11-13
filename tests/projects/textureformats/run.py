@@ -27,8 +27,8 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import reference_file, run_root
-from editor_runner import EditorJob, jsonl_complete, publish as publish_repeats, run_parallel, summary
+from probe_paths import reference_file, reference_root, run_root
+from editor_runner import EditorJob, jsonl_complete, publish as publish_repeats, run, run_parallel, summary
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -38,6 +38,18 @@ REPEATS = ('native1', 'native2')
 OUTPUT = 'values.jsonl'
 # The cases Unbound matches (TEXTURE_FORMATS_PROBE_ONLY prefixes): every one.
 SUPPORTED = 'rt,tex,feedback'
+DEVICE = 'opengl'
+# This device's reference covers the added format/clear/feedback mechanisms. Older packed
+# UNorm async-to-float cases do not repeat on this device and have no canonical reference.
+VULKAN_CASES = 'rt.partial,rt.readControl,rt.R16_SNorm,rt.R16G16_SNorm,rt.R16G16B16_SNorm,rt.R16G16B16A16_SNorm,rt.A2B10G10R10_UIntPack32,feedback.integer'
+
+
+def reference():
+    return reference_file(PROBE, 'jsonl') if DEVICE == 'opengl' else reference_root(PROBE)/'vulkan-q58.jsonl'
+
+
+def residuals():
+    return PROBE/('residuals.json' if DEVICE == 'opengl' else 'residuals-vulkan.json')
 
 
 def copy_project(dest, release):
@@ -81,10 +93,12 @@ def editor(work, release):
         copy_project(project, release)
         fresh_output(out)
         jobs.append(EditorJob(project, out/'editor.log', out, args=['-executeMethod', 'TexFormatsRunner.Record'],
-                              batch=True, graphics=True, env={'TEXTURE_FORMATS_PROBE_OUT': str(out/OUTPUT)},
+                              batch=True, graphics=True, vulkan=DEVICE == 'vulkan',
+                              env={'TEXTURE_FORMATS_PROBE_OUT': str(out/OUTPUT),
+                                   **({'TEXTURE_FORMATS_PROBE_ONLY': VULKAN_CASES} if DEVICE == 'vulkan' else {})},
                               timeout=900, shutdown_grace=120, progress_files=[out/OUTPUT], progress_timeout=600,
                               label='textureformats-'+repeat))
-    results = run_parallel(jobs)
+    results = [run(job) for job in jobs] if DEVICE == 'vulkan' else run_parallel(jobs)
     for result in results:
         print(summary(result))
     for repeat in REPEATS:
@@ -111,7 +125,7 @@ def publish(work, append=False):
         else:
             shutil.copyfile(first/OUTPUT, target)
         print('published', target)
-    target = reference_file(PROBE, 'jsonl')
+    target = reference()
     if append:
         # The repeat validator refuses overwriting a reference. Validate into a private candidate,
         # then append only new keys while keeping every earlier record byte for byte.
@@ -135,7 +149,8 @@ def unbound(work, release, only=None):
         env['TEXTURE_FORMATS_PROBE_ONLY'] = only
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
-                                 '--no-watch', '--frames', '30', '--size', '64x64'],
+                                 '--no-watch', '--frames', '30', '--size', '64x64',
+                                 '--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)
     if result.returncode == 0:
@@ -147,13 +162,13 @@ def unbound(work, release, only=None):
 
 
 def verify(work, release, cases):
-    only = None if cases == 'all' else SUPPORTED
+    only = VULKAN_CASES if DEVICE == 'vulkan' else None if cases == 'all' else SUPPORTED
     code = unbound(work, release, only)
     if code:
         return code
-    command = [sys.executable, str(PROBE/'compare.py'), str(reference_file(PROBE, 'jsonl')),
+    command = [sys.executable, str(PROBE/'compare.py'), str(reference()),
                str(work/'unbound'/OUTPUT), '--report', str(work/'report.json'),
-               '--residuals', str(PROBE/'residuals.json')]
+               '--residuals', str(residuals())]
     return subprocess.run(command + (['--only', only] if only else [])).returncode
 
 
@@ -163,16 +178,21 @@ def main():
     parser.add_argument('--cases', choices=('supported', 'all'), default='supported', help='verify: which cases')
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
+    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
     parser.add_argument('--append', action='store_true', help='publish: append new keys, preserving every existing record')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
+    global DEVICE
+    DEVICE = args.device
+    if DEVICE == 'vulkan' and args.cases == 'all':
+        parser.error('the Vulkan reference covers the Q58 cases; --cases all is not recorded')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     if args.mode == 'editor':
         return editor(work, args.release)
     if args.mode == 'unbound':
-        return unbound(work, args.release, os.environ.get('TEXTURE_FORMATS_PROBE_ONLY'))
+        return unbound(work, args.release, VULKAN_CASES if DEVICE == 'vulkan' else os.environ.get('TEXTURE_FORMATS_PROBE_ONLY'))
     if args.mode == 'verify':
         return verify(work, args.release, args.cases)
     return publish(work, args.append)

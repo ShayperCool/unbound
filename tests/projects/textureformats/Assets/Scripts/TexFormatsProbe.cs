@@ -644,6 +644,159 @@ public static class TexFormatsProbe
 
     }
 
+    // Typed partial clears and self-feedback, with outside-viewport and float-target controls.
+    static void Q58Cases()
+    {
+        var packed = new IntCase { Key = "A2B10G10R10_UIntPack32", Format = GraphicsFormat.A2B10G10R10_UIntPack32, Signed = false, Bits = 32 };
+        if (Runs("rt." + packed.Key)) IntTarget(packed);
+        foreach (var format in new[] { GraphicsFormat.R16_SNorm, GraphicsFormat.R16G16_SNorm, GraphicsFormat.R16G16B16_SNorm, GraphicsFormat.R16G16B16A16_SNorm })
+        {
+            string key = "rt." + format;
+            if (!Runs(key)) continue;
+            Support(key, format);
+            RenderTexture rt = null;
+            Try(key + ".create", () => { rt = Target(Descriptor(format)); return B2(rt.Create()); });
+            if (rt == null || !rt.IsCreated()) continue;
+            Value(key + ".allocatedFormat", Json(rt.graphicsFormat.ToString()));
+            Clear(rt, B); Read(key + ".clear", rt);
+            s_Mat.SetVector("_Color", A); s_Mat.SetVector("_Color2", B);
+            Graphics.Blit(null, rt, s_Mat, 2); Read(key + ".split", rt);
+            Try(key + ".sample", () => Sampled(rt, false));
+            Try(key + ".filter", () => Sampled(rt, true));
+            Clear(rt, B); s_Mat.SetVector("_Color", Over);
+            Graphics.Blit(null, rt, s_Mat, 1); Read(key + ".blend", rt);
+            var fresh = Target(Descriptor(format)); fresh.Create();
+            s_Mat.SetVector("_Color", A); s_Mat.SetVector("_Color2", B);
+            Graphics.Blit(null, fresh, s_Mat, 2); Read(key + ".freshDraw", fresh);
+            var edge = new Color(-1f, -1.25f, 1.25f, -.5f);
+            Clear(rt, edge); Read(key + ".endpoint.clear", rt);
+            s_Mat.SetVector("_Color", edge);
+            Graphics.Blit(null, rt, s_Mat, 0); Read(key + ".endpoint.draw", rt);
+            bool writable = SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.LoadStore);
+            Value(key + ".kernel.supported", B2(writable));
+            if (writable)
+            {
+                var d = Descriptor(format); d.enableRandomWrite = true;
+                var rw = Target(d); Value(key + ".kernel.create", B2(rw.Create()));
+                int kernel = s_Kernels.FindKernel("WriteNorm");
+                s_Kernels.SetTexture(kernel, "_Norm", rw); s_Kernels.Dispatch(kernel, 1, 1, 1);
+                Read(key + ".kernel", rw);
+            }
+        }
+        if (Runs("rt.readControl"))
+        foreach (var format in new[] { GraphicsFormat.R32_SFloat, GraphicsFormat.R16_SFloat, GraphicsFormat.R32G32_SFloat,
+            GraphicsFormat.R16_UNorm, GraphicsFormat.R16G16_UNorm, GraphicsFormat.R8G8_UNorm, GraphicsFormat.R8G8B8A8_UNorm })
+        {
+            string key = "rt.readControl." + format;
+            var rt = Target(Descriptor(format)); rt.Create();
+            s_Mat.SetVector("_Color", A); s_Mat.SetVector("_Color2", B);
+            Graphics.Blit(null, rt, s_Mat, 2); Read(key, rt);
+        }
+        if (Runs("rt.readControl"))
+        foreach (var format in new[] { GraphicsFormat.A2B10G10R10_UNormPack32, GraphicsFormat.R8G8_SNorm })
+        {
+            string key = "rt.readControl." + format;
+            var rt = Target(Descriptor(format)); rt.Create();
+            s_Mat.SetVector("_Color", A); s_Mat.SetVector("_Color2", B);
+            Graphics.Blit(null, rt, s_Mat, 2); ReadPixels(key, rt);
+        }
+        if (Runs("rt.readControl"))
+        foreach (var format in new[] { GraphicsFormat.R8G8B8A8_SNorm, GraphicsFormat.R16G16B16A16_SNorm })
+        {
+            int max = format == GraphicsFormat.R8G8B8A8_SNorm ? 127 : 32767;
+            var rt = Target(Descriptor(format)); rt.Create();
+            var values = max == 127 ? new[] { 0, 1, 15, 16, 63, 64, 126, 127 }
+                : new[] { 0, 64, 193, 322, 16383, 16384, 32766, 32767 };
+            for (int sign = 0; sign < 2; sign++)
+            {
+                float At(int i) => (sign == 0 ? 1 : -1) * (values[i] + .25f) / max;
+                s_Mat.SetVector("_Color", new Color(At(0), At(1), At(2), At(3)));
+                s_Mat.SetVector("_Color2", new Color(At(4), At(5), At(6), At(7)));
+                Graphics.Blit(null, rt, s_Mat, 2);
+                string key = "rt.readControl.transfer." + format + "." + sign;
+                Value(key + ".sample", Sampled(rt, false)); ReadPixels(key, rt);
+            }
+        }
+        var extra = Own(new Material(Shader.Find("Probe/TexFormatsQ58")));
+        foreach (var c in IntTargets) Q58Integer(c, extra);
+        Q58Integer(packed, extra);
+        if (Runs("rt.partial.float")) Q58Depth("rt.partial.float", Target(new RenderTextureDescriptor(2, 1, RenderTextureFormat.ARGBFloat, 24)), extra);
+    }
+
+    static void Q58Integer(IntCase c, Material extra)
+    {
+        string key = "rt.partial." + c.Key;
+        if (Runs(key))
+        {
+            var d = c.Legacy.HasValue ? new RenderTextureDescriptor(2, 1, c.Legacy.Value, 24) : Descriptor(c.Format);
+            d.depthBufferBits = 24;
+            var rt = Target(d); rt.Create();
+            foreach (bool command in new[] { false, true })
+            {
+                string path = key + (command ? ".command" : ".gl");
+                var previous = RenderTexture.active; RenderTexture.active = rt;
+                GL.Viewport(new Rect(0, 0, 2, 1));
+                GL.Clear(true, true, new Color(0, 0, 0, 0), .25f);
+                GL.PushMatrix(); GL.LoadOrtho(); s_Mat.SetPass(WritePass(c));
+                GL.Begin(GL.QUADS);
+                GL.TexCoord2(0, 0); GL.Vertex3(0, 0, 0);
+                GL.TexCoord2(0, 1); GL.Vertex3(0, 1, 0);
+                GL.TexCoord2(1, 1); GL.Vertex3(1, 1, 0);
+                GL.TexCoord2(1, 0); GL.Vertex3(1, 0, 0);
+                GL.End(); GL.PopMatrix();
+                var clear = new Color(3f, -2f, 1000.5f, .5f);
+                if (command)
+                {
+                    using (var cmd = new CommandBuffer())
+                    {
+                        cmd.SetRenderTarget(rt); cmd.SetViewport(new Rect(1, 0, 1, 1));
+                        cmd.ClearRenderTarget(false, true, clear); Graphics.ExecuteCommandBuffer(cmd);
+                    }
+                }
+                else { GL.Viewport(new Rect(1, 0, 1, 1)); GL.Clear(false, true, clear); }
+                GL.Viewport(new Rect(0, 0, 2, 1)); RenderTexture.active = previous;
+                Try(path + ".color.load", () => Loaded(rt, c.Signed));
+            }
+            Q58Depth(key, rt, extra);
+        }
+        key = "feedback.integer." + c.Key;
+        if (!Runs(key)) return;
+        var target = c.Legacy.HasValue ? Own(new RenderTexture(2, 1, 0, c.Legacy.Value, RenderTextureReadWrite.Linear)) : Target(Descriptor(c.Format));
+        target.filterMode = FilterMode.Point; target.Create();
+        Graphics.Blit(null, target, s_Mat, WritePass(c));
+        Try(key + ".initial", () => Loaded(target, c.Signed));
+        extra.SetTexture(c.Signed ? "_IntFeed" : "_UIntFeed", target);
+        for (int i = 0; i < 2; i++)
+        {
+            Graphics.Blit(null, target, extra, c.Signed ? 0 : 1);
+            Try(key + ".draw" + i, () => Loaded(target, c.Signed));
+        }
+        extra.SetTexture(c.Signed ? "_IntFeed" : "_UIntFeed", null);
+    }
+
+    static void Q58Depth(string key, RenderTexture rt, Material extra)
+    {
+        foreach (bool command in new[] { false, true })
+        {
+            var previous = RenderTexture.active; RenderTexture.active = rt;
+            GL.Viewport(new Rect(0, 0, 2, 1)); GL.Clear(true, true, Color.black, .25f);
+            if (command)
+            {
+                using (var cmd = new CommandBuffer())
+                {
+                    cmd.SetRenderTarget(rt); cmd.SetViewport(new Rect(1, 0, 1, 1));
+                    cmd.ClearRenderTarget(true, false, Color.white, .75f); Graphics.ExecuteCommandBuffer(cmd);
+                }
+            }
+            else { GL.Viewport(new Rect(1, 0, 1, 1)); GL.Clear(true, false, Color.white, .75f); }
+            GL.Viewport(new Rect(0, 0, 2, 1)); RenderTexture.active = previous;
+            extra.SetTexture("_DepthTex", rt, RenderTextureSubElement.Depth);
+            Graphics.Blit(null, s_Out2, extra, 2);
+            Value(key + (command ? ".command.depth" : ".gl.depth"), Floats(s_Out2));
+            extra.SetTexture("_DepthTex", null);
+        }
+    }
+
     public static void Record()
     {
         Rows.Clear();
@@ -675,6 +828,7 @@ public static class TexFormatsProbe
                          ("tex.R16_UInt", GraphicsFormat.R16_UInt, false), ("tex.R16G16B16A16_SInt", GraphicsFormat.R16G16B16A16_SInt, true),
                          ("tex.R32_UInt", GraphicsFormat.R32_UInt, false), ("tex.R32G32B32A32_SInt", GraphicsFormat.R32G32B32A32_SInt, true) })
                 if (Runs(key)) IntTexture(key, format, signed);
+            Q58Cases();
         }
         catch (Exception e)
         {
