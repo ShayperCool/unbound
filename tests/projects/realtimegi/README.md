@@ -207,8 +207,17 @@ copy's player settings) and the probe records the scenes without lighting data, 
 named as above, then the Room lit: `room-base`, `room-moved` with its point light moved, the
 three emission cases (`room-emission-call`, `room-setemissive`,
 `room-setemissive-then-call`), and with the panel dark the environment as the ambient color
-(`room-env-call`), a procedural sky (`room-sky`) and a gradient (`room-gradient`). These rows
-share the linear set's names but follow this sequence's own states. That set is its own reference, `Reference/unity-<version>/gamma`.
+(`room-env-call`), a procedural sky (`room-sky`) and a gradient (`room-gradient`). Then the Room
+loaded again: `room-intensity` (point light intensity 4), `room-bounce` (bounce intensity 3),
+`room-indirectscale-default` and `room-indirectscale` (2), `room-threshold-default`,
+`room-albedo-call` (the red wall blue, with UpdateGIMaterials), `room-spot` (the spot light
+alone), `room-directional` (a directional light alone) and, with the panel dark, `room-sky-only`
+and `room-sky-only-intensity` (the procedural sky at ambient intensities 1 and 2) and
+`room-envdata` (a script's cube). These rows share the linear set's names but follow this
+sequence's own states. Recorded while the machine was building, two captures of this set
+differed from each other and from the reference in the gradient and sky cases (up to 0.04 in
+`room-gradient`, which the reference holds since before); two captures on an idle machine were
+identical, their earlier cases equal to the reference, and are its new rows. That set is its own reference, `Reference/unity-<version>/gamma`.
 
 With `--pipeline urp` the same project is drawn by the Universal Render Pipeline (run.py adds
 the package and the pipeline assets of tests/projects/urp to the run's copy) and the probe

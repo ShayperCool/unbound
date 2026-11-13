@@ -107,6 +107,56 @@ public class RealtimeGIProbe : MonoBehaviour
             DynamicGI.UpdateEnvironment();
             yield return Converge();
             Capture("room-gradient", lit);
+            // The linear sequence's other light and input cases, the Room loaded again: the
+            // point light brighter, then with bounce intensity 3, the indirect scale 2 (and its
+            // default recorded), the red wall's albedo turned blue with UpdateGIMaterials, the
+            // spot light alone, a directional light alone; then, the panel dark and no light,
+            // the procedural sky at ambient intensities 1 and 2 and a cube a script gives
+            // (DynamicGI.SetEnvironmentData).
+            yield return Load("Room");
+            lit = Scene();
+            yield return Converge();
+            lit.point.intensity = 4f;
+            yield return Converge();
+            Capture("room-intensity", lit);
+            lit.point.bounceIntensity = 3f;
+            yield return Converge();
+            Capture("room-bounce", lit);
+            lit.point.bounceIntensity = 1f;
+            float gammaIndirect = DynamicGI.indirectScale;
+            Record("room-indirectscale-default", "\"indirectScale\":" + F(gammaIndirect));
+            DynamicGI.indirectScale = 2f;
+            yield return Converge();
+            Capture("room-indirectscale", lit);
+            DynamicGI.indirectScale = gammaIndirect;
+            Record("room-threshold-default", "\"updateThreshold\":" + F(DynamicGI.updateThreshold));
+            lit.leftWall.sharedMaterial.color = new Color(0.1f, 0.1f, 0.8f);
+            lit.leftWall.UpdateGIMaterials();
+            yield return Converge();
+            Capture("room-albedo-call", lit);
+            lit.point.enabled = false;
+            lit.spot.enabled = true;
+            yield return Converge();
+            Capture("room-spot", lit);
+            lit.spot.enabled = false;
+            var gammaSun = Sun(LightShadows.Hard, 40f, 25f);
+            yield return Converge();
+            Capture("room-directional", lit);
+            Destroy(gammaSun.gameObject);
+            DynamicGI.SetEmissive(lit.panel, Color.black);
+            RenderSettings.skybox = gammaSky;
+            RenderSettings.ambientMode = AmbientMode.Skybox;
+            DynamicGI.UpdateEnvironment();
+            yield return Converge();
+            Capture("room-sky-only", lit);
+            RenderSettings.ambientIntensity = 2f;
+            DynamicGI.UpdateEnvironment();
+            yield return Converge();
+            Capture("room-sky-only-intensity", lit);
+            RenderSettings.ambientIntensity = 1f;
+            DynamicGI.SetEnvironmentData(EnvironmentData());
+            yield return Converge();
+            Capture("room-envdata", lit);
             Finish();
             yield break;
         }
