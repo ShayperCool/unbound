@@ -578,54 +578,99 @@ namespace Unbound.Runtime.Playables
             s = LocalScale(t, b.ChannelOf(t, "scale"));
         }
 
-        /// <summary>Local to world through the stream's values up to the Animator, the scene above.</summary>
+        /// <summary>The nearest of <paramref name="t"/> and its ancestors below the Animator that
+        /// is a bone of a humanoid stream's human pose (the hips or a bone below them; 0: none,
+        /// also on a generic rig and an optimized hierarchy), and that bone's world values in
+        /// the pose. A transform the avatar's skeleton does not hold (a prop under a hand) is
+        /// placed under the bone as the stream's pose has it this update, its own and the
+        /// transforms' values between through the stream: the prop's world values follow the
+        /// hand's handle, its scale included (6000.0.71f1, tests/projects/humanoid bone.prop,
+        /// recorded with the macOS Editor).</summary>
+        int HumanBoneAbove(Transform t, out Transform bone, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            bone = null;
+            position = Vector3.zero;
+            rotation = Quaternion.identity;
+            scale = Vector3.one;
+            var animator = Handles.Animator;
+            if (animator.m_NoHierarchy || !animator.IsHuman || animator.Human is not { } human) return 0;
+            var root = animator.transform;
+            for (var p = t; p != null && p != root; p = p.m_Parent)
+            {
+                int node = human.HumanNodeOf(p);
+                if (node <= 0) continue;
+                bone = p;
+                HumanPose().BoneWorld(node, out position, out rotation, out scale);
+                return node;
+            }
+            return 0;
+        }
+
+        /// <summary>Where the stream's walk down to a transform starts: the bone of the human pose
+        /// above it (<see cref="HumanBoneAbove"/>), else the Animator's parent in the scene
+        /// (none: the world). The transforms below the start, the bottom one first, are left in
+        /// <see cref="m_Walk"/>; <paramref name="scene"/> is the Animator's parent when the walk
+        /// starts there.</summary>
+        void WalkFrom(Transform t, out Transform scene, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            m_Walk.Clear();
+            scene = null;
+            HumanBoneAbove(t, out var bone, out position, out rotation, out scale);
+            var root = Handles.Animator.transform;
+            for (var p = t; p != null && p != bone; p = p.m_Parent)
+            {
+                m_Walk.Add(p);
+                if (p != root) continue;
+                if (p.m_Parent != null)
+                {
+                    scene = p.m_Parent;
+                    position = p.m_Parent.position;
+                    rotation = p.m_Parent.rotation;
+                    scale = p.m_Parent.lossyScale;
+                }
+                break;
+            }
+        }
+
+        /// <summary>The transforms of the current stream walk (<see cref="WalkFrom"/>).</summary>
+        readonly List<Transform> m_Walk = new List<Transform>();
+
+        /// <summary>Local to world through the stream's values up to the Animator, the scene above
+        /// (below a bone of a humanoid's pose: from the bone's world values, see
+        /// <see cref="HumanBoneAbove"/>).</summary>
         internal Matrix4x4 LocalToWorld(Transform t)
         {
             using var engine = MainThreadCheck.Engine();
-            var root = Handles.Animator.transform;
-            var m = Matrix4x4.identity;
-            var p = t;
-            while (p != null)
+            WalkFrom(t, out var scene, out var position, out var rotation, out var scale);
+            var m = scene != null ? scene.localToWorldMatrix : Matrix4x4.TRS(position, rotation, scale);
+            for (int i = m_Walk.Count - 1; i >= 0; i--)
             {
-                Local(p, out var pos, out var rot, out var scale);
-                m = Matrix4x4.TRS(pos, rot, scale) * m;
-                if (p == root)
-                {
-                    if (p.m_Parent != null) m = p.m_Parent.localToWorldMatrix * m;
-                    break;
-                }
-                p = p.m_Parent;
+                Local(m_Walk[i], out var lp, out var lr, out var ls);
+                m = m * Matrix4x4.TRS(lp, lr, ls);
             }
             return m;
         }
 
-        internal void GlobalTR(Transform t, out Vector3 position, out Quaternion rotation)
+        internal void GlobalTR(Transform t, out Vector3 position, out Quaternion rotation) => Global(t, out position, out rotation, out _);
+
+        /// <summary>A transform's world position, rotation and scale through the stream's values
+        /// up to the Animator, the scene above (below a bone of a humanoid's pose: from the
+        /// bone's world values; identity for none).</summary>
+        void Global(Transform t, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
-            using var engine = MainThreadCheck.Engine();
-            var root = Handles.Animator.transform;
             position = Vector3.zero;
             rotation = Quaternion.identity;
-            var scale = Vector3.one;
-            // Accumulate from the transform up: world = parent * local.
-            var chain = new List<Transform>();
-            for (var p = t; p != null; p = p.m_Parent)
+            scale = Vector3.one;
+            if (t == null) return;
+            using var engine = MainThreadCheck.Engine();
+            WalkFrom(t, out _, out position, out rotation, out scale);
+            for (int i = m_Walk.Count - 1; i >= 0; i--)
             {
-                chain.Add(p);
-                if (p == root) break;
+                Local(m_Walk[i], out var lp, out var lr, out var ls);
+                position = position + rotation * Vector3.Scale(scale, lp);
+                rotation = rotation * lr;
+                scale = Vector3.Scale(scale, ls);
             }
-            var top = chain[chain.Count - 1];
-            Vector3 wp = top.m_Parent != null ? top.m_Parent.position : Vector3.zero;
-            Quaternion wr = top.m_Parent != null ? top.m_Parent.rotation : Quaternion.identity;
-            Vector3 ws = top.m_Parent != null ? top.m_Parent.lossyScale : Vector3.one;
-            for (int i = chain.Count - 1; i >= 0; i--)
-            {
-                Local(chain[i], out var lp, out var lr, out var ls);
-                wp = wp + wr * Vector3.Scale(ws, lp);
-                wr = wr * lr;
-                ws = Vector3.Scale(ws, ls);
-            }
-            position = wp;
-            rotation = wr;
         }
 
         // ------------------------------------------------------------------ skeleton nodes in the stream
@@ -743,28 +788,6 @@ namespace Unbound.Runtime.Playables
                 position = position + rotation * Vector3.Scale(scale, lp);
                 rotation = rotation * lr;
                 scale = Vector3.Scale(scale, ls);
-            }
-        }
-
-        /// <summary>A transform's world position, rotation and scale through the stream's values
-        /// up to the Animator, the scene above (identity for none).</summary>
-        void Global(Transform t, out Vector3 position, out Quaternion rotation, out Vector3 scale)
-        {
-            position = Vector3.zero;
-            rotation = Quaternion.identity;
-            scale = Vector3.one;
-            if (t == null) return;
-            var animator = Handles.Animator.transform;
-            GlobalTR(t, out position, out rotation);
-            for (var p = t; p != null; p = p.m_Parent)
-            {
-                Local(p, out _, out _, out var s);
-                scale = Vector3.Scale(scale, s);
-                if (p == animator)
-                {
-                    if (p.m_Parent != null) scale = Vector3.Scale(scale, p.m_Parent.lossyScale);
-                    break;
-                }
             }
         }
 

@@ -29,7 +29,29 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>Binds the avatar's transforms again: the hierarchy was optimized or
         /// deoptimized, and the pose and its memory stay (6000.0.71f1, tests/projects/animoptimize
         /// h.deopt.played, h.rt.replayed: a deoptimized humanoid plays on).</summary>
-        internal void Rebind() => m_Bound = AvatarBinding.Bind(m_Animator.transform, m_Constant);
+        internal void Rebind()
+        {
+            m_Bound = AvatarBinding.Bind(m_Animator.transform, m_Constant);
+            m_HumanNodes = null;
+        }
+
+        /// <summary>The bound transforms of the human skeleton's bones (the hips and below) and
+        /// their human nodes, made on first use for the binding there is.</summary>
+        System.Collections.Generic.Dictionary<Transform, int> m_HumanNodes;
+
+        /// <summary>The node of the human skeleton a transform of the hierarchy is bound to as one
+        /// of the avatar's bones (the hips or a bone below them; 0: none).</summary>
+        internal int HumanNodeOf(Transform transform)
+        {
+            if (m_HumanNodes == null)
+            {
+                m_HumanNodes = new System.Collections.Generic.Dictionary<Transform, int>();
+                var reverse = m_Constant.HumanSkeletonReverseIndexArray;
+                for (int i = 1; i < m_Bound.Length && i < reverse.Length; i++)
+                    if (m_Bound[i] != null && reverse[i] > 0) m_HumanNodes[m_Bound[i]] = reverse[i];
+            }
+            return m_HumanNodes.TryGetValue(transform, out int node) ? node : 0;
+        }
 
         internal AnimatorHuman(Animator animator, AvatarConstant constant)
         {

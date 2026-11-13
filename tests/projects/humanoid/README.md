@@ -146,8 +146,10 @@ imported without keyframe reduction.
   the lower arm (`bone.rotateLocal`), a world rotation of the head (`bone.rotateWorld`), both
   with the human stream and the bones read in between (`bone.rotateThenHuman`: `.job.humanBetween`,
   `.bones.between`), the hips' local position (`bone.moveHips`), the lower arm's world position
-  (`bone.moveArm`), the spine's scale (`bone.scale`), and a muscle set before the bones are read
-  (`bone.humanThenRead`). Each step records what the handles read before and after the change
+  (`bone.moveArm`), the spine's scale (`bone.scale`), a muscle set before the bones are read
+  (`bone.humanThenRead`), and none with a handle of an object added under the left hand, which
+  the avatar does not hold (`bone.prop`: `.prop`, its local values and world position and
+  rotation; recorded with the macOS Editor, two identical captures). Each step records what the handles read before and after the change
   (`.bones.before`, `.bones.after`: local position times 100, the inverse of the rig's root
   scale; local rotation and scale; world position and rotation), the human stream after it
   (`.job.human`) and the final pose, with the transforms' locals every fourth step.
@@ -157,7 +159,9 @@ imported without keyframe reduction.
   that much further from the hips than the transforms end up. Once the job has read the human
   stream after a bone change, the bones' local values are as before and their world positions
   are read under the root without its scale (the hips 1.02 units from the root where the
-  transform is 101.8).
+  transform is 101.8). The object under the hand is placed under the hand's bone of the stream's
+  pose, this update: its world values are the hand handle's composed with its own local values,
+  the hand's scale of 10000 included (0.001 local units 10 world units from the hand).
 
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3

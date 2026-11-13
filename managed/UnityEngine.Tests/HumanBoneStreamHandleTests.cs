@@ -394,5 +394,53 @@ namespace UnityEngine.Tests
             Near(spine.position, spineRead, 1e-3f);
             Assert.True((spine.position - hips.position).magnitude > 0.2f);
         }
+
+        /// <summary>An object under a bone that the avatar does not hold (a prop under a hand)
+        /// is placed under the bone of the stream's pose: after a muscle is set in the job its
+        /// world values have moved with the arm (control: the read before), they are the hand
+        /// handle's composed with the prop's local values, the hand's scale included, and they
+        /// are where the prop is once the update is done (tests/projects/humanoid bone.prop). A
+        /// world position written on it is read back.</summary>
+        [Fact]
+        public void AnObjectUnderABoneIsPlacedByTheStreamsPose()
+        {
+            var animator = Human(scale: 2f);
+            var lowerArm = animator.transform.Find("Hips/Spine/Chest/LeftUpperArm/LeftLowerArm");
+            var prop = new GameObject("Prop").transform;
+            prop.SetParent(lowerArm, false);
+            prop.localPosition = new Vector3(0.05f, 0.1f, 0f);
+            prop.localRotation = Quaternion.Euler(0f, 0f, 30f);
+            var propHandle = animator.BindStreamTransform(prop);
+            var armHandle = animator.BindStreamTransform(lowerArm);
+            Vector3 before = default, after = default, composed = default, matrix = default;
+            Quaternion rotation = default, composedRotation = default;
+            Evaluate(animator, (stream, _) =>
+            {
+                before = propHandle.GetPosition(stream);
+                stream.AsHuman().SetMuscle(new MuscleHandle(HumanPartDof.LeftArm, ArmDof.ArmDownUp), 0.6f);
+                after = propHandle.GetPosition(stream);
+                rotation = propHandle.GetRotation(stream);
+                var arm = armHandle.GetLocalToWorldMatrix(stream);
+                composed = arm.MultiplyPoint3x4(propHandle.GetLocalPosition(stream));
+                composedRotation = armHandle.GetRotation(stream) * propHandle.GetLocalRotation(stream);
+                matrix = propHandle.GetLocalToWorldMatrix(stream).GetColumn(3);
+            });
+            Assert.True((before - after).magnitude > 0.05f);
+            Near(composed, after);
+            Near(composedRotation, rotation);
+            Near(after, matrix);
+            Near(prop.position, after, 1e-3f);
+            Near(prop.rotation, rotation);
+
+            var target = Vector3.zero;
+            Vector3 read = default;
+            Evaluate(animator, (stream, _) =>
+            {
+                target = propHandle.GetPosition(stream) + new Vector3(0.1f, 0.2f, -0.1f);
+                propHandle.SetPosition(stream, target);
+                read = propHandle.GetPosition(stream);
+            });
+            Near(target, read);
+        }
     }
 }
