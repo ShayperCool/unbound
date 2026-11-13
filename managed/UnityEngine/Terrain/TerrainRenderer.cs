@@ -326,7 +326,8 @@ namespace UnityEngine
                 material.SetFloat("_NormalScale" + n, layer.normalScale);
                 material.SetTexture("_Mask" + n, layer.maskMapTexture);
                 // Already in the working color space: the material passes it on as it is, whatever
-                // the shader's [Gamma] flags (URP's terrain shaders flag _Metallic0-3).
+                // the shader's [Gamma] flags (URP's terrain shaders flag _Metallic0-3; unmeasured
+                // under URP).
                 int metallic = Shader.PropertyToID("_Metallic" + n);
                 material.SetFloat(metallic, LayerMetallic(layer));
                 material.m_RawBindings.Add(metallic);

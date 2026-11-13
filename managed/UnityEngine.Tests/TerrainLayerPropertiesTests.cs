@@ -1,3 +1,4 @@
+using UnityEditor;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -63,6 +64,27 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheFormatsWithAlphaAreTheEditors()
+        {
+            var alpha = new[]
+            {
+                TextureFormat.Alpha8, TextureFormat.ARGB4444, TextureFormat.RGBA32, TextureFormat.ARGB32, TextureFormat.DXT5,
+                TextureFormat.RGBA4444, TextureFormat.BGRA32, TextureFormat.RGBAHalf, TextureFormat.RGBAFloat, TextureFormat.BC7,
+                TextureFormat.DXT5Crunched, TextureFormat.PVRTC_RGBA2, TextureFormat.PVRTC_RGBA4, TextureFormat.ETC2_RGBA1,
+                TextureFormat.ETC2_RGBA8, TextureFormat.ETC2_RGBA8Crunched, TextureFormat.RGBA64, TextureFormat.RGBA32_SIGNED,
+                TextureFormat.RGBA64_SIGNED,
+            };
+            foreach (TextureFormat format in System.Enum.GetValues(typeof(TextureFormat)))
+            {
+                bool astc = format is >= TextureFormat.ASTC_4x4 and <= TextureFormat.ASTC_12x12
+                    or >= TextureFormat.ASTC_HDR_4x4 and <= TextureFormat.ASTC_HDR_12x12;
+                Assert.True(System.Array.IndexOf(alpha, format) >= 0 || astc
+                    ? Experimental.Rendering.GraphicsFormatUtility.HasAlphaChannel(format)
+                    : !Experimental.Rendering.GraphicsFormatUtility.HasAlphaChannel(format), format.ToString());
+            }
+        }
+
+        [Fact]
         public void AGammaFlaggedMetallicIsMadeLinearOnce()
         {
             var colorSpace = QualitySettings.s_ColorSpace;
@@ -75,7 +97,7 @@ namespace UnityEngine.Tests
                 QualitySettings.s_ColorSpace = ColorSpace.Linear;
                 int id = Shader.PropertyToID("_Metallic0");
                 // The shader asks for the conversion of a value a script sets (URP's terrain
-                // shaders flag their layers' metallic so).
+                // shaders flag their layers' metallic so; unmeasured under URP).
                 material.SetFloat(id, 0.5f);
                 Assert.True(material.ConvertsProperty(id));
                 // The terrain gives the layer's value made linear already: it goes as it is.
