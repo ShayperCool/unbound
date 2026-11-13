@@ -649,7 +649,7 @@ namespace UnityEngine
     }
 
     /// <summary>How a bundle is compressed (the recompression API's argument).</summary>
-    public partial struct BuildCompression
+    [global::System.Serializable] public partial struct BuildCompression
     {
         CompressionType m_Compression;
         CompressionLevel m_Level;

@@ -7,7 +7,7 @@ namespace UnityEngine
 {
     /// <summary>Assets of the project's `Resources` folders, by path relative to such a folder and
     /// without extension.</summary>
-    public partial class Resources
+    public sealed partial class Resources
     {
         static readonly JsonSerializerOptions s_Json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 

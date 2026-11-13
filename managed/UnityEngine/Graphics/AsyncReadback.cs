@@ -465,7 +465,8 @@ namespace UnityEngine.Rendering
         public int width => Result?.Width ?? 0;
         public int height => Result?.Height ?? 0;
         public int depth => Result?.Depth ?? 0;
-        public bool forcePlayerLoopUpdate { get; set; }
+        bool m_Value_forcePlayerLoopUpdate;
+        public bool forcePlayerLoopUpdate { get => m_Value_forcePlayerLoopUpdate; set => m_Value_forcePlayerLoopUpdate = value; }
 
         bool Available => Result is { } r && !r.HasError;
 

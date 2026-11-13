@@ -71,7 +71,8 @@ namespace UnityEngine.SceneManagement
         public bool isDirty => Data?.IsDirty ?? false;
         public int dirtyID => 0;
         public int rootCount => PublicData?.Roots.Count ?? 0;
-        public bool isSubScene { get; set; }
+        bool m_Value_isSubScene;
+        public bool isSubScene { get => m_Value_isSubScene; set => m_Value_isSubScene = value; }
 
         public LoadingState loadingState => Data?.LoadingState ?? LoadingState.NotLoaded;
 

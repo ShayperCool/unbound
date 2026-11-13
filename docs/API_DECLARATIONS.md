@@ -76,10 +76,10 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After Editor shape slice |
+| Category | Before Q410 | After runtime modifier slice |
 | --- | ---: | ---: |
 | Attributes | 938 | 304 |
-| Modifiers | 87 | 60 |
+| Modifiers | 87 | 13 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 41 |
 | Layout | 68 | 68 |
@@ -87,7 +87,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 18 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 568 |
+| Total | 1,332 | 521 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -152,6 +152,21 @@ serialization. A control starts it at 9, supplies 17 in JSON, and confirms 9 sur
 while the serialized visible-column list changes from [0,1] to [1]. DependencyInfo
 JSON controls change one name, retain the omitted version and preserve an independent
 struct copy. GUID and GlobalObjectId JSON controls use nondefault identifiers.
+
+The runtime modifier slice resolves 47 exact differences. Readonly getter metadata
+uses explicit storage where implicit auto-property getters differ. Setter values,
+struct copies and nonfinite values retain their selected-release behavior. Texture's
+graphicsFormat getter is virtual; compiler controls exercise an override, a sealed
+annotation class and an inheritable preference exception.
+
+Q410-Core-built-in-serialization retains three exact differences: the Serializable
+markers on SphericalHarmonicsL2 and RenderingLayerMask, and the mask field's
+SerializeField marker. The 6000.0.71f1 JSON control exposes special nested payloads
+for harmonic coefficients and a versioned rendering mask, while root values write
+empty objects. Removing the markers alone drops existing nested values. The runtime
+needs shared built-in classification and JSON/YAML read/write/clone controls before
+these declarations can migrate. Raw Native and engine differences remain recorded;
+the accepted modifier controls cover the declarations migrated in this slice.
 
 ## Landing checks and default state
 

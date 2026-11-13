@@ -1022,11 +1022,16 @@ namespace UnityEngine
 
     public partial struct CombineInstance
     {
-        public Mesh mesh { get; set; }
-        public int subMeshIndex { get; set; }
-        public Matrix4x4 transform { get; set; }
-        public Vector4 lightmapScaleOffset { get; set; }
-        public Vector4 realtimeLightmapScaleOffset { get; set; }
+        Mesh m_Value_mesh;
+        public Mesh mesh { get => m_Value_mesh; set => m_Value_mesh = value; }
+        int m_Value_subMeshIndex;
+        public int subMeshIndex { get => m_Value_subMeshIndex; set => m_Value_subMeshIndex = value; }
+        Matrix4x4 m_Value_transform;
+        public Matrix4x4 transform { get => m_Value_transform; set => m_Value_transform = value; }
+        Vector4 m_Value_lightmapScaleOffset;
+        public Vector4 lightmapScaleOffset { get => m_Value_lightmapScaleOffset; set => m_Value_lightmapScaleOffset = value; }
+        Vector4 m_Value_realtimeLightmapScaleOffset;
+        public Vector4 realtimeLightmapScaleOffset { get => m_Value_realtimeLightmapScaleOffset; set => m_Value_realtimeLightmapScaleOffset = value; }
     }
 
     [Serializable]

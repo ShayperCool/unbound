@@ -179,7 +179,7 @@ namespace UnityEngine
         }
     }
 
-    public sealed partial class PlayerPrefsException : Exception
+    public partial class PlayerPrefsException : Exception
     {
         public PlayerPrefsException(string error) : base(error) { }
     }

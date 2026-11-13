@@ -384,7 +384,7 @@ namespace UnityEngine
     }
 
     /// <summary>A texture a sprite brings besides its main one, bound to a shader property.</summary>
-    public partial struct SecondarySpriteTexture
+    [global::System.Serializable] public partial struct SecondarySpriteTexture
     {
         public string name;
         public Texture2D texture;

@@ -191,3 +191,26 @@ leaves omitted fields unchanged. Its struct limitation requires explicit boxing
 and unboxing here; the separate original value checks that the overwrite changed
 the boxed value. These controls use supported primitive fields. They do not
 extend JSON support to other engine objects or unsupported field types.
+
+## Runtime modifiers
+
+The runtime expansion adds 47 metadata and eight value controls, taking 949 rows
+to 1,004. The selected flags cover readonly getters, type serialization markers,
+sealed classes and the virtual texture format getter. Existing property values
+remain in the same storage order. Struct-copy controls change the original after
+a copy; separate controls retain NaN and positive infinity. Serialization controls
+cover existing public clip/texture fields and structs with no serialized fields.
+The probe explicitly enables the built-in Physics 2D module for these controls.
+
+[Texture.graphicsFormat](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture-graphicsFormat.html)
+is virtual in the Unity 6000.0 API; the metadata-only compiler control overrides
+it. [JointAngleLimits2D](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/JointAngleLimits2D.html)
+is a value type with angular limits. Copy and nonfinite answers here are measured
+value-storage observations, without a new physics-solver guarantee.
+
+Three serialization-marker declarations remain queued as
+Q410-Core-built-in-serialization. Their exploratory controls expose special
+nested harmonic/layer-mask payloads. The strict reports preserve those differences
+and the loss caused by removing markers without adapting the serializer. Existing
+markers stay in place until the built-in JSON/YAML and cloning migration lands.
+These cases do not claim serialization parity in the accepted modifier capture.

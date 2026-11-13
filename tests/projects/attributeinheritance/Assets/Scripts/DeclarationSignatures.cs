@@ -21,6 +21,7 @@ public static class DeclarationSignatures
     {
         return string.Join(",", parameters.Select(p => (p.ParameterType.IsByRef ? p.IsOut ? "out " : p.IsIn ? "in " : "ref " : "") + TypeKey(p.ParameterType)).ToArray());
     }
+    public static bool IsReadOnly(MemberInfo member) => member.GetCustomAttributesData().Any(a => a.AttributeType.FullName == "System.Runtime.CompilerServices.IsReadOnlyAttribute");
     public static string Key(MemberInfo member)
     {
         if (member is MethodBase)

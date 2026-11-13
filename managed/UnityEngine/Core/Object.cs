@@ -10,7 +10,6 @@ namespace UnityEngine
     /// Base of every object the engine owns. A destroyed object still exists as a managed object but
     /// compares equal to null, as in Unity ("fake null").
     /// </summary>
-    [Serializable]
     public partial class Object
     {
         internal int m_InstanceID;
@@ -431,7 +430,7 @@ namespace UnityEngine
 
 
 
-    public partial class MissingReferenceException : SystemException
+    [global::System.Serializable] public partial class MissingReferenceException : SystemException
     {
         public MissingReferenceException() : this("A Unity Runtime error occurred!", null) { }
         public MissingReferenceException(string message) : this(message, null) { }
@@ -441,7 +440,7 @@ namespace UnityEngine
         }
     }
 
-    public partial class MissingComponentException : SystemException
+    [global::System.Serializable] public partial class MissingComponentException : SystemException
     {
         public MissingComponentException() : this("A Unity Runtime error occurred!", null) { }
         public MissingComponentException(string message) : this(message, null) { }
@@ -451,7 +450,7 @@ namespace UnityEngine
         }
     }
 
-    public partial class UnassignedReferenceException : SystemException
+    [global::System.Serializable] public partial class UnassignedReferenceException : SystemException
     {
         public UnassignedReferenceException() : this("A Unity Runtime error occurred!", null) { }
         public UnassignedReferenceException(string message) : this(message, null) { }
@@ -461,7 +460,7 @@ namespace UnityEngine
         }
     }
 
-    public partial class UnityException : SystemException
+    [global::System.Serializable] public partial class UnityException : SystemException
     {
         public UnityException() : this("A Unity Runtime error occurred!", null) { }
         public UnityException(string message) : this(message, null) { }
@@ -475,7 +474,7 @@ namespace UnityEngine
 namespace UnityEngine.Internal
 {
     [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Parameter | global::System.AttributeTargets.GenericParameter)]
-    public partial class DefaultValueAttribute : Attribute
+    [global::System.Serializable] public partial class DefaultValueAttribute : Attribute
     {
         readonly object DefaultValue;
         public DefaultValueAttribute(string value) { DefaultValue = value; }

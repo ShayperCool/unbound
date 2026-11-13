@@ -164,7 +164,7 @@ namespace UnityEngine
     }
 
     /// <summary>An original clip of a controller and the clip that replaces it.</summary>
-    [global::System.@ObsoleteAttribute("This class is not used anymore. See AnimatorOverrideController.GetOverrides() and AnimatorOverrideController.ApplyOverrides()")] public partial class AnimationClipPair
+    [global::System.@ObsoleteAttribute("This class is not used anymore. See AnimatorOverrideController.GetOverrides() and AnimatorOverrideController.ApplyOverrides()")] [global::System.Serializable] public partial class AnimationClipPair
     {
         public AnimationClip originalClip;
         public AnimationClip overrideClip;

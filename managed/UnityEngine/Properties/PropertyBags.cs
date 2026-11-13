@@ -234,7 +234,7 @@ namespace Unity.Properties
                 m_Indexed = enumerator;
             }
 
-            public IProperty<TContainer> Current => m_Source switch
+            public readonly IProperty<TContainer> Current => m_Source switch
             {
                 Source.Enumerable => m_Enumerator.Current,
                 Source.List => m_List.Current,

@@ -2117,7 +2117,7 @@ namespace UnityEngine.Audio
 
 namespace UnityEngine.Events
 {
-    public enum PersistentListenerMode
+    [global::System.Serializable] public enum PersistentListenerMode
     {
         EventDefined = 0,
         Void = 1,

@@ -726,7 +726,7 @@ namespace UnityEngine
             get => (m_Flags & RenderTextureCreationFlags.CreatedFromScript) != 0;
             set => SetFlag(RenderTextureCreationFlags.CreatedFromScript, value);
         }
-        public GraphicsFormat depthStencilFormat { get => m_DepthStencilFormat; set => m_DepthStencilFormat = value; }
+        public GraphicsFormat depthStencilFormat { readonly get => m_DepthStencilFormat; set => m_DepthStencilFormat = value; }
 
         /// <summary>The color format; a depth-only target is Depth, or Shadowmap when it compares
         /// (measured: tests/projects/builtinrp rt.ProbeShadow).</summary>

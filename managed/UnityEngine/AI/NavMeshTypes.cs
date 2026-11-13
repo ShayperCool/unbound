@@ -246,10 +246,10 @@ namespace UnityEngine.AI
         int m_AreaMask;
         int m_AgentTypeID;
 
-        internal float[] costs => m_AreaCost;
+        internal readonly float[] costs => m_AreaCost;
 
-        public int areaMask { get => m_AreaMask; set => m_AreaMask = value; }
-        public int agentTypeID { get => m_AgentTypeID; set => m_AgentTypeID = value; }
+        public int areaMask { readonly get => m_AreaMask; set => m_AreaMask = value; }
+        public int agentTypeID { readonly get => m_AgentTypeID; set => m_AgentTypeID = value; }
 
         public float GetAreaCost(int areaIndex)
         {
@@ -281,7 +281,7 @@ namespace UnityEngine.AI
 
         internal int id
         {
-            get => m_Handle;
+            readonly get => m_Handle;
             set => m_Handle = value;
         }
 
@@ -326,7 +326,7 @@ namespace UnityEngine.AI
 
         internal int id
         {
-            get => m_Handle;
+            readonly get => m_Handle;
             set => m_Handle = value;
         }
 

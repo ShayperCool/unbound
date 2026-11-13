@@ -24,9 +24,11 @@ namespace UnityEngine
 
         internal bool IsDepth => m_BufferPtr.ToInt64() == Depth;
 
-        internal RenderBufferLoadAction loadAction { get; set; }
+        RenderBufferLoadAction m_Value_loadAction;
+        internal RenderBufferLoadAction loadAction { get => m_Value_loadAction; set => m_Value_loadAction = value; }
 
-        internal RenderBufferStoreAction storeAction { get; set; }
+        RenderBufferStoreAction m_Value_storeAction;
+        internal RenderBufferStoreAction storeAction { get => m_Value_storeAction; set => m_Value_storeAction = value; }
 
         internal void SetLoadAction(RenderBufferLoadAction action) => loadAction = action;
 

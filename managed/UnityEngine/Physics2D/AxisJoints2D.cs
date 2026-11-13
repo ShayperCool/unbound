@@ -8,14 +8,19 @@ namespace UnityEngine
 {
     public partial struct JointSuspension2D
     {
-        public float dampingRatio { get; set; }
-        public float frequency { get; set; }
-        public float angle { get; set; }
+        float m_Value_dampingRatio;
+        public float dampingRatio { get => m_Value_dampingRatio; set => m_Value_dampingRatio = value; }
+        float m_Value_frequency;
+        public float frequency { get => m_Value_frequency; set => m_Value_frequency = value; }
+        float m_Value_angle;
+        public float angle { get => m_Value_angle; set => m_Value_angle = value; }
     }
     public partial struct JointTranslationLimits2D
     {
-        public float min { get; set; }
-        public float max { get; set; }
+        float m_Value_min;
+        public float min { get => m_Value_min; set => m_Value_min = value; }
+        float m_Value_max;
+        public float max { get => m_Value_max; set => m_Value_max = value; }
     }
 
     [ClassId(235)]

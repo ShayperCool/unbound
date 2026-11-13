@@ -189,6 +189,7 @@ public class AttributeInheritanceProbe : MonoBehaviour
                 DeclarationTextEditorControls.Record(Row);
                 DeclarationParameterControls.Record(Row);
         DeclarationEditorShapeControls.Record(Row);
+        DeclarationCoreModifierControls.Record(Row);
                 Row("complete", 1);
             }
             EditorApplication.Exit(0);

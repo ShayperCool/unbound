@@ -8,7 +8,7 @@ using System.Text;
 
 namespace UnityEngine
 {
-    internal sealed partial class GlobalJavaObjectRef
+    internal partial class GlobalJavaObjectRef
     {
         bool m_Disposed;
         protected IntPtr m_jobject;

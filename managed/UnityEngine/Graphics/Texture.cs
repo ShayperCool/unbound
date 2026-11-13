@@ -44,7 +44,7 @@ namespace UnityEngine
         public Vector2 texelSize => new Vector2(m_Width > 0 ? 1f / m_Width : 0f, m_Height > 0 ? 1f / m_Height : 0f);
         [Unbound.EditorFaithful("the base answer, as Unity's: render and webcam textures are not CPU-readable; the readable texture classes override it")]
         public virtual bool isReadable => false;
-        public GraphicsFormat graphicsFormat => GraphicsFormatOf();
+        public virtual GraphicsFormat graphicsFormat => GraphicsFormatOf();
         internal virtual GraphicsFormat GraphicsFormatOf() => GraphicsFormat.R8G8B8A8_SRGB;
 
         public virtual TextureDimension dimension

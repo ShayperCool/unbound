@@ -109,6 +109,19 @@
     "managed/UnityEngine/Editor/EditorStages.cs",
     "managed/UnityEngine/Editor/EditorTestSupport.cs",
     "managed/UnityEngine/Editor/PackageManager.cs",
-    "managed/UnityEngine/Editor/TreeViews.cs"
+    "managed/UnityEngine/Editor/TreeViews.cs",
+    "managed/UnityEngine/Animation/Constraints/ConstraintSource.cs",
+    "managed/UnityEngine/Core/Resources.cs",
+    "managed/UnityEngine/Core/SceneManagement.cs",
+    "managed/UnityEngine/Graphics/AsyncReadback.cs",
+    "managed/UnityEngine/Graphics/RenderBuffers.cs",
+    "managed/UnityEngine/Graphics/SphericalHarmonics.cs",
+    "managed/UnityEngine/Graphics/Sprite.cs",
+    "managed/UnityEngine/Graphics/Srp/RenderingLayers.cs",
+    "managed/UnityEngine/Physics2D/AnchoredJoints2D.cs",
+    "managed/UnityEngine/Physics2D/AxisJoints2D.cs",
+    "managed/UnityEngine/Platform/Android/AndroidJava.cs",
+    "managed/UnityEngine/Platform/PlayerPrefs.cs",
+    "managed/UnityEngine/Properties/PropertyBags.cs"
   ]
 }

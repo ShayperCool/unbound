@@ -288,7 +288,7 @@ namespace UnityEngine
 
 
 
-    public readonly partial struct ApplicationMemoryUsageChange
+    public partial struct ApplicationMemoryUsageChange
     {
         public ApplicationMemoryUsage memoryUsage { get; }
         public ApplicationMemoryUsageChange(ApplicationMemoryUsage usage) { memoryUsage = usage; }

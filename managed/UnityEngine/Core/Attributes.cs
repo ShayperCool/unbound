@@ -11,7 +11,7 @@ namespace UnityEngine
     {
     }
 
-    public partial class HideInInspector : Attribute
+    public sealed partial class HideInInspector : Attribute
     {
     }
 
@@ -115,7 +115,7 @@ namespace UnityEngine
     }
 
     [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-    public sealed partial class ExcludeFromPresetAttribute : Attribute
+    public partial class ExcludeFromPresetAttribute : Attribute
     {
     }
 
@@ -275,7 +275,7 @@ namespace UnityEngine
     }
 
     [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Enum)]
-    public partial class InspectorOrderAttribute : PropertyAttribute
+    public sealed partial class InspectorOrderAttribute : PropertyAttribute
     {
         public InspectorOrderAttribute(InspectorSort inspectorSort = InspectorSort.ByName, InspectorSortDirection sortDirection = InspectorSortDirection.Ascending) { }
     }

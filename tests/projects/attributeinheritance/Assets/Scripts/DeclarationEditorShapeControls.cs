@@ -40,7 +40,6 @@ public static class DeclarationEditorShapeControls
         new string[] { "UnityEditor.PlayerSettings+iOS", "UnityEditor.CoreModule", "type", "modifiers" },
         new string[] { "UnityEditor.SceneManagement.PrefabStage", "UnityEditor.CoreModule", "type", "modifiers" },
     };
-    static bool ReadOnly(MemberInfo member) => member.GetCustomAttributesData().Any(a => a.AttributeType.FullName == "System.Runtime.CompilerServices.IsReadOnlyAttribute");
     public static void Record(Action<string, object> row)
     {
         foreach (var d in Declarations)
@@ -55,9 +54,9 @@ public static class DeclarationEditorShapeControls
             else if (member is Type)
             {
                 var type = (Type)member;
-                value = type.IsSerializable + ":" + type.IsSealed + ":" + type.IsAbstract + ":" + ReadOnly(type);
+                value = type.IsSerializable + ":" + type.IsSealed + ":" + type.IsAbstract + ":" + DeclarationSignatures.IsReadOnly(type);
             }
-            else value = ReadOnly(member).ToString();
+            else value = DeclarationSignatures.IsReadOnly(member).ToString();
             row("editor.shape." + d[0] + "." + d[2] + "." + d[3], value);
         }
         var dependency = UnityEngine.JsonUtility.FromJson<UnityEditor.PackageManager.DependencyInfo>("{\"m_Name\":\"before\",\"m_Version\":\"1\"}");

@@ -8,13 +8,17 @@ namespace UnityEngine
 {
     public partial struct JointMotor2D
     {
-        public float motorSpeed { get; set; }
-        public float maxMotorTorque { get; set; }
+        float m_Value_motorSpeed;
+        public float motorSpeed { get => m_Value_motorSpeed; set => m_Value_motorSpeed = value; }
+        float m_Value_maxMotorTorque;
+        public float maxMotorTorque { get => m_Value_maxMotorTorque; set => m_Value_maxMotorTorque = value; }
     }
     public partial struct JointAngleLimits2D
     {
-        public float min { get; set; }
-        public float max { get; set; }
+        float m_Value_min;
+        public float min { get => m_Value_min; set => m_Value_min = value; }
+        float m_Value_max;
+        public float max { get => m_Value_max; set => m_Value_max = value; }
     }
 
     [ClassId(233)]
