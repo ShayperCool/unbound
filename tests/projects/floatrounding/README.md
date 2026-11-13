@@ -24,8 +24,12 @@ python3 tests/projects/floatrounding/run.py gate --profile release              
 
 `--profile debug` selects the Debug code optimization mode (`-debugCodeOptimization` in the
 Editor, `UNBOUND_CODE_OPTIMIZATION=debug` in the engine). The Linux x86_64 Editor and the macOS arm64
-Editor (both in batch mode without a graphics device) each recorded two captures per mode; all four
-captures of a mode are byte-identical, so one reference per mode serves both hosts.
+Editor (both in batch mode without a graphics device) each recorded two captures per mode, the two
+of a host byte-identical. All rows but the `native/` ones are the same on both hosts and form one
+reference per mode (`Reference/unity-<release>/<mode>.jsonl`); the `native/` rows differ between
+the hosts in a few samples (Quaternion.Euler, eulerAngles, Vector3.RotateTowards) and each host has
+its own (`<mode>.linux.jsonl`, `<mode>.macos.jsonl`, the same in both modes). `publish --host linux`
+publishes captures copied from the Linux machine.
 
 ## Measured rule
 
@@ -55,8 +59,7 @@ is gone from the IL. The `il/` rows show each case.
 Unity's own C# for its math structs follows the same rule in the Editor (`Vector3.Dot` and
 `sqrMagnitude` sum double products, for example), and every local these methods declare rounds:
 `Vector3.Distance` rounds each coordinate difference, `ClampMagnitude` each normalized coordinate.
-The methods bound to native code do not follow this rule (`native/` rows); in these captures they
-give the same values on both hosts.
+The methods bound to native code do not follow this rule (`native/` rows).
 
 ## Engine
 

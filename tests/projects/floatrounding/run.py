@@ -3,13 +3,17 @@
 
     run.py record --profile P --label L     one capture with this host's Editor (Linux x86_64 or
                                             macOS arm64; batch mode, no graphics device)
-    run.py publish A B --profile P          two byte-identical captures -> Reference/unity-<release>/P.jsonl
+    run.py publish A B --profile P [--host H]
+                                            two byte-identical captures of host H (default: this one)
+                                            -> Reference/unity-<release>/P.jsonl and P.H.jsonl
     run.py gate --profile P [--label L]     the engine on a fresh copy with code optimization P,
                                             compared with Reference/
 
 P is `release` or `debug`, the Editor's Code Optimization mode (`-releaseCodeOptimization`,
 `-debugCodeOptimization`; `UNBOUND_CODE_OPTIMIZATION` for the engine). The Linux x86_64 and macOS
-arm64 Editors record the same values, so both hosts compare with one reference per mode. Every
+arm64 Editors record the same values for script code, so both hosts compare with one reference per
+mode; the `native/` rows (Unity's native math) can differ between the hosts and come from P.H.jsonl,
+H being `linux` or `macos`. Every
 missing, extra and differing key is printed; values compare exactly. residuals.json lists known
 residuals under their cause as "<profile>/<key>".
 """
@@ -39,8 +43,29 @@ def host():
     raise SystemExit(f'floatrounding: no Editor measured on {sys.platform}/{platform.machine()}')
 
 
+NATIVE = 'native/'
+
+
 def reference(profile):
     return reference_root(PROBE)/(profile+'.jsonl')
+
+
+def host_reference(profile, name):
+    return reference_root(PROBE)/(profile+'.'+name+'.jsonl')
+
+
+def references(profile):
+    """The values this host's Editor records: the shared rows and this host's native rows."""
+    return {**value_probe.read_values(reference(profile)), **value_probe.read_values(host_reference(profile, host()))}
+
+
+def split(capture):
+    """A capture's lines: the rows every host shares, and the native rows, each list ending complete."""
+    lines = [line for line in capture.decode().splitlines(keepends=True) if line.strip()]
+    rows, complete = lines[:-1], lines[-1]
+    native = [line for line in rows if json.loads(line)['k'].startswith(NATIVE)]
+    shared = [line for line in rows if not json.loads(line)['k'].startswith(NATIVE)]
+    return ''.join(shared+[complete]).encode(), ''.join(native+[complete]).encode()
 
 
 def macos_editor():
@@ -79,18 +104,28 @@ def record(profile, label):
     return 0
 
 
-def publish(profile, labels):
+def publish(profile, labels, name):
     if len(labels) != 2:
         raise SystemExit('publish takes the labels of two captures')
     first, second = (run_root(PROBE, profile+'-'+label)/'capture'/value_probe.VALUES for label in labels)
     value_probe.read_values(first)
     if first.read_bytes() != second.read_bytes():
         raise SystemExit('the two captures differ; not publishing')
+    shared, native = split(first.read_bytes())
     target = reference(profile)
     target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open('xb') as f:
-        f.write(first.read_bytes())
-    print('published', target)
+    if target.exists():
+        # The other host published the shared rows: they must be the same.
+        if target.read_bytes() != shared:
+            raise SystemExit(f'{target}: this host\'s shared rows differ from the published ones; not publishing')
+    else:
+        with target.open('xb') as f:
+            f.write(shared)
+        print('published', target)
+    native_target = host_reference(profile, name)
+    with native_target.open('xb') as f:
+        f.write(native)
+    print('published', native_target)
     return 0
 
 
@@ -105,7 +140,7 @@ def gate(profile, label):
         code = subprocess.run([str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p',
                                str(project), '--no-watch', '--headless', '600'],
                               env=env, stdout=log, stderr=subprocess.STDOUT).returncode
-    expected = value_probe.read_values(reference(profile))
+    expected = references(profile)
     try:
         actual = value_probe.read_values(capture/value_probe.VALUES)
     except (OSError, ValueError) as error:
@@ -134,12 +169,13 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--profile', choices=PROFILES, required=True)
     parser.add_argument('--label', default=None)
+    parser.add_argument('--host', choices=('linux', 'macos'), default=None, help='publish: the host that recorded the captures')
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
         return record(args.profile, label)
     if args.mode == 'publish':
-        return publish(args.profile, args.labels)
+        return publish(args.profile, args.labels, args.host or host())
     return gate(args.profile, label)
 
 
