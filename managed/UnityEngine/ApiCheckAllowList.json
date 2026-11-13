@@ -137,154 +137,21 @@
     "Category": "accessors",
     "Type": "UnityEditor.AssetPostprocessor",
     "Message": "P:assetImporter():UnityEditor.AssetImporter setter is internal, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.AssetPostprocessor."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.Compilation.Assembly",
-    "Message": "P:compiledAssemblyReferences():System.String[] setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.Compilation.Assembly."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.Compilation.Assembly",
-    "Message": "P:defines():System.String[] setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.Compilation.Assembly."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.Compilation.Assembly",
-    "Message": "P:flags():UnityEditor.Compilation.AssemblyFlags setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.Compilation.Assembly."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.Compilation.Assembly",
-    "Message": "P:name():System.String setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.Compilation.Assembly."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.Compilation.Assembly",
-    "Message": "P:outputPath():System.String setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.Compilation.Assembly."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.Compilation.Assembly",
-    "Message": "P:rootNamespace():System.String setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.Compilation.Assembly."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.Compilation.Assembly",
-    "Message": "P:sourceFiles():System.String[] setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.Compilation.Assembly."
+    "Reason": "Q410-Editor-coordination: defer assetImporter setter removal while Q411 owns Editor/MaterialDescription.cs; audit importer-context callers and add the selected accessor control with that migration."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "accessors",
     "Type": "UnityEditor.EditorApplication",
     "Message": "P:static isFocused():System.Boolean setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.EditorApplication."
+    "Reason": "Q410-Editor-computed-setters: isFocused currently derives live Application focus. Matching the selected private setter requires focus-update integration and a diverged-state Editor control; do not add an ineffective setter."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "accessors",
     "Type": "UnityEditor.EditorAssemblies",
     "Message": "P:static loadedAssemblies():System.Reflection.Assembly[] setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.EditorAssemblies."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.IMGUI.Controls.MultiColumnHeader",
-    "Message": "P:currentColumnIndex():System.Int32 setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.IMGUI.Controls.MultiColumnHeader."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:category():System.String setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:description():System.String setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:displayName():System.String setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:isDirectDependency():System.Boolean setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:keywords():System.String[] setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:name():System.String setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:resolvedPath():System.String setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:source():UnityEditor.PackageManager.PackageSource setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:type():System.String setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.PackageManager.PackageInfo",
-    "Message": "P:version():System.String setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.PackageManager.PackageInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.SceneView",
-    "Message": "P:static lastActiveSceneView():UnityEditor.SceneView setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEditor.SceneView."
+    "Reason": "Q410-Editor-computed-setters: loadedAssemblies currently rebuilds the live game-domain assembly list. Matching the selected private setter requires cache invalidation on domain changes and a diverged-state Editor control."
   },
   {
     "Release": "6000.0.71f1",
@@ -901,20 +768,6 @@
     "Type": "UnityEditor.GameView",
     "Message": "type attributes is [], Unity's is [UnityEditor.EditorWindowTitleAttribute:M:.ctor`0():System.Void(){title=System.String:\"Game\",useTypeNameAsIconName=System.Boolean:True}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.GameView."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.IMGUI.Controls.MultiColumnHeaderState",
-    "Message": "field m_MaxNumberOfSortedColumns NonSerialized is False, Unity's is True",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.IMGUI.Controls.MultiColumnHeaderState."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.IMGUI.Controls.MultiColumnHeaderState",
-    "Message": "field m_MaxNumberOfSortedColumns attributes is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}], Unity's is []",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.IMGUI.Controls.MultiColumnHeaderState."
   },
   {
     "Release": "6000.0.71f1",
@@ -3712,163 +3565,79 @@
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
-    "Type": "UnityEditor.ActiveEditorTracker",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.ActiveEditorTracker."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.AssetDatabase",
-    "Message": "type modifiers is static=False,abstract=False,virtual=False,override=False,sealed=False, Unity's is static=False,abstract=False,virtual=False,override=False,sealed=True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.AssetDatabase."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
     "Type": "UnityEditor.Build.Content.ObjectIdentifier",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.Build.Content.ObjectIdentifier."
+    "Reason": "Q410-Editor-coordination: defer the selected Serializable flag while Q411 owns Editor/ContentBuildInterface.cs; keep serialization and default-state controls together."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.Build.NamedBuildTarget",
     "Message": "M:Equals`0(System.Object):System.Boolean readonly is False, Unity's is True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.Build.NamedBuildTarget."
+    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.Build.NamedBuildTarget",
     "Message": "M:Equals`0(UnityEditor.Build.NamedBuildTarget):System.Boolean readonly is False, Unity's is True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.Build.NamedBuildTarget."
+    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.Build.NamedBuildTarget",
     "Message": "M:GetHashCode`0():System.Int32 readonly is False, Unity's is True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.Build.NamedBuildTarget."
+    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.Build.NamedBuildTarget",
     "Message": "M:ToBuildTargetGroup`0():UnityEditor.BuildTargetGroup readonly is False, Unity's is True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.Build.NamedBuildTarget."
+    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.Build.NamedBuildTarget",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is True/False/False",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.Build.NamedBuildTarget."
+    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.EditorBuildSettingsScene",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.EditorBuildSettingsScene."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.GUID",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.GUID."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.GlobalObjectId",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.GlobalObjectId."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.IMGUI.Controls.MultiColumnHeaderState",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.IMGUI.Controls.MultiColumnHeaderState."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.Networking.PlayerConnection.EditorConnection",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.Networking.PlayerConnection.EditorConnection."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.PackageManager.DependencyInfo",
-    "Message": "M:get_name`0():System.String readonly is True, Unity's is False",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PackageManager.DependencyInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.PackageManager.DependencyInfo",
-    "Message": "M:get_version`0():System.String readonly is True, Unity's is False",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PackageManager.DependencyInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.PackageManager.DependencyInfo",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PackageManager.DependencyInfo."
+    "Reason": "Q410-Editor-serialized-payloads: the selected Serializable flag needs m_enabled, m_path and m_guid payload migration from current auto properties, with nested serialization and overwrite controls."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.PackageManager.PackageCollection",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PackageManager.PackageCollection."
+    "Reason": "Q410-Editor-serialized-payloads: selected serialization stores m_PackageList, m_Error and m_HasError; current readonly List storage must retain enumeration and package error behavior during payload migration."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.PackageManager.PackageInfo",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PackageManager.PackageInfo."
+    "Reason": "Q410-Editor-serialized-payloads: selected serialization contains package identity, dependencies, registry and compliance payloads; current factory properties and lazy dependency cache require a shared serialization model before enabling nested composite serialization."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.PackageManager.Requests.ListRequest",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PackageManager.Requests.ListRequest."
+    "Reason": "Q410-Editor-serialized-payloads: selected request serialization includes fetched-result/error flags, native status and request identity. Current completed-request storage must be adapted with request-state serialization controls."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
     "Type": "UnityEditor.PackageManager.Requests.SearchRequest",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PackageManager.Requests.SearchRequest."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.PlayerSettings+Android",
-    "Message": "type modifiers is static=False,abstract=False,virtual=False,override=False,sealed=True, Unity's is static=False,abstract=False,virtual=False,override=False,sealed=False",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PlayerSettings+Android."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.PlayerSettings+iOS",
-    "Message": "type modifiers is static=False,abstract=False,virtual=False,override=False,sealed=True, Unity's is static=False,abstract=False,virtual=False,override=False,sealed=False",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.PlayerSettings+iOS."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.SceneManagement.PrefabStage",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Queued modifier migration; audit inheritance and mutable state in the module before changing its declarations. Owner: UnityEditor.SceneManagement.PrefabStage."
+    "Reason": "Q410-Editor-serialized-payloads: selected search serialization includes the query and fetched-result/error/request state. Current immutable results and query property need the common request payload migration."
   },
   {
     "Release": "6000.0.71f1",

@@ -103,6 +103,12 @@
     "managed/UnityEngine/Editor/GlobalObjectId.cs",
     "managed/UnityEngine/Graphics/GraphicsFormats.cs",
     "managed/UnityEngine/Graphics/LineRenderers.cs",
-    "managed/UnityEngine/Graphics/Mesh.cs"
+    "managed/UnityEngine/Graphics/Mesh.cs",
+    "managed/UnityEngine/Editor/CompilationPipeline.cs",
+    "managed/UnityEngine/Editor/EditorBuildSettings.cs",
+    "managed/UnityEngine/Editor/EditorStages.cs",
+    "managed/UnityEngine/Editor/EditorTestSupport.cs",
+    "managed/UnityEngine/Editor/PackageManager.cs",
+    "managed/UnityEngine/Editor/TreeViews.cs"
   ]
 }

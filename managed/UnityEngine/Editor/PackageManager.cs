@@ -16,19 +16,22 @@ namespace UnityEditor.PackageManager
 
         internal static PackageInfo Create(string name, string version, PackageSource source, string resolvedPath,
             string displayName, string description, string category, string type, string[] keywords, bool isDirectDependency) =>
-            new PackageInfo
-            {
-                name = name,
-                version = version,
-                source = source,
-                resolvedPath = resolvedPath,
-                displayName = string.IsNullOrEmpty(displayName) ? name : displayName,
-                description = description,
-                category = category,
-                type = type,
-                keywords = keywords ?? Array.Empty<string>(),
-                isDirectDependency = isDirectDependency,
-            };
+            new PackageInfo(name, version, source, resolvedPath, displayName, description, category, type, keywords, isDirectDependency);
+
+        PackageInfo(string name, string version, PackageSource source, string resolvedPath,
+            string displayName, string description, string category, string type, string[] keywords, bool isDirectDependency)
+        {
+            this.name = name;
+            this.version = version;
+            this.source = source;
+            this.resolvedPath = resolvedPath;
+            this.displayName = string.IsNullOrEmpty(displayName) ? name : displayName;
+            this.description = description;
+            this.category = category;
+            this.type = type;
+            this.keywords = keywords ?? Array.Empty<string>();
+            this.isDirectDependency = isDirectDependency;
+        }
 
         internal static void Register(IEnumerable<PackageInfo> packages)
         {
@@ -44,17 +47,17 @@ namespace UnityEditor.PackageManager
         internal static IReadOnlyList<PackageInfo> Registered => s_Registered;
 
         public string packageId => name + "@" + version;
-        public bool isDirectDependency { get; private set; }
-        public string version { get; private set; }
-        public PackageSource source { get; private set; }
-        public string resolvedPath { get; private set; }
+        public bool isDirectDependency { get; }
+        public string version { get; }
+        public PackageSource source { get; }
+        public string resolvedPath { get; }
         public string assetPath => "Packages/" + name;
-        public string name { get; private set; }
-        public string displayName { get; private set; }
-        public string category { get; private set; }
-        public string type { get; private set; }
-        public string description { get; private set; }
-        public string[] keywords { get; private set; }
+        public string name { get; }
+        public string displayName { get; }
+        public string category { get; }
+        public string type { get; }
+        public string description { get; }
+        public string[] keywords { get; }
         public bool isDeprecated
         {
             get

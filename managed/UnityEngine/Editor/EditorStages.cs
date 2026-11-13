@@ -16,6 +16,7 @@ namespace UnityEditor.SceneManagement
     }
 
     /// <summary>Prefab mode. Unbound's Editor never opens it.</summary>
+    [global::System.Serializable]
     public sealed partial class PrefabStage : PreviewSceneStage
     {
     }
@@ -34,6 +35,7 @@ namespace UnityEditor.Networking.PlayerConnection
     /// <summary>The Editor's connection to players: none connect to Unbound's Editor (the game
     /// runs in it), so registered handlers are kept and never called.</summary>
     [Unbound.EditorFaithful("no player connects to the Editor the game plays in: messages have nobody to go to")]
+    [global::System.Serializable]
     public partial class EditorConnection : ScriptableSingleton<EditorConnection>
     {
         readonly Dictionary<Guid, UnityAction<MessageEventArgs>> m_Handlers = new Dictionary<Guid, UnityAction<MessageEventArgs>>();

@@ -13,7 +13,7 @@ namespace UnityEditor
     /// GUIDs, loading assets by path, FindAssets with type, label and name filters. Unbound reads the
     /// project's assets directly, so these answer as the Editor would.
     /// </summary>
-    public partial class AssetDatabase
+    public sealed partial class AssetDatabase
     {
         sealed class Entry
         {
@@ -371,6 +371,7 @@ namespace UnityEditor
         }
     }
 
+    [global::System.Serializable]
     public partial struct GUID : IEquatable<GUID>, IComparable, IComparable<GUID>
     {
         readonly string m_Value;

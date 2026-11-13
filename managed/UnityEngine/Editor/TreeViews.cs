@@ -540,12 +540,13 @@ namespace UnityEditor.IMGUI.Controls
     }
 
     /// <summary>The columns of a multi-column header, which are visible and how they sort.</summary>
+    [global::System.Serializable]
     public partial class MultiColumnHeaderState
     {
         [SerializeField] Column[] m_Columns;
         [SerializeField] int[] m_VisibleColumns;
         [SerializeField] List<int> m_SortedColumns = new List<int>();
-        [SerializeField] int m_MaxNumberOfSortedColumns = 3;
+        [NonSerialized] int m_MaxNumberOfSortedColumns = 3;
 
         public MultiColumnHeaderState(Column[] columns)
         {
@@ -648,7 +649,7 @@ namespace UnityEditor.IMGUI.Controls
         public bool canSort { get; set; } = true;
 
         [Unbound.EditorFaithful("Unity's value outside the header's OnGUI, which no window runs")]
-        protected int currentColumnIndex => -1;
+        protected int currentColumnIndex { get; private set; } = -1;
 
         protected bool allowDraggingColumnsToReorder { get; set; }
 

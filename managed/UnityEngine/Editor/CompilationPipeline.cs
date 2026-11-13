@@ -22,13 +22,13 @@ namespace UnityEditor.Compilation
     /// <summary>A script assembly as the Editor's compilation pipeline describes it.</summary>
     public partial class Assembly
     {
-        readonly string m_Name;
-        readonly string m_OutputPath;
-        readonly string[] m_SourceFiles;
-        readonly string[] m_Defines;
+        string m_Name;
+        string m_OutputPath;
+        string[] m_SourceFiles;
+        string[] m_Defines;
         Assembly[] m_AssemblyReferences;
-        readonly string[] m_CompiledAssemblyReferences;
-        readonly AssemblyFlags m_Flags;
+        string[] m_CompiledAssemblyReferences;
+        AssemblyFlags m_Flags;
         internal string m_RootNamespace = "";
 
         public Assembly(string name, string outputPath, string[] sourceFiles, string[] defines, Assembly[] assemblyReferences, string[] compiledAssemblyReferences, AssemblyFlags flags)
@@ -42,15 +42,15 @@ namespace UnityEditor.Compilation
             m_Flags = flags;
         }
 
-        public string name => m_Name;
+        public string name { get => m_Name; private set => m_Name = value; }
 
-        public string rootNamespace => m_RootNamespace;
+        public string rootNamespace { get => m_RootNamespace; private set => m_RootNamespace = value; }
 
-        public string outputPath => m_OutputPath;
+        public string outputPath { get => m_OutputPath; private set => m_OutputPath = value; }
 
-        public string[] sourceFiles => m_SourceFiles;
+        public string[] sourceFiles { get => m_SourceFiles; private set => m_SourceFiles = value; }
 
-        public string[] defines => m_Defines;
+        public string[] defines { get => m_Defines; private set => m_Defines = value; }
 
         public Assembly[] assemblyReferences
         {
@@ -58,9 +58,9 @@ namespace UnityEditor.Compilation
             internal set => m_AssemblyReferences = value ?? Array.Empty<Assembly>();
         }
 
-        public string[] compiledAssemblyReferences => m_CompiledAssemblyReferences;
+        public string[] compiledAssemblyReferences { get => m_CompiledAssemblyReferences; private set => m_CompiledAssemblyReferences = value; }
 
-        public AssemblyFlags flags => m_Flags;
+        public AssemblyFlags flags { get => m_Flags; private set => m_Flags = value; }
 
         /// <summary>The output paths of the referenced script assemblies, then the precompiled references.</summary>
         public string[] allReferences => m_AssemblyReferences.Select(a => a.outputPath).Concat(m_CompiledAssemblyReferences).ToArray();

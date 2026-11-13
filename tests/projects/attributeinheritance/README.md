@@ -150,3 +150,44 @@ compiler omission controls. No framebuffer clearing behavior changes in this sli
 lists flags as required on the four-argument overload. Its existing three-argument
 overload is tested separately. Direction flags are selected-release metadata
 observations; these controls make no additional marshaling guarantee.
+
+## Editor declaration shapes
+
+The Editor expansion adds 33 metadata rows, three compilation-data setter
+controls and twelve serialization controls, taking 901 rows to 949. Paired NVIDIA GPU Editor captures match and
+all 901 prior raw rows remain unchanged. Type flags, getter readonly metadata
+and private/absent setters come from the 6000.0.71f1 assemblies. A reflected
+private setter changes an assembly name from before to after; outputPath remains
+before.dll. These are declaration and reflection observations. They make no
+new contract for compilation lifecycle, focus timing or wrapper memory layout.
+
+Metadata-only compiler tests reject deriving from AssetDatabase and accept
+deriving from PlayerSettings.Android. Engine tests retain PackageInfo factory
+fallbacks, array identity, nulls and independent DependencyInfo copies.
+
+The Unity 6000.0 [AssetDatabase declaration](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetDatabase.html)
+is sealed; the derivation compiler control distinguishes this guarantee.
+[Assembly.name](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Compilation.Assembly-name.html)
+is publicly get-only. Its private setter is a selected-release reflection
+observation, not a public mutation API. [PackageInfo](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/PackageManager.PackageInfo.html)
+describes package metadata; the engine factory controls preserve its existing
+values without claiming new package-resolution behavior.
+
+DependencyInfo serializes its selected private name/version fields. A boxed
+overwrite changes the name, retains the omitted version and leaves the original
+struct copy unchanged. Header controls place a nonserialized maximum at 9,
+attempt to overwrite it with 17 and change a serialized column list at the same
+time. The maximum stays 9 while the list changes. Field flags and the missing
+SerializeField annotation are recorded separately. Nondefault GUID and
+GlobalObjectId values retain their measured empty JSON objects.
+
+Five larger Serializable flags remain queued with their payload migrations.
+Their current package/request/cache properties do not represent the selected
+serialized fields; those flags are kept strict in api-check.
+
+The Unity 6000.0 [SerializeField contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializeField.html)
+covers private-field serialization. [FromJsonOverwrite](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/JsonUtility.FromJsonOverwrite.html)
+leaves omitted fields unchanged. Its struct limitation requires explicit boxing
+and unboxing here; the separate original value checks that the overwrite changed
+the boxed value. These controls use supported primitive fields. They do not
+extend JSON support to other engine objects or unsupported field types.

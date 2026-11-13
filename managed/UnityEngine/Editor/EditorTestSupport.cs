@@ -19,7 +19,7 @@ namespace UnityEditor
         public static void SetConsoleErrorPause(bool enabled) => s_ErrorPause = enabled;
     }
 
-    public partial class AssetDatabase
+    public sealed partial class AssetDatabase
     {
         /// <summary>Unbound never deletes a project's files: a path that names an asset is refused
         /// (and said so); one naming nothing (a scene saved only in memory) is not there to delete.</summary>

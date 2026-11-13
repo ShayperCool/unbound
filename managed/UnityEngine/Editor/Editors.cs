@@ -184,6 +184,7 @@ namespace UnityEditor
     }
 
     /// <summary>The inspector window's editors: Unbound has no inspector window, so none.</summary>
+    [global::System.Serializable]
     public sealed partial class ActiveEditorTracker
     {
         static ActiveEditorTracker s_Shared;

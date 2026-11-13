@@ -272,12 +272,12 @@ namespace UnityEditor
 
         public static string GetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget buildTarget) => ProjectInfo.Identifier;
 
-        public sealed partial class Android
+        public partial class Android
         {
             public static int bundleVersionCode { get; set; } = 1;
         }
 
-        public sealed partial class iOS
+        public partial class iOS
         {
             public static string buildNumber { get; set; } = "1";
         }

@@ -26,7 +26,7 @@ namespace UnityEditor
 
         public static ArrayList sceneViews => s_SceneViews;
 
-        public static SceneView lastActiveSceneView => null;
+        public static SceneView lastActiveSceneView { get; private set; }
 
         public static SceneView currentDrawingSceneView => null;
 

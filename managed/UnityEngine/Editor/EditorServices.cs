@@ -98,7 +98,7 @@ namespace UnityEditor
         public static bool isCreateFromTemplate => false;
     }
 
-    public partial class AssetDatabase
+    public sealed partial class AssetDatabase
     {
         /// <summary>Imports run in the Editor's own process: there are no import workers.</summary>
         [Unbound.EditorFaithful("measured: tests/projects/editor env.importWorker")]

@@ -14,6 +14,7 @@ namespace UnityEditor
     /// Unity's own serialized assets, 4 for built-in ones, and 0 (all zeros) for objects saved
     /// nowhere (tests/projects/editor measured them).
     /// </summary>
+    [global::System.Serializable]
     public partial struct GlobalObjectId : IEquatable<GlobalObjectId>, IComparable<GlobalObjectId>
     {
         GUID m_UnboundGuid;

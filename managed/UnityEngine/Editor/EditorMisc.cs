@@ -42,7 +42,7 @@ namespace UnityEditor
 
         // Build-only settings: what is set is kept for the session (Unbound does not write
         // ProjectSettings.asset); nothing in Play mode acts on them.
-        public sealed partial class Android
+        public partial class Android
         {
             static AndroidSdkVersions? s_MinSdkVersion, s_TargetSdkVersion;
             static AndroidSplashScreenScale? s_SplashScreenScale;
@@ -66,7 +66,7 @@ namespace UnityEditor
             }
         }
 
-        public sealed partial class iOS
+        public partial class iOS
         {
             static string s_TargetOSVersionString;
 
@@ -436,16 +436,19 @@ namespace UnityEditor.PackageManager
         }
     }
 
+    [global::System.Serializable]
     public partial struct DependencyInfo
     {
         internal DependencyInfo(string name, string version)
         {
-            this.name = name;
-            this.version = version;
+            m_Name = name;
+            m_Version = version;
         }
 
-        public string name { get; }
-        public string version { get; }
+        [global::UnityEngine.@SerializeField] string m_Name;
+        [global::UnityEngine.@SerializeField] string m_Version;
+        public string name { get => m_Name; }
+        public string version { get => m_Version; }
     }
 }
 

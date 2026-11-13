@@ -76,18 +76,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After parameter slice |
+| Category | Before Q410 | After Editor shape slice |
 | --- | ---: | ---: |
-| Attributes | 938 | 306 |
-| Modifiers | 87 | 72 |
+| Attributes | 938 | 304 |
+| Modifiers | 87 | 60 |
 | Parameters | 74 | 0 |
-| Accessors | 70 | 60 |
+| Accessors | 70 | 41 |
 | Layout | 68 | 68 |
 | Interfaces | 65 | 65 |
 | Accessibility | 18 | 18 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 601 |
+| Total | 1,332 | 568 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -127,6 +127,31 @@ needs divergent-state and moving-platform controls with the runtime adaptation.
 The parameter slice fixes 73 exact optional-default and array direction entries.
 Metadata controls cover each changed parameter; invocation controls exercise omitted
 arguments and the existing three-argument mesh overload.
+
+The Editor shape slice resolves 33 entries: 12 modifier, 19 accessor and two field-annotation differences.
+PackageInfo now initializes get-only values in its factory constructor. DependencyInfo
+uses explicit getters and the selected serialized fields; compilation metadata retains its storage with the selected
+private setters. Compiler controls distinguish sealed AssetDatabase from inheritable
+platform settings. The probe checks every changed declaration and a private setter
+with different before/after names and an unchanged output-path control.
+
+Q410-Editor-computed-setters retains EditorApplication.isFocused and
+EditorAssemblies.loadedAssemblies. Their current getters derive live state; matching
+private setters requires adapting focus updates and assembly-cache invalidation,
+with diverged-state controls. Q410-Editor-coordination retains the AssetPostprocessor
+setter and ObjectIdentifier serialization flag while Q411 owns their source files.
+The five NamedBuildTarget readonly differences also require a generated header
+currently owned by Q411. Q410-Editor-serialized-payloads retains five Serializable
+flags on EditorBuildSettingsScene, PackageInfo, PackageCollection, ListRequest and
+SearchRequest. Their current property/cache/request storage needs the selected
+serialized payloads and nested/overwrite controls before the runtime classifies them
+as serialized composites. These fourteen exact differences remain visible in the allow-list.
+
+The same slice excludes MultiColumnHeaderState.m_MaxNumberOfSortedColumns from
+serialization. A control starts it at 9, supplies 17 in JSON, and confirms 9 survives
+while the serialized visible-column list changes from [0,1] to [1]. DependencyInfo
+JSON controls change one name, retain the omitted version and preserve an independent
+struct copy. GUID and GlobalObjectId JSON controls use nondefault identifiers.
 
 ## Landing checks and default state
 
