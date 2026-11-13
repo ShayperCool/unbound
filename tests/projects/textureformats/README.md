@@ -170,3 +170,7 @@ GrabPass on this measured release; the renderer control captures the framebuffer
 These controls preserve different source colors so a skipped or stale grab is
 visible. The shared rendering compatibility flag selects blit pass selection;
 other releases retain the earlier selection until recorded.
+
+Use `publish --append` when adding controls to this existing reference. The runner
+checks every earlier raw record before appending, and refuses any changed or
+missing record; both new Editor captures must also agree.
