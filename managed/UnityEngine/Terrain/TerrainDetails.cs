@@ -15,7 +15,8 @@ namespace UnityEngine
         byte[][] m_DetailLayers = new byte[0][];
         /// <summary>Per patch (patch rows z, then columns x), its layers in the order they got values
         /// there: a layer joins at the end when it gets a value and leaves when all its values in
-        /// the patch are zero again. The order decides how the patch's meshes are built.</summary>
+        /// the patch are zero again. The order decides how the patch's meshes are built. A layer
+        /// is a byte, as in the Editor's patches (so at most 256 layers).</summary>
         List<byte>[] m_PatchLayers = new List<byte>[0];
         /// <summary>Bumped when the details or their prototypes change.</summary>
         internal int m_DetailsVersion;
@@ -41,26 +42,36 @@ namespace UnityEngine
             m_PatchLayers = new List<byte>[patches * patches];
         }
 
-        /// <summary>Drops a removed prototype's layer from every patch and renumbers the later ones;
-        /// with keep, drops layers from keep on.</summary>
-        void RemovePatchLayers(int index, int keep = int.MaxValue)
+        /// <summary>Drops a removed prototype's layer from every patch and renumbers the later ones.</summary>
+        void RemovePatchLayer(int index)
         {
             foreach (var list in m_PatchLayers)
             {
                 if (list == null) continue;
                 for (int i = list.Count - 1; i >= 0; i--)
                 {
-                    if (list[i] == index || list[i] >= keep) list.RemoveAt(i);
+                    if (list[i] == index) list.RemoveAt(i);
                     else if (list[i] > index) list[i]--;
                 }
             }
         }
 
+        /// <summary>Drops the layers of prototypes from count on (fewer prototypes).</summary>
+        void TruncatePatchLayers(int count)
+        {
+            foreach (var list in m_PatchLayers)
+                list?.RemoveAll(layer => layer >= count);
+        }
+
         public DetailScatterMode detailScatterMode => m_DetailScatterMode;
 
+        /// <summary>Switching the mode starts every patch empty (values and layer order).</summary>
         public void SetDetailScatterMode(DetailScatterMode detailScatterMode)
         {
+            if (m_DetailScatterMode == detailScatterMode) return;
             m_DetailScatterMode = detailScatterMode;
+            m_DetailLayers = new byte[m_DetailPrototypes.Length][];
+            ResetPatchLayers();
             m_DetailsVersion++;
         }
 
@@ -120,8 +131,8 @@ namespace UnityEngine
             int perPatch = m_DetailResolutionPerPatch, patches = detailPatchCount;
             if (perPatch <= 0 || patches <= 0 || width <= 0 || height <= 0) { m_DetailsVersion++; return; }
             if (m_PatchLayers.Length != patches * patches) ResetPatchLayers();
-            int fromX = Math.Clamp(xBase / perPatch, 0, patches - 1), toX = Math.Clamp((xBase + width) / perPatch, 0, patches - 1);
-            int fromY = Math.Clamp(yBase / perPatch, 0, patches - 1), toY = Math.Clamp((yBase + height) / perPatch, 0, patches - 1);
+            int fromX = Math.Clamp(xBase / perPatch, 0, patches - 1), toX = Math.Clamp((xBase + width - 1) / perPatch, 0, patches - 1);
+            int fromY = Math.Clamp(yBase / perPatch, 0, patches - 1), toY = Math.Clamp((yBase + height - 1) / perPatch, 0, patches - 1);
             for (int py = fromY; py <= toY; py++)
                 for (int px = fromX; px <= toX; px++)
                 {

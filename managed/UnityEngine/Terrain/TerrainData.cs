@@ -607,7 +607,7 @@ namespace UnityEngine
             {
                 m_DetailPrototypes = value != null ? (DetailPrototype[])value.Clone() : new DetailPrototype[0];
                 if (m_DetailLayers.Length > m_DetailPrototypes.Length) Array.Resize(ref m_DetailLayers, m_DetailPrototypes.Length);
-                RemovePatchLayers(-1, m_DetailPrototypes.Length);
+                TruncatePatchLayers(m_DetailPrototypes.Length);
                 m_DetailsVersion++;
             }
         }
@@ -623,7 +623,7 @@ namespace UnityEngine
                 layers.RemoveAt(index);
                 m_DetailLayers = layers.ToArray();
             }
-            RemovePatchLayers(index);
+            RemovePatchLayer(index);
             m_DetailsVersion++;
         }
 

@@ -95,6 +95,30 @@ namespace UnityEngine.Tests
             Assert.Equal(new byte[] { 1, 0 }, data.PatchLayers(0, 0));
         }
 
+        /// <summary>Setting the prototypes again keeps the patches' layers (fewer prototypes drop the
+        /// rest), and switching the scatter mode empties every patch.</summary>
+        [Fact]
+        public void PrototypesAndModeChangesKeepOrEmptyThePatches()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var prototypes = new[] { new DetailPrototype { prototypeTexture = texture, noiseSeed = 1 }, new DetailPrototype { prototypeTexture = texture, noiseSeed = 2 } };
+            var data = Data(DetailScatterMode.InstanceCountMode, prototypes);
+            data.SetDetailLayer(1, 1, 1, new int[,] { { 2 } });
+            data.SetDetailLayer(2, 2, 0, new int[,] { { 3 } });
+            int before = data.ComputeDetailInstanceTransforms(0, 0, 0, 1f, out _).Length;
+            data.detailPrototypes = prototypes;
+            Assert.Equal(new byte[] { 1, 0 }, data.PatchLayers(0, 0));
+            Assert.Equal(before, data.ComputeDetailInstanceTransforms(0, 0, 0, 1f, out _).Length);
+            Assert.Equal(3, before);
+            data.detailPrototypes = new[] { prototypes[0] };
+            Assert.Equal(new byte[] { 0 }, data.PatchLayers(0, 0));
+            data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+            Assert.Equal(new byte[] { 0 }, data.PatchLayers(0, 0));
+            data.SetDetailScatterMode(DetailScatterMode.CoverageMode);
+            Assert.Null(data.PatchLayers(0, 0));
+            Assert.Equal(0, data.GetDetailLayer(2, 2, 1, 1, 0)[0, 0]);
+        }
+
         /// <summary>A zero noiseSeed seeds a layer by its place in the patch: the second layer of a
         /// patch of 8 × 8 samples gets the seed 64.</summary>
         [Fact]
