@@ -1,0 +1,12 @@
+{"k":"member.function.0","v":"255 0 0 255"}
+{"k":"member.function.1","v":"0 128 0 255"}
+{"k":"member.function.2","v":"64 64 48 255"}
+{"k":"member.copy.0","v":"0 128 0 255"}
+{"k":"member.copy.1","v":"64 64 48 255"}
+{"k":"member.copy.2","v":"255 128 64 127"}
+{"k":"member.direct.0","v":"255 0 0 255"}
+{"k":"member.direct.1","v":"0 255 0 255"}
+{"k":"member.direct.2","v":"64 127 191 255"}
+{"k":"many.24","v":"184 128 92 255"}
+{"k":"many.24.changed","v":"184 200 95 255"}
+{"k":"complete","v":true}

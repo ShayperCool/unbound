@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/shaderresources/run.py gate"],
+  "summary": "shaderresources: .*",
+  "engine_paths": [
+    "crates/unbound-shaders/src/buffer_members.rs",
+    "vendor/wgpu-sampler/wgpu-hal/src/gles/adapter.rs"
+  ]
+}
