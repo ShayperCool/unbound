@@ -52,8 +52,9 @@ Recorded:
   describes disabled automatic resolves, and
   [ResolveAntiAliasedSurface](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.ResolveAntiAliasedSurface.html)
   describes explicit self and destination resolves. Separate retained depth publication
-  is observed behavior in these controls. Managed multisampled shader resources remain
-  outside this native-plugin measurement.
+  is observed behavior in these controls. Managed multisampled shader resources and the
+  disabled automatic color-resolve behavior remain unimplemented; these controls establish
+  native-plugin image selection.
 * **External textures** (`external.*`): `Texture2D.CreateExternalTexture` and
   `UpdateExternalTexture` with textures the plugin made, and with another texture's pointer
   (the same texture), also a render texture with depth and mips, which works on after the

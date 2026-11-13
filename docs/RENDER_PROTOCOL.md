@@ -171,8 +171,9 @@ writes remain ordered; the cbuffer's own uniform properties are then not used. A
 skips the dispatch with a warning. Shader cache format 19 also records active instanced-property
 declarations so only their scalar overrides fall back after instance zero.
 
-A render texture with packet flag 32 exposes its multisampled images to native plugins and
-publishes resolved color only when explicitly requested. Without that flag, native depth
+A render texture with packet flag 32 exposes its multisampled images to native plugins.
+Managed multisampled shader resources and automatic color-resolve behavior for this flag remain
+unimplemented. Without that flag, native depth
 pointers use a retained single-sample depth image. Depth clears, explicit self-resolves and
 graphics shader depth reads publish its content; ordinary drawing leaves it unchanged. Depth resolves
 select the sample specified by the graphics compatibility profile. Native pointer shape and

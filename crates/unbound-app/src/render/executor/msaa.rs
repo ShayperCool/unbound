@@ -60,7 +60,7 @@ impl UnityRenderer {
         enabled: bool,
         dimension: i32,
     ) {
-        let automatic = !gpu.bind_ms && (dimension != TEX2D_ARRAY || gpu.layers == 1);
+        let automatic = dimension != TEX2D_ARRAY || gpu.layers == 1;
         if !enabled || gpu.samples == 1 || gpu.format == 5 {
             self.release_resolve_history(&gpu.texture);
             return;

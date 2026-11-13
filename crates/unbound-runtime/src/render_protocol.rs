@@ -478,7 +478,7 @@ pub mod owned {
         pub defer_mips: bool,
         /// Readback and compute retain the preceding published MSAA resolve.
         pub retain_resolve: bool,
-        /// Native pointers expose the MSAA images; automatic resolves are disabled.
+        /// Native pointers expose the MSAA images.
         pub bind_ms: bool,
         /// A render target's MSAA samples (1: none).
         pub samples: u32,
