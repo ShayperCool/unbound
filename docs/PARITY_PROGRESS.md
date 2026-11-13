@@ -2911,3 +2911,17 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 
 - Root's independent reviewers check completed source/validation packages in parallel and return concrete decision drafts. Final integration, runtime composition and finite releases stay with Root. Review slots do not replace the separately authorized feature implementations.
 - Sixteen queued coordinator notices were archived in full and consolidated into one pending index, without changing source, evidence or any consumed validation budget. Routine launch notices now belong in saved state; consolidated decisions and new material blockers are the messages that need Root's attention. Archive and routing: `validation/runs/root-receipt-triage-20261104/`.
+
+
+### Q402: serialized GameObject and Transform bindings
+
+- Unity 6000.0.71f1, tests/projects/serializedstructure: two identical GPU Editor
+  captures, 96 values. The original engine completes 1/96; the bindings match 96/96.
+- The remaining 18 editorcallbacks prefab-field differences are resolved. Its
+  24 missing/extra callback-order pairs and strict scene-queue timing stay visible.
+- Raw icon/navigation/static metadata, separate Euler hints and scale lock are
+  preserved. Component slots support measured reference replacement but reject
+  resizing/reordering; existing-child permutations update live order without callbacks.
+- Structural ownership changes, null/foreign component references, multi-target
+  structural edits and JSON hierarchy-link writes remain outside the measured scope.
+  The probe README records the boundaries; existing references and tolerances are unchanged.

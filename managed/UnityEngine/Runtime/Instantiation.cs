@@ -237,7 +237,9 @@ namespace Unbound.Runtime
                 m_Tag = sourceGo.m_Tag,
                 m_Scene = scene,
             };
-            go.isStatic = sourceGo.isStatic;
+            go.m_StaticEditorFlags = sourceGo.m_StaticEditorFlags;
+            go.m_NavMeshLayer = sourceGo.m_NavMeshLayer;
+            go.m_Icon = sourceGo.m_Icon;
             map[sourceGo] = go;
             Transform transformClone = null;
             foreach (var c in sourceGo.m_Components)
@@ -252,6 +254,7 @@ namespace Unbound.Runtime
                     t.m_LocalPosition = source.m_LocalPosition;
                     t.m_LocalRotation = source.m_LocalRotation;
                     t.m_LocalScale = source.m_LocalScale;
+                    t.m_LocalEulerAnglesHint = source.m_LocalEulerAnglesHint;
                 }
                 else
                 {

@@ -18,6 +18,8 @@ namespace UnityEngine
         /// <summary>The serialized StaticEditorFlags (m_StaticEditorFlags): ContributeGI (1)
         /// places a renderer in the realtime GI precompute.</summary>
         internal uint m_StaticEditorFlags;
+        internal uint m_NavMeshLayer;
+        internal Texture2D m_Icon;
         [NonSerialized] internal int m_ActivationTransitionDepth;
         // Scene-authored objects are loaded but inactive during BeforeSceneLoad.
         internal bool m_AwaitingSceneAwake;
@@ -180,7 +182,11 @@ namespace UnityEngine
             set => SetActive(value);
         }
 
-        public bool isStatic { get; set; }
+        public bool isStatic
+        {
+            get => m_StaticEditorFlags != 0;
+            set => m_StaticEditorFlags = value ? int.MaxValue : 0u;
+        }
 
         public Scene scene
         {

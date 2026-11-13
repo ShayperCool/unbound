@@ -223,17 +223,17 @@ namespace UnityEngine
                         Field("m_LocalRotation", t.localRotation, typeof(Quaternion), Shape.Quaternion);
                         Field("m_LocalPosition", t.localPosition, typeof(Vector3), Shape.Vector3);
                         Field("m_LocalScale", t.localScale, typeof(Vector3), Shape.Vector3);
-                        Field("m_ConstrainProportionsScale", false, typeof(bool), Shape.Bool);
-                        Field("m_LocalEulerAnglesHint", t.localEulerAngles + Vector3.zero, typeof(Vector3), Shape.Vector3); // + 0: no negative zeros
+                        Field("m_ConstrainProportionsScale", t.m_ConstrainProportionsScale, typeof(bool), Shape.Bool);
+                        Field("m_LocalEulerAnglesHint", t.m_LocalEulerAnglesHint, typeof(Vector3), Shape.Vector3);
                         break;
                     case GameObject go:
                         Field("serializedVersion", "6", typeof(string), Shape.String);
                         Field("m_Layer", (uint)go.layer, typeof(uint), Shape.UInt);
                         Field("m_Name", go.name, typeof(string), Shape.String);
                         Field("m_TagString", go.tag, typeof(string), Shape.String);
-                        Field("m_Icon", null, typeof(Texture2D), Shape.UnityObject);
-                        Field("m_NavMeshLayer", 0u, typeof(uint), Shape.UInt);
-                        Field("m_StaticEditorFlags", 0u, typeof(uint), Shape.UInt);
+                        Field("m_Icon", go.m_Icon, typeof(Texture2D), Shape.UnityObject);
+                        Field("m_NavMeshLayer", go.m_NavMeshLayer, typeof(uint), Shape.UInt);
+                        Field("m_StaticEditorFlags", go.m_StaticEditorFlags, typeof(uint), Shape.UInt);
                         Field("m_IsActive", go.activeSelf, typeof(bool), Shape.Bool);
                         break;
                     default:
@@ -463,7 +463,8 @@ namespace UnityEngine
             {
                 foreach (var field in SerializedTree.NativeFields(target))
                 {
-                    if (field.ReadOnly || field.Set == null) continue;
+                    // Hierarchy-link arrays remain the object graph loader's responsibility.
+                    if (field.ReadOnly || field.Set == null || field.ElementType != null) continue;
                     var value = node.Get(field.Name);
                     if (value == null) continue;
                     try { field.Set(target, ReadValue(value, field.Type, field.Shape, null, 1)); }

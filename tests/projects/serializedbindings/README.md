@@ -30,10 +30,9 @@ while 2022.3 documents
 [PhysicMaterial](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/PhysicMaterial.html).
 Only the 6000.0.71f1 serialized schema has an Editor capture here.
 
-This closes the BoxCollider property-list omissions in editorcallbacks. GameObject
-and Transform metadata and component/child arrays remain separate gaps. Authored
-icon/navigation/static flags and scale/Euler hints need preserved state; live
-component and child arrays need structural bindings. Other collider-specific
+This closes the BoxCollider property-list omissions in editorcallbacks.
+GameObject and Transform metadata and structural bindings are measured separately
+in [serializedstructure](../serializedstructure/README.md). Other collider-specific
 geometry, cross-object reference persistence and invalid-value validation remain
 unmeasured. The API documentation warns that serialized writes bypass property
 setter validation; the present controls use valid values.

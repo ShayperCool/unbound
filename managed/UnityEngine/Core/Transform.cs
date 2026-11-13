@@ -16,6 +16,8 @@ namespace UnityEngine
         internal Vector3 m_LocalScale = Vector3.one;
         internal Transform m_Parent;
         internal readonly List<Transform> m_Children = new List<Transform>();
+        internal bool m_ConstrainProportionsScale;
+        internal Vector3 m_LocalEulerAnglesHint;
 
         Matrix4x4 m_LocalToWorld = Matrix4x4.identity;
         Quaternion m_WorldRotation = Quaternion.identity;
@@ -323,6 +325,8 @@ namespace UnityEngine
             m_LocalRotation = body.Quaternion("m_LocalRotation");
             m_LocalPosition = body.Vector3("m_LocalPosition");
             m_LocalScale = body.Vector3("m_LocalScale", Vector3.one);
+            m_ConstrainProportionsScale = body.Bool("m_ConstrainProportionsScale");
+            m_LocalEulerAnglesHint = body.Vector3("m_LocalEulerAnglesHint");
         }
 
         // ------------------------------------------------------------------ space conversion

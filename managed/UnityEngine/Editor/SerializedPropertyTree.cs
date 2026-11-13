@@ -198,6 +198,8 @@ namespace Unbound.Runtime
         internal SerializedPropertyType PropertyType;
         internal bool Hidden;
         internal bool ReadOnly;
+        internal bool FixedSize;
+        internal bool FixedOrder;
         /// <summary>Changed since the last Update/Apply (this node or a descendant).</summary>
         internal bool Dirty;
         /// <summary>Replaced as a whole (array resized, value assigned): written back entirely.</summary>
@@ -249,6 +251,10 @@ namespace Unbound.Runtime
             internal string TypeName;
             internal bool Hidden;
             internal bool ReadOnly;
+            internal Type ElementType;
+            internal Shape ElementShape;
+            internal bool FixedSize;
+            internal bool FixedOrder;
             internal Func<Object, object> Get;
             internal Action<Object, object> Set;
         }
@@ -283,10 +289,14 @@ namespace Unbound.Runtime
                 object value;
                 try { value = native.Get(target); }
                 catch (Exception) { value = null; }
-                var node = Make(root, native.Name, -1, native.Type, native.Shape, null, Shape.Unsupported, value, ctx, 0);
+                var node = Make(root, native.Name, -1, native.Type, native.Shape, native.ElementType, native.ElementShape, value, ctx, 0);
                 node.TypeName = native.TypeName;
                 node.Hidden = native.Hidden;
                 node.ReadOnly = native.ReadOnly;
+                node.FixedSize = native.FixedSize;
+                node.FixedOrder = native.FixedOrder;
+                SetNativeReferenceTypeNames(node);
+                node.TypeName = native.TypeName;
                 node.Accessor = new DelegateAccessor(native.Get, native.Set);
                 AddChild(root, node);
             }
@@ -301,6 +311,54 @@ namespace Unbound.Runtime
                 }
             }
             return root;
+        }
+
+        // Native references omit the script-field type prefix, including array elements.
+        static void SetNativeReferenceTypeNames(SerializedNode node)
+        {
+            if (node.Shape == Shape.UnityObject) node.TypeName = "PPtr<" + node.ClrType.Name + ">";
+            foreach (var child in node.Children) SetNativeReferenceTypeNames(child);
+        }
+
+        [Serializable]
+        internal struct ComponentPair
+        {
+            public Component component;
+        }
+
+        static object ComponentPairs(Object obj)
+        {
+            var owner = (GameObject)obj;
+            var pairs = new List<ComponentPair>(owner.m_Components.Count);
+            foreach (var component in owner.m_Components) pairs.Add(new ComponentPair { component = component });
+            return pairs;
+        }
+
+        static void SetComponentPairs(Object obj, object value)
+        {
+            var owner = (GameObject)obj;
+            var pairs = (List<ComponentPair>)value;
+            if (pairs.Count != owner.m_Components.Count || pairs.Count == 0 || pairs[0].component != owner.transform)
+                throw new NotSupportedException("Serialized component slots require the existing size and first Transform.");
+            foreach (var pair in pairs)
+                if (pair.component == null || pair.component.gameObject != owner)
+                    throw new NotSupportedException("Serialized component slots currently support live components of the same GameObject.");
+            owner.m_Components.Clear();
+            foreach (var pair in pairs) owner.m_Components.Add(pair.component);
+        }
+
+        static void SetChildrenOrder(Object obj, object value)
+        {
+            var transform = (Transform)obj;
+            var children = (List<Transform>)value;
+            var remaining = new HashSet<Transform>(transform.m_Children);
+            if (children.Count != transform.m_Children.Count)
+                throw new NotSupportedException("Serialized child edits currently support reordering existing children. Use Transform.SetParent to change ownership.");
+            foreach (var child in children)
+                if (child == null || !remaining.Remove(child))
+                    throw new NotSupportedException("Serialized child edits require each existing child exactly once. Use Transform.SetParent to change ownership.");
+            transform.m_Children.Clear();
+            transform.m_Children.AddRange(children);
         }
 
         static SerializedNode MakeMember(SerializedNode parent, SerializedMember member, object value, BuildContext ctx, int nesting)
@@ -537,6 +595,12 @@ namespace Unbound.Runtime
             {
                 yield return new NativeField
                 {
+                    Name = "m_Component", Type = typeof(List<ComponentPair>), Shape = Shape.List, TypeName = "vector",
+                    ElementType = typeof(ComponentPair), ElementShape = Shape.Composite, FixedSize = true, FixedOrder = true,
+                    Get = ComponentPairs, Set = SetComponentPairs,
+                };
+                yield return new NativeField
+                {
                     Name = "m_Layer", Type = typeof(uint), Shape = Shape.UInt, TypeName = "unsigned int",
                     Get = o => (uint)((GameObject)o).layer, Set = (o, v) => ((GameObject)o).layer = (int)(uint)v,
                 };
@@ -545,6 +609,21 @@ namespace Unbound.Runtime
                 {
                     Name = "m_TagString", Type = typeof(string), Shape = Shape.String, TypeName = "string",
                     Get = o => ((GameObject)o).tag, Set = (o, v) => ((GameObject)o).tag = (string)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_Icon", Type = typeof(Texture2D), Shape = Shape.UnityObject, TypeName = "PPtr<Texture2D>",
+                    Get = o => ((GameObject)o).m_Icon, Set = (o, v) => ((GameObject)o).m_Icon = (Texture2D)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_NavMeshLayer", Type = typeof(uint), Shape = Shape.UInt, TypeName = "uint",
+                    Get = o => ((GameObject)o).m_NavMeshLayer, Set = (o, v) => ((GameObject)o).m_NavMeshLayer = (uint)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_StaticEditorFlags", Type = typeof(uint), Shape = Shape.UInt, TypeName = "uint",
+                    Get = o => ((GameObject)o).m_StaticEditorFlags, Set = (o, v) => ((GameObject)o).m_StaticEditorFlags = (uint)v,
                 };
                 yield return new NativeField
                 {
@@ -571,8 +650,24 @@ namespace Unbound.Runtime
                 };
                 yield return new NativeField
                 {
+                    Name = "m_ConstrainProportionsScale", Type = typeof(bool), Shape = Shape.Bool, TypeName = "bool",
+                    Get = o => ((Transform)o).m_ConstrainProportionsScale, Set = (o, v) => ((Transform)o).m_ConstrainProportionsScale = (bool)v,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_Children", Type = typeof(List<Transform>), Shape = Shape.List, TypeName = "vector",
+                    ElementType = typeof(Transform), ElementShape = Shape.UnityObject, Hidden = true,
+                    Get = o => new List<Transform>(((Transform)o).m_Children), Set = SetChildrenOrder,
+                };
+                yield return new NativeField
+                {
                     Name = "m_Father", Type = typeof(Transform), Shape = Shape.UnityObject, TypeName = "PPtr<Transform>", Hidden = true, ReadOnly = true,
                     Get = o => ((Transform)o).parent,
+                };
+                yield return new NativeField
+                {
+                    Name = "m_LocalEulerAnglesHint", Type = typeof(Vector3), Shape = Shape.Vector3, TypeName = "Vector3",
+                    Get = o => ((Transform)o).m_LocalEulerAnglesHint, Set = (o, v) => ((Transform)o).m_LocalEulerAnglesHint = (Vector3)v,
                 };
             }
             else if (target is Collider)
@@ -980,6 +1075,7 @@ namespace Unbound.Runtime
 
         internal static bool InsertElement(SerializedNode array, int index)
         {
+            if (array.FixedSize) return false;
             int count = array.ArrayCount;
             if (index < 0 || index > count)
             {
@@ -1002,6 +1098,7 @@ namespace Unbound.Runtime
 
         internal static bool DeleteElement(SerializedNode array, int index)
         {
+            if (array.FixedSize) return false;
             int count = array.ArrayCount;
             if (index < 0 || index >= count)
             {
@@ -1017,6 +1114,7 @@ namespace Unbound.Runtime
 
         internal static bool MoveElement(SerializedNode array, int src, int dst)
         {
+            if (array.FixedOrder) return false;
             int count = array.ArrayCount;
             if (src < 0 || src >= count || dst < 0 || dst >= count) return false;
             if (src == dst) return true;
@@ -1031,6 +1129,7 @@ namespace Unbound.Runtime
 
         internal static bool Resize(SerializedNode array, int size)
         {
+            if (array.FixedSize) return false;
             if (size < 0)
             {
                 Debug.LogError($"Array size {size} of '{array.Path}' is negative.");

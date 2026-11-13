@@ -245,6 +245,8 @@ namespace Unbound.Runtime
             }
 
             // Data.
+            foreach (var (go, doc) in gameObjects.Values)
+                go.m_Icon = file.Resolve(doc.Body.Ref("m_Icon"), typeof(Texture2D)) as Texture2D;
             foreach (var (c, doc) in components)
             {
                 try
@@ -319,7 +321,7 @@ namespace Unbound.Runtime
                 IsPersistentAsset = kind != Kind.Scene,
             };
             go.m_StaticEditorFlags = (uint)body.Long("m_StaticEditorFlags");
-            go.isStatic = go.m_StaticEditorFlags != 0;
+            go.m_NavMeshLayer = (uint)body.Long("m_NavMeshLayer");
             if (scene != null) go.m_Scene = scene.Handle;
             if (instances != null) PrefabLinks.Link(go, body, instances);
             return go;
