@@ -60,3 +60,20 @@ real-device queue timing. The earlier [immediate and scheduled diagnostics](TRAN
 remain runnable and unchanged. Neither those recordings nor this expanded
 profile supports a constant reset offset or a scheduling correction. No reset
 implementation, mixer admission or canonical reference changes in this task.
+
+## Q416 repeat check
+
+Fresh, unchanged 19-control captures at both rates agree exactly on all
+8,160,617 values per rate. The current engine passes both first captures at
+the existing PCM gate. Strict comparisons retain 182 device values at 48000 Hz
+and 237 at 44100 Hz; every Master float passes. All recovered sources advance
+1024 clip frames during the first post-reset render in these four captures.
+The two idle controls stay at zero.
+
+These matching pairs retain the same callback, renderer restart and control
+order as the earlier 48000 Hz counterexample. They do not explain or supersede
+its delayed source publication. The complete earlier repeat failures remain
+part of the diagnostic record. No canonical reset PCM, fixed startup delay,
+sample alignment or additional tolerance is introduced. Q416-R1 remains open
+for a rule that accounts for both the matching and delayed histories, including
+scheduled recovery and the device queue.
