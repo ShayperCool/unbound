@@ -14,8 +14,9 @@ namespace Unbound.Runtime.Humanoid
         public bool HasRootMotionNode;
         /// <summary>The clip is a part of its take (firstFrame/lastFrame inside the take).</summary>
         public bool CroppedFromTake;
-        /// <summary>The clip's body mask leaves out a body part.</summary>
-        public bool MasksBodyParts;
+        /// <summary>The parts of the humanoid body the clip's body mask turns off, one bit per
+        /// AvatarMaskBodyPart: the clip has no curves of them (<see cref="HumanClipImport.Convert"/>).</summary>
+        public int PartsOff;
 
         public bool LoopTime, LoopBlend, LoopBlendOrientation, LoopBlendPositionY, LoopBlendPositionXZ;
         public bool KeepOriginalOrientation, KeepOriginalPositionY, KeepOriginalPositionXZ, HeightFromFeet, Mirror;
@@ -34,8 +35,6 @@ namespace Unbound.Runtime.Humanoid
                 throw new NotSupportedException("humanoid clip import with a root motion node (motion curves) is not supported");
             if (CroppedFromTake)
                 throw new NotSupportedException("humanoid clips that are only a part of their take (firstFrame/lastFrame) are not supported");
-            if (MasksBodyParts)
-                throw new NotSupportedException("humanoid clips with a body mask that leaves out body parts are not supported");
         }
     }
 
@@ -222,6 +221,27 @@ namespace Unbound.Runtime.Humanoid
             return BonePart[TDoFBones[(curve - TDoFFirst) / 3]];
         }
 
+        /// <summary>The curves of the body parts a clip's body mask turns off are not in the clip
+        /// (<see cref="BodyPart"/>: the motion curves with Root, a goal's with its IK part, a
+        /// muscle's with its bone's part, fingers with the hand's); the others keep their values.
+        /// The Editor takes the parts from the clip's own body mask (the model meta's, also with a
+        /// mask copied from another asset) whatever the mask type (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/modelclips HumanMask*, every part off once). Translation DoF
+        /// curves follow their bone's part, unmeasured.</summary>
+        internal static void DropPartsOff(float[][] values, float[][] slopes, int partsOff, bool translationDoF)
+        {
+            if (partsOff == 0) return;
+            if (translationDoF)
+                Stubs.Ignored("Humanoid clip with body parts off on an avatar with translation DoF",
+                    "drops the translation DoF curves of those parts with their bone's part (unmeasured)");
+            for (int c = 0; c < CurveCount; c++)
+            {
+                if ((partsOff & (1 << BodyPart(c))) == 0) continue;
+                values[c] = null;
+                slopes[c] = null;
+            }
+        }
+
         // ---------------------------------------------------------------- import
 
         /// <summary>The magnitude one key of a translation DoF curve must reach for the clip to
@@ -378,6 +398,7 @@ namespace Unbound.Runtime.Humanoid
                 MuscleRange(h, c - MuscleFirst, out float min, out float max);
                 Offset(values[c], min, max);
             }
+            DropPartsOff(values, slopes, settings.PartsOff, h.HasTDoF);
             return new HumanClipCurves { Times = times, Values = values, Slopes = slopes };
         }
 

@@ -191,6 +191,18 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
             ClipMask::Asset { guid, .. } => Some(mask_asset(db, path, &clip.name, guid)),
             _ => None,
         };
+        // A Humanoid clip's asset mask is measured with every transform on
+        // (tests/projects/modelclips HumanMaskAsset).
+        if clip.human_transforms.is_some()
+            && mask
+                .as_ref()
+                .is_some_and(|m| m.iter().any(|(p, _)| !mask_keeps(m, p)))
+        {
+            tracing::warn!(
+                "{path}: humanoid clip '{}' copies its mask from an AvatarMask that turns transforms off: the transform curves it keeps are not measured (the asset's transform list is applied as the model's own is)",
+                clip.name
+            );
+        }
         let mut document = clip_document(clip, mask.as_deref());
         if let (Some(avatar), false, Value::Map(map)) =
             (&human_avatar, clip.legacy, &mut document.body)
@@ -910,6 +922,7 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
                 "m_UnboundHumanTransformPaths",
                 human_transforms.map_or(Value::Null, Value::Seq),
             ),
+            ("m_UnboundHumanPartsOff", scalar(clip.human_parts_off)),
             (
                 "m_AnimationClipSettings",
                 map(vec![

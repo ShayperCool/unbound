@@ -16,8 +16,9 @@ and a clip of 31 frames (made by tests/projects/humanoid/make_models.py); `Human
 `HumanTwistAll` and `HumanTwistPart` carry animated bones that are not human bones under three
 clip masks; `HumanTwistGeneric` is the same file imported as Generic. `HumanSingle`,
 `GenericSingle` and `LegacySingle` are `HumanLong` with one clip of no frames (first and last
-frame 5) imported as Humanoid, Generic and Legacy; their records come last and were recorded with
-the macOS Editor (two identical captures, whose other records match the Linux reference). Other Humanoid clip
+frame 5) imported as Humanoid, Generic and Legacy; their records come after the others and were
+recorded with the macOS Editor (two identical captures, whose other records match the Linux
+reference); the `HumanMask*` models (see Body masks) come last. Other Humanoid clip
 settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
@@ -138,9 +139,28 @@ without a mask.
 - A transform the mask turns off has no curves (`HumanTwistPart`: the right twist bone only).
 - The Animator curves are 130 under each mask.
 
-Not measured: a mask copied from another asset, an empty mask made from the model, a body part
-or a human bone turned off, and a transform with only some channels keyed or none (the
-exporter keys every channel of every bone).
+Body masks: `HumanMaskBody`, `HumanMaskAsset`, `HumanMaskStale`, `HumanMaskNone`,
+`HumanMaskRest` and `HumanMaskRoot` are HumanTwistAll's file with body parts off in the clip's
+`bodyMask` (`keys.*` and `curves.*` of each, recorded last with the macOS Editor, two identical
+captures): the head, the left arm, the left fingers and the left hand's goal in a mask made
+from the model (`HumanMaskBody`); a mask copied from `Assets/HumanMasks/BodyOff.mask`, which
+turns off the root, the body, the right leg, the right fingers and the right foot's goal, while
+the meta's copy has every part on (`HumanMaskAsset`) or the head off (`HumanMaskStale`); the
+head off with mask type None (`HumanMaskNone`); every other part but the root
+(`HumanMaskRest`); and the root alone (`HumanMaskRoot`).
+
+- The clip has no Animator curves of the parts the meta's `bodyMask` turns off, whatever the
+  mask type: 82 curves for `HumanMaskBody`, 118 for `HumanMaskStale` and `HumanMaskNone`, 55
+  for `HumanMaskRest`, 123 for `HumanMaskRoot`. The asset's own body parts are not read: all
+  130 for `HumanMaskAsset`.
+- Root takes the root's motion curves (RootT, RootQ); Body the spine's, chest's and upper
+  chest's muscles; Head the neck's, head's, eyes' and jaw's; a leg or an arm its muscles; the
+  fingers a hand's finger muscles; an IK part its goal's seven curves. The other curves keep
+  the values they have with every part on, and the twist bones keep their transform curves.
+
+Not measured: an empty mask made from the model, a human bone turned off in the transform list,
+an asset mask with a transform off, how a clip without some parts' curves plays, and a
+transform with only some channels keyed or none (the exporter keys every channel of every bone).
 
 Not in the reference (an exploratory capture of a richer rig, 130 curves over 31 frames, the
 same in each of its 20 clips): the same rule gives the Editor's keys of all 130 curves at

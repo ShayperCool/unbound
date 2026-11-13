@@ -83,6 +83,10 @@ namespace UnityEngine
         /// tests/projects/modelclips HumanTwist*). Null: every such curve stays (a clip not made
         /// by the model importer).</summary>
         internal HashSet<string> m_HumanTransformPaths;
+        /// <summary>A Humanoid model clip: the parts of the humanoid body its body mask turns off,
+        /// one bit per AvatarMaskBodyPart; the converted clip has no curves of them (the model
+        /// importer's `m_UnboundHumanPartsOff`).</summary>
+        internal int m_HumanPartsOff;
         internal WrapMode m_WrapMode;
         internal Bounds m_Bounds;
         internal bool m_Legacy;
@@ -570,6 +574,7 @@ namespace UnityEngine
                 m_SampleRate = m_SampleRate,
                 m_HumanKeyReduction = m_HumanKeyReduction,
                 m_HumanTransformPaths = m_HumanTransformPaths,
+                m_HumanPartsOff = m_HumanPartsOff,
                 m_WrapMode = m_WrapMode,
                 m_Bounds = m_Bounds,
                 m_Legacy = m_Legacy,
@@ -970,6 +975,7 @@ namespace Unbound.Runtime
             clip.m_Legacy = body.Bool("m_Legacy");
             clip.m_SampleRate = body.Float("m_SampleRate", 60f);
             clip.m_HumanKeyReduction = body.Float("m_UnboundHumanKeyReduction", 0f);
+            clip.m_HumanPartsOff = body.Int("m_UnboundHumanPartsOff");
             var humanTransforms = body.Get("m_UnboundHumanTransformPaths");
             if (humanTransforms != null && !humanTransforms.IsNull)
             {

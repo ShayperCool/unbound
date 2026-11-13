@@ -162,6 +162,7 @@ namespace UnityEngine
             settings.Mirror = m_Mirror;
             settings.OrientationOffsetY = m_OrientationOffsetY;
             settings.Level = m_Level;
+            settings.PartsOff = m_HumanPartsOff;
             return settings;
         }
 

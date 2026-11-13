@@ -1566,46 +1566,65 @@ fn a_humanoid_clip_lists_the_transforms_its_mask_keeps() {
     assert_eq!(human_transforms_kept(&listed, Some(&[])), listed);
 }
 
-/// Mask shapes of Humanoid clips that are not measured say so: a body part off (every muscle
-/// curve is still imported), a mask from another asset and a mask made from the model without
-/// transforms. The measured shapes (mask None, a mask with transforms) do not warn.
+/// A Humanoid clip carries the body parts its meta's `bodyMask` turns off, whatever the mask
+/// type, one bit per part (tests/projects/modelclips HumanMask*); a malformed or missing mask
+/// turns none off. A mask made from the model without transforms is not measured and says so;
+/// the measured shapes (mask None, a mask with transforms, body parts off) and a mask from
+/// another asset (whose transform list is read where the documents are made) do not warn here.
 #[test]
-fn unmeasured_masks_of_humanoid_clips_warn() {
-    assert!(!body_parts_off(None));
-    assert!(!body_parts_off(Some(&"01000000".repeat(13))));
-    assert!(body_parts_off(Some(&format!(
-        "{}00000000{}",
-        "01000000".repeat(5),
-        "01000000".repeat(7)
-    ))));
-    assert!(!body_parts_off(Some("0100000")));
+fn humanoid_clips_carry_their_body_parts_off() {
+    let off = |parts: &[usize]| -> String {
+        (0..13)
+            .map(|i| {
+                if parts.contains(&i) {
+                    "00000000"
+                } else {
+                    "01000000"
+                }
+            })
+            .collect()
+    };
+    assert_eq!(body_parts_off(None), 0);
+    assert_eq!(body_parts_off(Some(&off(&[]))), 0);
+    assert_eq!(body_parts_off(Some(&off(&[5]))), 1 << 5);
+    assert_eq!(body_parts_off(Some(&off(&[0, 12]))), 1 | 1 << 12);
+    assert_eq!(body_parts_off(Some("0100000")), 0);
+    assert_eq!(body_parts_off(Some(&"0000000g".repeat(13))), 0);
 
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/modelclips/Assets/Resources/HumanTwistAll.fbx");
     let bytes = std::fs::read(&source).unwrap();
     let text = std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap();
-    let warnings = |text: &str| -> Vec<String> {
+    let import = |text: &str| {
         ModelImporter::default()
             .import(&source, &bytes, &meta(text))
             .unwrap()
+    };
+    let warnings = |text: &str| -> Vec<String> {
+        import(text)
             .warnings
             .into_iter()
             .filter(|w| w.starts_with("humanoid clip '"))
             .collect()
     };
-    assert!(warnings(&text).is_empty(), "{:?}", warnings(&text));
-
-    let all_on = "01000000".repeat(13);
-    assert!(text.contains(&all_on));
-    let part_off = text.replace(
-        &all_on,
-        &format!("{}00000000{}", "01000000".repeat(5), "01000000".repeat(7)),
-    );
-    assert!(
-        warnings(&part_off)
+    let parts_off = |text: &str| -> Vec<u16> {
+        import(text)
+            .clips
             .iter()
-            .any(|w| w.contains("body parts off"))
-    );
+            .filter(|c| !c.preview)
+            .map(|c| c.human_parts_off)
+            .collect()
+    };
+    assert!(warnings(&text).is_empty(), "{:?}", warnings(&text));
+    assert_eq!(parts_off(&text), [0]);
+
+    let all_on = off(&[]);
+    assert!(text.contains(&all_on));
+    let part_off = text.replace(&all_on, &off(&[2, 5, 7, 11]));
+    assert!(warnings(&part_off).is_empty(), "{:?}", warnings(&part_off));
+    assert_eq!(parts_off(&part_off), [1 << 2 | 1 << 5 | 1 << 7 | 1 << 11]);
+    let none = part_off.replace("      maskType: 0", "      maskType: 3");
+    assert_eq!(parts_off(&none), [1 << 2 | 1 << 5 | 1 << 7 | 1 << 11]);
 
     let start = text.find("      transformMask:").unwrap();
     let end = text.find("      maskType: 0").unwrap();
@@ -1626,13 +1645,26 @@ fn unmeasured_masks_of_humanoid_clips_warn() {
             "maskSource: {instanceID: 0}",
             "maskSource: {fileID: 31900000, guid: 0123456789abcdef0123456789abcdef, type: 2}",
         );
+    // An asset mask's transform list is read where the model's documents are made.
     assert!(
-        warnings(&asset)
+        !warnings(&asset)
             .iter()
-            .any(|w| w.contains("from another asset")),
+            .any(|w| w.contains("another asset") || w.contains("AvatarMask")),
         "{:?}",
         warnings(&asset)
     );
+    // With a mask from another asset the parts are the meta's copy's (HumanMaskStale).
+    let asset_copy = part_off
+        .replace("      maskType: 0", "      maskType: 1")
+        .replace(
+            "maskSource: {instanceID: 0}",
+            "maskSource: {fileID: 31900000, guid: 0123456789abcdef0123456789abcdef, type: 2}",
+        );
+    assert_eq!(parts_off(&asset_copy), [1 << 2 | 1 << 5 | 1 << 7 | 1 << 11]);
+    // A Generic rig's clips carry none.
+    let generic = part_off.replace("  animationType: 3", "  animationType: 2");
+    assert_ne!(generic, part_off);
+    assert_eq!(parts_off(&generic), [0]);
 }
 
 /// A Humanoid clip under a reducing compression keeps its transform keys on every frame, as
