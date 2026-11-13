@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
 namespace UnityEngine
@@ -324,14 +325,33 @@ namespace UnityEngine
                 }
                 material.SetFloat("_NormalScale" + n, layer.normalScale);
                 material.SetTexture("_Mask" + n, layer.maskMapTexture);
-                material.SetFloat("_Metallic" + n, layer.metallic);
-                material.SetFloat("_Smoothness" + n, layer.smoothness);
+                material.SetFloat("_Metallic" + n, LayerMetallic(layer));
+                material.SetFloat("_Smoothness" + n, LayerSmoothness(layer));
                 material.SetVector("_DiffuseRemapScale" + n, layer.diffuseRemapMax - layer.diffuseRemapMin);
                 material.SetVector("_MaskMapRemapOffset" + n, layer.maskMapRemapMin);
                 material.SetVector("_MaskMapRemapScale" + n, layer.maskMapRemapMax - layer.maskMapRemapMin);
             }
             if (normals) material.EnableKeyword("_NORMALMAP");
             else material.DisableKeyword("_NORMALMAP");
+        }
+
+        /// <summary>A layer's metallic value as its splat material gets it: the slider read as a
+        /// gamma value, made linear in a linear-space project, as in the Unity 6000.0.71f1
+        /// Editor (tests/projects/defaultreflection).</summary>
+        internal static float LayerMetallic(TerrainLayer layer) =>
+            QualitySettings.activeColorSpace == ColorSpace.Linear ? Mathf.GammaToLinearSpace(layer.metallic) : layer.metallic;
+
+        /// <summary>A layer's smoothness as its splat material gets it: the shaders multiply it by
+        /// the diffuse texture's alpha, so with the smoothness taken from that alpha
+        /// (<see cref="TerrainLayerSmoothnessSource.DiffuseAlphaChannel"/>, a new layer's) and a
+        /// diffuse format with alpha it is at least 1 (the alpha alone), else the layer's
+        /// smoothness; as in the Unity 6000.0.71f1 Editor (tests/projects/defaultreflection,
+        /// terrainlod layers5*).</summary>
+        internal static float LayerSmoothness(TerrainLayer layer)
+        {
+            bool fromAlpha = layer.smoothnessSource == TerrainLayerSmoothnessSource.DiffuseAlphaChannel
+                && layer.diffuseTexture is Texture2D diffuse && GraphicsFormatUtility.HasAlphaChannel(diffuse.graphicsFormat);
+            return Mathf.Max(layer.smoothness, fromAlpha ? 1f : 0f);
         }
 
         /// <summary>The holes map the shaders clip with: red 0 over a hole, one texel per cell.</summary>
