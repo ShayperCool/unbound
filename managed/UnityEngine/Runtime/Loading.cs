@@ -813,6 +813,7 @@ namespace Unbound.Runtime
                 Debug.LogError($"Unbound: asset {guid} references itself while loading.");
                 return null;
             }
+            bool read = false;
             try
             {
                 AssetInfo info;
@@ -886,13 +887,20 @@ namespace Unbound.Runtime
                 if (file != null && (info.Kind == "prefab" || info.Kind == "yaml"))
                     foreach (var o in new List<Object>(file.Objects.Values))
                         ScriptMessages.Validate(o);
+                read = true;
                 return file;
             }
             finally
             {
                 s_Loading.Remove(guid);
-                if (s_WhenLoaded.Remove(guid, out var pending))
-                    foreach (var action in pending) action();
+                // What waited for the file runs once it is read whole (not after a failed read);
+                // one that fails does not keep the others from running.
+                if (s_WhenLoaded.Remove(guid, out var pending) && read)
+                    foreach (var action in pending)
+                    {
+                        try { action(); }
+                        catch (Exception e) { Debug.LogException(e); }
+                    }
             }
         }
 
