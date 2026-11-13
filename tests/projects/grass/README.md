@@ -21,9 +21,10 @@ shaders (`Hidden/TerrainEngine/Details/*`) by shaders that write every vertex th
 random-write buffer.
 
 Make the assets once (they are committed; `ProbeRunner.CreateDensity`, then `CreateRefusals`, make
-the scene `Density` without touching the others) and record Unity's reference: `record.py` runs the Editor on the GPU in
-copies of the project under the validation cache, twice, and publishes only identical captures whose
-committed rows are unchanged:
+the scene `Density`, and `CreateAligned` the scene `Aligned`, without touching the others) and
+record Unity's reference: `record.py` runs the Editor on the GPU in copies of the project under the
+validation cache, twice, and publishes only identical captures whose committed rows and images are
+unchanged:
 
     python3 tests/projects/grass/record.py create --method CreateDensity --release 6000.0.71f1
     python3 tests/projects/grass/record.py create --method CreateRefusals --release 6000.0.71f1
