@@ -31,8 +31,10 @@
     ]
   },
   "foot-ik-legs": {
-    "reason": "The Animator's own Foot IK after a job changed the pose: leg muscles off by up to 2.4e-3 on single steps (stream.ik, stream.ikPass, stream.bodyLocal). Consistent with amplified rounding of a nearly straight leg: moving the foot goals by one single-precision step changes Unbound's own result by the same amount on the same value (measured once); see the residual row in docs/COMPATIBILITY_GAPS.md.",
+    "reason": "The Animator's own Foot IK after a job changed the pose: leg muscles off by up to 2.4e-3 on single steps (stream.ik, stream.ikPass, stream.bodyLocal). Consistent with amplified rounding of a nearly straight leg: moving the foot goals by one single-precision step changes Unbound's own result by the same amount on the same value (measured once); see the residual row in docs/COMPATIBILITY_GAPS.md. stream.bodyLocal step 17 (muscles 23 and 25, up to 5.7e-4): on macOS already off before, on Linux since game code's quaternion product setting the body rotation evaluates as the Editor's Mono does.",
     "keys": [
+      "stream.bodyLocal.step17.pose muscles[23]",
+      "stream.bodyLocal.step17.pose muscles[25]",
       "stream.bodyLocal.step28.pose muscles[31]"
     ]
   },
@@ -177,7 +179,7 @@
     ]
   },
   "readback-solve-straight-limbs": {
-    "reason": "A solve after the job read the pose back on the rig's root scaled by 100 (bone.rotateThenSolve, bone.solveTwice) works on the re-based skeleton, as the Editor's does: the body is displaced toward the root (bodyPosition z from -105.5 to -1.07 at step 0, alike in both) and the goals are out of reach, so the left arm is straight (forearm stretch muscle 1.06). The roll of a straight arm is one turn that the upper arm and forearm roll muscles (41, 43) split between them: Unbound's split is off the Editor's in steps of 1.8e-3 that cancel in their sum (within 9e-5), with the upper arm's and hand's local rotations that follow. Consistent with amplified single-precision rounding: moving the goal by one single-precision step moves Unbound's own split by 5.4e-3 at step 16 (measured once). The keys are those of Unbound on macOS and on Linux, whose splits fall on other steps (the Linux run has 36 of its own and matches 27 of the macOS ones). The left foot's muscles 26 and 27 are off by up to 1.4e-3 on five steps of each control, not traced further (both well outside -1 to 1 in either engine at most steps). The same solve before any read-back matches (bone.solve); see the residual row in docs/COMPATIBILITY_GAPS.md.",
+    "reason": "A solve after the job read the pose back on the rig's root scaled by 100 (bone.rotateThenSolve, bone.solveTwice) works on the re-based skeleton, as the Editor's does: the body is displaced toward the root (bodyPosition z from -105.5 to -1.07 at step 0, alike in both) and the goals are out of reach, so the left arm is straight (forearm stretch muscle 1.06). The roll of a straight arm is one turn that the upper arm and forearm roll muscles (41, 43) split between them: Unbound's split is off the Editor's in steps of 1.8e-3 that cancel in their sum (within 9e-5), with the upper arm's and hand's local rotations that follow. Consistent with amplified single-precision rounding: moving the goal by one single-precision step moves Unbound's own split by 5.4e-3 at step 16 (measured once). The keys are those of Unbound on macOS and on Linux, whose splits fall on other steps (the Linux run has 36 of its own and matches 27 of the macOS ones). The left foot's muscles 26 and 27 are off by up to 1.4e-3 on five steps of each control, not traced further (both well outside -1 to 1 in either engine at most steps). The same solve before any read-back matches (bone.solve); see the residual row in docs/COMPATIBILITY_GAPS.md. Game code's quaternion product before the solve (the lower arm's local rotation times Quaternion.Euler) is evaluated as the Editor's Mono does since tests/projects/floatrounding's math rows: that moved Unbound's split onto steps 3 (Linux), 20 (macOS) and 24 (both), and step 17 now matches on both hosts; the host counts above predate that move.",
     "keys": [
       "bone.rotateThenSolve.step0.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand[1]",
       "bone.rotateThenSolve.step0.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm[1]",
@@ -205,8 +207,6 @@
       "bone.rotateThenSolve.step16.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm[1]",
       "bone.rotateThenSolve.step16.pose muscles[41]",
       "bone.rotateThenSolve.step16.pose muscles[43]",
-      "bone.rotateThenSolve.step17.pose muscles[41]",
-      "bone.rotateThenSolve.step17.pose muscles[43]",
       "bone.rotateThenSolve.step18.pose muscles[41]",
       "bone.rotateThenSolve.step18.pose muscles[43]",
       "bone.rotateThenSolve.step19.pose muscles[41]",
@@ -214,10 +214,18 @@
       "bone.rotateThenSolve.step2.pose muscles[27]",
       "bone.rotateThenSolve.step2.pose muscles[41]",
       "bone.rotateThenSolve.step2.pose muscles[43]",
+      "bone.rotateThenSolve.step20.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand[1]",
+      "bone.rotateThenSolve.step20.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm[1]",
+      "bone.rotateThenSolve.step20.pose muscles[41]",
+      "bone.rotateThenSolve.step20.pose muscles[43]",
       "bone.rotateThenSolve.step21.pose muscles[41]",
       "bone.rotateThenSolve.step21.pose muscles[43]",
       "bone.rotateThenSolve.step22.pose muscles[41]",
       "bone.rotateThenSolve.step22.pose muscles[43]",
+      "bone.rotateThenSolve.step24.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand[1]",
+      "bone.rotateThenSolve.step24.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm[1]",
+      "bone.rotateThenSolve.step24.pose muscles[41]",
+      "bone.rotateThenSolve.step24.pose muscles[43]",
       "bone.rotateThenSolve.step25.pose muscles[41]",
       "bone.rotateThenSolve.step25.pose muscles[43]",
       "bone.rotateThenSolve.step26.pose muscles[27]",
@@ -229,6 +237,8 @@
       "bone.rotateThenSolve.step28.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm[1]",
       "bone.rotateThenSolve.step28.pose muscles[41]",
       "bone.rotateThenSolve.step28.pose muscles[43]",
+      "bone.rotateThenSolve.step3.pose muscles[41]",
+      "bone.rotateThenSolve.step3.pose muscles[43]",
       "bone.rotateThenSolve.step4.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand[1]",
       "bone.rotateThenSolve.step4.locals Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm[1]",
       "bone.rotateThenSolve.step4.pose muscles[26]",
