@@ -72,6 +72,30 @@ def active_tasks(queue):
     return found
 
 
+def command_paths(command, *, allow_root=True):
+    """Extract absolute arguments, including quoted shell bodies, without execution."""
+    pending, seen = [command], set()
+    while pending:
+        text = pending.pop()
+        if text in seen:
+            continue
+        seen.add(text)
+        try:
+            tokens = shlex.split(text)
+        except ValueError:
+            tokens = text.split()
+        for token in tokens:
+            # An equals sign can be part of an absolute filename.
+            assignment = re.match(r'^(?:--?[\w-]+|[A-Za-z_]\w*)=', token)
+            value = token.split('=', 1)[-1] if assignment else token
+            if value.startswith('/') and (value != '/' or allow_root):
+                yield Path(value)
+                if value.rstrip(',;') != value:
+                    yield Path(value.rstrip(',;'))
+            if '/' in value and any(c.isspace() for c in value):
+                pending.append(value)
+
+
 def suite_references(value):
     """Read path-valued metadata and complete command arguments, not summaries."""
     if isinstance(value, dict):
@@ -80,14 +104,7 @@ def suite_references(value):
                 # Older summaries shortened commands. Step logs retain them whole.
                 if len(child) >= 400:
                     child = child.rsplit(' ', 1)[0]
-                try:
-                    tokens = shlex.split(child)
-                except ValueError:
-                    tokens = []
-                for token in tokens:
-                    token = token.split('=', 1)[-1]
-                    if token.startswith('/'):
-                        yield Path(token)
+                yield from command_paths(child)
             elif key not in ('summary', 'continuation_summary'):
                 yield from suite_references(child)
     elif isinstance(value, list):
@@ -134,14 +151,7 @@ def promoted_suite_paths(cache):
                         for line in stream:
                             if '/' not in line:
                                 continue
-                            try:
-                                tokens = shlex.split(line)
-                            except ValueError:
-                                tokens = line.split()
-                            for token in tokens:
-                                token = token.split('=', 1)[-1].rstrip(',;')
-                                if token.startswith('/') and token != '/':
-                                    protected.add(Path(token))
+                            protected.update(command_paths(line, allow_root=line.startswith('$ ')))
     return {p.resolve() for p in protected} | protected, {p.resolve() for p in roots}
 
 

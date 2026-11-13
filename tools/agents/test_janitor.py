@@ -532,6 +532,26 @@ class JanitorTests(unittest.TestCase):
             self.assertFalse(self.j.remove(second, kind='task'))
         self.assertTrue(second.exists())
 
+    def test_shell_bodies_and_equals_in_paths_are_protected(self):
+        work = self.directory('q1/sheriff-S20-example')
+        metadata = self.directory('q1/metadata=name')
+        logged = self.directory('q1/logged=name')
+        direct = self.directory('q1/direct=name')
+        def shell(path, executable):
+            return janitor.shlex.join(['bash', '-c', janitor.shlex.join([executable, '--work', str(path)])])
+        self.promote_fixture(work, command=shell(metadata, 'tool'))
+        (work/'step.log').write_text('$ '+shell(logged, '/usr/bin/tool')+'\n')
+        (work/'metadata.json').write_text(json.dumps({'command': 'tool --work='+str(direct)}))
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            candidates = {path for path, _, _ in self.j.candidates()}
+            for path in (metadata, logged, direct):
+                self.assertNotIn(path, candidates)
+                self.j.apply = True
+                self.assertFalse(self.j.remove(path, kind='task'))
+        self.assertEqual(list(janitor.command_paths('tool '+str(direct))), [direct])
+
     def test_shortened_command_and_human_summary_do_not_protect_cache_ancestors(self):
         value = {'command': 'tool '+('x'*389)+' /home', 'summary': '3/10 values; /home'}
         self.assertEqual(len(value['command']), 400)
