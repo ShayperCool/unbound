@@ -490,12 +490,72 @@ class JanitorTests(unittest.TestCase):
                 self.assertFalse(snapshot.exists())
 
     def test_before_gate_threshold_and_protection(self):
-        with patch.object(janitor, 'free_space', return_value={'/': 1}), patch.object(janitor, 'main') as run:
-            janitor.before_gate(self.repo)
-        self.assertEqual(run.call_args.args[0], ['--repo', str(self.repo), '--apply', '--protect', str(self.repo)])
-        with patch.object(janitor, 'free_space', return_value={'/': 1000*janitor.GIB}), patch.object(janitor, 'main') as run:
+        for free in (1, 19*janitor.GIB):
+            with self.subTest(free=free), patch.dict(os.environ, {'UNBOUND_JANITOR_MIN_FREE_GIB': '20'}), \
+                 patch.object(janitor, 'free_space', return_value={'/': free}), \
+                 patch.object(janitor.subprocess, 'run') as run, patch.object(janitor, 'main') as collect:
+                run.return_value.returncode = 0
+                janitor.before_gate(self.repo)
+                self.assertEqual(run.call_args.args[0],
+                                 ['systemctl', '--user', 'start', '--no-block', 'unbound-janitor.service'])
+                self.assertEqual(run.call_args.kwargs['timeout'], janitor.GATE_HANDOFF_SECONDS)
+                collect.assert_not_called()
+        with patch.object(janitor, 'free_space', return_value={'/': 1000*janitor.GIB}), \
+             patch.object(janitor.subprocess, 'run') as run:
             janitor.before_gate(self.repo)
         run.assert_not_called()
+
+    def test_before_gate_large_backlog_has_bounded_handoff(self):
+        # A real slow service-manager substitute must be killed by the timeout.
+        for n in range(1000):
+            (self.directory('q1') if n == 0 else self.volume/'q1').joinpath(str(n)).touch()
+        original = subprocess.run
+        def stalled_manager(command, **kwargs):
+            return original([sys.executable, '-c', 'import time; time.sleep(30)'], **kwargs)
+        with patch.object(janitor, 'free_space', return_value={'/': 1}), \
+             patch.object(janitor.subprocess, 'run', side_effect=stalled_manager), \
+             patch.object(janitor.Janitor, 'collect', side_effect=AssertionError('inline cleanup')):
+            start = time.monotonic()
+            janitor.before_gate(self.repo)
+            self.assertLess(time.monotonic()-start, janitor.GATE_HANDOFF_SECONDS+1)
+
+    def test_batch_refreshes_expensive_guards_once_after_all_preparation(self):
+        paths = [self.directory(f'q1/old-{n}') for n in range(32)]
+        late = paths[-1]/'output'
+        with self.guards(), patch.object(janitor, 'process_paths', return_value={late}) as processes:
+            self.j.apply = True
+            self.assertEqual(self.j.remove_batch([(p, 'task', 24) for p in paths]), 31)
+        self.assertEqual(processes.call_count, 1)
+        self.assertTrue(late.exists())
+
+    def test_batch_rechecks_queue_and_links_between_removals(self):
+        paths = [self.directory(f'q1/old-{n}') for n in range(3)]
+        original = janitor.shutil.rmtree
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.j.apply = True
+            def remove_first(path):
+                original(path)
+                (self.cache/'late-reference').symlink_to(paths[1]/'output')
+                (self.cache/'agents/QUEUE.md').write_text('| Q1 | infra | now | active | worker |\n')
+            with patch.object(janitor.shutil, 'rmtree', side_effect=remove_first):
+                self.assertEqual(self.j.remove_batch([(p, 'task', 24) for p in paths]), 1)
+        self.assertTrue(paths[1].exists())
+        self.assertTrue(paths[2].exists())
+
+    def test_slow_removal_refreshes_process_guards_for_next_entry(self):
+        paths = [self.directory(f'q1/old-{n}') for n in range(2)]
+        original = janitor.shutil.rmtree
+        def slow_removal(path):
+            original(path)
+            time.sleep(janitor.GUARD_REUSE_SECONDS+0.01)
+        with self.guards(), patch.object(janitor, 'process_paths', side_effect=[set(), {paths[1]/'output'}]) as processes, \
+             patch.object(janitor.shutil, 'rmtree', side_effect=slow_removal):
+            self.j.apply = True
+            self.assertEqual(self.j.remove_batch([(p, 'task', 24) for p in paths]), 1)
+        self.assertEqual(processes.call_count, 2)
+        self.assertTrue(paths[1].exists())
 
     def test_timer_hourly_and_preserves_cache_locations(self):
         units = install_janitor.units(self.repo, dict(os.environ))

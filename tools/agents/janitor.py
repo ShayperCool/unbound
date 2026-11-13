@@ -32,6 +32,12 @@ DEFAULT_RUN_DAYS = 3
 DEFAULT_IDLE_HOURS = 24
 DEFAULT_MIN_FREE_GIB = 20
 DEFAULT_SCAN_SECONDS = 1200
+# Keep land's lock independent of a service manager or a historical backlog.
+GATE_HANDOFF_SECONDS = 2
+HARD_STOP_FREE_GIB = 10
+# Refresh expensive guards after preparation, then at least every short batch.
+REMOVAL_BATCH_SIZE = 32
+GUARD_REUSE_SECONDS = 0.1
 
 
 def inside(path, root):
@@ -441,63 +447,90 @@ class Janitor:
                                               watcher=self.watch, index_root=self.cache, prune=False))
         self.links.update(self.watch.references)
 
-    def remove(self, path, *, kind='runtime', hours=None):
-        """Runtime collector callback; re-check each candidate immediately before removal."""
+    def prepare_removal(self, path, kind, hours):
         path = Path(os.path.abspath(path))
         hours = max(self.idle_hours, hours or 0)
         try:
             self.refresh_links()
             if reason := self.reason(path, hours):
                 self.emit('keep', path=str(path), reason=reason)
-                return False
+                return None
             _, allocated, reclaimable = inventory(path)
-            if self.apply:
-                # Refresh process/queue guards after a potentially long discovery.
-                self.processes = process_paths()
-                self.states = task_states(self.cache/'agents/QUEUE.md')
-                self.active = active_tasks(self.cache/'agents/QUEUE.md')
-                if kind == 'task':
-                    task = next((p.name.lower() for p in path.parents
-                                 if p.parent in (self.volume, self.cache.resolve()) and re.fullmatch(r'q\d+', p.name, re.I)), '')
-                    if self.states.get(task) != 'landed':
-                        self.emit('keep', path=str(path), reason='task state changed')
-                        return False
-                self.refresh_links()
-                if reason := self.reason(path, hours):
-                    self.emit('keep', path=str(path), reason=reason)
-                    return False
-                directory = path.is_dir() and not path.is_symlink()
-                if directory:
-                    # Read-only snapshot files need no chmod; only directories do.
-                    for _, _, _, descriptor in os.fwalk(path, follow_symlinks=False):
-                        os.fchmod(descriptor, stat.S_IMODE(os.fstat(descriptor).st_mode) | stat.S_IRWXU)
-                # Inventory and permission preparation can walk a huge tree.
-                # Recheck after both, with no further tree walk before deletion.
-                self.processes = process_paths()
-                self.states = task_states(self.cache/'agents/QUEUE.md')
-                self.active = active_tasks(self.cache/'agents/QUEUE.md')
-                self.refresh_links()
-                if kind == 'task' and self.states.get(task) != 'landed':
-                    self.emit('keep', path=str(path), reason='task state changed')
-                    return False
-                if reason := self.protection_reason(path):
-                    self.emit('keep', path=str(path), reason=reason)
-                    return False
-                self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
-                          reclaimable_bytes=reclaimable)
-                if self.watch:
-                    self.watch.retired.add(path)
-                if directory:
-                    shutil.rmtree(path)
-                else:
-                    path.unlink()
-            self.emit('removed' if self.apply else 'would_remove', path=str(path), kind=kind,
-                      allocated_bytes=allocated, reclaimable_bytes=reclaimable)
-            self.removed += 1
-            self.reclaimable += reclaimable
-            return True
+            directory = path.is_dir() and not path.is_symlink()
+            if self.apply and directory:
+                # Only directories need chmod; files can share live target inodes.
+                for _, _, _, descriptor in os.fwalk(path, follow_symlinks=False):
+                    os.fchmod(descriptor, stat.S_IMODE(os.fstat(descriptor).st_mode) | stat.S_IRWXU)
+            # Preparation can walk a huge tree. Check age again before taking the
+            # batch's process snapshot, with no further tree walks afterwards.
+            if reason := self.reason(path, hours):
+                self.emit('keep', path=str(path), reason=reason)
+                return None
+            task = next((p.name.lower() for p in path.parents
+                         if p.parent in (self.volume, self.cache.resolve()) and
+                         re.fullmatch(r'q\d+', p.name, re.I)), '')
+            return path, kind, directory, task, allocated, reclaimable
         except FileNotFoundError:
-            return False
+            return None
+
+    def refresh_guards(self):
+        self.processes = process_paths()
+        self.refresh_queue()
+        self.refresh_links()
+        self.guards_at = time.monotonic()
+
+    def refresh_queue(self):
+        queue = self.cache/'agents/QUEUE.md'
+        info = queue.stat()
+        signature = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_size)
+        if signature != getattr(self, 'queue_signature', None):
+            self.states = task_states(queue)
+            self.active = active_tasks(queue)
+            self.queue_signature = signature
+
+    def remove_batch(self, candidates):
+        prepared = [value for path, kind, hours in candidates
+                    if (value := self.prepare_removal(path, kind, hours)) is not None]
+        if not prepared:
+            return 0
+        if self.apply:
+            self.refresh_guards()
+        removed = 0
+        for path, kind, directory, task, allocated, reclaimable in prepared:
+            try:
+                if self.apply:
+                    # A slow removal ends guard reuse. Queue edits and new links
+                    # are checked for every entry, including the first one.
+                    if time.monotonic()-self.guards_at >= GUARD_REUSE_SECONDS:
+                        self.refresh_guards()
+                    self.refresh_queue()
+                    self.refresh_links()
+                    if kind == 'task' and self.states.get(task) != 'landed':
+                        self.emit('keep', path=str(path), reason='task state changed')
+                        continue
+                    if reason := self.protection_reason(path):
+                        self.emit('keep', path=str(path), reason=reason)
+                        continue
+                    self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
+                              reclaimable_bytes=reclaimable)
+                    if self.watch:
+                        self.watch.retired.add(path)
+                    if directory:
+                        shutil.rmtree(path)
+                    else:
+                        path.unlink()
+                self.emit('removed' if self.apply else 'would_remove', path=str(path), kind=kind,
+                          allocated_bytes=allocated, reclaimable_bytes=reclaimable)
+                self.removed += 1
+                removed += 1
+                self.reclaimable += reclaimable
+            except FileNotFoundError:
+                continue
+        return removed
+
+    def remove(self, path, *, kind='runtime', hours=None):
+        """Runtime collector callback, with a fresh single-entry guard batch."""
+        return bool(self.remove_batch([(path, kind, hours)]))
 
     def collect(self):
         try:
@@ -508,7 +541,17 @@ class Janitor:
                 self.watch.close()
 
     def collect_candidates(self):
+        pending = []
         for path, kind, hours in self.candidates():
+            if kind != 'target':
+                pending.append((path, kind, hours))
+                if len(pending) >= REMOVAL_BATCH_SIZE:
+                    self.remove_batch(pending)
+                    pending.clear()
+                continue
+            if pending:
+                self.remove_batch(pending)
+                pending.clear()
             if kind == 'target':
                 marker = path/'.unbound-source-root'
                 if not marker.is_file() or marker.is_symlink():
@@ -525,8 +568,8 @@ class Janitor:
                         self.emit('keep', path=str(path), reason='checkout exists or marker is invalid')
                         continue
                     self.remove(path, kind=kind, hours=hours)
-            else:
-                self.remove(path, kind=kind, hours=hours)
+        if pending:
+            self.remove_batch(pending)
         # The collector owns its publication lock and pin/reference rules. The same
         # age, process and external-link guards apply to each of its removals.
         runtime_snapshot.cleanup(days=self.idle_hours/24, cache=self.runtimes, repo=self.repo,
@@ -565,13 +608,24 @@ def free_space(repo, protected=()):
 
 
 def before_gate(repo):
-    """Called only before a fresh gate; never fail a gate because cleanup deferred."""
-    threshold = float(os.environ.get('UNBOUND_JANITOR_MIN_FREE_GIB', DEFAULT_MIN_FREE_GIB))*GIB
-    if any(value < threshold for value in free_space(repo).values()):
-        try:
-            main(['--repo', str(repo), '--apply', '--protect', str(repo)])
-        except (OSError, ValueError, RuntimeError, sqlite3.Error, subprocess.SubprocessError) as error:
-            print(f'land: disk janitor deferred: {error}', flush=True)
+    """Request the timer's serialized service without waiting for cleanup.
+
+    Even below the hard reserve we do no inline deletion: discovery itself can
+    exceed a gate's budget. The service applies the normal safety guards.
+    """
+    try:
+        threshold = float(os.environ.get('UNBOUND_JANITOR_MIN_FREE_GIB', DEFAULT_MIN_FREE_GIB))*GIB
+        available = free_space(repo)
+        if not any(value < threshold for value in available.values()):
+            return
+        if any(value < HARD_STOP_FREE_GIB*GIB for value in available.values()):
+            print('land: disk below 10 GiB hard reserve; requesting urgent asynchronous cleanup', flush=True)
+        result = subprocess.run(['systemctl', '--user', 'start', '--no-block', 'unbound-janitor.service'],
+                                capture_output=True, text=True, timeout=GATE_HANDOFF_SECONDS)
+        if result.returncode:
+            print(f'land: disk janitor handoff failed: {result.stderr.strip()}', flush=True)
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        print(f'land: disk janitor deferred: {error}', flush=True)
 
 
 def main(argv=None):
