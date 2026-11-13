@@ -10,6 +10,7 @@ import collections
 import json
 import math
 import os
+import re
 import sys
 
 TOLERANCE = 2e-4
@@ -56,17 +57,45 @@ def section(key):
 
 
 def read_known(path):
-    """Known differences (known.json): per class a reason and the exact '<key> <field>' entries.
-    Listed differences are printed with their class and not counted; an entry that matches again
-    is printed as NOW MATCHES."""
+    """Known differences (known.json): per class a reason and either the exact '<key> <field>'
+    entries (`keys`) or bounds. Listed differences are printed with their class and not counted;
+    an entry that matches again is printed as NOW MATCHES.
+
+    A bounded class names the values it covers instead of listing them: `bounds` entries
+    (`key` and `field` regular expressions, `within`) accept a difference of a matching value up to
+    `within` (a quaternion: each component, up to its sign), and `sums` entries (`key`, the summed
+    `fields`, `within`) require the sum of those fields of every matching record to stay within
+    `within` of the Editor's, whether or not the values themselves differ. A covered value beyond
+    its bound, and a sum beyond its bound, count as differences."""
     if not os.path.isfile(path):
-        return {}
-    known = {}
+        return {}, []
+    known, bounded = {}, []
     with open(path) as handle:
         for name, entry in json.load(handle).items():
-            for key in entry['keys']:
+            for key in entry.get('keys', []):
                 known[key] = name
-    return known
+            if 'bounds' in entry or 'sums' in entry:
+                bounded.append((name, [(re.compile(b['key']), re.compile(b['field']), b['within'])
+                                       for b in entry.get('bounds', [])],
+                                [(re.compile(b['key']), b['fields'], b['within']) for b in entry.get('sums', [])]))
+    return known, bounded
+
+
+def within_bound(a, b, bound):
+    """Whether two values are within `bound` of each other (a quaternion also as its negation)."""
+    if isinstance(a, list) and isinstance(b, list) and len(a) == len(b) == 4:
+        return (all(abs(x - y) <= bound for x, y in zip(a, b))
+                or all(abs(x + y) <= bound for x, y in zip(a, b)))
+    return number(a) and number(b) and abs(a - b) <= bound
+
+
+def bounded_class(bounded, key, field, a, b):
+    """The bounded class covering a differing value, and whether the difference is within its bound."""
+    for name, bounds, _ in bounded:
+        for key_pattern, field_pattern, bound in bounds:
+            if key_pattern.search(key) and field_pattern.search(field):
+                return name, within_bound(a, b, bound)
+    return None, False
 
 
 def main():
@@ -77,12 +106,13 @@ def main():
     args = [a for i, a in enumerate(argv) if not a.startswith('-') and (i == 0 or argv[i - 1] not in ('--json', '--section', '--known'))]
     reference, actual = load(args[0]), load(args[1])
     known_path = argv[argv.index('--known') + 1] if '--known' in argv else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'known.json')
-    known = read_known(known_path)
+    known, bounded = read_known(known_path)
     keys = sorted(reference.keys() | actual.keys())
     if sections:
         keys = [k for k in keys if any(k.startswith(s) for s in sections)]
     stats = collections.OrderedDict()
     lines = []
+    bounded_listed = []
     for key in keys:
         s = stats.setdefault(section(key), [0, 0])
         if key not in actual or key not in reference:
@@ -100,9 +130,24 @@ def main():
             elif field not in a:
                 lines.append(f'{key} {field}: Unity MISSING, Unbound {b[field]}')
             elif not same(a[field], b[field]):
-                lines.append(f'{key} {field}: Unity {a[field]}, Unbound {b[field]}')
+                line = f'{key} {field}: Unity {a[field]}, Unbound {b[field]}'
+                name, inside = bounded_class(bounded, key, field, a[field], b[field])
+                if name is None:
+                    lines.append(line)
+                elif inside:
+                    bounded_listed.append((name, line))
+                else:
+                    lines.append(f'{line} (beyond the bound of {name})')
             else:
                 s[0] += 1
+        for name, _, sums in bounded:
+            for key_pattern, fields, bound in sums:
+                if not key_pattern.search(key) or not all(f in a and f in b and number(a[f]) and number(b[f]) for f in fields):
+                    continue
+                total_a, total_b = sum(a[f] for f in fields), sum(b[f] for f in fields)
+                if abs(total_a - total_b) > bound:
+                    lines.append(f'{key} {"+".join(fields)}: Unity {total_a}, Unbound {total_b} '
+                                 f'(sum beyond the bound of {name})')
     listed = [line for line in lines if line.split(': Unity')[0] in known]
     lines = [line for line in lines if line.split(': Unity')[0] not in known]
     seen = {line.split(': Unity')[0] for line in listed}
@@ -110,6 +155,8 @@ def main():
         print('\n'.join(lines))
         for line in listed:
             print(f'known {known[line.split(": Unity")[0]]}: {line}')
+        for name, line in bounded_listed:
+            print(f'known {name} (within its bound): {line}')
     for entry in sorted(set(known) - seen):
         if not sections or any(entry.startswith(s) for s in sections):
             print(f'NOW MATCHES {known[entry]}: {entry}')
@@ -117,6 +164,7 @@ def main():
         print(f'{name}: {ok}/{total}')
     ok = sum(s[0] for s in stats.values())
     total = sum(s[1] for s in stats.values())
+    listed += [line for _, line in bounded_listed]
     print(f'humanoid: {ok}/{total} values match, {len(lines)} differences, {len(listed)} known')
     if summary:
         with open(summary, 'w') as handle:

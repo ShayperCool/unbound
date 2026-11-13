@@ -169,7 +169,7 @@ imported without keyframe reduction.
   hand). A solve after the pose was read back works on that re-based skeleton: the goal is out of
   its reach, the arm ends straight and the body displaced toward the root (from z -105.5 to
   -1.07); Unbound does the same, its straight arm's roll split between the upper arm and the
-  forearm is the known class `readback-solve-straight-limbs`.
+  forearm is the bounded known class `readback-solve-straight-limbs`.
 
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
@@ -290,6 +290,11 @@ stance values step with the distance (body up to 3.3e-3, a straight leg's twist 
 1.5e-2 by update 28). `stream.stanceInPlace` (recorded last, built in `HumanoidBones.cs`) is
 the same job without root motion applied, so that the Animator stays at the origin: there every
 value matches. `mirror-no-goals`: `apiCurves.mirrorFootIK`, see below.
+`readback-solve-straight-limbs` is bounded instead of listed (its `bounds` and `sums`, see
+compare.py): in `bone.rotateThenSolve` and `bone.solveTwice`, the arm roll muscles 41 and 43 and
+the left foot's 26 and 27 within 1e-2 each, the roll muscles' sum within 1e-4 of the Editor's on
+every step, and the upper arm's and hand's local rotations within 1e-2 per component; a value
+beyond its bound counts as a difference.
 
 `apiCurves.*` (recorded after it, built in `HumanoidLeftovers.cs`): a clip made at run time whose
 humanoid curves (a spine, a left arm and a left thumb muscle, the body's height and turn) are set
