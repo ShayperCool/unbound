@@ -14,6 +14,7 @@ pub mod keywords;
 pub mod preprocess;
 
 mod buffer_members;
+mod exponents;
 mod fit;
 mod matrix_swizzles;
 mod samplers;
@@ -1042,25 +1043,33 @@ impl ShaderCompiler {
         let name = file
             .file_name()
             .map_or("shader".into(), |n| n.to_string_lossy().to_string());
-        let artifact = match self
+        // Macros expanded once: a program that calls frexp compiles rewritten at once (glslang
+        // can crash on one, taking the process with it); others compile as they are first.
+        let expanded = self
             .compiler
-            .compile_into_spirv(source, kind, &name, entry, Some(&o))
-        {
-            Ok(artifact) => artifact,
-            // Code FXC (Unity's compiler) accepts and glslang does not: compile again with the
-            // macros expanded and those constructs rewritten.
-            Err(_) => {
-                let expanded = self
-                    .compiler
-                    .preprocess(source, &name, entry, Some(&o))
-                    .map_err(|e| anyhow!("{}: {e}", stage_name(kind)))?;
-                let fixed = fxc_compatible(&expanded.as_text());
-                self.compiler
-                    .compile_into_spirv(&fixed, kind, &name, entry, Some(&o))
-                    .map_err(|e| {
-                        dump_failed(&fixed, &name, kind);
-                        anyhow!("{}: {e}", stage_name(kind))
-                    })?
+            .preprocess(source, &name, entry, Some(&o))
+            .map_err(|e| anyhow!("{}: {e}", stage_name(kind)))?
+            .as_text();
+        let compile_fixed = || {
+            let fixed = fxc_compatible(&expanded);
+            self.compiler
+                .compile_into_spirv(&fixed, kind, &name, entry, Some(&o))
+                .map_err(|e| {
+                    dump_failed(&fixed, &name, kind);
+                    anyhow!("{}: {e}", stage_name(kind))
+                })
+        };
+        let artifact = if exponents::calls_frexp(&expanded) {
+            compile_fixed()?
+        } else {
+            match self
+                .compiler
+                .compile_into_spirv(source, kind, &name, entry, Some(&o))
+            {
+                Ok(artifact) => artifact,
+                // Code FXC (Unity's compiler) accepts and glslang does not: compile again with
+                // the macros expanded and those constructs rewritten.
+                Err(_) => compile_fixed()?,
             }
         };
         Ok(artifact.as_binary().to_vec())
@@ -1160,12 +1169,12 @@ const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
 /// cbuffer, left by macros), namespaces and member functions defined outside their struct
 /// ([`scopes`]), half literals (`1.0h`, which glslang types as 16-bit floats that mix with no
 /// integer; `half` is `float` on desktop), buffers held in structs ([`buffer_members`]), matrix
-/// swizzles of several elements ([`matrix_swizzles`]).
+/// swizzles of several elements ([`matrix_swizzles`]), `frexp` and `ldexp` ([`exponents`]).
 fn fxc_compatible(source: &str) -> String {
     buffer_members::buffer_members(&writable_globals(&constructor_statements(
         &flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
             &drop_duplicate_overloads(&half_literals(&matrix_swizzles::matrix_swizzles(
-                &scopes::flatten_scopes(source),
+                &exponents::exponent_calls(&scopes::flatten_scopes(source)),
             ))),
         ))),
     )))
