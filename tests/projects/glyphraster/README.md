@@ -27,6 +27,14 @@ paths keep their own face and renderer.
 `Font.HasCharacter` of a dynamic font answers true for every character above U+001F, whether a
 face has it or not (`fallback/*/has/*`; U+FFFE is in no installed face).
 
+On macOS the same chain was measured with the Unity 6000.0.71f1 macOS arm64 Editor in batch
+mode on macOS 26's own fonts (not a reference: the Linux faces the reference needs are not
+installed there): Unbound's 9672 glyph metrics and raw values match the Editor's, the fallback
+characters included, which come from the common families there. The alpha bytes come from a
+screen read-back that neither the batch-mode Editor without a graphics device nor a headless
+Unbound run has, so they were not compared. A Mac with the Linux families installed is
+unmeasured.
+
 The reference depends on the OS fonts of the recording host (Debian/Ubuntu packages
 fonts-freefont-ttf, fonts-dejavu-core, fonts-liberation, fonts-noto-cjk). `run.py record` and
 `run.py gate` refuse to run, naming the missing faces, when one of them is not installed.
