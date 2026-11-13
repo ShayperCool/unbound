@@ -1,0 +1,85 @@
+using System;
+using System.Collections;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using UnityEngine;
+
+/// <summary>
+/// Terrain heightmap LOD and the base map: images of a bumpy terrain from one view at several
+/// pixel errors, with heightmapMaximumLOD and heightmapMinimumLODSimplification, from above
+/// orthographically, and with base map distances that put part or all of it on the base map.
+/// Writes <c>terrainlod.jsonl</c> (the settings each image used) and PNGs into
+/// <c>TERRAIN_LOD_PROBE_OUT</c>, then quits.
+/// </summary>
+public class TerrainLodProbe : MonoBehaviour
+{
+    const int Width = 480, Height = 270;
+    readonly StringBuilder m_Out = new StringBuilder();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Run() => new GameObject("TerrainLodProbe").AddComponent<TerrainLodProbe>();
+
+    static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
+
+    IEnumerator Start()
+    {
+        var dir = Environment.GetEnvironmentVariable("TERRAIN_LOD_PROBE_OUT") ?? "/tmp/terrainlod";
+        Directory.CreateDirectory(dir);
+        var terrain = FindAnyObjectByType<Terrain>();
+        yield return null;
+        var eye = new Vector3(200f, 55f, -40f);
+        var at = new Vector3(200f, 15f, 230f);
+        Capture(dir, "pe5", terrain, eye, at, 5f, 1000f, 0, 0);
+        Capture(dir, "pe1", terrain, eye, at, 1f, 1000f, 0, 0);
+        Capture(dir, "pe40", terrain, eye, at, 40f, 1000f, 0, 0);
+        Capture(dir, "pe200", terrain, eye, at, 200f, 1000f, 0, 0);
+        Capture(dir, "maxlod2", terrain, eye, at, 1f, 1000f, 2, 0);
+        Capture(dir, "minsimpl", terrain, eye, at, 200f, 1000f, 0, 2);
+        Capture(dir, "low", terrain, new Vector3(120f, 30f, 60f), new Vector3(260f, 20f, 300f), 8f, 1000f, 0, 0);
+        Capture(dir, "ortho", terrain, new Vector3(200f, 200f, 200f), new Vector3(200f, 0f, 200.001f), 20f, 1000f, 0, 0, true);
+        Capture(dir, "base150", terrain, eye, at, 5f, 150f, 0, 0);
+        Capture(dir, "base0", terrain, eye, at, 5f, 0f, 0, 0);
+        File.WriteAllText(Path.Combine(dir, "terrainlod.jsonl"), m_Out.ToString());
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit();
+#endif
+    }
+
+    void Capture(string dir, string name, Terrain terrain, Vector3 position, Vector3 target, float pixelError, float basemapDistance, int maximumLOD, int minimumSimplification, bool orthographic = false)
+    {
+        terrain.heightmapPixelError = pixelError;
+        terrain.basemapDistance = basemapDistance;
+        terrain.heightmapMaximumLOD = maximumLOD;
+        terrain.heightmapMinimumLODSimplification = minimumSimplification;
+        var go = new GameObject("camera");
+        go.transform.position = position;
+        go.transform.LookAt(target);
+        var camera = go.AddComponent<Camera>();
+        camera.fieldOfView = 55f;
+        camera.farClipPlane = 2000f;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0.4f, 0.5f, 0.7f);
+        if (orthographic)
+        {
+            camera.orthographic = true;
+            camera.orthographicSize = 210f;
+        }
+        var targetTexture = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32);
+        camera.targetTexture = targetTexture;
+        camera.Render();
+        RenderTexture.active = targetTexture;
+        var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
+        texture.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+        texture.Apply();
+        RenderTexture.active = null;
+        camera.targetTexture = null;
+        File.WriteAllBytes(Path.Combine(dir, name + ".png"), texture.EncodeToPNG());
+        m_Out.Append($"{{\"image\":\"{name}\",\"pixelError\":{F(terrain.heightmapPixelError)},\"basemapDistance\":{F(terrain.basemapDistance)},\"maximumLOD\":{terrain.heightmapMaximumLOD},\"minimumLODSimplification\":{terrain.heightmapMinimumLODSimplification},\"orthographic\":{(orthographic ? "true" : "false")}}}\n");
+        DestroyImmediate(targetTexture);
+        DestroyImmediate(go);
+        Destroy(texture);
+    }
+}

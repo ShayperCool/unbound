@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/terrainlod/run.py check"],
+  "summary": "terrainlod: .*",
+  "engine_paths": ["managed/UnityEngine/Terrain/TerrainRenderer.cs", "managed/UnityEngine/Terrain/TerrainPatches.cs"]
+}
