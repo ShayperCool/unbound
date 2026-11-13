@@ -229,13 +229,25 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                 identity = (info.st_dev, info.st_ino)
                 if identity in visited:
                     continue
+                try:
+                    entries = index.entries(directory, info)
+                except OSError as error:
+                    if watcher and str(error).startswith('run-cache directory changed during indexing:'):
+                        pending.append(directory)
+                        continue
+                    raise
                 visited.add(identity)
-                for entry in index.entries(directory, info):
+                for entry in entries:
                     path = Path(entry.path)
                     if entry.is_symlink():
                         # Keep lexical and resolved destinations. Lexical paths
                         # protect intermediate links in a chain too.
-                        target = Path(os.readlink(path))
+                        try:
+                            target = Path(os.readlink(path))
+                        except OSError as error:
+                            if watcher and gone(error):
+                                continue
+                            raise
                         target = target if target.is_absolute() else path.parent/target
                         found.update((Path(os.path.abspath(target)), target.resolve()))
                         if target.is_dir() and not any(inside(target.resolve(), p) for p in excluded):
@@ -357,7 +369,7 @@ class Janitor:
         else:
             yield path, 'task', self.idle_hours
 
-    def reason(self, path, hours):
+    def protection_reason(self, path):
         if any(value.lower() in self.active for part in path.parts
                for value in re.findall(r'(?<![a-zA-Z0-9])q\d+(?!\d)', part, re.I)):
             return 'active task directory'
@@ -367,6 +379,11 @@ class Janitor:
             return 'symlink reference'
         if any(inside(p, path) for p in self.processes):
             return 'live process'
+        return None
+
+    def reason(self, path, hours):
+        if reason := self.protection_reason(path):
+            return reason
         newest, _, _ = inventory(path)
         if newest >= time.time()-hours*3600:
             return 'recently modified'
@@ -406,14 +423,28 @@ class Janitor:
                 if reason := self.reason(path, hours):
                     self.emit('keep', path=str(path), reason=reason)
                     return False
-                if self.watch:
-                    self.watch.retired.add(path)
-                self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
-                          reclaimable_bytes=reclaimable)
-                if path.is_dir() and not path.is_symlink():
+                directory = path.is_dir() and not path.is_symlink()
+                if directory:
                     # Read-only snapshot files need no chmod; only directories do.
                     for _, _, _, descriptor in os.fwalk(path, follow_symlinks=False):
                         os.fchmod(descriptor, stat.S_IMODE(os.fstat(descriptor).st_mode) | stat.S_IRWXU)
+                # Inventory and permission preparation can walk a huge tree.
+                # Recheck after both, with no further tree walk before deletion.
+                self.processes = process_paths()
+                self.states = task_states(self.cache/'agents/QUEUE.md')
+                self.active = active_tasks(self.cache/'agents/QUEUE.md')
+                self.refresh_links()
+                if kind == 'task' and self.states.get(task) != 'landed':
+                    self.emit('keep', path=str(path), reason='task state changed')
+                    return False
+                if reason := self.protection_reason(path):
+                    self.emit('keep', path=str(path), reason=reason)
+                    return False
+                self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
+                          reclaimable_bytes=reclaimable)
+                if self.watch:
+                    self.watch.retired.add(path)
+                if directory:
                     shutil.rmtree(path)
                 else:
                     path.unlink()

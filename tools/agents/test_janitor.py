@@ -202,6 +202,40 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(run.is_dir())
         self.assertTrue((self.cache/'late-reference').exists())
 
+    def test_symlink_created_during_last_inventory_keeps_run(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        original = janitor.inventory
+        calls = 0
+        def concurrent_inventory(path):
+            nonlocal calls
+            calls += 1
+            result = original(path)
+            if calls == 3:
+                (self.cache/'inventory-reference').symlink_to(run/'output')
+            return result
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.j.apply = True
+            with patch.object(janitor, 'inventory', side_effect=concurrent_inventory):
+                self.assertFalse(self.j.remove(run, kind='run', hours=72))
+        self.assertEqual(calls, 3)
+        self.assertTrue((self.cache/'inventory-reference').exists())
+
+    def test_symlink_created_during_permission_preparation_keeps_run(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        original = janitor.os.fwalk
+        def concurrent_walk(*args, **kwargs):
+            yield from original(*args, **kwargs)
+            (self.cache/'permission-reference').symlink_to(run/'output')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.j.apply = True
+            with patch.object(janitor.os, 'fwalk', side_effect=concurrent_walk):
+                self.assertFalse(self.j.remove(run, kind='run', hours=72))
+        self.assertTrue((self.cache/'permission-reference').exists())
+
     def test_new_nested_directory_and_moved_directory_links_are_seen(self):
         run = self.directory('unbound-validation/runs/probe-20261101-old')
         staging = self.root/'staging/nested'
@@ -228,6 +262,25 @@ class JanitorTests(unittest.TestCase):
             self.j.apply = True
             self.assertFalse(self.j.remove(run, kind='run', hours=72))
         self.assertTrue(run.is_dir())
+
+    def test_directory_changing_during_scan_is_retried_under_watch(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        (self.cache/'existing-reference').symlink_to(run/'output')
+        watcher = janitor.ReferenceWatch()
+        self.addCleanup(watcher.close)
+        original = janitor.DirectoryIndex.entries
+        changed = False
+        def racing_entries(index, directory, info):
+            nonlocal changed
+            if directory == self.cache and not changed:
+                changed = True
+                (self.cache/'new-output').write_text('concurrent write')
+                raise OSError('run-cache directory changed during indexing: fixture')
+            return original(index, directory, info)
+        with patch.object(janitor.DirectoryIndex, 'entries', racing_entries):
+            references = janitor.reference_paths([self.cache], watcher=watcher)
+        self.assertTrue(changed)
+        self.assertIn(run/'output', references)
 
     def test_reference_watch_overflow_fails_closed(self):
         run = self.directory('unbound-validation/runs/probe-20261101-old')
