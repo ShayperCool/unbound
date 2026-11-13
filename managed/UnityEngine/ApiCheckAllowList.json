@@ -93,13 +93,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "Unity.Collections.NativeArray`1",
-    "Message": "M:static IsUnmanagedAndThrow`0():System.Void attributes is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_UNITY_COLLECTIONS_CHECKS\"){}], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_UNITY_COLLECTIONS_CHECKS\"){};Unity.Burst.BurstDiscardAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: Unity.Collections.NativeArray`1."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "Unity.Jobs.LowLevel.Unsafe.JobsUtility",
     "Message": "M:static get_ThreadIndexCount`0():System.Int32 attributes is [], Unity's is [Unity.Burst.BurstAuthorizedExternalMethodAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: Unity.Jobs.LowLevel.Unsafe.JobsUtility."
@@ -149,23 +142,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEditor.AssetImporter",
-    "Message": "type attributes is [UnityEngine.Scripting.PreserveAttribute:M:.ctor`0():System.Void(){}], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){};UnityEngine.Scripting.PreserveAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-object-factory-annotations: the selected public marker still comes from generated declarations. Add its handwritten usage and constructor with paired default-state controls, then update the generated file under coordinated ownership."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEditor.AssetImporters.ScriptedImporter",
     "Message": "type attributes is [UnityEngine.Scripting.PreserveAttribute:M:.ctor`0():System.Void(){}], Unity's is [UnityEngine.ExtensionOfNativeClassAttribute:M:.ctor`0():System.Void(){};UnityEngine.Scripting.PreserveAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Q410-tooling-annotation-policy: user-visible annotation values now match. Retain the remaining exact tooling metadata until the engine/compiler consumer audit and shared per-kind exclusion decision."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.Build.Profile.BuildProfile",
-    "Message": "type attributes is [UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){};UnityEngine.HelpURLAttribute:M:.ctor`0(System.String):System.Void(System.String:\"build-profiles-reference\"){}], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){};UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){};UnityEngine.HelpURLAttribute:M:.ctor`0(System.String):System.Void(System.String:\"build-profiles-reference\"){}]",
-    "Reason": "Q410-object-factory-annotations: the selected public marker still comes from generated declarations. Add its handwritten usage and constructor with paired default-state controls, then update the generated file under coordinated ownership."
   },
   {
     "Release": "6000.0.71f1",
@@ -177,22 +156,8 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEditor.ConsoleWindow",
-    "Message": "type attributes is [], Unity's is [UnityEditor.EditorWindowTitleAttribute:M:.ctor`0():System.Void(){title=System.String:\"Console\",useTypeNameAsIconName=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.ConsoleWindow."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEditor.Editor",
     "Message": "M:Initialize`0(UnityEngine.Object[]):System.Void attributes is [], Unity's is [System.ComponentModel.EditorBrowsableAttribute:M:.ctor`0(System.ComponentModel.EditorBrowsableState):System.Void(System.ComponentModel.EditorBrowsableState:Int32:1){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.Editor."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.Editor",
-    "Message": "type attributes is [], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.Editor."
   },
   {
@@ -219,13 +184,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEditor.EditorWindow",
-    "Message": "type attributes is [], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.EditorWindow."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEditor.GameObjectInspector",
     "Message": "type attributes is [], Unity's is [UnityEditor.CanEditMultipleObjects:M:.ctor`0():System.Void(){};UnityEditor.CustomEditor:M:.ctor`0(System.Type):System.Void(System.Type:UnityEngine.GameObject){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.GameObjectInspector."
@@ -235,13 +193,6 @@
     "Category": "attributes",
     "Type": "UnityEditor.GameView",
     "Message": "field m_Gizmos attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.GameView."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.GameView",
-    "Message": "type attributes is [], Unity's is [UnityEditor.EditorWindowTitleAttribute:M:.ctor`0():System.Void(){title=System.String:\"Game\",useTypeNameAsIconName=System.Boolean:True}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.GameView."
   },
   {
@@ -282,13 +233,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEditor.SceneView",
-    "Message": "type attributes is [], Unity's is [UnityEditor.EditorWindowTitleAttribute:M:.ctor`0():System.Void(){title=System.String:\"Scene\",useTypeNameAsIconName=System.Boolean:True}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.SceneView."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly",
     "Message": "type attributes is [], Unity's is [System.Diagnostics.DebuggerDisplayAttribute:M:.ctor`0(System.String):System.Void(System.String:\"{Path}\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly."
@@ -299,20 +243,6 @@
     "Type": "UnityEditor.Scripting.ScriptCompilation.ScriptAssembly",
     "Message": "type attributes is [], Unity's is [System.Diagnostics.DebuggerDisplayAttribute:M:.ctor`0(System.String):System.Void(System.String:\"{Filename}\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.Scripting.ScriptCompilation.ScriptAssembly."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.SerializedObject",
-    "Message": "M:Dispose`0():System.Void attributes is [], Unity's is [UnityEngine.ThreadAndSerializationSafeAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.SerializedObject."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEditor.SerializedProperty",
-    "Message": "M:Dispose`0():System.Void attributes is [], Unity's is [UnityEngine.ThreadAndSerializationSafeAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEditor.SerializedProperty."
   },
   {
     "Release": "6000.0.71f1",
@@ -383,13 +313,6 @@
     "Type": "UnityEngine.AssetBundle",
     "Message": "M:LoadAsset`0(System.String,System.Type):UnityEngine.Object attributes is [], Unity's is [UnityEngineInternal.TypeInferenceRuleAttribute:M:.ctor`0(UnityEngineInternal.TypeInferenceRules):System.Void(UnityEngineInternal.TypeInferenceRules:Int32:1){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.AssetBundle."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Audio.AudioMixer",
-    "Message": "type attributes is [UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){}], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){};UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-object-factory-annotations: the selected public marker still comes from generated declarations. Add its handwritten usage and constructor with paired default-state controls, then update the generated file under coordinated ownership."
   },
   {
     "Release": "6000.0.71f1",
@@ -1122,13 +1045,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Playables.PlayableOutputHandle",
-    "Message": "M:SetUserData`0(UnityEngine.Object):System.Void parameter[0] attributes is [], Unity's is [UnityEngine.WritableAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Playables.PlayableOutputHandle."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Profiling.CustomSampler",
     "Message": "M:Begin`0():System.Void attributes is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){}], Unity's is [System.Diagnostics.ConditionalAttribute:M:.ctor`0(System.String):System.Void(System.String:\"ENABLE_PROFILER\"){};Unity.Profiling.IgnoredByDeepProfilerAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Profiling.CustomSampler."
@@ -1283,13 +1199,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Rendering.RayTracingShader",
-    "Message": "type attributes is [], Unity's is [UnityEngine.Rendering.RayTracingShaderHelpURLAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Rendering.RayTracingShader."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.RenderingLayerMask",
     "Message": "field m_Bits attributes is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}], Unity's is []",
     "Reason": "Q410-Core-built-in-serialization: nested JSON uses a built-in payload although the selected CLR serialization marker is absent. Current runtime composite handling still needs the harmonic coefficient schema or rendering-layer version/bits schema. Migrate serialization classification, JSON/YAML read/write and cloning with root-versus-nested and round-trip controls before removing this marker; removal alone drops existing nested values."
@@ -1332,13 +1241,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.RuntimeAnimatorController",
-    "Message": "type attributes is [], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.RuntimeAnimatorController."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.ScriptableObject",
     "Message": "type attributes is [], Unity's is [UnityEngine.ExtensionOfNativeClassAttribute:M:.ctor`0():System.Void(){};UnityEngine.NativeClassAttribute:M:.ctor`0(System.String):System.Void(System.String:null){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.ScriptableObject."
@@ -1353,13 +1255,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.SpriteMask",
-    "Message": "type attributes is [], Unity's is [UnityEngine.RejectDragAndDropMaterial:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.SpriteMask."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.TextCore.LowLevel.FontReference",
     "Message": "type attributes is [], Unity's is [System.Diagnostics.DebuggerDisplayAttribute:M:.ctor`0(System.String):System.Void(System.String:\"{familyName} - {styleName}\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextCore.LowLevel.FontReference."
@@ -1370,13 +1265,6 @@
     "Type": "UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord",
     "Message": "type attributes is [], Unity's is [System.Diagnostics.DebuggerDisplayAttribute:M:.ctor`0(System.String):System.Void(System.String:\"First glyphIndex = {m_FirstAdjustmentRecord.m_GlyphIndex},  Second glyphIndex = {m_SecondAdjustmentRecord.m_GlyphIndex}\"){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextCore.Text.TextAsset",
-    "Message": "type attributes is [], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextCore.Text.TextAsset."
   },
   {
     "Release": "6000.0.71f1",
@@ -1402,44 +1290,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.TextCore.Text.TextSettings",
-    "Message": "type attributes is [UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){}], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){};UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-object-factory-annotations: the selected public marker still comes from generated declarations. Add its handwritten usage and constructor with paired default-state controls, then update the generated file under coordinated ownership."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.TextCore.Text.TextStyleSheet",
-    "Message": "type attributes is [UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){}], Unity's is [UnityEngine.ExcludeFromObjectFactoryAttribute:M:.ctor`0():System.Void(){};UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-object-factory-annotations: the selected public marker still comes from generated declarations. Add its handwritten usage and constructor with paired default-state controls, then update the generated file under coordinated ownership."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.TextMesh",
     "Message": "type attributes is [UnityEngine.RequireComponent:M:.ctor`0(System.Type,System.Type):System.Void(System.Type:UnityEngine.Transform,System.Type:UnityEngine.MeshRenderer){}], Unity's is [UnityEngine.NativeClassAttribute:M:.ctor`0(System.String):System.Void(System.String:\"TextRenderingPrivate::TextMesh\"){};UnityEngine.RequireComponent:M:.ctor`0(System.Type,System.Type):System.Void(System.Type:UnityEngine.Transform,System.Type:UnityEngine.MeshRenderer){}]",
     "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.TextMesh."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Texture2D",
-    "Message": "type attributes is [], Unity's is [UnityEngine.ExcludeFromPresetAttribute:M:.ctor`0():System.Void(){};UnityEngine.HelpURLAttribute:M:.ctor`0(System.String):System.Void(System.String:\"texture-type-default\"){}]",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.Texture2D."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.Internal.MultiColumnCollectionHeader",
-    "Message": "field m_OldSortedColumnStates attributes is [System.Runtime.CompilerServices.TupleElementNamesAttribute:M:.ctor`0(System.String[]):System.Void(System.String[]:[System.String:\"desc\",System.String:\"direction\"]){}], Unity's is []",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.Internal.MultiColumnCollectionHeader."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.StyleComplexSelector",
-    "Message": "field s_PseudoStates attributes is [System.Runtime.CompilerServices.TupleElementNamesAttribute:M:.ctor`0(System.String[]):System.Void(System.String[]:[System.String:\"State\",System.String:\"Negate\"]){}], Unity's is []",
-    "Reason": "Queued annotation migration; copy the release annotations and validate the owning module reflection consumers together. Owner: UnityEngine.UIElements.StyleComplexSelector."
   },
   {
     "Release": "6000.0.71f1",
@@ -1496,13 +1349,6 @@
     "Type": "UnityEngine.Texture2D",
     "Message": "M:SetPixelData`1(!!0[],System.Int32,System.Int32):System.Void generic[0] is None,class=False,struct=True,new=False,unmanaged=False,notnull=False,ref-like=False;, Unity's is None,class=False,struct=False,new=False,unmanaged=False,notnull=False,ref-like=False;",
     "Reason": "Queued generic-constraint migration; validate the implementation data-transfer path for the additional type arguments. Owner: UnityEngine.Texture2D."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
-    "Type": "UnityEditor.Build.NamedBuildTarget",
-    "Message": "type interfaces is System.IEquatable`1<UnityEditor.Build.NamedBuildTarget>, Unity's is System.IComparable`1<UnityEditor.Build.NamedBuildTarget>,System.IEquatable`1<UnityEditor.Build.NamedBuildTarget>",
-    "Reason": "Queued interface migration; supply implementations or explicit unsupported methods for the reference interface set. Owner: UnityEditor.Build.NamedBuildTarget."
   },
   {
     "Release": "6000.0.71f1",
@@ -1727,20 +1573,6 @@
     "Type": "UnityEngine.PhysicsMaterial2D",
     "Message": "type interfaces is Unbound.Runtime.ISerializedAsset,Unbound.Runtime.Instantiation+ICloneable, Unity's is ",
     "Reason": "Queued interface migration; supply implementations or explicit unsupported methods for the reference interface set. Owner: UnityEngine.PhysicsMaterial2D."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
-    "Type": "UnityEngine.Pool.LinkedPool`1",
-    "Message": "type interfaces is System.IDisposable,UnityEngine.Pool.IObjectPool`1<!0>, Unity's is System.IDisposable,UnityEngine.Pool.IObjectPool`1<!0>,UnityEngine.Pool.IPool",
-    "Reason": "Queued interface migration; supply implementations or explicit unsupported methods for the reference interface set. Owner: UnityEngine.Pool.LinkedPool`1."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
-    "Type": "UnityEngine.Pool.ObjectPool`1",
-    "Message": "type interfaces is System.IDisposable,UnityEngine.Pool.IObjectPool`1<!0>, Unity's is System.IDisposable,UnityEngine.Pool.IObjectPool`1<!0>,UnityEngine.Pool.IPool",
-    "Reason": "Queued interface migration; supply implementations or explicit unsupported methods for the reference interface set. Owner: UnityEngine.Pool.ObjectPool`1."
   },
   {
     "Release": "6000.0.71f1",
@@ -2504,41 +2336,6 @@
     "Type": "UnityEditor.Build.Content.ObjectIdentifier",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
     "Reason": "Q410-ObjectIdentifier-serialization: the selected flag yields empty root JSON and an empty nested object, but Instantiate leaves a field initializer (29) instead of copying the source identifier (17). The current composite cloner copies the value after enabling the flag. Adapt shared eligibility for empty composites and built-in structs before changing this flag."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.Build.NamedBuildTarget",
-    "Message": "M:Equals`0(System.Object):System.Boolean readonly is False, Unity's is True",
-    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.Build.NamedBuildTarget",
-    "Message": "M:Equals`0(UnityEditor.Build.NamedBuildTarget):System.Boolean readonly is False, Unity's is True",
-    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.Build.NamedBuildTarget",
-    "Message": "M:GetHashCode`0():System.Int32 readonly is False, Unity's is True",
-    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.Build.NamedBuildTarget",
-    "Message": "M:ToBuildTargetGroup`0():UnityEditor.BuildTargetGroup readonly is False, Unity's is True",
-    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEditor.Build.NamedBuildTarget",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is True/False/False",
-    "Reason": "Q410-Editor-coordination: readonly type and four inherited readonly method facts require regenerating the NamedBuildTarget partial header in UnityEditor.CoreModule.g.cs, currently owned by Q411. Migrate the source and generated header together."
   },
   {
     "Release": "6000.0.71f1",

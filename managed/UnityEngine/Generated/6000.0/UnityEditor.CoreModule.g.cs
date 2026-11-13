@@ -10054,15 +10054,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEditor.IWindowBackend GetBackend(global::UnityEditor.IWindowModel model) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowBackendManager.GetBackend"); return default; }
         internal static global::UnityEditor.GetDefaultWindowBackendFunction defaultWindowBackend { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowBackendManager.defaultWindowBackend"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowBackendManager.defaultWindowBackend"); } }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
-    [global::Unbound.Stub]
-    public unsafe partial class EditorWindowTitleAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public EditorWindowTitleAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowTitleAttribute.ctor"); }
-        public string title { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowTitleAttribute.title"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowTitleAttribute.title"); } }
-        public string icon { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowTitleAttribute.icon"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowTitleAttribute.icon"); } }
-        public bool useTypeNameAsIconName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowTitleAttribute.useTypeNameAsIconName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindowTitleAttribute.useTypeNameAsIconName"); } }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class EditorWrapper : global::System.IDisposable
     {
@@ -29701,24 +29692,10 @@ namespace UnityEditor.Build
         OptimizeSpeed = 0,
         OptimizeSize = 1,
     }
-    unsafe partial struct NamedBuildTarget : global::System.IComparable<global::UnityEditor.Build.NamedBuildTarget>
+    unsafe readonly partial struct NamedBuildTarget
     {
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget WindowsStoreApps;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget PS4;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget PS5;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget XboxOne;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget tvOS;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget VisionOS;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget NintendoSwitch;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget NintendoSwitch2;
-        [global::System.Obsolete("Stadia has been removed in 2023.1")] [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget Stadia;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget LinuxHeadlessSimulation;
-        [global::System.Obsolete("CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation")] [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget CloudRendering;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget EmbeddedLinux;
-        [global::Unbound.Stub] public static readonly global::UnityEditor.Build.NamedBuildTarget QNX;
         [global::Unbound.Stub] internal static global::UnityEditor.Build.NamedBuildTarget FromActiveSettings(global::UnityEditor.BuildTarget target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.NamedBuildTarget.FromActiveSettings"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.Build.NamedBuildTarget FromTargetAndSubtarget(global::UnityEditor.BuildTarget target, int subtarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.NamedBuildTarget.FromTargetAndSubtarget"); return default; }
-        [global::Unbound.Stub] public int CompareTo(global::UnityEditor.Build.NamedBuildTarget other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.NamedBuildTarget.CompareTo"); return default; }
     }
     public enum OSArchitecture
     {

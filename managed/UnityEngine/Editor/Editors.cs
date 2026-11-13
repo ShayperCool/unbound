@@ -14,7 +14,7 @@ namespace UnityEditor
     /// made and OnDisable when destroyed. Unbound shows no inspectors: OnInspectorGUI draws only in an
     /// OnGUI (outside one it throws, as the Editor's does).
     /// </summary>
-    public partial class Editor : ScriptableObject
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class Editor : ScriptableObject
     {
         Object[] m_Targets = Array.Empty<Object>();
         internal Object m_Context;

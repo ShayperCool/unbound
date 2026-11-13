@@ -323,7 +323,7 @@ namespace UnityEditor
 
 namespace UnityEditor.Build
 {
-    public partial struct NamedBuildTarget : IEquatable<NamedBuildTarget>
+    public readonly partial struct NamedBuildTarget : IEquatable<NamedBuildTarget>, IComparable<NamedBuildTarget>
     {
         public string TargetName { get; }
 
@@ -335,6 +335,21 @@ namespace UnityEditor.Build
         public static readonly NamedBuildTarget iOS = new NamedBuildTarget("iPhone");
         public static readonly NamedBuildTarget Android = new NamedBuildTarget("Android");
         public static readonly NamedBuildTarget WebGL = new NamedBuildTarget("WebGL");
+        public static readonly NamedBuildTarget WindowsStoreApps = new NamedBuildTarget("Windows Store Apps");
+        public static readonly NamedBuildTarget PS4 = new NamedBuildTarget("PS4");
+        public static readonly NamedBuildTarget PS5 = new NamedBuildTarget("PS5");
+        public static readonly NamedBuildTarget XboxOne = new NamedBuildTarget("XboxOne");
+        public static readonly NamedBuildTarget tvOS = new NamedBuildTarget("tvOS");
+        public static readonly NamedBuildTarget VisionOS = new NamedBuildTarget("VisionOS");
+        public static readonly NamedBuildTarget NintendoSwitch = new NamedBuildTarget("Nintendo Switch");
+        public static readonly NamedBuildTarget NintendoSwitch2 = new NamedBuildTarget("Nintendo Switch 2");
+        [global::System.@ObsoleteAttribute("Stadia has been removed in 2023.1")]
+        public static readonly NamedBuildTarget Stadia = new NamedBuildTarget("Stadia");
+        public static readonly NamedBuildTarget LinuxHeadlessSimulation = new NamedBuildTarget("LinuxHeadlessSimulation");
+        [global::System.@ObsoleteAttribute("CloudRendering is deprecated, please use LinuxHeadlessSimulation (UnityUpgradable) -> LinuxHeadlessSimulation", false)]
+        public static readonly NamedBuildTarget CloudRendering = LinuxHeadlessSimulation;
+        public static readonly NamedBuildTarget EmbeddedLinux = new NamedBuildTarget("EmbeddedLinux");
+        public static readonly NamedBuildTarget QNX = new NamedBuildTarget("QNX");
 
         public static NamedBuildTarget FromBuildTargetGroup(BuildTargetGroup buildTargetGroup) => new NamedBuildTarget(buildTargetGroup.ToString());
 
@@ -342,7 +357,8 @@ namespace UnityEditor.Build
 
         public bool Equals(NamedBuildTarget other) => TargetName == other.TargetName;
         public override bool Equals(object obj) => obj is NamedBuildTarget other && Equals(other);
-        public override int GetHashCode() => TargetName?.GetHashCode() ?? 0;
+        public override int GetHashCode() => TargetName.GetHashCode();
+        public int CompareTo(NamedBuildTarget other) => TargetName.CompareTo(other.TargetName);
         public static bool operator ==(NamedBuildTarget lhs, NamedBuildTarget rhs) => lhs.Equals(rhs);
         public static bool operator !=(NamedBuildTarget lhs, NamedBuildTarget rhs) => !lhs.Equals(rhs);
     }

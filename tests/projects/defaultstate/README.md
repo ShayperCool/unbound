@@ -532,3 +532,9 @@ The Hash128 slice (Q433) adds HashUtilities and HashUnsafeUtilities to the handw
 inventory as static rows. Two independent 6000.0.71f1 GPU Editor captures agree on both
 `@factory` rows (excluded, static); they were inserted into the reference beside the rows
 the captures place them after, and every prior row is byte-identical.
+
+The final declaration-shapes slice adds seven stable default rows for the newly
+handwritten ExcludeFromObjectFactoryAttribute and EditorWindowTitleAttribute. Both
+new types and all seven values agree in independent GPU Editor captures. The
+12,706 earlier raw rows and existing inventory entries remain byte-identical,
+bringing the canonical reference to 12,713 rows.

@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace UnityEditor
 {
-    public partial class AssetImporter
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class AssetImporter
     {
         static readonly Dictionary<string, AssetImporter> s_ByPath = new Dictionary<string, AssetImporter>(StringComparer.Ordinal);
 

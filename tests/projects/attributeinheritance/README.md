@@ -1,7 +1,7 @@
 # Attribute inheritance controls
 
-The Unity 6000.0.71f1 GPU Editor reference has 215 records from two independent, byte-identical
-captures on the NVIDIA driver. The controls distinguish CLR attribute inheritance from Editor
+The Unity 6000.0.71f1 GPU Editor reference has 1,357 records, with each expansion
+checked in independent, byte-identical captures on the NVIDIA driver. The controls distinguish CLR attribute inheritance from Editor
 registration and from each registration's explicit child-target flag. These are measured answers
 for this release and context; they do not establish a contract for other releases.
 
@@ -259,3 +259,33 @@ retains the target field initializer, 29, instead of the source value, 17. The c
 control guards against enabling the flag while the generic cloner still copies 17.
 The full uncommitted trial captures remain outside Git; comparator rules and every
 landed reference row remain unchanged.
+
+## Final declaration shapes
+
+The 6000.0.71f1 reference now has 1,357 rows. Two independent GPU Editor captures
+agree exactly and retain all 1,248 previous raw rows. The 109 additions cover
+18 annotation groups, six attribute usages and constructors, a writable parameter,
+two private tuple fields, title storage, marker inheritance, readonly declarations,
+all 19 named build targets, culture-sensitive/default comparison and populated pools.
+
+The [NamedBuildTarget API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Build.NamedBuildTarget.html)
+lists named constants. Comparison culture, default-value exceptions and the cloud
+alias are observations of 6000.0.71f1. The comparison includes invariant, en-US and
+tr-TR cultures plus an ordinal control. Hash observations record success or the
+exception type, because numeric string hashes differ between runtimes.
+
+[ObjectPool.Clear](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Pool.ObjectPool_1.Clear.html)
+removes inactive objects and invokes destruction callbacks. Both pool controls
+begin empty, release two distinct objects, invoke Clear through the internal
+interface, then observe zero inactive objects and two callbacks.
+
+[ExcludeFromObjectFactoryAttribute](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ExcludeFromObjectFactoryAttribute.html)
+and [EditorWindowTitleAttribute](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorWindowTitleAttribute.html)
+describe factory exclusion and window labels. This slice checks declaration,
+inheritance and attribute property storage. Actual ObjectFactory eligibility and
+window title/icon resource lookup remain runtime follow-ups. A child marker query
+changes when inheritance is enabled; independent unmarked classes remain excluded
+from that query. Title mutation preserves a separately assigned icon and flag.
+The ray-tracing help attribute's observed URL uses the selected Compat release;
+other profiles reject the unmeasured value. NamedBuildTarget group conversion and
+constructor validation are unchanged and need their own behavioral controls.

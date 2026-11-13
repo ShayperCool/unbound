@@ -313,7 +313,7 @@ namespace UnityEngine.UIElements
         [NonSerialized] internal StyleComplexSelector nextInTable;
         [NonSerialized] internal int orderInStyleSheet;
 
-        static Dictionary<string, (PseudoStates State, bool Negate)> s_PseudoStates;
+        static Dictionary<string, (PseudoStates, bool)> s_PseudoStates;
 
         public int specificity { get => m_Specificity; internal set => m_Specificity = value; }
         public StyleRule rule { get; internal set; }
@@ -350,8 +350,8 @@ namespace UnityEngine.UIElements
                     if (part.type != StyleSelectorType.PseudoClass) continue;
                     if (s_PseudoStates.TryGetValue(part.value, out var state))
                     {
-                        if (state.Negate) negated |= state.State;
-                        else mask |= state.State;
+                        if (state.Item2) negated |= state.Item1;
+                        else mask |= state.Item1;
                     }
                     else
                     {

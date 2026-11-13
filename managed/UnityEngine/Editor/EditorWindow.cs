@@ -10,7 +10,7 @@ namespace UnityEditor
     /// exist as objects with their lifecycle (OnEnable, OnFocus, OnDestroy on Close) and state, but
     /// Unbound has no editor UI, so they are never drawn. Opening one is reported once per type.
     /// </summary>
-    public partial class EditorWindow : ScriptableObject
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class EditorWindow : ScriptableObject
     {
         static readonly List<EditorWindow> s_Open = new List<EditorWindow>();
         static readonly HashSet<Type> s_Reported = new HashSet<Type>();

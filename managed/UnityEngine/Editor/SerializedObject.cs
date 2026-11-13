@@ -161,6 +161,7 @@ namespace UnityEditor
         }
 
         [Unbound.EditorFaithful("a managed tree: nothing native to release")]
+        [global::UnityEngine.@ThreadAndSerializationSafeAttribute]
         public void Dispose() { }
 
         /// <summary>The trees of the other targets, read on demand to compare values.</summary>
@@ -227,6 +228,7 @@ namespace UnityEditor
         public SerializedObject serializedObject => m_SerializedObject;
 
         [Unbound.EditorFaithful("a managed tree: nothing native to release")]
+        [global::UnityEngine.@ThreadAndSerializationSafeAttribute]
         public void Dispose() { }
 
         // ------------------------------------------------------------ description

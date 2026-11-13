@@ -20,18 +20,6 @@ namespace UnityEngine
         public string QualifiedNativeName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NativeClassAttribute.QualifiedNativeName"); return default; } }
         public string Declaration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NativeClassAttribute.Declaration"); return default; } }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
-    [global::Unbound.Stub]
-    internal unsafe partial class RejectDragAndDropMaterial : global::System.Attribute
-    {
-        [global::Unbound.Stub] public RejectDragAndDropMaterial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RejectDragAndDropMaterial.ctor"); }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
-    [global::Unbound.Stub]
-    internal unsafe partial class ThreadAndSerializationSafeAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public ThreadAndSerializationSafeAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ThreadAndSerializationSafeAttribute.ctor"); }
-    }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)1)]
     [global::Unbound.Stub]
     internal unsafe partial class UnityEngineModuleAssembly : global::System.Attribute
@@ -43,12 +31,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] public static string Format(string fmt, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityString.Format"); return default; }
         [global::Unbound.Stub] public UnityString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityString.ctor"); }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)2048, AllowMultiple = false)]
-    [global::Unbound.Stub]
-    internal unsafe partial class WritableAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public WritableAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WritableAttribute.ctor"); }
     }
 }
 namespace UnityEngine.Bindings

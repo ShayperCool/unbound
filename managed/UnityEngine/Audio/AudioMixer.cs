@@ -13,7 +13,7 @@ namespace UnityEngine.Audio
     /// group signal in serialized effect order.
     /// </summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(241)]
-    public partial class AudioMixer : Object, ISerializedAsset
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class AudioMixer : Object, ISerializedAsset
     {
         internal AudioMixerGroup m_OutputGroup;
         internal AudioMixerGroup m_MasterGroup;

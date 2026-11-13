@@ -10,7 +10,7 @@ namespace UnityEngine
     /// transitions and blend trees are the file's other documents, compiled into a graph on first use.
     /// </summary>
     [ClassId(91)]
-    public partial class RuntimeAnimatorController : Object, ISerializedAsset, Instantiation.ICloneable
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class RuntimeAnimatorController : Object, ISerializedAsset, Instantiation.ICloneable
     {
         internal List<AnimatorControllerParameter> m_Parameters = new List<AnimatorControllerParameter>();
         internal List<ControllerLayerData> m_Layers = new List<ControllerLayerData>();

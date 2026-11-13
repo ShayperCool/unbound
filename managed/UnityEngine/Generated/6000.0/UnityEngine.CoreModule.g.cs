@@ -1160,12 +1160,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void WriteCustomEvent(int value, string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.EventProvider.WriteCustomEvent"); }
         [global::Unbound.Stub] public EventProvider() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.EventProvider.ctor"); }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
-    [global::Unbound.Stub]
-    public unsafe partial class ExcludeFromObjectFactoryAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public ExcludeFromObjectFactoryAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExcludeFromObjectFactoryAttribute.ctor"); }
-    }
     [global::Unbound.Stub]
     public unsafe partial struct ExposedPropertyResolver
     {
@@ -4166,12 +4160,7 @@ namespace UnityEngine.PlayerLoop
 }
 namespace UnityEngine.Pool
 {
-    internal unsafe partial interface IPool
-    {
-        void Clear();
-        int CountInactive { get; }
-    }
-    unsafe partial class LinkedPool<T> : global::UnityEngine.Pool.IPool
+    unsafe partial class LinkedPool<T>
     {
         [global::Unbound.Stub] internal global::UnityEngine.Pool.LinkedPool<T>.LinkedPoolItem m_PoolFirst;
         [global::Unbound.Stub] internal global::UnityEngine.Pool.LinkedPool<T>.LinkedPoolItem m_NextAvailableListItem;
@@ -4183,7 +4172,7 @@ namespace UnityEngine.Pool
             [global::Unbound.Stub] public LinkedPoolItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pool.LinkedPool<T>.LinkedPoolItem.ctor"); }
         }
     }
-    unsafe partial class ObjectPool<T> : global::UnityEngine.Pool.IPool
+    unsafe partial class ObjectPool<T>
     {
         [global::Unbound.Stub] internal bool HasElement(T element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pool.ObjectPool<T>.HasElement"); return default; }
     }
@@ -4935,12 +4924,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public void SetAccelerationStructure(string name, global::UnityEngine.Rendering.RayTracingAccelerationStructure accelerationStructure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingShader.SetAccelerationStructure"); }
         [global::Unbound.Stub] public void SetTextureFromGlobal(string name, string globalTextureName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingShader.SetTextureFromGlobal"); }
         public float maxRecursionDepth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingShader.maxRecursionDepth"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class RayTracingShaderHelpURLAttribute : global::UnityEngine.HelpURLAttribute
-    {
-        [global::Unbound.Stub] public RayTracingShaderHelpURLAttribute() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingShaderHelpURLAttribute.ctor"); }
-        public override string URL { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingShaderHelpURLAttribute.URL"); return default; } }
     }
     [global::System.Flags]
     public enum RayTracingSubMeshFlags

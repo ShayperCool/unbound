@@ -118,7 +118,7 @@ namespace UnityEditor
         static string Text(UnityEngine.UTF8StringView view) => view.utf8Ptr == IntPtr.Zero || view.utf8Length <= 0 ? "" : view.ToString();
     }
 
-    internal partial class ConsoleWindow : EditorWindow
+    [global::UnityEditor.@EditorWindowTitleAttribute(title = "Console", useTypeNameAsIconName = true)] internal partial class ConsoleWindow : EditorWindow
     {
         internal static unsafe void AddMessages(NativeArray<LogEntryStruct> messages) =>
             LogEntries.AddMessagesImpl(messages.GetUnsafeReadOnlyPtr(), messages.Length);

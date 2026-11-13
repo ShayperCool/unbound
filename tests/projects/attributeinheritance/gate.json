@@ -164,6 +164,12 @@
     "managed/UnityEngine/Editor/ContentBuildInterface.cs",
     "managed/UnityEngine/Math/Random.cs",
     "managed/UnityEngine/Properties/Types.cs",
-    "managed/UnityEngine/Text/TextCoreText/TextGenerator.cs"
+    "managed/UnityEngine/Text/TextCoreText/TextGenerator.cs",
+    "managed/UnityEngine/Core/DeclarationAttributes.cs",
+    "managed/UnityEngine/Editor/EditorWindowTitleAttribute.cs",
+    "managed/UnityEngine/Graphics/RayTracingShaderHelpURLAttribute.cs",
+    "managed/UnityEngine/Graphics/SpriteMask.cs",
+    "managed/UnityEngine/Platform/Pool.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
   ]
 }

@@ -93,6 +93,7 @@ namespace Unity.Collections
         }
 
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        [global::Unity.Burst.@BurstDiscardAttribute]
         internal static void IsUnmanagedAndThrow()
         {
             if (!UnsafeUtility.IsUnmanaged<T>())

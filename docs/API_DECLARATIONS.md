@@ -76,18 +76,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After serialization annotations and UI state slices |
+| Category | Before Q410 | After final declaration shapes |
 | --- | ---: | ---: |
-| Attributes | 938 | 209 |
-| Modifiers | 87 | 13 |
+| Attributes | 938 | 188 |
+| Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
 | Layout | 68 | 68 |
-| Interfaces | 65 | 64 |
+| Interfaces | 65 | 61 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 370 |
+| Total | 1,332 | 341 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -141,12 +141,12 @@ private setters requires adapting focus updates and assembly-cache invalidation,
 with diverged-state controls. The accessor slice resolves the AssetPostprocessor
 setter. Q410-ObjectIdentifier-serialization retains the ObjectIdentifier serialization flag
 until the shared empty-payload eligibility rules cover JSON and cloning together.
-The five NamedBuildTarget readonly differences also require a generated header
-currently owned by Q411. Q410-Editor-serialized-payloads retains five Serializable
+The final-shapes slice resolves the five NamedBuildTarget readonly differences.
+Q410-Editor-serialized-payloads retains five Serializable
 flags on EditorBuildSettingsScene, PackageInfo, PackageCollection, ListRequest and
 SearchRequest. Their current property/cache/request storage needs the selected
 serialized payloads and nested/overwrite controls before the runtime classifies them
-as serialized composites. The thirteen remaining exact differences stay visible in the allow-list.
+as serialized composites. The eight remaining exact Editor differences stay visible in the allow-list.
 
 The same slice excludes MultiColumnHeaderState.m_MaxNumberOfSortedColumns from
 serialization. A control starts it at 9, supplies 17 in JSON, and confirms 9 survives
@@ -205,8 +205,8 @@ entries. It copies Flags, RequireComponent, preset exclusions, help URLs, requir
 members, preservation markers, asset extensions and edit-mode markers through the
 selected declaration renderer. Three Object lookup overloads now carry their
 selected obsolete warnings. Sixteen compound entries retain their exact remaining
-metadata differences for the later policy/type migration. Texture2D annotations
-remain queued while another slice owns a partial declaration.
+metadata differences for the later policy/type migration. The final-shapes slice also
+supplies the selected Texture2D preset exclusion and help URL.
 
 The 127 added probe rows include every changed declaration, six formatting values
 for each of eight enums and five component-requirement controls. A joint begins
@@ -239,6 +239,25 @@ the canonical probe. The full trial reports retain all three clone regressions a
 the two preexisting metadata/nested-JSON gaps. A shared eligibility model for empty
 composites and built-in structs must precede that flag change.
 
+The final declaration-shapes slice resolves 29 entries: 21 annotation, five readonly
+and three interface differences. Six handwritten attribute types retain the selected
+AttributeUsage and constructor/property state. NamedBuildTarget supplies culture-sensitive
+comparison, all 19 named constants and the measured default-value hash exception.
+IPool dispatch uses the existing pool count and Clear implementations. Two private
+tuple fields omit source labels while retaining their operations and storage.
+
+The attribute reference expands from 1,248 to 1,357 rows after independent GPU
+repeats, preserving every earlier raw row. Controls distinguish direct and inherited
+factory markers, change title storage while retaining its icon, compare under three
+cultures, and clear pools containing two inactive objects with destruction callbacks.
+The ray-tracing help URL is selected through Compat for 6000.0.71f1; other releases
+reject this newly implemented URL until measured. Group conversion and constructor
+validation for NamedBuildTarget retain their existing implementations and remain
+outside this declaration slice. ObjectFactory eligibility and Editor window title/icon
+resource resolution remain separate runtime follow-ups; the annotations alone do
+not establish those behaviors. The default-state inventory adds the two new public
+attribute types and seven stable rows, preserving all 12,706 earlier raw lines.
+
 ## Landing checks and default state
 
 The managed landing step runs `api-check` after stub generation and fails on any new or stale
@@ -265,8 +284,8 @@ fix resolves one additional row. The ParticleSystem slice resolves another 337 r
 UIElements resolves 59 values and shared JSON string transfer resolves two record strings.
 The remaining Core mechanisms resolve another 127 rows across their shared operation,
 component and renderer state. Small mechanisms resolve 107 existing entries and retain three new exact contextual
-gaps. The default-state probe now has 12,439 exact rows and 269 queued rows, including
-the unchanged 50 variable rows. Its 12,706 canonical rows
+gaps. The default-state probe now has 12,448 exact rows and 267 queued rows, including
+the unchanged 50 variable rows. Its 12,713 canonical rows
 preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases, refresh-rate arithmetic, drive input ranges,

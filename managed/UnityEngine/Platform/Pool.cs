@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 namespace UnityEngine.Pool
 {
+    internal partial interface IPool
+    {
+        void Clear();
+        int CountInactive { get; }
+    }
+
     public partial interface IObjectPool<T> where T : class
     {
         int CountInactive { get; }
@@ -32,7 +38,7 @@ namespace UnityEngine.Pool
     /// the slot.
     /// The order matches the Unity 6000.0.71f1 Editor (tests/projects/uitkcollections, the order
     /// in which a list view's rebuild destroys its rows).</summary>
-    public partial class ObjectPool<T> : IDisposable, IObjectPool<T> where T : class
+    public partial class ObjectPool<T> : IDisposable, IObjectPool<T>, IPool where T : class
     {
         internal readonly List<T> m_List;
         readonly Func<T> m_CreateFunc;
@@ -118,7 +124,7 @@ namespace UnityEngine.Pool
         public void Dispose() => Clear();
     }
 
-    public partial class LinkedPool<T> : IDisposable, IObjectPool<T> where T : class
+    public partial class LinkedPool<T> : IDisposable, IObjectPool<T>, IPool where T : class
     {
         readonly ObjectPool<T> m_Pool;
 

@@ -10,7 +10,7 @@ namespace UnityEngine
     /// the stencil the masks covering them write (<see cref="SpriteMasking"/>).
     /// </summary>
     [ClassId(331)]
-    public sealed partial class SpriteMask : Renderer
+    [global::UnityEngine.@RejectDragAndDropMaterial] public sealed partial class SpriteMask : Renderer
     {
         internal Sprite m_Sprite;
         internal float m_MaskAlphaCutoff = 0.2f;

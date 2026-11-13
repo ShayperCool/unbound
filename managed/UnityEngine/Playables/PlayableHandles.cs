@@ -379,7 +379,7 @@ namespace UnityEngine.Playables
 
         internal Object GetUserData() => Output.UserData;
 
-        internal void SetUserData(Object target) => Output.UserData = target;
+        internal void SetUserData([global::UnityEngine.@WritableAttribute] Object target) => Output.UserData = target;
 
         internal PlayableHandle GetSourcePlayable() => Output.Source?.ToHandle() ?? PlayableHandle.Null;
 

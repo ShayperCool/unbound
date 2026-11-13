@@ -1203,6 +1203,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.EditorWindowTitleAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.FilePathAttribute"
     },
@@ -3059,6 +3065,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "open-generic",
       "type": "UnityEngine.Events.UnityEvent`4"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.ExcludeFromObjectFactoryAttribute"
     },
     {
       "category": "class",

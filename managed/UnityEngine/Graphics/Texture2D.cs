@@ -10,7 +10,7 @@ namespace UnityEngine
     /// <summary>A 2D texture: imported from an asset (pixels on the native side), or made by code
     /// (pixels kept here and uploaded on Apply).</summary>
     [ClassId(28)]
-    public sealed partial class Texture2D : Texture, ISerializedAsset
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [global::UnityEngine.@HelpURLAttribute("texture-type-default")] public sealed partial class Texture2D : Texture, ISerializedAsset
     {
         internal TextureFormat m_Format = TextureFormat.RGBA32;
         internal int m_MipCount = 1;

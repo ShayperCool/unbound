@@ -9,6 +9,10 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        // Attribute URL observed by attributeinheritance on 6000.0.71f1.
+        internal static string RayTracingShaderHelpURL => Release == (6000, 0, 71, 'f', 1)
+            ? "https://docs.unity3d.com//6000.0/Documentation/ScriptReference/Rendering.RayTracingShader.html"
+            : throw new NotSupportedException("RayTracingShader help URL has not been measured for this Unity release.");
         /// <summary>Pointer angle conversion and lazy reads measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous independent angle values.</summary>
         internal static bool PointerAnglesMeasured => Release == (6000, 0, 71, 'f', 1);

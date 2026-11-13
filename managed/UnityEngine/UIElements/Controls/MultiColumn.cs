@@ -1797,7 +1797,7 @@ namespace UnityEngine.UIElements.Internal
         bool m_SortingEnabled;
         readonly List<SortColumnDescription> m_SortedColumns;
         SortColumnDescriptions m_SortDescriptions;
-        readonly List<(SortColumnDescription desc, SortDirection direction)> m_OldSortedColumnStates = new List<(SortColumnDescription, SortDirection)>();
+        readonly List<(SortColumnDescription, SortDirection)> m_OldSortedColumnStates = new List<(SortColumnDescription, SortDirection)>();
         readonly List<(SortColumnDescription desc, SortDirection direction)> m_NewSortedColumnStates = new List<(SortColumnDescription, SortDirection)>();
         bool m_SortingUpdatesTemporarilyDisabled;
         bool m_DoLayoutScheduled;

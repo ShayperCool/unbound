@@ -15,7 +15,7 @@ namespace UnityEditor
     /// fire (packages that draw handles or scene-view overlays find nothing to draw into).
     /// </summary>
     [Unbound.EditorFaithful("no Scene view is open, as in the batch-mode Editor (measured: tests/projects/editorui SceneView, tests/projects/editor sceneView.count)")]
-    public partial class SceneView : SearchableEditorWindow
+    [global::UnityEditor.@EditorWindowTitleAttribute(title = "Scene", useTypeNameAsIconName = true)] public partial class SceneView : SearchableEditorWindow
     {
         static readonly ArrayList s_SceneViews = new ArrayList();
 
@@ -62,7 +62,7 @@ namespace UnityEditor
         protected bool showGizmos { get => UnityEngine.Gizmos.GameViewEnabled; set { UnityEngine.Gizmos.GameViewEnabled = value; } }
     }
 
-    internal partial class GameView : PlayModeView
+    [global::UnityEditor.@EditorWindowTitleAttribute(title = "Game", useTypeNameAsIconName = true)] internal partial class GameView : PlayModeView
     {
         public GameView() { }
         internal bool m_Gizmos;

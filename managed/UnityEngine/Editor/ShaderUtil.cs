@@ -180,7 +180,7 @@ namespace UnityEditor
 
 namespace UnityEngine.Rendering
 {
-    public sealed partial class RayTracingShader : Object
+    [global::UnityEngine.Rendering.@RayTracingShaderHelpURLAttribute] public sealed partial class RayTracingShader : Object
     {
         RayTracingShader() { }
 

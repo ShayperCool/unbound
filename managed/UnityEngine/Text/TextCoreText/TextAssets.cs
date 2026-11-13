@@ -9,7 +9,7 @@ using UnityEngine.TextCore.LowLevel;
 namespace UnityEngine.TextCore.Text
 {
     [Serializable]
-    public abstract partial class TextAsset : ScriptableObject
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public abstract partial class TextAsset : ScriptableObject
     {
         [SerializeField] internal string m_Version;
         internal int m_InstanceID;
@@ -257,7 +257,7 @@ namespace UnityEngine.TextCore.Text
     }
 
     [global::UnityEngine.@ExcludeFromPresetAttribute] [Serializable]
-    public partial class TextStyleSheet : ScriptableObject
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class TextStyleSheet : ScriptableObject
     {
         [SerializeField] List<TextStyle> m_StyleList = new List<TextStyle>(1);
         Dictionary<int, TextStyle> m_StyleLookupDictionary;

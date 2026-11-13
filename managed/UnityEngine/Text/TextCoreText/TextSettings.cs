@@ -11,7 +11,7 @@ namespace UnityEngine.TextCore.Text
     /// (<see cref="GetCachedFontAsset"/>, how UI Toolkit draws a Font).
     /// </summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [Serializable]
-    public partial class TextSettings : ScriptableObject
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class TextSettings : ScriptableObject
     {
         [SerializeField] protected string m_Version;
         [SerializeField] [FormerlySerializedAs("m_defaultFontAsset")] protected FontAsset m_DefaultFontAsset;
