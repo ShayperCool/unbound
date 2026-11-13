@@ -263,8 +263,9 @@ another 156 rows, including one Canvas viewport observation; Physics2D resolves 
 and Physics resolves 89. Audio resolves 185 more; an independently integrated lighting
 fix resolves one additional row. The ParticleSystem slice resolves another 337 rows and the Editor slice resolves 132.
 UIElements resolves 59 values and shared JSON string transfer resolves two record strings.
-The default-state probe now has 11,808 exact rows and 500 queued rows, including
-the unchanged 50 variable rows. Its 12,281 canonical rows
+The remaining Core mechanisms resolve another 127 rows across their shared operation,
+component and renderer state. The default-state probe now has 12,153 exact rows and 373 queued rows, including
+the unchanged 50 variable rows. Its 12,499 canonical rows
 preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases, refresh-rate arithmetic, drive input ranges,
@@ -272,13 +273,15 @@ material ownership, existing audio-provider requirements, module ownership after
 destruction, removed particle accessors, default curve key metadata, sprite slots,
 importer backing and constructor failures, window initialization, removed texture
 settings, collection validity, nullable paths, pointer conversion/cache order, text interfaces,
-atlas configuration ownership, logical/physical parents and JSON string transfer.
+atlas configuration ownership, logical/physical parents, JSON string transfer, exact component
+construction backing, valid operation capabilities, LOD membership, curve ownership, mesh
+view safety and physical-camera configuration.
 
 Fixed removed-getter exceptions come from the selected release assembly during stub
 generation. Conditional and computed getters retain their existing fallback. Core
 constructor, factory and refresh-rate mechanisms select exactly 6000.0.71f1; other
 profiles keep their previous unmeasured paths, recorded in the compatibility gaps.
-The generator format is version 9 after implementing atlas settings and text interfaces.
+The generator format is version 10 after implementing Core configuration and operation state.
 TextElement implements its selected interface set, including rendered-text overrides through
 its existing rendering value, removing one exact interface exception. The atlas configuration
 retains private serialized fields and public mutable storage. Pointer and embedded-NUL string
@@ -287,7 +290,7 @@ API declarations and lookup checks retain the exact release exceptions listed ab
 with zero errors; no new exceptions are added by these default-state changes.
 
 The probe README lists remaining module counts and unresolved contexts. In particular,
-CoreModule keeps 112 rows requiring operation/payload validity, rendering initialization
+CoreModule keeps 36 rows requiring culling payloads, scene state, material ownership, rendering initialization
 or imported/serialized state controls. Two TextCore instance IDs and one Canvas early
 layout value retain updated exact implementation payloads, without changing reference
 values or adding variable policies.
@@ -298,9 +301,12 @@ so changing an invalid manual constructor does not change valid callback payload
 existing exact-release Physics2D mechanism carries these observations. Polygon initialization
 and initial substep accounting remain explicit follow-ups; no variable policy was widened.
 
-ParticleSystem retains ten rows after its module-handle and initialization changes:
+ParticleSystem initially retained ten rows after its module-handle and initialization changes:
 four aggregates with inactive gradient color fields, the variable random seed and five
 inherited Renderer rows. The canonical raw values and all 50 variable policies remain
 strict. Missing-owner fallbacks and removed accessors have exact-release Compat rules;
 constructor values reuse the existing initialization rule. The README records the
 362 independent controls and the remaining renderer and inactive-storage contexts.
+
+The remaining Core renderer configuration resolves those five ParticleSystem renderer rows.
+Its four gradient aggregates and variable random seed remain queued.
