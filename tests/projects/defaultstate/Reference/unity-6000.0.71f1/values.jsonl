@@ -8445,6 +8445,7 @@
 {"key":"UnityEngine.UIElements.EventBase/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEngine.UIElements.EventBase`1/@factory","status":"excluded","value":"open-generic"}
 {"key":"UnityEngine.UIElements.EventDispatcher/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.UIElements.EventInterestAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.UIElements.Experimental.Easing/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.UIElements.Experimental.StyleValues/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.UIElements.Experimental.StyleValues/Property/UnityEngine.UIElements.Experimental.StyleValues/backgroundColor","status":"value","value":"UnityEngine.Color{r=0;g=0;b=0;a=0}"}
@@ -10896,6 +10897,8 @@
 {"key":"UnityEngine.UIElements.UxmlLongAttributeDescription/Property/UnityEngine.UIElements.UxmlAttributeDescription/typeNamespace","status":"value","value":"string:http://www.w3.org/2001/XMLSchema"}
 {"key":"UnityEngine.UIElements.UxmlLongAttributeDescription/Property/UnityEngine.UIElements.UxmlAttributeDescription/use","status":"value","value":"enum:1"}
 {"key":"UnityEngine.UIElements.UxmlLongAttributeDescription/Property/UnityEngine.UIElements.UxmlLongAttributeDescription/defaultValueAsString","status":"value","value":"string:0"}
+{"key":"UnityEngine.UIElements.UxmlObjectAttribute/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.UIElements.UxmlObjectAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.UIElements.UxmlObjectAttribute"}
 {"key":"UnityEngine.UIElements.UxmlStringAttributeDescription/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.UIElements.UxmlStringAttributeDescription/Property/UnityEngine.UIElements.TypedUxmlAttributeDescription`1<System.String>/defaultValue","status":"value","value":"string:"}
 {"key":"UnityEngine.UIElements.UxmlStringAttributeDescription/Property/UnityEngine.UIElements.UxmlAttributeDescription/name","status":"value","value":"null"}
@@ -11587,7 +11590,4 @@
 {"key":"CoreControl/Audio/base/AudioListener","status":"value","value":"true"}
 {"key":"CoreControl/Audio/required/AudioListener","status":"value","value":"true"}
 {"key":"CoreControl/Audio/removedReverbSetting","status":"value","value":"[10,10,[string:Warning! roomRolloffFactor is no longer supported.,string:Warning! roomRolloffFactor is no longer supported.,string:Warning! roomRolloffFactor is no longer supported.,string:Warning! roomRolloffFactor is no longer supported.]]"}
-{"key":"UnityEngine.UIElements.EventInterestAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
-{"key":"UnityEngine.UIElements.UxmlObjectAttribute/@factory","status":"value","value":"class"}
-{"key":"UnityEngine.UIElements.UxmlObjectAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.UIElements.UxmlObjectAttribute"}
 {"key":"complete","status":"value","value":"1"}
