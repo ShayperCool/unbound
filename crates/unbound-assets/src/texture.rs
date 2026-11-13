@@ -1230,7 +1230,8 @@ impl Importer for TextureImporter {
     //     physics shape.
     // 38: runtime three-column block padding repeats the middle texel.
     // 39: Android HDR colour sources and their uncompressed fallbacks retain RGBM bytes.
-    const VERSION: u32 = 39;
+    // 40: RGBM retains high/nonfinite radiance and the authored colour-flag transform.
+    const VERSION: u32 = 40;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -1314,7 +1315,7 @@ impl Importer for TextureImporter {
             )
         {
             for mip in &mut texture.mips {
-                mip.data = rgbm::encode(&mip.data);
+                mip.data = rgbm::encode(&mip.data, !texture.settings.srgb_flag);
             }
             texture.format = TextureFormat::Rgba8;
             texture.srgb = texture.settings.srgb_flag;

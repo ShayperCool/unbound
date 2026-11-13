@@ -1789,48 +1789,59 @@ fn individual_block_reads_match_bulk_decoding_without_a_pixel_buffer() {
 fn hdr_crunch_uses_rgbm_in_both_project_colour_spaces() {
     let probe =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/texturecompression");
-    let source = probe.join("Assets/Textures/HdrCrunchAuto.exr");
-    let bytes = std::fs::read(&source).unwrap();
-    let meta = unbound_yaml::parse_value(
-        &std::fs::read_to_string(source.with_extension("exr.meta")).unwrap(),
-    )
-    .unwrap();
-    let reference =
-        std::fs::read_to_string(probe.join("Reference/unity-6000.0.71f1/AndroidGamma.jsonl"))
-            .unwrap();
-    let expected = reference
-        .lines()
-        .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
-        .find(|v| v["k"] == "tex.HdrCrunchAuto.raw")
+    for case in [
+        "HdrCrunchAuto",
+        "HdrCrunchQ0",
+        "HdrCrunchQ100",
+        "HdrCrunchLinear",
+        "HdrCrunchNoMips",
+        "HdrCrunchOpaque",
+        "HdrSpecialCrunch",
+    ] {
+        let source = probe.join(format!("Assets/Textures/{case}.exr"));
+        let bytes = std::fs::read(&source).unwrap();
+        let meta = unbound_yaml::parse_value(
+            &std::fs::read_to_string(source.with_extension("exr.meta")).unwrap(),
+        )
         .unwrap();
-    let expected = decode_base64(expected["v"].as_str().unwrap());
-    for gamma in [false, true] {
-        let mut importer = TextureImporter {
-            build_target: "Android".into(),
-            gamma,
-            project: ProjectCompression {
-                encoders: unbound_compat::TextureCompressionRules::for_version(
-                    unbound_compat::UnityVersion::new(6000, 0, 71),
-                ),
-                ..ProjectCompression::default()
-            },
-            ..TextureImporter::default()
-        };
-        let texture = importer.import(&source, &bytes, &meta).unwrap();
-        assert_eq!(texture.format, TextureFormat::Rgba8);
-        assert_eq!(
-            texture.crunched.as_ref().unwrap().data.as_ref(),
-            expected.as_slice()
-        );
-        assert_eq!(
-            texture.blocks.as_ref().unwrap().format,
-            BlockFormat::Etc2Rgba8
-        );
-        importer.project.encoders = Default::default();
-        let other = importer.import(&source, &bytes, &meta).unwrap();
-        assert!(other.crunched.is_none());
-        assert_eq!(other.format, TextureFormat::Rgba32F);
-        assert!(other.approximation.is_some());
+        let reference =
+            std::fs::read_to_string(probe.join("Reference/unity-6000.0.71f1/AndroidGamma.jsonl"))
+                .unwrap();
+        let expected = reference
+            .lines()
+            .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+            .find(|v| v["k"] == format!("tex.{case}.raw"))
+            .unwrap();
+        let expected = decode_base64(expected["v"].as_str().unwrap());
+        for gamma in [false, true] {
+            let mut importer = TextureImporter {
+                build_target: "Android".into(),
+                gamma,
+                project: ProjectCompression {
+                    encoders: unbound_compat::TextureCompressionRules::for_version(
+                        unbound_compat::UnityVersion::new(6000, 0, 71),
+                    ),
+                    ..ProjectCompression::default()
+                },
+                ..TextureImporter::default()
+            };
+            let texture = importer.import(&source, &bytes, &meta).unwrap();
+            assert_eq!(texture.format, TextureFormat::Rgba8);
+            assert_eq!(
+                texture.crunched.as_ref().unwrap().data.as_ref(),
+                expected.as_slice(),
+                "{case} gamma={gamma}"
+            );
+            assert_eq!(
+                texture.blocks.as_ref().unwrap().format,
+                BlockFormat::Etc2Rgba8
+            );
+            importer.project.encoders = Default::default();
+            let other = importer.import(&source, &bytes, &meta).unwrap();
+            assert!(other.crunched.is_none());
+            assert_eq!(other.format, TextureFormat::Rgba32F);
+            assert!(other.approximation.is_some());
+        }
     }
 }
 

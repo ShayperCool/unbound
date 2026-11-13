@@ -212,6 +212,19 @@ fn srgb_to_linear() -> &'static [f32; 256] {
     })
 }
 
+/// Gamma decoding of a float channel, including HDR radiance above one.
+pub(super) fn gamma_to_linear(v: f32) -> f32 {
+    if v <= 0.040_45 {
+        v / 12.92
+    } else if v < 1.0 {
+        ((v + 0.055) / 1.055).powf(2.4)
+    } else if v == 1.0 {
+        1.0
+    } else {
+        v.powf(2.2)
+    }
+}
+
 /// Linear to sRGB gamma of one channel, in float.
 pub(super) fn linear_to_gamma(v: f32) -> f32 {
     // The exponents are one float step above the nearest to 1/2.4 and 1/2.2 (as measured).
