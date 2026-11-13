@@ -332,3 +332,7 @@ python3 tools/agents/land_push.py --repo <main-checkout>
 
 `UNBOUND_LAND_NO_PUSH` keeps its existing opt-out. Network attempts never hold the land lock.
 Receipt updates briefly share that lock so older coordinators' journal appends remain safe.
+
+## Disk hygiene
+
+Keep generated outputs in a project's `Library/Unbound/` or the Unbound cache, and remove your own stale runs after checking their references. Run `python3 tools/agents/janitor.py --dry-run` to inspect cleanup, then `--apply` to remove old dated runs, landed-task cache contents except `NOTES*.md`, orphan checkout targets and unreferenced runtimes. It retains recent writes, live process paths, symlink destinations, slots and integration checkouts. Every action and filesystem free-space change is logged under `~/.cache/unbound/agents/janitor/`. Install the hourly user timer with `python3 tools/agents/install_janitor.py`; landing also invokes cleanup before a fresh gate when either filesystem has less than 40 GiB free, configurable with `UNBOUND_JANITOR_MIN_FREE_GIB`. The timer runs from the main checkout, so later landings update its code. Kache 2.0 excludes bytes held by target hardlinks from its 30 GiB eviction budget. Its registered store may therefore exceed that limit without consuming that much additional disk space; the janitor runs `kache gc --json` to bypass automatic-GC backoff after orphan targets are removed, preserving shared live outputs and recording GC's disk bytes reclaimed separately from store bytes.

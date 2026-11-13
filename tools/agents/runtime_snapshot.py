@@ -335,13 +335,24 @@ def pin_main(runtime, repo, tree, *, previous_tree=None, cache=None):
         atomic_json(pin, {'git_dir': common, 'tree': tree, 'snapshot': snapshot.name})
 
 
-def cleanup(*, days=14, cache=None, now=None, repo=None):
+def cleanup(*, days=14, cache=None, now=None, repo=None, remove=None, dry_run=False):
     """Remove old, unreferenced snapshots; retained run links and current main pins protect them."""
     if days < 0:
         raise ValueError('days must be nonnegative')
     cache = Path(cache or cache_root()).resolve()
     cutoff = (time.time() if now is None else now)-days*86400
     removed, protected = [], set()
+
+    def discard(path):
+        if remove is not None:
+            return remove(path)
+        if not dry_run:
+            if path.is_dir() and not path.is_symlink():
+                remove_snapshot(path)
+            else:
+                path.unlink()
+        return True
+
     with cache_lock(cache):
         active = active_snapshots(cache)
         protected.update(active)
@@ -370,8 +381,10 @@ def cleanup(*, days=14, cache=None, now=None, repo=None):
         # this lock now, so these are never live reference records.
         for directory in ('references', 'pins'):
             for temporary in (cache/directory).glob('*.tmp'):
-                temporary.unlink()
+                discard(temporary)
         for path in (cache/'references').glob('*'):
+            if path.name.endswith('.tmp'):
+                continue
             record = json.loads(path.read_text())
             reference = Path(record['path'])
             owner = record.get('owner', {})
@@ -387,17 +400,21 @@ def cleanup(*, days=14, cache=None, now=None, repo=None):
                 record['release_requested'] = True
             if record.get('release_requested') and not record.get('retained') and not live and record['snapshot'] not in protected:
                 if reference.is_symlink() and reference.resolve() == (cache/'snapshots'/record['snapshot']).resolve():
-                    reference.unlink()
-                path.unlink()
-                continue
+                    if not discard(reference):
+                        protected.add(record['snapshot'])
+                        continue
+                if discard(path):
+                    continue
             if reference.is_symlink() and reference.resolve() == (cache/'snapshots'/record['snapshot']).resolve():
                 protected.add(record['snapshot'])
             else:
-                path.unlink()
+                discard(path)
         # A main pin is replaced by the next successful build landing. Keep the
         # last validated main build across docs-only landings and their pin-update
         # interval, including when the checkout is unavailable during cleanup.
         for path in (cache/'pins').glob('*'):
+            if path.name.endswith('.tmp'):
+                continue
             protected.add(json.loads(path.read_text())['snapshot'])
         for snapshot in (cache/'snapshots').glob('*'):
             if snapshot.is_symlink() or not snapshot.is_dir():
@@ -409,19 +426,19 @@ def cleanup(*, days=14, cache=None, now=None, repo=None):
                     pid = int(snapshot.name.split('-')[1])
                     os.kill(pid, 0)
                 except ProcessLookupError:
-                    remove_snapshot(snapshot)
-                    removed.append(snapshot.name)
+                    if discard(snapshot):
+                        removed.append(snapshot.name)
                 except (ValueError, PermissionError):
                     pass
                 continue
             if len(snapshot.name) != 64 or any(c not in '0123456789abcdef' for c in snapshot.name):
                 continue
             if snapshot.name not in protected and snapshot.stat().st_mtime < cutoff:
-                remove_snapshot(snapshot)
-                removed.append(snapshot.name)
+                if discard(snapshot):
+                    removed.append(snapshot.name)
         for blob in (cache/'snapshots/.managed-blobs').glob('*'):
             if blob.is_file() and blob.stat().st_nlink == 1:
-                blob.unlink()
+                discard(blob)
     return removed
 
 

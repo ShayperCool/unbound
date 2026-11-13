@@ -760,6 +760,8 @@ def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, 
     logs.mkdir(parents=True, exist_ok=True)
     safe = re.sub(r'[^A-Za-z0-9._-]+', '-', branch)
     log = log or logs/f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{safe}.log'
+    from janitor import before_gate
+    before_gate(worktree)
     print(f'land: gate for tree {tree[:12]}, log {log}', flush=True)
     gate = Gate(worktree, base, probes, full, log, priority=priority, changed=changed, crates=crates,
                 releases=releases, environment=environment, automatic=automatic, probe_owners=probe_owners)
