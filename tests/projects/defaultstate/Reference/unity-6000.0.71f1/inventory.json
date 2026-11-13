@@ -3453,6 +3453,18 @@
     {
       "category": "class",
       "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.HashUnsafeUtilities"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.HashUtilities"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.HeaderAttribute"
     },

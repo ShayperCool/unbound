@@ -473,3 +473,8 @@ two nested FaceInfo records now match after the same narrowing. Six remaining
 raw observations retain updated exact implementation values and unchanged Native
 expectations. No variable policy was widened. The strict comparison retains
 561 queued rows and rejects every new or stale entry.
+
+The Hash128 slice (Q433) adds HashUtilities and HashUnsafeUtilities to the handwritten
+inventory as static rows. Two independent 6000.0.71f1 GPU Editor captures agree on both
+`@factory` rows (excluded, static); they were inserted into the reference beside the rows
+the captures place them after, and every prior row is byte-identical.
