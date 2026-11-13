@@ -416,6 +416,24 @@ public sealed class FloatRoundingProbe : MonoBehaviour
             bool made = GeometryUtility.TryCreatePlaneFromPolygon(new[] { V3(f, 0), V3(f, 3), V3(f, 6) }, out var plane);
             return made ? F(plane) : new[] { -1f };
         });
+        Api("api/polygonPlaneQuad", 15, f =>
+        {
+            bool made = GeometryUtility.TryCreatePlaneFromPolygon(new[] { V3(f, 0), V3(f, 3), V3(f, 6), V3(f, 9), V3(f, 12) }, out var plane);
+            var result = new List<float> { made ? 1f : 0f };
+            result.AddRange(F(plane));
+            return result.ToArray();
+        });
+        Api("api/polygonPlaneDegenerate", 6, f =>
+        {
+            // Two vertices, and four on one line (a zero Newell normal).
+            bool two = GeometryUtility.TryCreatePlaneFromPolygon(new[] { V3(f, 0), V3(f, 3) }, out var first);
+            Vector3 a = V3(f, 0), d = V3(f, 3);
+            bool line = GeometryUtility.TryCreatePlaneFromPolygon(new[] { a, a + d, a + d * 2f, a + d * 3f }, out var second);
+            var result = new List<float> { two ? 1f : 0f, line ? 1f : 0f };
+            result.AddRange(F(first));
+            result.AddRange(F(second));
+            return result.ToArray();
+        });
 
         Api("native/quaternionSlerp", 9, f => F(Quaternion.Slerp(Q(f, 0).normalized, Q(f, 4).normalized, Unit(f[8]))));
         Api("native/quaternionLerp", 9, f => F(Quaternion.Lerp(Q(f, 0), Q(f, 4), Unit(f[8]))));
