@@ -236,7 +236,7 @@ namespace Unbound.Tests
                 "Assert: Assertion failed on expression: 'ValidTRS()'",
                 "Assert: Invalid AABB *this",
                 "Assert: Invalid AABB rkBox",
-            }, logs.Where(l => !l.StartsWith("Exception", StringComparison.Ordinal)).ToArray());
+            }, logs.ToArray());
         }
 
         sealed class Capture : ILogHandler

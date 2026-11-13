@@ -99,7 +99,7 @@ namespace UnityEngine
         internal static Quaternion RotateTowards(Quaternion from, Quaternion to, float maxDegreesDelta)
         {
             float angle = Angle(from, to);
-            return angle == 0f ? to : Quaternion.SlerpUnclamped(from, to, Math.Min(1f, maxDegreesDelta / angle));
+            return angle == 0f ? to : Slerp(from, to, Math.Min(1f, maxDegreesDelta / angle));
         }
     }
 }
