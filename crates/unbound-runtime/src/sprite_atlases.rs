@@ -366,7 +366,8 @@ impl Importer for AtlasImporter<'_> {
     type Output = PackedAtlas;
     const KIND: &'static str = "sprite-atlases";
     // 2: warnings for skipped packables and compressed variant masters.
-    const VERSION: u32 = 2;
+    // 3: compressed pages keep their block format (the size fallback resolves per page).
+    const VERSION: u32 = 3;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
         let bytes = std::fs::read(source)?;

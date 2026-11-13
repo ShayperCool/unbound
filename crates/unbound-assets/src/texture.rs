@@ -1616,7 +1616,7 @@ pub fn import_texture(
 }
 
 /// Keeps the compressed-size byte fallback only where the final size and format need it (an
-/// image of `width` x `height` in `format`).
+/// image of `w` x `h` in `format`).
 fn resolve_size_fallback(settings: &mut TextureSettings, w: u32, h: u32, format: TextureFormat) {
     settings.compressed_fallback_alpha = settings.compressed_fallback_alpha.filter(|alpha| {
         let invalid_mips = settings.mipmaps && (!w.is_power_of_two() || !h.is_power_of_two());
