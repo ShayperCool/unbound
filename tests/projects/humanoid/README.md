@@ -150,8 +150,11 @@ imported without keyframe reduction.
   (`bone.humanThenRead`), and none with a handle of an object added under the left hand, which
   the avatar does not hold (`bone.prop`, recorded with the macOS Editor, two identical
   captures; `.prop`: its local position times 100 and rotation, its world position and
-  rotation). Each step records what the handles read before and after the change
-  (`.bones.before`, `.bones.after`: local position times 100, the inverse of the rig's root
+  rotation), and the left hand's goal moved by (10, 20, 0) world units and solved: alone
+  (`bone.solve`), after the lower arm was turned and the human stream read (`bone.rotateThenSolve`)
+  and solved, read back and solved again (`bone.solveTwice`), the three recorded with the macOS
+  Editor (two identical captures). Each step records what the handles read before and after the
+  change (`.bones.before`, `.bones.after`: local position times 100, the inverse of the rig's root
   scale; local rotation and scale; world position and rotation), the human stream after it
   (`.job.human`) and the final pose, with the transforms' locals every fourth step.
   Measured: the handles read the bones of the stream's pose; rotations and the hips' position
@@ -163,7 +166,10 @@ imported without keyframe reduction.
   transform is 101.8). The object under the hand is placed under the hand's bone of the stream's
   pose, this update: its world values are the hand handle's composed with its own local values,
   the hand's scale of 10000 included (its local offset of 0.0022 puts it 22 world units from the
-  hand).
+  hand). A solve after the pose was read back works on that re-based skeleton: the goal is out of
+  its reach, the arm ends straight and the body displaced toward the root (from z -105.5 to
+  -1.07); Unbound does the same, its straight arm's roll split between the upper arm and the
+  forearm is the known class `readback-solve-straight-limbs`.
 
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
