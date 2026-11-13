@@ -95,7 +95,7 @@ count as front. Unbound retains this winding for both mesh-call paths. `Renderer
 SkinnedMeshRenderer and CommandBuffer.DrawRenderer, each under a reflected parent. Those paths
 correct the model's determinant for both culling and stencil. Controls include X/Y/Z reflections,
 two negative axes, a collapsed X axis, both culling modes and GL.invertCulling in both states,
-and the same transforms through DrawMeshNow and CommandBuffer.DrawMesh. The two independent
+and the same transforms through DrawMeshNow, CommandBuffer.DrawMesh and DrawMultipleMeshes. The two independent
 captures per device keep all earlier rows unchanged. These observations are for Unity
 6000.0.71f1 on OpenGL Core and Vulkan, measured on the NVIDIA driver only.
 
