@@ -91,14 +91,14 @@ namespace UnityEngine.Android
             screenWidthDp = otherConfiguration.screenWidthDp;
             smallestScreenWidthDp = otherConfiguration.smallestScreenWidthDp;
             touchScreen = otherConfiguration.touchScreen;
-            colorModeHdr = otherConfiguration.colorModeHdr;
-            colorModeWideColorGamut = otherConfiguration.colorModeWideColorGamut;
-            screenLayoutDirection = otherConfiguration.screenLayoutDirection;
-            screenLayoutLong = otherConfiguration.screenLayoutLong;
-            screenLayoutRound = otherConfiguration.screenLayoutRound;
-            screenLayoutSize = otherConfiguration.screenLayoutSize;
-            uiModeNight = otherConfiguration.uiModeNight;
-            uiModeType = otherConfiguration.uiModeType;
+            m_Value_colorModeHdr = otherConfiguration.colorModeHdr;
+            m_Value_colorModeWideColorGamut = otherConfiguration.colorModeWideColorGamut;
+            m_Value_screenLayoutDirection = otherConfiguration.screenLayoutDirection;
+            m_Value_screenLayoutLong = otherConfiguration.screenLayoutLong;
+            m_Value_screenLayoutRound = otherConfiguration.screenLayoutRound;
+            m_Value_screenLayoutSize = otherConfiguration.screenLayoutSize;
+            m_Value_uiModeNight = otherConfiguration.uiModeNight;
+            m_Value_uiModeType = otherConfiguration.uiModeType;
         }
 
         public int densityDpi { get; private set; }
@@ -116,13 +116,21 @@ namespace UnityEngine.Android
         public int screenWidthDp { get; private set; }
         public int smallestScreenWidthDp { get; private set; }
         public AndroidTouchScreen touchScreen { get; private set; }
-        public AndroidColorModeHdr colorModeHdr { get; private set; }
-        public AndroidColorModeWideColorGamut colorModeWideColorGamut { get; private set; }
-        public AndroidScreenLayoutDirection screenLayoutDirection { get; private set; }
-        public AndroidScreenLayoutLong screenLayoutLong { get; private set; }
-        public AndroidScreenLayoutRound screenLayoutRound { get; private set; }
-        public AndroidScreenLayoutSize screenLayoutSize { get; private set; }
-        public AndroidUIModeNight uiModeNight { get; private set; }
-        public AndroidUIModeType uiModeType { get; private set; }
+        AndroidColorModeHdr m_Value_colorModeHdr;
+        public AndroidColorModeHdr colorModeHdr => m_Value_colorModeHdr;
+        AndroidColorModeWideColorGamut m_Value_colorModeWideColorGamut;
+        public AndroidColorModeWideColorGamut colorModeWideColorGamut => m_Value_colorModeWideColorGamut;
+        AndroidScreenLayoutDirection m_Value_screenLayoutDirection;
+        public AndroidScreenLayoutDirection screenLayoutDirection => m_Value_screenLayoutDirection;
+        AndroidScreenLayoutLong m_Value_screenLayoutLong;
+        public AndroidScreenLayoutLong screenLayoutLong => m_Value_screenLayoutLong;
+        AndroidScreenLayoutRound m_Value_screenLayoutRound;
+        public AndroidScreenLayoutRound screenLayoutRound => m_Value_screenLayoutRound;
+        AndroidScreenLayoutSize m_Value_screenLayoutSize;
+        public AndroidScreenLayoutSize screenLayoutSize => m_Value_screenLayoutSize;
+        AndroidUIModeNight m_Value_uiModeNight;
+        public AndroidUIModeNight uiModeNight => m_Value_uiModeNight;
+        AndroidUIModeType m_Value_uiModeType;
+        public AndroidUIModeType uiModeType => m_Value_uiModeType;
     }
 }

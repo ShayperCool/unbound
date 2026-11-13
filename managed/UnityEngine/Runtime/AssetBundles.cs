@@ -668,9 +668,9 @@ namespace UnityEngine
         public static readonly BuildCompression UncompressedRuntime = Uncompressed;
         public static readonly BuildCompression LZ4Runtime = new BuildCompression(CompressionType.Lz4, CompressionLevel.Maximum, 128 * 1024);
 
-        public CompressionType compression => m_Compression;
-        public CompressionLevel level => m_Level;
-        public uint blockSize => m_BlockSize;
+        public CompressionType compression { get => m_Compression; private set => m_Compression = value; }
+        public CompressionLevel level { get => m_Level; private set => m_Level = value; }
+        public uint blockSize { get => m_BlockSize; private set => m_BlockSize = value; }
     }
 }
 

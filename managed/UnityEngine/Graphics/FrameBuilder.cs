@@ -371,7 +371,7 @@ namespace Unbound.Runtime
         static void Render()
         {
             InDrawingFrame = true;
-            Camera.current = null;
+            Camera.Internal_SetCurrent(null);
             s_DrawDescriptions.Clear();
             s_CameraCount = s_DrawCount = 0;
             // A frame OnDemandRendering does not render (the interval latched when the frame
@@ -1309,7 +1309,7 @@ namespace Unbound.Runtime
             var previousStandIn = RenderTexture.ScreenStandIn;
             var previousProjection = Immediate.Projection;
             var previousModelView = Immediate.ModelView;
-            Camera.current = camera;
+            Camera.Internal_SetCurrent(camera);
             camera.UpdateVelocity();
             RenderTexture screenStandIn = null;
             // The engine's own capture of the sky is not a camera the game renders: scripts get
@@ -1715,7 +1715,7 @@ namespace Unbound.Runtime
                 if (screenStandIn != null) RenderTexture.ReleaseTemporary(screenStandIn);
                 ReleaseShadowTemporaries();
                 CommandBuffer.ReleaseNamedTemporaries();
-                Camera.current = previousCamera;
+                Camera.Internal_SetCurrent(previousCamera);
                 // RenderDontRestore leaves the camera's target active (measured).
                 RenderTexture.SetActiveQuietly(restoreActive ? previousActive : camera.targetTexture ?? camera.BufferTarget);
                 Immediate.Projection = previousProjection;
@@ -2314,7 +2314,9 @@ namespace UnityEngine
         public static int asyncUploadBufferSize { get; set; } = 16;
         public static bool asyncUploadPersistentBuffer { get; set; } = true;
         public static float resolutionScalingFixedDPIFactor { get; set; } = 1f;
-        public static string[] names { get; internal set; } = { "Default" };
+        static string[] s_Names = { "Default" };
+        public static string[] names => s_Names;
+        internal static void Internal_SetNames(string[] value) => s_Names = value;
         public static int count => names.Length;
         static int s_Level;
 

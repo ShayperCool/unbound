@@ -246,7 +246,7 @@ namespace UnityEngine.AI
         int m_AreaMask;
         int m_AgentTypeID;
 
-        internal readonly float[] costs => m_AreaCost;
+        internal float[] costs { readonly get => m_AreaCost; private set => m_AreaCost = value; }
 
         public int areaMask { readonly get => m_AreaMask; set => m_AreaMask = value; }
         public int agentTypeID { readonly get => m_AgentTypeID; set => m_AgentTypeID = value; }

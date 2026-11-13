@@ -226,3 +226,12 @@ Compiler controls reject an internal SystemInfo helper, accept the public textur
 limit and allow derived code to read the protected getter. Existing selected
 module assembly friendships remain unchanged. No getter values, helper bodies,
 physics behavior or font loading rules change in this slice.
+
+The accessor controls add 27 selected setter declarations and seven runtime values,
+bringing the reference to 1,066 rows. A reflected private setter changes one boxed
+NavMesh filter while its original copy and agent ID remain unchanged. A resource
+path setter preserves the supplied array identity and its independent field marker.
+The selected release exposes the public getters described by
+[Texture.updateCount](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture-updateCount.html)
+and [Camera.current](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera-current.html).
+This slice changes declaration metadata and preserves existing mutation timing.

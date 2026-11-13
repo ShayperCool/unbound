@@ -20,9 +20,9 @@ namespace UnityEngine.Rendering
             this.location = location;
         }
 
-        public SearchType location { get; }
-        public string[] paths { get; }
-        public bool isField { get; }
+        public SearchType location { get; private set; }
+        public string[] paths { get; private set; }
+        public bool isField { get; private set; }
     }
 
     public sealed partial class ResourcePathAttribute : ResourcePathsBaseAttribute

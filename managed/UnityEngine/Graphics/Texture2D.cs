@@ -553,7 +553,7 @@ namespace UnityEngine
                 // A block-compressed texture uploads its blocks (also those written by scripts).
                 if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
                 m_PixelsDirty = false;
-                updateCount++;
+                IncrementUpdateCount();
                 UploadBlocks();
                 DropIfNotReadable();
                 return;
@@ -562,7 +562,7 @@ namespace UnityEngine
             {
                 if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
                 m_PixelsDirty = false;
-                updateCount++;
+                IncrementUpdateCount();
                 UploadRaw();
                 DropIfNotReadable();
                 return;
@@ -571,7 +571,7 @@ namespace UnityEngine
             {
                 if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
                 m_PixelsDirty = false;
-                updateCount++;
+                IncrementUpdateCount();
                 UploadHdr();
                 DropIfNotReadable();
                 return;
@@ -586,7 +586,7 @@ namespace UnityEngine
             }
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             m_PixelsDirty = false;
-            updateCount++;
+            IncrementUpdateCount();
             UploadPixels();
             DropIfNotReadable();
         }

@@ -127,6 +127,13 @@
     "managed/UnityEngine/Graphics/Texture2D.cs",
     "managed/UnityEngine/IMGUI/GUIStyle.cs",
     "managed/UnityEngine/Text/FontEngine.cs",
-    "managed/UnityEngine/Text/TextCore.cs"
+    "managed/UnityEngine/Text/TextCore.cs",
+    "managed/UnityEngine/Editor/MaterialDescription.cs",
+    "managed/UnityEngine/Graphics/Camera.cs",
+    "managed/UnityEngine/Graphics/Srp/ResourcePathAttributes.cs",
+    "managed/UnityEngine/Graphics/TextureArrays.cs",
+    "managed/UnityEngine/Runtime/Awaitable.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "managed/Unbound.Host/Game.cs"
   ]
 }

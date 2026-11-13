@@ -64,7 +64,7 @@ namespace UnityEngine
 
         internal static void Internal_FocusChanged(bool focus)
         {
-            isFocused = focus;
+            s_IsFocused = focus;
             focusChanged?.Invoke(focus);
         }
 
@@ -99,7 +99,7 @@ namespace UnityEngine
 
         internal static void Internal_DeepLink(string url)
         {
-            absoluteURL = url;
+            s_AbsoluteURL = url;
             deepLinkActivated?.Invoke(url);
         }
 
@@ -114,7 +114,9 @@ namespace UnityEngine
         public static bool isMobilePlatform => false;
         [Unbound.EditorFaithful("the desktop Editor is no console")]
         public static bool isConsolePlatform => false;
-        public static bool isFocused { get; internal set; } = true;
+        static bool s_IsFocused = true;
+        public static bool isFocused => s_IsFocused;
+        internal static void Internal_SetFocusState(bool value) => s_IsFocused = value;
         public static bool runInBackground { get; set; } = true;
         /// <summary>True from a LoadScene/LoadSceneAsync call (held loads too) until the scene is
         /// integrated; already false in sceneLoaded (measured: tests/projects/appfacts).</summary>
@@ -139,7 +141,8 @@ namespace UnityEngine
         public static string cloudProjectId => ProjectInfo.CloudProjectId;
         [Unbound.EditorFaithful("the Editor has no build: 32 zeros (measured: tests/projects/appfacts)")]
         public static string buildGUID => "00000000000000000000000000000000";
-        public static string absoluteURL { get; private set; } = "";
+        static string s_AbsoluteURL = "";
+        public static string absoluteURL => s_AbsoluteURL;
         public static SystemLanguage systemLanguage => Unbound.Runtime.SystemLocale.Language;
         public static NetworkReachability internetReachability => NetworkReachability.ReachableViaLocalAreaNetwork;
         public static ThreadPriority backgroundLoadingPriority { get; set; } = ThreadPriority.Normal;
@@ -290,7 +293,7 @@ namespace UnityEngine
 
     public partial struct ApplicationMemoryUsageChange
     {
-        public ApplicationMemoryUsage memoryUsage { get; }
+        public ApplicationMemoryUsage memoryUsage { get; private set; }
         public ApplicationMemoryUsageChange(ApplicationMemoryUsage usage) { memoryUsage = usage; }
     }
 }

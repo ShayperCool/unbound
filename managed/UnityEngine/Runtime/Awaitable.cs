@@ -420,7 +420,7 @@ namespace UnityEngine
 
         public AwaitableCompletionSource() { }
 
-        public Awaitable Awaitable => m_Awaitable;
+        public Awaitable Awaitable { get => m_Awaitable; private set => m_Awaitable = value; }
 
         public void SetResult()
         {
@@ -467,7 +467,7 @@ namespace UnityEngine
 
         public AwaitableCompletionSource() { }
 
-        public Awaitable<T> Awaitable => m_Awaitable;
+        public Awaitable<T> Awaitable { get => m_Awaitable; private set => m_Awaitable = value; }
 
         public void SetResult(in T value)
         {

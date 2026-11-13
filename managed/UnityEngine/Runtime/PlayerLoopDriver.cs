@@ -439,7 +439,7 @@ namespace Unbound.Runtime
         /// (measured: tests/projects/messages).</summary>
         internal static void SendPlayModeStart()
         {
-            Application.isFocused = true;
+            Application.Internal_SetFocusState(true);
             Lifecycle.BroadcastByObject(m => m.OnApplicationPause, false);
             Lifecycle.BroadcastByObject(m => m.OnApplicationFocus, true);
         }

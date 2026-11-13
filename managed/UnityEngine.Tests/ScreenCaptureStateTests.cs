@@ -118,7 +118,7 @@ namespace UnityEngine.Tests
             var go = new GameObject("Nested capture state test");
             try
             {
-                Camera.current = go.AddComponent<Camera>();
+                Camera.Internal_SetCurrent(go.AddComponent<Camera>());
                 SetCallerState();
                 var expected = GfxStream.Current;
                 Assert.Throws<NotSupportedException>(() => ScreenCapture.CaptureScreenshotAsTexture(2));
@@ -126,7 +126,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                Camera.current = previousCamera;
+                Camera.Internal_SetCurrent(previousCamera);
                 GfxStream.Restore(saved);
                 Object.DestroyImmediate(go);
             }

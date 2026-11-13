@@ -4,217 +4,28 @@
     "Category": "accessors",
     "Type": "Unity.Properties.PropertyCollection`1+Enumerator",
     "Message": "P:Current():Unity.Properties.IProperty`1<!0> setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: Unity.Properties.PropertyCollection`1+Enumerator."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEditor.AssetPostprocessor",
-    "Message": "P:assetImporter():UnityEditor.AssetImporter setter is internal, Unity's is absent",
-    "Reason": "Q410-Editor-coordination: defer assetImporter setter removal while Q411 owns Editor/MaterialDescription.cs; audit importer-context callers and add the selected accessor control with that migration."
+    "Reason": "Q410-enumerator-current-state: Current derives the active underlying enumerator. The selected cached private setter needs MoveNext/Reset/end-state integration and diverged-state controls for enumerable, list and indexed property bags."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "accessors",
     "Type": "UnityEditor.EditorApplication",
     "Message": "P:static isFocused():System.Boolean setter is absent, Unity's is private",
-    "Reason": "Q410-Editor-computed-setters: isFocused currently derives live Application focus. Matching the selected private setter requires focus-update integration and a diverged-state Editor control; do not add an ineffective setter."
+    "Reason": "Q410-Editor-computed-setters: isFocused currently derives live Application focus. Matching the selected private setter requires focus-update integration and a diverged-state Editor control."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "accessors",
     "Type": "UnityEditor.EditorAssemblies",
     "Message": "P:static loadedAssemblies():System.Reflection.Assembly[] setter is absent, Unity's is private",
-    "Reason": "Q410-Editor-computed-setters: loadedAssemblies currently rebuilds the live game-domain assembly list. Matching the selected private setter requires cache invalidation on domain changes and a diverged-state Editor control."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.AI.NavMeshQueryFilter",
-    "Message": "P:costs():System.Single[] setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.AI.NavMeshQueryFilter."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Android.AndroidConfiguration",
-    "Message": "P:colorModeHdr():UnityEngine.Android.AndroidColorModeHdr setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Android.AndroidConfiguration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Android.AndroidConfiguration",
-    "Message": "P:colorModeWideColorGamut():UnityEngine.Android.AndroidColorModeWideColorGamut setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Android.AndroidConfiguration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Android.AndroidConfiguration",
-    "Message": "P:screenLayoutDirection():UnityEngine.Android.AndroidScreenLayoutDirection setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Android.AndroidConfiguration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Android.AndroidConfiguration",
-    "Message": "P:screenLayoutLong():UnityEngine.Android.AndroidScreenLayoutLong setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Android.AndroidConfiguration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Android.AndroidConfiguration",
-    "Message": "P:screenLayoutRound():UnityEngine.Android.AndroidScreenLayoutRound setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Android.AndroidConfiguration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Android.AndroidConfiguration",
-    "Message": "P:screenLayoutSize():UnityEngine.Android.AndroidScreenLayoutSize setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Android.AndroidConfiguration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Android.AndroidConfiguration",
-    "Message": "P:uiModeNight():UnityEngine.Android.AndroidUIModeNight setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Android.AndroidConfiguration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Android.AndroidConfiguration",
-    "Message": "P:uiModeType():UnityEngine.Android.AndroidUIModeType setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Android.AndroidConfiguration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Animations.PropertyStreamHandle",
-    "Message": "P:animatorBindingsVersion():System.UInt32 setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Animations.PropertyStreamHandle."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Animations.TransformStreamHandle",
-    "Message": "P:animatorBindingsVersion():System.UInt32 setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Animations.TransformStreamHandle."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Application",
-    "Message": "P:static absoluteURL():System.String setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Application."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Application",
-    "Message": "P:static isFocused():System.Boolean setter is internal, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Application."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.ApplicationMemoryUsageChange",
-    "Message": "P:memoryUsage():UnityEngine.ApplicationMemoryUsage setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.ApplicationMemoryUsageChange."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.AwaitableCompletionSource",
-    "Message": "P:Awaitable():UnityEngine.Awaitable setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.AwaitableCompletionSource."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.AwaitableCompletionSource`1",
-    "Message": "P:Awaitable():UnityEngine.Awaitable`1<!0> setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.AwaitableCompletionSource`1."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.BuildCompression",
-    "Message": "P:blockSize():System.UInt32 setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.BuildCompression."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.BuildCompression",
-    "Message": "P:compression():UnityEngine.CompressionType setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.BuildCompression."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.BuildCompression",
-    "Message": "P:level():UnityEngine.CompressionLevel setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.BuildCompression."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Camera",
-    "Message": "P:static current():UnityEngine.Camera setter is internal, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Camera."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.DefaultExecutionOrder",
-    "Message": "P:order():System.Int32 setter is private, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.DefaultExecutionOrder."
+    "Reason": "Q410-Editor-computed-setters: loadedAssemblies rebuilds the live game-domain list. Matching the selected cached setter requires domain-change invalidation and diverged-state controls."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "accessors",
     "Type": "UnityEngine.Pool.LinkedPool`1",
     "Message": "P:CountInactive():System.Int32 setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Pool.LinkedPool`1."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.QualitySettings",
-    "Message": "P:static names():System.String[] setter is internal, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.QualitySettings."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Rendering.ResourcePathsBaseAttribute",
-    "Message": "P:isField():System.Boolean setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Rendering.ResourcePathsBaseAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Rendering.ResourcePathsBaseAttribute",
-    "Message": "P:location():UnityEngine.Rendering.SearchType setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Rendering.ResourcePathsBaseAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Rendering.ResourcePathsBaseAttribute",
-    "Message": "P:paths():System.String[] setter is absent, Unity's is private",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Rendering.ResourcePathsBaseAttribute."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Texture",
-    "Message": "P:updateCount():System.UInt32 setter is internal, Unity's is absent",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Texture."
+    "Reason": "Q410-linked-pool-counter: CountInactive currently derives the shared ObjectPool storage. The selected private counter setter needs a common pool-state adaptation and get/release/clear controls, not a disconnected counter."
   },
   {
     "Release": "6000.0.71f1",

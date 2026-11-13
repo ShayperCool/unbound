@@ -739,7 +739,7 @@ namespace UnityEngine.Rendering
         {
             if (camera == null) throw new ArgumentNullException(nameof(camera));
             s_Camera = camera;
-            Camera.current = camera;
+            Camera.Internal_SetCurrent(camera);
             GfxStream.Camera(camera.worldToCameraMatrix, camera.projectionMatrix, GfxStream.CameraProperties);
         }
 

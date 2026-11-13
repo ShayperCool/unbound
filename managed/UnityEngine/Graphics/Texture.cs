@@ -57,7 +57,8 @@ namespace UnityEngine
         /// <summary>The mip count of the kind of texture (mipmapCount is not virtual in Unity: game
         /// code may call it without virtual dispatch).</summary>
         internal virtual int MipmapCount() => 1;
-        public uint updateCount { get; internal set; }
+        uint m_UpdateCount;
+        public uint updateCount => m_UpdateCount;
         public Hash128 imageContentsHash { get; set; }
 
         internal virtual void OnSamplerChanged() => EmitSamplingProperties();
@@ -111,7 +112,7 @@ namespace UnityEngine
 
         internal virtual IntPtr NativePointer() => NativePlugins.TexturePointer(TextureHandles.Of(this), false);
 
-        public void IncrementUpdateCount() => updateCount++;
+        public void IncrementUpdateCount() => m_UpdateCount++;
 
         [global::System.@ObsoleteAttribute("masterTextureLimit has been deprecated. Use globalMipmapLimit instead (UnityUpgradable) -> globalMipmapLimit", false)] public static int masterTextureLimit { get; set; }
         [global::System.@ObsoleteAttribute("globalMipmapLimit is not supported. Use QualitySettings.globalTextureMipmapLimit or Mipmap Limit Groups instead.", false)] public static int globalMipmapLimit { get; set; }

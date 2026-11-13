@@ -1029,4 +1029,38 @@
 {"key":"access.UnityEngine.TextCore.FaceInfo.P:unitsPerEM():System.Int32.getter","value":"internal"}
 {"key":"access.UnityEngine.TextCore.FaceInfo.P:unitsPerEM():System.Int32.setter","value":"internal"}
 {"key":"access.UnityEngine.TextCore.LowLevel.FontEngine.M:.ctor`0():System.Void.declaration","value":"internal"}
+{"key":"accessor.UnityEditor.AssetPostprocessor.P:assetImporter():UnityEditor.AssetImporter","value":"absent"}
+{"key":"accessor.UnityEngine.AI.NavMeshQueryFilter.P:costs():System.Single[]","value":"private"}
+{"key":"accessor.UnityEngine.Android.AndroidConfiguration.P:colorModeHdr():UnityEngine.Android.AndroidColorModeHdr","value":"absent"}
+{"key":"accessor.UnityEngine.Android.AndroidConfiguration.P:colorModeWideColorGamut():UnityEngine.Android.AndroidColorModeWideColorGamut","value":"absent"}
+{"key":"accessor.UnityEngine.Android.AndroidConfiguration.P:screenLayoutDirection():UnityEngine.Android.AndroidScreenLayoutDirection","value":"absent"}
+{"key":"accessor.UnityEngine.Android.AndroidConfiguration.P:screenLayoutLong():UnityEngine.Android.AndroidScreenLayoutLong","value":"absent"}
+{"key":"accessor.UnityEngine.Android.AndroidConfiguration.P:screenLayoutRound():UnityEngine.Android.AndroidScreenLayoutRound","value":"absent"}
+{"key":"accessor.UnityEngine.Android.AndroidConfiguration.P:screenLayoutSize():UnityEngine.Android.AndroidScreenLayoutSize","value":"absent"}
+{"key":"accessor.UnityEngine.Android.AndroidConfiguration.P:uiModeNight():UnityEngine.Android.AndroidUIModeNight","value":"absent"}
+{"key":"accessor.UnityEngine.Android.AndroidConfiguration.P:uiModeType():UnityEngine.Android.AndroidUIModeType","value":"absent"}
+{"key":"accessor.UnityEngine.Animations.PropertyStreamHandle.P:animatorBindingsVersion():System.UInt32","value":"private"}
+{"key":"accessor.UnityEngine.Animations.TransformStreamHandle.P:animatorBindingsVersion():System.UInt32","value":"private"}
+{"key":"accessor.UnityEngine.Application.P:static absoluteURL():System.String","value":"absent"}
+{"key":"accessor.UnityEngine.Application.P:static isFocused():System.Boolean","value":"absent"}
+{"key":"accessor.UnityEngine.ApplicationMemoryUsageChange.P:memoryUsage():UnityEngine.ApplicationMemoryUsage","value":"private"}
+{"key":"accessor.UnityEngine.AwaitableCompletionSource.P:Awaitable():UnityEngine.Awaitable","value":"private"}
+{"key":"accessor.UnityEngine.AwaitableCompletionSource`1.P:Awaitable():UnityEngine.Awaitable`1<!0>","value":"private"}
+{"key":"accessor.UnityEngine.BuildCompression.P:blockSize():System.UInt32","value":"private"}
+{"key":"accessor.UnityEngine.BuildCompression.P:compression():UnityEngine.CompressionType","value":"private"}
+{"key":"accessor.UnityEngine.BuildCompression.P:level():UnityEngine.CompressionLevel","value":"private"}
+{"key":"accessor.UnityEngine.Camera.P:static current():UnityEngine.Camera","value":"absent"}
+{"key":"accessor.UnityEngine.DefaultExecutionOrder.P:order():System.Int32","value":"absent"}
+{"key":"accessor.UnityEngine.QualitySettings.P:static names():System.String[]","value":"absent"}
+{"key":"accessor.UnityEngine.Rendering.ResourcePathsBaseAttribute.P:isField():System.Boolean","value":"private"}
+{"key":"accessor.UnityEngine.Rendering.ResourcePathsBaseAttribute.P:location():UnityEngine.Rendering.SearchType","value":"private"}
+{"key":"accessor.UnityEngine.Rendering.ResourcePathsBaseAttribute.P:paths():System.String[]","value":"private"}
+{"key":"accessor.UnityEngine.Texture.P:updateCount():System.UInt32","value":"absent"}
+{"key":"accessor.costs.before","value":"1"}
+{"key":"accessor.costs.after","value":"0.25"}
+{"key":"accessor.costs.copy","value":"1"}
+{"key":"accessor.costs.control-agent","value":"3"}
+{"key":"accessor.paths.changed","value":"after"}
+{"key":"accessor.paths.identity","value":"True"}
+{"key":"accessor.paths.control-isfield","value":"True"}
 {"key":"complete","value":"1"}

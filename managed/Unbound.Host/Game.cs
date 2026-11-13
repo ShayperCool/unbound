@@ -395,7 +395,7 @@ public static unsafe class Game
             UnityEngine.Rendering.GraphicsSettings.transparencySortAxis = new UnityEngine.Vector3(rp.TransparencySortAxis[0], rp.TransparencySortAxis[1], rp.TransparencySortAxis[2]);
         if (rp.QualityLevels.Count > 0)
         {
-            QualitySettings.names = rp.QualityLevels.ConvertAll(l => l.Name).ToArray();
+            QualitySettings.Internal_SetNames(rp.QualityLevels.ConvertAll(l => l.Name).ToArray());
             QualitySettings.s_LevelSettings = rp.QualityLevels.ConvertAll(l => l.Settings);
             QualitySettings.SetQualityLevel(rp.CurrentQuality);
         }

@@ -76,18 +76,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After visibility slice |
+| Category | Before Q410 | After accessor slice |
 | --- | ---: | ---: |
 | Attributes | 938 | 304 |
 | Modifiers | 87 | 13 |
 | Parameters | 74 | 0 |
-| Accessors | 70 | 31 |
+| Accessors | 70 | 4 |
 | Layout | 68 | 68 |
 | Interfaces | 65 | 65 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 493 |
+| Total | 1,332 | 466 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -181,6 +181,23 @@ implementation-only public rows disappear and two nested FaceInfo values now mat
 Six remaining exact observations retain their unchanged Native expectations with
 updated implementation payloads. The default-state queue is 561 rows; no variable
 policy, comparator or Native reference row changes.
+
+The accessor slice resolves 27 further entries. Get-only public properties use
+private storage and existing internal mutation paths for focus, deep links, the
+current camera, quality names and texture update counts. Snapshot properties retain
+their copy behavior; newly private setters retain their existing storage. Controls
+change NavMesh costs and resource paths through reflection, with independent struct
+copy, agent and attribute-field controls. Startup focus keeps its existing callback
+phase and texture increments retain their public counter.
+
+Q410-Accessor-state retains four exact entries. PropertyCollection<T>.Enumerator.Current
+needs a writable cached value integrated with MoveNext, Reset and end states;
+LinkedPool<T>.CountInactive needs a counter integrated with its shared ObjectPool.
+EditorApplication.isFocused and EditorAssemblies.loadedAssemblies retain the live
+focus and game-domain state migration already tracked above. No no-op setters are added. The strict texture-pixel run retains three VolumeRGFloat
+row differences per Gamma and Linear profile. The exact landed parent and this
+slice produce byte-identical 315-row outputs in both profiles; this numerical
+follow-up remains Q410-texturepixels-baseline.
 
 ## Landing checks and default state
 

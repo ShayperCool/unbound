@@ -55,7 +55,7 @@ namespace UnityEngine
     public partial class DefaultExecutionOrder : Attribute
     {
         public DefaultExecutionOrder(int order) { this.order = order; }
-        public int order { get; private set; }
+        public int order { get; }
     }
 
     public sealed partial class AddComponentMenu : Attribute

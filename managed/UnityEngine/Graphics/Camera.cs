@@ -107,7 +107,9 @@ namespace UnityEngine
             }
         }
 
-        public static Camera current { get; internal set; }
+        static Camera s_Current;
+        public static Camera current => s_Current;
+        internal static void Internal_SetCurrent(Camera value) => s_Current = value;
 
         public static int allCamerasCount => CollectActive().Count;
 

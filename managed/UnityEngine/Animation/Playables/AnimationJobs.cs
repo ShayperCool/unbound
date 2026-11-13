@@ -1211,7 +1211,7 @@ namespace UnityEngine.Animations
         internal uint m_AnimatorBindingsVersion;
         internal int handleIndex;
 
-        internal uint animatorBindingsVersion => m_AnimatorBindingsVersion;
+        internal uint animatorBindingsVersion { get => m_AnimatorBindingsVersion; private set => m_AnimatorBindingsVersion = value; }
 
         bool Data(AnimationStream stream, out StreamContext context, out AnimatorHandles.StreamTransform data)
         {
@@ -1409,7 +1409,7 @@ namespace UnityEngine.Animations
         internal uint m_AnimatorBindingsVersion;
         internal int handleIndex;
 
-        internal uint animatorBindingsVersion => m_AnimatorBindingsVersion;
+        internal uint animatorBindingsVersion { get => m_AnimatorBindingsVersion; private set => m_AnimatorBindingsVersion = value; }
 
         bool Channel(AnimationStream stream, out StreamContext context, out int channel)
         {
