@@ -196,9 +196,76 @@ public class ResidentDrawerProbe : MonoBehaviour
         Row("disallowType", disallow != null);
         if (disallow != null) disallowed.AddComponent(disallow);
 
+        BuildRefusals();
+
         var wall = Make("Wall", PrimitiveType.Cube, new Vector3(2.5f, 1.5f, 7), m_Grey);
         wall.transform.localScale = new Vector3(4, 3, 0.3f);
         Make("Hidden", PrimitiveType.Cube, new Vector3(2.5f, 1, 10), m_Red);
+    }
+
+    /// <summary>One renderer per rule the drawer may refuse a renderer by, out of the camera's
+    /// view and casting no shadows: whether the drawer holds each is recorded.</summary>
+    void BuildRefusals()
+    {
+        int slot = 0;
+        // Each set up on its own: a failing one is a row, and the others are still made.
+        void Control(string name, Action<MeshRenderer> setUp)
+        {
+            var renderer = Make(name, PrimitiveType.Cube, new Vector3(-6 + 1.5f * slot++, -20, -12), m_Green).GetComponent<MeshRenderer>();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            try
+            {
+                setUp(renderer);
+            }
+            catch (Exception e)
+            {
+                Row("exception.control." + name, e.GetType().Name + ": " + e.Message);
+            }
+        }
+        Control("Plain", r => { });
+        Control("RenderObject", r => r.gameObject.AddComponent<RenderObject>());
+        Control("BecameVisible", r => r.gameObject.AddComponent<BecameVisible>());
+        Control("Animator", r => r.gameObject.AddComponent<Animator>().cullingMode = AnimatorCullingMode.CullCompletely);
+        Control("AnimatorAlways", r => r.gameObject.AddComponent<Animator>().cullingMode = AnimatorCullingMode.AlwaysAnimate);
+        Control("Animation", r => r.gameObject.AddComponent<Animation>().cullingType = AnimationCullingType.BasedOnRenderers);
+        Control("AnimationPlaying", r =>
+        {
+            var animation = r.gameObject.AddComponent<Animation>();
+            var clip = new AnimationClip { legacy = true, name = "Bob", wrapMode = WrapMode.Loop };
+            clip.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0, r.transform.localPosition.x, 1, r.transform.localPosition.x + 0.5f));
+            animation.AddClip(clip, clip.name);
+            animation.cullingType = AnimationCullingType.BasedOnRenderers;
+            animation.Play(clip.name);
+        });
+        Control("Ordered", r => r.sortingOrder = 1);
+        Control("ProxyVolume", r => r.lightProbeUsage = LightProbeUsage.UseProxyVolume);
+        Control("Anchored", r =>
+        {
+            r.lightProbeUsage = LightProbeUsage.BlendProbes;
+            r.probeAnchor = m_Camera.transform;
+        });
+        Control("AnchoredNoProbes", r =>
+        {
+            r.lightProbeUsage = LightProbeUsage.Off;
+            r.probeAnchor = m_Camera.transform;
+        });
+        Control("VertexStreams", r => r.additionalVertexStreams = r.GetComponent<MeshFilter>().sharedMesh);
+        Control("ForcedOff", r => r.forceRenderingOff = true);
+        Control("ManyMaterials", r =>
+        {
+            var materials = new Material[129];
+            for (int i = 0; i < materials.Length; i++) materials[i] = m_Green;
+            r.sharedMaterials = materials;
+            Row("ManyMaterials.materials", r.sharedMaterials.Length);
+        });
+        // Streams on a renderer the ordinary path draws first (in view, with a property block
+        // until frame 16).
+        var drawn = Make("StreamsDrawn", PrimitiveType.Cube, new Vector3(-1.0f, 0.2f, -4.2f), m_Yellow).GetComponent<MeshRenderer>();
+        drawn.transform.localScale = Vector3.one * 0.4f;
+        drawn.additionalVertexStreams = drawn.GetComponent<MeshFilter>().sharedMesh;
+        var block = new MaterialPropertyBlock();
+        block.SetColor("_BaseColor", new Color(0.2f, 0.9f, 0.9f));
+        drawn.SetPropertyBlock(block);
     }
 
     GameObject Make(string name, PrimitiveType type, Vector3 position, Material material)
@@ -291,6 +358,9 @@ public class ResidentDrawerProbe : MonoBehaviour
         {
             case 12:
                 m_Red.SetColor("_BaseColor", new Color(1, 0.55f, 0.1f));
+                break;
+            case 16:
+                m_Renderers["StreamsDrawn"].SetPropertyBlock(null);
                 break;
             case 18:
                 m_Renderers["Cube1"].sharedMaterial = m_Blue;

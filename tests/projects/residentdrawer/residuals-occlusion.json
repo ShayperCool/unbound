@@ -1,3 +1,0 @@
-{
- "f56.visible.Cube1": "a GPU-driven renderer moved to a layer the camera does not draw stays visible in the Editor through its light's shadow culling, which draws it as a caster whatever the camera's layers; Unbound's shadow cullings do not mark GPU-driven casters visible yet, as its directional cascades carry no caster culling planes to find them by (follow-up: the cascades' caster culling planes, then the casters they find marked visible)"
-}

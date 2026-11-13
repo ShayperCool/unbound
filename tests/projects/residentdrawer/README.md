@@ -12,7 +12,12 @@ moving and a turning cube, LOD groups at several distances (one moving away thro
 one cross-fading, one with animated cross-fading, which the drawer leaves out), a transparent
 sphere, a wall with a cube behind it, and renderers the drawer leaves to the ordinary path (a
 material property block, a shader without DOTS instancing, an OnWillRenderObject script, the
-package's DisallowGPUDrivenRendering), and three levels drawn without a group. Between frames it
+package's DisallowGPUDrivenRendering), three levels drawn without a group, and out of view one
+renderer per rule the drawer may refuse a renderer by (an OnRenderObject or OnBecameVisible
+script, an Animator culling or always animating, an Animation without clips and one playing a
+clip, a sorting order, a light probe proxy volume, an anchored probe with blended probes or with
+probes off, additional vertex streams, forced-off rendering, 129 materials) besides a renderer
+with additional vertex streams the ordinary path draws until frame 16 (a property block). Between frames it
 changes a material's colour (frame 12), a renderer's material and disables another (18), destroys a
 renderer and edits a mesh (24), sets a property block and deactivates an object (30), reactivates it
 and clears the first block (36), adds a renderer (40), stretches a cube through its filter's own
@@ -42,8 +47,11 @@ drawer's types (in the Editor, one of the probe's read every frame left the draw
 the renderers made before it; why is not studied). The references are two identical captures
 each, measured on the NVIDIA driver only.
 
-Unbound: 371/372 values on both profiles, the one left a residual (`residuals-<profile>.json`: the
-cube moved to the hidden layer stays visible in the Editor through its light's shadow culling);
-images within the comparator's bounds (mean 0.13, at most 175 of 57600 pixels over 8: the edges
-of shadows and of a sphere, and the transparent sphere's highlight, which differs the same way with
-the drawer off, so it is not the drawer's).
+Every renderer the drawer holds is visible in the Editor, wherever it is (behind the camera, on
+a layer the camera does not draw, casting no shadows).
+
+Unbound: every value on both profiles; images within the comparator's bounds (mean 0.13, at most
+175 of 57600 pixels over 8: the edges of shadows and of a sphere, and the transparent sphere's
+highlight, which differs the same way with the drawer off, so it is not the drawer's). The transparent sphere is placed where it overlaps
+little on purpose: its difference is an open gap row of its own (a transparent URP Lit sphere
+darker and without its highlight); once that is fixed, its images here are checked again.

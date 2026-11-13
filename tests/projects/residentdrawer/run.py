@@ -84,6 +84,13 @@ def stage(label):
         shutil.copytree(source/part, project/part)
     shutil.copytree(source/'Assets', project/'Assets', ignore=lambda d, names: ['Scripts', 'Scripts.meta', 'Editor', 'Editor.meta'] if Path(d) == source/'Assets' else [])
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
+    # The Animation module (the probe's Animator and Animation controls).
+    manifest = json.loads((project/'Packages/manifest.json').read_text())
+    manifest['dependencies']['com.unity.modules.animation'] = '1.0.0'
+    (project/'Packages/manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
+    lock = json.loads((project/'Packages/packages-lock.json').read_text())
+    lock['dependencies']['com.unity.modules.animation'] = {'version': '1.0.0', 'depth': 0, 'source': 'builtin', 'dependencies': {}}
+    (project/'Packages/packages-lock.json').write_text(json.dumps(lock, indent=2)+'\n')
     edit(project/'ProjectSettings/GraphicsSettings.asset', 'm_BrgStripping: 0', 'm_BrgStripping: 2')
     edit(project/'Assets/Settings/ProbeRenderer.asset', 'm_RenderingMode: 0', 'm_RenderingMode: 2')
     edit(project/'Assets/Settings/ProbeURP.asset', 'm_GPUResidentDrawerMode: 0', 'm_GPUResidentDrawerMode: 1')
