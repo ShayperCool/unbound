@@ -840,7 +840,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 51;
+    const VERSION: u32 = 52;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -3606,11 +3606,14 @@ impl TakeSigns {
 /// tests/projects/modelclips `nodes.HumanTwistGeneric` and the rotation curves of
 /// `clip.HumanTwistGeneric.Scene` (a Generic import: 20 node rotations and 19 curves, four of
 /// each with a negative w). The Humanoid clip conversion applies the same rule to what it
-/// samples (managed `HumanClipImport.ImporterSign`). Ties between diagonal elements and a
-/// trace of exactly zero are unmeasured (x before y before z here), as are Legacy imports, the
-/// nodes of a static model whose axes are converted (the rule applies after the conversion),
-/// and the MotionQ curves of a root node, which keep the sign of their product. A rotation that is
-/// zero or not a number stays as it is.
+/// samples (managed `HumanClipImport.ImporterSign`). Legacy imports take it too
+/// (`nodes.HumanTwistLegacy`, `clip.HumanTwistLegacy.Scene`), and so do the nodes of a static
+/// model whose axes are converted, after the conversion (`nodes.AxisSigned/*`, modelaxis' Signed
+/// set). A diagonal element decides only when it is larger than the later ones: on a tie the
+/// later axis decides (the root of `AxisSigned/U2S1B0H0`, whose y and z elements are equal,
+/// takes z positive; a tie with x is unmeasured, as is a trace of exactly zero, which goes to
+/// the axes). The MotionQ curves of a root node keep the sign of their product (unmeasured). A
+/// rotation that is zero or not a number stays as it is.
 fn importer_sign(q: [f32; 4]) -> [f32; 4] {
     let [x, y, z, w] = q;
     let (xx, yy, zz) = (x * x, y * y, z * z);
@@ -3623,9 +3626,9 @@ fn importer_sign(q: [f32; 4]) -> [f32; 4] {
     );
     let deciding = if m00 + m11 + m22 > 0.0 {
         w
-    } else if m00 >= m11 && m00 >= m22 {
+    } else if m00 > m11 && m00 > m22 {
         x
-    } else if m11 >= m22 {
+    } else if m11 > m22 {
         y
     } else {
         z

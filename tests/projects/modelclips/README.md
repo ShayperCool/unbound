@@ -191,6 +191,27 @@ rotation, but scripts read it).
 Not measured: Legacy imports, static models whose axes are converted, ties between diagonal elements, a range that starts before its
 take, and a turn of half a revolution or more between two frames.
 
+
+## Signs of Legacy and axis-converted imports, a rotation within its error
+
+Recorded last with the macOS Editor (two identical captures): `nodes.HumanTwistLegacy` and the
+clip curves of `HumanTwistLegacy` (HumanTwistGeneric's file imported as Legacy), `nodes.AxisSigned/*`
+(six static models of tests/projects/modelaxis' Signed set: Z-up and Y-up files with a reversed
+front axis, with and without Bake Axis Conversion and Preserve Hierarchy), and `RigRotLoose`
+(Rig under Keyframe Reduction with a rotation error of 45 degrees and position and scale errors
+of 0.5%; Spine turns up to 40 degrees from its first key and ends 10 degrees from it).
+
+- Legacy node rotations and curves take the Generic import's signs.
+- A converted node takes the sign of its final rotation's matrix. On a tie between two diagonal
+  elements the later axis decides: the root of `U2S1B0H0` and `U2S1B0H1` (y and z elements
+  equal) has z positive and w negative.
+- Spine's rotation becomes two keys with its first value, as positions and scales within their
+  error of the first value do.
+
+Not in the reference: Blob (tests/projects/blendshapes) under a Position Error of 100% keeps its
+float curve's key at frame 29 (0.326) and ends at 1.00000012; Unbound drops that key and ends
+at 1 (open).
+
 ## Whole-curve reduction
 
 `RigLoose` is `Rig.fbx` under Keyframe Reduction with a Rotation Error of 15 degrees and Position

@@ -308,17 +308,19 @@ namespace Unbound.Runtime.Humanoid
         /// body.directEmptyChild (model clips' goals completed by the identity), and a capture
         /// outside the reference of the probe's three models imported as Generic: all 105
         /// rotation curves and 108 node rotations follow it, eight of each with a negative w.
-        /// Ties between diagonal elements and a trace of exactly zero are unmeasured (x before
-        /// y before z here). The model importer gives its node rotations and clip keys the same
-        /// rule (crates/unbound-assets/src/model.rs `importer_sign`).</summary>
+        /// A diagonal element decides only when it is larger than the later ones: on a tie the
+        /// later axis decides (measured on an imported node whose y and z elements are equal,
+        /// tests/projects/modelclips nodes.AxisSigned/U2S1B0H0; a tie with x and a trace of
+        /// exactly zero are unmeasured). The model importer gives its node rotations and clip
+        /// keys the same rule (crates/unbound-assets/src/model.rs `importer_sign`).</summary>
         internal static bool ImporterSign(F4 q)
         {
             float xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z;
             // The diagonal of the rotation's matrix, for a unit rotation.
             float m00 = 1f - 2f * (yy + zz), m11 = 1f - 2f * (xx + zz), m22 = 1f - 2f * (xx + yy);
             if (m00 + m11 + m22 > 0f) return q.w > 0f;
-            if (m00 >= m11 && m00 >= m22) return q.x > 0f;
-            return m11 >= m22 ? q.y > 0f : q.z > 0f;
+            if (m00 > m11 && m00 > m22) return q.x > 0f;
+            return m11 > m22 ? q.y > 0f : q.z > 0f;
         }
 
         /// <summary>Converts a clip into muscle curves.</summary>

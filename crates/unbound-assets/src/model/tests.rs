@@ -1366,6 +1366,12 @@ fn rotations_take_the_sign_of_their_matrix() {
     );
     assert_eq!(importer_sign([0.0; 4]), [0.0; 4]);
     assert!(importer_sign([f32::NAN; 4]).iter().all(|v| v.is_nan()));
+    // A tie between the y and z elements goes to z (tests/projects/modelclips
+    // nodes.AxisSigned/U2S1B0H0's root); the control without the tie goes to the larger one.
+    let (a, b) = (0.183_012_71_f32, 0.683_012_7_f32);
+    assert_eq!(importer_sign([-a, b, -b, a]), [a, -b, b, -a]);
+    assert_eq!(importer_sign([a, -b, b, -a]), [a, -b, b, -a]);
+    assert_eq!(importer_sign([-a, -0.69, 0.68, a])[1], 0.69);
 
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/modelclips/Assets/Resources/HumanTwistGeneric.fbx");

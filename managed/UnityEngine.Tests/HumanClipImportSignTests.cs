@@ -57,6 +57,11 @@ namespace UnityEngine.Tests
             Assert.True(HumanClipImport.ImporterSign(M.QNormalize(new F4(-0.2f, -0.2f, 0.9f, -0.3f))));
             Assert.False(HumanClipImport.ImporterSign(M.QNormalize(new F4(-0.9f, 0.2f, 0.2f, 0.3f))));
             Assert.True(HumanClipImport.ImporterSign(F4.QIdentity));
+            // Equal y and z elements: z decides (tests/projects/modelclips
+            // nodes.AxisSigned/U2S1B0H0); y decides once its element is the larger.
+            Assert.True(HumanClipImport.ImporterSign(new F4(0.18301271f, -0.6830127f, 0.6830127f, -0.18301271f)));
+            Assert.False(HumanClipImport.ImporterSign(new F4(-0.18301271f, 0.6830127f, -0.6830127f, 0.18301271f)));
+            Assert.True(HumanClipImport.ImporterSign(M.QNormalize(new F4(-0.18f, 0.69f, -0.68f, 0.18f))));
         }
 
         /// <summary>A conversion's curves do not depend on the sign the samples hold a node's
