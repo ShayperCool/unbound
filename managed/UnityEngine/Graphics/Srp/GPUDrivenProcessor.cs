@@ -155,14 +155,18 @@ namespace UnityEngine.Rendering
     /// decides which MeshRenderers GPU-driven rendering takes, hides those from the ordinary
     /// cullings, and hands their data to the caller. A MeshRenderer is taken when it is enabled in
     /// an active hierarchy and has a mesh, GPU-driven rendering is allowed on it, its visibility
-    /// drives no Animator or Animation culling, it uses no light probe proxy volume, additional
-    /// vertex streams, probe anchor with blended probes, property block, sorting layer or order
+    /// drives no Animator or Animation culling, it uses no light probe proxy volume, realtime GI
+    /// vertex stream, probe anchor with blended probes, property block, sorting layer or order
     /// other than the default or sorting group, no script of its GameObject receives
     /// OnWillRenderObject, OnBecameVisible or OnBecameInvisible, it has no TextMesh, is not forced
-    /// off, its LOD group (if any) does not animate cross-fading, it has at most 128 materials and
-    /// every material's shader has a DOTS instancing variant (a pass declaring
-    /// <c>DOTS_INSTANCING_ON</c>). Refused renderers are drawn as usual. Matches the Unity
-    /// 6000.0.71f1 Editor, tests/projects/residentdrawer.
+    /// off, is not lightmapped (Unbound's own refusal until BatchRendererGroup draws lightmaps), its
+    /// LOD group (if any) does not animate cross-fading and every material's shader has a DOTS
+    /// instancing variant (a pass declaring <c>DOTS_INSTANCING_ON</c>). Refused renderers are
+    /// drawn as usual. Matches the Unity 6000.0.71f1 Editor, tests/projects/residentdrawer, which
+    /// has a renderer for each rule but the sorting layer, sorting group, TextMesh (which Unity
+    /// does not add beside a MeshFilter), OnBecameInvisible and realtime GI ones: an
+    /// OnRenderObject script, additional vertex streams, an Animation without clips and more than
+    /// 128 materials (with the Editor's error) do not refuse a renderer.
     /// </summary>
     internal partial class GPUDrivenProcessor
     {
@@ -252,15 +256,17 @@ namespace UnityEngine.Rendering
             scratch.Refused.Add(renderer.m_InstanceID);
         }
 
-        /// <summary>A renderer's materials all supported: with more than <see cref="MaxMaterials"/>,
-        /// none is, with the Editor's error.</summary>
+        /// <summary>A renderer's materials all supported. With more than <see cref="MaxMaterials"/>
+        /// the Editor's error is logged and the materials are not checked: the renderer is taken
+        /// all the same, though the message says otherwise (measured: tests/projects/residentdrawer,
+        /// ManyMaterials).</summary>
         static bool TakesAllMaterials(MeshRenderer renderer, HashSet<Material> invalid)
         {
             var materials = renderer.m_Materials;
             if (materials.Length > MaxMaterials)
             {
-                Debug.LogError($"The number of sub-meshes on the MeshRenderer \"{renderer.name}\" is {materials.Length}. GPU Resident Drawer does not support more than {MaxMaterials} sub-meshes. The normal rendering path will be used for this renderer.");
-                return false;
+                Debug.LogError($"The number of sub-meshes on the MeshRenderer \"{renderer.name}\" is {materials.Length}. GPU Resident Drawer does not support more than {MaxMaterials} sub-meshes. The normal rendering path will be used for this MeshRenderer instead.");
+                return true;
             }
             if (invalid.Count == 0) return true;
             foreach (var material in materials)
@@ -276,7 +282,9 @@ namespace UnityEngine.Rendering
             if (renderer.GetComponent<MeshFilter>() is not MeshFilter filter || filter.sharedMesh == null) return false;
             if (!renderer.allowGPUDrivenRendering || AnimationCullsByVisibility(renderer)) return false;
             var probes = renderer.lightProbeUsage;
-            if (probes == LightProbeUsage.UseProxyVolume || renderer.additionalVertexStreams != null) return false;
+            // Realtime GI's own vertex stream refuses a renderer; additional vertex streams do not
+            // (measured: tests/projects/residentdrawer, VertexStreams and StreamsDrawn are taken).
+            if (probes == LightProbeUsage.UseProxyVolume || renderer.enlightenVertexStream != null) return false;
             if (probes == LightProbeUsage.BlendProbes && renderer.probeAnchor != null) return false;
             if (renderer.HasPropertyBlock()) return false;
             if (ReceivesVisibilityMessages(go)) return false;
@@ -313,7 +321,9 @@ namespace UnityEngine.Rendering
             {
                 var go = t.gameObject;
                 if (go.GetComponent<Animator>() is Animator animator) return animator.cullingMode != AnimatorCullingMode.AlwaysAnimate;
-                if (go.GetComponent<Animation>() is Animation animation) return animation.cullingType == AnimationCullingType.BasedOnRenderers;
+                // An Animation culls by its renderers only with clips to play (measured: one
+                // without clips does not keep its renderer from GPU-driven rendering).
+                if (go.GetComponent<Animation>() is Animation animation) return animation.cullingType == AnimationCullingType.BasedOnRenderers && animation.GetClipCount() > 0;
             }
             return false;
         }

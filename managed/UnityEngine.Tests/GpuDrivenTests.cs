@@ -271,17 +271,41 @@ namespace UnityEngine.Tests
             disallowed.allowGPUDrivenRendering = false;
             var disabled = Renderer("disabled", m_Dots);
             disabled.enabled = false;
-            var taken = Taken(processor, plain, block, ordered, noDots, disallowed, disabled);
-            Assert.Equal(new[] { plain.GetInstanceID() }, taken);
+            // Streams given before the renderer was first drawn (no merged mesh yet), and an
+            // Animation without clips culling by its renderers: taken.
+            var streams = Renderer("streams", m_Dots);
+            streams.additionalVertexStreams = streams.GetComponent<MeshFilter>().sharedMesh;
+            var clipless = Renderer("clipless", m_Dots);
+            clipless.gameObject.AddComponent<Animation>().cullingType = AnimationCullingType.BasedOnRenderers;
+            var animated = Renderer("animated", m_Dots);
+            animated.gameObject.AddComponent<Animator>().cullingMode = AnimatorCullingMode.CullCompletely;
+            // Realtime GI's own vertex stream: refused.
+            var realtime = Renderer("realtime", m_Dots);
+            realtime.enlightenVertexStream = realtime.GetComponent<MeshFilter>().sharedMesh;
+            // More than 128 materials: the Editor's error, and taken all the same.
+            var many = Renderer("many", m_Dots);
+            var materials = new Material[129];
+            for (int i = 0; i < materials.Length; i++) materials[i] = many.sharedMaterial;
+            many.sharedMaterials = materials;
+            var taken = Taken(processor, plain, block, ordered, noDots, disallowed, disabled, streams, clipless, animated, realtime, many);
+            Assert.Equal(new[] { plain.GetInstanceID(), streams.GetInstanceID(), clipless.GetInstanceID(), many.GetInstanceID() }, taken);
+            Assert.Contains("Error: The number of sub-meshes on the MeshRenderer \"many\" is 129. GPU Resident Drawer does not support more than 128 sub-meshes. The normal rendering path will be used for this MeshRenderer instead.", m_Logs);
             Assert.True(plain.m_GpuDriven);
             Assert.False(block.m_GpuDriven);
-            // A camera's culling leaves it to GPU-driven rendering, visible all the same.
+            // A camera's culling leaves it to GPU-driven rendering and marks it visible, even
+            // behind the camera on a layer the camera does not draw; an ordinary renderer there
+            // is not.
             var camera = Keep(new GameObject("camera")).AddComponent<Camera>();
-            camera.transform.position = new Vector3(0, 0, -5);
+            camera.transform.position = new Vector3(0, 0, 5);
+            camera.cullingMask = ~(1 << 30);
+            plain.gameObject.layer = 30;
+            block.gameObject.layer = 30;
             var renderers = Cull(camera);
             Assert.DoesNotContain(plain, renderers);
-            Assert.Contains(block, renderers);
+            Assert.DoesNotContain(block, renderers);
             Assert.True(plain.isVisible);
+            Assert.False(block.isVisible);
+            plain.gameObject.layer = 0;
             // Turned off again: drawn as usual.
             processor.DisableGPUDrivenRendering(new[] { plain.GetInstanceID() });
             Assert.False(plain.m_GpuDriven);

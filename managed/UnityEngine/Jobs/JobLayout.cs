@@ -68,8 +68,10 @@ namespace Unbound.Runtime.Jobs
         /// and containers of the struct it holds as to its own fields (measured: the GPU Resident
         /// Drawer's jobs, with an UnsafeAtomicCounter32 field marked
         /// [NativeDisableUnsafePtrRestriction] and struct fields of containers marked
-        /// [NativeDisableParallelForRestriction] or [NativeDisableContainerSafetyRestriction], run
-        /// in the Unity 6000.0.71f1 Editor, tests/projects/residentdrawer).</summary>
+        /// [NativeDisableParallelForRestriction], [NativeDisableContainerSafetyRestriction] or
+        /// [ReadOnly], run in the Unity 6000.0.71f1 Editor, tests/projects/residentdrawer).
+        /// [WriteOnly] follows the same rule, unmeasured: none of those jobs marks a struct field
+        /// with it.</summary>
         [Flags]
         enum Inherited
         {

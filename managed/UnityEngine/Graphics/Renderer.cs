@@ -763,7 +763,18 @@ namespace UnityEngine
                 Dirty();
             }
         }
-        public Mesh enlightenVertexStream { get; set; }
+        Mesh m_EnlightenVertexStream;
+        /// <summary>Realtime GI's own lightmap UVs for this renderer (GPU-driven rendering refuses
+        /// a renderer that has them).</summary>
+        public Mesh enlightenVertexStream
+        {
+            get => m_EnlightenVertexStream;
+            set
+            {
+                m_EnlightenVertexStream = value;
+                Dirty();
+            }
+        }
         /// <summary>A statically batched renderer keeps drawing its own mesh (Unbound combines no
         /// meshes): its submeshes start at 0.</summary>
         [Unbound.EditorFaithful("static batches draw the renderers' own meshes in Unbound; their first submesh is 0")]
