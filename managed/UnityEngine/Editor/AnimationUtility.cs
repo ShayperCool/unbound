@@ -116,12 +116,11 @@ namespace UnityEditor
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.RestoreImportedCurves();
-            if (curve != null) AnimationClip.NoteHumanCurveSetByType(binding.type, binding.propertyName);
             clip.m_Curves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
             if (curve != null)
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
-                clip.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(binding.path ?? "", binding.propertyName, binding.type), Curve = copy });
+                clip.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Curve = copy });
             }
             clip.m_Version++;
         }

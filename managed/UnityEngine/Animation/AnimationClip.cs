@@ -381,12 +381,11 @@ namespace UnityEngine
             relativePath ??= "";
             var attribute = CurveBinding.NormalizeScriptName(type, propertyName);
             RestoreImportedCurves();
-            if (curve != null) NoteHumanCurveSetByType(type, attribute);
             m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute == attribute && c.Binding.Matches(type));
             if (curve != null)
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
-                m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(relativePath, attribute, type), Curve = copy });
+                m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(relativePath, attribute, type), Curve = copy });
                 if (!m_Legacy && typeof(Transform).IsAssignableFrom(type)) AddVectorCompanions(relativePath, attribute, type, copy);
             }
             m_Version++;
@@ -634,6 +633,22 @@ namespace Unbound.Runtime
 
         internal static CurveBinding ForType(string path, string attribute, Type type) =>
             new CurveBinding { Path = path, Attribute = attribute, Type = type, m_ScriptResolved = true };
+
+        /// <summary>The Animator's class id: what its curves are bound by in an asset.</summary>
+        internal const int AnimatorClassId = 95;
+
+        /// <summary>The binding of a curve set through AnimationClip.SetCurve or
+        /// AnimationUtility.SetEditorCurve: by its type, and an Animator's curve also by the
+        /// Animator's class as an asset's is, so its humanoid curves (muscles, goals, the body,
+        /// translation DoF) are the clip's humanoid curves, mirrored and played as a pose
+        /// (Unity 6000.0.71f1, tests/projects/humanoid apiCurves.*: humanMotion is true and the
+        /// curves play, also mirrored).</summary>
+        internal static CurveBinding ForClipCurve(string path, string attribute, Type type)
+        {
+            var binding = ForType(path, attribute, type);
+            if (type == typeof(Animator)) binding.ClassId = AnimatorClassId;
+            return binding;
+        }
 
         /// <summary>Whether the binding names a component of this type, however it was made
         /// (by a class id or script in an asset, or by a type through SetCurve).</summary>
