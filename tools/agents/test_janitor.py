@@ -618,12 +618,13 @@ class JanitorTests(unittest.TestCase):
             thread.join(2)
         self.assertFalse(thread.is_alive())
         self.assertLess(time.monotonic()-began, 5)
-        self.assertTrue(self.j.partial)
+        self.assertTrue(self.j.partial or self.j.removed == 97)
         self.assertGreaterEqual(self.j.removed, 32)
         self.assertTrue(keep.exists())
         rows = [json.loads(line) for line in self.output.getvalue().splitlines()]
         batches = [row for row in rows if row['action'] == 'batch_finish']
-        self.assertTrue(any(row['status'] == 'deferred' for row in batches))
+        if self.j.partial:
+            self.assertTrue(any(row['status'] == 'deferred' for row in batches))
         self.assertEqual(sum(row['removals'] for row in batches), self.j.removed)
         self.assertTrue(all(row['candidates'] <= janitor.REMOVAL_BATCH_SIZE for row in rows
                             if row['action'] == 'batch_start'))
@@ -638,7 +639,7 @@ class JanitorTests(unittest.TestCase):
             nonlocal calls
             calls += 1
             if calls == 2:
-                raise janitor.ReferenceChanged('lost monitoring')
+                raise TimeoutError('batch discovery budget')
             return original(candidates)
         with self.guards(), patch.object(self.j, 'remove_batch', side_effect=invalidated):
             self.j.apply = True
@@ -648,8 +649,8 @@ class JanitorTests(unittest.TestCase):
         self.assertEqual(self.j.removed, 65)
         self.assertFalse(self.j.stopped)
 
-    def test_persistent_monitoring_loss_is_bounded_and_still_runs_cache_gc(self):
-        with self.guards(), patch.object(self.j, 'discover', side_effect=janitor.ReferenceChanged('overflow')) as discover, \
+    def test_persistent_discovery_timeouts_are_bounded_and_still_run_cache_gc(self):
+        with self.guards(), patch.object(self.j, 'discover', side_effect=TimeoutError('discovery budget')) as discover, \
              patch.object(self.j, 'kache_gc') as gc:
             self.j.collect()
         self.assertEqual(discover.call_count, 1+janitor.MAX_REDISCOVERIES)
@@ -657,6 +658,58 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(self.j.stopped)
         self.assertEqual(self.j.removed, 0)
         gc.assert_called_once()
+
+    def test_unpaired_move_inside_roots_reconciles_new_references(self):
+        target = self.directory('q1/target')
+        unrelated = self.directory('q1/unrelated')
+        moving = self.directory('moving')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (moving/'link').symlink_to(target/'output')
+            parent = self.volume/'new-parent'
+            parent.mkdir()
+            moving.rename(parent/'moved')
+            self.j.apply = True
+            self.assertFalse(self.j.remove(target, kind='task'))
+            self.assertTrue(self.j.remove(unrelated, kind='task'))
+        self.assertTrue(target.exists())
+
+    def test_new_reference_moved_outside_roots_stops_later_deletions(self):
+        root = self.directory('q1')
+        for n in range(96):
+            (root/f'old-{n:03d}').write_text('old')
+        target = root/'z-target'
+        target.write_text('keep')
+        moving = self.directory('moving')
+        outside = self.root/'outside'
+        emit = self.j.emit
+        def move_new_link(action, **fields):
+            emit(action, **fields)
+            if action == 'batch_finish' and fields['batch'] == 1:
+                (moving/'link').symlink_to(target)
+                moving.rename(outside)
+        with self.guards(), patch.object(self.j, 'emit', side_effect=move_new_link):
+            self.j.apply = True
+            self.j.collect()
+        self.assertTrue(self.j.partial)
+        self.assertTrue(self.j.stopped)
+        self.assertEqual(self.j.removed, 32)
+        self.assertTrue((outside/'link').exists())
+        self.assertEqual(target.read_text(), 'keep')
+
+    def test_new_symlink_moved_outside_roots_defers_removals(self):
+        target = self.directory('q1/target')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            link = self.volume/'new-link'
+            link.symlink_to(target/'output')
+            link.rename(self.root/'outside-link')
+            self.j.apply = True
+            with self.assertRaises(janitor.ReferenceChanged):
+                self.j.remove(target, kind='task')
+        self.assertTrue(target.exists())
 
     def test_run_budget_returns_explicit_partial_summary(self):
         with self.guards():

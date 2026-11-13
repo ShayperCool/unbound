@@ -254,6 +254,7 @@ class ReferenceWatch:
         self.excluded = tuple(p.resolve() for p in excluded)
         self.metadata_roots = set(metadata_roots)
         self.metadata_dirty = False
+        self.unresolved, self.file_moves = {}, {}
 
     def close(self):
         if self.fd >= 0:
@@ -270,15 +271,22 @@ class ReferenceWatch:
             if number == errno.ENOENT:
                 return
             raise OSError(number, f'cannot monitor reference directory {directory}; cleanup deferred')
+        previous = self.directories.get(descriptor)
+        if previous is not None and previous != directory:
+            self.relocate(previous, directory, handled=False)
+        if descriptor in self.unresolved:
+            old = self.unresolved.pop(descriptor)
+            self.invalidated.add(directory)
+            self.moves = {cookie: source for cookie, source in self.moves.items() if source != old}
         self.directories[descriptor] = directory
 
-    def relocate(self, source, destination):
+    def relocate(self, source, destination, *, handled=True):
         # A parent rename changes the location of every descendant watch. Rescan
         # the moved tree too: existing relative links may now name new targets.
         for descriptor, previous in self.directories.items():
             if inside(previous, source):
                 self.directories[descriptor] = destination/previous.relative_to(source)
-                if previous == source:
+                if previous == source and handled:
                     self.handled_moves.add(descriptor)
         self.invalidated.update((source, destination))
 
@@ -305,12 +313,15 @@ class ReferenceWatch:
                     # Its links are already protected. The watched parent catches
                     # any replacement directory and its new links.
                     self.directories.pop(descriptor, None)
+                    old = self.unresolved.pop(descriptor, directory)
+                    self.moves = {cookie: source for cookie, source in self.moves.items() if source != old}
                     continue
                 if mask & self.MOVE_SELF:
                     if descriptor in self.handled_moves:
                         self.handled_moves.remove(descriptor)
                         continue
-                    raise ReferenceChanged(f'reference directory moved: {directory}; batch deferred')
+                    self.unresolved[descriptor] = directory
+                    continue
                 if mask & self.IGNORED:
                     self.directories.pop(descriptor, None)
                     continue
@@ -318,9 +329,13 @@ class ReferenceWatch:
                 if mask & self.MOVED_FROM:
                     if mask & self.ISDIR:
                         self.moves[cookie] = path
+                    else:
+                        self.file_moves[cookie] = path
                     continue
                 # The destination may have moved again or been deleted by now.
                 # Pair recorded directory events before inspecting current paths.
+                if mask & self.MOVED_TO:
+                    self.file_moves.pop(cookie, None)
                 if mask & self.MOVED_TO and mask & self.ISDIR:
                     source = self.moves.pop(cookie, None)
                     if source is not None:
@@ -416,6 +431,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                     watcher.invalidated.clear()
         if watcher:
             found.update(watcher.references)
+            if watcher.unresolved or watcher.moves or watcher.file_moves:
+                raise ReferenceChanged('reference directory moved or link names left the discovered view; remaining work retained')
         if prune:
             index.finish()
     finally:
@@ -499,7 +516,10 @@ class Janitor:
                          self.cache/'tools', self.volume/'editors', self.volume/'tools',
                          Path.home()/'Unity/Hub/Editor']
         self.emit('scan', roots=[str(p) for p in self.scan_roots], seconds=self.scan_seconds)
-        self.watch = ReferenceWatch(self.excluded, self.suite_roots)
+        if self.watch is None:
+            self.watch = ReferenceWatch(self.excluded, self.suite_roots)
+        else:
+            self.watch.metadata_roots.update(self.suite_roots)
         links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
                                      watcher=self.watch, index_root=self.cache)
         self.links = getattr(self, 'links', set()) | links
@@ -599,9 +619,18 @@ class Janitor:
         if self.watch is None:
             return
         pending = self.watch.poll()
-        if pending:
-            self.links.update(reference_paths(pending, excluded=self.excluded, seconds=self.scan_budget(),
-                                              watcher=self.watch, index_root=self.cache, prune=False))
+        if pending or self.watch.unresolved or self.watch.moves or self.watch.file_moves:
+            full = bool(self.watch.unresolved or self.watch.moves or self.watch.file_moves)
+            roots = self.scan_roots if full else pending
+            try:
+                links = reference_paths(roots, excluded=self.excluded, seconds=self.scan_budget(),
+                                        watcher=self.watch, index_root=self.cache, prune=False)
+            except ReferenceChanged:
+                if full:
+                    raise
+                links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
+                                        watcher=self.watch, index_root=self.cache, prune=False)
+            self.links.update(links)
         self.links.update(self.watch.references)
         self.refresh_baseline(force=self.watch.metadata_dirty)
         self.watch.metadata_dirty = False
@@ -741,14 +770,14 @@ class Janitor:
                 return self.stop_batches('reference recovery limit reached; remaining work retained')
             if self.deadline is not None and time.monotonic() >= self.deadline:
                 return self.stop_batches('run budget exhausted; remaining work retained')
-            if self.watch:
-                self.watch.close()
-                self.watch = None
             self.discovery_attempts += 1
             self.emit('discovery_start', attempt=self.discovery_attempts)
             try:
                 self.discover()
-            except (ReferenceChanged, TimeoutError) as error:
+            except ReferenceChanged as error:
+                self.emit('discovery_deferred', attempt=self.discovery_attempts, error=str(error))
+                return self.stop_batches('reference trees could not be recovered; remaining work retained')
+            except TimeoutError as error:
                 self.emit('discovery_deferred', attempt=self.discovery_attempts, error=str(error))
             else:
                 self.needs_discovery = False
@@ -767,7 +796,10 @@ class Janitor:
         status, error = 'complete', None
         try:
             self.remove_batch(candidates)
-        except (ReferenceChanged, TimeoutError) as problem:
+        except ReferenceChanged as problem:
+            status, error = 'deferred', str(problem)
+            self.stop_batches('reference trees could not be recovered; remaining work retained')
+        except TimeoutError as problem:
             # Retain the unsafe remainder of this batch. Later batches require a
             # complete fresh scan; previously discovered destinations stay kept.
             self.partial = self.needs_discovery = True
