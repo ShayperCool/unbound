@@ -3,7 +3,7 @@
 This is the complete source-patch inventory for the vendored PhysX 4.1.2 tree.
 [UNBOUND.md](UNBOUND.md) records its upstream revision,
 `a2c0428acab643e60618c681b501e86f7fd558cc`, and the directories retained at import.
-The local import is `9a4c8ad7`. Relative to that import, twenty-seven SDK source/header
+The local import is `9a4c8ad7`. Relative to that import, twenty-eight SDK source/header
 files have changes and one header is added, listed below. The import's directory exclusions and the
 Unbound build/shim code outside this directory are separate from these patches.
 
@@ -27,6 +27,7 @@ identified separately where relevant.
 | Change trigger role without broadphase reinsertion | [ScShapeSim.cpp](source/simulationcontroller/src/ScShapeSim.cpp), `physx::Sc::ShapeSim::onFlagChange` | `9491a8bc` |
 | Refit objects moved late in a query-tree rebuild | [SqAABBPruner.cpp](source/scenequery/src/SqAABBPruner.cpp), `Sq::AABBPruner::updateObjectsAfterManualBoundsUpdates`, `Sq::AABBPruner::updateObjectsAndInflateBounds` | Q276 |
 | Run the BV4 midphase on NEON | [GuBV4_Simd.h](source/geomutils/src/mesh/GuBV4_Simd.h) (added); the BV4 guards of [GuBV4.h](source/geomutils/src/mesh/GuBV4.h), [GuBV4_Common.h](source/geomutils/src/mesh/GuBV4_Common.h), [GuBV4_Internal.h](source/geomutils/src/mesh/GuBV4_Internal.h), [GuBV4_AABBAABBSweepTest.h](source/geomutils/src/mesh/GuBV4_AABBAABBSweepTest.h), [GuBV4_BoxBoxOverlapTest.h](source/geomutils/src/mesh/GuBV4_BoxBoxOverlapTest.h), [GuMidphaseInterface.h](source/geomutils/src/mesh/GuMidphaseInterface.h), [GuMidphaseBV4.cpp](source/geomutils/src/mesh/GuMidphaseBV4.cpp) and the `GuBV4_*` query sources (`AABBSweep`, `BoxOverlap`, `CapsuleSweep`, `CapsuleSweepAA`, `OBBSweep`, `Raycast`, `SphereOverlap`, `SphereSweep`) | Q249 |
+| CCD sweep frame in the SSE2 order | [PsUnixNeonInlineAoS.h](source/foundation/include/unix/neon/PsUnixNeonInlineAoS.h), `QuatGetMat33VSse2Order` (added); [GuCCDSweepPrimitives.cpp](source/geomutils/src/ccd/GuCCDSweepPrimitives.cpp), `CCDSweep` | Q431 |
 
 The comparison against `4724b839e749590151e862695e1e31ad94447151` contains only
 the trigger/trigger filtering, interaction-creation callback and trigger-role
@@ -311,6 +312,36 @@ against meshes included. On macOS arm64 Unbound matches them: 7/3203 before the 
 Cooking arm64 meshes with the BVH33 midphase instead was measured as a control and does not
 reproduce the reference: rayhits 3083/3203 (120 box-cast hit points on meshes), physicsbatch
 5734/5870. The Linux x86_64 probes do not exercise the NEON definitions.
+
+## CCD sweep frame in the SSE2 order
+
+`CCDSweep` builds the matrix of the swept shape's frame relative to the other shape
+(`aToB`) from a quaternion. The SSE2 build's `QuatGetMat33V` (`PsVecMathSSE.h`) computes
+each column as `v * 2q_i + (2ww - 1, ...)`, every product and sum rounded; the NEON one
+computes the textbook `(1 - 2y^2) - 2z^2` form. For a capsule whose axis is turned a
+quarter turn (Unity's Y-direction capsule, stored as `(0, 0, -s, s)`) the two give a
+diagonal entry of about 1e-7 with opposite signs, which decides the end of the capsule
+segment the sweep's first support point comes from. On NEON, `CCDSweep` now builds
+`aToB` with the added `QuatGetMat33VSse2Order`, the SSE2 operation order in NEON
+intrinsics (separate multiplies and adds). Every other caller, and the Intel build, is
+unchanged.
+
+Measured requirement (Unity 6000.0.71f1 macOS arm64 Editor, tests/projects/physicsccdhinge):
+the Editor records the Linux reference's values for the capsule's Continuous and
+ContinuousDynamic sweeps `ccd/thin/2/{False/1,False/2,True/2}/0/event/0/0` (one contact at
+y = -0.0952381), while Unbound on arm64 reported y = 0 from the other end. With the patch the
+three rows match: the default suite goes from 6706 to 6709 of 6814, its 5 unresolved rows
+being `ccd/ghost/3`, where the macOS Editor gives the same values as Unbound. Against the
+macOS Editor's own captures nothing else moves: the five other physicsccdhinge suites,
+tests/projects/contactmodify3d (350 of 412 records identical in key and value) and the
+capsule, sweeps and geometry suites of tests/projects/contactevents3d are byte-identical
+with and without it. Controls that were rejected: the SSE2 order in every
+`QuatGetMat33V` of the NEON build, or in the shared `PsMatTransformV` constructor from a
+transform (also used by contact generation), resolves the three rows but lowers
+contactmodify3d to 328 identical records; fused multiply-adds in the NEON multiply-add
+helpers lower it to 317-325. That the macOS Editor's own build computes this one frame in
+the SSE2 order is an inference from these measurements, not an observed mechanism; the
+Linux x86_64 probes do not exercise the NEON code.
 
 ## Replay and maintain the inventory
 

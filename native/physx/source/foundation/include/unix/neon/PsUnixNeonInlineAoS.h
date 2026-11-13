@@ -3644,6 +3644,27 @@ PX_FORCE_INLINE VecU32V V4ConvertToU32VSaturate(const Vec4V in, PxU32 power)
 	return vcvtq_u32_f32(in);
 }
 
+// Unbound: the rotation matrix in the SSE2 build's operation order (PsVecMathSSE.h): each column
+// is v * 2q_i + (2ww - 1, ...) with every product and sum rounded, so the diagonal is
+// (2ww - 1) + 2x^2 rather than (1 - 2y^2) - 2z^2. Used where the macOS arm64 Unity Editor gives the
+// SSE2 build's values (UNBOUND_PATCHES.md, "CCD sweep frame in the SSE2 order").
+PX_FORCE_INLINE void QuatGetMat33VSse2Order(const QuatVArg q, Vec3V& column0, Vec3V& column1, Vec3V& column2)
+{
+	const float32x4_t q2 = vaddq_f32(q, q);
+	const float32x4_t minusOneW = { 0.0f, 0.0f, 0.0f, -1.0f };
+	const float32x4_t qw2 = vaddq_f32(vmulq_n_f32(q2, vgetq_lane_f32(q, 3)), minusOneW); // (2xw, 2yw, 2zw, 2ww - 1)
+	const float32x4_t v = vsetq_lane_f32(0.0f, q, 3);
+	const float xw = vgetq_lane_f32(qw2, 0), yw = vgetq_lane_f32(qw2, 1), zw = vgetq_lane_f32(qw2, 2);
+	const float ww = vgetq_lane_f32(qw2, 3);
+	// Negated as V4Neg does, 0 - a (a zero stays +0).
+	const float32x4_t a0 = { ww, zw, 0.0f - yw, 0.0f };
+	const float32x4_t a1 = { 0.0f - zw, ww, xw, 0.0f };
+	const float32x4_t a2 = { yw, 0.0f - xw, ww, 0.0f };
+	column0 = vaddq_f32(vmulq_n_f32(v, vgetq_lane_f32(q2, 0)), a0);
+	column1 = vaddq_f32(vmulq_n_f32(v, vgetq_lane_f32(q2, 1)), a1);
+	column2 = vaddq_f32(vmulq_n_f32(v, vgetq_lane_f32(q2, 2)), a2);
+}
+
 PX_FORCE_INLINE void QuatGetMat33V(const QuatVArg q, Vec3V& column0, Vec3V& column1, Vec3V& column2)
 {
 	const FloatV one = FOne();

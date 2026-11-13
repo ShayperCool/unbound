@@ -75,7 +75,15 @@ static PxReal CCDSweep(ConvexA& a, ConvexB& b,  const PxTransform& transform0, c
 	const PsTransformV tr0(p0, q0);
 	const PsTransformV tr1(p1, q1);
 
+#if PX_NEON
+	// Unbound: the relative frame's matrix in the SSE2 build's order (UNBOUND_PATCHES.md).
+	const PsTransformV relative = tr1.transformInv(tr0);
+	PsMatTransformV aToB;
+	aToB.p = relative.p;
+	QuatGetMat33VSse2Order(relative.q, aToB.rot.col0, aToB.rot.col1, aToB.rot.col2);
+#else
 	const PsMatTransformV aToB(tr1.transformInv(tr0));
+#endif
 
 	const Vec3V trans0p = V3LoadU(transform0.p);
 	const Vec3V trans1p = V3LoadU(transform1.p);
