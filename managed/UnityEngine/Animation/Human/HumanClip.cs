@@ -15,9 +15,10 @@ namespace UnityEngine
         const int AnimatorClassId = CurveBinding.AnimatorClassId;
 
         /// <summary>The index of a curve among the humanoid curves (-1: none): a curve on the
-        /// Animator at the root path whose name is a humanoid curve's.</summary>
+        /// Animator whose name is a humanoid curve's (at any path, as before; a path below the
+        /// root is unmeasured).</summary>
         static int HumanCurveIndexOf(CurveBinding b) =>
-            b.ClassId == AnimatorClassId && b.Path.Length == 0 ? HumanClipImport.CurveIndex(b.Attribute) : -1;
+            b.ClassId == AnimatorClassId ? HumanClipImport.CurveIndex(b.Attribute) : -1;
         bool m_HumanConverted;
 
         /// <summary>Whether the clip animates a human (root, goal or muscle curves on the Animator);
@@ -187,8 +188,8 @@ namespace UnityEngine
             if (m_Mirror) NoteMirroredWithoutFootGoals();
         }
 
-        /// <summary>Says once that a mirrored humanoid clip without a foot's goal curves places
-        /// its legs under Foot IK differently from the Editor (6000.0.71f1, an exploratory capture
+        /// <summary>Says once, when a humanoid clip without a foot's goal curves is mirrored, that
+        /// played with Foot IK it places its legs differently from the Editor (6000.0.71f1, an exploratory capture
         /// of tests/projects/humanoid apiCurves.mirror with foot IK, kept as the known class
         /// mirror-no-goals of apiCurves.mirrorFootIK: leg muscles and the body position differ,
         /// the unmirrored clip matches; the cause is not found).</summary>
@@ -200,13 +201,13 @@ namespace UnityEngine
                 int i = c.Curve != null ? HumanCurveIndexOf(c.Binding) : -1;
                 if (i < 0) continue;
                 any = true;
-                left |= i == HumanClipImport.GoalFirst;
-                right |= i == HumanClipImport.GoalFirst + 7;
+                left |= i >= HumanClipImport.GoalFirst && i < HumanClipImport.GoalFirst + 7;
+                right |= i >= HumanClipImport.GoalFirst + 7 && i < HumanClipImport.GoalFirst + 14;
             }
             // Only the clip without either foot's goals is measured; one foot's goals alone is not.
             if (any && !(left && right))
                 Unbound.Runtime.Stubs.Ignored("AnimationClip mirrored humanoid clip without foot goal curves",
-                    "places its legs under Foot IK differently from the Editor (measured without either foot's goals, not matched)");
+                    "places its legs differently from the Editor if played with Foot IK (measured without either foot's goals, not matched)");
         }
 
         AnimationClip m_StateMirrored;

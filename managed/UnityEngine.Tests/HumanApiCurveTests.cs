@@ -94,8 +94,8 @@ namespace UnityEngine.Tests
             return 0;
         }
 
-        /// <summary>A mirrored humanoid clip without a foot's goal curves reports that its legs
-        /// under Foot IK differ from the Editor's (tests/projects/humanoid apiCurves.mirrorFootIK;
+        /// <summary>A mirrored humanoid clip without a foot's goal curves reports that played
+        /// with Foot IK its legs differ from the Editor's (tests/projects/humanoid apiCurves.mirrorFootIK;
         /// the warning itself is logged once per run). Control: the unmirrored clip does not.</summary>
         [Theory]
         [InlineData(true)]
