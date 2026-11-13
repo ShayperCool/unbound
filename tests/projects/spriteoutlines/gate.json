@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/spriteoutlines/run.py check"],
+  "summary": "spriteoutlines: \\d+ values, \\d+ differences"
+}
