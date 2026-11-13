@@ -2,7 +2,7 @@
 //! mode (tests/projects/spriteatlas): where each sprite goes on which page, and the pages'
 //! pixels.
 //!
-//! The layout, in the Editor's terms:
+//! The layout:
 //! - Sprites are ordered by their secondary-texture set, then by texture rect area (largest
 //!   first), then by texture (by GUID; on one texture by the FNV-1a hash of the name).
 //! - Each sprite's mask is its render mesh rasterized over the texture rect's pixel bounds (the
@@ -246,8 +246,9 @@ fn fnv1a(text: &str) -> u32 {
         .fold(0x811c_9dc5, |h, b| (h ^ b as u32).wrapping_mul(0x0100_0193))
 }
 
-/// A GUID's four 32-bit words as the Editor holds them: each word's nibbles are its eight hex
-/// digits, the first digit the lowest nibble.
+/// A GUID's four 32-bit words, which order textures: each word's nibbles are its group's eight
+/// hex digits, the first digit the lowest nibble (matches the Unity 6000.0.71f1 Editor's order,
+/// tests/projects/spriteatlas).
 pub fn guid_words(guid: u128) -> [u32; 4] {
     let mut words = [0u32; 4];
     for (i, word) in words.iter_mut().enumerate() {
@@ -261,7 +262,8 @@ pub fn guid_words(guid: u128) -> [u32; 4] {
     words
 }
 
-/// The search's random generator (xorshift128), seeded as the Editor seeds it.
+/// The search's random generator: xorshift128, its state seeded from one word by the Mersenne
+/// Twister's recurrence.
 struct Rng([u32; 4]);
 
 impl Rng {
@@ -375,7 +377,7 @@ fn md4(message: &[u8]) -> [u8; 16] {
     out
 }
 
-/// The smallest power of two above `v` (`v` = 2^k - 1 gives 2^k, as the Editor rounds sizes).
+/// The smallest power of two above `v` (`v` = 2^k - 1 gives 2^k).
 fn power_of_two_above(v: i32) -> i32 {
     let mut v = v as u32;
     v |= v >> 16;
@@ -700,7 +702,7 @@ fn pixel_bounds(rect: [f32; 4], texture: [u32; 2]) -> [i32; 4] {
 }
 
 /// The sprite's mask: its mesh's triangles rasterized in texture pixels within its pixel bounds
-/// (each covered pixel counts 8 per triangle in a byte, as the Editor counts them), and the
+/// (each covered pixel counts 8 per triangle in a byte, so 32 overlapping triangles wrap to 0), and the
 /// bounding box of the covered bits; unless packing tightly, the whole box.
 fn sprite_mask(sprite: &PackSprite, tight: bool) -> (Bits, [i32; 2], [i32; 4]) {
     let [x0, y0, x1, y1] = pixel_bounds(sprite.rect, sprite.texture_size);

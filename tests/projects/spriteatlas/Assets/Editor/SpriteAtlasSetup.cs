@@ -28,6 +28,7 @@ public static class SpriteAtlasSetup
         ("Dilated", 8, true, true, 256, true, true, true, 1, false),
         ("Blocks", 2, true, true, 256, false, false, false, 2, false),
         ("Late", 2, true, true, 256, false, false, false, 1, false),
+        ("Hd", 2, false, false, 256, false, false, false, 1, false),
     };
 
     static Color32 Pixel(int x, int y, int w, int h, int shape, int seed)
@@ -113,6 +114,11 @@ public static class SpriteAtlasSetup
         if (Set == "v2")
         {
             AuthorV2();
+            return;
+        }
+        if (Set == "over")
+        {
+            AuthorOversize();
             return;
         }
         try
@@ -210,12 +216,21 @@ public static class SpriteAtlasSetup
             atlases.Add(variant);
             var late = atlases.First(a => a.name == "Late");
             late.SetIncludeInBuild(false);
+            // A master left out of builds with a variant in them (the Manual's way to use a
+            // variant): `Hd` and its half-scale variant `Sd`.
+            var hd = atlases.First(a => a.name == "Hd");
+            hd.SetIncludeInBuild(false);
+            var variantSd = Atlas("Sd", 2, false, false, 256, false, false, false, 1, FilterMode.Bilinear, new UnityEngine.Object[0]);
+            variantSd.SetIsVariant(true);
+            variantSd.SetMasterAtlas(hd);
+            variantSd.SetVariantScale(0.5f);
+            atlases.Add(variantSd);
             EditorSettings.spritePackerMode = SpritePackerMode.AlwaysOnAtlas;
             AssetDatabase.SaveAssets();
 
             // Drawn: a flipped and a tightly packed sprite, a Full Rect sprite on a second page, a
             // folder sprite on a point-filtered page and a late-binding sprite.
-            Scene(atlases, late, new[] { "SheetACell2", "TightInset", "PagedTiny", "FolderBig", "LateRing", "TightBig" });
+            Scene(atlases, late, new[] { "SheetACell2", "TightInset", "PagedTiny", "FolderBig", "LateRing", "TightBig", "HdRing", "Sliced", "Sliced" });
             EditorApplication.Exit(0);
         }
         catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
@@ -268,6 +283,40 @@ public static class SpriteAtlasSetup
         catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
     }
 
+    /// <summary>Sprite Atlas V1 with one atlas whose page is smaller than a sprite (`Over`, 64
+    /// pixels for a 100-pixel sprite) beside one that fits (`Fits`).</summary>
+    static void AuthorOversize()
+    {
+        try
+        {
+            EditorSettings.serializationMode = SerializationMode.ForceText;
+            Directory.CreateDirectory("Assets/Atlases");
+            int seed = 400;
+            foreach (var name in new[] { "Fits", "Over" })
+            {
+                Directory.CreateDirectory($"Assets/{name}");
+                foreach (var s in Shapes.Take(4))
+                {
+                    int sd = ++seed;
+                    WriteTexture($"Assets/{name}/{name}{s.n}.png", s.w, s.h, (x, y) => Pixel(x, y, s.w, s.h, s.shape, sd));
+                }
+            }
+            AssetDatabase.Refresh();
+            foreach (var name in new[] { "Fits", "Over" })
+                foreach (var s in Shapes.Take(4))
+                    SpriteImporter($"Assets/{name}/{name}{s.n}.png", SpriteImportMode.Single, s.mesh, false).SaveAndReimport();
+            var atlases = new List<SpriteAtlas>();
+            foreach (var (name, max) in new[] { ("Fits", 256), ("Over", 64) })
+                atlases.Add(Atlas(name, 2, false, false, max, false, false, false, 1, FilterMode.Bilinear,
+                    Shapes.Take(4).Select(s => (UnityEngine.Object)AssetDatabase.LoadAssetAtPath<Texture2D>($"Assets/{name}/{name}{s.n}.png")).ToArray()));
+            EditorSettings.spritePackerMode = SpritePackerMode.AlwaysOnAtlas;
+            AssetDatabase.SaveAssets();
+            Scene(atlases, null, new[] { "FitsBig", "OverBig" });
+            EditorApplication.Exit(0);
+        }
+        catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+    }
+
     /// <summary>The probe scene: the probe with every sprite of the project and the atlases, a
     /// camera and renderers of the `drawn` sprites.</summary>
     static void Scene(List<SpriteAtlas> atlases, SpriteAtlas late, string[] drawn)
@@ -290,9 +339,17 @@ public static class SpriteAtlasSetup
         camera.allowMSAA = false;
         for (int i = 0; i < drawn.Length; i++)
         {
-            var renderer = new GameObject(drawn[i] + "Renderer").AddComponent<SpriteRenderer>();
+            var renderer = new GameObject(drawn[i] + "Renderer" + i).AddComponent<SpriteRenderer>();
             renderer.sprite = sprites.First(s => s.name == drawn[i]);
             renderer.transform.position = new Vector3(-1.5f + 1.0f * (i % 4), i < 4 ? .5f : -.6f, 0);
+            // The 9-sliced sprite: once Sliced, once Tiled, larger than its rect, apart from the
+            // other renderers (their order at equal depth is not part of the probe).
+            if (i >= 7)
+            {
+                renderer.drawMode = i == 7 ? SpriteDrawMode.Sliced : SpriteDrawMode.Tiled;
+                renderer.size = new Vector2(.8f, .4f);
+                renderer.transform.position = new Vector3(1.5f, i == 7 ? -.45f : -.95f, 0);
+            }
         }
         EditorSceneManager.SaveScene(scene, "Assets/Probe.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Probe.unity", true) };

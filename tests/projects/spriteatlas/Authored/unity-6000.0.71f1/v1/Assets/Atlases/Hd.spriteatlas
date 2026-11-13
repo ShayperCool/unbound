@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Hd
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 0
+      compressionQuality: 0
+      maxTextureSize: 0
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 1
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 4
+      m_BuildTarget: DefaultTexturePlatform
+      m_MaxTextureSize: 256
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: -1
+      m_TextureCompression: 0
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 0
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 2
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 0
+      enableTightPacking: 0
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 2800000, guid: d676216ed685b5d169730b88890572ea, type: 3}
+    - {fileID: 2800000, guid: a89d461181a37e70892e0f6dde27f868, type: 3}
+    - {fileID: 2800000, guid: f94772f743927e5f488f417a81b5b9d1, type: 3}
+    - {fileID: 2800000, guid: 7c8f709f750a84fc2ae7051dcb26029b, type: 3}
+    - {fileID: 2800000, guid: 70f1963be8e4d0c5d992c4f7aae4d620, type: 3}
+    - {fileID: 2800000, guid: 9c5d239eac423bf82ae05b97e05d78e6, type: 3}
+    - {fileID: 2800000, guid: ab88471882c8aebbc9ee014aa246d769, type: 3}
+    - {fileID: 2800000, guid: 8b75c595e2b7e3595936ce59ba9a8625, type: 3}
+    - {fileID: 2800000, guid: e336b7bdc00d42c19985125153966118, type: 3}
+    bindAsDefault: 0
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys: []
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites: []
+  m_PackedSpriteNamesToIndex: []
+  m_RenderDataMap: {}
+  m_Tag: Hd
+  m_IsVariant: 0

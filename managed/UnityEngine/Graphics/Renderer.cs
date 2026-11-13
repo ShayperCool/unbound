@@ -1048,12 +1048,14 @@ namespace UnityEngine
             m_SlicedKey = key;
             var s = m_Sprite;
             float ppu = s.pixelsPerUnit;
-            var rect = s.rect;
+            // The rect where the sprite is drawn from: on a packed atlas's page, placed as its
+            // texture rect is (in the page's rect space: a variant's master's).
+            var rect = s.DrawnRect;
+            var space = s.RectSpace;
             var border = s.border;
-            var tex = s.texture;
             bool tiled = m_DrawMode == SpriteDrawMode.Tiled, adaptive = m_TileMode == SpriteTileMode.Adaptive;
-            AxisSegments(s_SegmentsX, m_Size.x, s.pivot.x / rect.width, rect.x, rect.width, border.x, border.z, ppu, tex.width, tiled, adaptive, m_AdaptiveModeThreshold);
-            AxisSegments(s_SegmentsY, m_Size.y, s.pivot.y / rect.height, rect.y, rect.height, border.y, border.w, ppu, tex.height, tiled, adaptive, m_AdaptiveModeThreshold);
+            AxisSegments(s_SegmentsX, m_Size.x, s.pivot.x / rect.width, rect.x, rect.width, border.x, border.z, ppu, space.x, tiled, adaptive, m_AdaptiveModeThreshold);
+            AxisSegments(s_SegmentsY, m_Size.y, s.pivot.y / rect.height, rect.y, rect.height, border.y, border.w, ppu, space.y, tiled, adaptive, m_AdaptiveModeThreshold);
             int quads = s_SegmentsX.Count * s_SegmentsY.Count;
             var vertices = new Vector3[quads * 4];
             var uvs = new Vector2[quads * 4];
@@ -1076,6 +1078,7 @@ namespace UnityEngine
                     tris[t + 3] = v + 2; tris[t + 4] = v + 3; tris[t + 5] = v;
                     q++;
                 }
+            s.MirrorPackedUVs(uvs);
             if (m_DrawMode == SpriteDrawMode.Tiled && s.m_MeshType == SpriteMeshType.Tight && !m_WarnedTight)
             {
                 m_WarnedTight = true;

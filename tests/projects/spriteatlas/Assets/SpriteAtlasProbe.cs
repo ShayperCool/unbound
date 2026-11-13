@@ -124,7 +124,7 @@ public sealed class SpriteAtlasProbe : MonoBehaviour
         try
         {
             capture.sprites = sprites.Select(Describe).ToArray();
-            capture.lateBefore = sprites.Where(s => s.name.StartsWith("Late")).Select(Describe).ToArray();
+            capture.lateBefore = sprites.Where(s => s.name.StartsWith("Late") || s.name.StartsWith("Hd")).Select(Describe).ToArray();
             var pages = new Dictionary<string, Texture2D>();
             void Note(Texture2D t) { if (t != null && t.name.StartsWith("sactx")) pages[t.name] = t; }
             foreach (var s in sprites) Note(s.texture);
@@ -151,7 +151,7 @@ public sealed class SpriteAtlasProbe : MonoBehaviour
         for (int i = 0; i < 3; i++) yield return null;
         try
         {
-            capture.lateAfter = sprites.Where(s => s.name.StartsWith("Late")).Select(Describe).ToArray();
+            capture.lateAfter = sprites.Where(s => s.name.StartsWith("Late") || s.name.StartsWith("Hd")).Select(Describe).ToArray();
             capture.image = Render(160, 96);
             capture.events = s_Events.ToArray();
             capture.complete = true;

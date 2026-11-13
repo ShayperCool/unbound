@@ -12,10 +12,16 @@ and report from the packed pages there. Unity 6000.0.71f1 authors two projects (
   textures), `Dilated` (padding 8, alpha dilation, mipmaps, a compressed page), `Blocks`
   (block offset 2) and `Late` (not included in builds: late binding). Also `Sheets` (two sprite
   sheets of equal 32 x 32 cells), `Folder` (a folder packable, point filtering), `Picked`
-  (sprites as packables, one 9-sliced) and `PagedHalf` (a variant of `Paged` at scale 0.5);
-  `Unpicked` and `Loose` (a trimmed Tight sprite) are in no atlas.
+  (sprites as packables, one 9-sliced, drawn Sliced and Tiled), `PagedHalf` (a variant of
+  `Paged` at scale 0.5) and `Hd` (left out of builds) with its variant `Sd` (in builds, scale
+  0.5: the Manual's way to use a variant); `Unpicked` and `Loose` (a trimmed Tight sprite) are
+  in no atlas.
 - `v2`: Sprite Atlas V2 assets (`.spriteatlasv2` with SpriteAtlasImporter settings), mode 5:
   `Tight`, `Paged` and `Late`.
+- `over`: Sprite Atlas V1, mode 4, an atlas (`Over`) whose 64-pixel page is smaller than one of
+  its sprites beside one that fits (`Fits`): the Editor reports "Packing Error: Sprite Atlas
+  (Over) contain sprite(s) larger than its max texture size. It needs at least 128." and packs
+  no atlas at all (every sprite unpacked, every atlas empty).
 
 In Play mode the probe records every sprite (texture, texture rect, offsets, packed, packing
 mode and rotation, rect, pivot, bounds, vertices, UVs, triangles, `spriteAtlasTextureScale`,
@@ -23,7 +29,8 @@ mode and rotation, rect, pivot, bounds, vertices, UVs, triangles, `spriteAtlasTe
 `GetSprites` clones in order, `GetSprite`, `CanBindTo`), every page texture (size, format,
 mipmaps, sampler, readability and all texels), the late-binding sprites before and after
 `SpriteAtlasManager.atlasRequested` registers their atlas (and the events with their frames),
-and a 160 x 96 render of six sprite renderers.
+and a 160 x 96 render of the sprite renderers (placed apart: their order at equal depth is
+not part of the probe).
 
 The comparator (`compare.py`) compares every value exactly (the render within 2 per channel).
 Page textures pair up by name; their names end with a hash of the Editor's import state,
@@ -40,7 +47,4 @@ python3 tests/projects/spriteatlas/run.py publish --set v1 native-a native-b
 UNBOUND=/path/to/this/checkouts/unbound python3 tests/projects/spriteatlas/run.py check
 ```
 
-(The same with `--set v2`.) A sprite larger than its atlas's page cancels the packing of every
-atlas in the Editor ("Packing Error: Sprite Atlas (X) contain sprite(s) larger than its max
-texture size. It needs at least N."): that case needs a project of its own and is covered by
-unit tests, not by this probe.
+(The same with `--set v2` and `--set over`.)

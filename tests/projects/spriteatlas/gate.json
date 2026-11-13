@@ -1,4 +1,4 @@
 {
   "commands": ["python3 tests/projects/spriteatlas/run.py check"],
-  "summary": "spriteatlas v\\d: \\d+ values, \\d+ differences"
+  "summary": "spriteatlas \\w+: \\d+ values, \\d+ differences"
 }

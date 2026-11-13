@@ -315,6 +315,46 @@ namespace UnityEngine
             m_ShapeMesh = null;
         }
 
+        /// <summary>The texture size the sprite's rects are in: a variant atlas's scaled page keeps
+        /// its master's rects (measured: tests/projects/spriteatlas).</summary>
+        internal Vector2 RectSpace
+        {
+            get
+            {
+                var t = m_Texture;
+                return t == null ? Vector2.one : new Vector2(t.width / m_AtlasScale, t.height / m_AtlasScale);
+            }
+        }
+
+        /// <summary>The sprite's rect where it is drawn from: in a packed atlas, the rect placed as
+        /// its texture rect is (the rect itself otherwise).</summary>
+        internal Rect DrawnRect
+        {
+            get
+            {
+                if (m_AtlasRect is not Rect t) return m_Rect;
+                var offset = textureRectOffset;
+                return new Rect(t.x - offset.x, t.y - offset.y, m_Rect.width, m_Rect.height);
+            }
+        }
+
+        /// <summary>Mirrors UVs within the drawn rect as the packer flipped the sprite (UVs made
+        /// for the unflipped drawn rect, as sliced and tiled geometry makes them).</summary>
+        internal void MirrorPackedUVs(Vector2[] uvs)
+        {
+            bool flipX = m_PackingRotation == SpritePackingRotation.FlipHorizontal || m_PackingRotation == SpritePackingRotation.Rotate180;
+            bool flipY = m_PackingRotation == SpritePackingRotation.FlipVertical || m_PackingRotation == SpritePackingRotation.Rotate180;
+            if (m_AtlasRect == null || !(flipX || flipY)) return;
+            var r = DrawnRect;
+            var space = RectSpace;
+            float sumU = (2f * r.x + r.width) / space.x, sumV = (2f * r.y + r.height) / space.y;
+            for (int i = 0; i < uvs.Length; i++)
+            {
+                if (flipX) uvs[i].x = sumU - uvs[i].x;
+                if (flipY) uvs[i].y = sumV - uvs[i].y;
+            }
+        }
+
         /// <summary>A sprite of an atlas that binds late, before the atlas is registered: no texture
         /// (measured: tests/projects/spriteatlas).</summary>
         internal void UnbindTexture()
@@ -449,25 +489,6 @@ namespace UnityEngine
     {
         public sealed partial class DataUtility
         {
-            /// <summary>The texture size the sprite's rects are in: a variant atlas's scaled page keeps
-            /// its master's rects (measured: tests/projects/spriteatlas).</summary>
-            static (float, float) RectSpace(Sprite sprite, Texture2D t)
-            {
-                float scale = sprite.spriteAtlasTextureScale;
-                return (t.width / scale, t.height / scale);
-            }
-
-            /// <summary>The sprite's rect where it is drawn from: in a packed atlas, the rect placed as
-            /// its texture rect is.</summary>
-            static Rect DrawnRect(Sprite sprite)
-            {
-                var r = sprite.rect;
-                if (!sprite.packed) return r;
-                var t = sprite.textureRect;
-                var offset = sprite.textureRectOffset;
-                return new Rect(t.x - offset.x, t.y - offset.y, r.width, r.height);
-            }
-
             /// <summary>Without a texture the inner and outer UVs are the unit square (measured for a
             /// late-binding sprite before its atlas registers: tests/projects/spriteatlas).</summary>
             static readonly Vector4 s_NoTexture = new Vector4(0f, 0f, 1f, 1f);
@@ -476,8 +497,8 @@ namespace UnityEngine
             {
                 var t = sprite.texture;
                 if (t == null) return s_NoTexture;
-                var (w, h) = RectSpace(sprite, t);
-                var r = DrawnRect(sprite);
+                var (w, h) = (sprite.RectSpace.x, sprite.RectSpace.y);
+                var r = sprite.DrawnRect;
                 var b = sprite.border;
                 return new Vector4((r.x + b.x) / w, (r.y + b.y) / h, (r.xMax - b.z) / w, (r.yMax - b.w) / h);
             }
@@ -488,7 +509,7 @@ namespace UnityEngine
             {
                 var t = sprite.texture;
                 if (t == null) return s_NoTexture;
-                var (w, h) = RectSpace(sprite, t);
+                var (w, h) = (sprite.RectSpace.x, sprite.RectSpace.y);
                 var r = sprite.textureRect;
                 return new Vector4(r.x / w, r.y / h, r.xMax / w, r.yMax / h);
             }

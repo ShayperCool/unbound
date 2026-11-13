@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Author each set once; capture twice independently; publish; check committed fixtures without an Editor.
 
-    run.py author  --set v1|v2 --label L   the Editor authors the set's project (recorded in Authored/)
-    run.py native  --set v1|v2 --label L   an Editor capture in Play mode
-    run.py publish --set v1|v2 L1 L2       checks two captures agree, copies one to Reference/
-    run.py check   [--set v1|v2]           engine captures against Reference/ (both sets by default)
+    run.py author  --set v1|v2|over --label L   the Editor authors the set's project (recorded in Authored/)
+    run.py native  --set v1|v2|over --label L   an Editor capture in Play mode
+    run.py publish --set v1|v2|over L1 L2       checks two captures agree, copies one to Reference/
+    run.py check   [--set v1|v2|over]      engine captures against Reference/ (every set by default)
 """
 import argparse
 import json
@@ -27,8 +27,9 @@ from probe_paths import run_root, unity_version
 WORK = run_root(ROOT, 'runs')
 OUT = 'capture.json'
 # v1: Sprite Atlas V1 assets, packer mode "Sprite Atlas V1 - Always Enabled"; v2: Sprite Atlas
-# V2 assets, packer mode "Sprite Atlas V2 - Enabled".
-SETS = ('v1', 'v2')
+# V2 assets, packer mode "Sprite Atlas V2 - Enabled"; over: V1 with an atlas whose page is smaller
+# than one of its sprites.
+SETS = ('v1', 'v2', 'over')
 
 
 def reference(atlas_set):

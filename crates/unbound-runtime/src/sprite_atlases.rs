@@ -262,7 +262,7 @@ fn compression_name(texture: &ImportedTexture) -> String {
 
 impl AtlasImporter<'_> {
     /// A variant: the master's sprites on the master's pages scaled by `scale` (the importer's
-    /// Mitchell filter, as the Editor scales them; the size rounds down, unmeasured for scales
+    /// Mitchell filter (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlas); the size rounds down, unmeasured for scales
     /// that do not divide it), stored with the variant's own texture settings.
     fn variant(
         &self,

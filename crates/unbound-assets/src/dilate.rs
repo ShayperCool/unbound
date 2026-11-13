@@ -10,8 +10,8 @@ pub const NONE: (u16, u16) = (u16::MAX, u16::MAX);
 /// takes its colour from, or [`NONE`]. Each texel starts with itself if `solid`, then for steps
 /// `k = min(max(w, h) / 2, max_step)`, `k / 2`, ..., 1 looks at its own candidate and those of
 /// the texels `k` left, right, below and above (in that order), keeping the first one nearest in
-/// Manhattan distance; a solid texel keeps itself. Images of 0xffff texels or more on a side are
-/// not flooded (every texel gets [`NONE`]), as the Editor's 16-bit coordinates cannot hold them.
+/// Manhattan distance; a solid texel keeps itself. Coordinates are 16-bit with 0xffff for none:
+/// images of 0xffff texels or more on a side are not flooded (every texel gets [`NONE`]).
 pub fn jump_flood(
     width: usize,
     height: usize,

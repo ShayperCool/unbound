@@ -28,6 +28,8 @@ namespace UnityEngine.U2D
             public Page[] Pages;
             public List<Binding> Sprites = new List<Binding>();
             public Dictionary<(string, long), Binding> ByKey = new Dictionary<(string, long), Binding>();
+            /// <summary>The loaded sprites in GetSprites order, once asked for.</summary>
+            public List<Sprite> Loaded;
         }
 
         sealed class Binding
@@ -42,9 +44,13 @@ namespace UnityEngine.U2D
 
         static Dictionary<(string, long), Binding> s_Bindings;
         static Dictionary<string, Atlas> s_Atlases;
+        /// <summary>A sprite larger than its atlas's page cancelled the packing: every atlas is
+        /// empty (measured: tests/projects/spriteatlas set `over`).</summary>
+        static bool s_Cancelled;
         /// <summary>Late-binding sprites waiting for their atlas, by atlas tag.</summary>
         static readonly Dictionary<string, List<Sprite>> s_Waiting = new Dictionary<string, List<Sprite>>();
         static readonly List<string> s_Requests = new List<string>();
+        static readonly List<Sprite> s_None = new List<Sprite>();
 
         sealed class Json
         {
@@ -96,6 +102,7 @@ namespace UnityEngine.U2D
             s_Bindings = new Dictionary<(string, long), Binding>();
             s_Atlases = new Dictionary<string, Atlas>(StringComparer.OrdinalIgnoreCase);
             var json = JsonSerializer.Deserialize<Json>(Native.Call("sprite-atlases", "{}"), s_Options);
+            s_Cancelled = json?.Cancelled != null;
             if (json?.Atlases == null) return;
             var shared = new Dictionary<(string, string), int>();
             foreach (var a in json.Atlases)
@@ -130,6 +137,12 @@ namespace UnityEngine.U2D
                     s_Bindings[key] = binding;
                 }
             }
+            // A master left out of builds with a variant in them: its sprites bind to the variant
+            // (measured: tests/projects/spriteatlas, the Manual's way to use a variant).
+            foreach (var atlas in s_Atlases.Values)
+                if (atlas.Master != null && atlas.IncludeInBuild && s_Atlases.TryGetValue(atlas.Master, out var master) && !master.IncludeInBuild)
+                    foreach (var pair in atlas.ByKey)
+                        s_Bindings[pair.Key] = pair.Value;
             foreach (var ((first, second), n) in shared)
                 Debug.LogWarning($"Unbound: {n} sprites are in sprite atlases {first} and {second}; they bind to {second} (the Editor's choice among several atlases is not reproduced)");
         }
@@ -197,9 +210,10 @@ namespace UnityEngine.U2D
             atlas.Registered = true;
             if (!s_Waiting.TryGetValue(atlas.Tag, out var waiting)) return;
             s_Waiting.Remove(atlas.Tag);
+            // A registered variant binds the sprites to its own pages (unmeasured).
             foreach (var sprite in waiting)
                 if (sprite != null && sprite.m_AtlasBinding is (string Texture, long FileId) key
-                    && s_Bindings.TryGetValue((key.Texture, key.FileId), out var binding))
+                    && (atlas.ByKey.TryGetValue(key, out var binding) || s_Bindings.TryGetValue(key, out binding)))
                     Bind(sprite, binding);
         }
 
@@ -215,15 +229,17 @@ namespace UnityEngine.U2D
         {
             if (!Active) return null;
             Load();
+            if (s_Cancelled) return s_None;
             var atlas = Find(spriteAtlas);
             if (atlas == null) return null;
+            if (atlas.Loaded != null) return atlas.Loaded;
             var sprites = new List<Sprite>(atlas.Sprites.Count);
             foreach (var b in atlas.Sprites)
                 if (AssetDatabaseRuntime.Load(b.Texture, b.FileId, typeof(Sprite)) is Sprite s) sprites.Add(s);
-            return sprites;
+            return atlas.Loaded = sprites;
         }
 
-        /// <summary>A copy of a packed atlas's sprite as SpriteAtlas.GetSprite gives it: on the atlas's
+        /// <summary>A copy of a packed atlas's sprite as SpriteAtlas.GetSprite gives it: on that atlas's
         /// page (a variant's scaled page), also before a late-binding atlas is registered.</summary>
         internal static Sprite Clone(SpriteAtlas spriteAtlas, Sprite sprite)
         {
@@ -231,7 +247,9 @@ namespace UnityEngine.U2D
             if (!Active || sprite.m_AtlasBinding is not (string Texture, long FileId) key) return copy;
             Load();
             var atlas = Find(spriteAtlas);
-            if (atlas != null && atlas.ByKey.TryGetValue(key, out var binding) && (!copy.packed || atlas.Master != null))
+            // On the pages of the atlas it comes from, whichever atlas the sprite itself binds to
+            // (measured: a master left out of builds gives clones on its own pages).
+            if (atlas != null && atlas.ByKey.TryGetValue(key, out var binding))
                 Bind(copy, binding);
             return copy;
         }
