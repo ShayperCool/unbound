@@ -1,6 +1,6 @@
-// A material block where one member between those the fragment program reads is read by the vertex program
-// alone (as Shader Graph materials' texel sizes and tiling often are): both programs share one
-// uniform layout, so the fragment program's block has a gap of a whole float4 row there.
+// A layout control: a material block whose members around one the vertex program alone reads are
+// read by the fragment program. Both programs keep every member of the block, so no gap arises;
+// it checks the uniform layout, not the type order fix (README.md).
 Shader "Probe/UniformGaps"
 {
     SubShader

@@ -500,6 +500,7 @@ fn fit_kernel(
             }
         }
     }
+    // A safeguard: the kernel fitting inserts no types after their users today.
     crate::fit::order_types(&mut module);
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
