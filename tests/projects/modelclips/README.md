@@ -188,8 +188,9 @@ rotation, but scripts read it).
   take's rotations have reached there: `Spin` has turned past half a turn and starts with a
   negative w, the opposite of its own matrix's sign.
 
-Not measured: Legacy imports, static models whose axes are converted, ties between diagonal elements, a range that starts before its
-take, and a turn of half a revolution or more between two frames.
+Not measured: a tie with the x element and a trace of exactly zero (Legacy imports, converted
+static models and a y-z tie: see the next section), a range that starts before its take, and a
+turn of half a revolution or more between two frames.
 
 
 ## Signs of Legacy and axis-converted imports, a rotation within its error
@@ -227,11 +228,12 @@ elsewhere: Head's z position (0.004, 0.006 at 1.5 s, 0.003 at the end), Hips' x 
 - The curves that leave the error of their first value are reduced from the start as in the
   `Reduced` set of tests/projects/modelaxis.
 
-Not measured: a rotation curve that stays within the Rotation Error of its first value and ends
-elsewhere (Spine's turn leaves it), a float curve (Animator parameter or blend shape weight) that
-does so, and such Humanoid curves (the two-key curves of `HumanReduced` have equal ends either
-way); the rule is applied to them as to the measured position and scale curves.
+A rotation curve that stays within the Rotation Error of its first value and ends elsewhere
+takes the rule too (`RigRotLoose`, see the section above). Not measured: a float curve (Animator
+parameter or blend shape weight) that does so, and such Humanoid curves (the two-key curves of
+`HumanReduced` have equal ends either way); the rule is applied to them as to the measured
+curves.
 
-Unbound matches 3617/3617 records. The generic reducing compression modes are compared by their
+Unbound matches 4534/4534 records. The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
 set).
