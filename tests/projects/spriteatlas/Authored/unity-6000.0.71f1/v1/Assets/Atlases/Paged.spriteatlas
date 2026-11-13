@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Paged
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 0
+      compressionQuality: 0
+      maxTextureSize: 0
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 1
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 4
+      m_BuildTarget: DefaultTexturePlatform
+      m_MaxTextureSize: 128
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: -1
+      m_TextureCompression: 0
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 0
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 4
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 0
+      enableTightPacking: 0
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 2800000, guid: e49463c6f6bb29e74a636813ddca930c, type: 3}
+    - {fileID: 2800000, guid: 80f3af0f22596b3aeb0a4c89e62bcbb8, type: 3}
+    - {fileID: 2800000, guid: b8787dc4c0d88582db91f1c44186d547, type: 3}
+    - {fileID: 2800000, guid: 5b3ff0155f04ce60882f3bbf8224b626, type: 3}
+    - {fileID: 2800000, guid: 38096dddc6d6fdca0b09321e8be24383, type: 3}
+    - {fileID: 2800000, guid: 01da815fe9b53c942887980722a7ab0c, type: 3}
+    - {fileID: 2800000, guid: 0c6df893bc6ce470e99adf0a0cc68aa9, type: 3}
+    - {fileID: 2800000, guid: bc2564482af9a986db1bcfcdebf7e734, type: 3}
+    - {fileID: 2800000, guid: da1fb9e12d87935f7834a05fff64858f, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys: []
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites: []
+  m_PackedSpriteNamesToIndex: []
+  m_RenderDataMap: {}
+  m_Tag: Paged
+  m_IsVariant: 0

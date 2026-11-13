@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: FullRect
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 0
+      compressionQuality: 0
+      maxTextureSize: 0
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 1
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 4
+      m_BuildTarget: DefaultTexturePlatform
+      m_MaxTextureSize: 256
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: -1
+      m_TextureCompression: 0
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 0
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 2
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 1
+      enableTightPacking: 1
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 2800000, guid: 16c5d74e7b3f798d0b8d7c8f83ce8e0a, type: 3}
+    - {fileID: 2800000, guid: a22cbcaccc4e14f6f98261217ea93601, type: 3}
+    - {fileID: 2800000, guid: 114c05aa82229f53d9ed2ffb8ddea4ab, type: 3}
+    - {fileID: 2800000, guid: b0e996776b57b9441b3fc1d62e982f19, type: 3}
+    - {fileID: 2800000, guid: 9e07de6147482e724b08ba5759dce7a0, type: 3}
+    - {fileID: 2800000, guid: 947f2ee8fa86a66f09b627eedbf2a035, type: 3}
+    - {fileID: 2800000, guid: 232cc3788888a75e7a322034d7101a77, type: 3}
+    - {fileID: 2800000, guid: cc6c616944e520a6fa56b234ff462eea, type: 3}
+    - {fileID: 2800000, guid: 012387ea3266519c9a125df07858bb8e, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys: []
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites: []
+  m_PackedSpriteNamesToIndex: []
+  m_RenderDataMap: {}
+  m_Tag: FullRect
+  m_IsVariant: 0
