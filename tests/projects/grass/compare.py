@@ -7,12 +7,16 @@ import json, os, sys
 TOLERANCE = 1e-4
 # Known differences: (case, name) -> why.
 EXPECTED = {
-    ("instances", "Coverage", 0): "coverage mode with samples narrower than three quarters of a footprint: Unbound's rule is measured on lone samples only",
-    ("instances", "Coverage", 1): "coverage mode with samples narrower than three quarters of a footprint (as layer 0)",
-    ("instances", "Coverage", 2): "coverage mode near the edge of the deterministic range, and ground-aligned turns",
-    ("instances", "Coverage", 3): "coverage mode at low coverage (28/255): the Editor keeps more candidates than the coverage squared",
+    ("instances", "Coverage", 2): "ground-aligned meshes: the Editor's turn of a tilted instance is not reproduced",
     ("instances", "Counts", 2): "ground-aligned meshes: the Editor's turn of a tilted instance is not reproduced (within 0.06 rad)",
 }
+# Not reproduced yet: prototypes scaled by detailObjectDensity, and ground-aligned meshes.
+for terrain in ("DensityCounts", "DensityCoverage"):
+    for layer in (0, 3):
+        EXPECTED[("instances", terrain, layer)] = "useDensityScaling: the density does not scale the instances yet"
+    for case in ("instances", "legacy"):
+        for layer in (1, 2):
+            EXPECTED[(case, terrain, layer)] = "ground-aligned meshes: the Editor's turns and bounds of tilted instances are not reproduced"
 CLIP_TOLERANCE = None
 
 

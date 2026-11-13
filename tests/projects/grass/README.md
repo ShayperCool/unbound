@@ -2,7 +2,11 @@
 
 Two terrains with the same detail prototypes (a grass texture, the same as billboards, a cube
 mesh drawn without and with instancing) and painted layers: `Counts` scatters by instance counts,
-`Coverage` by coverage. `GrassProbe` records Mathf.PerlinNoise samples, each terrain's detail data
+`Coverage` by coverage. Two more, `DensityCounts` and `DensityCoverage`, hold prototypes scaled by
+detailObjectDensity (also recorded at a third density), a lopsided slab mesh fully and partly
+ground-aligned, and two prototypes the Editor refuses (what `Validate` says of each is recorded);
+their instances are recorded again with QualitySettings.useLegacyDetailDistribution, and the
+probe records the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each terrain's detail data
 (resolution, patches, prototypes, layers read back, coverage), every patch's and layer's
 instances from `ComputeDetailInstanceTransforms` at two densities, and an image of each terrain
 (waving off in the data).
@@ -13,13 +17,14 @@ The grass meshes were measured with a scratch copy of the project overriding the
 shaders (`Hidden/TerrainEngine/Details/*`) by shaders that write every vertex they see to a
 random-write buffer.
 
-Make the assets and record Unity's reference (the Editor needs a display):
+Make the assets once (they are committed; `ProbeRunner.CreateDensity` adds the density terrains
+without touching the others) and record Unity's reference: `record.py` runs the Editor on the GPU in
+copies of the project under the validation cache, twice, and publishes only identical captures whose
+committed rows are unchanged:
 
-    ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath tests/projects/grass \
-        -executeMethod ProbeRunner.Create -logFile ~/.cache/grass-create.log
-    GRASS_PROBE_OUT=$PWD/tests/projects/grass/Reference \
-        ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -projectPath tests/projects/grass \
-        -executeMethod ProbeRunner.Record -logFile ~/.cache/grass.log
+    python3 tests/projects/grass/record.py create --release 6000.0.71f1
+    python3 tests/projects/grass/record.py record --release 6000.0.71f1
+    python3 tests/projects/grass/record.py publish --release 6000.0.71f1
 
 Run Unbound and compare:
 
@@ -27,9 +32,8 @@ Run Unbound and compare:
     python3 tests/projects/grass/compare.py tests/projects/grass/Reference /tmp/grass
     python3 tests/projects/particles/compare_images.py tests/projects/grass/Reference /tmp/grass
 
-Instance counts match exactly (positions, sizes, turns, bounds) but for ground-aligned meshes'
-turns. Coverage mode matches where samples hold at least three quarters of a footprint across;
-narrower samples, and low coverage values, are approximated (the listed expected differences).
-The images differ mostly in the layerless terrains' shading: the Editor's checker comes out
-bluer and a little darker than Unbound's (the ambient probe is the same; how the Editor lights a
-terrain without layers is not known yet).
+Instance counts and coverage match exactly (positions, sizes, turns, bounds) but for ground-aligned
+meshes' turns and bounds and prototypes scaled by detailObjectDensity (the listed expected
+differences). The images differ mostly in the layerless terrains' shading: the Editor's checker
+comes out bluer and a little darker than Unbound's (the ambient probe is the same; how the Editor
+lights a terrain without layers is not known yet).

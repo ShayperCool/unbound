@@ -34,6 +34,10 @@ public class GrassProbe : MonoBehaviour
                 perlin.Add(F(Mathf.PerlinNoise(x, y)));
         Record("perlin", $"\"values\":[{string.Join(",", perlin)}],\"oneD\":[{F(Mathf.PerlinNoise1D(-3.5f))},{F(Mathf.PerlinNoise1D(0.25f))},{F(Mathf.PerlinNoise1D(10.7f))}]");
 
+        // Messages the terrain API logs, recorded with their types at the end.
+        var messages = new List<string>();
+        Application.LogCallback onLog = (message, stack, type) => messages.Add($"{type}: {message}");
+        Application.logMessageReceived += onLog;
         var terrains = FindObjectsByType<Terrain>(FindObjectsSortMode.None).OrderBy(t => t.name).ToArray();
         foreach (var terrain in terrains)
         {
@@ -53,16 +57,30 @@ public class GrassProbe : MonoBehaviour
                 foreach (var v in values) sum += v;
                 Record("layer", $"\"terrain\":\"{terrain.name}\",\"layer\":{layer},\"sum\":{sum},\"samples\":[{string.Join(",", rows)}],\"coverage\":{F(data.ComputeDetailCoverage(layer))}");
             }
-            foreach (var density in new[] { 1f, 0.5f })
-                for (int layer = 0; layer < data.detailPrototypes.Length; layer++)
-                    for (int py = 0; py < data.detailPatchCount; py++)
-                        for (int px = 0; px < data.detailPatchCount; px++)
-                        {
-                            var instances = data.ComputeDetailInstanceTransforms(px, py, layer, density, out var bounds);
-                            var list = instances.Take(40).Select(i => $"[{F(i.posX)},{F(i.posY)},{F(i.posZ)},{F(i.scaleXZ)},{F(i.scaleY)},{F(i.rotationY)}]");
-                            Record("instances", $"\"terrain\":\"{terrain.name}\",\"density\":{F(density)},\"layer\":{layer},\"patch\":[{px},{py}],\"count\":{instances.Length},\"bounds\":[{F(bounds.min.x)},{F(bounds.min.y)},{F(bounds.min.z)},{F(bounds.max.x)},{F(bounds.max.y)},{F(bounds.max.z)}],\"first\":[{string.Join(",", list)}]");
-                        }
+            // The density terrains also at a third density, and what their prototypes validate to.
+            bool densityTerrain = terrain.name.StartsWith("Density");
+            if (densityTerrain)
+            {
+                var prototypes = data.detailPrototypes;
+                for (int i = 0; i < prototypes.Length; i++)
+                {
+                    bool valid = prototypes[i].Validate(out var error);
+                    Record("prototype", $"\"terrain\":\"{terrain.name}\",\"layer\":{i},\"valid\":{(valid ? "true" : "false")},\"error\":\"{error}\"");
+                }
+                Record("coverage_index", $"\"terrain\":\"{terrain.name}\",\"values\":[{F(data.ComputeDetailCoverage(-1))},{F(data.ComputeDetailCoverage(prototypes.Length))}]");
+            }
+            foreach (var density in densityTerrain ? new[] { 1f, 0.5f, 0.3f } : new[] { 1f, 0.5f })
+                RecordInstances("instances", terrain, density);
         }
+        // QualitySettings.useLegacyDetailDistribution: the density terrains again, then back.
+        QualitySettings.useLegacyDetailDistribution = true;
+        foreach (var terrain in terrains)
+            if (terrain.name.StartsWith("Density"))
+                RecordInstances("legacy", terrain, 1f);
+        QualitySettings.useLegacyDetailDistribution = false;
+        Application.logMessageReceived -= onLog;
+        foreach (var group in messages.GroupBy(m => m))
+            Record("log", $"\"message\":\"{group.Key}\",\"count\":{group.Count()}");
 
         // Images: each terrain from above at an angle (waving is off in the data).
         var target = new RenderTexture(320, 180, 24, RenderTextureFormat.ARGB32);
@@ -90,6 +108,19 @@ public class GrassProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    void RecordInstances(string kind, Terrain terrain, float density)
+    {
+        var data = terrain.terrainData;
+        for (int layer = 0; layer < data.detailPrototypes.Length; layer++)
+            for (int py = 0; py < data.detailPatchCount; py++)
+                for (int px = 0; px < data.detailPatchCount; px++)
+                {
+                    var instances = data.ComputeDetailInstanceTransforms(px, py, layer, density, out var bounds);
+                    var list = instances.Take(40).Select(i => $"[{F(i.posX)},{F(i.posY)},{F(i.posZ)},{F(i.scaleXZ)},{F(i.scaleY)},{F(i.rotationY)}]");
+                    Record(kind, $"\"terrain\":\"{terrain.name}\",\"density\":{F(density)},\"layer\":{layer},\"patch\":[{px},{py}],\"count\":{instances.Length},\"bounds\":[{F(bounds.min.x)},{F(bounds.min.y)},{F(bounds.min.z)},{F(bounds.max.x)},{F(bounds.max.y)},{F(bounds.max.z)}],\"first\":[{string.Join(",", list)}]");
+                }
     }
 
     static void Save(RenderTexture target, string path)
