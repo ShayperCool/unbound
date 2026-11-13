@@ -58,13 +58,40 @@ namespace Unbound.Runtime.Jobs
         internal static JobLayout For(Type jobType) => s_Layouts.GetOrAdd(jobType, t =>
         {
             var layout = new JobLayout();
-            layout.Scan(t, 0, t.Name, 0);
+            layout.Scan(t, 0, t.Name, 0, Inherited.None);
             return layout;
         });
 
         const BindingFlags Instance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        void Scan(Type type, int baseOffset, string path, int depth)
+        /// <summary>The attributes of an enclosing plain struct field, which apply to the pointers
+        /// and containers of the struct it holds as to its own fields (measured: the GPU Resident
+        /// Drawer's jobs, with an UnsafeAtomicCounter32 field marked
+        /// [NativeDisableUnsafePtrRestriction] and struct fields of containers marked
+        /// [NativeDisableParallelForRestriction] or [NativeDisableContainerSafetyRestriction], run
+        /// in the Unity 6000.0.71f1 Editor, tests/projects/residentdrawer).</summary>
+        [Flags]
+        enum Inherited
+        {
+            None = 0,
+            UnsafePointers = 1,
+            ParallelFor = 2,
+            Safety = 4,
+            ReadOnly = 8,
+            WriteOnly = 16,
+        }
+
+        static Inherited Attributes(FieldInfo field, Inherited inherited)
+        {
+            if (field.IsDefined(typeof(NativeDisableUnsafePtrRestrictionAttribute), false)) inherited |= Inherited.UnsafePointers;
+            if (field.IsDefined(typeof(NativeDisableParallelForRestrictionAttribute), false)) inherited |= Inherited.ParallelFor;
+            if (field.IsDefined(typeof(NativeDisableContainerSafetyRestrictionAttribute), false)) inherited |= Inherited.Safety;
+            if (field.IsDefined(typeof(ReadOnlyAttribute), false)) inherited |= Inherited.ReadOnly;
+            if (field.IsDefined(typeof(WriteOnlyAttribute), false)) inherited |= Inherited.WriteOnly;
+            return inherited;
+        }
+
+        void Scan(Type type, int baseOffset, string path, int depth, Inherited inherited)
         {
             if (depth > 16) return;
             foreach (var field in type.GetFields(Instance))
@@ -72,9 +99,10 @@ namespace Unbound.Runtime.Jobs
                 var fieldType = field.FieldType;
                 var fieldPath = path + "." + field.Name;
                 int offset = baseOffset + UnsafeUtility.GetFieldOffset(field);
+                var attributes = Attributes(field, inherited);
                 if (fieldType.IsPointer || fieldType.IsFunctionPointer)
                 {
-                    if (!field.IsDefined(typeof(NativeDisableUnsafePtrRestrictionAttribute), false))
+                    if ((attributes & Inherited.UnsafePointers) == 0)
                         Error ??= $"{fieldPath} uses unsafe Pointers which is not allowed. Unsafe Pointers can lead to crashes and no safety against race conditions can be provided.\nIf you really need to use unsafe pointers, you can disable this check using [NativeDisableUnsafePtrRestriction].";
                     continue;
                 }
@@ -91,19 +119,21 @@ namespace Unbound.Runtime.Jobs
                 }
                 if (fieldType.IsDefined(typeof(NativeContainerAttribute), false))
                 {
-                    if (field.IsDefined(typeof(NativeDisableContainerSafetyRestrictionAttribute), false))
+                    if ((attributes & Inherited.Safety) != 0)
                     {
                         var free = new Container { Path = fieldPath, Access = ContainerAccess.ReadWrite };
+                        // A deferred view of a list still takes the list's buffer when the job starts.
+                        Deferred(free, fieldType, offset);
                         ScanInsideContainer(fieldType, offset, fieldPath, free, depth + 1);
                         Unchecked.Add(free);
                         continue;
                     }
                     var container = new Container { Path = fieldPath };
-                    bool readOnly = field.IsDefined(typeof(ReadOnlyAttribute), false) || fieldType.IsDefined(typeof(NativeContainerIsReadOnlyAttribute), false);
-                    bool writeOnly = field.IsDefined(typeof(WriteOnlyAttribute), false);
+                    bool readOnly = (attributes & Inherited.ReadOnly) != 0 || fieldType.IsDefined(typeof(NativeContainerIsReadOnlyAttribute), false);
+                    bool writeOnly = (attributes & Inherited.WriteOnly) != 0;
                     container.AtomicWriteOnly = fieldType.IsDefined(typeof(NativeContainerIsAtomicWriteOnlyAttribute), false);
                     container.Access = readOnly ? ContainerAccess.Read : writeOnly || container.AtomicWriteOnly ? ContainerAccess.Write : ContainerAccess.ReadWrite;
-                    container.DisableParallelForRestriction = field.IsDefined(typeof(NativeDisableParallelForRestrictionAttribute), false);
+                    container.DisableParallelForRestriction = (attributes & Inherited.ParallelFor) != 0;
                     container.SupportsMinMax = fieldType.IsDefined(typeof(NativeContainerSupportsMinMaxWriteRestrictionAttribute), false);
                     if (container.SupportsMinMax)
                     {
@@ -111,14 +141,7 @@ namespace Unbound.Runtime.Jobs
                         container.MinOffset = FieldOffset(fieldType, "m_MinIndex", offset);
                         container.MaxOffset = FieldOffset(fieldType, "m_MaxIndex", offset);
                     }
-                    if (fieldType.IsDefined(typeof(NativeContainerSupportsDeferredConvertListToArray), false))
-                    {
-                        container.DeferredConvert = true;
-                        container.BufferOffset = FieldOffset(fieldType, "m_Buffer", offset);
-                        container.LengthOffset = FieldOffset(fieldType, "m_Length", offset);
-                        container.MinOffset = FieldOffset(fieldType, "m_MinIndex", offset);
-                        container.MaxOffset = FieldOffset(fieldType, "m_MaxIndex", offset);
-                    }
+                    Deferred(container, fieldType, offset);
                     if (field.IsDefined(typeof(DeallocateOnJobCompletionAttribute), false))
                     {
                         if (!fieldType.IsDefined(typeof(NativeContainerSupportsDeallocateOnJobCompletionAttribute), false))
@@ -132,7 +155,7 @@ namespace Unbound.Runtime.Jobs
                     continue;
                 }
                 if (fieldType == typeof(AtomicSafetyHandle)) continue;
-                Scan(fieldType, offset, fieldPath, depth + 1);
+                Scan(fieldType, offset, fieldPath, depth + 1, attributes);
             }
         }
 
@@ -169,6 +192,18 @@ namespace Unbound.Runtime.Jobs
                 }
                 ScanInsideContainer(fieldType, offset, path + "." + field.Name, container, depth + 1);
             }
+        }
+
+        /// <summary>A container that may be a deferred view of a list (NativeList.AsDeferredJobArray):
+        /// where its buffer, length and range are, to patch when the job starts.</summary>
+        static void Deferred(Container container, Type type, int offset)
+        {
+            if (!type.IsDefined(typeof(NativeContainerSupportsDeferredConvertListToArray), false)) return;
+            container.DeferredConvert = true;
+            container.BufferOffset = FieldOffset(type, "m_Buffer", offset);
+            container.LengthOffset = FieldOffset(type, "m_Length", offset);
+            container.MinOffset = FieldOffset(type, "m_MinIndex", offset);
+            container.MaxOffset = FieldOffset(type, "m_MaxIndex", offset);
         }
 
         static int FieldOffset(Type type, string name, int baseOffset)

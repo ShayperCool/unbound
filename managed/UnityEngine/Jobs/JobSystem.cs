@@ -397,8 +397,11 @@ namespace Unbound.Runtime.Jobs
                     continue;
                 }
                 int deny = AtomicSafetyHandle.Dispose | (writes ? 0 : AtomicSafetyHandle.Write) | ((container.Access & ContainerAccess.Read) != 0 ? 0 : AtomicSafetyHandle.Read);
-                Safety.AddJobUse(handle, record, writes, container.Path);
+                // The job's copy first: registering a writer may bump the secondary version (a
+                // list's views taken before the job are invalid on the main thread), which a view
+                // the job itself holds (NativeList.AsArray scheduled with the job) keeps.
                 Safety.PatchForJob(ref *(AtomicSafetyHandle*)(record.Data + offset), record, container.Access, deny);
+                Safety.AddJobUse(handle, record, writes, container.Path);
                 if (container.DeallocateOnCompletion && container.BufferOffset >= 0 && container.AllocatorOffset >= 0)
                     record.Deallocations.Add((*(IntPtr*)(source + container.BufferOffset), *(Allocator*)(source + container.AllocatorOffset), handle));
             }
@@ -585,24 +588,29 @@ namespace Unbound.Runtime.Jobs
         static void PrepareToRun(JobRecord record)
         {
             if (record.Reflection == null || Interlocked.Exchange(ref record.Prepared, 1) != 0) return;
-            foreach (var container in record.Reflection.Layout.Containers)
-            {
-                if (!container.DeferredConvert || container.BufferOffset < 0 || container.LengthOffset < 0) continue;
-                var buffer = *(IntPtr*)(record.Data + container.BufferOffset);
-                if (((long)buffer & 1) == 0) continue;
-                // An UnsafeList: its element pointer, then its length.
-                var list = (byte*)buffer - 1;
-                int length = *(int*)(list + IntPtr.Size);
-                *(IntPtr*)(record.Data + container.BufferOffset) = *(IntPtr*)list;
-                *(int*)(record.Data + container.LengthOffset) = length;
-                if (container.MinOffset >= 0) *(int*)(record.Data + container.MinOffset) = 0;
-                if (container.MaxOffset >= 0) *(int*)(record.Data + container.MaxOffset) = length - 1;
-            }
+            // Containers with safety checks and those without ([NativeDisableContainerSafetyRestriction]).
+            foreach (var container in record.Reflection.Layout.Containers) PatchDeferred(record, container);
+            foreach (var container in record.Reflection.Layout.Unchecked) PatchDeferred(record, container);
             if (record.DeferredList != null)
             {
                 int length = *(int*)((byte*)record.DeferredList + IntPtr.Size);
                 PrepareRanges(record, Kind.ParallelFor, ScheduleMode.Parallel, length, record.DeferredBatchSize, IntPtr.Zero);
             }
+        }
+
+        /// <summary>A deferred array takes its list's buffer and length.</summary>
+        static void PatchDeferred(JobRecord record, JobLayout.Container container)
+        {
+            if (!container.DeferredConvert || container.BufferOffset < 0 || container.LengthOffset < 0) return;
+            var buffer = *(IntPtr*)(record.Data + container.BufferOffset);
+            if (((long)buffer & 1) == 0) return;
+            // An UnsafeList: its element pointer, then its length.
+            var list = (byte*)buffer - 1;
+            int length = *(int*)(list + IntPtr.Size);
+            *(IntPtr*)(record.Data + container.BufferOffset) = *(IntPtr*)list;
+            *(int*)(record.Data + container.LengthOffset) = length;
+            if (container.MinOffset >= 0) *(int*)(record.Data + container.MinOffset) = 0;
+            if (container.MaxOffset >= 0) *(int*)(record.Data + container.MaxOffset) = length - 1;
         }
 
         static void EnqueueLocked(JobRecord record)
