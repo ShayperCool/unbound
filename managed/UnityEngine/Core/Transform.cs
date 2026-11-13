@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.Arm;
 using Unbound.Runtime;
 
 namespace UnityEngine
@@ -670,10 +672,26 @@ namespace UnityEngine
         static float ReciprocalScale(float scale)
         {
             if (MathF.Abs(scale) < 1e-9f) return 0f;
+            if (AdvSimd.IsSupported) return NeonReciprocal(scale);
             float estimate = float.ReciprocalEstimate(scale);
             float first = estimate * (2.0000005f - scale * estimate);
             float refined = first * (2f - scale * first);
             return float.IsNaN(refined) ? estimate : refined;
+        }
+
+        // On arm64 the reciprocal starts from the 8-bit hardware estimate and takes two
+        // reciprocal steps, each estimate * (2 - scale * estimate) with the bracket rounded
+        // once (an infinite scale's zero estimate stays zero). Unity 6000.0.71f1 macOS arm64
+        // Editor, tests/projects/solverpairorder --transform-inputs: 132,419 of 135,896
+        // fields equal, against 121,013 with the refinement above on the arm64 estimate and
+        // 122,809 with a division; the remaining fields differ in rotation arithmetic.
+        static float NeonReciprocal(float scale)
+        {
+            var value = Vector64.CreateScalarUnsafe(scale);
+            var estimate = AdvSimd.ReciprocalEstimate(value);
+            estimate = AdvSimd.Multiply(estimate, AdvSimd.ReciprocalStep(value, estimate));
+            estimate = AdvSimd.Multiply(estimate, AdvSimd.ReciprocalStep(value, estimate));
+            return estimate.ToScalar();
         }
 
         Matrix4x4 InverseLocalMatrix()

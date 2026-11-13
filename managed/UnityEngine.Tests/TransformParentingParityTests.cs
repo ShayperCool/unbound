@@ -89,6 +89,29 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(child); Object.DestroyImmediate(parent); }
         }
+        // tests/projects/solverpairorder --transform-inputs circle-planar/10/initial: the Linux
+        // x86-64 and macOS arm64 Editors round three inverse scales differently.
+        [Fact]
+        public void TheInverseScaleFollowsTheCpusReciprocal()
+        {
+            var parent = new GameObject("parent"); var child = new GameObject("child");
+            try
+            {
+                child.transform.position = new Vector3(.3f,-.2f,2f);
+                child.transform.localScale = new Vector3(-.9f,1.7f,-1.1f);
+                parent.transform.position = child.transform.position;
+                child.transform.SetParent(parent.transform,true);
+                var inverse = child.transform.worldToLocalMatrix;
+                bool arm64 = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64;
+                Assert.Equal(-1.11111116f,inverse.m00);
+                Assert.Equal(arm64 ? .5882353f : .588235259f,inverse.m11);
+                Assert.Equal(arm64 ? -.909090936f : -.9090909f,inverse.m22);
+                Assert.Equal(.333333373f,inverse.m03);
+                Assert.Equal(arm64 ? .117647067f : .117647052f,inverse.m13);
+                Assert.Equal(arm64 ? 1.81818187f : 1.81818175f,inverse.m23);
+            }
+            finally { Object.DestroyImmediate(child); Object.DestroyImmediate(parent); }
+        }
         [Fact]
         public void NestedPositionRetainsTheMeasuredVectorArithmetic()
         {
