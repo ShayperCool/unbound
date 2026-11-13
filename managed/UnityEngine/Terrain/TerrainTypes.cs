@@ -113,8 +113,8 @@ namespace UnityEngine
     /// <summary>A kind of detail object (grass or a mesh) a terrain scatters.</summary>
     public sealed partial class DetailPrototype
     {
-        internal static readonly Color DefaultHealthColor = new Color(0.2627451f, 0.9764706f, 0.1647059f, 1f);
-        internal static readonly Color DefaultDryColor = new Color(0.8039216f, 0.7372549f, 0.1019608f, 1f);
+        internal static readonly Color DefaultHealthColor = new Color(0.2627451f, 0.9764706f, 42f / 255f, 1f);
+        internal static readonly Color DefaultDryColor = new Color(0.8039216f, 0.7372549f, 26f / 255f, 1f);
         internal GameObject m_Prototype;
         internal Texture2D m_PrototypeTexture;
         internal Color m_HealthyColor = DefaultHealthColor;

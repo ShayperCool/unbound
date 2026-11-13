@@ -9,7 +9,7 @@ namespace UnityEngine
     [ClassId(226)]
     public sealed partial class BillboardAsset : Object, ISerializedAsset
     {
-        float m_Width = 1f, m_Height = 1f, m_Bottom;
+        float m_Width = Compat.DefaultConstructorStateMeasured ? 0f : 1f, m_Height = Compat.DefaultConstructorStateMeasured ? 0f : 1f, m_Bottom;
         Vector4[] m_ImageTexCoords = Array.Empty<Vector4>();
         Vector2[] m_Vertices = Array.Empty<Vector2>();
         ushort[] m_Indices = Array.Empty<ushort>();

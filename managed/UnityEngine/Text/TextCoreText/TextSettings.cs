@@ -26,6 +26,8 @@ namespace UnityEngine.TextCore.Text
         [SerializeField] [FormerlySerializedAs("m_defaultSpriteAsset")] protected SpriteAsset m_DefaultSpriteAsset;
         [SerializeField] [FormerlySerializedAs("m_defaultSpriteAssetPath")] protected string m_DefaultSpriteAssetPath = "Sprite Assets/";
         [SerializeField] protected List<SpriteAsset> m_FallbackSpriteAssets;
+        [Obsolete("The Fallback Sprite Assets list is now obsolete. Use the emojiFallbackTextAssets instead.", true)]
+        public List<SpriteAsset> fallbackSpriteAssets { get => m_FallbackSpriteAssets; set => m_FallbackSpriteAssets = value; }
         [SerializeField] protected uint m_MissingSpriteCharacterUnicode;
         [SerializeField] [FormerlySerializedAs("m_defaultStyleSheet")] protected TextStyleSheet m_DefaultStyleSheet;
         [SerializeField] protected string m_StyleSheetsResourcePath = "Text Style Sheets/";

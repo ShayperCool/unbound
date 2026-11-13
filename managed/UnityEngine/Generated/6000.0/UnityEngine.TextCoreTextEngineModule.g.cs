@@ -551,7 +551,6 @@ namespace UnityEngine.TextCore.Text
     unsafe partial class TextSettings
     {
         [global::Unbound.Stub] internal void UpdateNativeTextSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.UpdateNativeTextSettings"); }
-        [global::System.Obsolete("The Fallback Sprite Assets list is now obsolete. Use the emojiFallbackTextAssets instead.")] public global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.SpriteAsset> fallbackSpriteAssets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.fallbackSpriteAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.SpriteAsset>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.fallbackSpriteAssets"); } }
         internal static global::UnityEngine.TextCore.Text.SpriteAsset s_GlobalSpriteAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.s_GlobalSpriteAsset"); return default; } }
         internal global::System.IntPtr nativeTextSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.nativeTextSettings"); return default; } }
     }

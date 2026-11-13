@@ -104,7 +104,7 @@ namespace UnityEngine
     [RequireComponent(typeof(Transform))]
     public sealed partial class Grid : GridLayout
     {
-        internal Vector3 m_CellSize = new Vector3(1f, 1f, 0f);
+        internal Vector3 m_CellSize = Compat.DefaultConstructorStateMeasured ? Vector3.one : new Vector3(1f, 1f, 0f);
         internal Vector3 m_CellGap;
         internal CellLayout m_CellLayout;
         internal CellSwizzle m_CellSwizzle;

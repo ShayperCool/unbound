@@ -15,6 +15,8 @@ namespace UnityEngine
     [ClassId(156)]
     public sealed partial class TerrainData : Object, ISerializedAsset
     {
+        // Minimum thickness of flat terrain bounds in the defaultstate reference.
+        const float MinimumBoundsHeight = 0.0002f;
         internal const int MaxHeight = 32766;
         internal static readonly int k_MaximumResolution = 4097;
         internal static readonly int k_MinimumDetailResolutionPerPatch = 8;
@@ -31,7 +33,7 @@ namespace UnityEngine
         bool[] m_Solid = Filled(32 * 32);
         bool m_EnableHolesTextureCompression = true;
         int m_AlphamapResolution = 512;
-        int m_BaseMapResolution = 1024;
+        int m_BaseMapResolution = Compat.DefaultConstructorStateMeasured ? 512 : 1024;
         Texture2D[] m_AlphaTextures = new Texture2D[0];
         TerrainLayer[] m_Layers = new TerrainLayer[0];
         TreeInstance[] m_TreeInstances = new TreeInstance[0];
@@ -54,7 +56,7 @@ namespace UnityEngine
 
         public TerrainData()
         {
-            m_Scale = new Vector3(1000f / 32f, 600f, 1000f / 32f);
+            m_Scale = Compat.DefaultConstructorStateMeasured ? Vector3.one : new Vector3(1000f / 32f, 600f, 1000f / 32f);
         }
 
         static bool[] Filled(int n)
@@ -118,7 +120,7 @@ namespace UnityEngine
                 if (m_Heights.Length == 0) min = max = 0;
                 var s = size;
                 float low = min / (float)MaxHeight * s.y, high = max / (float)MaxHeight * s.y;
-                return new Bounds(new Vector3(s.x * 0.5f, (low + high) * 0.5f, s.z * 0.5f), new Vector3(s.x, high - low, s.z));
+                return new Bounds(new Vector3(s.x * 0.5f, (low + high) * 0.5f, s.z * 0.5f), new Vector3(s.x, Math.Max(high - low, MinimumBoundsHeight), s.z));
             }
         }
 

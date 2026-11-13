@@ -53,11 +53,11 @@ namespace UnityEngine
             }
         }
 
-        [Obsolete("Please use 'text' instead of 'content'", true)]
+        [Obsolete("Please use 'text' instead of 'content'", true)] [Unbound.EditorFaithful("removed property throws on both accessors in the selected release")]
         public GUIContent content
         {
-            get => new GUIContent(m_Text);
-            set => text = value?.text;
+            get => throw new NotImplementedException("Please use 'text' instead of 'content'");
+            set => throw new NotImplementedException("Please use 'text' instead of 'content'");
         }
 
         public Rect position

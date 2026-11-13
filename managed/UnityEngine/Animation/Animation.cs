@@ -184,6 +184,11 @@ namespace UnityEngine
             {
                 Debug.LogWarning($"Unbound: Animation.AddClip(\"{newName}\", addLoopFrame): no extra loop frame is inserted when firstFrame is int.MinValue and lastFrame is int.MaxValue (the whole source clip is added as it is).", this);
             }
+            if (used == clip && (clip.name != newName || addLoopFrame))
+            {
+                used = clip.Clone();
+                used.m_Name = newName;
+            }
             var existing = GetState(newName);
             if (existing != null) RemoveState(existing);
             m_States.Add(CreateState(used, newName));
@@ -1134,11 +1139,17 @@ namespace UnityEngine
 
         internal override bool IsTrackedAlive => !m_Removed && m_Owner != null;
 
+        void RequireState()
+        {
+            if (!IsTrackedAlive) throw new NullReferenceException();
+        }
+
         public bool enabled
         {
-            get => m_Enabled;
+            get { RequireState(); return m_Enabled; }
             set
             {
+                RequireState();
                 if (m_Enabled == value) return;
                 m_Enabled = value;
                 if (value && !m_Playing) Begin();
@@ -1147,9 +1158,10 @@ namespace UnityEngine
 
         public float weight
         {
-            get => m_Weight;
+            get { RequireState(); return m_Weight; }
             set
             {
+                RequireState();
                 m_Weight = value;
                 m_Fading = false;
             }
@@ -1157,68 +1169,71 @@ namespace UnityEngine
 
         public WrapMode wrapMode
         {
-            get => m_WrapMode;
-            set => m_WrapMode = value;
+            get { RequireState(); return m_WrapMode; }
+            set { RequireState(); m_WrapMode = value; }
         }
 
         public float time
         {
-            get => (float)m_Time;
-            set => m_Time = value;
+            get { RequireState(); return (float)m_Time; }
+            set { RequireState(); m_Time = value; }
         }
 
         public float normalizedTime
         {
             get
             {
+                RequireState();
                 float l = length;
-                return l > 0f ? (float)(m_Time / l) : 0f;
+                return (float)(m_Time / l);
             }
-            set => m_Time = value * length;
+            set { RequireState(); m_Time = value * length; }
         }
 
         public float speed
         {
-            get => m_Speed;
-            set => m_Speed = value;
+            get { RequireState(); return m_Speed; }
+            set { RequireState(); m_Speed = value; }
         }
 
         public float normalizedSpeed
         {
             get
             {
+                RequireState();
                 float l = length;
-                return l > 0f ? m_Speed / l : 0f;
+                return m_Speed / l;
             }
-            set => m_Speed = value * length;
+            set { RequireState(); m_Speed = value * length; }
         }
 
-        public float length => m_Clip != null ? m_Clip.length : 0f;
+        public float length { get { RequireState(); return m_Clip.length; } }
 
         public int layer
         {
-            get => m_Layer;
-            set => m_Layer = value;
+            get { RequireState(); return m_Layer; }
+            set { RequireState(); m_Layer = value; }
         }
 
-        public AnimationClip clip => m_Clip;
+        public AnimationClip clip { get { RequireState(); return m_Clip; } }
 
         public string name
         {
-            get => m_Name;
-            set => m_Name = value ?? "";
+            get { RequireState(); return m_Name; }
+            set { RequireState(); m_Name = value ?? ""; }
         }
 
         public AnimationBlendMode blendMode
         {
-            get => m_BlendMode;
-            set => m_BlendMode = value;
+            get { RequireState(); return m_BlendMode; }
+            set { RequireState(); m_BlendMode = value; }
         }
 
         public void AddMixingTransform(Transform mix) => AddMixingTransform(mix, true);
 
         public void AddMixingTransform(Transform mix, [Internal.DefaultValue("true")] bool recursive)
         {
+            RequireState();
             if (mix == null) throw new NullReferenceException("mix");
             m_Mixing ??= new List<(Transform, bool)>();
             m_Mixing.Add((mix, recursive));
@@ -1227,6 +1242,7 @@ namespace UnityEngine
 
         public void RemoveMixingTransform(Transform mix)
         {
+            RequireState();
             if (m_Mixing == null) return;
             m_Mixing.RemoveAll(m => m.Transform == mix);
             if (m_Mixing.Count == 0) m_Mixing = null;

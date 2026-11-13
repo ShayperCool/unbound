@@ -26,6 +26,7 @@ namespace UnityEngine
         internal bool m_ReceivesEvents = true;
         internal bool m_OverrideSorting;
         internal bool m_OverridePixelPerfect;
+        const float DefaultSortingGridSize = 0.1f;
         internal float m_SortingBucketNormalizedSize;
         internal bool m_VertexColorAlwaysGammaSpace;
         internal AdditionalCanvasShaderChannels m_AdditionalShaderChannels;
@@ -219,8 +220,13 @@ namespace UnityEngine
 
         public float normalizedSortingGridSize
         {
-            get => m_SortingBucketNormalizedSize;
-            set => m_SortingBucketNormalizedSize = value;
+            get
+            {
+                var root = rootCanvas;
+                float size = root.m_SortingBucketNormalizedSize;
+                return size == 0f ? DefaultSortingGridSize : size;
+            }
+            set { if (isRootCanvas) m_SortingBucketNormalizedSize = Mathf.Clamp01(value); }
         }
 
         public StandaloneRenderResize updateRectTransformForStandalone { get; set; } = StandaloneRenderResize.Enabled;
@@ -394,7 +400,7 @@ namespace UnityEngine
         internal bool m_HasRectClipping;
         internal Rect m_ClipRect;
         internal Vector2 m_ClippingSoftness;
-        internal bool m_CullTransparentMesh;
+        internal bool m_CullTransparentMesh = true;
         internal int m_AbsoluteDepth = -1;
         internal int m_RelativeDepth = -1;
 
@@ -641,7 +647,7 @@ namespace UnityEngine
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
-            m_CullTransparentMesh = body.Bool("m_CullTransparentMesh");
+            m_CullTransparentMesh = body.Bool("m_CullTransparentMesh", true);
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)

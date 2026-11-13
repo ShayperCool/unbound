@@ -23,7 +23,7 @@ namespace UnityEngine
         float m_HeightmapPixelError = 5f, m_SplatMapDistance = 1000f;
         int m_HeightmapMinimumLODSimplification, m_HeightmapMaximumLOD;
         ShadowCastingMode m_ShadowCastingMode = ShadowCastingMode.TwoSided;
-        bool m_DrawHeightmap = true, m_DrawInstanced, m_DrawTreesAndFoliage = true, m_IgnoreQualitySettings, m_AllowAutoConnect = true;
+        bool m_DrawHeightmap = true, m_DrawInstanced, m_DrawTreesAndFoliage = true, m_IgnoreQualitySettings, m_AllowAutoConnect = !Compat.DefaultConstructorStateMeasured;
         bool m_BakeLightProbesForTrees = true, m_DeringLightProbesForTrees = true, m_PreserveTreePrototypeLayers;
         bool m_EnableHeightmapRayTracing = true, m_KeepUnusedRenderingResources, m_CollectDetailPatches = true;
         ReflectionProbeUsage m_ReflectionProbeUsage = ReflectionProbeUsage.BlendProbes;
@@ -370,7 +370,8 @@ namespace UnityEngine
         }
 
         [global::System.@ObsoleteAttribute("Property materialType is not used any more. Set materialTemplate directly.", false)]
-        public MaterialType materialType { get; set; } = MaterialType.BuiltInStandard;
+        [Unbound.EditorFaithful("removed material selection returns Custom and ignores writes; materialTemplate selects the material") ]
+        public MaterialType materialType { get => MaterialType.Custom; set { } }
 
         [global::System.@ObsoleteAttribute("Property legacySpecular is not used any more. Set materialTemplate directly.", false)]
         public Color legacySpecular { get; set; } = new Color(0.5f, 0.5f, 0.5f, 1f);
@@ -470,7 +471,7 @@ namespace UnityEngine
             }
         }
 
-        public bool enableTreeColliders { get => m_EnableTreeColliders; set => m_EnableTreeColliders = value; }
+        internal bool enableTreeColliders { get => m_EnableTreeColliders; set => m_EnableTreeColliders = value; }
 
         /// <summary>A ray against this terrain; with <paramref name="hitHoles"/> the holes are solid
         /// too (not supported yet: they stay open).</summary>

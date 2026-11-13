@@ -119,14 +119,39 @@ namespace UnityEngine
         /// <summary>The serialized m_HasGenericRootTransform (player data), else computed.</summary>
         internal bool? m_GenericRoot;
 
+        const float EmptyClipLength = 1f;
+        bool m_RuntimeCurveRange;
+        float m_RuntimeCurveEnd;
+
         public AnimationClip() { }
+
+        internal void UpdateRuntimeCurveRange()
+        {
+            bool found = false;
+            float end = float.NegativeInfinity;
+            foreach (var c in m_Curves)
+                if ((c.Curve != null && c.Curve.length > 0) || c.Sampled != null)
+                { end = Math.Max(end, c.LastKeyTime); found = true; }
+            foreach (var c in m_ObjectCurves)
+                if (c.Times.Length > 0)
+                { end = Math.Max(end, c.Times[c.Times.Length - 1]); found = true; }
+            if (found)
+            {
+                m_RuntimeCurveEnd = m_RuntimeCurveRange ? Math.Max(m_RuntimeCurveEnd, end) : end;
+                m_RuntimeCurveRange = true;
+            }
+        }
 
         public float length
         {
             get
             {
                 if (m_HasRange) return Math.Max(0f, m_StopTime - m_StartTime);
-                return CurveEnd();
+                if (!Compat.DefaultConstructorStateMeasured) return CurveEnd();
+                if (!m_RuntimeCurveRange) UpdateRuntimeCurveRange();
+                float end = m_RuntimeCurveRange ? m_RuntimeCurveEnd : float.NegativeInfinity;
+                foreach (var e in m_Events) end = Math.Max(end, e.m_Time);
+                return !m_RuntimeCurveRange && m_Events.Count == 0 ? EmptyClipLength : end;
             }
         }
 
@@ -392,6 +417,7 @@ namespace UnityEngine
                 m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(relativePath, attribute, type), Curve = copy });
                 if (!m_Legacy && typeof(Transform).IsAssignableFrom(type)) AddVectorCompanions(relativePath, attribute, type, copy);
             }
+            UpdateRuntimeCurveRange();
             m_Version++;
         }
 
@@ -543,6 +569,8 @@ namespace UnityEngine
         {
             m_Curves.Clear();
             m_ObjectCurves.Clear();
+            m_RuntimeCurveRange = false;
+            m_RuntimeCurveEnd = 0f;
             m_Version++;
         }
 
@@ -571,6 +599,8 @@ namespace UnityEngine
             {
                 m_Curves = new List<ClipCurve>(m_Curves),
                 m_ObjectCurves = new List<ClipObjectCurve>(m_ObjectCurves),
+                m_RuntimeCurveRange = m_RuntimeCurveRange,
+                m_RuntimeCurveEnd = m_RuntimeCurveEnd,
                 m_SampleRate = m_SampleRate,
                 m_HumanKeyReduction = m_HumanKeyReduction,
                 m_HumanTransformPaths = m_HumanTransformPaths,

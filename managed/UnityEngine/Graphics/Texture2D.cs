@@ -41,7 +41,14 @@ namespace UnityEngine
 
         Texture2D() { }
 
-        public Texture2D(int width, int height) : this(width, height, TextureFormat.RGBA32, true, false) { }
+        public Texture2D(int width, int height)
+        {
+            if (width == 0 && height == 0)
+            {
+                InitEmpty(TextureFormat.RGBA32, false);
+            }
+            else Init(width, height, TextureFormat.RGBA32, -1, false);
+        }
 
         public Texture2D(int width, int height, TextureFormat textureFormat, bool mipChain) : this(width, height, textureFormat, mipChain, false) { }
 
@@ -142,12 +149,18 @@ namespace UnityEngine
         /// below one: ARGB32, linear, readable, 0x0 and without pixels (tests/projects/screencapture).</summary>
         internal static Texture2D EmptyCapture()
         {
-            var texture = new Texture2D(1, 1, TextureFormat.ARGB32, false, true);
-            texture.m_Width = 0;
-            texture.m_Height = 0;
-            texture.m_Pixels = null;
-            texture.m_PixelsDirty = false;
+            var texture = new Texture2D();
+            texture.InitEmpty(TextureFormat.ARGB32, true);
             return texture;
+        }
+
+        void InitEmpty(TextureFormat format, bool linear)
+        {
+            CheckMainThreadCreation("Internal_CreateEmptyImpl");
+            m_Format = format;
+            m_Linear = linear;
+            m_IsReadable = true;
+            m_Name = "";
         }
 
         public TextureFormat format => m_SourceFormat ?? m_Format;
@@ -218,6 +231,8 @@ namespace UnityEngine
         /// alone).</summary>
         void RequireReadable(bool pixelArray = false, bool pixels = true)
         {
+            if (pixelArray && m_Width == 0 && m_Height == 0)
+                throw new ArgumentException("Texture contains no pixel data.");
             if (!m_IsReadable)
             {
                 string message = $"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.";
@@ -341,6 +356,11 @@ namespace UnityEngine
 
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
+            if (m_Width == 0 && m_Height == 0 && m_IsReadable)
+            {
+                if (makeNoLongerReadable) m_IsReadable = false;
+                return;
+            }
             // A block-compressed texture uploads its blocks: its pixels need not be decoded.
             RequireReadable(pixels: !SourceBlocks);
             // A block-compressed texture's levels are its blocks: nothing regenerates them.

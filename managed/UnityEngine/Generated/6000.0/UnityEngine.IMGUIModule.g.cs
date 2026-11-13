@@ -34,7 +34,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void Internal_MakeMasterEventCurrent(int displayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Event.Internal_MakeMasterEventCurrent"); }
         [global::Unbound.Stub] internal static void CleanupRoots() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Event.CleanupRoots"); }
         public global::UnityEngine.PenStatus penStatus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Event.penStatus"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Event.penStatus"); } }
-        [global::System.Obsolete("Use HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);")] public global::UnityEngine.Ray mouseRay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Event.mouseRay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Event.mouseRay"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {

@@ -68,15 +68,32 @@ namespace UnityEngine.Networking
             return true;
         }
 
-        internal override byte[] Bytes() => m_Stream.ToArray();
+        internal override byte[] Bytes() => m_Stream.Length == 0 ? null : m_Stream.ToArray();
 
         protected override Unity.Collections.NativeArray<byte> GetNativeData() => base.GetNativeData();
+
+        internal override void End(bool received)
+        {
+            base.End(received);
+            if (m_IsDone)
+            {
+                _ = texture;
+                if (m_Texture == null) m_Error = "Failed to create texture from downloaded bytes";
+            }
+        }
+
+        internal override UnityWebRequest.Result? CompletionFailure =>
+            m_Decoded && m_Texture == null ? UnityWebRequest.Result.DataProcessingError : null;
+
+        internal override string ErrorMessage =>
+            !m_IsDone ? "Texture download hasn't finished yet" : m_Error;
 
         public Texture2D texture
         {
             get
             {
-                if (!m_Decoded && m_IsDone)
+                if (!isDone) throw new InvalidOperationException("Texture download hasn't finished yet");
+                if (!m_Decoded)
                 {
                     m_Decoded = true;
                     var texture = new Texture2D(2, 2, TextureFormat.RGBA32, m_Params.mipmapChain, m_Params.linearColorSpace);

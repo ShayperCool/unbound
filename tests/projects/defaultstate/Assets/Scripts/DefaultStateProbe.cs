@@ -41,8 +41,8 @@ public sealed class DefaultStateProbe : MonoBehaviour
     {
         for (int step=0;step<4 && index<candidates.Length;step++,index++) Capture(candidates[index]);
         if (index<candidates.Length) return;
-        if (!core2Waiting) { Core2Begin(); Core2BeginMore(); core2Waiting = true; return; }
-        if (!core2Resource.isDone || !core2Bundle.isDone || !core2Instantiation.isDone || !core2MissingResource.isDone) return;
+        if (!core2Waiting) { Core2Begin(); Core2BeginMore(); SmallBegin(); core2Waiting = true; return; }
+        if (!core2Resource.isDone || !core2Bundle.isDone || !core2Instantiation.isDone || !core2MissingResource.isDone || !smallVideo.isPrepared || smallWeb.Any(r => !r.isDone)) return;
         Capture(new Candidate { type=typeof(FreshStateControl).FullName, module=typeof(FreshStateControl).Assembly.GetName().Name,
             category="class", status="candidate" });
         try
@@ -57,7 +57,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
             PhysicsPayloadControls();
             EditorImporterControls();
             UiControls();
-            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls(); Core2LayoutMutationControls(); Core2DefaultLayoutControls();
+            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls(); Core2LayoutMutationControls(); SmallControls(); SmallMoreControls(); SmallOwnershipControls(); SmallBoundaryControls(); SmallWebControls(); SmallFinalControls(); SmallAnimationBoundaryControls(); Core2DefaultLayoutControls();
             Emit("complete","value","1"); output.Dispose(); output=null;
             EditorApplication.Exit(0);
         }
@@ -944,6 +944,423 @@ public sealed class DefaultStateProbe : MonoBehaviour
             CoreValue("Core2/meshLayout/retainedColorFormat", new object[] { before, after, mesh.colors });
         }
         finally { UnityEngine.Object.DestroyImmediate(mesh); }
+    }
+    static void SmallControls()
+    {
+        SmallGridControls(); SmallGuiControls(); SmallEventControls(); SmallSocialControls(); SmallAnimationControls();
+    }
+    static void SmallGridControls()
+    {
+        var go = new GameObject("SmallGridControl"); go.SetActive(false);
+        try
+        {
+            var old = Debug.unityLogger.logHandler;
+            try
+            {
+                Debug.unityLogger.logHandler = new FactoryControlLogHandler(old);
+                CoreValue("Small/grid/rejected", new object[] { go.AddComponent<GridLayout>() == null, go.GetComponents<Component>().Length });
+                CoreValue("Small/grid/requiredMissing", new object[] { go.AddComponent<DefaultSmallGridRequirement>() == null, go.GetComponents<Component>().Length });
+            }
+            finally { Debug.unityLogger.logHandler = old; }
+            var grid = go.AddComponent<Grid>();
+            CoreValue("Small/grid/initial", new object[] { grid.cellSize, ((GridLayout)grid).cellSize, grid.CellToLocal(new Vector3Int(2, 3, 4)) });
+            grid.cellSize = new Vector3(2, 3, 4);
+            CoreValue("Small/grid/written", new object[] { ((GridLayout)grid).cellSize, grid.CellToLocal(new Vector3Int(2, 3, 4)), grid.LocalToCell(new Vector3(4, 9, 16)) });
+            grid.cellSize = new Vector3(2, 3, 0);
+            CoreValue("Small/grid/flat", grid.CellToLocal(new Vector3Int(2, 3, 4)));
+            CoreValue("Small/grid/requiredPresent", new object[] { go.AddComponent<DefaultSmallGridRequirement>() != null, go.GetComponents<Component>().Length });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); }
+    }
+    static void SmallGuiControls()
+    {
+        var style = new GUIStyle(); var copy = new GUIStyle(style);
+        CoreValue("Small/guiStyle/fresh", new object[] { style.name, style.richText, copy.richText });
+        style.richText = false; copy = new GUIStyle(style); style.richText = true;
+        CoreValue("Small/guiStyle/explicitCopy", new[] { style.richText, copy.richText });
+        var skin = ScriptableObject.CreateInstance<GUISkin>(); var other = ScriptableObject.CreateInstance<GUISkin>();
+        var manual = new GUISkin();
+        try
+        {
+            foreach (var name in new[] { "box", "button", "toggle", "label", "textField", "textArea", "window", "horizontalSlider", "horizontalSliderThumb", "verticalSlider", "verticalSliderThumb", "horizontalScrollbar", "horizontalScrollbarThumb", "horizontalScrollbarLeftButton", "horizontalScrollbarRightButton", "verticalScrollbar", "verticalScrollbarThumb", "verticalScrollbarUpButton", "verticalScrollbarDownButton", "scrollView" })
+            {
+                var p = typeof(GUISkin).GetProperty(name); var value = (GUIStyle)p.GetValue(skin, null);
+                CoreValue("Small/skin/fresh/" + name, new object[] { value.name, value.richText, ReferenceEquals(value, p.GetValue(other, null)) });
+            }
+            CoreValue("Small/skin/manual", new object[] { manual.box.name, manual.box.richText });
+            var replacement = new GUIStyle { name = "renamed", richText = false };
+            skin.box = replacement;
+            CoreValue("Small/skin/replacement", new object[] { replacement.name, ReferenceEquals(replacement, skin.box), ReferenceEquals(replacement, skin.FindStyle("BOX")), skin.FindStyle("renamed") == null });
+            skin.box = null;
+            CoreValue("Small/skin/nullRegenerated", new object[] { skin.box.name, skin.box.richText, ReferenceEquals(replacement, skin.box), ReferenceEquals(skin.box, skin.button) });
+            var custom = new GUIStyle { name = "BoX", richText = false }; skin.customStyles = new[] { custom };
+            CoreValue("Small/skin/customLookup", new object[] { ReferenceEquals(custom, skin.FindStyle("box")), ReferenceEquals(custom, skin.box), ReferenceEquals(custom, skin.FindStyle("BOX")) });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(skin); UnityEngine.Object.DestroyImmediate(other); UnityEngine.Object.DestroyImmediate(manual); }
+        CoreValue("Small/textEditor/removedContent", Core2Read(() => typeof(TextEditor).GetProperty("content").GetValue(new TextEditor(), null)));
+    }
+    static void SmallEventControls()
+    {
+        var e = new Event();
+        CoreValue("Small/event/fresh", new object[] { e.type, e.rawType, e.pressure, e.isMouse, typeof(Event).GetProperty("mouseRay").GetValue(e, null) });
+        var indexed = new Event(3); CoreValue("Small/event/indexed", new object[] { indexed.type, indexed.pressure, indexed.displayIndex });
+        foreach (var type in new[] { EventType.MouseDown, EventType.MouseMove, EventType.ScrollWheel, EventType.KeyDown, EventType.Layout, EventType.Repaint })
+        {
+            e.type = type; e.pressure = .7f; var copied = new Event(e);
+            CoreValue("Small/event/changed/" + type, new object[] { e.rawType, e.isMouse, copied.type, copied.pressure });
+        }
+        typeof(Event).GetProperty("mouseRay").SetValue(e, new Ray(Vector3.right, Vector3.forward), null); CoreValue("Small/event/removedRay", typeof(Event).GetProperty("mouseRay").GetValue(e, null));
+        e.pressure = -2; CoreValue("Small/event/pressureNegative", e.pressure);
+    }
+    static void SmallSocialControls()
+    {
+        var empty = new UnityEngine.SocialPlatforms.Impl.Score();
+        var explicitScore = new UnityEngine.SocialPlatforms.Impl.Score("board", 17);
+        CoreValue("Small/social/score", new object[] { empty.leaderboardID, explicitScore.leaderboardID, explicitScore.value });
+        var profile = new UnityEngine.SocialPlatforms.Impl.UserProfile();
+        var explicitProfile = new UnityEngine.SocialPlatforms.Impl.UserProfile("name", "id", true);
+        var suppliedImage = new Texture2D(4, 8);
+        var supplied = new UnityEngine.SocialPlatforms.Impl.UserProfile("other", "otherid", false, UnityEngine.SocialPlatforms.UserState.Online, suppliedImage);
+        try
+        {
+            CoreValue("Small/social/profileImage", new object[] { profile.image.width, profile.image.height, profile.image.name, explicitProfile.image.width, explicitProfile.image.height, ReferenceEquals(profile.image, explicitProfile.image), ReferenceEquals(supplied.image, suppliedImage) });
+            CoreValue("Small/social/legacyDefault", Core2Read(() => typeof(UnityEngine.SocialPlatforms.Impl.UserProfile).GetProperty("legacyId").GetValue(profile, null)));
+            CoreValue("Small/social/legacyExplicit", Core2Read(() => typeof(UnityEngine.SocialPlatforms.Impl.UserProfile).GetProperty("legacyId").GetValue(supplied, null)));
+        }
+        finally { UnityEngine.Object.DestroyImmediate(profile.image); UnityEngine.Object.DestroyImmediate(explicitProfile.image); UnityEngine.Object.DestroyImmediate(suppliedImage); }
+    }
+    static void SmallAnimationControls()
+    {
+        var bare = new AnimationState();
+        foreach (var name in new[] { "enabled", "weight", "wrapMode", "time", "normalizedTime", "speed", "normalizedSpeed", "length", "layer", "clip", "name", "blendMode" })
+        {
+            var p = typeof(AnimationState).GetProperty(name);
+            CoreValue("Small/animation/bare/" + name, Core2Read(() => p.GetValue(bare, null)));
+        }
+        var go = new GameObject("SmallAnimationControl"); go.SetActive(false);
+        var clip = new AnimationClip { legacy = true };
+        try
+        {
+            CoreValue("Small/animation/freshClip", new object[] { clip.length, clip.averageDuration });
+            clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(2, 1)));
+            var animation = go.AddComponent<Animation>(); animation.AddClip(clip, "control"); var state = animation["control"];
+            state.time = .5f; state.speed = -2; state.weight = .3f; state.layer = 3;
+            CoreValue("Small/animation/valid", new object[] { state.clip == clip, state.name, state.length, state.time, state.normalizedTime, state.speed, state.normalizedSpeed, state.weight, state.layer });
+            animation.RemoveClip("control");
+            CoreValue("Small/animation/removed", Core2Read(() => state.time));
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); UnityEngine.Object.DestroyImmediate(clip); }
+    }
+    static UnityEngine.Networking.UnityWebRequest[] smallWeb;
+    static void SmallWebControls()
+    {
+        var go = new GameObject("SmallCanvas");
+        try
+        {
+            var canvas = go.AddComponent<Canvas>();
+            CoreValue("Small/canvas/default", canvas.normalizedSortingGridSize);
+            foreach (float size in new[] { -2f, 0.37f, 2f, float.NaN })
+            { canvas.normalizedSortingGridSize = size; CoreValue("Small/canvas/size/" + size.ToString(CultureInfo.InvariantCulture), canvas.normalizedSortingGridSize); }
+            var renderer = go.AddComponent<CanvasRenderer>();
+            CoreValue("Small/canvasRenderer/default", renderer.cullTransparentMesh);
+            renderer.cullTransparentMesh = false; CoreValue("Small/canvasRenderer/disabled", renderer.cullTransparentMesh);
+            renderer.cullTransparentMesh = true; CoreValue("Small/canvasRenderer/enabled", renderer.cullTransparentMesh);
+            using (var buffer = new UnityEngine.Networking.DownloadHandlerBuffer())
+                CoreValue("Small/web/buffer/fresh", new object[] { buffer.data, buffer.text, buffer.error, buffer.isDone, buffer.nativeData.IsCreated });
+            using (var script = new UnityEngine.Networking.DownloadHandlerScript())
+                CoreValue("Small/web/script/fresh", new object[] { script.data, script.text, script.error, script.isDone, script.nativeData.IsCreated });
+            using (var texture = new UnityEngine.Networking.DownloadHandlerTexture())
+                CoreValue("Small/web/texture/fresh", new object[] { texture.data, texture.text, texture.error, texture.isDone, Core2Read(() => texture.texture), texture.nativeData.IsCreated });
+            for (int i = 0; i < smallWeb.Length; i++)
+            {
+                var handler = smallWeb[i].downloadHandler;
+                CoreValue("Small/web/request/" + i, new object[] { smallWeb[i].result, smallWeb[i].error });
+                CoreValue("Small/web/responseCode/" + i, smallWeb[i].responseCode);
+                CoreValue("Small/web/completed/" + i, new object[] { handler.data == null ? -1 : handler.data.Length, handler.text == null, handler.error, handler.isDone, handler.nativeData.IsCreated });
+                if (handler is UnityEngine.Networking.DownloadHandlerTexture tex)
+                    CoreValue("Small/web/decoded/" + i, Core2Read(() => { var t = tex.texture; return t == null ? null : new object[] { t.width, t.height, t.isReadable }; }));
+            }
+            CoreValue("Small/web/buffer/text", smallWeb[0].downloadHandler.text);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); foreach (var request in smallWeb) request.Dispose(); }
+    }
+    static UnityEngine.Video.VideoPlayer smallVideo;
+    static void SmallBegin()
+    {
+        var go = new GameObject("SmallPreparedVideo");
+        smallVideo = go.AddComponent<UnityEngine.Video.VideoPlayer>(); smallVideo.playOnAwake = false;
+        smallVideo.renderMode = UnityEngine.Video.VideoRenderMode.APIOnly;
+        smallVideo.audioOutputMode = UnityEngine.Video.VideoAudioOutputMode.None;
+        smallVideo.url = Path.Combine(Application.streamingAssetsPath, "control.webm");
+        smallVideo.Prepare();
+        string folder = Application.streamingAssetsPath;
+        smallWeb = new UnityEngine.Networking.UnityWebRequest[] {
+            UnityEngine.Networking.UnityWebRequest.Get(new Uri(Path.Combine(folder, "small-text.txt")).AbsoluteUri),
+            UnityEngine.Networking.UnityWebRequest.Get(new Uri(Path.Combine(folder, "small-empty.txt")).AbsoluteUri),
+            UnityEngine.Networking.UnityWebRequestTexture.GetTexture(new Uri(Path.Combine(folder, "small-image.png")).AbsoluteUri),
+            UnityEngine.Networking.UnityWebRequestTexture.GetTexture(new Uri(Path.Combine(folder, "small-text.txt")).AbsoluteUri),
+            UnityEngine.Networking.UnityWebRequestTexture.GetTexture(new Uri(Path.Combine(folder, "missing-control.png")).AbsoluteUri),
+            UnityEngine.Networking.UnityWebRequestTexture.GetTexture(new Uri(Path.Combine(folder, "missing-directory/missing-control.png")).AbsoluteUri),
+            UnityEngine.Networking.UnityWebRequest.Get(new Uri(Path.Combine(folder, "missing-control.txt")).AbsoluteUri),
+        };
+        foreach (var request in smallWeb) request.SendWebRequest();
+    }
+    static void SmallMoreControls()
+    {
+        var go = new GameObject("SmallDataState"); go.SetActive(false);
+        var billboard = new BillboardAsset(); var layer = new TerrainLayer(); var data = new TerrainData();
+        try
+        {
+            CoreValue("Small/billboard/fresh", new[] { billboard.width, billboard.height, billboard.bottom });
+            billboard.width = -3; billboard.height = float.NaN; billboard.bottom = 4;
+            CoreValue("Small/billboard/written", new[] { billboard.width, billboard.height, billboard.bottom });
+            var projector = go.AddComponent<Projector>(); var obsolete = typeof(Projector).GetProperty("orthoGraphicSize");
+            projector.orthographicSize = 13;
+            CoreValue("Small/projector/removedGet", obsolete.GetValue(projector, null));
+            obsolete.SetValue(projector, 7f, null); CoreValue("Small/projector/removedSet", new object[] { obsolete.GetValue(projector, null), projector.orthographicSize });
+            var details = new DetailPrototype();
+            CoreValue("Small/detail/fresh", new object[] { details.dryColor, details.healthyColor });
+            details.dryColor = new Color(.1f, .2f, .3f, .4f); details.healthyColor = new Color(.5f, .6f, .7f, .8f);
+            CoreValue("Small/detail/written", new object[] { details.dryColor, details.healthyColor });
+            CoreValue("Small/terrainLayer/fresh", layer.tileSize); layer.tileSize = new Vector2(3, 7); CoreValue("Small/terrainLayer/written", layer.tileSize);
+            var terrain = go.AddComponent<Terrain>();
+            CoreValue("Small/terrain/fresh", new object[] { terrain.allowAutoConnect, typeof(Terrain).GetProperty("materialType").GetValue(terrain, null) });
+            terrain.allowAutoConnect = true; CoreValue("Small/terrain/autoConnect", terrain.allowAutoConnect);
+            typeof(Terrain).GetProperty("materialType").SetValue(terrain, Enum.ToObject(typeof(Terrain).GetProperty("materialType").PropertyType, 0), null);
+            CoreValue("Small/terrain/removedMaterial", typeof(Terrain).GetProperty("materialType").GetValue(terrain, null));
+            CoreValue("Small/terrainData/fresh", new object[] { data.heightmapResolution, data.size, data.heightmapScale, data.bounds, data.baseMapResolution, data.maxDetailScatterPerRes });
+            data.size = new Vector3(64, 3, 128); data.baseMapResolution = 256;
+            CoreValue("Small/terrainData/resized", new object[] { data.size, data.heightmapScale, data.bounds, data.baseMapResolution });
+            var heights = new float[33, 33]; for (int y = 0; y < 33; y++) for (int x = 0; x < 33; x++) heights[y, x] = .5f;
+            data.SetHeights(0, 0, heights); CoreValue("Small/terrainData/flatHeight", data.bounds);
+            var textSettings = ScriptableObject.CreateInstance<UnityEngine.TextCore.Text.TextSettings>();
+            try
+            {
+                var fallback = typeof(UnityEngine.TextCore.Text.TextSettings).GetProperty("fallbackSpriteAssets");
+                CoreValue("Small/text/fallbackInitial", fallback.GetValue(textSettings, null) == null);
+                fallback.SetValue(textSettings, new List<UnityEngine.TextCore.Text.SpriteAsset>(), null); CoreValue("Small/text/fallbackWritten", ((System.Collections.ICollection)fallback.GetValue(textSettings, null)).Count);
+                fallback.SetValue(textSettings, null, null); CoreValue("Small/text/fallbackNull", fallback.GetValue(textSettings, null) == null);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(textSettings); }
+            var video = go.AddComponent<UnityEngine.Video.VideoPlayer>();
+            CoreValue("Small/video/fresh", new object[] { video.audioOutputMode, video.renderMode, video.timeUpdateMode, video.targetMaterialProperty, video.canSetTime, video.canStep, video.canSetTimeSource, video.canSetSkipOnDrop, video.canSetDirectAudioVolume });
+            video.audioOutputMode = UnityEngine.Video.VideoAudioOutputMode.AudioSource; video.renderMode = UnityEngine.Video.VideoRenderMode.MaterialOverride; video.timeUpdateMode = UnityEngine.Video.VideoTimeUpdateMode.GameTime; video.targetMaterialProperty = "control";
+            CoreValue("Small/video/written", new object[] { video.audioOutputMode, video.renderMode, video.timeUpdateMode, video.targetMaterialProperty });
+            if (!smallVideo.isPrepared) throw new InvalidOperationException("Small video did not prepare");
+            CoreValue("Small/video/prepared", new object[] { smallVideo.isPrepared, smallVideo.canSetTime, smallVideo.canStep, smallVideo.canSetTimeSource, smallVideo.canSetSkipOnDrop, smallVideo.canSetDirectAudioVolume });
+            smallVideo.Stop();
+            CoreValue("Small/video/stopped", new object[] { smallVideo.isPrepared, smallVideo.canSetTime, smallVideo.canStep, smallVideo.canSetTimeSource, smallVideo.canSetSkipOnDrop, smallVideo.canSetDirectAudioVolume });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); UnityEngine.Object.DestroyImmediate(billboard); UnityEngine.Object.DestroyImmediate(layer); UnityEngine.Object.DestroyImmediate(data); UnityEngine.Object.DestroyImmediate(smallVideo.gameObject); }
+    }
+    static void SmallOwnershipControls()
+    {
+        var go = new GameObject("SmallMeshOwnership"); go.SetActive(false);
+        var shared = new Mesh { name = "SharedControl" };
+        Mesh first = null, owned = null, reset = null;
+        try
+        {
+            var filter = go.AddComponent<MeshFilter>();
+            CoreValue("Small/meshFilter/sharedInitially", filter.sharedMesh == null);
+            first = filter.mesh;
+            CoreValue("Small/meshFilter/created", new object[] { first != null, first.name, first.vertexCount,
+                ReferenceEquals(first, filter.mesh), ReferenceEquals(first, filter.sharedMesh) });
+            filter.sharedMesh = shared; owned = filter.mesh;
+            CoreValue("Small/meshFilter/sharedAssignment", new object[] { ReferenceEquals(shared, owned),
+                owned.name, shared.name, ReferenceEquals(owned, filter.sharedMesh), ReferenceEquals(owned, filter.mesh) });
+            filter.mesh = shared;
+            CoreValue("Small/meshFilter/instanceAssignment", new object[] { ReferenceEquals(shared, filter.mesh), filter.mesh.name });
+            filter.sharedMesh = null; reset = filter.mesh;
+            CoreValue("Small/meshFilter/reset", new object[] { reset.name, ReferenceEquals(first, reset), ReferenceEquals(reset, filter.sharedMesh) });
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(go); if (first) UnityEngine.Object.DestroyImmediate(first);
+            if (owned) UnityEngine.Object.DestroyImmediate(owned); if (reset) UnityEngine.Object.DestroyImmediate(reset);
+            UnityEngine.Object.DestroyImmediate(shared);
+        }
+        var owner = new GameObject("SmallAnimationOwnership"); owner.SetActive(false);
+        var clip = new AnimationClip { name = "original", legacy = true };
+        try
+        {
+            var animation = owner.AddComponent<Animation>();
+            clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(2, 1)));
+            animation.AddClip(clip, "original"); animation.AddClip(clip, "renamed");
+            var same = animation["original"]; var renamed = animation["renamed"];
+            CoreValue("Small/animation/clipNames", new object[] { ReferenceEquals(clip, same.clip), ReferenceEquals(clip, renamed.clip), same.clip.name, renamed.clip.name, clip.name });
+            clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(3, 1)));
+            CoreValue("Small/animation/clipCopies", new[] { clip.length, same.length, renamed.length });
+            animation.RemoveClip("renamed");
+            CoreValue("Small/animation/removedName", Core2Read(() => renamed.name));
+            CoreValue("Small/animation/removedWrite", Core2Write(() => renamed.speed = 2));
+            clip.ClearCurves(); CoreValue("Small/animation/cleared", clip.length);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(owner); UnityEngine.Object.DestroyImmediate(clip); }
+        var range = new AnimationClip { legacy = true };
+        try
+        {
+            range.ClearCurves(); CoreValue("Small/animation/clearedFresh", range.length);
+            range.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(.5f, 1)));
+            CoreValue("Small/animation/shortCurve", range.length);
+            range.SetCurve("", typeof(Transform), "localPosition.x", null); CoreValue("Small/animation/removedLastCurve", range.length);
+            range.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(2, 0), new Keyframe(3, 1)));
+            CoreValue("Small/animation/delayedCurve", range.length);
+            range.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(-2, 0), new Keyframe(-1, 1)));
+            CoreValue("Small/animation/negativeCurve", range.length);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(range); }
+    }
+    static void SmallBoundaryControls()
+    {
+        var go = new GameObject("SmallPopulatedMesh"); go.SetActive(false);
+        var shared = new Mesh { name = "PopulatedControl", vertices = new[] { Vector3.zero, Vector3.right, Vector3.up }, triangles = new[] { 0, 1, 2 } };
+        Mesh copied = null;
+        try
+        {
+            var filter = go.AddComponent<MeshFilter>(); filter.sharedMesh = shared; copied = filter.mesh;
+            CoreValue("Small/meshFilter/populatedShared", new object[] { ReferenceEquals(shared, copied), copied.name, shared.name, copied.vertexCount, ReferenceEquals(copied, filter.mesh) });
+            var direct = new GameObject("SmallDirectMesh"); direct.SetActive(false);
+            try
+            {
+                var other = direct.AddComponent<MeshFilter>(); other.mesh = shared;
+                CoreValue("Small/meshFilter/populatedDirect", new object[] { ReferenceEquals(shared, other.mesh), other.mesh.name, shared.name });
+            }
+            finally { UnityEngine.Object.DestroyImmediate(direct); }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); if (copied && !ReferenceEquals(copied, shared)) UnityEngine.Object.DestroyImmediate(copied); UnityEngine.Object.DestroyImmediate(shared); }
+        var range = new AnimationClip { legacy = true };
+        try
+        {
+            range.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(3, 1)));
+            range.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(.25f, 1)));
+            CoreValue("Small/animation/replacedShort", range.length);
+            range.events = new[] { new AnimationEvent { time = 5, functionName = "control" } };
+            CoreValue("Small/animation/eventExtent", range.length);
+            range.ClearCurves(); CoreValue("Small/animation/clearedWithEvents", range.length);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(range); }
+        foreach (var size in new[] { new Vector2Int(0, 0), new Vector2Int(0, 4), new Vector2Int(4, 0), new Vector2Int(-1, 0) })
+        {
+            Texture2D texture = null; var old = Debug.unityLogger.logHandler;
+            try
+            {
+                Debug.unityLogger.logHandler = new FactoryControlLogHandler(old);
+                CoreValue("Small/texture/construct/" + size.x + "/" + size.y, Core2Read(() => { texture = new Texture2D(size.x, size.y); return "ok"; }));
+                if (texture != null)
+                {
+                    CoreValue("Small/texture/state/" + size.x + "/" + size.y, new object[] { texture.width, texture.height, texture.mipmapCount, texture.format, texture.graphicsFormat, texture.isReadable, texture.dimension });
+                    CoreValue("Small/texture/pixels/" + size.x + "/" + size.y, Core2Read(() => texture.GetPixels32().Length));
+                    CoreValue("Small/texture/apply/" + size.x + "/" + size.y, Core2Write(() => texture.Apply()));
+                }
+            }
+            finally { if (texture != null) UnityEngine.Object.DestroyImmediate(texture); Debug.unityLogger.logHandler = old; }
+        }
+    }
+    static void SmallFinalControls()
+    {
+        var first = new GameObject("SmallFirstFilter"); var second = new GameObject("SmallSecondFilter");
+        var emptyMesh = new Mesh { name = "EmptyShared" }; var clearedMesh = new Mesh { name = "ClearedShared", vertices = new[] { Vector3.one } };
+        Mesh afterClaim = null;
+        try
+        {
+            var a = first.AddComponent<MeshFilter>(); var b = second.AddComponent<MeshFilter>();
+            a.sharedMesh = emptyMesh; var original = a.mesh;
+            b.sharedMesh = original; var other = b.mesh;
+            original.vertices = new[] { Vector3.one };
+            afterClaim = a.mesh;
+            CoreValue("Small/mesh/crossFilterOwner", new object[] { ReferenceEquals(original, other), original.name, ReferenceEquals(original, afterClaim), afterClaim.name, ReferenceEquals(other, b.mesh) });
+            clearedMesh.Clear(); a.sharedMesh = clearedMesh; var cleared = a.mesh;
+            CoreValue("Small/mesh/clearedSource", new object[] { ReferenceEquals(clearedMesh, cleared), cleared.name, cleared.vertexCount });
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(first); UnityEngine.Object.DestroyImmediate(second);
+            if (afterClaim != null && !ReferenceEquals(afterClaim, emptyMesh)) UnityEngine.Object.DestroyImmediate(afterClaim);
+            UnityEngine.Object.DestroyImmediate(emptyMesh); UnityEngine.Object.DestroyImmediate(clearedMesh);
+        }
+        var editor = new TextEditor { text = "before" };
+        CoreValue("Small/textEditor/removedSet", new object[] { Core2Write(() => typeof(TextEditor).GetProperty("content").SetValue(editor, new GUIContent("after"), null)), editor.text });
+        CoreValue("Small/texture/explicitZeroConstructor", Core2Read(() => { var zero = new Texture2D(0, 0, TextureFormat.RGBA32, true); UnityEngine.Object.DestroyImmediate(zero); return "ok"; }));
+        var clip = new AnimationClip { legacy = true };
+        try
+        {
+            clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(-2, 0), new Keyframe(-1, 1)));
+            CoreValue("Small/animation/firstNegative", clip.length);
+            clip.ClearCurves();
+            clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 1)));
+            CoreValue("Small/animation/firstZero", clip.length);
+            clip.ClearCurves(); clip.events = new[] { new AnimationEvent { time = .25f, functionName = "control" } };
+            CoreValue("Small/animation/firstEvent", clip.length);
+            clip.events = new AnimationEvent[0]; CoreValue("Small/animation/removeEvents", clip.length);
+            clip.events = new[] { new AnimationEvent { time = -2, functionName = "control" } };
+            CoreValue("Small/animation/negativeEvent", clip.length);
+            clip.events = new AnimationEvent[0]; clip.ClearCurves();
+            clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(3, 1)));
+            clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(.25f, 1)));
+            clip.events = new[] { new AnimationEvent { time = 5, functionName = "control" } };
+            clip.events = new AnimationEvent[0]; CoreValue("Small/animation/removeEventWithCurve", clip.length);
+            clip.ClearCurves(); clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve());
+            CoreValue("Small/animation/emptyCurve", clip.length);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(clip); }
+        var terrain = new TerrainData { size = new Vector3(64, 3, 128) };
+        try
+        {
+            var heights = new float[33,33]; heights[0,0] = 1; terrain.SetHeights(0,0,heights);
+            CoreValue("Small/terrain/nonflatBounds", new object[] { terrain.bounds.center, terrain.bounds.extents });
+            terrain.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+            CoreValue("Small/terrain/scatterCount", new object[] { terrain.detailScatterMode, terrain.maxDetailScatterPerRes });
+            terrain.SetDetailScatterMode(DetailScatterMode.CoverageMode);
+            CoreValue("Small/terrain/scatterCoverage", new object[] { terrain.detailScatterMode, terrain.maxDetailScatterPerRes });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(terrain); }
+        var parent = new GameObject("SmallCanvasParent"); var child = new GameObject("SmallCanvasChild");
+        try
+        {
+            child.transform.SetParent(parent.transform, false);
+            var root = parent.AddComponent<Canvas>(); var nested = child.AddComponent<Canvas>();
+            root.normalizedSortingGridSize = .37f; nested.normalizedSortingGridSize = .8f;
+            CoreValue("Small/canvas/inherited", new object[] { root.normalizedSortingGridSize, nested.normalizedSortingGridSize, nested.rootCanvas == root });
+            root.normalizedSortingGridSize = .6f;
+            CoreValue("Small/canvas/changedParent", nested.normalizedSortingGridSize);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(child); UnityEngine.Object.DestroyImmediate(parent); }
+    }
+    static void SmallAnimationBoundaryControls()
+    {
+        var owner = new GameObject("SmallAnimationBoundary"); owner.SetActive(false);
+        var source = new AnimationClip { name = "original", legacy = true, frameRate = 24 };
+        try
+        {
+            source.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0, 0), new Keyframe(2, 1)));
+            var animation = owner.AddComponent<Animation>();
+            foreach (bool loop in new[] { false, true })
+            {
+                animation.AddClip(source, "original", int.MinValue, int.MaxValue, loop);
+                var same = animation.GetClip("original");
+                CoreValue("Small/animation/wholeSame/" + loop, new object[] { ReferenceEquals(source, same), source.name, same.name });
+                CoreValue("Small/animation/wholeSameLength/" + loop, new object[] { source.length, same.length });
+                animation.AddClip(source, "whole", int.MinValue, int.MaxValue, loop);
+                var other = animation.GetClip("whole");
+                CoreValue("Small/animation/wholeOther/" + loop, new object[] { ReferenceEquals(source, other), source.name, other.name });
+                CoreValue("Small/animation/wholeOtherLength/" + loop, new object[] { source.length, other.length });
+            }
+            foreach (bool negative in new[] { false, true })
+            {
+                var edge = new AnimationClip { name = "edge", legacy = true };
+                try
+                {
+                    edge.SetCurve("", typeof(Transform), "localPosition.x", negative ? new AnimationCurve(new Keyframe(-2, 0), new Keyframe(-1, 1)) : new AnimationCurve(new Keyframe(0, 1)));
+                    animation.AddClip(edge, "edge"); var state = animation["edge"];
+                    state.time = .5f; state.speed = -2;
+                    CoreValue("Small/animation/normalize/" + negative, new object[] { edge.length, state.length, state.time, state.speed, state.normalizedTime, state.normalizedSpeed });
+                    state.normalizedTime = .25f; state.normalizedSpeed = .5f;
+                    CoreValue("Small/animation/normalizeWrite/" + negative, new object[] { state.time, state.speed, state.normalizedTime, state.normalizedSpeed });
+                }
+                finally { UnityEngine.Object.DestroyImmediate(edge); }
+            }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(owner); UnityEngine.Object.DestroyImmediate(source); }
     }
     static void UiControls()
     {

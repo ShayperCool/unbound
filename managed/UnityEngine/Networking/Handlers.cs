@@ -19,7 +19,9 @@ namespace UnityEngine.Networking
 
         public bool isDone { get { CheckDisposed(); return m_IsDone; } }
 
-        public string error { get { CheckDisposed(); return m_Error; } }
+        public string error { get { CheckDisposed(); return ErrorMessage; } }
+
+        internal virtual string ErrorMessage => m_Error;
 
         public byte[] data => GetData();
 
@@ -47,9 +49,9 @@ namespace UnityEngine.Networking
         /// <summary>The data decoded with the charset of the response's Content-Type, UTF-8 by default.</summary>
         protected virtual string GetText()
         {
-            var bytes = GetData();
-            if (bytes == null) return null;
-            return EncodingOf(m_ContentType).GetString(bytes);
+            var bytes = GetNativeData();
+            if (!bytes.IsCreated || bytes.Length == 0) return "";
+            return EncodingOf(m_ContentType).GetString(bytes.ToArray());
         }
 
         static Encoding EncodingOf(string contentType)
@@ -122,7 +124,7 @@ namespace UnityEngine.Networking
         /// <summary>Read by UnityWebRequest.Finish after a successful End: the result the request
         /// completes with when the handler could not process the data it received and has set its
         /// own error: DataProcessingError, or ConnectionError for data it refused to write. Opt-in:
-        /// only the AssetBundle handler sets it; every other handler keeps null.</summary>
+        /// handlers that validate the completed content set it; other handlers keep null.</summary>
         internal virtual UnityWebRequest.Result? CompletionFailure => null;
 
         /// <summary>Called by SendWebRequest on the main thread as the request starts: true when the
@@ -158,7 +160,7 @@ namespace UnityEngine.Networking
             return true;
         }
 
-        internal override byte[] Bytes() => m_Bytes ??= m_Stream.ToArray();
+        internal override byte[] Bytes() => m_Stream.Length == 0 ? null : m_Bytes ??= m_Stream.ToArray();
 
         protected override NativeArray<byte> GetNativeData() => base.GetNativeData();
 

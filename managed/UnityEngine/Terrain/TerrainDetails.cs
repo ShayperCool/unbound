@@ -63,6 +63,8 @@ namespace UnityEngine
                 list?.RemoveAll(layer => layer >= count);
         }
 
+        public int maxDetailScatterPerRes => m_DetailScatterMode == DetailScatterMode.InstanceCountMode ? MaxInstancesPerSample : byte.MaxValue;
+
         public DetailScatterMode detailScatterMode => m_DetailScatterMode;
 
         /// <summary>Switching the mode starts every patch empty (values and layer order).</summary>
@@ -119,7 +121,7 @@ namespace UnityEngine
             var values = DetailLayer(layer, true);
             int height = details.GetLength(0), width = details.GetLength(1);
             // Instance counts keep at most 16 a sample, coverage at most 255.
-            int max = m_DetailScatterMode == DetailScatterMode.InstanceCountMode ? MaxInstancesPerSample : 255;
+            int max = maxDetailScatterPerRes;
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                 {

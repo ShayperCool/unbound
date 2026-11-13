@@ -208,7 +208,8 @@ namespace UnityEngine.Tests
             animation.AddClip(source, "four", 6, 18);
             animation.AddClip(source, "five", 6, 18, false);
             animation.AddClip(source, "whole");
-            Assert.Same(source, animation.GetClip("whole"));
+            Assert.NotSame(source, animation.GetClip("whole"));
+            Assert.Equal("whole", animation.GetClip("whole").name);
 
             foreach (var name in new[] { "four", "five" })
             {
@@ -583,7 +584,7 @@ namespace UnityEngine.Tests
         // ------------------------------------------------------------------ refused cases
 
         [Fact]
-        public void TheWholeClipWithTheLoopFrameIsAddedAsItIsAndSaysSo()
+        public void TheWholeClipLoopRequestWarnsAndPreservesTheSource()
         {
             var source = Source(SmoothCurve(), 24f);
             float length = source.length;
@@ -592,11 +593,13 @@ namespace UnityEngine.Tests
             var warnings = WarningsOf(() => animation.AddClip(source, "whole", int.MinValue, int.MaxValue, true));
             Assert.Single(warnings);
             Assert.Contains("no extra loop frame is inserted", warnings[0]);
-            Assert.Same(source, animation.GetClip("whole"));
+            Assert.NotSame(source, animation.GetClip("whole"));
+            Assert.Equal("whole", animation.GetClip("whole").name);
             Assert.Equal(length, source.length);
             // The two-argument overload adds the whole clip without a message (Dispose checks).
             animation.AddClip(source, "plain");
-            Assert.Same(source, animation.GetClip("plain"));
+            Assert.NotSame(source, animation.GetClip("plain"));
+            Assert.Equal("plain", animation.GetClip("plain").name);
         }
 
         [Theory]

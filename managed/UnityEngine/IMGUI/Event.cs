@@ -12,13 +12,15 @@ namespace UnityEngine
     /// </summary>
     public sealed partial class Event
     {
-        EventType m_Type;
+        // Empty events have a separate code from the public input event kinds.
+        const int EmptyEventType = 1003;
+        EventType m_Type = Compat.DefaultConstructorStateMeasured ? (EventType)EmptyEventType : default;
         Vector2 m_MousePosition;
         Vector2 m_Delta;
         PointerType m_PointerType;
         int m_Button;
         EventModifiers m_Modifiers;
-        float m_Pressure;
+        float m_Pressure = Compat.DefaultConstructorStateMeasured ? 1f : 0f;
         float m_Twist;
         Vector2 m_Tilt;
         int m_ClickCount;
@@ -30,6 +32,11 @@ namespace UnityEngine
         internal const float scrollWheelDeltaPerTick = 3f;
 
         static Event s_Current;
+
+        [Obsolete("Use HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);", true)]
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Unbound.EditorFaithful("removed property returns the release's upward ray and ignores writes")]
+        public Ray mouseRay { get => new Ray(Vector3.up, Vector3.up); set { } }
 
         public Event() { }
 

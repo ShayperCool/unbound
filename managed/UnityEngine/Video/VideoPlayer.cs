@@ -194,20 +194,20 @@ namespace UnityEngine.Video
         VideoSource m_Source;
         string m_Url = "";
         VideoClip m_Clip;
-        VideoRenderMode m_RenderMode = VideoRenderMode.CameraFarPlane;
+        VideoRenderMode m_RenderMode = Compat.DefaultConstructorStateMeasured ? VideoRenderMode.RenderTexture : VideoRenderMode.CameraFarPlane;
         Camera m_TargetCamera;
         RenderTexture m_TargetTexture;
         Renderer m_TargetMaterialRenderer;
-        string m_TargetMaterialProperty = "_MainTex";
+        string m_TargetMaterialProperty = Compat.DefaultConstructorStateMeasured ? "" : "_MainTex";
         VideoAspectRatio m_AspectRatio = VideoAspectRatio.FitHorizontally;
         float m_TargetCameraAlpha = 1f;
         Video3DLayout m_TargetCamera3DLayout;
         bool m_WaitForFirstFrame = true, m_PlayOnAwake = true, m_Looping, m_SkipOnDrop = true, m_SendFrameReadyEvents;
         float m_PlaybackSpeed = 1f;
-        VideoTimeUpdateMode m_TimeUpdateMode = VideoTimeUpdateMode.GameTime;
+        VideoTimeUpdateMode m_TimeUpdateMode = Compat.DefaultConstructorStateMeasured ? VideoTimeUpdateMode.UnscaledGameTime : VideoTimeUpdateMode.GameTime;
         VideoTimeReference m_TimeReference;
         double m_ExternalReferenceTime;
-        VideoAudioOutputMode m_AudioOutputMode = VideoAudioOutputMode.AudioSource;
+        VideoAudioOutputMode m_AudioOutputMode = Compat.DefaultConstructorStateMeasured ? VideoAudioOutputMode.Direct : VideoAudioOutputMode.AudioSource;
         ushort m_ControlledAudioTrackCount = 1;
 
         // Playback.
@@ -271,18 +271,18 @@ namespace UnityEngine.Video
         public bool playOnAwake { get => m_PlayOnAwake; set => m_PlayOnAwake = value; }
         public bool isPlaying => m_Playing && !m_Paused;
         public bool isPaused => m_Paused;
-        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
-        public bool canSetTime => true;
-        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
-        public bool canStep => true;
-        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
+        [Unbound.EditorFaithful("capability of the file backend; prepared and stopped states are measured in tests/projects/defaultstate")]
+        public bool canSetTime => isPrepared;
+        [Unbound.EditorFaithful("capability of the file backend; prepared and stopped states are measured in tests/projects/defaultstate")]
+        public bool canStep => isPrepared;
+        [Unbound.EditorFaithful("capability of the file backend; prepared and stopped states are measured in tests/projects/defaultstate")]
         public bool canSetPlaybackSpeed => true;
-        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
+        [Unbound.EditorFaithful("capability of the file backend; prepared and stopped states are measured in tests/projects/defaultstate")]
         public bool canSetTimeUpdateMode => true;
-        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
-        public bool canSetSkipOnDrop => true;
-        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
-        public bool canSetDirectAudioVolume => true;
+        [Unbound.EditorFaithful("capability of the file backend; prepared and stopped states are measured in tests/projects/defaultstate")]
+        public bool canSetSkipOnDrop => isPrepared;
+        [Unbound.EditorFaithful("capability of the file backend; prepared and stopped states are measured in tests/projects/defaultstate")]
+        public bool canSetDirectAudioVolume => isPrepared;
         public float playbackSpeed { get => m_PlaybackSpeed; set => m_PlaybackSpeed = Mathf.Max(0f, value); }
         public bool isLooping { get => m_Looping; set => m_Looping = value; }
         public VideoTimeUpdateMode timeUpdateMode { get => m_TimeUpdateMode; set => m_TimeUpdateMode = value; }
@@ -310,8 +310,8 @@ namespace UnityEngine.Video
         public double clockTime => m_Time;
 
         [Obsolete("VideoPlayer.canSetTimeSource is deprecated. Use canSetTimeUpdateMode instead. (UnityUpgradable) -> canSetTimeUpdateMode")]
-        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
-        public bool canSetTimeSource => true;
+        [Unbound.EditorFaithful("capability of the file backend; prepared and stopped states are measured in tests/projects/defaultstate")]
+        public bool canSetTimeSource => !Compat.DefaultConstructorStateMeasured;
 
         [Obsolete("VideoPlayer.timeSource is deprecated. Use timeUpdateMode instead. (UnityUpgradable) -> timeUpdateMode")]
         public VideoTimeSource timeSource
@@ -794,16 +794,16 @@ namespace UnityEngine.Video
             m_TargetCamera = Ref<Camera>("m_TargetCamera");
             m_TargetTexture = Ref<RenderTexture>("m_TargetTexture");
             m_TargetMaterialRenderer = Ref<Renderer>("m_TargetMaterialRenderer");
-            m_TargetMaterialProperty = body.Str("m_TargetMaterialProperty", "_MainTex");
+            m_TargetMaterialProperty = body.Str("m_TargetMaterialProperty", m_TargetMaterialProperty);
             m_TargetCameraAlpha = body.Float("m_TargetCameraAlpha", 1f);
             m_TargetCamera3DLayout = (Video3DLayout)body.Int("m_TargetCamera3DLayout");
             m_TimeReference = (VideoTimeReference)body.Int("m_TimeReference");
-            m_RenderMode = (VideoRenderMode)body.Int("m_RenderMode");
+            m_RenderMode = (VideoRenderMode)body.Int("m_RenderMode", (int)m_RenderMode);
             m_AspectRatio = (VideoAspectRatio)body.Int("m_AspectRatio", 2);
             m_Source = (VideoSource)body.Int("m_DataSource");
-            m_TimeUpdateMode = (VideoTimeUpdateMode)body.Int("m_TimeUpdateMode", 1);
+            m_TimeUpdateMode = (VideoTimeUpdateMode)body.Int("m_TimeUpdateMode", (int)m_TimeUpdateMode);
             m_PlaybackSpeed = body.Float("m_PlaybackSpeed", 1f);
-            m_AudioOutputMode = (VideoAudioOutputMode)body.Int("m_AudioOutputMode", 1);
+            m_AudioOutputMode = (VideoAudioOutputMode)body.Int("m_AudioOutputMode", (int)m_AudioOutputMode);
             m_Url = body.Str("m_Url");
             m_ControlledAudioTrackCount = (ushort)body.Int("m_ControlledAudioTrackCount", 1);
             m_PlayOnAwake = body.Bool("m_PlayOnAwake", true);

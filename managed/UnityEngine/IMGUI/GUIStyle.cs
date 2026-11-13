@@ -190,7 +190,7 @@ namespace UnityEngine
         [SerializeField] FontStyle m_FontStyle;
         [SerializeField] TextAnchor m_Alignment;
         [SerializeField] bool m_WordWrap;
-        [SerializeField] bool m_RichText;
+        [SerializeField] bool m_RichText = Compat.DefaultConstructorStateMeasured;
         [SerializeField] TextClipping m_TextClipping;
         [SerializeField] ImagePosition m_ImagePosition;
         [SerializeField] Vector2 m_ContentOffset;
@@ -652,6 +652,7 @@ namespace UnityEngine
         public GUISkin()
         {
             m_CustomStyles = new GUIStyle[1];
+            Apply();
         }
 
         internal static GUIStyle error => s_Error ??= new GUIStyle { name = "StyleNotFoundError" };
@@ -708,7 +709,30 @@ namespace UnityEngine
 
         internal void Apply()
         {
-            m_Styles = null;
+            m_box ??= new GUIStyle();
+            m_button ??= new GUIStyle();
+            m_toggle ??= new GUIStyle();
+            m_label ??= new GUIStyle();
+            m_textField ??= new GUIStyle();
+            m_textArea ??= new GUIStyle();
+            m_window ??= new GUIStyle();
+            m_horizontalSlider ??= new GUIStyle();
+            m_horizontalSliderThumb ??= new GUIStyle();
+            m_horizontalSliderThumbExtent ??= new GUIStyle();
+            m_verticalSlider ??= new GUIStyle();
+            m_verticalSliderThumb ??= new GUIStyle();
+            m_verticalSliderThumbExtent ??= new GUIStyle();
+            m_SliderMixed ??= new GUIStyle();
+            m_horizontalScrollbar ??= new GUIStyle();
+            m_horizontalScrollbarThumb ??= new GUIStyle();
+            m_horizontalScrollbarLeftButton ??= new GUIStyle();
+            m_horizontalScrollbarRightButton ??= new GUIStyle();
+            m_verticalScrollbar ??= new GUIStyle();
+            m_verticalScrollbarThumb ??= new GUIStyle();
+            m_verticalScrollbarUpButton ??= new GUIStyle();
+            m_verticalScrollbarDownButton ??= new GUIStyle();
+            m_ScrollView ??= new GUIStyle();
+            BuildStyleCache();
         }
 
         IEnumerable<GUIStyle> Builtins()
@@ -745,7 +769,7 @@ namespace UnityEngine
                 {
                     // A built-in style without a name takes its own (measured: the GameSkin's
                     // slider extents and SliderMixed, tests/projects/imguiskin).
-                    if (string.IsNullOrEmpty(style.name)) style.name = names[i];
+                    style.name = names[i];
                     m_Styles[names[i]] = style;
                 }
                 i++;

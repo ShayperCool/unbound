@@ -394,9 +394,10 @@ namespace UnityEngine.SocialPlatforms.Impl
             m_LegacyID = "0";
             m_IsFriend = false;
             m_State = UserState.Offline;
+            m_Image = new Texture2D(32, 32);
         }
 
-        public UserProfile(string name, string id, bool friend) : this(name, id, friend, UserState.Offline, null) { }
+        public UserProfile(string name, string id, bool friend) : this(name, id, friend, UserState.Offline, new Texture2D(0, 0)) { }
 
         public UserProfile(string name, string id, bool friend, UserState state, Texture2D image) : this(name, id, id, friend, state, image) { }
 
@@ -423,7 +424,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         public string userName => m_UserName;
         public string id => m_ID;
         [global::System.@ObsoleteAttribute("legacyId returns playerID from GKPlayer, which became obsolete in iOS 12.4 . id returns playerID for devices running versions before iOS 12.4, and the newer teamPlayerID for later versions. Please use IUserProfile.id or UserProfile.id instead (UnityUpgradable) -> id", true)]
-        public string legacyId => m_LegacyID;
+        public string legacyId => throw new NotSupportedException("legacyId returns playerID from GKPlayer, which became obsolete in iOS 12.4 . id returns playerID for devices running versions before iOS 12.4, and the newer teamPlayerID for later versions. Please use IUserProfile.id or UserProfile.id instead");
         public string gameId => m_GameID;
         public bool isFriend => m_IsFriend;
         public UserState state => m_State;
@@ -539,7 +540,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         string m_UserID;
         int m_Rank;
 
-        public Score() : this("unkown_score", -1) { }
+        public Score() : this("unkown", -1) { }
 
         public Score(string leaderboardID, long value) : this(leaderboardID, value, "0", DateTime.Now, "", -1) { }
 

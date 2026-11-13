@@ -41,7 +41,8 @@ namespace UnityEngine
         public bool isOrthoGraphic { get => m_Orthographic; set => m_Orthographic = value; }
 
         [global::System.@ObsoleteAttribute("Property orthoGraphicSize has been deprecated. Use orthographicSize instead (UnityUpgradable) -> orthographicSize", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
-        public float orthoGraphicSize { get => m_OrthographicSize; set => m_OrthographicSize = value; }
+        [Unbound.EditorFaithful("removed property returns -1 and ignores writes in the selected release") ]
+        public float orthoGraphicSize { get => Compat.DefaultConstructorStateMeasured ? -1f : m_OrthographicSize; set { if (!Compat.DefaultConstructorStateMeasured) m_OrthographicSize = value; } }
 
         internal override void OnEngineEnable()
         {

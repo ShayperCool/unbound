@@ -80,6 +80,8 @@ namespace UnityEngine
             }
         }
 
+        internal int m_InstanceOwnerId;
+
         public Mesh()
         {
             CheckMainThreadCreation("Internal_Create");

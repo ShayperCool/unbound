@@ -7,7 +7,7 @@ namespace UnityEngine
     public sealed partial class TerrainLayer : Object, ISerializedAsset
     {
         Texture2D m_DiffuseTexture, m_NormalMapTexture, m_MaskMapTexture;
-        Vector2 m_TileSize = new Vector2(15f, 15f);
+        Vector2 m_TileSize = Compat.DefaultConstructorStateMeasured ? new Vector2(2f, 2f) : new Vector2(15f, 15f);
         Vector2 m_TileOffset;
         Color m_Specular = new Color(0f, 0f, 0f, 0f);
         float m_Metallic, m_Smoothness, m_NormalScale = 1f;

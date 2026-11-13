@@ -86,7 +86,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal bool NeedUpgradeScaledTreePrototypes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.NeedUpgradeScaledTreePrototypes"); return default; }
         [global::Unbound.Stub] internal void UpgradeScaledTreePrototype() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.UpgradeScaledTreePrototype"); }
         internal global::UnityEngine.RenderTexture holesRenderTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.holesRenderTexture"); return default; } }
-        public int maxDetailScatterPerRes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.maxDetailScatterPerRes"); return default; } }
         internal global::UnityEngine.TextureFormat atlasFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.atlasFormat"); return default; } }
     }
     [global::Unbound.Stub]

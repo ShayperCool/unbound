@@ -122,6 +122,7 @@ namespace UnityEditor
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
                 clip.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Curve = copy });
             }
+            clip.UpdateRuntimeCurveRange();
             clip.m_Version++;
         }
 
