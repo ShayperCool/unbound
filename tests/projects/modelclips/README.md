@@ -188,9 +188,9 @@ rotation, but scripts read it).
   take's rotations have reached there: `Spin` has turned past half a turn and starts with a
   negative w, the opposite of its own matrix's sign.
 
-Not measured: a tie with the x element and a trace of exactly zero (Legacy imports, converted
-static models and a y-z tie: see the next section), a range that starts before its take, and a
-turn of half a revolution or more between two frames.
+Not measured: a tie with the x element and a trace of exactly zero, a range that starts before
+its take, and a turn of half a revolution or more between two frames. Legacy imports, converted
+static models and a y-z tie are measured: see the next section.
 
 
 ## Signs of Legacy and axis-converted imports, a rotation within its error
