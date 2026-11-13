@@ -15,6 +15,8 @@
   "managed/UnityEngine/Graphics/AsyncReadback.cs",
   "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs",
   "crates/unbound-app/src/render/executor/compute.rs",
-  "crates/unbound-shaders/src/compute.rs"
+  "crates/unbound-shaders/src/compute.rs",
+  "managed/UnityEngine/Graphics/Immediate.cs",
+  "managed/UnityEngine/Graphics/CommandStream.cs"
  ]
 }
