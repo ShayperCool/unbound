@@ -344,13 +344,13 @@ namespace UnityEngine
         /// <summary>A layer's smoothness as its splat material gets it: the shaders multiply it by
         /// the diffuse texture's alpha, so with the smoothness taken from that alpha
         /// (<see cref="TerrainLayerSmoothnessSource.DiffuseAlphaChannel"/>, a new layer's) and a
-        /// diffuse format with alpha it is at least 1 (the alpha alone), else the layer's
-        /// smoothness; as in the Unity 6000.0.71f1 Editor (tests/projects/defaultreflection,
-        /// terrainlod layers5*).</summary>
+        /// diffuse format with alpha (<see cref="GraphicsFormatUtility.TextureFormatHasAlpha"/>) it
+        /// is at least 1 (the alpha alone), else the layer's smoothness; as in the Unity
+        /// 6000.0.71f1 Editor (tests/projects/defaultreflection, terrain, terrainlod layers5*).</summary>
         internal static float LayerSmoothness(TerrainLayer layer)
         {
             bool fromAlpha = layer.smoothnessSource == TerrainLayerSmoothnessSource.DiffuseAlphaChannel
-                && layer.diffuseTexture is Texture2D diffuse && GraphicsFormatUtility.HasAlphaChannel(diffuse.graphicsFormat);
+                && layer.diffuseTexture is Texture2D diffuse && GraphicsFormatUtility.TextureFormatHasAlpha(diffuse.format);
             return Mathf.Max(layer.smoothness, fromAlpha ? 1f : 0f);
         }
 

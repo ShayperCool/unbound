@@ -12,6 +12,7 @@ namespace UnityEngine.Tests
         {
             var rgba = new Texture2D(4, 4, TextureFormat.RGBA32, false);
             var rgb = new Texture2D(4, 4, TextureFormat.RGB24, false);
+            var dxt1 = new Texture2D(4, 4, TextureFormat.DXT1, false);
             try
             {
                 // A new layer takes its smoothness from the diffuse alpha: the slider no longer counts.
@@ -23,6 +24,9 @@ namespace UnityEngine.Tests
                 Assert.Equal(0.3f, TerrainRenderer.LayerSmoothness(layer));
                 layer.diffuseTexture = null;
                 Assert.Equal(0.3f, TerrainRenderer.LayerSmoothness(layer));
+                // DXT1 has no alpha for this, though its graphics format is an RGBA one.
+                layer.diffuseTexture = dxt1;
+                Assert.Equal(0.3f, TerrainRenderer.LayerSmoothness(layer));
                 // A constant source keeps the slider whatever the texture.
                 layer.diffuseTexture = rgba;
                 layer.smoothnessSource = TerrainLayerSmoothnessSource.Constant;
@@ -32,6 +36,7 @@ namespace UnityEngine.Tests
             {
                 Object.DestroyImmediate(rgba);
                 Object.DestroyImmediate(rgb);
+                Object.DestroyImmediate(dxt1);
             }
         }
 

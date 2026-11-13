@@ -296,6 +296,24 @@ namespace UnityEngine.Experimental.Rendering
         internal const GraphicsFormat Texture2DARGB32SRGB = (GraphicsFormat)87;
         internal const GraphicsFormat Texture2DAlpha8 = (GraphicsFormat)54;
 
+        /// <summary>Whether a texture format holds alpha in the Editor's sense: the formats with an
+        /// alpha channel, Alpha8 and the RGBA compressed ones, but not DXT1 (whose graphics format
+        /// is an RGBA one) or the other RGB block formats. What decides a terrain layer's
+        /// smoothness source in the Unity 6000.0.71f1 Editor (tests/projects/terrain: DXT1 diffuse
+        /// maps keep the slider; tests/projects/defaultreflection: RGBA32 ones take the alpha).</summary>
+        internal static bool TextureFormatHasAlpha(TextureFormat format) => format switch
+        {
+            TextureFormat.Alpha8 or TextureFormat.ARGB4444 or TextureFormat.RGBA32 or TextureFormat.ARGB32
+                or TextureFormat.DXT5 or TextureFormat.RGBA4444 or TextureFormat.BGRA32 or TextureFormat.RGBAHalf
+                or TextureFormat.RGBAFloat or TextureFormat.BC7 or TextureFormat.DXT5Crunched or TextureFormat.PVRTC_RGBA2
+                or TextureFormat.PVRTC_RGBA4 or TextureFormat.ETC2_RGBA1 or TextureFormat.ETC2_RGBA8
+                or TextureFormat.ETC2_RGBA8Crunched or TextureFormat.RGBA64 or TextureFormat.RGBA32_SIGNED
+                or TextureFormat.RGBA64_SIGNED => true,
+            >= TextureFormat.ASTC_4x4 and <= TextureFormat.ASTC_12x12 => true,
+            >= TextureFormat.ASTC_HDR_4x4 and <= TextureFormat.ASTC_HDR_12x12 => true,
+            _ => false,
+        };
+
         /// <summary>A Texture2D's graphicsFormat: ARGB32 and Alpha8 report the unnamed values above, R8
         /// and RG16 their sRGB formats for sRGB data; other formats as <see cref="GetGraphicsFormat(TextureFormat, bool)"/>.</summary>
         internal static GraphicsFormat Texture2DGraphicsFormat(TextureFormat format, bool isSRGB) => format switch
