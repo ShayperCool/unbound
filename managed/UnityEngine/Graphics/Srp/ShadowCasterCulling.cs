@@ -95,7 +95,7 @@ namespace Unbound.Runtime
             float near = camera.nearClipPlane;
             float distance = Mathf.Min(data.Parameters.shadowDistance, camera.farClipPlane);
             if (!(distance > near)) return false;
-            var inverse = data.Parameters.cullingMatrix.inverse;
+            var inverse = data.Parameters.cullingMatrix.inverseDoublePrecision;
             var view = camera.worldToCameraMatrix;
             for (int i = 0; i < 4; i++)
             {

@@ -542,7 +542,7 @@ namespace UnityEngine
             m_TreeMaterialVersion = m_TreeMaterial != null ? m_TreeMaterial.m_ChangeVersion : 0;
             var prototypes = data.treePrototypes;
             var origin = transform.position;
-            var frame = Matrix4x4.TRS(origin, Quaternion.identity, Vector3.one).inverse;
+            var frame = Matrix4x4.TRS(origin, Quaternion.identity, Vector3.one).inverseDoublePrecision;
             foreach (var tree in data.treeInstances)
             {
                 if (tree.prototypeIndex < 0 || tree.prototypeIndex >= prototypes.Length) continue;

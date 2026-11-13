@@ -35,13 +35,13 @@ namespace UnityEngine
             {
                 if (orthographic) view = Matrix4x4.Translate(new Vector3(0f, 0f, near)) * view;
                 toBuild = view;
-                fromBuild = view.inverse;
+                fromBuild = view.inverseDoublePrecision;
             }
             else
             {
                 Vector3 x = frame.GetColumn(0), y = frame.GetColumn(1), z = frame.GetColumn(2);
                 fromBuild = new Matrix4x4(x, y, -z, new Vector4(origin.x, origin.y, origin.z, 1f));
-                toBuild = fromBuild.inverse;
+                toBuild = fromBuild.inverseDoublePrecision;
             }
             return new LineSpace { ToBuild = toBuild * inputToWorld, FromBuild = worldToOutput * fromBuild };
         }

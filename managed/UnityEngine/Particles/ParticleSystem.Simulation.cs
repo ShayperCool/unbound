@@ -1369,7 +1369,7 @@ namespace UnityEngine
                 }
                 default:
                 {
-                    var inv = emitter.inverse;
+                    var inv = emitter.inverseDoublePrecision;
                     pos = inv.MultiplyPoint3x4(worldPos);
                     vel = inv.MultiplyVector(worldVel);
                     return;
@@ -1674,7 +1674,7 @@ namespace UnityEngine
                 // Into simulation space with its scale: local space divides by the scaling mode's
                 // emitter scale, custom space by the custom transform's (measured).
                 var gravityWorld = SourceGravity(m_Main.gravitySource);
-                c.Gravity = simWorld ? gravityWorld : SimulationToWorld().inverse.MultiplyVector(gravityWorld);
+                c.Gravity = simWorld ? gravityWorld : SimulationToWorld().inverseDoublePrecision.MultiplyVector(gravityWorld);
             }
             c.Center = simWorld ? m_GameObject.m_Transform.position : Vector3.zero;
             if (m_Main.simulationSpace == ParticleSystemSimulationSpace.Custom && m_Main.customSimulationSpace != null)
@@ -1688,7 +1688,7 @@ namespace UnityEngine
             if (m_Collision.enabled)
             {
                 c.SimToWorld = SimulationToWorld();
-                c.WorldToSimMatrix = c.SimToWorld.inverse;
+                c.WorldToSimMatrix = c.SimToWorld.inverseDoublePrecision;
                 if (m_Collision.type == ParticleSystemCollisionType.Planes) PrepareCollisionPlanes(c.WorldToSimMatrix, simWorld);
             }
             return c;

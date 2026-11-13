@@ -700,7 +700,7 @@ namespace Unbound.Runtime
             if (motion == PendingMotion.RenderPipeline)
             {
                 s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousM", Kind = MatrixKind, Matrix = s_MotionPrevious });
-                s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousMI", Kind = MatrixKind, Matrix = s_MotionPrevious.inverse });
+                s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousMI", Kind = MatrixKind, Matrix = s_MotionPrevious.inverseDoublePrecision });
                 s_Properties.Add(new PropertyValue { Name = "unity_MotionVectorsParams", Kind = VectorKind, Vector = s_MotionParams });
             }
             else if (motion == PendingMotion.BuiltIn)

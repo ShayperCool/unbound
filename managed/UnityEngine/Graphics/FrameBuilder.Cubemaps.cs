@@ -38,7 +38,7 @@ namespace Unbound.Runtime
             {
                 camera.targetTexture = face;
                 camera.rect = new Rect(0f, 0f, 1f, 1f);
-                camera.projectionMatrix = Matrix4x4.Perspective(90f, 1f, camera.nearClipPlane, camera.farClipPlane);
+                camera.projectionMatrix = Matrix4x4.PerspectiveDoublePrecision(90f, 1f, camera.nearClipPlane, camera.farClipPlane);
                 // The faces are stored the other way up: their culling turns around.
                 GL.invertCulling = !inverted;
                 for (int i = 0; i < 6; i++)

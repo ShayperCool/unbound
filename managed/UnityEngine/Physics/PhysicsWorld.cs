@@ -433,7 +433,7 @@ namespace Unbound.Runtime
 
         /// <summary>Maps points of a collider's transform space into the frame of the body at the given pose.</summary>
         internal static Matrix4x4 ToBodyMatrix(Transform collider, Vector3 bodyPosition, Quaternion bodyRotation) =>
-            PoseMatrix(bodyPosition, bodyRotation).inverse * collider.localToWorldMatrix;
+            PoseMatrix(bodyPosition, bodyRotation).inverseDoublePrecision * collider.localToWorldMatrix;
 
         static bool SameShapeMatrix(Matrix4x4 a, Matrix4x4 b)
         {
@@ -962,7 +962,7 @@ namespace Unbound.Runtime
                 body = c.m_StaticBody;
             }
 
-            var matrix = keepPose ? c.m_ShapeMatrix : PoseMatrix(framePosition, frameRotation).inverse * world;
+            var matrix = keepPose ? c.m_ShapeMatrix : PoseMatrix(framePosition, frameRotation).inverseDoublePrecision * world;
             c.m_ShapeMatrix = matrix;
             if (!keepPose)
                 c.m_ShapeRotation = Quaternion.Inverse(frameRotation) * (rb == null && addedPose ? c.m_AddedRotation : transform.rotation);

@@ -232,7 +232,7 @@ namespace UnityEngine
             m_Paths = new List<Vector2[]>();
             m_HavePaths = true;
             CaptureGeneratedSettings();
-            var fromBody = toBody.inverse;
+            var fromBody = toBody.inverseDoublePrecision;
             bool measured = Compat.Physics2DGeneratedGeometryMeasured;
             var result = new Paths();
             double scale = ClipperOps.Scale;

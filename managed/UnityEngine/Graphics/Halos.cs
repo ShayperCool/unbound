@@ -198,7 +198,7 @@ namespace Unbound.Runtime
         static bool DrawHalos(Camera camera, in Matrix4x4 view)
         {
             s_Vertices.Clear(); s_Uvs.Clear(); s_Colors.Clear(); s_Indices.Clear();
-            var cameraToWorld = view.inverse;
+            var cameraToWorld = view.inverseDoublePrecision;
             Vector3 right = cameraToWorld.GetColumn(0), up = cameraToWorld.GetColumn(1), forward = -(Vector3)cameraToWorld.GetColumn(2);
             right.Normalize(); up.Normalize(); forward.Normalize();
             foreach (var halo in s_Halos)
@@ -366,7 +366,7 @@ namespace Unbound.Runtime
                 s_DrawnBy.Clear();
             }
             bool drawn = false;
-            var cameraPosition = view.inverse.MultiplyPoint3x4(Vector3.zero);
+            var cameraPosition = view.inverseDoublePrecision.MultiplyPoint3x4(Vector3.zero);
             var saved = GfxStream.Current;
             bool matrices = false;
             foreach (var source in s_Sources)

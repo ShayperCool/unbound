@@ -381,7 +381,7 @@ namespace UnityEngine
                 var local = Matrix4x4.TRS(bones[i].position, bones[i].rotation, Vector3.one);
                 int parent = bones[i].parentId;
                 world[i] = parent >= 0 && parent < i ? world[parent] * local : local;
-                m_BindPoses[i] = world[i].inverse;
+                m_BindPoses[i] = world[i].inverseDoublePrecision;
             }
             m_Bones = bones;
         }

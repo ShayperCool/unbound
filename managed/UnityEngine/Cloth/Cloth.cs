@@ -421,7 +421,7 @@ namespace UnityEngine
             if (renderer == null || mesh == null) return;
             var t = transform;
             var f = Frame;
-            var frame = Matrix4x4.TRS(f.position, f.rotation, Vector3.one).inverse;
+            var frame = Matrix4x4.TRS(f.position, f.rotation, Vector3.one).inverseDoublePrecision;
             Vector3[] positions, normals;
             if (renderer.SkinnedPose(out positions, out normals))
             {
@@ -672,7 +672,7 @@ namespace UnityEngine
         unsafe void UpdateColliders()
         {
             var t = Frame;
-            var toFrame = Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverse;
+            var toFrame = Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverseDoublePrecision;
             var spheres = new List<Vector4>();
             var capsules = new List<uint>();
             foreach (var capsule in m_CapsuleColliders)

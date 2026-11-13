@@ -217,8 +217,8 @@ namespace UnityEngine.Rendering
             var world = light.localToWorldMatrix;
             var position = new Vector3(world.m03, world.m13, world.m23);
             var rotation = Quaternion.LookRotationSilent(world.GetColumn(2), world.GetColumn(1));
-            viewMatrix = Matrix4x4.Scale(new Vector3(1, 1, -1)) * Matrix4x4.TRS(position, rotation, Vector3.one).inverse;
-            projMatrix = Matrix4x4.Perspective(light.spotAngle, 1f, near, light.range);
+            viewMatrix = Matrix4x4.Scale(new Vector3(1, 1, -1)) * Matrix4x4.TRS(position, rotation, Vector3.one).inverseDoublePrecision;
+            projMatrix = Matrix4x4.PerspectiveDoublePrecision(light.spotAngle, 1f, near, light.range);
             SetFrustumCulling(ref shadowSplitData, projMatrix * viewMatrix, near);
             return true;
         }
@@ -254,7 +254,7 @@ namespace UnityEngine.Rendering
                 new Vector4(axes.x.y, axes.y.y, axes.z.y, 0f),
                 new Vector4(axes.x.z, axes.y.z, axes.z.z, 0f),
                 new Vector4(-Vector3.Dot(axes.x, position), -Vector3.Dot(axes.y, position), -Vector3.Dot(axes.z, position), 1f));
-            projMatrix = Matrix4x4.Perspective(90f + fovBias, 1f, near, light.range * 1.01f);
+            projMatrix = Matrix4x4.PerspectiveDoublePrecision(90f + fovBias, 1f, near, light.range * 1.01f);
             SetFrustumCulling(ref shadowSplitData, projMatrix * viewMatrix, near);
             // The culling matrix keeps the face's vertical axis upright (the view above turns it
             // for the cube map), and on Vulkan also turns its depth axis: measured,

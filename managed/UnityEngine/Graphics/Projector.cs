@@ -57,10 +57,10 @@ namespace UnityEngine
         internal Matrix4x4 ViewProjection(out Matrix4x4 worldToProjector)
         {
             var t = transform;
-            worldToProjector = Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverse;
+            worldToProjector = Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverseDoublePrecision;
             var projection = m_Orthographic
                 ? Matrix4x4.Ortho(-m_OrthographicSize * m_AspectRatio, m_OrthographicSize * m_AspectRatio, -m_OrthographicSize, m_OrthographicSize, m_NearClipPlane, m_FarClipPlane)
-                : Matrix4x4.Perspective(m_FieldOfView, m_AspectRatio, m_NearClipPlane, m_FarClipPlane);
+                : Matrix4x4.PerspectiveDoublePrecision(m_FieldOfView, m_AspectRatio, m_NearClipPlane, m_FarClipPlane);
             return projection * Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * worldToProjector;
         }
 

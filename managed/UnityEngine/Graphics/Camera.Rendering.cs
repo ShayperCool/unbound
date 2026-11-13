@@ -34,7 +34,7 @@ namespace UnityEngine
         public Matrix4x4 CalculateObliqueMatrix(Vector4 clipPlane)
         {
             var projection = projectionMatrix;
-            var q = projection.inverse * new Vector4(Sign(clipPlane.x), Sign(clipPlane.y), 1f, 1f);
+            var q = projection.inverseDoublePrecision * new Vector4(Sign(clipPlane.x), Sign(clipPlane.y), 1f, 1f);
             var c = clipPlane * (2f / Vector4.Dot(clipPlane, q));
             projection.m20 = c.x - projection.m30;
             projection.m21 = c.y - projection.m31;

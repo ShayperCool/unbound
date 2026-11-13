@@ -895,7 +895,7 @@ namespace UnityEngine
                         velocity += worldToSim * ((total + accel) * (multiplier * dt));
                         total = accel = Vector3.zero;
                         var tangent = t.TransformVector(new Vector3(local.z, 0f, -local.x));
-                        var target = toWorld.inverse.MultiplyVector(tangent).normalized * (rotationSpeed * multiplier);
+                        var target = toWorld.inverseDoublePrecision.MultiplyVector(tangent).normalized * (rotationSpeed * multiplier);
                         velocity += (target - velocity) * (attraction * multiplier * (30f * dt));
                         rotated = true;
                     }

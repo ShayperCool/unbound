@@ -176,7 +176,7 @@ namespace Unbound.Runtime
             // The camera's motion over the whole view, from the depth texture.
             if (s_CameraDepth != null) GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(s_CameraDepth));
             var quad = MotionQuad(context.Projection);
-            GfxStream.Draw(quad.Sync(), 0, s_MotionVectors.Sync(), 1, (context.Projection * context.View).inverse, Color.white);
+            GfxStream.Draw(quad.Sync(), 0, s_MotionVectors.Sync(), 1, (context.Projection * context.View).inverseDoublePrecision, Color.white);
             // The moving objects test against the camera's depth texture, bound as their depth
             // buffer (as Unity binds the camera's own).
             if (s_CameraDepth != null)
@@ -254,7 +254,7 @@ namespace Unbound.Runtime
             }
             forceNoMotion = mode == MotionVectorGenerationMode.ForceNoMotion;
             moving = forceNoMotion || renderer.m_PreviousModel != model;
-            previous = boned ? renderer.m_PreviousModel * model.inverse * item.Model : renderer.m_PreviousModel;
+            previous = boned ? renderer.m_PreviousModel * model.inverseDoublePrecision * item.Model : renderer.m_PreviousModel;
             return true;
         }
 
@@ -298,7 +298,7 @@ namespace Unbound.Runtime
             if (s_MotionQuad != null && s_MotionQuadProjection.Equals(projection)) return s_MotionQuad;
             s_MotionQuad ??= new Mesh { name = "Camera motion", hideFlags = HideFlags.HideAndDontSave };
             s_MotionQuadProjection = projection;
-            var inverse = projection.inverse;
+            var inverse = projection.inverseDoublePrecision;
             for (int i = 0; i < 4; i++)
             {
                 var corner = s_MotionQuadCorners[i];

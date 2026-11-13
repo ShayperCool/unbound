@@ -376,7 +376,7 @@ namespace UnityEngine
         /// (its shape lives in that frame).</summary>
         static void ActorPose(Collider c, Vector3 position, Quaternion rotation, out Vector3 p, out Quaternion q)
         {
-            var m = Matrix4x4.TRS(position, rotation, c.transform.lossyScale) * c.m_ShapeMatrix.inverse;
+            var m = Matrix4x4.TRS(position, rotation, c.transform.lossyScale) * c.m_ShapeMatrix.inverseDoublePrecision;
             p = m.GetColumn(3);
             q = Quaternion.LookRotationSilent(m.GetColumn(2), m.GetColumn(1));
         }

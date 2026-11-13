@@ -302,7 +302,7 @@ namespace Unbound.Runtime
                 Debug.LogWarning("Unbound: NavMeshBuilder does not build height meshes at run time yet (buildHeightMesh): agents stand on the NavMesh's polygons; baked height meshes are used.");
             }
             var dataToWorld = Matrix4x4.TRS(data.position, data.rotation, Vector3.one);
-            var g = Gather(sources, dataToWorld.inverse);
+            var g = Gather(sources, dataToWorld.inverseDoublePrecision);
             data.m_Settings = settings;
             data.m_Tiles.Clear();
             data.m_Version++;

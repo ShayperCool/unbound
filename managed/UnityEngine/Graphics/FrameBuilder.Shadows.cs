@@ -203,7 +203,7 @@ namespace Unbound.Runtime
             GfxStream.Keyword("SHADOWS_SINGLE_CASCADE", cascades == 1);
             RunLightEvent(camera, light, LightEvent.BeforeScreenspaceMask, mask);
             var quad = CollectorQuad(context.Projection);
-            var model = (context.Projection * context.View).inverse;
+            var model = (context.Projection * context.View).inverseDoublePrecision;
             GfxStream.Draw(quad.Sync(), 0, s_Collector.Sync(), soft ? 2 : 0, model, Color.white);
             RunLightEvent(camera, light, LightEvent.AfterScreenspaceMask, mask);
             GfxStream.Keyword("SHADOWS_SPLIT_SPHERES", false);
@@ -216,7 +216,7 @@ namespace Unbound.Runtime
         static Mesh CollectorQuad(Matrix4x4 projection)
         {
             s_CollectorQuad ??= new Mesh { name = "Shadow collector", hideFlags = HideFlags.HideAndDontSave };
-            var inverse = projection.inverse;
+            var inverse = projection.inverseDoublePrecision;
             var corners = new[] { new Vector2(-1f, -1f), new Vector2(-1f, 1f), new Vector2(1f, 1f), new Vector2(1f, -1f) };
             var positions = new Vector3[4];
             var uvs = new List<Vector2>();
@@ -380,8 +380,8 @@ namespace Unbound.Runtime
             }
             int size = ShadowMapSize(light, PixelSize(context, width, height, points));
             var map = Temporary(new RenderTextureDescriptor(size, size, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt) { shadowSamplingMode = ShadowSamplingMode.CompareDepths });
-            var view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverse;
-            var projection = Matrix4x4.Perspective(light.spotAngle, 1f, near, range);
+            var view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverseDoublePrecision;
+            var projection = Matrix4x4.PerspectiveDoublePrecision(light.spotAngle, 1f, near, range);
 
             CollectCasters(light, context);
             GfxStream.DepthBias(1f, 1f);
@@ -440,7 +440,7 @@ namespace Unbound.Runtime
             // Near at the light's shadow near plane, far just past its range (measured,
             // shadow_globals_point_*: _LightProjectionParams).
             float near = Mathf.Clamp(light.shadowNearPlane, 1e-3f, range * 0.5f), far = range * 1.01f;
-            var projection = Matrix4x4.Perspective(90f, 1f, near, far);
+            var projection = Matrix4x4.PerspectiveDoublePrecision(90f, 1f, near, far);
             ulong handle = TextureHandles.Of(map);
 
             CollectCasters(light, context);

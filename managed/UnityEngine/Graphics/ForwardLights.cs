@@ -322,7 +322,7 @@ namespace Unbound.Runtime
                         new Vector4(0f, 1f / range, 0f, 0f),
                         new Vector4(0f, 0f, 1f / range, spread),
                         new Vector4(0f, 0f, 0f, 0f));
-                    into[s_WorldToLight] = projection * Matrix4x4.TRS(p, t.rotation, Vector3.one).inverse;
+                    into[s_WorldToLight] = projection * Matrix4x4.TRS(p, t.rotation, Vector3.one).inverseDoublePrecision;
                     into[s_LightTexture0] = cookie != null ? cookie : SpotCookie;
                     into[s_LightTextureB0] = Attenuation;
                     return "SPOT";
@@ -332,7 +332,7 @@ namespace Unbound.Runtime
                     var p = t.position;
                     into[s_WorldSpaceLightPos0] = new Vector4(p.x, p.y, p.z, 1f);
                     float range = Mathf.Max(l.range, 1e-4f);
-                    into[s_WorldToLight] = Matrix4x4.TRS(p, t.rotation, new Vector3(range, range, range)).inverse;
+                    into[s_WorldToLight] = Matrix4x4.TRS(p, t.rotation, new Vector3(range, range, range)).inverseDoublePrecision;
                     if (cookie != null)
                     {
                         into[s_LightTexture0] = cookie;

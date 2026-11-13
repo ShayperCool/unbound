@@ -447,7 +447,7 @@ namespace UnityEngine
             {
                 // Relative to the skin's root node, placed by this renderer's transform (which the
                 // Animator keeps at that node's pose when it is exposed).
-                var toWorld = m_SkinRoot > 0 ? fallback * skeleton.Global(m_SkinRoot).inverse : fallback;
+                var toWorld = m_SkinRoot > 0 ? fallback * skeleton.Global(m_SkinRoot).inverseDoublePrecision : fallback;
                 for (int b = 0; b < boneCount; b++)
                 {
                     int node = m_SkinNodes[b];
@@ -562,7 +562,7 @@ namespace UnityEngine
                 }
             }
             if (!m_Rigid || mesh.blendShapeCount != 0 || m_Bones.Length != 1 || m_Bones[0] == null || GetComponent<Cloth>() != null) return false;
-            local = TransformBounds(m_RigidBoneBounds, RootMatrix.inverse * m_Bones[0].localToWorldMatrix);
+            local = TransformBounds(m_RigidBoneBounds, RootMatrix.inverseDoublePrecision * m_Bones[0].localToWorldMatrix);
             return true;
         }
 
@@ -729,7 +729,7 @@ namespace UnityEngine
             if (mesh == null) throw new ArgumentNullException(nameof(mesh), "The mesh to bake into is null");
             if (m_Mesh == null) return;
             var t = transform;
-            var toLocal = useScale ? t.worldToLocalMatrix : Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverse;
+            var toLocal = useScale ? t.worldToLocalMatrix : Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverseDoublePrecision;
             bool skinned = IsSkinned;
             var source = skinned || HasShapes ? Deform(now: true) : m_Mesh;
             mesh.Clear();

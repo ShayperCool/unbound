@@ -499,6 +499,70 @@ namespace UnityEngine
         }
 
         /// <summary>
+        /// The engine's own inverse, from double-precision cofactors (zero for a singular matrix): the
+        /// rendering, physics, particle, cloth and navigation code that the visual and physics probes
+        /// measure keeps it. Unity's scripting Matrix4x4.inverse is <see cref="Inverse"/>.
+        /// </summary>
+        internal static Matrix4x4 InverseDoublePrecision(Matrix4x4 m)
+        {
+            // t is the transpose of m in row-major order (t[i * 4 + j] = m[j, i]); the inverse of the
+            // transpose, written back column-major, is the inverse of m. Cofactors are built from
+            // the 2x2 determinants of the top two and bottom two rows.
+            Span<double> t = stackalloc double[16];
+            for (int i = 0; i < 4; i++)
+                for (int j = 0; j < 4; j++)
+                    t[i * 4 + j] = m[j, i];
+
+            double s0 = t[0 * 4 + 0] * t[1 * 4 + 1] - t[1 * 4 + 0] * t[0 * 4 + 1];
+            double s1 = t[0 * 4 + 0] * t[1 * 4 + 2] - t[1 * 4 + 0] * t[0 * 4 + 2];
+            double s2 = t[0 * 4 + 0] * t[1 * 4 + 3] - t[1 * 4 + 0] * t[0 * 4 + 3];
+            double s3 = t[0 * 4 + 1] * t[1 * 4 + 2] - t[1 * 4 + 1] * t[0 * 4 + 2];
+            double s4 = t[0 * 4 + 1] * t[1 * 4 + 3] - t[1 * 4 + 1] * t[0 * 4 + 3];
+            double s5 = t[0 * 4 + 2] * t[1 * 4 + 3] - t[1 * 4 + 2] * t[0 * 4 + 3];
+
+            double c5 = t[2 * 4 + 2] * t[3 * 4 + 3] - t[3 * 4 + 2] * t[2 * 4 + 3];
+            double c4 = t[2 * 4 + 1] * t[3 * 4 + 3] - t[3 * 4 + 1] * t[2 * 4 + 3];
+            double c3 = t[2 * 4 + 1] * t[3 * 4 + 2] - t[3 * 4 + 1] * t[2 * 4 + 2];
+            double c2 = t[2 * 4 + 0] * t[3 * 4 + 3] - t[3 * 4 + 0] * t[2 * 4 + 3];
+            double c1 = t[2 * 4 + 0] * t[3 * 4 + 2] - t[3 * 4 + 0] * t[2 * 4 + 2];
+            double c0 = t[2 * 4 + 0] * t[3 * 4 + 1] - t[3 * 4 + 0] * t[2 * 4 + 1];
+
+            double det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
+            if (det == 0.0 || double.IsNaN(det) || double.IsInfinity(det))
+                return zeroMatrix;
+            double inv = 1.0 / det;
+
+            Span<double> b = stackalloc double[16];
+            b[0 * 4 + 0] = (t[1 * 4 + 1] * c5 - t[1 * 4 + 2] * c4 + t[1 * 4 + 3] * c3) * inv;
+            b[0 * 4 + 1] = (-t[0 * 4 + 1] * c5 + t[0 * 4 + 2] * c4 - t[0 * 4 + 3] * c3) * inv;
+            b[0 * 4 + 2] = (t[3 * 4 + 1] * s5 - t[3 * 4 + 2] * s4 + t[3 * 4 + 3] * s3) * inv;
+            b[0 * 4 + 3] = (-t[2 * 4 + 1] * s5 + t[2 * 4 + 2] * s4 - t[2 * 4 + 3] * s3) * inv;
+
+            b[1 * 4 + 0] = (-t[1 * 4 + 0] * c5 + t[1 * 4 + 2] * c2 - t[1 * 4 + 3] * c1) * inv;
+            b[1 * 4 + 1] = (t[0 * 4 + 0] * c5 - t[0 * 4 + 2] * c2 + t[0 * 4 + 3] * c1) * inv;
+            b[1 * 4 + 2] = (-t[3 * 4 + 0] * s5 + t[3 * 4 + 2] * s2 - t[3 * 4 + 3] * s1) * inv;
+            b[1 * 4 + 3] = (t[2 * 4 + 0] * s5 - t[2 * 4 + 2] * s2 + t[2 * 4 + 3] * s1) * inv;
+
+            b[2 * 4 + 0] = (t[1 * 4 + 0] * c4 - t[1 * 4 + 1] * c2 + t[1 * 4 + 3] * c0) * inv;
+            b[2 * 4 + 1] = (-t[0 * 4 + 0] * c4 + t[0 * 4 + 1] * c2 - t[0 * 4 + 3] * c0) * inv;
+            b[2 * 4 + 2] = (t[3 * 4 + 0] * s4 - t[3 * 4 + 1] * s2 + t[3 * 4 + 3] * s0) * inv;
+            b[2 * 4 + 3] = (-t[2 * 4 + 0] * s4 + t[2 * 4 + 1] * s2 - t[2 * 4 + 3] * s0) * inv;
+
+            b[3 * 4 + 0] = (-t[1 * 4 + 0] * c3 + t[1 * 4 + 1] * c1 - t[1 * 4 + 2] * c0) * inv;
+            b[3 * 4 + 1] = (t[0 * 4 + 0] * c3 - t[0 * 4 + 1] * c1 + t[0 * 4 + 2] * c0) * inv;
+            b[3 * 4 + 2] = (-t[3 * 4 + 0] * s3 + t[3 * 4 + 1] * s1 - t[3 * 4 + 2] * s0) * inv;
+            b[3 * 4 + 3] = (t[2 * 4 + 0] * s3 - t[2 * 4 + 1] * s1 + t[2 * 4 + 2] * s0) * inv;
+
+            Matrix4x4 res = default;
+            for (int i = 0; i < 4; i++)
+                for (int j = 0; j < 4; j++)
+                    res[j, i] = (float)b[i * 4 + j];
+            return res;
+        }
+
+        internal Matrix4x4 inverseDoublePrecision => InverseDoublePrecision(this);
+
+        /// <summary>
         /// Inverts a matrix assumed to be affine (bottom row 0, 0, 0, 1). On failure (singular 3x3
         /// part) returns false and sets <paramref name="result"/> to a copy of the input.
         /// </summary>
@@ -698,6 +762,17 @@ namespace UnityEngine
         /// doubled times PI), in single precision as in the Unity 6000.0.71f1 Editor
         /// (tests/projects/floatrounding, native/matrixEdge).
         /// </summary>
+        /// <summary>The engine's own cameras', lights' and projectors' perspective, with a double-precision
+        /// cotangent; Unity's scripting Matrix4x4.Perspective is <see cref="Perspective"/>.</summary>
+        internal static Matrix4x4 PerspectiveDoublePrecision(float fov, float aspect, float zNear, float zFar)
+        {
+            double cotangent = 1.0 / Math.Tan(fov * Mathf.Deg2Rad * 0.5);
+            Matrix4x4 m = Perspective(fov, aspect, zNear, zFar);
+            m.m00 = (float)(cotangent / aspect);
+            m.m11 = (float)cotangent;
+            return m;
+        }
+
         public static Matrix4x4 Perspective(float fov, float aspect, float zNear, float zFar)
         {
             float turns = fov * 0.5f / 360f;

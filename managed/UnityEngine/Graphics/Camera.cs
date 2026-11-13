@@ -325,7 +325,7 @@ namespace UnityEngine
                 if (m_HasCustomWorldToCamera) return m_CustomWorldToCamera;
                 var t = transform;
                 var cameraToWorld = Matrix4x4.TRS(t.position, t.rotation, Vector3.one);
-                return Matrix4x4.Scale(new Vector3(1, 1, -1)) * cameraToWorld.inverse;
+                return Matrix4x4.Scale(new Vector3(1, 1, -1)) * cameraToWorld.inverseDoublePrecision;
             }
             set
             {
@@ -334,7 +334,7 @@ namespace UnityEngine
             }
         }
 
-        public Matrix4x4 cameraToWorldMatrix => worldToCameraMatrix.inverse;
+        public Matrix4x4 cameraToWorldMatrix => worldToCameraMatrix.inverseDoublePrecision;
 
         public void ResetWorldToCameraMatrix() => m_HasCustomWorldToCamera = false;
 
@@ -354,7 +354,7 @@ namespace UnityEngine
                         m_NearClipPlane, m_FarClipPlane, new GateFitParameters(m_GateFit, aspect));
                     return physical;
                 }
-                return Matrix4x4.Perspective(m_FieldOfView, aspect, m_NearClipPlane, m_FarClipPlane);
+                return Matrix4x4.PerspectiveDoublePrecision(m_FieldOfView, aspect, m_NearClipPlane, m_FarClipPlane);
             }
             set
             {
@@ -529,7 +529,7 @@ namespace UnityEngine
         public Vector3 ViewportToWorldPoint(Vector3 position, MonoOrStereoscopicEye eye)
         {
             // position.z is the distance from the camera along its forward axis.
-            var invProjection = projectionMatrix.inverse;
+            var invProjection = projectionMatrix.inverseDoublePrecision;
             var ndc = new Vector3(position.x * 2f - 1f, position.y * 2f - 1f, 0f);
             Vector3 viewPoint;
             if (m_Orthographic)

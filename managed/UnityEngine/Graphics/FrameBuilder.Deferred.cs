@@ -110,7 +110,7 @@ namespace Unbound.Runtime
             GfxStream.GlobalFloat("_LightAsQuad", 1f);
             var quad = MotionQuad(context.Projection);
             ulong quadMesh = quad.Sync();
-            var quadModel = (context.Projection * context.View).inverse;
+            var quadModel = (context.Projection * context.View).inverseDoublePrecision;
 
             // Reflections: the default reflection, then each probe over it, into a buffer added to
             // the light buffer.

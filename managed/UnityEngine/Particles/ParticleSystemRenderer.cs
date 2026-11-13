@@ -411,7 +411,7 @@ namespace UnityEngine
                 {
                     // The kept bounds move with the emitter (a local-space system moved while time
                     // stands still; world-space ones stay put).
-                    var moved = ps.SimulationToWorld() * m_CullingBoundsToWorld.inverse;
+                    var moved = ps.SimulationToWorld() * m_CullingBoundsToWorld.inverseDoublePrecision;
                     m_CullingBounds = m_CullingBoundsCoverDraw ? TransformBounds(m_ComputedCullingBounds, moved) : bounds;
                     return;
                 }
