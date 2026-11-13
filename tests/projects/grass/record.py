@@ -47,7 +47,7 @@ def complete(directory):
     if not path.is_file():
         return 'missing grass.jsonl'
     lines = path.read_text().splitlines()
-    if not lines or not any('"terrain":"Instanced"' in line for line in lines):
+    if not lines or not any('"overrides":"ignored"' in line for line in lines):
         return 'incomplete grass.jsonl'
     return None
 

@@ -10,7 +10,8 @@ check; these three terrains have one terrain layer. Last the probe loads the sce
 is steep, with grass textures fully and half aligned to the ground and one of zero width. Then it
 makes a terrain itself (no image): two grass textures of noiseSeed 0 written in different orders
 per patch, a count over 16, and a scatter mode switch after coverage values. Last it loads the scene
-`Instanced`: two instanced slab layers share their patches. What `Validate` says of each prototype is
+`Instanced`: two instanced slab layers share their patches. Then it records the terrain settings the
+quality level's overrides replace. What `Validate` says of each prototype is
 recorded, the density terrains' instances again with QualitySettings.useLegacyDetailDistribution,
 and the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each
 terrain's detail data (resolution, patches, prototypes, layers read back, coverage), every patch's
@@ -42,8 +43,7 @@ Run Unbound and compare:
     python3 tests/projects/grass/compare.py tests/projects/grass/Reference /tmp/grass
     python3 tests/projects/particles/compare_images.py tests/projects/grass/Reference /tmp/grass
 
-Instance counts and coverage match exactly (positions, sizes, turns, bounds) but for prototypes
-scaled by detailObjectDensity (the listed expected differences). The Editor draws grass, billboards
+Instance counts and coverage match exactly (positions, sizes, turns, bounds). The Editor draws grass, billboards
 and meshes drawn without instancing at other places than ComputeDetailInstanceTransforms reports
 (its patch meshes have their own placement), and Unbound draws them the same way. The images of the
 first two terrains differ mostly in the layerless terrains' checker, which the Editor draws darker

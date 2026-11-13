@@ -15,7 +15,8 @@ using UnityEngine.SceneManagement;
 /// from a camera. Then the same for the terrains of the scene `Density`, loaded additively, with
 /// their prototypes' validation, a third density, the legacy distribution and the logged messages;
 /// then for the scene `Aligned`; then a terrain made here (zero noise seeds, a count over 16, a
-/// scatter mode switch); then the scene `Instanced`. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
+/// scatter mode switch); then the scene `Instanced`; then the terrain settings under the quality
+/// level's overrides. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GrassProbe : MonoBehaviour
 {
@@ -143,6 +144,25 @@ public class GrassProbe : MonoBehaviour
         foreach (var terrain in instanced)
             Render(camera, target, terrain, dir);
 
+        // The quality level's terrain overrides: what the terrain settings read without them,
+        // with all of them, and with the terrain ignoring quality settings.
+        var probe = terrains[0];
+        RecordTerrainSettings(probe, "none");
+        QualitySettings.terrainQualityOverrides = (TerrainQualityOverrides)255;
+        QualitySettings.terrainPixelError = 7f;
+        QualitySettings.terrainDetailDensityScale = 0.35f;
+        QualitySettings.terrainBasemapDistance = 333f;
+        QualitySettings.terrainDetailDistance = 44f;
+        QualitySettings.terrainTreeDistance = 555f;
+        QualitySettings.terrainBillboardStart = 66f;
+        QualitySettings.terrainFadeLength = 9f;
+        QualitySettings.terrainMaxTrees = 12;
+        RecordTerrainSettings(probe, "all");
+        probe.ignoreQualitySettings = true;
+        RecordTerrainSettings(probe, "ignored");
+        probe.ignoreQualitySettings = false;
+        QualitySettings.terrainQualityOverrides = TerrainQualityOverrides.None;
+
         File.WriteAllText(Path.Combine(dir, "grass.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -184,6 +204,9 @@ public class GrassProbe : MonoBehaviour
         foreach (var density in terrain.name.StartsWith("Density") ? new[] { 1f, 0.5f, 0.3f } : new[] { 1f, 0.5f })
             RecordInstances("instances", terrain, density);
     }
+
+    void RecordTerrainSettings(Terrain t, string overrides) =>
+        Record("terrain_settings", $"\"overrides\":\"{overrides}\",\"values\":[{F(t.heightmapPixelError)},{F(t.detailObjectDensity)},{F(t.basemapDistance)},{F(t.detailObjectDistance)},{F(t.treeDistance)},{F(t.treeBillboardDistance)},{F(t.treeCrossFadeLength)},{t.treeMaximumFullLODCount}]");
 
     static void Render(Camera camera, RenderTexture target, Terrain terrain, string dir)
     {

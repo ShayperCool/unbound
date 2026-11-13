@@ -7,10 +7,6 @@ import json, math, os, sys
 TOLERANCE = 1e-4
 # Known differences: (case, name) -> why.
 EXPECTED = {}
-# Not reproduced yet: prototypes scaled by detailObjectDensity.
-for terrain in ("DensityCounts", "DensityCoverage"):
-    for layer in (0, 1, 3):
-        EXPECTED[("instances", terrain, layer)] = "useDensityScaling: the density does not scale the instances yet"
 CLIP_TOLERANCE = None
 
 
