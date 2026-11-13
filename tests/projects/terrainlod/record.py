@@ -28,13 +28,14 @@ def copy_project(destination, release):
 
 
 def outputs(directory):
-    return sorted(p.name for p in Path(directory).iterdir() if p.suffix in ('.jsonl', '.png'))
+    # The probe's own files: the runner may leave logs of its own (hub-sweeps.jsonl) beside them.
+    return sorted(p.name for p in Path(directory).iterdir() if p.name == 'terrainlod.jsonl' or p.suffix == '.png')
 
 
 def complete(directory):
     path = directory/'terrainlod.jsonl'
     lines = path.read_text().splitlines() if path.is_file() else []
-    if sum('"image"' in line for line in lines) != 14 or not any('"basemap"' in line for line in lines):
+    if sum('"image"' in line for line in lines) != 16 or not any('"basemap"' in line for line in lines):
         return 'missing or incomplete terrainlod.jsonl'
     return None
 

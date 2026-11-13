@@ -52,7 +52,24 @@ public class TerrainLodProbe : MonoBehaviour
         Capture(dir, "base0", terrain, eye, at, 5f, 0f, 0, 0);
         // Orthographic views draw no patch on the base map, whatever the distance.
         Capture(dir, "baseortho", terrain, new Vector3(200f, 200f, 200f), new Vector3(200f, 0f, 200.001f), 20f, 0f, 0, 0, true);
-        // The base maps the terrains' materials made: one row per name and description, with how many.
+        AppendBaseMaps();
+        // Five layers: the base map adds the second group of four onto the first.
+        var layered = Layered();
+        Capture(dir, "layers5base", layered, new Vector3(5050f, 70f, 4975f), new Vector3(5050f, 0f, 5050f), 5f, 0f, 0, 0);
+        Capture(dir, "layers5splat", layered, new Vector3(5050f, 70f, 4975f), new Vector3(5050f, 0f, 5050f), 5f, 1000f, 0, 0);
+        AppendBaseMaps();
+        File.WriteAllText(Path.Combine(dir, "terrainlod.jsonl"), m_Out.ToString());
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit();
+#endif
+    }
+
+    /// <summary>The base maps the terrains' materials made so far: one row per name and
+    /// description, with how many.</summary>
+    void AppendBaseMaps()
+    {
         var maps = new System.Collections.Generic.SortedDictionary<string, int>(StringComparer.Ordinal);
         foreach (var rt in Resources.FindObjectsOfTypeAll<RenderTexture>())
         {
@@ -62,12 +79,40 @@ public class TerrainLodProbe : MonoBehaviour
             maps[row] = count + 1;
         }
         foreach (var pair in maps) m_Out.Append(pair.Key).Append($",\"count\":{pair.Value}}}\n");
-        File.WriteAllText(Path.Combine(dir, "terrainlod.jsonl"), m_Out.ToString());
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.Exit(0);
-#else
-        Application.Quit();
-#endif
+    }
+
+    /// <summary>A flat terrain far from the others with five plain-coloured layers in stripes,
+    /// each stripe blending two neighbouring layers.</summary>
+    static Terrain Layered()
+    {
+        var colors = new[] { new Color(0.8f, 0.2f, 0.2f), new Color(0.2f, 0.7f, 0.2f), new Color(0.2f, 0.3f, 0.8f), new Color(0.9f, 0.8f, 0.2f), new Color(0.9f, 0.9f, 0.9f) };
+        var layers = new TerrainLayer[colors.Length];
+        for (int i = 0; i < colors.Length; i++)
+        {
+            var texture = new Texture2D(4, 4, TextureFormat.RGBA32, true);
+            var pixels = new Color[16];
+            for (int p = 0; p < pixels.Length; p++) pixels[p] = (p & 1) == 0 ? colors[i] : colors[i] * 0.8f;
+            texture.SetPixels(pixels);
+            texture.Apply();
+            layers[i] = new TerrainLayer { diffuseTexture = texture, tileSize = new Vector2(8f, 8f), smoothness = 0.2f * i };
+        }
+        var data = new TerrainData { heightmapResolution = 33, alphamapResolution = 64, baseMapResolution = 128 };
+        data.size = new Vector3(100f, 10f, 100f);
+        data.terrainLayers = layers;
+        var weights = new float[64, 64, colors.Length];
+        for (int y = 0; y < 64; y++)
+            for (int x = 0; x < 64; x++)
+            {
+                float t = x / 64f * colors.Length;
+                int a = Mathf.Min((int)t, colors.Length - 1), b = (a + 1) % colors.Length;
+                float f = (y & 16) == 0 ? 0f : t - a;
+                weights[y, x, a] = 1f - f;
+                weights[y, x, b] += f;
+            }
+        data.SetAlphamaps(0, 0, weights);
+        var go = Terrain.CreateTerrainGameObject(data);
+        go.transform.position = new Vector3(5000f, 0f, 5000f);
+        return go.GetComponent<Terrain>();
     }
 
     void Capture(string dir, string name, Terrain terrain, Vector3 position, Vector3 target, float pixelError, float basemapDistance, int maximumLOD, int minimumSimplification, bool orthographic = false)
