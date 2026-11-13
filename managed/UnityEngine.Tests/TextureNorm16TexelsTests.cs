@@ -74,14 +74,16 @@ namespace Unbound.Tests
         public void DescriptorRequiresAFormatTheSelectedDeviceCanRender()
         {
             var previous = GraphicsDeviceProfile.Current;
+            var version = ProjectInfo.UnityVersion;
             try
             {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
                 GraphicsDeviceProfile.Select("Vulkan");
                 Assert.Throws<ArgumentException>(() => new RenderTexture(new RenderTextureDescriptor(2, 1, GraphicsFormat.R16G16B16_SNorm, 0)));
                 var valid = new RenderTexture(new RenderTextureDescriptor(2, 1, GraphicsFormat.R16G16_SNorm, 0));
                 Object.DestroyImmediate(valid);
             }
-            finally { GraphicsDeviceProfile.Select(previous.Type.ToString()); }
+            finally { ProjectInfo.UnityVersion = version; GraphicsDeviceProfile.Select(previous.Type.ToString()); }
         }
 
         [Fact]
