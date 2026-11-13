@@ -184,9 +184,8 @@ namespace UnityEngine
             m_Colors = data.Attributes.Colors;
             m_TexCoords = data.Attributes.TexCoords;
             // A reference that resolves to no scriptable object reads as null.
-            if (data.ScriptableObjects.Length > 0)
-                m_ScriptableObjects = new List<ScriptableObject>(Array.ConvertAll(data.ScriptableObjects,
-                    o => o.IsNull ? null : resolver.Resolve(o, typeof(ScriptableObject)) as ScriptableObject));
+            m_ScriptableObjects = data.ScriptableObjects.Length == 0 ? null : new List<ScriptableObject>(Array.ConvertAll(data.ScriptableObjects,
+                o => o.IsNull ? null : resolver.Resolve(o, typeof(ScriptableObject)) as ScriptableObject));
             m_SecondaryTextures = secondary.Length != 0 ? secondary : null;
             m_SecondaryGuids = null;
             m_SecondaryProperties = null;

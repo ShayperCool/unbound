@@ -280,8 +280,9 @@ namespace UnityEngine.Tests
         [InlineData(128, true)]
         public void StoredTextureCoordinatesAreUsedOnlyAsTheSpritesOwn(int setting, bool stored)
         {
-            // An ordinary save stores zeros and the UVs come from uvTransform; settingsRaw bit 7
-            // marks texture coordinates set through SetVertexAttribute (tests/projects/spriteassets).
+            // An ordinary save stores zeros and the UVs come from uvTransform, whatever is stored
+            // (layout StoredUv); settingsRaw bit 7 marks texture coordinates set through
+            // SetVertexAttribute (layout TexCoord0; tests/projects/spriteassets).
             var computed = Assert.IsType<Sprite>(Load(Documents("Rectangle")).MainObject).uv;
             var docs = Documents("Rectangle");
             var rd = docs[0].Body.Get("m_RD");

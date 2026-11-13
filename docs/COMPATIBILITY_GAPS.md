@@ -270,13 +270,14 @@ for an Edit-mode session (row `SpriteAtlas packing in Editor Play mode`). Sprite
 shapes, also from texels a script wrote, PolygonCollider2D and TilemapCollider2D outlines of
 sprites without a physics shape, `SpriteUtility.GenerateOutline` and `Sprite.OverridePhysicsShape`,
 `SpriteUtility.GenerateOutlineFromSprite`, colliders fitting a renderer's bounds when added (also
-flipped) and `PolygonCollider2D.CreatePrimitive` (row `SpriteMeshType.Tight` outline). Still
-open, with their rows: packed or rotated m_RD, legacy Sprite Packer atlas names, split alpha,
-downscale multipliers other than 1, scriptable objects and texture coordinates 1 to 7 in saved
-Sprites stay rejected (none produced by the Editor in these
-probes); the SpriteAtlas cases its row lists as not reproduced (with warnings); the SVGImage drawn
-on a canvas. Measured on 6000.0.71f1 with the NVIDIA driver only, except spriteoutlines (macOS
-Editor, Metal; equal to its earlier Linux reference in every value it had).
+flipped) and `PolygonCollider2D.CreatePrimitive` (row `SpriteMeshType.Tight` outline). Saved
+Sprites now also load scriptable objects, texture coordinates 1 to 7, their own texture
+coordinates 0 and clones of variant and split-alpha atlas members; packed, rotated, split-alpha or
+downscaled m_RD and legacy Sprite Packer atlas names stay rejected, with the reason (the Editor
+never saves them; row YAML Sprite documents). Still open, with their rows: the SpriteAtlas cases
+its row lists as not reproduced (with warnings); the SVGImage drawn on a canvas. Measured on
+6000.0.71f1 with the NVIDIA driver only, except spriteoutlines (macOS Editor, Metal; equal to its
+earlier Linux reference in every value it had).
 
 Seen beside these, tracked elsewhere and not classified again: coreapis, humanfirstpose,
 humanoid, indirectspec, modelimport, particles and shaderkeywords have open tasks, deferred

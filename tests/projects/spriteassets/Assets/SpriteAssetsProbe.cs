@@ -21,6 +21,7 @@ public sealed class SpriteAssetsProbe : MonoBehaviour
         public string layoutImage;
         public Layout[] laterLayouts;
         public string laterLayoutImage;
+        public string[] scriptableObjectApi;
     }
 
     [Serializable] public sealed class Bone
@@ -81,8 +82,8 @@ public sealed class SpriteAssetsProbe : MonoBehaviour
         var capture = new Capture { complete = true, sprites = entries,
             sceneResourceIdentity = sceneSprite == Resources.Load<Sprite>("Rectangle"), image = Render("Camera", 160, 96),
             layouts = layouts, layoutImage = Render("LayoutCamera", 192, 128),
-            laterLayouts = new[] { "Scripted", "TexCoords", "TexCoord0", "Variant", "Split" }.Select(n => Resources.Load<Sprite>("Layouts/" + n)).Select(DescribeLayout).ToArray(),
-            laterLayoutImage = Render("LaterLayoutCamera", 224, 64) };
+            laterLayouts = new[] { "Scripted", "TexCoords", "TexCoord0", "Variant", "Split", "StoredUv" }.Select(n => Resources.Load<Sprite>("Layouts/" + n)).Select(DescribeLayout).ToArray(),
+            laterLayoutImage = Render("LaterLayoutCamera", 288, 64), scriptableObjectApi = ScriptableObjectApi() };
         File.WriteAllText(Environment.GetEnvironmentVariable("SPRITE_ASSETS_OUT"), JsonUtility.ToJson(capture, true));
     }
 
@@ -102,6 +103,54 @@ public sealed class SpriteAssetsProbe : MonoBehaviour
             pivot = s.pivot, textureRectOffset = s.textureRectOffset, pixelsPerUnit = s.pixelsPerUnit,
             border = s.border, bounds = s.bounds, vertices = s.vertices, uv = s.uv,
             triangles = s.triangles, physics = shapes, packed = s.packed };
+    }
+
+    /// <summary>The scriptable object list API on a copy of Rectangle: repeats, indices out of
+    /// range, an object already at the index set, no object, a destroyed entry and a copy edited
+    /// after Instantiate.</summary>
+    static string[] ScriptableObjectApi()
+    {
+        var log = new System.Collections.Generic.List<string>();
+        string T(Func<object> f)
+        {
+            try { return Convert.ToString(f(), System.Globalization.CultureInfo.InvariantCulture); }
+            // A null argument's message is the runtime's wording: its parameter name only.
+            catch (Exception e) { return e.GetType().Name + ": " + (e is ArgumentNullException n ? n.ParamName : e.Message); }
+        }
+        string Held(Sprite sprite, int length)
+        {
+            var held = new ScriptableObject[length];
+            uint filled = sprite.GetScriptableObjects(held);
+            return filled + " " + string.Join(",", held.Select(h => h == null ? "null" : h.name));
+        }
+        var a = Resources.Load<SpriteAssetsHolder>("Layouts/HolderA");
+        var b = Resources.Load<SpriteAssetsHolder>("Layouts/HolderB");
+        var s = Instantiate(Resources.Load<Sprite>("Rectangle"));
+        log.Add("count " + s.GetScriptableObjectsCount());
+        log.Add("add a " + T(() => s.AddScriptableObject(a)));
+        log.Add("add a again " + T(() => s.AddScriptableObject(a)));
+        log.Add("add null " + T(() => s.AddScriptableObject(null)));
+        log.Add("add b " + T(() => s.AddScriptableObject(b)));
+        log.Add("get 1 " + Held(s, 1));
+        log.Add("get 4 " + Held(s, 4));
+        log.Add("get null " + T(() => s.GetScriptableObjects(null)));
+        log.Add("set b at 0 " + T(() => s.SetScriptableObjectAt(b, 0)));
+        log.Add("set a at 0 " + T(() => s.SetScriptableObjectAt(a, 0)));
+        var c = ScriptableObject.CreateInstance<SpriteAssetsHolder>();
+        c.name = "C";
+        log.Add("set c at 9 " + T(() => s.SetScriptableObjectAt(c, 9)));
+        log.Add("set c at 1 " + T(() => s.SetScriptableObjectAt(c, 1)));
+        log.Add("set null at 0 " + T(() => s.SetScriptableObjectAt(null, 0)));
+        log.Add("remove 7 " + T(() => s.RemoveScriptableObjectAt(7)));
+        log.Add("get 3 " + Held(s, 3));
+        var copy = Instantiate(s);
+        DestroyImmediate(c);
+        log.Add("destroyed get 3 " + Held(s, 3));
+        log.Add("remove 0 " + T(() => s.RemoveScriptableObjectAt(0)) + " count " + s.GetScriptableObjectsCount());
+        log.Add("copy add a " + T(() => copy.AddScriptableObject(a)) + " copy count " + copy.GetScriptableObjectsCount() + " count " + s.GetScriptableObjectsCount());
+        DestroyImmediate(copy);
+        DestroyImmediate(s);
+        return log.ToArray();
     }
 
     static readonly VertexAttribute[] Channels = (VertexAttribute[])Enum.GetValues(typeof(VertexAttribute));

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using Unity.Collections;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -269,7 +270,21 @@ public static class SpriteAssetsSetup
         SpriteAtlasUtility.PackAllAtlases(EditorUserBuildSettings.activeBuildTarget);
         var variantClone = Save(AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/Variant.png"), "Variant");
         EditorSettings.spritePackerMode = packerMode;
-        return new[] { scripted, texCoords, texCoord0, variantClone, splitClone };
+
+        // A copy of Rectangle whose stored UVs are not zero while settingsRaw says they are not the
+        // sprite's own (no Editor save writes this; the Editor loads it).
+        AssetDatabase.SaveAssets();
+        var text = File.ReadAllText("Assets/Resources/Rectangle.asset").Replace("m_Name: Rectangle", "m_Name: StoredUv");
+        const string Key = "_typelessdata: ";
+        int at = text.IndexOf(Key, StringComparison.Ordinal) + Key.Length;
+        // Four positions (48 bytes) before the UVs; the UVs become (0.25, 0.5) at each vertex.
+        string uvs = string.Concat(Enumerable.Repeat(BitConverter.ToString(BitConverter.GetBytes(.25f)) + BitConverter.ToString(BitConverter.GetBytes(.5f)), 4)).Replace("-", "").ToLowerInvariant();
+        if (text.Substring(at + 96, 64) != new string('0', 64)) throw new Exception("unexpected Rectangle UV stream");
+        text = text.Substring(0, at + 96) + uvs + text.Substring(at + 160);
+        File.WriteAllText("Assets/Resources/Layouts/StoredUv.asset", text);
+        AssetDatabase.ImportAsset("Assets/Resources/Layouts/StoredUv.asset");
+        var storedUv = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/Layouts/StoredUv.asset");
+        return new[] { scripted, texCoords, texCoord0, variantClone, splitClone, storedUv };
     }
 
     /// <summary>The later layouts' renderers, seen by a third camera.</summary>
@@ -288,7 +303,7 @@ public static class SpriteAssetsSetup
             var renderer = new GameObject(layouts[i].name + "Renderer").AddComponent<SpriteRenderer>();
             renderer.sprite = layouts[i];
             // Apart, so that no two overlap (their order would be unspecified).
-            renderer.transform.position = new Vector3(37.2f + 1.4f * i, 0, 0);
+            renderer.transform.position = new Vector3(36.5f + 1.4f * i, 0, 0);
             renderer.transform.localScale = new Vector3(.45f, .45f, 1);
         }
     }
