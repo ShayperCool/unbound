@@ -590,6 +590,86 @@ namespace UnityEngine.Tests
             }
         }
 
+        struct PropertyJob : IAnimationJob
+        {
+            public PropertyStreamHandle Property;
+            public static bool Valid;
+            public static string Error;
+            public static float Value;
+
+            public void ProcessRootMotion(AnimationStream stream) { }
+
+            public void ProcessAnimation(AnimationStream stream)
+            {
+                Valid = Property.IsValid(stream);
+                Error = null;
+                try { Value = Property.GetFloat(stream); }
+                catch (InvalidOperationException e) { Error = e.Message; }
+            }
+        }
+
+        sealed class Logs : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args) =>
+                Lines.Add(type + ": " + (args == null || args.Length == 0 ? format : string.Format(format, args)));
+
+            public void LogException(Exception exception, Object context) => Lines.Add("Exception: " + exception.Message);
+        }
+
+        /// <summary>A property handle of a Transform property is valid but not resolved: its
+        /// first access logs the assertion and the warning, once, and every access throws
+        /// (6000.0.71f1, tests/projects/animoptimize jobTransformProperty.Rig). Control: a custom
+        /// property's handle reads its value without a message.</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ATransformPropertysStreamHandleCannotBeResolved(bool transform)
+        {
+            var root = Rig(out var animator, out _);
+            var hand = root.transform.Find("Rig/Hips/Spine/Hand");
+            var job = new PropertyJob
+            {
+                Property = transform ? animator.BindStreamProperty(hand, typeof(Transform), "m_LocalPosition.z")
+                    : animator.BindCustomStreamProperty("probeValue", CustomStreamPropertyType.Float),
+            };
+            var graph = PlayableGraph.Create("property");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var playable = AnimationScriptPlayable.Create(graph, job, 1);
+            playable.ConnectInput(0, AnimationClipPlayable.Create(graph, Clip()), 0, 1f);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+            var logs = new Logs();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                graph.Evaluate(0f);
+                graph.Evaluate(0.5f);
+                Assert.True(PropertyJob.Valid);
+                if (transform)
+                {
+                    Assert.Equal("The PropertyStreamHandle cannot be resolved.", PropertyJob.Error);
+                    Assert.Equal(new[]
+                    {
+                        "Assert: Transform bound type not supported, binding: 'Rig/Hips/Spine/Hand.m_LocalPosition.z'",
+                        "Warning: Could not resolve 'Rig/Hips/Spine/Hand' for property m_LocalPosition.z",
+                    }, logs.Lines);
+                }
+                else
+                {
+                    Assert.Null(PropertyJob.Error);
+                    Assert.Empty(logs.Lines);
+                }
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
         struct NothingJob : IAnimationJob
         {
             public static int Ran;

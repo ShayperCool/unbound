@@ -618,7 +618,10 @@ namespace Unbound.Runtime.Playables
         }
 
         /// <summary>The mixer rule over input streams: per channel, the weighted sum of the inputs
-        /// that animate it, completed to weight one with the default value.</summary>
+        /// of weight above 0 that animate it, completed to weight one with the default value; a
+        /// channel only inputs of weight 0 animate is not set in the stream (a job above reads
+        /// what an unset channel holds; the output writes its default value once it animated it:
+        /// 6000.0.71f1, tests/projects/animoptimize jobUnanimatedMixer.Rig.2).</summary>
         internal static void MixInto(AnimStream into, List<(AnimStream Stream, float Weight)> inputs)
         {
             into.GoalsInMotion = AlignGoalFrames(inputs);
@@ -652,9 +655,8 @@ namespace Unbound.Runtime.Playables
                     bool any = false;
                     foreach (var (s, weight) in inputs)
                     {
-                        if (!s.Animated[c]) continue;
+                        if (!s.Animated[c] || !(weight > 0f)) continue;
                         any = true;
-                        if (weight <= 0f) continue;
                         float sx = s.Values[c], sy = s.Values[c + 1], sz = s.Values[c + 2], sw = s.Values[c + 3];
                         if (total > 0f && x * sx + y * sy + z * sz + w * sw < 0f) { sx = -sx; sy = -sy; sz = -sz; sw = -sw; }
                         x += weight * sx; y += weight * sy; z += weight * sz; w += weight * sw;
@@ -683,7 +685,7 @@ namespace Unbound.Runtime.Playables
                 bool animated = false;
                 foreach (var (s, weight) in inputs)
                 {
-                    if (!s.Animated[c]) continue;
+                    if (!s.Animated[c] || !(weight > 0f)) continue;
                     animated = true;
                     acc += weight * s.Values[c];
                     sum += weight;

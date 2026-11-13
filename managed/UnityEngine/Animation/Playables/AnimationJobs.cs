@@ -56,6 +56,10 @@ namespace Unbound.Runtime.Playables
             internal bool IsObject;
             /// <summary>A stream has read or written the handle, or resolved it (PropertyStreamHandle.IsResolved).</summary>
             internal bool Resolved;
+            /// <summary>The path and name of a Transform property, which a property handle
+            /// cannot resolve (null: none): what its first access reports.</summary>
+            internal string TransformPath, TransformProperty;
+            internal bool Reported;
         }
 
         internal readonly Animator Animator;
@@ -120,7 +124,20 @@ namespace Unbound.Runtime.Playables
         }
 
         readonly Dictionary<Transform, int> m_DefaultNodes = new Dictionary<Transform, int>(ReferenceEqualityComparer.Instance);
-        readonly List<Transform> m_DefaultNodesAlive = new List<Transform>();
+        readonly List<Transform> m_DefaultNodesDropped = new List<Transform>();
+
+        /// <summary>Whether a bound handle's transform or one of its ancestors is <paramref name="transform"/>.</summary>
+        bool HeldByHandle(Transform transform)
+        {
+            foreach (var handle in Transforms)
+            {
+                if (ReferenceEquals(handle.Transform, transform)) return true;
+                if (handle.Ancestors == null) continue;
+                foreach (var ancestor in handle.Ancestors)
+                    if (ReferenceEquals(ancestor, transform)) return true;
+            }
+            return false;
+        }
         Unbound.Runtime.Humanoid.AvatarConstant m_DefaultNodesFor;
 
         /// <summary>The generic avatar skeleton whose default pose the stream gives the nodes
@@ -207,6 +224,7 @@ namespace Unbound.Runtime.Playables
         {
             Transforms.Clear();
             StreamOwned.Clear();
+            m_DefaultNodes.Clear();
             Properties.Clear();
             m_OffSkeletonFor = null;
         }
@@ -219,12 +237,13 @@ namespace Unbound.Runtime.Playables
         internal void HierarchyChanged()
         {
             StreamOwned.Clear();
-            // Paths change with the hierarchy; destroyed transforms keep the nodes they were found at.
-            m_DefaultNodesAlive.Clear();
+            // Paths change with the hierarchy: live transforms are found again, destroyed ones
+            // keep the nodes they were found at while a handle still reads under them.
+            m_DefaultNodesDropped.Clear();
             foreach (var transform in m_DefaultNodes.Keys)
-                if (transform != null) m_DefaultNodesAlive.Add(transform);
-            foreach (var transform in m_DefaultNodesAlive) m_DefaultNodes.Remove(transform);
-            m_DefaultNodesAlive.Clear();
+                if (transform != null || !HeldByHandle(transform)) m_DefaultNodesDropped.Add(transform);
+            foreach (var transform in m_DefaultNodesDropped) m_DefaultNodes.Remove(transform);
+            m_DefaultNodesDropped.Clear();
             m_NodeChannelsFor = -1;
             m_OffSkeletonFor = null;
             for (int i = 0; i < Transforms.Count; i++)
@@ -1400,6 +1419,7 @@ namespace UnityEngine.Animations
             if (m_AnimatorBindingsVersion != context.Handles.Id || handleIndex < 0 || handleIndex >= context.Handles.Properties.Count)
                 throw new InvalidOperationException("The PropertyStreamHandle is invalid. Please use proper function to create the handle.");
             var p = context.Handles.Properties[handleIndex];
+            if (p.TransformProperty != null) Unresolvable(context, p);
             if (!p.Resolved)
             {
                 p.Resolved = true;
@@ -1407,6 +1427,23 @@ namespace UnityEngine.Animations
             }
             channel = p.Channel;
             return channel >= 0 && !p.IsObject && channel < context.Stream.FloatCount;
+        }
+
+        /// <summary>A handle of a Transform property: the stream does not resolve it, its first
+        /// access logs the assertion and the warning the Editor gives, and every access throws
+        /// (6000.0.71f1, tests/projects/animoptimize jobTransformProperty.Rig: the handle is
+        /// valid; the two messages come once, before the record of the first evaluation, which
+        /// reads it; a handle never read is unmeasured).</summary>
+        void Unresolvable(StreamContext context, AnimatorHandles.StreamProperty p)
+        {
+            if (!p.Reported)
+            {
+                p.Reported = true;
+                context.Handles.Properties[handleIndex] = p;
+                Debug.LogAssertion($"Transform bound type not supported, binding: '{p.TransformPath}.{p.TransformProperty}'");
+                Debug.LogWarning($"Could not resolve '{p.TransformPath}' for property {p.TransformProperty}");
+            }
+            throw new InvalidOperationException("The PropertyStreamHandle cannot be resolved.");
         }
 
         public bool IsValid(AnimationStream stream) =>
@@ -1589,6 +1626,12 @@ namespace UnityEngine.Animations
             var handles = AnimatorHandles.Of(animator);
             var path = handles.PathOf(transform);
             if (path == null) throw new InvalidOperationException($"The transform '{transform.name}' is not in the hierarchy of the Animator '{animator.name}'.");
+            if (type == typeof(Transform))
+            {
+                // Transform values are a TransformStreamHandle's; a property handle cannot resolve them.
+                handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = -1, TransformPath = path, TransformProperty = property });
+                return new PropertyStreamHandle { m_AnimatorBindingsVersion = handles.Id, handleIndex = handles.Properties.Count - 1 };
+            }
             int channel = animator.StreamBindings.BindChannel(CurveBinding.ForType(path, property, type), isObjectReference);
             handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = channel, IsObject = isObjectReference });
             return new PropertyStreamHandle { m_AnimatorBindingsVersion = handles.Id, handleIndex = handles.Properties.Count - 1 };
