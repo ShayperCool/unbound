@@ -73,7 +73,7 @@ namespace Unbound.Runtime
 
         /// <summary>The flares drawn in frame <see cref="s_DrawnFrame"/> and the camera that drew
         /// each first.</summary>
-        static readonly Dictionary<UnityEngine.Object, Camera> s_DrawnBy = new Dictionary<UnityEngine.Object, Camera>();
+        static readonly Dictionary<UnityEngine.Object, Camera> s_DrawnBy = new Dictionary<UnityEngine.Object, Camera>(ReferenceEqualityComparer.Instance);
         static int s_DrawnFrame = -1;
         static bool s_WarnedGamma;
 

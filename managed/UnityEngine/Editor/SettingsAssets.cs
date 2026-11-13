@@ -79,7 +79,7 @@ namespace Unbound.Runtime
     internal static class SettingsAssets
     {
         static Dictionary<string, SettingsFile> s_Files;
-        static readonly Dictionary<Object, SettingsFile> s_ByObject = new Dictionary<Object, SettingsFile>();
+        static readonly Dictionary<Object, SettingsFile> s_ByObject = new Dictionary<Object, SettingsFile>(ReferenceEqualityComparer.Instance);
 
         static Dictionary<string, SettingsFile> Files
         {

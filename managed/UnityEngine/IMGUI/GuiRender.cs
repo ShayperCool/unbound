@@ -549,7 +549,7 @@ namespace Unbound.Runtime
     internal sealed class GuiDispatch : FrameBuilder.IDrawSource
     {
         static readonly GuiDispatch s_Instance = new GuiDispatch();
-        static readonly Dictionary<MonoBehaviour, int> s_Depth = new Dictionary<MonoBehaviour, int>();
+        static readonly Dictionary<MonoBehaviour, int> s_Depth = new Dictionary<MonoBehaviour, int>(ReferenceEqualityComparer.Instance);
         static readonly List<MonoBehaviour> s_Order = new List<MonoBehaviour>();
         static bool s_AtlasRebuilt;
         static bool s_Registered;
@@ -630,7 +630,7 @@ namespace Unbound.Runtime
         static List<MonoBehaviour> Sorted(bool descending)
         {
             var list = new List<MonoBehaviour>(s_Order);
-            var index = new Dictionary<MonoBehaviour, int>();
+            var index = new Dictionary<MonoBehaviour, int>(ReferenceEqualityComparer.Instance);
             for (int i = 0; i < list.Count; i++) index[list[i]] = i;
             list.Sort((a, b) =>
             {

@@ -19,7 +19,7 @@ namespace Unbound.Runtime
         {
             readonly List<(int Order, long Seq, MonoBehaviour Behaviour, Action<MonoBehaviour> Call)> m_Items =
                 new List<(int, long, MonoBehaviour, Action<MonoBehaviour>)>();
-            readonly HashSet<MonoBehaviour> m_Members = new HashSet<MonoBehaviour>();
+            readonly HashSet<MonoBehaviour> m_Members = new HashSet<MonoBehaviour>(ReferenceEqualityComparer.Instance);
             int m_Removed;
 
             internal void Add(MonoBehaviour b, int order, long seq, Action<MonoBehaviour> call)
@@ -288,12 +288,12 @@ namespace Unbound.Runtime
         {
             var m = ScriptMessages.For(mb.GetType());
             var seq = ++s_Sequence;
-            if (!mb.m_DidStart && !s_PendingStart.Contains(mb)) s_PendingStart.Add(mb);
+            if (!mb.m_DidStart && !IdentityLists.Contains(s_PendingStart, mb)) s_PendingStart.Add(mb);
             if (m.Update != null) s_Update.Add(mb, m.ExecutionOrder, seq, m.Update);
             if (m.LateUpdate != null) s_LateUpdate.Add(mb, m.ExecutionOrder, seq, m.LateUpdate);
             if (m.FixedUpdate != null) s_FixedUpdate.Add(mb, m.ExecutionOrder, seq, m.FixedUpdate);
-            if (m.OnGUI != null && !s_OnGUI.Contains(mb)) s_OnGUI.Add(mb);
-            if (m.OnRenderObject != null && !s_OnRenderObject.Contains(mb)) s_OnRenderObject.Add(mb);
+            if (m.OnGUI != null && !IdentityLists.Contains(s_OnGUI, mb)) s_OnGUI.Add(mb);
+            if (m.OnRenderObject != null && !IdentityLists.Contains(s_OnRenderObject, mb)) s_OnRenderObject.Add(mb);
             mb.m_EnabledState = true;
             mb.m_DestroyDisableSent = false;
             if (m.OnEnable != null)
@@ -324,8 +324,8 @@ namespace Unbound.Runtime
             s_Update.Remove(mb);
             s_LateUpdate.Remove(mb);
             s_FixedUpdate.Remove(mb);
-            s_OnGUI.Remove(mb);
-            s_OnRenderObject.Remove(mb);
+            IdentityLists.Remove(s_OnGUI, mb);
+            IdentityLists.Remove(s_OnRenderObject, mb);
         }
 
         // ------------------------------------------------------------------ destruction
@@ -391,7 +391,7 @@ namespace Unbound.Runtime
             {
                 if (mb.isActiveAndEnabled) Disable(mb, includeAwakened: Compat.DestroyPhasesMeasured);
                 else RemoveFromLists(mb);
-                s_PendingStart.Remove(mb);
+                IdentityLists.Remove(s_PendingStart, mb);
                 Coroutines.StopAll(mb);
                 Invokes.Cancel(mb, null);
                 mb.CancelDestroyToken();
@@ -435,7 +435,7 @@ namespace Unbound.Runtime
         static void StartNow(MonoBehaviour mb)
         {
             mb.m_DidStart = true;
-            s_PendingStart.Remove(mb);
+            IdentityLists.Remove(s_PendingStart, mb);
             var m = ScriptMessages.For(mb.GetType());
             if (m.Start != null || m.StartCoroutine != null) Trace.Lifecycle("Start", mb);
             try
@@ -487,8 +487,8 @@ namespace Unbound.Runtime
                     if (m.Update != null) s_Update.Add(mb, m.ExecutionOrder, seq, m.Update);
                     if (m.LateUpdate != null) s_LateUpdate.Add(mb, m.ExecutionOrder, seq, m.LateUpdate);
                     if (m.FixedUpdate != null) s_FixedUpdate.Add(mb, m.ExecutionOrder, seq, m.FixedUpdate);
-                    if (m.OnGUI != null && !s_OnGUI.Contains(mb)) s_OnGUI.Add(mb);
-                    if (m.OnRenderObject != null && !s_OnRenderObject.Contains(mb)) s_OnRenderObject.Add(mb);
+                    if (m.OnGUI != null && !IdentityLists.Contains(s_OnGUI, mb)) s_OnGUI.Add(mb);
+                    if (m.OnRenderObject != null && !IdentityLists.Contains(s_OnRenderObject, mb)) s_OnRenderObject.Add(mb);
                 }
             }
         }

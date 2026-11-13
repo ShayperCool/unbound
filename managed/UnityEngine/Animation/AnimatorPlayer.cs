@@ -127,7 +127,7 @@ namespace Unbound.Runtime
         readonly int[][] m_TimingLayers;
         int m_OverrideVersion;
 
-        readonly Dictionary<StateMachineBehaviour, StateMachineBehaviour> m_Instances = new Dictionary<StateMachineBehaviour, StateMachineBehaviour>();
+        readonly Dictionary<StateMachineBehaviour, StateMachineBehaviour> m_Instances = new Dictionary<StateMachineBehaviour, StateMachineBehaviour>(ReferenceEqualityComparer.Instance);
         internal readonly List<StateMachineBehaviour> AllBehaviours = new List<StateMachineBehaviour>();
         List<StateCallback> m_Callbacks = new List<StateCallback>();
         readonly Dictionary<string, int> m_ParameterIndex = new Dictionary<string, int>();

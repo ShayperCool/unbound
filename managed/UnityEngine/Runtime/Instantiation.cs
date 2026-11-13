@@ -115,7 +115,7 @@ namespace Unbound.Runtime
         /// components, references inside it remapped to the copies. Nothing is placed or woken.</summary>
         internal static Prepared Prepare(Object original, GameObject sourceGo, SceneHandle scene, string suffix)
         {
-            var map = new Dictionary<Object, Object>();
+            var map = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance);
             var pairs = new List<(Component Source, Component Clone)>();
             var source = sourceGo.m_Transform;
             var rootClone = CloneTree(source, null, scene, map, pairs);
@@ -548,7 +548,7 @@ namespace Unbound.Runtime
             // Removing only the body converts its surviving colliders to static without exits.
             if (c is Rigidbody2D body2D) Physics2DWorld.Remove(body2D, silent: true);
             Lifecycle.OnComponentDestroyed(c);
-            go?.m_Components.Remove(c);
+            if (go != null) IdentityLists.Remove(go.m_Components, c);
             c.MarkDestroyed();
         }
 

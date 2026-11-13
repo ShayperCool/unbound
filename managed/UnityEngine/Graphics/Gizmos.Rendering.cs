@@ -10,7 +10,7 @@ namespace UnityEngine
         internal static bool GameViewEnabled;
         static bool s_Drawing;
         static readonly List<MonoBehaviour> s_Scripts = new List<MonoBehaviour>();
-        static readonly HashSet<MonoBehaviour> s_Tracked = new HashSet<MonoBehaviour>();
+        static readonly HashSet<MonoBehaviour> s_Tracked = new HashSet<MonoBehaviour>(ReferenceEqualityComparer.Instance);
         static Material s_Lit, s_Wire;
         static Mesh s_Cube, s_Sphere, s_Edges, s_Line;
 

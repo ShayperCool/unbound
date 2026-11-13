@@ -31,7 +31,7 @@ namespace Unbound.Runtime
         internal readonly List<GameObject> Roots = new List<GameObject>();
         /// <summary>The file ids of the objects the scene file made (GlobalObjectId names scene
         /// objects by them).</summary>
-        internal readonly Dictionary<Object, long> FileIds = new Dictionary<Object, long>();
+        internal readonly Dictionary<Object, long> FileIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
         /// <summary>The scene's Lighting Settings (its LightmapSettings' m_LightingSettings, or
         /// what UnityEditor.Lightmapping assigned since); null: none.</summary>
         internal LightingSettings LightingSettings;

@@ -23,7 +23,7 @@ namespace Unbound.Runtime
         /// component or child of an added GameObject (<see cref="AssetDatabaseRuntime.ByProducedObjects"/>).</summary>
         internal bool UnknownFileIds;
         /// <summary>The identifiers a ScriptedImporter gave its objects.</summary>
-        internal readonly Dictionary<Object, string> Identifiers = new Dictionary<Object, string>();
+        internal readonly Dictionary<Object, string> Identifiers = new Dictionary<Object, string>(ReferenceEqualityComparer.Instance);
 
         public Object Resolve(ObjectRef reference, Type expected)
         {
