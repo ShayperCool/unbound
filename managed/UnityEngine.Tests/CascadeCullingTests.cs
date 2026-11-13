@@ -1,4 +1,7 @@
 using System;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using UnityEngine.Rendering;
 using Xunit;
 
@@ -54,6 +57,48 @@ namespace UnityEngine.Tests
         static Vector4 Round(Vector4 v) =>
             new Vector4((float)Math.Round(v.x, 4), (float)Math.Round(v.y, 4), (float)Math.Round(v.z, 4), (float)Math.Round(v.w, 3));
 
+        static string UrpReference([CallerFilePath] string here = "") =>
+            Path.GetFullPath(Path.Combine(Path.GetDirectoryName(here), "..", "..", "tests", "projects", "urp", "Reference", "scenarios", "conservative-shadow-matrices.jsonl"));
+
+        /// <summary>Every conservative cascade the Editor recorded in tests/projects/urp (fields of
+        /// view 30-90, aspects 0.5-1.8, near 0.3 and 2, pitches 0 and 45, distances 20-100, 64 and 8
+        /// rounds, one and four cascades, a near plane offset of 3): the sphere and the
+        /// projection's depth range.</summary>
+        [Fact]
+        public void EveryRecordedConservativeCascadeIsTheEditors()
+        {
+            int checkedRecords = 0;
+            float worst = 0f;
+            foreach (var line in File.ReadLines(UrpReference()))
+            {
+                using var json = JsonDocument.Parse(line);
+                var root = json.RootElement;
+                if (!root.TryGetProperty("grid", out var grid)) continue;
+                m_Camera.fieldOfView = grid[0].GetSingle();
+                m_Camera.aspect = grid[1].GetSingle();
+                m_Camera.nearClipPlane = grid[2].GetSingle();
+                m_Object.transform.rotation = Quaternion.Euler(grid[3].GetSingle(), 0f, 0f);
+                float distance = root.GetProperty("distance").GetSingle();
+                int count = root.GetProperty("count").GetInt32(), split = root.GetProperty("split").GetInt32();
+                var ratios = count == 1 ? new[] { 1f } : new[] { 0.067f, 0.2f, 0.467f, 1f };
+                var sphere = CullingResults.ConservativeSliceSphere(m_Camera, split > 0 ? ratios[split - 1] : 0f, ratios[split], distance,
+                    root.GetProperty("iterations").GetInt32());
+                var expected = root.GetProperty("sphere");
+                for (int i = 0; i < 4; i++)
+                {
+                    float e = expected[i].GetSingle(), error = Math.Abs(sphere[i] - e) / Math.Max(1f, Math.Abs(e));
+                    worst = Math.Max(worst, error);
+                }
+                // The projection's depth range: 0.1 radii minus 30 (an offset of 3) to 2.3 radii.
+                var proj = root.GetProperty("proj");
+                float r = expected[3].GetSingle(), near = 0.1f * r - 30f, far = 2.3f * r;
+                Assert.Equal(-2f / (far - near), proj[10].GetSingle(), 5);
+                checkedRecords++;
+            }
+            Assert.Equal(1080, checkedRecords);
+            Assert.True(worst < 2e-4f, $"worst relative difference {worst}");
+        }
+
         [Fact]
         public void CasterPlanesKeepTheFacesAgainstTheLightThenTheSilhouette()
         {
@@ -71,6 +116,22 @@ namespace UnityEngine.Tests
             // Every silhouette plane runs along the light.
             for (int i = 2; i < first.cullingPlaneCount; i++)
                 Assert.Equal(0f, Vector3.Dot(first.GetCullingPlane(i).normal, light.normalized), 4);
+        }
+
+        /// <summary>A pipeline that lowers the plane count (no far plane culling) still gets the
+        /// slice of the six planes the parameters hold.</summary>
+        [Fact]
+        public void APipelineWithFivePlanesGetsTheSameCasterPlanes()
+        {
+            var light = new Vector3(-0.3214f, -0.766f, 0.5567f).normalized;
+            var six = Planes(light, 0f, 0.25f, 0.3f);
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            parameters.shadowDistance = 50f;
+            parameters.cullingPlaneCount = 5;
+            var split = new ShadowSplitData();
+            CullingResults.CasterCullingPlanes(ref parameters, m_Camera, 0.3f, CullingResults.ConservativeSliceSphere(m_Camera, 0f, 0.25f, 50f, 64), light, ref split);
+            Assert.Equal(six.cullingPlaneCount, split.cullingPlaneCount);
+            for (int i = 0; i < split.cullingPlaneCount; i++) Assert.Equal(six.GetCullingPlane(i), split.GetCullingPlane(i));
         }
 
         [Fact]

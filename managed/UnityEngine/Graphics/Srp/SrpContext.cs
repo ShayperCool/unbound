@@ -124,6 +124,13 @@ namespace UnityEngine.Rendering
             fixed (Plane* p = &m_Plane0) p[index] = plane;
         }
 
+        /// <summary>A stored culling plane whatever the plane count says (the cascades' slice takes
+        /// the six the parameters hold even when a pipeline lowers the count).</summary>
+        internal unsafe Plane StoredCullingPlane(int index)
+        {
+            fixed (Plane* p = &m_Plane0) return p[index];
+        }
+
         public bool Equals(ScriptableCullingParameters other) =>
             m_LODParameters == other.m_LODParameters && m_CullingPlaneCount == other.m_CullingPlaneCount && m_CullingMask == other.m_CullingMask
             && m_CullingMatrix == other.m_CullingMatrix && m_Origin == other.m_Origin && m_ShadowDistance == other.m_ShadowDistance
@@ -316,7 +323,7 @@ namespace UnityEngine.Rendering
             ref ShadowSplitData split)
         {
             Span<Plane> planes = stackalloc Plane[6];
-            for (int i = 0; i < planes.Length; i++) planes[i] = parameters.GetCullingPlane(i);
+            for (int i = 0; i < planes.Length; i++) planes[i] = parameters.StoredCullingPlane(i);
             var eye = camera.transform.position;
             var center = new Vector3(sphere.x, sphere.y, sphere.z);
             float depth = Math.Abs(Vector3.Dot(center - eye, planes[FarPlane].normal));
@@ -324,7 +331,6 @@ namespace UnityEngine.Rendering
             planes[NearPlane].distance += cullingNear - camera.nearClipPlane;
             planes[FarPlane].distance = -Vector3.Dot(planes[FarPlane].normal, eye) + far;
             Span<Vector3> corners = stackalloc Vector3[8];
-            Span<bool> kept = stackalloc bool[6];
             var middle = Vector3.zero;
             for (int i = 0; i < 8; i++)
             {
@@ -334,25 +340,7 @@ namespace UnityEngine.Rendering
             }
             middle *= 0.125f;
             Span<Plane> result = stackalloc Plane[ShadowSplitData.maximumCullingPlaneCount];
-            int count = 0;
-            for (int i = 0; i < planes.Length; i++)
-            {
-                kept[i] = Vector3.Dot(planes[i].normal, light) < 0f;
-                if (kept[i]) result[count++] = planes[i];
-            }
-            for (int e = 0; e < s_SliceEdges.Length && count < result.Length; e++)
-            {
-                int edge = s_SliceEdges[e];
-                if (kept[(edge >> 8) & 0xf] == kept[edge >> 12]) continue;
-                var a = corners[edge & 0xf];
-                var normal = Vector3.Cross(corners[(edge >> 4) & 0xf] - a, light);
-                float length = normal.sqrMagnitude;
-                // A degenerate edge (along the light) gives no plane.
-                if (length <= 1.1920929e-07f) continue;
-                normal *= 1f / Mathf.Sqrt(length);
-                if (Vector3.Dot(middle - a, normal) < 0f) normal = -normal;
-                result[count++] = new Plane(normal, -Vector3.Dot(normal, a));
-            }
+            int count = Unbound.Runtime.ShadowCasterCulling.SweepTowardLight(planes, corners, s_SliceEdges, middle, light, false, result);
             split.cullingPlaneCount = count;
             for (int i = 0; i < count; i++) split.SetCullingPlane(i, result[i]);
         }

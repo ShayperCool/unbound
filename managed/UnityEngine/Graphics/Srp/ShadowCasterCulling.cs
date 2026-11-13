@@ -67,8 +67,8 @@ namespace Unbound.Runtime
                     return false;
             }
             var hull = light.type == LightType.Directional
-                ? SweptPlanes(corners, faces, center, -light.transform.forward, null)
-                : SweptPlanes(corners, faces, center, default, position);
+                ? SweptPlanes(corners, faces, center, light.transform.forward, false)
+                : SweptPlanes(corners, faces, center, position, true);
 
             bool any = false;
             int mask = light.cullingMask;
@@ -116,12 +116,11 @@ namespace Unbound.Runtime
             new[] { 3, 2, 6, 7 }, new[] { 0, 3, 7, 4 }, new[] { 1, 2, 6, 5 },
         };
 
-        /// <summary>The frustum's edges: their corners and the two faces meeting there.</summary>
-        static readonly (int A, int B, int F, int G)[] s_Edges =
+        /// <summary>The frustum's edges: their two corners and the two faces meeting there, 4 bits
+        /// each (see <see cref="SweepTowardLight"/>).</summary>
+        static readonly int[] s_Edges =
         {
-            (0, 1, 0, 2), (1, 2, 0, 5), (2, 3, 0, 3), (3, 0, 0, 4),
-            (4, 5, 1, 2), (5, 6, 1, 5), (6, 7, 1, 3), (7, 4, 1, 4),
-            (0, 4, 2, 4), (1, 5, 2, 5), (2, 6, 5, 3), (3, 7, 3, 4),
+            0x2010, 0x5021, 0x3032, 0x4003, 0x2154, 0x5165, 0x3176, 0x4147, 0x4240, 0x5251, 0x3562, 0x4373,
         };
 
         /// <summary>The frustum's six faces as planes facing inward.</summary>
@@ -140,23 +139,45 @@ namespace Unbound.Runtime
             return planes;
         }
 
-        /// <summary>The planes of the frustum swept toward a light: the faces looking away from it
-        /// and, along the edges between a face looking toward it and one looking away, planes
-        /// through the edge and the light.</summary>
-        static Plane[] SweptPlanes(Vector3[] corners, Plane[] faces, Vector3 center, Vector3 towardLight, Vector3? lightPosition)
+        static Plane[] SweptPlanes(Vector3[] corners, Plane[] faces, Vector3 center, Vector3 light, bool positional)
         {
-            var facing = new bool[6];
-            for (int f = 0; f < 6; f++)
-                facing[f] = lightPosition is Vector3 p ? faces[f].GetDistanceToPoint(p) < 0f : Vector3.Dot(faces[f].normal, towardLight) < 0f;
-            var planes = new List<Plane>();
-            for (int f = 0; f < 6; f++) if (!facing[f]) planes.Add(faces[f]);
-            foreach (var (a, b, f, g) in s_Edges)
+            Span<Plane> planes = stackalloc Plane[6 + 12];
+            return planes.Slice(0, SweepTowardLight(faces, corners, s_Edges, center, light, positional, planes)).ToArray();
+        }
+
+        /// <summary>
+        /// The planes of a frustum swept toward a light, into <paramref name="result"/> (as many as
+        /// fit; the count is returned): the faces turned away from the light (a directional light's
+        /// direction of travel, or a local light's position: <paramref name="positional"/>), in
+        /// their order, then for each edge between such a face and one turned toward it, in the
+        /// edges' order, the plane through the edge along the light, facing the frustum's middle
+        /// (none for an edge along the light). An edge is its two corners and its two faces, 4
+        /// bits each from the lowest. The cascades' caster culling planes and the shadow casters'
+        /// bounds take it.
+        /// </summary>
+        internal static int SweepTowardLight(ReadOnlySpan<Plane> faces, ReadOnlySpan<Vector3> corners, ReadOnlySpan<int> edges, Vector3 middle,
+            Vector3 light, bool positional, Span<Plane> result)
+        {
+            Span<bool> away = stackalloc bool[6];
+            int count = 0;
+            for (int f = 0; f < faces.Length; f++)
             {
-                if (facing[f] == facing[g]) continue;
-                var third = lightPosition is Vector3 p ? p : corners[a] + towardLight;
-                if (Inward(corners[a], corners[b], third, center) is Plane plane) planes.Add(plane);
+                away[f] = positional ? faces[f].GetDistanceToPoint(light) > 0f : Vector3.Dot(faces[f].normal, light) < 0f;
+                if (away[f] && count < result.Length) result[count++] = faces[f];
             }
-            return planes.ToArray();
+            for (int e = 0; e < edges.Length && count < result.Length; e++)
+            {
+                int edge = edges[e];
+                if (away[(edge >> 8) & 0xf] == away[(edge >> 12) & 0xf]) continue;
+                var a = corners[edge & 0xf];
+                var normal = Vector3.Cross(corners[(edge >> 4) & 0xf] - a, positional ? light - a : light);
+                float length = normal.sqrMagnitude;
+                if (length <= 1.1920929e-07f) continue;
+                normal *= 1f / Mathf.Sqrt(length);
+                if (Vector3.Dot(middle - a, normal) < 0f) normal = -normal;
+                result[count++] = new Plane(normal, -Vector3.Dot(normal, a));
+            }
+            return count;
         }
 
         /// <summary>A spot light's cone as a square pyramid: its apex, then the far corners.</summary>

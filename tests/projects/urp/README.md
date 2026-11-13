@@ -40,7 +40,8 @@ reading structured and byte address buffers set on a material and a property blo
 `shadow-matrices.jsonl` (what CullingResults computes for directional shadows over lights, splits,
 resolutions, distances and camera settings), `conservative-shadow-matrices.jsonl` (its culling
 spheres with conservative enclosing spheres, as URP's asset asks for, over cameras, distances,
-cascades and iteration counts: within 0.3% of the exact sphere Unbound takes), `local-shadow-matrices.jsonl` (the same for point
+cascades and iteration counts: Unbound computes the same iterative sphere, within 2e-4 of every
+record, managed/UnityEngine.Tests/CascadeCullingTests), `local-shadow-matrices.jsonl` (the same for point
 light cube faces and spot lights) and `sky-mesh.jsonl` (the
 sky mesh's vertices, read through a flat-shading probe shader). The Editor's are in
 `Reference/scenarios/`:
