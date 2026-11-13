@@ -17,6 +17,7 @@ public sealed class HierarchyIdControl : MonoBehaviour
         if(root!=null) { AssetDatabase.TryGetGUIDAndLocalFileIdentifier(root,out string guid,out long id); Put("root/id",id); Put("root/name",root.name); }
         Listing("deep","Assets/Imports/Deep.hierarchyid");
         Listing("script","Assets/Imports/Script.hierarchyid");
+        Listing("named","Assets/Imports/Named.hierarchyid");
         Put("complete",1);
         File.WriteAllLines(Environment.GetEnvironmentVariable("SERIALIZED_BINDING_OUT"),Rows); EditorApplication.Exit(0);
     }
@@ -40,7 +41,7 @@ public sealed class HierarchyIdControl : MonoBehaviour
         {
             string p=parent+"/"+t.name;
             Add(t.gameObject,prefix+"/"+p+"/GameObject");
-            foreach(var c in t.GetComponents<Component>()) Add(c,prefix+"/"+p+"/"+c.GetType().Name);
+            foreach(var c in t.GetComponents<Component>()) if(c!=null) Add(c,prefix+"/"+p+"/"+c.GetType().Name);
             for(int i=0;i<t.childCount;i++) Walk(t.GetChild(i),p);
         }
         foreach(var o in listed)
