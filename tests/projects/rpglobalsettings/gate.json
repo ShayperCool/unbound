@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/rpglobalsettings/run.py gate"],
+  "summary": "rpglobalsettings: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorGraphicsSettings.cs",
+    "managed/UnityEngine/Editor/RenderPipelineGraphicsSettings.cs"
+  ]
+}
