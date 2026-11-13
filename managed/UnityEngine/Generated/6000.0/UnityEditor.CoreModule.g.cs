@@ -44020,12 +44020,6 @@ namespace UnityEditor.Rendering
         [global::Unbound.Stub] public float minLuminance;
         [global::Unbound.Stub] public float maxLuminance;
     }
-    public enum BatchRendererGroupStrippingMode
-    {
-        KeepIfEntitiesGraphics = 0,
-        StripAll = 1,
-        KeepAll = 2,
-    }
     [global::Unbound.Stub]
     public unsafe static partial class EditorCameraUtils
     {
@@ -44052,7 +44046,6 @@ namespace UnityEditor.Rendering
         [global::System.Obsolete("Use GraphicsTier instead of ShaderHardwareTier enum")] [global::Unbound.Stub] public static global::UnityEditor.Rendering.TierSettings GetTierSettings(global::UnityEditor.BuildTargetGroup target, global::UnityEngine.Rendering.ShaderHardwareTier tier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.GetTierSettings"); return default; }
         [global::System.Obsolete("Use GraphicsTier instead of ShaderHardwareTier enum")] [global::Unbound.Stub] public static void SetTierSettings(global::UnityEditor.BuildTargetGroup target, global::UnityEngine.Rendering.ShaderHardwareTier tier, global::UnityEditor.Rendering.TierSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.SetTierSettings"); }
         public static global::UnityEditor.Rendering.AlbedoSwatchInfo[] albedoSwatches { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.albedoSwatches"); return global::System.Array.Empty<global::UnityEditor.Rendering.AlbedoSwatchInfo>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.albedoSwatches"); } }
-        public static global::UnityEditor.Rendering.BatchRendererGroupStrippingMode batchRendererGroupShaderStrippingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.batchRendererGroupShaderStrippingMode"); return default; } }
     }
     [global::System.Obsolete("IRenderPipelineGraphicsSettingsContextMenu is deprecated and will be removed in a future release. Use IRenderPipelineGraphicsSettingsContextMenu2 instead. #from(6000.0)")]
     public unsafe partial interface IRenderPipelineGraphicsSettingsContextMenu

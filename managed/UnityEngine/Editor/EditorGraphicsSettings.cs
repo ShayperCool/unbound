@@ -83,5 +83,41 @@ namespace UnityEditor.Rendering
             if (action == null) return;
             foreach (var asset in GraphicsSettings.AllGlobalSettings()) action(asset);
         }
+
+        static BatchRendererGroupStrippingMode? s_BrgStripping;
+
+        /// <summary>The project's "BatchRendererGroup Variants" setting (GraphicsSettings.asset
+        /// <c>m_BrgStripping</c>, read once; without it, as a new project's,
+        /// KeepIfEntitiesGraphics).</summary>
+        public static BatchRendererGroupStrippingMode batchRendererGroupShaderStrippingMode => s_BrgStripping ??= ReadBrgStripping();
+
+        /// <summary>GraphicsSettings' class ID in serialized files.</summary>
+        const int GraphicsSettingsClassId = 30;
+
+        static BatchRendererGroupStrippingMode ReadBrgStripping()
+        {
+            try
+            {
+                if (Unbound.Runtime.Native.IsReady && !string.IsNullOrEmpty(UnityEngine.ProjectInfo.ProjectPath))
+                {
+                    var path = System.IO.Path.Combine(UnityEngine.ProjectInfo.ProjectPath, "ProjectSettings", "GraphicsSettings.asset");
+                    if (System.IO.File.Exists(path))
+                        foreach (var doc in Unbound.Runtime.Native.LoadDocuments(path))
+                            if (doc.ClassId == GraphicsSettingsClassId) return (BatchRendererGroupStrippingMode)doc.Body.Int("m_BrgStripping");
+                }
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogWarning($"Unbound: reading GraphicsSettings: {e.Message}");
+            }
+            return BatchRendererGroupStrippingMode.KeepIfEntitiesGraphics;
+        }
+    }
+
+    public enum BatchRendererGroupStrippingMode
+    {
+        KeepIfEntitiesGraphics = 0,
+        StripAll = 1,
+        KeepAll = 2,
     }
 }
