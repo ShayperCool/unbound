@@ -34,6 +34,7 @@ to eliminate a listed insignificant residual.
 | navcost / 6000.0.71f1 | route sweeps whose path end passes a corner (8 values: `bake.box.side.e0`, `strip.rays*.end.c*.e*` near 4) | The corner drops about 1e-4 later in the swept coordinate than in Unity (-1.5000 vs -1.4999; 4.000001 vs 3.9999), within the 1e-3 tolerance | Unity's straight path treats a corner the path passes within about 1e-4 of as passed; Unbound's funnel now snaps offsets the same way (42 such values before), these 8 remain. Same route on both sides of the band. Recorded, not chased. |
 | particlemeshshape / 6000.0.71f1 | `loop-edge-colour` (1 record) and `spread-boundary` (21 records) of `tests/projects/particlemeshshape/known.json` | One colour channel within 1/255 in some Edge Loop particles; particles born exactly on a spread step land on the neighbouring step | Float ties of the emission time (Unity computes it in double precision between the step's ends) or of the step quotient; listed, not chased. |
 | particlecurves / 6000.0.71f1 | `gradient-rounding-ties` (6) and `perceptual-precision` (4) of `tests/projects/particlecurves/known.json` | One colour byte 1/255 apart: at half-byte ties of the particle's age; in PerceptualBlend values about once in thirty | Float ties; the Oklab round trip differing by hundredths of a byte. |
+| spriteatlas / 6000.0.71f1 | The names of packed pages wherever recorded (`pages.*.name`, sprites', clones' and late-binding sprites' `texture`, `atlases[*].byName`): 234 values in set `v1`, 61 in `v2` (listed by `tests/projects/spriteatlas/compare.py`) | Names equal up to their last eight hex digits (`sactx-{page}-{W}x{H}-{format}-{atlas}-{hash}`) | The Editor ends the name with a hash of its import state, which Unbound does not reproduce (it uses its own content hash); sizes, formats and texels match. No game effect unless a script looks pages up by full name |
 | svgsprites / 6000.0.71f1 | `image` pixels 11648, 11649, 11888 and 12620 (listed in `tests/projects/svgsprites/residuals.json`) | 10 channel values off by 3 to 5/255 | The focus of `gradients.svg`'s radial gradient, evaluated per pixel by the package's shader; the Editor's GL shader on the NVIDIA driver and the engine's compiled shader round it differently. No visible effect. |
 | urp / 6000.0.71f1 | `decal_*` (Screen Space scenarios): a 1-px column on the cube's vertical edge (x 158, y 64-75) | 51-55 pixels over 8, worst 113; means 0.01-0.05 | The decal's normal reconstructed from depth at a depth discontinuity (derivatives across the cube's silhouette). Not pursued. |
 | urp / 6000.0.71f1 | `ssao_downsample` (73 px over 8, worst 21), `ssao_samples_high` (57 px, worst 26), scattered | Means 0.13 and 0.05 | Occlusion samples landing on the other side of depth edges at half resolution / with more samples; no visible pattern. Not pursued. |
@@ -249,20 +250,28 @@ done, see below), the dynamic atlas, UXML `VectorImage` references, and, unmeasu
 whose end tangents oppose and pieces cut at the subdivision depth limit. Measured on
 6000.0.71f1 only.
 
-The Q93, Q380 and Q412 sprite work: spriteimport passes 650 of 650 fields over 65 sprites (519 of
-520 before; a Polygon-mode sprite is always Tight and takes its mesh's boundary as its default
-physics shape, with thirteen Polygon controls). Spriteassets matches 120,888 values (46,318 before):
-the Sprite layouts the Editor saves load (clones of SpriteAtlas members, read unpacked from their
-own render data; skinned clones; colour, normal and tangent channels, colours drawn; secondary
-textures; vertex data version 2; Sprites saved without a texture, not drawn). Svgsprites is new
-(101,024 values; four pixels at a radial gradient's focus listed as a residual): the SVG importer's
-vector sprite, UI SVGImage, textured sprite and Texture2D outputs, run by the package's own code,
-and imported sprite IDs. Still open, with their rows: packed or rotated m_RD, legacy Sprite Packer
-atlas names, split alpha, downscale multipliers other than 1, scriptable objects and texture
-coordinates 1 to 7 in saved Sprites stay rejected (none produced by the Editor in these probes);
-SpriteAtlas packing in Editor Play mode (now done, row `SpriteAtlas packing in Editor Play mode`); runtime
-`Sprite.Create` Tight geometry and the SVG importer's generated physics shape (now done, rows `SpriteMeshType.Tight` outline and UI Toolkit VectorImage drawing and SVG import); the
-SVGImage drawn on a canvas. Measured on 6000.0.71f1 with the NVIDIA driver only.
+The Q93, Q380, Q412 and Q427 sprite work: spriteimport passes 650 of 650 fields over 65 sprites
+(519 of 520 before; a Polygon-mode sprite is always Tight and takes its mesh's boundary as its
+default physics shape, with thirteen Polygon controls). Spriteassets matches 120,888 values
+(46,318 before): the Sprite layouts the Editor saves load (clones of SpriteAtlas members, read
+unpacked from their own render data; skinned clones; colour, normal and tangent channels,
+colours drawn; secondary textures; vertex data version 2; Sprites saved without a texture, not
+drawn). Svgsprites matches 108,891 values (four pixels at a radial gradient's focus listed as a
+residual): the SVG importer's vector sprite, UI SVGImage, textured sprite and Texture2D outputs,
+run by the package's own code, imported sprite IDs and the generated physics shape (row
+`UI Toolkit VectorImage drawing and SVG import`). Spriteatlas is new (Sprite Atlas V1 1,306,495,
+V2 444,109 and oversize 46,607 values, zero differences; the page textures' name hashes listed as
+a residual): SpriteAtlas packing in Editor Play mode, with `unbound doctor` and a one-time warning
+for an Edit-mode session (row `SpriteAtlas packing in Editor Play mode`). Spriteoutlines is new
+(5,339 values, zero differences): runtime `Sprite.Create` Tight meshes and fallback physics
+shapes, also from texels a script wrote, PolygonCollider2D and TilemapCollider2D outlines of
+sprites without a physics shape, `SpriteUtility.GenerateOutline` and `Sprite.OverridePhysicsShape`
+(row `SpriteMeshType.Tight` outline). Still open, with their rows: packed or rotated m_RD, legacy
+Sprite Packer atlas names, split alpha, downscale multipliers other than 1, scriptable objects and
+texture coordinates 1 to 7 in saved Sprites stay rejected (none produced by the Editor in these
+probes); the SpriteAtlas cases its row lists as not reproduced (with warnings); BoxCollider2D and
+CircleCollider2D fitting to a sprite when added; `SpriteUtility.GenerateOutlineFromSprite` (the PSD
+and Aseprite importers' call, still a stub); the SVGImage drawn on a canvas. Measured on 6000.0.71f1 with the NVIDIA driver only.
 
 Seen beside these, tracked elsewhere and not classified again: coreapis, humanfirstpose,
 humanoid, indirectspec, modelimport, particles, shaderkeywords and terrain have open tasks, deferred
