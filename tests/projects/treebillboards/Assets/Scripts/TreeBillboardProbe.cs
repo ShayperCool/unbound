@@ -11,7 +11,7 @@ using UnityEngine;
 /// placed in staggered rows from 30 to 380 units ahead of the cameras, of several widths, heights
 /// and colors, drawn as meshes near the camera and as billboards past treeBillboardDistance.
 /// Images from the ground, from above at two pitches, with a nearer billboard start, a long cross
-/// fade and a short tree distance. Writes <c>treebillboards.jsonl</c> (the settings each image used)
+/// fade and a short tree distance, and the billboard atlas as the ground view left it. Writes <c>treebillboards.jsonl</c> (the settings each image used)
 /// and PNGs into <c>TREE_BILLBOARD_PROBE_OUT</c>, then quits.
 /// </summary>
 public class TreeBillboardProbe : MonoBehaviour
@@ -55,6 +55,7 @@ public class TreeBillboardProbe : MonoBehaviour
         yield return null;
         yield return null;
         Capture(dir, "ground", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 50f, 5f, 5000f);
+        AppendAtlas(dir);
         Capture(dir, "pitch20", terrain, new Vector3(0f, 40f, -60f), new Vector3(0f, 0f, 110f), 50f, 5f, 5000f);
         Capture(dir, "pitch55", terrain, new Vector3(0f, 170f, 30f), new Vector3(0f, 0f, 150f), 50f, 5f, 5000f);
         Capture(dir, "start20", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 20f, 5f, 5000f);
@@ -66,6 +67,30 @@ public class TreeBillboardProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    /// <summary>The atlas the billboards are cut from (the render texture named "Tree Imposter
+    /// Texture"), as the last capture left it: a row of its size, format and sampler, and its
+    /// first mip as atlas.png.</summary>
+    void AppendAtlas(string dir)
+    {
+        RenderTexture atlas = null;
+        foreach (var rt in Resources.FindObjectsOfTypeAll<RenderTexture>())
+            if (rt.name == "Tree Imposter Texture") atlas = rt;
+        if (atlas == null)
+        {
+            m_Out.Append("{\"atlas\":null}\n");
+            return;
+        }
+        m_Out.Append($"{{\"atlas\":\"{atlas.name}\",\"width\":{atlas.width},\"height\":{atlas.height},\"graphicsFormat\":\"{atlas.graphicsFormat}\",\"depth\":{atlas.depth},\"mipmaps\":{(atlas.useMipMap ? "true" : "false")},\"sRGB\":{(atlas.sRGB ? "true" : "false")},\"filterMode\":\"{atlas.filterMode}\",\"wrapMode\":\"{atlas.wrapMode}\",\"mipMapBias\":{F(atlas.mipMapBias)},\"hideFlags\":{(int)atlas.hideFlags}}}\n");
+        var previous = RenderTexture.active;
+        RenderTexture.active = atlas;
+        var texture = new Texture2D(atlas.width, atlas.height, TextureFormat.RGBA32, false);
+        texture.ReadPixels(new Rect(0, 0, atlas.width, atlas.height), 0, 0);
+        texture.Apply();
+        RenderTexture.active = previous;
+        File.WriteAllBytes(Path.Combine(dir, "atlas.png"), texture.EncodeToPNG());
+        Destroy(texture);
     }
 
     void Capture(string dir, string name, Terrain terrain, Vector3 position, Vector3 target, float billboardDistance, float crossFade, float treeDistance)
@@ -92,7 +117,7 @@ public class TreeBillboardProbe : MonoBehaviour
         camera.targetTexture = null;
         File.WriteAllBytes(Path.Combine(dir, name + ".png"), texture.EncodeToPNG());
         var euler = go.transform.eulerAngles;
-        m_Out.Append($"{{\"image\":\"{name}\",\"treeBillboardDistance\":{F(terrain.treeBillboardDistance)},\"treeCrossFadeLength\":{F(terrain.treeCrossFadeLength)},\"treeDistance\":{F(terrain.treeDistance)},\"pitch\":{F(euler.x)},\"yaw\":{F(euler.y)}}}\n");
+        m_Out.Append($"{{\"image\":\"{name}\",\"treeBillboardDistance\":{F(terrain.treeBillboardDistance)},\"treeCrossFadeLength\":{F(terrain.treeCrossFadeLength)},\"treeDistance\":{F(terrain.treeDistance)},\"pitch\":{euler.x.ToString("F2", CultureInfo.InvariantCulture)},\"yaw\":{euler.y.ToString("F2", CultureInfo.InvariantCulture)}}}\n");
         DestroyImmediate(targetTexture);
         DestroyImmediate(go);
         Destroy(texture);

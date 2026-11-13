@@ -1,7 +1,8 @@
 {"defaults":{"treeDistance":5000,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeMaximumFullLODCount":50}}
-{"image":"ground","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.8184555,"yaw":0}
-{"image":"pitch20","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":13.2405205,"yaw":0}
-{"image":"pitch55","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":54.78241,"yaw":0}
-{"image":"start20","treeBillboardDistance":20,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.8184555,"yaw":0}
-{"image":"fade40","treeBillboardDistance":25,"treeCrossFadeLength":40,"treeDistance":5000,"pitch":0.8184555,"yaw":0}
-{"image":"distance150","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":150,"pitch":0.8184555,"yaw":0}
+{"image":"ground","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"atlas":"Tree Imposter Texture","width":256,"height":256,"graphicsFormat":"R8G8B8A8_UNorm","depth":16,"mipmaps":true,"sRGB":false,"filterMode":"Bilinear","wrapMode":"Clamp","mipMapBias":-1,"hideFlags":61}
+{"image":"pitch20","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":13.24,"yaw":0.00}
+{"image":"pitch55","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":54.78,"yaw":0.00}
+{"image":"start20","treeBillboardDistance":20,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"fade40","treeBillboardDistance":25,"treeCrossFadeLength":40,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"distance150","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":150,"pitch":0.82,"yaw":0.00}

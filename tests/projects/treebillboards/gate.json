@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/treebillboards/run.py check"],
+  "summary": "treebillboards: .*",
+  "engine_paths": ["managed/UnityEngine/Terrain/TerrainTreeBillboards.cs", "managed/UnityEngine/Terrain/TerrainRenderer.cs"]
+}
