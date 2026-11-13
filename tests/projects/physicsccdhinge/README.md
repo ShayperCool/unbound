@@ -546,7 +546,7 @@ of the reference where named.
 
 | Suite | macOS Editor against the reference | Unbound (macOS) against the macOS Editor | Unbound (macOS) against the reference |
 | --- | --- | --- | --- |
-| default | 6809/6814, 5 unresolved | 6711/6814, 3 unresolved | 6706/6814, 8 unresolved |
+| default | 6809/6814, 5 unresolved | 6714/6814, 0 unresolved | 6709/6814, 5 unresolved |
 | `--geometry-controls` | 1167/1167 | 1167/1167, every value equal | 1167/1167 |
 | `--geometry` | 12331/12335, 4 content differences | 11915/12400, no motion or content difference | 11911/12400, 4 content differences |
 | `--geometry-ordering` | 4554/4554 | 3842/4554, no consistency failure | 3842/4554, no consistency failure |
@@ -573,22 +573,28 @@ negation, and flushing denormals made no difference to those families
 (floating-point contraction is already off for the whole vendored build). So arm64
 keeps NEON, and the Linux reference is not the target there.
 
+The capsule rows `ccd/thin/2/{False/1,False/2,True/2}/0/event/0/0` (the capsule's
+Continuous and ContinuousDynamic sweep against the wall) matched the Linux values in the
+macOS Editor while Unbound reported one contact at y = 0 instead of y = −0.0952381: the
+sweep's first support point came from the other end of the capsule segment, decided by the
+sign of a rotation matrix entry of about 1e-7 for the Y-axis capsule frame, which PhysX's
+NEON and SSE2 quaternion-to-matrix formulas give with opposite signs. On arm64 the CCD
+sweep's relative frame now takes the SSE2 operation order, and these rows match
+(`native/physx/UNBOUND_PATCHES.md`, "CCD sweep frame in the SSE2 order"); the five other
+suites, `contactmodify3d` and `contactevents3d` are byte-identical with and without it.
+Rejected, by equality with the macOS Editor's own values: the SSE2 order in the shared
+transform-to-matrix constructor or in every quaternion matrix (the rows match, but
+`contactmodify3d` falls from 350 to 328 records identical to the macOS Editor), a capsule
+frame that fixes the rows (it moves capsule query and contact rows of `contactevents3d`),
+and fused multiply-adds in the NEON helpers (317–325 identical records; the 2-lane ones
+also move two `ccd/ghost/3` rows to the Linux values).
+
 Open on macOS (measured, cause not found):
 
-- `ccd/thin/2/{False/1,False/2,True/2}/0/event/0/0`: the capsule's Continuous
-  and ContinuousDynamic sweep against the wall. The sweep's first support
-  point comes from the other end of the capsule segment, so Unbound reports one
-  contact at y = 0 where both Editors report y = −0.0952381. The end is
-  decided by the sign of a rotation matrix entry of about 1e-7 for the Y-axis
-  capsule frame, which PhysX's NEON and SSE2 quaternion-to-matrix formulas give
-  with opposite signs. Using the SSE2 formula on arm64 fixes these rows but
-  changes `contactmodify3d` away from the macOS Editor, and a capsule frame
-  that fixes them changes capsule query and contact rows of `contactevents3d`
-  away from it. Neither is used.
 - `rotation/contact/3/False/False/4/bullet/event/0/2`: a contact witness on the
   other side of the face (y = 0.150 against the Editor's −0.150).
 
-So `run.py gate` on macOS reports, against the committed reference, the 8
-unresolved default rows (the 5 `ccd/ghost/3` rows the macOS Editor shares and
-the 3 capsule rows), 4 `--geometry` content differences and 5 rotation
-differences; the land gate runs these probes on Linux.
+So `run.py gate` on macOS reports, against the committed reference, the 5
+unresolved default rows (the `ccd/ghost/3` rows the macOS Editor shares), 4
+`--geometry` content differences and 5 rotation differences; the land gate runs
+these probes on Linux.
