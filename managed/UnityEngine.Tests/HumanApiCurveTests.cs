@@ -107,6 +107,24 @@ namespace UnityEngine.Tests
             Assert.Equal(mirror ? before + 1 : before, Hits(MirroredWithoutFootGoals));
         }
 
+        /// <summary>A mirrored clip with one foot's goal curves reports it too (unmeasured); with
+        /// both feet's goals it does not.</summary>
+        [Theory]
+        [InlineData(true, false, true)]
+        [InlineData(true, true, false)]
+        public void AMirroredClipReportsWhenAFootLacksItsGoals(bool left, bool right, bool reports)
+        {
+            var clip = Clip(false, false);
+            if (left) clip.SetCurve("", typeof(Animator), "LeftFootQ.w", AnimationCurve.Constant(0f, 1f, 1f));
+            if (right) clip.SetCurve("", typeof(Animator), "RightFootT.y", AnimationCurve.Constant(0f, 1f, 0.1f));
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.mirror = true;
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+            int before = Hits(MirroredWithoutFootGoals);
+            _ = clip.humanMotion;
+            Assert.Equal(reports ? before + 1 : before, Hits(MirroredWithoutFootGoals));
+        }
+
         /// <summary>Control: a Transform curve set through SetCurve stays a Transform curve, and a
         /// float curve on the Animator that is no humanoid curve does not make the clip a
         /// humanoid one.</summary>

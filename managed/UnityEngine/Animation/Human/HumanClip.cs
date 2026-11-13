@@ -15,8 +15,8 @@ namespace UnityEngine
         const int AnimatorClassId = CurveBinding.AnimatorClassId;
 
         /// <summary>The index of a curve among the humanoid curves (-1: none): a curve on the
-        /// Animator whose name is a humanoid curve's (at any path, as before; a path below the
-        /// root is unmeasured).</summary>
+        /// Animator whose name is a humanoid curve's, at any path (a path below the root is
+        /// unmeasured).</summary>
         static int HumanCurveIndexOf(CurveBinding b) =>
             b.ClassId == AnimatorClassId ? HumanClipImport.CurveIndex(b.Attribute) : -1;
         bool m_HumanConverted;
