@@ -35,6 +35,8 @@ def apply_overlay(values, overlay, profile):
         width, height, data = mip(values[row['k']])
         data = bytearray(data)
         for index, word in row['words'].items():
+            if not 0 <= int(index) < len(data) // 4:
+                sys.exit(f'{overlay}: {profile} {row["k"]} has no word {index}')
             data[int(index) * 4:int(index) * 4 + 4] = int(word, 16).to_bytes(4, 'little')
         values[row['k']] = f'{width}x{height}:' + base64.b64encode(bytes(data)).decode()
     return values
