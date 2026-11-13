@@ -73,9 +73,10 @@ are script code and are converted. A hot-reload edit is patched in place unless 
 needs conversions or calls converted math (below); then the session restarts (the conversions do
 not fit the edit's method bodies).
 
-A game assembly's calls to the math methods Unity implements in C# go to copies of those methods
-added to the assembly, converted as script code is (`managed/Unbound.Host/WideFloats.EngineMath.cs`);
-the engine's own calls keep float32. The copies come from a second build of the engine's math
+A game assembly's calls to the math methods Unity implements in C# go to converted copies of those
+methods in one generated assembly, `Unbound.EngineMath` (`managed/Unbound.Host/WideFloats.EngineMath.cs`;
+built once per engine and cached with the adapted assemblies; the runtime optimizes it whatever the
+game's code optimization mode); the engine's own calls keep float32. The copies come from a second build of the engine's math
 sources without IL optimization (`managed/Unbound.ScriptMath`), where every declared local is a
 store as in the Editor. Methods Unity binds to native code keep the engine's float32 implementation.
 
@@ -85,7 +86,7 @@ The gate matches every control in both modes. Its residuals (`residuals.json`):
   loaded, with the conversions. In the measured runs the instructions apart from them (and the
   shifted branch offsets) were the Editor's; the gate lists these rows as residuals and does not
   compare them further.
-- `il/` rows of controls that call converted math: their calls name the copies.
+- `il/` rows of controls that call converted math: their calls name the converted copies.
 - `native/` rows: Unbound's float32 implementations of Unity's native math do not round in the
   Editor's order (queued), and the two C# methods that use a native result (`TransformPlane` uses
   the inverse, `Quaternion.RotateTowards` uses `SlerpUnclamped`).
@@ -95,7 +96,8 @@ a three-float struct with operators, `Dot` and `sqrMagnitude` takes 16 ms instea
 scalar polynomial-and-lerp loop 108 ms instead of 89 ms. Converting every float load of every
 method would take 34 ms and 124 ms: the larger operators then no longer get inlined. A per-object
 update loop over Unity's math API (normalize, Lerp, quaternion products, TRS, MultiplyPoint3x4,
-Dot, Distance, Cross) takes 32.6 ms with the copies instead of 25 ms.
+Dot, Distance, Cross) takes 33.6 ms with the converted copies instead of 25.4 ms when the game code is
+compiled in Release, and 72.2 ms instead of 70.4 ms in Debug.
 
 Not measured: other Unity releases, NaN payloads, code Burst compiles in the Editor (and the
 methods such code calls, which are converted like any other), and Unity's managed code outside its
