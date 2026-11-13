@@ -101,6 +101,13 @@ namespace Unbound.Runtime
         /// evaluation, unmeasured.</summary>
         internal static bool ScriptFloatsWide => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>On arm64 hosts transform arithmetic follows the macOS arm64 Editor: a set rotation is
+        /// normalized with one sum (x² + y²) + (z² + w²) for every component, and a scale's reciprocal
+        /// starts from the hardware estimate with two reciprocal steps. Measured by
+        /// tests/projects/solverpairorder --transform-inputs against the macOS arm64 6000.0.71f1 Editor;
+        /// x86_64 hosts keep what the Linux Editor measures. Chosen by the host's architecture.</summary>
+        internal static bool TransformArithmeticArm64 => System.Runtime.Intrinsics.Arm.AdvSimd.IsSupported;
+
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by
         /// tests/projects/quaternioneuler on 6000.0.71f1. Other releases retain their unmeasured
         /// single-precision arithmetic.</summary>

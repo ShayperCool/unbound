@@ -90,12 +90,11 @@
   "release/il/Vector3Magnitude",
   "release/il/Vector3SqrMagnitude"
  ],
- "Unity's native math (Quaternion Slerp, Lerp, Euler, eulerAngles, LookRotation, AngleAxis, FromToRotation, Vector3 Slerp and RotateTowards, Matrix4x4 inverse, rotation and lossyScale, Bounds SqrDistance and ClosestPoint) rounds in float32 in an order or with an algorithm Unbound's float32 implementations do not match bit for bit (queued follow-up)": [
+ "Unity's native math (Quaternion Slerp, Lerp, eulerAngles, LookRotation, AngleAxis, FromToRotation, Vector3 Slerp and RotateTowards, Matrix4x4 inverse, rotation and lossyScale, Bounds SqrDistance and ClosestPoint) rounds in float32 in an order or with an algorithm Unbound's float32 implementations do not match bit for bit (queued follow-up)": [
   "debug/native/boundsPoint",
   "debug/native/matrixDecompose",
   "debug/native/matrixInverse",
   "debug/native/quaternionAngleAxis",
-  "debug/native/quaternionEuler",
   "debug/native/quaternionEulerAngles",
   "debug/native/quaternionFromToRotation",
   "debug/native/quaternionLerp",
@@ -107,7 +106,6 @@
   "release/native/matrixDecompose",
   "release/native/matrixInverse",
   "release/native/quaternionAngleAxis",
-  "release/native/quaternionEuler",
   "release/native/quaternionEulerAngles",
   "release/native/quaternionFromToRotation",
   "release/native/quaternionLerp",
@@ -121,5 +119,9 @@
   "debug/api/quaternionRotateTowards",
   "release/api/matrixVector",
   "release/api/quaternionRotateTowards"
+ ],
+ "Quaternion.Euler on Linux x86_64: Unbound's float32 implementation differs from the Linux Editor's native result in some samples (cause not studied; queued); on macOS arm64 it matches": [
+  "linux:debug/native/quaternionEuler",
+  "linux:release/native/quaternionEuler"
  ]
 }

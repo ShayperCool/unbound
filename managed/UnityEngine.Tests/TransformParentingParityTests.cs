@@ -4,6 +4,35 @@ namespace UnityEngine.Tests
 {
     public class TransformParentingParityTests
     {
+        static bool MacArm64 => OperatingSystem.IsMacOS() && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64;
+
+        [Fact]
+        public void SetRotationsNormalizeAsTheHostsEditor()
+        {
+            // tests/projects/solverpairorder --transform-inputs raw/6 and circle-scale/0/rotated: the
+            // Linux x86_64 and macOS arm64 Editors give different last bits; each host matches its own.
+            var o = new GameObject("rotation");
+            try
+            {
+                o.transform.localRotation = new Quaternion(.23f, -.17f, .31f, .9f);
+                Assert.Equal(MacArm64 ? new Quaternion(.231404275f, -.171037942f, .311892718f, .9054949f)
+                    : new Quaternion(.231404275f, -.171037927f, .311892718f, .905494869f), o.transform.localRotation, Exact);
+                // Euler's half-angle sines and cosines: one sincos (macOS differs from sin and cos).
+                o.transform.localRotation = Quaternion.Euler(7f, -19f, 31f);
+                Assert.Equal(MacArm64 ? new Quaternion(.0139966542f, -.17483902f, .272791237f, .9459495f)
+                    : new Quaternion(.0139966542f, -.174839f, .272791237f, .945949435f), o.transform.localRotation, Exact);
+            }
+            finally { Object.DestroyImmediate(o); }
+        }
+
+        static readonly System.Collections.Generic.IEqualityComparer<Quaternion> Exact = new BitsComparer();
+
+        sealed class BitsComparer : System.Collections.Generic.IEqualityComparer<Quaternion>
+        {
+            public bool Equals(Quaternion a, Quaternion b) => a.x.Equals(b.x) && a.y.Equals(b.y) && a.z.Equals(b.z) && a.w.Equals(b.w);
+            public int GetHashCode(Quaternion q) => 0;
+        }
+
         [Fact]
         public void TiltedLossyScaleKeepsTheMeasuredAccumulationOrder()
         {

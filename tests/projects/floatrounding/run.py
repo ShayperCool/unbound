@@ -15,7 +15,7 @@ arm64 Editors record the same values for script code, so both hosts compare with
 mode; the `native/` rows (Unity's native math) can differ between the hosts and come from P.H.jsonl,
 H being `linux` or `macos`. Every
 missing, extra and differing key is printed; values compare exactly. residuals.json lists known
-residuals under their cause as "<profile>/<key>".
+residuals under their cause as "<profile>/<key>", or "<host>:<profile>/<key>" for one host only.
 """
 import argparse
 import json
@@ -151,8 +151,11 @@ def gate(profile, label):
         print(f'floatrounding: no complete engine capture ({error}); engine exit {code}; log {out}/engine.log')
         return 1
     matched, failures = value_probe.compare(expected, actual, 0)
-    known = {key[len(profile)+1:]: reason for key, reason in value_probe.residuals(PROBE).items()
-             if key.startswith(profile+'/')}
+    known = {}
+    for key, reason in value_probe.residuals(PROBE).items():
+        scope, _, rest = key.rpartition(':')
+        if scope in ('', host()) and rest.startswith(profile+'/'):
+            known[rest[len(profile)+1:]] = reason
     residual = [f for f in failures if f['key'] in known]
     failures = [f for f in failures if f['key'] not in known]
     for failure in failures:
