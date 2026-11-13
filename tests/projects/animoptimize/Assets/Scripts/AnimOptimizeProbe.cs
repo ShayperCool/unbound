@@ -142,7 +142,8 @@ public class AnimOptimizeProbe : MonoBehaviour
                 Handles(name, mode);
             foreach (string mode in new[] { "jobResolve", "jobResolveAll", "jobEarly", "jobTop", "jobIdle", "jobIdleResolveAll", "jobProp", "jobReoptimize", "jobDestroyed" })
                 Handles("Rig", mode);
-            Handles("Rig", "jobDestroyedRead");
+            foreach (string mode in new[] { "jobDestroyedRead", "jobParentDestroyed", "jobBranchDestroyed", "jobRootDestroyed", "jobRootRebound", "jobRootInactive", "jobUnanimated" })
+                Handles("Rig", mode);
             foreach (var name in new[] { "Rig", "RigOpt", "Human", "HumanOpt" }) GraphOnly(name, "graphOnly");
             foreach (string mode in new[] { "graphJob", "graphJobHand" })
             foreach (var name in new[] { "Human", "HumanOpt" })
@@ -161,9 +162,20 @@ public class AnimOptimizeProbe : MonoBehaviour
         Finished = true;
     }
 
-    static GameObject Spawn(string name, out Animator animator)
+    static GameObject Spawn(string name, out Animator animator, Action<GameObject> beforeEnable = null)
     {
-        var instance = Object.Instantiate(Resources.Load<GameObject>("Models/" + name));
+        GameObject instance;
+        if (beforeEnable == null) instance = Object.Instantiate(Resources.Load<GameObject>("Models/" + name));
+        else
+        {
+            // Instantiated below an inactive holder: the Animator is first enabled after the change.
+            var holder = new GameObject("holder");
+            holder.SetActive(false);
+            instance = Object.Instantiate(Resources.Load<GameObject>("Models/" + name), holder.transform);
+            beforeEnable(instance);
+            instance.transform.SetParent(null, false);
+            Object.DestroyImmediate(holder);
+        }
         instance.name = name;
         animator = instance.GetComponent<Animator>();
         animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("C_" + name);
@@ -360,7 +372,15 @@ public class AnimOptimizeProbe : MonoBehaviour
     /// exposed between the first and the second evaluation; "jobDestroyed": the hand is
     /// destroyed there instead (the record's bone is then null), and the job reads the stream
     /// handle only while it is unresolved; "jobDestroyedRead": the same, and the job goes on
-    /// reading the handle after the hand is gone.
+    /// reading the handle after the hand is gone; "jobParentDestroyed": as "jobDestroyedRead",
+    /// and the hand's parent Spine is destroyed between the second and the third evaluation;
+    /// "jobBranchDestroyed": Hips, the hand's animated grandparent, is destroyed with the
+    /// hand between the first and the second; "jobRootDestroyed": the top node Rig, which the
+    /// take does not animate, is raised by 3 before the handles are bound and destroyed with
+    /// the whole skeleton there; "jobRootRebound": the same, with Animator.Rebind after Rig
+    /// is raised; "jobRootInactive": the same, Rig raised before the Animator is first enabled;
+    /// "jobUnanimated": the handles are of Leg, which the take does not animate, moved by 1
+    /// along z before they are bound.
     /// On the plain rig only: "jobEarly" binds the hand's stream
     /// handle, then optimizes the hierarchy exposing the hand; "jobTop" optimizes exposing the
     /// top node Rig and the hand, and binds the stream handle of the exposed Rig, which the job
@@ -369,14 +389,19 @@ public class AnimOptimizeProbe : MonoBehaviour
     static void Handles(string name, string mode)
     {
         string key = mode + "." + name;
-        var go = Spawn(name, out var animator);
+        Action<GameObject> raise = g => g.transform.Find("Rig").localPosition = new Vector3(0f, 3f, 0f);
+        var go = Spawn(name, out var animator, mode == "jobRootInactive" ? raise : null);
         var clip = animator.runtimeAnimatorController.animationClips[0];
         animator.runtimeAnimatorController = null;
-        Transform Hand() => go.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Hand");
+        string boneName = mode == "jobUnanimated" ? "Leg" : "Hand";
+        Transform Hand() => go.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == boneName);
         bool idle = mode == "jobIdle" || mode == "jobIdleResolveAll" || mode == "jobProp";
         var job = new HandleJob { write = mode == "job" || mode == "jobEarly" || mode == "jobTop", resolve = mode == "jobResolve",
             idle = idle, readProperty = mode == "jobProp", readUnresolved = mode == "jobDestroyed" };
         var bone = Hand();
+        if (mode == "jobRootDestroyed" || mode == "jobRootRebound") raise(go);
+        if (mode == "jobUnanimated") bone.localPosition += new Vector3(0f, 0f, 1f);
+        if (mode == "jobRootRebound") animator.Rebind();
         if (idle) job.property = animator.BindCustomStreamProperty("probeValue", CustomStreamPropertyType.Float);
         if (mode == "jobEarly")
         {
@@ -412,9 +437,15 @@ public class AnimOptimizeProbe : MonoBehaviour
                 AnimatorUtility.OptimizeTransformHierarchy(go, new[] { "Rig/Hips/Spine/Hand" });
                 bone = Hand();
             }
-            if ((mode == "jobDestroyed" || mode == "jobDestroyedRead") && step == 1)
+            if ((mode == "jobDestroyed" || mode == "jobDestroyedRead" || mode == "jobParentDestroyed") && step == 1)
             {
                 Object.DestroyImmediate(bone.gameObject);
+                bone = null;
+            }
+            if (mode == "jobParentDestroyed" && step == 2) Object.DestroyImmediate(go.transform.Find("Rig/Hips/Spine").gameObject);
+            if ((mode == "jobBranchDestroyed" || mode == "jobRootDestroyed" || mode == "jobRootRebound" || mode == "jobRootInactive") && step == 1)
+            {
+                Object.DestroyImmediate(go.transform.Find(mode == "jobBranchDestroyed" ? "Rig/Hips" : "Rig").gameObject);
                 bone = null;
             }
             graph.Evaluate(step == 0 ? 0f : step == 1 ? .5f : .25f);

@@ -39,7 +39,10 @@ handle bound before the hierarchy is optimized with the hand exposed (`jobEarly`
 handle of an exposed top node (`jobTop`), the hierarchy optimized between the first two
 evaluations of a job that read the handle (`jobReoptimize`) and the hand destroyed there
 (`jobDestroyed`, the job reading the stream handle only while it is unresolved;
-`jobDestroyedRead`, the job reading it in every evaluation). Graph controls on a rig without
+`jobDestroyedRead`, the job reading it in every evaluation), then its parent `Spine` destroyed
+between the second and the third (`jobParentDestroyed`), or the hand destroyed with its animated
+grandparent `Hips` (`jobBranchDestroyed`) or with the whole skeleton under the unanimated top
+node `Rig`, raised by 3 before the handles are bound (`jobRootDestroyed`), between the first two. Graph controls on a rig without
 its controller, three evaluations of a manual graph each with the whole pose: the take as the
 output's source on `Rig`, `RigOpt`, `Human` and `HumanOpt` (`graphOnly.*`), and on the two
 humanoids under a job that does nothing (`graphJob.*`) or reads a stream handle of the left
@@ -108,7 +111,12 @@ What the Editor does (measured):
   reads the exposed hand. After the hand is destroyed the stream handle stays valid and
   resolved and the scene handle is invalid (`jobDestroyed`), and a job that goes on reading
   the stream handle gets the stream's values of its path: the local ones of the take and the
-  world ones under the hand's parent (`jobDestroyedRead`).
+  world ones under the hand's parent (`jobDestroyedRead`). Its world values stay what the take
+  gives the path when the parent, an animated ancestor or the top node is destroyed too
+  (`jobParentDestroyed`, `jobBranchDestroyed`, `jobRootDestroyed`: the same records as
+  `jobDestroyedRead`). These three controls were recorded with the macOS Editor (two identical
+  captures); every other record of that capture matches the Linux reference within the
+  comparator's tolerance, so the reference keeps its Linux records and adds these.
 - A manual graph plays the take on a rig without its controller, optimized or not, generic
   or humanoid, alone or under a job (`graphOnly.*`, `graphJob.*`). On the optimized humanoid
   with its exposed hand bound by `Animator.BindStreamTransform`, or an object added below the
